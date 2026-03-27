@@ -20,6 +20,16 @@ public interface WalletAccountService {
 
     WalletAccountVO refund(Long merchantId, Long userId, BigDecimal amount, String refundNo, String operator, String remark);
 
+    void transfer(Long merchantId,
+                  Long fromUserId,
+                  Long toUserId,
+                  BigDecimal amount,
+                  String transferNo,
+                  String operator,
+                  String remark);
+
+    void withdraw(Long merchantId, Long userId, BigDecimal amount, String withdrawNo, String operator, String remark);
+
     WalletAccountLog getLog(String bizType, Long merchantId, Long userId, String bizNo);
 
     Page<WalletAccountLog> pageLogs(int pageNum, int pageSize, Long merchantId, Long userId, String bizType, String bizNo);

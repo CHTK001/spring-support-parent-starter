@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 @Data
 public class WithdrawRequest {
     private String withdrawNo;
+    private String notifyUrl;
     private Long merchantId;
     private Long userId;
     private BigDecimal amount;

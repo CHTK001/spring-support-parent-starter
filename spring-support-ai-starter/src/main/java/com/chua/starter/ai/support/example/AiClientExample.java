@@ -1,9 +1,11 @@
 package com.chua.starter.ai.support.example;
 
-import com.chua.deeplearning.support.api.AiClient;
+import com.chua.common.support.ai.AiClient;
 import com.chua.deeplearning.support.config.FaceConfig;
 import com.chua.deeplearning.support.config.LlmConfig;
 import com.chua.deeplearning.support.config.OcrConfig;
+import com.chua.deeplearning.support.core.result.PredictResult;
+import com.chua.deeplearning.support.core.result.PredictResultObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -84,7 +86,7 @@ public class AiClientExample {
         var imageData = Files.readAllBytes(imageFile.toPath());
         
         // 人脸检测
-        var detectResult = faceBuilder.detect(imageData);
+        var detectResult = (PredictResultObject<PredictResult>) faceBuilder.detect(imageData);
         System.out.println("检测到人脸数量: " + detectResult.getList().size());
         
         // 人脸识别（提取特征）
@@ -124,7 +126,7 @@ public class AiClientExample {
         // 3. 人脸检测
         var faceBuilder = aiClient.createFace();
         var faceImageData = Files.readAllBytes(new File("/path/to/face.jpg").toPath());
-        var faceResult = faceBuilder.detect(faceImageData);
+        var faceResult = (PredictResultObject<PredictResult>) faceBuilder.detect(faceImageData);
         
         // 4. 综合分析
         System.out.println("LLM 分析: " + llmResponse);

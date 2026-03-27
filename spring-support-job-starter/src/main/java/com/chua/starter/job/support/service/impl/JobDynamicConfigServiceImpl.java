@@ -1,15 +1,21 @@
 package com.chua.starter.job.support.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.starter.job.support.JobNumberGenerator;
 import com.chua.starter.job.support.entity.SysJob;
+import com.chua.starter.job.support.scheduler.JobDispatchModeEnum;
 import com.chua.starter.job.support.mapper.SysJobMapper;
+import com.chua.starter.job.support.scheduler.JobHelper;
+import com.chua.starter.job.support.scheduler.JobStorageModeEnum;
 import com.chua.starter.job.support.scheduler.LocalJobTrigger;
+import com.chua.starter.job.support.scheduler.SchedulerTypeEnum;
 import com.chua.starter.job.support.scheduler.TriggerTypeEnum;
 import com.chua.starter.job.support.service.JobDynamicConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.Date;
 import java.util.List;
@@ -25,6 +31,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
 
+    private static final String DEFAULT_SCHEDULE_TYPE = "CRON";
+    private static final String DEFAULT_GLUE_TYPE = "BEAN";
+    private static final String DEFAULT_MISFIRE_STRATEGY = "DO_NOTHING";
+
     private final SysJobMapper sysJobMapper;
 
     /**
@@ -39,19 +49,23 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Integer registerOrUpdateJob(String jobName, String cronExpr, String beanName, 
-                                        String param, String desc, boolean autoStart) {
+    public Integer registerOrUpdateJob(String jobName, String cronExpr, String beanName,
+                                       String param, String desc, boolean autoStart) {
+        requireText(jobName, "任务名称不能为空");
+        requireText(beanName, "执行 Bean 名称不能为空");
+        requireText(cronExpr, "Cron 表达式不能为空");
         log.info("注册或更新任务: jobName={}, cron={}, bean={}", jobName, cronExpr, beanName);
 
         SysJob existingJob = getJobByName(jobName);
         if (existingJob != null) {
             // 更新现有任务
-            existingJob.setJobScheduleTime(cronExpr);
-            existingJob.setJobExecuteBean(beanName);
+            existingJob.setJobScheduleType(DEFAULT_SCHEDULE_TYPE);
+            existingJob.setJobScheduleTime(cronExpr.trim());
+            existingJob.setJobExecuteBean(beanName.trim());
             existingJob.setJobExecuteParam(param);
             existingJob.setJobDesc(desc);
-            if (autoStart && existingJob.getJobTriggerStatus() != STATUS_RUNNING) {
-                existingJob.setJobTriggerStatus(STATUS_RUNNING);
+            if (autoStart || STATUS_RUNNING == safeStatus(existingJob.getJobTriggerStatus())) {
+                applyTriggerState(existingJob, true);
             }
             sysJobMapper.updateById(existingJob);
             log.info("任务更新成功: jobId={}, jobName={}", existingJob.getJobId(), jobName);
@@ -60,19 +74,21 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
 
         // 创建新任务
         SysJob job = new SysJob();
-        job.setJobName(jobName);
-        job.setJobScheduleType("cron");
-        job.setJobScheduleTime(cronExpr);
-        job.setJobExecuteBean(beanName);
+        job.setJobNo(JobNumberGenerator.nextJobNo());
+        job.setJobName(jobName.trim());
+        job.setJobScheduleType(DEFAULT_SCHEDULE_TYPE);
+        job.setJobScheduleTime(cronExpr.trim());
+        job.setJobExecuteBean(beanName.trim());
         job.setJobExecuteParam(param);
         job.setJobDesc(desc);
         job.setJobTriggerStatus(autoStart ? STATUS_RUNNING : STATUS_STOP);
-        job.setJobGlueType("BEAN");
+        job.setJobGlueType(DEFAULT_GLUE_TYPE);
         job.setJobGlueUpdatetime(new Date());
         job.setJobFailRetry(0);
         job.setJobExecuteTimeout(0);
-        job.setJobExecuteMisfireStrategy("DO_NOTHING");
+        job.setJobExecuteMisfireStrategy(DEFAULT_MISFIRE_STRATEGY);
 
+        applyTriggerState(job, autoStart);
         sysJobMapper.insert(job);
         log.info("任务创建成功: jobId={}, jobName={}", job.getJobId(), jobName);
         return job.getJobId();
@@ -81,14 +97,20 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Integer createJob(SysJob job) {
+        if (job == null) {
+            throw new IllegalArgumentException("任务内容不能为空");
+        }
         log.info("创建任务: jobName={}", job.getJobName());
-        
+
         // 设置默认值
         if (job.getJobScheduleType() == null) {
-            job.setJobScheduleType("cron");
+            job.setJobScheduleType(DEFAULT_SCHEDULE_TYPE);
         }
         if (job.getJobGlueType() == null) {
-            job.setJobGlueType("BEAN");
+            job.setJobGlueType(DEFAULT_GLUE_TYPE);
+        }
+        if (!StringUtils.hasText(job.getJobNo())) {
+            job.setJobNo(JobNumberGenerator.nextJobNo());
         }
         if (job.getJobGlueUpdatetime() == null) {
             job.setJobGlueUpdatetime(new Date());
@@ -103,9 +125,20 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
             job.setJobExecuteTimeout(0);
         }
         if (job.getJobExecuteMisfireStrategy() == null) {
-            job.setJobExecuteMisfireStrategy("DO_NOTHING");
+            job.setJobExecuteMisfireStrategy(DEFAULT_MISFIRE_STRATEGY);
+        }
+        if (job.getJobRetryInterval() == null) {
+            job.setJobRetryInterval(0);
+        }
+        if (!StringUtils.hasText(job.getJobDispatchMode())) {
+            job.setJobDispatchMode(JobDispatchModeEnum.LOCAL.name());
+        }
+        if (!StringUtils.hasText(job.getJobStorageMode())) {
+            job.setJobStorageMode(JobStorageModeEnum.DATABASE.name());
         }
 
+        normalizeJob(job);
+        applyTriggerState(job, STATUS_RUNNING == safeStatus(job.getJobTriggerStatus()));
         sysJobMapper.insert(job);
         log.info("任务创建成功: jobId={}", job.getJobId());
         return job.getJobId();
@@ -114,7 +147,20 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateJob(SysJob job) {
+        if (job == null || job.getJobId() == null) {
+            throw new IllegalArgumentException("任务ID不能为空");
+        }
         log.info("更新任务: jobId={}", job.getJobId());
+        if (StringUtils.hasText(job.getJobScheduleType())) {
+            job.setJobScheduleType(normalizeScheduleType(job.getJobScheduleType()));
+        }
+        if (STATUS_RUNNING == safeStatus(job.getJobTriggerStatus())
+                && StringUtils.hasText(job.getJobScheduleType())
+                && StringUtils.hasText(job.getJobScheduleTime())) {
+            job.setJobTriggerNextTime(calculateNextTriggerTime(job.getJobScheduleType(), job.getJobScheduleTime()));
+        } else if (STATUS_STOP == safeStatus(job.getJobTriggerStatus())) {
+            resetTriggerState(job);
+        }
         return sysJobMapper.updateById(job) > 0;
     }
 
@@ -147,12 +193,9 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
             log.warn("任务不存在: jobId={}", jobId);
             return false;
         }
-        
-        job.setJobTriggerStatus(STATUS_RUNNING);
-        // 计算下次执行时间
-        long nextTriggerTime = calculateNextTriggerTime(job.getJobScheduleType(), job.getJobScheduleTime());
-        job.setJobTriggerNextTime(nextTriggerTime);
-        
+
+        normalizeJob(job);
+        applyTriggerState(job, true);
         return sysJobMapper.updateById(job) > 0;
     }
 
@@ -165,11 +208,10 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
             log.warn("任务不存在: jobId={}", jobId);
             return false;
         }
-        
+
         job.setJobTriggerStatus(STATUS_STOP);
-        job.setJobTriggerLastTime(0L);
-        job.setJobTriggerNextTime(0L);
-        
+        resetTriggerState(job);
+
         return sysJobMapper.updateById(job) > 0;
     }
 
@@ -183,6 +225,13 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
     @Override
     public SysJob getJobById(Integer jobId) {
         return sysJobMapper.selectById(jobId);
+    }
+
+    @Override
+    public SysJob getJobByNo(String jobNo) {
+        return sysJobMapper.selectOne(Wrappers.<SysJob>lambdaQuery()
+                .eq(SysJob::getJobNo, jobNo)
+                .last("LIMIT 1"));
     }
 
     @Override
@@ -221,20 +270,33 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateJobCron(Integer jobId, String cronExpr) {
+        requireText(cronExpr, "Cron 表达式不能为空");
         log.info("更新任务Cron: jobId={}, cron={}", jobId, cronExpr);
         SysJob job = sysJobMapper.selectById(jobId);
         if (job == null) {
             return false;
         }
-        
-        job.setJobScheduleTime(cronExpr);
+
+        job.setJobScheduleType(DEFAULT_SCHEDULE_TYPE);
+        job.setJobScheduleTime(cronExpr.trim());
         // 如果任务正在运行，重新计算下次执行时间
         if (STATUS_RUNNING == job.getJobTriggerStatus()) {
-            long nextTriggerTime = calculateNextTriggerTime(job.getJobScheduleType(), cronExpr);
+            long nextTriggerTime = calculateNextTriggerTime(job.getJobScheduleType(), job.getJobScheduleTime());
             job.setJobTriggerNextTime(nextTriggerTime);
         }
-        
+
         return sysJobMapper.updateById(job) > 0;
+    }
+
+    @Override
+    public boolean triggerJobByNo(String jobNo, String param) {
+        requireText(jobNo, "任务编号不能为空");
+        SysJob job = getJobByNo(jobNo.trim());
+        if (job == null || job.getJobId() == null) {
+            log.warn("任务不存在: jobNo={}", jobNo);
+            return false;
+        }
+        return triggerJob(job.getJobId(), param);
     }
 
     @Override
@@ -259,25 +321,79 @@ public class JobDynamicConfigServiceImpl implements JobDynamicConfigService {
      */
     private long calculateNextTriggerTime(String scheduleType, String scheduleTime) {
         try {
-            if ("cron".equalsIgnoreCase(scheduleType)) {
-                // 使用Spring的CronExpression计算
-                org.springframework.scheduling.support.CronExpression cron = 
-                        org.springframework.scheduling.support.CronExpression.parse(scheduleTime);
-                java.time.LocalDateTime next = cron.next(java.time.LocalDateTime.now());
-                if (next != null) {
-                    return next.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
-                }
-            } else if ("fixed".equalsIgnoreCase(scheduleType)) {
-                // 固定间隔
-                long interval = Long.parseLong(scheduleTime);
-                return System.currentTimeMillis() + interval;
-            } else if ("fixed_ms".equalsIgnoreCase(scheduleType)) {
-                long interval = Long.parseLong(scheduleTime);
-                return System.currentTimeMillis() + interval;
+            SysJob job = new SysJob();
+            job.setJobScheduleType(normalizeScheduleType(scheduleType));
+            job.setJobScheduleTime(scheduleTime == null ? null : scheduleTime.trim());
+            Date nextValidTime = JobHelper.generateNextValidTime(job, new Date());
+            if (nextValidTime != null) {
+                return nextValidTime.getTime();
             }
         } catch (Exception e) {
             log.error("计算下次执行时间失败: scheduleType={}, scheduleTime={}", scheduleType, scheduleTime, e);
+            throw new IllegalArgumentException("无效的调度配置: type=" + scheduleType + ", time=" + scheduleTime, e);
         }
-        return 0L;
+        throw new IllegalArgumentException("无效的调度配置: type=" + scheduleType + ", time=" + scheduleTime);
+    }
+
+    private void applyTriggerState(SysJob job, boolean running) {
+        if (running) {
+            requireText(job.getJobScheduleTime(), "运行中的任务必须配置调度时间");
+            job.setJobTriggerStatus(STATUS_RUNNING);
+            job.setJobTriggerNextTime(calculateNextTriggerTime(job.getJobScheduleType(), job.getJobScheduleTime()));
+            if (job.getJobTriggerLastTime() == null) {
+                job.setJobTriggerLastTime(0L);
+            }
+            return;
+        }
+        job.setJobTriggerStatus(STATUS_STOP);
+        resetTriggerState(job);
+    }
+
+    private void normalizeJob(SysJob job) {
+        if (StringUtils.hasText(job.getJobName())) {
+            job.setJobName(job.getJobName().trim());
+        }
+        if (StringUtils.hasText(job.getJobNo())) {
+            job.setJobNo(job.getJobNo().trim());
+        }
+        if (StringUtils.hasText(job.getJobExecuteBean())) {
+            job.setJobExecuteBean(job.getJobExecuteBean().trim());
+        }
+        if (StringUtils.hasText(job.getJobScheduleTime())) {
+            job.setJobScheduleTime(job.getJobScheduleTime().trim());
+        }
+        if (StringUtils.hasText(job.getJobDispatchMode())) {
+            job.setJobDispatchMode(JobDispatchModeEnum.match(job.getJobDispatchMode()).name());
+        }
+        if (StringUtils.hasText(job.getJobStorageMode())) {
+            job.setJobStorageMode(JobStorageModeEnum.match(job.getJobStorageMode()).name());
+        }
+        job.setJobScheduleType(normalizeScheduleType(job.getJobScheduleType()));
+    }
+
+    private String normalizeScheduleType(String scheduleType) {
+        if (!StringUtils.hasText(scheduleType)) {
+            return DEFAULT_SCHEDULE_TYPE;
+        }
+        SchedulerTypeEnum matched = SchedulerTypeEnum.match(scheduleType, null);
+        if (matched == null) {
+            throw new IllegalArgumentException("不支持的调度类型: " + scheduleType);
+        }
+        return matched.name();
+    }
+
+    private void resetTriggerState(SysJob job) {
+        job.setJobTriggerLastTime(0L);
+        job.setJobTriggerNextTime(0L);
+    }
+
+    private void requireText(String value, String message) {
+        if (!StringUtils.hasText(value)) {
+            throw new IllegalArgumentException(message);
+        }
+    }
+
+    private int safeStatus(Integer triggerStatus) {
+        return triggerStatus == null ? STATUS_STOP : triggerStatus;
     }
 }

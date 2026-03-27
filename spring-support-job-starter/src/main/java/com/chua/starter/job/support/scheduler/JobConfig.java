@@ -2,19 +2,34 @@ package com.chua.starter.job.support.scheduler;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.starter.job.support.GlueTypeEnum;
 import com.chua.starter.job.support.JobProperties;
+import com.chua.starter.job.support.callback.JobExecutionCallback;
+import com.chua.starter.job.support.callback.JobExecutionCallbackContext;
 import com.chua.starter.job.support.entity.SysJob;
 import com.chua.starter.job.support.entity.SysJobLog;
+import com.chua.starter.job.support.glue.GlueFactory;
+import com.chua.starter.job.support.handler.GlueJobHandler;
 import com.chua.starter.job.support.handler.JobHandler;
 import com.chua.starter.job.support.handler.JobHandlerFactory;
+import com.chua.starter.job.support.handler.ScriptJobHandler;
+import com.chua.starter.job.support.log.JobDetailLogger;
+import com.chua.starter.job.support.log.JobFileAppender;
+import com.chua.starter.job.support.log.JobLogDetailService;
 import com.chua.starter.job.support.mapper.SysJobLogMapper;
 import com.chua.starter.job.support.mapper.SysJobMapper;
 import com.chua.starter.job.support.thread.JobContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -65,7 +80,7 @@ public class JobConfig {
     /**
      * 本地锁，用于保证调度线程安全（单机版本）
      */
-    private final ReentrantLock localLock = new ReentrantLock();
+    private final Map<String, ReentrantLock> localLocks = new ConcurrentHashMap<>();
 
     /**
      * 私有构造函数，防止外部实例化
@@ -117,7 +132,7 @@ public class JobConfig {
      * @return 返回SysJob对象，如果找不到则返回null。
      */
     public SysJob loadById(int jobId) {
-        return sysJobMapper.selectById(jobId);
+        return requireJobMapper().selectById(jobId);
     }
 
     /**
@@ -138,7 +153,7 @@ public class JobConfig {
      * @param jobLog 监控作业日志对象
      */
     public void saveLog(SysJobLog jobLog) {
-        sysJobLogMapper.insert(jobLog);
+        requireJobLogMapper().insert(jobLog);
     }
 
     /**
@@ -147,7 +162,7 @@ public class JobConfig {
      * @param jobLog 监控作业日志对象
      */
     public void updateLog(SysJobLog jobLog) {
-        sysJobLogMapper.updateById(jobLog);
+        requireJobLogMapper().updateById(jobLog);
     }
 
     /**
@@ -158,10 +173,9 @@ public class JobConfig {
      * @return 执行结果
      */
     public void runLocal(SysJobLog jobLog, SysJob jobInfo) {
-        String handlerName = jobInfo.getJobExecuteBean();
-        JobHandler handler = JobHandlerFactory.getInstance().get(handlerName);
+        JobHandler handler = resolveHandler(jobInfo);
+        String handlerName = resolveHandlerName(jobInfo);
 
-        // 检查处理器是否存在
         if (handler == null) {
             log.warn("任务处理器未找到: {}", handlerName);
             jobLog.setJobLogExecuteCode("FAILURE");
@@ -170,38 +184,76 @@ public class JobConfig {
             return;
         }
 
-        // 设置任务执行上下文
         JobContext context = new JobContext(
                 jobLog.getJobLogId(),
                 jobInfo.getJobId(),
+                jobInfo.getJobNo(),
+                jobLog.getJobLogNo(),
                 jobInfo.getJobExecuteParam(),
-                null,
+                resolveLogFilePath(jobLog),
                 0,
                 1
         );
+        context.getAttributes().put("handler", handlerName);
+        context.getAttributes().put("profile", resolveProfile());
+        context.getAttributes().put("dispatchMode", StringUtils.hasText(jobInfo.getJobDispatchMode())
+                ? jobInfo.getJobDispatchMode().trim()
+                : JobDispatchModeEnum.LOCAL.name());
+        context.getAttributes().put("address", trimToNull(jobInfo.getJobRemoteExecutorAddress()));
         JobContext.setJobContext(context);
 
         long startTime = System.currentTimeMillis();
+        int maxAttempts = Math.max(1, resolveRetryTimes(jobInfo));
+        Throwable lastError = null;
+        boolean success = false;
         try {
-            // 执行任务
-            log.debug("开始执行本地任务: {}", handlerName);
-            handler.execute();
-            long cost = System.currentTimeMillis() - startTime;
+            for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+                context.getAttributes().put("attempt", attempt);
+                context.getAttributes().put("maxAttempts", maxAttempts);
+                JobDetailLogger.info("开始执行任务，handler=" + handlerName + "，attempt=" + attempt + "/" + maxAttempts,
+                        attempt == 1 ? "START" : "RETRY", resolveAttemptProgress(attempt, maxAttempts));
+                if (attempt > 1) {
+                    invokeRetryCallback(jobInfo, jobLog, context, lastError, attempt, maxAttempts);
+                }
+                try {
+                    executeHandler(handler, context, jobInfo.getJobExecuteTimeout());
+                    success = true;
+                    if (!StringUtils.hasText(context.getHandleMsg())) {
+                        context.setSuccess("执行成功");
+                    }
+                    break;
+                } catch (Throwable e) {
+                    lastError = unwrap(e);
+                    context.setFail("执行异常: " + safeMessage(lastError));
+                    JobDetailLogger.error("任务执行异常，handler=" + handlerName + "，attempt=" + attempt, lastError);
+                    if (attempt >= maxAttempts) {
+                        invokeExceptionCallback(jobInfo, jobLog, context, lastError, attempt, maxAttempts);
+                        break;
+                    }
+                    sleepRetryInterval(jobInfo.getJobRetryInterval());
+                }
+            }
 
-            // 记录成功结果
-            jobLog.setJobLogExecuteCode("SUCCESS");
-            jobLog.setJobLogCost(BigDecimal.valueOf(cost));
-            jobLog.setJobLogTriggerMsg("执行成功，耗时: " + cost + "ms");
-            log.info("本地任务执行成功: {}, 耗时: {}ms", handlerName, cost);
-        } catch (Exception e) {
             long cost = System.currentTimeMillis() - startTime;
-            // 记录失败结果
-            jobLog.setJobLogExecuteCode("FAILURE");
             jobLog.setJobLogCost(BigDecimal.valueOf(cost));
-            jobLog.setJobLogTriggerMsg("执行异常: " + e.getMessage());
-            log.error("本地任务执行失败: {}, 错误: {}", handlerName, e.getMessage(), e);
+            if (success && context.getHandleCode() == JobContext.HANDLE_CODE_SUCCESS) {
+                jobLog.setJobLogExecuteCode("SUCCESS");
+                jobLog.setJobLogTriggerMsg(buildResultMessage(context, "执行成功，耗时: " + cost + "ms"));
+                JobDetailLogger.info("任务执行完成，状态=SUCCESS，耗时=" + cost + "ms", "END", 100);
+                log.info("本地任务执行成功: {}, jobNo={}, 耗时: {}ms", handlerName, jobInfo.getJobNo(), cost);
+            } else if (context.getHandleCode() == JobContext.HANDLE_CODE_TIMEOUT) {
+                jobLog.setJobLogExecuteCode("FAILURE");
+                jobLog.setJobLogTriggerMsg(buildResultMessage(context, "执行超时，耗时: " + cost + "ms"));
+                JobDetailLogger.warn("任务执行完成，状态=TIMEOUT，耗时=" + cost + "ms");
+                log.warn("本地任务执行超时: {}, jobNo={}, 耗时: {}ms", handlerName, jobInfo.getJobNo(), cost);
+            } else {
+                jobLog.setJobLogExecuteCode("FAILURE");
+                jobLog.setJobLogTriggerMsg(buildResultMessage(context, "执行失败，耗时: " + cost + "ms"));
+                JobDetailLogger.warn("任务执行完成，状态=FAILURE，耗时=" + cost + "ms");
+                log.error("本地任务执行失败: {}, jobNo={}, 耗时: {}ms, 错误: {}",
+                        handlerName, jobInfo.getJobNo(), cost, safeMessage(lastError));
+            }
         } finally {
-            // 更新日志并清除上下文
             updateLog(jobLog);
             JobContext.removeJobContext();
         }
@@ -214,7 +266,8 @@ public class JobConfig {
      * @return JobLock
      */
     public JobLock lock(String name) {
-        return new LocalJobLock(localLock);
+        String lockName = (name == null || name.trim().isEmpty()) ? "default" : name.trim();
+        return new LocalJobLock(localLocks.computeIfAbsent(lockName, key -> new ReentrantLock()));
     }
 
     /**
@@ -225,10 +278,13 @@ public class JobConfig {
      * @return 任务列表
      */
     public List<SysJob> scheduleJobQuery(long nextTime, int preReadCount) {
-        return sysJobMapper.selectPage(
-                new Page<>(1, preReadCount),
+        return requireJobMapper().selectPage(
+                new Page<>(1, Math.max(preReadCount, 1)),
                 Wrappers.<SysJob>lambdaQuery()
                         .eq(SysJob::getJobTriggerStatus, 1)
+                        .and(wrapper -> wrapper.isNull(SysJob::getJobDispatchMode)
+                                .or()
+                                .eq(SysJob::getJobDispatchMode, JobDispatchModeEnum.LOCAL.name()))
                         .le(SysJob::getJobTriggerNextTime, nextTime)
                         .orderByDesc(SysJob::getJobId)
         ).getRecords();
@@ -240,7 +296,223 @@ public class JobConfig {
      * @param jobInfo 任务信息
      */
     public void scheduleUpdate(SysJob jobInfo) {
-        sysJobMapper.updateById(jobInfo);
+        requireJobMapper().updateById(jobInfo);
+    }
+
+    private SysJobMapper requireJobMapper() {
+        if (sysJobMapper == null) {
+            throw new IllegalStateException("JobConfig 尚未完成初始化: SysJobMapper 不可用");
+        }
+        return sysJobMapper;
+    }
+
+    private SysJobLogMapper requireJobLogMapper() {
+        if (sysJobLogMapper == null) {
+            throw new IllegalStateException("JobConfig 尚未完成初始化: SysJobLogMapper 不可用");
+        }
+        return sysJobLogMapper;
+    }
+
+    public JobLogDetailService jobLogDetailService() {
+        if (applicationContext == null) {
+            return null;
+        }
+        try {
+            return applicationContext.getBean(JobLogDetailService.class);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private JobHandler resolveHandler(SysJob jobInfo) {
+        GlueTypeEnum glueType = GlueTypeEnum.match(jobInfo.getJobGlueType());
+        if (glueType == null || glueType == GlueTypeEnum.BEAN) {
+            return JobHandlerFactory.getInstance().get(jobInfo.getJobExecuteBean());
+        }
+        try {
+            long glueUpdatetime = jobInfo.getJobGlueUpdatetime() == null
+                    ? System.currentTimeMillis()
+                    : jobInfo.getJobGlueUpdatetime().getTime();
+            if (glueType.isScript()) {
+                return new ScriptJobHandler(
+                        jobInfo.getJobId(),
+                        jobInfo.getJobNo(),
+                        glueUpdatetime,
+                        jobInfo.getJobGlueSource(),
+                        glueType
+                );
+            }
+            return new GlueJobHandler(GlueFactory.getInstance().loadNewInstance(jobInfo.getJobGlueSource()), glueUpdatetime);
+        } catch (Exception e) {
+            log.error("构建任务处理器失败, jobId={}, jobNo={}", jobInfo.getJobId(), jobInfo.getJobNo(), e);
+            return null;
+        }
+    }
+
+    private void executeHandler(JobHandler handler, JobContext context, Integer timeoutSeconds) throws Throwable {
+        int safeTimeout = Math.max(0, timeoutSeconds == null ? 0 : timeoutSeconds);
+        if (safeTimeout <= 0) {
+            handler.execute();
+            return;
+        }
+        FutureTask<Boolean> futureTask = new FutureTask<>(() -> {
+            JobContext.setJobContext(context);
+            handler.execute();
+            return true;
+        });
+        Thread futureThread = new Thread(futureTask, "job-local-executor-" + context.getJobNo());
+        futureThread.start();
+        try {
+            futureTask.get(safeTimeout, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            context.setTimeout("执行超时，限制 " + safeTimeout + " 秒");
+            JobDetailLogger.warn("任务执行超时，限制 " + safeTimeout + " 秒");
+            throw e;
+        } finally {
+            futureThread.interrupt();
+        }
+    }
+
+    private void invokeRetryCallback(SysJob jobInfo,
+                                     SysJobLog jobLog,
+                                     JobContext context,
+                                     Throwable throwable,
+                                     int attempt,
+                                     int maxAttempts) {
+        invokeCallback(jobInfo.getJobRetryCallbackBean(), "RETRY", jobInfo, jobLog, context, throwable, attempt, maxAttempts);
+    }
+
+    private void invokeExceptionCallback(SysJob jobInfo,
+                                         SysJobLog jobLog,
+                                         JobContext context,
+                                         Throwable throwable,
+                                         int attempt,
+                                         int maxAttempts) {
+        invokeCallback(jobInfo.getJobExceptionCallbackBean(), "EXCEPTION", jobInfo, jobLog, context, throwable, attempt, maxAttempts);
+    }
+
+    private void invokeCallback(String callbackBean,
+                                String phase,
+                                SysJob jobInfo,
+                                SysJobLog jobLog,
+                                JobContext context,
+                                Throwable throwable,
+                                int attempt,
+                                int maxAttempts) {
+        String beanName = trimToNull(callbackBean);
+        if (!StringUtils.hasText(beanName)) {
+            return;
+        }
+        try {
+            context.getAttributes().put("callbackPhase", phase);
+            context.getAttributes().put("callbackThrowable", throwable);
+            if (applicationContext != null && applicationContext.containsBean(beanName)) {
+                Object bean = applicationContext.getBean(beanName);
+                if (bean instanceof JobExecutionCallback callback) {
+                    callback.onCallback(JobExecutionCallbackContext.builder()
+                            .phase(phase)
+                            .job(jobInfo)
+                            .jobLog(jobLog)
+                            .jobContext(context)
+                            .attempt(attempt)
+                            .maxAttempts(maxAttempts)
+                            .throwable(throwable)
+                            .build());
+                    JobDetailLogger.info("已执行任务回调: " + beanName + ", phase=" + phase);
+                    return;
+                }
+            }
+            JobHandler handler = JobHandlerFactory.getInstance().get(beanName);
+            if (handler != null) {
+                handler.execute();
+                JobDetailLogger.info("已执行任务处理器回调: " + beanName + ", phase=" + phase);
+                return;
+            }
+            JobDetailLogger.warn("未找到任务回调处理器: " + beanName + ", phase=" + phase);
+        } catch (Throwable e) {
+            log.warn("任务回调执行失败, callbackBean={}, phase={}, jobNo={}", beanName, phase, jobInfo.getJobNo(), e);
+            JobDetailLogger.error("任务回调执行失败: " + beanName + ", phase=" + phase, e);
+        }
+    }
+
+    private void sleepRetryInterval(Integer retryIntervalSeconds) {
+        int seconds = Math.max(0, retryIntervalSeconds == null ? 0 : retryIntervalSeconds);
+        if (seconds <= 0) {
+            return;
+        }
+        try {
+            TimeUnit.SECONDS.sleep(seconds);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private int resolveRetryTimes(SysJob jobInfo) {
+        return Math.max(0, jobInfo.getJobFailRetry() == null ? 0 : jobInfo.getJobFailRetry()) + 1;
+    }
+
+    private int resolveAttemptProgress(int attempt, int maxAttempts) {
+        return Math.min(99, Math.max(1, (int) Math.round((attempt * 100.0d) / Math.max(maxAttempts, 1))));
+    }
+
+    private String resolveHandlerName(SysJob jobInfo) {
+        GlueTypeEnum glueType = GlueTypeEnum.match(jobInfo.getJobGlueType());
+        if (glueType == null || glueType == GlueTypeEnum.BEAN) {
+            return trimToNull(jobInfo.getJobExecuteBean());
+        }
+        return glueType.name();
+    }
+
+    private String resolveProfile() {
+        if (applicationContext == null || applicationContext.getEnvironment() == null) {
+            return null;
+        }
+        String[] activeProfiles = applicationContext.getEnvironment().getActiveProfiles();
+        if (activeProfiles == null || activeProfiles.length == 0) {
+            return null;
+        }
+        return trimToNull(activeProfiles[0]);
+    }
+
+    private String resolveLogFilePath(SysJobLog jobLog) {
+        String path = trimToNull(jobLog.getJobLogFilePath());
+        if (StringUtils.hasText(path)) {
+            return path;
+        }
+        return JobFileAppender.makeLogFileName(jobLog.getJobLogTriggerTime(), jobLog.getJobNo(), jobLog.getJobLogNo());
+    }
+
+    private String safeMessage(Throwable throwable) {
+        if (throwable == null) {
+            return "未知异常";
+        }
+        String message = trimToNull(throwable.getMessage());
+        return StringUtils.hasText(message) ? message : throwable.getClass().getSimpleName();
+    }
+
+    private Throwable unwrap(Throwable throwable) {
+        if (throwable instanceof java.util.concurrent.ExecutionException && throwable.getCause() != null) {
+            return unwrap(throwable.getCause());
+        }
+        if (throwable instanceof java.lang.reflect.InvocationTargetException && throwable.getCause() != null) {
+            return unwrap(throwable.getCause());
+        }
+        return throwable;
+    }
+
+    private String buildResultMessage(JobContext context, String defaultMessage) {
+        String message = context == null ? null : trimToNull(context.getHandleMsg());
+        if (StringUtils.hasText(message)) {
+            return message;
+        }
+        return defaultMessage;
+    }
+
+    private String trimToNull(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.trim();
     }
 
     /**

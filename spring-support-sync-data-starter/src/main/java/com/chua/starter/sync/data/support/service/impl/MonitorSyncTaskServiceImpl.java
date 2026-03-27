@@ -25,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -92,6 +93,9 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
         log.info("创建同步任务: {}", task.getSyncTaskName());
 
         try {
+            if (task == null) {
+                return ReturnResult.error("任务信息不能为空");
+            }
             task.setSyncTaskStatus("STOPPED");
             task.setSyncTaskCreateTime(LocalDateTime.now());
             task.setSyncTaskUpdateTime(LocalDateTime.now());
@@ -113,6 +117,17 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
             }
             if (task.getSyncTaskTransactionEnabled() == null) {
                 task.setSyncTaskTransactionEnabled(0);
+            }
+            if (StringUtils.isEmpty(task.getSyncTaskSyncMode())) {
+                task.setSyncTaskSyncMode("FULL");
+            }
+            if (StringUtils.isEmpty(task.getSyncTaskConflictStrategy())) {
+                task.setSyncTaskConflictStrategy("OVERWRITE");
+            }
+
+            ReturnResult<Boolean> validation = validateTaskSettings(task, false);
+            if (!validation.isSuccess()) {
+                return ReturnResult.error(validation.getMsg());
             }
 
             taskMapper.insert(task);
@@ -146,8 +161,15 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
                 return ReturnResult.error("运行中的任务不允许修改");
             }
 
-            task.setSyncTaskUpdateTime(LocalDateTime.now());
-            taskMapper.updateById(task);
+            MonitorSyncTask mergedTask = mergeTask(existing, task);
+            mergedTask.setSyncTaskUpdateTime(LocalDateTime.now());
+
+            ReturnResult<Boolean> validation = validateTaskSettings(mergedTask, false);
+            if (!validation.isSuccess()) {
+                return ReturnResult.error(validation.getMsg());
+            }
+
+            taskMapper.updateById(mergedTask);
             if (isJobIntegrationEnabled()) {
                 MonitorSyncTask updatedTask = taskMapper.selectCompatibleById(task.getSyncTaskId());
                 requireSyncJobIntegrationService().createOrUpdateJob(updatedTask);
@@ -316,6 +338,11 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
                 return ReturnResult.error("任务设计验证失败: " + validateResult.getMsg());
             }
 
+            ReturnResult<Boolean> scheduleValidation = validateTaskSettings(task, true);
+            if (!scheduleValidation.isSuccess()) {
+                return ReturnResult.error(scheduleValidation.getMsg());
+            }
+
             task.setSyncTaskStatus("RUNNING");
             task.setSyncTaskUpdateTime(LocalDateTime.now());
             if (isJobIntegrationEnabled()) {
@@ -382,6 +409,15 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
             MonitorSyncTask task = taskMapper.selectCompatibleById(taskId);
             if (task == null) {
                 return ReturnResult.error("任务不存在");
+            }
+
+            SyncTaskDesign design = new SyncTaskDesign();
+            design.setTask(task);
+            design.setNodes(nodeMapper.selectByTaskId(taskId));
+            design.setConnections(connectionMapper.selectByTaskId(taskId));
+            ReturnResult<Boolean> validateResult = validateDesign(design);
+            if (!validateResult.isSuccess() || !Boolean.TRUE.equals(validateResult.getData())) {
+                return ReturnResult.error("任务设计验证失败: " + validateResult.getMsg());
             }
 
             Long logId;
@@ -452,13 +488,20 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
             return ReturnResult.error("至少需要一个节点");
         }
 
-        boolean hasInput = nodes.stream()
+        List<MonitorSyncNode> enabledNodes = nodes.stream()
+                .filter(node -> node.getSyncNodeEnabled() == null || node.getSyncNodeEnabled() == 1)
+                .collect(Collectors.toList());
+        if (enabledNodes.isEmpty()) {
+            return ReturnResult.error("至少需要一个启用节点");
+        }
+
+        boolean hasInput = enabledNodes.stream()
                 .anyMatch(n -> "INPUT".equals(n.getSyncNodeType()));
         if (!hasInput) {
             return ReturnResult.error("必须有至少一个输入节点");
         }
 
-        boolean hasOutput = nodes.stream()
+        boolean hasOutput = enabledNodes.stream()
                 .anyMatch(n -> "OUTPUT".equals(n.getSyncNodeType()));
         if (!hasOutput) {
             return ReturnResult.error("必须有至少一个输出节点");
@@ -467,6 +510,51 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
         List<MonitorSyncConnection> connections = design.getConnections();
         if (connections == null || connections.isEmpty()) {
             return ReturnResult.error("必须有至少一条连线");
+        }
+
+        Map<String, MonitorSyncNode> nodeByKey = new LinkedHashMap<>();
+        for (MonitorSyncNode node : enabledNodes) {
+            if (StringUtils.isEmpty(node.getSyncNodeKey())) {
+                return ReturnResult.error("所有启用节点都必须有节点标识");
+            }
+            if (nodeByKey.put(node.getSyncNodeKey(), node) != null) {
+                return ReturnResult.error("存在重复节点标识: " + node.getSyncNodeKey());
+            }
+        }
+
+        Map<String, Long> incoming = new HashMap<>();
+        Map<String, Long> outgoing = new HashMap<>();
+        for (MonitorSyncConnection connection : connections) {
+            if (StringUtils.isEmpty(connection.getSourceNodeKey()) || StringUtils.isEmpty(connection.getTargetNodeKey())) {
+                return ReturnResult.error("连线必须包含源节点和目标节点");
+            }
+            if (!nodeByKey.containsKey(connection.getSourceNodeKey())) {
+                return ReturnResult.error("连线源节点不存在: " + connection.getSourceNodeKey());
+            }
+            if (!nodeByKey.containsKey(connection.getTargetNodeKey())) {
+                return ReturnResult.error("连线目标节点不存在: " + connection.getTargetNodeKey());
+            }
+            if (connection.getSourceNodeKey().equals(connection.getTargetNodeKey())) {
+                return ReturnResult.error("节点不允许连接到自身: " + connection.getSourceNodeKey());
+            }
+            outgoing.merge(connection.getSourceNodeKey(), 1L, Long::sum);
+            incoming.merge(connection.getTargetNodeKey(), 1L, Long::sum);
+        }
+
+        for (MonitorSyncNode node : enabledNodes) {
+            String nodeType = node.getSyncNodeType();
+            String nodeKey = node.getSyncNodeKey();
+            long in = incoming.getOrDefault(nodeKey, 0L);
+            long out = outgoing.getOrDefault(nodeKey, 0L);
+            if ("INPUT".equals(nodeType) && out == 0) {
+                return ReturnResult.error("输入节点必须至少连接一条输出线: " + defaultNodeName(node));
+            }
+            if ("OUTPUT".equals(nodeType) && in == 0) {
+                return ReturnResult.error("输出节点必须至少连接一条输入线: " + defaultNodeName(node));
+            }
+            if ("FILTER".equals(nodeType) && (in == 0 || out == 0)) {
+                return ReturnResult.error("过滤器节点必须同时具备输入和输出连线: " + defaultNodeName(node));
+            }
         }
 
         return ReturnResult.ok(true);
@@ -1033,6 +1121,96 @@ public class MonitorSyncTaskServiceImpl extends ServiceImpl<MonitorSyncTaskMappe
 
     private boolean isJobIntegrationEnabled() {
         return syncJobIntegrationProperties.isEnabled();
+    }
+
+    private ReturnResult<Boolean> validateTaskSettings(MonitorSyncTask task, boolean requireSchedule) {
+        if (task == null) {
+            return ReturnResult.error("任务信息不能为空");
+        }
+        if (StringUtils.isEmpty(task.getSyncTaskName())) {
+            return ReturnResult.error("任务名称不能为空");
+        }
+        if (task.getSyncTaskBatchSize() != null && task.getSyncTaskBatchSize() <= 0) {
+            return ReturnResult.error("批次大小必须大于0");
+        }
+        if (task.getSyncTaskRetryCount() != null && task.getSyncTaskRetryCount() < 0) {
+            return ReturnResult.error("重试次数不能小于0");
+        }
+        if (task.getSyncTaskRetryInterval() != null && task.getSyncTaskRetryInterval() < 0) {
+            return ReturnResult.error("重试间隔不能小于0");
+        }
+        if (task.getSyncTaskConsumeTimeout() != null && task.getSyncTaskConsumeTimeout() < 0) {
+            return ReturnResult.error("消费超时时间不能小于0");
+        }
+        if (task.getSyncTaskSyncInterval() != null && task.getSyncTaskSyncInterval() < 0) {
+            return ReturnResult.error("同步间隔不能小于0");
+        }
+        if (task.getSyncTaskMaxMemoryMb() != null && task.getSyncTaskMaxMemoryMb() <= 0) {
+            return ReturnResult.error("最大内存限制必须大于0");
+        }
+        if (task.getSyncTaskThreadPoolSize() != null && task.getSyncTaskThreadPoolSize() <= 0) {
+            return ReturnResult.error("线程池大小必须大于0");
+        }
+        if ("INCREMENTAL".equalsIgnoreCase(task.getSyncTaskSyncMode())
+                && StringUtils.isEmpty(task.getSyncTaskIncrementalField())) {
+            return ReturnResult.error("增量同步模式必须配置增量字段");
+        }
+        if (StringUtils.isNotEmpty(task.getSyncTaskCron())
+                && !CronExpression.isValidExpression(task.getSyncTaskCron().trim())) {
+            return ReturnResult.error("CRON表达式格式不正确");
+        }
+        if (requireSchedule) {
+            boolean hasCron = StringUtils.isNotEmpty(task.getSyncTaskCron());
+            boolean hasInterval = task.getSyncTaskSyncInterval() != null && task.getSyncTaskSyncInterval() > 0;
+            if (!hasCron && !hasInterval) {
+                return ReturnResult.error("启动任务前必须配置 CRON 表达式或同步间隔");
+            }
+        }
+        return ReturnResult.ok(true);
+    }
+
+    private MonitorSyncTask mergeTask(MonitorSyncTask existing, MonitorSyncTask incoming) {
+        MonitorSyncTask merged = new MonitorSyncTask();
+        merged.setSyncTaskId(existing.getSyncTaskId());
+        merged.setSyncTaskName(firstNonEmpty(incoming.getSyncTaskName(), existing.getSyncTaskName()));
+        merged.setSyncTaskDesc(firstNonEmpty(incoming.getSyncTaskDesc(), existing.getSyncTaskDesc()));
+        merged.setSyncTaskStatus(firstNonEmpty(incoming.getSyncTaskStatus(), existing.getSyncTaskStatus()));
+        merged.setSyncTaskBatchSize(firstNonNull(incoming.getSyncTaskBatchSize(), existing.getSyncTaskBatchSize()));
+        merged.setSyncTaskConsumeTimeout(firstNonNull(incoming.getSyncTaskConsumeTimeout(), existing.getSyncTaskConsumeTimeout()));
+        merged.setSyncTaskRetryCount(firstNonNull(incoming.getSyncTaskRetryCount(), existing.getSyncTaskRetryCount()));
+        merged.setSyncTaskRetryInterval(firstNonNull(incoming.getSyncTaskRetryInterval(), existing.getSyncTaskRetryInterval()));
+        merged.setSyncTaskSyncInterval(firstNonNull(incoming.getSyncTaskSyncInterval(), existing.getSyncTaskSyncInterval()));
+        merged.setSyncTaskAckEnabled(firstNonNull(incoming.getSyncTaskAckEnabled(), existing.getSyncTaskAckEnabled()));
+        merged.setSyncTaskTransactionEnabled(firstNonNull(incoming.getSyncTaskTransactionEnabled(), existing.getSyncTaskTransactionEnabled()));
+        merged.setSyncTaskCron(firstNonEmpty(incoming.getSyncTaskCron(), existing.getSyncTaskCron()));
+        merged.setSyncTaskLayout(firstNonEmpty(incoming.getSyncTaskLayout(), existing.getSyncTaskLayout()));
+        merged.setSyncTaskLastRunTime(firstNonNull(incoming.getSyncTaskLastRunTime(), existing.getSyncTaskLastRunTime()));
+        merged.setSyncTaskLastRunStatus(firstNonEmpty(incoming.getSyncTaskLastRunStatus(), existing.getSyncTaskLastRunStatus()));
+        merged.setSyncTaskRunCount(firstNonNull(incoming.getSyncTaskRunCount(), existing.getSyncTaskRunCount()));
+        merged.setSyncTaskSuccessCount(firstNonNull(incoming.getSyncTaskSuccessCount(), existing.getSyncTaskSuccessCount()));
+        merged.setSyncTaskFailCount(firstNonNull(incoming.getSyncTaskFailCount(), existing.getSyncTaskFailCount()));
+        merged.setSyncTaskCreateTime(firstNonNull(incoming.getSyncTaskCreateTime(), existing.getSyncTaskCreateTime()));
+        merged.setSyncTaskUpdateTime(existing.getSyncTaskUpdateTime());
+        merged.setSyncTaskTransformConfig(firstNonEmpty(incoming.getSyncTaskTransformConfig(), existing.getSyncTaskTransformConfig()));
+        merged.setSyncTaskFilterConfig(firstNonEmpty(incoming.getSyncTaskFilterConfig(), existing.getSyncTaskFilterConfig()));
+        merged.setSyncTaskSyncMode(firstNonEmpty(incoming.getSyncTaskSyncMode(), existing.getSyncTaskSyncMode()));
+        merged.setSyncTaskIncrementalField(firstNonEmpty(incoming.getSyncTaskIncrementalField(), existing.getSyncTaskIncrementalField()));
+        merged.setSyncTaskConflictStrategy(firstNonEmpty(incoming.getSyncTaskConflictStrategy(), existing.getSyncTaskConflictStrategy()));
+        merged.setSyncTaskMaxMemoryMb(firstNonNull(incoming.getSyncTaskMaxMemoryMb(), existing.getSyncTaskMaxMemoryMb()));
+        merged.setSyncTaskThreadPoolSize(firstNonNull(incoming.getSyncTaskThreadPoolSize(), existing.getSyncTaskThreadPoolSize()));
+        return merged;
+    }
+
+    private String defaultNodeName(MonitorSyncNode node) {
+        return StringUtils.isNotEmpty(node.getSyncNodeName()) ? node.getSyncNodeName() : node.getSyncNodeKey();
+    }
+
+    private String firstNonEmpty(String preferred, String fallback) {
+        return StringUtils.isNotEmpty(preferred) ? preferred : fallback;
+    }
+
+    private <T> T firstNonNull(T preferred, T fallback) {
+        return preferred != null ? preferred : fallback;
     }
 
     private SyncJobIntegrationService requireSyncJobIntegrationService() {

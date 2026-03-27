@@ -95,3 +95,4 @@ public class GatewayClient implements AutoCloseable {
         deregister();
     }
 }
+

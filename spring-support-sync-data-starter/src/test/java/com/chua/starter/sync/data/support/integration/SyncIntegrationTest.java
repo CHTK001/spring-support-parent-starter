@@ -1,23 +1,15 @@
 package com.chua.starter.sync.data.support.integration;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Disabled;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.TestPropertySource;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * 数据同步集成测试
  * 
- * 使用Testcontainers进行数据库集成测试
- * 需要Docker环境支持
+ * 需要外部环境支持，默认禁用
  */
-@SpringBootTest
-@TestPropertySource(properties = {
-    "spring.datasource.url=jdbc:h2:mem:testdb",
-    "spring.datasource.driver-class-name=org.h2.Driver"
-})
 @Disabled("需要Docker环境，CI/CD中启用")
 class SyncIntegrationTest {
     

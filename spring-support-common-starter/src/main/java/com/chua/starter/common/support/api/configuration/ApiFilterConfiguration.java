@@ -132,6 +132,7 @@ public class ApiFilterConfiguration {
                 resp.getOutputStream().write(REJECT_MSG.getBytes(StandardCharsets.UTF_8));
                 return;
             }
+            req.setAttribute(NonceUtils.REQUEST_SIGN_VALIDATED_ATTRIBUTE, Boolean.TRUE);
             chain.doFilter(request, response);
         }
     }

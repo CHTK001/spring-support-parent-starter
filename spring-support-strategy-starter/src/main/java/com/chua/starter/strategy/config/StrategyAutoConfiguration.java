@@ -15,6 +15,8 @@ import com.chua.starter.strategy.interceptor.RequestTimeoutInterceptor;
 import com.chua.starter.strategy.interceptor.ParameterCountLimitInterceptor;
 import com.chua.starter.strategy.interceptor.ContentSecurityPolicyInterceptor;
 import com.chua.starter.strategy.interceptor.ClickjackingProtectionInterceptor;
+import com.chua.starter.strategy.interceptor.XssProtectionInterceptor;
+import com.chua.starter.strategy.support.StrategyConsoleAuthInterceptor;
 import com.chua.starter.strategy.service.SysCircuitBreakerConfigurationService;
 import com.chua.starter.strategy.service.SysCircuitBreakerRecordService;
 import com.chua.starter.strategy.template.DefaultLockTemplate;
@@ -37,13 +39,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.annotation.EnableAsync;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import jakarta.annotation.PostConstruct;
 
 /**
@@ -60,6 +63,12 @@ import jakarta.annotation.PostConstruct;
 @Configuration
 @EnableAsync
 @EnableAspectJAutoProxy
+@EnableConfigurationProperties(StrategyProperties.class)
+@Import({
+        StrategyEnvironmentConfiguration.class,
+        StrategyWebMvcConfiguration.class,
+        StrategyEmbeddedAuthConfig.class
+})
 @ComponentScan(basePackages = {
         "com.chua.starter.strategy.controller",
         "com.chua.starter.strategy.service",
@@ -352,6 +361,24 @@ public class StrategyAutoConfiguration {
     }
 
     /**
+     * XSS 防护拦截器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public XssProtectionInterceptor xssProtectionInterceptor(StrategyProperties strategyProperties) {
+        return new XssProtectionInterceptor(strategyProperties.getXss());
+    }
+
+    /**
+     * Strategy 轻控制台页面认证拦截器
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public StrategyConsoleAuthInterceptor strategyConsoleAuthInterceptor(StrategyProperties strategyProperties) {
+        return new StrategyConsoleAuthInterceptor(strategyProperties);
+    }
+
+    /**
      * 策略限流器（默认本地实现）
      */
     @Bean
@@ -369,28 +396,6 @@ public class StrategyAutoConfiguration {
     @ConditionalOnProperty(name = "plugin.strategy.debounce.type", havingValue = "local", matchIfMissing = true)
     public StrategyDebounce localDebounce() {
         return new com.chua.starter.strategy.distributed.LocalDebounce();
-    }
-
-    /**
-     * 策略限流器（Redis实现）
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnProperty(name = "plugin.strategy.rate-limiter.type", havingValue = "redis")
-    @ConditionalOnBean(StringRedisTemplate.class)
-    public StrategyRateLimiter redisRateLimiter(StringRedisTemplate stringRedisTemplate) {
-        return new com.chua.starter.strategy.distributed.RedisRateLimiter(stringRedisTemplate);
-    }
-
-    /**
-     * 策略防抖器（Redis实现）
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnProperty(name = "plugin.strategy.debounce.type", havingValue = "redis")
-    @ConditionalOnBean(StringRedisTemplate.class)
-    public StrategyDebounce redisDebounce(StringRedisTemplate stringRedisTemplate) {
-        return new com.chua.starter.strategy.distributed.RedisDebounce(stringRedisTemplate);
     }
 
     // ==================== 新增策略组件 ====================

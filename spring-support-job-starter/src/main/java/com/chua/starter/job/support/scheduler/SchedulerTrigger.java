@@ -2,8 +2,6 @@ package com.chua.starter.job.support.scheduler;
 
 import com.chua.starter.job.support.JobProperties;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
@@ -46,8 +44,6 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 public class SchedulerTrigger implements InitializingBean, DisposableBean, ApplicationContextAware {
-    private static final Logger log = LoggerFactory.getLogger(SchedulerTrigger.class);
-
     /**
      * 核心触发处理器，负责扫描即将执行的任务
      */
@@ -91,8 +87,12 @@ public class SchedulerTrigger implements InitializingBean, DisposableBean, Appli
         }
 
         // 依次关闭各组件
-        coreTriggerHandler.stop();
-        ringTriggerHandler.stop();
+        if (coreTriggerHandler != null) {
+            coreTriggerHandler.stop();
+        }
+        if (ringTriggerHandler != null) {
+            ringTriggerHandler.stop();
+        }
         JobTriggerPoolHelper.toStop();
 
         log.info(">>>>>>>>>>> Job调度系统已关闭");
@@ -111,6 +111,9 @@ public class SchedulerTrigger implements InitializingBean, DisposableBean, Appli
     @Override
     public void afterPropertiesSet() throws Exception {
         log.info(">>>>>>>>>>> 开始初始化Job调度系统...");
+        if (applicationContext == null) {
+            throw new IllegalStateException("Job 调度器初始化失败: ApplicationContext 未注入");
+        }
 
         // 创建处理器实例
         coreTriggerHandler = new CoreTriggerHandler(jobProperties);

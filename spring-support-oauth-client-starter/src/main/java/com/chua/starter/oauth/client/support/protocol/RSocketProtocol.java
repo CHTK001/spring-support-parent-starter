@@ -108,8 +108,7 @@ public class RSocketProtocol extends AbstractProtocol {
 
     @Override
     protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
-        JsonObject jsonObject = new JsonObject();
-        jsonObject.put("x-oauth-user-code", Json.toJSONBytes(appKeySecret));
+        JsonObject jsonObject = createAppKeyAuthenticationData(appKeySecret);
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
         jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
         var request = RequestUtils.getRequest();
@@ -184,6 +183,28 @@ public class RSocketProtocol extends AbstractProtocol {
             return LoginAuthResult.OK;
         }
         throw new AuthException(information.getInformation().getMessage());
+    }
+
+    @Override
+    public LoginAuthResult createTemporaryToken(String sourceToken, Map<String, Object> ext) {
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
+        jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
+        jsonObject.put("x-oauth-source-token", sourceToken);
+        jsonObject.put("x-oauth-ext", ext);
+
+        AuthenticationInformation information = sendRSocketRequest("temporary-token", jsonObject, null);
+
+        LoginAuthResult result = new LoginAuthResult();
+        result.setCode(information.getInformation().getCode());
+        String msg = information.getErrorMessage() != null
+                ? information.getErrorMessage() : information.getInformation().getMessage();
+        result.setMessage(msg);
+        if (information.getInformation() == Information.OK) {
+            result.setToken(information.getToken());
+            result.setUserResume(information.getReturnResult());
+        }
+        return result;
     }
 
     /**

@@ -10,6 +10,9 @@ import com.chua.payment.support.mapper.PaymentNotifyErrorMapper;
 import com.chua.payment.support.mapper.PaymentNotifyLogMapper;
 import com.chua.payment.support.service.PaymentNotifyProcessService;
 import com.chua.payment.support.service.PaymentNotifyService;
+import com.chua.payment.support.service.WalletNotifyService;
+import com.chua.payment.support.service.WechatPayScoreNotifyService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,17 +40,30 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
     private final PaymentNotifyLogMapper notifyLogMapper;
     private final PaymentNotifyErrorMapper notifyErrorMapper;
     private final PaymentNotifyService paymentNotifyService;
+    private final WechatPayScoreNotifyService wechatPayScoreNotifyService;
+    private final WalletNotifyService walletNotifyService;
+    private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public PaymentNotifyLog logNotify(String notifyType, Long merchantId, String channelType, String channelSubType,
-                                       HttpServletRequest request, String body) {
+    public PaymentNotifyLog logNotify(String notifyType,
+                                      Long merchantId,
+                                      Long channelId,
+                                      String channelType,
+                                      String channelSubType,
+                                      String orderNo,
+                                      String refundNo,
+                                      HttpServletRequest request,
+                                      String body) {
         PaymentNotifyLog notifyLog = new PaymentNotifyLog();
         notifyLog.setNotifyType(notifyType);
         notifyLog.setMerchantId(merchantId);
+        notifyLog.setChannelId(channelId);
         notifyLog.setChannelType(channelType);
         notifyLog.setChannelSubType(channelSubType);
+        notifyLog.setOrderNo(orderNo);
+        notifyLog.setRefundNo(refundNo);
         notifyLog.setRequestHeaders(extractHeaders(request));
         notifyLog.setRequestBody(body);
         notifyLog.setRequestParams(extractParams(request));
@@ -179,6 +195,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
                 processRefundNotify(log);
             } else {
                 dispatchNotify(log, false);
+                markSuccess(log.getId(), "回调重试处理成功");
             }
 
             error.setStatus("RESOLVED");
@@ -217,15 +234,32 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
         if (notifyLog == null) {
             throw new PaymentException("回调日志不存在");
         }
+        String normalizedType = upper(firstNonBlank(notifyLog.getNotifyType(), refundNotify ? "REFUND" : "PAYMENT"));
+        if (normalizedType.contains("WALLET") || "WALLET".equalsIgnoreCase(notifyLog.getChannelType())) {
+            dispatchWalletNotify(notifyLog);
+            return;
+        }
         if (notifyLog.getChannelId() == null) {
             throw new PaymentException("回调日志缺少 channelId，无法重放");
         }
-        String normalizedType = upper(firstNonBlank(notifyLog.getNotifyType(), refundNotify ? "REFUND" : "PAYMENT"));
         if (normalizedType.contains("WECHAT") || "WECHAT".equalsIgnoreCase(notifyLog.getChannelType())) {
             Map<String, String> headers = parseHeaders(notifyLog.getRequestHeaders());
+            if (normalizedType.contains("PAYSCORE")) {
+                wechatPayScoreNotifyService.handleNotify(
+                        notifyLog.getChannelId(),
+                        notifyLog.getOrderNo(),
+                        headers.get("Wechatpay-Serial"),
+                        headers.get("Wechatpay-Timestamp"),
+                        headers.get("Wechatpay-Nonce"),
+                        headers.get("Wechatpay-Signature"),
+                        headers.get("Wechatpay-Signature-Type"),
+                        notifyLog.getRequestBody());
+                return;
+            }
             if (refundNotify || normalizedType.contains("REFUND")) {
                 paymentNotifyService.handleWechatRefundNotify(
                         notifyLog.getChannelId(),
+                        notifyLog.getRefundNo(),
                         headers.get("Wechatpay-Serial"),
                         headers.get("Wechatpay-Timestamp"),
                         headers.get("Wechatpay-Nonce"),
@@ -236,6 +270,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
             }
             paymentNotifyService.handleWechatPayNotify(
                     notifyLog.getChannelId(),
+                    notifyLog.getOrderNo(),
                     headers.get("Wechatpay-Serial"),
                     headers.get("Wechatpay-Timestamp"),
                     headers.get("Wechatpay-Nonce"),
@@ -245,10 +280,24 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
             return;
         }
         if (normalizedType.contains("ALIPAY") || "ALIPAY".equalsIgnoreCase(notifyLog.getChannelType())) {
-            paymentNotifyService.handleAlipayPayNotify(notifyLog.getChannelId(), parseParams(notifyLog.getRequestParams()));
+            paymentNotifyService.handleAlipayPayNotify(
+                    notifyLog.getChannelId(),
+                    notifyLog.getOrderNo(),
+                    parseParams(notifyLog.getRequestParams()));
             return;
         }
         throw new PaymentException("不支持的回调重放类型: " + notifyLog.getNotifyType());
+    }
+
+    private void dispatchWalletNotify(PaymentNotifyLog notifyLog) {
+        Map<String, Object> payload = mergeNotifyPayload(notifyLog);
+        walletNotifyService.handleNotify(
+                firstNonBlank(notifyLog.getChannelSubType(), deriveWalletOrderType(notifyLog.getNotifyType())),
+                notifyLog.getOrderNo(),
+                firstText(payload, "thirdPartyOrderNo", "tradeNo", "trade_no", "transactionId", "transaction_id"),
+                firstText(payload, "status", "tradeStatus", "trade_status", "state", "resultStatus", "result_status", "code"),
+                buildWalletPayload(notifyLog),
+                firstText(payload, "reason", "message", "msg", "error", "errorMessage", "error_message", "errMsg"));
     }
 
     private Map<String, String> parseHeaders(String headers) {
@@ -286,6 +335,59 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
             result.put(pair.substring(0, idx), pair.substring(idx + 1));
         }
         return result;
+    }
+
+    private Map<String, Object> mergeNotifyPayload(PaymentNotifyLog notifyLog) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.putAll(parseParams(notifyLog.getRequestParams()));
+        if (StringUtils.hasText(notifyLog.getRequestBody())) {
+            try {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> bodyMap = objectMapper.readValue(notifyLog.getRequestBody(), LinkedHashMap.class);
+                result.putAll(bodyMap);
+            } catch (Exception ignored) {
+                result.put("body", notifyLog.getRequestBody());
+            }
+        }
+        return result;
+    }
+
+    private String buildWalletPayload(PaymentNotifyLog notifyLog) {
+        if (StringUtils.hasText(notifyLog.getRequestBody())) {
+            return notifyLog.getRequestBody();
+        }
+        return notifyLog.getRequestParams();
+    }
+
+    private String deriveWalletOrderType(String notifyType) {
+        String normalized = upper(notifyType);
+        if (!StringUtils.hasText(normalized)) {
+            return null;
+        }
+        if (normalized.contains("TRANSFER")) {
+            return "TRANSFER";
+        }
+        if (normalized.contains("WITHDRAW")) {
+            return "WITHDRAW";
+        }
+        return "RECHARGE";
+    }
+
+    private String firstText(Map<String, Object> source, String... keys) {
+        if (source == null || keys == null) {
+            return null;
+        }
+        for (String key : keys) {
+            Object value = source.get(key);
+            if (value == null) {
+                continue;
+            }
+            String text = String.valueOf(value);
+            if (StringUtils.hasText(text)) {
+                return text;
+            }
+        }
+        return null;
     }
 
     private Boolean isSignVerified(Integer signVerified) {

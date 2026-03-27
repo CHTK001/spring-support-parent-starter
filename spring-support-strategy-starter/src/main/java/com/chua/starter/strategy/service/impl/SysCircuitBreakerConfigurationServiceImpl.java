@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.AntPathMatcher;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -58,10 +59,16 @@ public class SysCircuitBreakerConfigurationServiceImpl
 
     @Override
     public List<SysCircuitBreakerConfiguration> listEnabledConfigurations() {
-        LambdaQueryWrapper<SysCircuitBreakerConfiguration> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(SysCircuitBreakerConfiguration::getSysCircuitBreakerStatus, 1);
-        wrapper.orderByAsc(SysCircuitBreakerConfiguration::getSysCircuitBreakerSort);
-        return list(wrapper);
+        try {
+            LambdaQueryWrapper<SysCircuitBreakerConfiguration> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(SysCircuitBreakerConfiguration::getSysCircuitBreakerStatus, 1);
+            wrapper.orderByAsc(SysCircuitBreakerConfiguration::getSysCircuitBreakerSort);
+            return list(wrapper);
+        } catch (Exception e) {
+            // 运行时策略匹配属于增强能力，不应因为配置表暂不可用直接放大成业务 500。
+            log.warn("查询熔断配置失败，当前请求将跳过熔断配置匹配", e);
+            return Collections.emptyList();
+        }
     }
 
     @Override

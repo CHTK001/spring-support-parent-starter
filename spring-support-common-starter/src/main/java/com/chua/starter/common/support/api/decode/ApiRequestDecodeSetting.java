@@ -14,9 +14,9 @@ import org.springframework.context.ApplicationEvent;
 public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade<ApiRequestDecodeSetting> {
 
     /**
-     * 是否开启请求解密
+     * 数据库配置别名：CodecRequestOpen
      */
-    private boolean enable = true;
+    private boolean codecRequestOpen = true;
 
     /**
      * 请求加密key
@@ -46,7 +46,7 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
      */
     @Override
     public void upgrade(ApiRequestDecodeSetting setting) {
-        this.enable = setting.isEnable();
+        this.codecRequestOpen = setting.isEnable();
         this.codecRequestKey = setting.getCodecRequestKey();
     }
     /**
@@ -55,7 +55,7 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
      * @return enable
      */
     public boolean getEnable() {
-        return enable;
+        return isEnable();
     }
 
     /**
@@ -64,7 +64,7 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
      * @return enable
      */
     public boolean isEnable() {
-        return enable;
+        return codecRequestOpen;
     }
 
     /**
@@ -73,7 +73,34 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
      * @param enable enable
      */
     public void setEnable(boolean enable) {
-        this.enable = enable;
+        this.codecRequestOpen = enable;
+    }
+
+    /**
+     * 获取 codecRequestOpen
+     *
+     * @return codecRequestOpen
+     */
+    public boolean getCodecRequestOpen() {
+        return codecRequestOpen;
+    }
+
+    /**
+     * 判断是否开启请求解密
+     *
+     * @return codecRequestOpen
+     */
+    public boolean isCodecRequestOpen() {
+        return codecRequestOpen;
+    }
+
+    /**
+     * 设置 codecRequestOpen
+     *
+     * @param codecRequestOpen codecRequestOpen
+     */
+    public void setCodecRequestOpen(boolean codecRequestOpen) {
+        this.codecRequestOpen = codecRequestOpen;
     }
 
     /**
@@ -96,4 +123,3 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
 
 
 }
-

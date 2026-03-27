@@ -96,6 +96,14 @@ public interface JobDynamicConfigService {
     SysJob getJobById(Integer jobId);
 
     /**
+     * 根据任务编号获取任务。
+     *
+     * @param jobNo 任务编号
+     * @return 任务配置
+     */
+    SysJob getJobByNo(String jobNo);
+
+    /**
      * 获取所有任务
      *
      * @return 任务列表
@@ -118,6 +126,15 @@ public interface JobDynamicConfigService {
      * @return 是否成功触发
      */
     boolean triggerJob(Integer jobId, String param);
+
+    /**
+     * 根据任务编号手动触发任务执行。
+     *
+     * @param jobNo 任务编号
+     * @param param 执行参数
+     * @return 是否成功触发
+     */
+    boolean triggerJobByNo(String jobNo, String param);
 
     /**
      * 更新任务Cron表达式

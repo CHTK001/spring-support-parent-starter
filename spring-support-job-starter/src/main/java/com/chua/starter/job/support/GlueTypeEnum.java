@@ -142,8 +142,12 @@ public enum GlueTypeEnum {
      * @return 枚举值
      */
     public static GlueTypeEnum match(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            return null;
+        }
+        String normalized = name.trim();
         for (GlueTypeEnum item : GlueTypeEnum.values()) {
-            if (item.name().equals(name)) {
+            if (item.name().equalsIgnoreCase(normalized) || item.getDesc().equalsIgnoreCase(normalized)) {
                 return item;
             }
         }

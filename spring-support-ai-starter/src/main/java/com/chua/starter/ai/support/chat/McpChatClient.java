@@ -22,13 +22,13 @@ import java.util.function.Consumer;
  * @since 2024-01-01
  */
 @Slf4j
-class McpChatClient implements ChatClient {
+class McpChatClient implements com.chua.starter.ai.support.chat.ChatClient {
 
-    private final com.chua.deeplearning.support.api.ChatClient delegate;
+    private final com.chua.common.support.ai.ChatClient delegate;
     private final List<McpPreprocessor> preprocessors;
     private final List<McpPostprocessor> postprocessors;
 
-    McpChatClient(com.chua.deeplearning.support.api.ChatClient delegate,
+    McpChatClient(com.chua.common.support.ai.ChatClient delegate,
                   List<McpPreprocessor> preprocessors,
                   List<McpPostprocessor> postprocessors) {
         this.delegate = delegate;
@@ -142,9 +142,12 @@ class McpChatClient implements ChatClient {
         delegate.chat(prompt, consumer, onComplete, onError);
     }
 
-    @Override
     public void chat(BigModelRequest request, BigModelCallback callback) {
-        delegate.chat(request, callback);
+        if (delegate instanceof com.chua.deeplearning.support.ml.bigmodel.DefaultChatClient defaultChatClient) {
+            defaultChatClient.chat(request, callback);
+            return;
+        }
+        throw new UnsupportedOperationException("Underlying ChatClient does not support BigModelRequest chat");
     }
 
     @Override
@@ -188,14 +191,18 @@ class McpChatClient implements ChatClient {
         return delegate.chatAsync(prompt, timeout);
     }
 
-    @Override
     public BigModelClient getClient() {
-        return delegate.getClient();
+        if (delegate instanceof com.chua.deeplearning.support.ml.bigmodel.DefaultChatClient defaultChatClient) {
+            return defaultChatClient.getClient();
+        }
+        return null;
     }
 
-    @Override
     public BigModelSetting getSetting() {
-        return delegate.getSetting();
+        if (delegate instanceof com.chua.deeplearning.support.ml.bigmodel.DefaultChatClient defaultChatClient) {
+            return defaultChatClient.getSetting();
+        }
+        return null;
     }
 
     @Override

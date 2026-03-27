@@ -34,7 +34,7 @@ public interface WalletOrderService {
     /**
      * 标记订单成功
      */
-    void markSuccess(String orderNo, String responsePayload);
+    void markSuccess(String orderNo, String thirdPartyOrderNo, String responsePayload);
 
     /**
      * 标记订单失败

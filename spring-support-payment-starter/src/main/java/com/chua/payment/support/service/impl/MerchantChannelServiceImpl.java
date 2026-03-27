@@ -9,12 +9,14 @@ import com.chua.payment.support.configuration.PaymentProviderProperties;
 import com.chua.payment.support.dto.ChannelConfigDTO;
 import com.chua.payment.support.entity.Merchant;
 import com.chua.payment.support.entity.MerchantChannel;
+import com.chua.payment.support.entity.PaymentOrder;
 import com.chua.payment.support.enums.ChannelStatus;
 import com.chua.payment.support.enums.OnboardingStatus;
 import com.chua.payment.support.enums.PaymentChannelType;
 import com.chua.payment.support.exception.PaymentException;
 import com.chua.payment.support.mapper.MerchantChannelMapper;
 import com.chua.payment.support.mapper.MerchantMapper;
+import com.chua.payment.support.mapper.PaymentOrderMapper;
 import com.chua.payment.support.service.MerchantChannelService;
 import com.chua.payment.support.vo.MerchantChannelVO;
 import com.chua.payment.support.vo.PaymentMethodGuideVO;
@@ -25,6 +27,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -45,9 +48,11 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
 
     private final MerchantChannelMapper channelMapper;
     private final MerchantMapper merchantMapper;
+    private final PaymentOrderMapper paymentOrderMapper;
     private final ObjectMapper objectMapper;
     private final PaymentProviderProperties paymentProviderProperties;
     private final PaymentCipherService paymentCipherService;
+    @Lazy
     private final PaymentChannelRegistry paymentChannelRegistry;
 
     @Override
@@ -145,6 +150,23 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         MerchantChannel channel = requireChannel(id);
         channel.setStatus(ChannelStatus.DISABLED.getCode());
         return channelMapper.updateById(channel) > 0;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteChannel(Long id) {
+        MerchantChannel channel = requireChannel(id);
+        if (Integer.valueOf(ChannelStatus.ENABLED.getCode()).equals(channel.getStatus())) {
+            throw new PaymentException("启用中的支付方式不允许删除，请先禁用");
+        }
+
+        Long relatedOrderCount = paymentOrderMapper.selectCount(new LambdaQueryWrapper<PaymentOrder>()
+                .eq(PaymentOrder::getChannelId, id)
+                .ne(PaymentOrder::getDeleted, 1));
+        if (relatedOrderCount != null && relatedOrderCount > 0) {
+            throw new PaymentException("该支付方式已关联订单，不允许删除");
+        }
+        return channelMapper.deleteById(id) > 0;
     }
 
     @Override

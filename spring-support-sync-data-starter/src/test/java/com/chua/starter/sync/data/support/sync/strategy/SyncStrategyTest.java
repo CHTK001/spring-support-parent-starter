@@ -1,118 +1,120 @@
 package com.chua.starter.sync.data.support.sync.strategy;
 
+import com.chua.starter.sync.data.support.adapter.DataSourceAdapter;
+import com.chua.starter.sync.data.support.adapter.DataSourceConfig;
+import com.chua.starter.sync.data.support.adapter.DataSourceMetadata;
+import com.chua.starter.sync.data.support.adapter.ReadConfig;
+import com.chua.starter.sync.data.support.adapter.WriteConfig;
 import com.chua.starter.sync.data.support.sync.strategy.impl.FullSyncStrategy;
 import com.chua.starter.sync.data.support.sync.strategy.impl.IncrementalSyncStrategy;
-import com.chua.starter.sync.data.support.sync.strategy.impl.BidirectionalSyncStrategy;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * 同步策略单元测试
  */
 class SyncStrategyTest {
-    
-    private Map<String, Object> sourceConfig;
-    private Map<String, Object> targetConfig;
-    
+
+    private SyncContext context;
+
     @BeforeEach
     void setUp() {
-        sourceConfig = new HashMap<>();
-        sourceConfig.put("type", "jdbc");
-        sourceConfig.put("url", "jdbc:h2:mem:source");
-        
-        targetConfig = new HashMap<>();
-        targetConfig.put("type", "jdbc");
-        targetConfig.put("url", "jdbc:h2:mem:target");
+        context = new SyncContext();
+        context.setReadConfig(new ReadConfig());
+        context.setWriteConfig(new WriteConfig());
+        context.setBatchSize(2);
+        context.setIncrementalField("updatedAt");
     }
-    
+
     @Test
-    void testFullSyncStrategyInitialization() {
+    void testFullSyncStrategyMode() {
         FullSyncStrategy strategy = new FullSyncStrategy();
-        assertNotNull(strategy);
-        assertEquals("FULL", strategy.getStrategyType());
+        assertEquals(SyncMode.FULL, strategy.getMode());
     }
-    
+
     @Test
-    void testIncrementalSyncStrategyInitialization() {
+    void testIncrementalSyncStrategyModeAndState() {
         IncrementalSyncStrategy strategy = new IncrementalSyncStrategy();
-        assertNotNull(strategy);
-        assertEquals("INCREMENTAL", strategy.getStrategyType());
+        assertEquals(SyncMode.INCREMENTAL, strategy.getMode());
+        strategy.setLastIncrementalValue(10L);
+        assertEquals(10L, strategy.getLastIncrementalValue());
     }
-    
+
     @Test
-    void testBidirectionalSyncStrategyInitialization() {
-        BidirectionalSyncStrategy strategy = new BidirectionalSyncStrategy();
-        assertNotNull(strategy);
-        assertEquals("BIDIRECTIONAL", strategy.getStrategyType());
-    }
-    
-    @Test
-    void testFullSyncStrategyExecution() {
+    void testFullSyncExecute() {
         FullSyncStrategy strategy = new FullSyncStrategy();
-        
-        try {
-            // 配置策略
-            strategy.configure(sourceConfig, targetConfig);
-            assertTrue(strategy.isConfigured());
-            
-            // 执行同步（需要实际数据库连接，这里只测试配置）
-            // SyncResult result = strategy.execute();
-            // assertNotNull(result);
-            
-        } catch (Exception e) {
-            System.out.println("全量同步测试跳过: " + e.getMessage());
+        InMemoryAdapter source = new InMemoryAdapter(List.of(
+            Map.of("id", 1, "updatedAt", 1L),
+            Map.of("id", 2, "updatedAt", 2L)
+        ));
+        InMemoryAdapter target = new InMemoryAdapter(new ArrayList<>());
+
+        SyncResult result = strategy.execute(source, target, context);
+        assertTrue(result.isSuccess());
+        assertEquals(2L, result.getTotalRecords());
+        assertEquals(2L, result.getSuccessRecords());
+    }
+
+    @Test
+    void testIncrementalSyncExecuteAndTrackValue() {
+        IncrementalSyncStrategy strategy = new IncrementalSyncStrategy();
+        InMemoryAdapter source = new InMemoryAdapter(List.of(
+            Map.of("id", 1, "updatedAt", 100L),
+            Map.of("id", 2, "updatedAt", 200L)
+        ));
+        InMemoryAdapter target = new InMemoryAdapter(new ArrayList<>());
+
+        SyncResult result = strategy.execute(source, target, context);
+        assertTrue(result.isSuccess());
+        assertEquals(2L, result.getTotalRecords());
+        assertEquals(200L, strategy.getLastIncrementalValue());
+    }
+
+    private static final class InMemoryAdapter implements DataSourceAdapter {
+        private final List<Map<String, Object>> sourceRecords;
+        private final List<Map<String, Object>> writtenRecords = new ArrayList<>();
+
+        private InMemoryAdapter(List<Map<String, Object>> sourceRecords) {
+            this.sourceRecords = sourceRecords;
         }
-    }
-    
-    @Test
-    void testIncrementalSyncWithTimestamp() {
-        IncrementalSyncStrategy strategy = new IncrementalSyncStrategy();
-        
-        Map<String, Object> config = new HashMap<>(sourceConfig);
-        config.put("incrementalField", "updated_at");
-        config.put("incrementalType", "timestamp");
-        
-        strategy.configure(config, targetConfig);
-        assertTrue(strategy.isConfigured());
-        
-        // 验证增量字段配置
-        assertEquals("updated_at", strategy.getIncrementalField());
-    }
-    
-    @Test
-    void testBidirectionalSyncConflictDetection() {
-        BidirectionalSyncStrategy strategy = new BidirectionalSyncStrategy();
-        
-        Map<String, Object> config = new HashMap<>(sourceConfig);
-        config.put("conflictStrategy", "OVERWRITE");
-        config.put("conflictField", "updated_at");
-        
-        strategy.configure(config, targetConfig);
-        assertTrue(strategy.isConfigured());
-        
-        // 验证冲突策略配置
-        assertEquals("OVERWRITE", strategy.getConflictStrategy());
-    }
-    
-    @Test
-    void testSyncStrategyFactory() {
-        SyncStrategyFactory factory = new SyncStrategyFactory();
-        
-        SyncStrategy fullSync = factory.create("FULL");
-        assertNotNull(fullSync);
-        assertTrue(fullSync instanceof FullSyncStrategy);
-        
-        SyncStrategy incrementalSync = factory.create("INCREMENTAL");
-        assertNotNull(incrementalSync);
-        assertTrue(incrementalSync instanceof IncrementalSyncStrategy);
-        
-        SyncStrategy bidirectionalSync = factory.create("BIDIRECTIONAL");
-        assertNotNull(bidirectionalSync);
-        assertTrue(bidirectionalSync instanceof BidirectionalSyncStrategy);
+
+        @Override
+        public void connect(DataSourceConfig config) {
+            // no-op
+        }
+
+        @Override
+        public Stream<Map<String, Object>> read(ReadConfig config) {
+            return sourceRecords.stream().map(HashMap::new);
+        }
+
+        @Override
+        public void write(List<Map<String, Object>> records, WriteConfig config) {
+            writtenRecords.addAll(records);
+        }
+
+        @Override
+        public boolean testConnection() {
+            return true;
+        }
+
+        @Override
+        public void close() {
+            // no-op
+        }
+
+        @Override
+        public DataSourceMetadata getMetadata() {
+            return new DataSourceMetadata();
+        }
     }
 }

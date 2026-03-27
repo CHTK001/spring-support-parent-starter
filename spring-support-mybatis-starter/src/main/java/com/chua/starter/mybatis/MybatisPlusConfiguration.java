@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.config.GlobalConfig;
 import com.baomidou.mybatisplus.extension.parser.JsqlParserGlobal;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
@@ -28,6 +29,7 @@ import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
@@ -171,18 +173,11 @@ public class MybatisPlusConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public MybatisPlusInterceptor mybatisPlusInterceptor(
-            @Autowired(required = false) TenantLineInnerInterceptor tenantLineInnerInterceptor,
-            OptimisticLockerInnerInterceptor optimisticLockerInnerInterceptor,
-            DataPermissionInterceptor dataPermissionInterceptor,
-            PaginationInnerInterceptor paginationInnerInterceptor
-            ) {
+            ObjectProvider<List<InnerInterceptor>> innerInterceptorProvider) {
         MybatisPlusInterceptor mybatisPlusInterceptor = new MybatisPlusInterceptor();
-        mybatisPlusInterceptor.addInnerInterceptor(optimisticLockerInnerInterceptor);
-        mybatisPlusInterceptor.addInnerInterceptor(dataPermissionInterceptor);
-        mybatisPlusInterceptor.addInnerInterceptor(paginationInnerInterceptor);
-
-        if(null != tenantLineInnerInterceptor) {
-            mybatisPlusInterceptor.addInnerInterceptor(tenantLineInnerInterceptor);
+        List<InnerInterceptor> innerInterceptors = innerInterceptorProvider.getIfAvailable(List::of);
+        for (InnerInterceptor innerInterceptor : innerInterceptors) {
+            mybatisPlusInterceptor.addInnerInterceptor(innerInterceptor);
         }
         return mybatisPlusInterceptor;
     }

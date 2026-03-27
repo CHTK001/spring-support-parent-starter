@@ -3,6 +3,8 @@ package com.chua.payment.support.provider;
 import com.chua.common.support.core.spi.ServiceProvider;
 import com.chua.payment.support.configuration.PaymentProviderProperties;
 import com.chua.payment.support.exception.PaymentException;
+import com.chua.starter.aliyun.support.payment.AliyunAlipayGateway;
+import com.chua.starter.tencent.support.payment.TencentWechatPayGateway;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
@@ -22,19 +24,19 @@ public class PaymentProviderGatewayRegistry {
         this.properties = properties;
     }
 
-    public <T> T aliyunAlipayGateway() {
+    public AliyunAlipayGateway aliyunAlipayGateway() {
         return aliyunAlipayGateway(null);
     }
 
-    public <T> T tencentWechatPayGateway() {
+    public TencentWechatPayGateway tencentWechatPayGateway() {
         return tencentWechatPayGateway(null);
     }
 
-    public <T> T aliyunAlipayGateway(String extension) {
+    public AliyunAlipayGateway aliyunAlipayGateway(String extension) {
         return required(ALIYUN_ALIPAY_GATEWAY, resolveAliyunExtension(extension), "Aliyun Alipay");
     }
 
-    public <T> T tencentWechatPayGateway(String extension) {
+    public TencentWechatPayGateway tencentWechatPayGateway(String extension) {
         return required(TENCENT_WECHAT_PAY_GATEWAY, resolveWechatExtension(extension), "Tencent Wechat Pay");
     }
 

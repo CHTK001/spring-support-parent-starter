@@ -126,6 +126,9 @@ public class StaticProtocol extends AbstractProtocol {
         // 如果通过token未能获取到用户信息，则尝试从cookie中解析
         if (null == userResult && null != cookie) {
             for (Cookie cookie1 : cookie) {
+                if (null == cookie1) {
+                    continue;
+                }
                 if (!"JSESSIONID".equals(cookie1.getName())) {
                     String source;
                     try {

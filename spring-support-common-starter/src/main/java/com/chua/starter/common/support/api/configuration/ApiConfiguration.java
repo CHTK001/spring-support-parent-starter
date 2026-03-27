@@ -112,7 +112,6 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
      */
     @Bean("apiResponseEncodeResponseBodyAdvice")
     @ConditionalOnMissingBean
-    @ConditionalOnBean(ApiResponseEncodeRegister.class)
     @ConditionalOnProperty(name = "plugin.api.encode.enable", havingValue = "true", matchIfMissing = true)
     public ApiResponseEncodeResponseBodyAdvice responseEncodeResponseBodyAdvice(ApiResponseEncodeRegister apiResponseEncodeRegister) {
         return new ApiResponseEncodeResponseBodyAdvice(apiResponseEncodeRegister);
@@ -141,7 +140,6 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
      */
     @Bean("apiRequestDecodeBodyAdvice")
     @ConditionalOnMissingBean
-    @ConditionalOnBean(ApiRequestDecodeRegister.class)
     @ConditionalOnProperty(name = "plugin.api.decode.enable", havingValue = "true", matchIfMissing = true)
     public ApiRequestDecodeBodyAdvice apiRequestDecodeBodyAdvice(ApiRequestDecodeRegister apiRequestDecodeRegister) {
         return new ApiRequestDecodeBodyAdvice(apiRequestDecodeRegister);

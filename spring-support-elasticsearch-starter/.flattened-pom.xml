@@ -37,10 +37,7 @@
     </license>
   </licenses>
   <properties>
-    <maven.compiler.target>21</maven.compiler.target>
     <elasticsearch-java.version>8.17.0</elasticsearch-java.version>
-    <maven.compiler.source>21</maven.compiler.source>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   <dependencies>
     <dependency>

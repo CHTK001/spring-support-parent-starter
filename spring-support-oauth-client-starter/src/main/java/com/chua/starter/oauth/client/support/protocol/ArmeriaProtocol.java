@@ -138,8 +138,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
         // 协议层此时还没有用户信息，无法进行真正的指纹比对
         // 指纹比对逻辑在 AuthFilter.verifyFingerprint() 中实现
         
-        JsonObject jsonObject = new JsonObject();
-        jsonObject.put("x-oauth-user-code", Json.toJSONBytes(appKeySecret));
+        JsonObject jsonObject = createAppKeyAuthenticationData(appKeySecret);
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
         jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
         var request = RequestUtils.getRequest();

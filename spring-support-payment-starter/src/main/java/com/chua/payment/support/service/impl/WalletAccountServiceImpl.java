@@ -13,6 +13,7 @@ import com.chua.payment.support.mapper.MerchantMapper;
 import com.chua.payment.support.mapper.WalletAccountLogMapper;
 import com.chua.payment.support.mapper.WalletAccountMapper;
 import com.chua.payment.support.service.WalletAccountService;
+import com.chua.payment.support.service.WalletLimitService;
 import com.chua.payment.support.vo.WalletAccountVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -36,6 +37,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     private final WalletAccountMapper walletAccountMapper;
     private final WalletAccountLogMapper walletAccountLogMapper;
     private final MerchantMapper merchantMapper;
+    private final WalletLimitService walletLimitService;
 
     @Override
     public WalletAccountVO getAccount(Long merchantId, Long userId) {
@@ -52,6 +54,13 @@ public class WalletAccountServiceImpl implements WalletAccountService {
         if (dto == null) {
             throw new PaymentException("充值参数不能为空");
         }
+        walletLimitService.validateRechargeLimit(dto.getMerchantId(), dto.getUserId(), dto.getAmount());
+        WalletAccount current = findAccount(dto.getMerchantId(), dto.getUserId());
+        walletLimitService.validateBalanceLimit(
+                dto.getMerchantId(),
+                dto.getUserId(),
+                current != null ? scale(current.getAvailableBalance()) : zeroAmount(),
+                scale(dto.getAmount()));
         String bizNo = StringUtils.hasText(dto.getRechargeNo()) ? dto.getRechargeNo() : generateBizNo("RCH");
         WalletAccount account = applyChange("RECHARGE", bizNo, dto.getMerchantId(), dto.getUserId(), dto.getAmount(), true, true, dto.getOperator(), dto.getRemark());
         return toVO(account);
@@ -67,8 +76,49 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public WalletAccountVO refund(Long merchantId, Long userId, BigDecimal amount, String refundNo, String operator, String remark) {
+        WalletAccount current = findAccount(merchantId, userId);
+        walletLimitService.validateBalanceLimit(
+                merchantId,
+                userId,
+                current != null ? scale(current.getAvailableBalance()) : zeroAmount(),
+                scale(amount));
         WalletAccount account = applyChange("REFUND", refundNo, merchantId, userId, amount, true, true, operator, remark);
         return toVO(account);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void transfer(Long merchantId,
+                         Long fromUserId,
+                         Long toUserId,
+                         BigDecimal amount,
+                         String transferNo,
+                         String operator,
+                         String remark) {
+        if (fromUserId == null || toUserId == null) {
+            throw new PaymentException("转账双方用户不能为空");
+        }
+        if (fromUserId.equals(toUserId)) {
+            throw new PaymentException("转出用户和转入用户不能相同");
+        }
+        validateArgs(merchantId, fromUserId, "TRANSFER_OUT", transferNo, amount);
+        requireWalletEnabledMerchant(merchantId);
+        walletLimitService.validateTransferLimit(merchantId, fromUserId, amount);
+        WalletAccount targetAccount = findAccount(merchantId, toUserId);
+        walletLimitService.validateBalanceLimit(
+                merchantId,
+                toUserId,
+                targetAccount != null ? scale(targetAccount.getAvailableBalance()) : zeroAmount(),
+                scale(amount));
+        applyChange("TRANSFER_OUT", transferNo, merchantId, fromUserId, amount, false, false, operator, remark);
+        applyChange("TRANSFER_IN", transferNo, merchantId, toUserId, amount, true, true, operator, remark);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void withdraw(Long merchantId, Long userId, BigDecimal amount, String withdrawNo, String operator, String remark) {
+        walletLimitService.validateWithdrawLimit(merchantId, userId, amount);
+        applyChange("WITHDRAW", withdrawNo, merchantId, userId, amount, false, false, operator, remark);
     }
 
     @Override
@@ -223,7 +273,11 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     }
 
     private BigDecimal scale(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP) : value.setScale(2, RoundingMode.HALF_UP);
+        return value == null ? zeroAmount() : value.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal zeroAmount() {
+        return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
     }
 
     private String generateBizNo(String prefix) {

@@ -2,6 +2,7 @@ package com.chua.payment.support.config;
 
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import org.apache.ibatis.reflection.MetaObject;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
  * @since 2026-03-18
  */
 @Component
+@ConditionalOnMissingBean(MetaObjectHandler.class)
 public class MetaObjectHandlerConfig implements MetaObjectHandler {
 
     /**

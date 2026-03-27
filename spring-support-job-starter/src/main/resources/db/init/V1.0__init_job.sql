@@ -17,9 +17,10 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `sys_job`;
 CREATE TABLE `sys_job` (
     `job_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '任务ID',
+    `job_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '任务编号',
     `job_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '任务名称',
-    `job_schedule_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'CRON' COMMENT '调度类型 CRON-cron表达式 FIXED-固定间隔',
-    `job_schedule_time` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '调度配置（cron表达式或固定间隔秒数）',
+    `job_schedule_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'CRON' COMMENT '调度类型 CRON/FIXED/FIXED_MS/DELAY/AT/NONE',
+    `job_schedule_time` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '调度配置（cron表达式、固定间隔、延迟毫秒或绝对时间）',
     `job_author` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '负责人',
     `job_alarm_email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '报警邮件',
     `job_trigger_status` tinyint(1) NULL DEFAULT 0 COMMENT '调度状态 0-停止 1-运行中',
@@ -27,10 +28,16 @@ CREATE TABLE `sys_job` (
     `job_glue_updatetime` datetime NULL DEFAULT NULL COMMENT 'GLUE更新时间',
     `job_glue_source` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT 'GLUE源码',
     `job_glue_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'BEAN' COMMENT 'GLUE类型 BEAN-Spring Bean GROOVY-Groovy脚本 SHELL-Shell脚本 PYTHON-Python脚本',
+    `job_dispatch_mode` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'LOCAL' COMMENT '分发模式 LOCAL-本地轮询 REMOTE-远程推送',
+    `job_remote_executor_address` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '远程执行器地址',
+    `job_storage_mode` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'DATABASE' COMMENT '存储模式 DATABASE/REDIS',
     `job_fail_retry` int(11) NULL DEFAULT 3 COMMENT '失败重试次数',
+    `job_retry_interval` int(11) NULL DEFAULT 0 COMMENT '失败重试间隔(秒)',
     `job_execute_timeout` int(11) NULL DEFAULT 0 COMMENT '执行超时时间(秒)',
     `job_execute_bean` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '执行器处理器名称',
     `job_execute_param` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '执行参数',
+    `job_exception_callback_bean` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '异常回调处理器',
+    `job_retry_callback_bean` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '重试前回调处理器',
     `job_execute_misfire_strategy` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'DO_NOTHING' COMMENT '错失策略 DO_NOTHING-忽略 FIRE_ONCE_NOW-立即执行一次',
     `job_trigger_last_time` bigint(20) NULL DEFAULT 0 COMMENT '上次调度时间',
     `job_trigger_next_time` bigint(20) NULL DEFAULT 0 COMMENT '下次调度时间',
@@ -39,8 +46,10 @@ CREATE TABLE `sys_job` (
     `create_by` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '创建人',
     `update_by` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '更新人',
     PRIMARY KEY (`job_id`) USING BTREE,
+    UNIQUE KEY `uk_job_no` (`job_no`) USING BTREE,
     KEY `idx_trigger_status` (`job_trigger_status`) USING BTREE,
-    KEY `idx_trigger_next_time` (`job_trigger_next_time`) USING BTREE
+    KEY `idx_trigger_next_time` (`job_trigger_next_time`) USING BTREE,
+    KEY `idx_job_dispatch_mode` (`job_dispatch_mode`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '定时任务表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
@@ -49,6 +58,9 @@ CREATE TABLE `sys_job` (
 DROP TABLE IF EXISTS `sys_job_log`;
 CREATE TABLE `sys_job_log` (
     `job_log_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '日志ID',
+    `job_log_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '日志编号',
+    `job_id` int(11) NULL DEFAULT NULL COMMENT '任务ID',
+    `job_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '任务编号',
     `job_log_app` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '触发应用',
     `job_log_trigger_bean` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '执行器处理器名称',
     `job_log_trigger_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '触发类型',
@@ -61,13 +73,16 @@ CREATE TABLE `sys_job_log` (
     `job_log_trigger_msg` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '触发消息',
     `job_log_trigger_param` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '触发参数',
     `job_log_trigger_address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '触发地址',
+    `job_log_file_path` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '日志文件路径',
     `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `create_by` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '创建人',
     `update_by` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '更新人',
     PRIMARY KEY (`job_log_id`) USING BTREE,
+    UNIQUE KEY `uk_job_log_no` (`job_log_no`) USING BTREE,
     KEY `idx_trigger_date` (`job_log_trigger_date`) USING BTREE,
-    KEY `idx_trigger_bean` (`job_log_trigger_bean`) USING BTREE
+    KEY `idx_trigger_bean` (`job_log_trigger_bean`) USING BTREE,
+    KEY `idx_job_no` (`job_no`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '定时任务日志表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
@@ -78,7 +93,9 @@ DROP TABLE IF EXISTS `sys_job_log_detail`;
 CREATE TABLE `sys_job_log_detail` (
     `job_log_detail_id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '日志详情ID',
     `job_log_id` int(11) NULL DEFAULT NULL COMMENT '关联的任务日志ID',
+    `job_log_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '关联的任务日志编号',
     `job_id` int(11) NULL DEFAULT NULL COMMENT '任务ID',
+    `job_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '任务编号',
     `job_log_detail_level` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT 'INFO' COMMENT '日志级别: DEBUG/INFO/WARN/ERROR',
     `job_log_detail_content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '日志内容',
     `job_log_detail_time` datetime NULL DEFAULT NULL COMMENT '日志时间戳',
@@ -92,6 +109,7 @@ CREATE TABLE `sys_job_log_detail` (
     PRIMARY KEY (`job_log_detail_id`) USING BTREE,
     KEY `idx_job_log_id` (`job_log_id`) USING BTREE,
     KEY `idx_job_id` (`job_id`) USING BTREE,
+    KEY `idx_job_no` (`job_no`) USING BTREE,
     KEY `idx_detail_time` (`job_log_detail_time`) USING BTREE,
     KEY `idx_level` (`job_log_detail_level`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '任务日志详情表' ROW_FORMAT = Dynamic;

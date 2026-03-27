@@ -1,14 +1,19 @@
 package com.chua.starter.sync.support.configuration;
 
 import com.chua.starter.sync.support.client.SyncClient;
+import com.chua.starter.sync.support.data.SyncDataExchangeService;
 import com.chua.starter.sync.support.properties.SyncProperties;
 import com.chua.starter.sync.support.server.SyncServer;
+import com.chua.starter.sync.support.spi.SyncClientInfoCustomizer;
+import com.chua.starter.sync.support.spi.SyncClientCustomizer;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import static com.chua.starter.common.support.logger.ModuleLog.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
@@ -74,8 +79,33 @@ public class SyncAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @Conditional(SyncClientCondition.class)
-    public SyncClient syncClient(SyncProperties syncProperties) {
+    public SyncClient syncClient(SyncProperties syncProperties,
+                                 ObjectProvider<SyncClientInfoCustomizer> syncClientInfoCustomizerProvider,
+                                 ObjectProvider<SyncClientCustomizer> syncClientCustomizerProvider) {
         log.info("[Sync] 创建客户端");
-        return new SyncClient(syncProperties, environment);
+        return new SyncClient(
+                syncProperties,
+                environment,
+                syncClientInfoCustomizerProvider.orderedStream().toList(),
+                syncClientCustomizerProvider.orderedStream().toList()
+        );
+    }
+
+    /**
+     * 创建数据同步交换服务。
+     *
+     * @param syncClientProvider Sync客户端提供器
+     * @param syncServerProvider Sync服务端提供器
+     * @param syncProperties     同步配置
+     * @return 数据同步交换服务
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "plugin.sync.data-sync", name = "enabled", havingValue = "true", matchIfMissing = true)
+    public SyncDataExchangeService syncDataExchangeService(ObjectProvider<SyncClient> syncClientProvider,
+                                                           ObjectProvider<SyncServer> syncServerProvider,
+                                                           SyncProperties syncProperties) {
+        log.info("[Sync] 创建数据同步交换服务");
+        return new SyncDataExchangeService(syncClientProvider, syncServerProvider, syncProperties);
     }
 }

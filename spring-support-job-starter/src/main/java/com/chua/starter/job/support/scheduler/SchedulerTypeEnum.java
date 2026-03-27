@@ -6,7 +6,7 @@ import lombok.Getter;
 /**
  * 任务调度类型枚举
  * <p>
- * 定义任务的调度触发方式，支持CRON表达式和固定频率两种模式。
+ * 定义任务的调度触发方式。
  * </p>
  *
  * <h3>调度类型说明</h3>
@@ -14,6 +14,9 @@ import lombok.Getter;
  *     <li><b>NONE</b> - 无调度，仅支持手动触发</li>
  *     <li><b>CRON</b> - 使用CRON表达式定义执行时间，如 "0 0 12 * * ?"表示每天中午12点</li>
  *     <li><b>FIXED</b> - 固定频率执行，配置值为间隔秒数，如 "60"表示每60秒执行一次</li>
+ *     <li><b>FIXED_MS</b> - 固定频率执行，配置值为间隔毫秒数</li>
+ *     <li><b>DELAY</b> - 单次延迟执行，配置值为延迟毫秒数</li>
+ *     <li><b>AT</b> - 单次定时执行，配置值为绝对时间或时间戳</li>
  * </ul>
  *
  * @author CH
@@ -48,6 +51,18 @@ public enum SchedulerTypeEnum {
      * <p>配置值为间隔毫秒数，如 "30000" 表示每30秒执行一次</p>
      */
     FIXED_MS("固定毫秒频率"),
+
+    /**
+     * 单次延迟执行。
+     * <p>配置值为延迟毫秒数，如 "30000" 表示 30 秒后执行一次。</p>
+     */
+    DELAY("延迟执行"),
+
+    /**
+     * 单次定时执行。
+     * <p>配置值为绝对时间，如 "2026-03-24 12:00:00"。</p>
+     */
+    AT("定时执行"),
     ;
     private final String name;
 
@@ -60,8 +75,12 @@ public enum SchedulerTypeEnum {
      * @return {@link SchedulerTypeEnum}
      */
     public static SchedulerTypeEnum match(String name, SchedulerTypeEnum defaultItem){
+        if (name == null || name.trim().isEmpty()) {
+            return defaultItem;
+        }
+        String candidate = name.trim();
         for (SchedulerTypeEnum item: SchedulerTypeEnum.values()) {
-            if (item.name().equals(name)) {
+            if (item.name().equalsIgnoreCase(candidate) || item.getName().equalsIgnoreCase(candidate)) {
                 return item;
             }
         }

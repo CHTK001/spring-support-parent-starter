@@ -69,6 +69,29 @@ plugin:
 | `log-retention-days`       | 任务执行日志保留天数            | `30`    |
 | `log-cleanup-enabled`      | 是否启用任务执行日志清理         | `true`  |
 
+### 数据同步交换配置
+
+```yaml
+plugin:
+  sync:
+    data-sync:
+      enabled: true
+      topic-prefix: sync/data
+      default-channel: default
+      request-timeout: 30000
+```
+
+### 数据同步交换说明
+
+`spring-support-sync-starter` 当前提供 `SyncDataExchangeService`，
+用于在 `SyncClient / SyncServer` 之上封装面向业务的数据同步交换能力：
+
+- 客户端发布数据同步消息
+- 客户端发起同步请求并等待响应
+- 服务端广播数据同步消息
+- 服务端向指定会话定向发送数据
+- 服务端按应用名推送数据同步消息
+
 ### 客户端配置
 
 ```yaml

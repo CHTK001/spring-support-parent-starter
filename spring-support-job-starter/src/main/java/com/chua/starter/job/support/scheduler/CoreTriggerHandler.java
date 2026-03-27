@@ -59,6 +59,10 @@ public class CoreTriggerHandler implements TriggerHandler, Runnable {
 
     @Override
     public void start() {
+        if (scheduleThread != null && scheduleThread.isAlive()) {
+            return;
+        }
+        scheduleThreadToStop = false;
         scheduleThread = new Thread(this);
         scheduleThread.setDaemon(true);
         scheduleThread.setName("job, coreThread");
@@ -68,11 +72,16 @@ public class CoreTriggerHandler implements TriggerHandler, Runnable {
     @Override
     public void stop() {
         scheduleThreadToStop = true;
-        if (scheduleThread.getState() != Thread.State.TERMINATED) {
-            scheduleThread.interrupt();
+        Thread current = scheduleThread;
+        if (current == null) {
+            return;
+        }
+        if (current.getState() != Thread.State.TERMINATED) {
+            current.interrupt();
             try {
-                scheduleThread.join();
+                current.join(TimeUnit.SECONDS.toMillis(5));
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 log.error(e.getMessage(), e);
             }
         }

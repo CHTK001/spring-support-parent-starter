@@ -1,10 +1,11 @@
 package com.chua.starter.ai.support.configuration;
 
-import com.chua.deeplearning.support.api.AiClient;
+import com.chua.common.support.ai.AiClient;
 import com.chua.deeplearning.support.config.AiClientConfig;
 import com.chua.deeplearning.support.config.FaceConfig;
 import com.chua.deeplearning.support.config.LlmConfig;
 import com.chua.deeplearning.support.config.OcrConfig;
+import com.chua.deeplearning.support.ml.ai.DefaultAiClient;
 import com.chua.starter.ai.support.chat.AiChat;
 import com.chua.starter.ai.support.engine.FaceClient;
 import com.chua.starter.ai.support.engine.FaceEngine;
@@ -48,11 +49,11 @@ public class AiConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean(AiClient.class)
-    @ConditionalOnClass(name = "com.chua.deeplearning.support.api.AiClient")
+    @ConditionalOnClass(name = "com.chua.deeplearning.support.ml.ai.DefaultAiClient")
     @Lazy
     public AiClient aiClient(AiProperties aiProperties) {
         AiClientConfig config = buildAiClientConfig(aiProperties);
-        return AiClient.builder()
+        return DefaultAiClient.builder()
                 .config(config)
                 .build();
     }

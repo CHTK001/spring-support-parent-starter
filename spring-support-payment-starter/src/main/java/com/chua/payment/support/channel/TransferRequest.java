@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 @Data
 public class TransferRequest {
     private String transferNo;
+    private String notifyUrl;
     private Long merchantId;
     private Long fromUserId;
     private Long toUserId;

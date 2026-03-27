@@ -45,6 +45,11 @@ public class TriggerParam {
     private int jobId;
 
     /**
+     * 任务编号。
+     */
+    private String jobNo;
+
+    /**
      * 环境配置
      */
     private String profile;
@@ -78,6 +83,11 @@ public class TriggerParam {
      * 日志ID
      */
     private long logId;
+
+    /**
+     * 日志编号。
+     */
+    private String logNo;
 
     /**
      * 日志生成时间戳

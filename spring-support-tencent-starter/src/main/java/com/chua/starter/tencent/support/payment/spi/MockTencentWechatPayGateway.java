@@ -7,6 +7,9 @@ import com.chua.starter.tencent.support.payment.dto.TencentWechatOrderResponse;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatPayNotifyPayload;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatPayRequest;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatPayResponse;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreNotifyPayload;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreRequest;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreResponse;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatRefundNotifyPayload;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatRefundRequest;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatRefundResponse;
@@ -136,6 +139,42 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
+    public TencentWechatPayScoreResponse createPayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
+        return buildPayScoreResponse(request, "CREATED", "微信支付分 mock 创建成功");
+    }
+
+    @Override
+    public TencentWechatPayScoreResponse queryPayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
+        return buildPayScoreResponse(request, "DOING", "微信支付分 mock 查询成功");
+    }
+
+    @Override
+    public TencentWechatPayScoreResponse completePayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
+        return buildPayScoreResponse(request, "COMPLETED", "微信支付分 mock 完结成功");
+    }
+
+    @Override
+    public TencentWechatPayScoreResponse cancelPayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
+        return buildPayScoreResponse(request, "CANCELED", "微信支付分 mock 取消成功");
+    }
+
+    @Override
+    public TencentWechatPayScoreNotifyPayload parsePayScoreNotify(TencentWechatPayProperties properties, TencentWechatNotifyRequest request) {
+        Map<String, Object> body = parseJsonBody(request.getBody());
+        TencentWechatPayScoreNotifyPayload payload = new TencentWechatPayScoreNotifyPayload();
+        String outOrderNo = firstNonBlank(textOf(body.get("out_order_no")), textOf(body.get("outOrderNo")));
+        payload.setOutOrderNo(outOrderNo);
+        payload.setServiceOrderNo(firstNonBlank(textOf(body.get("service_order_no")), textOf(body.get("serviceOrderNo")), "MOCK-PAYSCORE-" + outOrderNo));
+        payload.setAppId(firstNonBlank(textOf(body.get("appid")), textOf(body.get("appId")), properties.getAppId()));
+        payload.setServiceId(firstNonBlank(textOf(body.get("service_id")), textOf(body.get("serviceId"))));
+        payload.setOpenId(firstNonBlank(textOf(body.get("openid")), textOf(body.get("openId"))));
+        payload.setState(firstNonBlank(textOf(body.get("state")), textOf(body.get("service_state")), "DOING"));
+        payload.setFinishReason(firstNonBlank(textOf(body.get("finish_reason")), textOf(body.get("finishReason"))));
+        payload.setRawData(body);
+        return payload;
+    }
+
+    @Override
     public TencentWechatRefundResponse refund(TencentWechatPayProperties properties, TencentWechatRefundRequest request) {
         return buildRefundResponse(request, "SUCCESS", "微信支付 mock 退款成功");
     }
@@ -206,6 +245,22 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
         result.setRefundStatus(refundStatus);
         result.setMessage(message);
         result.setRawResponse(raw("wechat-mock", "REFUND", request.getRefundNo()));
+        return result;
+    }
+
+    private TencentWechatPayScoreResponse buildPayScoreResponse(TencentWechatPayScoreRequest request, String state, String message) {
+        TencentWechatPayScoreResponse result = new TencentWechatPayScoreResponse();
+        result.setSuccess(true);
+        result.setOutOrderNo(request.getOutOrderNo());
+        result.setServiceOrderNo("MOCK-PAYSCORE-" + request.getOutOrderNo());
+        result.setState(state);
+        result.setPackageInfo("mock_package=1&out_order_no=" + request.getOutOrderNo());
+        result.setMessage(message);
+        result.setRawData(Map.of(
+                "out_order_no", request.getOutOrderNo(),
+                "service_order_no", "MOCK-PAYSCORE-" + request.getOutOrderNo(),
+                "state", state));
+        result.setRawResponse(raw("wechat-mock", "PAYSCORE", request.getOutOrderNo()));
         return result;
     }
 

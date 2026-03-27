@@ -8,7 +8,9 @@ import com.chua.payment.support.channel.WithdrawRequest;
 import com.chua.payment.support.entity.WalletOrder;
 import com.chua.payment.support.exception.PaymentException;
 import com.chua.payment.support.mapper.WalletOrderMapper;
+import com.chua.payment.support.service.PaymentCallbackUrlResolver;
 import com.chua.payment.support.service.WalletOrderService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,11 +27,17 @@ import java.util.UUID;
 public class WalletOrderServiceImpl implements WalletOrderService {
 
     private final WalletOrderMapper walletOrderMapper;
+    private final PaymentCallbackUrlResolver paymentCallbackUrlResolver;
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public WalletOrder createRechargeOrder(RechargeRequest request) {
         String orderNo = StringUtils.hasText(request.getRechargeNo()) ? request.getRechargeNo() : generateOrderNo("RCH");
+        request.setRechargeNo(orderNo);
+        if (!StringUtils.hasText(request.getNotifyUrl())) {
+            request.setNotifyUrl(paymentCallbackUrlResolver.defaultWalletNotifyUrl("recharge", orderNo));
+        }
 
         WalletOrder existing = getByOrderNo(orderNo);
         if (existing != null) {
@@ -45,6 +53,7 @@ public class WalletOrderServiceImpl implements WalletOrderService {
         order.setStatus("PENDING");
         order.setOperator(request.getOperator());
         order.setRemark(request.getRemark());
+        order.setRequestPayload(safeJson(request));
         walletOrderMapper.insert(order);
         return order;
     }
@@ -53,6 +62,10 @@ public class WalletOrderServiceImpl implements WalletOrderService {
     @Transactional(rollbackFor = Exception.class)
     public WalletOrder createTransferOrder(TransferRequest request) {
         String orderNo = StringUtils.hasText(request.getTransferNo()) ? request.getTransferNo() : generateOrderNo("TRF");
+        request.setTransferNo(orderNo);
+        if (!StringUtils.hasText(request.getNotifyUrl())) {
+            request.setNotifyUrl(paymentCallbackUrlResolver.defaultWalletNotifyUrl("transfer", orderNo));
+        }
 
         WalletOrder existing = getByOrderNo(orderNo);
         if (existing != null) {
@@ -69,6 +82,7 @@ public class WalletOrderServiceImpl implements WalletOrderService {
         order.setStatus("PENDING");
         order.setOperator(request.getOperator());
         order.setRemark(request.getRemark());
+        order.setRequestPayload(safeJson(request));
         walletOrderMapper.insert(order);
         return order;
     }
@@ -77,6 +91,10 @@ public class WalletOrderServiceImpl implements WalletOrderService {
     @Transactional(rollbackFor = Exception.class)
     public WalletOrder createWithdrawOrder(WithdrawRequest request) {
         String orderNo = StringUtils.hasText(request.getWithdrawNo()) ? request.getWithdrawNo() : generateOrderNo("WDW");
+        request.setWithdrawNo(orderNo);
+        if (!StringUtils.hasText(request.getNotifyUrl())) {
+            request.setNotifyUrl(paymentCallbackUrlResolver.defaultWalletNotifyUrl("withdraw", orderNo));
+        }
 
         WalletOrder existing = getByOrderNo(orderNo);
         if (existing != null) {
@@ -95,6 +113,7 @@ public class WalletOrderServiceImpl implements WalletOrderService {
         order.setStatus("PENDING");
         order.setOperator(request.getOperator());
         order.setRemark(request.getRemark());
+        order.setRequestPayload(safeJson(request));
         walletOrderMapper.insert(order);
         return order;
     }
@@ -111,9 +130,12 @@ public class WalletOrderServiceImpl implements WalletOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void markSuccess(String orderNo, String responsePayload) {
+    public void markSuccess(String orderNo, String thirdPartyOrderNo, String responsePayload) {
         WalletOrder order = requireOrder(orderNo);
         order.setStatus("SUCCESS");
+        if (StringUtils.hasText(thirdPartyOrderNo)) {
+            order.setThirdPartyOrderNo(thirdPartyOrderNo);
+        }
         order.setResponsePayload(responsePayload);
         order.setCompletedAt(LocalDateTime.now());
         walletOrderMapper.updateById(order);
@@ -168,5 +190,13 @@ public class WalletOrderServiceImpl implements WalletOrderService {
 
     private String generateOrderNo(String prefix) {
         return prefix + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+    }
+
+    private String safeJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (Exception e) {
+            return String.valueOf(value);
+        }
     }
 }

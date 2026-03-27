@@ -109,6 +109,11 @@ public class StrategyProperties {
     private ClickjackingProtectionConfig clickjackingProtection = new ClickjackingProtectionConfig();
 
     /**
+     * 轻控制台嵌入式认证配置
+     */
+    private WebAuthConfig webAuth = new WebAuthConfig();
+
+    /**
      * 限流配置
      */
     @Data
@@ -470,5 +475,30 @@ public class StrategyProperties {
         private List<String> includePatterns = new ArrayList<>(
                 Collections.singletonList("/**"));
     }
-}
 
+    /**
+     * 轻控制台认证配置
+     */
+    @Data
+    public static class WebAuthConfig {
+        /**
+         * 认证模式: embedded(嵌入式) 或 none(无认证)
+         */
+        private String mode = "embedded";
+
+        /**
+         * 默认控制台用户名
+         */
+        private String username = "admin";
+
+        /**
+         * 默认控制台密码
+         */
+        private String password = "admin123";
+
+        /**
+         * Session 超时时间（秒）
+         */
+        private Integer sessionTimeout = 3600;
+    }
+}

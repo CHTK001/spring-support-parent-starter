@@ -5,6 +5,9 @@ import com.chua.starter.tencent.support.payment.dto.TencentWechatOrderResponse;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatPayNotifyPayload;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatPayRequest;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatPayResponse;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreNotifyPayload;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreRequest;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreResponse;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatRefundNotifyPayload;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatRefundRequest;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatRefundResponse;
@@ -52,4 +55,14 @@ public interface TencentWechatPayGateway {
     TencentWechatOrderResponse queryMiniProgramOrder(TencentWechatPayProperties properties, String orderNo);
 
     boolean closeMiniProgramOrder(TencentWechatPayProperties properties, String orderNo);
+
+    TencentWechatPayScoreResponse createPayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request);
+
+    TencentWechatPayScoreResponse queryPayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request);
+
+    TencentWechatPayScoreResponse completePayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request);
+
+    TencentWechatPayScoreResponse cancelPayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request);
+
+    TencentWechatPayScoreNotifyPayload parsePayScoreNotify(TencentWechatPayProperties properties, TencentWechatNotifyRequest request);
 }

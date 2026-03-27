@@ -4,6 +4,8 @@ import com.chua.starter.tencent.support.properties.TencentWechatPayProperties;
 import com.wechat.pay.java.core.Config;
 import com.wechat.pay.java.core.RSAAutoCertificateConfig;
 import com.wechat.pay.java.core.notification.NotificationParser;
+import com.wechat.pay.java.core.http.DefaultHttpClientBuilder;
+import com.wechat.pay.java.core.http.HttpClient;
 import com.wechat.pay.java.service.payments.app.AppService;
 import com.wechat.pay.java.service.payments.app.AppServiceExtension;
 import com.wechat.pay.java.service.payments.h5.H5Service;
@@ -80,5 +82,11 @@ public class TencentWechatPayClientFactory {
             return new NotificationParser(autoCertificateConfig);
         }
         throw new IllegalArgumentException("当前配置不支持自动证书回调解析: " + config.getClass().getName());
+    }
+
+    public HttpClient createHttpClient(Config config) {
+        return new DefaultHttpClientBuilder()
+                .config(config)
+                .build();
     }
 }

@@ -29,6 +29,11 @@ public class ScriptJobHandler implements JobHandler {
     private final int jobId;
 
     /**
+     * 任务编号。
+     */
+    private final String jobNo;
+
+    /**
      * GLUE更新时间戳
      */
     @Getter
@@ -52,8 +57,9 @@ public class ScriptJobHandler implements JobHandler {
      * @param gluesource     脚本源码
      * @param glueType       脚本类型
      */
-    public ScriptJobHandler(int jobId, long glueUpdatetime, String gluesource, GlueTypeEnum glueType) {
+    public ScriptJobHandler(int jobId, String jobNo, long glueUpdatetime, String gluesource, GlueTypeEnum glueType) {
         this.jobId = jobId;
+        this.jobNo = jobNo;
         this.glueUpdatetime = glueUpdatetime;
         this.gluesource = gluesource;
         this.glueType = glueType;
@@ -113,14 +119,18 @@ public class ScriptJobHandler implements JobHandler {
         }
 
         // 日志文件路径
-        String logFileName = jobId + ".log";
+        String logFileName = com.chua.starter.job.support.thread.JobContext.getCurrentLogFileName();
 
         // 脚本参数：0=param、1=分片序号、2=分片总数
-        String[] scriptParams = new String[3];
+        String[] scriptParams = new String[]{
+                com.chua.starter.job.support.thread.JobContext.getJobParam(),
+                String.valueOf(com.chua.starter.job.support.thread.JobContext.getCurrentShardIndex()),
+                String.valueOf(com.chua.starter.job.support.thread.JobContext.getCurrentShardTotal())
+        };
 
         // 执行脚本
         DefaultJobLog.log("----------- 脚本文件:" + scriptFileName + " -----------");
-        log.info("开始执行脚本任务, 任务ID: {}, 脚本类型: {}", jobId, glueType.getDesc());
+        log.info("开始执行脚本任务, 任务ID: {}, 任务编号: {}, 脚本类型: {}", jobId, jobNo, glueType.getDesc());
 
         int exitValue = ScriptUtil.execToFile(cmd, scriptFileName, logFileName, scriptParams);
 
@@ -128,9 +138,9 @@ public class ScriptJobHandler implements JobHandler {
         if (exitValue != 0) {
             String errorMsg = "脚本执行失败, 退出码: " + exitValue;
             DefaultJobLog.log(errorMsg);
-            log.error("脚本执行失败, 任务ID: {}, 退出码: {}", jobId, exitValue);
+            log.error("脚本执行失败, 任务ID: {}, 任务编号: {}, 退出码: {}", jobId, jobNo, exitValue);
         } else {
-            log.info("脚本执行成功, 任务ID: {}", jobId);
+            log.info("脚本执行成功, 任务ID: {}, 任务编号: {}", jobId, jobNo);
         }
     }
 }

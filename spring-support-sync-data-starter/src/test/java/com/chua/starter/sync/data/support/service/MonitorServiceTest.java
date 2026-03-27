@@ -1,145 +1,133 @@
 package com.chua.starter.sync.data.support.service;
 
-import com.chua.starter.sync.data.support.service.impl.SyncMonitorServiceImpl;
-import com.chua.starter.sync.data.support.service.impl.SyncStatisticsServiceImpl;
-import com.chua.starter.sync.data.support.service.impl.AlertServiceImpl;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
- * 监控服务单元测试
+ * 监控服务接口单元测试（基于 mock）
  */
 class MonitorServiceTest {
-    
+
     @Mock
     private SyncMonitorService monitorService;
-    
+
     @Mock
     private SyncStatisticsService statisticsService;
-    
+
     @Mock
     private AlertService alertService;
-    
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
     }
-    
+
     @Test
-    void testMonitorServiceInitialization() {
-        SyncMonitorServiceImpl service = new SyncMonitorServiceImpl();
-        assertNotNull(service);
-    }
-    
-    @Test
-    void testStatisticsServiceInitialization() {
-        SyncStatisticsServiceImpl service = new SyncStatisticsServiceImpl();
-        assertNotNull(service);
-    }
-    
-    @Test
-    void testAlertServiceInitialization() {
-        AlertServiceImpl service = new AlertServiceImpl();
-        assertNotNull(service);
-    }
-    
-    @Test
-    void testGetRealtimeMonitorData() {
+    void testCollectRealtimeData() {
         Long taskId = 1L;
-        
-        when(monitorService.getRealtimeMonitorData(taskId))
+
+        when(monitorService.collectRealtimeData(taskId))
             .thenReturn(createMockMonitorData());
-        
-        Map<String, Object> data = monitorService.getRealtimeMonitorData(taskId);
-        
+
+        Map<String, Object> data = monitorService.collectRealtimeData(taskId);
+
         assertNotNull(data);
         assertTrue(data.containsKey("taskId"));
         assertTrue(data.containsKey("status"));
         assertTrue(data.containsKey("progress"));
-        
-        verify(monitorService, times(1)).getRealtimeMonitorData(taskId);
+
+        verify(monitorService, times(1)).collectRealtimeData(taskId);
     }
-    
+
     @Test
-    void testGetPerformanceMetrics() {
+    void testCalculatePerformanceMetrics() {
         Long taskId = 1L;
-        
-        when(monitorService.getPerformanceMetrics(taskId))
+        LocalDateTime start = LocalDateTime.now().minusHours(1);
+        LocalDateTime end = LocalDateTime.now();
+
+        when(monitorService.calculatePerformanceMetrics(taskId, start, end))
             .thenReturn(createMockMetrics());
-        
-        Map<String, Object> metrics = monitorService.getPerformanceMetrics(taskId);
-        
+
+        Map<String, Object> metrics = monitorService.calculatePerformanceMetrics(taskId, start, end);
+
         assertNotNull(metrics);
         assertTrue(metrics.containsKey("throughput"));
         assertTrue(metrics.containsKey("latency"));
         assertTrue(metrics.containsKey("errorRate"));
-        
-        verify(monitorService, times(1)).getPerformanceMetrics(taskId);
+
+        verify(monitorService, times(1)).calculatePerformanceMetrics(taskId, start, end);
     }
-    
+
     @Test
-    void testGetDailyStatistics() {
-        LocalDateTime date = LocalDateTime.now();
-        
-        when(statisticsService.getDailyStatistics(date))
+    void testAnalyzeTrend() {
+        Long taskId = 1L;
+        int days = 7;
+
+        when(statisticsService.analyzeTrend(taskId, days))
             .thenReturn(createMockStatistics());
-        
-        Map<String, Object> stats = statisticsService.getDailyStatistics(date);
-        
+
+        Map<String, Object> stats = statisticsService.analyzeTrend(taskId, days);
+
         assertNotNull(stats);
         assertTrue(stats.containsKey("totalRecords"));
         assertTrue(stats.containsKey("successCount"));
         assertTrue(stats.containsKey("failureCount"));
-        
-        verify(statisticsService, times(1)).getDailyStatistics(date);
+
+        verify(statisticsService, times(1)).analyzeTrend(taskId, days);
     }
-    
+
     @Test
-    void testCreateAlert() {
+    void testTriggerAlert() {
         Long taskId = 1L;
-        String alertType = "ERROR";
+        String alertType = "PERFORMANCE";
+        String alertLevel = "WARNING";
         String message = "同步失败";
-        
-        doNothing().when(alertService).createAlert(taskId, alertType, message);
-        
-        alertService.createAlert(taskId, alertType, message);
-        
-        verify(alertService, times(1)).createAlert(taskId, alertType, message);
+
+        doNothing().when(alertService).triggerAlert(taskId, alertType, alertLevel, message);
+
+        alertService.triggerAlert(taskId, alertType, alertLevel, message);
+
+        verify(alertService, times(1)).triggerAlert(taskId, alertType, alertLevel, message);
     }
-    
+
     @Test
     void testResolveAlert() {
         Long alertId = 1L;
-        
+
         doNothing().when(alertService).resolveAlert(alertId);
-        
+
         alertService.resolveAlert(alertId);
-        
+
         verify(alertService, times(1)).resolveAlert(alertId);
     }
-    
+
     @Test
-    void testGetActiveAlerts() {
+    void testListAlerts() {
         Long taskId = 1L;
-        
-        when(alertService.getActiveAlerts(taskId))
-            .thenReturn(java.util.Collections.emptyList());
-        
-        var alerts = alertService.getActiveAlerts(taskId);
-        
+        when(alertService.listAlerts(taskId, "WARNING", false))
+            .thenReturn(Collections.emptyList());
+
+        var alerts = alertService.listAlerts(taskId, "WARNING", false);
+
         assertNotNull(alerts);
-        
-        verify(alertService, times(1)).getActiveAlerts(taskId);
+
+        verify(alertService, times(1)).listAlerts(taskId, "WARNING", false);
     }
-    
+
     private Map<String, Object> createMockMonitorData() {
         return Map.of(
             "taskId", 1L,

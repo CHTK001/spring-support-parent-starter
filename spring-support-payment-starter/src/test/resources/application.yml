@@ -8,6 +8,11 @@ spring:
     url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     username: sa
     password: 
+
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/schema.sql
   
   # H2控制台
   h2:
@@ -17,7 +22,7 @@ spring:
   # JPA配置
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: none
     show-sql: true
     properties:
       hibernate:
@@ -29,6 +34,16 @@ spring:
       host: localhost
       port: 6379
       database: 0
+
+plugin:
+  oauth:
+    enable: false
+  payment:
+    callback:
+      base-url: http://127.0.0.1:8080
+  redis:
+    server:
+      enable: false
 
 # MyBatis Plus配置
 mybatis-plus:

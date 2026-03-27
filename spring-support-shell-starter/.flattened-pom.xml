@@ -35,11 +35,6 @@
       <distribution>repo</distribution>
     </license>
   </licenses>
-  <properties>
-    <maven.compiler.target>21</maven.compiler.target>
-    <maven.compiler.source>21</maven.compiler.source>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  </properties>
   <dependencies>
     <dependency>
       <groupId>org.springframework.shell</groupId>
@@ -67,10 +62,7 @@
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
-          <source>21</source>
-          <target>21</target>
-        </configuration>
+        <configuration></configuration>
       </plugin>
     </plugins>
   </build>

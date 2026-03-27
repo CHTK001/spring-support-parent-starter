@@ -103,6 +103,34 @@ public class JobFileAppender {
     }
 
     /**
+     * 生成日志文件名。
+     * <p>
+     * 新版日志路径按任务编号归档，便于同一任务的历史日志聚合查看。
+     * 当编号缺失时会自动回退到旧版按日志 ID 命名的路径。
+     * </p>
+     *
+     * @param triggerDate 触发日期
+     * @param jobNo       任务编号
+     * @param jobLogNo    任务日志编号
+     * @return 日志文件名
+     */
+    public static String makeLogFileName(Date triggerDate, String jobNo, String jobLogNo) {
+        if (jobNo == null || jobNo.trim().isEmpty() || jobLogNo == null || jobLogNo.trim().isEmpty()) {
+            return makeLogFileName(triggerDate, System.currentTimeMillis());
+        }
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        File datePath = new File(getLogPath(), sdf.format(triggerDate));
+        if (!datePath.exists()) {
+            datePath.mkdir();
+        }
+        File taskPath = new File(datePath, jobNo.trim());
+        if (!taskPath.exists()) {
+            taskPath.mkdirs();
+        }
+        return new File(taskPath, jobLogNo.trim() + ".log").getPath();
+    }
+
+    /**
      * 追加日志
      *
      * @param logFileName 日志文件名

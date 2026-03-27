@@ -25,6 +25,8 @@ public interface MerchantChannelService {
 
     boolean disableChannel(Long id);
 
+    boolean deleteChannel(Long id);
+
     List<PaymentMethodGuideVO> listCatalog();
 
     List<ProviderSpiOptionVO> listProviderOptions(String channelType);

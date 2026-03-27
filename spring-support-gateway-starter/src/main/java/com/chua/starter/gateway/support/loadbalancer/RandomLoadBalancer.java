@@ -31,3 +31,4 @@ public class RandomLoadBalancer implements LoadBalancer {
         return "random";
     }
 }
+

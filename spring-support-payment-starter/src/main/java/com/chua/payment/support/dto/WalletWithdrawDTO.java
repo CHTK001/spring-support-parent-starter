@@ -18,6 +18,7 @@ public class WalletWithdrawDTO {
     private Long merchantId;
     private Long userId;
     private String withdrawNo;
+    private String notifyUrl;
     private BigDecimal amount;
     private String bankAccount;
     private String bankName;

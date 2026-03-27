@@ -1,7 +1,7 @@
 package com.chua.starter.ai.support.service.impl;
 
+import com.chua.common.support.ai.AiClient;
 import com.chua.common.support.core.spi.ServiceProvider;
-import com.chua.deeplearning.support.api.AiClient;
 import com.chua.deeplearning.support.core.function.api.Detector;
 import com.chua.deeplearning.support.core.function.api.Feature;
 import com.chua.deeplearning.support.core.result.DetectorPredictResult;
@@ -250,7 +250,7 @@ public class DefaultAiService implements AiService {
         try {
             // 使用新的 AiClient 架构
             var faceBuilder = aiClient.createFace();
-            var result = faceBuilder.detect(imageData);
+            var result = (PredictResultObject<PredictResult>) faceBuilder.detect(imageData);
             var faces = convertToFaces(result);
             
             return FaceDetectionResult.success(faces, System.currentTimeMillis() - startTime);
@@ -322,7 +322,7 @@ public class DefaultAiService implements AiService {
         try {
             // 使用新的 AiClient 架构
             var faceBuilder = aiClient.createFace();
-            var result = faceBuilder.recognize(imageData);
+            var result = (PredictResultObject<PredictResult>) faceBuilder.recognize(imageData);
             
             // 提取特征值（假设第一个结果包含特征）
             float[] featureValue = null;
@@ -570,7 +570,7 @@ public class DefaultAiService implements AiService {
             var fullText = ocrBuilder.recognize(imageData);
             
             // 获取详细结果
-            var detailResult = ocrBuilder.recognizeDetail(imageData);
+            var detailResult = (PredictResultObject<PredictResult>) ocrBuilder.recognizeDetail(imageData);
             var textLines = convertToTextLinesFromPredictResult(detailResult);
             
             return com.chua.starter.ai.support.model.OcrResult.success(fullText, textLines, System.currentTimeMillis() - startTime);

@@ -17,11 +17,6 @@
       <distribution>repo</distribution>
     </license>
   </licenses>
-  <properties>
-    <maven.compiler.target>25</maven.compiler.target>
-    <maven.compiler.source>25</maven.compiler.source>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  </properties>
   <dependencies>
     <dependency>
       <groupId>com.chua</groupId>
@@ -72,22 +67,9 @@
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
-          <source>25</source>
-          <target>25</target>
-          <release>25</release>
-          <encoding>UTF-8</encoding>
-          <useIncrementalCompilation>true</useIncrementalCompilation>
           <compilerArgs>
-            <arg>-parameters</arg>
             <arg>-J--enable-native-access=ALL-UNNAMED</arg>
           </compilerArgs>
-          <annotationProcessorPaths>
-            <path>
-              <groupId>org.projectlombok</groupId>
-              <artifactId>lombok</artifactId>
-              <version>${lombok.version}</version>
-            </path>
-          </annotationProcessorPaths>
         </configuration>
       </plugin>
     </plugins>

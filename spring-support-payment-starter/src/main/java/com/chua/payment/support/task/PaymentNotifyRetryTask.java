@@ -4,9 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.payment.support.entity.PaymentNotifyError;
 import com.chua.payment.support.mapper.PaymentNotifyErrorMapper;
 import com.chua.payment.support.service.PaymentNotifyProcessService;
+import com.chua.starter.job.support.annotation.Job;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -18,15 +19,12 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class PaymentNotifyRetryTask {
+@ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "enabled", havingValue = "true", matchIfMissing = true)
+public class PaymentNotifyRetryTask implements PaymentManagedTask {
 
     private final PaymentNotifyErrorMapper notifyErrorMapper;
     private final PaymentNotifyProcessService notifyProcessService;
 
-    /**
-     * 每5分钟执行一次，重试失败的回调
-     */
-    @Scheduled(cron = "0 */5 * * * ?")
     public void retryFailedNotifies() {
         log.info("开始执行回调异常重试任务");
 
@@ -53,22 +51,35 @@ public class PaymentNotifyRetryTask {
         }
     }
 
-    /**
-     * 每天凌晨2点执行一次，清理已解决的异常记录（保留30天）
-     */
-    @Scheduled(cron = "0 0 2 * * ?")
-    public void cleanResolvedErrors() {
-        log.info("开始清理已解决的回调异常记录");
+    @Override
+    public String taskKey() {
+        return "payment-notify-retry";
+    }
 
-        try {
-            LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
-            int deleted = notifyErrorMapper.delete(new LambdaQueryWrapper<PaymentNotifyError>()
-                    .eq(PaymentNotifyError::getStatus, "RESOLVED")
-                    .lt(PaymentNotifyError::getResolvedAt, thirtyDaysAgo));
+    @Override
+    public String taskName() {
+        return "回调异常重试";
+    }
 
-            log.info("清理了 {} 条已解决的回调异常记录", deleted);
-        } catch (Exception e) {
-            log.error("清理回调异常记录失败", e);
-        }
+    @Override
+    public String defaultCron() {
+        return "0 */5 * * * ?";
+    }
+
+    @Override
+    public String description() {
+        return "扫描待重试的支付回调异常并自动回放。";
+    }
+
+    @Override
+    @Job(
+            value = "payment-notify-retry",
+            scheduleType = "cron",
+            scheduleTime = "0 */5 * * * ?",
+            desc = "扫描待重试的支付回调异常并自动回放。",
+            autoStart = true
+    )
+    public void execute() {
+        retryFailedNotifies();
     }
 }

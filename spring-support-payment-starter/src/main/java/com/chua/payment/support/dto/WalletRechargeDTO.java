@@ -12,6 +12,7 @@ public class WalletRechargeDTO {
     private Long merchantId;
     private Long userId;
     private String rechargeNo;
+    private String notifyUrl;
     private BigDecimal amount;
     private String operator;
     private String remark;

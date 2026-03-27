@@ -58,15 +58,11 @@ public class BeanJobHandler implements JobHandler {
     @Override
     public void execute() throws Exception {
         log.debug("开始执行Bean任务: {}#{}", target.getClass().getSimpleName(), method.getName());
-        Class<?>[] paramTypes = method.getParameterTypes();
-        // 根据方法参数类型决定调用方式
-        if (paramTypes.length > 0) {
-            // 如果方法有参数，传入空参数数组
-            method.invoke(target, new Object[paramTypes.length]);
-        } else {
-            // 无参方法直接调用
-            method.invoke(target);
+        if (method.getParameterCount() > 0) {
+            throw new IllegalStateException("@Job 方法不支持带参数执行: "
+                    + target.getClass().getSimpleName() + "#" + method.getName());
         }
+        method.invoke(target);
         log.debug("Bean任务执行完成: {}#{}", target.getClass().getSimpleName(), method.getName());
     }
 

@@ -43,6 +43,25 @@ public class SyncProperties {
      */
     private ClientConfig client = new ClientConfig();
 
+    /**
+     * 数据同步交换配置
+     */
+    private DataSyncConfig dataSync = new DataSyncConfig();
+
+    public static SyncProperties copyOf(SyncProperties source) {
+        if (source == null) {
+            return new SyncProperties();
+        }
+
+        SyncProperties target = new SyncProperties();
+        target.type = source.type;
+        target.topics = source.topics == null ? new LinkedHashMap<>() : new LinkedHashMap<>(source.topics);
+        target.server = ServerConfig.copyOf(source.server);
+        target.client = ClientConfig.copyOf(source.client);
+        target.dataSync = DataSyncConfig.copyOf(source.dataSync);
+        return target;
+    }
+
     // ==================== 服务端配置 ====================
 
     /**
@@ -116,6 +135,25 @@ public class SyncProperties {
                 return List.of(defaultInstance);
             }
             return instances;
+        }
+
+        public static ServerConfig copyOf(ServerConfig source) {
+            ServerConfig target = new ServerConfig();
+            if (source == null) {
+                return target;
+            }
+
+            target.enable = source.enable;
+            target.instances = source.instances == null
+                    ? new ArrayList<>()
+                    : source.instances.stream().map(ServerInstance::copyOf).toList();
+            target.host = source.host;
+            target.port = source.port;
+            target.protocol = source.protocol;
+            target.heartbeat = source.heartbeat;
+            target.heartbeatInterval = source.heartbeatInterval;
+            target.connectTimeout = source.connectTimeout;
+            return target;
         }
 
     }
@@ -193,6 +231,22 @@ public class SyncProperties {
          * 该实例的主题映射 (可覆盖全局)
          */
         private Map<String, String> topics = new LinkedHashMap<>();
+
+        public static ServerInstance copyOf(ServerInstance source) {
+            ServerInstance target = new ServerInstance();
+            if (source == null) {
+                return target;
+            }
+
+            target.name = source.name;
+            target.host = source.host;
+            target.port = source.port;
+            target.protocol = source.protocol;
+            target.enable = source.enable;
+            target.description = source.description;
+            target.topics = source.topics == null ? new LinkedHashMap<>() : new LinkedHashMap<>(source.topics);
+            return target;
+        }
 
     }
 
@@ -324,6 +378,34 @@ public class SyncProperties {
             return serverHost + ":" + serverPort;
         }
 
+        public static ClientConfig copyOf(ClientConfig source) {
+            ClientConfig target = new ClientConfig();
+            if (source == null) {
+                return target;
+            }
+
+            target.enable = source.enable;
+            target.instanceId = source.instanceId;
+            target.ipAddress = source.ipAddress;
+            target.protocol = source.protocol;
+            target.serverHost = source.serverHost;
+            target.serverPort = source.serverPort;
+            target.serverAddress = source.serverAddress;
+            target.heartbeat = source.heartbeat;
+            target.heartbeatInterval = source.heartbeatInterval;
+            target.connectTimeout = source.connectTimeout;
+            target.autoReconnect = source.autoReconnect;
+            target.maxReconnectAttempts = source.maxReconnectAttempts;
+            target.reconnectInterval = source.reconnectInterval;
+            target.capabilities = source.capabilities == null ? null : Arrays.copyOf(source.capabilities, source.capabilities.length);
+            target.metadata = source.metadata == null ? new HashMap<>() : new HashMap<>(source.metadata);
+            target.autoRegister = source.autoRegister;
+            target.registerTopic = source.registerTopic;
+            target.heartbeatTopic = source.heartbeatTopic;
+            target.offlineTopic = source.offlineTopic;
+            return target;
+        }
+
     }
 
     // ==================== 便捷方法 ====================
@@ -383,5 +465,54 @@ public class SyncProperties {
      */
     public Map<String, String> getTopics() {
         return topics;
+    }
+
+    /**
+     * 获取数据同步配置
+     *
+     * @return 数据同步配置
+     */
+    public DataSyncConfig getDataSync() {
+        return dataSync;
+    }
+
+    /**
+     * 数据同步交换配置
+     */
+    @Data
+    public static class DataSyncConfig {
+
+        /**
+         * 是否启用数据同步交换服务
+         */
+        private boolean enabled = true;
+
+        /**
+         * 主题前缀
+         */
+        private String topicPrefix = "sync/data";
+
+        /**
+         * 默认请求超时时间（毫秒）
+         */
+        private long requestTimeout = 30000L;
+
+        /**
+         * 默认逻辑通道
+         */
+        private String defaultChannel = "default";
+
+        public static DataSyncConfig copyOf(DataSyncConfig source) {
+            DataSyncConfig target = new DataSyncConfig();
+            if (source == null) {
+                return target;
+            }
+
+            target.enabled = source.enabled;
+            target.topicPrefix = source.topicPrefix;
+            target.requestTimeout = source.requestTimeout;
+            target.defaultChannel = source.defaultChannel;
+            return target;
+        }
     }
 }

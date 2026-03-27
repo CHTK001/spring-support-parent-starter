@@ -81,4 +81,10 @@ public class MerchantChannelController {
     public Result<Boolean> disableChannel(@PathVariable Long id) {
         return Result.success(channelService.disableChannel(id));
     }
+
+    @Operation(summary = "删除渠道")
+    @DeleteMapping("/{id}")
+    public Result<Boolean> deleteChannel(@PathVariable Long id) {
+        return Result.success(channelService.deleteChannel(id));
+    }
 }

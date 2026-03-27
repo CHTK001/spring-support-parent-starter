@@ -17,7 +17,7 @@ import java.util.List;
  * @author CH
  * @since 2024-01-01
  */
-public interface ChatClient extends com.chua.deeplearning.support.api.ChatClient {
+public interface ChatClient extends com.chua.common.support.ai.ChatClient {
 
     /**
      * 发送聊天消息（带 Spring 层上下文）
@@ -47,7 +47,7 @@ public interface ChatClient extends com.chua.deeplearning.support.api.ChatClient
     @Slf4j
     class Builder {
 
-        private com.chua.deeplearning.support.api.ChatClient chatClient;
+        private com.chua.common.support.ai.ChatClient chatClient;
         private List<McpPreprocessor> preprocessors;
         private List<McpPostprocessor> postprocessors;
 
@@ -57,7 +57,7 @@ public interface ChatClient extends com.chua.deeplearning.support.api.ChatClient
          * @param chatClient 聊天客户端
          * @return 构建器
          */
-        public Builder client(com.chua.deeplearning.support.api.ChatClient chatClient) {
+        public Builder client(com.chua.common.support.ai.ChatClient chatClient) {
             this.chatClient = chatClient;
             return this;
         }

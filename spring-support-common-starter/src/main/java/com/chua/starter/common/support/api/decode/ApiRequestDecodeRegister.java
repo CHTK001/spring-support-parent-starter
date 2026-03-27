@@ -86,10 +86,16 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     }
 
     private void check() {
-        if (null != decodeSetting) {
-            return;
+        ApiRequestDecodeSetting setting = globalSettingFactory.get("config", ApiRequestDecodeSetting.class);
+        if (null == setting) {
+            setting = globalSettingFactory.get("decode", ApiRequestDecodeSetting.class);
         }
-        this.upgrade(globalSettingFactory.get("decode", ApiRequestDecodeSetting.class));
+        if (null == setting) {
+            setting = new ApiRequestDecodeSetting();
+            setting.setEnable(decodeConfig.isEnable());
+            setting.setCodecRequestKey(decodeConfig.getCodecRequestKey());
+        }
+        this.upgrade(setting);
     }
 
     /**
@@ -194,20 +200,27 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     @Override
     public void upgrade(ApiRequestDecodeSetting setting) {
         this.decodeSetting = setting;
-        if (null != requestCodec) {
+        String nextRequestCodecKey = null == setting ? null : setting.getCodecRequestKey();
+        boolean enable = null != setting && setting.isEnable();
+
+        if (null != requestCodec
+                && (!enable
+                || StringUtils.isEmpty(nextRequestCodecKey)
+                || !nextRequestCodecKey.equals(this.requestCodecKey))) {
             IoUtils.closeQuietly(requestCodec);
             requestCodec = null;
         }
-        if (null == setting || null == setting.getCodecRequestKey()) {
+
+        this.requestCodecKey = nextRequestCodecKey;
+
+        if (!enable || StringUtils.isEmpty(nextRequestCodecKey)) {
             return;
         }
-        if (setting.getCodecRequestKey().equals(this.requestCodecKey)) {
+
+        if (null != requestCodec) {
             return;
         }
-        if (!setting.isEnable()) {
-            return;
-        }
-        this.requestCodecKey = setting.getCodecRequestKey();
+
         requestCodec = Codec.build(decodeConfig.getCodecType(), this.requestCodecKey);
     }
 

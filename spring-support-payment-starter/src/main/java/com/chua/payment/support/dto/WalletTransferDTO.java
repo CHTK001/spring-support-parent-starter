@@ -19,6 +19,7 @@ public class WalletTransferDTO {
     private Long fromUserId;
     private Long toUserId;
     private String transferNo;
+    private String notifyUrl;
     private BigDecimal amount;
     private String operator;
     private String remark;

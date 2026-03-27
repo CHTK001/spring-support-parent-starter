@@ -15,6 +15,7 @@ import com.chua.starter.strategy.interceptor.RequestTimeoutInterceptor;
 import com.chua.starter.strategy.interceptor.ParameterCountLimitInterceptor;
 import com.chua.starter.strategy.interceptor.ContentSecurityPolicyInterceptor;
 import com.chua.starter.strategy.interceptor.ClickjackingProtectionInterceptor;
+import com.chua.starter.strategy.support.StrategyConsoleAuthInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -87,12 +88,19 @@ public class StrategyWebMvcConfiguration implements WebMvcConfigurer {
     @Autowired(required = false)
     private ClickjackingProtectionInterceptor clickjackingProtectionInterceptor;
 
+    @Nullable
+    @Autowired(required = false)
+    private StrategyConsoleAuthInterceptor strategyConsoleAuthInterceptor;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        String[] excludedPatterns = getConsoleExcludedPatterns();
+
         // 0. XSS 防护拦截器（最高优先级，按配置开关控制）
         if (strategyProperties.getXss().isEnabled()) {
             registry.addInterceptor(xssProtectionInterceptor)
                     .addPathPatterns("/**")
+                    .excludePathPatterns(excludedPatterns)
                     .order(0);
         }
 
@@ -100,6 +108,7 @@ public class StrategyWebMvcConfiguration implements WebMvcConfigurer {
         if (pathTraversalInterceptor != null && strategyProperties.getPathTraversal().isEnabled()) {
             registry.addInterceptor(pathTraversalInterceptor)
                     .addPathPatterns("/**")
+                    .excludePathPatterns(excludedPatterns)
                     .order(1);
         }
 
@@ -107,23 +116,27 @@ public class StrategyWebMvcConfiguration implements WebMvcConfigurer {
         if (ipAccessControlInterceptor != null) {
             registry.addInterceptor(ipAccessControlInterceptor)
                     .addPathPatterns("/**")
+                    .excludePathPatterns(excludedPatterns)
                     .order(2);
         }
 
         // 3. 限流拦截器
         registry.addInterceptor(sysLimitConfigurationInterceptor)
                 .addPathPatterns("/**")
+                .excludePathPatterns(excludedPatterns)
                 .order(3);
 
         // 4. 防抖拦截器
         registry.addInterceptor(sysDebounceConfigurationInterceptor)
                 .addPathPatterns("/**")
+                .excludePathPatterns(excludedPatterns)
                 .order(4);
 
         // 5. 熔断拦截器
         if (circuitBreakerInterceptor != null) {
             registry.addInterceptor(circuitBreakerInterceptor)
                     .addPathPatterns("/**")
+                    .excludePathPatterns(excludedPatterns)
                     .order(5);
         }
 
@@ -131,6 +144,7 @@ public class StrategyWebMvcConfiguration implements WebMvcConfigurer {
         if (sqlInjectionProtectionInterceptor != null && strategyProperties.getSqlInjection().isEnabled()) {
             registry.addInterceptor(sqlInjectionProtectionInterceptor)
                     .addPathPatterns("/**")
+                    .excludePathPatterns(excludedPatterns)
                     .order(6);
         }
 
@@ -138,6 +152,7 @@ public class StrategyWebMvcConfiguration implements WebMvcConfigurer {
         if (csrfProtectionInterceptor != null && strategyProperties.getCsrf().isEnabled()) {
             registry.addInterceptor(csrfProtectionInterceptor)
                     .addPathPatterns("/**")
+                    .excludePathPatterns(excludedPatterns)
                     .order(7);
         }
 
@@ -145,6 +160,7 @@ public class StrategyWebMvcConfiguration implements WebMvcConfigurer {
         if (requestSizeLimitInterceptor != null && strategyProperties.getRequestSizeLimit().isEnabled()) {
             registry.addInterceptor(requestSizeLimitInterceptor)
                     .addPathPatterns("/**")
+                    .excludePathPatterns(excludedPatterns)
                     .order(8);
         }
 
@@ -152,6 +168,7 @@ public class StrategyWebMvcConfiguration implements WebMvcConfigurer {
         if (httpMethodRestrictionInterceptor != null && strategyProperties.getHttpMethodRestriction().isEnabled()) {
             registry.addInterceptor(httpMethodRestrictionInterceptor)
                     .addPathPatterns("/**")
+                    .excludePathPatterns(excludedPatterns)
                     .order(9);
         }
 
@@ -159,6 +176,7 @@ public class StrategyWebMvcConfiguration implements WebMvcConfigurer {
         if (parameterCountLimitInterceptor != null && strategyProperties.getParameterCountLimit().isEnabled()) {
             registry.addInterceptor(parameterCountLimitInterceptor)
                     .addPathPatterns("/**")
+                    .excludePathPatterns(excludedPatterns)
                     .order(10);
         }
 
@@ -166,6 +184,7 @@ public class StrategyWebMvcConfiguration implements WebMvcConfigurer {
         if (requestTimeoutInterceptor != null && strategyProperties.getRequestTimeout().isEnabled()) {
             registry.addInterceptor(requestTimeoutInterceptor)
                     .addPathPatterns("/**")
+                    .excludePathPatterns(excludedPatterns)
                     .order(11);
         }
 
@@ -173,6 +192,7 @@ public class StrategyWebMvcConfiguration implements WebMvcConfigurer {
         if (contentSecurityPolicyInterceptor != null && strategyProperties.getContentSecurityPolicy().isEnabled()) {
             registry.addInterceptor(contentSecurityPolicyInterceptor)
                     .addPathPatterns("/**")
+                    .excludePathPatterns(excludedPatterns)
                     .order(12);
         }
 
@@ -180,7 +200,37 @@ public class StrategyWebMvcConfiguration implements WebMvcConfigurer {
         if (clickjackingProtectionInterceptor != null && strategyProperties.getClickjackingProtection().isEnabled()) {
             registry.addInterceptor(clickjackingProtectionInterceptor)
                     .addPathPatterns("/**")
+                    .excludePathPatterns(excludedPatterns)
                     .order(13);
         }
+
+        if (strategyConsoleAuthInterceptor != null && isEmbeddedConsoleAuthEnabled()) {
+            registry.addInterceptor(strategyConsoleAuthInterceptor)
+                    .addPathPatterns("/strategy-console", "/strategy-console/", "/strategy-console/**")
+                    .excludePathPatterns(
+                            "/strategy-console/login",
+                            "/strategy-console/login/",
+                            "/strategy-console/login.html",
+                            "/strategy-console/assets/**",
+                            "/strategy-console/static/**",
+                            "/v2/strategy/auth/**")
+                    .order(100);
+        }
+    }
+
+    private String[] getConsoleExcludedPatterns() {
+        return new String[]{
+                // 控制台与管理接口属于策略模块的控制面，不应再被业务策略链二次拦截，
+                // 否则会出现管理接口依赖策略配置表、策略配置表又反向影响管理接口的递归问题。
+                "/v2/strategy/**",
+                "/v2/strategy/auth/**",
+                "/strategy-console/**",
+                "/error"
+        };
+    }
+
+    private boolean isEmbeddedConsoleAuthEnabled() {
+        StrategyProperties.WebAuthConfig webAuth = strategyProperties.getWebAuth();
+        return webAuth != null && !"none".equalsIgnoreCase(webAuth.getMode());
     }
 }

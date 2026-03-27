@@ -86,6 +86,16 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     }
 
     @Override
+    public PaymentRefundOrder getByThirdPartyRefundNo(String thirdPartyRefundNo) {
+        if (!StringUtils.hasText(thirdPartyRefundNo)) {
+            return null;
+        }
+        return paymentRefundOrderMapper.selectOne(new LambdaQueryWrapper<PaymentRefundOrder>()
+                .eq(PaymentRefundOrder::getThirdPartyRefundNo, thirdPartyRefundNo)
+                .last("limit 1"));
+    }
+
+    @Override
     public RefundOrderVO getDetail(Long id) {
         return convertToVO(getById(id));
     }

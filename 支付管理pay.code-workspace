@@ -1,13 +1,16 @@
 {
-	"folders": [
-		{
-			"path": "."
-		},
-		{
-			"path": "../utils-support-parent-starter"
-		},
-		{
-			"path": "../vue-support-parent-starter"
-		}
-	]
+  "folders": [
+    {
+      "path": ".",
+    },
+    {
+      "path": "../utils-support-parent-starter",
+    },
+    {
+      "path": "../vue-support-parent-starter",
+    },
+    {
+      "path": "../spring-support-api-parent",
+    },
+  ],
 }

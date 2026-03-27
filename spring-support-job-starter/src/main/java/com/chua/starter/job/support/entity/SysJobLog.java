@@ -47,6 +47,27 @@ public class SysJobLog implements Serializable {
     private Integer jobLogId;
 
     /**
+     * 日志编号。
+     * <p>
+     * 文件名、跨系统回执和页面展示优先使用该编号，避免直接暴露自增主键。
+     * </p>
+     */
+    @TableField(value = "job_log_no")
+    private String jobLogNo;
+
+    /**
+     * 关联任务ID。
+     */
+    @TableField(value = "job_id")
+    private Integer jobId;
+
+    /**
+     * 关联任务编号。
+     */
+    @TableField(value = "job_no")
+    private String jobNo;
+
+    /**
      * 触发时间
      */
     @TableField(value = "job_log_trigger_time")
@@ -105,6 +126,32 @@ public class SysJobLog implements Serializable {
      */
     @TableField(value = "job_log_trigger_type")
     private String jobLogTriggerType;
+
+    /**
+     * 触发时所在环境/Profile。
+     * <p>
+     * 该字段在较新的任务日志表结构里已经存在，但历史实体类遗漏了映射，
+     * 会导致 JdbcEngine 无法在 UPDATE 模式下补齐该列。
+     * </p>
+     */
+    @TableField(value = "job_log_profile")
+    private String jobLogProfile;
+
+    /**
+     * 触发来源地址。
+     * <p>
+     * 调度中心在远程执行模式下会把命中的执行器地址写入该列，便于平台排查
+     * “任务是由哪个远程执行器接单”的问题。
+     * </p>
+     */
+    @TableField(value = "job_log_trigger_address")
+    private String jobLogTriggerAddress;
+
+    /**
+     * 对应的日志文件路径。
+     */
+    @TableField(value = "job_log_file_path")
+    private String jobLogFilePath;
 
     /**
      * 触发时间

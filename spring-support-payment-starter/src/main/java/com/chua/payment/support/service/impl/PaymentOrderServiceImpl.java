@@ -34,6 +34,7 @@ import com.chua.payment.support.mapper.PaymentOrderMapper;
 import com.chua.payment.support.service.OrderStateLogService;
 import com.chua.payment.support.service.OrderStateMachineService;
 import com.chua.payment.support.service.MerchantPaymentConfigService;
+import com.chua.payment.support.service.PaymentCallbackUrlResolver;
 import com.chua.payment.support.service.PaymentOrderService;
 import com.chua.payment.support.service.PaymentRefundOrderService;
 import com.chua.payment.support.service.TransactionRecordService;
@@ -70,6 +71,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     private final TransactionRecordService transactionRecordService;
     private final PaymentChannelRegistry paymentChannelRegistry;
     private final PaymentRefundOrderService paymentRefundOrderService;
+    private final PaymentCallbackUrlResolver paymentCallbackUrlResolver;
     private final MerchantPaymentConfigService merchantPaymentConfigService;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
@@ -110,7 +112,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         order.setStatus(OrderState.PENDING.name());
         order.setSubject(StringUtils.hasText(dto.getSubject()) ? dto.getSubject() : "支付订单");
         order.setBody(dto.getBody());
-        order.setNotifyUrl(firstNonBlank(dto.getNotifyUrl(), channel.getNotifyUrl(), merchant.getDefaultNotifyUrl()));
+        order.setNotifyUrl(paymentCallbackUrlResolver.resolvePayNotifyUrl(dto.getNotifyUrl(), channel, merchant, orderNo));
         order.setReturnUrl(firstNonBlank(dto.getReturnUrl(), channel.getReturnUrl(), merchant.getDefaultReturnUrl()));
         order.setExpireTime(LocalDateTime.now().plusMinutes(resolveExpireMinutes(dto, merchant)));
         order.setDeleted(0);
@@ -437,7 +439,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         request.setRefundAmount(refundAmount);
         request.setTotalAmount(resolvedPaidAmount(latest));
         request.setReason(dto != null ? dto.getRefundReason() : null);
-        request.setNotifyUrl(latest.getNotifyUrl());
+        request.setNotifyUrl(paymentCallbackUrlResolver.resolveRefundNotifyUrl(channel, request.getRefundNo(), latest.getNotifyUrl()));
         String requestPayload = safeJson(request);
 
         paymentRefundOrderService.createRefundOrder(latest,

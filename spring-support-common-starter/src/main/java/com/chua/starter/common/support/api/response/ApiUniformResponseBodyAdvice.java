@@ -107,13 +107,12 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
             return o;
         }
 
-        Class<?> parameterDeclaringClass = methodParameter.getDeclaringClass();
-        if (isIgnorePackages(parameterDeclaringClass)) {
+        Class<?> controllerClass = methodParameter.getContainingClass();
+        if (isIgnorePackages(controllerClass)) {
             return o;
         }
         Method method = methodParameter.getMethod();
-        Class<?> declaringClass = method.getReturnType();
-        if (isIgnoreReturnFormat(methodParameter, method, declaringClass, serverHttpRequest, mediaType)) {
+        if (isIgnoreReturnFormat(methodParameter, method, controllerClass, serverHttpRequest, mediaType)) {
             return o;
         }
 
@@ -208,15 +207,15 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
     }
 
     @SneakyThrows
-    private boolean isIgnoreReturnFormat(MethodParameter methodParameter, Method method, Class<?> declaringClass, ServerHttpRequest serverHttpRequest, MediaType mediaType) {
+    private boolean isIgnoreReturnFormat(MethodParameter methodParameter, Method method, Class<?> controllerClass, ServerHttpRequest serverHttpRequest, MediaType mediaType) {
         // 检查方法级别注解
         if (methodParameter.hasMethodAnnotation(ApiReturnFormatIgnore.class)) {
             return true;
         }
 
         // 检查类级别注解或ResponseEntity类型
-        if (declaringClass.isAnnotationPresent(ApiReturnFormatIgnore.class) ||
-                isAssignableFrom(ResponseEntity.class, declaringClass)) {
+        if (AnnotationUtils.findAnnotation(controllerClass, ApiReturnFormatIgnore.class) != null ||
+                isAssignableFrom(ResponseEntity.class, method.getReturnType())) {
             return true;
         }
 
@@ -235,7 +234,7 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
         }
 
         // 检查IgnoreReturnType注解
-        if (AnnotationUtils.isAnnotationDeclaredLocally(IgnoreReturnType.class, declaringClass)) {
+        if (AnnotationUtils.findAnnotation(controllerClass, IgnoreReturnType.class) != null) {
             return true;
         }
 

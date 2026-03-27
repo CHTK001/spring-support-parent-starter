@@ -10,6 +10,8 @@ import com.chua.starter.sync.support.pojo.ClientInfo;
 import com.chua.starter.sync.support.pojo.SyncResponse;
 import com.chua.starter.sync.support.properties.SyncProperties;
 import com.chua.starter.sync.support.server.SyncServer;
+import com.chua.starter.sync.support.spi.SyncClientInfoCustomizer;
+import com.chua.starter.sync.support.spi.SyncClientCustomizer;
 import com.chua.starter.sync.support.spi.SyncMessageHandler;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +23,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.net.InetAddress;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -53,6 +56,16 @@ public class SyncClient implements InitializingBean, DisposableBean {
      * Spring 环境配置
      */
     private final Environment environment;
+
+    /**
+     * 客户端信息定制器
+     */
+    private final List<SyncClientInfoCustomizer> clientInfoCustomizers;
+
+    /**
+     * 客户端初始化定制器。
+     */
+    private final List<SyncClientCustomizer> clientCustomizers;
 
     /**
      * 同步客户端
@@ -97,6 +110,16 @@ public class SyncClient implements InitializingBean, DisposableBean {
     private final Set<String> dynamicTopics = ConcurrentHashMap.newKeySet();
 
     /**
+     * 已订阅主题
+     */
+    private final Set<String> subscribedTopics = ConcurrentHashMap.newKeySet();
+
+    /**
+     * 已注册监听器的主题
+     */
+    private final Set<String> listenerTopics = ConcurrentHashMap.newKeySet();
+
+    /**
      * 构造方法
      *
      * @param syncProperties 同步配置属性
@@ -105,8 +128,31 @@ public class SyncClient implements InitializingBean, DisposableBean {
      * @since 1.0.0
      */
     public SyncClient(SyncProperties syncProperties, Environment environment) {
-        this.syncProperties = syncProperties;
+        this(syncProperties, environment, List.of(), List.of());
+    }
+
+    public SyncClient(SyncProperties syncProperties,
+                      Environment environment,
+                      List<SyncClientInfoCustomizer> clientInfoCustomizers) {
+        this(syncProperties, environment, clientInfoCustomizers, List.of());
+    }
+
+    public SyncClient(SyncProperties syncProperties,
+                      Environment environment,
+                      List<SyncClientInfoCustomizer> clientInfoCustomizers,
+                      List<SyncClientCustomizer> clientCustomizers) {
+        this.syncProperties = SyncProperties.copyOf(syncProperties);
         this.environment = environment;
+        this.clientInfoCustomizers = clientInfoCustomizers == null
+                ? List.of()
+                : clientInfoCustomizers.stream()
+                .sorted(Comparator.comparingInt(SyncClientInfoCustomizer::getOrder))
+                .toList();
+        this.clientCustomizers = clientCustomizers == null
+                ? List.of()
+                : clientCustomizers.stream()
+                .sorted(Comparator.comparingInt(SyncClientCustomizer::getOrder))
+                .toList();
         loadHandlers();
     }
 
@@ -151,6 +197,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
             return;
         }
 
+        applyClientCustomizers();
         initClientInfo();
         connect();
         startScheduler();
@@ -244,9 +291,45 @@ public class SyncClient implements InitializingBean, DisposableBean {
             log.info("[Sync客户端] 客户端信息初始化: app={}, active={}, ip={}, port={}, clientUrl={}, actuatorPath={}",
                     clientInfo.getClientApplicationName(), clientInfo.getClientApplicationActive(), 
                     clientInfo.getClientIpAddress(), clientInfo.getClientPort(), serviceUrl, actuatorPath);
-        } catch (Exception e) {
+        } catch (UnknownHostException | RuntimeException e) {
             log.error("[Sync客户端] 初始化客户端信息失败", e);
             clientInfo = ClientInfo.builder().clientStartTime(System.currentTimeMillis()).clientOnline(true).build();
+        }
+
+        applyClientInfoCustomizers();
+    }
+
+    /**
+     * 应用客户端信息定制器
+     */
+    private void applyClientInfoCustomizers() {
+        if (clientInfo == null || clientInfoCustomizers.isEmpty()) {
+            return;
+        }
+
+        for (SyncClientInfoCustomizer customizer : clientInfoCustomizers) {
+            try {
+                customizer.customize(clientInfo);
+            } catch (Exception e) {
+                log.error("[Sync客户端] 客户端信息定制器执行失败: {}", customizer.getClass().getName(), e);
+            }
+        }
+    }
+
+    /**
+     * 应用客户端连接前定制器。
+     */
+    private void applyClientCustomizers() {
+        if (clientCustomizers.isEmpty()) {
+            return;
+        }
+
+        for (SyncClientCustomizer customizer : clientCustomizers) {
+            try {
+                customizer.customize(this);
+            } catch (Exception e) {
+                log.error("[Sync客户端] 客户端初始化定制器执行失败: {}", customizer.getClass().getName(), e);
+            }
         }
     }
 
@@ -283,36 +366,28 @@ public class SyncClient implements InitializingBean, DisposableBean {
                     .protocol(protocol)
                     .host(host)
                     .port(port)
-                    .connectTimeoutMillis(10000)          // 连接超时10秒
-                    .autoReconnectEnabled(true)           // 启用自动重连
-                    .maxRetries(-1)                       // 无限重连（-1表示无限）
-                    .retryIntervalMillis(5000)            // 重连间隔5秒（不自动断开空闲连接）
+                    .connectTimeoutMillis(clientConfig.getConnectTimeout())
+                    .autoReconnectEnabled(clientConfig.isAutoReconnect())
+                    .maxRetries(clientConfig.getMaxReconnectAttempts())
+                    .retryIntervalMillis(clientConfig.getReconnectInterval())
                     .build();
 
             // 使用新的 SyncClient 接口创建客户端
             syncClient = com.chua.common.support.network.protocol.sync.SyncClient.create(protocol, protocolSetting);
 
             // 订阅所有配置的主题 + 系统主题
-            List<String> allTopics = new ArrayList<>(syncProperties.getTopics().keySet());
+            Set<String> allTopics = new LinkedHashSet<>(syncProperties.getTopics().keySet());
+            allTopics.addAll(dynamicTopics);
             allTopics.add(SyncServer.TOPIC_HEALTH);
             allTopics.add(SyncServer.TOPIC_RESPONSE);
             allTopics.add(SyncServer.TOPIC_CONNECT);      // 监听其他客户端连接事件
             allTopics.add(SyncServer.TOPIC_DISCONNECT);   // 监听其他客户端断开事件
-            syncClient.subscribe(allTopics.toArray(new String[0]));
+            syncClient.subscribe(allTopics.toArray(String[]::new));
+            subscribedTopics.addAll(allTopics);
 
             // 为每个主题添加监听器
             for (String topic : allTopics) {
-                syncClient.getListenerManager().addTopicListener(new TopicListener() {
-                    @Override
-                    public String getTopic() {
-                        return topic;
-                    }
-
-                    @Override
-                    public void onEvent(DataEvent event) {
-                        SyncClient.this.onMessage(event.getTopic(), event.getData());
-                    }
-                });
+                registerTopicListener(topic);
             }
 
             // 添加连接监听器
@@ -328,18 +403,14 @@ public class SyncClient implements InitializingBean, DisposableBean {
             // 连接服务端
             syncClient.connect();
             clientInfo.setClientId(syncClient.getClientId());
-            connected.set(true);
-
-            // 自动注册
-            if (syncProperties.getClient().isAutoRegister()) {
-                register();
+            if (syncClient.isConnected()) {
+                onConnectionStateChanged(true);
+                log.info("[Sync客户端] 连接成功，协议: {}，服务器: {}:{}, clientId={}",
+                        syncProperties.getClient().getProtocol(), host, port, syncClient.getClientId());
+            } else {
+                connected.set(false);
+                log.warn("[Sync客户端] connect() 已执行，但底层连接状态尚未就绪，等待连接事件回调");
             }
-
-            // 通知连接监听器
-            notifyConnectionListeners(true);
-
-            log.info("[Sync客户端] 连接成功，协议: {}，服务器: {}:{}, clientId={}",
-                    syncProperties.getClient().getProtocol(), host, port, syncClient.getClientId());
         } catch (Exception e) {
             log.error("[Sync客户端] 连接失败，底层将自动重连", e);
             connected.set(false);
@@ -393,37 +464,65 @@ public class SyncClient implements InitializingBean, DisposableBean {
      * 动态订阅主题
      */
     public void subscribe(String... topics) {
-        if (syncClient == null) return;
-        syncClient.subscribe(topics);
-        dynamicTopics.addAll(Arrays.asList(topics));
-        
-        // 为新主题添加监听器
-        for (String topic : topics) {
-            syncClient.getListenerManager().addTopicListener(new TopicListener() {
-                @Override
-                public String getTopic() {
-                    return topic;
-                }
-
-                @Override
-                public void onEvent(DataEvent event) {
-                    SyncClient.this.onMessage(event.getTopic(), event.getData());
-                }
-            });
+        if (syncClient == null || topics == null || topics.length == 0) {
+            return;
         }
-        log.info("[Sync客户端] 动态订阅主题: {}", Arrays.toString(topics));
+
+        List<String> newTopics = Arrays.stream(topics)
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(topic -> !topic.isEmpty())
+                .filter(subscribedTopics::add)
+                .toList();
+        if (newTopics.isEmpty()) {
+            return;
+        }
+
+        syncClient.subscribe(newTopics.toArray(String[]::new));
+        dynamicTopics.addAll(newTopics);
+
+        for (String topic : newTopics) {
+            registerTopicListener(topic);
+        }
+        log.info("[Sync客户端] 动态订阅主题: {}", newTopics);
     }
 
     /**
      * 动态注册消息处理器
      */
     public void registerHandler(String topic, SyncMessageHandler handler) {
-        handlerMap.computeIfAbsent(topic, k -> new CopyOnWriteArrayList<>()).add(handler);
-        // 如果主题未订阅，自动订阅
-        if (!dynamicTopics.contains(topic) && !syncProperties.getTopics().containsKey(topic)) {
-            subscribe(topic);
+        registerHandlerInternal(topic, handler, false);
+    }
+
+    /**
+     * 仅在当前主题不存在同类处理器时注册。
+     *
+     * @param topic   主题
+     * @param handler 处理器
+     * @return 是否新增注册
+     */
+    public boolean registerHandlerIfAbsent(String topic, SyncMessageHandler handler) {
+        return registerHandlerInternal(topic, handler, true);
+    }
+
+    /**
+     * 当前主题下是否已存在指定处理器。
+     *
+     * @param topic       主题
+     * @param handlerName 处理器名称
+     * @return 是否已注册
+     */
+    public boolean hasHandler(String topic, String handlerName) {
+        if (topic == null || topic.isBlank() || handlerName == null || handlerName.isBlank()) {
+            return false;
         }
-        log.info("[Sync客户端] 注册处理器: topic={}, handler={}", topic, handler.getName());
+
+        List<SyncMessageHandler> handlers = handlerMap.get(topic);
+        if (handlers == null || handlers.isEmpty()) {
+            return false;
+        }
+
+        return handlers.stream().anyMatch(handler -> handlerName.equals(handler.getName()));
     }
 
     /**
@@ -475,19 +574,22 @@ public class SyncClient implements InitializingBean, DisposableBean {
      * 注：断线重连由底层 SyncProtocolClient 自动处理
      */
     private void onConnectionStateChanged(boolean isConnected) {
+        boolean previous = connected.getAndSet(isConnected);
+        if (previous == isConnected) {
+            return;
+        }
+
         if (isConnected) {
-            connected.set(true);
-            // 重连后自动注册
             if (syncProperties.getClient().isAutoRegister()) {
                 register();
             }
             notifyConnectionListeners(true);
             log.info("[Sync客户端] 已连接");
-        } else {
-            connected.set(false);
-            notifyConnectionListeners(false);
-            log.warn("[Sync客户端] 已断开，底层将自动重连");
+            return;
         }
+
+        notifyConnectionListeners(false);
+        log.warn("[Sync客户端] 已断开，底层将自动重连");
     }
 
     /**
@@ -588,8 +690,9 @@ public class SyncClient implements InitializingBean, DisposableBean {
         });
 
         // 心跳任务
-        int heartbeatInterval = syncProperties.getClient().getHeartbeatInterval();
-        if (heartbeatInterval > 0) {
+        SyncProperties.ClientConfig clientConfig = syncProperties.getClient();
+        int heartbeatInterval = clientConfig.getHeartbeatInterval();
+        if (clientConfig.isHeartbeat() && heartbeatInterval > 0) {
             scheduler.scheduleAtFixedRate(
                     this::sendHeartbeat,
                     heartbeatInterval,
@@ -616,8 +719,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
         try {
             if (syncClient == null) {
                 if (connected.get()) {
-                    connected.set(false);
-                    notifyConnectionListeners(false);
+                    onConnectionStateChanged(false);
                 }
                 return;
             }
@@ -625,17 +727,7 @@ public class SyncClient implements InitializingBean, DisposableBean {
             // 同步底层连接状态
             boolean actualConnected = syncClient.isConnected();
             if (connected.get() != actualConnected) {
-                connected.set(actualConnected);
-                notifyConnectionListeners(actualConnected);
-                if (actualConnected) {
-                    log.info("[Sync客户端] 检测到连接已恢复");
-                    // 重连后自动注册
-                    if (syncProperties.getClient().isAutoRegister()) {
-                        register();
-                    }
-                } else {
-                    log.warn("[Sync客户端] 检测到连接已断开");
-                }
+                onConnectionStateChanged(actualConnected);
             }
         } catch (Exception e) {
             log.debug("[Sync客户端] 连接状态检测异常: {}", e.getMessage());
@@ -672,7 +764,12 @@ public class SyncClient implements InitializingBean, DisposableBean {
             }
 
             // 构建响应对象
-            boolean success = Boolean.TRUE.equals(responseData.get("success"));
+            Object successValue = responseData.get("success");
+            boolean success = Boolean.TRUE.equals(successValue);
+            if (!success && successValue == null) {
+                Object code = responseData.get("code");
+                success = code instanceof Number number && number.intValue() >= 200 && number.intValue() < 300;
+            }
             String message = (String) responseData.get("message");
             Object result = responseData.get("data");
 
@@ -722,6 +819,64 @@ public class SyncClient implements InitializingBean, DisposableBean {
         return connected.get();
     }
 
+    private void registerTopicListener(String topic) {
+        if (syncClient == null || topic == null || topic.isBlank() || !listenerTopics.add(topic)) {
+            return;
+        }
+
+        syncClient.getListenerManager().addTopicListener(new TopicListener() {
+            @Override
+            public String getTopic() {
+                return topic;
+            }
+
+            @Override
+            public void onEvent(DataEvent event) {
+                SyncClient.this.onMessage(event.getTopic(), event.getData());
+            }
+        });
+    }
+
+    private boolean registerHandlerInternal(String topic, SyncMessageHandler handler, boolean ignoreIfPresent) {
+        if (topic == null || topic.isBlank() || handler == null) {
+            return false;
+        }
+
+        List<SyncMessageHandler> handlers = handlerMap.computeIfAbsent(topic, key -> new CopyOnWriteArrayList<>());
+        boolean exists = handlers.stream().anyMatch(existing -> isSameHandler(existing, handler));
+        if (exists && ignoreIfPresent) {
+            return false;
+        }
+        if (!exists) {
+            handlers.add(handler);
+        }
+
+        boolean managedByConfig = syncProperties.getTopics().containsKey(topic);
+        if (!managedByConfig) {
+            dynamicTopics.add(topic);
+        }
+
+        if (syncClient != null && !subscribedTopics.contains(topic) && !managedByConfig) {
+            subscribe(topic);
+        } else {
+            registerTopicListener(topic);
+        }
+
+        log.info("[Sync客户端] 注册处理器: topic={}, handler={}, exists={}",
+                topic, handler.getName(), exists);
+        return !exists;
+    }
+
+    private boolean isSameHandler(SyncMessageHandler left, SyncMessageHandler right) {
+        if (left == right) {
+            return true;
+        }
+        if (left == null || right == null) {
+            return false;
+        }
+        return left.getClass().equals(right.getClass()) && Objects.equals(left.getName(), right.getName());
+    }
+
     @Override
     public void destroy() throws Exception {
         log.info("[Sync客户端] 正在停止...");
@@ -733,7 +888,8 @@ public class SyncClient implements InitializingBean, DisposableBean {
                         "clientId", getClientId(),
                         "timestamp", System.currentTimeMillis()
                 ));
-            } catch (Exception ignored) {
+            } catch (RuntimeException e) {
+                log.warn("[Sync客户端] 发送下线通知失败", e);
             }
         }
 

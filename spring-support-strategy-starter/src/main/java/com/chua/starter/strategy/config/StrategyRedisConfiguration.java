@@ -1,13 +1,22 @@
 package com.chua.starter.strategy.config;
 
+import com.chua.starter.strategy.distributed.RedisDebounce;
+import com.chua.starter.strategy.distributed.RedisRateLimiter;
+import com.chua.starter.strategy.distributed.StrategyDebounce;
+import com.chua.starter.strategy.distributed.StrategyRateLimiter;
+import com.chua.starter.strategy.support.SpringDataRedisStrategyRedisSupport;
+import com.chua.starter.strategy.support.StrategyRedisSupport;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 
 /**
  * 策略模块 Redis 配置
@@ -41,5 +50,55 @@ public class StrategyRedisConfiguration {
         StringRedisTemplate template = new StringRedisTemplate();
         template.setConnectionFactory(connectionFactory);
         return template;
+    }
+
+    /**
+     * Redis 支撑能力实现。
+     *
+     * @param stringRedisTemplate Redis 模板
+     * @param listenerContainerProvider Redis 订阅容器提供者
+     * @return Redis 能力实现
+     */
+    @Bean
+    @ConditionalOnMissingBean(StrategyRedisSupport.class)
+    public StrategyRedisSupport strategyRedisSupport(
+            StringRedisTemplate stringRedisTemplate,
+            ObjectProvider<RedisMessageListenerContainer> listenerContainerProvider) {
+        return new SpringDataRedisStrategyRedisSupport(
+                stringRedisTemplate,
+                listenerContainerProvider.getIfAvailable()
+        );
+    }
+
+    /**
+     * Redis 策略限流器
+     * <p>
+     * 仅在显式选择 Redis 限流模式时注册，避免本地模式被无关依赖拖入。
+     * </p>
+     *
+     * @param stringRedisTemplate Redis 模板
+     * @return Redis 限流器
+     */
+    @Bean
+    @ConditionalOnMissingBean(StrategyRateLimiter.class)
+    @ConditionalOnProperty(name = "plugin.strategy.rate-limiter.type", havingValue = "redis")
+    public StrategyRateLimiter redisRateLimiter(StringRedisTemplate stringRedisTemplate) {
+        return new RedisRateLimiter(stringRedisTemplate);
+    }
+
+    /**
+     * Redis 策略防抖器
+     * <p>
+     * 仅在显式选择 Redis 防抖模式时注册，避免本地模式加载 Redis 相关实现。
+     * </p>
+     *
+     * @param stringRedisTemplate Redis 模板
+     * @return Redis 防抖器
+     */
+    @Bean
+    @ConditionalOnMissingBean(StrategyDebounce.class)
+    @ConditionalOnProperty(name = "plugin.strategy.debounce.type", havingValue = "redis")
+    public StrategyDebounce redisDebounce(StringRedisTemplate stringRedisTemplate) {
+        return new RedisDebounce(stringRedisTemplate);
     }
 }

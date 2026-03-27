@@ -2,6 +2,7 @@ package com.chua.starter.strategy.aspect;
 
 import com.chua.starter.strategy.annotation.Idempotent;
 import com.chua.starter.strategy.exception.IdempotentException;
+import com.chua.starter.strategy.support.StrategyRedisSupport;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -12,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.expression.MethodBasedEvaluationContext;
 import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.ParameterNameDiscoverer;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
@@ -59,7 +59,7 @@ public class IdempotentAspect {
     private final Map<String, Long> localCache = new ConcurrentHashMap<>();
 
     @Autowired(required = false)
-    private StringRedisTemplate stringRedisTemplate;
+    private StrategyRedisSupport strategyRedisSupport;
 
     @Around("@annotation(idempotent)")
     public Object around(ProceedingJoinPoint joinPoint, Idempotent idempotent) throws Throwable {
@@ -243,10 +243,9 @@ public class IdempotentAspect {
         long timeoutMillis = timeUnit.toMillis(timeout);
 
         // 优先使用Redis
-        if (stringRedisTemplate != null) {
-            Boolean success = stringRedisTemplate.opsForValue().setIfAbsent(
+        if (strategyRedisSupport != null && strategyRedisSupport.isAvailable()) {
+            return strategyRedisSupport.setIfAbsent(
                     key, String.valueOf(System.currentTimeMillis()), timeout, timeUnit);
-            return Boolean.TRUE.equals(success);
         }
 
         // 降级使用本地缓存
@@ -275,8 +274,8 @@ public class IdempotentAspect {
      * 删除幂等键
      */
     private void removeKey(String key) {
-        if (stringRedisTemplate != null) {
-            stringRedisTemplate.delete(key);
+        if (strategyRedisSupport != null && strategyRedisSupport.isAvailable()) {
+            strategyRedisSupport.delete(key);
         } else {
             localCache.remove(key);
         }

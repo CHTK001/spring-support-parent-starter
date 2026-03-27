@@ -17,6 +17,54 @@
       "type": "java.lang.String",
       "defaultValue": "default",
       "description": "微信支付渠道默认使用的 provider SPI 实现名，例如 default、wechat-pay、mock、wechat-mock。"
+    },
+    {
+      "name": "plugin.payment.scheduler.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "是否启用支付模块内置调度任务与动态调度管理器。中心化部署时，可在非支付中心服务中关闭。"
+    },
+    {
+      "name": "plugin.payment.scheduler.engine",
+      "type": "java.lang.String",
+      "defaultValue": "internal",
+      "description": "支付调度引擎。internal 表示使用支付模块内置调度；job 表示接入 spring-support-job-starter。"
+    },
+    {
+      "name": "plugin.payment.scheduler.platform-base-url",
+      "type": "java.lang.String",
+      "defaultValue": "http://127.0.0.1:18083/scheduler/api",
+      "description": "当 plugin.payment.scheduler.engine=job 时，支付运营台调度接口代理到的 scheduler 平台根地址。"
+    },
+    {
+      "name": "plugin.payment.scheduler.platform-namespace",
+      "type": "java.lang.String",
+      "defaultValue": "payment",
+      "description": "当 plugin.payment.scheduler.engine=job 时，支付任务在 scheduler 平台使用的命名空间。"
+    },
+    {
+      "name": "plugin.payment.scheduler.platform-access-mode",
+      "type": "java.lang.String",
+      "defaultValue": "auto",
+      "description": "支付代理 scheduler 平台时的访问模式。auto 表示有 OAuth 头时走 /v1/job-platform，无统一登录态时自动切到 /job-console/api；也可强制设置为 platform 或 console。"
+    },
+    {
+      "name": "plugin.payment.scheduler.platform-console-username",
+      "type": "java.lang.String",
+      "defaultValue": "admin",
+      "description": "当使用 scheduler 轻量控制台 API 时，payment 代理自动登录 scheduler 控制台所使用的账号。"
+    },
+    {
+      "name": "plugin.payment.scheduler.platform-console-password",
+      "type": "java.lang.String",
+      "defaultValue": "admin123456",
+      "description": "当使用 scheduler 轻量控制台 API 时，payment 代理自动登录 scheduler 控制台所使用的密码。"
+    },
+    {
+      "name": "plugin.payment.ops.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "是否启用支付运营台接口。该接口依赖调度管理器，通常与 plugin.payment.scheduler.enabled 一起使用。"
     }
   ]
 }

@@ -46,8 +46,14 @@ public class WalletLimitServiceImpl implements WalletLimitService {
         }
         MerchantWalletLimit existing = getLimit(limit.getMerchantId());
         if (existing != null) {
-            limit.setId(existing.getId());
-            limitMapper.updateById(limit);
+            existing.setSingleRechargeLimit(limit.getSingleRechargeLimit());
+            existing.setDailyRechargeLimit(limit.getDailyRechargeLimit());
+            existing.setSingleWithdrawLimit(limit.getSingleWithdrawLimit());
+            existing.setDailyWithdrawLimit(limit.getDailyWithdrawLimit());
+            existing.setSingleTransferLimit(limit.getSingleTransferLimit());
+            existing.setDailyTransferLimit(limit.getDailyTransferLimit());
+            existing.setBalanceLimit(limit.getBalanceLimit());
+            limitMapper.updateById(existing);
         } else {
             limitMapper.insert(limit);
         }

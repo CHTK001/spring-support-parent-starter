@@ -91,3 +91,4 @@ public class GatewayConfiguration {
         return new GatewayClient(properties, serviceDiscovery);
     }
 }
+

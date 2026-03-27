@@ -44,8 +44,11 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
                 .eq(MerchantPaymentConfig::getMerchantId, config.getMerchantId())
                 .last("limit 1"));
         if (existing != null) {
-            config.setId(existing.getId());
-            configMapper.updateById(config);
+            existing.setOrderReusable(config.getOrderReusable());
+            existing.setOrderTimeoutMinutes(config.getOrderTimeoutMinutes());
+            existing.setPendingOrderLimit(config.getPendingOrderLimit());
+            existing.setAutoCancelTimeoutOrder(config.getAutoCancelTimeoutOrder());
+            configMapper.updateById(existing);
         } else {
             configMapper.insert(config);
         }

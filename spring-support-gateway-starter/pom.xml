@@ -52,6 +52,7 @@
             <groupId>com.chua</groupId>
             <artifactId>utils-support-netty-starter</artifactId>
         </dependency>
+
     </dependencies>
 
     <!-- 构建配置 -->

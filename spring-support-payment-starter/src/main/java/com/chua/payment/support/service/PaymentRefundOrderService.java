@@ -24,6 +24,8 @@ public interface PaymentRefundOrderService {
 
     PaymentRefundOrder getByRefundNo(String refundNo);
 
+    PaymentRefundOrder getByThirdPartyRefundNo(String thirdPartyRefundNo);
+
     RefundOrderVO getDetail(Long id);
 
     Page<RefundOrderVO> page(int pageNum, int pageSize, Long merchantId, String orderNo, String refundNo, String status);

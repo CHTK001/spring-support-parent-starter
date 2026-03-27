@@ -1,7 +1,9 @@
 package com.chua.starter.job.support.scheduler;
 
+import com.chua.starter.job.support.JobNumberGenerator;
 import com.chua.starter.job.support.entity.SysJob;
 import com.chua.starter.job.support.entity.SysJobLog;
+import com.chua.starter.job.support.log.JobFileAppender;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
@@ -77,6 +79,9 @@ public class LocalJobTrigger {
 
         // 1、保存日志
         SysJobLog jobLog = new SysJobLog();
+        jobLog.setJobLogNo(JobNumberGenerator.nextJobLogNo());
+        jobLog.setJobId(jobInfo.getJobId());
+        jobLog.setJobNo(jobInfo.getJobNo());
         jobLog.setJobLogApp("local");
         jobLog.setJobLogTriggerBean(jobInfo.getJobExecuteBean());
         jobLog.setJobLogTriggerType(triggerType.getName());
@@ -84,6 +89,7 @@ public class LocalJobTrigger {
         jobLog.setJobLogTriggerDate(LocalDate.now());
         jobLog.setJobLogExecuteCode("PADDING");
         jobLog.setJobLogTriggerParam(jobInfo.getJobExecuteParam());
+        jobLog.setJobLogFilePath(JobFileAppender.makeLogFileName(jobLog.getJobLogTriggerTime(), jobInfo.getJobNo(), jobLog.getJobLogNo()));
         JobConfig.getInstance().saveLog(jobLog);
         log.debug(">>>>>>>>>>> 任务触发开始, 日志ID={}", jobLog.getJobLogId());
 

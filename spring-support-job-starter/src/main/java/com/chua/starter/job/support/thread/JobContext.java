@@ -2,6 +2,10 @@ package com.chua.starter.job.support.thread;
 
 import lombok.Data;
 import lombok.Getter;
+import lombok.Setter;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 作业执行上下文
@@ -50,6 +54,18 @@ public class JobContext {
     private final long jobLogId;
 
     /**
+     * 任务编号。
+     */
+    @Getter
+    private final String jobNo;
+
+    /**
+     * 任务日志编号。
+     */
+    @Getter
+    private final String jobLogNo;
+
+    /**
      * 任务执行参数
      */
     @Getter
@@ -84,6 +100,16 @@ public class JobContext {
     private String handleMsg;
 
     /**
+     * 结构化扩展属性。
+     * <p>
+     * 供回调、脚本和更详细日志写入时补充上下文信息。
+     * </p>
+     */
+    @Setter
+    @Getter
+    private Map<String, Object> attributes = new HashMap<>();
+
+    /**
      * 构造函数
      *
      * @param jobId          任务ID
@@ -93,7 +119,7 @@ public class JobContext {
      * @param shardTotal     分片总数
      */
     public JobContext(long jobId, String jobParam, String jobLogFileName, int shardIndex, int shardTotal) {
-        this(-1L, jobId, jobParam, jobLogFileName, shardIndex, shardTotal);
+        this(-1L, jobId, null, null, jobParam, jobLogFileName, shardIndex, shardTotal);
     }
 
     /**
@@ -101,14 +127,25 @@ public class JobContext {
      *
      * @param jobLogId       任务日志ID
      * @param jobId          任务ID
+     * @param jobNo          任务编号
+     * @param jobLogNo       任务日志编号
      * @param jobParam       任务参数
      * @param jobLogFileName 日志文件名
      * @param shardIndex     分片索引
      * @param shardTotal     分片总数
      */
-    public JobContext(long jobLogId, long jobId, String jobParam, String jobLogFileName, int shardIndex, int shardTotal) {
+    public JobContext(long jobLogId,
+                      long jobId,
+                      String jobNo,
+                      String jobLogNo,
+                      String jobParam,
+                      String jobLogFileName,
+                      int shardIndex,
+                      int shardTotal) {
         this.jobLogId = jobLogId;
         this.jobId = jobId;
+        this.jobNo = jobNo;
+        this.jobLogNo = jobLogNo;
         this.jobParam = jobParam;
         this.jobLogFileName = jobLogFileName;
         this.shardIndex = shardIndex;
@@ -171,6 +208,22 @@ public class JobContext {
     public static long getCurrentJobLogId() {
         JobContext context = getJobContext();
         return context != null ? context.jobLogId : -1;
+    }
+
+    /**
+     * 获取当前任务编号。
+     */
+    public static String getCurrentJobNo() {
+        JobContext context = getJobContext();
+        return context != null ? context.jobNo : null;
+    }
+
+    /**
+     * 获取当前任务日志编号。
+     */
+    public static String getCurrentJobLogNo() {
+        JobContext context = getJobContext();
+        return context != null ? context.jobLogNo : null;
     }
 
     /**

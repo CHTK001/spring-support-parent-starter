@@ -1,13 +1,11 @@
 package com.chua.starter.strategy.service;
 
 import com.chua.common.support.text.json.Json;
+import com.chua.starter.strategy.support.StrategyRedisSupport;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.listener.ChannelTopic;
-import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
@@ -35,10 +33,7 @@ public class StrategyConfigSyncService {
     private static final String SYNC_CHANNEL = "strategy:config:sync";
 
     @Autowired(required = false)
-    private StringRedisTemplate stringRedisTemplate;
-
-    @Autowired(required = false)
-    private RedisMessageListenerContainer redisMessageListenerContainer;
+    private StrategyRedisSupport strategyRedisSupport;
 
     /**
      * 配置类型对应的刷新回调
@@ -109,12 +104,7 @@ public class StrategyConfigSyncService {
 
     @PostConstruct
     public void init() {
-        if (redisMessageListenerContainer != null) {
-            // 订阅配置同步频道
-            redisMessageListenerContainer.addMessageListener(
-                    (message, pattern) -> handleMessage(new String(message.getBody())),
-                    new ChannelTopic(SYNC_CHANNEL)
-            );
+        if (strategyRedisSupport != null && strategyRedisSupport.subscribe(SYNC_CHANNEL, this::handleMessage)) {
             log.info("[STRATEGY] 配置同步服务已启动，订阅频道: {}", SYNC_CHANNEL);
         } else {
             log.warn("[STRATEGY] Redis未配置，配置同步服务不可用");
@@ -138,14 +128,14 @@ public class StrategyConfigSyncService {
      * @param message 同步消息
      */
     public void publish(SyncMessage message) {
-        if (stringRedisTemplate == null) {
+        if (strategyRedisSupport == null || !strategyRedisSupport.isAvailable()) {
             log.warn("Redis未配置，无法发布配置变更通知");
             return;
         }
 
         try {
             String json = Json.toJson(message);
-            stringRedisTemplate.convertAndSend(SYNC_CHANNEL, json);
+            strategyRedisSupport.publish(SYNC_CHANNEL, json);
             log.info("[STRATEGY] 发布配置变更通知: type={}, operation={}", 
                     message.getConfigType(), message.getOperation());
         } catch (Exception e) {
@@ -251,6 +241,6 @@ public class StrategyConfigSyncService {
      * @return true-可用，false-不可用
      */
     public boolean isAvailable() {
-        return stringRedisTemplate != null && redisMessageListenerContainer != null;
+        return strategyRedisSupport != null && strategyRedisSupport.isAvailable();
     }
 }

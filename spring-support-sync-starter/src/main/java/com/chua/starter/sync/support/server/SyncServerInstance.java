@@ -93,15 +93,26 @@ public class SyncServerInstance {
     private volatile boolean running = false;
 
     public SyncServerInstance(SyncProperties.ServerInstance instanceConfig, SyncProperties syncProperties) {
-        this.instanceConfig = instanceConfig;
-        this.syncProperties = syncProperties;
+        this.instanceConfig = SyncProperties.ServerInstance.copyOf(instanceConfig);
+        this.syncProperties = SyncProperties.copyOf(syncProperties);
     }
 
     /**
      * 注册消息处理器
      */
     public void registerHandler(String topic, SyncMessageHandler handler) {
-        handlerMap.computeIfAbsent(topic, k -> new CopyOnWriteArrayList<>()).add(handler);
+        if (topic == null || topic.isBlank() || handler == null) {
+            return;
+        }
+
+        List<SyncMessageHandler> handlers = handlerMap.computeIfAbsent(topic, k -> new CopyOnWriteArrayList<>());
+        boolean exists = handlers.stream()
+                .anyMatch(existing -> existing == handler
+                        || (existing.getClass().equals(handler.getClass())
+                        && Objects.equals(existing.getName(), handler.getName())));
+        if (!exists) {
+            handlers.add(handler);
+        }
     }
 
     /**
@@ -306,6 +317,7 @@ public class SyncServerInstance {
                                 "requestId", dataMap.getOrDefault("requestId", ""),
                                 "topic", topic,
                                 "handler", handler.getName(),
+                                "success", true,
                                 "code", 200,
                                 "data", result,
                                 "timestamp", System.currentTimeMillis()
@@ -317,6 +329,7 @@ public class SyncServerInstance {
                     send(sessionId, TOPIC_RESPONSE, Map.of(
                             "requestId", dataMap.getOrDefault("requestId", ""),
                             "topic", topic,
+                            "success", false,
                             "code", 500,
                             "message", e.getMessage(),
                             "timestamp", System.currentTimeMillis()
@@ -329,29 +342,31 @@ public class SyncServerInstance {
         private boolean handleSystemTopic(SyncSession session, String topic, Object data) {
             String sessionId = session.getSessionId();
 
-            switch (topic) {
-                case TOPIC_HEALTH -> {
-                    send(sessionId, TOPIC_HEALTH, Map.of(
-                            "status", "UP",
-                            "instance", instanceConfig.getName(),
-                            "connections", getConnectionCount(),
-                            "timestamp", System.currentTimeMillis()
-                    ));
-                    return true;
-                }
-                case TOPIC_CLIENT_REGISTER -> {
-                    handleClientRegister(session, sessionId, data);
-                    return true;
-                }
-                case TOPIC_CLIENT_HEARTBEAT -> {
-                    handleClientHeartbeat(sessionId, data);
-                    return true;
-                }
-                case TOPIC_CLIENT_OFFLINE -> {
-                    handleClientOffline(sessionId, data);
-                    return true;
-                }
+            if (TOPIC_HEALTH.equals(topic)) {
+                send(sessionId, TOPIC_HEALTH, Map.of(
+                        "status", "UP",
+                        "instance", instanceConfig.getName(),
+                        "connections", getConnectionCount(),
+                        "timestamp", System.currentTimeMillis()
+                ));
+                return true;
             }
+
+            if (isClientRegisterTopic(topic)) {
+                handleClientRegister(session, sessionId, data);
+                return true;
+            }
+
+            if (isClientHeartbeatTopic(topic)) {
+                handleClientHeartbeat(sessionId, data);
+                return true;
+            }
+
+            if (isClientOfflineTopic(topic)) {
+                handleClientOffline(sessionId, data);
+                return true;
+            }
+
             return false;
         }
 
@@ -409,6 +424,28 @@ public class SyncServerInstance {
             if (clientInfo != null) {
                 clientInfo.setClientOnline(false);
             }
+        }
+
+        private boolean isClientRegisterTopic(String topic) {
+            return matchesClientTopic(topic, syncProperties.getClient().getRegisterTopic(), TOPIC_CLIENT_REGISTER);
+        }
+
+        private boolean isClientHeartbeatTopic(String topic) {
+            return matchesClientTopic(topic, syncProperties.getClient().getHeartbeatTopic(), TOPIC_CLIENT_HEARTBEAT);
+        }
+
+        private boolean isClientOfflineTopic(String topic) {
+            return matchesClientTopic(topic, syncProperties.getClient().getOfflineTopic(), TOPIC_CLIENT_OFFLINE);
+        }
+
+        private boolean matchesClientTopic(String actualTopic, String configuredTopic, String defaultTopic) {
+            if (actualTopic == null || actualTopic.isBlank()) {
+                return false;
+            }
+            if (Objects.equals(actualTopic, configuredTopic)) {
+                return true;
+            }
+            return Objects.equals(actualTopic, defaultTopic);
         }
     }
 }

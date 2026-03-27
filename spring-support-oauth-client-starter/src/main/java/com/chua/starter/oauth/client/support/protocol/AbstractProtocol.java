@@ -179,6 +179,72 @@ public abstract class AbstractProtocol implements Protocol {
         }
         return Codec.build(encryption, key).encodeHex(data);
     }
+
+    /**
+     * 构建 AppKey 鉴权请求体。
+     * <p>
+     * 当前服务端将 x-oauth-user-code 视为 appKey 字符串，并要求 code 字段参与用户信息回填。
+     * AppKeySecret.body 兼容两种形式：
+     * 1. 纯字符串：按 code 处理
+     * 2. JSON 对象：展开并合并到请求体
+     * </p>
+     *
+     * @param appKeySecret AppKey 参数
+     * @return 请求体
+     */
+    protected JsonObject createAppKeyAuthenticationData(AppKeySecret appKeySecret) {
+        JsonObject jsonObject = new JsonObject();
+        if (appKeySecret == null) {
+            return jsonObject;
+        }
+
+        if (StringUtils.isNotBlank(appKeySecret.getUserCode())) {
+            jsonObject.put("x-oauth-user-code", appKeySecret.getUserCode());
+        }
+        if (StringUtils.isNotBlank(appKeySecret.getAppId())) {
+            jsonObject.put("x-oauth-app-id", appKeySecret.getAppId());
+        }
+        if (StringUtils.isNotBlank(appKeySecret.getXTime())) {
+            jsonObject.put("x-time", appKeySecret.getXTime());
+        }
+        if (StringUtils.isNotBlank(appKeySecret.getXRandom())) {
+            jsonObject.put("x-random", appKeySecret.getXRandom());
+        }
+        if (StringUtils.isNotBlank(appKeySecret.getXSign())) {
+            jsonObject.put("x-sign", appKeySecret.getXSign());
+        }
+        mergeAppKeyRequestBody(jsonObject, appKeySecret.getBody());
+        return jsonObject;
+    }
+
+    /**
+     * 合并 AppKey 鉴权附加参数。
+     *
+     * @param target 目标请求体
+     * @param body   原始 body
+     */
+    protected void mergeAppKeyRequestBody(JsonObject target, String body) {
+        if (target == null || StringUtils.isBlank(body)) {
+            return;
+        }
+
+        String trimmed = body.trim();
+        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+            try {
+                JsonObject bodyObject = Json.fromJson(trimmed, JsonObject.class);
+                if (bodyObject != null) {
+                    target.putAll(bodyObject);
+                    return;
+                }
+            } catch (Exception ignored) {
+                // 非法 JSON 时回退为 code 字段，兼容老调用方只传订单/用户编码场景。
+            }
+        }
+
+        if (StringUtils.isBlank(target.getString("code"))) {
+            target.put("code", body);
+        }
+    }
     
     /**
      * 获取 AccessKey（用于请求头）
@@ -501,6 +567,9 @@ public abstract class AbstractProtocol implements Protocol {
         }
 
         for (Cookie cookie : cookies) {
+            if (cookie == null) {
+                continue;
+            }
             if ("x-oauth-cookie".equals(cookie.getName())) {
                 return cookie.getValue();
             }

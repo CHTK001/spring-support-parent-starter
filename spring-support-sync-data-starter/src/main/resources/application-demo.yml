@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: sync-data-demo
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:syncdatademo;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:demo-schema.sql
+      data-locations: classpath:demo-data.sql
+      continue-on-error: true
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+server:
+  port: 18080
+  servlet:
+    context-path: /
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+
+logging:
+  level:
+    root: INFO
+    com.chua.starter.sync.data: DEBUG
+    com.chua.starter.sync.data.support.mapper: DEBUG

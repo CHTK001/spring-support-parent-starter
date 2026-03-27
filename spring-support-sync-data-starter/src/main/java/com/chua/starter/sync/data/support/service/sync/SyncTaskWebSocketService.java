@@ -9,6 +9,7 @@ import com.chua.starter.sync.data.support.websocket.SyncProgressWebSocketHandler
 import com.chua.starter.sync.support.message.ServerWebSocketMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -31,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class SyncTaskWebSocketService {
 
-    private final SocketSessionTemplate socketSessionTemplate;
+    private final ObjectProvider<SocketSessionTemplate> socketSessionTemplateProvider;
     private final SyncProgressWebSocketHandler syncProgressWebSocketHandler;
     private final SyncMonitorService syncMonitorService;
 
@@ -249,7 +250,10 @@ public class SyncTaskWebSocketService {
                 .timestamp(timestamp)
                 .build();
 
-        socketSessionTemplate.send(topic, Json.toJson(wsMessage));
+        SocketSessionTemplate socketSessionTemplate = socketSessionTemplateProvider.getIfAvailable();
+        if (socketSessionTemplate != null) {
+            socketSessionTemplate.send(topic, Json.toJson(wsMessage));
+        }
 
         Map<String, Object> broadcastPayload = new HashMap<>(data);
         broadcastPayload.put("messageType", messageType);

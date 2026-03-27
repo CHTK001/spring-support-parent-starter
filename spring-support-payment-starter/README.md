@@ -44,6 +44,56 @@ spring:
 
 启动后访问: http://localhost:8080/swagger-ui.html
 
+## 运行模式
+
+`spring-support-payment-starter` 支持两种使用方式:
+
+- 嵌入式模式: 业务服务直接引用 starter，并由当前服务承载支付接口、回调、调度
+- 中心化模式: 业务服务继续引用 starter 处理创建/支付/回调等核心能力，但关闭调度与运营台，由独立支付服务统一承载运维能力
+
+关键开关:
+
+```yaml
+plugin:
+  payment:
+    scheduler:
+      enabled: true
+    ops:
+      enabled: true
+```
+
+如果当前服务不是支付中心，只想复用支付核心能力，建议关闭:
+
+```yaml
+plugin:
+  payment:
+    scheduler:
+      enabled: false
+    ops:
+      enabled: false
+```
+
+中心化模式完整接入说明见:
+
+- `H:\\workspace\\2\\spring-support-api-parent\\spring-api-support-payment-starter\\支付中心化接入说明.MD`
+
+如果要切到 `spring-support-job-starter` 承载支付调度，可进一步配置:
+
+```yaml
+plugin:
+  payment:
+    scheduler:
+      enabled: true
+      engine: job
+  job:
+    enable: true
+    config-table-enabled: true
+    job-annotation-sync-mode: UPDATE
+    table-init-mode: UPDATE
+    table:
+      prefix: payment
+```
+
 ## 核心功能
 
 ### 商户管理

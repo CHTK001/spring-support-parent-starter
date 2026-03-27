@@ -1,25 +1,33 @@
 package com.chua.starter.job.support;
 
+import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.DynamicTableNameInnerInterceptor;
 import com.chua.starter.job.support.log.JobFileAppender;
 import com.chua.starter.job.support.log.JobLogBackupService;
 import com.chua.starter.job.support.log.JobLogDetailService;
 import com.chua.starter.job.support.mapper.SysJobLogBackupMapper;
 import com.chua.starter.job.support.mapper.SysJobLogDetailMapper;
 import com.chua.starter.job.support.mapper.SysJobLogMapper;
+import com.chua.starter.job.support.remote.RemoteJobExecutorController;
+import com.chua.starter.job.support.remote.RemoteJobExecutorDispatchService;
 import com.chua.starter.job.support.scheduler.SchedulerTrigger;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import static com.chua.starter.common.support.logger.ModuleLog.*;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+
+import javax.sql.DataSource;
 
 /**
  * Job调度模块自动配置类
@@ -60,8 +68,6 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 @ComponentScan("com.chua.starter.job.support.log")
 @ConditionalOnProperty(prefix = JobProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
 public class JobConfiguration {
-    private static final Logger log = LoggerFactory.getLogger(JobConfiguration.class);
-
     /**
      * Job线程池任务调度器
      * <p>
@@ -79,6 +85,7 @@ public class JobConfiguration {
      */
     @Bean(name = "jobThreadPoolTaskScheduler")
     @ConditionalOnMissingBean(name = "jobThreadPoolTaskScheduler")
+    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "config-table-enabled", havingValue = "true", matchIfMissing = true)
     public ThreadPoolTaskScheduler jobThreadPoolTaskScheduler(JobProperties jobProperties) {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
         scheduler.setPoolSize(jobProperties.getPoolSize());
@@ -91,6 +98,9 @@ public class JobConfiguration {
 
         log.info("[Job] 调度器初始化完成 [{}], 线程池: {}, 日志路径: {}", 
                 enabled(), highlight(jobProperties.getPoolSize()), highlight(jobProperties.getLogPath()));
+        if (jobProperties.getRemoteExecutor() != null && jobProperties.getRemoteExecutor().isEnabled()) {
+            log.warn("[Job] 当前服务同时启用了本地表轮询和远程执行器入口；若调度中心也在轮询同一命名空间任务表，可能出现重复触发。中心推送模式下请将 plugin.job.config-table-enabled 设为 false。");
+        }
         return scheduler;
     }
 
@@ -124,7 +134,74 @@ public class JobConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "config-table-enabled", havingValue = "true", matchIfMissing = true)
     public SchedulerTrigger schedulerTrigger() {
         return new SchedulerTrigger();
+    }
+
+    /**
+     * 按当前解析后的物理表配置初始化 Job 表结构。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public JobSchemaInitializer jobSchemaInitializer(
+            JobProperties jobProperties,
+            ObjectProvider<DataSource> dataSourceProvider) {
+        return new JobSchemaInitializer(jobProperties, dataSourceProvider);
+    }
+
+    /**
+     * Job 相关表的动态表名拦截器。
+     * <p>
+     * 允许业务方通过 {@code plugin.job.table.*} 将默认的 sys_job 系列表
+     * 映射到自定义物理表。
+     * </p>
+     */
+    @Bean
+    @ConditionalOnMissingBean(name = "jobDynamicTableNameInnerInterceptor")
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    public DynamicTableNameInnerInterceptor jobDynamicTableNameInnerInterceptor(JobProperties jobProperties) {
+        DynamicTableNameInnerInterceptor interceptor = new DynamicTableNameInnerInterceptor();
+        interceptor.setTableNameHandler((sql, tableName) -> resolveJobTableName(jobProperties, tableName));
+        return interceptor;
+    }
+
+    /**
+     * 远程执行器下发服务。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = JobProperties.PRE + ".remote-executor", name = "enabled", havingValue = "true")
+    public RemoteJobExecutorDispatchService remoteJobExecutorDispatchService() {
+        return new RemoteJobExecutorDispatchService();
+    }
+
+    /**
+     * 远程执行器 HTTP 入口。
+     * <p>
+     * 仅在 Web 应用且显式开启远程执行器模式时注册，避免纯 SDK 场景多暴露接口。
+     * </p>
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    @ConditionalOnProperty(prefix = JobProperties.PRE + ".remote-executor", name = "enabled", havingValue = "true")
+    public RemoteJobExecutorController remoteJobExecutorController(JobProperties jobProperties,
+                                                                   RemoteJobExecutorDispatchService dispatchService) {
+        return new RemoteJobExecutorController(jobProperties, dispatchService);
+    }
+
+    private String resolveJobTableName(JobProperties jobProperties, String tableName) {
+        if (tableName == null) {
+            return tableName;
+        }
+        JobProperties.Table table = JobTableContextHolder.get();
+        if (table == null && jobProperties != null) {
+            table = jobProperties.getTable();
+        }
+        if (table == null) {
+            return tableName;
+        }
+        return table.resolve(tableName);
     }
 }

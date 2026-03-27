@@ -19,10 +19,7 @@
   </licenses>
   <properties>
     <jna-version>5.14.0</jna-version>
-    <maven.compiler.target>21</maven.compiler.target>
-    <maven.compiler.source>21</maven.compiler.source>
     <docker-java-version>3.4.0</docker-java-version>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <hutool.version>5.8.34</hutool.version>
   </properties>
   <dependencies>
@@ -61,10 +58,6 @@
     </dependency>
     <dependency>
       <groupId>com.chua</groupId>
-      <artifactId>utils-support-groovy-starter</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
       <artifactId>spring-support-swagger-starter</artifactId>
     </dependency>
     <dependency>
@@ -89,17 +82,17 @@
       <artifactId>jakarta.servlet-api</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>${maven-compiler-plugin.version}</version>
         <configuration>
-          <source>21</source>
-          <target>21</target>
-          <release>21</release>
-          <encoding>UTF-8</encoding>
           <useIncrementalCompilation>true</useIncrementalCompilation>
           <compilerArgs>
             <arg>-parameters</arg>

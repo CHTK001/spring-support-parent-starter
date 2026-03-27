@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.payment.support.channel.support.AbstractMerchantPaymentChannel;
 import com.chua.payment.support.entity.MerchantChannel;
 import com.chua.payment.support.entity.PaymentOrder;
+import com.chua.payment.support.entity.PaymentRefundOrder;
 import com.chua.payment.support.enums.ChannelStatus;
 import com.chua.payment.support.enums.OrderState;
 import com.chua.payment.support.exception.PaymentException;
@@ -13,6 +14,7 @@ import com.chua.payment.support.provider.PaymentProviderGatewayRegistry;
 import com.chua.payment.support.service.MerchantChannelService;
 import com.chua.payment.support.service.PaymentNotifyService;
 import com.chua.payment.support.service.PaymentOrderService;
+import com.chua.payment.support.service.PaymentRefundOrderService;
 import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayNotifyRequest;
 import com.chua.starter.aliyun.support.payment.dto.AliyunAlipayPayNotifyPayload;
 import com.chua.starter.aliyun.support.properties.AliyunAlipayProperties;
@@ -39,6 +41,7 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
     private final MerchantChannelMapper merchantChannelMapper;
     private final PaymentOrderMapper paymentOrderMapper;
     private final PaymentOrderService paymentOrderService;
+    private final PaymentRefundOrderService paymentRefundOrderService;
     private final PaymentProviderGatewayRegistry providerGatewayRegistry;
 
     public PaymentNotifyServiceImpl(MerchantChannelService merchantChannelService,
@@ -46,17 +49,20 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
                                     MerchantChannelMapper merchantChannelMapper,
                                     PaymentOrderMapper paymentOrderMapper,
                                     PaymentOrderService paymentOrderService,
+                                    PaymentRefundOrderService paymentRefundOrderService,
                                     PaymentProviderGatewayRegistry providerGatewayRegistry) {
         super(merchantChannelService, objectMapper);
         this.merchantChannelMapper = merchantChannelMapper;
         this.paymentOrderMapper = paymentOrderMapper;
         this.paymentOrderService = paymentOrderService;
+        this.paymentRefundOrderService = paymentRefundOrderService;
         this.providerGatewayRegistry = providerGatewayRegistry;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void handleWechatPayNotify(Long channelId,
+                                      String orderNo,
                                       String serialNumber,
                                       String timestamp,
                                       String nonce,
@@ -67,7 +73,8 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
         TencentWechatPayNotifyPayload payload = providerGatewayRegistry.tencentWechatPayGateway(providerSpi(channel, null))
                 .parsePayNotify(buildWechatProperties(channel), buildWechatNotifyRequest(serialNumber, timestamp, nonce, signature, signType, body));
 
-        PaymentOrder order = requireOrder(payload.getOrderNo());
+        validateNotifyOrderNo(orderNo, payload.getOrderNo());
+        PaymentOrder order = requireOrder(firstNonBlank(orderNo, payload.getOrderNo()));
         validateOrderChannel(order, channel);
         validateWechatIdentity(channel, payload.getAppId(), payload.getMerchantId());
         validateAmount(order.getOrderAmount(), fenToYuan(payload.getTotalAmountFen()), "微信支付通知金额不匹配");
@@ -98,6 +105,7 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void handleWechatRefundNotify(Long channelId,
+                                         String refundNo,
                                          String serialNumber,
                                          String timestamp,
                                          String nonce,
@@ -108,8 +116,12 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
         TencentWechatRefundNotifyPayload payload = providerGatewayRegistry.tencentWechatPayGateway(providerSpi(channel, null))
                 .parseRefundNotify(buildWechatProperties(channel), buildWechatNotifyRequest(serialNumber, timestamp, nonce, signature, signType, body));
 
-        PaymentOrder order = requireOrder(payload.getOrderNo());
+        validateNotifyRefundNo(refundNo, payload.getRefundNo());
+        PaymentRefundOrder refundOrder = resolveRefundOrder(firstNonBlank(refundNo, payload.getRefundNo()), payload.getRefundId(), payload.getOrderNo());
+        PaymentOrder order = requireOrder(refundOrder.getOrderNo());
+        validateRefundChannel(refundOrder, channel);
         validateOrderChannel(order, channel);
+        validateRefundOrderMapping(refundOrder, payload.getOrderNo());
         validateAmount(order.getOrderAmount(), fenToYuan(payload.getTotalAmountFen()), "微信退款通知原订单金额不匹配");
 
         BigDecimal refundAmount = fenToYuan(payload.getRefundAmountFen());
@@ -118,21 +130,32 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
         }
 
         switch (payload.getRefundStatus()) {
-            case "SUCCESS" -> paymentOrderService.refundSuccess(order.getId(), refundAmount, "wechat-refund-notify");
-            case "CLOSED", "ABNORMAL" -> paymentOrderService.refundFail(order.getId(), "微信退款失败:" + payload.getRefundStatus(), "wechat-refund-notify");
-            case "PROCESSING" -> log.info("微信退款通知保持处理中: orderNo={}, outRefundNo={}", order.getOrderNo(), payload.getRefundNo());
-            default -> log.info("微信退款通知未触发状态更新: orderNo={}, refundStatus={}", order.getOrderNo(), payload.getRefundStatus());
+            case "SUCCESS" -> paymentOrderService.refundSuccess(
+                    refundOrder.getRefundNo(),
+                    refundAmount,
+                    firstNonBlank(payload.getRefundId(), refundOrder.getThirdPartyRefundNo()),
+                    "wechat-refund-notify",
+                    toJson(payload),
+                    "微信退款回调成功");
+            case "CLOSED", "ABNORMAL" -> paymentOrderService.refundFail(
+                    refundOrder.getRefundNo(),
+                    toJson(payload),
+                    "wechat-refund-notify",
+                    "微信退款失败:" + payload.getRefundStatus());
+            case "PROCESSING" -> log.info("微信退款通知保持处理中: orderNo={}, refundNo={}, outRefundNo={}", order.getOrderNo(), refundOrder.getRefundNo(), payload.getRefundNo());
+            default -> log.info("微信退款通知未触发状态更新: orderNo={}, refundNo={}, refundStatus={}", order.getOrderNo(), refundOrder.getRefundNo(), payload.getRefundStatus());
         }
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void handleAlipayPayNotify(Long channelId, Map<String, String> params) {
+    public void handleAlipayPayNotify(Long channelId, String orderNo, Map<String, String> params) {
         MerchantChannel channel = requireEnabledChannel(channelId, "ALIPAY");
         AliyunAlipayPayNotifyPayload payload = providerGatewayRegistry.aliyunAlipayGateway(providerSpi(channel, null))
                 .verifyAndParsePayNotify(buildAlipayProperties(channel), buildAlipayNotifyRequest(params));
 
-        PaymentOrder order = requireOrder(payload.getOrderNo());
+        validateNotifyOrderNo(orderNo, payload.getOrderNo());
+        PaymentOrder order = requireOrder(firstNonBlank(orderNo, payload.getOrderNo()));
         validateOrderChannel(order, channel);
         validateAlipayIdentity(channel, payload.getAppId(), payload.getSellerId());
         validateAmount(order.getOrderAmount(), payload.getTotalAmount(), "支付宝支付通知金额不匹配");
@@ -190,6 +213,50 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
         }
     }
 
+    private void validateRefundChannel(PaymentRefundOrder refundOrder, MerchantChannel channel) {
+        if (refundOrder.getChannelId() == null || !refundOrder.getChannelId().equals(channel.getId())) {
+            throw new PaymentException("退款单和回调支付方式不匹配");
+        }
+    }
+
+    private void validateNotifyOrderNo(String pathOrderNo, String payloadOrderNo) {
+        if (StringUtils.hasText(pathOrderNo) && StringUtils.hasText(payloadOrderNo) && !pathOrderNo.equals(payloadOrderNo)) {
+            throw new PaymentException("回调路径订单号和报文订单号不一致");
+        }
+    }
+
+    private void validateNotifyRefundNo(String pathRefundNo, String payloadRefundNo) {
+        if (StringUtils.hasText(pathRefundNo) && StringUtils.hasText(payloadRefundNo) && !pathRefundNo.equals(payloadRefundNo)) {
+            throw new PaymentException("回调路径退款单号和报文退款单号不一致");
+        }
+    }
+
+    private void validateRefundOrderMapping(PaymentRefundOrder refundOrder, String payloadOrderNo) {
+        if (refundOrder == null || !StringUtils.hasText(payloadOrderNo)) {
+            return;
+        }
+        if (!payloadOrderNo.equals(refundOrder.getOrderNo())) {
+            throw new PaymentException("退款回调订单号和本地退款单不一致");
+        }
+    }
+
+    private PaymentRefundOrder resolveRefundOrder(String refundNo, String thirdPartyRefundNo, String orderNo) {
+        PaymentRefundOrder refundOrder = paymentRefundOrderService.getByRefundNo(refundNo);
+        if (refundOrder == null) {
+            refundOrder = paymentRefundOrderService.getByThirdPartyRefundNo(thirdPartyRefundNo);
+        }
+        if (refundOrder == null && StringUtils.hasText(orderNo)) {
+            PaymentOrder order = requireOrder(orderNo);
+            refundOrder = firstNonNull(
+                    paymentRefundOrderService.getProcessingByOrderId(order.getId()),
+                    paymentRefundOrderService.getLatestByOrderId(order.getId()));
+        }
+        if (refundOrder == null) {
+            throw new PaymentException("退款单不存在: " + firstNonBlank(refundNo, thirdPartyRefundNo, orderNo));
+        }
+        return refundOrder;
+    }
+
     private void validateWechatIdentity(MerchantChannel channel, String appId, String merchantNo) {
         if (StringUtils.hasText(channel.getAppId()) && StringUtils.hasText(appId) && !channel.getAppId().equals(appId)) {
             throw new PaymentException("微信支付通知 AppId 不匹配");
@@ -227,6 +294,19 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
 
     private boolean canCancel(String status) {
         return OrderState.PENDING.name().equals(status) || OrderState.PAYING.name().equals(status);
+    }
+
+    @SafeVarargs
+    private <T> T firstNonNull(T... values) {
+        if (values == null) {
+            return null;
+        }
+        for (T value : values) {
+            if (value != null) {
+                return value;
+            }
+        }
+        return null;
     }
 
     private TencentWechatNotifyRequest buildWechatNotifyRequest(String serialNumber,

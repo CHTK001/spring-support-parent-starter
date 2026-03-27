@@ -49,3 +49,4 @@ public class WeightLoadBalancer implements LoadBalancer {
         return "weight";
     }
 }
+

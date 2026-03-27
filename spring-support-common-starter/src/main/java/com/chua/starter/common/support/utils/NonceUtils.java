@@ -31,6 +31,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class NonceUtils {
 
+    /** 请求签名已在前置过滤器通过校验的标记 */
+    public static final String REQUEST_SIGN_VALIDATED_ATTRIBUTE =
+            NonceUtils.class.getName() + ".requestSignValidated";
+
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     /** 排除的参数字段（如 file 等） */

@@ -16,10 +16,12 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.Comparator;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
@@ -74,7 +76,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
     private final List<BiConsumer<String, ClientInfo>> disconnectListeners = new CopyOnWriteArrayList<>();
 
     public SyncServer(SyncProperties syncProperties) {
-        this.syncProperties = syncProperties;
+        this.syncProperties = SyncProperties.copyOf(syncProperties);
         loadHandlers();
     }
 
@@ -159,7 +161,17 @@ public class SyncServer implements InitializingBean, DisposableBean {
      * 动态注册消息处理器到所有实例
      */
     public void registerHandler(String topic, SyncMessageHandler handler) {
-        handlers.add(handler);
+        if (topic == null || topic.isBlank() || handler == null) {
+            return;
+        }
+
+        boolean exists = handlers.stream()
+                .anyMatch(existing -> existing == handler
+                        || (existing.getClass().equals(handler.getClass())
+                        && Objects.equals(existing.getName(), handler.getName())));
+        if (!exists) {
+            handlers.add(handler);
+        }
         for (SyncServerInstance instance : instances.values()) {
             instance.registerHandler(topic, handler);
         }
@@ -371,6 +383,93 @@ public class SyncServer implements InitializingBean, DisposableBean {
             }
         }
         return result;
+    }
+
+    /**
+     * 根据客户端元数据查找客户端ID。
+     *
+     * @param metadataKey   元数据键
+     * @param metadataValue 元数据值
+     * @return 客户端ID列表
+     */
+    public List<String> findClientIdsByMetadata(String metadataKey, Object metadataValue) {
+        return findClientIds(clientInfo -> {
+            Map<String, Object> metadata = clientInfo.getClientMetadata();
+            if (metadata == null || metadataKey == null || metadataKey.isBlank()) {
+                return false;
+            }
+            return matchesValue(metadata.get(metadataKey), metadataValue);
+        });
+    }
+
+    /**
+     * 根据过滤条件查找客户端ID。
+     *
+     * @param filter 客户端过滤条件
+     * @return 客户端ID列表
+     */
+    public List<String> findClientIds(Predicate<ClientInfo> filter) {
+        if (filter == null) {
+            return List.of();
+        }
+
+        List<String> result = new ArrayList<>();
+        for (Map.Entry<String, ClientInfo> entry : allClientsInternal.entrySet()) {
+            ClientInfo clientInfo = entry.getValue();
+            if (clientInfo != null && filter.test(clientInfo)) {
+                result.add(entry.getKey());
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 按客户端元数据定向发送消息。
+     *
+     * @param metadataKey   元数据键
+     * @param metadataValue 元数据值
+     * @param topic         消息主题
+     * @param data          消息体
+     * @return 成功发送数量
+     */
+    public int publishByMetadata(String metadataKey, Object metadataValue, String topic, Object data) {
+        return publishToClients(clientInfo -> {
+            Map<String, Object> metadata = clientInfo.getClientMetadata();
+            if (metadata == null || metadataKey == null || metadataKey.isBlank()) {
+                return false;
+            }
+            return matchesValue(metadata.get(metadataKey), metadataValue);
+        }, topic, data);
+    }
+
+    /**
+     * 按客户端过滤条件定向发送消息。
+     *
+     * @param filter 过滤条件
+     * @param topic  消息主题
+     * @param data   消息体
+     * @return 成功发送数量
+     */
+    public int publishToClients(Predicate<ClientInfo> filter, String topic, Object data) {
+        List<String> clientIds = findClientIds(filter);
+        if (clientIds.isEmpty()) {
+            return 0;
+        }
+
+        for (String clientId : clientIds) {
+            send(clientId, topic, data);
+        }
+        return clientIds.size();
+    }
+
+    private boolean matchesValue(Object actual, Object expected) {
+        if (Objects.equals(actual, expected)) {
+            return true;
+        }
+        if (actual == null || expected == null) {
+            return false;
+        }
+        return Objects.equals(String.valueOf(actual), String.valueOf(expected));
     }
 
     /**

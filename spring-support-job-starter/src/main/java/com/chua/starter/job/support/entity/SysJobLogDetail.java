@@ -39,10 +39,22 @@ public class SysJobLogDetail implements Serializable {
     private Integer jobLogId;
 
     /**
+     * 关联任务日志编号。
+     */
+    @TableField(value = "job_log_no")
+    private String jobLogNo;
+
+    /**
      * 任务ID
      */
     @TableField(value = "job_id")
     private Integer jobId;
+
+    /**
+     * 任务编号。
+     */
+    @TableField(value = "job_no")
+    private String jobNo;
 
     /**
      * 日志级别: DEBUG/INFO/WARN/ERROR

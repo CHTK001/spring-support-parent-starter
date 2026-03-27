@@ -15,8 +15,12 @@ import com.chua.payment.support.service.MerchantChannelService;
 import com.chua.payment.support.service.WalletAccountService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.support.StaticListableBeanFactory;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -42,7 +46,7 @@ class PaymentChannelRegistryTest {
         PaymentChannel alipayApp = new AlipayAppPaymentChannel(merchantChannelService, objectMapper, providerGatewayRegistry);
         PaymentChannel wallet = new WalletBalancePaymentChannel(merchantChannelService, objectMapper, walletAccountService);
 
-        PaymentChannelRegistry registry = new PaymentChannelRegistry(List.of(
+        PaymentChannelRegistry registry = new PaymentChannelRegistry(provider(
                 jsapi,
                 h5,
                 app,
@@ -67,10 +71,18 @@ class PaymentChannelRegistryTest {
 
     @Test
     void shouldRejectUnsupportedChannelMatrix() {
-        PaymentChannelRegistry registry = new PaymentChannelRegistry(List.of(
+        PaymentChannelRegistry registry = new PaymentChannelRegistry(provider(
                 new WechatJsapiPaymentChannel(merchantChannelService, objectMapper, providerGatewayRegistry)));
 
         assertThrows(PaymentException.class, () -> registry.getChannel("ALIPAY", "APP"));
+    }
+
+    private ObjectProvider<PaymentChannel> provider(PaymentChannel... channels) {
+        Map<String, Object> beans = new LinkedHashMap<>();
+        for (int i = 0; i < channels.length; i++) {
+            beans.put("channel" + i, channels[i]);
+        }
+        return new StaticListableBeanFactory(beans).getBeanProvider(PaymentChannel.class);
     }
 
     private void assertResolved(PaymentChannelRegistry registry,

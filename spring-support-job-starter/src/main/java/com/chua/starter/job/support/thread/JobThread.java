@@ -159,6 +159,8 @@ public class JobThread extends Thread {
                     JobContext jobContext = new JobContext(
                             triggerParam.getLogId(),
                             triggerParam.getJobId(),
+                            triggerParam.getJobNo(),
+                            triggerParam.getLogNo(),
                             triggerParam.getExecutorParams(),
                             logFileName,
                             triggerParam.getBroadcastIndex(),

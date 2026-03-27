@@ -44,8 +44,8 @@ import java.util.List;
  *
  * @author CH
  * @since 2022/7/23 8:51
-@ConditionalOnProperty(prefix = "plugin.oauth.client", name = "enable", havingValue = "true", matchIfMissing = true)
  */
+@ConditionalOnProperty(prefix = "plugin.oauth", name = "enable", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties({ AuthClientProperties.class })
 public class AuthClientConfiguration
         implements ApplicationContextAware, BeanDefinitionRegistryPostProcessor, WebMvcConfigurer {

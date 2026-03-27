@@ -1,6 +1,7 @@
 package com.chua.starter.job.support.log;
 
 import cn.hutool.core.date.DateUtil;
+import com.chua.starter.job.support.scheduler.JobConfig;
 import com.chua.starter.job.support.thread.JobContext;
 import lombok.extern.slf4j.Slf4j;
 
@@ -62,6 +63,10 @@ public class DefaultJobLog implements JobLog {
 
         if (logFileName != null && !logFileName.trim().isEmpty()) {
             JobFileAppender.appendLog(logFileName, formatAppendLog);
+            JobLogDetailService detailService = JobConfig.getInstance().jobLogDetailService();
+            if (detailService != null) {
+                detailService.log(jobContext, "INFO", appendLog, null, null);
+            }
             return true;
         } else {
             log.info(">>>>>>>>>>> {}", formatAppendLog);

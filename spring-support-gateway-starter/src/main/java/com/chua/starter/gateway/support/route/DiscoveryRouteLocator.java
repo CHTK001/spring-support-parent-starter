@@ -66,3 +66,4 @@ public class DiscoveryRouteLocator {
         return discovery.createUrl(requestPath);
     }
 }
+

@@ -6,9 +6,10 @@ import com.chua.payment.support.entity.PaymentOrder;
 import com.chua.payment.support.mapper.MerchantPaymentConfigMapper;
 import com.chua.payment.support.mapper.PaymentOrderMapper;
 import com.chua.payment.support.service.PaymentOrderService;
+import com.chua.starter.job.support.annotation.Job;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -20,16 +21,13 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class PaymentOrderTimeoutTask {
+@ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "enabled", havingValue = "true", matchIfMissing = true)
+public class PaymentOrderTimeoutTask implements PaymentManagedTask {
 
     private final PaymentOrderMapper orderMapper;
     private final MerchantPaymentConfigMapper configMapper;
     private final PaymentOrderService paymentOrderService;
 
-    /**
-     * 每10分钟执行一次，处理超时订单
-     */
-    @Scheduled(cron = "0 */10 * * * ?")
     public void cancelTimeoutOrders() {
         log.info("开始执行订单超时处理任务");
 
@@ -79,5 +77,37 @@ public class PaymentOrderTimeoutTask {
         }
 
         return cancelled;
+    }
+
+    @Override
+    public String taskKey() {
+        return "payment-order-timeout-scan";
+    }
+
+    @Override
+    public String taskName() {
+        return "订单超时扫描";
+    }
+
+    @Override
+    public String defaultCron() {
+        return "0 */10 * * * ?";
+    }
+
+    @Override
+    public String description() {
+        return "按商户支付配置扫描超时订单并执行自动取消。";
+    }
+
+    @Override
+    @Job(
+            value = "payment-order-timeout-scan",
+            scheduleType = "cron",
+            scheduleTime = "0 */10 * * * ?",
+            desc = "按商户支付配置扫描超时订单并执行自动取消。",
+            autoStart = true
+    )
+    public void execute() {
+        cancelTimeoutOrders();
     }
 }

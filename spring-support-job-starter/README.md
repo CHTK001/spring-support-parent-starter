@@ -6,6 +6,7 @@
 
 - **注解驱动**：使用 `@Job` 注解标记任务方法，自动扫描注册
 - **数据库驱动**：定时查询数据库中的任务配置，触发本地任务执行
+- **远程执行器**：可选暴露轻量下发入口，允许调度中心把任务推送到当前服务执行
 - **多种执行模式**：支持 Bean 模式、Groovy 脚本、Shell/Python 等脚本执行
 - **任务日志**：完整的任务执行日志记录
 - **线程池管理**：快速/慢速双线程池，避免慢任务阻塞
@@ -34,11 +35,21 @@
 plugin:
   job:
     enable: true
+    config-table-enabled: true
+    table-init-mode: UPDATE
     pool-size: 10
     log-path: /data/applogs/job/jobhandler
     log-retention-days: 30
     trigger-pool-fast-max: 200
     trigger-pool-slow-max: 100
+    job-annotation-sync-mode: NONE
+    scheduled-annotation-sync-mode: NONE
+    remote-executor:
+      enabled: false
+      access-token: job-secret
+      dispatch-path: /v1/job-executor/dispatch
+    table:
+      prefix: payment
 ```
 
 ### 3. 定义任务
@@ -86,11 +97,100 @@ public class DemoJobHandler {
 | 配置项 | 默认值 | 说明 |
 |--------|--------|------|
 | `plugin.job.enable` | `true` | 是否启用 |
+| `plugin.job.config-table-enabled` | `true` | 是否启用基于任务配置表的本地轮询调度 |
 | `plugin.job.pool-size` | `10` | 线程池大小 |
 | `plugin.job.log-path` | `/data/applogs/job/jobhandler` | 日志路径 |
 | `plugin.job.log-retention-days` | `30` | 日志保留天数 |
 | `plugin.job.trigger-pool-fast-max` | `200` | 快速触发池最大线程数 |
 | `plugin.job.trigger-pool-slow-max` | `100` | 慢速触发池最大线程数 |
+| `plugin.job.job-annotation-sync-mode` | `NONE` | `@Job` 自动入表策略：`NONE/CREATE/UPDATE` |
+| `plugin.job.scheduled-annotation-sync-mode` | `NONE` | `@Scheduled` 自动入表策略：`NONE/CREATE/UPDATE` |
+| `plugin.job.table-init-mode` | `NONE` | 物理表初始化策略：`NONE/CREATE/UPDATE/DROP_CREATE` |
+| `plugin.job.remote-executor.enabled` | `false` | 是否暴露远程执行器入口 |
+| `plugin.job.remote-executor.access-token` | `` | 远程下发访问口令 |
+| `plugin.job.remote-executor.dispatch-path` | `/v1/job-executor/dispatch` | 远程执行器接口路径 |
+| `plugin.job.table.prefix` | `` | 表前缀，例如 `payment` -> `payment_sys_job` |
+| `plugin.job.table.job` | `sys_job` | 自定义任务表名 |
+| `plugin.job.table.log` | `sys_job_log` | 自定义任务日志表名 |
+| `plugin.job.table.log-detail` | `sys_job_log_detail` | 自定义任务日志详情表名 |
+| `plugin.job.table.log-backup` | `sys_job_log_backup` | 自定义任务日志备份表名 |
+
+## 远程执行器模式
+
+当你需要类似 XXL-Job 的“中心下发，业务服务执行”模式时，可以在业务服务里开启：
+
+```yaml
+plugin:
+  job:
+    enable: true
+    remote-executor:
+      enabled: true
+      access-token: job-secret
+```
+
+此时业务服务会暴露一个远程执行器接口，调度中心可以把任务推送到该服务。
+
+- 如果执行器服务同时保留 `config-table-enabled=true`，它仍会本地轮询任务表
+- 如果要切到类似 XXL-Job 的“中心轮询 + 远程推送执行”模式，执行器服务应改为：
+
+```yaml
+plugin:
+  job:
+    enable: true
+    config-table-enabled: false
+    remote-executor:
+      enabled: true
+      access-token: job-secret
+```
+
+- 这种模式下，`spring-api-support-scheduler-starter` 负责中心侧轮询和路由，`job-starter` 只作为执行器 SDK
+- 当执行器服务也能访问同一套任务表时，远程下发会优先复用本地 `LocalJobTrigger` 链路，任务日志仍写入统一的 `sys_job_log` 体系
+- 如果执行器不访问任务表，则会退化为轻量队列执行模式；这种情况下只有“已接收”回执，没有完整数据库执行日志
+- 因此要支持“类似 XXL-Job 的中心下发”，需要一个平台应用模块承载 admin/dispatch，当前推荐直接使用 `spring-api-support-scheduler-starter`
+
+## 自动入表说明
+
+### `@Job` 自动入表
+
+当开启：
+
+```yaml
+plugin:
+  job:
+    config-table-enabled: true
+    job-annotation-sync-mode: CREATE
+```
+
+或：
+
+```yaml
+plugin:
+  job:
+    config-table-enabled: true
+    job-annotation-sync-mode: UPDATE
+```
+
+框架会在启动时把 `@Job` 注解方法自动同步到任务配置表。
+
+- `CREATE`：表中不存在时才创建
+- `UPDATE`：存在则更新，不存在则创建
+
+### `@Scheduled` 自动入表
+
+当开启：
+
+```yaml
+plugin:
+  job:
+    config-table-enabled: true
+    scheduled-annotation-sync-mode: UPDATE
+```
+
+框架会把自定义 `@Scheduled` 和 Spring `@Scheduled` 方法自动同步到任务配置表。
+
+注意：
+
+- 当启用了自动入表并同时启用配置表调度时，框架会优先走表驱动调度，避免同一任务被直接调度和表调度双重执行。
 
 ## 任务执行类型
 

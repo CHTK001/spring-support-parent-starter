@@ -11,8 +11,15 @@ public interface PaymentNotifyProcessService {
     /**
      * 记录回调日志
      */
-    PaymentNotifyLog logNotify(String notifyType, Long merchantId, String channelType, String channelSubType,
-                                HttpServletRequest request, String body);
+    PaymentNotifyLog logNotify(String notifyType,
+                               Long merchantId,
+                               Long channelId,
+                               String channelType,
+                               String channelSubType,
+                               String orderNo,
+                               String refundNo,
+                               HttpServletRequest request,
+                               String body);
 
     /**
      * 处理支付回调

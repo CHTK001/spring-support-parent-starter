@@ -2,6 +2,7 @@ package com.chua.starter.strategy.aspect;
 
 import com.chua.starter.strategy.annotation.DistributedLock;
 import com.chua.starter.strategy.exception.LockAcquireException;
+import com.chua.starter.strategy.support.StrategyRedisSupport;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -12,15 +13,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.expression.MethodBasedEvaluationContext;
 import org.springframework.core.DefaultParameterNameDiscoverer;
 import org.springframework.core.ParameterNameDiscoverer;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
-import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -45,32 +43,18 @@ public class DistributedLockAspect {
 
     private static final String LOCK_SUCCESS = "OK";
 
-    /**
-     * 解锁Lua脚本
-     * <p>
-     * 确保只有锁的持有者才能释放锁
-     * </p>
-     */
-    private static final String UNLOCK_SCRIPT = """
-            if redis.call('get', KEYS[1]) == ARGV[1] then
-                return redis.call('del', KEYS[1])
-            else
-                return 0
-            end
-            """;
-
     private final ExpressionParser parser = new SpelExpressionParser();
 
     private final ParameterNameDiscoverer parameterNameDiscoverer = new DefaultParameterNameDiscoverer();
 
     @Autowired(required = false)
-    private StringRedisTemplate stringRedisTemplate;
+    private StrategyRedisSupport strategyRedisSupport;
 
     @Around("@annotation(distributedLock)")
     public Object around(ProceedingJoinPoint joinPoint, DistributedLock distributedLock) throws Throwable {
         // 检查Redis是否可用
-        if (stringRedisTemplate == null) {
-            log.warn("StringRedisTemplate未配置，跳过分布式锁");
+        if (strategyRedisSupport == null || !strategyRedisSupport.isAvailable()) {
+            log.warn("StrategyRedisSupport未配置，跳过分布式锁");
             return joinPoint.proceed();
         }
 
@@ -150,10 +134,7 @@ public class DistributedLockAspect {
         long sleepTime = Math.min(100L, waitMillis / 10);
 
         do {
-            Boolean success = stringRedisTemplate.opsForValue().setIfAbsent(
-                    lockKey, lockValue, leaseMillis, TimeUnit.MILLISECONDS);
-
-            if (Boolean.TRUE.equals(success)) {
+            if (strategyRedisSupport.setIfAbsent(lockKey, lockValue, leaseMillis, TimeUnit.MILLISECONDS)) {
                 return true;
             }
 
@@ -182,14 +163,11 @@ public class DistributedLockAspect {
      */
     private void releaseLock(String lockKey, String lockValue) {
         try {
-            DefaultRedisScript<Long> script = new DefaultRedisScript<>();
-            script.setScriptText(UNLOCK_SCRIPT);
-            script.setResultType(Long.class);
+            long result = strategyRedisSupport == null
+                    ? 0L
+                    : strategyRedisSupport.deleteIfValueMatches(lockKey, lockValue);
 
-            Long result = stringRedisTemplate.execute(
-                    script, Collections.singletonList(lockKey), lockValue);
-
-            if (result != null && result > 0) {
+            if (result > 0) {
                 log.debug("释放分布式锁成功: key={}", lockKey);
             } else {
                 log.warn("释放分布式锁失败（锁可能已过期）: key={}", lockKey);
