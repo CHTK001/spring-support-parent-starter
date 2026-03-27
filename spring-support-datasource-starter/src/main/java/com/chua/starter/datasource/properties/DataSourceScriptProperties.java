@@ -48,6 +48,14 @@ public class DataSourceScriptProperties {
      * 配置属性前缀
      */
     public static final String PRE = "plugin.datasource.script";
+    /**
+     * 默认扫描路径
+     * <p>
+     * 支持多个路径，使用英文逗号分隔。
+     * </p>
+     */
+    public static final String DEFAULT_SCRIPT_PATH =
+            "classpath*:db/init/*.sql,classpath*:db/migration/*.sql,classpath*:db/sync/*.sql";
 
     /**
      * 是否启用数据源脚本功能
@@ -85,10 +93,13 @@ public class DataSourceScriptProperties {
     private String sqlScriptEncoding = "UTF-8";
     /**
      * 数据源脚本路径
-     * 默认值: classpath*:db/init/*.sql
-     * 示例: plugin.datasource.script.script-path=classpath*:db/migration/*.sql
+     * <p>
+     * 支持多个路径，使用英文逗号、分号或换行分隔。
+     * </p>
+     * 默认值: classpath*:db/init/*.sql,classpath*:db/migration/*.sql,classpath*:db/sync/*.sql
+     * 示例: plugin.datasource.script.script-path=classpath*:db/init/*.sql,classpath*:db/migration/*.sql
      */
-    private String scriptPath = "classpath*:db/init/*.sql";
+    private String scriptPath = DEFAULT_SCRIPT_PATH;
 
     /**
      * 数据库类型

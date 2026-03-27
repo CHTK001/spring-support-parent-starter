@@ -1,3 +1,6 @@
+﻿-- 同步数据模块初始化 SQL
+-- 聚合同步任务基础表、增强字段、统计/告警索引与转换规则表
+
 CREATE TABLE IF NOT EXISTS monitor_sync_task (
     sync_task_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     sync_task_name VARCHAR(255) NOT NULL,
@@ -114,3 +117,28 @@ CREATE TABLE IF NOT EXISTS monitor_sync_statistics (
     peak_memory_mb INT DEFAULT 0,
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+
+-- monitor_sync_task 增强索引
+CREATE INDEX idx_sync_task_status ON monitor_sync_task(sync_task_status);
+CREATE INDEX idx_sync_task_last_run_time ON monitor_sync_task(sync_task_last_run_time);
+
+-- monitor_sync_statistics / monitor_sync_alert 索引
+CREATE INDEX idx_task_date ON monitor_sync_statistics(sync_task_id, stat_date);
+CREATE INDEX idx_task_time ON monitor_sync_alert(sync_task_id, alert_time);
+CREATE INDEX idx_resolved ON monitor_sync_alert(is_resolved);
+
+-- 创建数据转换规则表
+-- 作者: System
+-- 日期: 2026-03-09
+
+CREATE TABLE monitor_sync_transform_rule (
+    rule_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '规则ID',
+    rule_name VARCHAR(255) NOT NULL COMMENT '规则名称',
+    rule_type VARCHAR(50) NOT NULL COMMENT '规则类型: MAPPING/FILTER/MASKING/SCRIPT',
+    rule_config TEXT NOT NULL COMMENT '规则配置JSON',
+    rule_desc VARCHAR(500) COMMENT '规则描述',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) COMMENT='数据转换规则表';
+

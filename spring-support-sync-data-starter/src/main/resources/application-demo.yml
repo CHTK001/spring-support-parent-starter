@@ -9,8 +9,8 @@ spring:
   sql:
     init:
       mode: always
-      schema-locations: classpath:demo-schema.sql
-      data-locations: classpath:demo-data.sql
+      schema-locations: classpath:db/init/V1.0__init_sync_data.sql
+      data-locations: classpath:db/init/V1.0__initdata_sync_data.sql
       continue-on-error: true
   h2:
     console:

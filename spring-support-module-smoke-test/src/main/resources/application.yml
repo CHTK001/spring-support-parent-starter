@@ -23,8 +23,8 @@ spring:
   sql:
     init:
       mode: ${smoke.sql.init.mode:never}
-      schema-locations: ${smoke.sql.init.schema-locations:optional:classpath:db/schema.sql}
-      data-locations: ${smoke.sql.init.data-locations:optional:classpath:db/data.sql}
+      schema-locations: ${smoke.sql.init.schema-locations:optional:classpath:db/init/V1.0__init.sql}
+      data-locations: ${smoke.sql.init.data-locations:optional:classpath:db/init/V1.0__initdata.sql}
 server:
   port: 0
 management:

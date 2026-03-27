@@ -422,7 +422,7 @@
       <id>smoke-payment</id>
       <properties>
         <smoke.sql.init.mode>always</smoke.sql.init.mode>
-        <smoke.sql.init.schema-locations>optional:classpath:db/schema.sql</smoke.sql.init.schema-locations>
+        <smoke.sql.init.schema-locations>optional:classpath:db/init/V1.0__init_payment.sql</smoke.sql.init.schema-locations>
         <smoke.target.module>spring-support-payment-starter</smoke.target.module>
       </properties>
       <dependencies>
@@ -533,9 +533,9 @@
       <properties>
         <smoke.sql.init.mode>always</smoke.sql.init.mode>
         <smoke.proxy.auto-restart-running>false</smoke.proxy.auto-restart-running>
-        <smoke.sql.init.schema-locations>optional:classpath:db/proxy/schema.sql</smoke.sql.init.schema-locations>
+        <smoke.sql.init.schema-locations>optional:classpath:db/proxy/V1.0__init_proxy.sql</smoke.sql.init.schema-locations>
         <smoke.proxy.enable>true</smoke.proxy.enable>
-        <smoke.sql.init.data-locations>optional:classpath:db/proxy/data.sql</smoke.sql.init.data-locations>
+        <smoke.sql.init.data-locations>optional:classpath:db/proxy/V1.0__initdata_proxy.sql</smoke.sql.init.data-locations>
         <smoke.swagger.enable>false</smoke.swagger.enable>
         <smoke.target.module>spring-support-proxy-starter</smoke.target.module>
       </properties>

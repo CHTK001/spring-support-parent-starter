@@ -12,8 +12,8 @@ spring:
   sql:
     init:
       mode: always
-      schema-locations: classpath:test-schema.sql
-      data-locations: classpath:test-data.sql
+      schema-locations: classpath:db/init/V1.0__init_sync_data_test.sql
+      data-locations: classpath:db/init/V1.0__initdata_sync_data_test.sql
       continue-on-error: true
 
 # ===========================================

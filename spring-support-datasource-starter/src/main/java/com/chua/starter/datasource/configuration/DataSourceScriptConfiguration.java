@@ -4,7 +4,6 @@ import com.chua.common.support.lang.process.ProgressBar;
 import com.chua.common.support.lang.process.ProgressBarBuilder;
 import com.chua.common.support.lang.process.ProgressBarStyle;
 import com.chua.common.support.lang.version.Version;
-import com.chua.common.support.core.utils.ObjectUtils;
 import com.chua.starter.datasource.properties.DataSourceScriptProperties;
 import com.chua.starter.datasource.support.DatabaseFileProvider;
 import lombok.extern.slf4j.Slf4j;
@@ -15,11 +14,12 @@ import org.springframework.core.io.support.EncodedResource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.util.DigestUtils;
+import org.springframework.util.StringUtils;
 
 import javax.sql.DataSource;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
@@ -65,8 +65,11 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                     FlywayLikePopulator populator = new FlywayLikePopulator(ds, dataSourceScriptProperties);
                     populator.populate();
                     log.info("DataSource [{}] 数据库脚本执行完成", beanName);
-                } catch (SQLException e) {
+                } catch (Exception e) {
                     log.warn("执行数据库脚本失败: {}", beanName, e);
+                    if (!dataSourceScriptProperties.isContinueOnError()) {
+                        throw new IllegalStateException("执行数据库脚本失败: " + beanName, e);
+                    }
                 }
             }
         }
@@ -143,19 +146,22 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                 // 2. 如果启用基线且表为空，插入基线记录
                 insertBaselineIfNeeded();
 
-                // 3. 扫描脚本（包括db/init和配置的脚本路径）
+                // 3. 扫描脚本（包括db/init、db/migration、db/sync和配置的脚本路径）
                 PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
-                Resource[] resources = resolver.getResources(dataSourceScriptProperties.getScriptPath());
-                List<Resource> list = new ArrayList<>(Arrays.asList(resources));
+                List<String> scriptPaths = splitScriptPaths(dataSourceScriptProperties.getScriptPath());
+                List<Resource> list = scanScripts(resolver, scriptPaths.toArray(String[]::new));
 
                 // 如果配置了数据库类型，则额外加载数据库特定的脚本目录
-                if (dataSourceScriptProperties.getDatabaseType() != null && !dataSourceScriptProperties.getDatabaseType().trim().isEmpty()) {
-                    String dbSpecificPath = buildDatabaseSpecificPath(dataSourceScriptProperties.getScriptPath(), dataSourceScriptProperties.getDatabaseType());
-                    Resource[] dbSpecificResources = resolver.getResources(dbSpecificPath);
-                    list.addAll(Arrays.asList(dbSpecificResources));
+                if (StringUtils.hasText(dataSourceScriptProperties.getDatabaseType())) {
+                    List<String> dbSpecificPaths = new ArrayList<>();
+                    for (String scriptPath : scriptPaths) {
+                        String dbSpecificPath = buildDatabaseSpecificPath(scriptPath, dataSourceScriptProperties.getDatabaseType());
+                        dbSpecificPaths.add(dbSpecificPath);
+                        list.addAll(scanScripts(resolver, dbSpecificPath));
+                    }
 
-                    if (dataSourceScriptProperties.isVerbose()) {
-                        log.info("加载数据库特定脚本路径: {}", dbSpecificPath);
+                    if (dataSourceScriptProperties.isVerbose() && !dbSpecificPaths.isEmpty()) {
+                        log.info("加载数据库特定脚本路径: {}", dbSpecificPaths);
                     }
                 }
 
@@ -258,13 +264,10 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                 for (Resource res : scriptsToExecute) {
                     String fileName = Objects.requireNonNull(res.getFilename());
                     String version = versionOf(fileName);
-                    
-                    Integer count = jdbc.queryForObject(
-                            String.format("SELECT COUNT(*) FROM %s WHERE %s_script_name = ? AND %s_version = ?",
-                                    tableName, tablePrefix, tablePrefix),
-                            Integer.class, fileName, version);
-                    
-                    if (count == null || count == 0) {
+
+                    ScriptExecutionRecord executionRecord =
+                            findScriptExecutionRecord(tableName, tablePrefix, fileName, version);
+                    if (needsExecution(executionRecord)) {
                         actualScriptsToExecute++;
                     }
                 }
@@ -283,41 +286,27 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                 try {
                     int executedCount = 0;
                     for (Resource res : scriptsToExecute) {
-                    String fileName = Objects.requireNonNull(res.getFilename());
-                    String version = versionOf(fileName);
-                    String description = descriptionOf(fileName);
-                    String scriptType = getScriptType(fileName);
-                    String currentChecksum = checksum(res);
+                        String fileName = Objects.requireNonNull(res.getFilename());
+                        String version = versionOf(fileName);
+                        String description = descriptionOf(fileName);
+                        String scriptType = getScriptType(fileName);
+                        String currentChecksum = checksum(res);
+                        ScriptExecutionRecord executionRecord =
+                                findScriptExecutionRecord(tableName, tablePrefix, fileName, version);
 
-                    // 5. 检查是否已执行过（根据脚本名称+版本一起判断）
-                    Integer count = jdbc.queryForObject(
-                            String.format("SELECT COUNT(*) FROM %s WHERE %s_script_name = ? AND %s_version = ?",
-                                    tableName, tablePrefix, tablePrefix),
-                            Integer.class, fileName, version);
-
-                        if (count != null && count > 0) {
-                            // 如果启用校验和验证，检查脚本是否被修改
-                            if (dataSourceScriptProperties.isValidateChecksum()) {
-                                String storedChecksum = jdbc.queryForObject(
-                                        String.format("SELECT %s_checksum FROM %s WHERE %s_script_name = ? AND %s_version = ?",
-                                                tablePrefix, tableName, tablePrefix, tablePrefix),
-                                        String.class, fileName, version);
-                                if (!currentChecksum.equals(storedChecksum)) {
-                                    String errorMsg = String.format("脚本 %s (版本: %s) 的校验和不匹配。期望值: %s, 实际值: %s",
-                                            fileName, version, storedChecksum, currentChecksum);
-                                    log.error(errorMsg);
-                                    if (!dataSourceScriptProperties.isContinueOnError()) {
-                                        throw new SQLException(errorMsg);
-                                    }
-                                }
-                            }
+                        if (hasSuccessfulExecution(executionRecord)) {
+                            validateChecksumIfNecessary(executionRecord, currentChecksum, fileName, version);
 
                             if (dataSourceScriptProperties.isVerbose()) {
                                 log.info("跳过已执行的脚本: {} (版本: {})", fileName, version);
                             }
                             continue;
                         }
-                        
+
+                        if (executionRecord != null && dataSourceScriptProperties.isVerbose()) {
+                            log.info("检测到失败记录，重新执行脚本: {} (版本: {})", fileName, version);
+                        }
+
                         executedCount++;
 
                         // 5. 执行脚本
@@ -326,14 +315,14 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                         try {
                             // 更新总体进度条信息
                             if (overallProgressBar != null) {
-                                overallProgressBar.setExtraMessage(String.format("[%d/%d] %s (版本: %s)", 
+                                overallProgressBar.setExtraMessage(String.format("[%d/%d] %s (版本: %s)",
                                         executedCount, actualScriptsToExecute, fileName, version));
                             }
-                            
+
                             if (!dataSourceScriptProperties.isVerbose()) {
-                                log.info("[{}/{}] 执行脚本: {}", 
-                                        executedCount, 
-                                        actualScriptsToExecute, 
+                                log.info("[{}/{}] 执行脚本: {}",
+                                        executedCount,
+                                        actualScriptsToExecute,
                                         fileName);
                             }
 
@@ -341,7 +330,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                                 // 禁用自动提交以提高性能
                                 boolean originalAutoCommit = scriptConnection.getAutoCommit();
                                 scriptConnection.setAutoCommit(false);
-                                
+
                                 try {
                                     // 创建编码资源
                                     EncodedResource encodedResource = new EncodedResource(res, dataSourceScriptProperties.getSqlScriptEncoding());
@@ -355,40 +344,45 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                                     // 提交事务
                                     scriptConnection.commit();
                                     success = "true";
-                                
-                            } catch (Exception e) {
-                                // 回滚事务
-                                try {
-                                    scriptConnection.rollback();
-                                } catch (SQLException rollbackEx) {
-                                    log.error("回滚事务失败", rollbackEx);
-                                }
-                                throw e;
-                            } finally {
-                                // 恢复自动提交设置
-                                scriptConnection.setAutoCommit(originalAutoCommit);
-                            }
-                        }
 
-                        // 6. 记录执行结果
-                        jdbc.update(
-                                String.format("INSERT INTO %s(%s_version,%s_script_name,%s_script_type,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?,?,?)",
-                                        tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
-                                version, fileName, scriptType, description, currentChecksum, success);
+                                } catch (Exception e) {
+                                    // 回滚事务
+                                    try {
+                                        scriptConnection.rollback();
+                                    } catch (SQLException rollbackEx) {
+                                        log.error("回滚事务失败", rollbackEx);
+                                    }
+                                    throw e;
+                                } finally {
+                                    // 恢复自动提交设置
+                                    scriptConnection.setAutoCommit(originalAutoCommit);
+                                }
+                            }
+
+                            // 6. 记录执行结果
+                            saveScriptExecutionRecord(
+                                    tableName,
+                                    tablePrefix,
+                                    version,
+                                    fileName,
+                                    scriptType,
+                                    description,
+                                    currentChecksum,
+                                    success);
 
                             long endTime = System.currentTimeMillis();
                             long duration = endTime - startTime;
-                            
+
                             // 更新总体进度条
                             if (overallProgressBar != null) {
                                 overallProgressBar.step();
                             }
-                            
+
                             if (!dataSourceScriptProperties.isVerbose()) {
-                                log.info("[{}/{}] 成功执行迁移脚本: {} (版本: {}) - 耗时: {}ms", 
+                                log.info("[{}/{}] 成功执行迁移脚本: {} (版本: {}) - 耗时: {}ms",
                                         executedCount,
                                         actualScriptsToExecute,
-                                        fileName, 
+                                        fileName,
                                         version,
                                         duration);
                             }
@@ -398,10 +392,15 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
 
                             // 记录失败的执行
                             try {
-                                jdbc.update(
-                                        String.format("INSERT INTO %s(%s_version,%s_script_name,%s_script_type,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?,?,?)",
-                                                tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
-                                        version, fileName, scriptType, description, currentChecksum, "false");
+                                saveScriptExecutionRecord(
+                                        tableName,
+                                        tablePrefix,
+                                        version,
+                                        fileName,
+                                        scriptType,
+                                        description,
+                                        currentChecksum,
+                                        "false");
                             } catch (Exception recordException) {
                                 log.error("记录迁移失败信息失败", recordException);
                             }
@@ -480,20 +479,20 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                     
                     try {
                         String currentChecksum = checksum(res);
-                        
-                        // 检查是否已执行过
-                        Integer count = jdbc.queryForObject(
-                                String.format("SELECT COUNT(*) FROM %s WHERE %s_script_name = ? AND %s_version = ?",
-                                        tableName, tablePrefix, tablePrefix),
-                                Integer.class, fileName, version);
-                        
-                        if (count != null && count > 0) {
+
+                        ScriptExecutionRecord executionRecord =
+                                findScriptExecutionRecord(tableName, tablePrefix, fileName, version);
+                        if (hasSuccessfulExecution(executionRecord)) {
                             if (dataSourceScriptProperties.isVerbose()) {
                                 log.debug("[异步] 跳过已执行的数据脚本: {} (v{})", fileName, version);
                             }
                             return;
                         }
-                        
+
+                        if (executionRecord != null && dataSourceScriptProperties.isVerbose()) {
+                            log.info("[异步] 检测到失败记录，重新执行数据脚本: {} (v{})", fileName, version);
+                        }
+
                         long startTime = System.currentTimeMillis();
                         String success = "false";
                         
@@ -524,10 +523,15 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                         }
                         
                         // 记录执行结果
-                        jdbc.update(
-                                String.format("INSERT INTO %s(%s_version,%s_script_name,%s_script_type,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?,?,?)",
-                                        tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
-                                version, fileName, scriptType, description, currentChecksum, success);
+                        saveScriptExecutionRecord(
+                                tableName,
+                                tablePrefix,
+                                version,
+                                fileName,
+                                scriptType,
+                                description,
+                                currentChecksum,
+                                success);
                         
                     } catch (Exception e) {
                         failCount.incrementAndGet();
@@ -537,10 +541,15 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                         // 记录失败
                         try {
                             String currentChecksum = checksum(res);
-                            jdbc.update(
-                                    String.format("INSERT INTO %s(%s_version,%s_script_name,%s_script_type,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?,?,?)",
-                                            tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
-                                    version, fileName, scriptType, description, currentChecksum, "false");
+                            saveScriptExecutionRecord(
+                                    tableName,
+                                    tablePrefix,
+                                    version,
+                                    fileName,
+                                    scriptType,
+                                    description,
+                                    currentChecksum,
+                                    "false");
                         } catch (Exception recordEx) {
                             log.error("[异步] 记录失败信息失败", recordEx);
                         }
@@ -587,118 +596,96 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                 Connection connection,
                 EncodedResource resource,
                 String fileName) throws SQLException {
-            
-            try {
-                // 读取脚本内容
-                String script = new String(resource.getResource().getInputStream().readAllBytes(),
-                        ObjectUtils.defaultIfNull(resource.getCharset(), StandardCharsets.UTF_8));
-                
-                // 先移除多行注释 /* ... */（避免注释中的分号干扰分割）
-                script = removeBlockComments(script);
-                
-                // 分割SQL语句
-                String separator = dataSourceScriptProperties.getSeparator();
-                String[] statements = script.split(separator);
-                
-                // 过滤有效的SQL语句
-                List<String> validStatements = new ArrayList<>();
-                for (String sql : statements) {
-                    String trimmed = sql.trim();
-                    // 跳过空语句和单行注释
-                    if (!trimmed.isEmpty() && !trimmed.startsWith("--")) {
-                        validStatements.add(trimmed);
-                    }
-                }
-                
-                int totalStatements = validStatements.size();
-                int batchSize = 50; // 批量执行大小
-                
-                // 创建脚本级进度条（仅当语句数量较多且开启详细模式时）
-                ProgressBar scriptProgressBar = null;
-                if (dataSourceScriptProperties.isVerbose() && totalStatements > 100) {
-                    scriptProgressBar = new ProgressBarBuilder()
-                            .setTaskName(String.format("  执行 %s", fileName))
-                            .setInitialMax(totalStatements)
-                            .setStyle(ProgressBarStyle.COLORFUL_UNICODE_BAR)
-                            .setUnit("条SQL", 1)
-                            .build();
-                }
-                
-                try (var stmt = connection.createStatement()) {
-                    for (int i = 0; i < validStatements.size(); i++) {
-                        String sql = validStatements.get(i);
-                        
-                        // 添加到批处理
-                        stmt.addBatch(sql);
-                        
-                        // 每50条执行一次批处理，或者到达最后一条
-                        if ((i + 1) % batchSize == 0 || i == validStatements.size() - 1) {
-                            try {
-                                stmt.executeBatch();
-                                stmt.clearBatch();
-                            } catch (Exception e) {
-                                if(e.getMessage().contains(" already exists")) {
-                                    continue;
-                                }
-                                throw new RuntimeException(e);
-                            }
+            ScriptUtils.executeSqlScript(
+                    connection,
+                    resource,
+                    false,
+                    dataSourceScriptProperties.isIgnoreFailedDrops(),
+                    ScriptUtils.DEFAULT_COMMENT_PREFIXES,
+                    dataSourceScriptProperties.getSeparator(),
+                    ScriptUtils.DEFAULT_BLOCK_COMMENT_START_DELIMITER,
+                    ScriptUtils.DEFAULT_BLOCK_COMMENT_END_DELIMITER
+            );
+        }
 
-                            // 更新进度条
-                            if (scriptProgressBar != null) {
-                                int executed = Math.min(i + 1, totalStatements);
-                                scriptProgressBar.stepTo(executed);
-                            }
-                        }
-                    }
-                } finally {
-                    // 关闭脚本级进度条
-                    if (scriptProgressBar != null) {
-                        scriptProgressBar.close();
-                    }
-                }
-                
-            } catch (IOException e) {
-                throw new SQLException("读取脚本文件失败: " + fileName, e);
-            } catch (SQLException e) {
-                log.error("执行脚本失败: {}", fileName, e);
-                if (!dataSourceScriptProperties.isContinueOnError()) {
-                    throw e;
-                }
+        private boolean needsExecution(ScriptExecutionRecord executionRecord) {
+            return executionRecord == null || !executionRecord.isSuccess();
+        }
+
+        private boolean hasSuccessfulExecution(ScriptExecutionRecord executionRecord) {
+            return executionRecord != null && executionRecord.isSuccess();
+        }
+
+        private ScriptExecutionRecord findScriptExecutionRecord(
+                String tableName,
+                String tablePrefix,
+                String fileName,
+                String version) {
+            List<Map<String, Object>> rows = jdbc.queryForList(
+                    String.format("SELECT %s_checksum AS checksum, %s_success AS success FROM %s WHERE %s_script_name = ? AND %s_version = ?",
+                            tablePrefix, tablePrefix, tableName, tablePrefix, tablePrefix),
+                    fileName, version);
+            if (rows.isEmpty()) {
+                return null;
             }
+
+            Map<String, Object> row = rows.get(0);
+            return new ScriptExecutionRecord(
+                    Objects.toString(row.get("checksum"), null),
+                    Objects.toString(row.get("success"), null));
+        }
+
+        private void validateChecksumIfNecessary(
+                ScriptExecutionRecord executionRecord,
+                String currentChecksum,
+                String fileName,
+                String version) throws SQLException {
+            if (!dataSourceScriptProperties.isValidateChecksum() || executionRecord == null) {
+                return;
+            }
+
+            String storedChecksum = executionRecord.checksum();
+            if (Objects.equals(currentChecksum, storedChecksum)) {
+                return;
+            }
+
+            String errorMsg = String.format("脚本 %s (版本: %s) 的校验和不匹配。期望值: %s, 实际值: %s",
+                    fileName, version, storedChecksum, currentChecksum);
+            log.error(errorMsg);
+            if (!dataSourceScriptProperties.isContinueOnError()) {
+                throw new SQLException(errorMsg);
+            }
+        }
+
+        private void saveScriptExecutionRecord(
+                String tableName,
+                String tablePrefix,
+                String version,
+                String fileName,
+                String scriptType,
+                String description,
+                String checksum,
+                String success) {
+            int updated = jdbc.update(
+                    String.format("UPDATE %s SET %s_script_type = ?, %s_description = ?, %s_checksum = ?, %s_success = ?, %s_executed_on = CURRENT_TIMESTAMP WHERE %s_script_name = ? AND %s_version = ?",
+                            tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
+                    scriptType, description, checksum, success, fileName, version);
+            if (updated > 0) {
+                return;
+            }
+
+            jdbc.update(
+                    String.format("INSERT INTO %s(%s_version,%s_script_name,%s_script_type,%s_description,%s_checksum,%s_success) VALUES(?,?,?,?,?,?)",
+                            tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix),
+                    version, fileName, scriptType, description, checksum, success);
         }
 
         /* ---------- 工具方法 ---------- */
 
-        /**
-         * 移除SQL脚本中的多行注释
-         * <p>
-         * 避免注释中的分号干扰SQL语句分割
-         * </p>
-         *
-         * @param script SQL脚本内容
-         * @return 移除多行注释后的脚本
-         */
-        private String removeBlockComments(String script) {
-            StringBuilder result = new StringBuilder();
-            int i = 0;
-            while (i < script.length()) {
-                // 检查是否是多行注释开始
-                if (i < script.length() - 1 && script.charAt(i) == '/' && script.charAt(i + 1) == '*') {
-                    // 跳过整个注释块
-                    i += 2;
-                    while (i < script.length() - 1) {
-                        if (script.charAt(i) == '*' && script.charAt(i + 1) == '/') {
-                            i += 2;
-                            break;
-                        }
-                        i++;
-                    }
-                } else {
-                    result.append(script.charAt(i));
-                    i++;
-                }
+        private record ScriptExecutionRecord(String checksum, String success) {
+            private boolean isSuccess() {
+                return "true".equalsIgnoreCase(success);
             }
-            return result.toString();
         }
 
         /**
@@ -825,17 +812,38 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                 throws IOException {
             List<Resource> allResources = new ArrayList<>();
             for (String path : paths) {
+                if (!StringUtils.hasText(path)) {
+                    continue;
+                }
                 try {
-                    Resource[] resources = resolver.getResources(path);
+                    Resource[] resources = resolver.getResources(path.trim());
                     allResources.addAll(Arrays.asList(resources));
                     if (dataSourceScriptProperties.isVerbose()) {
-                        log.debug("从路径 {} 扫描到 {} 个脚本", path, resources.length);
+                        log.debug("从路径 {} 扫描到 {} 个脚本", path.trim(), resources.length);
                     }
                 } catch (IOException e) {
                     log.debug("路径不存在或无法访问: {}", path);
                 }
             }
             return allResources;
+        }
+
+        private List<String> splitScriptPaths(String rawPaths) {
+            if (!StringUtils.hasText(rawPaths)) {
+                return List.of(DataSourceScriptProperties.DEFAULT_SCRIPT_PATH.split(","));
+            }
+
+            List<String> paths = Arrays.stream(rawPaths.split("[,;\\r\\n]+"))
+                    .map(String::trim)
+                    .filter(StringUtils::hasText)
+                    .distinct()
+                    .toList();
+
+            if (!paths.isEmpty()) {
+                return paths;
+            }
+
+            return List.of(DataSourceScriptProperties.DEFAULT_SCRIPT_PATH.split(","));
         }
 
         /**
@@ -922,14 +930,17 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
             String prefix = dataSourceScriptProperties.getScriptPrefix();
             String suffix = dataSourceScriptProperties.getScriptSuffix();
             String separator = dataSourceScriptProperties.getVersionSeparator();
+            if (!fileName.startsWith(prefix) || !fileName.endsWith(suffix)) {
+                return fileName;
+            }
 
-            // 构建正则表达式: ^V(.*?)__.*\.sql$
-            String regex = String.format("^%s(.*?)%s.*\\%s$",
-                    escapeRegex(prefix),
-                    escapeRegex(separator),
-                    escapeRegex(suffix));
+            int versionStart = prefix.length();
+            int separatorIndex = fileName.indexOf(separator, versionStart);
+            if (separatorIndex < 0) {
+                return fileName;
+            }
 
-            return fileName.replaceFirst(regex, "$1");
+            return fileName.substring(versionStart, separatorIndex);
         }
 
         /**
@@ -942,13 +953,22 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         private String descriptionOf(String fileName) {
             String suffix = dataSourceScriptProperties.getScriptSuffix();
             String separator = dataSourceScriptProperties.getVersionSeparator();
+            if (!fileName.endsWith(suffix)) {
+                return fileName;
+            }
 
-            // 构建正则表达式: ^.*?__(.*)\.sql$
-            String regex = String.format("^.*?%s(.*)\\%s$",
-                    escapeRegex(separator),
-                    escapeRegex(suffix));
+            int separatorIndex = fileName.indexOf(separator);
+            if (separatorIndex < 0) {
+                return fileName;
+            }
 
-            String description = fileName.replaceFirst(regex, "$1");
+            int descriptionStart = separatorIndex + separator.length();
+            int descriptionEnd = fileName.length() - suffix.length();
+            if (descriptionStart >= descriptionEnd) {
+                return fileName;
+            }
+
+            String description = fileName.substring(descriptionStart, descriptionEnd);
             // 将下划线替换为空格，使描述更可读
             return description.replace("_", " ");
         }
@@ -962,16 +982,6 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
          */
         private String checksum(Resource res) throws IOException {
             return DigestUtils.md5DigestAsHex(res.getInputStream());
-        }
-
-        /**
-         * 转义正则表达式特殊字符
-         *
-         * @param str 需要转义的字符串
-         * @return 转义后的字符串
-         */
-        private String escapeRegex(String str) {
-            return str.replaceAll("([\\[\\]\\(\\)\\{\\}\\*\\+\\?\\^\\$\\|\\\\])", "\\\\$1");
         }
 
         /**

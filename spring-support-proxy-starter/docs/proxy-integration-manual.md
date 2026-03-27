@@ -51,8 +51,8 @@ plugin:
 
 如果只是验证“starter 能否独立装配 + 基础接口能否返回”，可以直接复用 smoke 项目的最小 SQL：
 
-- `spring-support-module-smoke-test/src/test/resources/db/proxy/schema.sql`
-- `spring-support-module-smoke-test/src/test/resources/db/proxy/data.sql`
+- `spring-support-module-smoke-test/src/test/resources/db/proxy/V1.0__init_proxy.sql`
+- `spring-support-module-smoke-test/src/test/resources/db/proxy/V1.0__initdata_proxy.sql`
 
 注意：
 
@@ -71,8 +71,8 @@ plugin:
 
 - `smoke.target.module=spring-support-proxy-starter`
 - `smoke.sql.init.mode=always`
-- `smoke.sql.init.schema-locations=optional:classpath:db/proxy/schema.sql`
-- `smoke.sql.init.data-locations=optional:classpath:db/proxy/data.sql`
+- `smoke.sql.init.schema-locations=optional:classpath:db/proxy/V1.0__init_proxy.sql`
+- `smoke.sql.init.data-locations=optional:classpath:db/proxy/V1.0__initdata_proxy.sql`
 - `smoke.proxy.enable=true`
 - `smoke.proxy.auto-restart-running=false`
 

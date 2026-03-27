@@ -24,7 +24,7 @@
 
 ### 1. 数据库初始化
 
-执行 `src/main/resources/db/schema.sql` 创建数据库表。
+执行 `src/main/resources/db/init/V1.0__init_payment.sql` 创建数据库表。
 
 ### 2. 配置文件
 

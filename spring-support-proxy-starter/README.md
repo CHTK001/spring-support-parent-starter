@@ -43,9 +43,9 @@ plugin:
 - 完整代理表结构可复用网关模块现有初始化脚本：
   `spring-support-gateway-starter/src/main/resources/db/init/V1.0__init_gateway_proxy.sql`
 - 如果只是做最小 smoke 验证，可参考：
-  `spring-support-module-smoke-test/src/test/resources/db/proxy/schema.sql`
+  `spring-support-module-smoke-test/src/test/resources/db/proxy/V1.0__init_proxy.sql`
   和
-  `spring-support-module-smoke-test/src/test/resources/db/proxy/data.sql`
+  `spring-support-module-smoke-test/src/test/resources/db/proxy/V1.0__initdata_proxy.sql`
 
 ## 核心接口
 
