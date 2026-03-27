@@ -49,6 +49,10 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
      * 已处理的 DataSource Bean 名称集合，避免重复执行
      */
     private final Set<String> processedDataSources = Collections.synchronizedSet(new HashSet<>());
+    /**
+     * 已提示过禁用状态的 DataSource Bean 名称集合，避免重复打印日志
+     */
+    private final Set<String> skippedDataSources = Collections.synchronizedSet(new HashSet<>());
 
     public DataSourceScriptConfiguration(DataSourceScriptProperties dataSourceScriptProperties) {
         this.dataSourceScriptProperties = dataSourceScriptProperties;
@@ -56,7 +60,15 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
 
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-        if (bean instanceof DataSource && dataSourceScriptProperties.isEnable()) {
+        if (bean instanceof DataSource) {
+            if (!dataSourceScriptProperties.isEnable()) {
+                if (skippedDataSources.add(beanName)) {
+                    log.info("检测到 DataSource [{}] 初始化完成，但 [{}]=false，已跳过数据库脚本执行",
+                            beanName, DataSourceScriptProperties.PRE + ".enable");
+                }
+                return bean;
+            }
+
             DataSource ds = (DataSource) bean;
             // 避免重复处理同一个 DataSource
             if (processedDataSources.add(beanName)) {

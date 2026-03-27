@@ -650,4 +650,5 @@ CREATE TABLE `proxy_server_setting_preview_extension`  (
   `update_by` int NULL DEFAULT NULL COMMENT '更新人',
   PRIMARY KEY (`proxy_server_setting_preview_extension_id`) USING BTREE,
   INDEX `idx_server_id`(`preview_extension_server_id`) USING BTREE
+ ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '代理服务器预览扩展配置' ROW_FORMAT = DYNAMIC;
 

@@ -237,7 +237,7 @@ plugin:
 | **数据库**        |
 | MyBatis           | `plugin.mybatis.enable`           | false  | MyBatis Plus       |
 | MyBatis Tenant    | `plugin.tenant.enable`            | false  | 多租户             |
-| DataSource Script | `plugin.datasource.script.enable` | false  | 数据源脚本         |
+| DataSource Script | `plugin.datasource.script.enable` | true   | 数据源脚本         |
 | Multi DataSource  | `plugin.datasource.multi.enable`  | false  | 多数据源           |
 | Transaction       | `plugin.transaction.enable`       | false  | 事务管理           |
 | **缓存存储**      |
