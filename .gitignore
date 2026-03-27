@@ -10,3 +10,5 @@ target/
 *.log
 *bak
 logs/!/patch/
+/.runtime/
+/system-ui-inspect.png
