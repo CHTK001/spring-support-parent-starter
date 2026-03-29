@@ -413,7 +413,7 @@ public class StrategyAutoConfiguration {
      * 分布式锁切面
      */
     @Bean
-    @ConditionalOnMissingBean
+    @ConditionalOnMissingBean(value = DistributedLockAspect.class, name = "lockStrategyAnnotationCompatibilityMarker")
     public DistributedLockAspect distributedLockAspect() {
         return new DistributedLockAspect();
     }
@@ -422,7 +422,7 @@ public class StrategyAutoConfiguration {
      * 幂等性控制切面
      */
     @Bean
-    @ConditionalOnMissingBean
+    @ConditionalOnMissingBean(value = IdempotentAspect.class, name = "lockStrategyAnnotationCompatibilityMarker")
     public IdempotentAspect idempotentAspect() {
         return new IdempotentAspect();
     }

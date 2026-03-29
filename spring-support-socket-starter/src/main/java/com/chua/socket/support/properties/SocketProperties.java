@@ -30,6 +30,15 @@ public class SocketProperties {
     private boolean enable;
 
     /**
+     * 是否在 Spring 容器启动阶段自动启动 Socket 服务
+     * <p>
+     * 关闭后仍会创建对应的 {@link com.chua.socket.support.session.SocketSessionTemplate} Bean，
+     * 但不会在应用启动时自动监听端口，适合由外部逻辑或运维脚本显式控制生命周期。
+     * </p>
+     */
+    private boolean autoStart = true;
+
+    /**
      * 房间配置列表
      * <p>
      * 支持配置多个独立的 Socket 服务实例，每个实例可以有不同的端口和路径
@@ -503,7 +512,7 @@ public class SocketProperties {
         /**
          * 上下文路径，如 /webrtc、/shell 等
          */
-        private String contextPath = "/";
+        private String contextPath = "/socket.io";
 
         /**
          * 端口号
@@ -609,8 +618,11 @@ public class SocketProperties {
          * @return 实际端口
          */
         public int getActualPort(int mainPort) {
-            if(port < 0) {
-                return mainPort + port;
+            if (port == -1) {
+                return mainPort;
+            }
+            if (port < -1) {
+                return mainPort + Math.abs(port) - 1;
             }
             return port;
         }

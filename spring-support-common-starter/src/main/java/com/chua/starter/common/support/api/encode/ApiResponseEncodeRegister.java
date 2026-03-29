@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationListener;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -42,17 +43,18 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
      */
     public ApiResponseEncodeRegister(ApiProperties.ResponseEncodeProperties responseEncodePropertiesConfig) {
         this.globalSettingFactory = GlobalSettingFactory.getInstance();
-        boolean extInject = responseEncodePropertiesConfig.isExtInject();
-        if (!extInject) {
-            globalSettingFactory.register("config", new ApiResponseEncodeConfiguration());
-            globalSettingFactory.setIfNoChange("config", "codecResponseOpen", responseEncodePropertiesConfig.isResponseEnable());
-            this.upgrade(globalSettingFactory.get("config", ApiResponseEncodeConfiguration.class));
-        }
         this.codecType = responseEncodePropertiesConfig.getCodecType();
         this.codec = Codec.build(codecType);
-        this.whiteList = responseEncodePropertiesConfig.getWhiteList();
+        this.whiteList = responseEncodePropertiesConfig.getWhiteList() == null
+                ? Collections.emptyList()
+                : responseEncodePropertiesConfig.getWhiteList();
         this.codecKeyPair = (CodecKeyPair) codec;
         this.publicKeyHex = codecKeyPair.getPublicKeyHex();
+        ApiResponseEncodeConfiguration configuration = getOrCreateConfiguration();
+        if (!responseEncodePropertiesConfig.isExtInject()) {
+            configuration.setCodecResponseOpen(responseEncodePropertiesConfig.isResponseEnable());
+        }
+        this.upgrade(configuration);
     }
 
     public boolean isPass() {
@@ -64,7 +66,7 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
         if (null != apiResponseEncodeConfiguration) {
             return;
         }
-        this.upgrade(globalSettingFactory.get("config", ApiResponseEncodeConfiguration.class));
+        this.upgrade(getOrCreateConfiguration());
     }
 
     /**
@@ -128,6 +130,15 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
         upgrade(event);
     }
 
+    private ApiResponseEncodeConfiguration getOrCreateConfiguration() {
+        ApiResponseEncodeConfiguration configuration = globalSettingFactory.get("config", ApiResponseEncodeConfiguration.class);
+        if (configuration == null) {
+            configuration = new ApiResponseEncodeConfiguration();
+            globalSettingFactory.register("config", configuration);
+        }
+        return configuration;
+    }
+
     /**
      * 编码结果
      */
@@ -160,4 +171,3 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
         }
     }
 }
-

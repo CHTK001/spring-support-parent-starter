@@ -433,6 +433,18 @@
       </dependencies>
     </profile>
     <profile>
+      <id>smoke-lock</id>
+      <properties>
+        <smoke.target.module>spring-support-lock-starter</smoke.target.module>
+      </properties>
+      <dependencies>
+        <dependency>
+          <groupId>com.chua</groupId>
+          <artifactId>spring-support-lock-starter</artifactId>
+        </dependency>
+      </dependencies>
+    </profile>
+    <profile>
       <id>smoke-strategy</id>
       <properties>
         <smoke.target.module>spring-support-strategy-starter</smoke.target.module>

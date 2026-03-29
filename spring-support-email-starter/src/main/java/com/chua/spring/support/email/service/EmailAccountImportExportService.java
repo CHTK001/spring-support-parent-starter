@@ -29,20 +29,20 @@ public class EmailAccountImportExportService {
      */
     public void exportToJson(List<EmailAccount> accounts, OutputStream outputStream) {
         try {
+            List<EmailAccount> safeAccounts = accounts == null ? List.of() : accounts;
             EmailAccountExport export = new EmailAccountExport();
             export.setExportTime(System.currentTimeMillis());
 
-            List<EmailAccountExport.EmailAccountData> accountDataList = accounts.stream()
+            List<EmailAccountExport.EmailAccountData> accountDataList = safeAccounts.stream()
                     .map(this::convertToExportData)
                     .collect(Collectors.toList());
 
             export.setAccounts(accountDataList);
             export.setGroups(new ArrayList<>());
 
-            objectMapper.writerWithDefaultPrettyPrinter()
-                    .writeValue(outputStream, export);
+            objectMapper.writeValue(outputStream, export);
 
-            log.info("成功导出 {} 个账户", accounts.size());
+            log.info("成功导出 {} 个账户", safeAccounts.size());
         } catch (Exception e) {
             log.error("导出账户失败", e);
             throw new RuntimeException("导出失败: " + e.getMessage());
@@ -55,8 +55,10 @@ public class EmailAccountImportExportService {
     public List<EmailAccount> importFromJson(InputStream inputStream) {
         try {
             EmailAccountExport export = objectMapper.readValue(inputStream, EmailAccountExport.class);
-
-            List<EmailAccount> accounts = export.getAccounts().stream()
+            List<EmailAccountExport.EmailAccountData> accountDataList = export.getAccounts() == null
+                    ? List.of()
+                    : export.getAccounts();
+            List<EmailAccount> accounts = accountDataList.stream()
                     .map(this::convertFromExportData)
                     .collect(Collectors.toList());
 

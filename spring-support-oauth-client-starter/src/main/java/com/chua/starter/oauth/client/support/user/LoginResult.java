@@ -10,14 +10,12 @@ import lombok.*;
  */
 @Data
 @NoArgsConstructor
-@RequiredArgsConstructor
 @AllArgsConstructor
 public class LoginResult {
 
     /**
      * token信息
      */
-    @NonNull
     private String token;
 
     /**

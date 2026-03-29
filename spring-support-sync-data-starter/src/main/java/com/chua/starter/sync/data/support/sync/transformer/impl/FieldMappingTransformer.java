@@ -37,8 +37,8 @@ public class FieldMappingTransformer implements DataTransformer {
             }
         });
 
-        // 保留未映射的字段（如果配置允许）
-        if (Boolean.TRUE.equals(config.getKeepUnmappedFields())) {
+        // 默认保留未映射字段，只有显式设置为 false 才丢弃
+        if (!Boolean.FALSE.equals(config.getKeepUnmappedFields())) {
             input.forEach((key, value) -> {
                 if (!mappings.containsKey(key) && !output.containsKey(key)) {
                     output.put(key, value);

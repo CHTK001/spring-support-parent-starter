@@ -183,14 +183,24 @@ public class HttpProtocol extends AbstractProtocol {
         jsonObject.put("x-oauth-auth-type", authTypeCode);
         jsonObject.put("x-oauth-ext", ext);
         AuthenticationInformation information = createAuthenticationInformation(jsonObject, null, authClientProperties.getLoginPage());
-        log.info("当前状态: {}", information.getInformation().getCode());
-        log.info("当前信息: {}", information.getInformation().getMessage());
+        log.info("[Login] 状态={}, 用户={}, 类型={}",
+                information.getInformation().getCode(), username, authTypeCode);
+        log.debug("[Login] 信息={}", information.getInformation().getMessage());
         LoginAuthResult loginAuthResult = new LoginAuthResult();
         loginAuthResult.setCode(information.getInformation().getCode());
-        loginAuthResult.setMessage(information.getInformation().getMessage());
+        String errorMessage = StringUtils.isNotBlank(information.getErrorMessage())
+                ? information.getErrorMessage()
+                : information.getInformation().getMessage();
+        loginAuthResult.setMessage(errorMessage);
         loginAuthResult.setUserResume(information.getReturnResult());
-        loginAuthResult.setToken(information.getToken());
-        loginAuthResult.setRefreshToken(information.getRefreshToken());
+        String token = information.getToken();
+        if (StringUtils.isNotBlank(token)) {
+            loginAuthResult.setToken(token);
+        }
+        String refreshToken = information.getRefreshToken();
+        if (StringUtils.isNotBlank(refreshToken)) {
+            loginAuthResult.setRefreshToken(refreshToken);
+        }
         return loginAuthResult;
     }
 

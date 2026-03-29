@@ -11,7 +11,7 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>spring-support-minio-starter</artifactId>
+    <artifactId>spring-support-filesystem-minio-starter</artifactId>
 
 <dependencies>
         <dependency>

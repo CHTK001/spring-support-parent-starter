@@ -81,6 +81,7 @@
     <module>spring-support-tencent-starter</module>
     <module>spring-support-aliyun-starter</module>
     <module>spring-support-payment-starter</module>
+    <module>spring-support-lock-starter</module>
     <module>spring-support-strategy-starter</module>
     <module>spring-support-shell-starter</module>
     <module>spring-support-ssh-starter</module>
@@ -339,6 +340,11 @@
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
+        <artifactId>spring-support-swagger2-starter</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.chua</groupId>
         <artifactId>spring-support-queue-starter</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -439,6 +445,16 @@
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
+        <artifactId>spring-support-email-starter</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-lock-starter</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.chua</groupId>
         <artifactId>spring-support-strategy-starter</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -475,6 +491,11 @@
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-proxy-starter</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-sync-data-starter</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

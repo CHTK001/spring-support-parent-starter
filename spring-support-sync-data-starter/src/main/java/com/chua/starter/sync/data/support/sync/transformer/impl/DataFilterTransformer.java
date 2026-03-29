@@ -3,6 +3,7 @@ package com.chua.starter.sync.data.support.sync.transformer.impl;
 import com.chua.starter.sync.data.support.sync.transformer.DataTransformer;
 import com.chua.starter.sync.data.support.sync.transformer.TransformConfig;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.expression.MapAccessor;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
@@ -39,6 +40,7 @@ public class DataFilterTransformer implements DataTransformer {
                 // 使用SpEL表达式过滤
                 Expression exp = parser.parseExpression(rule.getExpression());
                 StandardEvaluationContext context = new StandardEvaluationContext(input);
+                context.addPropertyAccessor(new MapAccessor());
                 
                 // 设置变量，支持直接访问字段
                 input.forEach(context::setVariable);

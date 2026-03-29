@@ -6,8 +6,6 @@ import com.chua.socket.support.properties.SocketProperties;
 import com.chua.socket.support.session.SocketSessionTemplate;
 import com.chua.socket.support.spi.SocketProvider;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import static com.chua.starter.common.support.logger.ModuleLog.*;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
@@ -29,13 +27,10 @@ import java.util.stream.Collectors;
  * @author CH
  * @version 1.0.0
  * @since 2024-12-04
-@ConditionalOnProperty(prefix = "plugin.socket", name = "enable", havingValue = "true", matchIfMissing = true)
  */
 @Slf4j
 @EnableConfigurationProperties(SocketProperties.class)
 public class SocketConfiguration {
-
-    private static final Logger log = LoggerFactory.getLogger(SocketConfiguration.class);
 
     /**
      * 创建多协议 Socket 会话模板集合
@@ -111,6 +106,7 @@ public class SocketConfiguration {
             SocketProperties.ProtocolConfig protocolConfig) {
         SocketProperties props = new SocketProperties();
         props.setEnable(baseProperties.isEnable());
+        props.setAutoStart(baseProperties.isAutoStart());
         props.setProtocol(protocolConfig.getProtocol());
         props.setRoom(protocolConfig.getRoom());
         props.setHost(baseProperties.getHost());
@@ -149,8 +145,6 @@ public class SocketConfiguration {
      */
     @Slf4j
     public static class SocketLifecycle implements InitializingBean, DisposableBean {
-
-        private static final Logger log = LoggerFactory.getLogger(SocketLifecycle.class);
         private final Map<String, SocketSessionTemplate> templates;
         private final SocketProperties properties;
 
@@ -161,6 +155,10 @@ public class SocketConfiguration {
 
         @Override
         public void afterPropertiesSet() throws Exception {
+            if (!properties.isAutoStart()) {
+                log.info("[Socket] auto-start=false，已跳过 Socket 服务自动启动");
+                return;
+            }
             List<SocketProperties.ProtocolConfig> protocolConfigs = properties.getEffectiveProtocols();
             for (SocketProperties.ProtocolConfig config : protocolConfigs) {
                 String protocolName = config.getProtocol().getValue();

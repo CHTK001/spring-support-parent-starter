@@ -39,7 +39,11 @@ public class DataSourceAdapterFactory {
                 throw new IllegalArgumentException("不支持的数据源类型: " + type);
             }
             try {
-                return adapterClass.getDeclaredConstructor().newInstance();
+                var constructor = adapterClass.getDeclaredConstructor();
+                if (!constructor.canAccess(null)) {
+                    constructor.setAccessible(true);
+                }
+                return constructor.newInstance();
             } catch (Exception e) {
                 throw new RuntimeException("创建适配器失败: " + type, e);
             }

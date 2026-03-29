@@ -12,9 +12,13 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.util.ClassUtils;
 import com.chua.starter.smoke.web.SmokeController;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -118,6 +122,30 @@ class SmokeModuleContextTest {
     }
 
     @Test
+    void strategyLockCompatibilityAspectsShouldBeResolvedByClasspath() {
+        Assumptions.assumeTrue(isStrategyModule());
+
+        boolean lockCompatibilityEnabled = applicationContext.containsBean("lockStrategyAnnotationCompatibilityMarker")
+                && hasType("com.chua.starter.lock.aspect.StrategyDistributedLockAspect")
+                && hasType("com.chua.starter.lock.aspect.StrategyIdempotentAspect");
+
+        if (lockCompatibilityEnabled) {
+            assertEquals(0, beanCount("com.chua.starter.strategy.aspect.DistributedLockAspect"));
+            assertEquals(0, beanCount("com.chua.starter.strategy.aspect.IdempotentAspect"));
+            assertEquals(1, beanCount("com.chua.starter.lock.aspect.StrategyDistributedLockAspect"));
+            assertEquals(1, beanCount("com.chua.starter.lock.aspect.StrategyIdempotentAspect"));
+            return;
+        }
+
+        assertTrue(hasType("com.chua.starter.strategy.aspect.DistributedLockAspect"));
+        assertTrue(hasType("com.chua.starter.strategy.aspect.IdempotentAspect"));
+        assertEquals(1, beanCount("com.chua.starter.strategy.aspect.DistributedLockAspect"));
+        assertEquals(1, beanCount("com.chua.starter.strategy.aspect.IdempotentAspect"));
+        assertFalse(hasType("com.chua.starter.lock.aspect.StrategyDistributedLockAspect"));
+        assertFalse(hasType("com.chua.starter.lock.aspect.StrategyIdempotentAspect"));
+    }
+
+    @Test
     void proxyServerPageEndpointShouldReturnSeededServer() throws Exception {
         Assumptions.assumeTrue(isProxyModule());
 
@@ -153,5 +181,18 @@ class SmokeModuleContextTest {
     private boolean isProxyModule() {
         return "spring-support-proxy-starter".equals(
                 environment.getProperty("smoke.target.module", "base"));
+    }
+
+    private boolean hasType(String className) {
+        return beanCount(className) > 0;
+    }
+
+    private int beanCount(String className) {
+        ClassLoader classLoader = applicationContext.getClassLoader();
+        if (!ClassUtils.isPresent(className, classLoader)) {
+            return 0;
+        }
+        Class<?> type = ClassUtils.resolveClassName(className, classLoader);
+        return applicationContext.getBeanNamesForType(type).length;
     }
 }

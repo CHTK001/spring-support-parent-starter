@@ -1,0 +1,64 @@
+{
+  "properties": [
+    {
+      "name": "plugin.lock.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "是否启用锁模块自动配置，包括 @Locked、幂等能力以及旧 strategy 注解兼容层。"
+    },
+    {
+      "name": "plugin.lock.register-additional-providers",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "是否向 SPI 注册 read、write、striped 等附加锁实现；关闭后仅保留上下文中已有的 LockProvider。"
+    },
+    {
+      "name": "plugin.lock.idempotent.enabled",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "是否启用幂等处理能力以及相关切面。"
+    },
+    {
+      "name": "plugin.lock.idempotent.provider",
+      "type": "java.lang.String",
+      "defaultValue": "auto",
+      "description": "幂等 provider 类型。auto 会优先尝试 Redis 适配，不可用时回退为本地实现；也可显式设置为 local 或 redis。"
+    },
+    {
+      "name": "plugin.lock.idempotent.key-prefix",
+      "type": "java.lang.String",
+      "defaultValue": "lock:idempotent:",
+      "description": "幂等键默认前缀。"
+    },
+    {
+      "name": "plugin.lock.idempotent.default-timeout",
+      "type": "java.lang.Long",
+      "defaultValue": 5,
+      "description": "幂等锁默认超时时长，配合 default-time-unit 使用。"
+    },
+    {
+      "name": "plugin.lock.idempotent.default-time-unit",
+      "type": "java.util.concurrent.TimeUnit",
+      "defaultValue": "SECONDS",
+      "description": "幂等锁默认时间单位。"
+    },
+    {
+      "name": "plugin.lock.idempotent.local-clean-interval-seconds",
+      "type": "java.lang.Long",
+      "defaultValue": 60,
+      "description": "本地幂等实现清理过期记录的周期，单位秒。"
+    },
+    {
+      "name": "plugin.lock.compatibility.strategy-annotations",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "是否兼容旧的 strategy 模块 @DistributedLock 与 @Idempotent 注解，并接管其执行。"
+    },
+    {
+      "name": "plugin.lock.compatibility.strategy-lock-type",
+      "type": "java.lang.String",
+      "defaultValue": "reentrant",
+      "description": "旧 strategy @DistributedLock 注解映射到锁模块时默认使用的锁类型；fair=true 时会自动切换为 fair。"
+    }
+  ]
+}

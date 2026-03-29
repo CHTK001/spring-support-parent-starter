@@ -69,9 +69,10 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
                 ? decodeConfig.getWhiteList() 
                 : Collections.emptyList();
         if (!decodeConfig.isExtInject()) {
-            globalSettingFactory.register("config", new ApiRequestDecodeSetting());
-            globalSettingFactory.setIfNoChange("config", "codecRequestOpen", decodeConfig.isEnable());
-            this.upgrade(globalSettingFactory.get("config", ApiRequestDecodeSetting.class));
+            ApiRequestDecodeSetting setting = getOrCreateSetting();
+            setting.setEnable(decodeConfig.isEnable());
+            setting.setCodecRequestKey(decodeConfig.getCodecRequestKey());
+            this.upgrade(setting);
         }
     }
 
@@ -86,7 +87,7 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     }
 
     private void check() {
-        ApiRequestDecodeSetting setting = globalSettingFactory.get("config", ApiRequestDecodeSetting.class);
+        ApiRequestDecodeSetting setting = getOrCreateSetting();
         if (null == setting) {
             setting = globalSettingFactory.get("decode", ApiRequestDecodeSetting.class);
         }
@@ -96,6 +97,15 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
             setting.setCodecRequestKey(decodeConfig.getCodecRequestKey());
         }
         this.upgrade(setting);
+    }
+
+    private ApiRequestDecodeSetting getOrCreateSetting() {
+        ApiRequestDecodeSetting setting = globalSettingFactory.get("config", ApiRequestDecodeSetting.class);
+        if (setting == null) {
+            setting = new ApiRequestDecodeSetting();
+            globalSettingFactory.register("config", setting);
+        }
+        return setting;
     }
 
     /**

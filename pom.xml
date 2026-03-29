@@ -124,6 +124,7 @@
         <module>spring-support-payment-starter</module>
 
         <!-- 容错和稳定性模块 -->
+        <module>spring-support-lock-starter</module>
         <module>spring-support-strategy-starter</module>
 
         <!-- 运维和管理模块 -->
@@ -428,6 +429,12 @@
                 <artifactId>spring-support-swagger-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-swagger2-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             
             <!-- 消息队列模块 -->
             <dependency>
@@ -555,8 +562,20 @@
                 <artifactId>spring-support-payment-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-email-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             
             <!-- 容错和策略模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-lock-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-strategy-starter</artifactId>
@@ -607,6 +626,12 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-proxy-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-sync-data-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
