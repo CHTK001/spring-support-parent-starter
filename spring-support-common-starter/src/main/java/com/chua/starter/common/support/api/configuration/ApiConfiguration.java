@@ -113,7 +113,7 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware {
     @Bean("apiResponseEncodeResponseBodyAdvice")
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "plugin.api.encode.enable", havingValue = "true", matchIfMissing = true)
-    public ApiResponseEncodeResponseBodyAdvice responseEncodeResponseBodyAdvice(ApiResponseEncodeRegister apiResponseEncodeRegister) {
+    public ApiResponseEncodeResponseBodyAdvice responseEncodeResponseBodyAdvice(@Lazy ApiResponseEncodeRegister apiResponseEncodeRegister) {
         return new ApiResponseEncodeResponseBodyAdvice(apiResponseEncodeRegister);
     }
 

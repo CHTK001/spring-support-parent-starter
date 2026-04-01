@@ -13,7 +13,7 @@
     - 开箱即用的集成方案
 
     @author CH
-    @version 4.0.0.37
+    @version 4.0.0.41
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -32,7 +32,7 @@
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
     <packaging>pom</packaging> 
-    <version>4.0.0.37</version>
+    <version>4.0.0.41</version>
     
     <name>Spring Support Parent Starter</name>
     <description>Spring Boot 3.x企业级应用支持框架，提供模块化的功能组件和开箱即用的集成方案</description>
@@ -160,10 +160,10 @@
         <maven.compiler.target>25</maven.compiler.target>
 
         <!-- 项目版本管理 -->
-        <revision>4.0.0.37</revision>               <!-- 当前项目版本，使用revision便于统一管理 -->
+        <revision>4.0.0.41</revision>               <!-- 当前项目版本，使用revision便于统一管理 -->
         <module.version>${project.version}</module.version>        <!-- 当前项目模块版本 -->
         <!-- 工具类库版本与 utils-support-parent-starter 保持一致，当前为 4.0.0.34 -->
-        <utils.version>4.0.0.36</utils.version>
+        <utils.version>4.0.0.40</utils.version>
         <spring.boot.version>3.5.9</spring.boot.version>
 
         <!-- 框架和库版本管理 -->

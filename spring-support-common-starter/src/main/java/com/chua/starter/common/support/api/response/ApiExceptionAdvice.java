@@ -24,7 +24,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
@@ -325,13 +324,6 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
         } else if (e instanceof DataIntegrityViolationException dive) {
             return ReturnResult.error(DATA_CONFLICT, extractConstraintMessage(dive.getMessage()));
         }
-        return ReturnResult.error(DATABASE_ERROR, "数据操作失败，请稍后重试");
-    }
-
-    @ExceptionHandler(BadSqlGrammarException.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public <T> ReturnResult<T> handleBadSqlGrammarException(BadSqlGrammarException e) {
-        logError("SQL语法错误 - SQL: " + e.getSql(), e);
         return ReturnResult.error(DATABASE_ERROR, "数据操作失败，请稍后重试");
     }
 
