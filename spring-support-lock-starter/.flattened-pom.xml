@@ -5,10 +5,10 @@
   <parent>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
-    <version>4.0.0.37</version>
+    <version>4.0.0.41</version>
   </parent>
   <artifactId>spring-support-lock-starter</artifactId>
-  <version>4.0.0.37</version>
+  <version>4.0.0.41</version>
   <name>Spring Support Lock Starter</name>
   <description>基于 utils-support 的锁与幂等能力适配 Spring Boot AOP 自动配置模块</description>
   <licenses>

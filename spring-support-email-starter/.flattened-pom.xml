@@ -5,10 +5,10 @@
   <parent>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
-    <version>4.0.0.37</version>
+    <version>4.0.0.41</version>
   </parent>
   <artifactId>spring-support-email-starter</artifactId>
-  <version>4.0.0.37</version>
+  <version>4.0.0.41</version>
   <name>Spring Support Email Starter</name>
   <description>Spring Boot 邮箱收发管理模块，提供完整的邮箱收发 REST API 接口。
         

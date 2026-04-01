@@ -5,10 +5,10 @@
   <parent>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-parent-starter</artifactId>
-    <version>4.0.0.37</version>
+    <version>4.0.0.41</version>
   </parent>
   <artifactId>spring-support-module-smoke-test</artifactId>
-  <version>4.0.0.37</version>
+  <version>4.0.0.41</version>
   <name>Spring Support Module Smoke Test</name>
   <description>Dedicated Spring Boot smoke-test app for validating spring-support-parent-starter modules one by one.</description>
   <licenses>
