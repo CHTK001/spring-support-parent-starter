@@ -87,6 +87,7 @@
     <module>spring-support-ssh-starter</module>
     <module>spring-support-job-starter</module>
     <module>spring-support-ai-starter</module>
+    <module>spring-support-spider-starter</module>
     <module>spring-support-message-starter</module>
     <module>spring-support-email-starter</module>
     <module>spring-support-gateway-starter</module>
@@ -476,6 +477,11 @@
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-ai-starter</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-spider-starter</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
