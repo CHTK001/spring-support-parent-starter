@@ -53,25 +53,25 @@ Spring Support Elasticsearch Starter 是一个功能强大的Elasticsearch集成
 ```yaml
 spring:
   elasticsearch:
-    uris: http://localhost:9200
-    username: elastic
-    password: password
-    connection-timeout: 10s
-    socket-timeout: 30s
+    uris: http://localhost:9200   # ES 服务地址，多个地址可用逗号分隔
+    username: elastic             # 登录用户名
+    password: password            # 登录密码
+    connection-timeout: 10s       # 建连超时
+    socket-timeout: 30s           # Socket 读写超时
     
 plugin:
   elasticsearch:
-    enable: true
+    enable: true                  # 是否启用 Elasticsearch 扩展
     # 索引配置
     index:
-      number-of-shards: 1
-      number-of-replicas: 0
-      refresh-interval: 1s
+      number-of-shards: 1         # 主分片数
+      number-of-replicas: 0       # 副本分片数
+      refresh-interval: 1s        # 刷新间隔
     # 查询配置
     query:
-      default-size: 20
-      max-size: 1000
-      timeout: 30s
+      default-size: 20            # 默认分页大小
+      max-size: 1000              # 单次查询最大返回数量
+      timeout: 30s                # 查询超时时间
 ```
 
 ## 📋 详细功能说明

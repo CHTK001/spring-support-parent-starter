@@ -31,13 +31,13 @@
 ```yaml
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/payment
-    username: root
-    password: password
+    url: jdbc:mysql://localhost:3306/payment  # 支付库连接地址
+    username: root                            # 数据库用户名
+    password: password                        # 数据库密码
   
   redis:
-    host: localhost
-    port: 6379
+    host: localhost  # Redis 地址
+    port: 6379       # Redis 端口
 ```
 
 ### 3. API文档
@@ -57,9 +57,9 @@ spring:
 plugin:
   payment:
     scheduler:
-      enabled: true
+      enabled: true # 是否启用支付调度任务
     ops:
-      enabled: true
+      enabled: true # 是否启用运营后台接口
 ```
 
 如果当前服务不是支付中心，只想复用支付核心能力，建议关闭:
@@ -68,9 +68,9 @@ plugin:
 plugin:
   payment:
     scheduler:
-      enabled: false
+      enabled: false # 关闭本服务内的支付调度
     ops:
-      enabled: false
+      enabled: false # 关闭本服务内的运营台接口
 ```
 
 中心化模式完整接入说明见:
@@ -83,15 +83,15 @@ plugin:
 plugin:
   payment:
     scheduler:
-      enabled: true
-      engine: job
+      enabled: true  # 启用支付调度
+      engine: job    # 调度引擎切换为 spring-support-job-starter
   job:
-    enable: true
-    config-table-enabled: true
-    job-annotation-sync-mode: UPDATE
-    table-init-mode: UPDATE
+    enable: true                     # 启用任务模块
+    config-table-enabled: true       # 启用任务配置表调度
+    job-annotation-sync-mode: UPDATE # 同步 @Job 到任务表
+    table-init-mode: UPDATE          # 自动更新任务表结构
     table:
-      prefix: payment
+      prefix: payment                # 任务表前缀
 ```
 
 ## 核心功能

@@ -45,21 +45,21 @@ AI深度学习功能模块，提供企业级应用中常用的AI能力。
 ```yaml
 spring:
   ai:
-    enabled: true
-    model-path: /path/to/models
+    enabled: true                  # 是否启用 AI 能力
+    model-path: /path/to/models    # 本地模型目录
     face-detection:
-      enabled: true
-      confidence-threshold: 0.5
-      nms-threshold: 0.4
+      enabled: true                # 是否启用人脸检测
+      confidence-threshold: 0.5    # 置信度阈值
+      nms-threshold: 0.4           # 非极大值抑制阈值
     ocr:
-      enabled: true
-      language: chi_sim
+      enabled: true                # 是否启用 OCR
+      language: chi_sim            # OCR 语言包
     image:
-      enabled: true
-      feature-dimension: 512
+      enabled: true                # 是否启用图像特征提取
+      feature-dimension: 512       # 图像特征维度
     text:
-      enabled: true
-      max-sequence-length: 512
+      enabled: true                # 是否启用文本能力
+      max-sequence-length: 512     # 文本最大序列长度
 ```
 
 ### 3. 使用链式API（同步模式）

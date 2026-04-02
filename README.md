@@ -188,32 +188,32 @@ implementation 'com.chua:spring-support-circuit-breaker-starter:4.0.0.32'
 plugin:
   # API 统一响应格式
   api:
-    enable: true # 默认: false，需要显式启用
+    enable: true # 是否启用 API 统一封装，默认 false
 
   # Redis 缓存
   redis:
     server:
-      enable: true # 默认: false
+      enable: true # 是否启用 Redis 服务能力，默认 false
 
   # MyBatis 数据库
   mybatis:
-    enable: true # 默认: false
+    enable: true # 是否启用 MyBatis Plus 扩展，默认 false
 
   # OAuth 客户端
   oauth:
     client:
-      enable: true # 默认: false
+      enable: true # 是否启用 OAuth 客户端，默认 false
 
   # 熔断降级和限流配置
   circuit-breaker:
-    enable: true
+    enable: true # 是否启用熔断与限流
     circuit-breaker:
-      failure-rate-threshold: 50.0
-      minimum-number-of-calls: 10
+      failure-rate-threshold: 50.0 # 失败率阈值，超过后打开熔断器
+      minimum-number-of-calls: 10  # 进入统计窗口的最小调用次数
     rate-limiter:
-      limit-for-period: 100
-      limit-refresh-period: 1s
-      enable-management: true
+      limit-for-period: 100    # 每个刷新周期允许的请求数
+      limit-refresh-period: 1s # 限流窗口大小
+      enable-management: true  # 是否暴露管理端能力
 ```
 
 #### 📋 所有模块配置开关列表
