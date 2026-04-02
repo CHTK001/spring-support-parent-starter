@@ -136,6 +136,7 @@
 
         <!-- AI深度学习模块 -->
         <module>spring-support-ai-starter</module>
+        <module>spring-support-spider-starter</module>
 
         <!-- 消息推送模块 -->
         <module>spring-support-message-starter</module>               <!-- 消息推送集成 -->
