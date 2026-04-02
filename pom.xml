@@ -609,6 +609,12 @@
                 <artifactId>spring-support-ai-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-spider-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             
             <!-- 消息推送模块 -->
             <dependency>
