@@ -14,14 +14,13 @@ import java.util.List;
 @Data
 @ConfigurationProperties(prefix = MultiHikariDataSourceProperties.PRE, ignoreInvalidFields = true)
 public class MultiHikariDataSourceProperties {
+    public static final String PRE = "plugin.multi-datasource.hikari";
+    public static final String LEGACY_PRE = "spring.multi-datasource.hikari";
+
     /**
      * 是否启用
      */
     private boolean enable = false;
-
-
-    public static final String PRE = "spring.multi-datasource.hikari";
-
 
     /**
      * 数据源

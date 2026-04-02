@@ -11,6 +11,9 @@ import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerIntercept
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
 import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
 import com.chua.starter.common.support.oauth.AuthService;
+import com.chua.common.support.data.materialized.MaterializedSqlDataSourceRouter;
+import com.chua.starter.datasource.properties.MultiDataSourceSettingProperties;
+import com.chua.starter.datasource.properties.MaterializedRouteProperties;
 import com.chua.starter.mybatis.endpoint.MybatisEndpoint;
 import com.chua.starter.mybatis.interceptor.*;
 import com.chua.starter.mybatis.method.SupportInjector;
@@ -31,6 +34,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 
 import javax.sql.DataSource;
@@ -207,13 +211,21 @@ public class MybatisPlusConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public ConfigurationCustomizer mybatisConfigurationCustomizer(MybatisPlusProperties mybatisProperties) {
+    public ConfigurationCustomizer mybatisConfigurationCustomizer(MybatisPlusProperties mybatisProperties,
+                                                                 @Autowired(required = false) MaterializedSqlDataSourceRouter materializedSqlRouter,
+                                                                 @Autowired(required = false) MaterializedRouteProperties materializedRouteProperties,
+                                                                 MultiDataSourceSettingProperties multiDataSourceSettingProperties,
+                                                                 ApplicationContext applicationContext) {
         return configuration -> {
             // 只读拦截器优先级最高，需要第一个添加
             if (mybatisProperties.isReadOnly()) {
                 log.warn("数据库只读模式已开启，所有写操作将被拒绝");
                 configuration.addInterceptor(new ReadOnlyInterceptor(mybatisProperties));
             }
+            if (materializedSqlRouter != null && materializedRouteProperties != null && materializedRouteProperties.isEnabled()) {
+                configuration.addInterceptor(new MaterializedSqlInterceptor(materializedSqlRouter, materializedRouteProperties));
+            }
+            configuration.addInterceptor(new MapperDataSourceInterceptor(applicationContext, multiDataSourceSettingProperties));
             // 添加追踪拦截器
             configuration.addInterceptor(new MapperTracingInterceptor());
         };

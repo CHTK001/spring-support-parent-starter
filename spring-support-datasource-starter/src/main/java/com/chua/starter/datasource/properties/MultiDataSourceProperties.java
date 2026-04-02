@@ -15,14 +15,13 @@ import java.util.List;
 @Data
 @ConfigurationProperties(prefix = MultiDataSourceProperties.PRE, ignoreInvalidFields = true)
 public class MultiDataSourceProperties {
+    public static final String PRE = "plugin.multi-datasource";
+    public static final String LEGACY_PRE = "spring.multi-datasource";
+
     /**
      * 是否启用
      */
     private boolean enable = false;
-
-
-    public static final String PRE = "spring.multi-datasource";
-
 
     /**
      * 数据源

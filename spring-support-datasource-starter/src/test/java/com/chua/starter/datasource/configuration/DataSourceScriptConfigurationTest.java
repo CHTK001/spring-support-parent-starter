@@ -113,6 +113,77 @@ class DataSourceScriptConfigurationTest {
                 "V1.0__retry_script.sql")).isEqualTo(1);
     }
 
+    @Test
+    void shouldExecuteMigrationAndInitdataWithIndependentScanModes() throws Exception {
+        JdbcDataSource dataSource = createDataSource("script-independent-modes-" + UUID.randomUUID());
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+        jdbcTemplate.execute("""
+                CREATE TABLE script_test_user (
+                    id INT PRIMARY KEY,
+                    username VARCHAR(64) NOT NULL
+                )
+                """);
+
+        DataSourceScriptProperties properties = createProperties();
+        properties.setScanMode(DataSourceScriptProperties.ScanMode.ONCE);
+        properties.setMigrationScanMode(DataSourceScriptProperties.RepeatableScanMode.ALWAYS);
+        properties.setDataScanMode(DataSourceScriptProperties.ScanMode.ONCE);
+
+        new DataSourceScriptConfiguration(properties)
+                .postProcessAfterInitialization(dataSource, "independentModeDataSource");
+
+        waitUntil(Duration.ofSeconds(5),
+                () -> jdbcTemplate.queryForObject("SELECT COUNT(*) FROM script_test_user", Integer.class) == 1);
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT nickname FROM script_test_user WHERE id = 1",
+                String.class)).isEqualTo("alpha");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM sys_database_version WHERE sys_database_version_script_name = ?",
+                Integer.class,
+                "V1.0__init_script_test_user.sql")).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM sys_database_version WHERE sys_database_version_script_name = ?",
+                Integer.class,
+                "V1.1__add_script_test_user_nickname.sql")).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM sys_database_version WHERE sys_database_version_script_name = ?",
+                Integer.class,
+                "V1.0__initdata_script_test_user.sql")).isEqualTo(1);
+    }
+
+    @Test
+    void shouldSkipInitdataWhenBusinessDataAlreadyExists() {
+        JdbcDataSource dataSource = createDataSource("script-initdata-skip-" + UUID.randomUUID());
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+        jdbcTemplate.execute("""
+                CREATE TABLE script_test_user (
+                    id INT PRIMARY KEY,
+                    username VARCHAR(64) NOT NULL,
+                    nickname VARCHAR(64)
+                )
+                """);
+        jdbcTemplate.update(
+                "INSERT INTO script_test_user (id, username, nickname) VALUES (1, ?, ?)",
+                "existing",
+                "seed");
+
+        DataSourceScriptProperties properties = createProperties();
+        properties.setScanMode(DataSourceScriptProperties.ScanMode.NONE);
+        properties.setMigrationScanMode(DataSourceScriptProperties.RepeatableScanMode.NONE);
+        properties.setDataScanMode(DataSourceScriptProperties.ScanMode.ONCE);
+        properties.setScriptPath("classpath*:db/init/V1.0__initdata_script_test_user.sql");
+
+        new DataSourceScriptConfiguration(properties)
+                .postProcessAfterInitialization(dataSource, "initdataSkipDataSource");
+
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM script_test_user", Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM sys_database_version WHERE sys_database_version_script_name = ?",
+                Integer.class,
+                "V1.0__initdata_script_test_user.sql")).isZero();
+    }
+
     private JdbcDataSource createDataSource(String name) {
         JdbcDataSource dataSource = new JdbcDataSource();
         dataSource.setURL("jdbc:h2:mem:" + name + ";MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE");

@@ -152,6 +152,36 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
          */
         public void populate() throws SQLException {
             try {
+                DataSourceScriptProperties.ScanMode schemaScanMode = dataSourceScriptProperties.getEffectiveSchemaScanMode();
+                DataSourceScriptProperties.RepeatableScanMode migrationScanMode =
+                        dataSourceScriptProperties.getEffectiveMigrationScanMode();
+                DataSourceScriptProperties.ScanMode dataScanMode = dataSourceScriptProperties.getEffectiveDataScanMode();
+
+                if (schemaScanMode == DataSourceScriptProperties.ScanMode.NONE
+                        && migrationScanMode == DataSourceScriptProperties.RepeatableScanMode.NONE
+                        && dataScanMode == DataSourceScriptProperties.ScanMode.NONE) {
+                    if (dataSourceScriptProperties.isVerbose()) {
+                        log.info("数据库脚本扫描模式均为 NONE，跳过脚本扫描");
+                    }
+                    return;
+                }
+
+                Boolean emptyDatabase = null;
+                if (schemaScanMode == DataSourceScriptProperties.ScanMode.ONCE) {
+                    emptyDatabase = isDatabaseEmpty();
+                    if (emptyDatabase == null) {
+                        log.warn("表结构脚本扫描模式为 ONCE，但无法判断当前库是否为空，按 ALWAYS 继续执行");
+                    }
+                }
+
+                Boolean hasBusinessData = null;
+                if (dataScanMode == DataSourceScriptProperties.ScanMode.ONCE) {
+                    hasBusinessData = hasBusinessData();
+                    if (hasBusinessData == null) {
+                        log.warn("初始化数据脚本扫描模式为 ONCE，但无法判断当前库是否已有业务数据，按 ALWAYS 继续执行");
+                    }
+                }
+
                 // 1. 创建版本记录表（兼容多种数据库）
                 createVersionTable();
 
@@ -259,13 +289,28 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                     log.info("跳过 {} 个不符合格式的脚本", skippedCount);
                 }
 
+                List<Resource> schemaScriptsToExecute = filterSchemaScripts(
+                        initScriptsToExecute.values(),
+                        schemaScanMode,
+                        emptyDatabase);
+                List<Resource> migrationScriptsToExecute = filterMigrationScripts(
+                        otherScriptsToExecute,
+                        migrationScanMode);
+                initDataScriptsToExecute = filterDataScripts(
+                        initDataScriptsToExecute,
+                        dataScanMode,
+                        hasBusinessData);
+
                 // 合并同步执行脚本列表：先执行 INIT（表结构），再执行 ADD/NORMAL
                 List<Resource> scriptsToExecute = new ArrayList<>();
-                scriptsToExecute.addAll(initScriptsToExecute.values());
-                scriptsToExecute.addAll(otherScriptsToExecute);
+                scriptsToExecute.addAll(schemaScriptsToExecute);
+                scriptsToExecute.addAll(migrationScriptsToExecute);
                 
                 if (dataSourceScriptProperties.isVerbose()) {
-                    log.info("同步脚本: {} 个, 异步数据脚本: {} 个", scriptsToExecute.size(), initDataScriptsToExecute.size());
+                    log.info("表结构脚本: {} 个, 补丁脚本: {} 个, 异步数据脚本: {} 个",
+                            schemaScriptsToExecute.size(),
+                            migrationScriptsToExecute.size(),
+                            initDataScriptsToExecute.size());
                 }
 
                 String tableName = dataSourceScriptProperties.getVersionTable();
@@ -697,6 +742,120 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
         private record ScriptExecutionRecord(String checksum, String success) {
             private boolean isSuccess() {
                 return "true".equalsIgnoreCase(success);
+            }
+        }
+
+        private List<Resource> filterSchemaScripts(
+                Collection<Resource> scripts,
+                DataSourceScriptProperties.ScanMode scanMode,
+                Boolean emptyDatabase) {
+            if (scanMode == DataSourceScriptProperties.ScanMode.NONE) {
+                if (dataSourceScriptProperties.isVerbose()) {
+                    log.info("表结构脚本扫描模式为 NONE，跳过 {} 个表结构脚本", scripts.size());
+                }
+                return List.of();
+            }
+
+            if (scanMode == DataSourceScriptProperties.ScanMode.ONCE && Boolean.FALSE.equals(emptyDatabase)) {
+                if (dataSourceScriptProperties.isVerbose()) {
+                    log.info("表结构脚本扫描模式为 ONCE，检测到当前库已有表，跳过 {} 个表结构脚本", scripts.size());
+                }
+                return List.of();
+            }
+
+            return new ArrayList<>(scripts);
+        }
+
+        private List<Resource> filterMigrationScripts(
+                Collection<Resource> scripts,
+                DataSourceScriptProperties.RepeatableScanMode scanMode) {
+            if (scanMode == DataSourceScriptProperties.RepeatableScanMode.NONE) {
+                if (dataSourceScriptProperties.isVerbose()) {
+                    log.info("补丁脚本扫描模式为 NONE，跳过 {} 个补丁脚本", scripts.size());
+                }
+                return List.of();
+            }
+            return new ArrayList<>(scripts);
+        }
+
+        private List<Resource> filterDataScripts(
+                Collection<Resource> scripts,
+                DataSourceScriptProperties.ScanMode scanMode,
+                Boolean hasBusinessData) {
+            if (scanMode == DataSourceScriptProperties.ScanMode.NONE) {
+                if (dataSourceScriptProperties.isVerbose()) {
+                    log.info("初始化数据脚本扫描模式为 NONE，跳过 {} 个数据脚本", scripts.size());
+                }
+                return List.of();
+            }
+
+            if (scanMode == DataSourceScriptProperties.ScanMode.ONCE && Boolean.TRUE.equals(hasBusinessData)) {
+                if (dataSourceScriptProperties.isVerbose()) {
+                    log.info("初始化数据脚本扫描模式为 ONCE，检测到当前库已有业务数据，跳过 {} 个数据脚本", scripts.size());
+                }
+                return List.of();
+            }
+
+            return new ArrayList<>(scripts);
+        }
+
+        /**
+         * 判断当前数据源对应的库是否为空
+         *
+         * @return true-空库, false-已有表, null-无法判断
+         */
+        private Boolean isDatabaseEmpty() {
+            try (Connection connection = ds.getConnection()) {
+                String catalog = connection.getCatalog();
+                String schema = connection.getSchema();
+
+                try (var tables = connection.getMetaData().getTables(catalog, schema, "%", new String[]{"TABLE"})) {
+                    while (tables.next()) {
+                        String tableName = tables.getString("TABLE_NAME");
+                        if (StringUtils.hasText(tableName)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+            } catch (Exception e) {
+                log.warn("判断当前库是否为空失败: {}", e.getMessage());
+                return null;
+            }
+        }
+
+        /**
+         * 判断当前库是否已有业务数据
+         *
+         * @return true-已有数据, false-无数据, null-无法判断
+         */
+        private Boolean hasBusinessData() {
+            String versionTableName = extractTablePrefix(dataSourceScriptProperties.getVersionTable());
+
+            try (Connection connection = ds.getConnection();
+                 var tables = connection.getMetaData().getTables(
+                         connection.getCatalog(),
+                         connection.getSchema(),
+                         "%",
+                         new String[]{"TABLE"})) {
+                while (tables.next()) {
+                    String tableName = tables.getString("TABLE_NAME");
+                    if (!StringUtils.hasText(tableName)
+                            || tableName.equalsIgnoreCase(versionTableName)) {
+                        continue;
+                    }
+
+                    try (var statement = connection.createStatement();
+                         var rows = statement.executeQuery("SELECT 1 FROM " + tableName + " LIMIT 1")) {
+                        if (rows.next()) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            } catch (Exception e) {
+                log.warn("判断当前库是否已有业务数据失败: {}", e.getMessage());
+                return null;
             }
         }
 

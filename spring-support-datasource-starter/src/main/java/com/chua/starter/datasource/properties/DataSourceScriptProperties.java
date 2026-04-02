@@ -9,14 +9,17 @@ import java.util.Set;
 /**
  * 数据源脚本配置属性类
  * <p>
- * 配置示例:
- * <pre>
- * plugin:
- *   datasource:
- *     script:
- *       enable: true                              # 是否启用脚本功能
- *       script-path: "classpath*:db/migration/*.sql" # 脚本文件路径
- *       database-type: "mysql"                   # 数据库类型(可选)
+     * 配置示例:
+     * <pre>
+     * plugin:
+     *   datasource:
+     *     script:
+     *       enable: true                              # 是否启用脚本功能
+     *       scan-mode: ONCE                           # 表结构脚本扫描模式: NONE/ONCE/ALWAYS
+     *       migration-scan-mode: ALWAYS               # 升级补丁脚本扫描模式: NONE/ALWAYS
+     *       data-scan-mode: ONCE                      # 初始化数据脚本扫描模式: NONE/ONCE/ALWAYS
+     *       script-path: "classpath*:db/migration/*.sql" # 脚本文件路径
+     *       database-type: "mysql"                   # 数据库类型(可选)
  *       version-table: "flyway_schema_history"    # 版本记录表名
  *       baseline-version: "1.0.0"                # 基线版本
  *       baseline-description: "Initial setup"    # 基线描述
@@ -63,6 +66,41 @@ public class DataSourceScriptProperties {
      * 示例: plugin.datasource.script.enable=true
      */
     private boolean enable = true;
+
+    /**
+     * 表结构脚本扫描模式
+     * <p>
+     * NONE   : 不扫描
+     * ONCE   : 仅当当前数据库没有任何业务表时扫描一次
+     * ALWAYS : 每次启动都扫描
+     * </p>
+     * 默认值: ONCE
+     * 示例: plugin.datasource.script.scan-mode=ALWAYS
+     */
+    private ScanMode scanMode = ScanMode.ONCE;
+
+    /**
+     * 升级补丁脚本扫描模式
+     * <p>
+     * NONE   : 不扫描
+     * ALWAYS : 每次启动都扫描
+     * </p>
+     * 默认值: ALWAYS
+     * 示例: plugin.datasource.script.migration-scan-mode=NONE
+     */
+    private RepeatableScanMode migrationScanMode = RepeatableScanMode.ALWAYS;
+
+    /**
+     * 初始化数据脚本扫描模式
+     * <p>
+     * NONE   : 不扫描
+     * ONCE   : 仅当当前数据库不存在业务数据时扫描一次
+     * ALWAYS : 每次启动都扫描
+     * </p>
+     * 默认值: ONCE
+     * 示例: plugin.datasource.script.data-scan-mode=ALWAYS
+     */
+    private ScanMode dataScanMode = ScanMode.ONCE;
 
     /**
      * 是否继续执行脚本，如果某个脚本执行失败，是否继续执行下一个脚本
@@ -230,6 +268,38 @@ public class DataSourceScriptProperties {
 
     public boolean isContinueOnError() {
         return continueOnError;
+    }
+
+    public ScanMode getScanMode() {
+        return scanMode;
+    }
+
+    public ScanMode getEffectiveScanMode() {
+        return enable ? scanMode : ScanMode.NONE;
+    }
+
+    public ScanMode getSchemaScanMode() {
+        return scanMode;
+    }
+
+    public ScanMode getEffectiveSchemaScanMode() {
+        return enable ? scanMode : ScanMode.NONE;
+    }
+
+    public RepeatableScanMode getMigrationScanMode() {
+        return migrationScanMode;
+    }
+
+    public RepeatableScanMode getEffectiveMigrationScanMode() {
+        return enable ? migrationScanMode : RepeatableScanMode.NONE;
+    }
+
+    public ScanMode getDataScanMode() {
+        return dataScanMode;
+    }
+
+    public ScanMode getEffectiveDataScanMode() {
+        return enable ? dataScanMode : ScanMode.NONE;
     }
 
     public String getSeparator() {
@@ -414,5 +484,37 @@ public class DataSourceScriptProperties {
             }
             return STABLE;
         }
+    }
+
+    /**
+     * 数据库脚本扫描模式
+     */
+    public enum ScanMode {
+        /**
+         * 不扫描
+         */
+        NONE,
+        /**
+         * 仅当当前数据库无表时扫描一次
+         */
+        ONCE,
+        /**
+         * 每次启动都扫描
+         */
+        ALWAYS
+    }
+
+    /**
+     * 可重复执行脚本扫描模式
+     */
+    public enum RepeatableScanMode {
+        /**
+         * 不扫描
+         */
+        NONE,
+        /**
+         * 每次启动都扫描
+         */
+        ALWAYS
     }
 }

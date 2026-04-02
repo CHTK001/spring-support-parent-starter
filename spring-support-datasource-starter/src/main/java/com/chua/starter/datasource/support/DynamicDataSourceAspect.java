@@ -47,6 +47,11 @@ public class DynamicDataSourceAspect {
     public void beforeSwitchDS(MethodInvocation methodInvocation, MultiDataSourceSettingProperties multiDataSourceSettingProperties) {
         //默认数据源
         String dataSource = getDataSourceType(methodInvocation, multiDataSourceSettingProperties);
+        switchTo(dataSource, multiDataSourceSettingProperties);
+    }
+
+    public void switchTo(String dataSource, MultiDataSourceSettingProperties multiDataSourceSettingProperties) {
+        dataSource = createDataSource(dataSource, multiDataSourceSettingProperties);
         //分析处理多数据源
         doAnalysisDataSource(dataSource);
         // 切换数据源

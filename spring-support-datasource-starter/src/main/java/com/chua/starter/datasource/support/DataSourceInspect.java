@@ -73,11 +73,55 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     }
 
     private void registerMultiDataSourceProperties(BeanDefinitionRegistry beanDefinitionRegistry) {
-        MultiDataSourceProperties multiDataSourceProperties = Binder.get(environment).bindOrCreate(MultiDataSourceProperties.PRE, MultiDataSourceProperties.class);
+        MultiDataSourceProperties multiDataSourceProperties = bindMultiDataSourceProperties(environment);
         registerDataSource(multiDataSourceProperties.getDataSource(), beanDefinitionRegistry, null);
 
-        MultiHikariDataSourceProperties multiHikariDataSourceProperties = Binder.get(environment).bindOrCreate(MultiHikariDataSourceProperties.PRE, MultiHikariDataSourceProperties.class);
+        MultiHikariDataSourceProperties multiHikariDataSourceProperties = bindMultiHikariDataSourceProperties(environment);
         registerDataSource(multiHikariDataSourceProperties.getDataSource(), beanDefinitionRegistry, HikariDataSource.class);
+    }
+
+    static MultiDataSourceProperties bindMultiDataSourceProperties(Environment environment) {
+        MultiDataSourceProperties current = Binder.get(environment)
+                .bindOrCreate(MultiDataSourceProperties.PRE, MultiDataSourceProperties.class);
+        MultiDataSourceProperties legacy = Binder.get(environment)
+                .bindOrCreate(MultiDataSourceProperties.LEGACY_PRE, MultiDataSourceProperties.class);
+
+        MultiDataSourceProperties result = new MultiDataSourceProperties();
+        result.setEnable(current.isEnable() || legacy.isEnable());
+        result.setDataSource(mergeDataSourceProperties(current.getDataSource(), legacy.getDataSource()));
+        return result;
+    }
+
+    static MultiHikariDataSourceProperties bindMultiHikariDataSourceProperties(Environment environment) {
+        MultiHikariDataSourceProperties current = Binder.get(environment)
+                .bindOrCreate(MultiHikariDataSourceProperties.PRE, MultiHikariDataSourceProperties.class);
+        MultiHikariDataSourceProperties legacy = Binder.get(environment)
+                .bindOrCreate(MultiHikariDataSourceProperties.LEGACY_PRE, MultiHikariDataSourceProperties.class);
+
+        MultiHikariDataSourceProperties result = new MultiHikariDataSourceProperties();
+        result.setEnable(current.isEnable() || legacy.isEnable());
+        result.setDataSource(mergeDataSourceProperties(current.getDataSource(), legacy.getDataSource()));
+        return result;
+    }
+
+    private static <T extends DataSourceProperties> List<T> mergeDataSourceProperties(List<T> current, List<T> legacy) {
+        Map<String, T> merged = new LinkedHashMap<>();
+        putDataSourceProperties(merged, legacy);
+        putDataSourceProperties(merged, current);
+        return merged.isEmpty() ? null : new ArrayList<>(merged.values());
+    }
+
+    private static <T extends DataSourceProperties> void putDataSourceProperties(Map<String, T> target, List<T> source) {
+        if (source == null) {
+            return;
+        }
+        for (T item : source) {
+            if (item == null) {
+                continue;
+            }
+            String key = Strings.isNullOrEmpty(item.getName()) ? UUID.randomUUID().toString() : item.getName();
+            target.put(key, item);
+        }
     }
 
     private void registerDataSource(List<? extends DataSourceProperties> dataSource,
