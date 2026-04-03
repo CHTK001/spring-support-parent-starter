@@ -45,7 +45,27 @@ AI深度学习功能模块，提供企业级应用中常用的AI能力。
 ```yaml
 spring:
   ai:
-    enabled: true                  # 是否启用 AI 能力
+    enabled: true
+    default-provider: openai
+    providers:
+      openai:
+        api-key: your-api-key
+        base-url: https://api.openai.com/v1
+    llm:
+      factory: default             # common ChatClient.Factory SPI 名称
+      provider: openai
+      model: gpt-4o-mini
+      system: 你是一个代码重构助手
+      input-optimization-enabled: true
+      context-compression-enabled: true
+      mcp:
+        enabled: true
+    agent:
+      type: default
+      provider: openai
+      model: gpt-4o-mini
+      snapshot-enabled: true
+      execution-record-enabled: true
     model-path: /path/to/models    # 本地模型目录
     face-detection:
       enabled: true                # 是否启用人脸检测
@@ -175,24 +195,51 @@ FeatureResult feature = aiClient.extractFaceFeature(imageFile);
 float similarity = aiClient.compareFaces(image1, image2);
 ```
 
-### 7. 使用ChatClient（支持MCP前后置处理）
+### 7. 使用ChatClient（scope + MCP）
 
 ```java
-// 创建基础ChatClient
-ChatClient baseClient = ChatClient.create("openai", "your-api-key");
+@Autowired
+private ChatClient chatClient;
 
-// 使用Builder构建带MCP处理的ChatClient
-ChatClient chatClient = ChatClient.builder()
-    .client(baseClient)
-    .withPreprocessors()  // 自动加载MCP前置处理器
-    .withPostprocessors() // 自动加载MCP后置处理器
-    .build();
+ChatContext context = new ChatContext();
+context.setHistory(List.of(
+    ChatMessage.user("请记住我在看 Spring AI 模块"),
+    ChatMessage.assistant("好的，我会基于这个上下文继续回答")
+));
 
-// 使用ChatClient（会自动执行MCP前后置处理）
-String response = chatClient.chat("你好", new ChatContext());
+ChatResponse response = chatClient.chat(ChatScope.builder()
+    .input("帮我梳理 chatclient 和 agent 的边界")
+    .model("gpt-4.1-mini")
+    .context(context)
+    .inputOptimizationEnabled(true)
+    .contextCompressionEnabled(true)
+    .build());
+
+System.out.println(response.getText());
 ```
 
-### 8. 直接使用AiService
+### 8. 使用Agent（session + snapshot）
+
+```java
+@Autowired
+private Agent agent;
+
+AgentResponse first = agent.execute(AgentRequest.builder()
+    .sessionId("editor-1")
+    .input("先创建一个重构清单")
+    .build());
+
+agent.session("editor-1").useModel("gpt-4.1");
+
+AgentResponse second = agent.execute(AgentRequest.builder()
+    .sessionId("editor-1")
+    .input("继续完善刚才的方案")
+    .build());
+
+List<AgentSnapshot> snapshots = agent.snapshots("editor-1");
+```
+
+### 9. 直接使用AiService
 
 ```java
 @Autowired
@@ -246,12 +293,12 @@ float similarity = feature1.cosineSimilarity(feature2);
 
 | 方法 | 说明 |
 |------|------|
-| `chat(String message)` | 发送聊天消息 |
-| `chat(String message, ChatContext context)` | 发送聊天消息（带上下文） |
-| `Builder.client(ChatClient)` | 设置基础ChatClient实现 |
-| `Builder.withPreprocessors()` | 自动加载MCP前置处理器 |
-| `Builder.withPostprocessors()` | 自动加载MCP后置处理器 |
-| `Builder.build()` | 构建带MCP处理的ChatClient |
+| `chat(ChatScope scope)` | 执行一次 scope 聊天 |
+| `chat(ChatScope scope, Consumer<String>, Runnable, Consumer<Throwable>)` | 执行一次流式 scope 聊天 |
+| `listModels()` | 返回当前 provider 支持的模型目录 |
+| `listTools(ChatScope scope)` | 返回当前 scope 可用工具 |
+| `callTool(ChatScope scope, AiToolCall)` | 直接调用 MCP 工具 |
+| `chatSync(String input)` | 使用最简单的默认 scope 调用 |
 
 ### AiChat链式API
 
@@ -284,44 +331,6 @@ public AiService customAiService() {
 }
 ```
 
-### MCP前后置处理器扩展
-
-框架支持通过SPI机制扩展MCP前后置处理器：
-
-```java
-// 实现MCP前置处理器
-@Component
-public class CustomMcpPreprocessor implements McpPreprocessor {
-    
-    @Override
-    public int getPriority() {
-        return 100; // 优先级，数字越小优先级越高
-    }
-    
-    @Override
-    public String preprocess(String rawInput, ChatContext context) {
-        // 自定义预处理逻辑
-        return rawInput.trim();
-    }
-}
-
-// 实现MCP后置处理器
-@Component
-public class CustomMcpPostprocessor implements McpPostprocessor {
-    
-    @Override
-    public int getPriority() {
-        return 100;
-    }
-    
-    @Override
-    public String postprocess(String rawOutput, ChatContext context) {
-        // 自定义后处理逻辑
-        return rawOutput;
-    }
-}
-```
-
 ### SPI扩展机制
 
 框架基于SPI机制支持多种AI服务提供商，可通过配置文件指定：
@@ -343,24 +352,28 @@ spring:
 
 ### 架构设计
 
-- **底层接口**：`utils-support-deeplearning-starter` 提供通用的MCP接口（`com.chua.deeplearning.support.ml.bigmodel.mcp.McpPreprocessor`、`McpPostprocessor`）
-- **Spring层适配**：`spring-support-ai-starter` 提供Spring层的适配接口，通过`ChatContextAdapter`进行上下文转换
-- **自动加载**：通过SPI机制自动发现和加载MCP处理器，支持优先级排序
+- **BigModelClient = provider + model catalog + inference**
+- **ChatClient = BigModelClient + MCP + scope**
+- **Agent = ChatClient + session + snapshot + permission**
+- **MCP统一抽象**：当前 MCP 直接复用 `common` 模块的 `McpProvider / McpClient / McpPlugin`
+- **自动工具编排**：默认 `ChatClient` 实现会自动处理 tool call / MCP loop
 
 ### ChatClient MCP支持
 
-- ✅ **支持前置处理器**：在LLM处理前对输入进行预处理
-- ✅ **支持后置处理器**：在LLM处理后对输出进行后处理
-- ✅ **优先级排序**：处理器按优先级顺序执行
-- ✅ **异常处理**：单个处理器异常不影响整体流程
-- ✅ **上下文传递**：支持上下文信息在处理器间传递
+- ✅ **scope内启用MCP**：每次调用可独立控制是否启用 MCP
+- ✅ **自动tool loop**：模型返回 tool call 后自动继续编排
+- ✅ **输入美化**：可用当前模型优化输入
+- ✅ **上下文压缩**：可用当前模型压缩历史上下文
+- ✅ **模型热切换**：在当前 provider 支持范围内按 scope 切换 model
+- ✅ **SPI复用**：底层实现通过 common `ChatClient.Factory` SPI 接入，默认实现与后续 `langchain4j` 实现可复用同一 Spring `ChatClient/Agent` 外层
 
 ### 使用建议
 
-1. **合理使用优先级**：根据业务需求设置处理器优先级
-2. **异常处理**：确保处理器内部异常不会影响主流程
-3. **性能考虑**：避免在处理器中执行耗时操作
-4. **上下文管理**：合理使用上下文传递必要信息
+1. `ChatClient` 只负责单次 scope，不要把 session 放进去
+2. `Agent` 负责会话、快照、权限和任务编排
+3. provider 固定在 Agent 生命周期内，model 在 provider 内热切换
+4. `AgentRequest.model > AgentSession.model > Agent.defaultModel`
+5. **上下文管理**：合理使用上下文传递必要信息
 
 ## 依赖
 

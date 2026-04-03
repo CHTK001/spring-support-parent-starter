@@ -1,11 +1,11 @@
 package com.chua.starter.ai.support.example;
 
 import com.chua.common.support.ai.AiClient;
-import com.chua.deeplearning.support.config.FaceConfig;
+import com.chua.common.support.ai.config.FaceConfig;
+import com.chua.common.support.ai.config.OcrConfig;
+import com.chua.common.support.ai.result.PredictResult;
+import com.chua.common.support.ai.result.PredictResultObject;
 import com.chua.deeplearning.support.config.LlmConfig;
-import com.chua.deeplearning.support.config.OcrConfig;
-import com.chua.deeplearning.support.core.result.PredictResult;
-import com.chua.deeplearning.support.core.result.PredictResultObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 

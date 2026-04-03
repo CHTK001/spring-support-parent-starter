@@ -5,10 +5,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 聊天消息
+ * 单条聊天消息。
  *
  * @author CH
- * @since 2024-01-01
+ * @since 2026/04/03
  */
 @Data
 @NoArgsConstructor
@@ -16,13 +16,33 @@ import lombok.NoArgsConstructor;
 public class ChatMessage {
 
     /**
-     * 角色：user或assistant
+     * 消息角色。
+     * 常见取值为 {@code user}、{@code assistant}。
      */
     private String role;
 
     /**
-     * 消息内容
+     * 消息文本内容。
      */
     private String content;
-}
 
+    /**
+     * 创建用户消息。
+     *
+     * @param content 消息内容
+     * @return 用户消息
+     */
+    public static ChatMessage user(String content) {
+        return new ChatMessage("user", content);
+    }
+
+    /**
+     * 创建助手消息。
+     *
+     * @param content 消息内容
+     * @return 助手消息
+     */
+    public static ChatMessage assistant(String content) {
+        return new ChatMessage("assistant", content);
+    }
+}

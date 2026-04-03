@@ -148,7 +148,6 @@
         <module>spring-support-gateway-starter</module>
         <module>spring-support-proxy-starter</module>
         <module>spring-support-sync-data-starter</module>         <!-- API网关 -->
-        <module>spring-support-module-smoke-test</module>        <!-- 模块级 Spring Boot 冒烟测试应用 -->
 
     </modules>
 

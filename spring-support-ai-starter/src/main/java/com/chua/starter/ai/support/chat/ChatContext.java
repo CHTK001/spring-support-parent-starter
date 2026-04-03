@@ -2,58 +2,63 @@ package com.chua.starter.ai.support.chat;
 
 import lombok.Data;
 
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
- * 聊天上下文信息
+ * 聊天上下文。
+ * <p>
+ * 该对象只描述一次聊天 scope 内的上下文，不承载 session 生命周期。
  *
  * @author CH
- * @since 2024-01-01
+ * @since 2026/04/03
  */
 @Data
 public class ChatContext {
 
     /**
-     * 用户ID
+     * 当前用户标识。
      */
     private String userId;
 
     /**
-     * 会话ID
+     * 传入当前 scope 的历史消息。
      */
-    private String sessionId;
+    private List<ChatMessage> history = new ArrayList<>();
 
     /**
-     * 历史对话记录
+     * 上下文变量。
      */
-    private java.util.List<ChatMessage> history;
+    private Map<String, Object> variables = new LinkedHashMap<>();
 
     /**
-     * 扩展属性
+     * 扩展属性。
      */
-    private Map<String, Object> attributes = new HashMap<>();
+    private Map<String, Object> attributes = new LinkedHashMap<>();
 
     /**
-     * 添加扩展属性
+     * 放入上下文变量。
      *
-     * @param key   键
-     * @param value 值
+     * @param key   变量名
+     * @param value 变量值
      * @return 当前上下文
      */
-    public ChatContext attribute(String key, Object value) {
-        this.attributes.put(key, value);
+    public ChatContext variable(String key, Object value) {
+        variables.put(key, value);
         return this;
     }
 
     /**
-     * 获取扩展属性
+     * 放入扩展属性。
      *
-     * @param key 键
-     * @return 值
+     * @param key   属性名
+     * @param value 属性值
+     * @return 当前上下文
      */
-    public Object getAttribute(String key) {
-        return this.attributes.get(key);
+    public ChatContext attribute(String key, Object value) {
+        attributes.put(key, value);
+        return this;
     }
 }
-

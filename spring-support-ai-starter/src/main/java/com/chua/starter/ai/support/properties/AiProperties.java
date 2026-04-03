@@ -1,8 +1,10 @@
 package com.chua.starter.ai.support.properties;
 
+import com.chua.common.support.ai.config.AgentProperties;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.LinkedHashMap;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -36,6 +38,25 @@ public class AiProperties {
     private LlmProperties llm = new LlmProperties();
 
     /**
+     * 额外 LLM 路由配置。
+     * <p>
+     * 旧版运行时路由配置，保留仅用于兼容。
+     */
+    @Deprecated
+    private Map<String, LlmProperties> llms = new LinkedHashMap<>();
+
+    /**
+     * 启动时默认激活的 LLM 路由。
+     */
+    @Deprecated
+    private String activeLlm = "default";
+
+    /**
+     * Agent 配置。
+     */
+    private AgentProperties agent = new AgentProperties();
+
+    /**
      * OCR 配置
      */
     private OcrProperties ocr = new OcrProperties();
@@ -67,48 +88,15 @@ public class AiProperties {
      * @deprecated 使用 face 替代
      */
     @Deprecated
-    private FaceDetection faceDetection = new FaceDetection();
+    private AiLegacyFaceDetectionProperties faceDetection = new AiLegacyFaceDetectionProperties();
 
     /**
      * 图像配置（向后兼容）
      */
-    private Image image = new Image();
+    private AiLegacyImageProperties image = new AiLegacyImageProperties();
 
     /**
      * 文本配置（向后兼容）
      */
-    private Text text = new Text();
-
-    /**
-     * 人脸检测配置（向后兼容）
-     * @deprecated 使用 FaceProperties 替代
-     */
-    @Deprecated
-    @Data
-    public static class FaceDetection {
-        private boolean enabled = true;
-        private String provider = "default";
-        private float confidenceThreshold = 0.5f;
-        private float nmsThreshold = 0.4f;
-    }
-
-    /**
-     * 图像配置（向后兼容）
-     */
-    @Data
-    public static class Image {
-        private boolean enabled = true;
-        private String provider = "default";
-        private int featureDimension = 512;
-    }
-
-    /**
-     * 文本配置（向后兼容）
-     */
-    @Data
-    public static class Text {
-        private boolean enabled = true;
-        private String provider = "default";
-        private int maxSequenceLength = 512;
-    }
+    private AiLegacyTextProperties text = new AiLegacyTextProperties();
 }

@@ -1,17 +1,17 @@
 package com.chua.starter.ai.support.service.impl;
 
 import com.chua.common.support.ai.AiClient;
+import com.chua.common.support.ai.Detector;
+import com.chua.common.support.ai.Feature;
+import com.chua.common.support.ai.face.api.FaceDetector;
+import com.chua.common.support.ai.face.api.FaceFeature;
+import com.chua.common.support.ai.ocr.api.OcrRecognizer;
+import com.chua.common.support.ai.ocr.model.OcrResult;
+import com.chua.common.support.ai.result.DetectorPredictResult;
+import com.chua.common.support.ai.result.HumanPredictResult;
+import com.chua.common.support.ai.result.PredictResult;
+import com.chua.common.support.ai.result.PredictResultObject;
 import com.chua.common.support.core.spi.ServiceProvider;
-import com.chua.deeplearning.support.core.function.api.Detector;
-import com.chua.deeplearning.support.core.function.api.Feature;
-import com.chua.deeplearning.support.core.result.DetectorPredictResult;
-import com.chua.deeplearning.support.core.result.HumanPredictResult;
-import com.chua.deeplearning.support.core.result.PredictResult;
-import com.chua.deeplearning.support.core.result.PredictResultObject;
-import com.chua.deeplearning.support.ml.face.api.FaceDetector;
-import com.chua.deeplearning.support.ml.face.api.FaceFeature;
-import com.chua.deeplearning.support.ml.ocr.api.OcrRecognizer;
-import com.chua.deeplearning.support.ml.ocr.model.OcrResult;
 import com.chua.starter.ai.support.model.*;
 import com.chua.starter.ai.support.properties.AiProperties;
 import com.chua.starter.ai.support.service.AiService;

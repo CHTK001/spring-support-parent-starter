@@ -1,116 +1,141 @@
 package com.chua.starter.ai.support.chat;
 
-import com.chua.common.support.core.spi.ServiceProvider;
-import com.chua.deeplearning.support.ml.mcp.model.ChatContext;
-import com.chua.starter.ai.support.mcp.ChatContextAdapter;
-import com.chua.starter.ai.support.mcp.McpPostprocessor;
-import com.chua.starter.ai.support.mcp.McpPreprocessor;
-import lombok.extern.slf4j.Slf4j;
+import com.chua.common.support.ai.AiTool;
+import com.chua.common.support.ai.AiToolCall;
+import com.chua.common.support.ai.AiToolResult;
+import com.chua.common.support.ai.bigmodel.BigModelMetadataView;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
- * Spring层聊天客户端接口
+ * Spring 层聊天客户端。
  * <p>
- * 继承自 utils 模块的 ChatClient，提供 Spring 层的扩展功能
+ * 该接口只负责单次请求 scope，不承载 session。
  *
  * @author CH
- * @since 2024-01-01
+ * @since 2026/04/03
  */
-public interface ChatClient extends com.chua.common.support.ai.ChatClient {
+public interface ChatClient extends AutoCloseable {
 
     /**
-     * 发送聊天消息（带 Spring 层上下文）
+     * 当前聊天客户端工厂名称。
      *
-     * @param message 用户消息
-     * @param context Spring 层上下文信息
-     * @return LLM回复内容
+     * @return 工厂名称
      */
-    default String chat(String message, com.chua.starter.ai.support.chat.ChatContext context) {
-        var deepLearningContext = ChatContextAdapter.toDeepLearningContext(context);
-        // 添加历史消息
-        if (context != null && context.getHistory() != null) {
-            for (var msg : context.getHistory()) {
-                if ("user".equals(msg.getRole())) {
-                    addUserHistory(msg.getContent());
-                } else if ("assistant".equals(msg.getRole())) {
-                    addAssistantHistory(msg.getContent());
-                }
-            }
-        }
-        return chatSync(message);
+    String getFactory();
+
+    /**
+     * 当前提供商名称。
+     *
+     * @return 提供商名称
+     */
+    String getProvider();
+
+    /**
+     * 默认模型名称。
+     *
+     * @return 默认模型名称
+     */
+    String getDefaultModel();
+
+    /**
+     * 当前底层端点。
+     *
+     * @return 端点地址
+     */
+    default String getEndpoint() {
+        return null;
     }
 
     /**
-     * 聊天客户端构建器
+     * 返回当前 provider 的模型目录。
+     *
+     * @return 模型目录
      */
-    @Slf4j
-    class Builder {
+    List<BigModelMetadataView> listModels();
 
-        private com.chua.common.support.ai.ChatClient chatClient;
-        private List<McpPreprocessor> preprocessors;
-        private List<McpPostprocessor> postprocessors;
+    /**
+     * 执行一次 scope 聊天。
+     *
+     * @param scope 聊天 scope
+     * @return 聊天响应
+     */
+    ChatResponse chat(ChatScope scope);
 
-        /**
-         * 设置聊天客户端实现
-         *
-         * @param chatClient 聊天客户端
-         * @return 构建器
-         */
-        public Builder client(com.chua.common.support.ai.ChatClient chatClient) {
-            this.chatClient = chatClient;
-            return this;
-        }
+    /**
+     * 以流式方式执行一次 scope 聊天。
+     *
+     * @param scope      聊天 scope
+     * @param consumer   输出消费者
+     * @param onComplete 完成回调
+     * @param onError    错误回调
+     */
+    void chat(ChatScope scope, Consumer<String> consumer, Runnable onComplete, Consumer<Throwable> onError);
 
-        /**
-         * 使用SPI加载前置处理器
-         *
-         * @return 构建器
-         */
-        public Builder withPreprocessors() {
-            this.preprocessors = ServiceProvider.of(McpPreprocessor.class).collect();
-            log.info("[AI][ChatClient] 加载前置处理器: {}", preprocessors.size());
-            return this;
-        }
-
-        /**
-         * 使用SPI加载后置处理器
-         *
-         * @return 构建器
-         */
-        public Builder withPostprocessors() {
-            this.postprocessors = ServiceProvider.of(McpPostprocessor.class).collect();
-            log.info("[AI][ChatClient] 加载后置处理器: {}", postprocessors.size());
-            return this;
-        }
-
-        /**
-         * 构建带MCP处理的聊天客户端
-         *
-         * @return 聊天客户端
-         */
-        public ChatClient build() {
-            if (chatClient == null) {
-                throw new IllegalStateException("ChatClient实现不能为空");
-            }
-
-            if (preprocessors == null || preprocessors.isEmpty()) {
-                preprocessors = ServiceProvider.of(McpPreprocessor.class).collect();
-            }
-            if (postprocessors == null || postprocessors.isEmpty()) {
-                postprocessors = ServiceProvider.of(McpPostprocessor.class).collect();
-            }
-
-            return new McpChatClient(chatClient, preprocessors, postprocessors);
-        }
+    /**
+     * 返回当前 scope 可用的工具列表。
+     *
+     * @param scope 聊天 scope
+     * @return 工具列表
+     */
+    default List<AiTool> listTools(ChatScope scope) {
+        return List.of();
     }
 
     /**
-     * 创建构建器
+     * 直接调用工具。
      *
-     * @return 构建器
+     * @param scope    聊天 scope
+     * @param toolCall 工具调用
+     * @return 工具执行结果
      */
-    static Builder builder() {
-        return new Builder();
+    default AiToolResult callTool(ChatScope scope, AiToolCall toolCall) {
+        return AiToolResult.builder()
+                .callId(toolCall == null ? null : toolCall.getId())
+                .success(false)
+                .error("当前聊天客户端未实现工具直调")
+                .build();
+    }
+
+    /**
+     * 仅使用输入文本执行聊天。
+     *
+     * @param input 输入文本
+     * @return 文本响应
+     */
+    default String chatSync(String input) {
+        return chat(ChatScope.of(input)).getText();
+    }
+
+    /**
+     * 使用输入文本和上下文执行聊天。
+     *
+     * @param input   输入文本
+     * @param context 上下文
+     * @return 文本响应
+     */
+    default String chat(String input, ChatContext context) {
+        return chat(ChatScope.builder()
+                .input(input)
+                .context(context)
+                .build()).getText();
+    }
+
+    /**
+     * 仅消费流式输出。
+     *
+     * @param scope    聊天 scope
+     * @param consumer 输出消费者
+     */
+    default void chat(ChatScope scope, Consumer<String> consumer) {
+        chat(scope, consumer, () -> {
+        }, throwable -> {
+            throw new RuntimeException(throwable);
+        });
+    }
+
+    @Override
+    default void close() {
     }
 }

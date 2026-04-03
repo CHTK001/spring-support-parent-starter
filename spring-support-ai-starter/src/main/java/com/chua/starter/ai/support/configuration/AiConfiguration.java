@@ -1,12 +1,19 @@
 package com.chua.starter.ai.support.configuration;
 
 import com.chua.common.support.ai.AiClient;
+import com.chua.common.support.ai.agent.AgentProvider;
+import com.chua.common.support.ai.agent.AgentProviders;
+import com.chua.common.support.ai.config.FaceConfig;
+import com.chua.common.support.ai.config.OcrConfig;
 import com.chua.deeplearning.support.config.AiClientConfig;
-import com.chua.deeplearning.support.config.FaceConfig;
 import com.chua.deeplearning.support.config.LlmConfig;
-import com.chua.deeplearning.support.config.OcrConfig;
 import com.chua.deeplearning.support.ml.ai.DefaultAiClient;
+import com.chua.starter.ai.support.agent.Agent;
+import com.chua.starter.ai.support.agent.AgentOptionsResolver;
 import com.chua.starter.ai.support.chat.AiChat;
+import com.chua.starter.ai.support.chat.ChatClient;
+import com.chua.starter.ai.support.chat.ChatClientSettingsResolver;
+import com.chua.starter.ai.support.chat.DefaultScopeChatClient;
 import com.chua.starter.ai.support.engine.FaceClient;
 import com.chua.starter.ai.support.engine.FaceEngine;
 import com.chua.starter.ai.support.engine.impl.AiChatFaceEngine;
@@ -31,7 +38,12 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 /**
- * AI模块自动配置类
+ * AI 模块自动配置。
+ * <p>
+ * 该配置同时装配三层能力:
+ * `AiClient` 负责通用 AI 能力，
+ * `ChatClient` 负责 scope + MCP，
+ * `Agent` 负责 session + snapshot + permission。
  *
  * @author CH
  * @since 2024-01-01
@@ -56,6 +68,42 @@ public class AiConfiguration {
         return DefaultAiClient.builder()
                 .config(config)
                 .build();
+    }
+
+    /**
+     * 注册 Spring ChatClient。
+     *
+     * @param aiProperties AI 配置属性
+     * @return Spring ChatClient 实例
+     */
+    @Bean
+    @ConditionalOnMissingBean(ChatClient.class)
+    @Lazy
+    public ChatClient chatClient(AiProperties aiProperties) {
+        return new DefaultScopeChatClient(ChatClientSettingsResolver.resolve(aiProperties));
+    }
+
+    /**
+     * 注册 Spring Agent。
+     *
+     * @param aiProperties AI 配置属性
+     * @param chatClient   Spring ChatClient
+     * @return Spring Agent
+     */
+    @Bean
+    @ConditionalOnMissingBean(Agent.class)
+    @Lazy
+    public Agent agent(AiProperties aiProperties, ChatClient chatClient) {
+        var options = AgentOptionsResolver.resolve(aiProperties, chatClient);
+        AgentProvider provider = AgentProviders.resolve(options.getAgentType());
+        if (provider == null) {
+            throw new IllegalStateException("No AgentProvider found for type: " + options.getAgentType());
+        }
+        com.chua.common.support.ai.agent.Agent created = provider.create(options);
+        if (created instanceof Agent springAgent) {
+            return springAgent;
+        }
+        throw new IllegalStateException("AgentProvider must return Spring Agent implementation: " + provider.getClass().getName());
     }
 
     /**
@@ -429,64 +477,4 @@ public class AiConfiguration {
         return new AiChatFactory(aiService, asyncAiService, reactiveAiService.getIfAvailable());
     }
 
-    /**
-     * AiChat工厂类
-     */
-    public static class AiChatFactory {
-
-        private final AiService aiService;
-        private final AsyncAiService asyncAiService;
-        private final ReactiveAiService reactiveAiService;
-
-        public AiChatFactory(AiService aiService, AsyncAiService asyncAiService, ReactiveAiService reactiveAiService) {
-            this.aiService = aiService;
-            this.asyncAiService = asyncAiService;
-            this.reactiveAiService = reactiveAiService;
-        }
-
-        /**
-         * 创建AiChat实例（同步+异步模式）
-         *
-         * @return AiChat实例
-         */
-        public AiChat create() {
-            return AiChat.of(aiService, asyncAiService, reactiveAiService);
-        }
-
-        /**
-         * 创建AiChat实例（仅同步模式）
-         *
-         * @return AiChat实例
-         */
-        public AiChat createSync() {
-            return AiChat.of(aiService);
-        }
-
-        /**
-         * 获取AI服务实例
-         *
-         * @return AI服务实例
-         */
-        public AiService getAiService() {
-            return aiService;
-        }
-
-        /**
-         * 获取异步AI服务实例
-         *
-         * @return 异步AI服务实例
-         */
-        public AsyncAiService getAsyncAiService() {
-            return asyncAiService;
-        }
-
-        /**
-         * 获取响应式AI服务实例
-         *
-         * @return 响应式AI服务实例（可能为null）
-         */
-        public ReactiveAiService getReactiveAiService() {
-            return reactiveAiService;
-        }
-    }
 }
