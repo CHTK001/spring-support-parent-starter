@@ -8,7 +8,6 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.core.utils.IdUtils;
 import com.chua.common.support.core.utils.SignUtils;
 import com.chua.common.support.core.utils.StringUtils;
-import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.trace.TraceContext;
 import com.chua.starter.oauth.client.support.trace.TraceSpan;
@@ -20,6 +19,7 @@ import com.chua.starter.oauth.client.support.infomation.AuthenticationInformatio
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.resilience.OAuthClientResilience;
+import com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.google.common.base.Strings;
@@ -107,7 +107,7 @@ public class HttpProtocol extends AbstractProtocol {
         jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
         var request = RequestUtils.getRequest();
         jsonObject.put("x-oauth-param-address", request != null ? RequestUtils.getIpAddress(request) : "unknown");
-        jsonObject.put("x-oauth-param-app-name", SpringBeanUtils.getEnvironment().resolvePlaceholders("${spring.application.name:}"));
+        jsonObject.put("x-oauth-param-app-name", OauthClientRuntimeContext.getApplicationName());
         return createAuthenticationInformation(jsonObject, null, authClientProperties.getOauthUrl());
     }
 
@@ -123,7 +123,7 @@ public class HttpProtocol extends AbstractProtocol {
         jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
         var request = RequestUtils.getRequest();
         jsonObject.put("x-oauth-param-address", request != null ? RequestUtils.getIpAddress(request) : "unknown");
-        jsonObject.put("x-oauth-param-app-name", SpringBeanUtils.getEnvironment().resolvePlaceholders("${spring.application.name:}"));
+        jsonObject.put("x-oauth-param-app-name", OauthClientRuntimeContext.getApplicationName());
         return createAuthenticationInformation(jsonObject, null, authClientProperties.getOauthUrl());
     }
     
@@ -165,6 +165,12 @@ public class HttpProtocol extends AbstractProtocol {
                 if (hasCache(cacheKey)) {
                     clearAuthenticationInformation(cacheKey);
                 }
+            } else if (upgradeType == UpgradeType.REFRESH) {
+                String cacheKey = getCacheKey(new Cookie[]{cookie}, token);
+                if (hasCache(cacheKey)) {
+                    clearAuthenticationInformation(cacheKey);
+                }
+                invalidateCache(token);
             }
         }
         return authenticationInformation;
@@ -417,7 +423,7 @@ public class HttpProtocol extends AbstractProtocol {
             traceContext = TraceContext.create();
             var request = RequestUtils.getRequest();
             traceContext.clientInfo(
-                    SpringBeanUtils.getEnvironment().resolvePlaceholders("${spring.application.name:}"),
+                    OauthClientRuntimeContext.getApplicationName(),
                     request != null ? RequestUtils.getIpAddress(request) : "unknown"
             );
             isNewTrace = true;

@@ -64,6 +64,7 @@ public class AiConfiguration {
     @ConditionalOnClass(name = "com.chua.deeplearning.support.ml.ai.DefaultAiClient")
     @Lazy
     public AiClient aiClient(AiProperties aiProperties) {
+        aiProperties = AiProviderDefaults.normalize(aiProperties);
         AiClientConfig config = buildAiClientConfig(aiProperties);
         return DefaultAiClient.builder()
                 .config(config)
@@ -80,6 +81,7 @@ public class AiConfiguration {
     @ConditionalOnMissingBean(ChatClient.class)
     @Lazy
     public ChatClient chatClient(AiProperties aiProperties) {
+        aiProperties = AiProviderDefaults.normalize(aiProperties);
         return new DefaultScopeChatClient(ChatClientSettingsResolver.resolve(aiProperties));
     }
 
@@ -94,6 +96,7 @@ public class AiConfiguration {
     @ConditionalOnMissingBean(Agent.class)
     @Lazy
     public Agent agent(AiProperties aiProperties, ChatClient chatClient) {
+        aiProperties = AiProviderDefaults.normalize(aiProperties);
         var options = AgentOptionsResolver.resolve(aiProperties, chatClient);
         AgentProvider provider = AgentProviders.resolve(options.getAgentType());
         if (provider == null) {
@@ -113,6 +116,7 @@ public class AiConfiguration {
      * @return AiClientConfig
      */
     private AiClientConfig buildAiClientConfig(AiProperties properties) {
+        properties = AiProviderDefaults.normalize(properties);
         // 验证配置
         validateConfiguration(properties);
         

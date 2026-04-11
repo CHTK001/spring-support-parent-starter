@@ -157,8 +157,5 @@ plugin:
 2. 再做 Redis 场景验证，确认限流、防抖、配置同步切到分布式实现。
 3. 最后验证控制台登录、受保护接口与指标接口。
 
-本仓库已使用简单项目 `spring-support-module-smoke-test` 完成一轮低内存烟雾验证：
-
-```bash
-MAVEN_OPTS="-Xms256m -Xmx768m" mvn -DskipTests=false -Dmaven.test.skip=false -Dsurefire.failIfNoSpecifiedTests=false -pl spring-support-module-smoke-test -am -P smoke-strategy test
-```
+仓库内原有的最小 smoke 工程已经删除。
+如果你需要复现这类低成本验证，建议自行准备一个最小 Spring Boot 工程，只保留策略模块与必要 Web 依赖，然后在该工程中执行常规 `mvn test` / `mvn verify`。

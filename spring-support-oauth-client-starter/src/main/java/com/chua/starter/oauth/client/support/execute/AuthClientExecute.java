@@ -8,9 +8,7 @@ import com.chua.common.support.core.utils.DigestUtils;
 import com.chua.common.support.core.utils.Md5Utils;
 import com.chua.common.support.core.utils.StringUtils;
 import com.chua.common.support.value.Value;
-import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.watch.Watch;
-import org.springframework.boot.context.properties.bind.Binder;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
@@ -21,6 +19,7 @@ import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
+import com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext;
 import com.chua.starter.oauth.client.support.web.WebRequest;
 import com.google.common.base.Strings;
 import com.google.common.cache.Cache;
@@ -28,7 +27,6 @@ import com.google.common.cache.CacheBuilder;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Getter;
-import lombok.Setter;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -65,8 +63,7 @@ public class AuthClientExecute {
             .build();
 
     public AuthClientExecute() {
-        this.authClientProperties = Binder.get(SpringBeanUtils.getEnvironment())
-                .bindOrCreate(AuthClientProperties.PRE, AuthClientProperties.class);
+        this.authClientProperties = OauthClientRuntimeContext.getAuthClientProperties();
     }
 
 

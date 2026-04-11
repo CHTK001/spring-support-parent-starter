@@ -6,7 +6,6 @@ import com.chua.common.support.core.exception.AuthenticationException;
 import com.chua.common.support.core.spi.ServiceProvider;
 import com.chua.common.support.core.utils.ObjectUtils;
 import com.chua.common.support.core.utils.StringUtils;
-import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
 import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.enums.UpgradeType;
@@ -15,6 +14,7 @@ import com.chua.starter.oauth.client.support.infomation.AuthenticationInformatio
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.protocol.Protocol;
+import com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext;
 import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
@@ -57,7 +57,8 @@ public class WebRequest {
         this.protocol = authProperties.getProtocol();
         this.request = request;
         this.requestMappingHandlerMapping = requestMappingHandlerMapping;
-        this.contextPath = SpringBeanUtils.getEnvironment().resolvePlaceholders("${server.servlet.context-path:}");
+        this.contextPath = request != null && StringUtils.isNotBlank(request.getContextPath())
+                ? request.getContextPath() : OauthClientRuntimeContext.getContextPath();
         
         if (request != null) {
             log.debug("[WebRequest]创建WebRequest - URI: {}, 协议: {}, 上下文路径: {}", 

@@ -4,12 +4,7 @@
 
 - 模块：`spring-support-proxy-starter`
 - 执行日期：`2026-03-27`
-- 简单项目：`spring-support-module-smoke-test`
-- 执行命令：
-
-```bash
-mvn -f H:/workspace/2/spring-support-parent-starter/pom.xml -DskipTests=false -Dmaven.test.skip=false -Dsurefire.failIfNoSpecifiedTests=false -pl spring-support-module-smoke-test -am -P smoke-proxy test
-```
+- 验证方式：历史上基于仓库内最小 Spring Boot 验证工程完成；该验证工程现已删除，本报告仅保留结果记录
 
 - 执行结果：`BUILD SUCCESS`
 - 构建完成时间：`2026-03-27 00:33:05 +08:00`
@@ -35,10 +30,8 @@ mvn -f H:/workspace/2/spring-support-parent-starter/pom.xml -DskipTests=false -D
 ## 4. 本轮修复点
 
 - `SystemServerMapper.pageFor` 从 `s.*` 改为显式字段投影，修复 `proxy_server_*` 到 `SystemServer` 字段的映射缺失
-- `spring-support-module-smoke-test` 新增 `smoke-proxy` profile，并注入代理模块最小 schema/data
-- smoke 项目为代理验证显式增加 `plugin.proxy.enable` 和 `plugin.proxy.auto-restart-running`
-- smoke 项目默认关闭 `plugin.swagger.enable` 与 `plugin.api` 编解码增强，避免无关自动配置导致上下文噪音
-- 统一 smoke 脚本已加入 `spring-support-proxy-starter -> smoke-proxy` 映射
+- 历史最小验证工程曾注入代理模块最小 schema/data，并显式开启 `plugin.proxy.enable`、关闭自动恢复
+- 历史最小验证工程默认关闭 `plugin.swagger.enable` 与 `plugin.api` 编解码增强，避免无关自动配置导致上下文噪音
 
 ## 5. 当前未覆盖项
 

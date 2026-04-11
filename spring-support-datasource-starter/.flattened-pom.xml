@@ -70,6 +70,10 @@
       <artifactId>sqlite-jdbc</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.alibaba</groupId>
       <artifactId>druid-spring-boot-3-starter</artifactId>
       <scope>provided</scope>
@@ -103,11 +107,6 @@
       <groupId>com.chua</groupId>
       <artifactId>utils-support-calcite-starter</artifactId>
       <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>com.h2database</groupId>
-      <artifactId>h2</artifactId>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>

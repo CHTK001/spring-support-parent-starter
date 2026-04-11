@@ -1,6 +1,5 @@
 package com.chua.starter.oauth.client.support.configuration;
 
-import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.oauth.client.support.filter.AuthFilter;
 import com.chua.starter.oauth.client.support.interceptor.PermissionInterceptor;
@@ -8,6 +7,7 @@ import com.chua.starter.oauth.client.support.interceptor.TokenForTypeInterceptor
 import com.chua.starter.oauth.client.support.oauth.OauthAuthService;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.provider.UserStatisticProvider;
+import com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext;
 import com.chua.starter.oauth.client.support.web.WebRequest;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -24,7 +24,6 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
 import org.springframework.core.Ordered;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -67,7 +66,6 @@ public class AuthClientConfiguration
      * @return OAuth认证服务实例
      */
     @Bean(name = "authService")
-    @Primary
     public AuthService authService() {
         return new OauthAuthService();
     }
@@ -110,6 +108,7 @@ public class AuthClientConfiguration
     @Bean
     @ConditionalOnProperty(name = "plugin.oauth.temp.open", havingValue = "true", matchIfMissing = false)
     public UserStatisticProvider tempProvider() {
+        OauthClientRuntimeContext.setAuthClientProperties(getSpringBean());
         return new UserStatisticProvider();
     }
 
@@ -135,14 +134,13 @@ public class AuthClientConfiguration
     public FilterRegistrationBean<AuthFilter> authFilterFilterRegistrationBean(
             RequestMappingHandlerMapping requestMappingHandlerMapping,
             AuthClientProperties authClientProperties) {
+        OauthClientRuntimeContext.setAuthClientProperties(authClientProperties);
         // 使用注入的 AuthClientProperties Bean，确保与 WhitelistFileWatcher 同一实例
         FilterRegistrationBean<AuthFilter> authFilterFilterRegistrationBean = new FilterRegistrationBean<>();
         authFilterFilterRegistrationBean.setOrder(Ordered.LOWEST_PRECEDENCE);
         authFilterFilterRegistrationBean.setUrlPatterns(authClientProperties.getBlockAddress());
         authFilterFilterRegistrationBean.setName("authFilterFilterRegistrationBean");
         authFilterFilterRegistrationBean.setAsyncSupported(true);
-        SpringBeanUtils.setRequestMappingHandlerMapping(requestMappingHandlerMapping);
-
         // 创建增强的AuthFilter，支持Principal和HttpServletRequest增强
         // 使用 Spring Bean 确保白名单更新能被感知
         authFilterFilterRegistrationBean
@@ -154,9 +152,12 @@ public class AuthClientConfiguration
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
+        OauthClientRuntimeContext.setApplicationContext(applicationContext);
+        OauthClientRuntimeContext.setEnvironment(applicationContext.getEnvironment());
         // 使用 Binder 创建初始配置，后续会被 Spring Bean 替换
         this.authProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(AuthClientProperties.PRE,
                 AuthClientProperties.class);
+        OauthClientRuntimeContext.setAuthClientProperties(this.authProperties);
     }
     
     /**
@@ -175,8 +176,14 @@ public class AuthClientConfiguration
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         // 使用 Spring Bean 确保白名单更新能被感知
         AuthClientProperties props = getSpringBean();
-        resolvers.add(new UserRequestHandlerMethodArgumentResolver(new WebRequest(props)));
-        resolvers.add(new TokenRequestHandlerMethodArgumentResolver(new WebRequest(props)));
+        var webRequest = new WebRequest(props);
+        var beanFactory = OauthClientRuntimeContext.getBeanFactory();
+        UserRequestHandlerMethodArgumentResolver userResolver = new UserRequestHandlerMethodArgumentResolver(webRequest);
+        userResolver.setConfigurableBeanFactory(beanFactory);
+        TokenRequestHandlerMethodArgumentResolver tokenResolver = new TokenRequestHandlerMethodArgumentResolver(webRequest);
+        tokenResolver.setConfigurableBeanFactory(beanFactory);
+        resolvers.add(userResolver);
+        resolvers.add(tokenResolver);
     }
 
     @Override
@@ -188,6 +195,7 @@ public class AuthClientConfiguration
 
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
-
+        OauthClientRuntimeContext.setBeanFactory(beanFactory);
+        OauthClientRuntimeContext.setAuthClientProperties(getSpringBean());
     }
 }

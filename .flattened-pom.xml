@@ -92,8 +92,9 @@
     <module>spring-support-email-starter</module>
     <module>spring-support-gateway-starter</module>
     <module>spring-support-proxy-starter</module>
+    <module>spring-support-server-starter</module>
+    <module>spring-support-soft-starter</module>
     <module>spring-support-sync-data-starter</module>
-    <module>spring-support-module-smoke-test</module>
   </modules>
   <scm>
     <connection>scm:git:git://github.com/your-org/spring-support-parent-starter.git</connection>
@@ -501,6 +502,16 @@
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
+        <artifactId>spring-support-server-starter</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-soft-starter</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.chua</groupId>
         <artifactId>spring-support-sync-data-starter</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -729,6 +740,11 @@
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>utils-support-ssh-starter</artifactId>
+        <version>${utils.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.chua</groupId>
+        <artifactId>utils-support-winrm-starter</artifactId>
         <version>${utils.version}</version>
       </dependency>
       <dependency>

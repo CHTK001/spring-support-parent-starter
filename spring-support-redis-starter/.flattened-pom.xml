@@ -52,7 +52,6 @@
     <dependency>
       <groupId>it.ozimov</groupId>
       <artifactId>embedded-redis</artifactId>
-      <scope>provided</scope>
       <exclusions>
         <exclusion>
           <groupId>org.slf4j</groupId>

@@ -72,6 +72,10 @@ public class SocketConfiguration {
             // 创建协议特定的配置
             SocketProperties protocolProperties = createProtocolProperties(properties, protocolConfig);
             SocketSessionTemplate template = provider.createSessionTemplate(protocolProperties, listeners);
+            if (protocolProperties.isAutoStart()) {
+                log.info("[Socket] 初始化时启动 {} 服务", highlight(protocolName));
+                provider.start(template);
+            }
             templates.put(protocolName, template);
         }
 
@@ -111,7 +115,8 @@ public class SocketConfiguration {
         props.setRoom(protocolConfig.getRoom());
         props.setHost(baseProperties.getHost());
         props.setCodecType(baseProperties.getCodecType());
-        props.setEncryptEnabled(baseProperties.isEncryptEnabled());
+        props.setEncryptEnabled(baseProperties.getEncryptEnabledValue());
+        props.setEncryptMode(baseProperties.getEncryptMode());
         props.setEncryptKey(baseProperties.getEncryptKey());
         props.setMaxFrameSize(baseProperties.getMaxFrameSize());
         props.setBossCount(baseProperties.getBossCount());

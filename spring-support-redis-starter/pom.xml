@@ -61,7 +61,6 @@
         <dependency>
             <groupId>it.ozimov</groupId>
             <artifactId>embedded-redis</artifactId>
-            <scope>provided</scope> <!-- 仅在测试环境使用 -->
             <exclusions>
                 <!-- 排除slf4j-simple，避免日志冲突 -->
                 <exclusion>

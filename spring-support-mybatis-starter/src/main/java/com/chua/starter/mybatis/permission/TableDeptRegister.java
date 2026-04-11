@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.chua.starter.common.support.oauth.CurrentUser;
 import com.chua.starter.mybatis.properties.MybatisPlusDataScopeProperties;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.StringValue;
@@ -15,6 +16,7 @@ import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.InExpression;
 import net.sf.jsqlparser.expression.operators.relational.LikeExpression;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.ParenthesedSelect;
@@ -22,7 +24,11 @@ import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectItem;
 
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler.NO_DATA;
@@ -34,6 +40,8 @@ import static com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler.
  * @author CH
  */
 public class TableDeptRegister implements DeptRegister {
+    private static final String DEPT_LEADER = "DEPT_LEADER";
+    private static final String MANAGED_DEPT_TREE_IDS = "managedDeptTreeIds";
 
     private final Table table;
     private final Expression where;
@@ -82,6 +90,9 @@ public class TableDeptRegister implements DeptRegister {
         if (null == tableInfo) {
             return null;
         }
+        if (!matchesScopedAlias()) {
+            return null;
+        }
         return createExpression(tableInfo);
     }
 
@@ -107,6 +118,10 @@ public class TableDeptRegister implements DeptRegister {
      * @return 表达式，如果where为null则直接返回权限条件，否则返回AND组合
      */
     private Expression createDeptWhere() {
+        if (hasManagedDeptLeaderScope()) {
+            return combineWithWhere(createManagedDeptLeaderExpression());
+        }
+
         if (DataFilterTypeEnum.DEPT_SETS == dataPermission) {
             if (StringUtils.isEmpty(currentUser.getDataPermissionRule())) {
                 return NO_DATA;
@@ -192,6 +207,49 @@ public class TableDeptRegister implements DeptRegister {
         return NO_DATA;
     }
 
+    private boolean hasManagedDeptLeaderScope() {
+        return currentUser.hasRole(DEPT_LEADER) && !resolveManagedDeptTreeIds().isEmpty();
+    }
+
+    private Expression createManagedDeptLeaderExpression() {
+        EqualsTo selfCondition = new EqualsTo();
+        selfCondition.setLeftExpression(createUserColumn());
+        selfCondition.setRightExpression(new StringValue(currentUser.getUserId()));
+
+        List<String> managedDeptTreeIds = resolveManagedDeptTreeIds();
+        List<Expression> deptConditions = new ArrayList<>(managedDeptTreeIds.size());
+        for (String treeId : managedDeptTreeIds) {
+            InExpression inExpression = new InExpression();
+            inExpression.setLeftExpression(createDeptColumn());
+
+            ParenthesedSelect subSelect = new ParenthesedSelect();
+            PlainSelect select = new PlainSelect();
+            select.setSelectItems(Collections.singletonList(new SelectItem<>(new Column(deptIdColumn))));
+
+            Table deptTable = new Table(dataScopeProperties.getTableName());
+            select.setFromItem(deptTable);
+
+            LikeExpression likeExpression = new LikeExpression();
+            likeExpression.setLeftExpression(new Column(deptTreeIdColumn));
+            net.sf.jsqlparser.expression.Function concatFunc = new net.sf.jsqlparser.expression.Function();
+            concatFunc.setName("CONCAT");
+            concatFunc.setParameters(new ExpressionList<>(new StringValue(treeId), new StringValue("%")));
+            likeExpression.setRightExpression(concatFunc);
+            select.setWhere(likeExpression);
+
+            subSelect.setSelect(select);
+            inExpression.setRightExpression(subSelect);
+            deptConditions.add(inExpression);
+        }
+
+        Expression deptCondition = null;
+        for (Expression expression : deptConditions) {
+            deptCondition = null == deptCondition ? expression : new OrExpression(deptCondition, expression);
+        }
+
+        return null == deptCondition ? selfCondition : new OrExpression(selfCondition, deptCondition);
+    }
+
     /**
      * 将权限条件与现有WHERE条件组合
      *
@@ -199,10 +257,47 @@ public class TableDeptRegister implements DeptRegister {
      * @return 组合后的表达式
      */
     private Expression combineWithWhere(Expression permissionCondition) {
+        Expression normalizedPermissionCondition = wrapOrExpression(permissionCondition);
         if (null == where) {
-            return permissionCondition;
+            return normalizedPermissionCondition;
         }
-        return new AndExpression(where, permissionCondition);
+        return new AndExpression(where, normalizedPermissionCondition);
+    }
+
+    private Expression wrapOrExpression(Expression expression) {
+        if (!(expression instanceof OrExpression)) {
+            return expression;
+        }
+        try {
+            return CCJSqlParserUtil.parseCondExpression("(" + expression + ")");
+        } catch (JSQLParserException ignored) {
+            return expression;
+        }
+    }
+
+    private boolean matchesScopedAlias() {
+        if (!hasScopedAlias()) {
+            return true;
+        }
+        String currentAlias = currentTableAlias();
+        return matchesAlias(currentAlias, deptAlias) || matchesAlias(currentAlias, userAlias);
+    }
+
+    private boolean hasScopedAlias() {
+        return StringUtils.isNotEmpty(deptAlias) || StringUtils.isNotEmpty(userAlias);
+    }
+
+    private String currentTableAlias() {
+        if (table.getAlias() != null && StringUtils.isNotEmpty(table.getAlias().getName())) {
+            return table.getAlias().getName();
+        }
+        return table.getName();
+    }
+
+    private boolean matchesAlias(String currentAlias, String expectedAlias) {
+        return StringUtils.isNotEmpty(currentAlias)
+                && StringUtils.isNotEmpty(expectedAlias)
+                && currentAlias.equalsIgnoreCase(expectedAlias);
     }
 
     /**
@@ -259,6 +354,59 @@ public class TableDeptRegister implements DeptRegister {
                 new ExpressionList<>(Arrays.stream(currentUser.getDataPermissionRule().split(","))
                         .map(LongValue::new).collect(Collectors.toList()))
         );
+    }
+
+    private List<String> resolveManagedDeptTreeIds() {
+        Map<String, Object> ext = currentUser.getExt();
+        if (null == ext) {
+            return Collections.emptyList();
+        }
+        Object managedDeptTreeIds = ext.get(MANAGED_DEPT_TREE_IDS);
+        if (managedDeptTreeIds instanceof Collection<?> collection) {
+            return collection.stream()
+                    .map(this::normalizeManagedDeptTreeId)
+                    .filter(StringUtils::isNotEmpty)
+                    .toList();
+        }
+        if (null != managedDeptTreeIds && managedDeptTreeIds.getClass().isArray()) {
+            int length = java.lang.reflect.Array.getLength(managedDeptTreeIds);
+            List<String> values = new ArrayList<>(length);
+            for (int i = 0; i < length; i++) {
+                String normalized = normalizeManagedDeptTreeId(java.lang.reflect.Array.get(managedDeptTreeIds, i));
+                if (StringUtils.isNotEmpty(normalized)) {
+                    values.add(normalized);
+                }
+            }
+            return values;
+        }
+        if (managedDeptTreeIds instanceof String value) {
+            String cleaned = value.trim();
+            if (cleaned.startsWith("[") && cleaned.endsWith("]") && cleaned.length() >= 2) {
+                cleaned = cleaned.substring(1, cleaned.length() - 1);
+            }
+            return Arrays.stream(cleaned.split(","))
+                    .map(this::normalizeManagedDeptTreeId)
+                    .filter(StringUtils::isNotEmpty)
+                    .toList();
+        }
+        return Collections.emptyList();
+    }
+
+    private String normalizeManagedDeptTreeId(Object value) {
+        if (null == value) {
+            return null;
+        }
+        String normalized = value.toString().trim();
+        if (StringUtils.isEmpty(normalized)) {
+            return null;
+        }
+        while (normalized.startsWith("[") || normalized.startsWith("\"") || normalized.startsWith("'")) {
+            normalized = normalized.substring(1).trim();
+        }
+        while (normalized.endsWith("]") || normalized.endsWith("\"") || normalized.endsWith("'")) {
+            normalized = normalized.substring(0, normalized.length() - 1).trim();
+        }
+        return StringUtils.isEmpty(normalized) ? null : normalized;
     }
 }
 

@@ -1,12 +1,15 @@
 package com.chua.socketio.support.session;
 
+import com.chua.socket.support.codec.SocketMessageCodec;
 import com.chua.socket.support.properties.SocketProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.chua.socket.support.session.SocketSession;
 import com.chua.socket.support.session.SocketUser;
+import com.corundumstudio.socketio.HandshakeData;
 import com.corundumstudio.socketio.SocketIOClient;
 
 import java.util.Map;
+import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -18,8 +21,11 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class SocketIOSession implements SocketSession {
 
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    public static final String ATTRIBUTE_ENCRYPT_REQUESTED = "socketEncryptRequested";
     private final SocketIOClient client;
     private final SocketProperties properties;
+    private final SocketMessageCodec messageCodec;
     private final Map<String, Object> attributes = new ConcurrentHashMap<>();
     private String clientId;
     private SocketUser user;
@@ -27,6 +33,11 @@ public class SocketIOSession implements SocketSession {
     public SocketIOSession(SocketIOClient client, SocketProperties properties) {
         this.client = client;
         this.properties = properties;
+        this.messageCodec = new SocketMessageCodec(properties);
+        Boolean encryptRequested = resolveEncryptRequested(client);
+        if (encryptRequested != null) {
+            setAttribute(ATTRIBUTE_ENCRYPT_REQUESTED, encryptRequested);
+        }
     }
 
     @Override
@@ -93,12 +104,12 @@ public class SocketIOSession implements SocketSession {
                 msg = (String) data;
             } else {
                 try {
-                    msg = new ObjectMapper().writeValueAsString(data);
+                    msg = OBJECT_MAPPER.writeValueAsString(data);
                 } catch (Exception e) {
                     msg = data.toString();
                 }
             }
-            client.sendEvent(event, msg);
+            client.sendEvent(event, messageCodec.encode(msg, getAttribute(ATTRIBUTE_ENCRYPT_REQUESTED)));
         }
     }
 
@@ -123,5 +134,40 @@ public class SocketIOSession implements SocketSession {
      */
     public SocketIOClient getClient() {
         return client;
+    }
+
+    private Boolean resolveEncryptRequested(SocketIOClient client) {
+        if (client == null) {
+            return null;
+        }
+        HandshakeData handshakeData = client.getHandshakeData();
+        if (handshakeData == null) {
+            return null;
+        }
+        String encryptValue = firstNonBlank(
+                handshakeData.getSingleUrlParam("socketEncrypt"),
+                handshakeData.getSingleUrlParam("encrypt"));
+        return parseEncryptRequested(encryptValue);
+    }
+
+    private String firstNonBlank(String first, String second) {
+        if (first != null && !first.isBlank()) {
+            return first;
+        }
+        if (second != null && !second.isBlank()) {
+            return second;
+        }
+        return null;
+    }
+
+    private Boolean parseEncryptRequested(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return switch (value.trim().toLowerCase(Locale.ROOT)) {
+            case "1", "true", "yes", "on", "encrypt", "encrypted" -> true;
+            case "0", "false", "no", "off", "plain", "plaintext" -> false;
+            default -> null;
+        };
     }
 }

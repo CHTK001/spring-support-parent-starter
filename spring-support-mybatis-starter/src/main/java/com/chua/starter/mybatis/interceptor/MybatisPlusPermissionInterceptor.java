@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.extension.parser.JsqlParserSupport;
 import com.baomidou.mybatisplus.extension.plugins.handler.DataPermissionHandler;
 import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
 import com.chua.common.support.core.utils.ObjectUtils;
-import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.common.support.oauth.CurrentUser;
 import com.chua.starter.mybatis.properties.MybatisPlusDataScopeProperties;
@@ -31,6 +30,7 @@ import org.springframework.util.ConcurrentReferenceHashMap;
 import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * 数据权限拦截器
@@ -46,10 +46,18 @@ import java.util.Map;
 public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implements InnerInterceptor {
 
     private DataPermissionHandler mybatisPlusPermissionHandler;
+    private Supplier<AuthService> authServiceSupplier;
     static final Map<String, Expression> MAPPED_STATEMENT_ID = new ConcurrentReferenceHashMap<>(4096);
 
     public MybatisPlusPermissionInterceptor(DataPermissionHandler mybatisPlusPermissionHandler, MybatisPlusDataScopeProperties methodSecurityInterceptor) {
+        this(mybatisPlusPermissionHandler, methodSecurityInterceptor, () -> null);
+    }
+
+    public MybatisPlusPermissionInterceptor(DataPermissionHandler mybatisPlusPermissionHandler,
+                                            MybatisPlusDataScopeProperties methodSecurityInterceptor,
+                                            Supplier<AuthService> authServiceSupplier) {
         this.mybatisPlusPermissionHandler = mybatisPlusPermissionHandler;
+        this.authServiceSupplier = authServiceSupplier;
     }
 
     /**
@@ -118,13 +126,12 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
      */
     @Override
     protected void processSelect(Select select, int index, String sql, Object obj) {
-        AuthService authService = SpringBeanUtils.getBean(AuthService.class);
-        if (authService == null) {
+        CurrentUser currentUser = getCurrentUser();
+        if (currentUser == null) {
             log.debug("未找到AuthService，跳过数据权限处理");
             return;
         }
 
-        CurrentUser currentUser = authService.getCurrentUser();
         if (ObjectUtils.isEmpty(currentUser)) {
             return;
         }
@@ -150,6 +157,14 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
         } catch (Exception e) {
             log.error("处理数据权限异常, mappedStatementId: {}", obj, e);
         }
+    }
+
+    private CurrentUser getCurrentUser() {
+        if (authServiceSupplier == null) {
+            return null;
+        }
+        AuthService authService = authServiceSupplier.get();
+        return authService == null ? null : authService.getCurrentUser();
     }
 
     /**

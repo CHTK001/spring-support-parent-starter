@@ -6,14 +6,13 @@ import com.chua.common.support.text.json.Json;
 import com.chua.common.support.core.utils.CollectionUtils;
 import com.chua.common.support.core.utils.DigestUtils;
 import com.chua.common.support.core.utils.StringUtils;
-import com.chua.spring.support.configuration.SpringBeanUtils;
-import org.springframework.boot.context.properties.bind.Binder;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.common.support.utils.ResponseUtils;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
+import com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.google.common.collect.Sets;
@@ -42,8 +41,7 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
     private final String encryption;
 
     public StaticProtocolExecutor() {
-        this.authClientProperties = Binder.get(SpringBeanUtils.getEnvironment())
-                .bindOrCreate(AuthClientProperties.PRE, AuthClientProperties.class);
+        this.authClientProperties = OauthClientRuntimeContext.getAuthClientProperties();
         this.encryption = "SM4";
     }
 

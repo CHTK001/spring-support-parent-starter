@@ -28,6 +28,7 @@ import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -36,9 +37,12 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.env.Environment;
 
 import javax.sql.DataSource;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * 处理注解
@@ -50,6 +54,8 @@ import java.util.List;
 @Slf4j
 @EnableConfigurationProperties({MybatisPlusProperties.class, MybatisPlusDataScopeProperties.class})
 public class MybatisPlusConfiguration {
+    private static final String ENCRYPTOR_PASSWORD_PROPERTY = "mybatis-plus.encryptor.password";
+    private static final String ENCRYPTOR_MODE_PROPERTY = "mybatis-plus.encryptor.mode";
 
     /**
      * 逻辑删除字段名
@@ -68,6 +74,7 @@ public class MybatisPlusConfiguration {
 
     private final MybatisPlusProperties mybatisProperties;
     private final MybatisPlusDataScopeProperties methodSecurityInterceptor;
+    private final Environment environment;
 
     /**
      * 构造函数
@@ -75,9 +82,13 @@ public class MybatisPlusConfiguration {
      * @param mybatisProperties MyBatis Plus配置属性
      * @param methodSecurityInterceptor 数据权限配置属性
      */
-    public MybatisPlusConfiguration(MybatisPlusProperties mybatisProperties, MybatisPlusDataScopeProperties methodSecurityInterceptor) {
+    public MybatisPlusConfiguration(MybatisPlusProperties mybatisProperties,
+                                    MybatisPlusDataScopeProperties methodSecurityInterceptor,
+                                    Environment environment) {
         this.mybatisProperties = mybatisProperties;
         this.methodSecurityInterceptor = methodSecurityInterceptor;
+        this.environment = environment;
+        syncEncryptorProperties();
     }
 
     static {
@@ -139,12 +150,18 @@ public class MybatisPlusConfiguration {
     @ConditionalOnMissingBean
     public DataPermissionInterceptor dataPermissionInterceptor(
             @Autowired(required = false) MybatisPlusDataPermissionHandler dataPermissionHandler,
-            MybatisPlusDataScopeProperties methodSecurityInterceptor
+            MybatisPlusDataScopeProperties methodSecurityInterceptor,
+            @Qualifier("authService") ObjectProvider<AuthService> authServiceProvider,
+            @Qualifier("defaultAuthService") ObjectProvider<AuthService> defaultAuthServiceProvider
             ) {
+        Supplier<AuthService> authServiceSupplier = () -> {
+            AuthService authService = authServiceProvider.getIfAvailable();
+            return null != authService ? authService : defaultAuthServiceProvider.getIfAvailable();
+        };
         if(null == dataPermissionHandler) {
-            dataPermissionHandler = new MybatisPlusDataPermissionHandler(methodSecurityInterceptor);
+            dataPermissionHandler = new MybatisPlusDataPermissionHandler(methodSecurityInterceptor, authServiceSupplier);
         }
-        return new MybatisPlusDataPermissionInterceptor(dataPermissionHandler, methodSecurityInterceptor);
+        return new MybatisPlusDataPermissionInterceptor(dataPermissionHandler, methodSecurityInterceptor, authServiceSupplier);
     }
 
 
@@ -179,7 +196,15 @@ public class MybatisPlusConfiguration {
     public MybatisPlusInterceptor mybatisPlusInterceptor(
             ObjectProvider<List<InnerInterceptor>> innerInterceptorProvider) {
         MybatisPlusInterceptor mybatisPlusInterceptor = new MybatisPlusInterceptor();
-        List<InnerInterceptor> innerInterceptors = innerInterceptorProvider.getIfAvailable(List::of);
+        List<InnerInterceptor> innerInterceptors = new ArrayList<>(innerInterceptorProvider.getIfAvailable(List::of));
+        innerInterceptors.sort((left, right) -> {
+            boolean leftPagination = left instanceof PaginationInnerInterceptor;
+            boolean rightPagination = right instanceof PaginationInnerInterceptor;
+            if (leftPagination == rightPagination) {
+                return 0;
+            }
+            return leftPagination ? 1 : -1;
+        });
         for (InnerInterceptor innerInterceptor : innerInterceptors) {
             mybatisPlusInterceptor.addInnerInterceptor(innerInterceptor);
         }
@@ -278,5 +303,18 @@ public class MybatisPlusConfiguration {
     @ConditionalOnMissingBean
     public SqlSessionTemplate sqlSessionTemplate(SqlSessionFactory sqlSessionFactory) {
         return new SqlSessionTemplate(sqlSessionFactory);
+    }
+
+    private void syncEncryptorProperties() {
+        syncSystemProperty(ENCRYPTOR_PASSWORD_PROPERTY);
+        syncSystemProperty(ENCRYPTOR_MODE_PROPERTY);
+    }
+
+    private void syncSystemProperty(String propertyName) {
+        String value = environment.getProperty(propertyName);
+        if (value == null || value.isBlank()) {
+            return;
+        }
+        System.setProperty(propertyName, value);
     }
 }

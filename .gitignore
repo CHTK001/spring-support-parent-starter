@@ -13,3 +13,5 @@ logs/!/patch/
 /.runtime/
 /system-ui-inspect.png
 *.code-workspace
+.codex/
+.runtime/

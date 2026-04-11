@@ -41,6 +41,31 @@ public class ProviderProperties {
     private String apiAddress;
 
     /**
+     * AppKey 文件路径
+     */
+    private String appKeyPath;
+
+    /**
+     * 加密密钥文件
+     */
+    private String encryptedKeyFile;
+
+    /**
+     * 密钥文件密码
+     */
+    private String keyPassword;
+
+    /**
+     * 环境变量键
+     */
+    private String envKey;
+
+    /**
+     * 密钥模式
+     */
+    private String keyMode;
+
+    /**
      * 基础URL
      */
     private String baseUrl;

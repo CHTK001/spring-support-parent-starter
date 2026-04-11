@@ -4,6 +4,7 @@ package com.chua.starter.oauth.client.support.filter;
 import com.chua.common.support.core.utils.MapUtils;
 import com.chua.common.support.core.utils.StringUtils;
 import com.chua.starter.oauth.client.support.annotation.VerifyFingerprint;
+import com.chua.starter.oauth.client.support.execute.AuthSessionUtils;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.principal.OAuthPrincipal;
@@ -183,6 +184,7 @@ public class AuthFilter implements Filter {
         session.setAttribute("username", userResume.getUsername());
         session.setAttribute("userId", MapUtils.getString(userResume.getExt(), "userId"));
         session.setAttribute("userResume", userResume);
+        session.setAttribute(AuthSessionUtils.SESSION_USER_INFO, userResume);
         
         // 存储浏览器指纹到Session
         if (userResume.getFingerprint() != null) {

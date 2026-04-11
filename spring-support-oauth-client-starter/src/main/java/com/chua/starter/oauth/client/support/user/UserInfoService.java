@@ -180,4 +180,15 @@ public interface UserInfoService {
      * @return 更新后的用户信息
      */
     UserResume upgrade(UserResult userResult);
+
+    /**
+     * 获取当前用户认证版本
+     * <p>用于判断 VERSION 升级时是否真的需要回源刷新用户态</p>
+     *
+     * @param userResult 已有的用户信息
+     * @return 认证版本签名，返回 null 表示不支持轻量比对
+     */
+    default String authVersion(UserResult userResult) {
+        return null;
+    }
 }

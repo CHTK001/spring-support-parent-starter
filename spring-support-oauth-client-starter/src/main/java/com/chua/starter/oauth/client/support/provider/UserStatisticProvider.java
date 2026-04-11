@@ -10,13 +10,13 @@ import com.chua.common.support.core.utils.ArrayUtils;
 import com.chua.common.support.core.utils.IoUtils;
 import com.chua.common.support.core.utils.MapUtils;
 import com.chua.common.support.core.utils.StringUtils;
-import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.oauth.client.support.annotation.UserValue;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.execute.AuthClientExecute;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
+import com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.google.common.base.Strings;
@@ -219,7 +219,7 @@ public class UserStatisticProvider {
         }
         UserMenuResult userMenuResult = new UserMenuResult();
         userMenuResult.setPermissions(AuthClientExecute.getInstance().getUserResult().getPermission());
-        Environment environment = SpringBeanUtils.getEnvironment();
+        Environment environment = OauthClientRuntimeContext.getEnvironment();
         try (InputStream resourceAsStream = UserStatisticProvider.class.getResourceAsStream(StringUtils.defaultString(authProperties.getTemp().getMenuPath(), "/menu.json5"));){
             List<RouteVO> routeVOS =
                     Json5.fromJsonList(IoUtils.toString(resourceAsStream, StandardCharsets.UTF_8), RouteVO.class);
@@ -235,7 +235,7 @@ public class UserStatisticProvider {
                 if(condition.startsWith("#login.role.")) {
                     String substring = condition.substring(11);
                     aBoolean = ArrayUtils.containsAny(roles, substring.split(","), true);
-                } else {
+                } else if (environment != null) {
                     aBoolean = environment.getProperty(condition, Boolean.class);
                 }
                 if(null == aBoolean || aBoolean) {

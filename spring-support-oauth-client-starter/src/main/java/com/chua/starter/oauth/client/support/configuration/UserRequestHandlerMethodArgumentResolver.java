@@ -4,7 +4,6 @@ import com.chua.common.support.base.converter.Converter;
 import com.chua.common.support.math.unit.name.NamingCase;
 import com.chua.common.support.core.utils.MapUtils;
 import com.chua.common.support.core.utils.StringUtils;
-import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.oauth.client.support.annotation.TokenValue;
@@ -14,7 +13,6 @@ import com.chua.starter.oauth.client.support.infomation.AuthenticationInformatio
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.chua.starter.oauth.client.support.web.WebRequest;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.Setter;
 import org.springframework.beans.factory.config.BeanExpressionContext;
 import org.springframework.beans.factory.config.BeanExpressionResolver;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
@@ -42,13 +40,21 @@ import java.util.function.Function;
 public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodArgumentResolver {
 
     private final WebRequest webRequest;
-    @Setter
     private ConfigurableBeanFactory configurableBeanFactory;
     private BeanExpressionContext expressionContext;
     private ConversionService conversionService;
 
     public UserRequestHandlerMethodArgumentResolver(WebRequest webRequest) {
         this.webRequest = webRequest;
+    }
+
+    public void setConfigurableBeanFactory(ConfigurableBeanFactory configurableBeanFactory) {
+        this.configurableBeanFactory = configurableBeanFactory;
+        if (configurableBeanFactory == null) {
+            return;
+        }
+        this.expressionContext = new BeanExpressionContext(configurableBeanFactory, new RequestScope());
+        this.conversionService = configurableBeanFactory.getConversionService();
     }
 
     @Override
@@ -219,22 +225,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
      */
     protected boolean supportsParameter(MethodParameter methodParameter, Class<? extends Annotation> annotationType) {
         if (null == configurableBeanFactory) {
-            try {
-                configurableBeanFactory = (ConfigurableBeanFactory) SpringBeanUtils.getApplicationContext().getAutowireCapableBeanFactory();
-            } catch (Throwable ignored) {
-            }
-        }
-
-        if (null == configurableBeanFactory) {
             return false;
-        }
-
-        if (null == expressionContext) {
-            this.expressionContext = new BeanExpressionContext(configurableBeanFactory, new RequestScope());
-        }
-
-        if (null == conversionService) {
-            conversionService = configurableBeanFactory.getConversionService();
         }
 
         return null != methodParameter.getParameterAnnotation(annotationType);

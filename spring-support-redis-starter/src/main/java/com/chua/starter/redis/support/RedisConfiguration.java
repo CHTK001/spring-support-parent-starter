@@ -58,6 +58,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
 
 
     @Bean(destroyMethod = "shutdown")
+    @DependsOn("embeddedServer")
     @ConditionalOnMissingBean
     public RedissonClient redissonClient(RedisProperties redisProperties) {
         log.info(">>>>> 开始创建Redisson客户端: => {}:{}", redisProperties.getHost(), redisProperties.getPort());
@@ -75,6 +76,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     }
 
     @Bean(destroyMethod = "close", name = "redisClient")
+    @DependsOn("embeddedServer")
     @ConditionalOnMissingBean
     public RedisClient redisClient(RedisProperties redisProperties) {
         log.info(">>>>> 开始创建RedisClient客户端: => {}:{}", redisProperties.getHost(), redisProperties.getPort());
@@ -120,7 +122,6 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "plugin.redis.server", name = "open-embedded", havingValue = "true", matchIfMissing = false)
     public RedisEmbeddedServer embeddedServer() {
         return new RedisEmbeddedServer(redisServerProperties);
     }

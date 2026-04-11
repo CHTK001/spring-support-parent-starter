@@ -4,12 +4,7 @@
 
 - 模块：`spring-support-strategy-starter`
 - 执行日期：`2026-03-26`
-- 简单项目：`spring-support-module-smoke-test`
-- 执行命令：
-
-```bash
-MAVEN_OPTS="-Xms256m -Xmx768m" mvn -DskipTests=false -Dmaven.test.skip=false -Dsurefire.failIfNoSpecifiedTests=false -pl spring-support-module-smoke-test -am -P smoke-strategy test
-```
+- 验证方式：历史上基于仓库内最小 Spring Boot 验证工程完成；该验证工程现已删除，本报告仅保留结果记录
 
 - 执行结果：`BUILD SUCCESS`
 

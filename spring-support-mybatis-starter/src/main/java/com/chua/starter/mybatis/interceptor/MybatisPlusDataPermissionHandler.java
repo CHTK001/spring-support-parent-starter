@@ -3,7 +3,6 @@ package com.chua.starter.mybatis.interceptor;
 import com.baomidou.mybatisplus.extension.plugins.handler.MultiDataPermissionHandler;
 import com.chua.common.support.core.utils.ClassUtils;
 import com.chua.starter.mybatis.annotations.DataScope;
-import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.common.support.oauth.CurrentUser;
@@ -14,8 +13,10 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.schema.Table;
 import org.springframework.util.ConcurrentReferenceHashMap;
 
+import java.util.Collection;
 import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import static com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler.NO_DATA;
 
@@ -34,6 +35,10 @@ import static com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler.
  */
 @Slf4j
 public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHandler {
+    private static final String SUPER_ADMIN = "SUPER_ADMIN";
+    private static final String ADMIN = "ADMIN";
+    private static final String DEPT_LEADER = "DEPT_LEADER";
+    private static final String MANAGED_DEPT_TREE_IDS = "managedDeptTreeIds";
 
     /**
      * 缓存 mappedStatementId 对应的 DataScope 注解
@@ -41,9 +46,16 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
     private static final Map<String, DataScopeInfo> DATA_SCOPE_CACHE = new ConcurrentReferenceHashMap<>(4096);
 
     private final MybatisPlusDataScopeProperties metaDataScopeProperties;
+    private final Supplier<AuthService> authServiceSupplier;
 
     public MybatisPlusDataPermissionHandler(MybatisPlusDataScopeProperties metaDataScopeProperties) {
+        this(metaDataScopeProperties, () -> null);
+    }
+
+    public MybatisPlusDataPermissionHandler(MybatisPlusDataScopeProperties metaDataScopeProperties,
+                                            Supplier<AuthService> authServiceSupplier) {
         this.metaDataScopeProperties = metaDataScopeProperties;
+        this.authServiceSupplier = authServiceSupplier;
     }
 
     /**
@@ -71,12 +83,7 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
             }
 
             // 获取当前用户
-            AuthService authService = SpringBeanUtils.getBean(AuthService.class);
-            if (authService == null) {
-                return null;
-            }
-
-            CurrentUser currentUser = authService.getCurrentUser();
+            CurrentUser currentUser = getCurrentUser();
             if (currentUser == null) {
                 return null;
             }
@@ -137,7 +144,7 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
             }
 
             String className = mappedStatementId.substring(0, lastDot);
-            String methodName = mappedStatementId.substring(lastDot + 1);
+            String methodName = normalizeMethodName(mappedStatementId.substring(lastDot + 1));
 
             // 使用ClassUtils替代Class.forName
             Class<?> mapperClass = ClassUtils.forName(className);
@@ -179,6 +186,19 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
         return null;
     }
 
+    private String normalizeMethodName(String methodName) {
+        if (null == methodName || methodName.isBlank()) {
+            return methodName;
+        }
+        if (methodName.endsWith("_mpCount")) {
+            return methodName.substring(0, methodName.length() - 8);
+        }
+        if (methodName.endsWith("_COUNT") || methodName.endsWith("_count")) {
+            return methodName.substring(0, methodName.length() - 6);
+        }
+        return methodName;
+    }
+
     /**
      * 数据权限过滤
      *
@@ -196,7 +216,7 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
                                        Expression where,
                                        DataFilterTypeEnum dataPermission,
                                        DataScopeInfo dataScopeInfo) {
-        if (null == dataPermission || dataPermission == DataFilterTypeEnum.ALL) {
+        if (currentUser.hasRole(SUPER_ADMIN) || currentUser.hasRole(ADMIN)) {
             return null;
         }
 
@@ -205,7 +225,34 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
         String userAlias = (dataScopeInfo != null && dataScopeInfo.userAlias != null && !dataScopeInfo.userAlias.isEmpty())
                 ? dataScopeInfo.userAlias : null;
 
-        return new TableDeptRegister(table, where, currentUser, dataPermission, dataScopeProperties, deptAlias, userAlias).register();
+        if (hasManagedDeptLeaderScope(currentUser)) {
+            return new TableDeptRegister(table, null, currentUser, dataPermission, dataScopeProperties, deptAlias, userAlias).register();
+        }
+
+        if (null == dataPermission || dataPermission == DataFilterTypeEnum.ALL) {
+            return null;
+        }
+
+        return new TableDeptRegister(table, null, currentUser, dataPermission, dataScopeProperties, deptAlias, userAlias).register();
+    }
+
+    private boolean hasManagedDeptLeaderScope(CurrentUser currentUser) {
+        if (!currentUser.hasRole(DEPT_LEADER) || null == currentUser.getExt()) {
+            return false;
+        }
+        Object managedDeptTreeIds = currentUser.getExt().get(MANAGED_DEPT_TREE_IDS);
+        if (managedDeptTreeIds instanceof Collection<?> collection) {
+            return !collection.isEmpty();
+        }
+        return null != managedDeptTreeIds && !managedDeptTreeIds.toString().isBlank();
+    }
+
+    private CurrentUser getCurrentUser() {
+        if (authServiceSupplier == null) {
+            return null;
+        }
+        AuthService authService = authServiceSupplier.get();
+        return authService == null ? null : authService.getCurrentUser();
     }
 
 

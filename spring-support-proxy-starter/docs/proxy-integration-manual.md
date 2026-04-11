@@ -49,34 +49,23 @@ plugin:
 - `proxy_server_setting_service_discovery_mapping`
 - `proxy_server_setting_preview_extension`
 
-如果只是验证“starter 能否独立装配 + 基础接口能否返回”，可以直接复用 smoke 项目的最小 SQL：
-
-- `spring-support-module-smoke-test/src/test/resources/db/proxy/V1.0__init_proxy.sql`
-- `spring-support-module-smoke-test/src/test/resources/db/proxy/V1.0__initdata_proxy.sql`
+如果只是验证“starter 能否独立装配 + 基础接口能否返回”，建议在你自己的最小 Spring Boot 验证工程里，基于完整网关脚本裁剪出分页查询与统计接口所需的最小 SQL。
 
 注意：
 
-- smoke SQL 只覆盖分页查询与统计接口所需的最小表，不等价于生产全量表结构
-- 生产接入不要直接拿 smoke SQL 代替正式初始化脚本
+- 最小验证 SQL 只覆盖分页查询与统计接口所需的最小表，不等价于生产全量表结构
+- 生产接入不要直接拿最小验证 SQL 代替正式初始化脚本
 
 ## 5. 简单测试项目
 
-本仓库已经复用了现有简单 Spring Boot 项目 `spring-support-module-smoke-test` 作为代理模块验证工程，不再额外新建测试项目。
+仓库内原有的最小 smoke 工程已经删除。
+如果你需要做独立验证，建议自行准备一个最小 Spring Boot 工程，并至少补齐以下配置：
 
-代理模块对应 profile：
+- `plugin.proxy.enable=true`
+- `plugin.proxy.auto-restart-running=false`
+- SQL 初始化开启，并指向你裁剪后的最小 schema/data
 
-- `smoke-proxy`
-
-关键配置：
-
-- `smoke.target.module=spring-support-proxy-starter`
-- `smoke.sql.init.mode=always`
-- `smoke.sql.init.schema-locations=optional:classpath:db/proxy/V1.0__init_proxy.sql`
-- `smoke.sql.init.data-locations=optional:classpath:db/proxy/V1.0__initdata_proxy.sql`
-- `smoke.proxy.enable=true`
-- `smoke.proxy.auto-restart-running=false`
-
-为了避免 smoke 被无关 starter 干扰，简单测试项目里额外做了两点隔离：
+为了避免最小验证被无关 starter 干扰，建议额外做两点隔离：
 
 - 默认关闭 `plugin.swagger.enable`
 - 默认关闭 `plugin.api.encode.enable`、`plugin.api.decode.enable`、`plugin.api.uniform`
@@ -85,17 +74,8 @@ plugin:
 
 ## 6. 验证命令
 
-直接执行 Maven：
-
-```bash
-mvn -f H:/workspace/2/spring-support-parent-starter/pom.xml -DskipTests=false -Dmaven.test.skip=false -Dsurefire.failIfNoSpecifiedTests=false -pl spring-support-module-smoke-test -am -P smoke-proxy test
-```
-
-或执行统一脚本：
-
-```powershell
-powershell -File H:/workspace/2/spring-support-parent-starter/scripts/test/smoke/Invoke-SpringSupportModuleSmoke.ps1 -Modules spring-support-proxy-starter
-```
+当前仓库不再提供代理模块专用 smoke 工程命令。
+建议在你的最小验证工程里执行常规 `mvn test` / `mvn verify`，并只保留代理模块所需依赖与最小 SQL。
 
 ## 7. 本轮已验证接口
 

@@ -11,9 +11,7 @@ import com.chua.common.support.lang.robin.LoadBalance;
 import com.chua.common.support.core.spi.ServiceProvider;
 import com.chua.common.support.task.cache.CacheProvider;
 import com.chua.common.support.task.cache.Cacheable;
-import com.chua.common.support.task.cache.GuavaCacheProvider;
 import com.chua.common.support.core.utils.StringUtils;
-import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.common.support.utils.ResponseUtils;
@@ -22,6 +20,7 @@ import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
+import com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
@@ -62,7 +61,7 @@ public abstract class AbstractProtocol implements Protocol {
         if (CACHEABLE == null) {
             synchronized (CACHE_LOCK) {
                 if (CACHEABLE == null) {
-                    CacheProvider provider = new GuavaCacheProvider((int) authClientProperties.getCacheTimeout() / 3600);
+                    CacheProvider provider = CacheProvider.auto();
                     provider.afterPropertiesSet();
                     CACHEABLE = provider.cacheHotColdBackup(authClientProperties.isCacheHotColdBackup());
                     log.info("[OAuth客户端]缓存初始化完成 - 超时时间: {}秒, 冷热备份: {}", 
@@ -272,7 +271,7 @@ public abstract class AbstractProtocol implements Protocol {
             log.warn("鉴权地址不存在");
             return null;
         }
-        String[] split = SpringBeanUtils.getApplicationContext().getEnvironment().resolvePlaceholders(address).split(",");
+        String[] split = OauthClientRuntimeContext.resolvePlaceholders(address).split(",");
         stringRobin.addNode((Object[]) split);
         Node robin = stringRobin.selectNode();
         return robin.getString();

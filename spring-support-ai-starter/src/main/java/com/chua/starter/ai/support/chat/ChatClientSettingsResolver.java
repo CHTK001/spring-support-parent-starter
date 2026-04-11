@@ -2,6 +2,7 @@ package com.chua.starter.ai.support.chat;
 
 import com.chua.common.support.ai.bigmodel.BigModelSetting;
 import com.chua.common.support.core.utils.StringUtils;
+import com.chua.starter.ai.support.configuration.AiProviderDefaults;
 import com.chua.starter.ai.support.properties.AiProperties;
 import com.chua.starter.ai.support.properties.LlmProperties;
 import com.chua.starter.ai.support.properties.ProviderProperties;
@@ -28,6 +29,7 @@ public final class ChatClientSettingsResolver {
      * @return 聊天客户端静态配置
      */
     public static ChatClientSettings resolve(AiProperties properties) {
+        properties = AiProviderDefaults.normalize(properties);
         if (properties == null || properties.getLlm() == null || !properties.getLlm().isEnabled()) {
             throw new IllegalStateException("spring.ai.llm 必须启用后才能创建 ChatClient");
         }
@@ -47,6 +49,9 @@ public final class ChatClientSettingsResolver {
                         providerValue(providerProperties, ProviderProperties::getAppKey)))
                 .appSecret(firstNonBlank(providerValue(providerProperties, ProviderProperties::getAppSecret),
                         providerValue(providerProperties, ProviderProperties::getSecretKey)))
+                .encryptedKeyFile(providerValue(providerProperties, ProviderProperties::getEncryptedKeyFile))
+                .keyPassword(providerValue(providerProperties, ProviderProperties::getKeyPassword))
+                .envKey(providerValue(providerProperties, ProviderProperties::getEnvKey))
                 .mcpEnabled(llm.getMcp() != null && llm.getMcp().isEnabled())
                 .mcpPreprocessors(llm.getMcp() == null ? java.util.List.of() : safeList(llm.getMcp().getPreprocessors()))
                 .mcpPostprocessors(llm.getMcp() == null ? java.util.List.of() : safeList(llm.getMcp().getPostprocessors()))

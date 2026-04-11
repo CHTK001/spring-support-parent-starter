@@ -147,6 +147,8 @@
         <!-- API网关模块 -->
         <module>spring-support-gateway-starter</module>
         <module>spring-support-proxy-starter</module>
+        <module>spring-support-server-starter</module>
+        <module>spring-support-soft-starter</module>
         <module>spring-support-sync-data-starter</module>         <!-- API网关 -->
 
     </modules>
@@ -637,6 +639,18 @@
 
             <dependency>
                 <groupId>com.chua</groupId>
+                <artifactId>spring-support-server-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-soft-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
                 <artifactId>spring-support-sync-data-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -979,6 +993,12 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-ssh-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-winrm-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 

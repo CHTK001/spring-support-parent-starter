@@ -42,10 +42,7 @@ plugin:
 - 代理模块依赖可用 JDBC 数据源。
 - 完整代理表结构可复用网关模块现有初始化脚本：
   `spring-support-gateway-starter/src/main/resources/db/init/V1.0__init_gateway_proxy.sql`
-- 如果只是做最小 smoke 验证，可参考：
-  `spring-support-module-smoke-test/src/test/resources/db/proxy/V1.0__init_proxy.sql`
-  和
-  `spring-support-module-smoke-test/src/test/resources/db/proxy/V1.0__initdata_proxy.sql`
+- 如果只是做最小接入验证，建议在你自己的最小 Spring Boot 验证工程里，从完整网关脚本中裁剪出分页查询和统计接口所需的最小 schema/data。
 
 ## 核心接口
 

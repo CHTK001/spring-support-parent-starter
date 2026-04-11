@@ -30,7 +30,7 @@ public class AiProperties {
     /**
      * 默认提供商
      */
-    private String defaultProvider;
+    private String defaultProvider = "siliconflow";
 
     /**
      * LLM 配置
