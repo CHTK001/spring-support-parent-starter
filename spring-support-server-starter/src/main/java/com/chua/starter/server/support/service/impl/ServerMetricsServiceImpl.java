@@ -1012,16 +1012,22 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
     }
 
     /**
-     * 从历史表读取指定时间范围内的指标点位，并按时间升序返回。
+     * 从历史表读取指定时间范围内的指标点位，并按时间升序返回；历史表缺失时回退内存缓存。
      */
     private List<ServerMetricsSnapshot> listPersistedHistory(Integer serverId, Integer minutes) {
-        long cutoff = resolveHistoryCutoff(minutes);
-        List<ServerMetricsHistory> rows = serverMetricsHistoryMapper.selectList(
-                Wrappers.<ServerMetricsHistory>lambdaQuery()
-                        .eq(ServerMetricsHistory::getServerId, serverId)
-                        .ge(cutoff > 0L, ServerMetricsHistory::getCollectTimestamp, cutoff)
-                        .orderByDesc(ServerMetricsHistory::getCollectTimestamp, ServerMetricsHistory::getServerMetricsHistoryId)
-                        .last("limit " + MAX_HISTORY_POINTS));
+        List<ServerMetricsHistory> rows;
+        try {
+            long cutoff = resolveHistoryCutoff(minutes);
+            rows = serverMetricsHistoryMapper.selectList(
+                    Wrappers.<ServerMetricsHistory>lambdaQuery()
+                            .eq(ServerMetricsHistory::getServerId, serverId)
+                            .ge(cutoff > 0L, ServerMetricsHistory::getCollectTimestamp, cutoff)
+                            .orderByDesc(ServerMetricsHistory::getCollectTimestamp, ServerMetricsHistory::getServerMetricsHistoryId)
+                            .last("limit " + MAX_HISTORY_POINTS));
+        } catch (Exception ex) {
+            log.warn("读取服务器指标历史表失败，回退内存历史: {}", ex.getMessage());
+            return Collections.emptyList();
+        }
         if (rows == null || rows.isEmpty()) {
             return Collections.emptyList();
         }
