@@ -18,7 +18,7 @@ import java.util.Set;
      *       scan-mode: ONCE                           # 表结构脚本扫描模式: NONE/ONCE/ALWAYS
      *       migration-scan-mode: ALWAYS               # 升级补丁脚本扫描模式: NONE/ALWAYS
      *       data-scan-mode: ONCE                      # 初始化数据脚本扫描模式: NONE/ONCE/ALWAYS
-     *       script-path: "classpath*:db/migration/*.sql" # 脚本文件路径
+     *       script-path: "classpath*:db/init/*.sql"   # 推荐脚本路径
      *       database-type: "mysql"                   # 数据库类型(可选)
  *       version-table: "flyway_schema_history"    # 版本记录表名
  *       baseline-version: "1.0.0"                # 基线版本
@@ -54,7 +54,12 @@ public class DataSourceScriptProperties {
     /**
      * 默认扫描路径
      * <p>
-     * 支持多个路径，使用英文逗号分隔。
+     * 推荐各业务模块将结构初始化脚本与初始化数据脚本统一放在 db/init 目录：
+     * <ul>
+     *   <li>V1.0__init_xxx_complete.sql</li>
+     *   <li>V1.0__initdata_xxx.sql</li>
+     * </ul>
+     * migration / sync 路径仍然保留兼容能力，但更推荐在业务模块内收敛到单一 init 目录。
      * </p>
      */
     public static final String DEFAULT_SCRIPT_PATH =
@@ -133,9 +138,10 @@ public class DataSourceScriptProperties {
      * 数据源脚本路径
      * <p>
      * 支持多个路径，使用英文逗号、分号或换行分隔。
+     * 推荐值：classpath*:db/init/*.sql
      * </p>
      * 默认值: classpath*:db/init/*.sql,classpath*:db/migration/*.sql,classpath*:db/sync/*.sql
-     * 示例: plugin.datasource.script.script-path=classpath*:db/init/*.sql,classpath*:db/migration/*.sql
+     * 示例: plugin.datasource.script.script-path=classpath*:db/init/*.sql
      */
     private String scriptPath = DEFAULT_SCRIPT_PATH;
 

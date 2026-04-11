@@ -88,13 +88,24 @@ plugin:
   datasource:
     script:
       enable: true
-      script-path: classpath*:db/init/*.sql,classpath*:db/migration/*.sql,classpath*:db/sync/*.sql
+      script-path: classpath*:db/init/*.sql
       scan-mode: ONCE               # 表结构脚本: NONE / ONCE / ALWAYS，默认 ONCE
       migration-scan-mode: ALWAYS  # 升级补丁脚本: NONE / ALWAYS，默认 ALWAYS
       data-scan-mode: ONCE         # 初始化数据脚本: NONE / ONCE / ALWAYS，默认 ONCE
       continue-on-error: true
       version-table: sys_database_version
 ```
+
+推荐目录组织：
+
+- `db/init/V1.0__init_xxx_complete.sql`：模块结构初始化
+- `db/init/V1.0__initdata_xxx.sql`：模块初始化数据
+
+兼容说明：
+
+- starter 仍兼容 `db/migration` 与 `db/sync`
+- 新模块和已完成收敛的模块，推荐统一只使用 `db/init`
+- `initdata` 不需要单独目录，按命名规范放在 `db/init` 即可
 
 - `scan-mode=NONE`：完全不扫描表结构脚本
 - `scan-mode=ONCE`：仅当当前库没有业务表时执行表结构脚本
