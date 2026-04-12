@@ -5,10 +5,12 @@
 ## 项目边界
 
 - 接口项目(后端): `g:\work\spring-support-parent-starter\spring-support-panel-starter`
+
   - 说明: `panel-starter` 被依赖后即提供 panel 全部后端能力，包括 `controller / service / model / jdbc / ai / document / datasource`。
   - 约束: `monitor` 只负责挂服务器启动，不承载 panel 业务接口。
 
 - 前端项目: `g:\work\vue-support-parent-starter\pages\panel`
+
   - 说明: panel 页面、工作区、对象树、SQL 编辑器、右侧详情、表编辑、文档页都在这里实现。
 
 - 前端真实联调启动壳: `g:\work\vue-support-parent-starter\scripts\panel-playground`
@@ -24,6 +26,7 @@
 ## 继续开发时优先关注的代码位置
 
 - 后端接口入口:
+
   - `spring-support-panel-starter/src/main/java/com/chua/starter/panel/controller/PanelJdbcController.java`
   - `spring-support-panel-starter/src/main/java/com/chua/starter/panel/service/JdbcPanelService.java`
   - `spring-support-panel-starter/src/main/java/com/chua/starter/panel/service/impl/DefaultJdbcPanelService.java`
@@ -59,6 +62,11 @@
   - 打开表是否真实刷新
   - 注释修改是否真实落库
 
+### 扩展
+
+1.编辑表支持行拖动
+2.sql 编辑器执行怎么没有效果，在结果里没有信数据 3.在保存 sql 右侧添加查询耗时 4.点击刷新应该完全充值左侧树 5.添加类似 navcat 的筛选&排序，单元格编辑器(文本，十六进制，图像，网页)。并且表头添加排序按钮 6.打开表的表头列支持右键支持注解，表，排序，显示字段类型，显示字段注释，显示数据注释，调整列宽自适应内容等功能。支持日期格式数据编辑数据是弹出日期框的并不是输入等要根据类型判断编辑组件，json 格式可以在单元格编辑器点击字段自动获取到 sql 需要的字段，可以创建一个自定义的组件完成上述功能
+
 ### 二、前端页面任务
 
 - 左侧对象树继续按 Navicat 客户端模式收敛，只保留搜索、刷新、树结构本身。
@@ -85,11 +93,11 @@
 ### 三、用户新增任务(原样保留)
 
 1. 编辑表支持行拖动
-2. sql编辑器执行怎么没有效果，在结果里没有信数据
-3. 在保存sql右侧添加查询耗时
+2. sql 编辑器执行怎么没有效果，在结果里没有信数据
+3. 在保存 sql 右侧添加查询耗时
 4. 点击刷新应该完全充值左侧树
-5. 添加类似navcat的筛选&排序，单元格编辑器(文本，十六进制，图像，网页)。并且表头添加排序按钮
-6. 打开表的表头列支持右键支持注解，表，排序，显示字段类型，显示字段注释，显示数据注释，调整列宽自适应内容等功能。支持日期格式数据编辑数据是弹出日期框的并不是输入等要根据类型判断编辑组件，json格式可以在单元格编辑器点击字段自动获取到sql需要的字段，可以创建一个自定义的组件完成上述功能
+5. 添加类似 navcat 的筛选&排序，单元格编辑器(文本，十六进制，图像，网页)。并且表头添加排序按钮
+6. 打开表的表头列支持右键支持注解，表，排序，显示字段类型，显示字段注释，显示数据注释，调整列宽自适应内容等功能。支持日期格式数据编辑数据是弹出日期框的并不是输入等要根据类型判断编辑组件，json 格式可以在单元格编辑器点击字段自动获取到 sql 需要的字段，可以创建一个自定义的组件完成上述功能
 
 ## 建议的开发顺序
 
