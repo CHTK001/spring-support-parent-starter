@@ -178,6 +178,12 @@ public class GuacamoleServerRemoteGatewayProvider implements ServerRemoteGateway
         String authMode = firstText(
                 metadata.get("remoteGatewayAuthMode"),
                 firstText(metadata.get("guacamoleAuthMode"), properties.getGuacamole().getAuthMode()));
+        if (!hasExplicitConnectionId(metadata)
+                && "connection".equalsIgnoreCase(authMode)
+                && "json".equalsIgnoreCase(properties.getGuacamole().getAuthMode())
+                && StringUtils.hasText(properties.getGuacamole().getJsonSecretKey())) {
+            authMode = "json";
+        }
         if ("json".equalsIgnoreCase(authMode)) {
             String secretKey = firstText(
                     metadata.get("remoteGatewaySecretKey"),
@@ -188,6 +194,12 @@ public class GuacamoleServerRemoteGatewayProvider implements ServerRemoteGateway
             return buildJsonLaunchUrl(host, gatewayUrl, connectionId, protocol, parameters, secretKey);
         }
         return gatewayUrl + normalizeLaunchPath(launchPath) + connectionId;
+    }
+
+    private boolean hasExplicitConnectionId(Map<String, Object> metadata) {
+        return StringUtils.hasText(firstText(
+                metadata.get("remoteGatewayConnectionId"),
+                firstText(metadata.get("guacamoleConnectionId"), null)));
     }
 
     private String buildJsonLaunchUrl(

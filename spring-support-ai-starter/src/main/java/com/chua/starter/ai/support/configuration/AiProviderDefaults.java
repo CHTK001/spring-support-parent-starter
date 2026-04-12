@@ -7,7 +7,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Stream;
 import org.springframework.util.StringUtils;
 
 public final class AiProviderDefaults {
@@ -21,7 +23,7 @@ public final class AiProviderDefaults {
 
     public static AiProperties normalize(AiProperties properties) {
         if (properties == null) {
-            return null;
+            properties = new AiProperties();
         }
         if (!StringUtils.hasText(properties.getDefaultProvider())) {
             properties.setDefaultProvider(DEFAULT_PROVIDER);
@@ -79,6 +81,32 @@ public final class AiProviderDefaults {
         }
         paths.add(Paths.get("config", "siliconflow.appkey"));
         paths.add(Paths.get("config", "siliconflow.key"));
+        paths.add(Paths.get("target", "config", "siliconflow.appkey"));
+        paths.add(Paths.get("target", "config", "siliconflow.key"));
+        addCandidateDirectoryFiles(paths, Paths.get("config"));
+        addCandidateDirectoryFiles(paths, Paths.get("target", "config"));
+        Path workingDirectory = Paths.get("").toAbsolutePath();
+        for (Path current = workingDirectory; current != null; current = current.getParent()) {
+            paths.add(current.resolve(Paths.get("config", "siliconflow.appkey")));
+            paths.add(current.resolve(Paths.get("config", "siliconflow.key")));
+            paths.add(current.resolve(Paths.get("target", "config", "siliconflow.appkey")));
+            paths.add(current.resolve(Paths.get("target", "config", "siliconflow.key")));
+            addCandidateDirectoryFiles(paths, current.resolve("config"));
+            addCandidateDirectoryFiles(paths, current.resolve(Paths.get("target", "config")));
+        }
         return paths;
+    }
+
+    private static void addCandidateDirectoryFiles(List<Path> paths, Path directory) {
+        try (Stream<Path> stream = Files.list(directory)) {
+            stream.filter(Files::isRegularFile)
+                    .filter(path -> {
+                        String name = path.getFileName() == null ? "" : path.getFileName().toString().toLowerCase();
+                        return name.endsWith(".appkey") || name.endsWith(".key");
+                    })
+                    .sorted(Comparator.comparing(path -> path.getFileName().toString()))
+                    .forEach(paths::add);
+        } catch (Exception ignored) {
+        }
     }
 }

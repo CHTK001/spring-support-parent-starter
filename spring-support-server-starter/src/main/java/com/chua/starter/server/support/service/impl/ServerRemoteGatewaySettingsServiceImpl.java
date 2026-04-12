@@ -167,6 +167,10 @@ public class ServerRemoteGatewaySettingsServiceImpl implements ServerRemoteGatew
         metadata.remove("remoteGatewayLaunchPath");
         metadata.remove("remoteGatewayWebsocketPath");
         metadata.remove("remoteGatewayConnectionId");
+        metadata.remove("remoteGatewayAuthMode");
+        metadata.remove("remoteGatewaySecretKey");
+        metadata.remove("remoteGatewayHostname");
+        metadata.remove("remoteGatewayPort");
         metadata.remove("guacamoleEnabled");
         metadata.remove("guacamoleProvider");
         metadata.remove("guacamoleGatewayUrl");
@@ -174,6 +178,10 @@ public class ServerRemoteGatewaySettingsServiceImpl implements ServerRemoteGatew
         metadata.remove("guacamoleLaunchPath");
         metadata.remove("guacamoleWebsocketPath");
         metadata.remove("guacamoleConnectionId");
+        metadata.remove("guacamoleAuthMode");
+        metadata.remove("guacamoleSecretKey");
+        metadata.remove("guacamoleHostname");
+        metadata.remove("guacamolePort");
     }
 
     private boolean hasHostOverride(Map<String, Object> metadata) {
@@ -184,13 +192,21 @@ public class ServerRemoteGatewaySettingsServiceImpl implements ServerRemoteGatew
                 || metadata.containsKey("remoteGatewayLaunchPath")
                 || metadata.containsKey("remoteGatewayWebsocketPath")
                 || metadata.containsKey("remoteGatewayConnectionId")
+                || metadata.containsKey("remoteGatewayAuthMode")
+                || metadata.containsKey("remoteGatewaySecretKey")
+                || metadata.containsKey("remoteGatewayHostname")
+                || metadata.containsKey("remoteGatewayPort")
                 || metadata.containsKey("guacamoleEnabled")
                 || metadata.containsKey("guacamoleProvider")
                 || metadata.containsKey("guacamoleGatewayUrl")
                 || metadata.containsKey("guacamoleProtocol")
                 || metadata.containsKey("guacamoleLaunchPath")
                 || metadata.containsKey("guacamoleWebsocketPath")
-                || metadata.containsKey("guacamoleConnectionId");
+                || metadata.containsKey("guacamoleConnectionId")
+                || metadata.containsKey("guacamoleAuthMode")
+                || metadata.containsKey("guacamoleSecretKey")
+                || metadata.containsKey("guacamoleHostname")
+                || metadata.containsKey("guacamolePort");
     }
 
     private ServerRemoteGatewaySettings mergeSettings(ServerRemoteGatewaySettings base, ServerRemoteGatewaySettings override) {

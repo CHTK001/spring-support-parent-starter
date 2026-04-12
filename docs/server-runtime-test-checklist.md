@@ -1,6 +1,6 @@
 # 服务器测试清单
 
-更新时间: `2026-04-12 11:36 +08:00`
+更新时间: `2026-04-12 17:34 +08:00`
 
 ## 目标环境
 
@@ -111,15 +111,44 @@
   - `PUT /server/hosts/2/files/rename`
   - `DELETE /server/hosts/2/files?path=/opt/soft-runtime/codex-file-test&recursive=true`
   - 结果: 已在 `172.16.0.40` 上完成远程目录创建、文件写入、内容读取、重命名、删除闭环
+- 文件管理抽屉已通过浏览器实际打开验证:
+  - 页面: `http://127.0.0.1:8856/#/server/list`
+  - 触发方式: `agent-browser eval` 直接点击“文件管理”按钮，规避 Element Plus 无障碍树识别偏差
+  - 实际请求:
+    - `GET /server/hosts/2/files?path=/opt`
+  - 可见结果:
+    - 抽屉标题显示 `远程 Linux 172.16.0.40 · 文件管理`
+    - 列表中显示真实远程目录，如 `java`、`soft-runtime`、`nacos`、`server-remote-proxy`
+    - 右侧空态显示 `选择文件查看内容`
+- 项目管理页已通过浏览器实际加载验证:
+  - 页面: `http://127.0.0.1:8856/#/server/projects?serverId=2&serverName=%E8%BF%9C%E7%A8%8B%20Linux%20172.16.0.40`
+  - 可见结果:
+    - 标题显示 `项目管理工作台`
+    - 统计卡片显示 `项目实例 121`、`运行中 115`、`异常 9`
+    - 项目卡片、AI 诊断区、安装项目实例入口已渲染
 - 前端服务器页主链路已通过 `agent-browser` 复测:
   - 页面: `http://127.0.0.1:8856/#/server/list`
   - 可见结果:
     - 顶部“统一任务中心”已渲染
     - 左侧服务器列表已显示 `172.16.0.40`
+    - 远程 Linux 卡片已恢复远程控制图标，本机卡片保持无远程入口
     - 预警中心已显示固定高度列表与“最新触发”卡片
     - 基础信息区已显示进程管理、文件管理快捷入口
   - 说明:
     - `agent-browser` 点击 Element Plus 按钮后，弹框显隐没有稳定回显到快照；当前不据此判定页面缺陷，后续继续结合人工联调确认
+    - 对于“文件管理”等按钮，DOM 直点可稳定触发真实接口与抽屉渲染，说明后端与前端事件链路本身正常，当前主要是自动化工具点击兼容性问题
+- 远程代理链路已恢复:
+  - 实际网关: `http://172.16.0.40:18088/guacamole/`
+  - 实测命令:
+    - `curl -I http://127.0.0.1:18088/guacamole/` on `172.16.0.40`
+    - `GET /server/settings/remote-gateway`
+    - `GET /server/hosts/2/remote-gateway`
+    - `GET /server/hosts/2/remote-console`
+  - 结果:
+    - 全局远程网关已恢复 `enabled=true`
+    - 远程服务器 `172.16.0.40` 已返回 `protocol=ssh`
+    - 已生成可直接打开的 `launchUrl`
+    - `launchUrl` 与网关首页均返回 `HTTP 200`
 
 ## 本轮修复要点
 
@@ -130,6 +159,10 @@
 - 初始化 SQL 中旧的 `192.168.110.100` 示例已替换为 `172.16.0.40`
 - `GET /server/hosts/{id}/metrics/task-settings` 之前返回 `500` 的根因不是业务异常，而是 `soft-test` 进程仍在使用旧包；本轮已通过重装依赖并重启解决
 - `POST /server/hosts/{id}/metrics/history/ai-analyze` 与 `POST /server/hosts/{id}/alerts/ai-analyze` 之前返回 `500` 的根因同样是 `soft-test` 使用旧包；本轮重启后已恢复 `200`
+- 远程控制入口缺失的根因是旧全局远程网关配置残留在数据库里:
+  - `enabled=false`
+  - `gatewayUrl=http://127.0.0.1:8080/guacamole`
+  - 本轮已改为启动时自动同步 `172.16.0.40:18088/guacamole`
 
 ## 待继续联调
 
@@ -138,6 +171,9 @@
 - 指标历史 AI / 告警历史 AI 任务结果轮询与前端展示校验
 - 前端页面弹框逐项人工联调确认
 - 文件管理树视图、编辑同步、相对路径展示验收
+- 文件管理“经典”视图的纯浏览器视觉复核:
+  - 当前已经验证切换动作可触发
+  - 但 `agent-browser` 在独立会话下仍会出现快照丢失，不据此直接判定经典视图空白
 - 项目管理、进程管理、任务组件、远程代理页面级联调
 - 文件管理“基础目录守卫”交互确认:
   - 当前 `GET /server/hosts/2/files?path=/opt` 与 `GET /server/hosts/2/files/content?path=/etc/os-release` 会返回 `409`

@@ -52,13 +52,14 @@ public class ServerCapabilityServiceImpl implements ServerCapabilityService {
         ChatClient chatClient = chatClientProvider.getIfAvailable();
         AiProperties properties = AiProviderDefaults.normalize(aiPropertiesProvider.getIfAvailable());
         boolean chatClientReady = chatClient != null;
-        if (properties == null) {
-            return new AiCapabilityState(false, null, null, 0, java.util.List.of(), false, chatClientReady, "未激活", "未检测到 AI 配置", "NO_CONFIG", null);
-        }
         int providerCount = properties.getProviders() == null ? 0 : properties.getProviders().size();
         java.util.List<String> providerNames = properties.getProviders() == null
                 ? java.util.List.of()
                 : properties.getProviders().keySet().stream().sorted().toList();
+        if (providerCount <= 0 && chatClientReady && StringUtils.hasText(chatClient.getProvider())) {
+            return new AiCapabilityState(true, chatClient.getProvider(), properties.getDefaultProvider(), 1,
+                    java.util.List.of(chatClient.getProvider()), true, true, "已激活", null, null, "chat-client");
+        }
         if (providerCount <= 0) {
             return new AiCapabilityState(false, null, properties.getDefaultProvider(), 0, providerNames, false, chatClientReady, "未激活", "未配置任何 AI Provider", "NO_PROVIDER", null);
         }
@@ -70,9 +71,15 @@ public class ServerCapabilityServiceImpl implements ServerCapabilityService {
         }
         ProviderProperties config = properties.getProviders().get(provider);
         if (config == null) {
+            if (chatClientReady) {
+                return new AiCapabilityState(true, provider, defaultProvider, providerCount, providerNames, true, true, "已激活", null, null, providerResolution.source());
+            }
             return new AiCapabilityState(false, provider, defaultProvider, providerCount, providerNames, false, chatClientReady, "未激活", "默认 Provider 未找到可用配置", "PROVIDER_NOT_FOUND", providerResolution.source());
         }
         if (!StringUtils.hasText(config.getApiKey()) && !StringUtils.hasText(config.getAppKey())) {
+            if (chatClientReady) {
+                return new AiCapabilityState(true, provider, defaultProvider, providerCount, providerNames, true, true, "已激活", null, null, providerResolution.source());
+            }
             return new AiCapabilityState(false, provider, defaultProvider, providerCount, providerNames, false, chatClientReady, "未激活", "Provider 缺少 apiKey/appKey", "MISSING_CREDENTIAL", providerResolution.source());
         }
         if (chatClient == null) {
