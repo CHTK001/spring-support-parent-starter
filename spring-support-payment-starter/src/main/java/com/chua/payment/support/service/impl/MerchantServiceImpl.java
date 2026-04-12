@@ -38,10 +38,12 @@ public class MerchantServiceImpl implements MerchantService {
         Merchant merchant = new Merchant();
         BeanUtils.copyProperties(dto, merchant);
         merchant.setMerchantNo(generateMerchantNo());
-        merchant.setWalletEnabled(Boolean.TRUE.equals(dto.getWalletEnabled()));
-        merchant.setCompositeEnabled(Boolean.TRUE.equals(dto.getCompositeEnabled()));
-        merchant.setAutoCloseEnabled(Boolean.TRUE.equals(dto.getAutoCloseEnabled()));
-        merchant.setAutoCloseMinutes(dto.getAutoCloseMinutes() != null && dto.getAutoCloseMinutes() > 0 ? dto.getAutoCloseMinutes() : 30);
+        merchant.setPaymentWalletEnabled(Boolean.TRUE.equals(dto.getPaymentWalletEnabled()));
+        merchant.setPaymentAutoCloseEnabled(Boolean.TRUE.equals(dto.getPaymentAutoCloseEnabled()));
+        merchant.setPaymentAutoCloseMinutes(dto.getPaymentAutoCloseMinutes() != null && dto.getPaymentAutoCloseMinutes() > 0 ? dto.getPaymentAutoCloseMinutes() : 30);
+        merchant.setPaymentSplitTableEnabled(Boolean.TRUE.equals(dto.getPaymentSplitTableEnabled()));
+        merchant.setPaymentProfitSharingEnabled(Boolean.TRUE.equals(dto.getPaymentProfitSharingEnabled()));
+        merchant.setPaymentCouponEnabled(Boolean.TRUE.equals(dto.getPaymentCouponEnabled()));
         merchant.setStatus(MerchantStatus.PENDING.getCode());
         merchantMapper.insert(merchant);
         return convertToVO(merchant);
@@ -52,10 +54,12 @@ public class MerchantServiceImpl implements MerchantService {
     public MerchantVO updateMerchant(Long id, MerchantDTO dto) {
         Merchant merchant = requireMerchant(id);
         BeanUtils.copyProperties(dto, merchant);
-        merchant.setWalletEnabled(Boolean.TRUE.equals(dto.getWalletEnabled()));
-        merchant.setCompositeEnabled(Boolean.TRUE.equals(dto.getCompositeEnabled()));
-        merchant.setAutoCloseEnabled(Boolean.TRUE.equals(dto.getAutoCloseEnabled()));
-        merchant.setAutoCloseMinutes(dto.getAutoCloseMinutes() != null && dto.getAutoCloseMinutes() > 0 ? dto.getAutoCloseMinutes() : merchant.getAutoCloseMinutes());
+        merchant.setPaymentWalletEnabled(Boolean.TRUE.equals(dto.getPaymentWalletEnabled()));
+        merchant.setPaymentAutoCloseEnabled(Boolean.TRUE.equals(dto.getPaymentAutoCloseEnabled()));
+        merchant.setPaymentAutoCloseMinutes(dto.getPaymentAutoCloseMinutes() != null && dto.getPaymentAutoCloseMinutes() > 0 ? dto.getPaymentAutoCloseMinutes() : merchant.getPaymentAutoCloseMinutes());
+        merchant.setPaymentSplitTableEnabled(Boolean.TRUE.equals(dto.getPaymentSplitTableEnabled()));
+        merchant.setPaymentProfitSharingEnabled(Boolean.TRUE.equals(dto.getPaymentProfitSharingEnabled()));
+        merchant.setPaymentCouponEnabled(Boolean.TRUE.equals(dto.getPaymentCouponEnabled()));
         merchantMapper.updateById(merchant);
         return convertToVO(merchant);
     }

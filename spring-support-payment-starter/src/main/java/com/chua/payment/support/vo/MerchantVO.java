@@ -33,13 +33,17 @@ public class MerchantVO implements Serializable {
 
     private String defaultReturnUrl;
 
-    private Boolean walletEnabled;
+    private Boolean paymentWalletEnabled;
 
-    private Boolean compositeEnabled;
+    private Boolean paymentAutoCloseEnabled;
 
-    private Boolean autoCloseEnabled;
+    private Integer paymentAutoCloseMinutes;
 
-    private Integer autoCloseMinutes;
+    private Boolean paymentSplitTableEnabled;
+
+    private Boolean paymentProfitSharingEnabled;
+
+    private Boolean paymentCouponEnabled;
 
     private String remark;
 

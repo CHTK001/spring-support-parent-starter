@@ -41,23 +41,21 @@ public class MerchantChannelVO implements Serializable {
 
     private String returnUrl;
 
-    private String onboardingStatus;
-
-    private String onboardingStatusDesc;
-
-    private String onboardingLink;
-
     private Integer status;
 
     private String statusDesc;
 
     private String extConfig;
 
-    private String providerSpi;
-
     private String guideTitle;
 
     private String guideUrl;
+
+    private String channelTypeDesc;
+
+    private String effectiveNotifyUrl;
+
+    private String effectiveReturnUrl;
 
     private LocalDateTime createdAt;
 

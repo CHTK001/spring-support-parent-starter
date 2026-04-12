@@ -44,10 +44,6 @@ public class MerchantChannel {
 
     private String returnUrl;
 
-    private String onboardingStatus;
-
-    private String onboardingLink;
-
     private Integer status;
 
     private String extConfig;

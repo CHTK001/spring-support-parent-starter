@@ -51,6 +51,7 @@ public abstract class AbstractMerchantPaymentChannel {
                 extText(channel, EXT_PROVIDER_SPI),
                 extText(channel, "providerExtension"),
                 extText(channel, "spi"),
+                channel != null && "EPAY".equalsIgnoreCase(channel.getChannelType()) ? "epay" : null,
                 fallback);
     }
 

@@ -27,10 +27,6 @@ public class PaymentMethodGuideVO implements Serializable {
 
     private String summary;
 
-    private String defaultProviderSpi;
-
-    private List<String> availableProviderSpis;
-
     private List<String> requiredMaterials;
 
     private List<String> steps;

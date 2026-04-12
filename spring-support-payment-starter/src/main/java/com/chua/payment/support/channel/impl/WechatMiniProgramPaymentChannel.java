@@ -26,7 +26,7 @@ public class WechatMiniProgramPaymentChannel extends WechatJsapiPaymentChannel i
 
     @Override
     public boolean supports(String channelType, String channelSubType) {
-        return "WECHAT".equalsIgnoreCase(channelType)
+        return ("WECHAT".equalsIgnoreCase(channelType) || "EPAY".equalsIgnoreCase(channelType))
                 && ("MINI_PROGRAM".equalsIgnoreCase(channelSubType)
                 || "MINIPROGRAM".equalsIgnoreCase(channelSubType));
     }

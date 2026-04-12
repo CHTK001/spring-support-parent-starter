@@ -112,7 +112,7 @@ class WalletAccountServiceImplTest {
         Merchant merchant = new Merchant();
         merchant.setId(1L);
         merchant.setStatus(MerchantStatus.PENDING.getCode());
-        merchant.setWalletEnabled(true);
+        merchant.setPaymentWalletEnabled(true);
         when(merchantMapper.selectById(1L)).thenReturn(merchant);
         when(walletAccountMapper.selectOne(any())).thenReturn(null);
         when(walletAccountLogMapper.selectOne(any())).thenReturn(null);
@@ -222,7 +222,7 @@ class WalletAccountServiceImplTest {
         Merchant merchant = new Merchant();
         merchant.setId(1L);
         merchant.setStatus(MerchantStatus.ACTIVE.getCode());
-        merchant.setWalletEnabled(true);
+        merchant.setPaymentWalletEnabled(true);
         return merchant;
     }
 

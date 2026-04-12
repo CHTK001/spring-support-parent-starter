@@ -1,14 +1,15 @@
 package com.chua.payment.support.service.impl;
 
-import com.chua.payment.support.configuration.PaymentCallbackProperties;
 import com.chua.payment.support.dto.WechatPayScoreCreateDTO;
 import com.chua.payment.support.entity.MerchantChannel;
+import com.chua.payment.support.entity.PaymentGlobalConfig;
 import com.chua.payment.support.entity.WechatPayScoreOrder;
 import com.chua.payment.support.mapper.MerchantChannelMapper;
 import com.chua.payment.support.mapper.WechatPayScoreOrderMapper;
 import com.chua.payment.support.provider.PaymentProviderGatewayRegistry;
 import com.chua.payment.support.service.MerchantChannelService;
 import com.chua.payment.support.service.PaymentCallbackUrlResolver;
+import com.chua.payment.support.service.PaymentGlobalConfigService;
 import com.chua.starter.tencent.support.payment.TencentWechatPayGateway;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreNotifyPayload;
 import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreRequest;
@@ -35,12 +36,14 @@ class WechatPayScoreOrderServiceImplTest {
     private final MerchantChannelMapper merchantChannelMapper = mock(MerchantChannelMapper.class);
     private final PaymentProviderGatewayRegistry providerGatewayRegistry = mock(PaymentProviderGatewayRegistry.class);
     private final TencentWechatPayGateway tencentWechatPayGateway = mock(TencentWechatPayGateway.class);
-    private final PaymentCallbackProperties paymentCallbackProperties = new PaymentCallbackProperties();
+    private final PaymentGlobalConfigService paymentGlobalConfigService = mock(PaymentGlobalConfigService.class);
     private WechatPayScoreOrderServiceImpl wechatPayScoreOrderService;
 
     @BeforeEach
     void setUp() {
-        paymentCallbackProperties.setBaseUrl("http://127.0.0.1:8080");
+        PaymentGlobalConfig globalConfig = new PaymentGlobalConfig();
+        globalConfig.setPaymentNotifyBaseUrl("http://127.0.0.1:8080");
+        when(paymentGlobalConfigService.getConfigEntity()).thenReturn(globalConfig);
         when(merchantChannelService.decryptApiKey(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(providerGatewayRegistry.tencentWechatPayGateway(any())).thenReturn(tencentWechatPayGateway);
         when(providerGatewayRegistry.tencentWechatPayGateway(eq((String) null))).thenReturn(tencentWechatPayGateway);
@@ -50,7 +53,7 @@ class WechatPayScoreOrderServiceImplTest {
                 wechatPayScoreOrderMapper,
                 merchantChannelMapper,
                 providerGatewayRegistry,
-                new PaymentCallbackUrlResolver(paymentCallbackProperties));
+                new PaymentCallbackUrlResolver(paymentGlobalConfigService));
     }
 
     @Test

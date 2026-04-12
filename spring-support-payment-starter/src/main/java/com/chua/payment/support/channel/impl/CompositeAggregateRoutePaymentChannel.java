@@ -23,7 +23,7 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * 综合支付显式路由
+ * 直营网关托管路由
  */
 @Component
 public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPaymentChannel implements PaymentChannel {
@@ -87,32 +87,32 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
 
     private MerchantChannel resolveTargetChannel(MerchantChannel compositeChannel) {
         if (compositeChannel == null) {
-            throw new PaymentException("综合支付渠道不存在");
+            throw new PaymentException("直营网关渠道不存在");
         }
         Long targetChannelId = parseRouteChannelId(extConfig(compositeChannel));
         if (targetChannelId == null) {
-            throw new PaymentException("综合支付路由未配置 targetChannelId 或 defaultChannelId");
+            throw new PaymentException("直营网关配置未提供 targetChannelId 或 defaultChannelId");
         }
         if (compositeChannel.getId() != null && compositeChannel.getId().equals(targetChannelId)) {
-            throw new PaymentException("综合支付路由不能指向自身");
+            throw new PaymentException("直营网关配置不能指向自身");
         }
         MerchantChannel targetChannel = merchantChannelMapper.selectOne(new LambdaQueryWrapper<MerchantChannel>()
                 .eq(MerchantChannel::getId, targetChannelId)
                 .last("limit 1"));
         if (targetChannel == null) {
-            throw new PaymentException("综合支付路由目标渠道不存在: " + targetChannelId);
+            throw new PaymentException("直营网关目标渠道不存在: " + targetChannelId);
         }
         if (compositeChannel.getMerchantId() != null && !compositeChannel.getMerchantId().equals(targetChannel.getMerchantId())) {
-            throw new PaymentException("综合支付路由目标渠道和商户不匹配");
+            throw new PaymentException("直营网关目标渠道和商户不匹配");
         }
         if ("COMPOSITE".equalsIgnoreCase(targetChannel.getChannelType())) {
-            throw new PaymentException("综合支付路由不能嵌套 COMPOSITE 渠道");
+            throw new PaymentException("直营网关配置不能嵌套 COMPOSITE 渠道");
         }
         if (!Integer.valueOf(ChannelStatus.ENABLED.getCode()).equals(targetChannel.getStatus())) {
-            throw new PaymentException("综合支付路由目标渠道未启用");
+            throw new PaymentException("直营网关目标渠道未启用");
         }
         if (!paymentChannelRegistry.supports(targetChannel.getChannelType(), targetChannel.getChannelSubType())) {
-            throw new PaymentException("综合支付路由目标渠道不可执行: "
+            throw new PaymentException("直营网关目标渠道不可执行: "
                     + targetChannel.getChannelType() + "/" + targetChannel.getChannelSubType());
         }
         return targetChannel;
@@ -140,7 +140,7 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
             try {
                 return Long.parseLong(text);
             } catch (NumberFormatException e) {
-                throw new PaymentException("综合支付路由 channelId 格式错误: " + text, e);
+                throw new PaymentException("直营网关 channelId 格式错误: " + text, e);
             }
         }
         return null;

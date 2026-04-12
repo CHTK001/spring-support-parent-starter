@@ -1,31 +1,35 @@
 package com.chua.payment.support.service;
 
-import com.chua.payment.support.configuration.PaymentCallbackProperties;
 import com.chua.payment.support.entity.Merchant;
 import com.chua.payment.support.entity.MerchantChannel;
+import com.chua.payment.support.entity.PaymentGlobalConfig;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class PaymentCallbackUrlResolverTest {
 
     @Test
     void shouldBuildOrderAndRefundScopedNotifyUrls() {
-        PaymentCallbackProperties properties = new PaymentCallbackProperties();
-        properties.setBaseUrl("http://127.0.0.1:8080/");
-        PaymentCallbackUrlResolver resolver = new PaymentCallbackUrlResolver(properties);
+        PaymentGlobalConfigService paymentGlobalConfigService = mock(PaymentGlobalConfigService.class);
+        PaymentGlobalConfig globalConfig = new PaymentGlobalConfig();
+        globalConfig.setPaymentNotifyBaseUrl("http://127.0.0.1:8080/");
+        when(paymentGlobalConfigService.getConfigEntity()).thenReturn(globalConfig);
+        PaymentCallbackUrlResolver resolver = new PaymentCallbackUrlResolver(paymentGlobalConfigService);
 
         Merchant merchant = new Merchant();
+        merchant.setId(10001L);
         MerchantChannel channel = new MerchantChannel();
-        channel.setId(12L);
         channel.setChannelType("WECHAT");
 
         assertEquals(
-                "http://127.0.0.1:8080/api/notify/wechat/pay/12/ORD001",
+                "http://127.0.0.1:8080/api/notify/wechat/pay/ORD001/10001",
                 resolver.resolvePayNotifyUrl(null, channel, merchant, "ORD001"));
         assertEquals(
-                "http://127.0.0.1:8080/api/notify/wechat/refund/12/REF001",
-                resolver.resolveRefundNotifyUrl(channel, "REF001", null));
+                "http://127.0.0.1:8080/api/notify/wechat/refund/REF001/10001",
+                resolver.resolveRefundNotifyUrl(channel, 10001L, "REF001", null));
         assertEquals(
                 "http://127.0.0.1:8080/api/notify/wechat/payscore/12/PS001",
                 resolver.defaultWechatPayScoreNotifyUrl(12L, "PS001"));
@@ -33,14 +37,16 @@ class PaymentCallbackUrlResolverTest {
 
     @Test
     void shouldPreserveExplicitConfiguredNotifyUrl() {
-        PaymentCallbackProperties properties = new PaymentCallbackProperties();
-        properties.setBaseUrl("http://127.0.0.1:8080");
-        PaymentCallbackUrlResolver resolver = new PaymentCallbackUrlResolver(properties);
+        PaymentGlobalConfigService paymentGlobalConfigService = mock(PaymentGlobalConfigService.class);
+        PaymentGlobalConfig globalConfig = new PaymentGlobalConfig();
+        globalConfig.setPaymentNotifyBaseUrl("http://127.0.0.1:8080");
+        when(paymentGlobalConfigService.getConfigEntity()).thenReturn(globalConfig);
+        PaymentCallbackUrlResolver resolver = new PaymentCallbackUrlResolver(paymentGlobalConfigService);
 
         Merchant merchant = new Merchant();
+        merchant.setId(10002L);
         merchant.setDefaultNotifyUrl("https://merchant.example.com/pay/notify");
         MerchantChannel channel = new MerchantChannel();
-        channel.setId(18L);
         channel.setChannelType("ALIPAY");
 
         assertEquals(

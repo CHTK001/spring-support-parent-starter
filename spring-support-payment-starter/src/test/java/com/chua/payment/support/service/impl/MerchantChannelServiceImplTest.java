@@ -2,7 +2,6 @@ package com.chua.payment.support.service.impl;
 
 import com.chua.payment.support.channel.PaymentChannelRegistry;
 import com.chua.payment.support.configuration.PaymentCipherService;
-import com.chua.payment.support.configuration.PaymentProviderProperties;
 import com.chua.payment.support.entity.PaymentOrder;
 import com.chua.payment.support.entity.MerchantChannel;
 import com.chua.payment.support.enums.ChannelStatus;
@@ -26,7 +25,6 @@ class MerchantChannelServiceImplTest {
     private final MerchantMapper merchantMapper = mock(MerchantMapper.class);
     private final PaymentOrderMapper paymentOrderMapper = mock(PaymentOrderMapper.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final PaymentProviderProperties paymentProviderProperties = new PaymentProviderProperties();
     private final PaymentCipherService paymentCipherService = mock(PaymentCipherService.class);
     private final PaymentChannelRegistry paymentChannelRegistry = mock(PaymentChannelRegistry.class);
 
@@ -39,7 +37,6 @@ class MerchantChannelServiceImplTest {
                 merchantMapper,
                 paymentOrderMapper,
                 objectMapper,
-                paymentProviderProperties,
                 paymentCipherService,
                 paymentChannelRegistry);
     }

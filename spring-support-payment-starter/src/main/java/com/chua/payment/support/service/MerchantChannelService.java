@@ -4,7 +4,6 @@ import com.chua.payment.support.dto.ChannelConfigDTO;
 import com.chua.payment.support.entity.MerchantChannel;
 import com.chua.payment.support.vo.MerchantChannelVO;
 import com.chua.payment.support.vo.PaymentMethodGuideVO;
-import com.chua.payment.support.vo.ProviderSpiOptionVO;
 
 import java.util.List;
 
@@ -28,8 +27,6 @@ public interface MerchantChannelService {
     boolean deleteChannel(Long id);
 
     List<PaymentMethodGuideVO> listCatalog();
-
-    List<ProviderSpiOptionVO> listProviderOptions(String channelType);
 
     String encryptApiKey(String apiKey);
 
