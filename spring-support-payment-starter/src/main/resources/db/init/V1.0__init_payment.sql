@@ -363,6 +363,29 @@ CREATE TABLE IF NOT EXISTS `payment_scheduler_config` (
   INDEX `idx_payment_scheduler_enabled` (`enabled`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支付调度任务配置表';
 
+CREATE TABLE IF NOT EXISTS `payment_partition_config` (
+  `id` BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+  `business_type` VARCHAR(32) NOT NULL COMMENT '业务类型: ORDER/TRANSACTION',
+  `source_table` VARCHAR(64) NOT NULL COMMENT '源表名',
+  `partition_prefix` VARCHAR(64) NOT NULL COMMENT '分表前缀',
+  `partition_granularity` VARCHAR(16) NOT NULL DEFAULT 'MONTH' COMMENT '分表粒度: MONTH/DAY',
+  `retention_days` INT NOT NULL DEFAULT 365 COMMENT '保留天数',
+  `create_ahead_days` INT NOT NULL DEFAULT 7 COMMENT '提前建表天数',
+  `migrate_before_days` INT NOT NULL DEFAULT 90 COMMENT '迁移阈值天数',
+  `auto_create_enabled` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否自动建表',
+  `auto_migrate_enabled` TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否自动迁移',
+  `keep_source_data` TINYINT(1) NOT NULL DEFAULT 1 COMMENT '迁移后是否保留主表数据',
+  `create_task_key` VARCHAR(80) DEFAULT NULL COMMENT '自动建表任务Key',
+  `migrate_task_key` VARCHAR(80) DEFAULT NULL COMMENT '迁移任务Key',
+  `last_partition_table` VARCHAR(80) DEFAULT NULL COMMENT '最近分表名',
+  `last_partition_at` DATETIME DEFAULT NULL COMMENT '最近建表时间',
+  `last_migrate_at` DATETIME DEFAULT NULL COMMENT '最近迁移时间',
+  `remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  UNIQUE KEY `uk_payment_partition_business_type` (`business_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单与流水分表配置表';
+
 CREATE TABLE IF NOT EXISTS `payment_sys_job` (
   `job_id` INT NOT NULL AUTO_INCREMENT COMMENT '任务ID',
   `job_no` VARCHAR(64) NOT NULL COMMENT '任务编号',

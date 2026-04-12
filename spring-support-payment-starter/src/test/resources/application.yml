@@ -35,12 +35,15 @@ spring:
       port: 6379
       database: 0
 
+server:
+  port: 18080
+
 plugin:
   oauth:
     enable: false
   payment:
     callback:
-      base-url: http://127.0.0.1:8080
+      base-url: http://127.0.0.1:18080
   redis:
     server:
       enable: false

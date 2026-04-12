@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: job-real-executor
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:file:./target/real-run/job-executor-db;MODE=MySQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+
+server:
+  port: 18081
+  servlet:
+    context-path: /payment/api
+
+plugin:
+  job:
+    enable: true
+    auto-backup-cron: "0 0 3 * * ?"
+    config-table-enabled: false
+    table-init-mode: DROP_CREATE
+    pool-size: 4
+    job-annotation-sync-mode: NONE
+    scheduled-annotation-sync-mode: NONE
+    log-path: ./target/real-run/logs/executor
+    remote-executor:
+      enabled: true
+      access-token: job-secret
+      dispatch-path: /v1/job-executor/dispatch
+    table:
+      prefix: payment
+
+logging:
+  level:
+    com.chua.starter.job: INFO

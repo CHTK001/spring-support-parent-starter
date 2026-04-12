@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: job-real-discovery-executor
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:file:./target/real-run/job-discovery-executor-db;MODE=MySQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+
+server:
+  port: 18082
+  servlet:
+    context-path: /payment/api
+
+plugin:
+  discovery:
+    enable: true
+    properties:
+      - protocol: multicast
+        address: 230.0.0.1:18888
+        node:
+          - server-id: ${spring.application.name}
+            namespace: /job-executor/payment
+            protocol: http
+  job:
+    enable: true
+    auto-backup-cron: "0 0 3 * * ?"
+    config-table-enabled: false
+    table-init-mode: DROP_CREATE
+    pool-size: 4
+    job-annotation-sync-mode: NONE
+    scheduled-annotation-sync-mode: NONE
+    log-path: ./target/real-run/logs/discovery-executor
+    remote-executor:
+      enabled: true
+      access-token: job-secret
+      dispatch-path: /v1/job-executor/dispatch
+    table:
+      prefix: payment
+
+logging:
+  level:
+    com.chua.starter.job: INFO
+    com.chua.starter.discovery: INFO
+

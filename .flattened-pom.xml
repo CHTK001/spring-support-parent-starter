@@ -94,6 +94,7 @@
     <module>spring-support-proxy-starter</module>
     <module>spring-support-server-starter</module>
     <module>spring-support-soft-starter</module>
+    <module>spring-support-panel-starter</module>
     <module>spring-support-sync-data-starter</module>
   </modules>
   <scm>
@@ -508,6 +509,11 @@
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-soft-starter</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-panel-starter</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

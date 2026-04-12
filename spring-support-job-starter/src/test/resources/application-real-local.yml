@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: job-real-local
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:file:./target/real-run/job-local-db;MODE=MySQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+
+server:
+  port: 18091
+  servlet:
+    context-path: /job-local/api
+
+plugin:
+  job:
+    enable: true
+    auto-backup-cron: "0 0 3 * * ?"
+    config-table-enabled: true
+    table-init-mode: DROP_CREATE
+    pool-size: 4
+    job-annotation-sync-mode: NONE
+    scheduled-annotation-sync-mode: NONE
+    log-path: ./target/real-run/logs/local
+    remote-executor:
+      enabled: false
+    table:
+      prefix: localdemo
+
+logging:
+  level:
+    com.chua.starter.job: INFO

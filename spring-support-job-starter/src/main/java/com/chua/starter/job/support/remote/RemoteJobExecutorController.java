@@ -2,6 +2,7 @@ package com.chua.starter.job.support.remote;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.job.support.JobProperties;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 远程执行器入口。
  */
 @RestController
+@ConditionalOnProperty(prefix = JobProperties.PRE + ".remote-executor", name = "enabled", havingValue = "true")
 public class RemoteJobExecutorController {
 
     private static final String ACCESS_TOKEN_HEADER = "X-Job-Access-Token";

@@ -8,13 +8,16 @@ import com.chua.payment.support.entity.PaymentNotifyError;
 import com.chua.payment.support.entity.PaymentNotifyLog;
 import com.chua.payment.support.mapper.PaymentNotifyErrorMapper;
 import com.chua.payment.support.mapper.PaymentNotifyLogMapper;
+import com.chua.payment.support.service.PaymentDashboardService;
 import com.chua.payment.support.service.PaymentNotifyProcessService;
 import com.chua.payment.support.service.PaymentSchedulerTaskOpsService;
 import com.chua.payment.support.vo.PaymentCallbackAuditVO;
+import com.chua.payment.support.vo.PaymentDashboardSummaryVO;
 import com.chua.payment.support.vo.PaymentOpsOverviewVO;
 import com.chua.payment.support.vo.PaymentOrderNumberStrategyVO;
 import com.chua.payment.support.vo.PaymentSchedulerTaskVO;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -38,18 +42,27 @@ import java.util.List;
 public class PaymentOpsController {
 
     private final PaymentSchedulerTaskOpsService paymentSchedulerTaskOpsService;
+    private final PaymentDashboardService paymentDashboardService;
     private final PaymentNotifyLogMapper paymentNotifyLogMapper;
     private final PaymentNotifyErrorMapper paymentNotifyErrorMapper;
     private final PaymentNotifyProcessService paymentNotifyProcessService;
 
     public PaymentOpsController(PaymentSchedulerTaskOpsService paymentSchedulerTaskOpsService,
+                                PaymentDashboardService paymentDashboardService,
                                 PaymentNotifyLogMapper paymentNotifyLogMapper,
                                 PaymentNotifyErrorMapper paymentNotifyErrorMapper,
                                 PaymentNotifyProcessService paymentNotifyProcessService) {
         this.paymentSchedulerTaskOpsService = paymentSchedulerTaskOpsService;
+        this.paymentDashboardService = paymentDashboardService;
         this.paymentNotifyLogMapper = paymentNotifyLogMapper;
         this.paymentNotifyErrorMapper = paymentNotifyErrorMapper;
         this.paymentNotifyProcessService = paymentNotifyProcessService;
+    }
+
+    @GetMapping("/dashboard/summary")
+    public PaymentDashboardSummaryVO dashboardSummary(@RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+                                                      @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+        return paymentDashboardService.summary(startDate, endDate);
     }
 
     @GetMapping("/overview")

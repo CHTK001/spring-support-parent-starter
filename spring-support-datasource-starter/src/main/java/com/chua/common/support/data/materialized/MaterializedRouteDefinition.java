@@ -15,13 +15,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class MaterializedRouteDefinition {
 
-    /**
-     * 表行数阈值。
-     */
     private long threshold;
-
-    /**
-     * 源数据源名称。
-     */
     private String dataSource;
 }

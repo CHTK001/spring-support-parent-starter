@@ -1,135 +1,194 @@
-# 支付系统模块
+# spring-support-payment-starter
 
-## 功能概述
+## 1. 模块定位
 
-支付系统提供完整的支付解决方案,包括:
+`spring-support-payment-starter` 是当前支付主线模块，用于承载：
 
 - 商户管理
-- 支付渠道配置(微信/支付宝/综合支付/钱包)
-- 订单管理
-- 订单状态机流转
-- 交易流水记录
-- API密钥加密存储
+- 支付渠道管理
+- 支付订单与状态机
+- 退款单与交易流水
+- 钱包账户与钱包订单
+- 微信支付分订单
+- 支付回调与运营台能力
 
-## 技术栈
+历史目录 `spring-api-support-common-payment-starter` 仅保留迁移存档，不再作为当前接入主线。
 
-- Spring Boot 3.x
-- MyBatis Plus
-- Redis
-- Spring State Machine 4.0
-- 微信支付SDK
-- 支付宝SDK
+前端联调仓位于：
 
-## 快速开始
+- `g:/work/vue-support-parent-starter/apps/vue-support-payment-starter`
+- 公共支付页面包：`g:/work/vue-support-parent-starter/pages/pay`
 
-### 1. 数据库初始化
+## 2. 能力边界
 
-执行 `src/main/resources/db/init/V1.0__init_payment.sql` 创建数据库表。
+当前后端已提供以下接口域：
 
-### 2. 配置文件
+- 商户：`/api/merchant`
+- 渠道：`/api/channel`
+- 商户扩展配置：`/api/merchant/{merchantId}/payment-config`
+- 商户钱包限额：`/api/merchant/{merchantId}/wallet-limit`
+- 订单：`/api/order`
+- 退款：`/api/refund`
+- 交易流水：`/api/transaction`
+- 钱包账户：`/api/wallet`
+- 钱包订单：`/api/wallet/order`
+- 微信支付分：`/api/wechat/payscore/order`
+- 支付通知：`/api/notify/**`
+- 运营台：`/api/ops/**`
+  - 首页业务汇总：`/api/ops/dashboard/summary`
+
+## 3. Maven 接入
+
+```xml
+<dependency>
+  <groupId>com.chua</groupId>
+  <artifactId>spring-support-payment-starter</artifactId>
+  <version>${revision}</version>
+</dependency>
+```
+
+如果你的服务只是业务方，不负责统一支付运营台，可以关闭运营接口和内置调度：
+
+```yaml
+plugin:
+  payment:
+    scheduler:
+      enabled: false
+    ops:
+      enabled: false
+```
+
+## 4. 数据库初始化
+
+初始化脚本：
+
+- `src/main/resources/db/init/V1.0__init_payment.sql`
+
+该脚本会创建支付主表、商户、渠道、钱包、支付分等运行所需结构。
+
+## 5. 关键配置
+
+### 5.1 基础配置
 
 ```yaml
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/payment  # 支付库连接地址
-    username: root                            # 数据库用户名
-    password: password                        # 数据库密码
-  
-  redis:
-    host: localhost  # Redis 地址
-    port: 6379       # Redis 端口
-```
+    url: jdbc:mysql://127.0.0.1:3306/payment
+    username: root
+    password: your-password
 
-### 3. API文档
-
-启动后访问: http://localhost:8080/swagger-ui.html
-
-## 运行模式
-
-`spring-support-payment-starter` 支持两种使用方式:
-
-- 嵌入式模式: 业务服务直接引用 starter，并由当前服务承载支付接口、回调、调度
-- 中心化模式: 业务服务继续引用 starter 处理创建/支付/回调等核心能力，但关闭调度与运营台，由独立支付服务统一承载运维能力
-
-关键开关:
-
-```yaml
 plugin:
   payment:
+    callback:
+      base-url: https://pay.example.com
     scheduler:
-      enabled: true # 是否启用支付调度任务
+      enabled: true
+      engine: internal
     ops:
-      enabled: true # 是否启用运营后台接口
+      enabled: true
+    provider:
+      default-spi: default
+      wechat-spi: default
+      alipay-spi: default
+    security:
+      key: PaymentSystem16
 ```
 
-如果当前服务不是支付中心，只想复用支付核心能力，建议关闭:
+### 5.2 配置说明
 
-```yaml
-plugin:
-  payment:
-    scheduler:
-      enabled: false # 关闭本服务内的支付调度
-    ops:
-      enabled: false # 关闭本服务内的运营台接口
+- `plugin.payment.callback.base-url`
+  用于生成默认回调地址，必须配置为业务侧可访问的支付服务根地址。
+- `plugin.payment.scheduler.enabled`
+  是否启用支付调度任务。
+- `plugin.payment.scheduler.engine`
+  默认 `internal`；若接入任务平台，可切到外部调度方案。
+- `plugin.payment.ops.enabled`
+  是否暴露 `/api/ops/**` 运营接口。
+- `plugin.payment.provider.*-spi`
+  配置默认 provider SPI，渠道扩展字段仍可覆盖。
+- `plugin.payment.security.key`
+  支付敏感字段加密密钥；未配置时兼容历史默认值 `PaymentSystem16`。
+
+## 6. 回调约定
+
+推荐使用路径携带业务号的 scoped 回调：
+
+- 微信支付：`/api/notify/wechat/pay/{channelId}/{orderNo}`
+- 微信退款：`/api/notify/wechat/refund/{channelId}/{refundNo}`
+- 微信支付分：`/api/notify/wechat/payscore/{channelId}/{outOrderNo}`
+- 支付宝支付：`/api/notify/alipay/pay/{channelId}/{orderNo}`
+- 钱包订单：`/api/notify/wallet/{orderType}/{orderNo}`
+
+注意：
+
+- 显式请求参数中的 `notifyUrl` 优先级高于默认生成地址。
+- 渠道与商户维度的 notify 配置也可能覆盖 scoped 默认地址。
+
+## 7. 启动建议
+
+### 7.1 后端本地验证
+
+2026-04-11 实测可通过测试类路径直接启动：
+
+- 主类：`com.chua.payment.support.PaymentTestApplication`
+- 端口：`18080`
+- 测试数据源：H2 内存库
+
+推荐命令：
+
+```bash
+mvn -f g:/work/spring-support-parent-starter/spring-support-payment-starter/pom.xml \
+  -DskipTests \
+  -Dexec.mainClass=com.chua.payment.support.PaymentTestApplication \
+  -Dexec.classpathScope=test \
+  "-Dexec.args=--server.port=18080 --plugin.payment.callback.base-url=http://127.0.0.1:18080" \
+  org.codehaus.mojo:exec-maven-plugin:3.5.0:java
 ```
 
-中心化模式完整接入说明见:
+### 7.2 前端联调
 
-- `H:\\workspace\\2\\spring-support-api-parent\\spring-api-support-payment-starter\\支付中心化接入说明.MD`
+支付前端开发目录：
 
-如果要切到 `spring-support-job-starter` 承载支付调度，可进一步配置:
+- `g:/work/vue-support-parent-starter/apps/vue-support-payment-starter`
 
-```yaml
-plugin:
-  payment:
-    scheduler:
-      enabled: true  # 启用支付调度
-      engine: job    # 调度引擎切换为 spring-support-job-starter
-  job:
-    enable: true                     # 启用任务模块
-    config-table-enabled: true       # 启用任务配置表调度
-    job-annotation-sync-mode: UPDATE # 同步 @Job 到任务表
-    table-init-mode: UPDATE          # 自动更新任务表结构
-    table:
-      prefix: payment                # 任务表前缀
-```
+本次联调过程中发现该前端当前并非零配置即开，需要保证以下修复已存在：
 
-## 核心功能
+- `vite.config.ts` 不再依赖旧版 `@repo/build-config` dist 链式 API
+- `@pages/common` alias 已补齐
+- `pages/pay/src/index.ts` 不再导出不存在的 `index.vue`
+- `src/main.ts` 改为支付台独立挂载，而不是 `@repo/core` 通用壳
 
-### 商户管理
+## 8. 浏览器联调状态
 
-- 创建商户
-- 更新商户信息
-- 激活/停用商户
-- 商户列表查询
+### 2026-04-11 实测结果
 
-### 渠道配置
+后端：
 
-- 微信支付配置
-- 支付宝配置(支持沙盒)
-- 综合支付配置
-- 钱包配置
-- API密钥AES加密存储
+- `http://127.0.0.1:18080` 可正常监听
 
-### 订单管理
+前端：
 
-- 创建订单
-- 订单状态流转(状态机)
-- 订单取消
-- 订单退款
-- 超时自动取消
+- `http://127.0.0.1:4174` 可启动
+- 左侧支付运营台壳层可渲染
 
-### 状态机
+当前阻塞：
 
-订单状态流转:
-- 待支付 → 支付中 → 支付成功 → 已完成
-- 待支付 → 已取消
-- 支付成功 → 退款中 → 已退款
+- `router-view` 内业务主体页面仍未稳定渲染
+- 因此前端“商户 -> 渠道 -> 订单 -> 退款/流水”完整浏览器链路尚未闭环
 
-## 作者
+建议：
 
-CH
+- 优先继续排查 `vue-support-payment-starter` 的页面主体渲染问题
+- 后端业务能力可先通过单元测试和接口联调继续推进
 
-## 版本
+## 9. 验证记录
 
-4.0.0.37
+详细测试结论见：
+
+- `./业务单元测试报告.md`
+
+## 10. 当前结论
+
+- 后端支付主链路的业务单测已通过
+- 前端支付台的“可启动性”问题已定位并修复一部分
+- 浏览器业务链路目前还缺最后一段页面主体渲染修复

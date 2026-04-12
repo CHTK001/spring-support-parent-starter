@@ -85,7 +85,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         }
 
         registry.registerBeanDefinition("discoveryService#embedd", BeanDefinitionBuilder.rootBeanDefinition(DiscoveryService.class)
-                .setAutowireMode(AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE)
+                .setAutowireMode(AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR)
                 .getBeanDefinition());
     }
 

@@ -17,10 +17,12 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.context.EmbeddedValueResolverAware;
 import org.springframework.core.MethodIntrospector;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.lang.NonNull;
 import org.springframework.util.StringUtils;
+import org.springframework.util.StringValueResolver;
 
 import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
@@ -32,16 +34,22 @@ import java.util.Map;
  * 解析 {@link Scheduled} 注解，构建 Trigger，并将无参方法封装为 Runnable 注册到 SPI 选择的 SchedulerProvider。
  */
 @Slf4j
-public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartInitializingSingleton {
+public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartInitializingSingleton, EmbeddedValueResolverAware {
 
     private volatile SchedulerProvider provider;
     private final Map<String, ScheduledDefinition> discoveredDefinitions = new LinkedHashMap<>();
+    private StringValueResolver embeddedValueResolver;
 
     @org.springframework.beans.factory.annotation.Autowired
     private JobProperties jobProperties;
 
     @org.springframework.beans.factory.annotation.Autowired
     private ObjectProvider<JobDynamicConfigService> jobDynamicConfigServiceProvider;
+
+    @Override
+    public void setEmbeddedValueResolver(StringValueResolver resolver) {
+        this.embeddedValueResolver = resolver;
+    }
 
     @Override
     public void afterSingletonsInstantiated() {
@@ -94,7 +102,7 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
             Trigger trigger = toTrigger(ann);
             registerBeanHandler(name, bean, method);
             if (trigger != null) {
-                discoveredDefinitions.put(name, ScheduledDefinition.fromCustom(name, bean, method, ann, trigger));
+                discoveredDefinitions.put(name, ScheduledDefinition.fromCustom(name, bean, method, ann, trigger, this::resolveStringValue));
             }
         }
     }
@@ -123,7 +131,7 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
             Trigger trigger = toTrigger(ann);
             registerBeanHandler(name, bean, method);
             if (trigger != null) {
-                discoveredDefinitions.put(name, ScheduledDefinition.fromSpring(name, bean, method, ann, trigger));
+                discoveredDefinitions.put(name, ScheduledDefinition.fromSpring(name, bean, method, ann, trigger, this::resolveStringValue));
             }
         }
     }
@@ -205,12 +213,13 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
         JobHandlerFactory.getInstance().register(name, new BeanJobHandler(bean, method, null, null));
     }
 
-    private static Trigger toTrigger(Scheduled s) {
-        if (StringUtils.hasText(s.value())) {
-            return new CronTrigger(s.value());
+    private Trigger toTrigger(Scheduled s) {
+        String cron = resolveStringValue(s.value());
+        if (StringUtils.hasText(cron)) {
+            return new CronTrigger(cron);
         }
-        if (StringUtils.hasText(s.strategy())) {
-            String strategy = s.strategy();
+        String strategy = resolveStringValue(s.strategy());
+        if (StringUtils.hasText(strategy)) {
             try {
                 if (strategy.startsWith("fixedRate=")) {
                     long period = Long.parseLong(strategy.substring("fixedRate=".length()));
@@ -230,9 +239,10 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
         return null;
     }
 
-    private static Trigger toTrigger(org.springframework.scheduling.annotation.Scheduled s) {
-        if (StringUtils.hasText(s.cron())) {
-            return new CronTrigger(s.cron());
+    private Trigger toTrigger(org.springframework.scheduling.annotation.Scheduled s) {
+        String cron = resolveStringValue(s.cron());
+        if (StringUtils.hasText(cron)) {
+            return new CronTrigger(cron);
         }
         if (s.fixedRate() > 0) {
             return new FixedRateTrigger(s.initialDelay(), s.fixedRate());
@@ -240,16 +250,18 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
         if (s.fixedDelay() > 0) {
             return new FixedDelayTrigger(s.initialDelay(), s.fixedDelay());
         }
-        if (StringUtils.hasText(s.fixedRateString())) {
+        String fixedRateString = resolveStringValue(s.fixedRateString());
+        if (StringUtils.hasText(fixedRateString)) {
             try {
-                long period = Long.parseLong(s.fixedRateString());
+                long period = Long.parseLong(fixedRateString);
                 return new FixedRateTrigger(resolveInitialDelay(s), period);
             } catch (Exception ignore) {
             }
         }
-        if (StringUtils.hasText(s.fixedDelayString())) {
+        String fixedDelayString = resolveStringValue(s.fixedDelayString());
+        if (StringUtils.hasText(fixedDelayString)) {
             try {
-                long delay = Long.parseLong(s.fixedDelayString());
+                long delay = Long.parseLong(fixedDelayString);
                 return new FixedDelayTrigger(resolveInitialDelay(s), delay);
             } catch (Exception ignore) {
             }
@@ -257,17 +269,26 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
         return null;
     }
 
-    private static long resolveInitialDelay(org.springframework.scheduling.annotation.Scheduled s) {
+    private long resolveInitialDelay(org.springframework.scheduling.annotation.Scheduled s) {
         if (s.initialDelay() > 0) {
             return s.initialDelay();
         }
-        if (StringUtils.hasText(s.initialDelayString())) {
+        String initialDelayString = resolveStringValue(s.initialDelayString());
+        if (StringUtils.hasText(initialDelayString)) {
             try {
-                return Long.parseLong(s.initialDelayString());
+                return Long.parseLong(initialDelayString);
             } catch (Exception ignore) {
             }
         }
         return 0L;
+    }
+
+    private String resolveStringValue(String value) {
+        if (!StringUtils.hasText(value) || embeddedValueResolver == null) {
+            return value;
+        }
+        String resolved = embeddedValueResolver.resolveStringValue(value);
+        return resolved == null ? value : resolved;
     }
 
     private record ScheduledDefinition(String name,
@@ -279,12 +300,14 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
                                        Method method,
                                        Class<?> beanClass) {
 
-        private static ScheduledDefinition fromCustom(String name, Object bean, Method method, Scheduled ann, Trigger trigger) {
-            return new ScheduledDefinition(name, customScheduleTypeOf(ann), customScheduleTimeOf(ann), trigger, runnableOf(name, bean, method), bean, method, bean.getClass());
+        private static ScheduledDefinition fromCustom(String name, Object bean, Method method, Scheduled ann, Trigger trigger,
+                                                      java.util.function.Function<String, String> valueResolver) {
+            return new ScheduledDefinition(name, customScheduleTypeOf(ann), customScheduleTimeOf(ann, valueResolver), trigger, runnableOf(name, bean, method), bean, method, bean.getClass());
         }
 
-        private static ScheduledDefinition fromSpring(String name, Object bean, Method method, org.springframework.scheduling.annotation.Scheduled ann, Trigger trigger) {
-            return new ScheduledDefinition(name, springScheduleTypeOf(ann), springScheduleTimeOf(ann), trigger, runnableOf(name, bean, method), bean, method, bean.getClass());
+        private static ScheduledDefinition fromSpring(String name, Object bean, Method method, org.springframework.scheduling.annotation.Scheduled ann, Trigger trigger,
+                                                      java.util.function.Function<String, String> valueResolver) {
+            return new ScheduledDefinition(name, springScheduleTypeOf(ann), springScheduleTimeOf(ann, valueResolver), trigger, runnableOf(name, bean, method), bean, method, bean.getClass());
         }
 
         private static Runnable runnableOf(String name, Object bean, Method method) {
@@ -316,12 +339,12 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
             return "cron";
         }
 
-        private static String customScheduleTimeOf(Scheduled ann) {
+        private static String customScheduleTimeOf(Scheduled ann, java.util.function.Function<String, String> valueResolver) {
             if (StringUtils.hasText(ann.value())) {
-                return ann.value();
+                return valueResolver.apply(ann.value());
             }
             if (StringUtils.hasText(ann.strategy())) {
-                String strategy = ann.strategy();
+                String strategy = valueResolver.apply(ann.strategy());
                 int idx = strategy.indexOf('=');
                 return idx > -1 ? strategy.substring(idx + 1) : strategy;
             }
@@ -341,21 +364,22 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
             return "cron";
         }
 
-        private static String springScheduleTimeOf(org.springframework.scheduling.annotation.Scheduled ann) {
+        private static String springScheduleTimeOf(org.springframework.scheduling.annotation.Scheduled ann,
+                                                   java.util.function.Function<String, String> valueResolver) {
             if (StringUtils.hasText(ann.cron())) {
-                return ann.cron();
+                return valueResolver.apply(ann.cron());
             }
             if (ann.fixedRate() > 0) {
                 return String.valueOf(ann.fixedRate());
             }
             if (StringUtils.hasText(ann.fixedRateString())) {
-                return ann.fixedRateString();
+                return valueResolver.apply(ann.fixedRateString());
             }
             if (ann.fixedDelay() > 0) {
                 return String.valueOf(ann.fixedDelay());
             }
             if (StringUtils.hasText(ann.fixedDelayString())) {
-                return ann.fixedDelayString();
+                return valueResolver.apply(ann.fixedDelayString());
             }
             return "";
         }
