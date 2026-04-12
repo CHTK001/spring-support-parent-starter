@@ -6,6 +6,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,8 +36,8 @@ public final class ServerCommandSupport {
         if (isWindows(osType)) {
             args.add("powershell");
             args.add("-NoProfile");
-            args.add("-Command");
-            args.add(wrapPowerShellCommand(command));
+            args.add("-EncodedCommand");
+            args.add(encodePowerShellCommand(wrapPowerShellCommand(command)));
             return args;
         }
         args.add("sh");
@@ -106,6 +107,14 @@ public final class ServerCommandSupport {
                 + "} catch { "
                 + "Write-Error ($_ | Out-String); exit 1 "
                 + "}";
+    }
+
+    /**
+     * PowerShell 的 -EncodedCommand 需要 UTF-16LE Base64，避免多行脚本和特殊字符在参数层被截断。
+     */
+    private static String encodePowerShellCommand(String command) {
+        byte[] bytes = (command == null ? "" : command).getBytes(StandardCharsets.UTF_16LE);
+        return Base64.getEncoder().encodeToString(bytes);
     }
 
     public record CommandResult(boolean success, int exitCode, String output) {

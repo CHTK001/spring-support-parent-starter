@@ -278,21 +278,21 @@ INSERT INTO `server_host` (
   `update_time`
 )
 SELECT
-  '远程 Linux 192.168.110.100',
+  '远程 Linux 172.16.0.40',
   '20a860f7f008190a23da131959bb0580',
   'SSH',
   'LINUX',
   'AMD64',
-  '192.168.110.100',
+  '172.16.0.40',
   22,
   'root',
   'd57a246d45bbdaa0392dfb33d18d97fa',
   'dff1a552dea2f3164f0f6c7101fe0caa',
-  '/opt/soft-runtime',
+  '/opt',
   'soft,remote,linux',
   1,
   'soft-test 远程 Linux 真实联调入口',
-  '{"softEnabled":true,"displayMode":"default","source":"soft-test-bootstrap","hostAlias":"remote-linux-110100"}',
+  '{"softEnabled":true,"displayMode":"default","source":"soft-test-bootstrap","hostAlias":"remote-linux-17216040"}',
   NOW(),
   NOW()
 FROM DUAL

@@ -33,8 +33,18 @@ public class ServerAlertController {
     @GetMapping("/alerts")
     public ReturnResult<List<ServerAlertEvent>> alerts(
             @RequestParam(required = false) Integer serverId,
+            @RequestParam(required = false) String metricType,
+            @RequestParam(required = false) String severity,
+            @RequestParam(required = false) Long startTime,
+            @RequestParam(required = false) Long endTime,
             @RequestParam(required = false) Integer limit
     ) {
-        return ReturnResult.ok(serverAlertService.listAlerts(serverId, limit));
+        return ReturnResult.ok(serverAlertService.listAlerts(
+                serverId,
+                metricType,
+                severity,
+                startTime,
+                endTime,
+                limit));
     }
 }

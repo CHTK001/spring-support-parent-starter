@@ -39,9 +39,19 @@ public interface ServerMetricsService {
     ServerMetricsTaskSettings getTaskSettings();
 
     /**
+     * 返回指定服务器的指标采集任务配置，支持单机覆盖全局默认值。
+     */
+    ServerMetricsTaskSettings getTaskSettings(Integer serverId);
+
+    /**
      * 更新指标采集任务配置，并同步到底层调度器。
      */
     ServerMetricsTaskSettings updateTaskSettings(ServerMetricsTaskSettingsRequest request);
+
+    /**
+     * 更新指定服务器的指标采集任务配置，并写回服务器 metadata。
+     */
+    ServerMetricsTaskSettings updateTaskSettings(Integer serverId, ServerMetricsTaskSettingsRequest request);
 
     /**
      * job-starter 不可用时的本地刷新兜底入口。

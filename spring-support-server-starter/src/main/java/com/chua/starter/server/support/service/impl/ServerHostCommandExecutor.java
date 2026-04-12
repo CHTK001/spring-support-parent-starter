@@ -1,45 +1,45 @@
 package com.chua.starter.server.support.service.impl;
 
-import com.chua.common.support.network.protocol.ClientSetting;
-import com.chua.ssh.support.client.LinuxExecClient;
+import com.chua.common.support.core.utils.ServiceProvider;
 import com.chua.starter.server.support.entity.ServerHost;
+import com.chua.starter.server.support.spi.ServerCommandExecutorSpi;
 import com.chua.starter.server.support.util.ServerCommandSupport;
-import com.chua.winrm.support.client.WinRmExecClient;
+import java.util.Locale;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Service
 public class ServerHostCommandExecutor {
 
+    private final com.chua.common.support.core.spi.ServiceProvider<ServerCommandExecutorSpi> provider =
+            ServiceProvider.of(ServerCommandExecutorSpi.class);
+
+    /**
+     * 根据服务器协议委派到对应 SPI 执行命令。
+     */
     public ServerCommandSupport.CommandResult execute(ServerHost host, String command) throws Exception {
-        if ("LOCAL".equalsIgnoreCase(host.getServerType())) {
-            return ServerCommandSupport.runLocal(host, command);
+        ServerCommandExecutorSpi executor = resolveExecutor(host);
+        if (executor == null) {
+            throw new IllegalStateException("未找到服务器命令执行 SPI: " + resolveType(host));
         }
-        if ("WINRM".equalsIgnoreCase(host.getServerType())) {
-            WinRmExecClient client = new WinRmExecClient(toClientSetting(host, 5985));
-            try {
-                client.connect();
-                var result = client.executeCommand(command);
-                return new ServerCommandSupport.CommandResult(result.isSuccess(), result.getExitCode(), result.getFullOutput());
-            } finally {
-                client.closeQuietly();
-            }
-        }
-        LinuxExecClient client = new LinuxExecClient(toClientSetting(host, 22));
-        try {
-            client.connect();
-            var result = client.executeCommand(command);
-            return new ServerCommandSupport.CommandResult(result.isSuccess(), result.getExitCode(), result.getFullOutput());
-        } finally {
-            client.closeQuietly();
-        }
+        return executor.execute(host, command);
     }
 
-    private ClientSetting toClientSetting(ServerHost host, int defaultPort) {
-        return ClientSetting.builder()
-                .host("LOCAL".equalsIgnoreCase(host.getServerType()) ? "127.0.0.1" : host.getHost())
-                .port(host.getPort() == null ? defaultPort : host.getPort())
-                .username(host.getUsername())
-                .password(host.getPassword())
-                .build();
+    /**
+     * 获取协议对应的命令执行器，缺省回落到 local。
+     */
+    private ServerCommandExecutorSpi resolveExecutor(ServerHost host) {
+        ServerCommandExecutorSpi executor = provider.getExtension(resolveType(host));
+        return executor != null ? executor : provider.getExtension("local");
+    }
+
+    /**
+     * 标准化 SPI 名称，避免协议大小写影响查找。
+     */
+    private String resolveType(ServerHost host) {
+        if (host == null || !StringUtils.hasText(host.getServerType())) {
+            return "local";
+        }
+        return host.getServerType().trim().toLowerCase(Locale.ROOT);
     }
 }

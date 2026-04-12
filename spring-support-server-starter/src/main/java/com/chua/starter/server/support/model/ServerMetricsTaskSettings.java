@@ -7,6 +7,12 @@ import lombok.Data;
 @Builder
 public class ServerMetricsTaskSettings {
 
+    private Integer serverId;
+
+    private String serverName;
+
+    private Boolean inheritGlobal;
+
     private Boolean enabled;
 
     private String schedulerMode;

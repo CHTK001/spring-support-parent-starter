@@ -1,16 +1,14 @@
 package com.chua.starter.server.support.service.impl;
 
 import com.chua.common.support.io.file.FileInfo;
-import com.chua.common.support.network.protocol.ClientSetting;
 import com.chua.common.support.network.protocol.client.FileClient;
-import com.chua.ssh.support.client.SftpClient;
 import com.chua.starter.server.support.entity.ServerHost;
 import com.chua.starter.server.support.model.ServerFileContent;
 import com.chua.starter.server.support.model.ServerFileEntry;
 import com.chua.starter.server.support.model.ServerFileOperationResult;
 import com.chua.starter.server.support.service.ServerFileService;
 import com.chua.starter.server.support.service.ServerHostService;
-import com.chua.winrm.support.client.WinRmFileClient;
+import com.chua.starter.server.support.spi.ServerHostProtocolManager;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -32,6 +30,7 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class ServerFileServiceImpl implements ServerFileService {
 
+    private final ServerHostProtocolManager protocolManager = new ServerHostProtocolManager();
     private final ServerHostService serverHostService;
 
     @Override
@@ -262,11 +261,11 @@ public class ServerFileServiceImpl implements ServerFileService {
     }
 
     private boolean isLocal(ServerHost host) {
-        return "LOCAL".equalsIgnoreCase(host.getServerType());
+        return protocolManager.isLocal(host);
     }
 
     private boolean isWindows(ServerHost host) {
-        return "windows".equalsIgnoreCase(host.getOsType()) || "WINRM".equalsIgnoreCase(host.getServerType());
+        return protocolManager.isWindows(host);
     }
 
     private Path resolveLocalPath(ServerHost host, String requestedPath) {
@@ -344,7 +343,7 @@ public class ServerFileServiceImpl implements ServerFileService {
     private String resolveRemoteRoot(ServerHost host, boolean windows) {
         String baseDirectory = StringUtils.hasText(host.getBaseDirectory())
                 ? host.getBaseDirectory().trim()
-                : (windows ? "C:\\" : "/");
+                : protocolManager.resolveBaseDirectory(host);
         return normalizeRemotePath(baseDirectory, windows);
     }
 
@@ -390,17 +389,11 @@ public class ServerFileServiceImpl implements ServerFileService {
     }
 
     private FileClient createFileClient(ServerHost host) {
-        ClientSetting setting = ClientSetting.builder()
-                .host(host.getHost())
-                .port(host.getPort() == null
-                        ? ("WINRM".equalsIgnoreCase(host.getServerType()) ? 5985 : 22)
-                        : host.getPort())
-                .username(host.getUsername())
-                .password(host.getPassword())
-                .build();
-        return "WINRM".equalsIgnoreCase(host.getServerType())
-                ? new WinRmFileClient(setting)
-                : new SftpClient(setting);
+        FileClient client = protocolManager.createFileClient(host);
+        if (client == null) {
+            throw new IllegalStateException("当前协议不支持远程文件客户端: " + host.getServerType());
+        }
+        return client;
     }
 
     private byte[] readLocalBytes(Path path, int maxBytes) throws Exception {

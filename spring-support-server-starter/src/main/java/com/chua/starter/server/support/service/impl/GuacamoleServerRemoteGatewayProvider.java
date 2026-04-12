@@ -5,6 +5,7 @@ import com.chua.starter.server.support.config.ServerManagementProperties;
 import com.chua.starter.server.support.entity.ServerHost;
 import com.chua.starter.server.support.model.ServerGuacamoleConfig;
 import com.chua.starter.server.support.service.ServerRemoteGatewayProvider;
+import com.chua.starter.server.support.spi.ServerHostProtocolManager;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
@@ -23,6 +24,7 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class GuacamoleServerRemoteGatewayProvider implements ServerRemoteGatewayProvider {
 
+    private final ServerHostProtocolManager protocolManager = new ServerHostProtocolManager();
     private final ServerManagementProperties properties;
     private final ObjectMapper objectMapper;
 
@@ -97,10 +99,8 @@ public class GuacamoleServerRemoteGatewayProvider implements ServerRemoteGateway
         if (StringUtils.hasText(explicit)) {
             return explicit;
         }
-        if ("LOCAL".equalsIgnoreCase(host.getServerType())) {
-            return "127.0.0.1";
-        }
-        return StringUtils.hasText(host.getHost()) ? host.getHost() : "127.0.0.1";
+        String resolved = protocolManager.resolveHost(host);
+        return StringUtils.hasText(resolved) ? resolved : "127.0.0.1";
     }
 
     private int resolvePort(ServerHost host, Map<String, Object> metadata, String protocol) {
@@ -132,7 +132,7 @@ public class GuacamoleServerRemoteGatewayProvider implements ServerRemoteGateway
         if (StringUtils.hasText(explicit)) {
             return explicit;
         }
-        if ("WINRM".equalsIgnoreCase(host.getServerType()) || "windows".equalsIgnoreCase(host.getOsType())) {
+        if (protocolManager.isWindows(host)) {
             return properties.getGuacamole().getDefaultWindowsProtocol();
         }
         return properties.getGuacamole().getDefaultLinuxProtocol();

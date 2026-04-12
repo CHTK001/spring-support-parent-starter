@@ -124,12 +124,61 @@ public class ServerHostController {
         return ReturnResult.ok(serverMetricsService.getDetail(id));
     }
 
+    @GetMapping("/{id}/metrics/task-settings")
+    public ReturnResult<ServerMetricsTaskSettings> hostMetricsTaskSettings(@PathVariable Integer id) {
+        return ReturnResult.ok(serverMetricsService.getTaskSettings(id));
+    }
+
+    @PutMapping("/{id}/metrics/task-settings")
+    public ReturnResult<ServerMetricsTaskSettings> updateHostMetricsTaskSettings(
+            @PathVariable Integer id,
+            @RequestBody ServerMetricsTaskSettingsRequest request
+    ) {
+        return ReturnResult.ok(serverMetricsService.updateTaskSettings(id, request));
+    }
+
     @GetMapping("/{id}/metrics/history")
     public ReturnResult<List<ServerMetricsSnapshot>> hostMetricsHistory(
             @PathVariable Integer id,
             @RequestParam(value = "minutes", required = false) Integer minutes
     ) {
         return ReturnResult.ok(serverMetricsService.listHistory(id, minutes));
+    }
+
+    @PostMapping("/{id}/metrics/history/ai-analyze")
+    public ReturnResult<ServerAiTaskTicket> analyzeMetricHistory(
+            @PathVariable Integer id,
+            @RequestParam String metricType,
+            @RequestParam(value = "minutes", required = false) Integer minutes,
+            @RequestParam(value = "startTime", required = false) Long startTime,
+            @RequestParam(value = "endTime", required = false) Long endTime,
+            @RequestParam(value = "stateFilter", required = false) String stateFilter
+    ) {
+        return ReturnResult.ok(serverHostAiTaskService.scheduleMetricHistoryAnalysis(
+                id,
+                metricType,
+                minutes,
+                startTime,
+                endTime,
+                stateFilter));
+    }
+
+    @PostMapping("/{id}/alerts/ai-analyze")
+    public ReturnResult<ServerAiTaskTicket> analyzeAlertHistory(
+            @PathVariable Integer id,
+            @RequestParam(value = "metricType", required = false) String metricType,
+            @RequestParam(value = "severity", required = false) String severity,
+            @RequestParam(value = "startTime", required = false) Long startTime,
+            @RequestParam(value = "endTime", required = false) Long endTime,
+            @RequestParam(value = "limit", required = false) Integer limit
+    ) {
+        return ReturnResult.ok(serverHostAiTaskService.scheduleAlertHistoryAnalysis(
+                id,
+                metricType,
+                severity,
+                startTime,
+                endTime,
+                limit));
     }
 
     @GetMapping("/{id}/alert-settings")

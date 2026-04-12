@@ -17,6 +17,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -41,13 +42,27 @@ public class ServerProcessServiceImpl implements ServerProcessService {
     @Override
     public List<ServerProcessView> listProcesses(Integer serverId, String keyword, Integer limit) throws Exception {
         ServerHost host = requireHost(serverId);
-        List<ServerProcessView> processes = isWindows(host)
-                ? parseWindowsProcesses(host, execute(host, buildWindowsListCommand()))
-                : parseUnixProcesses(host, execute(host, buildUnixListCommand()));
+        boolean windows = isWindows(host);
+        List<ServerProcessView> processes;
+        try {
+            processes = windows
+                    ? parseWindowsProcesses(host, execute(host, buildWindowsListCommand()))
+                    : parseUnixProcesses(host, execute(host, buildUnixListCommand()));
+        } catch (Exception ex) {
+            if (isLocalWindows(host)) {
+                // 本机 Windows 兜底到 ProcessHandle，避免 PowerShell 异常时整个进程页为空。
+                processes = listLocalWindowsProcesses(host);
+            } else {
+                throw ex;
+            }
+        }
         String normalizedKeyword = normalizeKeyword(keyword);
+        Comparator<ServerProcessView> comparator = windows
+                ? processComparator()
+                : processComparator();
         List<ServerProcessView> result = processes.stream()
                 .filter(item -> matchesKeyword(item, normalizedKeyword))
-                .sorted(processComparator())
+                .sorted(comparator)
                 .limit(resolveLimit(limit))
                 .toList();
         publishProcesses(host, normalizedKeyword, resolveLimit(limit), result);
@@ -146,6 +161,12 @@ public class ServerProcessServiceImpl implements ServerProcessService {
         return ServerCommandSupport.isWindows(osType);
     }
 
+    private boolean isLocalWindows(ServerHost host) {
+        return host != null
+                && "LOCAL".equalsIgnoreCase(host.getServerType())
+                && isWindows(host);
+    }
+
     private long resolveLimit(Integer limit) {
         if (limit == null || limit <= 0) {
             return DEFAULT_LIMIT;
@@ -207,21 +228,42 @@ public class ServerProcessServiceImpl implements ServerProcessService {
     }
 
     private String buildWindowsListCommand() {
-        return """
-                $items = Get-CimInstance Win32_Process | ForEach-Object {
-                  [PSCustomObject]@{
-                    ProcessId = $_.ProcessId
-                    ParentProcessId = $_.ParentProcessId
-                    Name = $_.Name
-                    CommandLine = $_.CommandLine
-                    WorkingSetSize = [int64]($_.WorkingSetSize)
-                    ThreadCount = [int]($_.ThreadCount)
-                    CreationDate = if ($_.CreationDate) { ([System.Management.ManagementDateTimeConverter]::ToDateTime($_.CreationDate)).ToString('o') } else { $null }
-                    State = 'Running'
-                  }
-                };
-                $items | ConvertTo-Json -Depth 4 -Compress
-                """;
+        return "$os=Get-CimInstance Win32_OperatingSystem;"
+                + "$total=[double]($os.TotalVisibleMemorySize)*1024;"
+                + "$stats=Get-CimInstance Win32_PerfFormattedData_PerfProc_Process "
+                + "| Where-Object { $_.IDProcess -gt 0 -and $_.Name -ne '_Total' -and $_.Name -ne 'Idle' } "
+                + "| Sort-Object @{Expression='PercentProcessorTime';Descending=$true},@{Expression='WorkingSetPrivate';Descending=$true} "
+                + "| Select-Object -First 220;"
+                + "$procMap=@{};"
+                + "$selected=@{};"
+                + "$stats | ForEach-Object {$selected[[int]$_.IDProcess]=$true};"
+                + "Get-CimInstance Win32_Process | Where-Object {$selected.ContainsKey([int]$_.ProcessId)} | ForEach-Object {$procMap[[int]$_.ProcessId]=$_};"
+                + "$items=$stats | ForEach-Object {"
+                + "$stat=$_;"
+                + "$proc=$procMap[[int]$stat.IDProcess];"
+                + "$workingSet=if($null -ne $stat.WorkingSetPrivate){[int64]$stat.WorkingSetPrivate}elseif($proc -and $null -ne $proc.WorkingSetSize){[int64]$proc.WorkingSetSize}else{$null};"
+                + "$created=$null;"
+                + "if($proc -and $proc.CreationDate){"
+                + "try{$created=([System.Management.ManagementDateTimeConverter]::ToDateTime([string]$proc.CreationDate)).ToString('o')}catch{"
+                + "try{$created=([datetime]::Parse([string]$proc.CreationDate)).ToString('o')}catch{$created=$null}"
+                + "}"
+                + "};"
+                + "[pscustomobject]@{"
+                + "ProcessId=[int64]$stat.IDProcess;"
+                + "ParentProcessId=if($proc){[int64]$proc.ParentProcessId}else{$null};"
+                + "Name=if($proc -and $proc.Name){$proc.Name}else{$stat.Name};"
+                + "CommandLine=if($proc){$proc.CommandLine}else{$null};"
+                + "UserName=$null;"
+                + "State='Running';"
+                + "CpuPercent=if($null -ne $stat.PercentProcessorTime){[double]$stat.PercentProcessorTime}else{$null};"
+                + "MemoryPercent=if($total -gt 0 -and $workingSet -gt 0){[math]::Round(($workingSet / $total) * 100, 2)}else{$null};"
+                + "WorkingSetSize=$workingSet;"
+                + "ThreadCount=if($null -ne $stat.ThreadCount){[int]$stat.ThreadCount}else{$null};"
+                + "Elapsed=if($null -ne $stat.ElapsedTime){[string]$stat.ElapsedTime}else{$null};"
+                + "CreationDate=$created"
+                + "}"
+                + "};"
+                + "$items | ConvertTo-Json -Depth 4 -Compress";
     }
 
     private String buildUnixTerminateCommand(Long pid, boolean force) {
@@ -232,6 +274,57 @@ public class ServerProcessServiceImpl implements ServerProcessService {
         return force
                 ? "Stop-Process -Id %d -Force -ErrorAction Stop; Write-Output 'Process %d terminated'".formatted(pid, pid)
                 : "Stop-Process -Id %d -ErrorAction Stop; Write-Output 'Process %d terminated'".formatted(pid, pid);
+    }
+
+    private List<ServerProcessView> listLocalWindowsProcesses(ServerHost host) {
+        List<ServerProcessView> result = new ArrayList<>();
+        ProcessHandle.allProcesses().forEach(handle -> {
+            if (!handle.isAlive() || handle.pid() <= 0) {
+                return;
+            }
+            ProcessHandle.Info info = handle.info();
+            String command = info.command().orElse(null);
+            String commandLine = info.commandLine().orElseGet(() -> buildCommandLine(command, info.arguments().orElse(null)));
+            String name = resolveProcessName(StringUtils.hasText(command) ? command : commandLine);
+            result.add(ServerProcessView.builder()
+                    .serverId(host.getServerId())
+                    .serverCode(host.getServerCode())
+                    .pid(handle.pid())
+                    .parentPid(handle.parent().map(ProcessHandle::pid).orElse(null))
+                    .name(name)
+                    .command(name)
+                    .commandLine(StringUtils.hasText(commandLine) ? commandLine : name)
+                    .user(info.user().orElse(null))
+                    .state("Running")
+                    .startTime(info.startInstant()
+                            .map(instant -> OffsetDateTime.ofInstant(instant, ZoneId.systemDefault())
+                                    .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+                            .orElse(null))
+                    .alive(Boolean.TRUE)
+                    .executionProvider(host.getServerType())
+                    .spiChannel(host.getServerType())
+                    .build());
+        });
+        return result;
+    }
+
+    private String buildCommandLine(String command, String[] arguments) {
+        if (!StringUtils.hasText(command)) {
+            return null;
+        }
+        if (arguments == null || arguments.length == 0) {
+            return command;
+        }
+        return command + " " + String.join(" ", Arrays.asList(arguments));
+    }
+
+    private String resolveProcessName(String command) {
+        if (!StringUtils.hasText(command)) {
+            return "unknown";
+        }
+        String normalized = command.replace('\\', '/');
+        int index = normalized.lastIndexOf('/');
+        return index >= 0 ? normalized.substring(index + 1) : normalized;
     }
 
     private List<ServerProcessView> parseUnixProcesses(ServerHost host, String output) {

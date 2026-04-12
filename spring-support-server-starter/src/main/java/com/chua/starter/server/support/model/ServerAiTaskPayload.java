@@ -25,8 +25,29 @@ public class ServerAiTaskPayload {
     @ApiModelProperty("服务器ID")
     private Integer serverId;
 
+    @ApiModelProperty("指标类型")
+    private String metricType;
+
+    @ApiModelProperty("告警级别")
+    private String severity;
+
     @ApiModelProperty("操作日志ID")
     private Integer operationLogId;
+
+    @ApiModelProperty("历史分析分钟范围")
+    private Integer minutes;
+
+    @ApiModelProperty("历史开始时间戳")
+    private Long startTime;
+
+    @ApiModelProperty("历史结束时间戳")
+    private Long endTime;
+
+    @ApiModelProperty("历史状态过滤")
+    private String stateFilter;
+
+    @ApiModelProperty("当前过滤条件对应的唯一键")
+    private String filterKey;
 
     @ApiModelProperty("任务消息")
     private String message;

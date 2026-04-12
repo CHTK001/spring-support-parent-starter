@@ -25,6 +25,11 @@ import com.chua.starter.server.support.service.ServerAlertService;
 import com.chua.starter.server.support.service.ServerHostService;
 import com.chua.starter.server.support.service.ServerMetricsService;
 import com.chua.starter.server.support.service.ServerRealtimePublisher;
+import com.chua.starter.server.support.util.ServerHostMetadataSupport;
+import com.chua.starter.server.support.util.ServerPrometheusMetricsSupport;
+import com.chua.starter.server.support.spi.ServerMetricsCollectorDelegate;
+import com.chua.starter.server.support.spi.ServerMetricsCollectorManager;
+import com.chua.starter.server.support.spi.ServerMetricsSpiContext;
 import com.chua.winrm.support.client.WinRmExecClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
@@ -56,7 +61,7 @@ import org.springframework.util.StringUtils;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ServerMetricsServiceImpl implements ServerMetricsService {
+public class ServerMetricsServiceImpl implements ServerMetricsService, ServerMetricsCollectorDelegate {
 
     private static final String SNAPSHOT_CACHE_KEY = "plugin:server:metrics:snapshot";
     private static final int MAX_HISTORY_POINTS = 720;
@@ -160,6 +165,7 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
     private final ObjectProvider<JobProperties> jobPropertiesProvider;
     private final ObjectMapper objectMapper;
 
+    private final ServerMetricsCollectorManager metricsCollectorManager = new ServerMetricsCollectorManager();
     private final Map<Integer, ServerMetricsSnapshot> snapshotCache = new ConcurrentHashMap<>();
     private final Map<Integer, Deque<ServerMetricsSnapshot>> historyCache = new ConcurrentHashMap<>();
     private final Map<Integer, NetworkCounterState> networkCounterCache = new ConcurrentHashMap<>();
@@ -174,8 +180,8 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
     @PostConstruct
     void initializeMetricsScheduling() {
         synchronizeMetricsJobs();
-        if (properties.getMetrics().isEnable()) {
-            nextRefreshAt = System.currentTimeMillis() + Math.max(properties.getMetrics().getRefreshIntervalMs(), 1000L);
+        if (isAnyMetricsCollectionEnabled()) {
+            nextRefreshAt = System.currentTimeMillis() + computeDriverRefreshIntervalMs();
         }
     }
 
@@ -239,8 +245,19 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
      */
     @Override
     public List<ServerMetricsSnapshot> refreshMetrics() {
+        return collectMetrics(true);
+    }
+
+    /**
+     * 按主机级开关与采样间隔采集指标；手工刷新时可强制跳过频率限制。
+     */
+    private List<ServerMetricsSnapshot> collectMetrics(boolean forceAll) {
         List<ServerMetricsSnapshot> snapshots = new ArrayList<>();
+        long now = System.currentTimeMillis();
         for (ServerHost host : serverHostService.listHosts(null, null, null)) {
+            if (!forceAll && !shouldCollectHost(host, now)) {
+                continue;
+            }
             ServerMetricsSnapshot snapshot = collectSnapshot(host);
             if (host.getServerId() != null) {
                 snapshotCache.put(host.getServerId(), snapshot);
@@ -251,8 +268,8 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
             serverAlertService.processSnapshot(snapshot);
             publishSnapshot(snapshot);
         }
-        lastRefreshAt = System.currentTimeMillis();
-        nextRefreshAt = lastRefreshAt + Math.max(properties.getMetrics().getRefreshIntervalMs(), 1000L);
+        lastRefreshAt = now;
+        nextRefreshAt = lastRefreshAt + computeDriverRefreshIntervalMs();
         return snapshots;
     }
 
@@ -263,6 +280,14 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
     public List<ServerMetricsSnapshot> listHistory(Integer serverId, Integer minutes) {
         if (serverId == null) {
             return Collections.emptyList();
+        }
+        ServerHost host = serverHostService.getHost(serverId);
+        if (ServerHostMetadataSupport.isPrometheusMetrics(host)) {
+            try {
+                return ServerPrometheusMetricsSupport.listHistory(host, minutes);
+            } catch (Exception e) {
+                throw new IllegalStateException("Prometheus 历史查询失败: " + e.getMessage(), e);
+            }
         }
         ensureSnapshotCacheLoaded();
         List<ServerMetricsSnapshot> storedHistory = listPersistedHistory(serverId, minutes);
@@ -302,6 +327,19 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
     }
 
     /**
+     * 返回指定主机的单机指标采集配置；未覆盖时展示全局默认值。
+     */
+    @Override
+    public ServerMetricsTaskSettings getTaskSettings(Integer serverId) {
+        synchronizeMetricsJobs();
+        ServerHost host = serverHostService.getHost(serverId);
+        if (host == null) {
+            throw new IllegalStateException("服务器不存在");
+        }
+        return buildTaskSettings(host);
+    }
+
+    /**
      * 更新采集开关、频率、缓存策略，并同步到底层调度器。
      */
     @Override
@@ -324,9 +362,9 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
         if (request.getCacheTtlSeconds() != null) {
             properties.getMetrics().setCacheTtlSeconds(Math.max(request.getCacheTtlSeconds(), 60L));
         }
-        if (Boolean.TRUE.equals(properties.getMetrics().isEnable())) {
+        if (isAnyMetricsCollectionEnabled()) {
             long now = System.currentTimeMillis();
-            nextRefreshAt = now + Math.max(properties.getMetrics().getRefreshIntervalMs(), 1000L);
+            nextRefreshAt = now + computeDriverRefreshIntervalMs();
         } else {
             nextRefreshAt = 0L;
         }
@@ -335,15 +373,37 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
     }
 
     /**
+     * 更新指定主机的单机指标采集配置，并写回 metadataJson。
+     */
+    @Override
+    public ServerMetricsTaskSettings updateTaskSettings(Integer serverId, ServerMetricsTaskSettingsRequest request) {
+        ServerHost host = serverHostService.getHost(serverId);
+        if (host == null) {
+            throw new IllegalStateException("服务器不存在");
+        }
+        host.setMetadataJson(ServerHostMetadataSupport.applyMetricsTaskSettings(host, request));
+        serverHostService.saveHost(host);
+        if (!ServerHostMetadataSupport.resolveMetricsEnabled(host, properties.getMetrics().isEnable())) {
+            snapshotCache.remove(serverId);
+            historyCache.remove(serverId);
+        }
+        synchronizeMetricsJobs();
+        nextRefreshAt = isAnyMetricsCollectionEnabled()
+                ? System.currentTimeMillis() + computeDriverRefreshIntervalMs()
+                : 0L;
+        return getTaskSettings(serverId);
+    }
+
+    /**
      * job-starter 的指标采集入口，供统一任务中心调用。
      */
     @Job(value = METRICS_REFRESH_JOB_NAME, desc = METRICS_REFRESH_JOB_DESC)
     public void executeRefreshJob() {
-        if (!properties.getMetrics().isEnable()) {
+        if (!isAnyMetricsCollectionEnabled()) {
             nextRefreshAt = 0L;
             return;
         }
-        refreshMetrics();
+        collectMetrics(false);
     }
 
     /**
@@ -362,7 +422,7 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
         if (isJobTableSchedulingEnabled()) {
             return;
         }
-        if (!properties.getMetrics().isEnable()) {
+        if (!isAnyMetricsCollectionEnabled()) {
             return;
         }
         long now = System.currentTimeMillis();
@@ -388,14 +448,15 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
      */
     private ServerMetricsTaskSettings buildTaskSettings() {
         MetricsRefreshJobState jobState = resolveRefreshJobState();
-        Long resolvedNextRefreshAt = properties.getMetrics().isEnable()
+        boolean anyEnabled = isAnyMetricsCollectionEnabled();
+        Long resolvedNextRefreshAt = anyEnabled
                 ? (jobState.nextTriggerAt() != null
                 ? jobState.nextTriggerAt()
                 : (nextRefreshAt > 0L ? nextRefreshAt
-                : System.currentTimeMillis() + Math.max(properties.getMetrics().getRefreshIntervalMs(), 1000L)))
+                : System.currentTimeMillis() + computeDriverRefreshIntervalMs()))
                 : null;
-        String status = properties.getMetrics().isEnable() ? "RUNNING" : "STOPPED";
-        if (jobState.jobEnabled() && !StringUtils.hasText(jobState.jobStatus()) && properties.getMetrics().isEnable()) {
+        String status = properties.getMetrics().isEnable() ? "RUNNING" : (anyEnabled ? "PARTIAL" : "STOPPED");
+        if (jobState.jobEnabled() && !StringUtils.hasText(jobState.jobStatus()) && anyEnabled) {
             status = "PENDING";
         } else if (StringUtils.hasText(jobState.jobStatus())) {
             status = jobState.jobStatus();
@@ -425,6 +486,81 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
     }
 
     /**
+     * 构建单机视角的指标采集配置；单机覆盖项仍由统一 job 驱动调度。
+     */
+    private ServerMetricsTaskSettings buildTaskSettings(ServerHost host) {
+        MetricsRefreshJobState jobState = resolveRefreshJobState();
+        boolean inheritGlobal = ServerHostMetadataSupport.isMetricsTaskInheritGlobal(host);
+        boolean enabled = ServerHostMetadataSupport.resolveMetricsEnabled(host, properties.getMetrics().isEnable());
+        long refreshIntervalMs = Math.max(
+                ServerHostMetadataSupport.resolveMetricsRefreshIntervalMs(host, properties.getMetrics().getRefreshIntervalMs()),
+                1000L);
+        int timeoutMs = Math.max(
+                ServerHostMetadataSupport.resolveMetricsTimeoutMs(host, properties.getMetrics().getTimeoutMs()),
+                1000);
+        boolean cacheEnabled = ServerHostMetadataSupport.resolveMetricsCacheEnabled(host, properties.getMetrics().isCacheEnabled());
+        long cacheTtlSeconds = Math.max(
+                ServerHostMetadataSupport.resolveMetricsCacheTtlSeconds(host, properties.getMetrics().getCacheTtlSeconds()),
+                60L);
+        ServerMetricsSnapshot snapshot = host == null || host.getServerId() == null ? null : getSnapshot(host.getServerId());
+        Long lastHostRefreshAt = snapshot != null ? snapshot.getCollectTimestamp() : null;
+        Long nextHostRefreshAt = enabled
+                ? (lastHostRefreshAt != null ? lastHostRefreshAt + refreshIntervalMs : System.currentTimeMillis() + refreshIntervalMs)
+                : null;
+        String status = enabled ? "RUNNING" : "STOPPED";
+        if (!inheritGlobal && !enabled) {
+            status = "HOST_STOPPED";
+        } else if (!inheritGlobal) {
+            status = "HOST_OVERRIDE";
+        }
+        return ServerMetricsTaskSettings.builder()
+                .serverId(host == null ? null : host.getServerId())
+                .serverName(host == null ? null : host.getServerName())
+                .inheritGlobal(inheritGlobal)
+                .enabled(enabled)
+                .schedulerMode(jobState.schedulerMode())
+                .jobEnabled(jobState.jobEnabled())
+                .refreshIntervalMs(refreshIntervalMs)
+                .timeoutMs(timeoutMs)
+                .cacheEnabled(cacheEnabled)
+                .cacheTtlSeconds(cacheTtlSeconds)
+                .lastRefreshAt(lastHostRefreshAt)
+                .nextRefreshAt(nextHostRefreshAt)
+                .historyLimit(MAX_HISTORY_POINTS)
+                .status(status)
+                .jobId(jobState.jobId())
+                .jobNo(jobState.jobNo())
+                .jobName(jobState.jobName())
+                .jobScheduleType(jobState.jobScheduleType())
+                .jobScheduleTime(jobState.jobScheduleTime())
+                .jobStatus(jobState.jobStatus())
+                .jobLastTriggerAt(jobState.lastTriggerAt())
+                .jobNextTriggerAt(jobState.nextTriggerAt())
+                .manualTriggerSupported(Boolean.TRUE)
+                .build();
+    }
+
+    /**
+     * 判断当前主机在本轮调度中是否应当采样。
+     */
+    private boolean shouldCollectHost(ServerHost host, long now) {
+        if (host == null || host.getServerId() == null) {
+            return false;
+        }
+        if (!ServerHostMetadataSupport.resolveMetricsEnabled(host, properties.getMetrics().isEnable())) {
+            return false;
+        }
+        long intervalMs = Math.max(
+                ServerHostMetadataSupport.resolveMetricsRefreshIntervalMs(host, properties.getMetrics().getRefreshIntervalMs()),
+                1000L);
+        ServerMetricsSnapshot snapshot = snapshotCache.get(host.getServerId());
+        long lastHostRefreshAt = snapshot == null || snapshot.getCollectTimestamp() == null
+                ? 0L
+                : snapshot.getCollectTimestamp();
+        return lastHostRefreshAt <= 0L || lastHostRefreshAt + intervalMs <= now;
+    }
+
+    /**
      * 把指标采集和历史清理两个任务同步到 job-starter，页面修改后这里负责落地到底层调度器。
      */
     private void synchronizeMetricsJobs() {
@@ -448,8 +584,8 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
      */
     private void upsertRefreshJob(JobDynamicConfigService service) {
         SysJob job = service.getJobByName(METRICS_REFRESH_JOB_NAME);
-        boolean running = properties.getMetrics().isEnable();
-        long intervalMs = Math.max(properties.getMetrics().getRefreshIntervalMs(), 1000L);
+        boolean running = isAnyMetricsCollectionEnabled();
+        long intervalMs = computeDriverRefreshIntervalMs();
         if (job == null) {
             job = new SysJob();
             job.setJobName(METRICS_REFRESH_JOB_NAME);
@@ -522,10 +658,10 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
                     null,
                     METRICS_REFRESH_JOB_NAME,
                     METRICS_REFRESH_SCHEDULE_TYPE,
-                    String.valueOf(Math.max(properties.getMetrics().getRefreshIntervalMs(), 1000L)),
-                    properties.getMetrics().isEnable() ? "RUNNING" : "STOPPED",
+                    String.valueOf(computeDriverRefreshIntervalMs()),
+                    isAnyMetricsCollectionEnabled() ? "RUNNING" : "STOPPED",
                     lastRefreshAt > 0L ? lastRefreshAt : null,
-                    properties.getMetrics().isEnable() ? nextRefreshAt : null);
+                    isAnyMetricsCollectionEnabled() ? nextRefreshAt : null);
         }
         JobDynamicConfigService service = jobDynamicConfigServiceProvider.getIfAvailable();
         if (service == null) {
@@ -536,10 +672,10 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
                     null,
                     METRICS_REFRESH_JOB_NAME,
                     METRICS_REFRESH_SCHEDULE_TYPE,
-                    String.valueOf(Math.max(properties.getMetrics().getRefreshIntervalMs(), 1000L)),
+                    String.valueOf(computeDriverRefreshIntervalMs()),
                     "UNAVAILABLE",
                     lastRefreshAt > 0L ? lastRefreshAt : null,
-                    properties.getMetrics().isEnable() ? nextRefreshAt : null);
+                    isAnyMetricsCollectionEnabled() ? nextRefreshAt : null);
         }
         SysJob job = service.getJobByName(METRICS_REFRESH_JOB_NAME);
         if (job == null) {
@@ -550,10 +686,10 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
                     null,
                     METRICS_REFRESH_JOB_NAME,
                     METRICS_REFRESH_SCHEDULE_TYPE,
-                    String.valueOf(Math.max(properties.getMetrics().getRefreshIntervalMs(), 1000L)),
-                    properties.getMetrics().isEnable() ? "PENDING" : "STOPPED",
+                    String.valueOf(computeDriverRefreshIntervalMs()),
+                    isAnyMetricsCollectionEnabled() ? "PENDING" : "STOPPED",
                     lastRefreshAt > 0L ? lastRefreshAt : null,
-                    properties.getMetrics().isEnable() ? nextRefreshAt : null);
+                    isAnyMetricsCollectionEnabled() ? nextRefreshAt : null);
         }
         return new MetricsRefreshJobState(
                 "JOB_TABLE",
@@ -567,7 +703,7 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
                 job.getJobTriggerLastTime() != null && job.getJobTriggerLastTime() > 0L
                         ? job.getJobTriggerLastTime() : (lastRefreshAt > 0L ? lastRefreshAt : null),
                 job.getJobTriggerNextTime() != null && job.getJobTriggerNextTime() > 0L
-                        ? job.getJobTriggerNextTime() : (properties.getMetrics().isEnable() ? nextRefreshAt : null));
+                        ? job.getJobTriggerNextTime() : (isAnyMetricsCollectionEnabled() ? nextRefreshAt : null));
     }
 
     /**
@@ -578,9 +714,43 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
         return jobProperties != null && jobProperties.isEnable() && jobProperties.isConfigTableEnabled();
     }
 
+    /**
+     * 统一调度器实际需要跑多快，取全局默认值和所有启用主机覆盖值中的最小值。
+     */
+    private long computeDriverRefreshIntervalMs() {
+        long minInterval = Math.max(properties.getMetrics().getRefreshIntervalMs(), 1000L);
+        for (ServerHost host : serverHostService.listHosts(null, null, Boolean.TRUE)) {
+            if (!ServerHostMetadataSupport.resolveMetricsEnabled(host, properties.getMetrics().isEnable())) {
+                continue;
+            }
+            long intervalMs = Math.max(
+                    ServerHostMetadataSupport.resolveMetricsRefreshIntervalMs(host, properties.getMetrics().getRefreshIntervalMs()),
+                    1000L);
+            if (intervalMs < minInterval) {
+                minInterval = intervalMs;
+            }
+        }
+        return minInterval;
+    }
+
+    /**
+     * 判断当前是否至少有一台主机需要参与指标采集。
+     */
+    private boolean isAnyMetricsCollectionEnabled() {
+        if (properties.getMetrics().isEnable()) {
+            return true;
+        }
+        for (ServerHost host : serverHostService.listHosts(null, null, Boolean.TRUE)) {
+            if (ServerHostMetadataSupport.resolveMetricsEnabled(host, false)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private String safeStatusName(Integer status) {
         if (status == null) {
-            return properties.getMetrics().isEnable() ? "RUNNING" : "STOPPED";
+            return isAnyMetricsCollectionEnabled() ? "RUNNING" : "STOPPED";
         }
         return status == 1 ? "RUNNING" : "STOPPED";
     }
@@ -640,11 +810,7 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
             return buildDisabledSnapshot(host);
         }
         try {
-            return switch (StringUtils.hasText(host.getServerType()) ? host.getServerType().toUpperCase() : "LOCAL") {
-                case "SSH" -> collectViaSsh(host);
-                case "WINRM" -> collectViaWinRm(host);
-                default -> collectLocal(host);
-            };
+            return metricsCollectorManager.collectSnapshot(new ServerMetricsSpiContext(host, null, this));
         } catch (Exception e) {
             return ServerMetricsSnapshot.builder()
                     .serverId(host.getServerId())
@@ -835,13 +1001,16 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
      * 根据主机协议组装指标详情视图。
      */
     private ServerMetricsDetail collectDetail(ServerHost host, ServerMetricsSnapshot snapshot) {
-        return switch (StringUtils.hasText(host.getServerType()) ? host.getServerType().toUpperCase() : "LOCAL") {
-            case "SSH" -> collectUnixDetail(host, snapshot, false);
-            case "WINRM" -> collectWindowsDetail(host, snapshot, false);
-            default -> isWindowsHost(host)
-                    ? collectWindowsDetail(host, snapshot, true)
-                    : collectUnixDetail(host, snapshot, true);
-        };
+        try {
+            return metricsCollectorManager.collectDetail(new ServerMetricsSpiContext(host, snapshot, this));
+        } catch (Exception e) {
+            log.warn("采集服务器指标详情失败, serverId={}, message={}", host == null ? null : host.getServerId(), e.getMessage());
+            return ServerMetricsDetail.builder()
+                    .serverId(host == null ? null : host.getServerId())
+                    .serverCode(host == null ? null : host.getServerCode())
+                    .collectTimestamp(snapshot == null ? System.currentTimeMillis() : snapshot.getCollectTimestamp())
+                    .build();
+        }
     }
 
     /**
@@ -966,6 +1135,9 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
         if (snapshot == null || snapshot.getServerId() == null) {
             return;
         }
+        if (!shouldPersistHistory(snapshot.getServerId())) {
+            return;
+        }
         Deque<ServerMetricsSnapshot> history = historyCache.computeIfAbsent(
                 snapshot.getServerId(),
                 key -> new ConcurrentLinkedDeque<>());
@@ -982,6 +1154,9 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
     @Async
     protected void persistHistory(ServerMetricsSnapshot snapshot) {
         if (snapshot == null || snapshot.getServerId() == null) {
+            return;
+        }
+        if (!shouldPersistHistory(snapshot.getServerId())) {
             return;
         }
         try {
@@ -1012,22 +1187,27 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
     }
 
     /**
-     * 从历史表读取指定时间范围内的指标点位，并按时间升序返回；历史表缺失时回退内存缓存。
+     * Prometheus 模式直接走远端时序库，不再把指标重复写入本地历史表。
+     */
+    private boolean shouldPersistHistory(Integer serverId) {
+        if (serverId == null) {
+            return false;
+        }
+        ServerHost host = serverHostService.getHost(serverId);
+        return !ServerHostMetadataSupport.isPrometheusMetrics(host);
+    }
+
+    /**
+     * 从历史表读取指定时间范围内的指标点位，并按时间升序返回。
      */
     private List<ServerMetricsSnapshot> listPersistedHistory(Integer serverId, Integer minutes) {
-        List<ServerMetricsHistory> rows;
-        try {
-            long cutoff = resolveHistoryCutoff(minutes);
-            rows = serverMetricsHistoryMapper.selectList(
-                    Wrappers.<ServerMetricsHistory>lambdaQuery()
-                            .eq(ServerMetricsHistory::getServerId, serverId)
-                            .ge(cutoff > 0L, ServerMetricsHistory::getCollectTimestamp, cutoff)
-                            .orderByDesc(ServerMetricsHistory::getCollectTimestamp, ServerMetricsHistory::getServerMetricsHistoryId)
-                            .last("limit " + MAX_HISTORY_POINTS));
-        } catch (Exception ex) {
-            log.warn("读取服务器指标历史表失败，回退内存历史: {}", ex.getMessage());
-            return Collections.emptyList();
-        }
+        long cutoff = resolveHistoryCutoff(minutes);
+        List<ServerMetricsHistory> rows = serverMetricsHistoryMapper.selectList(
+                Wrappers.<ServerMetricsHistory>lambdaQuery()
+                        .eq(ServerMetricsHistory::getServerId, serverId)
+                        .ge(cutoff > 0L, ServerMetricsHistory::getCollectTimestamp, cutoff)
+                        .orderByDesc(ServerMetricsHistory::getCollectTimestamp, ServerMetricsHistory::getServerMetricsHistoryId)
+                        .last("limit " + MAX_HISTORY_POINTS));
         if (rows == null || rows.isEmpty()) {
             return Collections.emptyList();
         }
@@ -1036,6 +1216,56 @@ public class ServerMetricsServiceImpl implements ServerMetricsService {
             snapshots.add(toSnapshot(rows.get(index)));
         }
         return snapshots;
+    }
+
+    /**
+     * SPI 本机快照采集委派。
+     */
+    @Override
+    public ServerMetricsSnapshot collectLocalSnapshot(ServerHost host) throws Exception {
+        return collectLocal(host);
+    }
+
+    /**
+     * SPI SSH 快照采集委派。
+     */
+    @Override
+    public ServerMetricsSnapshot collectSshSnapshot(ServerHost host) throws Exception {
+        return collectViaSsh(host);
+    }
+
+    /**
+     * SPI WinRM 快照采集委派。
+     */
+    @Override
+    public ServerMetricsSnapshot collectWinRmSnapshot(ServerHost host) throws Exception {
+        return collectViaWinRm(host);
+    }
+
+    /**
+     * SPI 本机详情采集委派。
+     */
+    @Override
+    public ServerMetricsDetail collectLocalDetail(ServerHost host, ServerMetricsSnapshot snapshot) {
+        return isWindowsHost(host)
+                ? collectWindowsDetail(host, snapshot, true)
+                : collectUnixDetail(host, snapshot, true);
+    }
+
+    /**
+     * SPI SSH 详情采集委派。
+     */
+    @Override
+    public ServerMetricsDetail collectSshDetail(ServerHost host, ServerMetricsSnapshot snapshot) {
+        return collectUnixDetail(host, snapshot, false);
+    }
+
+    /**
+     * SPI WinRM 详情采集委派。
+     */
+    @Override
+    public ServerMetricsDetail collectWinRmDetail(ServerHost host, ServerMetricsSnapshot snapshot) {
+        return collectWindowsDetail(host, snapshot, false);
     }
 
     /**

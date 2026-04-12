@@ -17,7 +17,9 @@ import com.chua.starter.server.support.service.ServerAlertService;
 import com.chua.starter.server.support.service.ServerRealtimePublisher;
 import com.chua.starter.service.SysMessageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,9 +93,25 @@ public class ServerAlertServiceImpl implements ServerAlertService {
 
     @Override
     public List<ServerAlertEvent> listAlerts(Integer serverId, Integer limit) {
+        return listAlerts(serverId, null, null, null, null, limit);
+    }
+
+    @Override
+    public List<ServerAlertEvent> listAlerts(
+            Integer serverId,
+            String metricType,
+            String severity,
+            Long startTime,
+            Long endTime,
+            Integer limit
+    ) {
         int size = limit == null || limit <= 0 ? 50 : Math.min(limit, 200);
         return serverAlertEventMapper.selectList(Wrappers.<ServerAlertEvent>lambdaQuery()
                 .eq(serverId != null, ServerAlertEvent::getServerId, serverId)
+                .eq(StringUtils.hasText(metricType), ServerAlertEvent::getMetricType, metricType)
+                .eq(StringUtils.hasText(severity), ServerAlertEvent::getSeverity, severity)
+                .ge(startTime != null, ServerAlertEvent::getCreateTime, toLocalDateTime(startTime))
+                .le(endTime != null, ServerAlertEvent::getCreateTime, toLocalDateTime(endTime))
                 .orderByDesc(ServerAlertEvent::getCreateTime, ServerAlertEvent::getServerAlertEventId)
                 .last("limit " + size));
     }
@@ -189,6 +207,15 @@ public class ServerAlertServiceImpl implements ServerAlertService {
     private String buildAlertMessage(String metricType, String severity, Double metricValue, String unit) {
         return metricType + " 指标达到" + ("DANGER".equalsIgnoreCase(severity) ? "危险" : "预警")
                 + "阈值，当前值 " + trimNumeric(metricValue) + unit;
+    }
+
+    private LocalDateTime toLocalDateTime(Long timestamp) {
+        if (timestamp == null || timestamp <= 0) {
+            return null;
+        }
+        return LocalDateTime.ofInstant(
+                Instant.ofEpochMilli(timestamp),
+                ZoneId.systemDefault());
     }
 
     private void pushAlertMessageIfNecessary(

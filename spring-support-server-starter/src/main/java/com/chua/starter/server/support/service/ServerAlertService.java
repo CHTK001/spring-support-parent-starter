@@ -17,5 +17,17 @@ public interface ServerAlertService {
 
     List<ServerAlertEvent> listAlerts(Integer serverId, Integer limit);
 
+    /**
+     * 按条件筛选服务器告警历史。
+     */
+    List<ServerAlertEvent> listAlerts(
+            Integer serverId,
+            String metricType,
+            String severity,
+            Long startTime,
+            Long endTime,
+            Integer limit
+    );
+
     void processSnapshot(ServerMetricsSnapshot snapshot);
 }

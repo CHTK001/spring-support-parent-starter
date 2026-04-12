@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.starter.server.support.entity.ServerHost;
 import com.chua.starter.server.support.mapper.ServerHostMapper;
 import com.chua.starter.server.support.service.ServerHostService;
+import com.chua.starter.server.support.spi.ServerHostProtocolManager;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -19,6 +20,7 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class ServerHostServiceImpl extends ServiceImpl<ServerHostMapper, ServerHost> implements ServerHostService {
 
+    private final ServerHostProtocolManager protocolManager = new ServerHostProtocolManager();
     private final ServerAuditExecutor auditExecutor;
 
     /**
@@ -116,7 +118,7 @@ public class ServerHostServiceImpl extends ServiceImpl<ServerHostMapper, ServerH
     private void normalize(ServerHost host) {
         host.setServerName(trim(host.getServerName()));
         host.setServerCode(resolveCode(host));
-        host.setServerType(resolveServerType(host.getServerType()));
+        host.setServerType(protocolManager.normalizeType(host.getServerType()));
         host.setOsType(trim(host.getOsType()));
         host.setArchitecture(trim(host.getArchitecture()));
         host.setHost(resolveHost(host));
@@ -138,7 +140,7 @@ public class ServerHostServiceImpl extends ServiceImpl<ServerHostMapper, ServerH
         String hostValue = resolveHost(host);
         String usernameValue = trim(host.getUsername());
         if (!StringUtils.hasText(usernameValue)) {
-            usernameValue = "LOCAL".equalsIgnoreCase(resolveServerType(host.getServerType())) ? "local" : "anonymous";
+            usernameValue = protocolManager.isLocal(host) ? "local" : "anonymous";
         }
         String candidate = DigestUtils.md5Hex(
                 (StringUtils.hasText(hostValue) ? hostValue.trim().toLowerCase() : "")
@@ -150,49 +152,24 @@ public class ServerHostServiceImpl extends ServiceImpl<ServerHostMapper, ServerH
     }
 
     /**
-     * 规范化服务器类型，缺省按本机处理。
-     */
-    private String resolveServerType(String serverType) {
-        return StringUtils.hasText(serverType) ? serverType.trim().toUpperCase() : "LOCAL";
-    }
-
-    /**
      * 本机默认回落到 127.0.0.1，远程主机保留用户输入。
      */
     private String resolveHost(ServerHost host) {
-        if ("LOCAL".equalsIgnoreCase(host.getServerType())) {
-            return StringUtils.hasText(host.getHost()) ? host.getHost().trim() : "127.0.0.1";
-        }
-        return trim(host.getHost());
+        return protocolManager.resolveHost(host);
     }
 
     /**
      * 不同接入协议补齐默认端口。
      */
     private Integer resolvePort(ServerHost host) {
-        if (host.getPort() != null) {
-            return host.getPort();
-        }
-        return switch (resolveServerType(host.getServerType())) {
-            case "SSH" -> 22;
-            case "WINRM" -> 5985;
-            default -> 0;
-        };
+        return protocolManager.resolvePort(host);
     }
 
     /**
      * 自动推断基础目录，避免本机与远程新增时必须手工填写。
      */
     private String resolveBaseDirectory(ServerHost host) {
-        String value = trim(host.getBaseDirectory());
-        if (StringUtils.hasText(value)) {
-            return value;
-        }
-        String osType = trim(host.getOsType());
-        if (StringUtils.hasText(osType) && osType.toLowerCase().contains("win")) {
-            return "C:/";
-        }
-        return "/";
+        return protocolManager.resolveBaseDirectory(host);
     }
 
     /**
