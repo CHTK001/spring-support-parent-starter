@@ -9,6 +9,9 @@ target/
 *.html
 *.log
 *bak
+.tmp
+docs
+META-INF
 logs/!/patch/
 /.runtime/
 /system-ui-inspect.png

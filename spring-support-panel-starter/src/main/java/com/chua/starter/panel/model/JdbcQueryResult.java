@@ -16,5 +16,6 @@ public class JdbcQueryResult {
     private List<String> columns;
     private List<Map<String, Object>> rows;
     private long affectedRows;
+    private long elapsedMillis;
     private boolean query;
 }

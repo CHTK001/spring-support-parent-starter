@@ -17,7 +17,9 @@ public class JdbcTableStructure {
     private String schemaName;
     private String tableName;
     private String tableComment;
+    private String ddlText;
     private List<Map<String, Object>> columns;
     private List<Map<String, Object>> indexes;
+    private List<Map<String, Object>> triggers;
     private List<String> primaryKeys;
 }

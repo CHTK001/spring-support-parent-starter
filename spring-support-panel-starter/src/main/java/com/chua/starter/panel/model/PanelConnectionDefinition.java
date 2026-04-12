@@ -2,6 +2,8 @@ package com.chua.starter.panel.model;
 
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 import java.util.Map;
 
@@ -10,6 +12,8 @@ import java.util.Map;
  */
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class PanelConnectionDefinition {
 
     private String connectionId;

@@ -7,6 +7,7 @@ import com.chua.starter.panel.service.PanelRemarkService;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * 默认面板备注服务。
@@ -20,7 +21,7 @@ public class DefaultPanelRemarkService implements PanelRemarkService {
         return remarkStore.values().stream()
                 .filter(item -> panelConnectionId != null && panelConnectionId.equals(item.getPanelConnectionId()))
                 .sorted((left, right) -> left.getPanelRemarkKey().compareToIgnoreCase(right.getPanelRemarkKey()))
-                .toList();
+                .collect(Collectors.toList());
     }
 
     @Override

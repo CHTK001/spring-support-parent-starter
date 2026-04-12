@@ -23,4 +23,6 @@ public class PanelProperties {
     private boolean jdbcEnabled = true;
 
     private boolean aiEnabled = true;
+
+    private String datasourceStorePath = System.getProperty("user.home") + "/.panel/panel-datasources.json";
 }
