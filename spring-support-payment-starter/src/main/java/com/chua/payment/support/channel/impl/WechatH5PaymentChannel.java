@@ -26,7 +26,8 @@ public class WechatH5PaymentChannel extends WechatJsapiPaymentChannel implements
 
     @Override
     public boolean supports(String channelType, String channelSubType) {
-        return "WECHAT".equalsIgnoreCase(channelType) && "H5".equalsIgnoreCase(channelSubType);
+        return ("WECHAT".equalsIgnoreCase(channelType) || "EPAY".equalsIgnoreCase(channelType))
+                && "H5".equalsIgnoreCase(channelSubType);
     }
 
     @Override

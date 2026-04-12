@@ -1,17 +1,13 @@
 package com.chua.payment.support.service.impl;
 
 import com.chua.payment.support.channel.PaymentChannelRegistry;
-import com.chua.common.support.core.spi.ServiceProvider;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.chua.payment.support.channel.support.AbstractMerchantPaymentChannel;
 import com.chua.payment.support.configuration.PaymentCipherService;
-import com.chua.payment.support.configuration.PaymentProviderProperties;
 import com.chua.payment.support.dto.ChannelConfigDTO;
 import com.chua.payment.support.entity.Merchant;
 import com.chua.payment.support.entity.MerchantChannel;
 import com.chua.payment.support.entity.PaymentOrder;
 import com.chua.payment.support.enums.ChannelStatus;
-import com.chua.payment.support.enums.OnboardingStatus;
 import com.chua.payment.support.enums.PaymentChannelType;
 import com.chua.payment.support.exception.PaymentException;
 import com.chua.payment.support.mapper.MerchantChannelMapper;
@@ -20,9 +16,6 @@ import com.chua.payment.support.mapper.PaymentOrderMapper;
 import com.chua.payment.support.service.MerchantChannelService;
 import com.chua.payment.support.vo.MerchantChannelVO;
 import com.chua.payment.support.vo.PaymentMethodGuideVO;
-import com.chua.payment.support.vo.ProviderSpiOptionVO;
-import com.chua.starter.aliyun.support.payment.AliyunAlipayGateway;
-import com.chua.starter.tencent.support.payment.TencentWechatPayGateway;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +30,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * 商户渠道服务实现
@@ -50,7 +42,6 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     private final MerchantMapper merchantMapper;
     private final PaymentOrderMapper paymentOrderMapper;
     private final ObjectMapper objectMapper;
-    private final PaymentProviderProperties paymentProviderProperties;
     private final PaymentCipherService paymentCipherService;
     @Lazy
     private final PaymentChannelRegistry paymentChannelRegistry;
@@ -61,15 +52,13 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         Merchant merchant = requireMerchant(dto.getMerchantId());
         MerchantChannel channel = new MerchantChannel();
         BeanUtils.copyProperties(dto, channel);
-        channel.setExtConfig(normalizeExtConfig(channel.getChannelType(), mergeProviderSpi(dto.getExtConfig(), dto.getProviderSpi())));
+        channel.setExtConfig(normalizeExtConfig(dto.getExtConfig()));
         channel.setChannelName(StringUtils.hasText(dto.getChannelName()) ? dto.getChannelName() : buildDefaultChannelName(dto.getChannelType(), dto.getChannelSubType()));
         channel.setApiKey(encryptIfPresent(dto.getApiKey()));
         channel.setPrivateKey(encryptIfPresent(dto.getPrivateKey()));
         channel.setStatus(dto.getStatus() != null ? dto.getStatus() : ChannelStatus.DISABLED.getCode());
         channel.setSandboxMode(dto.getSandboxMode() != null ? dto.getSandboxMode() : 0);
-        channel.setOnboardingStatus(StringUtils.hasText(dto.getOnboardingStatus()) ? dto.getOnboardingStatus() : defaultOnboardingStatus(dto.getChannelType()));
         PaymentMethodGuideVO guide = findGuide(dto.getChannelType(), dto.getChannelSubType());
-        channel.setOnboardingLink(StringUtils.hasText(dto.getOnboardingLink()) ? dto.getOnboardingLink() : defaultGuideUrl(guide));
         validateEnabledChannelSupport(channel);
         channelMapper.insert(channel);
         return convertToVO(channel, merchant, guide);
@@ -81,7 +70,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         MerchantChannel channel = requireChannel(id);
         Merchant merchant = requireMerchant(channel.getMerchantId());
         BeanUtils.copyProperties(dto, channel, "apiKey", "privateKey");
-        channel.setExtConfig(normalizeExtConfig(channel.getChannelType(), mergeProviderSpi(channel.getExtConfig(), dto.getProviderSpi())));
+        channel.setExtConfig(normalizeExtConfig(channel.getExtConfig()));
         channel.setChannelName(StringUtils.hasText(channel.getChannelName()) ? channel.getChannelName() : buildDefaultChannelName(channel.getChannelType(), channel.getChannelSubType()));
         if (StringUtils.hasText(dto.getApiKey())) {
             channel.setApiKey(encryptApiKey(dto.getApiKey()));
@@ -95,13 +84,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         if (dto.getSandboxMode() == null && channel.getSandboxMode() == null) {
             channel.setSandboxMode(0);
         }
-        if (!StringUtils.hasText(channel.getOnboardingStatus())) {
-            channel.setOnboardingStatus(defaultOnboardingStatus(channel.getChannelType()));
-        }
         PaymentMethodGuideVO guide = findGuide(channel.getChannelType(), channel.getChannelSubType());
-        if (!StringUtils.hasText(channel.getOnboardingLink())) {
-            channel.setOnboardingLink(defaultGuideUrl(guide));
-        }
         validateEnabledChannelSupport(channel);
         channelMapper.updateById(channel);
         return convertToVO(channel, merchant, guide);
@@ -224,16 +207,26 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
                 List.of("进入开放平台支持中心", "打开沙箱调试", "获取测试账号与测试应用参数", "系统内开启沙箱模式"),
                 List.of("联调完成后必须切回正式网关")));
 
-        list.add(guide("COMPOSITE", "AGGREGATE_ROUTE", "综合支付路由配置", "平台内部路由", null, null, null,
-                "用于系统统一路由到多个第三方支付渠道。",
-                List.of("路由标识", "签名密钥", "回调地址", "供应商对接信息"),
-                List.of("确认已开通下游支付方式", "录入路由配置", "启用风控或权重规则"),
-                List.of("该能力不对应单一官方开户平台")));
         list.add(guide("WALLET", "BALANCE", "站内钱包配置", "平台内部钱包", null, null, null,
                 "用于账户余额支付、退款退回余额。",
                 List.of("钱包开关", "充值策略", "风控规则"),
                 List.of("启用钱包", "配置余额扣减和退款规则", "配置对账策略"),
                 List.of("钱包能力不依赖第三方开户，但对账责任在平台自身")));
+        list.add(guide("EPAY", "JSAPI", "易支付微信 JSAPI", "易支付", "https://www.ezfpy.cn/", "https://www.ezfpy.cn/", null,
+                "通过易支付网关承接微信 JSAPI 场景，系统自动路由到易支付 SPI。",
+                List.of("商户号", "应用 ID", "API 密钥", "支付回调地址"),
+                List.of("开通易支付商户", "配置微信通道参数", "录入系统并联调回调"),
+                List.of("前台无需再选择 SPI，后端自动处理")));
+        list.add(guide("EPAY", "MINI_PROGRAM", "易支付微信小程序", "易支付", "https://www.ezfpy.cn/", "https://www.ezfpy.cn/", null,
+                "适用于通过易支付通道发起微信小程序支付。",
+                List.of("商户号", "小程序 AppID", "API 密钥", "支付回调地址"),
+                List.of("开通易支付商户", "绑定小程序参数", "联调支付与回调"),
+                List.of("回调默认复用支付全局配置或商户默认配置")));
+        list.add(guide("EPAY", "H5", "易支付 H5", "易支付", "https://www.ezfpy.cn/", "https://www.ezfpy.cn/", null,
+                "适用于浏览器和移动端 H5 拉起支付。",
+                List.of("商户号", "API 密钥", "支付回调地址", "返回地址"),
+                List.of("开通易支付商户", "配置 H5 通道", "联调浏览器回跳和异步回调"),
+                List.of("建议同时配置统一回跳地址")));
 
         list.add(guide("UNIONPAY", "APP", "云闪付APP支付", "中国银联", "https://open.unionpay.com", "https://open.unionpay.com/tjweb/acproduct/list", "https://open.unionpay.com/tjweb/acproduct/sandbox",
                 "适用于APP内拉起云闪付客户端完成支付。",
@@ -248,22 +241,6 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
                 List.of("支持沙箱环境测试", "需要配置商户私钥和银联公钥")));
 
         return list;
-    }
-
-    @Override
-    public List<ProviderSpiOptionVO> listProviderOptions(String channelType) {
-        if (!StringUtils.hasText(channelType)) {
-            return List.of();
-        }
-
-        String normalizedType = channelType.toUpperCase(Locale.ROOT);
-        if (PaymentChannelType.ALIPAY.getCode().equalsIgnoreCase(normalizedType)) {
-            return buildProviderOptions(normalizedType, ServiceProvider.of(AliyunAlipayGateway.class).getExtensions());
-        }
-        if (PaymentChannelType.WECHAT.getCode().equalsIgnoreCase(normalizedType)) {
-            return buildProviderOptions(normalizedType, ServiceProvider.of(TencentWechatPayGateway.class).getExtensions());
-        }
-        return List.of();
     }
 
     @Override
@@ -329,52 +306,36 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
             requireText(channel.getPublicKey(), "支付宝公钥不能为空");
             return;
         }
+        if ("EPAY".equals(channelType)) {
+            requireText(channel.getMerchantNo(), "易支付商户号不能为空");
+            requireText(channel.getApiKey(), "易支付 API 密钥不能为空");
+            return;
+        }
         if ("COMPOSITE".equals(channelType) && "AGGREGATE_ROUTE".equals(channelSubType)) {
             Long targetChannelId = resolveRouteChannelId(channel.getExtConfig());
             if (targetChannelId == null) {
-                throw new PaymentException("综合支付路由必须在 extConfig 中提供 targetChannelId 或 defaultChannelId");
+                throw new PaymentException("直营网关配置必须在 extConfig 中提供 targetChannelId 或 defaultChannelId");
             }
             if (channel.getId() != null && channel.getId().equals(targetChannelId)) {
-                throw new PaymentException("综合支付路由不能指向自身");
+                throw new PaymentException("直营网关配置不能指向自身");
             }
             MerchantChannel targetChannel = channelMapper.selectById(targetChannelId);
             if (targetChannel == null) {
-                throw new PaymentException("综合支付路由目标渠道不存在: " + targetChannelId);
+                throw new PaymentException("直营网关目标渠道不存在: " + targetChannelId);
             }
             if ("COMPOSITE".equalsIgnoreCase(targetChannel.getChannelType())) {
-                throw new PaymentException("综合支付路由不能嵌套指向 COMPOSITE 渠道");
+                throw new PaymentException("直营网关配置不能嵌套指向 COMPOSITE 渠道");
             }
             if (!paymentChannelRegistry.supports(targetChannel.getChannelType(), targetChannel.getChannelSubType())) {
-                throw new PaymentException("综合支付路由目标渠道当前版本不可执行: "
+                throw new PaymentException("直营网关目标渠道当前版本不可执行: "
                         + targetChannel.getChannelType()
                         + "/" + targetChannel.getChannelSubType());
             }
         }
     }
 
-    private String normalizeExtConfig(String channelType, String extConfigText) {
-        Map<String, Object> config = parseExtConfig(extConfigText);
-        String providerSpi = firstText(
-                config.get(AbstractMerchantPaymentChannel.EXT_PROVIDER_SPI),
-                config.get("providerExtension"),
-                config.get("spi"),
-                paymentProviderProperties.resolveForChannelType(channelType));
-        validateProviderSpi(channelType, providerSpi);
-        config.put(AbstractMerchantPaymentChannel.EXT_PROVIDER_SPI, providerSpi);
-        config.remove("providerExtension");
-        config.remove("spi");
-        return writeExtConfig(config);
-    }
-
-    private String mergeProviderSpi(String extConfigText, String providerSpi) {
-        if (!StringUtils.hasText(providerSpi)) {
-            return extConfigText;
-        }
-        Map<String, Object> config = parseExtConfig(extConfigText);
-        config.put(AbstractMerchantPaymentChannel.EXT_PROVIDER_SPI, providerSpi);
-        config.remove("providerExtension");
-        config.remove("spi");
-        return writeExtConfig(config);
+    private String normalizeExtConfig(String extConfigText) {
+        return writeExtConfig(parseExtConfig(extConfigText));
     }
 
     private String buildDefaultChannelName(String channelType, String channelSubType) {
@@ -383,14 +344,6 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
             typeDesc = channelType;
         }
         return StringUtils.hasText(channelSubType) ? typeDesc + "-" + channelSubType : typeDesc;
-    }
-
-    private String defaultOnboardingStatus(String channelType) {
-        if (PaymentChannelType.WALLET.getCode().equalsIgnoreCase(channelType)
-                || PaymentChannelType.COMPOSITE.getCode().equalsIgnoreCase(channelType)) {
-            return OnboardingStatus.COMPLETED.getCode();
-        }
-        return OnboardingStatus.NOT_STARTED.getCode();
     }
 
     private String defaultGuideUrl(PaymentMethodGuideVO guide) {
@@ -434,10 +387,6 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         vo.setApplyUrl(applyUrl);
         vo.setSandboxUrl(sandboxUrl);
         vo.setSummary(summary);
-        vo.setDefaultProviderSpi(paymentProviderProperties.resolveForChannelType(channelType));
-        vo.setAvailableProviderSpis(listProviderOptions(channelType).stream()
-                .map(ProviderSpiOptionVO::getExtensionName)
-                .toList());
         vo.setRequiredMaterials(requiredMaterials);
         vo.setSteps(steps);
         vo.setTips(tips);
@@ -453,88 +402,14 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         vo.setPublicKeyConfigured(StringUtils.hasText(channel.getPublicKey()));
         vo.setCertConfigured(StringUtils.hasText(channel.getCertPath()));
         vo.setStatusDesc(ChannelStatus.descriptionOf(channel.getStatus()));
-        vo.setOnboardingStatusDesc(OnboardingStatus.descriptionOf(channel.getOnboardingStatus()));
-        vo.setProviderSpi(resolveProviderSpi(channel));
+        vo.setChannelTypeDesc(PaymentChannelType.descriptionOf(channel.getChannelType()));
+        vo.setEffectiveNotifyUrl(firstText(channel.getNotifyUrl(), merchant != null ? merchant.getDefaultNotifyUrl() : null));
+        vo.setEffectiveReturnUrl(firstText(channel.getReturnUrl(), merchant != null ? merchant.getDefaultReturnUrl() : null));
         if (guide != null) {
             vo.setGuideTitle(guide.getTitle());
             vo.setGuideUrl(defaultGuideUrl(guide));
         }
         return vo;
-    }
-
-    private List<ProviderSpiOptionVO> buildProviderOptions(String channelType, java.util.Set<String> extensions) {
-        if (extensions == null || extensions.isEmpty()) {
-            return List.of();
-        }
-        return extensions.stream()
-                .sorted()
-                .map(item -> {
-                    ProviderSpiOptionVO vo = new ProviderSpiOptionVO();
-                    vo.setChannelType(channelType);
-                    vo.setExtensionName(item);
-                    vo.setDefaultOption(paymentProviderProperties.resolveForChannelType(channelType).equalsIgnoreCase(item));
-                    vo.setDescription(buildProviderDescription(channelType, item));
-                    return vo;
-                })
-                .toList();
-    }
-
-    private String buildProviderDescription(String channelType, String extensionName) {
-        if (PaymentChannelType.ALIPAY.getCode().equalsIgnoreCase(channelType)) {
-            if ("default".equalsIgnoreCase(extensionName)) {
-                return "支付宝默认 SPI 实现";
-            }
-            if ("alipay".equalsIgnoreCase(extensionName)) {
-                return "支付宝官方网关实现";
-            }
-            if ("mock".equalsIgnoreCase(extensionName) || "alipay-mock".equalsIgnoreCase(extensionName)) {
-                return "支付宝本地联调 mock 实现";
-            }
-        }
-        if (PaymentChannelType.WECHAT.getCode().equalsIgnoreCase(channelType)) {
-            if ("default".equalsIgnoreCase(extensionName)) {
-                return "微信支付默认 SPI 实现";
-            }
-            if ("wechat-pay".equalsIgnoreCase(extensionName)) {
-                return "微信支付官方网关实现";
-            }
-            if ("mock".equalsIgnoreCase(extensionName) || "wechat-mock".equalsIgnoreCase(extensionName)) {
-                return "微信支付本地联调 mock 实现";
-            }
-        }
-        return "支付 provider SPI 实现";
-    }
-
-    private String resolveProviderSpi(MerchantChannel channel) {
-        if (channel == null || !StringUtils.hasText(channel.getExtConfig())) {
-            return paymentProviderProperties.resolveForChannelType(channel.getChannelType());
-        }
-        try {
-            var config = objectMapper.readValue(channel.getExtConfig(), new TypeReference<java.util.Map<String, Object>>() {
-            });
-            Object value = config.get(AbstractMerchantPaymentChannel.EXT_PROVIDER_SPI);
-            if (value == null) {
-                value = config.get("providerExtension");
-            }
-            if (value == null) {
-                value = config.get("spi");
-            }
-            return value == null ? paymentProviderProperties.resolveForChannelType(channel.getChannelType()) : String.valueOf(value);
-        } catch (Exception e) {
-            return paymentProviderProperties.resolveForChannelType(channel.getChannelType());
-        }
-    }
-
-    private void validateProviderSpi(String channelType, String providerSpi) {
-        if (!StringUtils.hasText(channelType) || !StringUtils.hasText(providerSpi)) {
-            return;
-        }
-        Set<String> available = listProviderOptions(channelType).stream()
-                .map(ProviderSpiOptionVO::getExtensionName)
-                .collect(java.util.stream.Collectors.toSet());
-        if (!available.isEmpty() && !available.contains(providerSpi)) {
-            throw new PaymentException("支付 provider SPI 不存在: " + providerSpi + ", channelType=" + channelType + ", 可选实现=" + available);
-        }
     }
 
     private Map<String, Object> parseExtConfig(String extConfigText) {

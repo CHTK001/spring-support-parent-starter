@@ -7,7 +7,8 @@ public enum PaymentChannelType {
 
     WECHAT("WECHAT", "微信支付"),
     ALIPAY("ALIPAY", "支付宝"),
-    COMPOSITE("COMPOSITE", "综合支付"),
+    EPAY("EPAY", "易支付"),
+    COMPOSITE("COMPOSITE", "直营网关"),
     WALLET("WALLET", "钱包");
 
     private final String code;

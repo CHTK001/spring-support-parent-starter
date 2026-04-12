@@ -13,10 +13,12 @@ CREATE TABLE IF NOT EXISTS `merchant` (
   `legal_person` VARCHAR(50) DEFAULT NULL COMMENT '法人',
   `default_notify_url` VARCHAR(255) DEFAULT NULL COMMENT '默认支付回调地址',
   `default_return_url` VARCHAR(255) DEFAULT NULL COMMENT '默认支付返回地址',
-  `wallet_enabled` TINYINT DEFAULT 0 COMMENT '钱包能力开关',
-  `composite_enabled` TINYINT DEFAULT 0 COMMENT '综合支付能力开关',
-  `auto_close_enabled` TINYINT DEFAULT 1 COMMENT '自动关单开关',
-  `auto_close_minutes` INT DEFAULT 30 COMMENT '自动关单分钟数',
+  `payment_wallet_enabled` TINYINT DEFAULT 0 COMMENT '钱包能力开关',
+  `payment_auto_close_enabled` TINYINT DEFAULT 1 COMMENT '自动关单开关',
+  `payment_auto_close_minutes` INT DEFAULT 30 COMMENT '自动关单分钟数',
+  `payment_split_table_enabled` TINYINT DEFAULT 0 COMMENT '自动分表能力开关',
+  `payment_profit_sharing_enabled` TINYINT DEFAULT 0 COMMENT '自动分账能力开关',
+  `payment_coupon_enabled` TINYINT DEFAULT 0 COMMENT '优惠能力开关',
   `remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
   `status` TINYINT DEFAULT 0 COMMENT '状态:0待审核 1已激活 2已停用 3已注销',
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -40,8 +42,6 @@ CREATE TABLE IF NOT EXISTS `merchant_channel` (
   `sandbox_mode` TINYINT DEFAULT 0 COMMENT '沙箱模式:0正式 1沙箱',
   `notify_url` VARCHAR(255) DEFAULT NULL COMMENT '渠道专属回调地址',
   `return_url` VARCHAR(255) DEFAULT NULL COMMENT '渠道专属返回地址',
-  `onboarding_status` VARCHAR(32) DEFAULT 'NOT_STARTED' COMMENT '开通状态',
-  `onboarding_link` VARCHAR(255) DEFAULT NULL COMMENT '开通链接',
   `status` TINYINT DEFAULT 0 COMMENT '状态:0禁用 1启用',
   `ext_config` TEXT DEFAULT NULL COMMENT '扩展配置JSON',
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -169,6 +169,19 @@ CREATE TABLE IF NOT EXISTS `merchant_payment_config` (
   UNIQUE KEY `uk_merchant_payment_config_merchant` (`merchant_id`),
   INDEX `idx_merchant_payment_config_tenant_merchant` (`tenant_id`, `merchant_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商户支付配置表';
+
+CREATE TABLE IF NOT EXISTS `payment_global_config` (
+  `id` BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+  `config_key` VARCHAR(32) NOT NULL COMMENT '配置标识',
+  `payment_notify_base_url` VARCHAR(255) DEFAULT NULL COMMENT '默认回调基础地址',
+  `payment_return_url` VARCHAR(255) DEFAULT NULL COMMENT '默认返回地址',
+  `payment_callback_path_template` VARCHAR(128) DEFAULT '/{orderNo}/{merchantId}' COMMENT '回调路径模板',
+  `payment_auto_refresh_seconds` INT DEFAULT 60 COMMENT '默认自动刷新秒数',
+  `remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  UNIQUE KEY `uk_payment_global_config_key` (`config_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支付全局配置表';
 
 CREATE TABLE IF NOT EXISTS `payment_refund_order` (
   `id` BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',

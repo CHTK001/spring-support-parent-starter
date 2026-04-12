@@ -16,6 +16,7 @@ public class PaymentProviderProperties {
     private String defaultSpi = AbstractMerchantPaymentChannel.DEFAULT_PROVIDER_SPI;
     private String alipaySpi = AbstractMerchantPaymentChannel.DEFAULT_PROVIDER_SPI;
     private String wechatSpi = AbstractMerchantPaymentChannel.DEFAULT_PROVIDER_SPI;
+    private String epaySpi = "epay";
 
     public String getDefaultSpi() {
         return defaultSpi;
@@ -41,6 +42,14 @@ public class PaymentProviderProperties {
         this.wechatSpi = wechatSpi;
     }
 
+    public String getEpaySpi() {
+        return epaySpi;
+    }
+
+    public void setEpaySpi(String epaySpi) {
+        this.epaySpi = epaySpi;
+    }
+
     public String resolveForChannelType(String channelType) {
         String fallback = StringUtils.hasText(defaultSpi)
                 ? defaultSpi
@@ -53,6 +62,9 @@ public class PaymentProviderProperties {
         }
         if (PaymentChannelType.WECHAT.getCode().equalsIgnoreCase(channelType)) {
             return StringUtils.hasText(wechatSpi) ? wechatSpi : fallback;
+        }
+        if (PaymentChannelType.EPAY.getCode().equalsIgnoreCase(channelType)) {
+            return StringUtils.hasText(epaySpi) ? epaySpi : "epay";
         }
         return fallback;
     }

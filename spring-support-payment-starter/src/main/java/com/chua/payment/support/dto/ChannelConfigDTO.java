@@ -23,9 +23,6 @@ public class ChannelConfigDTO {
     private Integer sandboxMode;
     private String notifyUrl;
     private String returnUrl;
-    private String onboardingStatus;
-    private String onboardingLink;
     private Integer status;
-    private String providerSpi;
     private String extConfig;
 }

@@ -267,7 +267,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
         if (!Integer.valueOf(MerchantStatus.ACTIVE.getCode()).equals(merchant.getStatus())) {
             throw new PaymentException("商户未激活");
         }
-        if (!Boolean.TRUE.equals(merchant.getWalletEnabled())) {
+        if (!Boolean.TRUE.equals(merchant.getPaymentWalletEnabled())) {
             throw new PaymentException("商户未启用钱包能力");
         }
     }

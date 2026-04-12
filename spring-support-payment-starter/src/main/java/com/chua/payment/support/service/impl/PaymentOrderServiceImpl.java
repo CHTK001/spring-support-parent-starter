@@ -439,7 +439,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         request.setRefundAmount(refundAmount);
         request.setTotalAmount(resolvedPaidAmount(latest));
         request.setReason(dto != null ? dto.getRefundReason() : null);
-        request.setNotifyUrl(paymentCallbackUrlResolver.resolveRefundNotifyUrl(channel, request.getRefundNo(), latest.getNotifyUrl()));
+        request.setNotifyUrl(paymentCallbackUrlResolver.resolveRefundNotifyUrl(channel, latest.getMerchantId(), request.getRefundNo(), latest.getNotifyUrl()));
         String requestPayload = safeJson(request);
 
         paymentRefundOrderService.createRefundOrder(latest,
@@ -691,26 +691,26 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         }
         Long targetChannelId = resolveRouteChannelId(channel);
         if (targetChannelId == null) {
-            throw new PaymentException("综合支付路由未配置 targetChannelId 或 defaultChannelId");
+            throw new PaymentException("直营网关配置未提供 targetChannelId 或 defaultChannelId");
         }
         if (channel.getId() != null && channel.getId().equals(targetChannelId)) {
-            throw new PaymentException("综合支付路由不能指向自身");
+            throw new PaymentException("直营网关配置不能指向自身");
         }
         MerchantChannel targetChannel = merchantChannelMapper.selectById(targetChannelId);
         if (targetChannel == null) {
-            throw new PaymentException("综合支付路由目标渠道不存在: " + targetChannelId);
+            throw new PaymentException("直营网关目标渠道不存在: " + targetChannelId);
         }
         if (!merchantId.equals(targetChannel.getMerchantId())) {
-            throw new PaymentException("综合支付路由目标渠道和订单商户不匹配");
+            throw new PaymentException("直营网关目标渠道和订单商户不匹配");
         }
         if ("COMPOSITE".equalsIgnoreCase(targetChannel.getChannelType())) {
-            throw new PaymentException("综合支付路由不能嵌套 COMPOSITE 渠道");
+            throw new PaymentException("直营网关配置不能嵌套 COMPOSITE 渠道");
         }
         if (!Integer.valueOf(ChannelStatus.ENABLED.getCode()).equals(targetChannel.getStatus())) {
-            throw new PaymentException("综合支付路由目标渠道未启用");
+            throw new PaymentException("直营网关目标渠道未启用");
         }
         if (!paymentChannelRegistry.supports(targetChannel.getChannelType(), targetChannel.getChannelSubType())) {
-            throw new PaymentException("综合支付路由目标渠道当前版本不可执行: "
+            throw new PaymentException("直营网关目标渠道当前版本不可执行: "
                     + targetChannel.getChannelType() + "/" + targetChannel.getChannelSubType());
         }
         return targetChannel;
@@ -725,7 +725,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
             });
             return parseLong(config.get("targetChannelId"), config.get("defaultChannelId"));
         } catch (Exception e) {
-            throw new PaymentException("综合支付路由配置格式错误", e);
+            throw new PaymentException("直营网关配置格式错误", e);
         }
     }
 
@@ -745,7 +745,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                 try {
                     return Long.parseLong(text);
                 } catch (NumberFormatException e) {
-                    throw new PaymentException("综合支付路由 channelId 格式错误: " + text, e);
+                    throw new PaymentException("直营网关 channelId 格式错误: " + text, e);
                 }
             }
         }
@@ -797,8 +797,10 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         if (dto.getExpireMinutes() != null && dto.getExpireMinutes() > 0) {
             return dto.getExpireMinutes();
         }
-        if (Boolean.TRUE.equals(merchant.getAutoCloseEnabled()) && merchant.getAutoCloseMinutes() != null && merchant.getAutoCloseMinutes() > 0) {
-            return merchant.getAutoCloseMinutes();
+        if (Boolean.TRUE.equals(merchant.getPaymentAutoCloseEnabled())
+                && merchant.getPaymentAutoCloseMinutes() != null
+                && merchant.getPaymentAutoCloseMinutes() > 0) {
+            return merchant.getPaymentAutoCloseMinutes();
         }
         return 30;
     }

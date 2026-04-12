@@ -1,6 +1,5 @@
 package com.chua.payment.support.service;
 
-import com.chua.payment.support.configuration.PaymentCallbackProperties;
 import com.chua.payment.support.entity.Merchant;
 import com.chua.payment.support.entity.MerchantChannel;
 import lombok.RequiredArgsConstructor;
@@ -16,22 +15,22 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class PaymentCallbackUrlResolver {
 
-    private final PaymentCallbackProperties paymentCallbackProperties;
+    private final PaymentGlobalConfigService paymentGlobalConfigService;
 
     public String resolvePayNotifyUrl(String requestNotifyUrl, MerchantChannel channel, Merchant merchant, String orderNo) {
         return firstNonBlank(
                 requestNotifyUrl,
                 channel != null ? channel.getNotifyUrl() : null,
                 merchant != null ? merchant.getDefaultNotifyUrl() : null,
-                defaultPayNotifyUrl(channel, orderNo));
+                defaultPayNotifyUrl(channel, merchant, orderNo));
     }
 
-    public String resolveRefundNotifyUrl(MerchantChannel channel, String refundNo, String fallbackNotifyUrl) {
-        return firstNonBlank(defaultRefundNotifyUrl(channel, refundNo), fallbackNotifyUrl);
+    public String resolveRefundNotifyUrl(MerchantChannel channel, Long merchantId, String refundNo, String fallbackNotifyUrl) {
+        return firstNonBlank(defaultRefundNotifyUrl(channel, merchantId, refundNo), fallbackNotifyUrl);
     }
 
-    public String defaultPayNotifyUrl(MerchantChannel channel, String orderNo) {
-        if (channel == null || channel.getId() == null || !StringUtils.hasText(orderNo)) {
+    public String defaultPayNotifyUrl(MerchantChannel channel, Merchant merchant, String orderNo) {
+        if (channel == null || merchant == null || merchant.getId() == null || !StringUtils.hasText(orderNo)) {
             return null;
         }
         String baseUrl = normalizedBaseUrl();
@@ -39,25 +38,25 @@ public class PaymentCallbackUrlResolver {
             return null;
         }
         String channelType = upper(channel.getChannelType());
-        if ("WECHAT".equals(channelType)) {
-            return baseUrl + "/api/notify/wechat/pay/" + channel.getId() + "/" + orderNo;
+        if ("WECHAT".equals(channelType) || "EPAY".equals(channelType)) {
+            return baseUrl + "/api/notify/wechat/pay/" + orderNo + "/" + merchant.getId();
         }
         if ("ALIPAY".equals(channelType)) {
-            return baseUrl + "/api/notify/alipay/pay/" + channel.getId() + "/" + orderNo;
+            return baseUrl + "/api/notify/alipay/pay/" + orderNo + "/" + merchant.getId();
         }
         return null;
     }
 
-    public String defaultRefundNotifyUrl(MerchantChannel channel, String refundNo) {
-        if (channel == null || channel.getId() == null || !StringUtils.hasText(refundNo)) {
+    public String defaultRefundNotifyUrl(MerchantChannel channel, Long merchantId, String refundNo) {
+        if (channel == null || merchantId == null || !StringUtils.hasText(refundNo)) {
             return null;
         }
         String baseUrl = normalizedBaseUrl();
         if (!StringUtils.hasText(baseUrl)) {
             return null;
         }
-        if ("WECHAT".equals(upper(channel.getChannelType()))) {
-            return baseUrl + "/api/notify/wechat/refund/" + channel.getId() + "/" + refundNo;
+        if ("WECHAT".equals(upper(channel.getChannelType())) || "EPAY".equals(upper(channel.getChannelType()))) {
+            return baseUrl + "/api/notify/wechat/refund/" + refundNo + "/" + merchantId;
         }
         return null;
     }
@@ -89,7 +88,7 @@ public class PaymentCallbackUrlResolver {
     }
 
     private String normalizedBaseUrl() {
-        String baseUrl = paymentCallbackProperties.getBaseUrl();
+        String baseUrl = paymentGlobalConfigService.getConfigEntity().getPaymentNotifyBaseUrl();
         if (!StringUtils.hasText(baseUrl)) {
             return null;
         }

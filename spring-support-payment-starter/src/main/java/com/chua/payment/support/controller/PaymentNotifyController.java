@@ -1,5 +1,10 @@
 package com.chua.payment.support.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.payment.support.entity.PaymentOrder;
+import com.chua.payment.support.entity.PaymentRefundOrder;
+import com.chua.payment.support.mapper.PaymentOrderMapper;
+import com.chua.payment.support.mapper.PaymentRefundOrderMapper;
 import com.chua.payment.support.service.MerchantChannelService;
 import com.chua.payment.support.service.PaymentNotifyProcessService;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
@@ -28,6 +33,8 @@ public class PaymentNotifyController {
 
     private final MerchantChannelService merchantChannelService;
     private final PaymentNotifyProcessService paymentNotifyProcessService;
+    private final PaymentOrderMapper paymentOrderMapper;
+    private final PaymentRefundOrderMapper paymentRefundOrderMapper;
     private final ObjectMapper objectMapper;
 
     @PostMapping("/wechat/pay/{channelId}")
@@ -72,6 +79,25 @@ public class PaymentNotifyController {
         }
     }
 
+    @PostMapping("/wechat/pay/{orderNo}/{merchantId}")
+    public ResponseEntity<String> handleWechatPayNotifyByMerchant(@PathVariable String orderNo,
+                                                                  @PathVariable Long merchantId,
+                                                                  @RequestHeader(value = "Wechatpay-Serial", required = false) String serialNumber,
+                                                                  @RequestHeader(value = "Wechatpay-Timestamp", required = false) String timestamp,
+                                                                  @RequestHeader(value = "Wechatpay-Nonce", required = false) String nonce,
+                                                                  @RequestHeader(value = "Wechatpay-Signature", required = false) String signature,
+                                                                  @RequestHeader(value = "Wechatpay-Signature-Type", required = false) String signType,
+                                                                  @RequestBody(required = false) String body,
+                                                                  HttpServletRequest request) {
+        try {
+            PaymentOrder order = requireOrder(orderNo, merchantId);
+            return handleWechatPayNotify(order.getChannelId(), orderNo, serialNumber, timestamp, nonce, signature, signType, body, request);
+        } catch (Exception e) {
+            log.error("微信支付通知处理失败: merchantId={}, orderNo={}", merchantId, orderNo, e);
+            return wechatFailure(e.getMessage());
+        }
+    }
+
     @PostMapping("/wechat/refund/{channelId}")
     public ResponseEntity<String> handleWechatRefundNotify(@PathVariable Long channelId,
                                                            @RequestHeader(value = "Wechatpay-Serial", required = false) String serialNumber,
@@ -110,6 +136,25 @@ public class PaymentNotifyController {
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
             log.error("微信退款通知处理失败: channelId={}, refundNo={}", channelId, refundNo, e);
+            return wechatFailure(e.getMessage());
+        }
+    }
+
+    @PostMapping("/wechat/refund/{refundNo}/{merchantId}")
+    public ResponseEntity<String> handleWechatRefundNotifyByMerchant(@PathVariable String refundNo,
+                                                                     @PathVariable Long merchantId,
+                                                                     @RequestHeader(value = "Wechatpay-Serial", required = false) String serialNumber,
+                                                                     @RequestHeader(value = "Wechatpay-Timestamp", required = false) String timestamp,
+                                                                     @RequestHeader(value = "Wechatpay-Nonce", required = false) String nonce,
+                                                                     @RequestHeader(value = "Wechatpay-Signature", required = false) String signature,
+                                                                     @RequestHeader(value = "Wechatpay-Signature-Type", required = false) String signType,
+                                                                     @RequestBody(required = false) String body,
+                                                                     HttpServletRequest request) {
+        try {
+            PaymentRefundOrder refundOrder = requireRefundOrder(refundNo, merchantId);
+            return handleWechatRefundNotify(refundOrder.getChannelId(), refundNo, serialNumber, timestamp, nonce, signature, signType, body, request);
+        } catch (Exception e) {
+            log.error("微信退款通知处理失败: merchantId={}, refundNo={}", merchantId, refundNo, e);
             return wechatFailure(e.getMessage());
         }
     }
@@ -174,6 +219,42 @@ public class PaymentNotifyController {
             log.error("支付宝支付通知处理失败: channelId={}, orderNo={}", channelId, orderNo, e);
             return "failure";
         }
+    }
+
+    @PostMapping(value = "/alipay/pay/{orderNo}/{merchantId}", produces = MediaType.TEXT_PLAIN_VALUE)
+    public String handleAlipayPayNotifyByMerchant(@PathVariable String orderNo,
+                                                  @PathVariable Long merchantId,
+                                                  @RequestParam Map<String, String> params,
+                                                  HttpServletRequest request) {
+        try {
+            PaymentOrder order = requireOrder(orderNo, merchantId);
+            return handleAlipayPayNotify(order.getChannelId(), orderNo, params, request);
+        } catch (Exception e) {
+            log.error("支付宝支付通知处理失败: merchantId={}, orderNo={}", merchantId, orderNo, e);
+            return "failure";
+        }
+    }
+
+    private PaymentOrder requireOrder(String orderNo, Long merchantId) {
+        PaymentOrder order = paymentOrderMapper.selectOne(new LambdaQueryWrapper<PaymentOrder>()
+                .eq(PaymentOrder::getOrderNo, orderNo)
+                .eq(PaymentOrder::getMerchantId, merchantId)
+                .last("limit 1"));
+        if (order == null) {
+            throw new IllegalArgumentException("订单不存在");
+        }
+        return order;
+    }
+
+    private PaymentRefundOrder requireRefundOrder(String refundNo, Long merchantId) {
+        PaymentRefundOrder refundOrder = paymentRefundOrderMapper.selectOne(new LambdaQueryWrapper<PaymentRefundOrder>()
+                .eq(PaymentRefundOrder::getRefundNo, refundNo)
+                .eq(PaymentRefundOrder::getMerchantId, merchantId)
+                .last("limit 1"));
+        if (refundOrder == null) {
+            throw new IllegalArgumentException("退款单不存在");
+        }
+        return refundOrder;
     }
 
     private ResponseEntity<String> wechatFailure(String message) {

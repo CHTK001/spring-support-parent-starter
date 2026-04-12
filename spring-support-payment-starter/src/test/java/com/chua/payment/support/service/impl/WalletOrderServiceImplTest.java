@@ -2,10 +2,11 @@ package com.chua.payment.support.service.impl;
 
 import com.chua.payment.support.channel.RechargeRequest;
 import com.chua.payment.support.channel.TransferRequest;
-import com.chua.payment.support.configuration.PaymentCallbackProperties;
+import com.chua.payment.support.entity.PaymentGlobalConfig;
 import com.chua.payment.support.entity.WalletOrder;
 import com.chua.payment.support.mapper.WalletOrderMapper;
 import com.chua.payment.support.service.PaymentCallbackUrlResolver;
+import com.chua.payment.support.service.PaymentGlobalConfigService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -24,13 +25,15 @@ import static org.mockito.Mockito.when;
 class WalletOrderServiceImplTest {
 
     private final WalletOrderMapper walletOrderMapper = mock(WalletOrderMapper.class);
-    private final PaymentCallbackProperties paymentCallbackProperties = new PaymentCallbackProperties();
+    private final PaymentGlobalConfigService paymentGlobalConfigService = mock(PaymentGlobalConfigService.class);
     private final PaymentCallbackUrlResolver paymentCallbackUrlResolver;
     private final WalletOrderServiceImpl walletOrderService;
 
     WalletOrderServiceImplTest() {
-        paymentCallbackProperties.setBaseUrl("http://127.0.0.1:8080");
-        paymentCallbackUrlResolver = new PaymentCallbackUrlResolver(paymentCallbackProperties);
+        PaymentGlobalConfig globalConfig = new PaymentGlobalConfig();
+        globalConfig.setPaymentNotifyBaseUrl("http://127.0.0.1:8080");
+        when(paymentGlobalConfigService.getConfigEntity()).thenReturn(globalConfig);
+        paymentCallbackUrlResolver = new PaymentCallbackUrlResolver(paymentGlobalConfigService);
         walletOrderService = new WalletOrderServiceImpl(walletOrderMapper, paymentCallbackUrlResolver, new ObjectMapper());
     }
 

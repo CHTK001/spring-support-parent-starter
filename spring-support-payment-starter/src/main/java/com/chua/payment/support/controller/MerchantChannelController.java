@@ -5,7 +5,6 @@ import com.chua.payment.support.dto.ChannelConfigDTO;
 import com.chua.payment.support.service.MerchantChannelService;
 import com.chua.payment.support.vo.MerchantChannelVO;
 import com.chua.payment.support.vo.PaymentMethodGuideVO;
-import com.chua.payment.support.vo.ProviderSpiOptionVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -62,12 +61,6 @@ public class MerchantChannelController {
     @GetMapping("/catalog")
     public Result<List<PaymentMethodGuideVO>> listCatalog() {
         return Result.success(channelService.listCatalog());
-    }
-
-    @Operation(summary = "查询 provider SPI 选项")
-    @GetMapping("/provider-options")
-    public Result<List<ProviderSpiOptionVO>> listProviderOptions(@RequestParam String channelType) {
-        return Result.success(channelService.listProviderOptions(channelType));
     }
 
     @Operation(summary = "启用渠道")
