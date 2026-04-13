@@ -1,5 +1,6 @@
 package com.chua.starter.panel.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.chua.starter.panel.cache.PanelConnectionCache;
 import com.chua.starter.panel.config.PanelProperties;
 import com.chua.starter.ai.support.chat.ChatClient;
@@ -42,6 +43,8 @@ import java.util.StringJoiner;
  * 默认 JDBC 面板服务实现。
  */
 public class DefaultJdbcPanelService implements JdbcPanelService {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final PanelConnectionCache panelConnectionCache;
     private final PanelProperties panelProperties;
@@ -297,7 +300,7 @@ public class DefaultJdbcPanelService implements JdbcPanelService {
 
     @Override
     public JdbcQueryResult explain(String connectionId, String sql) {
-        String normalizedSql = sql == null ? "" : sql.trim();
+        String normalizedSql = normalizeExecutableSql(sql);
         if (normalizedSql.isEmpty()) {
             throw new IllegalArgumentException("SQL 不能为空");
         }
@@ -428,10 +431,14 @@ public class DefaultJdbcPanelService implements JdbcPanelService {
 
     private JdbcQueryResult runQuery(String connectionId, String sql) {
         PanelConnectionHandle handle = requireHandle(connectionId);
+        String normalizedSql = normalizeExecutableSql(sql);
+        if (normalizedSql.isEmpty()) {
+            throw new IllegalArgumentException("SQL 不能为空");
+        }
         long startTime = System.currentTimeMillis();
         try (Connection connection = requireDataSource(handle).getConnection();
              Statement statement = connection.createStatement()) {
-            boolean hasResultSet = statement.execute(sql);
+            boolean hasResultSet = statement.execute(normalizedSql);
             if (!hasResultSet) {
                 return JdbcQueryResult.builder()
                         .query(false)
@@ -467,6 +474,39 @@ public class DefaultJdbcPanelService implements JdbcPanelService {
         } catch (Exception e) {
             throw new IllegalStateException("执行 SQL 失败: " + e.getMessage(), e);
         }
+    }
+
+    private String normalizeExecutableSql(String sql) {
+        String normalized = sql == null ? "" : sql.trim();
+        if (normalized.isEmpty()) {
+            return "";
+        }
+        for (int i = 0; i < 3; i++) {
+            if (normalized.length() >= 2 && normalized.startsWith("\"") && normalized.endsWith("\"")) {
+                try {
+                    normalized = OBJECT_MAPPER.readValue(normalized, String.class);
+                } catch (Exception ignored) {
+                    normalized = normalized.substring(1, normalized.length() - 1);
+                }
+                normalized = normalized == null ? "" : normalized.trim();
+                continue;
+            }
+            if (normalized.length() >= 4 && normalized.startsWith("\\\"") && normalized.endsWith("\\\"")) {
+                normalized = normalized.substring(2, normalized.length() - 2).trim();
+                continue;
+            }
+            break;
+        }
+        normalized = normalized
+                .replace("\\r\\n", "\n")
+                .replace("\\n", "\n")
+                .replace("\\r", "\r")
+                .replace("\\t", "\t")
+                .replace("\\\"", "\"");
+        normalized = normalized
+                .replaceAll("^[\\\\\"]+", "")
+                .replaceAll("[\\\\\"]+$", "");
+        return normalized == null ? "" : normalized.trim();
     }
 
     @Override

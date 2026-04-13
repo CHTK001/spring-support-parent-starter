@@ -81,10 +81,7 @@ public class DefaultPanelConnectionService implements PanelConnectionService {
     }
 
     private DataSource createJdbcDataSource(PanelConnectionDefinition definition) {
-        String jdbcUrl = definition.getProtocol();
-        if (StringUtils.isBlank(jdbcUrl)) {
-            jdbcUrl = buildJdbcUrl(definition);
-        }
+        String jdbcUrl = resolveJdbcUrl(definition);
         try {
             DataSource dataSource = JdbcDataSourceFactory.createDataSource(
                     jdbcUrl,
@@ -107,6 +104,17 @@ public class DefaultPanelConnectionService implements PanelConnectionService {
             }
             return createHikariDataSource(buildServerJdbcUrl(definition), definition);
         }
+    }
+
+    private String resolveJdbcUrl(PanelConnectionDefinition definition) {
+        String protocol = StringUtils.trim(definition.getProtocol());
+        if (StringUtils.isBlank(protocol)) {
+            return buildJdbcUrl(definition);
+        }
+        if (protocol.startsWith("jdbc:")) {
+            return protocol;
+        }
+        return buildJdbcUrl(definition);
     }
 
     private DataSource createHikariDataSource(String jdbcUrl, PanelConnectionDefinition definition) {
