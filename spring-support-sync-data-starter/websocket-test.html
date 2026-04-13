@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket 实时监控测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #303133;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status.connected {
+            background: #f0f9ff;
+            color: #409eff;
+        }
+
+        .status.disconnected {
+            background: #fef0f0;
+            color: #f56c6c;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #606266;
+            font-size: 14px;
+        }
+
+        input {
+            width: 200px;
+            padding: 8px 12px;
+            border: 1px solid #dcdfe6;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: all 0.3s;
+        }
+
+        button.primary {
+            background: #409eff;
+            color: white;
+        }
+
+        button.primary:hover {
+            background: #66b1ff;
+        }
+
+        button.success {
+            background: #67c23a;
+            color: white;
+        }
+
+        button.success:hover {
+            background: #85ce61;
+        }
+
+        button.danger {
+            background: #f56c6c;
+            color: white;
+        }
+
+        button.danger:hover {
+            background: #f78989;
+        }
+
+        .monitor {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .card-title {
+            font-size: 14px;
+            color: #909399;
+            margin-bottom: 10px;
+        }
+
+        .card-value {
+            font-size: 28px;
+            font-weight: 600;
+            color: #303133;
+        }
+
+        .logs {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .logs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .logs-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #303133;
+        }
+
+        .logs-content {
+            background: #f5f7fa;
+            border: 1px solid #dcdfe6;
+            border-radius: 4px;
+            padding: 15px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 4px 0;
+            border-bottom: 1px solid #ebeef5;
+        }
+
+        .log-time {
+            color: #909399;
+            margin-right: 10px;
+        }
+
+        .log-type {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-right: 10px;
+        }
+
+        .log-type.status {
+            background: #e1f3d8;
+            color: #67c23a;
+        }
+
+        .log-type.progress {
+            background: #d9ecff;
+            color: #409eff;
+        }
+
+        .log-type.metrics {
+            background: #fdf6ec;
+            color: #e6a23c;
+        }
+
+        .log-type.log {
+            background: #f4f4f5;
+            color: #909399;
+        }
+
+        .log-message {
+            color: #606266;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>WebSocket 实时监控测试</h1>
+            <span class="status" id="connectionStatus">未连接</span>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>WebSocket URL:</label>
+                <input type="text" id="wsUrl" value="ws://localhost:18080/ws/sync/progress" />
+            </div>
+            <div class="control-group">
+                <label>任务 ID:</label>
+                <input type="number" id="taskId" value="1" />
+            </div>
+            <div class="control-group">
+                <button class="primary" onclick="connect()">连接</button>
+                <button class="danger" onclick="disconnect()">断开</button>
+                <button class="success" onclick="subscribe()">订阅任务</button>
+                <button onclick="clearLogs()">清空日志</button>
+            </div>
+        </div>
+
+        <div class="monitor">
+            <div class="card">
+                <div class="card-title">任务状态</div>
+                <div class="card-value" id="taskStatus">-</div>
+            </div>
+            <div class="card">
+                <div class="card-title">执行进度</div>
+                <div class="card-value" id="taskProgress">0%</div>
+            </div>
+            <div class="card">
+                <div class="card-title">吞吐量</div>
+                <div class="card-value" id="taskThroughput">0</div>
+            </div>
+            <div class="card">
+                <div class="card-title">读取数量</div>
+                <div class="card-value" id="readCount">0</div>
+            </div>
+            <div class="card">
+                <div class="card-title">写入数量</div>
+                <div class="card-value" id="writeCount">0</div>
+            </div>
+            <div class="card">
+                <div class="card-title">成功数量</div>
+                <div class="card-value" id="successCount">0</div>
+            </div>
+        </div>
+
+        <div class="logs">
+            <div class="logs-header">
+                <div class="logs-title">实时消息日志</div>
+                <span id="messageCount">消息数: 0</span>
+            </div>
+            <div class="logs-content" id="logsContent"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let messageCount = 0;
+
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            if (connected) {
+                statusEl.textContent = '已连接';
+                statusEl.className = 'status connected';
+            } else {
+                statusEl.textContent = '未连接';
+                statusEl.className = 'status disconnected';
+            }
+        }
+
+        function connect() {
+            const url = document.getElementById('wsUrl').value;
+
+            if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+                addLog('warn', '已经连接或正在连接中');
+                return;
+            }
+
+            addLog('info', `正在连接到 ${url}...`);
+
+            ws = new WebSocket(url);
+
+            ws.onopen = () => {
+                addLog('success', 'WebSocket 连接成功');
+                updateConnectionStatus(true);
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleMessage(data);
+                } catch (e) {
+                    addLog('error', `解析消息失败: ${e.message}`);
+                }
+            };
+
+            ws.onerror = (error) => {
+                addLog('error', 'WebSocket 错误');
+                console.error('WebSocket error:', error);
+            };
+
+            ws.onclose = () => {
+                addLog('info', 'WebSocket 连接已关闭');
+                updateConnectionStatus(false);
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                const taskId = document.getElementById('taskId').value;
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        action: 'unsubscribe',
+                        taskId: parseInt(taskId)
+                    }));
+                }
+                ws.close();
+                ws = null;
+                addLog('info', '已断开连接');
+            }
+        }
+
+        function subscribe() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addLog('error', '请先连接 WebSocket');
+                return;
+            }
+
+            const taskId = document.getElementById('taskId').value;
+            const message = {
+                action: 'subscribe',
+                taskId: parseInt(taskId)
+            };
+
+            ws.send(JSON.stringify(message));
+            addLog('info', `已发送订阅请求: 任务 ${taskId}`);
+        }
+
+        function handleMessage(data) {
+            messageCount++;
+            document.getElementById('messageCount').textContent = `消息数: ${messageCount}`;
+
+            const messageType = data.messageType || 'unknown';
+
+            // 更新监控卡片
+            if (data.status) {
+                document.getElementById('taskStatus').textContent = data.status;
+            }
+            if (data.progress !== undefined) {
+                document.getElementById('taskProgress').textContent = data.progress + '%';
+            }
+            if (data.throughput !== undefined) {
+                document.getElementById('taskThroughput').textContent = data.throughput.toFixed(2) + '/s';
+            }
+            if (data.readCount !== undefined) {
+                document.getElementById('readCount').textContent = data.readCount;
+            }
+            if (data.writeCount !== undefined) {
+                document.getElementById('writeCount').textContent = data.writeCount;
+            }
+            if (data.successCount !== undefined) {
+                document.getElementById('successCount').textContent = data.successCount;
+            }
+
+            // 添加日志
+            const logType = messageType.replace('sync_task_', '');
+            const message = data.message || JSON.stringify(data);
+            addLog(logType, message, data);
+        }
+
+        function addLog(type, message, data = null) {
+            const logsContent = document.getElementById('logsContent');
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+
+            const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'log-time';
+            timeSpan.textContent = `[${time}]`;
+
+            const typeSpan = document.createElement('span');
+            typeSpan.className = `log-type ${type}`;
+            typeSpan.textContent = type.toUpperCase();
+
+            const messageSpan = document.createElement('span');
+            messageSpan.className = 'log-message';
+            messageSpan.textContent = message;
+
+            logEntry.appendChild(timeSpan);
+            logEntry.appendChild(typeSpan);
+            logEntry.appendChild(messageSpan);
+
+            if (data) {
+                const detailSpan = document.createElement('div');
+                detailSpan.style.marginLeft = '120px';
+                detailSpan.style.fontSize = '12px';
+                detailSpan.style.color = '#909399';
+                detailSpan.textContent = JSON.stringify(data, null, 2);
+                logEntry.appendChild(detailSpan);
+            }
+
+            logsContent.appendChild(logEntry);
+            logsContent.scrollTop = logsContent.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('logsContent').innerHTML = '';
+            messageCount = 0;
+            document.getElementById('messageCount').textContent = '消息数: 0';
+        }
+
+        // 页面加载时的提示
+        window.onload = () => {
+            addLog('info', '测试页面已加载');
+            addLog('info', '1. 点击"连接"按钮连接 WebSocket');
+            addLog('info', '2. 连接成功后点击"订阅任务"订阅任务更新');
+            addLog('info', '3. 在后端执行任务后，这里会实时显示状态、进度和指标');
+        };
+    </script>
+</body>
+</html>
