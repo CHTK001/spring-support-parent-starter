@@ -27,6 +27,8 @@ import com.chua.starter.soft.support.spi.SoftInstallExecutor;
 import com.chua.starter.soft.support.spi.SoftLogStreamProvider;
 import com.chua.starter.soft.support.spi.SoftRepositorySyncProvider;
 import com.chua.starter.soft.support.spi.SoftServiceManager;
+import com.chua.starter.soft.support.config.SoftManagementProperties;
+import com.chua.starter.server.support.service.ServerServiceService;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,6 +64,8 @@ class SoftManagementServiceRepositorySyncTest {
     @Mock
     private SoftServiceManager serviceManager;
     @Mock
+    private ServerServiceService serverServiceService;
+    @Mock
     private SoftLogStreamProvider logStreamProvider;
     @Mock
     private SoftConfigManager configManager;
@@ -69,6 +73,8 @@ class SoftManagementServiceRepositorySyncTest {
     private SoftGuideDefinitionService softGuideDefinitionService;
     @Mock
     private SoftRealtimePublisher realtimePublisher;
+    @Mock
+    private SoftManagementProperties properties;
 
     private SoftManagementService service;
 
@@ -85,10 +91,12 @@ class SoftManagementServiceRepositorySyncTest {
                 List.of(httpProvider, localProvider),
                 List.<SoftInstallExecutor>of(),
                 serviceManager,
+                serverServiceService,
                 logStreamProvider,
                 configManager,
                 softGuideDefinitionService,
-                realtimePublisher
+                realtimePublisher,
+                properties
         );
         when(httpProvider.supports("HTTP_JSON")).thenReturn(true);
         when(localProvider.supports("LOCAL_DIR")).thenReturn(true);

@@ -71,28 +71,33 @@ class SoftBuiltinProfileBootstrapperTest {
     void shouldBootstrapBuiltinProfilesWithFieldsAndTemplates() throws Exception {
         bootstrapper.run(null);
 
-        assertEquals(List.of("generic", "mysql", "redis", "nginx", "minio"),
+        assertEquals(List.of("generic", "mysql", "redis", "nginx", "minio", "nacos"),
                 insertedProfiles.stream().map(SoftPackageProfile::getProfileCode).toList());
-        assertEquals(37, insertedFields.size());
-        assertEquals(11, insertedTemplates.size());
+        assertEquals(48, insertedFields.size());
+        assertEquals(14, insertedTemplates.size());
 
         assertProfileMetadata("generic", "/logs/${serviceName}.log", "${installPath}/conf/app.conf");
         assertProfileMetadata("mysql", "${installPath}/logs/error.log", "${installPath}/conf/my.cnf");
         assertProfileMetadata("redis", "${installPath}/logs/redis.log", "${installPath}/conf/redis.conf");
         assertProfileMetadata("nginx", "${installPath}/logs/access.log", "${installPath}/conf/nginx.conf");
         assertProfileMetadata("minio", "${installPath}/logs/minio.log", "${installPath}/conf/minio.env");
+        assertProfileMetadata("nacos", "${installPath}/logs/start.out", "${installPath}/conf/application.properties");
 
         assertField("mysql", "port", "number", "目录与端口", "3306");
         assertField("mysql", "rootPassword", "password", "账号凭证", "root123456");
         assertField("redis", "appendonly", "switch", "配置初始化", "true");
         assertField("nginx", "configDirectory", "input", "配置初始化", "${installPath}/conf");
         assertField("minio", "secretKey", "password", "账号凭证", "minioadmin");
+        assertField("nacos", "httpPort", "number", "目录与端口", "8848");
+        assertField("nacos", "mode", "select", "配置初始化", "standalone");
 
         assertTemplateContainsByScope("generic", "CONFIG_TEMPLATE", "app.env=${environmentName}");
         assertTemplateContainsByScope("mysql", "CONFIG_TEMPLATE", "character-set-server=${characterSet}");
         assertTemplateContainsByScope("redis", "CONFIG_TEMPLATE", "requirepass ${password}");
         assertTemplateContainsByScope("nginx", "INSTALL_SCRIPT", "touch ${installPath}/sbin/nginx");
         assertTemplateContainsByScope("minio", "CONFIG_TEMPLATE", "MINIO_OPTS=--address :${apiPort} --console-address :${consolePort}");
+        assertTemplateContainsByScope("nacos", "CONFIG_TEMPLATE", "server.port=${httpPort}");
+        assertTemplateContainsByScope("nacos", "ENV_TEMPLATE", "MODE=${mode}");
     }
 
     private void assertProfileMetadata(String profileCode, String logPath, String configPath) {
