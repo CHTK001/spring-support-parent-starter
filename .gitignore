@@ -18,3 +18,4 @@ logs/!/patch/
 *.code-workspace
 .codex/
 .runtime/
+/tmp-*.png

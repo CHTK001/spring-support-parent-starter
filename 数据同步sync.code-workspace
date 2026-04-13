@@ -11,6 +11,9 @@
 		},
 		{
 			"path": "../vue-support-parent-starter"
+		},
+		{
+			"path": "../spring-support-api-parent"
 		}
 	]
 }
