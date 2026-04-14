@@ -7,6 +7,9 @@ import com.chua.starter.server.support.model.ServerMetricsSnapshot;
 import com.chua.starter.server.support.model.ServerMetricsDetail;
 import com.chua.starter.server.support.model.ServerMetricsTaskSettings;
 import com.chua.starter.server.support.model.ServerMetricsTaskSettingsRequest;
+import com.chua.starter.server.support.model.ServerExposurePortView;
+import com.chua.starter.server.support.model.ServerExposurePortMeta;
+import com.chua.starter.server.support.model.ServerExposureSummary;
 import com.chua.starter.server.support.model.ServerAlertSettings;
 import com.chua.starter.server.support.model.ServerRemoteGatewaySettings;
 import com.chua.starter.server.support.model.ServerAiTaskTicket;
@@ -16,6 +19,7 @@ import com.chua.starter.server.support.model.ServerProcessView;
 import com.chua.starter.server.support.service.ServerAlertService;
 import com.chua.starter.server.support.service.ServerGuacamoleService;
 import com.chua.starter.server.support.service.ServerHostService;
+import com.chua.starter.server.support.service.ServerExposureService;
 import com.chua.starter.server.support.service.ServerProcessService;
 import com.chua.starter.server.support.service.ServerHostViewAssembler;
 import com.chua.starter.server.support.service.ServerMetricsService;
@@ -50,6 +54,7 @@ public class ServerHostController {
     private final ServerServiceService serverServiceService;
     private final ServerHostAiTaskService serverHostAiTaskService;
     private final ServerProcessService serverProcessService;
+    private final ServerExposureService serverExposureService;
 
     @GetMapping
     public ReturnResult<List<ServerHost>> list(
@@ -122,6 +127,48 @@ public class ServerHostController {
     @GetMapping("/{id}/metrics/detail")
     public ReturnResult<ServerMetricsDetail> hostMetricsDetail(@PathVariable Integer id) {
         return ReturnResult.ok(serverMetricsService.getDetail(id));
+    }
+
+    @PostMapping("/{id}/public-ip/refresh")
+    public ReturnResult<ServerHost> refreshHostPublicIp(@PathVariable Integer id) {
+        serverMetricsService.getDetail(id);
+        return ReturnResult.ok(serverHostViewAssembler.enrich(serverHostService.getHost(id)));
+    }
+
+    @GetMapping("/{id}/exposure")
+    public ReturnResult<ServerExposureSummary> exposure(@PathVariable Integer id) {
+        return ReturnResult.ok(serverExposureService.getSummary(id));
+    }
+
+    @PostMapping("/{id}/exposure/refresh")
+    public ReturnResult<ServerExposureSummary> refreshExposure(@PathVariable Integer id) {
+        return ReturnResult.ok(serverExposureService.refresh(id));
+    }
+
+    @GetMapping("/{id}/ports")
+    public ReturnResult<List<ServerExposurePortView>> hostPorts(
+            @PathVariable Integer id,
+            @RequestParam(value = "refresh", required = false, defaultValue = "false") boolean refresh,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "protocol", required = false) String protocol,
+            @RequestParam(value = "state", required = false) String state,
+            @RequestParam(value = "limit", required = false) Integer limit
+    ) {
+        return ReturnResult.ok(serverExposureService.listPorts(
+                id,
+                refresh,
+                keyword,
+                protocol,
+                state,
+                limit));
+    }
+
+    @GetMapping("/{id}/ports/meta")
+    public ReturnResult<ServerExposurePortMeta> hostPortsMeta(
+            @PathVariable Integer id,
+            @RequestParam(value = "refresh", required = false, defaultValue = "false") boolean refresh
+    ) {
+        return ReturnResult.ok(serverExposureService.portMeta(id, refresh));
     }
 
     @GetMapping("/{id}/metrics/task-settings")

@@ -15,6 +15,8 @@ public class ServerManagementProperties {
 
     private final FileWatch fileWatch = new FileWatch();
 
+    private final Exposure exposure = new Exposure();
+
     private final RemoteGateway remoteGateway = new RemoteGateway();
 
     private final Guacamole guacamole = new Guacamole();
@@ -34,6 +36,8 @@ public class ServerManagementProperties {
         private double memoryDangerPercent = 90D;
         private double diskWarningPercent = 80D;
         private double diskDangerPercent = 92D;
+        private double diskIoWarningBytesPerSecond = 80 * 1024 * 1024D;
+        private double diskIoDangerBytesPerSecond = 160 * 1024 * 1024D;
         private double ioWarningBytesPerSecond = 50 * 1024 * 1024D;
         private double ioDangerBytesPerSecond = 120 * 1024 * 1024D;
         private int latencyWarningMs = 120;
@@ -45,6 +49,16 @@ public class ServerManagementProperties {
         private boolean enable = true;
         private long pollIntervalMs = 2000L;
         private int maxReadBytes = 262144;
+    }
+
+    @Data
+    public static class Exposure {
+        private boolean enable = true;
+        private long initialDelayMs = 180000L;
+        private long refreshIntervalMs = 900000L;
+        private int maxPorts = 300;
+        private boolean includeUdp = true;
+        private boolean includeLoopback = false;
     }
 
     @Data

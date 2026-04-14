@@ -26,6 +26,7 @@ import com.chua.starter.server.support.service.ServerHostService;
 import com.chua.starter.server.support.service.ServerMetricsService;
 import com.chua.starter.server.support.service.ServerRealtimePublisher;
 import com.chua.starter.server.support.util.ServerHostMetadataSupport;
+import com.chua.starter.server.support.util.ServerPortInspectionSupport;
 import com.chua.starter.server.support.util.ServerPrometheusMetricsSupport;
 import com.chua.starter.server.support.spi.ServerMetricsCollectorDelegate;
 import com.chua.starter.server.support.spi.ServerMetricsCollectorManager;
@@ -92,6 +93,26 @@ public class ServerMetricsServiceImpl implements ServerMetricsService, ServerMet
                     + "Write-Output \"ioWrite=$([math]::Round($txBytes,2))\";"
                     + "Write-Output \"networkRxPackets=$([math]::Round($rxPackets,2))\";"
                     + "Write-Output \"networkTxPackets=$([math]::Round($txPackets,2))\"";
+    private static final String LINUX_DISK_IO_COUNTER_COMMAND =
+            "read_bytes=0; write_bytes=0;"
+                    + "for dev in $(ls /sys/block 2>/dev/null); do "
+                    + "case \"$dev\" in loop*|ram*|fd*|sr*) continue ;; esac; "
+                    + "stats=$(cat /sys/block/$dev/stat 2>/dev/null); "
+                    + "[ -z \"$stats\" ] && continue; "
+                    + "read_sectors=$(printf '%s' \"$stats\" | awk '{print $3}'); "
+                    + "write_sectors=$(printf '%s' \"$stats\" | awk '{print $7}'); "
+                    + "read_bytes=$((read_bytes + (${read_sectors:-0} * 512))); "
+                    + "write_bytes=$((write_bytes + (${write_sectors:-0} * 512))); "
+                    + "done; printf '%s,%s' \"$read_bytes\" \"$write_bytes\"";
+    private static final String WINDOWS_DISK_IO_COUNTER_COMMAND =
+            "$read=0;$write=0;"
+                    + "try{$samples=Get-Counter '\\\\PhysicalDisk(_Total)\\\\Disk Read Bytes/sec','\\\\PhysicalDisk(_Total)\\\\Disk Write Bytes/sec' -ErrorAction SilentlyContinue;"
+                    + "$samples.CounterSamples | ForEach-Object {"
+                    + "if($_.Path -like '*Disk Read Bytes/sec*'){$read=[double]$_.CookedValue};"
+                    + "if($_.Path -like '*Disk Write Bytes/sec*'){$write=[double]$_.CookedValue};"
+                    + "}}catch{};"
+                    + "Write-Output \"diskRead=$([math]::Round($read,2))\";"
+                    + "Write-Output \"diskWrite=$([math]::Round($write,2))\"";
     private static final String UNIX_FACTS_COMMAND =
             "hostname_value=$(hostname 2>/dev/null || uname -n);"
                     + "os_value=$(if [ -f /etc/os-release ]; then . /etc/os-release && printf '%s' \"$PRETTY_NAME\"; else uname -srm; fi);"
@@ -169,6 +190,7 @@ public class ServerMetricsServiceImpl implements ServerMetricsService, ServerMet
     private final Map<Integer, ServerMetricsSnapshot> snapshotCache = new ConcurrentHashMap<>();
     private final Map<Integer, Deque<ServerMetricsSnapshot>> historyCache = new ConcurrentHashMap<>();
     private final Map<Integer, NetworkCounterState> networkCounterCache = new ConcurrentHashMap<>();
+    private final Map<Integer, DiskCounterState> diskCounterCache = new ConcurrentHashMap<>();
 
     private volatile boolean redisCacheLoaded;
     private volatile long lastRefreshAt;
@@ -790,6 +812,8 @@ public class ServerMetricsServiceImpl implements ServerMetricsService, ServerMet
                         .diskUsage(snapshot.getDiskUsage())
                         .diskTotalBytes(snapshot.getDiskTotalBytes())
                         .diskUsedBytes(snapshot.getDiskUsedBytes())
+                        .diskReadBytesPerSecond(snapshot.getDiskReadBytesPerSecond())
+                        .diskWriteBytesPerSecond(snapshot.getDiskWriteBytesPerSecond())
                         .ioReadBytesPerSecond(snapshot.getIoReadBytesPerSecond())
                         .ioWriteBytesPerSecond(snapshot.getIoWriteBytesPerSecond())
                         .networkRxPacketsPerSecond(snapshot.getNetworkRxPacketsPerSecond())
@@ -836,6 +860,7 @@ public class ServerMetricsServiceImpl implements ServerMetricsService, ServerMet
         long usedMemory = resolveUsedBytes(totalMemory, totalMemory - freeMemory);
         double memoryUsage = resolveUsagePercent(totalMemory, usedMemory);
         UsageStats diskStats = resolveLocalDiskStats();
+        DiskIoStats diskIoStats = resolveLocalDiskIoStats(host);
         NetworkStats networkStats = resolveLocalNetworkStats(host);
         int latency = resolveLocalLatency(host);
         return ServerMetricsSnapshot.builder()
@@ -852,6 +877,8 @@ public class ServerMetricsServiceImpl implements ServerMetricsService, ServerMet
                 .diskUsage(round(diskStats.usagePercent()))
                 .diskTotalBytes(diskStats.totalBytes())
                 .diskUsedBytes(diskStats.usedBytes())
+                .diskReadBytesPerSecond(round(diskIoStats.readBytesPerSecond()))
+                .diskWriteBytesPerSecond(round(diskIoStats.writeBytesPerSecond()))
                 .ioReadBytesPerSecond(round(networkStats.readBytesPerSecond()))
                 .ioWriteBytesPerSecond(round(networkStats.writeBytesPerSecond()))
                 .networkRxPacketsPerSecond(round(networkStats.readPacketsPerSecond()))
@@ -883,6 +910,11 @@ public class ServerMetricsServiceImpl implements ServerMetricsService, ServerMet
             UsageStats diskStats = parseUsageStats(client.executeCommand(
                     "df -B1 -x tmpfs -x devtmpfs --total | awk 'END {print $2\",\"$3}'",
                     properties.getMetrics().getTimeoutMs()).getOutput());
+            DiskIoStats diskIoStats = resolveLinuxDiskIoStats(
+                    host.getServerId(),
+                    client.executeCommand(
+                            LINUX_DISK_IO_COUNTER_COMMAND,
+                            properties.getMetrics().getTimeoutMs()).getOutput());
             NetworkStats networkStats = resolveLinuxNetworkStats(
                     host.getServerId(),
                     client.executeCommand(LINUX_NETWORK_COUNTER_COMMAND, properties.getMetrics().getTimeoutMs()).getOutput());
@@ -900,6 +932,8 @@ public class ServerMetricsServiceImpl implements ServerMetricsService, ServerMet
                     .diskUsage(round(diskStats.usagePercent()))
                     .diskTotalBytes(diskStats.totalBytes())
                     .diskUsedBytes(diskStats.usedBytes())
+                    .diskReadBytesPerSecond(round(diskIoStats.readBytesPerSecond()))
+                    .diskWriteBytesPerSecond(round(diskIoStats.writeBytesPerSecond()))
                     .ioReadBytesPerSecond(round(networkStats.readBytesPerSecond()))
                     .ioWriteBytesPerSecond(round(networkStats.writeBytesPerSecond()))
                     .networkRxPacketsPerSecond(round(networkStats.readPacketsPerSecond()))
@@ -930,6 +964,12 @@ public class ServerMetricsServiceImpl implements ServerMetricsService, ServerMet
                             + "$diskTotal=[int64](($disks | Measure-Object -Property Size -Sum).Sum);"
                             + "$diskFree=[int64](($disks | Measure-Object -Property FreeSpace -Sum).Sum);"
                             + "$diskUsed=if ($diskTotal -gt 0) { $diskTotal - $diskFree } else { 0 };"
+                            + "$diskIoRead=0;$diskIoWrite=0;"
+                            + "try{$diskSamples=Get-Counter '\\\\PhysicalDisk(_Total)\\\\Disk Read Bytes/sec','\\\\PhysicalDisk(_Total)\\\\Disk Write Bytes/sec' -ErrorAction SilentlyContinue;"
+                            + "$diskSamples.CounterSamples | ForEach-Object {"
+                            + "if($_.Path -like '*Disk Read Bytes/sec*'){$diskIoRead=[double]$_.CookedValue};"
+                            + "if($_.Path -like '*Disk Write Bytes/sec*'){$diskIoWrite=[double]$_.CookedValue};"
+                            + "}}catch{};"
                             + "$network=Get-NetAdapterStatistics -ErrorAction SilentlyContinue;"
                             + "$ioRead=[double](($network | Measure-Object -Property ReceivedBytes -Sum).Sum);"
                             + "$ioWrite=[double](($network | Measure-Object -Property SentBytes -Sum).Sum);"
@@ -945,6 +985,8 @@ public class ServerMetricsServiceImpl implements ServerMetricsService, ServerMet
                             + "Write-Output \\\"memoryUsed=$memoryUsed\\\";"
                             + "Write-Output \\\"diskTotal=$diskTotal\\\";"
                             + "Write-Output \\\"diskUsed=$diskUsed\\\";"
+                            + "Write-Output \\\"diskRead=$([math]::Round($diskIoRead,2))\\\";"
+                            + "Write-Output \\\"diskWrite=$([math]::Round($diskIoWrite,2))\\\";"
                             + "Write-Output \\\"ioRead=$([math]::Round($ioRead,2))\\\";"
                             + "Write-Output \\\"ioWrite=$([math]::Round($ioWrite,2))\\\";"
                             + "Write-Output \\\"networkRxPackets=$([math]::Round($networkRxPackets,2))\\\";"
@@ -971,6 +1013,8 @@ public class ServerMetricsServiceImpl implements ServerMetricsService, ServerMet
                     .diskUsage(round(resolveUsagePercent(diskTotal, diskUsed)))
                     .diskTotalBytes(diskTotal)
                     .diskUsedBytes(diskUsed)
+                    .diskReadBytesPerSecond(round(parseDouble(values.get("diskRead"))))
+                    .diskWriteBytesPerSecond(round(parseDouble(values.get("diskWrite"))))
                     .ioReadBytesPerSecond(round(networkStats.readBytesPerSecond()))
                     .ioWriteBytesPerSecond(round(networkStats.writeBytesPerSecond()))
                     .networkRxPacketsPerSecond(round(networkStats.readPacketsPerSecond()))
@@ -1002,15 +1046,51 @@ public class ServerMetricsServiceImpl implements ServerMetricsService, ServerMet
      */
     private ServerMetricsDetail collectDetail(ServerHost host, ServerMetricsSnapshot snapshot) {
         try {
-            return metricsCollectorManager.collectDetail(new ServerMetricsSpiContext(host, snapshot, this));
+            ServerMetricsDetail detail = metricsCollectorManager.collectDetail(new ServerMetricsSpiContext(host, snapshot, this));
+            if (detail != null) {
+                detail.setListeningPorts(resolveListeningPorts(host));
+            }
+            syncHostRuntimeFacts(host, detail);
+            return detail;
         } catch (Exception e) {
             log.warn("采集服务器指标详情失败, serverId={}, message={}", host == null ? null : host.getServerId(), e.getMessage());
             return ServerMetricsDetail.builder()
                     .serverId(host == null ? null : host.getServerId())
                     .serverCode(host == null ? null : host.getServerCode())
                     .collectTimestamp(snapshot == null ? System.currentTimeMillis() : snapshot.getCollectTimestamp())
-                    .build();
+                    .listeningPorts(resolveListeningPorts(host))
+                .build();
         }
+    }
+
+    /**
+     * 采集到详细系统信息后同步写回服务器主档，便于列表与基础信息直接复用。
+     */
+    private void syncHostRuntimeFacts(ServerHost host, ServerMetricsDetail detail) {
+        if (host == null || host.getServerId() == null || detail == null) {
+            return;
+        }
+        try {
+            ServerHost updated = serverHostService.updateRuntimeFacts(
+                    host.getServerId(),
+                    detail.getActualOsName(),
+                    detail.getPublicIp());
+            if (updated != null) {
+                host.setOsType(updated.getOsType());
+                host.setPublicIp(updated.getPublicIp());
+            }
+        } catch (Exception e) {
+            log.warn("同步服务器运行时事实失败, serverId={}, message={}", host.getServerId(), e.getMessage());
+        }
+    }
+
+    private List<com.chua.starter.server.support.model.ServerExposurePortView> resolveListeningPorts(ServerHost host) {
+        var exposure = properties.getExposure();
+        return ServerPortInspectionSupport.applyPolicy(
+                ServerPortInspectionSupport.inspect(host),
+                exposure.isIncludeUdp(),
+                exposure.isIncludeLoopback(),
+                exposure.getMaxPorts());
     }
 
     /**
@@ -1174,6 +1254,8 @@ public class ServerMetricsServiceImpl implements ServerMetricsService, ServerMet
             entity.setDiskUsage(snapshot.getDiskUsage());
             entity.setDiskTotalBytes(snapshot.getDiskTotalBytes());
             entity.setDiskUsedBytes(snapshot.getDiskUsedBytes());
+            entity.setDiskReadBytesPerSecond(snapshot.getDiskReadBytesPerSecond());
+            entity.setDiskWriteBytesPerSecond(snapshot.getDiskWriteBytesPerSecond());
             entity.setIoReadBytesPerSecond(snapshot.getIoReadBytesPerSecond());
             entity.setIoWriteBytesPerSecond(snapshot.getIoWriteBytesPerSecond());
             entity.setNetworkRxPacketsPerSecond(snapshot.getNetworkRxPacketsPerSecond());
@@ -1286,6 +1368,8 @@ public class ServerMetricsServiceImpl implements ServerMetricsService, ServerMet
                 .diskUsage(row.getDiskUsage())
                 .diskTotalBytes(row.getDiskTotalBytes())
                 .diskUsedBytes(row.getDiskUsedBytes())
+                .diskReadBytesPerSecond(row.getDiskReadBytesPerSecond())
+                .diskWriteBytesPerSecond(row.getDiskWriteBytesPerSecond())
                 .ioReadBytesPerSecond(row.getIoReadBytesPerSecond())
                 .ioWriteBytesPerSecond(row.getIoWriteBytesPerSecond())
                 .networkRxPacketsPerSecond(row.getNetworkRxPacketsPerSecond())
@@ -1323,6 +1407,8 @@ public class ServerMetricsServiceImpl implements ServerMetricsService, ServerMet
                 .diskUsage(snapshot.getDiskUsage())
                 .diskTotalBytes(snapshot.getDiskTotalBytes())
                 .diskUsedBytes(snapshot.getDiskUsedBytes())
+                .diskReadBytesPerSecond(snapshot.getDiskReadBytesPerSecond())
+                .diskWriteBytesPerSecond(snapshot.getDiskWriteBytesPerSecond())
                 .ioReadBytesPerSecond(snapshot.getIoReadBytesPerSecond())
                 .ioWriteBytesPerSecond(snapshot.getIoWriteBytesPerSecond())
                 .networkRxPacketsPerSecond(snapshot.getNetworkRxPacketsPerSecond())
@@ -1384,6 +1470,36 @@ public class ServerMetricsServiceImpl implements ServerMetricsService, ServerMet
     private NetworkStats resolveLinuxNetworkStats(Integer serverId, String output) {
         long[] values = parseNetworkCounters(output);
         return resolveNetworkStats(serverId, values[0], values[1], values[2], values[3]);
+    }
+
+    /**
+     * 本机磁盘 IO：Windows 直接读性能计数器，Linux/Unix 通过磁盘累计字节差值换算。
+     */
+    private DiskIoStats resolveLocalDiskIoStats(ServerHost host) {
+        if (host == null) {
+            return DiskIoStats.empty();
+        }
+        if (isWindowsHost(host)) {
+            Map<String, String> values = parseKeyValues(executeLocalCommand(
+                    "powershell",
+                    "-NoProfile",
+                    "-Command",
+                    WINDOWS_DISK_IO_COUNTER_COMMAND));
+            return new DiskIoStats(
+                    Math.max(0D, parseDouble(values.get("diskRead"))),
+                    Math.max(0D, parseDouble(values.get("diskWrite"))));
+        }
+        return resolveLinuxDiskIoStats(
+                host.getServerId(),
+                executeLocalCommand("sh", "-c", LINUX_DISK_IO_COUNTER_COMMAND));
+    }
+
+    /**
+     * 解析 Linux 累计磁盘字节计数，并结合上一次采样换算每秒速率。
+     */
+    private DiskIoStats resolveLinuxDiskIoStats(Integer serverId, String output) {
+        long[] values = parseDiskIoCounters(output);
+        return resolveDiskIoStats(serverId, values[0], values[1]);
     }
 
     /**
@@ -1495,6 +1611,41 @@ public class ServerMetricsServiceImpl implements ServerMetricsService, ServerMet
                 Math.max(writeBytes, 0L),
                 Math.max(readPackets, 0L),
                 Math.max(writePackets, 0L)};
+    }
+
+    /**
+     * 解析磁盘累计读写字节输出。
+     */
+    private long[] parseDiskIoCounters(String output) {
+        String[] parts = StringUtils.hasText(output) ? output.trim().split(",") : new String[0];
+        long readBytes = parts.length > 0 ? parseLong(parts[0]) : 0L;
+        long writeBytes = parts.length > 1 ? parseLong(parts[1]) : 0L;
+        return new long[]{
+                Math.max(readBytes, 0L),
+                Math.max(writeBytes, 0L)};
+    }
+
+    /**
+     * 根据累计读写字节与上次采样差值计算磁盘 IO 速率。
+     */
+    private DiskIoStats resolveDiskIoStats(Integer serverId, long readBytes, long writeBytes) {
+        if (serverId == null) {
+            return DiskIoStats.empty();
+        }
+        long now = System.currentTimeMillis();
+        DiskCounterState previous = diskCounterCache.put(
+                serverId,
+                new DiskCounterState(now, readBytes, writeBytes));
+        if (previous == null || now <= previous.timestampMillis()) {
+            return DiskIoStats.empty();
+        }
+        double seconds = (now - previous.timestampMillis()) / 1000D;
+        if (seconds <= 0D) {
+            return DiskIoStats.empty();
+        }
+        return new DiskIoStats(
+                Math.max(0D, (readBytes - previous.readBytes()) / seconds),
+                Math.max(0D, (writeBytes - previous.writeBytes()) / seconds));
     }
 
     /**
@@ -1894,6 +2045,22 @@ public class ServerMetricsServiceImpl implements ServerMetricsService, ServerMet
             long writeBytes,
             long readPackets,
             long writePackets
+    ) {
+    }
+
+    private record DiskIoStats(
+            double readBytesPerSecond,
+            double writeBytesPerSecond
+    ) {
+        private static DiskIoStats empty() {
+            return new DiskIoStats(0D, 0D);
+        }
+    }
+
+    private record DiskCounterState(
+            long timestampMillis,
+            long readBytes,
+            long writeBytes
     ) {
     }
 

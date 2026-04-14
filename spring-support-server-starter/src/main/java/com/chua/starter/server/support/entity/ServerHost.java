@@ -48,6 +48,10 @@ public class ServerHost extends SysBase {
     @ApiModelProperty("主机地址")
     private String host;
 
+    @TableField("server_public_ip")
+    @ApiModelProperty("公网IP")
+    private String publicIp;
+
     @TableField("server_port")
     @ApiModelProperty("端口")
     private Integer port;

@@ -23,6 +23,8 @@ public class ServerMetricsSnapshot {
     private Double diskUsage;
     private Long diskTotalBytes;
     private Long diskUsedBytes;
+    private Double diskReadBytesPerSecond;
+    private Double diskWriteBytesPerSecond;
     private Double ioReadBytesPerSecond;
     private Double ioWriteBytesPerSecond;
     private Double networkRxPacketsPerSecond;

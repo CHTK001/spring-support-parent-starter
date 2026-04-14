@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS `server_host` (
   `server_os_type` VARCHAR(64) DEFAULT NULL COMMENT '操作系统',
   `server_architecture` VARCHAR(64) DEFAULT NULL COMMENT '架构',
   `server_host` VARCHAR(255) DEFAULT NULL COMMENT '主机地址',
+  `server_public_ip` VARCHAR(255) DEFAULT NULL COMMENT '公网IP',
   `server_port` INT DEFAULT NULL COMMENT '端口',
   `server_username` VARCHAR(255) DEFAULT NULL COMMENT '用户名',
   `server_password` VARCHAR(2048) DEFAULT NULL COMMENT '密码密文',
@@ -132,6 +133,8 @@ CREATE TABLE IF NOT EXISTS `server_alert_setting` (
   `server_alert_memory_danger_percent` DOUBLE DEFAULT NULL COMMENT '内存危险阈值',
   `server_alert_disk_warning_percent` DOUBLE DEFAULT NULL COMMENT '磁盘预警阈值',
   `server_alert_disk_danger_percent` DOUBLE DEFAULT NULL COMMENT '磁盘危险阈值',
+  `server_alert_disk_io_warning_bytes_per_second` DOUBLE DEFAULT NULL COMMENT '磁盘IO预警阈值',
+  `server_alert_disk_io_danger_bytes_per_second` DOUBLE DEFAULT NULL COMMENT '磁盘IO危险阈值',
   `server_alert_io_warning_bytes_per_second` DOUBLE DEFAULT NULL COMMENT 'IO预警阈值',
   `server_alert_io_danger_bytes_per_second` DOUBLE DEFAULT NULL COMMENT 'IO危险阈值',
   `server_alert_latency_warning_ms` INT DEFAULT NULL COMMENT '延迟预警阈值',
@@ -183,6 +186,8 @@ CREATE TABLE IF NOT EXISTS `server_metrics_history` (
   `server_disk_usage` DOUBLE DEFAULT NULL COMMENT '磁盘使用率',
   `server_disk_total_bytes` BIGINT DEFAULT NULL COMMENT '磁盘总量',
   `server_disk_used_bytes` BIGINT DEFAULT NULL COMMENT '磁盘已用',
+  `server_disk_read_bps` DOUBLE DEFAULT NULL COMMENT '磁盘读取吞吐 B/s',
+  `server_disk_write_bps` DOUBLE DEFAULT NULL COMMENT '磁盘写入吞吐 B/s',
   `server_io_read_bps` DOUBLE DEFAULT NULL COMMENT '网络读取吞吐 B/s',
   `server_io_write_bps` DOUBLE DEFAULT NULL COMMENT '网络写入吞吐 B/s',
   `server_network_rx_pps` DOUBLE DEFAULT NULL COMMENT '接收包速率',
@@ -213,6 +218,17 @@ CREATE TABLE IF NOT EXISTS `server_setting` (
   PRIMARY KEY (`server_setting_id`),
   UNIQUE KEY `uk_server_setting_key` (`server_setting_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='服务器配置项';
+
+ALTER TABLE `server_host`
+  ADD COLUMN IF NOT EXISTS `server_public_ip` VARCHAR(255) DEFAULT NULL COMMENT '公网IP' AFTER `server_host`;
+
+ALTER TABLE `server_metrics_history`
+  ADD COLUMN IF NOT EXISTS `server_disk_read_bps` DOUBLE DEFAULT NULL COMMENT '磁盘读取吞吐 B/s' AFTER `server_disk_used_bytes`,
+  ADD COLUMN IF NOT EXISTS `server_disk_write_bps` DOUBLE DEFAULT NULL COMMENT '磁盘写入吞吐 B/s' AFTER `server_disk_read_bps`;
+
+ALTER TABLE `server_alert_setting`
+  ADD COLUMN IF NOT EXISTS `server_alert_disk_io_warning_bytes_per_second` DOUBLE DEFAULT NULL COMMENT '磁盘IO预警阈值' AFTER `server_alert_disk_danger_percent`,
+  ADD COLUMN IF NOT EXISTS `server_alert_disk_io_danger_bytes_per_second` DOUBLE DEFAULT NULL COMMENT '磁盘IO危险阈值' AFTER `server_alert_disk_io_warning_bytes_per_second`;
 
 INSERT INTO `server_host` (
   `server_name`,

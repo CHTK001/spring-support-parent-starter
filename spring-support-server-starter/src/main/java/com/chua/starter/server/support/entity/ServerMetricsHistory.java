@@ -72,6 +72,14 @@ public class ServerMetricsHistory extends SysBase {
     @ApiModelProperty("磁盘已用")
     private Long diskUsedBytes;
 
+    @TableField("server_disk_read_bps")
+    @ApiModelProperty("磁盘读取吞吐")
+    private Double diskReadBytesPerSecond;
+
+    @TableField("server_disk_write_bps")
+    @ApiModelProperty("磁盘写入吞吐")
+    private Double diskWriteBytesPerSecond;
+
     @TableField("server_io_read_bps")
     @ApiModelProperty("读取吞吐")
     private Double ioReadBytesPerSecond;

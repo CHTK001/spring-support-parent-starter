@@ -45,11 +45,11 @@ public class ServerSchemaInitializer {
      */
     @PostConstruct
     public void initializeSchemaIfNecessary() {
-        if (allTablesPresent()) {
-            return;
+        if (!allTablesPresent()) {
+            log.info("检测到 server 模块表结构缺失，开始补建核心表");
+            executeServerDdl();
         }
-        log.info("检测到 server 模块表结构缺失，开始补建核心表");
-        executeServerDdl();
+        executeServerMigrations();
     }
 
     /**
@@ -108,6 +108,29 @@ public class ServerSchemaInitializer {
             log.info("server 模块核心表补建完成");
         } catch (Exception e) {
             throw new IllegalStateException("初始化 server 模块表结构失败", e);
+        }
+    }
+
+    /**
+     * 执行列级补丁，保证老库也能拿到新增字段。
+     */
+    private void executeServerMigrations() {
+        ClassPathResource resource = new ClassPathResource(SERVER_DDL_PATH);
+        if (!resource.exists()) {
+            return;
+        }
+        try (InputStream inputStream = resource.getInputStream()) {
+            String ddlScript = StreamUtils.copyToString(inputStream, StandardCharsets.UTF_8);
+            JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+            for (String statement : splitStatements(ddlScript)) {
+                String normalized = normalizeStatement(statement);
+                if (!normalized.startsWith("ALTER TABLE")) {
+                    continue;
+                }
+                jdbcTemplate.execute(statement);
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("执行 server 模块表结构补丁失败", e);
         }
     }
 

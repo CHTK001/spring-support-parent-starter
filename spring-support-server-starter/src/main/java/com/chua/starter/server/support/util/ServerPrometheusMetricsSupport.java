@@ -78,6 +78,12 @@ public final class ServerPrometheusMetricsSupport {
         Double ioWrite = queryScalar(host, baseUrl,
                 "sum(rate(node_network_transmit_bytes_total{instance=~\"" + matcher + "\",device!=\"lo\"}" + rangeWindow + "))",
                 time);
+        Double diskRead = queryScalar(host, baseUrl,
+                "sum(rate(node_disk_read_bytes_total{instance=~\"" + matcher + "\"}" + rangeWindow + "))",
+                time);
+        Double diskWrite = queryScalar(host, baseUrl,
+                "sum(rate(node_disk_written_bytes_total{instance=~\"" + matcher + "\"}" + rangeWindow + "))",
+                time);
         Double rxPackets = queryScalar(host, baseUrl,
                 "sum(rate(node_network_receive_packets_total{instance=~\"" + matcher + "\",device!=\"lo\"}" + rangeWindow + "))",
                 time);
@@ -106,6 +112,8 @@ public final class ServerPrometheusMetricsSupport {
                 .diskUsage(percent(diskUsedBytes, diskTotalBytes))
                 .diskTotalBytes(diskTotalBytes)
                 .diskUsedBytes(diskUsedBytes)
+                .diskReadBytesPerSecond(scale2(diskRead))
+                .diskWriteBytesPerSecond(scale2(diskWrite))
                 .ioReadBytesPerSecond(scale2(ioRead))
                 .ioWriteBytesPerSecond(scale2(ioWrite))
                 .networkRxPacketsPerSecond(scale2(rxPackets))
@@ -123,10 +131,14 @@ public final class ServerPrometheusMetricsSupport {
         String matcher = instanceMatcher(host);
         String time = String.valueOf(System.currentTimeMillis() / 1000.0d);
         JsonNode unameSeries = queryVector(host, baseUrl, "node_uname_info{instance=~\"" + matcher + "\"}", time);
+        JsonNode osSeries = queryVector(host, baseUrl, "node_os_info{instance=~\"" + matcher + "\"}", time);
         String hostName = firstMetricLabel(unameSeries, "nodename", "instance");
         String sysName = firstMetricLabel(unameSeries, "sysname");
         String release = firstMetricLabel(unameSeries, "release");
         String machine = firstMetricLabel(unameSeries, "machine");
+        String prettyName = firstMetricLabel(osSeries, "pretty_name");
+        String osName = firstMetricLabel(osSeries, "name");
+        String osVersion = firstMetricLabel(osSeries, "version", "version_id");
         Map<String, DiskAccumulator> disks = new LinkedHashMap<>();
         mergeDiskSeries(disks, queryVector(host, baseUrl,
                 "node_filesystem_size_bytes{instance=~\"" + matcher + "\"," + DISK_FILTER + "}",
@@ -162,8 +174,10 @@ public final class ServerPrometheusMetricsSupport {
                 .serverId(host == null ? null : host.getServerId())
                 .serverCode(host == null ? null : host.getServerCode())
                 .hostName(StringUtils.hasText(hostName) ? hostName : host == null ? null : host.getServerName())
-                .publicIp(host == null ? null : host.getHost())
-                .actualOsName(joinNonBlank(" ", sysName, release, machine))
+                .publicIp(host == null ? null : host.getPublicIp())
+                .actualOsName(StringUtils.hasText(prettyName)
+                        ? prettyName
+                        : joinNonBlank(" ", osName, osVersion, machine, release))
                 .actualKernel(joinNonBlank(" ", sysName, release))
                 .collectTimestamp(snapshot == null ? System.currentTimeMillis() : snapshot.getCollectTimestamp())
                 .diskPartitions(diskViews)
@@ -200,6 +214,12 @@ public final class ServerPrometheusMetricsSupport {
         mergeHistorySeries(timeline, queryRange(host, baseUrl,
                 "sum(node_filesystem_size_bytes{instance=~\"" + matcher + "\"," + DISK_FILTER + "})",
                 startMillis, endMillis, stepSeconds), "diskTotal");
+        mergeHistorySeries(timeline, queryRange(host, baseUrl,
+                "sum(rate(node_disk_read_bytes_total{instance=~\"" + matcher + "\"}" + rangeWindow + "))",
+                startMillis, endMillis, stepSeconds), "diskRead");
+        mergeHistorySeries(timeline, queryRange(host, baseUrl,
+                "sum(rate(node_disk_written_bytes_total{instance=~\"" + matcher + "\"}" + rangeWindow + "))",
+                startMillis, endMillis, stepSeconds), "diskWrite");
         mergeHistorySeries(timeline, queryRange(host, baseUrl,
                 "sum(rate(node_network_receive_bytes_total{instance=~\"" + matcher + "\",device!=\"lo\"}" + rangeWindow + "))",
                 startMillis, endMillis, stepSeconds), "ioRead");
@@ -605,6 +625,8 @@ public final class ServerPrometheusMetricsSupport {
         private Double memoryTotal;
         private Double diskUsed;
         private Double diskTotal;
+        private Double diskRead;
+        private Double diskWrite;
         private Double ioRead;
         private Double ioWrite;
         private Double rxPackets;
@@ -621,6 +643,8 @@ public final class ServerPrometheusMetricsSupport {
                 case "memoryTotal" -> this.memoryTotal = value;
                 case "diskUsed" -> this.diskUsed = value;
                 case "diskTotal" -> this.diskTotal = value;
+                case "diskRead" -> this.diskRead = value;
+                case "diskWrite" -> this.diskWrite = value;
                 case "ioRead" -> this.ioRead = value;
                 case "ioWrite" -> this.ioWrite = value;
                 case "rxPackets" -> this.rxPackets = value;
@@ -649,6 +673,8 @@ public final class ServerPrometheusMetricsSupport {
                     .diskUsage(percent(diskUsedBytes, diskTotalBytes))
                     .diskTotalBytes(diskTotalBytes)
                     .diskUsedBytes(diskUsedBytes)
+                    .diskReadBytesPerSecond(scale2(diskRead))
+                    .diskWriteBytesPerSecond(scale2(diskWrite))
                     .ioReadBytesPerSecond(scale2(ioRead))
                     .ioWriteBytesPerSecond(scale2(ioWrite))
                     .networkRxPacketsPerSecond(scale2(rxPackets))

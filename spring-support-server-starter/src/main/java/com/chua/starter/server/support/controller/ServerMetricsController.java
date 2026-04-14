@@ -1,10 +1,13 @@
 package com.chua.starter.server.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.server.support.model.ServerExposurePortMeta;
+import com.chua.starter.server.support.model.ServerExposurePortView;
 import com.chua.starter.server.support.model.ServerMetricsDetail;
 import com.chua.starter.server.support.model.ServerMetricsSnapshot;
 import com.chua.starter.server.support.model.ServerMetricsTaskSettings;
 import com.chua.starter.server.support.model.ServerMetricsTaskSettingsRequest;
+import com.chua.starter.server.support.service.ServerExposureService;
 import com.chua.starter.server.support.service.ServerMetricsService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ServerMetricsController {
 
     private final ServerMetricsService serverMetricsService;
+    private final ServerExposureService serverExposureService;
 
     /**
      * 查询所有服务器当前的最新指标快照。
@@ -75,6 +79,38 @@ public class ServerMetricsController {
     @GetMapping("/{id}/detail")
     public ReturnResult<ServerMetricsDetail> getMetricsDetail(@PathVariable Integer id) {
         return ReturnResult.ok(serverMetricsService.getDetail(id));
+    }
+
+    /**
+     * 查询指定服务器的端口占用列表，支持按协议/状态/关键字过滤。
+     */
+    @GetMapping("/{id}/ports")
+    public ReturnResult<List<ServerExposurePortView>> getMetricsPorts(
+            @PathVariable Integer id,
+            @RequestParam(value = "refresh", required = false, defaultValue = "false") boolean refresh,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "protocol", required = false) String protocol,
+            @RequestParam(value = "state", required = false) String state,
+            @RequestParam(value = "limit", required = false) Integer limit
+    ) {
+        return ReturnResult.ok(serverExposureService.listPorts(
+                id,
+                refresh,
+                keyword,
+                protocol,
+                state,
+                limit));
+    }
+
+    /**
+     * 查询端口筛选项元信息（协议、状态、进程名等）。
+     */
+    @GetMapping("/{id}/ports/meta")
+    public ReturnResult<ServerExposurePortMeta> getMetricsPortMeta(
+            @PathVariable Integer id,
+            @RequestParam(value = "refresh", required = false, defaultValue = "false") boolean refresh
+    ) {
+        return ReturnResult.ok(serverExposureService.portMeta(id, refresh));
     }
 
     /**

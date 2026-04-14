@@ -44,6 +44,12 @@ public class ServerAlertSettings {
     @ApiModelProperty("磁盘危险阈值")
     private Double diskDangerPercent;
 
+    @ApiModelProperty("磁盘IO预警阈值")
+    private Double diskIoWarningBytesPerSecond;
+
+    @ApiModelProperty("磁盘IO危险阈值")
+    private Double diskIoDangerBytesPerSecond;
+
     @ApiModelProperty("IO 预警阈值")
     private Double ioWarningBytesPerSecond;
 

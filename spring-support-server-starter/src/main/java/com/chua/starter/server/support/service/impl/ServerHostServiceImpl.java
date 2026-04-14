@@ -36,6 +36,8 @@ public class ServerHostServiceImpl extends ServiceImpl<ServerHostMapper, ServerH
                         .or()
                         .like(ServerHost::getHost, keyword)
                         .or()
+                        .like(ServerHost::getPublicIp, keyword)
+                        .or()
                         .like(ServerHost::getTags, keyword))
                 .eq(StringUtils.hasText(serverType), ServerHost::getServerType, serverType)
                 .eq(enabled != null, ServerHost::getEnabled, enabled)
@@ -83,6 +85,41 @@ public class ServerHostServiceImpl extends ServiceImpl<ServerHostMapper, ServerH
     }
 
     /**
+     * 只刷新公网 IP，避免覆盖其他主档字段。
+     */
+    @Override
+    public ServerHost updatePublicIp(Integer id, String publicIp) {
+        ServerHost host = requireHost(id);
+        host.setPublicIp(trim(publicIp));
+        auditExecutor.run(() -> updateById(host));
+        return getById(id);
+    }
+
+    /**
+     * 只刷新采集得到的系统名称与公网 IP，避免覆盖页面录入字段。
+     */
+    @Override
+    public ServerHost updateRuntimeFacts(Integer id, String osType, String publicIp) {
+        ServerHost host = requireHost(id);
+        boolean changed = false;
+        String runtimeOsType = trim(osType);
+        String runtimePublicIp = trim(publicIp);
+        if (StringUtils.hasText(runtimeOsType) && !runtimeOsType.equals(trim(host.getOsType()))) {
+            host.setOsType(runtimeOsType);
+            changed = true;
+        }
+        if (StringUtils.hasText(runtimePublicIp) && !runtimePublicIp.equals(trim(host.getPublicIp()))) {
+            host.setPublicIp(runtimePublicIp);
+            changed = true;
+        }
+        if (!changed) {
+            return host;
+        }
+        auditExecutor.run(() -> updateById(host));
+        return getById(id);
+    }
+
+    /**
      * 启用或停用指定服务器。
      */
     @Override
@@ -122,6 +159,7 @@ public class ServerHostServiceImpl extends ServiceImpl<ServerHostMapper, ServerH
         host.setOsType(trim(host.getOsType()));
         host.setArchitecture(trim(host.getArchitecture()));
         host.setHost(resolveHost(host));
+        host.setPublicIp(trim(host.getPublicIp()));
         host.setPort(resolvePort(host));
         host.setUsername(trim(host.getUsername()));
         host.setBaseDirectory(resolveBaseDirectory(host));

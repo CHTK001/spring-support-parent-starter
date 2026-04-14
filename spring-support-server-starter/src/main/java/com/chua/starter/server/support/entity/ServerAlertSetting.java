@@ -60,6 +60,14 @@ public class ServerAlertSetting extends SysBase {
     @ApiModelProperty("磁盘危险阈值")
     private Double diskDangerPercent;
 
+    @TableField("server_alert_disk_io_warning_bytes_per_second")
+    @ApiModelProperty("磁盘IO预警阈值")
+    private Double diskIoWarningBytesPerSecond;
+
+    @TableField("server_alert_disk_io_danger_bytes_per_second")
+    @ApiModelProperty("磁盘IO危险阈值")
+    private Double diskIoDangerBytesPerSecond;
+
     @TableField("server_alert_io_warning_bytes_per_second")
     @ApiModelProperty("IO预警阈值")
     private Double ioWarningBytesPerSecond;

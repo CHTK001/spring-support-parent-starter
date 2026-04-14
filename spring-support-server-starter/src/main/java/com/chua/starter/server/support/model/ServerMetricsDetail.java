@@ -21,4 +21,5 @@ public class ServerMetricsDetail {
     private Long collectTimestamp;
     private List<ServerDiskPartitionView> diskPartitions;
     private List<ServerNetworkInterfaceView> networkInterfaces;
+    private List<ServerExposurePortView> listeningPorts;
 }

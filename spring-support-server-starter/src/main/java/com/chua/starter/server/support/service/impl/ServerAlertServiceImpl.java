@@ -133,6 +133,14 @@ public class ServerAlertServiceImpl implements ServerAlertService {
         evaluate(
                 snapshot,
                 settings,
+                "DISK_IO",
+                toDouble(snapshot.getDiskReadBytesPerSecond()) + toDouble(snapshot.getDiskWriteBytesPerSecond()),
+                settings.getDiskIoWarningBytesPerSecond(),
+                settings.getDiskIoDangerBytesPerSecond(),
+                "B/s");
+        evaluate(
+                snapshot,
+                settings,
                 "IO",
                 toDouble(snapshot.getIoReadBytesPerSecond()) + toDouble(snapshot.getIoWriteBytesPerSecond()),
                 settings.getIoWarningBytesPerSecond(),
@@ -191,6 +199,8 @@ public class ServerAlertServiceImpl implements ServerAlertService {
         payload.put("cpuUsage", snapshot.getCpuUsage());
         payload.put("memoryUsage", snapshot.getMemoryUsage());
         payload.put("diskUsage", snapshot.getDiskUsage());
+        payload.put("diskReadBytesPerSecond", snapshot.getDiskReadBytesPerSecond());
+        payload.put("diskWriteBytesPerSecond", snapshot.getDiskWriteBytesPerSecond());
         payload.put("ioReadBytesPerSecond", snapshot.getIoReadBytesPerSecond());
         payload.put("ioWriteBytesPerSecond", snapshot.getIoWriteBytesPerSecond());
         payload.put("networkRxPacketsPerSecond", snapshot.getNetworkRxPacketsPerSecond());
@@ -414,6 +424,8 @@ public class ServerAlertServiceImpl implements ServerAlertService {
                 .memoryDangerPercent(firstNonNull(source.getMemoryDangerPercent(), metrics.getMemoryDangerPercent()))
                 .diskWarningPercent(firstNonNull(source.getDiskWarningPercent(), metrics.getDiskWarningPercent()))
                 .diskDangerPercent(firstNonNull(source.getDiskDangerPercent(), metrics.getDiskDangerPercent()))
+                .diskIoWarningBytesPerSecond(firstNonNull(source.getDiskIoWarningBytesPerSecond(), metrics.getDiskIoWarningBytesPerSecond()))
+                .diskIoDangerBytesPerSecond(firstNonNull(source.getDiskIoDangerBytesPerSecond(), metrics.getDiskIoDangerBytesPerSecond()))
                 .ioWarningBytesPerSecond(firstNonNull(source.getIoWarningBytesPerSecond(), metrics.getIoWarningBytesPerSecond()))
                 .ioDangerBytesPerSecond(firstNonNull(source.getIoDangerBytesPerSecond(), metrics.getIoDangerBytesPerSecond()))
                 .latencyWarningMs(firstNonNull(source.getLatencyWarningMs(), metrics.getLatencyWarningMs()))
@@ -433,6 +445,8 @@ public class ServerAlertServiceImpl implements ServerAlertService {
         merged.setMemoryDangerPercent(firstNonNull(host.getMemoryDangerPercent(), global.getMemoryDangerPercent()));
         merged.setDiskWarningPercent(firstNonNull(host.getDiskWarningPercent(), global.getDiskWarningPercent()));
         merged.setDiskDangerPercent(firstNonNull(host.getDiskDangerPercent(), global.getDiskDangerPercent()));
+        merged.setDiskIoWarningBytesPerSecond(firstNonNull(host.getDiskIoWarningBytesPerSecond(), global.getDiskIoWarningBytesPerSecond()));
+        merged.setDiskIoDangerBytesPerSecond(firstNonNull(host.getDiskIoDangerBytesPerSecond(), global.getDiskIoDangerBytesPerSecond()));
         merged.setIoWarningBytesPerSecond(firstNonNull(host.getIoWarningBytesPerSecond(), global.getIoWarningBytesPerSecond()));
         merged.setIoDangerBytesPerSecond(firstNonNull(host.getIoDangerBytesPerSecond(), global.getIoDangerBytesPerSecond()));
         merged.setLatencyWarningMs(firstNonNull(host.getLatencyWarningMs(), global.getLatencyWarningMs()));
@@ -452,6 +466,8 @@ public class ServerAlertServiceImpl implements ServerAlertService {
                 .memoryDangerPercent(source == null ? null : source.getMemoryDangerPercent())
                 .diskWarningPercent(source == null ? null : source.getDiskWarningPercent())
                 .diskDangerPercent(source == null ? null : source.getDiskDangerPercent())
+                .diskIoWarningBytesPerSecond(source == null ? null : source.getDiskIoWarningBytesPerSecond())
+                .diskIoDangerBytesPerSecond(source == null ? null : source.getDiskIoDangerBytesPerSecond())
                 .ioWarningBytesPerSecond(source == null ? null : source.getIoWarningBytesPerSecond())
                 .ioDangerBytesPerSecond(source == null ? null : source.getIoDangerBytesPerSecond())
                 .latencyWarningMs(source == null ? null : source.getLatencyWarningMs())
@@ -466,6 +482,7 @@ public class ServerAlertServiceImpl implements ServerAlertService {
         clearHotState(alertStateKey(serverId, "CPU"));
         clearHotState(alertStateKey(serverId, "MEMORY"));
         clearHotState(alertStateKey(serverId, "DISK"));
+        clearHotState(alertStateKey(serverId, "DISK_IO"));
         clearHotState(alertStateKey(serverId, "IO"));
         clearHotState(alertStateKey(serverId, "LATENCY"));
     }
@@ -525,6 +542,8 @@ public class ServerAlertServiceImpl implements ServerAlertService {
                 .memoryDangerPercent(entity.getMemoryDangerPercent())
                 .diskWarningPercent(entity.getDiskWarningPercent())
                 .diskDangerPercent(entity.getDiskDangerPercent())
+                .diskIoWarningBytesPerSecond(entity.getDiskIoWarningBytesPerSecond())
+                .diskIoDangerBytesPerSecond(entity.getDiskIoDangerBytesPerSecond())
                 .ioWarningBytesPerSecond(entity.getIoWarningBytesPerSecond())
                 .ioDangerBytesPerSecond(entity.getIoDangerBytesPerSecond())
                 .latencyWarningMs(entity.getLatencyWarningMs())
@@ -543,6 +562,8 @@ public class ServerAlertServiceImpl implements ServerAlertService {
         entity.setMemoryDangerPercent(settings.getMemoryDangerPercent());
         entity.setDiskWarningPercent(settings.getDiskWarningPercent());
         entity.setDiskDangerPercent(settings.getDiskDangerPercent());
+        entity.setDiskIoWarningBytesPerSecond(settings.getDiskIoWarningBytesPerSecond());
+        entity.setDiskIoDangerBytesPerSecond(settings.getDiskIoDangerBytesPerSecond());
         entity.setIoWarningBytesPerSecond(settings.getIoWarningBytesPerSecond());
         entity.setIoDangerBytesPerSecond(settings.getIoDangerBytesPerSecond());
         entity.setLatencyWarningMs(settings.getLatencyWarningMs());

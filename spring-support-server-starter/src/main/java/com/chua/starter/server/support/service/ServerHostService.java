@@ -27,6 +27,16 @@ public interface ServerHostService {
     ServerHost saveHost(ServerHost host);
 
     /**
+     * 更新服务器公网 IP。
+     */
+    ServerHost updatePublicIp(Integer id, String publicIp);
+
+    /**
+     * 更新服务器运行时采集到的系统事实。
+     */
+    ServerHost updateRuntimeFacts(Integer id, String osType, String publicIp);
+
+    /**
      * 切换服务器启用状态。
      */
     ServerHost updateEnabled(Integer id, Boolean enabled);
