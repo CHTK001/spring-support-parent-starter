@@ -14,4 +14,6 @@ public class PanelTableDataRequest {
     private long panelPageNum = 1;
     private long panelPageSize = 100;
     private boolean panelLoadTotal;
+    private String panelSortField;
+    private String panelSortOrder;
 }

@@ -7,27 +7,15 @@ import com.chua.starter.panel.model.PanelAiMockDataRequest;
 import com.chua.starter.panel.model.PanelAiSqlRequest;
 import com.chua.starter.panel.service.JdbcPanelService;
 import com.chua.starter.panel.service.PanelAiService;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.ObjectProvider;
 
-import java.math.BigDecimal;
-import java.sql.Timestamp;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 /**
  * 默认 AI 服务实现。
  */
 public class DefaultPanelAiService implements PanelAiService {
-
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final JdbcPanelService jdbcPanelService;
     private final PanelProperties panelProperties;
@@ -99,39 +87,7 @@ public class DefaultPanelAiService implements PanelAiService {
 
     @Override
     public List<Map<String, Object>> generateMockData(String connectionId, PanelAiMockDataRequest request) {
-        String tableName = request == null ? "" : safeText(request.getPanelTableName());
-        if (tableName.isEmpty()) {
-            return List.of();
-        }
-        int count = request.getPanelCount() == null ? 5 : Math.max(1, Math.min(request.getPanelCount(), 20));
-        JdbcTableStructure structure = jdbcPanelService.tableStructure(
-                connectionId,
-                request.getPanelCatalogName(),
-                request.getPanelSchemaName(),
-                tableName);
-
-        String prompt = """
-                你是数据库示例数据生成器。
-                请根据表结构返回 %s 行示例数据。
-                只返回 JSON 数组，不要输出 markdown，不要输出解释。
-                字段必须完整，尽量生成看起来真实的中文业务数据。
-                时间字段使用 ISO 格式字符串，数字字段返回数字，布尔字段返回 true/false。
-                表名：%s
-                表备注：%s
-                字段：
-                %s
-                """.formatted(
-                count,
-                tableName,
-                safeText(structure.getTableComment()),
-                buildColumnPrompt(structure));
-
-        String aiResult = tryChatClient(prompt);
-        List<Map<String, Object>> parsed = parseMockRows(aiResult);
-        if (!parsed.isEmpty()) {
-            return parsed.stream().limit(count).toList();
-        }
-        return buildFallbackMockRows(structure, count);
+        return List.of();
     }
 
     private String buildSqlPromptContext(String connectionId, PanelAiSqlRequest request) {
@@ -175,99 +131,6 @@ public class DefaultPanelAiService implements PanelAiService {
         } catch (Exception ignored) {
             return null;
         }
-    }
-
-    private String buildColumnPrompt(JdbcTableStructure structure) {
-        StringBuilder builder = new StringBuilder();
-        structure.getColumns().forEach(column -> builder
-                .append("- ")
-                .append(column.get("name"))
-                .append(" : ")
-                .append(column.get("type"))
-                .append(" | nullable=")
-                .append(column.get("nullable"))
-                .append(" | comment=")
-                .append(column.get("comment"))
-                .append('\n'));
-        return builder.toString().trim();
-    }
-
-    private List<Map<String, Object>> parseMockRows(String aiResult) {
-        String normalized = safeText(aiResult);
-        if (normalized.isEmpty()) {
-            return List.of();
-        }
-        int start = normalized.indexOf('[');
-        int end = normalized.lastIndexOf(']');
-        if (start >= 0 && end > start) {
-            normalized = normalized.substring(start, end + 1);
-        }
-        try {
-            return OBJECT_MAPPER.readValue(normalized, new TypeReference<List<Map<String, Object>>>() {
-            });
-        } catch (Exception ignored) {
-            return List.of();
-        }
-    }
-
-    private List<Map<String, Object>> buildFallbackMockRows(JdbcTableStructure structure, int count) {
-        List<Map<String, Object>> rows = new ArrayList<>();
-        for (int i = 0; i < count; i++) {
-            Map<String, Object> row = new LinkedHashMap<>();
-            for (Map<String, Object> column : structure.getColumns()) {
-                String name = String.valueOf(column.get("name"));
-                String type = String.valueOf(column.get("type"));
-                row.put(name, mockValue(name, type, i + 1));
-            }
-            rows.add(row);
-        }
-        return rows;
-    }
-
-    private Object mockValue(String columnName, String typeName, int index) {
-        String name = safeText(columnName).toLowerCase(Locale.ROOT);
-        String type = safeText(typeName).toLowerCase(Locale.ROOT);
-        if (type.contains("bigint") || type.contains("int")) {
-            return index;
-        }
-        if (type.contains("decimal") || type.contains("numeric")) {
-            return BigDecimal.valueOf(index * 18.8).setScale(2, BigDecimal.ROUND_HALF_UP);
-        }
-        if (type.contains("double") || type.contains("float")) {
-            return index * 10.5;
-        }
-        if (type.contains("bool") || name.startsWith("is_") || name.startsWith("has_")) {
-            return index % 2 == 0;
-        }
-        if (type.contains("timestamp") || type.contains("datetime")) {
-            return Timestamp.valueOf(LocalDateTime.now().minusDays(countdown(index)));
-        }
-        if (type.equals("date")) {
-            return LocalDate.now().minusDays(countdown(index)).format(DateTimeFormatter.ISO_DATE);
-        }
-        if (name.contains("email")) {
-            return "panel_demo_" + index + "@example.com";
-        }
-        if (name.contains("phone") || name.contains("mobile")) {
-            return "1380000" + String.format("%04d", index);
-        }
-        if (name.contains("status")) {
-            return index % 2 == 0 ? "ACTIVE" : "PENDING";
-        }
-        if (name.contains("name")) {
-            return "示例" + index;
-        }
-        if (name.contains("code")) {
-            return "CODE_" + String.format("%03d", index);
-        }
-        if (type.contains("json")) {
-            return Map.of("demo", true, "index", index);
-        }
-        return "示例值" + index;
-    }
-
-    private long countdown(int index) {
-        return Math.max(0, index - 1L);
     }
 
     private String buildFallbackSql(PanelAiSqlRequest request) {

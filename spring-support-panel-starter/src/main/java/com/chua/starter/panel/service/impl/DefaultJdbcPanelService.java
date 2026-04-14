@@ -198,9 +198,24 @@ public class DefaultJdbcPanelService implements JdbcPanelService {
                     tableName);
             List<String> columns = new ArrayList<>();
             List<Map<String, Object>> rows = new ArrayList<>();
+            String quote = normalizeQuote(connection.getMetaData().getIdentifierQuoteString());
+            List<String> tableColumns = loadTableColumnNames(
+                    connection,
+                    request.getPanelCatalogName(),
+                    request.getPanelSchemaName(),
+                    tableName);
+            String sortField = normalizeSortableColumn(request.getPanelSortField(), tableColumns);
+            String sortOrder = normalizeSortOrder(request.getPanelSortOrder());
+            StringBuilder sql = new StringBuilder("select * from ").append(qualifiedTableName);
+            if (sortField != null) {
+                sql.append(" order by ")
+                        .append(quoteIdentifier(sortField, quote))
+                        .append(" ")
+                        .append(sortOrder);
+            }
+            sql.append(" limit ? offset ?");
 
-            try (PreparedStatement statement = connection.prepareStatement(
-                    "select * from " + qualifiedTableName + " limit ? offset ?")) {
+            try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
                 statement.setLong(1, pageSize);
                 statement.setLong(2, offset);
                 try (ResultSet resultSet = statement.executeQuery()) {
@@ -239,6 +254,43 @@ public class DefaultJdbcPanelService implements JdbcPanelService {
         } catch (Exception e) {
             throw new IllegalStateException("读取表数据失败: " + e.getMessage(), e);
         }
+    }
+
+    private List<String> loadTableColumnNames(
+            Connection connection,
+            String catalog,
+            String schema,
+            String tableName) throws Exception {
+        List<String> result = new ArrayList<>();
+        DatabaseMetaData metaData = connection.getMetaData();
+        try (ResultSet rs = metaData.getColumns(catalog, schema, tableName, null)) {
+            while (rs.next()) {
+                String columnName = rs.getString("COLUMN_NAME");
+                if (columnName != null && !columnName.isBlank()) {
+                    result.add(columnName);
+                }
+            }
+        }
+        return result;
+    }
+
+    private String normalizeSortableColumn(String columnName, List<String> availableColumns) {
+        if (columnName == null || columnName.isBlank() || availableColumns == null || availableColumns.isEmpty()) {
+            return null;
+        }
+        for (String item : availableColumns) {
+            if (item != null && item.equalsIgnoreCase(columnName.trim())) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    private String normalizeSortOrder(String sortOrder) {
+        if (sortOrder == null || sortOrder.isBlank()) {
+            return "asc";
+        }
+        return "desc".equalsIgnoreCase(sortOrder.trim()) ? "desc" : "asc";
     }
 
     @Override
