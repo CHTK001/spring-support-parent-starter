@@ -1,1 +1,0 @@
-import{d as a,D as t,e as r,F as d}from"./index-Dr1fsBAF.js";const p=a({name:"Auth",props:{value:{type:void 0,default:[]}},setup(n,{slots:e}){return()=>{var u;return e&&t(n.value)?r(d,null,[(u=e.default)==null?void 0:u.call(e)]):null}}}),h=p;export{h as Auth};

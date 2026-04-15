@@ -76,6 +76,13 @@
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
 
+        <!-- Web 接口支持 - 提供性能分析 REST API -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Spring Boot配置处理器 - 生成配置元数据 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -119,4 +126,3 @@
         </plugins>
     </build>
 </project>
-

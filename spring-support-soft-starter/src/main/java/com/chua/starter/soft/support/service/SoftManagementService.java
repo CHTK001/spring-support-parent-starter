@@ -1,6 +1,7 @@
 package com.chua.starter.soft.support.service;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.server.support.enums.ServerServiceOperationType;
 import com.chua.starter.server.support.model.ServerServiceCommandResult;
 import com.chua.starter.server.support.model.ServerServiceUpsertRequest;
@@ -13,6 +14,7 @@ import com.chua.starter.soft.support.entity.SoftOperationLog;
 import com.chua.starter.soft.support.entity.SoftPackage;
 import com.chua.starter.soft.support.entity.SoftPackageVersion;
 import com.chua.starter.soft.support.entity.SoftRepository;
+import com.chua.starter.soft.support.entity.SoftRepositorySourceEntity;
 import com.chua.starter.soft.support.entity.SoftTarget;
 import com.chua.starter.soft.support.enums.SoftInstallationStatus;
 import com.chua.starter.soft.support.enums.SoftOperationStage;
@@ -24,6 +26,7 @@ import com.chua.starter.soft.support.mapper.SoftOperationLogMapper;
 import com.chua.starter.soft.support.mapper.SoftPackageMapper;
 import com.chua.starter.soft.support.mapper.SoftPackageVersionMapper;
 import com.chua.starter.soft.support.mapper.SoftRepositoryMapper;
+import com.chua.starter.soft.support.mapper.SoftRepositorySourceMapper;
 import com.chua.starter.soft.support.mapper.SoftTargetMapper;
 import com.chua.starter.soft.support.model.SoftConfigResponse;
 import com.chua.starter.soft.support.model.SoftConfigWriteRequest;
@@ -35,11 +38,17 @@ import com.chua.starter.soft.support.model.SoftLogWatchHandle;
 import com.chua.starter.soft.support.model.SoftLogWatchTicket;
 import com.chua.starter.soft.support.model.SoftOperationResult;
 import com.chua.starter.soft.support.model.SoftOperationTicket;
+import com.chua.starter.soft.support.model.SoftPackageCreateRequest;
 import com.chua.starter.soft.support.model.SoftPackageUpdateRequest;
+import com.chua.starter.soft.support.model.SoftPackageVersionCopyInstallProfileRequest;
+import com.chua.starter.soft.support.model.SoftRepositoryPackageSearchItem;
+import com.chua.starter.soft.support.model.SoftRepositoryPackageSearchVersion;
 import com.chua.starter.soft.support.model.SoftPackageVersionUpdateRequest;
 import com.chua.starter.soft.support.model.SoftRealtimePayload;
 import com.chua.starter.soft.support.model.SoftRenderedConfigFile;
 import com.chua.starter.soft.support.model.SoftRepositorySource;
+import com.chua.starter.soft.support.model.SoftRepositorySourceSearchItem;
+import com.chua.starter.soft.support.model.SoftRepositorySourceUpdateRequest;
 import com.chua.starter.soft.support.spi.SoftCommandObserver;
 import com.chua.starter.soft.support.spi.SoftConfigManager;
 import com.chua.starter.soft.support.spi.SoftInstallExecutor;
@@ -77,6 +86,7 @@ public class SoftManagementService {
     private final SoftPackageMapper packageMapper;
     private final SoftPackageVersionMapper packageVersionMapper;
     private final SoftTargetMapper targetMapper;
+    private final SoftRepositorySourceMapper repositorySourceMapper;
     private final SoftInstallationMapper installationMapper;
     private final SoftOperationLogMapper operationLogMapper;
     private final SoftConfigSnapshotMapper configSnapshotMapper;
@@ -98,6 +108,7 @@ public class SoftManagementService {
             SoftPackageMapper packageMapper,
             SoftPackageVersionMapper packageVersionMapper,
             SoftTargetMapper targetMapper,
+            SoftRepositorySourceMapper repositorySourceMapper,
             SoftInstallationMapper installationMapper,
             SoftOperationLogMapper operationLogMapper,
             SoftConfigSnapshotMapper configSnapshotMapper,
@@ -115,6 +126,7 @@ public class SoftManagementService {
         this.packageMapper = packageMapper;
         this.packageVersionMapper = packageVersionMapper;
         this.targetMapper = targetMapper;
+        this.repositorySourceMapper = repositorySourceMapper;
         this.installationMapper = installationMapper;
         this.operationLogMapper = operationLogMapper;
         this.configSnapshotMapper = configSnapshotMapper;
@@ -153,12 +165,170 @@ public class SoftManagementService {
         } else {
             repositoryMapper.updateById(repository);
         }
+        replaceRepositorySourceRows(repository.getSoftRepositoryId(), repository.getSourceConfigs());
         SoftRepository stored = repositoryMapper.selectById(repository.getSoftRepositoryId());
         hydrateRepository(stored);
         return stored;
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public SoftRepository updateRepositorySources(Integer repositoryId, SoftRepositorySourceUpdateRequest request) {
+        SoftRepository repository = requiredRepository(repositoryId);
+        repository.setRepositoryUrl(request == null ? null : request.getRepositoryUrl());
+        repository.setLocalDirectory(request == null ? null : request.getLocalDirectory());
+        repository.setSourceConfigs(request == null ? List.of() : request.getSourceConfigs());
+        normalizeRepository(repository);
+        repositoryMapper.updateById(repository);
+        replaceRepositorySourceRows(repositoryId, repository.getSourceConfigs());
+        SoftRepository stored = repositoryMapper.selectById(repositoryId);
+        hydrateRepository(stored);
+        return stored;
+    }
+
+    public List<SoftRepositorySourceSearchItem> listRepositorySources(String keyword) {
+        String normalizedKeyword = normalizeText(keyword);
+        String keywordLower = normalizedKeyword == null ? null : normalizedKeyword.toLowerCase();
+        List<SoftRepositorySourceSearchItem> results = new ArrayList<>();
+
+        for (SoftRepository repository : listRepositories()) {
+            SoftRepositorySource primary = buildPrimarySource(repository);
+            if (primary != null) {
+                SoftRepositorySourceSearchItem item = buildRepositorySourceSearchItem(repository, primary, true);
+                if (matchesSourceKeyword(item, keywordLower)) {
+                    results.add(item);
+                }
+            }
+            for (SoftRepositorySource source : normalizeSourceConfigs(repository.getSourceConfigs())) {
+                SoftRepositorySourceSearchItem item = buildRepositorySourceSearchItem(repository, source, false);
+                if (matchesSourceKeyword(item, keywordLower)) {
+                    results.add(item);
+                }
+            }
+        }
+
+        return results;
+    }
+
+    public List<SoftRepositorySource> listRepositorySourceItems(Integer repositoryId) {
+        requiredRepository(repositoryId);
+        return loadRepositorySourceItems(repositoryId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public SoftRepositorySource createRepositorySourceItem(Integer repositoryId, SoftRepositorySource source) {
+        requiredRepository(repositoryId);
+        SoftRepositorySource normalized = normalizeSourceConfig(source);
+        if (normalized == null) {
+            throw new IllegalStateException("来源配置不能为空");
+        }
+        SoftRepositorySourceEntity row = toRepositorySourceEntity(repositoryId, normalized, null);
+        if (row.getSortOrder() == null) {
+            Integer maxSort = repositorySourceMapper.selectList(Wrappers.<SoftRepositorySourceEntity>lambdaQuery()
+                            .eq(SoftRepositorySourceEntity::getSoftRepositoryId, repositoryId)
+                            .orderByDesc(SoftRepositorySourceEntity::getSortOrder))
+                    .stream()
+                    .map(SoftRepositorySourceEntity::getSortOrder)
+                    .filter(Objects::nonNull)
+                    .findFirst()
+                    .orElse(0);
+            row.setSortOrder(maxSort + 10);
+        }
+        repositorySourceMapper.insert(row);
+        syncRepositorySourcesJson(repositoryId);
+        return toRepositorySourceModel(row);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public SoftRepositorySource updateRepositorySourceItem(Integer repositoryId, Integer sourceId, SoftRepositorySource source) {
+        requiredRepository(repositoryId);
+        SoftRepositorySourceEntity current = requiredRepositorySource(repositoryId, sourceId);
+        SoftRepositorySource normalized = normalizeSourceConfig(source);
+        if (normalized == null) {
+            throw new IllegalStateException("来源配置不能为空");
+        }
+        SoftRepositorySourceEntity next = toRepositorySourceEntity(repositoryId, normalized, current.getSortOrder());
+        next.setSoftRepositorySourceId(current.getSoftRepositorySourceId());
+        repositorySourceMapper.updateById(next);
+        syncRepositorySourcesJson(repositoryId);
+        return toRepositorySourceModel(next);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteRepositorySourceItem(Integer repositoryId, Integer sourceId) {
+        requiredRepositorySource(repositoryId, sourceId);
+        repositorySourceMapper.deleteById(sourceId);
+        syncRepositorySourcesJson(repositoryId);
+    }
+
+    public List<SoftRepositoryPackageSearchItem> searchRepositoryPackages(
+            String keyword,
+            List<Integer> repositoryIds,
+            String osType
+    ) {
+        String normalizedKeyword = normalizeText(keyword);
+        String keywordLower = normalizedKeyword == null ? null : normalizedKeyword.toLowerCase();
+        String normalizedOsType = SoftArtifactRepositorySupport.normalizeOsType(osType);
+        List<Integer> normalizedRepositoryIds = Optional.ofNullable(repositoryIds).orElseGet(List::of).stream()
+                .filter(Objects::nonNull)
+                .filter(value -> value > 0)
+                .distinct()
+                .toList();
+
+        List<SoftPackage> packages = packageMapper.selectList(Wrappers.<SoftPackage>lambdaQuery()
+                .in(!normalizedRepositoryIds.isEmpty(), SoftPackage::getSoftRepositoryId, normalizedRepositoryIds)
+                .orderByAsc(SoftPackage::getPackageName));
+        if (packages.isEmpty()) {
+            return List.of();
+        }
+        Map<Integer, SoftRepository> repositoryMap = repositoryMapper.selectBatchIds(
+                        packages.stream()
+                                .map(SoftPackage::getSoftRepositoryId)
+                                .filter(Objects::nonNull)
+                                .distinct()
+                                .toList()
+                ).stream()
+                .collect(java.util.stream.Collectors.toMap(SoftRepository::getSoftRepositoryId, value -> value, (a, b) -> a));
+        List<Integer> packageIds = packages.stream()
+                .map(SoftPackage::getSoftPackageId)
+                .filter(Objects::nonNull)
+                .toList();
+        Map<Integer, List<SoftPackageVersion>> versionGroups = new HashMap<>();
+        if (!packageIds.isEmpty()) {
+            List<SoftPackageVersion> versions = packageVersionMapper.selectList(Wrappers.<SoftPackageVersion>lambdaQuery()
+                    .in(SoftPackageVersion::getSoftPackageId, packageIds)
+                    .orderByDesc(SoftPackageVersion::getUpdateTime, SoftPackageVersion::getCreateTime));
+            versions.forEach(version -> versionGroups.computeIfAbsent(version.getSoftPackageId(), key -> new ArrayList<>()).add(version));
+        }
+
+        List<SoftRepositoryPackageSearchItem> results = new ArrayList<>();
+        for (SoftPackage softPackage : packages) {
+            List<SoftRepositoryPackageSearchVersion> versionItems = Optional.ofNullable(versionGroups.get(softPackage.getSoftPackageId()))
+                    .orElseGet(List::of)
+                    .stream()
+                    .map(version -> toRepositoryPackageSearchVersion(softPackage, version))
+                    .filter(item -> normalizedOsType == null || Objects.equals(item.getOsType(), normalizedOsType))
+                    .filter(item -> matchesRepositoryPackageKeyword(softPackage, item, keywordLower))
+                    .toList();
+            if (versionItems.isEmpty()) {
+                continue;
+            }
+            SoftRepository repository = repositoryMap.get(softPackage.getSoftRepositoryId());
+            results.add(SoftRepositoryPackageSearchItem.builder()
+                    .repositoryId(softPackage.getSoftRepositoryId())
+                    .repositoryName(repository == null ? null : repository.getRepositoryName())
+                    .repositoryCode(repository == null ? null : repository.getRepositoryCode())
+                    .softPackageId(softPackage.getSoftPackageId())
+                    .packageCode(softPackage.getPackageCode())
+                    .packageName(softPackage.getPackageName())
+                    .versions(versionItems)
+                    .build());
+        }
+        return results;
+    }
+
     public void deleteRepository(Integer repositoryId) {
+        repositorySourceMapper.delete(Wrappers.<SoftRepositorySourceEntity>lambdaQuery()
+                .eq(SoftRepositorySourceEntity::getSoftRepositoryId, repositoryId));
         repositoryMapper.deleteById(repositoryId);
     }
 
@@ -303,6 +473,74 @@ public class SoftManagementService {
         return packages;
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> createPackage(SoftPackageCreateRequest request) {
+        if (request == null) {
+            throw new IllegalStateException("创建请求不能为空");
+        }
+        String packageCode = normalizeSoftwareKey(request.getPackageCode());
+        String packageName = normalizeText(request.getPackageName());
+        String versionCode = normalizeText(request.getVersionCode());
+        if (packageCode == null || packageName == null || versionCode == null) {
+            throw new IllegalStateException("软件编码、软件名称、版本编码不能为空");
+        }
+        Integer repositoryId = resolveCreateRepositoryId(request.getSoftRepositoryId());
+        String osType = SoftArtifactRepositorySupport.normalizeOsType(request.getOsType());
+        String architecture = SoftArtifactRepositorySupport.normalizeArchitecture(request.getArchitecture());
+        SoftPackage existed = packageMapper.selectOne(Wrappers.<SoftPackage>lambdaQuery()
+                .eq(repositoryId != null, SoftPackage::getSoftRepositoryId, repositoryId)
+                .eq(SoftPackage::getPackageCode, packageCode)
+                .last("limit 1"));
+        if (existed != null) {
+            throw new IllegalStateException("软件已存在: " + packageCode + "（同仓库内不允许重复创建主档）");
+        }
+
+        SoftPackage softPackage = new SoftPackage();
+        softPackage.setSoftRepositoryId(repositoryId);
+        softPackage.setPackageCode(packageCode);
+        softPackage.setPackageName(packageName);
+        softPackage.setPackageCategory(normalizeText(request.getPackageCategory()));
+        softPackage.setProfileCode(normalizeText(request.getProfileCode()));
+        softPackage.setOsType(osType);
+        softPackage.setArchitecture(architecture);
+        softPackage.setDescription(normalizeText(request.getDescription()));
+        softPackage.setIconUrl(normalizeText(request.getIconUrl()));
+        normalizePackage(softPackage);
+        packageMapper.insert(softPackage);
+
+        SoftPackageVersion version = new SoftPackageVersion();
+        version.setSoftPackageId(softPackage.getSoftPackageId());
+        version.setPackageCode(softPackage.getPackageCode());
+        version.setVersionCode(versionCode);
+        version.setVersionName(Optional.ofNullable(normalizeText(request.getVersionName())).orElse(versionCode));
+        version.setPackageName(packageName);
+        version.setOsType(osType);
+        version.setArchitecture(architecture);
+        version.setSourceKind(normalizeSourceKind(request.getSourceKind(), null));
+        version.setInstallMode(normalizeInstallMode(request.getInstallMode(), version.getSourceKind()));
+        version.setRepositorySourceId(request.getRepositorySourceId());
+        version.setArtifactPath(normalizeText(request.getArtifactPath()));
+        version.setDownloadUrl(normalizeText(request.getDownloadUrl()));
+        version.setDownloadUrlsJson(toJsonArray(request.getDownloadUrls()));
+        version.setInstallScript(normalizeText(request.getInstallScript()));
+        version.setUninstallScript(normalizeText(request.getUninstallScript()));
+        version.setStartScript(normalizeText(request.getStartScript()));
+        version.setStopScript(normalizeText(request.getStopScript()));
+        version.setServiceRegisterScript(normalizeText(request.getServiceRegisterScript()));
+        version.setServiceUnregisterScript(normalizeText(request.getServiceUnregisterScript()));
+        version.setEnabled(request.getEnabled() == null ? Boolean.TRUE : request.getEnabled());
+        version.setMetadataJson(buildCreatePackageMetadata(request, softPackage));
+        normalizeVersion(version);
+        packageVersionMapper.insert(version);
+        hydrateVersion(version);
+        hydratePackage(softPackage, List.of(version));
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("package", softPackage);
+        payload.put("version", version);
+        return payload;
+    }
+
     public Map<String, Object> getPackageDetail(Integer packageId) {
         SoftPackage softPackage = requiredPackage(packageId);
         List<SoftPackageVersion> versions = packageVersionMapper.selectList(Wrappers.<SoftPackageVersion>lambdaQuery()
@@ -357,6 +595,33 @@ public class SoftManagementService {
                 current.setVersionName(versionName);
             }
         }
+        if (request.getPackageName() != null) {
+            current.setPackageName(normalizeText(request.getPackageName()));
+        }
+        if (request.getOsType() != null) {
+            current.setOsType(SoftArtifactRepositorySupport.normalizeOsType(request.getOsType()));
+        }
+        if (request.getArchitecture() != null) {
+            current.setArchitecture(SoftArtifactRepositorySupport.normalizeArchitecture(request.getArchitecture()));
+        }
+        if (request.getSourceKind() != null) {
+            current.setSourceKind(normalizeSourceKind(request.getSourceKind(), current.getSourceKind()));
+        }
+        if (request.getInstallMode() != null) {
+            current.setInstallMode(normalizeInstallMode(request.getInstallMode(), current.getSourceKind()));
+        }
+        if (request.getRepositorySourceId() != null) {
+            current.setRepositorySourceId(request.getRepositorySourceId());
+        }
+        if (request.getArtifactPath() != null) {
+            current.setArtifactPath(normalizeText(request.getArtifactPath()));
+        }
+        if (request.getDownloadUrl() != null) {
+            current.setDownloadUrl(normalizeText(request.getDownloadUrl()));
+        }
+        if (request.getTemplateFromVersionId() != null) {
+            current.setTemplateFromVersionId(request.getTemplateFromVersionId());
+        }
         if (request.getEnabled() != null) {
             current.setEnabled(request.getEnabled());
         }
@@ -365,6 +630,9 @@ public class SoftManagementService {
         }
         if (request.getInstallScript() != null) {
             current.setInstallScript(normalizeText(request.getInstallScript()));
+        }
+        if (request.getUninstallScript() != null) {
+            current.setUninstallScript(normalizeText(request.getUninstallScript()));
         }
         if (request.getStartScript() != null) {
             current.setStartScript(normalizeText(request.getStartScript()));
@@ -377,6 +645,12 @@ public class SoftManagementService {
         }
         if (request.getStatusScript() != null) {
             current.setStatusScript(normalizeText(request.getStatusScript()));
+        }
+        if (request.getServiceRegisterScript() != null) {
+            current.setServiceRegisterScript(normalizeText(request.getServiceRegisterScript()));
+        }
+        if (request.getServiceUnregisterScript() != null) {
+            current.setServiceUnregisterScript(normalizeText(request.getServiceUnregisterScript()));
         }
         if (request.getLogPathsJson() != null) {
             current.setLogPathsJson(normalizeJsonText(request.getLogPathsJson()));
@@ -391,6 +665,49 @@ public class SoftManagementService {
         packageVersionMapper.updateById(current);
         hydrateVersion(current);
         return current;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public SoftPackageVersion copyVersionInstallProfile(Integer packageId,
+                                                        Integer versionId,
+                                                        SoftPackageVersionCopyInstallProfileRequest request) {
+        requiredPackage(packageId);
+        SoftPackageVersion targetVersion = requiredVersion(versionId);
+        if (!Objects.equals(targetVersion.getSoftPackageId(), packageId)) {
+            throw new IllegalStateException("软件版本不属于当前软件: " + versionId);
+        }
+        if (request == null || request.getSourceVersionId() == null) {
+            throw new IllegalStateException("来源版本不能为空");
+        }
+        SoftPackageVersion sourceVersion = requiredVersion(request.getSourceVersionId());
+        if (!Objects.equals(sourceVersion.getSoftPackageId(), packageId)) {
+            throw new IllegalStateException("来源版本不属于当前软件: " + request.getSourceVersionId());
+        }
+
+        targetVersion.setSourceKind(normalizeSourceKind(sourceVersion.getSourceKind(), targetVersion.getSourceKind()));
+        targetVersion.setInstallMode(normalizeInstallMode(sourceVersion.getInstallMode(), targetVersion.getSourceKind()));
+        targetVersion.setRepositorySourceId(sourceVersion.getRepositorySourceId());
+        targetVersion.setArtifactPath(normalizeText(sourceVersion.getArtifactPath()));
+        targetVersion.setDownloadUrl(normalizeText(sourceVersion.getDownloadUrl()));
+        targetVersion.setInstallScript(normalizeText(sourceVersion.getInstallScript()));
+        targetVersion.setUninstallScript(normalizeText(sourceVersion.getUninstallScript()));
+        targetVersion.setStartScript(normalizeText(sourceVersion.getStartScript()));
+        targetVersion.setStopScript(normalizeText(sourceVersion.getStopScript()));
+        targetVersion.setRestartScript(normalizeText(sourceVersion.getRestartScript()));
+        targetVersion.setStatusScript(normalizeText(sourceVersion.getStatusScript()));
+        targetVersion.setServiceRegisterScript(normalizeText(sourceVersion.getServiceRegisterScript()));
+        targetVersion.setServiceUnregisterScript(normalizeText(sourceVersion.getServiceUnregisterScript()));
+        targetVersion.setLogPathsJson(normalizeJsonText(sourceVersion.getLogPathsJson()));
+        targetVersion.setConfigPathsJson(normalizeJsonText(sourceVersion.getConfigPathsJson()));
+        targetVersion.setCapabilityFlagsJson(normalizeJsonText(sourceVersion.getCapabilityFlagsJson()));
+        targetVersion.setTemplateFromVersionId(sourceVersion.getSoftPackageVersionId());
+        if (Boolean.TRUE.equals(request.getCopyDownloadUrls())) {
+            targetVersion.setDownloadUrlsJson(normalizeJsonText(sourceVersion.getDownloadUrlsJson()));
+        }
+        normalizeVersion(targetVersion);
+        packageVersionMapper.updateById(targetVersion);
+        hydrateVersion(targetVersion);
+        return targetVersion;
     }
 
     public SoftPackage requiredPackageView(Integer packageId) {
@@ -1091,9 +1408,26 @@ public class SoftManagementService {
 
     private SoftPackageVersion upsertVersion(SoftPackageVersion value) {
         normalizeVersion(value);
-        SoftPackageVersion current = packageVersionMapper.selectOne(Wrappers.<SoftPackageVersion>lambdaQuery()
+        value.setPackageName(Optional.ofNullable(normalizeText(value.getPackageName())).orElse(normalizeText(value.getPackageCode())));
+        LambdaQueryWrapper<SoftPackageVersion> query = Wrappers.<SoftPackageVersion>lambdaQuery()
                 .eq(SoftPackageVersion::getSoftPackageId, value.getSoftPackageId())
-                .eq(SoftPackageVersion::getVersionCode, value.getVersionCode()));
+                .eq(SoftPackageVersion::getVersionCode, value.getVersionCode());
+        if (value.getPackageName() == null) {
+            query.isNull(SoftPackageVersion::getPackageName);
+        } else {
+            query.eq(SoftPackageVersion::getPackageName, value.getPackageName());
+        }
+        if (value.getOsType() == null) {
+            query.isNull(SoftPackageVersion::getOsType);
+        } else {
+            query.eq(SoftPackageVersion::getOsType, value.getOsType());
+        }
+        if (value.getArchitecture() == null) {
+            query.isNull(SoftPackageVersion::getArchitecture);
+        } else {
+            query.eq(SoftPackageVersion::getArchitecture, value.getArchitecture());
+        }
+        SoftPackageVersion current = packageVersionMapper.selectOne(query.last("limit 1"));
         if (current == null) {
             packageVersionMapper.insert(value);
             return value;
@@ -1340,7 +1674,11 @@ public class SoftManagementService {
         if (repository == null) {
             return;
         }
-        repository.setSourceConfigs(readSourceConfigs(repository.getSourceConfigsJson()));
+        List<SoftRepositorySource> sources = loadRepositorySourceItems(repository.getSoftRepositoryId());
+        if (sources.isEmpty()) {
+            sources = readSourceConfigs(repository.getSourceConfigsJson());
+        }
+        repository.setSourceConfigs(sources);
     }
 
     private List<SoftRepositorySource> readSourceConfigs(String json) {
@@ -1362,29 +1700,118 @@ public class SoftManagementService {
         List<SoftRepositorySource> normalized = new ArrayList<>();
         Set<String> deduplicated = new java.util.LinkedHashSet<>();
         for (SoftRepositorySource source : sources) {
-            if (source == null) {
+            SoftRepositorySource normalizedSource = normalizeSourceConfig(source);
+            if (normalizedSource == null) {
                 continue;
             }
-            String sourceType = Optional.ofNullable(normalizeText(source.getSourceType())).orElse("HTTP_JSON");
-            String sourceUrl = normalizeText(source.getSourceUrl());
-            String localDirectory = normalizeText(source.getLocalDirectory());
-            if (sourceUrl == null && localDirectory == null) {
-                continue;
-            }
-            String identity = sourceType + "#" + Objects.toString(sourceUrl, "") + "#" + Objects.toString(localDirectory, "");
+            String identity = Objects.toString(normalizedSource.getSourceKind(), "")
+                    + "#" + Objects.toString(normalizedSource.getSourceType(), "")
+                    + "#" + Objects.toString(normalizedSource.getSourceUrl(), "")
+                    + "#" + Objects.toString(normalizedSource.getLocalDirectory(), "");
             if (!deduplicated.add(identity)) {
                 continue;
             }
-            normalized.add(SoftRepositorySource.builder()
-                    .sourceName(normalizeText(source.getSourceName()))
-                    .sourceType(sourceType)
-                    .sourceUrl(sourceUrl)
-                    .localDirectory(localDirectory)
-                    .enabled(source.getEnabled() == null ? Boolean.TRUE : source.getEnabled())
-                    .sourceConfig(normalizeText(source.getSourceConfig()))
-                    .build());
+            normalized.add(normalizedSource);
         }
         return normalized;
+    }
+
+    private SoftRepositorySource normalizeSourceConfig(SoftRepositorySource source) {
+        if (source == null) {
+            return null;
+        }
+        String sourceType = Optional.ofNullable(normalizeText(source.getSourceType())).orElse("HTTP_JSON");
+        String sourceUrl = normalizeText(source.getSourceUrl());
+        String localDirectory = normalizeText(source.getLocalDirectory());
+        if (sourceUrl == null && localDirectory == null) {
+            return null;
+        }
+        return SoftRepositorySource.builder()
+                .softRepositorySourceId(source.getSoftRepositorySourceId())
+                .sourceName(normalizeText(source.getSourceName()))
+                .sourceKind(normalizeSourceKind(source.getSourceKind(), sourceType))
+                .sourceType(sourceType)
+                .sourceUrl(sourceUrl)
+                .localDirectory(localDirectory)
+                .enabled(source.getEnabled() == null ? Boolean.TRUE : source.getEnabled())
+                .sourceConfig(normalizeText(source.getSourceConfig()))
+                .build();
+    }
+
+    private List<SoftRepositorySource> loadRepositorySourceItems(Integer repositoryId) {
+        if (repositoryId == null) {
+            return new ArrayList<>();
+        }
+        return repositorySourceMapper.selectList(Wrappers.<SoftRepositorySourceEntity>lambdaQuery()
+                        .eq(SoftRepositorySourceEntity::getSoftRepositoryId, repositoryId)
+                        .orderByAsc(SoftRepositorySourceEntity::getSortOrder, SoftRepositorySourceEntity::getSoftRepositorySourceId))
+                .stream()
+                .map(this::toRepositorySourceModel)
+                .toList();
+    }
+
+    private SoftRepositorySourceEntity requiredRepositorySource(Integer repositoryId, Integer sourceId) {
+        SoftRepositorySourceEntity source = repositorySourceMapper.selectById(sourceId);
+        if (source == null || !Objects.equals(source.getSoftRepositoryId(), repositoryId)) {
+            throw new IllegalStateException("仓库来源不存在: " + sourceId);
+        }
+        return source;
+    }
+
+    private void replaceRepositorySourceRows(Integer repositoryId, List<SoftRepositorySource> sourceConfigs) {
+        repositorySourceMapper.delete(Wrappers.<SoftRepositorySourceEntity>lambdaQuery()
+                .eq(SoftRepositorySourceEntity::getSoftRepositoryId, repositoryId));
+        List<SoftRepositorySource> normalized = normalizeSourceConfigs(sourceConfigs);
+        int sort = 10;
+        for (SoftRepositorySource source : normalized) {
+            SoftRepositorySourceEntity row = toRepositorySourceEntity(repositoryId, source, sort);
+            repositorySourceMapper.insert(row);
+            sort += 10;
+        }
+    }
+
+    private void syncRepositorySourcesJson(Integer repositoryId) {
+        SoftRepository repository = repositoryMapper.selectById(repositoryId);
+        if (repository == null) {
+            return;
+        }
+        List<SoftRepositorySource> sources = loadRepositorySourceItems(repositoryId);
+        repository.setSourceConfigs(sources);
+        repository.setSourceConfigsJson(sources.isEmpty() ? null : SoftJsons.toJson(sources));
+        repositoryMapper.updateById(repository);
+    }
+
+    private SoftRepositorySourceEntity toRepositorySourceEntity(Integer repositoryId,
+                                                                SoftRepositorySource source,
+                                                                Integer fallbackSortOrder) {
+        SoftRepositorySource normalized = normalizeSourceConfig(source);
+        if (normalized == null) {
+            throw new IllegalStateException("来源配置不能为空");
+        }
+        SoftRepositorySourceEntity entity = new SoftRepositorySourceEntity();
+        entity.setSoftRepositoryId(repositoryId);
+        entity.setSourceName(normalized.getSourceName());
+        entity.setSourceKind(normalized.getSourceKind());
+        entity.setSourceType(normalized.getSourceType());
+        entity.setSourceUrl(normalized.getSourceUrl());
+        entity.setLocalDirectory(normalized.getLocalDirectory());
+        entity.setEnabled(normalized.getEnabled() == null ? Boolean.TRUE : normalized.getEnabled());
+        entity.setSourceConfig(normalized.getSourceConfig());
+        entity.setSortOrder(fallbackSortOrder);
+        return entity;
+    }
+
+    private SoftRepositorySource toRepositorySourceModel(SoftRepositorySourceEntity entity) {
+        return SoftRepositorySource.builder()
+                .softRepositorySourceId(entity.getSoftRepositorySourceId())
+                .sourceName(entity.getSourceName())
+                .sourceKind(normalizeSourceKind(entity.getSourceKind(), entity.getSourceType()))
+                .sourceType(entity.getSourceType())
+                .sourceUrl(entity.getSourceUrl())
+                .localDirectory(entity.getLocalDirectory())
+                .enabled(entity.getEnabled() == null ? Boolean.TRUE : entity.getEnabled())
+                .sourceConfig(entity.getSourceConfig())
+                .build();
     }
 
     private List<SoftRepositorySource> resolveRepositorySources(SoftRepository repository) {
@@ -1415,12 +1842,136 @@ public class SoftManagementService {
         }
         return SoftRepositorySource.builder()
                 .sourceName(repository.getRepositoryName())
+                .sourceKind(normalizeSourceKind(null, repositoryType))
                 .sourceType(repositoryType)
                 .sourceUrl(repositoryUrl)
                 .localDirectory(localDirectory)
                 .enabled(Boolean.TRUE)
                 .sourceConfig(repository.getSyncConfig())
                 .build();
+    }
+
+    private SoftRepositorySourceSearchItem buildRepositorySourceSearchItem(
+            SoftRepository repository,
+            SoftRepositorySource source,
+            boolean primarySource
+    ) {
+        String sourceAddress = normalizeText(source.getSourceUrl());
+        if (sourceAddress == null) {
+            sourceAddress = normalizeText(source.getLocalDirectory());
+        }
+        return SoftRepositorySourceSearchItem.builder()
+                .softRepositorySourceId(source.getSoftRepositorySourceId())
+                .repositoryId(repository.getSoftRepositoryId())
+                .repositoryName(repository.getRepositoryName())
+                .repositoryCode(repository.getRepositoryCode())
+                .repositoryType(repository.getRepositoryType())
+                .primarySource(primarySource)
+                .sourceName(source.getSourceName())
+                .sourceKind(source.getSourceKind())
+                .sourceType(source.getSourceType())
+                .sourceUrl(source.getSourceUrl())
+                .localDirectory(source.getLocalDirectory())
+                .sourceAddress(sourceAddress)
+                .enabled(source.getEnabled() == null ? Boolean.TRUE : source.getEnabled())
+                .build();
+    }
+
+    private boolean matchesSourceKeyword(SoftRepositorySourceSearchItem item, String keywordLower) {
+        if (keywordLower == null) {
+            return true;
+        }
+        return containsKeyword(item.getRepositoryName(), keywordLower)
+                || containsKeyword(item.getRepositoryCode(), keywordLower)
+                || containsKeyword(item.getRepositoryType(), keywordLower)
+                || containsKeyword(item.getSourceName(), keywordLower)
+                || containsKeyword(item.getSourceKind(), keywordLower)
+                || containsKeyword(item.getSourceType(), keywordLower)
+                || containsKeyword(item.getSourceUrl(), keywordLower)
+                || containsKeyword(item.getLocalDirectory(), keywordLower)
+                || containsKeyword(item.getSourceAddress(), keywordLower);
+    }
+
+    private boolean containsKeyword(String value, String keywordLower) {
+        if (value == null || keywordLower == null) {
+            return false;
+        }
+        return value.toLowerCase().contains(keywordLower);
+    }
+
+    private String normalizeSourceKind(String sourceKind, String sourceType) {
+        String normalized = normalizeText(sourceKind);
+        if (normalized != null) {
+            normalized = normalized.toUpperCase();
+            if ("LINUX_DEFAULT".equals(normalized)
+                    || "LOCAL_REPOSITORY".equals(normalized)
+                    || "THIRD_PARTY".equals(normalized)) {
+                return normalized;
+            }
+        }
+        String type = normalizeText(sourceType);
+        if (type == null) {
+            return "THIRD_PARTY";
+        }
+        if ("LOCAL_DIR".equalsIgnoreCase(type)) {
+            return "LOCAL_REPOSITORY";
+        }
+        if ("RPM_REPO".equalsIgnoreCase(type)) {
+            return "LINUX_DEFAULT";
+        }
+        return "THIRD_PARTY";
+    }
+
+    private String normalizeInstallMode(String installMode, String sourceKind) {
+        String normalized = normalizeText(installMode);
+        if (normalized != null) {
+            normalized = normalized.toUpperCase();
+            if ("PKG_MANAGER".equals(normalized)
+                    || "LOCAL_UPLOAD".equals(normalized)
+                    || "REMOTE_DOWNLOAD".equals(normalized)) {
+                return normalized;
+            }
+        }
+        return switch (normalizeSourceKind(sourceKind, null)) {
+            case "LOCAL_REPOSITORY" -> "LOCAL_UPLOAD";
+            case "LINUX_DEFAULT" -> "PKG_MANAGER";
+            default -> "REMOTE_DOWNLOAD";
+        };
+    }
+
+    private SoftRepositoryPackageSearchVersion toRepositoryPackageSearchVersion(SoftPackage softPackage,
+                                                                                SoftPackageVersion version) {
+        String resolvedPackageName = Optional.ofNullable(normalizeText(version.getPackageName()))
+                .orElse(normalizeText(softPackage.getPackageName()));
+        String resolvedOsType = Optional.ofNullable(SoftArtifactRepositorySupport.normalizeOsType(version.getOsType()))
+                .orElse(SoftArtifactRepositorySupport.normalizeOsType(softPackage.getOsType()));
+        String resolvedArchitecture = Optional.ofNullable(SoftArtifactRepositorySupport.normalizeArchitecture(version.getArchitecture()))
+                .orElse(SoftArtifactRepositorySupport.normalizeArchitecture(softPackage.getArchitecture()));
+        return SoftRepositoryPackageSearchVersion.builder()
+                .softPackageVersionId(version.getSoftPackageVersionId())
+                .versionCode(version.getVersionCode())
+                .versionName(version.getVersionName())
+                .packageName(resolvedPackageName)
+                .osType(resolvedOsType)
+                .architecture(resolvedArchitecture)
+                .sourceKind(normalizeSourceKind(version.getSourceKind(), null))
+                .installMode(normalizeInstallMode(version.getInstallMode(), version.getSourceKind()))
+                .build();
+    }
+
+    private boolean matchesRepositoryPackageKeyword(SoftPackage softPackage,
+                                                   SoftRepositoryPackageSearchVersion version,
+                                                   String keywordLower) {
+        if (keywordLower == null) {
+            return true;
+        }
+        return containsKeyword(softPackage.getPackageCode(), keywordLower)
+                || containsKeyword(softPackage.getPackageName(), keywordLower)
+                || containsKeyword(version.getPackageName(), keywordLower)
+                || containsKeyword(version.getVersionCode(), keywordLower)
+                || containsKeyword(version.getVersionName(), keywordLower)
+                || containsKeyword(version.getOsType(), keywordLower)
+                || containsKeyword(version.getArchitecture(), keywordLower);
     }
 
     private boolean requiresRemoteRepositoryUrl(String repositoryType) {
@@ -1498,6 +2049,63 @@ public class SoftManagementService {
         return SoftArtifactRepositorySupport.normalizeSoftwareKey(normalizeText(value));
     }
 
+    private Integer resolveCreateRepositoryId(Integer requestedRepositoryId) {
+        if (requestedRepositoryId != null && requestedRepositoryId > 0) {
+            return requestedRepositoryId;
+        }
+        SoftRepository repository = repositoryMapper.selectOne(Wrappers.<SoftRepository>lambdaQuery()
+                .eq(SoftRepository::getEnabled, Boolean.TRUE)
+                .orderByDesc(SoftRepository::getUpdateTime, SoftRepository::getCreateTime)
+                .last("limit 1"));
+        return repository == null ? null : repository.getSoftRepositoryId();
+    }
+
+    private String toJsonArray(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return null;
+        }
+        List<String> normalized = values.stream()
+                .map(this::normalizeText)
+                .filter(item -> item != null && !item.isBlank())
+                .toList();
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        return SoftJsons.toJson(normalized);
+    }
+
+    private String buildCreatePackageMetadata(SoftPackageCreateRequest request, SoftPackage softPackage) {
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        String initScript = normalizeText(request.getInitScript());
+        if (initScript != null) {
+            metadata.put("initScript", initScript);
+        }
+        if (Boolean.TRUE.equals(request.getIntegrateServerService())) {
+            Map<String, Object> serverService = new LinkedHashMap<>();
+            serverService.put("enabled", true);
+            serverService.put("serviceCode", normalizeText(request.getServerServiceCode()));
+            serverService.put("serviceName", normalizeText(request.getServerServiceName()));
+            serverService.put("serviceType", normalizeText(request.getServerServiceType()));
+            serverService.put("startMode", normalizeText(request.getServerServiceStartMode()));
+            serverService.put("executionProvider", normalizeText(request.getServerExecutionProvider()));
+            serverService.put("source", "soft-package-create");
+            metadata.put("serverServiceIntegration", serverService);
+        }
+        String softwareKey = normalizeSoftwareKey(softPackage.getPackageCode());
+        if (softwareKey != null) {
+            metadata.put("softwareKey", softwareKey);
+        }
+        String packageOsType = SoftArtifactRepositorySupport.normalizeOsType(softPackage.getOsType());
+        if (packageOsType != null) {
+            metadata.put("packageOsType", packageOsType);
+        }
+        String packageArchitecture = SoftArtifactRepositorySupport.normalizeArchitecture(softPackage.getArchitecture());
+        if (packageArchitecture != null) {
+            metadata.put("packageArchitecture", packageArchitecture);
+        }
+        return metadata.isEmpty() ? null : SoftJsons.toJson(metadata);
+    }
+
     private String readMetadataText(String metadataJson, String key) {
         Object value = SoftJsons.toMap(metadataJson).get(key);
         if (value == null) {
@@ -1528,6 +2136,13 @@ public class SoftManagementService {
         }
         version.setVersionCode(normalizeText(version.getVersionCode()));
         version.setVersionName(normalizeText(version.getVersionName()));
+        version.setPackageName(normalizeText(version.getPackageName()));
+        version.setOsType(SoftArtifactRepositorySupport.normalizeOsType(version.getOsType()));
+        version.setArchitecture(SoftArtifactRepositorySupport.normalizeArchitecture(version.getArchitecture()));
+        version.setSourceKind(normalizeSourceKind(version.getSourceKind(), null));
+        version.setInstallMode(normalizeInstallMode(version.getInstallMode(), version.getSourceKind()));
+        version.setArtifactPath(normalizeText(version.getArtifactPath()));
+        version.setDownloadUrl(normalizeText(version.getDownloadUrl()));
         version.setDownloadUrlsJson(normalizeJsonText(version.getDownloadUrlsJson()));
         version.setInstallScript(normalizeText(version.getInstallScript()));
         version.setUninstallScript(normalizeText(version.getUninstallScript()));
@@ -1616,6 +2231,9 @@ public class SoftManagementService {
                 }
             }
             metadata.put("artifactKind", "UPLOAD");
+            version.setSourceKind("LOCAL_REPOSITORY");
+            version.setInstallMode("LOCAL_UPLOAD");
+            version.setArtifactPath(expectedPath);
             String softwareKey = normalizeSoftwareKey(Objects.toString(metadata.get("softwareKey"), version.getPackageCode()));
             if (softwareKey != null) {
                 metadata.put("softwareKey", softwareKey);
@@ -1633,6 +2251,7 @@ public class SoftManagementService {
                 metadata.put("packageArchitecture", packageArchitecture);
             }
             version.setMetadataJson(SoftJsons.toJson(metadata));
+            normalizeVersion(version);
             packageVersionMapper.updateById(version);
         }
     }
@@ -1656,15 +2275,23 @@ public class SoftManagementService {
     }
 
     private String versionIdentity(SoftPackageVersion version) {
-        return resolveVersionPackageIdentity(version) + "#" + normalizeText(version.getVersionCode());
+        return resolveVersionPackageIdentity(version)
+                + "#"
+                + normalizeText(version.getVersionCode())
+                + "#"
+                + normalizeText(version.getPackageName());
     }
 
     private String resolveVersionPackageIdentity(SoftPackageVersion version) {
         Map<String, Object> metadata = SoftJsons.toMap(version.getMetadataJson());
+        String packageOsType = Optional.ofNullable(SoftArtifactRepositorySupport.normalizeOsType(version.getOsType()))
+                .orElse(Objects.toString(metadata.get("packageOsType"), null));
+        String packageArchitecture = Optional.ofNullable(SoftArtifactRepositorySupport.normalizeArchitecture(version.getArchitecture()))
+                .orElse(Objects.toString(metadata.get("packageArchitecture"), null));
         return packageIdentity(
                 version == null ? null : version.getPackageCode(),
-                Objects.toString(metadata.get("packageOsType"), null),
-                Objects.toString(metadata.get("packageArchitecture"), null)
+                packageOsType,
+                packageArchitecture
         );
     }
 

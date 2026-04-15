@@ -1,1 +1,0 @@
-import{E as r}from"./ErrorPage-DUdwz9Ia.js";import{d as o,J as a,K as t,f as n,I as s,L as l}from"./index-Dr1fsBAF.js";const f=o({name:"403",__name:"403",setup(c){const e=n(()=>l.ErrorPageStyle||"forbidden");return(m,p)=>(s(),a(r,{code:"403",style:t(e.value)},null,8,["style"]))}});export{f as default};

@@ -27,7 +27,14 @@ spring:
     image:
       enabled: true
       provider: tencent
-    
+
+    # 网站性能分析配置
+    performance:
+      enabled: true
+      api-enabled: true
+      sample-count: 5
+      ai-advice-enabled: true
+
     # 多云厂商配置
     providers:
       openai:

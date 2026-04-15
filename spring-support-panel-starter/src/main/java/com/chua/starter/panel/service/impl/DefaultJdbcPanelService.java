@@ -1,5 +1,7 @@
 package com.chua.starter.panel.service.impl;
 
+import com.chua.common.support.data.datasource.dialect.Dialect;
+import com.chua.common.support.data.datasource.dialect.DialectFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.chua.starter.panel.cache.PanelConnectionCache;
 import com.chua.starter.panel.config.PanelProperties;
@@ -14,6 +16,7 @@ import com.chua.starter.panel.model.PanelCapabilitySnapshot;
 import com.chua.starter.panel.model.PanelConnectionHandle;
 import com.chua.starter.panel.model.PanelJdbcPrivilegeRequest;
 import com.chua.starter.panel.model.PanelTableDataRequest;
+import com.chua.starter.panel.model.PanelTableFilterItem;
 import com.chua.starter.panel.model.PanelTableDataView;
 import com.chua.starter.panel.model.PanelTableMutationView;
 import com.chua.starter.panel.model.PanelTableRowUpdate;
@@ -22,13 +25,18 @@ import com.chua.starter.panel.service.JdbcPanelService;
 import org.springframework.beans.factory.ObjectProvider;
 
 import javax.sql.DataSource;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
-import java.sql.Types;
+import java.sql.Date;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.PreparedStatement;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -199,14 +207,26 @@ public class DefaultJdbcPanelService implements JdbcPanelService {
             List<String> columns = new ArrayList<>();
             List<Map<String, Object>> rows = new ArrayList<>();
             String quote = normalizeQuote(connection.getMetaData().getIdentifierQuoteString());
-            List<String> tableColumns = loadTableColumnNames(
+            Map<String, Integer> tableColumnTypes = loadTableColumnTypes(
                     connection,
                     request.getPanelCatalogName(),
                     request.getPanelSchemaName(),
                     tableName);
+            List<String> tableColumns = new ArrayList<>(tableColumnTypes.keySet());
             String sortField = normalizeSortableColumn(request.getPanelSortField(), tableColumns);
             String sortOrder = normalizeSortOrder(request.getPanelSortOrder());
+            String filterKeyword = normalizeFilterKeyword(request.getPanelFilterKeyword());
+            List<Object> filterParameters = new ArrayList<>();
+            String filterClause = buildFilterClause(
+                    connection,
+                    tableColumnTypes,
+                    quote,
+                    filterKeyword,
+                    request.getPanelFilterJoin(),
+                    request.getPanelFilters(),
+                    filterParameters);
             StringBuilder sql = new StringBuilder("select * from ").append(qualifiedTableName);
+            appendFilterClause(sql, filterClause);
             if (sortField != null) {
                 sql.append(" order by ")
                         .append(quoteIdentifier(sortField, quote))
@@ -216,8 +236,9 @@ public class DefaultJdbcPanelService implements JdbcPanelService {
             sql.append(" limit ? offset ?");
 
             try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
-                statement.setLong(1, pageSize);
-                statement.setLong(2, offset);
+                int parameterIndex = bindParameters(statement, filterParameters, 1);
+                statement.setLong(parameterIndex++, pageSize);
+                statement.setLong(parameterIndex, offset);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     ResultSetMetaData metaData = resultSet.getMetaData();
                     for (int i = 1; i <= metaData.getColumnCount(); i++) {
@@ -235,10 +256,14 @@ public class DefaultJdbcPanelService implements JdbcPanelService {
 
             long total = -1;
             if (request.isPanelLoadTotal()) {
-                try (Statement statement = connection.createStatement();
-                     ResultSet rs = statement.executeQuery("select count(*) from " + qualifiedTableName)) {
-                    if (rs.next()) {
-                        total = rs.getLong(1);
+                StringBuilder countSql = new StringBuilder("select count(*) from ").append(qualifiedTableName);
+                appendFilterClause(countSql, filterClause);
+                try (PreparedStatement statement = connection.prepareStatement(countSql.toString())) {
+                    bindParameters(statement, filterParameters, 1);
+                    try (ResultSet rs = statement.executeQuery()) {
+                        if (rs.next()) {
+                            total = rs.getLong(1);
+                        }
                     }
                 }
             }
@@ -256,22 +281,353 @@ public class DefaultJdbcPanelService implements JdbcPanelService {
         }
     }
 
-    private List<String> loadTableColumnNames(
+    private Map<String, Integer> loadTableColumnTypes(
             Connection connection,
             String catalog,
             String schema,
             String tableName) throws Exception {
-        List<String> result = new ArrayList<>();
+        Map<String, Integer> result = new LinkedHashMap<>();
         DatabaseMetaData metaData = connection.getMetaData();
         try (ResultSet rs = metaData.getColumns(catalog, schema, tableName, null)) {
             while (rs.next()) {
                 String columnName = rs.getString("COLUMN_NAME");
                 if (columnName != null && !columnName.isBlank()) {
-                    result.add(columnName);
+                    result.put(columnName, rs.getInt("DATA_TYPE"));
                 }
             }
         }
         return result;
+    }
+
+    private String normalizeFilterKeyword(String filterKeyword) {
+        if (filterKeyword == null || filterKeyword.isBlank()) {
+            return null;
+        }
+        return filterKeyword.trim();
+    }
+
+    private String buildFilterClause(
+            Connection connection,
+            Map<String, Integer> tableColumnTypes,
+            String quote,
+            String filterKeyword,
+            String filterJoin,
+            List<PanelTableFilterItem> filterItems,
+            List<Object> parameters) throws Exception {
+        if (tableColumnTypes == null || tableColumnTypes.isEmpty()) {
+            return "";
+        }
+        String keywordClause = buildKeywordFilterClause(connection, tableColumnTypes, quote, filterKeyword, parameters);
+        String advancedClause = buildAdvancedFilterClause(connection, tableColumnTypes, quote, filterJoin, filterItems, parameters);
+        return combineFilterClauses(keywordClause, advancedClause);
+    }
+
+    private String buildKeywordFilterClause(
+            Connection connection,
+            Map<String, Integer> tableColumnTypes,
+            String quote,
+            String filterKeyword,
+            List<Object> parameters) throws Exception {
+        if (filterKeyword == null || filterKeyword.isBlank()) {
+            return "";
+        }
+        String productName = connection.getMetaData().getDatabaseProductName();
+        String normalizedFilterValue = "%" + escapeLikeValue(filterKeyword.toLowerCase(Locale.ROOT)) + "%";
+        List<String> predicates = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : tableColumnTypes.entrySet()) {
+            if (!isFilterableColumnType(entry.getValue())) {
+                continue;
+            }
+            String columnSql = quoteIdentifier(entry.getKey(), quote);
+            predicates.add("lower(coalesce("
+                    + resolveFilterColumnExpression(productName, columnSql)
+                    + ", '')) like ? escape '\\'");
+            parameters.add(normalizedFilterValue);
+        }
+        return String.join(" or ", predicates);
+    }
+
+    private String buildAdvancedFilterClause(
+            Connection connection,
+            Map<String, Integer> tableColumnTypes,
+            String quote,
+            String filterJoin,
+            List<PanelTableFilterItem> filterItems,
+            List<Object> parameters) throws Exception {
+        if (filterItems == null || filterItems.isEmpty()) {
+            return "";
+        }
+        String normalizedJoin = normalizeFilterJoin(filterJoin);
+        String productName = connection.getMetaData().getDatabaseProductName();
+        List<String> availableColumns = new ArrayList<>(tableColumnTypes.keySet());
+        List<String> predicates = new ArrayList<>();
+        for (PanelTableFilterItem item : filterItems) {
+            String predicate = buildSingleFilterPredicate(
+                    productName,
+                    tableColumnTypes,
+                    availableColumns,
+                    quote,
+                    item,
+                    parameters);
+            if (predicate != null && !predicate.isBlank()) {
+                predicates.add("(" + predicate + ")");
+            }
+        }
+        return String.join(" " + normalizedJoin + " ", predicates);
+    }
+
+    private String buildSingleFilterPredicate(
+            String productName,
+            Map<String, Integer> tableColumnTypes,
+            List<String> availableColumns,
+            String quote,
+            PanelTableFilterItem item,
+            List<Object> parameters) {
+        if (item == null) {
+            return "";
+        }
+        String columnName = normalizeSortableColumn(item.getPanelColumnName(), availableColumns);
+        if (columnName == null) {
+            return "";
+        }
+        String operator = normalizeFilterOperator(item.getPanelOperator());
+        String rawValue = item.getPanelValue() == null ? "" : item.getPanelValue().trim();
+        Integer dataType = tableColumnTypes.get(columnName);
+        String columnSql = quoteIdentifier(columnName, quote);
+        String textColumnSql = "lower(coalesce(" + resolveFilterColumnExpression(productName, columnSql) + ", ''))";
+
+        return switch (operator) {
+            case "contains" -> {
+                parameters.add("%" + escapeLikeValue(rawValue.toLowerCase(Locale.ROOT)) + "%");
+                yield textColumnSql + " like ? escape '\\'";
+            }
+            case "notContains" -> {
+                parameters.add("%" + escapeLikeValue(rawValue.toLowerCase(Locale.ROOT)) + "%");
+                yield textColumnSql + " not like ? escape '\\'";
+            }
+            case "startsWith" -> {
+                parameters.add(escapeLikeValue(rawValue.toLowerCase(Locale.ROOT)) + "%");
+                yield textColumnSql + " like ? escape '\\'";
+            }
+            case "endsWith" -> {
+                parameters.add("%" + escapeLikeValue(rawValue.toLowerCase(Locale.ROOT)));
+                yield textColumnSql + " like ? escape '\\'";
+            }
+            case "equals" -> buildEqualsPredicate(textColumnSql, columnSql, dataType, rawValue, parameters, true);
+            case "notEquals" -> buildEqualsPredicate(textColumnSql, columnSql, dataType, rawValue, parameters, false);
+            case "gt" -> buildComparablePredicate(columnSql, dataType, rawValue, ">", parameters);
+            case "ge" -> buildComparablePredicate(columnSql, dataType, rawValue, ">=", parameters);
+            case "lt" -> buildComparablePredicate(columnSql, dataType, rawValue, "<", parameters);
+            case "le" -> buildComparablePredicate(columnSql, dataType, rawValue, "<=", parameters);
+            case "isEmpty" -> "trim(coalesce(" + resolveFilterColumnExpression(productName, columnSql) + ", '')) = ''";
+            case "isNotEmpty" -> "trim(coalesce(" + resolveFilterColumnExpression(productName, columnSql) + ", '')) <> ''";
+            case "isNotNull" -> columnSql + " is not null";
+            default -> columnSql + " is null";
+        };
+    }
+
+    private String buildEqualsPredicate(
+            String textColumnSql,
+            String columnSql,
+            Integer dataType,
+            String rawValue,
+            List<Object> parameters,
+            boolean equals) {
+        String operator = equals ? "=" : "<>";
+        if (shouldUseTypedComparison(dataType)) {
+            parameters.add(parseFilterValue(dataType, rawValue));
+            return columnSql + " " + operator + " ?";
+        }
+        parameters.add(rawValue.toLowerCase(Locale.ROOT));
+        return textColumnSql + " " + operator + " ?";
+    }
+
+    private String buildComparablePredicate(
+            String columnSql,
+            Integer dataType,
+            String rawValue,
+            String operator,
+            List<Object> parameters) {
+        parameters.add(parseFilterValue(dataType, rawValue));
+        return columnSql + " " + operator + " ?";
+    }
+
+    private String normalizeFilterJoin(String filterJoin) {
+        return "or".equalsIgnoreCase(filterJoin == null ? "" : filterJoin.trim()) ? "or" : "and";
+    }
+
+    private String normalizeFilterOperator(String operator) {
+        if (operator == null || operator.isBlank()) {
+            return "contains";
+        }
+        return switch (operator.trim()) {
+            case "contains",
+                    "notContains",
+                    "equals",
+                    "notEquals",
+                    "startsWith",
+                    "endsWith",
+                    "gt",
+                    "ge",
+                    "lt",
+                    "le",
+                    "isEmpty",
+                    "isNotEmpty",
+                    "isNull",
+                    "isNotNull" -> operator.trim();
+            default -> "contains";
+        };
+    }
+
+    private String combineFilterClauses(String... clauses) {
+        List<String> availableClauses = new ArrayList<>();
+        for (String clause : clauses) {
+            if (clause != null && !clause.isBlank()) {
+                availableClauses.add("(" + clause + ")");
+            }
+        }
+        return String.join(" and ", availableClauses);
+    }
+
+    private boolean shouldUseTypedComparison(Integer dataType) {
+        if (dataType == null) {
+            return false;
+        }
+        return switch (dataType) {
+            case Types.CHAR,
+                    Types.VARCHAR,
+                    Types.LONGVARCHAR,
+                    Types.NCHAR,
+                    Types.NVARCHAR,
+                    Types.LONGNVARCHAR,
+                    Types.CLOB,
+                    Types.NCLOB -> false;
+            default -> true;
+        };
+    }
+
+    private Object parseFilterValue(Integer dataType, String rawValue) {
+        if (rawValue == null) {
+            return null;
+        }
+        if (dataType == null) {
+            return rawValue;
+        }
+        try {
+            return switch (dataType) {
+                case Types.TINYINT,
+                        Types.SMALLINT -> Short.valueOf(rawValue);
+                case Types.INTEGER -> Integer.valueOf(rawValue);
+                case Types.BIGINT -> Long.valueOf(rawValue);
+                case Types.FLOAT,
+                        Types.REAL,
+                        Types.DOUBLE -> Double.valueOf(rawValue);
+                case Types.DECIMAL,
+                        Types.NUMERIC -> new BigDecimal(rawValue);
+                case Types.BIT,
+                        Types.BOOLEAN -> parseBooleanValue(rawValue);
+                case Types.DATE -> Date.valueOf(rawValue);
+                case Types.TIME -> Time.valueOf(rawValue);
+                case Types.TIMESTAMP -> Timestamp.valueOf(normalizeTimestampValue(rawValue));
+                default -> rawValue;
+            };
+        } catch (Exception ignored) {
+            return rawValue;
+        }
+    }
+
+    private Boolean parseBooleanValue(String rawValue) {
+        String normalizedValue = rawValue == null ? "" : rawValue.trim().toLowerCase(Locale.ROOT);
+        if (Objects.equals(normalizedValue, "1")
+                || Objects.equals(normalizedValue, "true")
+                || Objects.equals(normalizedValue, "yes")) {
+            return Boolean.TRUE;
+        }
+        if (Objects.equals(normalizedValue, "0")
+                || Objects.equals(normalizedValue, "false")
+                || Objects.equals(normalizedValue, "no")) {
+            return Boolean.FALSE;
+        }
+        return Boolean.valueOf(rawValue);
+    }
+
+    private String normalizeTimestampValue(String rawValue) {
+        String normalizedValue = rawValue == null ? "" : rawValue.trim();
+        if (normalizedValue.contains("T")) {
+            normalizedValue = normalizedValue.replace("T", " ");
+        }
+        if (normalizedValue.length() == 16) {
+            normalizedValue = normalizedValue + ":00";
+        }
+        return normalizedValue;
+    }
+
+    private boolean isFilterableColumnType(Integer dataType) {
+        if (dataType == null) {
+            return true;
+        }
+        return switch (dataType) {
+            case Types.BINARY,
+                    Types.VARBINARY,
+                    Types.LONGVARBINARY,
+                    Types.BLOB,
+                    Types.CLOB,
+                    Types.NCLOB,
+                    Types.SQLXML,
+                    Types.ARRAY,
+                    Types.DATALINK,
+                    Types.DISTINCT,
+                    Types.JAVA_OBJECT,
+                    Types.OTHER,
+                    Types.REF,
+                    Types.ROWID,
+                    Types.STRUCT -> false;
+            default -> true;
+        };
+    }
+
+    private String resolveFilterColumnExpression(String productName, String columnSql) {
+        String normalizedProductName = productName == null ? "" : productName.toLowerCase(Locale.ROOT);
+        if (normalizedProductName.contains("oracle")) {
+            return "cast(" + columnSql + " as varchar2(4000))";
+        }
+        if (normalizedProductName.contains("sql server") || normalizedProductName.contains("microsoft")) {
+            return "cast(" + columnSql + " as nvarchar(max))";
+        }
+        if (normalizedProductName.contains("mysql")
+                || normalizedProductName.contains("mariadb")) {
+            return "cast(" + columnSql + " as char)";
+        }
+        if (normalizedProductName.contains("postgresql")
+                || normalizedProductName.contains("h2")
+                || normalizedProductName.contains("sqlite")) {
+            return "cast(" + columnSql + " as varchar)";
+        }
+        return "cast(" + columnSql + " as varchar(4000))";
+    }
+
+    private String escapeLikeValue(String value) {
+        if (value == null || value.isEmpty()) {
+            return "";
+        }
+        return value.replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
+    }
+
+    private void appendFilterClause(StringBuilder sql, String filterClause) {
+        if (filterClause == null || filterClause.isBlank()) {
+            return;
+        }
+        sql.append(" where (").append(filterClause).append(")");
+    }
+
+    private int bindParameters(PreparedStatement statement, List<Object> parameters, int startIndex) throws Exception {
+        int index = startIndex;
+        for (Object parameter : parameters) {
+            statement.setObject(index++, parameter);
+        }
+        return index;
     }
 
     private String normalizeSortableColumn(String columnName, List<String> availableColumns) {
@@ -290,7 +646,11 @@ public class DefaultJdbcPanelService implements JdbcPanelService {
         if (sortOrder == null || sortOrder.isBlank()) {
             return "asc";
         }
-        return "desc".equalsIgnoreCase(sortOrder.trim()) ? "desc" : "asc";
+        String normalized = sortOrder.trim().toLowerCase(Locale.ROOT);
+        if ("desc".equals(normalized) || "descending".equals(normalized)) {
+            return "desc";
+        }
+        return "asc";
     }
 
     @Override
@@ -490,7 +850,8 @@ public class DefaultJdbcPanelService implements JdbcPanelService {
         long startTime = System.currentTimeMillis();
         try (Connection connection = requireDataSource(handle).getConnection();
              Statement statement = connection.createStatement()) {
-            boolean hasResultSet = statement.execute(normalizedSql);
+            String executableSql = applyQueryPreviewLimit(connection, statement, normalizedSql);
+            boolean hasResultSet = statement.execute(executableSql);
             if (!hasResultSet) {
                 return JdbcQueryResult.builder()
                         .query(false)
@@ -526,6 +887,47 @@ public class DefaultJdbcPanelService implements JdbcPanelService {
         } catch (Exception e) {
             throw new IllegalStateException("执行 SQL 失败: " + e.getMessage(), e);
         }
+    }
+
+    private String applyQueryPreviewLimit(Connection connection, Statement statement, String normalizedSql) {
+        int previewLimit = Math.max(1, panelProperties.getSqlQueryPreviewLimit());
+        if (looksLikeRowsetQuery(normalizedSql)) {
+            Dialect dialect = null;
+            try {
+                dialect = DialectFactory.create(connection);
+            } catch (RuntimeException ignored) {
+                dialect = null;
+            }
+            if (dialect != null && dialect.supportsLimit()) {
+                return dialect.getPaginationSql(normalizedSql, 1, previewLimit);
+            }
+        }
+        applyStatementMaxRows(statement, previewLimit);
+        return normalizedSql;
+    }
+
+    private void applyStatementMaxRows(Statement statement, int previewLimit) {
+        try {
+            statement.setMaxRows(previewLimit);
+        } catch (SQLException ignored) {
+            // ignore driver-specific maxRows failures and continue
+        }
+    }
+
+    private boolean looksLikeRowsetQuery(String sql) {
+        String normalized = sql == null ? "" : sql.trim().toLowerCase(Locale.ROOT);
+        return normalized.startsWith("select ")
+                || normalized.startsWith("select\n")
+                || normalized.startsWith("with ")
+                || normalized.startsWith("with\n")
+                || normalized.startsWith("show ")
+                || normalized.startsWith("show\n")
+                || normalized.startsWith("desc ")
+                || normalized.startsWith("desc\n")
+                || normalized.startsWith("describe ")
+                || normalized.startsWith("describe\n")
+                || normalized.startsWith("explain ")
+                || normalized.startsWith("explain\n");
     }
 
     private String normalizeExecutableSql(String sql) {

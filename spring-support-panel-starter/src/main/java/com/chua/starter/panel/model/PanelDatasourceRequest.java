@@ -18,6 +18,10 @@ public class PanelDatasourceRequest {
     private String panelUsername;
     private String panelPassword;
     private String panelProtocol;
+    private String panelDialectType;
+    private String panelDriverClassName;
+    private String panelDriverJarName;
+    private String panelDriverJarPath;
     private String panelNote;
     private Boolean panelFavorite;
     private String panelUpdatedAt;

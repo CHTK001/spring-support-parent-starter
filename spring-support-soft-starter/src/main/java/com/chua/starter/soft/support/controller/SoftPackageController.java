@@ -2,11 +2,16 @@ package com.chua.starter.soft.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.soft.support.entity.SoftPackage;
+import com.chua.starter.soft.support.model.SoftPackageAiDraftRequest;
+import com.chua.starter.soft.support.model.SoftPackageAiDraftResponse;
+import com.chua.starter.soft.support.model.SoftPackageCreateRequest;
 import com.chua.starter.soft.support.model.SoftGuidePreviewRequest;
 import com.chua.starter.soft.support.model.SoftGuidePreviewResponse;
 import com.chua.starter.soft.support.model.SoftPackageGuide;
+import com.chua.starter.soft.support.model.SoftPackageVersionCopyInstallProfileRequest;
 import com.chua.starter.soft.support.model.SoftPackageUpdateRequest;
 import com.chua.starter.soft.support.model.SoftPackageVersionUpdateRequest;
+import com.chua.starter.soft.support.service.SoftPackageAiDraftAdvisor;
 import com.chua.starter.soft.support.service.SoftGuideDefinitionService;
 import com.chua.starter.soft.support.service.SoftManagementService;
 import java.util.List;
@@ -28,6 +33,7 @@ public class SoftPackageController {
 
     private final SoftManagementService softManagementService;
     private final SoftGuideDefinitionService softGuideDefinitionService;
+    private final SoftPackageAiDraftAdvisor softPackageAiDraftAdvisor;
 
     @RequestMapping(method = RequestMethod.HEAD)
     public void head() {
@@ -36,6 +42,18 @@ public class SoftPackageController {
     @GetMapping
     public ReturnResult<List<SoftPackage>> list() {
         return ReturnResult.ok(softManagementService.listPackages());
+    }
+
+    @PostMapping
+    public ReturnResult<Map<String, Object>> create(@RequestBody SoftPackageCreateRequest request) {
+        return ReturnResult.ok(softManagementService.createPackage(request));
+    }
+
+    @PostMapping("/ai-draft")
+    public ReturnResult<SoftPackageAiDraftResponse> aiDraft(
+            @RequestBody(required = false) SoftPackageAiDraftRequest request
+    ) {
+        return ReturnResult.ok(softPackageAiDraftAdvisor.generate(request));
     }
 
     @GetMapping("/{id}")
@@ -56,6 +74,16 @@ public class SoftPackageController {
         return ReturnResult.ok(Map.of(
                 "package", softManagementService.requiredPackageView(packageId),
                 "version", softManagementService.updatePackageVersion(packageId, versionId, request)
+        ));
+    }
+
+    @PostMapping("/{packageId}/versions/{versionId}/copy-install-profile")
+    public ReturnResult<Map<String, Object>> copyInstallProfile(@PathVariable Integer packageId,
+                                                                @PathVariable Integer versionId,
+                                                                @RequestBody SoftPackageVersionCopyInstallProfileRequest request) {
+        return ReturnResult.ok(Map.of(
+                "package", softManagementService.requiredPackageView(packageId),
+                "version", softManagementService.copyVersionInstallProfile(packageId, versionId, request)
         ));
     }
 

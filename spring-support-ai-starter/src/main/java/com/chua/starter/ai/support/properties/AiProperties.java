@@ -67,6 +67,11 @@ public class AiProperties {
     private FaceProperties face = new FaceProperties();
 
     /**
+     * 网站性能分析配置
+     */
+    private AiPerformanceProperties performance = new AiPerformanceProperties();
+
+    /**
      * 云厂商配置
      * <p>
      * key: 提供商名称（如 openai, aliyun, baidu, tencent）

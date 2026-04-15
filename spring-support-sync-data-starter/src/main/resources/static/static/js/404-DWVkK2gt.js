@@ -1,1 +1,0 @@
-import{E as o}from"./ErrorPage-DUdwz9Ia.js";import{d as r,J as t,K as a,f as n,I as s,L as l}from"./index-Dr1fsBAF.js";const f=r({name:"404",__name:"404",setup(c){const e=n(()=>l.ErrorPageStyle||"notfound");return(m,p)=>(s(),t(o,{code:"404",style:a(e.value)},null,8,["style"]))}});export{f as default};

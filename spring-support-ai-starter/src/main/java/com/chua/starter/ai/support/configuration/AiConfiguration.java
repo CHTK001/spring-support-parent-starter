@@ -19,17 +19,22 @@ import com.chua.starter.ai.support.engine.FaceEngine;
 import com.chua.starter.ai.support.engine.impl.AiChatFaceEngine;
 import com.chua.starter.ai.support.engine.impl.DefaultFaceClient;
 import com.chua.starter.ai.support.properties.AiProperties;
+import com.chua.starter.ai.support.provider.WebPerformanceAnalyzeProvider;
 import com.chua.starter.ai.support.properties.ProviderProperties;
 import com.chua.starter.ai.support.service.AiService;
 import com.chua.starter.ai.support.service.AsyncAiService;
 import com.chua.starter.ai.support.service.ReactiveAiService;
+import com.chua.starter.ai.support.service.WebPerformanceAnalyzeService;
 import com.chua.starter.ai.support.service.impl.DefaultAiService;
 import com.chua.starter.ai.support.service.impl.DefaultAsyncAiService;
 import com.chua.starter.ai.support.service.impl.DefaultReactiveAiService;
+import com.chua.starter.ai.support.service.impl.DefaultWebPerformanceAnalyzeService;
 import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -452,6 +457,39 @@ public class AiConfiguration {
     @Lazy
     public FaceClient faceClient(FaceEngine faceEngine) {
         return new DefaultFaceClient(faceEngine, Schedulers.boundedElastic());
+    }
+
+    /**
+     * 注册网站性能分析服务。
+     *
+     * @param aiProperties      AI 配置
+     * @param chatClientProvider ChatClient 提供器
+     * @return 网站性能分析服务
+     */
+    @Bean
+    @ConditionalOnMissingBean(WebPerformanceAnalyzeService.class)
+    @ConditionalOnProperty(prefix = AiProperties.PREFIX + ".performance", name = "enabled", havingValue = "true", matchIfMissing = true)
+    @Lazy
+    public WebPerformanceAnalyzeService webPerformanceAnalyzeService(AiProperties aiProperties,
+                                                                     ObjectProvider<ChatClient> chatClientProvider) {
+        return new DefaultWebPerformanceAnalyzeService(aiProperties, chatClientProvider);
+    }
+
+    /**
+     * 注册网站性能分析接口。
+     *
+     * @param webPerformanceAnalyzeService 网站性能分析服务
+     * @return 网站性能分析接口
+     */
+    @Bean
+    @ConditionalOnMissingBean(WebPerformanceAnalyzeProvider.class)
+    @ConditionalOnClass(name = "org.springframework.web.bind.annotation.RestController")
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    @ConditionalOnProperty(prefix = AiProperties.PREFIX + ".performance", name = "api-enabled", havingValue = "true", matchIfMissing = true)
+    @Lazy
+    public WebPerformanceAnalyzeProvider webPerformanceAnalyzeProvider(
+            WebPerformanceAnalyzeService webPerformanceAnalyzeService) {
+        return new WebPerformanceAnalyzeProvider(webPerformanceAnalyzeService);
     }
 
     /**

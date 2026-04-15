@@ -25,4 +25,8 @@ public class PanelProperties {
     private boolean aiEnabled = true;
 
     private String datasourceStorePath = System.getProperty("user.home") + "/.panel/panel-datasources.json";
+
+    private String datasourceDriverStorePath = System.getProperty("user.home") + "/.panel/drivers";
+
+    private int sqlQueryPreviewLimit = 1000;
 }

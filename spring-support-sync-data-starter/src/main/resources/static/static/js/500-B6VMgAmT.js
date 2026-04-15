@@ -1,1 +1,0 @@
-import{E as r}from"./ErrorPage-DUdwz9Ia.js";import{d as o,J as a,K as t,f as s,I as l,L as n}from"./index-Dr1fsBAF.js";const f=o({name:"500",__name:"500",setup(c){const e=s(()=>n.ErrorPageStyle||"servererror");return(m,p)=>(l(),a(r,{code:"500",style:t(e.value)},null,8,["style"]))}});export{f as default};

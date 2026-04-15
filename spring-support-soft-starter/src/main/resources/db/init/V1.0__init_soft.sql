@@ -29,6 +29,32 @@ CREATE TABLE IF NOT EXISTS `soft_repository` (
   UNIQUE KEY `uk_soft_repository_code` (`repository_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='软件仓库';
 
+CREATE TABLE IF NOT EXISTS `soft_repository_source` (
+  `soft_repository_source_id` INT NOT NULL AUTO_INCREMENT COMMENT '来源ID',
+  `soft_repository_id` INT NOT NULL COMMENT '仓库ID',
+  `source_name` VARCHAR(255) DEFAULT NULL COMMENT '来源名称',
+  `source_kind` VARCHAR(64) DEFAULT NULL COMMENT '来源分类',
+  `source_type` VARCHAR(64) DEFAULT NULL COMMENT '来源类型',
+  `source_url` VARCHAR(1024) DEFAULT NULL COMMENT '来源地址',
+  `local_directory` VARCHAR(1024) DEFAULT NULL COMMENT '本地目录',
+  `auth_type` VARCHAR(64) DEFAULT NULL COMMENT '认证类型',
+  `username` VARCHAR(255) DEFAULT NULL COMMENT '用户名',
+  `password` VARCHAR(2048) DEFAULT NULL COMMENT '密码密文',
+  `token` VARCHAR(4096) DEFAULT NULL COMMENT '令牌密文',
+  `enabled` TINYINT(1) DEFAULT 1 COMMENT '是否启用',
+  `sort_order` INT DEFAULT 10 COMMENT '排序',
+  `source_config` TEXT DEFAULT NULL COMMENT '来源附加配置',
+  `create_name` VARCHAR(255) DEFAULT NULL,
+  `create_by` INT DEFAULT NULL,
+  `create_time` DATETIME DEFAULT NULL,
+  `update_time` DATETIME DEFAULT NULL,
+  `update_name` VARCHAR(255) DEFAULT NULL,
+  `update_by` INT DEFAULT NULL,
+  PRIMARY KEY (`soft_repository_source_id`),
+  KEY `idx_soft_repo_source_repository` (`soft_repository_id`),
+  KEY `idx_soft_repo_source_kind_enabled` (`soft_repository_id`, `source_kind`, `enabled`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='仓库来源子表';
+
 CREATE TABLE IF NOT EXISTS `soft_package` (
   `soft_package_id` INT NOT NULL AUTO_INCREMENT COMMENT '软件ID',
   `soft_repository_id` INT DEFAULT NULL COMMENT '仓库ID',
@@ -48,7 +74,7 @@ CREATE TABLE IF NOT EXISTS `soft_package` (
   `update_name` VARCHAR(255) DEFAULT NULL,
   `update_by` INT DEFAULT NULL,
   PRIMARY KEY (`soft_package_id`),
-  UNIQUE KEY `uk_soft_package_identity` (`soft_repository_id`, `package_code`, `os_type`, `architecture`),
+  UNIQUE KEY `uk_soft_package_identity` (`soft_repository_id`, `package_code`),
   KEY `idx_soft_package_repository_id` (`soft_repository_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='软件主档';
 
@@ -125,6 +151,15 @@ CREATE TABLE IF NOT EXISTS `soft_package_version` (
   `soft_package_id` INT DEFAULT NULL COMMENT '软件ID',
   `version_code` VARCHAR(255) DEFAULT NULL COMMENT '版本编码',
   `version_name` VARCHAR(255) DEFAULT NULL COMMENT '版本名称',
+  `package_name` VARCHAR(255) DEFAULT NULL COMMENT '版本软件名称',
+  `os_type` VARCHAR(64) DEFAULT NULL COMMENT '版本操作系统',
+  `architecture` VARCHAR(64) DEFAULT NULL COMMENT '版本架构',
+  `source_kind` VARCHAR(64) DEFAULT NULL COMMENT '来源分类',
+  `install_mode` VARCHAR(64) DEFAULT NULL COMMENT '安装模式',
+  `repository_source_id` INT DEFAULT NULL COMMENT '来源ID',
+  `artifact_path` VARCHAR(1024) DEFAULT NULL COMMENT '本地包路径',
+  `download_url` VARCHAR(1024) DEFAULT NULL COMMENT '远程下载地址',
+  `template_from_version_id` INT DEFAULT NULL COMMENT '模板来源版本ID',
   `download_urls_json` TEXT DEFAULT NULL COMMENT '下载地址JSON',
   `md5` VARCHAR(128) DEFAULT NULL COMMENT 'MD5',
   `sha256` VARCHAR(255) DEFAULT NULL COMMENT 'SHA256',
@@ -148,7 +183,8 @@ CREATE TABLE IF NOT EXISTS `soft_package_version` (
   `update_name` VARCHAR(255) DEFAULT NULL,
   `update_by` INT DEFAULT NULL,
   PRIMARY KEY (`soft_package_version_id`),
-  UNIQUE KEY `uk_soft_package_version` (`soft_package_id`, `version_code`)
+  UNIQUE KEY `uk_soft_package_version` (`soft_package_id`, `version_code`, `package_name`, `os_type`, `architecture`),
+  KEY `idx_soft_package_version_lookup` (`soft_package_id`, `version_code`, `os_type`, `architecture`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='软件版本档';
 
 CREATE TABLE IF NOT EXISTS `soft_target` (

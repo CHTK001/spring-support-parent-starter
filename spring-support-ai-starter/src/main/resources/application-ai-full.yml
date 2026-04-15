@@ -44,6 +44,17 @@ spring:
       provider: aliyun
       feature-dimension: 512
       timeout: 5000
+
+    # 网站性能分析配置
+    performance:
+      enabled: true
+      api-enabled: true
+      sample-count: 3
+      sample-interval-ms: 200
+      connect-timeout-ms: 5000
+      request-timeout-ms: 30000
+      ai-advice-enabled: true
+      snapshot-preview-length: 800
     
     # 云厂商配置
     providers:

@@ -2,6 +2,10 @@ package com.chua.starter.soft.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.soft.support.entity.SoftRepository;
+import com.chua.starter.soft.support.model.SoftRepositoryPackageSearchItem;
+import com.chua.starter.soft.support.model.SoftRepositorySource;
+import com.chua.starter.soft.support.model.SoftRepositorySourceSearchItem;
+import com.chua.starter.soft.support.model.SoftRepositorySourceUpdateRequest;
 import com.chua.starter.soft.support.service.SoftManagementService;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +33,45 @@ public class SoftRepositoryController {
         return ReturnResult.ok(softManagementService.listRepositories());
     }
 
+    @GetMapping("/sources")
+    public ReturnResult<List<SoftRepositorySourceSearchItem>> listSources(@RequestParam(required = false) String keyword) {
+        return ReturnResult.ok(softManagementService.listRepositorySources(keyword));
+    }
+
+    @GetMapping("/{id}/sources")
+    public ReturnResult<List<SoftRepositorySource>> listRepositorySourceItems(@PathVariable Integer id) {
+        return ReturnResult.ok(softManagementService.listRepositorySourceItems(id));
+    }
+
+    @PostMapping("/{id}/sources")
+    public ReturnResult<SoftRepositorySource> createRepositorySourceItem(@PathVariable Integer id,
+                                                                         @RequestBody SoftRepositorySource source) {
+        return ReturnResult.ok(softManagementService.createRepositorySourceItem(id, source));
+    }
+
+    @PutMapping("/{id}/sources/{sourceId}")
+    public ReturnResult<SoftRepositorySource> updateRepositorySourceItem(@PathVariable Integer id,
+                                                                         @PathVariable Integer sourceId,
+                                                                         @RequestBody SoftRepositorySource source) {
+        return ReturnResult.ok(softManagementService.updateRepositorySourceItem(id, sourceId, source));
+    }
+
+    @DeleteMapping("/{id}/sources/{sourceId}")
+    public ReturnResult<Boolean> deleteRepositorySourceItem(@PathVariable Integer id,
+                                                            @PathVariable Integer sourceId) {
+        softManagementService.deleteRepositorySourceItem(id, sourceId);
+        return ReturnResult.ok(true);
+    }
+
+    @GetMapping("/search/packages")
+    public ReturnResult<List<SoftRepositoryPackageSearchItem>> searchPackages(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) List<Integer> repositoryIds,
+            @RequestParam(required = false) String osType
+    ) {
+        return ReturnResult.ok(softManagementService.searchRepositoryPackages(keyword, repositoryIds, osType));
+    }
+
     @PostMapping
     public ReturnResult<SoftRepository> create(@RequestBody SoftRepository repository) {
         return ReturnResult.ok(softManagementService.saveRepository(repository));
@@ -38,6 +81,12 @@ public class SoftRepositoryController {
     public ReturnResult<SoftRepository> update(@PathVariable Integer id, @RequestBody SoftRepository repository) {
         repository.setSoftRepositoryId(id);
         return ReturnResult.ok(softManagementService.saveRepository(repository));
+    }
+
+    @PutMapping("/{id}/sources")
+    public ReturnResult<SoftRepository> updateSources(@PathVariable Integer id,
+                                                      @RequestBody SoftRepositorySourceUpdateRequest request) {
+        return ReturnResult.ok(softManagementService.updateRepositorySources(id, request));
     }
 
     @DeleteMapping("/{id}")

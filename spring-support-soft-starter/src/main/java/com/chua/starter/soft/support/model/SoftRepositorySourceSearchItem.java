@@ -11,11 +11,26 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@ApiModel("软件仓库源")
-public class SoftRepositorySource {
+@ApiModel("软件下载源检索结果")
+public class SoftRepositorySourceSearchItem {
 
     @ApiModelProperty("源ID")
     private Integer softRepositorySourceId;
+
+    @ApiModelProperty("仓库ID")
+    private Integer repositoryId;
+
+    @ApiModelProperty("仓库名称")
+    private String repositoryName;
+
+    @ApiModelProperty("仓库编码")
+    private String repositoryCode;
+
+    @ApiModelProperty("仓库类型")
+    private String repositoryType;
+
+    @ApiModelProperty("是否主源")
+    private Boolean primarySource;
 
     @ApiModelProperty("源名称")
     private String sourceName;
@@ -32,9 +47,9 @@ public class SoftRepositorySource {
     @ApiModelProperty("本地目录")
     private String localDirectory;
 
+    @ApiModelProperty("显示地址")
+    private String sourceAddress;
+
     @ApiModelProperty("是否启用")
     private Boolean enabled;
-
-    @ApiModelProperty("源配置JSON")
-    private String sourceConfig;
 }

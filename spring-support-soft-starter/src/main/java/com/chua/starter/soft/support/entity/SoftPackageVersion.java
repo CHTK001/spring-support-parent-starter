@@ -30,6 +30,33 @@ public class SoftPackageVersion extends SysBase {
     @ApiModelProperty("版本名称")
     private String versionName;
 
+    @ApiModelProperty("版本软件名称")
+    private String packageName;
+
+    @ApiModelProperty("版本操作系统")
+    private String osType;
+
+    @ApiModelProperty("版本架构")
+    private String architecture;
+
+    @ApiModelProperty("来源分类")
+    private String sourceKind;
+
+    @ApiModelProperty("安装模式")
+    private String installMode;
+
+    @ApiModelProperty("来源ID")
+    private Integer repositorySourceId;
+
+    @ApiModelProperty("本地包路径")
+    private String artifactPath;
+
+    @ApiModelProperty("远程下载地址")
+    private String downloadUrl;
+
+    @ApiModelProperty("模板来源版本ID")
+    private Integer templateFromVersionId;
+
     @ApiModelProperty("下载地址JSON")
     private String downloadUrlsJson;
 
