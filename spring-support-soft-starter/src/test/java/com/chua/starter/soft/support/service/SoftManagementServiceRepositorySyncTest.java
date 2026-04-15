@@ -1,6 +1,7 @@
 package com.chua.starter.soft.support.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -20,7 +21,9 @@ import com.chua.starter.soft.support.mapper.SoftOperationLogMapper;
 import com.chua.starter.soft.support.mapper.SoftPackageMapper;
 import com.chua.starter.soft.support.mapper.SoftPackageVersionMapper;
 import com.chua.starter.soft.support.mapper.SoftRepositoryMapper;
+import com.chua.starter.soft.support.mapper.SoftRepositorySourceMapper;
 import com.chua.starter.soft.support.mapper.SoftTargetMapper;
+import com.chua.starter.soft.support.model.SoftPackageVersionCreateRequest;
 import com.chua.starter.soft.support.model.SoftRepositorySource;
 import com.chua.starter.soft.support.spi.SoftConfigManager;
 import com.chua.starter.soft.support.spi.SoftInstallExecutor;
@@ -51,6 +54,8 @@ class SoftManagementServiceRepositorySyncTest {
     private SoftPackageVersionMapper packageVersionMapper;
     @Mock
     private SoftTargetMapper targetMapper;
+    @Mock
+    private SoftRepositorySourceMapper repositorySourceMapper;
     @Mock
     private SoftInstallationMapper installationMapper;
     @Mock
@@ -85,6 +90,7 @@ class SoftManagementServiceRepositorySyncTest {
                 packageMapper,
                 packageVersionMapper,
                 targetMapper,
+                repositorySourceMapper,
                 installationMapper,
                 operationLogMapper,
                 configSnapshotMapper,
@@ -100,6 +106,7 @@ class SoftManagementServiceRepositorySyncTest {
         );
         when(httpProvider.supports("HTTP_JSON")).thenReturn(true);
         when(localProvider.supports("LOCAL_DIR")).thenReturn(true);
+        when(repositorySourceMapper.selectList(any())).thenReturn(List.of());
         when(packageMapper.selectOne(any())).thenReturn(null);
         when(packageVersionMapper.selectOne(any())).thenReturn(null);
         AtomicInteger packageId = new AtomicInteger(10);
@@ -149,6 +156,62 @@ class SoftManagementServiceRepositorySyncTest {
         assertEquals("仓库已禁用，无法执行同步", error.getMessage());
         verify(repositoryMapper).updateById(repository);
         verify(httpProvider, never()).sync(any(), any());
+    }
+
+    @Test
+    void shouldCreatePackageVersionWithoutInstallAction() {
+        SoftPackage softPackage = new SoftPackage();
+        softPackage.setSoftPackageId(22);
+        softPackage.setPackageName("Nginx");
+        softPackage.setOsType("linux");
+        softPackage.setArchitecture("amd64");
+        when(packageMapper.selectById(22)).thenReturn(softPackage);
+        when(packageVersionMapper.selectOne(any())).thenReturn(null);
+        doAnswer(invocation -> {
+            SoftPackageVersion value = invocation.getArgument(0);
+            value.setSoftPackageVersionId(301);
+            return 1;
+        }).when(packageVersionMapper).insert(any(SoftPackageVersion.class));
+
+        SoftPackageVersionCreateRequest request = new SoftPackageVersionCreateRequest();
+        request.setVersionCode("1.25.5");
+        request.setDownloadUrls(List.of("https://example.com/nginx-1.25.5.tar.gz"));
+
+        SoftPackageVersion created = service.createPackageVersion(22, request);
+
+        assertNotNull(created);
+        assertEquals("1.25.5", created.getVersionCode());
+        assertEquals("1.25.5", created.getVersionName());
+        assertEquals("Nginx", created.getPackageName());
+        assertEquals("linux", created.getOsType());
+        assertEquals("amd64", created.getArchitecture());
+        assertEquals("THIRD_PARTY", created.getSourceKind());
+        assertEquals("REMOTE_DOWNLOAD", created.getInstallMode());
+        assertNotNull(created.getDownloadUrls());
+        assertEquals(1, created.getDownloadUrls().size());
+    }
+
+    @Test
+    void shouldRejectDuplicateVersionWhenCreatePackageVersion() {
+        SoftPackage softPackage = new SoftPackage();
+        softPackage.setSoftPackageId(22);
+        softPackage.setPackageName("Nginx");
+        softPackage.setOsType("linux");
+        softPackage.setArchitecture("amd64");
+        when(packageMapper.selectById(22)).thenReturn(softPackage);
+
+        SoftPackageVersion existed = new SoftPackageVersion();
+        existed.setSoftPackageVersionId(99);
+        when(packageVersionMapper.selectOne(any())).thenReturn(existed);
+
+        SoftPackageVersionCreateRequest request = new SoftPackageVersionCreateRequest();
+        request.setVersionCode("1.25.5");
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> service.createPackageVersion(22, request));
+
+        assertTrue(error.getMessage().contains("软件版本已存在"));
+        verify(packageVersionMapper, never()).insert(any(SoftPackageVersion.class));
     }
 
     private SoftRepository enabledRepository() {

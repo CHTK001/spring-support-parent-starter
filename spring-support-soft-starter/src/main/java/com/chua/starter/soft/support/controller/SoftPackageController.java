@@ -8,6 +8,7 @@ import com.chua.starter.soft.support.model.SoftPackageCreateRequest;
 import com.chua.starter.soft.support.model.SoftGuidePreviewRequest;
 import com.chua.starter.soft.support.model.SoftGuidePreviewResponse;
 import com.chua.starter.soft.support.model.SoftPackageGuide;
+import com.chua.starter.soft.support.model.SoftPackageVersionCreateRequest;
 import com.chua.starter.soft.support.model.SoftPackageVersionCopyInstallProfileRequest;
 import com.chua.starter.soft.support.model.SoftPackageUpdateRequest;
 import com.chua.starter.soft.support.model.SoftPackageVersionUpdateRequest;
@@ -65,6 +66,15 @@ public class SoftPackageController {
     public ReturnResult<SoftPackage> update(@PathVariable Integer id,
                                             @RequestBody SoftPackageUpdateRequest request) {
         return ReturnResult.ok(softManagementService.updatePackage(id, request));
+    }
+
+    @PostMapping("/{packageId}/versions")
+    public ReturnResult<Map<String, Object>> createVersion(@PathVariable Integer packageId,
+                                                           @RequestBody SoftPackageVersionCreateRequest request) {
+        return ReturnResult.ok(Map.of(
+                "package", softManagementService.requiredPackageView(packageId),
+                "version", softManagementService.createPackageVersion(packageId, request)
+        ));
     }
 
     @PutMapping("/{packageId}/versions/{versionId}")

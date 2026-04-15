@@ -219,6 +219,71 @@ CREATE TABLE IF NOT EXISTS `server_setting` (
   UNIQUE KEY `uk_server_setting_key` (`server_setting_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='服务器配置项';
 
+CREATE TABLE IF NOT EXISTS `sys_message` (
+  `sys_message_id` INT NOT NULL AUTO_INCREMENT COMMENT '消息ID - 主键自增',
+  `sys_message_title` VARCHAR(255) DEFAULT NULL COMMENT '消息标题',
+  `sys_message_content` TEXT DEFAULT NULL COMMENT '消息内容',
+  `sys_message_type` VARCHAR(50) DEFAULT 'system' COMMENT '消息类型',
+  `sys_message_level` VARCHAR(20) DEFAULT 'normal' COMMENT '消息级别',
+  `sys_message_sender_id` INT DEFAULT 0 COMMENT '发送者ID',
+  `sys_message_sender_name` VARCHAR(100) DEFAULT NULL COMMENT '发送者名称',
+  `sys_message_receiver_id` INT DEFAULT 0 COMMENT '接收者ID',
+  `sys_message_receiver_name` VARCHAR(100) DEFAULT NULL COMMENT '接收者名称',
+  `sys_message_read` TINYINT DEFAULT 0 COMMENT '是否已读',
+  `sys_message_read_time` DATETIME DEFAULT NULL COMMENT '阅读时间',
+  `sys_message_send_time` DATETIME DEFAULT NULL COMMENT '发送时间',
+  `sys_message_expire_time` DATETIME DEFAULT NULL COMMENT '过期时间',
+  `sys_message_biz_type` VARCHAR(50) DEFAULT NULL COMMENT '业务类型',
+  `sys_message_biz_id` VARCHAR(100) DEFAULT NULL COMMENT '业务ID',
+  `sys_message_url` VARCHAR(500) DEFAULT NULL COMMENT '跳转链接',
+  `sys_message_extra` TEXT DEFAULT NULL COMMENT '扩展数据',
+  `sys_message_status` TINYINT DEFAULT 1 COMMENT '消息状态',
+  `create_by` INT DEFAULT NULL COMMENT '创建人ID',
+  `create_name` VARCHAR(255) DEFAULT NULL COMMENT '创建人姓名',
+  `create_time` DATETIME DEFAULT NULL COMMENT '创建时间',
+  `update_by` INT DEFAULT NULL COMMENT '更新人ID',
+  `update_name` VARCHAR(255) DEFAULT NULL COMMENT '更新人姓名',
+  `update_time` DATETIME DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`sys_message_id`),
+  KEY `idx_sys_message_receiver_id` (`sys_message_receiver_id`),
+  KEY `idx_sys_message_sender_id` (`sys_message_sender_id`),
+  KEY `idx_sys_message_type` (`sys_message_type`),
+  KEY `idx_sys_message_status` (`sys_message_status`),
+  KEY `idx_sys_message_read` (`sys_message_read`),
+  KEY `idx_sys_message_send_time` (`sys_message_send_time`),
+  KEY `idx_sys_message_expire_time` (`sys_message_expire_time`),
+  KEY `idx_sys_message_biz` (`sys_message_biz_type`, `sys_message_biz_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统消息表';
+
+CREATE TABLE IF NOT EXISTS `sys_message_history` (
+  `sys_message_history_id` INT NOT NULL AUTO_INCREMENT COMMENT '历史记录ID - 主键自增',
+  `sys_message_history_message_id` INT DEFAULT NULL COMMENT '原消息ID',
+  `sys_message_history_title` VARCHAR(255) DEFAULT NULL COMMENT '消息标题',
+  `sys_message_history_content` TEXT DEFAULT NULL COMMENT '消息内容',
+  `sys_message_history_type` VARCHAR(50) DEFAULT NULL COMMENT '消息类型',
+  `sys_message_history_level` VARCHAR(20) DEFAULT NULL COMMENT '消息级别',
+  `sys_message_history_sender_id` INT DEFAULT NULL COMMENT '发送者ID',
+  `sys_message_history_sender_name` VARCHAR(100) DEFAULT NULL COMMENT '发送者名称',
+  `sys_message_history_receiver_id` INT DEFAULT NULL COMMENT '接收者ID',
+  `sys_message_history_receiver_name` VARCHAR(100) DEFAULT NULL COMMENT '接收者名称',
+  `sys_message_history_send_time` DATETIME DEFAULT NULL COMMENT '发送时间',
+  `sys_message_history_read_time` DATETIME DEFAULT NULL COMMENT '阅读时间',
+  `sys_message_history_biz_type` VARCHAR(50) DEFAULT NULL COMMENT '业务类型',
+  `sys_message_history_biz_id` VARCHAR(100) DEFAULT NULL COMMENT '业务ID',
+  `sys_message_history_url` VARCHAR(500) DEFAULT NULL COMMENT '跳转链接',
+  `sys_message_history_extra` TEXT DEFAULT NULL COMMENT '扩展数据',
+  `create_by` INT DEFAULT NULL COMMENT '创建人ID',
+  `create_name` VARCHAR(255) DEFAULT NULL COMMENT '创建人姓名',
+  `create_time` DATETIME DEFAULT NULL COMMENT '创建时间',
+  `update_by` INT DEFAULT NULL COMMENT '更新人ID',
+  `update_name` VARCHAR(255) DEFAULT NULL COMMENT '更新人姓名',
+  `update_time` DATETIME DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`sys_message_history_id`),
+  KEY `idx_sys_message_history_receiver_id` (`sys_message_history_receiver_id`),
+  KEY `idx_sys_message_history_read_time` (`sys_message_history_read_time`),
+  KEY `idx_sys_message_history_message_id` (`sys_message_history_message_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统消息历史表';
+
 ALTER TABLE `server_host`
   ADD COLUMN IF NOT EXISTS `server_public_ip` VARCHAR(255) DEFAULT NULL COMMENT '公网IP' AFTER `server_host`;
 
@@ -229,93 +294,5 @@ ALTER TABLE `server_metrics_history`
 ALTER TABLE `server_alert_setting`
   ADD COLUMN IF NOT EXISTS `server_alert_disk_io_warning_bytes_per_second` DOUBLE DEFAULT NULL COMMENT '磁盘IO预警阈值' AFTER `server_alert_disk_danger_percent`,
   ADD COLUMN IF NOT EXISTS `server_alert_disk_io_danger_bytes_per_second` DOUBLE DEFAULT NULL COMMENT '磁盘IO危险阈值' AFTER `server_alert_disk_io_warning_bytes_per_second`;
-
-INSERT INTO `server_host` (
-  `server_name`,
-  `server_code`,
-  `server_type`,
-  `server_os_type`,
-  `server_architecture`,
-  `server_host`,
-  `server_port`,
-  `server_username`,
-  `server_password`,
-  `server_private_key`,
-  `server_base_directory`,
-  `server_tags`,
-  `server_enabled`,
-  `server_description`,
-  `server_metadata_json`,
-  `create_time`,
-  `update_time`
-)
-SELECT
-  '本机 Windows',
-  'f32a4ba8642dc68c0ff5042a572fcdcf',
-  'LOCAL',
-  'WINDOWS',
-  'AMD64',
-  '127.0.0.1',
-  0,
-  'yemen',
-  NULL,
-  NULL,
-  'H:/workspace/2/tmp/soft-runtime/local',
-  'soft,local,windows',
-  1,
-  'soft-test 本机真实联调入口',
-  '{"softEnabled":true,"displayMode":"default","source":"soft-test-bootstrap"}',
-  NOW(),
-  NOW()
-FROM DUAL
-WHERE NOT EXISTS (
-  SELECT 1
-  FROM `server_host`
-  WHERE `server_code` = 'f32a4ba8642dc68c0ff5042a572fcdcf'
-);
-
-INSERT INTO `server_host` (
-  `server_name`,
-  `server_code`,
-  `server_type`,
-  `server_os_type`,
-  `server_architecture`,
-  `server_host`,
-  `server_port`,
-  `server_username`,
-  `server_password`,
-  `server_private_key`,
-  `server_base_directory`,
-  `server_tags`,
-  `server_enabled`,
-  `server_description`,
-  `server_metadata_json`,
-  `create_time`,
-  `update_time`
-)
-SELECT
-  '远程 Linux 172.16.0.40',
-  '20a860f7f008190a23da131959bb0580',
-  'SSH',
-  'LINUX',
-  'AMD64',
-  '172.16.0.40',
-  22,
-  'root',
-  'd57a246d45bbdaa0392dfb33d18d97fa',
-  'dff1a552dea2f3164f0f6c7101fe0caa',
-  '/opt',
-  'soft,remote,linux',
-  1,
-  'soft-test 远程 Linux 真实联调入口',
-  '{"softEnabled":true,"displayMode":"default","source":"soft-test-bootstrap","hostAlias":"remote-linux-17216040"}',
-  NOW(),
-  NOW()
-FROM DUAL
-WHERE NOT EXISTS (
-  SELECT 1
-  FROM `server_host`
-  WHERE `server_code` = '20a860f7f008190a23da131959bb0580'
-);
 
 SET FOREIGN_KEY_CHECKS = 1;

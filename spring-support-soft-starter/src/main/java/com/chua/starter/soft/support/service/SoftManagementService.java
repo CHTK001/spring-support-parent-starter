@@ -40,6 +40,7 @@ import com.chua.starter.soft.support.model.SoftOperationResult;
 import com.chua.starter.soft.support.model.SoftOperationTicket;
 import com.chua.starter.soft.support.model.SoftPackageCreateRequest;
 import com.chua.starter.soft.support.model.SoftPackageUpdateRequest;
+import com.chua.starter.soft.support.model.SoftPackageVersionCreateRequest;
 import com.chua.starter.soft.support.model.SoftPackageVersionCopyInstallProfileRequest;
 import com.chua.starter.soft.support.model.SoftRepositoryPackageSearchItem;
 import com.chua.starter.soft.support.model.SoftRepositoryPackageSearchVersion;
@@ -578,6 +579,82 @@ public class SoftManagementService {
         packageMapper.updateById(current);
         hydratePackage(current, null);
         return current;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public SoftPackageVersion createPackageVersion(Integer packageId, SoftPackageVersionCreateRequest request) {
+        SoftPackage softPackage = requiredPackage(packageId);
+        if (request == null) {
+            throw new IllegalStateException("新增版本请求不能为空");
+        }
+        String versionCode = normalizeText(request.getVersionCode());
+        if (versionCode == null) {
+            throw new IllegalStateException("版本编码不能为空");
+        }
+
+        SoftPackageVersion version = new SoftPackageVersion();
+        version.setSoftPackageId(packageId);
+        version.setVersionCode(versionCode);
+        version.setVersionName(Optional.ofNullable(normalizeText(request.getVersionName())).orElse(versionCode));
+        version.setPackageName(Optional.ofNullable(normalizeText(request.getPackageName()))
+                .orElse(normalizeText(softPackage.getPackageName())));
+        version.setOsType(Optional.ofNullable(SoftArtifactRepositorySupport.normalizeOsType(request.getOsType()))
+                .orElse(SoftArtifactRepositorySupport.normalizeOsType(softPackage.getOsType())));
+        version.setArchitecture(Optional.ofNullable(SoftArtifactRepositorySupport.normalizeArchitecture(request.getArchitecture()))
+                .orElse(SoftArtifactRepositorySupport.normalizeArchitecture(softPackage.getArchitecture())));
+        version.setSourceKind(normalizeSourceKind(request.getSourceKind(), null));
+        version.setInstallMode(normalizeInstallMode(request.getInstallMode(), version.getSourceKind()));
+        version.setRepositorySourceId(request.getRepositorySourceId());
+        version.setArtifactPath(normalizeText(request.getArtifactPath()));
+        version.setDownloadUrl(normalizeText(request.getDownloadUrl()));
+        version.setTemplateFromVersionId(request.getTemplateFromVersionId());
+        version.setEnabled(request.getEnabled() == null ? Boolean.TRUE : request.getEnabled());
+        version.setDownloadUrlsJson(toJsonArray(request.getDownloadUrls()));
+        version.setInstallScript(normalizeText(request.getInstallScript()));
+        version.setUninstallScript(normalizeText(request.getUninstallScript()));
+        version.setStartScript(normalizeText(request.getStartScript()));
+        version.setStopScript(normalizeText(request.getStopScript()));
+        version.setRestartScript(normalizeText(request.getRestartScript()));
+        version.setStatusScript(normalizeText(request.getStatusScript()));
+        version.setServiceRegisterScript(normalizeText(request.getServiceRegisterScript()));
+        version.setServiceUnregisterScript(normalizeText(request.getServiceUnregisterScript()));
+        version.setLogPathsJson(normalizeJsonText(request.getLogPathsJson()));
+        version.setConfigPathsJson(normalizeJsonText(request.getConfigPathsJson()));
+        version.setMetadataJson(normalizeJsonText(request.getMetadataJson()));
+        normalizeVersion(version);
+
+        LambdaQueryWrapper<SoftPackageVersion> versionQuery = Wrappers.<SoftPackageVersion>lambdaQuery()
+                .eq(SoftPackageVersion::getSoftPackageId, version.getSoftPackageId())
+                .eq(SoftPackageVersion::getVersionCode, version.getVersionCode());
+        if (version.getPackageName() == null) {
+            versionQuery.isNull(SoftPackageVersion::getPackageName);
+        } else {
+            versionQuery.eq(SoftPackageVersion::getPackageName, version.getPackageName());
+        }
+        if (version.getOsType() == null) {
+            versionQuery.isNull(SoftPackageVersion::getOsType);
+        } else {
+            versionQuery.eq(SoftPackageVersion::getOsType, version.getOsType());
+        }
+        if (version.getArchitecture() == null) {
+            versionQuery.isNull(SoftPackageVersion::getArchitecture);
+        } else {
+            versionQuery.eq(SoftPackageVersion::getArchitecture, version.getArchitecture());
+        }
+
+        SoftPackageVersion existed = packageVersionMapper.selectOne(versionQuery.last("limit 1"));
+        if (existed != null) {
+            throw new IllegalStateException("软件版本已存在: "
+                    + version.getVersionCode()
+                    + " / "
+                    + Optional.ofNullable(version.getOsType()).orElse("UNKNOWN")
+                    + " / "
+                    + Optional.ofNullable(version.getArchitecture()).orElse("UNKNOWN"));
+        }
+
+        packageVersionMapper.insert(version);
+        hydrateVersion(version);
+        return version;
     }
 
     @Transactional(rollbackFor = Exception.class)
