@@ -2224,3 +2224,607 @@ public void routeAfterCondition(String nodeId, ConditionResult result, FlowConte
     context.setNextNode(nextNodeId, result.getData());
 }
 ```
+
+---
+
+## 二十五、执行记录详细持久化（节点级）
+
+### 设计目标
+
+每次爬虫执行不仅记录整体结果，还要记录每个节点的详细执行信息，方便排查问题和分析性能。
+
+### 数据库表扩展
+
+**spider_execution_record**（已有，补充字段）：
+```sql
+ALTER TABLE spider_execution_record ADD COLUMN flow_snapshot LONGTEXT NULL COMMENT '执行时的编排快照 JSON';
+ALTER TABLE spider_execution_record ADD COLUMN error_detail TEXT NULL COMMENT '错误详情';
+ALTER TABLE spider_execution_record ADD COLUMN extra_stats TEXT NULL COMMENT '扩展统计 JSON';
+```
+
+**spider_node_execution_log（新表）**：
+```sql
+CREATE TABLE spider_node_execution_log (
+    id              BIGINT       NOT NULL COMMENT '主键',
+    record_id       BIGINT       NOT NULL COMMENT '关联执行记录 ID',
+    task_id         BIGINT       NOT NULL COMMENT '关联任务 ID',
+    node_id         VARCHAR(64)  NOT NULL COMMENT '节点 ID',
+    node_type       VARCHAR(32)  NOT NULL COMMENT '节点类型',
+    node_name       VARCHAR(128) NULL     COMMENT '节点名称',
+    status          VARCHAR(16)  NOT NULL COMMENT '执行状态（PENDING/RUNNING/SUCCESS/FAILED/SKIPPED/WAITING_INPUT）',
+    start_time      DATETIME     NULL     COMMENT '开始时间',
+    end_time        DATETIME     NULL     COMMENT '结束时间',
+    duration_ms     BIGINT       NULL     COMMENT '执行耗时（毫秒）',
+    input_summary   TEXT         NULL     COMMENT '输入摘要（URL/记录数/字段预览）',
+    output_summary  TEXT         NULL     COMMENT '输出摘要（记录数/字段预览）',
+    success_count   BIGINT       NOT NULL DEFAULT 0 COMMENT '成功处理数',
+    failure_count   BIGINT       NOT NULL DEFAULT 0 COMMENT '失败处理数',
+    error_msg       TEXT         NULL     COMMENT '错误信息',
+    retry_count     INT          NOT NULL DEFAULT 0 COMMENT '重试次数',
+    ai_used         TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '是否使用了 AI',
+    ai_tokens       INT          NULL     COMMENT 'AI 消耗 token 数',
+    extra           TEXT         NULL     COMMENT '扩展信息 JSON',
+    create_time     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_record_id (record_id),
+    KEY idx_task_id (task_id),
+    KEY idx_node_id (node_id),
+    KEY idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='节点执行日志';
+```
+
+### 执行引擎写入逻辑
+
+```java
+// SpiderExecutionEngine 中，每个节点执行前后写入日志
+public void executeNode(Long recordId, Long taskId, SpiderFlowNode node, FlowContext ctx) {
+    SpiderNodeExecutionLog log = SpiderNodeExecutionLog.builder()
+        .recordId(recordId).taskId(taskId)
+        .nodeId(node.getNodeId()).nodeType(node.getNodeType().name())
+        .nodeName(node.getLabel()).status("RUNNING")
+        .startTime(LocalDateTime.now())
+        .inputSummary(buildInputSummary(ctx.getInput()))
+        .build();
+    nodeLogRepository.save(log);
+
+    try {
+        Object output = doExecuteNode(node, ctx);
+        log.setStatus("SUCCESS");
+        log.setEndTime(LocalDateTime.now());
+        log.setDurationMs(calcDuration(log.getStartTime()));
+        log.setOutputSummary(buildOutputSummary(output));
+        log.setSuccessCount(countSuccess(output));
+    } catch (Exception e) {
+        log.setStatus("FAILED");
+        log.setEndTime(LocalDateTime.now());
+        log.setErrorMsg(e.getMessage());
+        log.setFailureCount(1L);
+    } finally {
+        nodeLogRepository.updateById(log);
+        // SSE 推送节点状态
+        pushService.pushNodeStatus(taskId, node.getNodeId(), log.getStatus(), log);
+    }
+}
+```
+
+### 新增接口
+
+```
+GET /v1/spider/tasks/{taskId}/records/{recordId}/nodes
+响应：[SpiderNodeExecutionLog 列表，按 start_time 排序]
+
+GET /v1/spider/tasks/{taskId}/records/{recordId}/nodes/{nodeId}
+响应：单个节点的详细执行日志
+```
+
+### 前端展示
+
+执行记录详情页（点击执行记录列表中的某条记录）：
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 执行记录 #42  2026-04-15 10:00:00  成功  耗时 3.2s           │
+│ ─────────────────────────────────────────────────────────── │
+│ 节点执行时间线：                                              │
+│                                                              │
+│ ▶ START          0ms    ✓ 成功                               │
+│ ▶ DOWNLOADER     1,230ms ✓ 成功  输入:URL  输出:HTML 45KB    │
+│ ▶ DATA_EXTRACTOR 890ms  ✓ 成功  输入:HTML  输出:50条记录     │
+│ ▶ PROCESSOR      120ms  ✓ 成功  输入:50条  输出:50条         │
+│ ▶ PIPELINE       340ms  ✓ 成功  输入:50条  写入数据库        │
+│ ▶ END            5ms    ✓ 成功                               │
+│                                                              │
+│ 总计：成功 50 条，失败 0 条，耗时 2,585ms                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+同时，在 ScReteEditor 运行时视图中，点击已完成的节点，右侧面板显示该节点的历史执行日志。
+
+---
+
+## 二十六、SPI 扩展机制
+
+### 设计原则
+
+平台层所有可替换的组件（下载器、URL 存储器、输出管道、调度器等）均通过 SPI 机制获取实现，方便后续扩展而无需修改核心代码。
+
+底层 `utils-support-spider-starter` 已定义了 `@Spi` 注解的接口，平台层通过 `ServiceProvider.of(Interface.class).getNewExtension(name)` 动态获取实现。
+
+### 已有 SPI 接口（utils-spider 提供）
+
+| 接口 | @Spi 名称 | 内置实现 | 说明 |
+|------|-----------|---------|------|
+| `Downloader` | `downloader` | jsoup / httpclient | 页面下载器 |
+| `Pipeline` | `pipeline` | console / file / json | 数据输出管道 |
+| `Scheduler` | `scheduler` | queue / priority / file | URL 调度器 |
+| `UrlStore` | `url-store` | memory | URL 持久化存储 |
+| `PageFilter` | `page-filter` | — | 页面过滤器 |
+| `DataCollector` | `data-collector` | — | 数据采集器 |
+| `ProxyPool` | `proxy-pool` | — | 代理池 |
+| `DeadLetterQueue` | `dead-letter-queue` | file | 死信队列 |
+| `SpiderBrainHook` | `brain-hook` | — | AI 大脑钩子 |
+
+### 平台层 SPI 扩展点
+
+平台层在 `utils-spider` 基础上，新增以下 SPI 接口，供业务方扩展：
+
+#### SpiderNodeExecutor（节点执行器 SPI）
+
+```java
+// 平台层新增，允许业务方自定义节点执行逻辑
+@Spi("node-executor")
+public interface SpiderNodeExecutor {
+    /**
+     * 是否支持该节点类型
+     */
+    boolean supports(SpiderNodeType nodeType);
+
+    /**
+     * 执行节点
+     * @param node 节点定义
+     * @param context 执行上下文（含上游输出数据）
+     * @return 节点输出数据
+     */
+    Object execute(SpiderFlowNode node, SpiderFlowContext context) throws Exception;
+}
+```
+
+内置实现（通过 `META-INF/services` 注册）：
+- `DownloaderNodeExecutor`（处理 DOWNLOADER 节点）
+- `UrlExtractorNodeExecutor`（处理 URL_EXTRACTOR 节点）
+- `DataExtractorNodeExecutor`（处理 DATA_EXTRACTOR 节点）
+- `DetailFetchNodeExecutor`（处理 DETAIL_FETCH 节点）
+- `ProcessorNodeExecutor`（处理 PROCESSOR 节点）
+- `FilterNodeExecutor`（处理 FILTER 节点）
+- `HumanInputNodeExecutor`（处理 HUMAN_INPUT 节点）
+- `PipelineNodeExecutor`（处理 PIPELINE 节点）
+- `ConditionNodeExecutor`（处理 CONDITION 节点）
+- `ErrorHandlerNodeExecutor`（处理 ERROR_HANDLER 节点）
+- `DelayNodeExecutor`（处理 DELAY 节点）
+
+**执行引擎中的调用方式**：
+```java
+// SpiderExecutionEngine 中，通过 SPI 获取节点执行器
+public Object executeNode(SpiderFlowNode node, SpiderFlowContext context) {
+    // 通过 SPI 查找支持该节点类型的执行器
+    SpiderNodeExecutor executor = ServiceProvider.of(SpiderNodeExecutor.class)
+        .collect()
+        .stream()
+        .filter(e -> e.supports(node.getNodeType()))
+        .findFirst()
+        .orElseThrow(() -> new IllegalStateException("未找到节点执行器: " + node.getNodeType()));
+    return executor.execute(node, context);
+}
+```
+
+#### SpiderUrlStore（URL 存储器 SPI，平台层扩展）
+
+平台层提供基于数据库的 URL 存储实现，注册到 SPI：
+
+```java
+// 基于 spider_url_store 表的数据库实现
+@Spi("database")
+@Component
+public class DatabaseUrlStore implements UrlStore {
+    @Autowired
+    private SpiderUrlStoreRepository repository;
+
+    @Override
+    public void save(Request request) {
+        repository.save(SpiderUrlStoreEntity.from(request));
+    }
+
+    @Override
+    public List<Request> getPending(int limit) {
+        return repository.findPending(limit).stream()
+            .map(SpiderUrlStoreEntity::toRequest)
+            .collect(Collectors.toList());
+    }
+    // ...
+}
+```
+
+注册文件：`META-INF/services/com.chua.spider.store.UrlStore`：
+```
+com.chua.starter.spider.support.store.DatabaseUrlStore
+```
+
+#### SpiderDownloaderFactory（下载器工厂 SPI）
+
+平台层可注册自定义下载器，例如支持 Selenium、Puppeteer 等：
+
+```java
+// 自定义 Playwright 下载器（已在 utils-spider 中通过 SPI 扩展）
+@Spi("playwright")
+public class PlaywrightDownloader implements Downloader {
+    @Override
+    public Page download(Request request, Task task) {
+        // 使用 Playwright 驱动真实浏览器
+    }
+}
+```
+
+注册文件：`META-INF/services/com.chua.spider.downloader.Downloader`：
+```
+com.chua.starter.spider.support.downloader.PlaywrightDownloader
+```
+
+#### SpiderPipelineFactory（输出管道 SPI）
+
+平台层提供数据库输出管道：
+
+```java
+@Spi("database")
+@Component
+public class DatabasePipeline implements Pipeline {
+    @Override
+    public void process(ResultItems resultItems, Task task) {
+        // 根据节点配置的 tableName 动态写入数据库
+        String tableName = (String) resultItems.get("__tableName");
+        dynamicTableService.insert(tableName, resultItems.getAll());
+    }
+}
+```
+
+### SPI 配置文件位置
+
+```
+spring-support-spider-starter/src/main/resources/META-INF/services/
+├── com.chua.spider.downloader.Downloader          # 自定义下载器
+├── com.chua.spider.pipeline.Pipeline              # 自定义输出管道
+├── com.chua.spider.store.UrlStore                 # 自定义 URL 存储器
+└── com.chua.starter.spider.support.engine.SpiderNodeExecutor  # 节点执行器
+```
+
+### 节点配置中指定 SPI 实现
+
+用户在节点配置中通过名称指定 SPI 实现：
+
+```json
+// DOWNLOADER 节点
+{"downloaderType": "playwright"}  // 使用 @Spi("playwright") 的实现
+
+// PIPELINE 节点
+{"pipelineType": "database"}      // 使用 @Spi("database") 的 Pipeline 实现
+
+// URL_EXTRACTOR 节点（URL 存储器）
+{"urlStoreType": "database"}      // 使用 @Spi("database") 的 UrlStore 实现
+```
+
+### 前端能力查询接口
+
+```
+GET /v1/spider/capabilities
+响应：{
+  "downloader": ["jsoup", "httpclient", "playwright"],
+  "pipeline": ["console", "file", "json", "database"],
+  "urlStore": ["memory", "database"],
+  "scheduler": ["queue", "priority", "file"],
+  "nodeExecutor": ["downloader", "url-extractor", "data-extractor", ...]
+}
+```
+
+前端节点配置面板中，下拉选项动态从该接口获取，确保只展示已注册的 SPI 实现。
+
+---
+
+## 二十七、完整示例：Gitee 开源项目爬虫
+
+### 场景描述
+
+爬取 Gitee 探索页面的开源项目列表，采集项目名称、描述、Star 数、Fork 数、语言、最后更新时间，支持分页持续采集，结果写入数据库。
+
+**目标 URL**：`https://gitee.com/explore/all?order=starred&page=1`
+
+**执行类型**：SCHEDULED（每天凌晨 2 点执行一次）
+
+**编排结构**：
+```
+START
+  ↓
+DOWNLOADER（jsoup，下载列表页）
+  ↓
+URL_EXTRACTOR（提取分页 URL，最多 50 页）
+  ↓
+DOWNLOADER（jsoup，下载每页内容）
+  ↓
+DATA_EXTRACTOR（CSS 选择器提取项目信息）
+  ↓
+PROCESSOR（清洗数据：Star 数字符串转整数，时间格式化）
+  ↓
+FILTER（去重：以 projectUrl 为去重字段）
+  ↓
+PIPELINE（写入数据库 gitee_projects 表）
+  ↓
+END
+```
+
+### 完整任务配置 JSON
+
+```json
+{
+  "taskCode": "SAMPLE-GITEE-EXPLORE",
+  "taskName": "Gitee 开源项目探索爬虫",
+  "entryUrl": "https://gitee.com/explore/all?order=starred&page=1",
+  "description": "爬取 Gitee 探索页面的开源项目列表，按 Star 数排序，支持分页持续采集",
+  "tags": "gitee,开源,示例",
+  "authType": "NONE",
+  "executionType": "SCHEDULED",
+  "executionPolicy": {
+    "executionType": "SCHEDULED",
+    "cron": "0 0 2 * * ?",
+    "timezone": "Asia/Shanghai",
+    "misfirePolicy": "DO_NOTHING",
+    "jobChannel": "default",
+    "threadCount": 2,
+    "retryPolicy": {"maxRetries": 3, "retryIntervalMs": 5000}
+  },
+  "aiProfile": {
+    "enabled": false
+  }
+}
+```
+
+### 完整编排 JSON
+
+```json
+{
+  "nodes": [
+    {
+      "nodeId": "start-1",
+      "nodeType": "START",
+      "label": "开始",
+      "positionX": 100, "positionY": 200,
+      "config": {}
+    },
+    {
+      "nodeId": "dl-list",
+      "nodeType": "DOWNLOADER",
+      "label": "下载列表页",
+      "positionX": 300, "positionY": 200,
+      "config": {
+        "downloaderType": "jsoup",
+        "aiMode": "off",
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        },
+        "timeout": 30000,
+        "retryTimes": 3
+      }
+    },
+    {
+      "nodeId": "url-pager",
+      "nodeType": "URL_EXTRACTOR",
+      "label": "分页链接提取",
+      "positionX": 500, "positionY": 200,
+      "config": {
+        "urlPattern": "https://gitee.com/explore/all?order=starred&page={page}",
+        "maxPages": 50,
+        "urlStoreType": "database"
+      }
+    },
+    {
+      "nodeId": "dl-page",
+      "nodeType": "DOWNLOADER",
+      "label": "下载分页内容",
+      "positionX": 700, "positionY": 200,
+      "config": {
+        "downloaderType": "jsoup",
+        "aiMode": "off",
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        },
+        "timeout": 30000,
+        "retryTimes": 3,
+        "sleepTime": 2000
+      }
+    },
+    {
+      "nodeId": "ext-projects",
+      "nodeType": "DATA_EXTRACTOR",
+      "label": "提取项目信息",
+      "positionX": 900, "positionY": 200,
+      "config": {
+        "fields": [
+          {
+            "name": "projectName",
+            "selectorType": "CSS",
+            "selector": ".explore-repo__list .item .title a",
+            "attribute": "text",
+            "multi": false,
+            "required": true
+          },
+          {
+            "name": "projectUrl",
+            "selectorType": "CSS",
+            "selector": ".explore-repo__list .item .title a",
+            "attribute": "href",
+            "multi": false,
+            "required": true
+          },
+          {
+            "name": "description",
+            "selectorType": "CSS",
+            "selector": ".explore-repo__list .item .desc",
+            "attribute": "text",
+            "multi": false,
+            "required": false
+          },
+          {
+            "name": "starCount",
+            "selectorType": "CSS",
+            "selector": ".explore-repo__list .item .star-count",
+            "attribute": "text",
+            "multi": false,
+            "required": false
+          },
+          {
+            "name": "forkCount",
+            "selectorType": "CSS",
+            "selector": ".explore-repo__list .item .fork-count",
+            "attribute": "text",
+            "multi": false,
+            "required": false
+          },
+          {
+            "name": "language",
+            "selectorType": "CSS",
+            "selector": ".explore-repo__list .item .lang",
+            "attribute": "text",
+            "multi": false,
+            "required": false
+          },
+          {
+            "name": "lastUpdated",
+            "selectorType": "CSS",
+            "selector": ".explore-repo__list .item .time",
+            "attribute": "text",
+            "multi": false,
+            "required": false
+          }
+        ]
+      }
+    },
+    {
+      "nodeId": "proc-clean",
+      "nodeType": "PROCESSOR",
+      "label": "数据清洗",
+      "positionX": 1100, "positionY": 200,
+      "config": {
+        "rules": [
+          {"type": "regex", "field": "starCount", "pattern": "\\d+", "group": 0, "to": "starCount"},
+          {"type": "regex", "field": "forkCount", "pattern": "\\d+", "group": 0, "to": "forkCount"},
+          {"type": "format", "field": "projectUrl", "template": "https://gitee.com{{projectUrl}}", "to": "projectUrl"},
+          {"type": "drop", "field": "lastUpdated"}
+        ]
+      }
+    },
+    {
+      "nodeId": "filter-dedup",
+      "nodeType": "FILTER",
+      "label": "去重过滤",
+      "positionX": 1300, "positionY": 200,
+      "config": {
+        "dedupField": "projectUrl",
+        "dedupScope": "task",
+        "conditions": [
+          {"field": "projectName", "op": "notEmpty"},
+          {"field": "projectUrl", "op": "notEmpty"}
+        ]
+      }
+    },
+    {
+      "nodeId": "pipe-db",
+      "nodeType": "PIPELINE",
+      "label": "写入数据库",
+      "positionX": 1500, "positionY": 200,
+      "config": {
+        "pipelineType": "database",
+        "tableName": "gitee_projects",
+        "tableComment": "Gitee 开源项目",
+        "columns": [
+          {"name": "project_name", "type": "VARCHAR", "length": 256, "sourceField": "projectName", "comment": "项目名称"},
+          {"name": "project_url", "type": "VARCHAR", "length": 512, "sourceField": "projectUrl", "comment": "项目地址", "primaryKey": false},
+          {"name": "description", "type": "TEXT", "sourceField": "description", "comment": "项目描述", "nullable": true},
+          {"name": "star_count", "type": "INT", "sourceField": "starCount", "comment": "Star 数", "nullable": true},
+          {"name": "fork_count", "type": "INT", "sourceField": "forkCount", "comment": "Fork 数", "nullable": true},
+          {"name": "language", "type": "VARCHAR", "length": 64, "sourceField": "language", "comment": "编程语言", "nullable": true},
+          {"name": "crawled_at", "type": "DATETIME", "defaultValue": "CURRENT_TIMESTAMP", "comment": "采集时间"}
+        ]
+      }
+    },
+    {
+      "nodeId": "end-1",
+      "nodeType": "END",
+      "label": "结束",
+      "positionX": 1700, "positionY": 200,
+      "config": {}
+    }
+  ],
+  "edges": [
+    {"edgeId": "e1", "sourceNodeId": "start-1", "targetNodeId": "dl-list"},
+    {"edgeId": "e2", "sourceNodeId": "dl-list", "targetNodeId": "url-pager"},
+    {"edgeId": "e3", "sourceNodeId": "url-pager", "targetNodeId": "dl-page"},
+    {"edgeId": "e4", "sourceNodeId": "dl-page", "targetNodeId": "ext-projects"},
+    {"edgeId": "e5", "sourceNodeId": "ext-projects", "targetNodeId": "proc-clean"},
+    {"edgeId": "e6", "sourceNodeId": "proc-clean", "targetNodeId": "filter-dedup"},
+    {"edgeId": "e7", "sourceNodeId": "filter-dedup", "targetNodeId": "pipe-db"},
+    {"edgeId": "e8", "sourceNodeId": "pipe-db", "targetNodeId": "end-1"}
+  ],
+  "groups": []
+}
+```
+
+### 预期输出数据库表结构
+
+```sql
+CREATE TABLE gitee_projects (
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    project_name VARCHAR(256) NOT NULL COMMENT '项目名称',
+    project_url  VARCHAR(512) NOT NULL COMMENT '项目地址',
+    description  TEXT         COMMENT '项目描述',
+    star_count   INT          COMMENT 'Star 数',
+    fork_count   INT          COMMENT 'Fork 数',
+    language     VARCHAR(64)  COMMENT '编程语言',
+    crawled_at   DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '采集时间',
+    UNIQUE KEY uk_project_url (project_url(255))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Gitee 开源项目';
+```
+
+### 预期执行结果
+
+- 每次执行爬取约 50 页 × 20 条 = 1000 条项目数据
+- 执行耗时约 3-5 分钟（含 2 秒/页的礼貌延迟）
+- 去重后写入数据库，重复项目自动跳过
+- 执行记录保存到 `spider_execution_record`，每个节点日志保存到 `spider_node_execution_log`
+
+### 作为基础数据初始化
+
+`SampleTaskFactory.createGiteeSample()` 方法返回上述完整配置，可在系统初始化时自动创建：
+
+```java
+// SpiderDataInitializer（Spring Boot CommandLineRunner）
+@Component
+@ConditionalOnProperty(prefix = "spring.spider", name = "init-sample", havingValue = "true")
+public class SpiderDataInitializer implements CommandLineRunner {
+    @Autowired private SpiderTaskService taskService;
+    @Autowired private SampleTaskFactory sampleTaskFactory;
+
+    @Override
+    public void run(String... args) {
+        // 若 Gitee 样例任务不存在，则创建
+        if (!taskService.existsByTaskCode("SAMPLE-GITEE-EXPLORE")) {
+            CreateTaskResult result = sampleTaskFactory.createGiteeSample();
+            taskService.saveTask(result.getTask(), result.getFlow());
+            log.info("[Spider] Gitee 样例任务已初始化");
+        }
+    }
+}
+```
+
+配置项：
+```yaml
+spring:
+  spider:
+    init-sample: true   # 是否初始化样例任务，默认 false
+```

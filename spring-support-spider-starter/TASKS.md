@@ -175,3 +175,45 @@
 - [ ] F41 DATA_EXTRACTOR 面板增强：历史 URL 下拉选择（调用 /crawled-urls 接口）
 - [ ] F42 DATA_EXTRACTOR 面板增强：可视化选取模式（iframe 预览 + 点击生成选择器 + 确认弹框）
 - [ ] F43 前端 API 层统一处理 ReturnResult（request 函数检查 code !== '200' 时抛出错误）
+
+---
+
+## 新增功能任务（第三批）
+
+### 执行记录详细持久化
+
+- [ ] B74 新建 `spider_node_execution_log` 表 DDL（追加到 V1__spider_init.sql）
+- [ ] B75 `spider_execution_record` 表新增字段：flow_snapshot、error_detail、extra_stats
+- [ ] B76 SpiderNodeExecutionLog 实体类 + Mapper + Repository
+- [ ] B77 SpiderExecutionEngine 改造：每个节点执行前后写入 spider_node_execution_log
+- [ ] B78 新增接口：GET /v1/spider/tasks/{taskId}/records/{recordId}/nodes（节点执行日志列表）
+- [ ] B79 新增接口：GET /v1/spider/tasks/{taskId}/records/{recordId}/nodes/{nodeId}（单节点详情）
+- [ ] B80 前端：执行记录详情页，展示节点执行时间线（SpiderRecordDetailPanel.vue）
+
+### SPI 扩展机制
+
+- [ ] B81 定义 SpiderNodeExecutor SPI 接口（`@Spi("node-executor")`）
+- [ ] B82 实现 DownloaderNodeExecutor（处理 DOWNLOADER 节点）
+- [ ] B83 实现 UrlExtractorNodeExecutor（处理 URL_EXTRACTOR 节点）
+- [ ] B84 实现 DataExtractorNodeExecutor（处理 DATA_EXTRACTOR 节点，含 AI 选择器）
+- [ ] B85 实现 DetailFetchNodeExecutor（处理 DETAIL_FETCH 节点）
+- [ ] B86 实现 ProcessorNodeExecutor（处理 PROCESSOR 节点，含规则引擎）
+- [ ] B87 实现 FilterNodeExecutor（处理 FILTER 节点，含去重）
+- [ ] B88 实现 HumanInputNodeExecutor（处理 HUMAN_INPUT 节点，含挂起/恢复）
+- [ ] B89 实现 PipelineNodeExecutor（处理 PIPELINE 节点，含数据库写入）
+- [ ] B90 实现 ConditionNodeExecutor（处理 CONDITION 节点，含双端口路由）
+- [ ] B91 实现 ErrorHandlerNodeExecutor（处理 ERROR_HANDLER 节点）
+- [ ] B92 实现 DelayNodeExecutor（处理 DELAY 节点）
+- [ ] B93 SpiderExecutionEngine 改造：通过 SPI 动态获取节点执行器（替换 switch-case）
+- [ ] B94 DatabaseUrlStore 实现（`@Spi("database")` UrlStore，基于 spider_url_store 表）
+- [ ] B95 DatabasePipeline 实现（`@Spi("database")` Pipeline，动态建表写入）
+- [ ] B96 新增 spider_url_store 表 DDL
+- [ ] B97 新增接口：GET /v1/spider/capabilities（查询所有已注册 SPI 实现）
+- [ ] B98 前端：节点配置面板中，下载器/管道/URL存储器等下拉选项从 /capabilities 动态获取
+
+### 完整示例与初始化
+
+- [ ] B99 SampleTaskFactory.createGiteeSample() 返回完整编排 JSON（含所有节点配置）
+- [ ] B100 SpiderDataInitializer（CommandLineRunner，spring.spider.init-sample=true 时初始化样例）
+- [ ] B101 样例任务单元测试：验证 Gitee 样例编排通过 SpiderFlowValidator 校验
+- [ ] B102 样例任务集成测试：验证 Gitee 样例可被 SpiderToolkit 正确执行（Mock HTTP）
