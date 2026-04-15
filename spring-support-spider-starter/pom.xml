@@ -14,6 +14,7 @@
     <description>Spring Support 爬虫模块，提供 Spider 大脑默认配置与自动注册能力</description>
 
     <dependencies>
+        <!-- 基础能力 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>
@@ -23,6 +24,8 @@
             <artifactId>utils-support-common-starter</artifactId>
             <version>${utils.version}</version>
         </dependency>
+
+        <!-- 底层爬虫引擎 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-spider-starter</artifactId>
@@ -34,6 +37,29 @@
                 </exclusion>
             </exclusions>
         </dependency>
+
+        <!-- Web -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- MyBatis-Plus 持久化 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-mybatis-starter</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- JSON -->
+        <dependency>
+            <groupId>com.alibaba.fastjson2</groupId>
+            <artifactId>fastjson2</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Spring Boot 自动配置 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
@@ -43,9 +69,16 @@
             <artifactId>spring-boot-configuration-processor</artifactId>
             <optional>true</optional>
         </dependency>
+
+        <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

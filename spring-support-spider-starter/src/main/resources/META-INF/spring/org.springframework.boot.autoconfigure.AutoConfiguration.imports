@@ -1,1 +1,2 @@
 com.chua.starter.spider.support.SpiderConfiguration
+com.chua.starter.spider.support.config.SpiderPlatformAutoConfiguration
