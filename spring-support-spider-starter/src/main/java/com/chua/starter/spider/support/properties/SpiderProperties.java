@@ -24,9 +24,40 @@ public class SpiderProperties {
     private boolean enable = true;
 
     /**
+     * 平台层配置。
+     */
+    private PlatformProperties platform = new PlatformProperties();
+
+    /**
+     * 凭证加密配置。
+     */
+    private CredentialProperties credential = new CredentialProperties();
+
+    /**
+     * 是否初始化样例任务（仅开发/测试环境使用）。
+     */
+    private boolean initSample = false;
+
+    /**
      * 默认大脑配置。
      */
     private BrainProperties brain = new BrainProperties();
+
+    @Data
+    public static class PlatformProperties {
+        /**
+         * 是否启用平台层（REST 接口、持久化、执行引擎等）。
+         */
+        private boolean enabled = true;
+    }
+
+    @Data
+    public static class CredentialProperties {
+        /**
+         * AES 加密密钥（32 位字符串），用于凭证池密码加密存储。
+         */
+        private String aesKey = "spider-default-aes-key-32chars!!";
+    }
 
     @Data
     public static class BrainProperties {

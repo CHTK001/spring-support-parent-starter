@@ -724,7 +724,7 @@ String encryptedData = encryptionService.encrypt(JSON.toJSONString(credentialDat
 CredentialData data = JSON.parseObject(encryptionService.decrypt(credential.getEncryptedData()), CredentialData.class);
 ```
 
-AES 密钥从 `application.yml` 的 `spring.spider.credential.aes-key` 读取，不硬编码。
+AES 密钥从 `application.yml` 的 `plugin.spider.credential.aes-key` 读取，不硬编码。
 
 ### 凭证引用方式
 
@@ -2805,7 +2805,7 @@ CREATE TABLE gitee_projects (
 ```java
 // SpiderDataInitializer（Spring Boot CommandLineRunner）
 @Component
-@ConditionalOnProperty(prefix = "spring.spider", name = "init-sample", havingValue = "true")
+@ConditionalOnProperty(prefix = "plugin.spider", name = "init-sample", havingValue = "true")
 public class SpiderDataInitializer implements CommandLineRunner {
     @Autowired private SpiderTaskService taskService;
     @Autowired private SampleTaskFactory sampleTaskFactory;
@@ -2824,7 +2824,367 @@ public class SpiderDataInitializer implements CommandLineRunner {
 
 配置项：
 ```yaml
-spring:
+plugin:
   spider:
     init-sample: true   # 是否初始化样例任务，默认 false
 ```
+
+---
+
+## 二十八、完整示例：短信验证码登录爬虫（某平台私有数据采集）
+
+### 场景描述
+
+某平台需要手机号 + 短信验证码登录后才能访问数据，无法使用账号密码自动登录。
+爬虫需要：
+1. 打开登录页，填入手机号，点击"发送验证码"
+2. 等待用户在平台界面输入收到的短信验证码
+3. 提交验证码完成登录，获取 Cookie/Session
+4. 使用登录态访问目标数据页面，采集数据
+
+**目标**：采集登录后才能看到的用户订单列表
+
+**执行类型**：ONCE（手动触发，因为每次都需要人工输入验证码）
+
+### 编排结构
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  🔐 登录子流程（黄色分组框）                                                  │
+│                                                                              │
+│  DOWNLOADER(打开登录页)                                                      │
+│       ↓                                                                      │
+│  HUMAN_INPUT(等待用户输入验证码)                                              │
+│       ↓                                                                      │
+│  DOWNLOADER(提交验证码，完成登录)                                             │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+         ↓（登录成功，Session 已保存）
+  DOWNLOADER(访问订单列表页，复用 Session)
+         ↓
+  URL_EXTRACTOR(提取分页 URL)
+         ↓
+  DOWNLOADER(下载每页订单数据)
+         ↓
+  DATA_EXTRACTOR(提取订单字段)
+         ↓
+  PROCESSOR(数据清洗)
+         ↓
+  PIPELINE(写入数据库)
+         ↓
+  END
+```
+
+### 完整任务配置 JSON
+
+```json
+{
+  "taskCode": "SAMPLE-SMS-LOGIN",
+  "taskName": "短信验证码登录采集示例",
+  "entryUrl": "https://example-platform.com/login",
+  "description": "演示短信验证码登录流程：打开登录页 → 填手机号 → 等待用户输入验证码 → 完成登录 → 采集数据",
+  "tags": "示例,短信登录,人工介入",
+  "authType": "COOKIE",
+  "executionType": "ONCE",
+  "executionPolicy": {
+    "executionType": "ONCE",
+    "threadCount": 1,
+    "manualTrigger": true,
+    "retryPolicy": {"maxRetries": 1, "retryIntervalMs": 3000}
+  },
+  "credentialRef": {
+    "credentialId": "cred-phone-001",
+    "credentialType": "BASIC"
+  },
+  "aiProfile": {
+    "enabled": true,
+    "provider": "deepseek",
+    "model": "deepseek-chat"
+  }
+}
+```
+
+凭证池中 `cred-phone-001` 存储的内容（AES 加密）：
+```json
+{"username": "13800138000", "extra": {"loginType": "sms"}}
+```
+注意：凭证中只存手机号，不存验证码（验证码是动态的，每次不同）。
+
+### 完整编排 JSON
+
+```json
+{
+  "nodes": [
+    {
+      "nodeId": "start-1",
+      "nodeType": "START",
+      "label": "开始",
+      "positionX": 100, "positionY": 300,
+      "config": {}
+    },
+    {
+      "nodeId": "dl-login-page",
+      "nodeType": "DOWNLOADER",
+      "label": "打开登录页",
+      "positionX": 300, "positionY": 300,
+      "config": {
+        "downloaderType": "playwright",
+        "aiMode": "assist",
+        "shareSession": true,
+        "timeout": 30000,
+        "waitForSelector": "#phone-input",
+        "evaluateScript": "document.querySelector('#phone-input').value = '{{credential.username}}'; document.querySelector('#send-sms-btn').click();"
+      },
+      "aiProfile": {
+        "enabled": true,
+        "provider": "deepseek",
+        "model": "deepseek-chat"
+      }
+    },
+    {
+      "nodeId": "hi-sms-code",
+      "nodeType": "HUMAN_INPUT",
+      "label": "等待短信验证码",
+      "positionX": 500, "positionY": 300,
+      "config": {
+        "promptText": "请输入手机 13800138000 收到的短信验证码",
+        "waitType": "text_input",
+        "timeoutSeconds": 300,
+        "onTimeout": "fail",
+        "inputFieldName": "smsCode"
+      }
+    },
+    {
+      "nodeId": "dl-submit-login",
+      "nodeType": "DOWNLOADER",
+      "label": "提交验证码完成登录",
+      "positionX": 700, "positionY": 300,
+      "config": {
+        "downloaderType": "playwright",
+        "aiMode": "assist",
+        "shareSession": true,
+        "timeout": 30000,
+        "evaluateScript": "document.querySelector('#sms-code-input').value = '{{context.smsCode}}'; document.querySelector('#login-btn').click();",
+        "waitForSelector": ".user-dashboard",
+        "loginSuccessCheck": ".user-dashboard"
+      }
+    },
+    {
+      "nodeId": "dl-order-list",
+      "nodeType": "DOWNLOADER",
+      "label": "访问订单列表",
+      "positionX": 300, "positionY": 500,
+      "config": {
+        "downloaderType": "playwright",
+        "aiMode": "off",
+        "shareSession": true,
+        "timeout": 30000,
+        "waitForSelector": ".order-list"
+      }
+    },
+    {
+      "nodeId": "url-order-pages",
+      "nodeType": "URL_EXTRACTOR",
+      "label": "提取订单分页",
+      "positionX": 500, "positionY": 500,
+      "config": {
+        "urlPattern": "https://example-platform.com/orders?page={page}",
+        "maxPages": 10,
+        "urlStoreType": "memory"
+      }
+    },
+    {
+      "nodeId": "dl-order-page",
+      "nodeType": "DOWNLOADER",
+      "label": "下载订单页",
+      "positionX": 700, "positionY": 500,
+      "config": {
+        "downloaderType": "playwright",
+        "aiMode": "off",
+        "shareSession": true,
+        "timeout": 30000,
+        "waitForSelector": ".order-item",
+        "sleepTime": 1000
+      }
+    },
+    {
+      "nodeId": "ext-orders",
+      "nodeType": "DATA_EXTRACTOR",
+      "label": "提取订单数据",
+      "positionX": 900, "positionY": 500,
+      "config": {
+        "fields": [
+          {
+            "name": "orderId",
+            "selectorType": "CSS",
+            "selector": ".order-item .order-id",
+            "attribute": "text",
+            "required": true
+          },
+          {
+            "name": "orderAmount",
+            "selectorType": "CSS",
+            "selector": ".order-item .amount",
+            "attribute": "text",
+            "required": true
+          },
+          {
+            "name": "orderStatus",
+            "selectorType": "CSS",
+            "selector": ".order-item .status",
+            "attribute": "text",
+            "required": false
+          },
+          {
+            "name": "orderTime",
+            "selectorType": "CSS",
+            "selector": ".order-item .create-time",
+            "attribute": "text",
+            "required": false
+          },
+          {
+            "name": "productName",
+            "selectorType": "AI",
+            "aiDescription": "提取订单中的商品名称",
+            "required": false
+          }
+        ]
+      },
+      "aiProfile": {
+        "enabled": true,
+        "provider": "deepseek",
+        "model": "deepseek-chat"
+      }
+    },
+    {
+      "nodeId": "proc-orders",
+      "nodeType": "PROCESSOR",
+      "label": "清洗订单数据",
+      "positionX": 1100, "positionY": 500,
+      "config": {
+        "rules": [
+          {"type": "regex", "field": "orderAmount", "pattern": "[\\d.]+", "group": 0, "to": "orderAmount"},
+          {"type": "format", "field": "orderTime", "format": "yyyy-MM-dd HH:mm:ss"}
+        ]
+      }
+    },
+    {
+      "nodeId": "pipe-orders",
+      "nodeType": "PIPELINE",
+      "label": "写入订单数据库",
+      "positionX": 1300, "positionY": 500,
+      "config": {
+        "pipelineType": "database",
+        "tableName": "crawled_orders",
+        "tableComment": "采集的订单数据",
+        "columns": [
+          {"name": "order_id", "type": "VARCHAR", "length": 128, "sourceField": "orderId", "comment": "订单号"},
+          {"name": "order_amount", "type": "DECIMAL", "length": 10, "scale": 2, "sourceField": "orderAmount", "comment": "订单金额"},
+          {"name": "order_status", "type": "VARCHAR", "length": 64, "sourceField": "orderStatus", "comment": "订单状态"},
+          {"name": "order_time", "type": "DATETIME", "sourceField": "orderTime", "comment": "下单时间"},
+          {"name": "product_name", "type": "VARCHAR", "length": 512, "sourceField": "productName", "comment": "商品名称"},
+          {"name": "crawled_at", "type": "DATETIME", "defaultValue": "CURRENT_TIMESTAMP", "comment": "采集时间"}
+        ]
+      }
+    },
+    {
+      "nodeId": "end-1",
+      "nodeType": "END",
+      "label": "结束",
+      "positionX": 1500, "positionY": 500,
+      "config": {}
+    }
+  ],
+  "edges": [
+    {"edgeId": "e1", "sourceNodeId": "start-1", "targetNodeId": "dl-login-page"},
+    {"edgeId": "e2", "sourceNodeId": "dl-login-page", "targetNodeId": "hi-sms-code"},
+    {"edgeId": "e3", "sourceNodeId": "hi-sms-code", "targetNodeId": "dl-submit-login"},
+    {"edgeId": "e4", "sourceNodeId": "dl-submit-login", "targetNodeId": "dl-order-list"},
+    {"edgeId": "e5", "sourceNodeId": "dl-order-list", "targetNodeId": "url-order-pages"},
+    {"edgeId": "e6", "sourceNodeId": "url-order-pages", "targetNodeId": "dl-order-page"},
+    {"edgeId": "e7", "sourceNodeId": "dl-order-page", "targetNodeId": "ext-orders"},
+    {"edgeId": "e8", "sourceNodeId": "ext-orders", "targetNodeId": "proc-orders"},
+    {"edgeId": "e9", "sourceNodeId": "proc-orders", "targetNodeId": "pipe-orders"},
+    {"edgeId": "e10", "sourceNodeId": "pipe-orders", "targetNodeId": "end-1"}
+  ],
+  "groups": [
+    {
+      "groupId": "group-login",
+      "groupName": "登录子流程",
+      "groupType": "login",
+      "nodeIds": ["dl-login-page", "hi-sms-code", "dl-submit-login"],
+      "positionX": 250, "positionY": 250,
+      "width": 550, "height": 150
+    }
+  ]
+}
+```
+
+### 运行时交互流程
+
+```
+1. 用户点击"运行"
+2. 任务状态 → RUNNING
+3. DOWNLOADER(打开登录页) 执行：
+   - Playwright 打开 https://example-platform.com/login
+   - AI 辅助：自动填入手机号（从凭证池取出），点击"发送验证码"
+   - 节点状态 → SUCCESS（绿色）
+
+4. HUMAN_INPUT(等待验证码) 执行：
+   - 任务状态 → WAITING_INPUT
+   - 节点状态 → 黄色闪烁 ⚠
+   - SSE 推送事件到前端
+   - 前端 ScReteEditor 中该节点变黄色
+   - 用户点击该节点，右侧面板显示：
+     ┌─────────────────────────────────────────┐
+     │ ⚠ 等待人工介入                           │
+     │ 请输入手机 13800138000 收到的短信验证码   │
+     │ [输入框]                                 │
+     │ 剩余时间：4:45                           │
+     │ [提交并继续]  [超时跳过]                  │
+     └─────────────────────────────────────────┘
+   - 用户填入验证码（如 "123456"），点击"提交并继续"
+   - 前端调用 POST /v1/spider/tasks/{taskId}/nodes/hi-sms-code/input
+     请求体：{"value": "123456"}
+   - 节点状态 → SUCCESS（绿色）
+
+5. DOWNLOADER(提交验证码) 执行：
+   - Playwright 将 "123456" 填入验证码输入框，点击登录
+   - 等待 .user-dashboard 元素出现（登录成功标志）
+   - 保存 Cookie/Session 到 Playwright 浏览器上下文
+   - 节点状态 → SUCCESS（绿色）
+
+6. 后续节点正常执行（复用登录 Session）
+   - DOWNLOADER(订单列表) → URL_EXTRACTOR → DOWNLOADER(分页) → DATA_EXTRACTOR → PROCESSOR → PIPELINE → END
+   - 所有节点依次变绿
+
+7. 任务状态 → FINISHED
+   - 执行记录写入 spider_execution_record
+   - 每个节点日志写入 spider_node_execution_log
+```
+
+### 配置说明
+
+```yaml
+plugin:
+  spider:
+    enable: true
+    platform:
+      enabled: true
+    credential:
+      aes-key: your-32-char-aes-key-here  # 凭证加密密钥
+    brain:
+      enable: true
+      provider: deepseek
+      model: deepseek-chat
+      api-key: ${DEEPSEEK_API_KEY}
+    init-sample: false  # 生产环境不自动初始化样例
+```
+
+### 关键设计点
+
+1. **验证码不存凭证池**：验证码是动态的，每次不同，只能通过 HUMAN_INPUT 节点实时输入
+2. **Session 共享**：登录子流程中的 Playwright 浏览器上下文在整个任务生命周期内共享，`shareSession=true` 的节点复用同一个浏览器实例
+3. **AI 辅助填表**：`aiMode=assist` 时，AI 分析登录页面结构，自动识别手机号输入框和发送验证码按钮，通过 `evaluateScript` 执行填写操作
+4. **超时保护**：HUMAN_INPUT 节点设置 300 秒超时，超时后任务失败，避免无限等待
+5. **分组框**：登录相关的三个节点用黄色分组框包裹，视觉上清晰区分登录子流程和数据采集主流程

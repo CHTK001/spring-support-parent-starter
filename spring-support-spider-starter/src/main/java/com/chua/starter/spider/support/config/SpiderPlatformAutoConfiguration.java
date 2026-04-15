@@ -30,12 +30,12 @@ import org.springframework.context.annotation.ComponentScan;
  * 爬虫平台 AutoConfiguration。
  *
  * <p>注册所有平台层 Service、Repository、Controller Bean。
- * 通过 {@code spring.spider.platform.enabled=false} 可关闭平台层（保留底层 Brain 配置）。</p>
+ * 通过 {@code plugin.spider.platform.enabled=false} 可关闭平台层（保留底层 Brain 配置）。</p>
  *
  * @author CH
  */
 @AutoConfiguration
-@ConditionalOnProperty(prefix = "spring.spider.platform", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "plugin.spider.platform", name = "enabled", havingValue = "true", matchIfMissing = true)
 @MapperScan("com.chua.starter.spider.support.mapper")
 @ComponentScan(basePackages = {
         "com.chua.starter.spider.support.repository",
