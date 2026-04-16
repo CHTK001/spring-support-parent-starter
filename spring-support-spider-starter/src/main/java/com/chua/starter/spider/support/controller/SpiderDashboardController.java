@@ -1,6 +1,7 @@
 package com.chua.starter.spider.support.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.spider.support.domain.SpiderExecutionRecord;
 import com.chua.starter.spider.support.domain.SpiderJobBinding;
 import com.chua.starter.spider.support.domain.SpiderRuntimeSnapshot;
@@ -11,7 +12,6 @@ import com.chua.starter.spider.support.repository.SpiderJobBindingRepository;
 import com.chua.starter.spider.support.repository.SpiderRuntimeSnapshotRepository;
 import com.chua.starter.spider.support.repository.SpiderTaskRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -40,7 +40,7 @@ public class SpiderDashboardController {
      * 返回 KPI 汇总：定时器数量、最新执行任务、任务总数。
      */
     @GetMapping("/summary")
-    public ResponseEntity<Map<String, Object>> summary() {
+    public ReturnResult<Map<String, Object>> summary() {
         // 定时器数量 = 有效 job 绑定数
         long timerCount = jobBindingRepository.count(
                 new LambdaQueryWrapper<SpiderJobBinding>().eq(SpiderJobBinding::getActive, true));
@@ -63,10 +63,12 @@ public class SpiderDashboardController {
             );
         }
 
-        return ResponseEntity.ok(Map.of(
+        return ReturnResult.ok(Map.of(
                 "timerCount", timerCount,
                 "taskTotal", taskTotal,
-                "latestTask", latestTask != null ? latestTask : Map.of()
+                "latestTask", latestTask != null ? latestTask : Map.of(),
+                "totalCrawled", executionRecordRepository.sumSuccessCount(),
+                "totalUrlsCollected", executionRecordRepository.sumTotalRequests()
         ));
     }
 
@@ -75,7 +77,7 @@ public class SpiderDashboardController {
      * 返回运行中或需要关注的任务卡片列表。
      */
     @GetMapping("/running-cards")
-    public ResponseEntity<List<Map<String, Object>>> runningCards() {
+    public ReturnResult<List<Map<String, Object>>> runningCards() {
         // 查询 RUNNING / FAILED / PAUSED 状态的任务
         List<SpiderTaskDefinition> tasks = taskRepository.list(
                 new LambdaQueryWrapper<SpiderTaskDefinition>()
@@ -102,7 +104,7 @@ public class SpiderDashboardController {
                             ? snapshot.getFailureCount() : 0L
             ));
         }
-        return ResponseEntity.ok(cards);
+        return ReturnResult.ok(cards);
     }
 
     private boolean isAiEnabled(SpiderTaskDefinition task) {

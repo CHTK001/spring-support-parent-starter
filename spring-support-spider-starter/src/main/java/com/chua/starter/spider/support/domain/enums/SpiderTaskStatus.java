@@ -15,5 +15,7 @@ public enum SpiderTaskStatus {
     /** 执行失败 */
     FAILED,
     /** 执行完成 */
-    FINISHED
+    FINISHED,
+    /** 等待人工介入输入 */
+    WAITING_INPUT
 }

@@ -7,6 +7,7 @@ import com.chua.starter.spider.support.mapper.SpiderExecutionRecordMapper;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 执行记录 Repository。
@@ -36,5 +37,27 @@ public class SpiderExecutionRecordRepository extends ServiceImpl<SpiderExecution
             wrapper.eq(SpiderExecutionRecord::getTaskId, taskId);
         }
         return getOne(wrapper);
+    }
+
+    /**
+     * 汇总所有执行记录的 success_count。
+     */
+    public long sumSuccessCount() {
+        return list().stream()
+                .map(SpiderExecutionRecord::getSuccessCount)
+                .filter(Objects::nonNull)
+                .mapToLong(Long::longValue)
+                .sum();
+    }
+
+    /**
+     * 汇总所有执行记录的 total_requests（URL 收集总数）。
+     */
+    public long sumTotalRequests() {
+        return list().stream()
+                .map(SpiderExecutionRecord::getTotalRequests)
+                .filter(Objects::nonNull)
+                .mapToLong(Long::longValue)
+                .sum();
     }
 }

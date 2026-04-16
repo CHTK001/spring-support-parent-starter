@@ -35,6 +35,10 @@ public class SpiderFlowDefinition {
     @TableField(exist = false)
     private List<SpiderFlowEdge> edges;
 
+    /** 分组框列表（不映射数据库列，前端画布分组数据） */
+    @TableField(exist = false)
+    private List<SpiderFlowGroup> groups;
+
     /** 节点列表 JSON 字符串（数据库实际存储列） */
     @TableField("nodes_json")
     private String nodesJson;

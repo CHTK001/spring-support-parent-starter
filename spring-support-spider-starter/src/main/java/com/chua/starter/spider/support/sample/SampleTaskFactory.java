@@ -26,12 +26,12 @@ import java.util.UUID;
 public class SampleTaskFactory {
 
     /**
-     * 创建 Gitee 全部项目分页持续爬虫样例。
+     * 创建 Gitee 全部项目分页持续爬虫样例（完整编排，含所有节点配置）。
      *
      * <ul>
      *   <li>入口 URL：{@code https://gitee.com/explore/all?order=starred&page=1}</li>
      *   <li>执行类型：SCHEDULED（每小时一次）</li>
-     *   <li>编排：START → DOWNLOADER → PARSER → FILTER → PIPELINE → END</li>
+     *   <li>编排：START → DOWNLOADER → URL_EXTRACTOR → DATA_EXTRACTOR → FILTER → PIPELINE → END</li>
      * </ul>
      */
     public CreateTaskResult createGiteeSample() {
@@ -59,16 +59,74 @@ public class SampleTaskFactory {
                 .version(0)
                 .build();
 
-        SpiderFlowDefinition flow = buildFullChainFlow(
-                "gitee-start", "gitee-dl", "gitee-parser", "gitee-filter", "gitee-pipeline", "gitee-end",
-                Map.of("urlPattern", "https://gitee.com/explore/all?order=starred&page={page}",
-                        "maxPages", 100,
-                        "downloader", "jsoup"),
-                Map.of("selector", ".explore-repo__list .item", "type", "CSS",
-                        "fields", List.of("name", "description", "stars", "url")),
-                Map.of("dedup", true, "dedupField", "url"),
-                Map.of("pipeline", "json", "outputPath", "./data/gitee-projects")
+        // 完整编排：START → DOWNLOADER → URL_EXTRACTOR → DATA_EXTRACTOR → FILTER → PIPELINE → END
+        List<SpiderFlowNode> nodes = List.of(
+                SpiderFlowNode.builder()
+                        .nodeId("gitee-start").nodeType(SpiderNodeType.START)
+                        .label("开始").positionX(50.0).positionY(200.0).build(),
+                SpiderFlowNode.builder()
+                        .nodeId("gitee-dl").nodeType(SpiderNodeType.DOWNLOADER)
+                        .label("下载器").positionX(200.0).positionY(200.0)
+                        .config(Map.of(
+                                "downloader", "jsoup",
+                                "timeout", 30000,
+                                "retryTimes", 3,
+                                "headers", Map.of(
+                                        "User-Agent", "Mozilla/5.0 (compatible; SpiderBot/1.0)",
+                                        "Accept-Language", "zh-CN,zh;q=0.9"
+                                )
+                        )).build(),
+                SpiderFlowNode.builder()
+                        .nodeId("gitee-url-extractor").nodeType(SpiderNodeType.URL_EXTRACTOR)
+                        .label("链接提取器").positionX(370.0).positionY(200.0)
+                        .config(Map.of(
+                                "urlPattern", "https://gitee\\.com/explore/all\\?order=starred&page=\\d+",
+                                "baseUrl", "https://gitee.com"
+                        )).build(),
+                SpiderFlowNode.builder()
+                        .nodeId("gitee-data").nodeType(SpiderNodeType.DATA_EXTRACTOR)
+                        .label("数据采集器").positionX(540.0).positionY(200.0)
+                        .config(Map.of(
+                                "selectorType", "css",
+                                "selector", ".explore-repo__list .item",
+                                "fields", List.of(
+                                        Map.of("name", "projectName", "selector", ".title a", "attr", "text"),
+                                        Map.of("name", "description", "selector", ".description", "attr", "text"),
+                                        Map.of("name", "stars", "selector", ".star-count", "attr", "text"),
+                                        Map.of("name", "url", "selector", ".title a", "attr", "href")
+                                )
+                        )).build(),
+                SpiderFlowNode.builder()
+                        .nodeId("gitee-filter").nodeType(SpiderNodeType.FILTER)
+                        .label("过滤器").positionX(710.0).positionY(200.0)
+                        .config(Map.of(
+                                "dedup", true,
+                                "dedupField", "url",
+                                "emptyCheck", "projectName"
+                        )).build(),
+                SpiderFlowNode.builder()
+                        .nodeId("gitee-pipeline").nodeType(SpiderNodeType.PIPELINE)
+                        .label("管道").positionX(880.0).positionY(200.0)
+                        .config(Map.of(
+                                "pipelineType", "database",
+                                "targetTable", "gitee_projects"
+                        )).build(),
+                SpiderFlowNode.builder()
+                        .nodeId("gitee-end").nodeType(SpiderNodeType.END)
+                        .label("结束").positionX(1050.0).positionY(200.0).build()
         );
+
+        List<SpiderFlowEdge> edges = List.of(
+                SpiderFlowEdge.builder().edgeId("ge1").sourceNodeId("gitee-start").targetNodeId("gitee-dl").build(),
+                SpiderFlowEdge.builder().edgeId("ge2").sourceNodeId("gitee-dl").targetNodeId("gitee-url-extractor").build(),
+                SpiderFlowEdge.builder().edgeId("ge3").sourceNodeId("gitee-url-extractor").targetNodeId("gitee-data").build(),
+                SpiderFlowEdge.builder().edgeId("ge4").sourceNodeId("gitee-data").targetNodeId("gitee-filter").build(),
+                SpiderFlowEdge.builder().edgeId("ge5").sourceNodeId("gitee-filter").targetNodeId("gitee-pipeline").build(),
+                SpiderFlowEdge.builder().edgeId("ge6").sourceNodeId("gitee-pipeline").targetNodeId("gitee-end").build()
+        );
+
+        SpiderFlowDefinition flow = SpiderFlowDefinition.builder()
+                .nodes(nodes).edges(edges).version(1).build();
 
         return new CreateTaskResult(null, flow);
     }

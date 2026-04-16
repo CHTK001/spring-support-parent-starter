@@ -45,6 +45,10 @@ public class SpiderExecutionRecord {
     @TableField("failure_count")
     private Long failureCount;
 
+    /** URL 收集总数 */
+    @TableField("total_requests")
+    private Long totalRequests;
+
     /** 触发来源（MANUAL / SCHEDULED） */
     @TableField("trigger_source")
     private String triggerSource;

@@ -16,12 +16,90 @@ import java.util.*;
  *   <li>主链路必须从 START 可达 END（BFS 可达性）</li>
  *   <li>悬空节点检测：非 START/END 节点若无任何连线则报错</li>
  *   <li>非法回环检测：不经过 ERROR_HANDLER 的环路报错</li>
+ *   <li>连线类型兼容性校验：源节点输出类型必须与目标节点接受的输入类型兼容</li>
+ *   <li>CONDITION 节点必须恰好有 2 条出边（true/false 双端口）</li>
  * </ol>
  * </p>
  *
  * @author CH
  */
 public class SpiderFlowValidator {
+
+    /**
+     * 节点数据类型标识，用于连线兼容性校验。
+     */
+    private enum DataType {
+        URL_CONTEXT,
+        RAW_DOCUMENT,
+        RAW_RECORD,
+        PROCESSED_RECORD,
+        PIPELINE_RESULT,
+        ERROR_CONTEXT,
+        BRANCH,
+        ANY
+    }
+
+    /**
+     * 返回节点的输出数据类型集合。
+     * HUMAN_INPUT 和 DELAY 为透传节点，其输出类型取决于上游，此处返回 ANY 表示透传。
+     */
+    private Set<DataType> getOutputTypes(SpiderNodeType type) {
+        switch (type) {
+            case START:          return EnumSet.of(DataType.URL_CONTEXT);
+            case DOWNLOADER:     return EnumSet.of(DataType.RAW_DOCUMENT);
+            case URL_EXTRACTOR:  return EnumSet.of(DataType.URL_CONTEXT);
+            case DATA_EXTRACTOR: return EnumSet.of(DataType.RAW_RECORD);
+            case DETAIL_FETCH:   return EnumSet.of(DataType.RAW_RECORD);
+            case PROCESSOR:      return EnumSet.of(DataType.PROCESSED_RECORD);
+            case FILTER:         return EnumSet.of(DataType.RAW_RECORD, DataType.PROCESSED_RECORD);
+            case HUMAN_INPUT:    return EnumSet.of(DataType.ANY);
+            case PIPELINE:       return EnumSet.of(DataType.PIPELINE_RESULT);
+            case END:            return EnumSet.noneOf(DataType.class);
+            case CONDITION:      return EnumSet.of(DataType.BRANCH);
+            case ERROR_HANDLER:  return EnumSet.of(DataType.URL_CONTEXT, DataType.RAW_RECORD, DataType.PIPELINE_RESULT);
+            case DELAY:          return EnumSet.of(DataType.ANY);
+            default:             return EnumSet.of(DataType.ANY);
+        }
+    }
+
+    /**
+     * 返回节点接受的输入数据类型集合。
+     * HUMAN_INPUT 和 DELAY 为透传节点，接受任意类型。
+     */
+    private Set<DataType> getAcceptedInputTypes(SpiderNodeType type) {
+        switch (type) {
+            case START:          return EnumSet.noneOf(DataType.class);
+            case DOWNLOADER:     return EnumSet.of(DataType.URL_CONTEXT);
+            case URL_EXTRACTOR:  return EnumSet.of(DataType.RAW_DOCUMENT);
+            case DATA_EXTRACTOR: return EnumSet.of(DataType.RAW_DOCUMENT);
+            case DETAIL_FETCH:   return EnumSet.of(DataType.RAW_RECORD);
+            case PROCESSOR:      return EnumSet.of(DataType.RAW_RECORD, DataType.PROCESSED_RECORD);
+            case FILTER:         return EnumSet.of(DataType.RAW_RECORD, DataType.PROCESSED_RECORD);
+            case HUMAN_INPUT:    return EnumSet.of(DataType.ANY);
+            case PIPELINE:       return EnumSet.of(DataType.PROCESSED_RECORD, DataType.RAW_RECORD);
+            case END:            return EnumSet.of(DataType.PIPELINE_RESULT);
+            case CONDITION:      return EnumSet.of(DataType.RAW_RECORD, DataType.PROCESSED_RECORD, DataType.RAW_DOCUMENT);
+            case ERROR_HANDLER:  return EnumSet.of(DataType.ERROR_CONTEXT);
+            case DELAY:          return EnumSet.of(DataType.ANY);
+            default:             return EnumSet.of(DataType.ANY);
+        }
+    }
+
+    /**
+     * 判断源节点的输出类型与目标节点的接受输入类型是否兼容。
+     * 若任一方包含 ANY，则视为透传，直接兼容。
+     */
+    private boolean isTypeCompatible(Set<DataType> outputTypes, Set<DataType> acceptedInputTypes) {
+        if (outputTypes.contains(DataType.ANY) || acceptedInputTypes.contains(DataType.ANY)) {
+            return true;
+        }
+        for (DataType out : outputTypes) {
+            if (acceptedInputTypes.contains(out)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /**
      * 校验编排定义。
@@ -47,9 +125,10 @@ public class SpiderFlowValidator {
             return result;
         }
 
-        // 构建邻接表（有向图）
+        // 构建邻接表（有向图）和节点 ID → 节点对象映射
         Map<String, List<String>> adjOut = buildAdjacency(nodes, edges);
         Map<String, List<String>> adjIn = buildInAdjacency(nodes, edges);
+        Map<String, SpiderFlowNode> nodeMap = buildNodeMap(nodes);
 
         // 2. 悬空节点检测（非 START/END 节点无任何连线）
         for (SpiderFlowNode node : nodes) {
@@ -78,7 +157,74 @@ public class SpiderFlowValidator {
         }
         detectIllegalCycles(nodes, adjOut, errorHandlerIds, result);
 
+        // 5. 连线类型兼容性校验
+        validateConnectionTypes(edges, nodeMap, result);
+
+        // 6. CONDITION 节点出边数量校验（必须恰好 2 条：true/false 双端口）
+        validateConditionOutEdges(nodes, adjOut, result);
+
         return result;
+    }
+
+    /**
+     * 校验每条边的源节点输出类型与目标节点接受输入类型是否兼容。
+     */
+    private void validateConnectionTypes(List<SpiderFlowEdge> edges,
+                                         Map<String, SpiderFlowNode> nodeMap,
+                                         SpiderFlowValidationResult result) {
+        for (SpiderFlowEdge edge : edges) {
+            SpiderFlowNode source = nodeMap.get(edge.getSourceNodeId());
+            SpiderFlowNode target = nodeMap.get(edge.getTargetNodeId());
+            if (source == null || target == null) {
+                continue;
+            }
+            Set<DataType> outputTypes = getOutputTypes(source.getNodeType());
+            Set<DataType> acceptedInputTypes = getAcceptedInputTypes(target.getNodeType());
+
+            // END 节点无输出，START 节点无输入，跳过这两种边界情况的反向校验
+            if (outputTypes.isEmpty()) {
+                result.addError(edge.getEdgeId() != null ? edge.getEdgeId() : source.getNodeId(),
+                        "连线非法：" + source.getNodeType() + " 节点没有输出，不能作为连线源");
+                continue;
+            }
+            if (acceptedInputTypes.isEmpty()) {
+                result.addError(edge.getEdgeId() != null ? edge.getEdgeId() : target.getNodeId(),
+                        "连线非法：" + target.getNodeType() + " 节点不接受任何输入，不能作为连线目标");
+                continue;
+            }
+
+            if (!isTypeCompatible(outputTypes, acceptedInputTypes)) {
+                result.addError(edge.getEdgeId() != null ? edge.getEdgeId() : source.getNodeId(),
+                        "连线类型不兼容：" + source.getNodeType() + " 输出类型 " + outputTypes
+                                + " 与 " + target.getNodeType() + " 接受的输入类型 " + acceptedInputTypes + " 不匹配");
+            }
+        }
+    }
+
+    /**
+     * 校验 CONDITION 节点必须恰好有 2 条出边（true/false 双端口）。
+     */
+    private void validateConditionOutEdges(List<SpiderFlowNode> nodes,
+                                           Map<String, List<String>> adjOut,
+                                           SpiderFlowValidationResult result) {
+        for (SpiderFlowNode node : nodes) {
+            if (node.getNodeType() != SpiderNodeType.CONDITION) {
+                continue;
+            }
+            int outCount = adjOut.getOrDefault(node.getNodeId(), Collections.emptyList()).size();
+            if (outCount != 2) {
+                result.addError(node.getNodeId(),
+                        "CONDITION 节点必须恰好有 2 条出边（true/false 双端口），当前出边数量：" + outCount);
+            }
+        }
+    }
+
+    private Map<String, SpiderFlowNode> buildNodeMap(List<SpiderFlowNode> nodes) {
+        Map<String, SpiderFlowNode> map = new HashMap<>();
+        for (SpiderFlowNode node : nodes) {
+            map.put(node.getNodeId(), node);
+        }
+        return map;
     }
 
     private SpiderFlowNode findUniqueNode(List<SpiderFlowNode> nodes, SpiderNodeType type,

@@ -121,3 +121,54 @@ CREATE TABLE IF NOT EXISTS spider_credential (
     KEY idx_domain (domain),
     KEY idx_type (credential_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='凭证池（加密存储）';
+
+-- ============================================================
+-- spider_node_execution_log：节点执行日志表（B74）
+-- ============================================================
+CREATE TABLE IF NOT EXISTS spider_node_execution_log (
+    id              BIGINT       NOT NULL COMMENT '主键（雪花ID）',
+    record_id       BIGINT       NOT NULL COMMENT '关联执行记录 ID',
+    task_id         BIGINT       NOT NULL COMMENT '关联任务 ID',
+    node_id         VARCHAR(64)  NOT NULL COMMENT '节点 ID',
+    node_type       VARCHAR(32)  NULL     COMMENT '节点类型',
+    status          VARCHAR(16)  NOT NULL DEFAULT 'PENDING' COMMENT '执行状态（PENDING/RUNNING/SUCCESS/FAILED/SKIPPED/WAITING_INPUT）',
+    start_time      DATETIME     NULL     COMMENT '开始时间',
+    end_time        DATETIME     NULL     COMMENT '结束时间',
+    duration_ms     BIGINT       NULL     COMMENT '执行耗时（毫秒）',
+    input_summary   TEXT         NULL     COMMENT '输入摘要',
+    output_summary  TEXT         NULL     COMMENT '输出摘要',
+    success_count   BIGINT       NOT NULL DEFAULT 0 COMMENT '成功处理数',
+    failure_count   BIGINT       NOT NULL DEFAULT 0 COMMENT '失败处理数',
+    error_msg       TEXT         NULL     COMMENT '错误信息',
+    retry_count     INT          NOT NULL DEFAULT 0 COMMENT '重试次数',
+    ai_used         TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '是否使用了 AI',
+    ai_tokens       INT          NULL     COMMENT 'AI 消耗 token 数',
+    PRIMARY KEY (id),
+    KEY idx_record_id (record_id),
+    KEY idx_task_id (task_id),
+    KEY idx_node_id (node_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='节点执行日志';
+
+-- ============================================================
+-- spider_execution_record 新增字段（B75）
+-- ============================================================
+ALTER TABLE spider_execution_record
+    ADD COLUMN IF NOT EXISTS flow_snapshot  LONGTEXT NULL COMMENT '执行时的编排快照 JSON',
+    ADD COLUMN IF NOT EXISTS error_detail   TEXT     NULL COMMENT '错误详情',
+    ADD COLUMN IF NOT EXISTS extra_stats    TEXT     NULL COMMENT '扩展统计 JSON';
+
+-- ============================================================
+-- spider_url_store：URL 存储表（B96）
+-- ============================================================
+CREATE TABLE IF NOT EXISTS spider_url_store (
+    id          BIGINT        NOT NULL COMMENT '主键（雪花ID）',
+    task_id     BIGINT        NOT NULL COMMENT '关联任务 ID',
+    record_id   BIGINT        NULL     COMMENT '关联执行记录 ID',
+    url         VARCHAR(2048) NOT NULL COMMENT '爬取的 URL',
+    status      VARCHAR(16)   NOT NULL DEFAULT 'PENDING' COMMENT 'URL 状态（PENDING/CRAWLED/FAILED/SKIPPED）',
+    depth       INT           NOT NULL DEFAULT 0 COMMENT '爬取深度',
+    create_time DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    KEY idx_task_id (task_id),
+    KEY idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='URL 存储（去重 + 历史记录）';
