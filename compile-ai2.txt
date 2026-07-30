@@ -1,0 +1,857 @@
+﻿[INFO] Scanning for projects...
+[WARNING] 
+[WARNING] Some problems were encountered while building the effective model for com.chua:spring-support-datasource-starter:jar:4.0.0.42
+[WARNING] 'dependencies.dependency.(groupId:artifactId:type:classifier)' must be unique: org.aspectj:aspectjweaver:jar -> duplicate declaration of version (?) @ line 188, column 42
+[WARNING] 'dependencies.dependency.(groupId:artifactId:type:classifier)' must be unique: jakarta.servlet:jakarta.servlet-api:jar -> duplicate declaration of version (?) @ line 193, column 21
+[WARNING] 
+[WARNING] It is highly recommended to fix these problems because they threaten the stability of your build.
+[WARNING] 
+[WARNING] For this reason, future Maven versions might no longer support building such malformed projects.
+[WARNING] 
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Build Order:
+[INFO] 
+[INFO] Spring Support Parent Starter                                      [pom]
+[INFO] spring-support-swagger-starter                                     [jar]
+[INFO] spring-support-common-starter                                      [jar]
+[INFO] spring-support-ai-starter                                          [jar]
+[INFO] 
+[INFO] ---------------< com.chua:spring-support-parent-starter >---------------
+[INFO] Building Spring Support Parent Starter 4.0.0.42                    [1/4]
+[INFO]   from pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- enforcer:3.4.1:enforce (enforce-versions) @ spring-support-parent-starter ---
+[INFO] Skipping Rule Enforcement.
+[INFO] 
+[INFO] --- flatten:1.6.0:flatten (flatten) @ spring-support-parent-starter ---
+[INFO] Generating flattened POM of project com.chua:spring-support-parent-starter:pom:4.0.0.42...
+[INFO] 
+[INFO] >>> source:3.3.0:jar (default) > generate-sources @ spring-support-parent-starter >>>
+[INFO] 
+[INFO] --- enforcer:3.4.1:enforce (enforce-versions) @ spring-support-parent-starter ---
+[INFO] Skipping Rule Enforcement.
+[INFO] 
+[INFO] <<< source:3.3.0:jar (default) < generate-sources @ spring-support-parent-starter <<<
+[INFO] 
+[INFO] 
+[INFO] --- source:3.3.0:jar (default) @ spring-support-parent-starter ---
+[INFO] Skipping source per configuration.
+[INFO] 
+[INFO] --------------< com.chua:spring-support-swagger-starter >---------------
+[INFO] Building spring-support-swagger-starter 4.0.0.42                   [2/4]
+[INFO]   from spring-support-swagger-starter\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- enforcer:3.4.1:enforce (enforce-versions) @ spring-support-swagger-starter ---
+[INFO] Skipping Rule Enforcement.
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ spring-support-swagger-starter ---
+[INFO] Copying 0 resource from src\main\resources to target\classes
+[INFO] Copying 11 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- flatten:1.6.0:flatten (flatten) @ spring-support-swagger-starter ---
+[INFO] Generating flattened POM of project com.chua:spring-support-swagger-starter:jar:4.0.0.42...
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ spring-support-swagger-starter ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] >>> source:3.3.0:jar (default) > generate-sources @ spring-support-swagger-starter >>>
+[INFO] 
+[INFO] --- enforcer:3.4.1:enforce (enforce-versions) @ spring-support-swagger-starter ---
+[INFO] Skipping Rule Enforcement.
+[INFO] 
+[INFO] <<< source:3.3.0:jar (default) < generate-sources @ spring-support-swagger-starter <<<
+[INFO] 
+[INFO] 
+[INFO] --- source:3.3.0:jar (default) @ spring-support-swagger-starter ---
+[INFO] Skipping source per configuration.
+[INFO] 
+[INFO] ---------------< com.chua:spring-support-common-starter >---------------
+[INFO] Building spring-support-common-starter 4.0.0.42                    [3/4]
+[INFO]   from spring-support-common-starter\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- enforcer:3.4.1:enforce (enforce-versions) @ spring-support-common-starter ---
+[INFO] Skipping Rule Enforcement.
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ spring-support-common-starter ---
+[INFO] Copying 0 resource from src\main\resources to target\classes
+[INFO] Copying 6 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- flatten:1.6.0:flatten (flatten) @ spring-support-common-starter ---
+[INFO] Generating flattened POM of project com.chua:spring-support-common-starter:jar:4.0.0.42...
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ spring-support-common-starter ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] >>> source:3.3.0:jar (default) > generate-sources @ spring-support-common-starter >>>
+[INFO] 
+[INFO] --- enforcer:3.4.1:enforce (enforce-versions) @ spring-support-common-starter ---
+[INFO] Skipping Rule Enforcement.
+[INFO] 
+[INFO] <<< source:3.3.0:jar (default) < generate-sources @ spring-support-common-starter <<<
+[INFO] 
+[INFO] 
+[INFO] --- source:3.3.0:jar (default) @ spring-support-common-starter ---
+[INFO] Skipping source per configuration.
+[INFO] 
+[INFO] -----------------< com.chua:spring-support-ai-starter >-----------------
+[INFO] Building spring-support-ai-starter 4.0.0.42                        [4/4]
+[INFO]   from spring-support-ai-starter\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+Downloading from central: https://repo.maven.apache.org/maven2/com/github/ben-manes/caffeine/caffeine/3.1.8/caffeine-3.1.8.pom
+Progress (1): 980 B
+Progress (1): 2.1 kB
+                    
+Downloaded from central: https://repo.maven.apache.org/maven2/com/github/ben-manes/caffeine/caffeine/3.1.8/caffeine-3.1.8.pom (2.1 kB at 2.2 kB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/com/github/ben-manes/caffeine/caffeine/3.1.8/caffeine-3.1.8.jar
+Progress (1): 0.9/889 kB
+Progress (1): 2.3/889 kB
+Progress (1): 3.6/889 kB
+Progress (1): 5.0/889 kB
+Progress (1): 6.4/889 kB
+Progress (1): 7.7/889 kB
+Progress (1): 9.1/889 kB
+Progress (1): 10/889 kB 
+Progress (1): 12/889 kB
+Progress (1): 13/889 kB
+Progress (1): 15/889 kB
+Progress (1): 16/889 kB
+Progress (1): 17/889 kB
+Progress (1): 19/889 kB
+Progress (1): 20/889 kB
+Progress (1): 21/889 kB
+Progress (1): 23/889 kB
+Progress (1): 24/889 kB
+Progress (1): 26/889 kB
+Progress (1): 27/889 kB
+Progress (1): 28/889 kB
+Progress (1): 29/889 kB
+Progress (1): 30/889 kB
+Progress (1): 32/889 kB
+Progress (1): 33/889 kB
+Progress (1): 35/889 kB
+Progress (1): 36/889 kB
+Progress (1): 37/889 kB
+Progress (1): 39/889 kB
+Progress (1): 40/889 kB
+Progress (1): 41/889 kB
+Progress (1): 43/889 kB
+Progress (1): 44/889 kB
+Progress (1): 46/889 kB
+Progress (1): 47/889 kB
+Progress (1): 48/889 kB
+Progress (1): 50/889 kB
+Progress (1): 51/889 kB
+Progress (1): 52/889 kB
+Progress (1): 57/889 kB
+Progress (1): 61/889 kB
+Progress (1): 65/889 kB
+Progress (1): 69/889 kB
+Progress (1): 74/889 kB
+Progress (1): 78/889 kB
+Progress (1): 82/889 kB
+Progress (1): 86/889 kB
+Progress (1): 90/889 kB
+Progress (1): 95/889 kB
+Progress (1): 99/889 kB
+Progress (1): 103/889 kB
+Progress (1): 107/889 kB
+Progress (1): 112/889 kB
+Progress (1): 116/889 kB
+Progress (1): 120/889 kB
+Progress (1): 124/889 kB
+Progress (1): 128/889 kB
+Progress (1): 133/889 kB
+Progress (1): 137/889 kB
+Progress (1): 141/889 kB
+Progress (1): 145/889 kB
+Progress (1): 150/889 kB
+Progress (1): 154/889 kB
+Progress (1): 158/889 kB
+Progress (1): 159/889 kB
+Progress (1): 163/889 kB
+Progress (1): 167/889 kB
+Progress (1): 171/889 kB
+Progress (1): 176/889 kB
+Progress (1): 180/889 kB
+Progress (1): 184/889 kB
+Progress (1): 188/889 kB
+Progress (1): 193/889 kB
+Progress (1): 197/889 kB
+Progress (1): 201/889 kB
+Progress (1): 205/889 kB
+Progress (1): 210/889 kB
+Progress (1): 214/889 kB
+Progress (1): 218/889 kB
+Progress (1): 234/889 kB
+Progress (1): 251/889 kB
+Progress (1): 253/889 kB
+Progress (1): 270/889 kB
+Progress (1): 286/889 kB
+Progress (1): 302/889 kB
+Progress (1): 319/889 kB
+Progress (1): 335/889 kB
+Progress (1): 352/889 kB
+Progress (1): 368/889 kB
+Progress (1): 384/889 kB
+Progress (1): 401/889 kB
+Progress (1): 417/889 kB
+Progress (1): 434/889 kB
+Progress (1): 450/889 kB
+Progress (1): 466/889 kB
+Progress (1): 483/889 kB
+Progress (1): 499/889 kB
+Progress (1): 515/889 kB
+Progress (1): 532/889 kB
+Progress (1): 548/889 kB
+Progress (1): 565/889 kB
+Progress (1): 581/889 kB
+Progress (1): 597/889 kB
+Progress (1): 614/889 kB
+Progress (1): 630/889 kB
+Progress (1): 647/889 kB
+Progress (1): 663/889 kB
+Progress (1): 679/889 kB
+Progress (1): 696/889 kB
+Progress (1): 712/889 kB
+Progress (1): 728/889 kB
+Progress (1): 745/889 kB
+Progress (1): 761/889 kB
+Progress (1): 778/889 kB
+Progress (1): 794/889 kB
+Progress (1): 810/889 kB
+Progress (1): 827/889 kB
+Progress (1): 843/889 kB
+Progress (1): 860/889 kB
+Progress (1): 876/889 kB
+Progress (1): 889 kB    
+                    
+Downloaded from central: https://repo.maven.apache.org/maven2/com/github/ben-manes/caffeine/caffeine/3.1.8/caffeine-3.1.8.jar (889 kB at 412 kB/s)
+[INFO] 
+[INFO] --- enforcer:3.4.1:enforce (enforce-versions) @ spring-support-ai-starter ---
+[INFO] Skipping Rule Enforcement.
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ spring-support-ai-starter ---
+[INFO] Copying 0 resource from src\main\resources to target\classes
+[INFO] Copying 12 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- flatten:1.6.0:flatten (flatten) @ spring-support-ai-starter ---
+[INFO] Generating flattened POM of project com.chua:spring-support-ai-starter:jar:4.0.0.42...
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ spring-support-ai-starter ---
+[INFO] Compiling 85 source files with javac [forked debug parameters release 25] to target\classes
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultScopeChatClient.java:[14,48] 无法访问DefaultChatClient
+  错误的源文件: D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\deeplearning\support\ml\bigmodel\DefaultChatClient.java
+    文件不包含类com.chua.deeplearning.support.ml.bigmodel.DefaultChatClient
+    请删除该文件或确保该文件位于正确的源路径子目录中。
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatMessage.java:[21,37] 已在类 ChatMessage中定义了方法 builder()
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\deeplearning\support\ml\bigmodel\DefaultChatClient.java:[6,7] 类重复: com.chua.common.support.ai.DefaultChatClient
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelClient.java:[35,9] 找不到符号
+  符号:   类 AiTool
+  位置: 接口 BigModelClient
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelClient.java:[37,29] 找不到符号
+  符号:   类 AiToolCall
+  位置: 接口 BigModelClient
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelClient.java:[37,4] 找不到符号
+  符号:   类 AiToolResult
+  位置: 接口 BigModelClient
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelSetting.java:[20,12] 找不到符号
+  符号:   类 List
+  位置: 类 BigModelSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelSetting.java:[21,12] 找不到符号
+  符号:   类 List
+  位置: 类 BigModelSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelSetting.java:[38,16] 找不到符号
+  符号:   类 List
+  位置: 类 BigModelSettingBuilder
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelSetting.java:[39,16] 找不到符号
+  符号:   类 List
+  位置: 类 BigModelSettingBuilder
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelSetting.java:[51,55] 找不到符号
+  符号:   类 List
+  位置: 类 BigModelSettingBuilder
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelSetting.java:[52,56] 找不到符号
+  符号:   类 List
+  位置: 类 BigModelSettingBuilder
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\rag\RagDocumentManager.java:[3,33] 找不到符号
+  符号:   类 ChatClient
+  位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\rag\RagEngine.java:[4,33] 找不到符号
+  符号:   类 ChatClient
+  位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\rag\RagEngine.java:[9,12] 找不到符号
+  符号:   类 ChatClient
+  位置: 类 RagEngine
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\rag\RagEngine.java:[15,18] 找不到符号
+  符号:   类 RagService
+  位置: 类 RagEngine
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\rag\RagEngine.java:[31,43] 找不到符号
+  符号:   类 List
+  位置: 类 RagResult
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\rag\RagEngine.java:[27,30] 找不到符号
+  符号:   类 ChatClient
+  位置: 类 RagEngine
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\CommonChatClientFactoryResolver.java:[25,37] 找不到符号
+  符号:   类 ChatClient
+  位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultKnowledgeGraphLlmClient.java:[4,33] 找不到符号
+  符号:   类 ChatClient
+  位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\KnowledgeGraphSettings.java:[4,33] 找不到符号
+  符号:   类 ChatClient
+  位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultScopeChatClient.java:[63,80] 找不到符号
+  符号:   类 ChatClient
+  位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultScopeChatClient.java:[104,89] 找不到符号
+  符号:   类 ChatClient
+  位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultScopeChatClient.java:[338,70] 找不到符号
+  符号:   类 ChatClient
+  位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultScopeChatClient.java:[358,73] 找不到符号
+  符号:   类 ChatClient
+  位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultScopeChatClient.java:[426,60] 找不到符号
+  符号:   类 ChatClient
+  位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultScopeChatClient.java:[539,38] 找不到符号
+  符号:   类 ChatClient
+  位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultScopeChatClient.java:[704,56] 找不到符号
+  符号:   类 ChatClient
+  位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\configuration\RagAutoConfiguration.java:[3,33] 找不到符号
+  符号:   类 ChatClient
+  位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\configuration\RagAutoConfiguration.java:[75,37] 找不到符号
+  符号:   类 ChatClient
+  位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\RagController.java:[19,33] 找不到符号
+  符号:   类 VectorStorage
+  位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\RagController.java:[20,33] 找不到符号
+  符号:   类 KnowledgeClient
+  位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\RagController.java:[22,33] 找不到符号
+  符号:   类 VectorService
+  位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\configuration\RagAutoConfiguration.java:[102,38] 找不到符号
+  符号:   类 ChatClient
+  位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiManufacturerController.java:[4,49] 程序包com.chua.common.support.ai.bigmodel.bridge不存在
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiManufacturerController.java:[9,47] 找不到符号
+  符号:   类 AiModelPriceSyncService
+  位置: 程序包 com.chua.starter.ai.support.service.impl
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiManufacturerController.java:[47,18] 找不到符号
+  符号:   类 AiModelPriceSyncService
+  位置: 类 AiManufacturerController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[22,27] 程序包jakarta.servlet.http不存在
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[50,30] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[58,35] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[96,34] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[136,60] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[162,54] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[188,62] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[213,57] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[239,62] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[268,62] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[294,62] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[10,27] 程序包jakarta.servlet.http不存在
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[38,30] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[71,64] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[104,59] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[129,64] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[154,69] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[180,67] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[204,60] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[227,59] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[242,58] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[252,61] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[262,59] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[272,68] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[284,68] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[295,67] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[305,70] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[315,68] 找不到符号
+  符号:   类 HttpServletRequest
+  位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\route\AiRouteRegistrar.java:[7,38] 找不到符号
+  符号:   类 ConfigureObjectContext
+  位置: 程序包 com.chua.common.support.objects
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\route\AiRouteRegistrar.java:[8,52] 找不到符号
+  符号:   类 MappingBeanDefinitionRegister
+  位置: 程序包 com.chua.common.support.objects.register.impl
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\route\AiRouteRegistrar.java:[61,31] 找不到符号
+  符号:   类 ConfigureObjectContext
+  位置: 类 AiRouteRegistrar
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\AiToolResult.java:[34,19] 无法将类 AiToolResult中的构造器 AiToolResult应用到给定类型;
+  需要: 没有参数
+  找到:    String,String,Object,boolean,String
+  原因: 实际参数列表和形式参数列表长度不同
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\DetectionConfiguration.java:[37,19] 无法将类 DetectionConfiguration中的构造器 DetectionConfiguration应用到给定类型;
+  需要: 没有参数
+  找到:    String,Map<String,Object>
+  原因: 实际参数列表和形式参数列表长度不同
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\LocalModuleDefinition.java:[34,19] 无法将类 LocalModuleDefinition中的构造器 LocalModuleDefinition应用到给定类型;
+  需要: 没有参数
+  找到:    String,String,String,String,boolean
+  原因: 实际参数列表和形式参数列表长度不同
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\agent\AgentUsage.java:[34,19] 无法将类 AgentUsage中的构造器 AgentUsage应用到给定类型;
+  需要: 没有参数
+  找到:    Integer,Integer,Integer,Double,String
+  原因: 实际参数列表和形式参数列表长度不同
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelResponse.java:[34,19] 无法将类 BigModelResponse中的构造器 BigModelResponse应用到给定类型;
+  需要: 没有参数
+  找到:    String,String,String,Boolean,Boolean
+  原因: 实际参数列表和形式参数列表长度不同
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelMetadataView.java:[31,19] 无法将类 BigModelMetadataView中的构造器 BigModelMetadataView应用到给定类型;
+  需要: 没有参数
+  找到:    String,String,String,String
+  原因: 实际参数列表和形式参数列表长度不同
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelRequest.java:[37,19] 无法将类 BigModelRequest中的构造器 BigModelRequest应用到给定类型;
+  需要: 没有参数
+  找到:    String,String,String,Integer,Double,Long
+  原因: 实际参数列表和形式参数列表长度不同
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\rag\RagDocumentManager.java:[22,15] 无法将记录 RagDocument中的构造器 RagDocument应用到给定类型;
+  需要: String,String,String,long,int,String,String,long,Map<String,Object>
+  找到:    String,String,<空值>
+  原因: 实际参数列表和形式参数列表长度不同
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\rag\RagEngine.java:[20,33] 找不到符号
+  符号:   变量 List
+  位置: 类 RagEngine
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\deeplearning\support\ml\bigmodel\DefaultChatClient.java:[14,4] 方法不会覆盖或实现超类型的方法
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\deeplearning\support\ml\bigmodel\DefaultChatClient.java:[20,16] 名称冲突: DefaultChatClient 中的 chat(String,Consumer<String>,Runnable,Consumer<Throwable>) 和 ChatClient 中的 chat(String,Consumer<ChatResponse>,Runnable,Consumer<Throwable>) 具有相同疑符, 但两者均不覆盖对方
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\deeplearning\support\ml\bigmodel\DefaultChatClient.java:[19,4] 方法不会覆盖或实现超类型的方法
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\deeplearning\support\ml\bigmodel\DefaultChatClient.java:[29,4] 方法不会覆盖或实现超类型的方法
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\deeplearning\support\ml\bigmodel\DefaultChatClient.java:[33,46] 找不到符号
+  符号:   方法 getPrompt()
+  位置: 类型为BigModelRequest的变量 request
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\AiAutoConfiguration.java:[24,8] 找不到符号
+  符号:   变量 log
+  位置: 类 AiAutoConfiguration
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultChatClient.java:[22,8] 找不到符号
+  符号:   变量 log
+  位置: 类 DefaultChatClient
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultChatClient.java:[28,8] 找不到符号
+  符号:   变量 log
+  位置: 类 DefaultChatClient
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[32,37] 找不到符号
+  符号:   方法 getProvider()
+  位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[33,33] 找不到符号
+  符号:   方法 getHost()
+  位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[34,36] 找不到符号
+  符号:   方法 getBaseUrl()
+  位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[35,34] 找不到符号
+  符号:   方法 getAppId()
+  位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[36,35] 找不到符号
+  符号:   方法 getAppKey()
+  位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[37,38] 找不到符号
+  符号:   方法 getAppSecret()
+  位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[38,45] 找不到符号
+  符号:   方法 getEncryptedKeyFile()
+  位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[39,40] 找不到符号
+  符号:   方法 getKeyPassword()
+  位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[40,35] 找不到符号
+  符号:   方法 getEnvKey()
+  位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[42,45] 找不到符号
+  符号:   方法 getMcpPreprocessors()
+  位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[43,46] 找不到符号
+  符号:   方法 getMcpPostprocessors()
+  位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[77,19] 无法将类 ChatClientSettings中的构造器 ChatClientSettings应用到给定类型;
+  需要: 没有参数
+  找到:    String,String,String,String,String,Double,Integer,Long,boolean,boolean,int,int,BigModelSetting
+  原因: 实际参数列表和形式参数列表长度不同
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettingsResolver.java:[61,58] 无法从静态上下文中引用非静态 方法 normalize(BigModelSetting)
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatMessage.java:[33,19] 无法将类 ChatMessage中的构造器 ChatMessage应用到给定类型;
+  需要: 没有参数
+  找到:    String,String
+  原因: 实际参数列表和形式参数列表长度不同
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatScope.java:[84,19] 无法将类 ChatScope中的构造器 ChatScope应用到给定类型;
+  需要: 没有参数
+  找到:    String,String,Double,Integer,Long,boolean,boolean,int,int,boolean,List<String>,String,ChatContext,Map<String,Object>
+  原因: 实际参数列表和形式参数列表长度不同
+[INFO] 100 errors 
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary for Spring Support Parent Starter 4.0.0.42:
+[INFO] 
+[INFO] Spring Support Parent Starter ...................... SUCCESS [  0.952 s]
+[INFO] spring-support-swagger-starter ..................... SUCCESS [  1.207 s]
+[INFO] spring-support-common-starter ...................... SUCCESS [  0.853 s]
+[INFO] spring-support-ai-starter .......................... FAILURE [  8.075 s]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  12.073 s
+[INFO] Finished at: 2026-07-25T12:12:53+08:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.15.0:compile (default-compile) on project spring-support-ai-starter: Compilation failure: Compilation failure: 
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultScopeChatClient.java:[14,48] 无法访问DefaultChatClient
+[ERROR]   错误的源文件: D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\deeplearning\support\ml\bigmodel\DefaultChatClient.java
+[ERROR]     文件不包含类com.chua.deeplearning.support.ml.bigmodel.DefaultChatClient
+[ERROR]     请删除该文件或确保该文件位于正确的源路径子目录中。
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatMessage.java:[21,37] 已在类 ChatMessage中定义了方法 builder()
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\deeplearning\support\ml\bigmodel\DefaultChatClient.java:[6,7] 类重复: com.chua.common.support.ai.DefaultChatClient
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelClient.java:[35,9] 找不到符号
+[ERROR]   符号:   类 AiTool
+[ERROR]   位置: 接口 BigModelClient
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelClient.java:[37,29] 找不到符号
+[ERROR]   符号:   类 AiToolCall
+[ERROR]   位置: 接口 BigModelClient
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelClient.java:[37,4] 找不到符号
+[ERROR]   符号:   类 AiToolResult
+[ERROR]   位置: 接口 BigModelClient
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelSetting.java:[20,12] 找不到符号
+[ERROR]   符号:   类 List
+[ERROR]   位置: 类 BigModelSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelSetting.java:[21,12] 找不到符号
+[ERROR]   符号:   类 List
+[ERROR]   位置: 类 BigModelSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelSetting.java:[38,16] 找不到符号
+[ERROR]   符号:   类 List
+[ERROR]   位置: 类 BigModelSettingBuilder
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelSetting.java:[39,16] 找不到符号
+[ERROR]   符号:   类 List
+[ERROR]   位置: 类 BigModelSettingBuilder
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelSetting.java:[51,55] 找不到符号
+[ERROR]   符号:   类 List
+[ERROR]   位置: 类 BigModelSettingBuilder
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelSetting.java:[52,56] 找不到符号
+[ERROR]   符号:   类 List
+[ERROR]   位置: 类 BigModelSettingBuilder
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\rag\RagDocumentManager.java:[3,33] 找不到符号
+[ERROR]   符号:   类 ChatClient
+[ERROR]   位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\rag\RagEngine.java:[4,33] 找不到符号
+[ERROR]   符号:   类 ChatClient
+[ERROR]   位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\rag\RagEngine.java:[9,12] 找不到符号
+[ERROR]   符号:   类 ChatClient
+[ERROR]   位置: 类 RagEngine
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\rag\RagEngine.java:[15,18] 找不到符号
+[ERROR]   符号:   类 RagService
+[ERROR]   位置: 类 RagEngine
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\rag\RagEngine.java:[31,43] 找不到符号
+[ERROR]   符号:   类 List
+[ERROR]   位置: 类 RagResult
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\rag\RagEngine.java:[27,30] 找不到符号
+[ERROR]   符号:   类 ChatClient
+[ERROR]   位置: 类 RagEngine
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\CommonChatClientFactoryResolver.java:[25,37] 找不到符号
+[ERROR]   符号:   类 ChatClient
+[ERROR]   位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultKnowledgeGraphLlmClient.java:[4,33] 找不到符号
+[ERROR]   符号:   类 ChatClient
+[ERROR]   位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\KnowledgeGraphSettings.java:[4,33] 找不到符号
+[ERROR]   符号:   类 ChatClient
+[ERROR]   位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultScopeChatClient.java:[63,80] 找不到符号
+[ERROR]   符号:   类 ChatClient
+[ERROR]   位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultScopeChatClient.java:[104,89] 找不到符号
+[ERROR]   符号:   类 ChatClient
+[ERROR]   位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultScopeChatClient.java:[338,70] 找不到符号
+[ERROR]   符号:   类 ChatClient
+[ERROR]   位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultScopeChatClient.java:[358,73] 找不到符号
+[ERROR]   符号:   类 ChatClient
+[ERROR]   位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultScopeChatClient.java:[426,60] 找不到符号
+[ERROR]   符号:   类 ChatClient
+[ERROR]   位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultScopeChatClient.java:[539,38] 找不到符号
+[ERROR]   符号:   类 ChatClient
+[ERROR]   位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultScopeChatClient.java:[704,56] 找不到符号
+[ERROR]   符号:   类 ChatClient
+[ERROR]   位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\configuration\RagAutoConfiguration.java:[3,33] 找不到符号
+[ERROR]   符号:   类 ChatClient
+[ERROR]   位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\configuration\RagAutoConfiguration.java:[75,37] 找不到符号
+[ERROR]   符号:   类 ChatClient
+[ERROR]   位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\RagController.java:[19,33] 找不到符号
+[ERROR]   符号:   类 VectorStorage
+[ERROR]   位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\RagController.java:[20,33] 找不到符号
+[ERROR]   符号:   类 KnowledgeClient
+[ERROR]   位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\RagController.java:[22,33] 找不到符号
+[ERROR]   符号:   类 VectorService
+[ERROR]   位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\configuration\RagAutoConfiguration.java:[102,38] 找不到符号
+[ERROR]   符号:   类 ChatClient
+[ERROR]   位置: 程序包 com.chua.common.support.ai
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiManufacturerController.java:[4,49] 程序包com.chua.common.support.ai.bigmodel.bridge不存在
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiManufacturerController.java:[9,47] 找不到符号
+[ERROR]   符号:   类 AiModelPriceSyncService
+[ERROR]   位置: 程序包 com.chua.starter.ai.support.service.impl
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiManufacturerController.java:[47,18] 找不到符号
+[ERROR]   符号:   类 AiModelPriceSyncService
+[ERROR]   位置: 类 AiManufacturerController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[22,27] 程序包jakarta.servlet.http不存在
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[50,30] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[58,35] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[96,34] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[136,60] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[162,54] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[188,62] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[213,57] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[239,62] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[268,62] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiController.java:[294,62] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[10,27] 程序包jakarta.servlet.http不存在
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[38,30] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[71,64] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[104,59] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[129,64] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[154,69] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[180,67] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[204,60] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[227,59] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[242,58] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[252,61] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[262,59] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[272,68] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[284,68] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[295,67] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[305,70] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\controller\AiOpenaiExtendedController.java:[315,68] 找不到符号
+[ERROR]   符号:   类 HttpServletRequest
+[ERROR]   位置: 类 AiOpenaiExtendedController
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\route\AiRouteRegistrar.java:[7,38] 找不到符号
+[ERROR]   符号:   类 ConfigureObjectContext
+[ERROR]   位置: 程序包 com.chua.common.support.objects
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\route\AiRouteRegistrar.java:[8,52] 找不到符号
+[ERROR]   符号:   类 MappingBeanDefinitionRegister
+[ERROR]   位置: 程序包 com.chua.common.support.objects.register.impl
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\route\AiRouteRegistrar.java:[61,31] 找不到符号
+[ERROR]   符号:   类 ConfigureObjectContext
+[ERROR]   位置: 类 AiRouteRegistrar
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\AiToolResult.java:[34,19] 无法将类 AiToolResult中的构造器 AiToolResult应用到给定类型;
+[ERROR]   需要: 没有参数
+[ERROR]   找到:    String,String,Object,boolean,String
+[ERROR]   原因: 实际参数列表和形式参数列表长度不同
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\DetectionConfiguration.java:[37,19] 无法将类 DetectionConfiguration中的构造器 DetectionConfiguration应用到给定类型;
+[ERROR]   需要: 没有参数
+[ERROR]   找到:    String,Map<String,Object>
+[ERROR]   原因: 实际参数列表和形式参数列表长度不同
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\LocalModuleDefinition.java:[34,19] 无法将类 LocalModuleDefinition中的构造器 LocalModuleDefinition应用到给定类型;
+[ERROR]   需要: 没有参数
+[ERROR]   找到:    String,String,String,String,boolean
+[ERROR]   原因: 实际参数列表和形式参数列表长度不同
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\agent\AgentUsage.java:[34,19] 无法将类 AgentUsage中的构造器 AgentUsage应用到给定类型;
+[ERROR]   需要: 没有参数
+[ERROR]   找到:    Integer,Integer,Integer,Double,String
+[ERROR]   原因: 实际参数列表和形式参数列表长度不同
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelResponse.java:[34,19] 无法将类 BigModelResponse中的构造器 BigModelResponse应用到给定类型;
+[ERROR]   需要: 没有参数
+[ERROR]   找到:    String,String,String,Boolean,Boolean
+[ERROR]   原因: 实际参数列表和形式参数列表长度不同
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelMetadataView.java:[31,19] 无法将类 BigModelMetadataView中的构造器 BigModelMetadataView应用到给定类型;
+[ERROR]   需要: 没有参数
+[ERROR]   找到:    String,String,String,String
+[ERROR]   原因: 实际参数列表和形式参数列表长度不同
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\bigmodel\BigModelRequest.java:[37,19] 无法将类 BigModelRequest中的构造器 BigModelRequest应用到给定类型;
+[ERROR]   需要: 没有参数
+[ERROR]   找到:    String,String,String,Integer,Double,Long
+[ERROR]   原因: 实际参数列表和形式参数列表长度不同
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\rag\RagDocumentManager.java:[22,15] 无法将记录 RagDocument中的构造器 RagDocument应用到给定类型;
+[ERROR]   需要: String,String,String,long,int,String,String,long,Map<String,Object>
+[ERROR]   找到:    String,String,<空值>
+[ERROR]   原因: 实际参数列表和形式参数列表长度不同
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\common\support\ai\rag\RagEngine.java:[20,33] 找不到符号
+[ERROR]   符号:   变量 List
+[ERROR]   位置: 类 RagEngine
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\deeplearning\support\ml\bigmodel\DefaultChatClient.java:[14,4] 方法不会覆盖或实现超类型的方法
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\deeplearning\support\ml\bigmodel\DefaultChatClient.java:[20,16] 名称冲突: DefaultChatClient 中的 chat(String,Consumer<String>,Runnable,Consumer<Throwable>) 和 ChatClient 中的 chat(String,Consumer<ChatResponse>,Runnable,Consumer<Throwable>) 具有相同疑符, 但两者均不覆盖对方
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\deeplearning\support\ml\bigmodel\DefaultChatClient.java:[19,4] 方法不会覆盖或实现超类型的方法
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\deeplearning\support\ml\bigmodel\DefaultChatClient.java:[29,4] 方法不会覆盖或实现超类型的方法
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\deeplearning\support\ml\bigmodel\DefaultChatClient.java:[33,46] 找不到符号
+[ERROR]   符号:   方法 getPrompt()
+[ERROR]   位置: 类型为BigModelRequest的变量 request
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\AiAutoConfiguration.java:[24,8] 找不到符号
+[ERROR]   符号:   变量 log
+[ERROR]   位置: 类 AiAutoConfiguration
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultChatClient.java:[22,8] 找不到符号
+[ERROR]   符号:   变量 log
+[ERROR]   位置: 类 DefaultChatClient
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\DefaultChatClient.java:[28,8] 找不到符号
+[ERROR]   符号:   变量 log
+[ERROR]   位置: 类 DefaultChatClient
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[32,37] 找不到符号
+[ERROR]   符号:   方法 getProvider()
+[ERROR]   位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[33,33] 找不到符号
+[ERROR]   符号:   方法 getHost()
+[ERROR]   位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[34,36] 找不到符号
+[ERROR]   符号:   方法 getBaseUrl()
+[ERROR]   位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[35,34] 找不到符号
+[ERROR]   符号:   方法 getAppId()
+[ERROR]   位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[36,35] 找不到符号
+[ERROR]   符号:   方法 getAppKey()
+[ERROR]   位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[37,38] 找不到符号
+[ERROR]   符号:   方法 getAppSecret()
+[ERROR]   位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[38,45] 找不到符号
+[ERROR]   符号:   方法 getEncryptedKeyFile()
+[ERROR]   位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[39,40] 找不到符号
+[ERROR]   符号:   方法 getKeyPassword()
+[ERROR]   位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[40,35] 找不到符号
+[ERROR]   符号:   方法 getEnvKey()
+[ERROR]   位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[42,45] 找不到符号
+[ERROR]   符号:   方法 getMcpPreprocessors()
+[ERROR]   位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[43,46] 找不到符号
+[ERROR]   符号:   方法 getMcpPostprocessors()
+[ERROR]   位置: 类型为BigModelSetting的变量 baseSetting
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettings.java:[77,19] 无法将类 ChatClientSettings中的构造器 ChatClientSettings应用到给定类型;
+[ERROR]   需要: 没有参数
+[ERROR]   找到:    String,String,String,String,String,Double,Integer,Long,boolean,boolean,int,int,BigModelSetting
+[ERROR]   原因: 实际参数列表和形式参数列表长度不同
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatClientSettingsResolver.java:[61,58] 无法从静态上下文中引用非静态 方法 normalize(BigModelSetting)
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatMessage.java:[33,19] 无法将类 ChatMessage中的构造器 ChatMessage应用到给定类型;
+[ERROR]   需要: 没有参数
+[ERROR]   找到:    String,String
+[ERROR]   原因: 实际参数列表和形式参数列表长度不同
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-ai-starter\src\main\java\com\chua\starter\ai\support\chat\ChatScope.java:[84,19] 无法将类 ChatScope中的构造器 ChatScope应用到给定类型;
+[ERROR]   需要: 没有参数
+[ERROR]   找到:    String,String,Double,Integer,Long,boolean,boolean,int,int,boolean,List<String>,String,ChatContext,Map<String,Object>
+[ERROR]   原因: 实际参数列表和形式参数列表长度不同
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :spring-support-ai-starter

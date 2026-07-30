@@ -1,0 +1,236 @@
+﻿mvn : WARNING: A restricted method in java.lang.System has been called
+At line:1 char:114
++ ... azon Corretto\jdk25.0.3_9'; mvn compile -DskipTests=true 2>&1 | Out-F ...
++                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (WARNING: A rest...has been called:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+WARNING: java.lang.System::load has been called by org.fusesource.jansi.internal.JansiLoader in an unnamed module (file
+:/D:/apache-maven-3.9.9-bin/apache-maven-3.9.9/lib/jansi-2.4.1.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by com.google.common.util.concurrent.AbstractFuture$UnsafeA
+tomicHelper (file:/D:/apache-maven-3.9.9-bin/apache-maven-3.9.9/lib/guava-33.2.1-jre.jar)
+WARNING: Please consider reporting this to the maintainers of class com.google.common.util.concurrent.AbstractFuture$Un
+safeAtomicHelper
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+[INFO] Scanning for projects...
+[WARNING] 
+[WARNING] Some problems were encountered while building the effective model for com.chua:spring-support-datasource-starter:jar:4.0.0.42
+[WARNING] 'dependencies.dependency.(groupId:artifactId:type:classifier)' must be unique: org.aspectj:aspectjweaver:jar -> duplicate declaration of version (?) @ line 188, column 42
+[WARNING] 'dependencies.dependency.(groupId:artifactId:type:classifier)' must be unique: jakarta.servlet:jakarta.servlet-api:jar -> duplicate declaration of version (?) @ line 193, column 21
+[WARNING] 
+[WARNING] Some problems were encountered while building the effective model for com.chua:spring-support-common-starter:jar:4.0.0.42
+[WARNING] 'dependencies.dependency.(groupId:artifactId:type:classifier)' must be unique: commons-codec:commons-codec:jar -> version 1.16.1 vs (?) @ line 167, column 21
+[WARNING] 
+[WARNING] It is highly recommended to fix these problems because they threaten the stability of your build.
+[WARNING] 
+[WARNING] For this reason, future Maven versions might no longer support building such malformed projects.
+[WARNING] 
+[INFO] ------------------------------------------------------------------------
+[INFO] Detecting the operating system and CPU architecture
+[INFO] ------------------------------------------------------------------------
+[INFO] os.detected.name: windows
+[INFO] os.detected.arch: x86_64
+[INFO] os.detected.bitness: 64
+[INFO] os.detected.version: 10.0
+[INFO] os.detected.version.major: 10
+[INFO] os.detected.version.minor: 0
+[INFO] os.detected.classifier: windows-x86_64
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Build Order:
+[INFO] 
+[INFO] Spring Support Parent Starter                                      [pom]
+[INFO] spring-support-swagger-starter                                     [jar]
+[INFO] spring-support-common-starter                                      [jar]
+[INFO] spring-support-datasource-starter                                  [jar]
+[INFO] spring-support-mybatis-starter                                     [jar]
+[INFO] spring-support-oauth-client-starter                                [jar]
+[INFO] spring-support-redis-starter                                       [jar]
+[INFO] spring-support-filesystem-minio-starter                            [jar]
+[INFO] Spring Support FileSystem Starter - 文件存储模块                         [jar]
+[INFO] spring-support-swagger2-starter                                    [jar]
+[INFO] spring-support-queue-starter                                       [jar]
+[INFO] spring-support-queue-mqtt-starter                                  [jar]
+[INFO] spring-support-queue-kafka-starter                                 [jar]
+[INFO] spring-support-queue-rabbitmq-starter                              [jar]
+[INFO] spring-support-queue-rocketmq-starter                              [jar]
+[INFO] spring-support-socket-starter                                      [jar]
+[INFO] spring-support-discovery-starter                                   [jar]
+[INFO] spring-support-job-starter                                         [jar]
+[INFO] spring-support-sync-starter                                        [jar]
+[INFO] spring-support-socket-websocket-starter                            [jar]
+[INFO] spring-support-socket-io-starter                                   [jar]
+[INFO] spring-support-socket-rsocket-starter                              [jar]
+[INFO] spring-support-socket-sse-starter                                  [jar]
+[INFO] spring-support-rpc-starter                                         [jar]
+[INFO] spring-support-elasticsearch-starter                               [jar]
+[INFO] spring-support-configcenter-starter                                [jar]
+[INFO] spring-support-tencent-starter                                     [jar]
+[INFO] spring-support-aliyun-starter                                      [jar]
+[INFO] spring-support-shell-starter                                       [jar]
+[INFO] Spring Support SSH Starter                                         [jar]
+[INFO] spring-support-ai-starter                                          [jar]
+[INFO] spring-support-message-starter                                     [jar]
+[INFO] Spring Support Email Starter                                       [jar]
+[INFO] spring-support-software-starter                                    [jar]
+[INFO] spring-support-report-client-starter                               [jar]
+[INFO] 
+[INFO] ---------------< com.chua:spring-support-parent-starter >---------------
+[INFO] Building Spring Support Parent Starter 4.0.0.42                   [1/35]
+[INFO]   from pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- enforcer:3.4.1:enforce (enforce-versions) @ spring-support-parent-starter ---
+[INFO] Rule 0: org.apache.maven.enforcer.rules.version.RequireMavenVersion passed
+[INFO] Rule 1: org.apache.maven.enforcer.rules.version.RequireJavaVersion passed
+[INFO] Rule 2: org.apache.maven.enforcer.rules.dependency.BannedDependencies passed
+[INFO] Rule 3: org.apache.maven.enforcer.rules.dependency.DependencyConvergence passed
+[INFO] Rule 4: org.apache.maven.enforcer.rules.dependency.RequireUpperBoundDeps passed
+[INFO] Rule 5: org.apache.maven.enforcer.rules.dependency.RequireReleaseDeps passed
+[INFO] 
+[INFO] --- flatten:1.6.0:flatten (flatten) @ spring-support-parent-starter ---
+[INFO] Generating flattened POM of project com.chua:spring-support-parent-starter:pom:4.0.0.42...
+[INFO] 
+[INFO] >>> source:3.3.0:jar (default) > generate-sources @ spring-support-parent-starter >>>
+[INFO] 
+[INFO] --- enforcer:3.4.1:enforce (enforce-versions) @ spring-support-parent-starter ---
+[INFO] Rule 2: org.apache.maven.enforcer.rules.dependency.BannedDependencies passed
+[INFO] Rule 3: org.apache.maven.enforcer.rules.dependency.DependencyConvergence passed
+[INFO] Rule 4: org.apache.maven.enforcer.rules.dependency.RequireUpperBoundDeps passed
+[INFO] Rule 5: org.apache.maven.enforcer.rules.dependency.RequireReleaseDeps passed
+[INFO] 
+[INFO] <<< source:3.3.0:jar (default) < generate-sources @ spring-support-parent-starter <<<
+[INFO] 
+[INFO] 
+[INFO] --- source:3.3.0:jar (default) @ spring-support-parent-starter ---
+[INFO] Skipping source per configuration.
+[INFO] 
+[INFO] --------------< com.chua:spring-support-swagger-starter >---------------
+[INFO] Building spring-support-swagger-starter 4.0.0.42                  [2/35]
+[INFO]   from spring-support-swagger-starter\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- enforcer:3.4.1:enforce (enforce-versions) @ spring-support-swagger-starter ---
+[INFO] Rule 2: org.apache.maven.enforcer.rules.dependency.BannedDependencies passed
+[INFO] Rule 3: org.apache.maven.enforcer.rules.dependency.DependencyConvergence passed
+[INFO] Rule 5: org.apache.maven.enforcer.rules.dependency.RequireReleaseDeps passed
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary:
+[INFO] 
+[INFO] Spring Support Parent Starter 4.0.0.42 ............. SUCCESS [  1.583 s]
+[INFO] spring-support-swagger-starter 4.0.0.42 ............ FAILURE [  0.958 s]
+[INFO] spring-support-common-starter 4.0.0.42 ............. SKIPPED
+[INFO] spring-support-datasource-starter 4.0.0.42 ......... SKIPPED
+[INFO] spring-support-mybatis-starter 4.0.0.42 ............ SKIPPED
+[INFO] spring-support-oauth-client-starter 4.0.0.42 ....... SKIPPED
+[INFO] spring-support-redis-starter 4.0.0.42 .............. SKIPPED
+[INFO] spring-support-filesystem-minio-starter 4.0.0.42 ... SKIPPED
+[INFO] Spring Support FileSystem Starter - 文件存储模块 4.0.0.42  SKIPPED
+[INFO] spring-support-swagger2-starter 4.0.0.42 ........... SKIPPED
+[INFO] spring-support-queue-starter 4.0.0.42 .............. SKIPPED
+[INFO] spring-support-queue-mqtt-starter 4.0.0.42 ......... SKIPPED
+[INFO] spring-support-queue-kafka-starter 4.0.0.42 ........ SKIPPED
+[INFO] spring-support-queue-rabbitmq-starter 4.0.0.42 ..... SKIPPED
+[INFO] spring-support-queue-rocketmq-starter 4.0.0.42 ..... SKIPPED
+[INFO] spring-support-socket-starter 4.0.0.42 ............. SKIPPED
+[INFO] spring-support-discovery-starter 4.0.0.42 .......... SKIPPED
+[INFO] spring-support-job-starter 4.0.0.42 ................ SKIPPED
+[INFO] spring-support-sync-starter 4.0.0.42 ............... SKIPPED
+[INFO] spring-support-socket-websocket-starter 4.0.0.42 ... SKIPPED
+[INFO] spring-support-socket-io-starter 4.0.0.42 .......... SKIPPED
+[INFO] spring-support-socket-rsocket-starter 4.0.0.42 ..... SKIPPED
+[INFO] spring-support-socket-sse-starter 4.0.0.42 ......... SKIPPED
+[INFO] spring-support-rpc-starter 4.0.0.42 ................ SKIPPED
+[INFO] spring-support-elasticsearch-starter 4.0.0.42 ...... SKIPPED
+[INFO] spring-support-configcenter-starter 4.0.0.42 ....... SKIPPED
+[INFO] spring-support-tencent-starter 4.0.0.42 ............ SKIPPED
+[INFO] spring-support-aliyun-starter 4.0.0.42 ............. SKIPPED
+[INFO] spring-support-shell-starter 4.0.0.42 .............. SKIPPED
+[INFO] Spring Support SSH Starter 4.0.0.42 ................ SKIPPED
+[INFO] spring-support-ai-starter 4.0.0.42 ................. SKIPPED
+[INFO] spring-support-message-starter 4.0.0.42 ............ SKIPPED
+[INFO] Spring Support Email Starter 4.0.0.42 .............. SKIPPED
+[INFO] spring-support-software-starter 4.0.0.42 ........... SKIPPED
+[INFO] spring-support-report-client-starter 4.0.0.41 ...... SKIPPED
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  5.833 s
+[INFO] Finished at: 2026-07-25T08:41:50+08:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-enforcer-plugin:3.4.1:enforce (enforce-versions) on project spring-support-swagger-starter: 
+[ERROR] Rule 4: org.apache.maven.enforcer.rules.dependency.RequireUpperBoundDeps failed with message:
+[ERROR] Failed while enforcing RequireUpperBoundDeps. The error(s) are [
+[ERROR] Require upper bound dependencies error for io.projectreactor:reactor-core:3.7.14 paths to dependency are:
+[ERROR] +-com.chua:spring-support-swagger-starter:4.0.0.42
+[ERROR]   +-com.chua:utils-support-common-starter:4.0.0.42
+[ERROR]     +-io.projectreactor:reactor-core:3.7.14 (managed) <-- io.projectreactor:reactor-core:3.8.0-M3
+[ERROR] , 
+[ERROR] Require upper bound dependencies error for org.slf4j:slf4j-api:2.0.17 paths to dependency are:
+[ERROR] +-com.chua:spring-support-swagger-starter:4.0.0.42
+[ERROR]   +-com.chua:utils-support-common-starter:4.0.0.42
+[ERROR]     +-org.slf4j:slf4j-api:2.0.17 (managed) <-- org.slf4j:slf4j-api:2.1.0-alpha1
+[ERROR] and
+[ERROR] +-com.chua:spring-support-swagger-starter:4.0.0.42
+[ERROR]   +-com.github.xiaoymin:knife4j-openapi3-jakarta-spring-boot-starter:4.5.0
+[ERROR]     +-org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0
+[ERROR]       +-org.springdoc:springdoc-openapi-starter-webmvc-api:2.3.0
+[ERROR]         +-org.springdoc:springdoc-openapi-starter-common:2.3.0
+[ERROR]           +-io.swagger.core.v3:swagger-core-jakarta:2.2.19
+[ERROR]             +-org.slf4j:slf4j-api:2.0.17 (managed) <-- org.slf4j:slf4j-api:2.0.9
+[ERROR] , 
+[ERROR] Require upper bound dependencies error for com.google.guava:guava:33.3.1-jre paths to dependency are:
+[ERROR] +-com.chua:spring-support-swagger-starter:4.0.0.42
+[ERROR]   +-com.chua:utils-support-common-starter:4.0.0.42
+[ERROR]     +-com.google.guava:guava:33.3.1-jre (managed) <-- com.google.guava:guava:33.4.8-jre
+[ERROR] , 
+[ERROR] Require upper bound dependencies error for com.fasterxml.jackson.core:jackson-annotations:2.19.4 paths to dependency are:
+[ERROR] +-com.chua:spring-support-swagger-starter:4.0.0.42
+[ERROR]   +-com.chua:utils-support-common-starter:4.0.0.42
+[ERROR]     +-com.fasterxml.jackson.core:jackson-annotations:2.19.4 (managed) <-- com.fasterxml.jackson.core:jackson-annotations:3.0-rc5
+[ERROR] and
+[ERROR] +-com.chua:spring-support-swagger-starter:4.0.0.42
+[ERROR]   +-org.springframework.boot:spring-boot-actuator-autoconfigure:3.5.9
+[ERROR]     +-com.fasterxml.jackson.core:jackson-databind:2.19.4 (managed) <-- com.fasterxml.jackson.core:jackson-databind:2.19.4
+[ERROR]       +-com.fasterxml.jackson.core:jackson-annotations:2.19.4 (managed) <-- com.fasterxml.jackson.core:jackson-annotations:2.19.4
+[ERROR] and
+[ERROR] +-com.chua:spring-support-swagger-starter:4.0.0.42
+[ERROR]   +-org.springframework.boot:spring-boot-actuator-autoconfigure:3.5.9
+[ERROR]     +-com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.19.4 (managed) <-- com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.19.4
+[ERROR]       +-com.fasterxml.jackson.core:jackson-annotations:2.19.4 (managed) <-- com.fasterxml.jackson.core:jackson-annotations:2.19.4
+[ERROR] and
+[ERROR] +-com.chua:spring-support-swagger-starter:4.0.0.42
+[ERROR]   +-com.github.xiaoymin:knife4j-openapi3-jakarta-spring-boot-starter:4.5.0
+[ERROR]     +-org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0
+[ERROR]       +-org.springdoc:springdoc-openapi-starter-webmvc-api:2.3.0
+[ERROR]         +-org.springdoc:springdoc-openapi-starter-common:2.3.0
+[ERROR]           +-io.swagger.core.v3:swagger-core-jakarta:2.2.19
+[ERROR]             +-com.fasterxml.jackson.core:jackson-annotations:2.19.4 (managed) <-- com.fasterxml.jackson.core:jackson-annotations:2.15.2
+[ERROR] and
+[ERROR] +-com.chua:spring-support-swagger-starter:4.0.0.42
+[ERROR]   +-com.github.xiaoymin:knife4j-openapi3-jakarta-spring-boot-starter:4.5.0
+[ERROR]     +-org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0
+[ERROR]       +-org.springdoc:springdoc-openapi-starter-webmvc-api:2.3.0
+[ERROR]         +-org.springdoc:springdoc-openapi-starter-common:2.3.0
+[ERROR]           +-io.swagger.core.v3:swagger-core-jakarta:2.2.19
+[ERROR]             +-io.swagger.core.v3:swagger-models-jakarta:2.2.19
+[ERROR]               +-com.fasterxml.jackson.core:jackson-annotations:2.19.4 (managed) <-- com.fasterxml.jackson.core:jackson-annotations:2.15.2
+[ERROR] , 
+[ERROR] Require upper bound dependencies error for org.apache.commons:commons-compress:1.26.2 paths to dependency are:
+[ERROR] +-com.chua:spring-support-swagger-starter:4.0.0.42
+[ERROR]   +-com.chua:utils-support-common-starter:4.0.0.42
+[ERROR]     +-org.apache.commons:commons-compress:1.26.2 (managed) <-- org.apache.commons:commons-compress:1.28.0
+[ERROR] ]
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :spring-support-swagger-starter

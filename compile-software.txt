@@ -1,0 +1,33 @@
+﻿[INFO] Scanning for projects...
+[WARNING] 
+[WARNING] Some problems were encountered while building the effective model for com.chua:spring-support-datasource-starter:jar:4.0.0.42
+[WARNING] 'dependencies.dependency.(groupId:artifactId:type:classifier)' must be unique: org.aspectj:aspectjweaver:jar -> duplicate declaration of version (?) @ line 188, column 42
+[WARNING] 'dependencies.dependency.(groupId:artifactId:type:classifier)' must be unique: jakarta.servlet:jakarta.servlet-api:jar -> duplicate declaration of version (?) @ line 193, column 21
+[WARNING] 
+[WARNING] It is highly recommended to fix these problems because they threaten the stability of your build.
+[WARNING] 
+[WARNING] For this reason, future Maven versions might no longer support building such malformed projects.
+[WARNING] 
+[INFO] 
+[INFO] --------------< com.chua:spring-support-software-starter >--------------
+[INFO] Building spring-support-software-starter 4.0.0.42
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[WARNING] The POM for com.chua:spring-support-elasticsearch-starter:jar:4.0.0.42 is missing, no dependency information available
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  2.222 s
+[INFO] Finished at: 2026-07-25T12:55:48+08:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal on project spring-support-software-starter: Could not resolve dependencies for project com.chua:spring-support-software-starter:jar:4.0.0.42
+[ERROR] dependency: com.chua:spring-support-elasticsearch-starter:jar:4.0.0.42 (compile)
+[ERROR] 	com.chua:spring-support-elasticsearch-starter:jar:4.0.0.42 was not found in https://repo.maven.apache.org/maven2 during a previous attempt. This failure was cached in the local repository and resolution is not reattempted until the update interval of central has elapsed or updates are forced
+[ERROR] 
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/DependencyResolutionException

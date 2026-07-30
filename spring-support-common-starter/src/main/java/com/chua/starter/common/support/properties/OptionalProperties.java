@@ -1,0 +1,44 @@
+package com.chua.starter.common.support.properties;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+/**
+ * 可选功能配置属性
+ * <p>
+ * 用于配置系统中的可选功能开关。
+ * </p>
+ *
+ * @author CH
+ * @version 1.0.0
+ */
+@ConfigurationProperties(prefix = OptionalProperties.PRE, ignoreInvalidFields = true)
+public class OptionalProperties {
+
+    /**
+     * 配置前缀
+     */
+    public static final String PRE = "plugin.optional";
+
+    /**
+     *  是否打开
+     */
+    private boolean enable = true;
+
+    /**
+     * 获取 enable
+     *
+     * @return enable
+     */
+    public boolean getEnable() {
+        return enable;
+    }
+
+    /**
+     * 设置 enable
+     *
+     * @param enable enable
+     */
+    public void setEnable(boolean enable) {
+        this.enable = enable;
+    }
+}

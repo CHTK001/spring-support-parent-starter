@@ -1,0 +1,122 @@
+package com.chua.starter.ai.support.chat;
+
+import com.chua.common.support.ai.chat.ChatClientSetting;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import org.springframework.beans.factory.FactoryBean;
+
+/**
+ * 压缩专用 ChatClient FactoryBean，支持运行时重建。
+ * <p>
+ * 读取 sys_ai_global_setting(runtime) 中的 compression_model 和压缩专用 provider 配置，
+ * 如果 compression_model 为空则不创建压缩专用 ChatClient（回落到主 ChatClient）。
+ *
+ * @author CH
+ * @since 2026/05/26
+ */
+public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient> {
+
+    private static final String GROUP = "runtime";
+
+    private final SysAiGlobalSettingService sysAiGlobalSettingService;
+    private volatile ChatClient chatClient;
+
+    public CompressionChatClientFactoryBean(SysAiGlobalSettingService sysAiGlobalSettingService) {
+        this.sysAiGlobalSettingService = sysAiGlobalSettingService;
+        this.chatClient = buildClientSafe();
+    }
+
+    public synchronized void rebuild() {
+        ChatClient old = this.chatClient;
+        ChatClient newClient = buildClientSafe();
+        if (newClient != null) {
+            this.chatClient = newClient;
+            closeQuietly(old);
+        }
+    }
+
+    private ChatClient buildClientSafe() {
+        try {
+            return buildClient();
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(CompressionChatClientFactoryBean.class)
+                    .warn("[CompressionChatClient] 构建失败，压缩将回落到主 ChatClient: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private ChatClient buildClient() {
+        String compressionModel = getValue("compression_model");
+        if (StringUtils.isBlank(compressionModel)) {
+            return null;
+        }
+
+        // 读取压缩专用 provider 配置，缺失时回落到主 provider
+        String provider = firstNonBlank(getValue("compression_provider"), getValue("provider"), "openai");
+        String factory = firstNonBlank(getValue("compression_factory"), getValue("factory"), "default");
+
+        ChatClientSetting setting = ChatClientSetting.builder()
+                .provider(provider)
+                .baseUrl(firstNonBlank(getValue("compression_provider_base_url"), getValue("provider_base_url"), getValue("provider_api_address")))
+                .appKey(firstNonBlank(getValue("compression_provider_api_key"), getValue("provider_api_key"), getValue("provider_app_key")))
+                .appSecret(firstNonBlank(getValue("compression_provider_app_secret"), getValue("provider_app_secret"), getValue("provider_secret_key")))
+                .build();
+
+        ChatClientSettings compressionSettings = ChatClientSettings.builder()
+                .factory(factory)
+                .provider(provider)
+                .defaultModel(compressionModel)
+                .compressionModel(compressionModel)
+                .timeoutMillis(getLong("timeout_millis", 30_000L))
+                .baseSetting(setting)
+                .build();
+
+        return new DefaultScopeChatClient(compressionSettings);
+    }
+
+    @Override
+    public ChatClient getObject() {
+        return chatClient;
+    }
+
+    @Override
+    public Class<?> getObjectType() {
+        return ChatClient.class;
+    }
+
+    @Override
+    public boolean isSingleton() {
+        return true;
+    }
+
+    private String getValue(String field) {
+        return sysAiGlobalSettingService.getValue(GROUP, field).orElse(null);
+    }
+
+    private long getLong(String field, long defaultValue) {
+        String value = getValue(field);
+        if (StringUtils.isBlank(value)) return defaultValue;
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException ignored) {
+            return defaultValue;
+        }
+    }
+
+    private static String firstNonBlank(String... values) {
+        if (values == null) return null;
+        for (String v : values) {
+            if (StringUtils.isNotBlank(v)) return v;
+        }
+        return null;
+    }
+
+    private static void closeQuietly(ChatClient client) {
+        if (client != null) {
+            try {
+                client.close();
+            } catch (Exception ignored) {
+            }
+        }
+    }
+}

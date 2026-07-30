@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.ai.support.mapper.SysAiAppKeyMapper">
+
+    <!--
+        按 AppKey 值查询应用密钥。
+        用于 Bearer Token 验证和 AppKey 校验。
+    -->
+    <select id="selectByAppKey" resultType="com.chua.starter.ai.support.entity.SysAiAppKey">
+        SELECT *
+        FROM sys_ai_app_key
+        WHERE app_key = #{appKey}
+          AND delete_flag = 0
+        LIMIT 1
+    </select>
+
+    <!--
+        按分组 ID 查询该分组下所有应用密钥。
+    -->
+    <select id="selectByGroupId" resultType="com.chua.starter.ai.support.entity.SysAiAppKey">
+        SELECT *
+        FROM sys_ai_app_key
+        WHERE sys_ai_app_key_group_id = #{groupId}
+          AND delete_flag = 0
+        ORDER BY create_time DESC
+    </select>
+
+</mapper>

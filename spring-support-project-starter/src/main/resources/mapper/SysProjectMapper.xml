@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.project.mapper.SysProjectMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.entity.project.SysProject">
+    <!--@mbg.generated-->
+    <!--@Table sys_project-->
+    <id column="sys_project_id" jdbcType="INTEGER" property="sysProjectId" />
+    <result column="sys_project_name" jdbcType="VARCHAR" property="sysProjectName" />
+    <result column="sys_project_icon" jdbcType="VARCHAR" property="sysProjectIcon" />
+    <result column="sys_project_group" jdbcType="VARCHAR" property="sysProjectGroup" />
+    <result column="sys_project_code" jdbcType="VARCHAR" property="sysProjectCode" />
+    <result column="sys_project_app_id" jdbcType="VARCHAR" property="sysProjectAppId" />
+    <result column="sys_project_app_secret" jdbcType="VARCHAR" property="sysProjectAppSecret" />
+    <result column="sys_project_sign" jdbcType="VARCHAR" property="sysProjectSign" />
+    <result column="sys_project_delete" jdbcType="INTEGER" property="sysProjectDelete" />
+    <result column="sys_project_status" jdbcType="INTEGER" property="sysProjectStatus" />
+    <result column="sys_project_cdn" jdbcType="VARCHAR" property="sysProjectCdn" />
+    <result column="sys_project_endpoint" jdbcType="VARCHAR" property="sysProjectEndpoint" />
+    <result column="sys_project_api_address" jdbcType="VARCHAR" property="sysProjectApiAddress" />
+    <result column="sys_project_vender" jdbcType="VARCHAR" property="sysProjectVender" />
+    <result column="sys_project_remark" jdbcType="VARCHAR" property="sysProjectRemark" />
+    <result column="sys_project_function" jdbcType="VARCHAR" property="sysProjectFunction" />
+    <result column="sys_project_smtp_host" jdbcType="VARCHAR" property="sysProjectSmtpHost" />
+    <result column="sys_project_smtp_port" jdbcType="VARCHAR" property="sysProjectSmtpPort" />
+    <result column="sys_project_smtp_password" jdbcType="VARCHAR" property="sysProjectSmtpPassword" />
+    <result column="sys_project_smtp_from" jdbcType="VARCHAR" property="sysProjectSmtpFrom" />
+    <result column="create_name" jdbcType="VARCHAR" property="createName" />
+    <result column="create_by" jdbcType="INTEGER" property="createBy" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="update_name" jdbcType="VARCHAR" property="updateName" />
+    <result column="update_by" jdbcType="INTEGER" property="updateBy" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    sys_project_id, sys_project_name, sys_project_icon, sys_project_group, sys_project_code, 
+    sys_project_app_id, sys_project_app_secret, sys_project_sign, sys_project_delete, 
+    sys_project_status, sys_project_cdn, sys_project_endpoint, sys_project_api_address, 
+    sys_project_vender, sys_project_remark, sys_project_function, sys_project_smtp_host, 
+    sys_project_smtp_port, sys_project_smtp_password, sys_project_smtp_from, create_name, 
+    create_by, create_time, update_time, update_name, update_by
+  </sql>
+    <select id="selectPageFor" resultType="com.chua.starter.entity.project.SysProject">
+        SELECT T.*, CASE WHEN sysProjectFunctionDefaultLabel is not null THEN 1 ELSE 0 END sysProjectFunctionDefault FROM (
+        SELECT sp.*,
+               (SELECT group_concat(spd.sys_project_default_type)
+                FROM sys_project_default spd
+                WHERE spd.sys_project_id = sp.sys_project_id) sysProjectFunctionDefaultLabel,
+               (SELECT group_concat(spd.sys_project_default_type)
+                FROM sys_project_default spd
+                WHERE spd.sys_project_id = sp.sys_project_id) sysProjectFunctionDefaultIds
+        FROM sys_project sp
+        <trim>
+            <where>
+                <if test="request.sysProjectId != null">
+                    AND sys_project_id = #{request.sysProjectId}
+                </if>
+                <if test="request.sysProjectName != null and request.sysProjectName != ''">
+                    AND sys_project_name LIKE CONCAT('%', #{request.sysProjectName}, '%')
+                </if>
+                <if test="request.sysProjectGroup != null">
+                    AND sys_project_group = #{request.sysProjectGroup}
+                </if>
+                <if test="request.sysProjectStatus != null">
+                    AND sys_project_status = #{request.sysProjectStatus}
+                </if>
+                <if test="request.sysProjectDelete != null">
+                    AND sys_project_delete = #{request.sysProjectDelete}
+                </if>
+
+                <if test="request.sysProjectVender != null and request.sysProjectVender != ''">
+                    AND sys_project_vender = #{request.sysProjectVender}
+                </if>
+
+                <if test="request.sysProjectFunction != null">
+                    AND FIND_IN_SET(#{request.sysProjectFunction}, sys_project_function)
+                </if>
+            </where>
+        </trim>
+        ) T
+        ORDER BY sysProjectFunctionDefault desc, sys_project_sort
+    </select>
+
+    <select id="getDefaultByType" resultType="com.chua.starter.entity.project.SysProject">
+        SELECT sp.*
+        FROM sys_project_default spd
+        INNER JOIN sys_project sp ON sp.sys_project_id = spd.sys_project_id
+        WHERE spd.sys_project_default_type = #{typeName}
+    </select>
+</mapper>

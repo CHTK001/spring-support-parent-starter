@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.ai.support.mapper.AiModuleMapper">
+  <resultMap id="BaseResultMap" type="com.chua.starter.ai.support.entity.SysAiModule">
+    <!--@mbg.generated-->
+    <!--@Table sys_ai_module-->
+    <id column="sys_ai_module_id" jdbcType="INTEGER" property="sysAiModuleId" />
+    <result column="sys_ai_module_name" jdbcType="VARCHAR" property="sysAiModuleName" />
+    <result column="sys_ai_module_code" jdbcType="VARCHAR" property="sysAiModuleCode" />
+    <result column="sys_project_id" jdbcType="INTEGER" property="sysProjectId" />
+    <result column="sys_ai_module_remark" jdbcType="VARCHAR" property="sysAiModuleRemark" />
+    <result column="create_name" jdbcType="VARCHAR" property="createName" />
+    <result column="create_by" jdbcType="INTEGER" property="createBy" />
+    <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
+    <result column="update_time" jdbcType="TIMESTAMP" property="updateTime" />
+    <result column="update_name" jdbcType="VARCHAR" property="updateName" />
+    <result column="update_by" jdbcType="INTEGER" property="updateBy" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    sys_ai_module_id, sys_ai_module_name, sys_ai_module_code, sys_project_id, sys_ai_module_remark, 
+    create_name, create_by, create_time, update_time, update_name, update_by
+  </sql>
+</mapper>

@@ -1,0 +1,343 @@
+package com.chua.starter.mybatis;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.baomidou.mybatisplus.autoconfigure.ConfigurationCustomizer;
+import com.baomidou.mybatisplus.core.config.GlobalConfig;
+import com.baomidou.mybatisplus.extension.parser.JsqlParserGlobal;
+import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.InnerInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
+import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
+import com.chua.starter.common.support.oauth.AuthService;
+import com.chua.common.support.data.materialized.MaterializedSqlDataSourceRouter;
+import com.chua.starter.datasource.properties.MultiDataSourceSettingProperties;
+import com.chua.starter.datasource.properties.MaterializedRouteProperties;
+import com.chua.starter.mybatis.endpoint.MybatisEndpoint;
+import com.chua.starter.mybatis.interceptor.*;
+import com.chua.starter.mybatis.method.SupportInjector;
+import com.chua.starter.mybatis.properties.MybatisPlusDataScopeProperties;
+import com.chua.starter.mybatis.properties.MybatisPlusProperties;
+import com.chua.starter.mybatis.properties.MybatisSlowSqlProperties;
+import com.chua.starter.mybatis.reloader.MapperReload;
+import com.chua.starter.mybatis.reloader.Reload;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.mybatis.spring.SqlSessionTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.core.env.Environment;
+
+import javax.sql.DataSource;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Supplier;
+
+/**
+ * 处理注解
+ *
+ * @author CH
+ * @version 1.0.0
+ * @since 2021/4/12
+ */
+@EnableConfigurationProperties({MybatisPlusProperties.class, MybatisPlusDataScopeProperties.class, MybatisSlowSqlProperties.class})
+public class MybatisPlusConfiguration {
+    private static final Logger log = LoggerFactory.getLogger(MybatisPlusConfiguration.class);
+    private static final String ENCRYPTOR_PASSWORD_PROPERTY = "mybatis-plus.encryptor.password";
+    private static final String ENCRYPTOR_MODE_PROPERTY = "mybatis-plus.encryptor.mode";
+
+    /**
+     * 逻辑删除字段名
+     */
+    private static final String LOGIC_DELETE_FIELD = "sys_deleted";
+
+    /**
+     * 逻辑删除值（已删除）
+     */
+    private static final String LOGIC_DELETE_VALUE = "1";
+
+    /**
+     * 逻辑未删除值（未删除）
+     */
+    private static final String LOGIC_NOT_DELETE_VALUE = "0";
+
+    private final MybatisPlusProperties mybatisProperties;
+    private final MybatisPlusDataScopeProperties methodSecurityInterceptor;
+    private final Environment environment;
+
+    /**
+     * 构造函数
+     *
+     * @param mybatisProperties MyBatis Plus配置属性
+     * @param methodSecurityInterceptor 数据权限配置属性
+     */
+    public MybatisPlusConfiguration(MybatisPlusProperties mybatisProperties,
+                                    MybatisPlusDataScopeProperties methodSecurityInterceptor,
+                                    Environment environment) {
+        this.mybatisProperties = mybatisProperties;
+        this.methodSecurityInterceptor = methodSecurityInterceptor;
+        this.environment = environment;
+        syncEncryptorProperties();
+    }
+
+    static {
+        JsqlParserGlobal.setParserMultiFunc((sql) -> {
+            String formatSql = CCJSqlParserUtil.sanitizeSingleSql(sql);
+            return CCJSqlParserUtil.parseStatements(formatSql, JsqlParserGlobal.getExecutorService(), null);
+        });
+        JsqlParserGlobal.setParserSingleFunc((sql) -> {
+            String formatSql = CCJSqlParserUtil.sanitizeSingleSql(sql);
+            return CCJSqlParserUtil.parse(formatSql, JsqlParserGlobal.getExecutorService(), null);
+        });
+    }
+    /**
+     * 分页
+     *
+     * @return OptimisticLockerInnerInterceptor
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public PaginationInnerInterceptor paginationInnerInterceptor() {
+        return new PaginationInnerInterceptor();
+    }
+
+
+    /**
+     * 配置MyBatis Plus全局配置
+     *
+     * @return GlobalConfig 全局配置对象
+     */
+    @Bean
+    public GlobalConfig globalConfig() {
+        GlobalConfig globalConfig = new GlobalConfig();
+        GlobalConfig.DbConfig dbConfig = new GlobalConfig.DbConfig();
+        // 设置逻辑删除的全局值
+        dbConfig.setLogicDeleteField(LOGIC_DELETE_FIELD);
+        dbConfig.setLogicDeleteValue(LOGIC_DELETE_VALUE);
+        dbConfig.setLogicNotDeleteValue(LOGIC_NOT_DELETE_VALUE);
+        globalConfig.setDbConfig(dbConfig);
+        return globalConfig;
+    }
+
+
+    /**
+     * 删除权限
+     *
+     * @return OptimisticLockerInnerInterceptor
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public DeleteOnlySelfInterceptor deleteOnlySelfInterceptor(AuthService authService) {
+        return new DeleteOnlySelfInterceptor(authService);
+    }
+    /**
+     * 数据权限
+     *
+     * @return OptimisticLockerInnerInterceptor
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public DataPermissionInterceptor dataPermissionInterceptor(
+            @Autowired(required = false) MybatisPlusDataPermissionHandler dataPermissionHandler,
+            MybatisPlusDataScopeProperties methodSecurityInterceptor,
+            @Qualifier("authService") ObjectProvider<AuthService> authServiceProvider,
+            @Qualifier("defaultAuthService") ObjectProvider<AuthService> defaultAuthServiceProvider
+            ) {
+        Supplier<AuthService> authServiceSupplier = () -> {
+            AuthService authService = authServiceProvider.getIfAvailable();
+            return null != authService ? authService : defaultAuthServiceProvider.getIfAvailable();
+        };
+        if(null == dataPermissionHandler) {
+            dataPermissionHandler = new MybatisPlusDataPermissionHandler(methodSecurityInterceptor, authServiceSupplier);
+        }
+        return new MybatisPlusDataPermissionInterceptor(dataPermissionHandler, methodSecurityInterceptor, authServiceSupplier);
+    }
+
+
+    /**
+     * 乐观锁
+     *
+     * @return OptimisticLockerInnerInterceptor
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public OptimisticLockerInnerInterceptor optimisticLockerInnerInterceptor() {
+        return new OptimisticLockerInnerInterceptor();
+    }
+    /**
+     * 加密
+     *
+     * @return OptimisticLockerInnerInterceptor
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public CryptoInterceptor cryptoInterceptor() {
+        return new CryptoInterceptor();
+    }
+
+    /**
+     * MybatisPlusInterceptor
+     *
+     * @return MybatisPlusInterceptor
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public MybatisPlusInterceptor mybatisPlusInterceptor(
+            ObjectProvider<List<InnerInterceptor>> innerInterceptorProvider) {
+        MybatisPlusInterceptor mybatisPlusInterceptor = new MybatisPlusInterceptor();
+        List<InnerInterceptor> innerInterceptors = new ArrayList<>(innerInterceptorProvider.getIfAvailable(List::of));
+        innerInterceptors.sort((left, right) -> {
+            boolean leftPagination = left instanceof PaginationInnerInterceptor;
+            boolean rightPagination = right instanceof PaginationInnerInterceptor;
+            if (leftPagination == rightPagination) {
+                return 0;
+            }
+            return leftPagination ? 1 : -1;
+        });
+        for (InnerInterceptor innerInterceptor : innerInterceptors) {
+            mybatisPlusInterceptor.addInnerInterceptor(innerInterceptor);
+        }
+        return mybatisPlusInterceptor;
+    }
+
+
+    /**
+     * SqlInterceptor
+     *
+     * @return SqlInterceptor
+     */
+    @Bean("mapper-reload")
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = MybatisPlusProperties.PRE, name = "open-xml-reload", havingValue = "true", matchIfMissing = false)
+    public Reload xmlReload(List<SqlSessionFactory> sqlSessionFactory, MybatisPlusProperties mybatisProperties) {
+        return new MapperReload(sqlSessionFactory, mybatisProperties);
+    }
+    /**
+     * SupportInjector
+     *
+     * @return SupportInjector
+     */
+    @Bean
+    @ConditionalOnMissingBean(name = {"supportInjector"})
+    public SupportInjector supportInjector(MybatisPlusProperties mybatisProperties) {
+        return new SupportInjector(mybatisProperties);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public ConfigurationCustomizer mybatisConfigurationCustomizer(MybatisPlusProperties mybatisProperties,
+                                                                 @Autowired(required = false) MaterializedSqlDataSourceRouter materializedSqlRouter,
+                                                                 @Autowired(required = false) MaterializedRouteProperties materializedRouteProperties,
+                                                                 MultiDataSourceSettingProperties multiDataSourceSettingProperties,
+                                                                 ApplicationContext applicationContext,
+                                                                 ObjectProvider<SlowSqlDetectInterceptor> slowSqlDetectInterceptorProvider) {
+        return configuration -> {
+            // 只读拦截器优先级最高，需要第一个添加
+            if (mybatisProperties.isReadOnly()) {
+                log.warn("数据库只读模式已开启，所有写操作将被拒绝");
+                configuration.addInterceptor(new ReadOnlyInterceptor(mybatisProperties));
+            }
+            if (materializedSqlRouter != null && materializedRouteProperties != null && materializedRouteProperties.isEnabled()) {
+                configuration.addInterceptor(new MaterializedSqlInterceptor(materializedSqlRouter, materializedRouteProperties));
+            }
+            configuration.addInterceptor(new MapperDataSourceInterceptor(applicationContext, multiDataSourceSettingProperties));
+            // 添加追踪拦截器
+            configuration.addInterceptor(new MapperTracingInterceptor());
+            SlowSqlDetectInterceptor slowSqlDetectInterceptor = slowSqlDetectInterceptorProvider.getIfAvailable();
+            if (slowSqlDetectInterceptor != null) {
+                configuration.addInterceptor(slowSqlDetectInterceptor);
+            }
+        };
+    }
+
+    /**
+     * 慢 SQL 检测拦截器（可选）。
+     *
+     * @param eventPublisher Spring 事件发布器
+     * @param properties     慢 SQL 配置
+     * @return 慢 SQL 检测拦截器
+     * @author CH
+     */
+    @Bean
+    @ConditionalOnProperty(prefix = MybatisPlusProperties.PRE + ".slow-sql", name = "enabled", havingValue = "true", matchIfMissing = true)
+    public SlowSqlDetectInterceptor slowSqlDetectInterceptor(org.springframework.context.ApplicationEventPublisher eventPublisher,
+                                                            MybatisSlowSqlProperties properties) {
+        return new SlowSqlDetectInterceptor(eventPublisher, properties);
+    }
+    /**
+     * MybatisEndpoint
+     *
+     * @return MybatisEndpoint MybatisEndpoint
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnBean(name = {"mapper-reload", "supportInjector"})
+    public MybatisEndpoint mybatisEndpoint(Reload reload, SqlSessionFactory sqlSessionFactory, @Autowired(required = false) SupportInjector supportInjector ) {
+        return new MybatisEndpoint(reload, sqlSessionFactory.getConfiguration(), supportInjector);
+    }
+
+
+    /**
+     * 创建 {@link SqlSessionFactory}。
+     * <p>基于动态数据源和 MyBatis Plus 全局配置、拦截器进行构建。</p>
+     *
+     * @param dataSource               主数据源
+     * @param mybatisPlusInterceptor   MyBatis Plus 拦截器
+     * @param globalConfig             MyBatis Plus 全局配置
+     * @return SqlSessionFactory 实例
+     * @throws Exception 创建失败时抛出异常
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public SqlSessionFactory sqlSessionFactory(DataSource dataSource,
+                                               MybatisPlusInterceptor mybatisPlusInterceptor,
+                                               GlobalConfig globalConfig) throws Exception {
+        var factoryBean = new MybatisSqlSessionFactoryBean();
+        factoryBean.setDataSource(dataSource);
+        factoryBean.setPlugins(mybatisPlusInterceptor);
+        factoryBean.setGlobalConfig(globalConfig);
+        var sqlSessionFactory = factoryBean.getObject();
+        log.info("[OAuth][MyBatis]SqlSessionFactory 已创建");
+        return sqlSessionFactory;
+    }
+
+    /**
+     * 创建 {@link SqlSessionTemplate}。
+     * <p>用于给 Mapper 提供实际使用的 SqlSession。</p>
+     *
+     * @param sqlSessionFactory SqlSessionFactory 实例
+     * @return SqlSessionTemplate 实例
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public SqlSessionTemplate sqlSessionTemplate(SqlSessionFactory sqlSessionFactory) {
+        return new SqlSessionTemplate(sqlSessionFactory);
+    }
+
+    private void syncEncryptorProperties() {
+        syncSystemProperty(ENCRYPTOR_PASSWORD_PROPERTY);
+        syncSystemProperty(ENCRYPTOR_MODE_PROPERTY);
+    }
+
+    private void syncSystemProperty(String propertyName) {
+        String value = environment.getProperty(propertyName);
+        if (value == null || value.isBlank()) {
+            return;
+        }
+        System.setProperty(propertyName, value);
+    }
+}

@@ -1,0 +1,276 @@
+package com.chua.starter.common.support.application;
+
+import com.chua.common.support.constant.CommonConstant;
+import com.chua.common.support.function.Upgrade;
+import com.chua.common.support.utils.ClassUtils;
+import com.chua.common.support.utils.MapUtils;
+import com.chua.starter.common.support.reflection.FieldStation;
+import com.chua.spring.support.configuration.SpringBeanUtils;
+
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * 全局工厂
+ *
+ * @author CH
+ * @since 2024/8/6
+ */
+public class GlobalSettingFactory {
+
+    private static final GlobalSettingFactory INSTANCE = new GlobalSettingFactory();
+
+    /**
+     * 平台前缀
+     * <p>
+     * 使用 volatile 保证多线程可见性。PREFIX 在应用启动时由平台配置写入一次，
+     * 运行期只读，不存在并发写问题。如需多租户动态切换前缀，请使用 ThreadLocal 方案。
+     * </p>
+     */
+    public static volatile String PREFIX = "";
+
+
+    static final Map<String, Object> CONFIG = new ConcurrentHashMap<>();
+    static final Map<String, List<Object>> GROUP = new ConcurrentHashMap<>();
+    static final Map<String, Boolean> GROUP_ENABLED = new ConcurrentHashMap<>();
+
+    /**
+     * 获取全局设置对象
+     *
+     * @param type 设置名称
+     * @param <T>  泛型标记
+     * @return 对应的设置对象，如果不存在则返回null
+     */
+    public <T> T get(Class<T> type) {
+        for (Map.Entry<String, List<Object>> entry : GROUP.entrySet()) {
+            List<Object> value = entry.getValue();
+            for (Object o : value) {
+                if (type.isAssignableFrom(o.getClass())) {
+                    return (T) o;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 根据设置名称获取全局设置对象
+     *
+     * @param group 设置名称
+     * @param <T>   泛型标记
+     * @return 对应的设置对象，如果不存在则返回null
+     */
+    public <T> List<T> get(String group) {
+        return (List<T>) GROUP.get(PREFIX + group);
+    }
+
+    /**
+     * 根据设置组名和属性名获取配置值
+     *
+     * @param group 设置组名称
+     * @param name  属性名称
+     * @return 对应的属性值字符串，如果不存在则返回null
+     */
+    public String get(String group, String name) {
+        List<Object> ts = GROUP.get(PREFIX + group);
+        if (null == ts || ts.isEmpty()) {
+            return null;
+        }
+        for (Object t : ts) {
+            if (t == null) {
+                continue;
+            }
+            Object value = FieldStation.of(t).getValue(name);
+            if (value != null) {
+                return String.valueOf(value);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 根据设置名称和类类型获取全局设置对象如果对象不存在则创建并返回
+     *
+     * @param group 设置名称
+     * @param clazz 对象的类类型
+     * @param <T>   泛型标记
+     * @return 对应的设置对象
+     */
+    @SuppressWarnings("unchecked")
+    public <T> T get(String group, Class<T> clazz) {
+        List<T> t = (List<T>) GROUP.get(PREFIX + group);
+        if (t == null) {
+            T t1 = ClassUtils.forObject(clazz);
+            register(group, t1);
+            return t1;
+        }
+
+        for (T t1 : t) {
+            if(null == t1) {
+                continue;
+            }
+            if (clazz.isInstance(t1)) {
+                return t1;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 注册全局设置对象
+     *
+     * @param group 设置名称
+     * @param t     要注册的设置对象
+     * @param <T>   泛型标记
+     */
+    public <T> void register(String group, T t) {
+        register(group, t, true);
+    }
+
+    /**
+     * 注册全局设置对象, 带启用状态
+     *
+     * @param group   设置名称
+     * @param t       要注册的设置对象
+     * @param enabled 是否启用
+     * @param <T>     泛型标记
+     */
+    public <T> void register(String group, T t, boolean enabled) {
+        if (null == t) {
+            return;
+        }
+        String groupKey = PREFIX + group;
+        List<Object> objects = GROUP.get(groupKey);
+        if (null == objects) {
+            GROUP.put(groupKey, new LinkedList<>());
+            objects = GROUP.get(groupKey);
+        }
+
+        for (Object object : objects) {
+            if (object.getClass().isAssignableFrom(t.getClass())) {
+                return;
+            }
+        }
+
+        objects.add(t);
+        GROUP_ENABLED.putIfAbsent(groupKey, enabled);
+    }
+
+    /**
+     * 获取全局设置工厂实例
+     *
+     * @return 全局设置工厂实例
+     */
+    public static GlobalSettingFactory getInstance() {
+        return INSTANCE;
+    }
+
+    /**
+     * 获取所有分组配置
+     *
+     * @return 分组名称与配置列表映射
+     */
+    public Map<String, List<Object>> getAllGroup() {
+        return Collections.unmodifiableMap(GROUP);
+    }
+
+    /**
+     * 获取所有分组启用状态
+     *
+     * @return 分组名称与启用状态映射
+     */
+    public Map<String, Boolean> getAllGroupEnabled() {
+        return Collections.unmodifiableMap(GROUP_ENABLED);
+    }
+
+    /**
+     * 为指定组(Group)和名称(Name)的配置项设置新值，如果配置项自上次检查以来未发生改变
+     * 此方法设计用于确保只有在相关配置项未被外部更改的情况下，才更新其值。该设计有助于避免并发修改带来的问题。
+     *
+     * @param group 配置项所属的组，用于定位特定的配置项 必须是有效的组名称。
+     * @param name  配置项的名称，用于精确识别特定的配置项。必须是有效的配置项名称。
+     * @param value 要设置的新值，可以是任何类型的对象 如果配置项自上次检查后未改变，将设置此值。
+     * @param <T>   值的类型，泛型使用以支持各种类型的配置项值。
+     */
+    public synchronized <T> void setIfNoChange(String group, String name, Object value) {
+        if (CONFIG.containsKey(PREFIX + group + name)) {
+            return;
+        }
+
+        set(group, name, value);
+        CONFIG.put(PREFIX + group + name, CommonConstant.SYMBOL_EMPTY);
+    }
+
+    /**
+     * 设置全局设置对象的属性值。
+     *
+     * @param group  设置名称
+     * @param params 属性
+     * @param <T>    泛型标记
+     */
+    public synchronized <T> void set(String group, Map<String, Object> params) {
+        if (MapUtils.isEmpty(params)) {
+            return;
+        }
+
+        List<T> ts = get(group);
+        if (null == ts) {
+            return;
+        }
+        for (T t : ts) {
+            params.forEach((name, value) -> FieldStation.of(t).setIgnoreNameValue(name, value));
+            if (t instanceof Upgrade<?>) {
+                ((Upgrade) t).upgrade(t);
+                SpringBeanUtils.getApplicationContext().publishEvent(t);
+            }
+        }
+    }
+
+    /**
+     * 设置全局设置对象的属性值。
+     *
+     * @param group 设置名称
+     * @param name  属性名称
+     * @param value 属性值
+     * @param <T>   泛型标记
+     */
+    public synchronized <T> void set(String group, String name, Object value) {
+        List<T> ts = get(group);
+        if (null == ts) {
+            return;
+        }
+        for (T t : ts) {
+            FieldStation.of(t).setIgnoreNameValue(name, value);
+            if (t instanceof Upgrade<?>) {
+                ((Upgrade) t).upgrade(t);
+                SpringBeanUtils.getApplicationContext().publishEvent(t);
+            }
+        }
+    }
+
+    /**
+     * 根据类类型设置全局设置对象的属性值。
+     *
+     * @param group 设置名称
+     * @param type  对象的类类型
+     * @param name  属性名称
+     * @param value 属性值
+     * @param <T>   泛型标记
+     */
+    @SuppressWarnings("unchecked")
+    public synchronized <T> void set(String group, Class<T> type, String name, Object value) {
+        T t = get(group, type);
+        if (null == t) {
+            return;
+        }
+
+        FieldStation.of(t).setIgnoreNameValue(name, value);
+        if (t instanceof Upgrade<?>) {
+            ((Upgrade) t).upgrade(t);
+            return;
+        }
+    }
+}

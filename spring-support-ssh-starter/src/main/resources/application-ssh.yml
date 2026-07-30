@@ -1,0 +1,63 @@
+# SSH服务端配置
+ssh:
+  server:
+    # 启用SSH服务端
+    enabled: true
+    # SSH服务器配置
+    host: 0.0.0.0
+    port: 2222
+    
+    # 认证配置
+    authentication:
+      # 启用密码认证
+      password: true
+      # 启用公钥认证
+      public-key: false
+      # 默认用户配置 - 请修改为您自己的凭据
+      username: your_username
+      user-password: your_password
+      # 公钥文件路径（可选）
+      public-key-file: ~/.ssh/id_rsa.pub
+      # 私钥文件路径（可选）
+      private-key-file: ~/.ssh/id_rsa
+    
+    # 会话配置
+    session:
+      # 会话超时时间（秒）
+      timeout: 3600
+      # 最大会话数
+      max-sessions: 10
+      # 空闲超时时间（秒）
+      idle-timeout: 1800
+    
+    # 文件传输配置
+    file-transfer:
+      # 启用SCP
+      scp-enabled: true
+      # 启用SFTP
+      sftp-enabled: true
+      # 文件传输根目录
+      root-directory: /tmp
+      # 最大文件大小（字节）
+      max-file-size: 104857600  # 100MB
+    
+    # 安全配置
+    security:
+      # 允许的IP地址列表
+      allowed-ips:
+        - 127.0.0.1
+        - 192.168.1.0/24
+      # 禁止的IP地址列表
+      denied-ips: []
+      # 最大登录尝试次数
+      max-login-attempts: 3
+      # 登录失败锁定时间（秒）
+      lockout-duration: 300
+      # 是否启用主机密钥验证
+      host-key-verification: true
+
+# 日志配置
+logging:
+  level:
+    com.chua.starter.ssh: INFO
+    org.apache.sshd: INFO

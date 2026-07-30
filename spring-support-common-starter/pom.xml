@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support Common Starter - 通用功能模块
+
+    这是Spring Support框架的核心通用模块，提供了企业级应用开发中常用的基础功能和工具类。
+    包含以下主要功能：
+
+    1. 统一响应处理 - 提供统一的API响应格式和异常处理
+    2. 参数验证 - 集成Bean Validation进行参数校验
+    3. 缓存支持 - 提供多级缓存和缓存管理功能
+    4. 验证码生成 - 支持图形验证码生成和验证
+    5. 文件存储 - 提供统一的文件存储接口
+    6. 加密解密 - 支持数据加密和隐私保护
+    7. 异步任务 - 提供异步任务执行和线程池管理
+    8. 拦截器 - 提供通用的Web拦截器功能
+    9. 工具类集成 - 集成各种常用工具类库
+
+    @author CH
+    @version 4.0.0.41
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 继承父项目配置 -->
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>4.0.0.42</version>
+    </parent>
+
+    <!-- 项目基本信息 -->
+    <artifactId>spring-support-common-starter</artifactId>
+    <description>Spring Support框架通用功能模块，提供企业级应用开发的基础功能和工具类</description>
+
+    <!-- 项目属性配置 -->
+    <!-- 依赖配置 -->
+    <dependencies>
+        <!-- Lombok - 简化Java代码编写 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Commons Codec - 编解码工具 -->
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+        </dependency>
+
+        <!-- JSON路径查询工具 - 用于JSON数据的路径查询和提取 -->
+
+
+        <!-- SpEL表达式扩展 - 增强Spring表达式语言功能 -->
+        <dependency>
+            <groupId>kim.nzxy</groupId>
+            <artifactId>spel-extension</artifactId>
+            <scope>provided</scope> <!-- 编译时依赖，运行时由其他模块提供 -->
+        </dependency>
+
+        <!-- 通用工具类库核心模块 - 提供 CommonConstant, Action, Version 等类 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- Jakarta Servlet API - 提供 Servlet 相关接口 -->
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Spring Boot参数验证 - 提供Bean Validation支持 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Swagger API文档 - 可选依赖，用于API文档生成 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-swagger-starter</artifactId>
+            <scope>provided</scope> <!-- 可选依赖，不强制引入 -->
+        </dependency>
+
+        <!-- Java验证API - 提供标准的验证注解 -->
+        <dependency>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
+            <scope>provided</scope> <!-- 可选依赖，不强制引入 -->
+        </dependency>
+
+        <!-- Jackson JSR310时间处理 - 支持Java 8时间API的JSON序列化 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+
+        <!-- Jackson JDK8模块 - 支持Optional等JDK8特性 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jdk8</artifactId>
+        </dependency>
+
+        <!-- Jackson参数名模块 - 支持使用参数名进行反序列化 -->
+        <!-- 注意：此模块由 Spring Boot 自动提供，无需显式添加依赖 -->
+        <!-- <dependency>
+            <groupId>com.fasterxml.jackson.module</groupId>
+            <artifactId>jackson-module-paramnames</artifactId>
+        </dependency> -->
+
+        <!-- HTTP客户端工具 - 提供HTTP请求功能 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-httpclient-starter</artifactId>
+        </dependency>
+
+        <!-- Spring框架扩展工具 - 提供Spring相关的工具类 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-spring-starter</artifactId>
+        </dependency>
+
+        <!-- JDK 15+特性支持 - 提供新版本JDK特性的支持 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-jdk15on-starter</artifactId>
+        </dependency>
+
+        <!-- ByteBuddy - 已移除（AutoController 已删除，本 starter 不再需要字节码生成） -->
+
+        <!-- Google Guava工具库 - 提供Table等集合工具 -->
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
+
+        <!-- Easy Captcha验证码生成器 - 提供图形验证码生成功能 -->
+        <dependency>
+            <groupId>com.github.whvcse</groupId>
+            <artifactId>easy-captcha</artifactId>
+        </dependency>
+
+        <!-- Apache Commons IO - 提供IO工具类 -->
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+        </dependency>
+
+        <!-- Caffeine缓存 - 高性能的本地缓存库 -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-xml</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+
+        <!-- Spring Boot缓存支持 - 提供缓存抽象和管理功能 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+
+        <!-- Spring Boot自动配置 - 提供自动配置功能 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+        <!-- Tomcat 嵌入式服务器 - 可选依赖，用于虚拟线程配置 -->
+        <dependency>
+            <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Undertow 嵌入式服务器 - 可选依赖，用于虚拟线程配置 -->
+        <dependency>
+            <groupId>io.undertow</groupId>
+            <artifactId>undertow-core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.undertow</groupId>
+            <artifactId>undertow-servlet</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Spring JDBC - 提供 DataAccessException 等数据访问异常类 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>${okhttp.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.ip2proxy</groupId>
+            <artifactId>ip2proxy-java</artifactId>
+            <version>${ip2proxy.version}</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerArgs>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.jvm=ALL-UNNAMED</arg>
+                        <arg>-J--add-exports=jdk.unsupported/sun.misc=ALL-UNNAMED</arg>
+                        <arg>-parameters</arg>
+                        <arg>-proc:full</arg>
+                    </compilerArgs>
+                    <fork>true</fork>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+

@@ -1,0 +1,38 @@
+package com.chua.starter.panel.config;
+
+import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import java.time.Duration;
+
+/**
+ * 面板模块配置。
+ *
+ * @author CH
+ */
+@Data
+@ConfigurationProperties(prefix = PanelProperties.PREFIX)
+public class PanelProperties {
+
+    public static final String PREFIX = "panel";
+
+    private boolean enabled = true;
+
+    private Duration connectionCacheTtl = Duration.ofMinutes(15);
+
+    private Duration documentCacheTtl = Duration.ofMinutes(30);
+
+    private boolean jdbcEnabled = true;
+
+    private boolean aiEnabled = true;
+
+    private String datasourceStorePath = System.getProperty("user.home") + "/.panel/panel-datasources.json";
+
+    private String datasourceDriverStorePath = System.getProperty("user.home") + "/.panel/drivers";
+
+    private String datasourceEncryptionKey = System.getProperty("user.name", "panel")
+            + "@"
+            + System.getProperty("os.name", "default");
+
+    private int sqlQueryPreviewLimit = 1000;
+}

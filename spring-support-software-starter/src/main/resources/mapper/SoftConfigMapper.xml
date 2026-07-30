@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.software.support.mapper.SoftConfigMapper">
+
+    <sql id="selectSoftConfigVo">
+        SELECT
+            config_id,
+            config_software_id,
+            config_user_id,
+            config_device_id,
+            config_key,
+            config_value,
+            config_type,
+            config_label,
+            config_description,
+            config_group,
+            config_sort,
+            config_is_visible,
+            config_is_editable,
+            config_default_value,
+            config_range,
+            config_extra,
+            config_create_time,
+            config_update_time,
+            config_create_by,
+            config_update_by
+        FROM soft_config
+    </sql>
+
+    <select id="selectPageFor" resultType="com.chua.starter.software.support.entity.SoftConfig">
+        <include refid="selectSoftConfigVo"/>
+        <where>
+            <if test="request.configSoftwareId != null and request.configSoftwareId != ''">
+                AND config_software_id = #{request.configSoftwareId}
+            </if>
+            <if test="request.configUserId != null and request.configUserId != ''">
+                AND config_user_id = #{request.configUserId}
+            </if>
+            <if test="request.configDeviceId != null and request.configDeviceId != ''">
+                AND config_device_id = #{request.configDeviceId}
+            </if>
+            <if test="request.configKey != null and request.configKey != ''">
+                AND config_key = #{request.configKey}
+            </if>
+            <if test="request.configGroup != null and request.configGroup != ''">
+                AND config_group = #{request.configGroup}
+            </if>
+        </where>
+        ORDER BY config_group ASC, config_sort ASC
+    </select>
+</mapper>

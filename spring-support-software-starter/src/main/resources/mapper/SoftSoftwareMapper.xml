@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.software.support.mapper.SoftSoftwareMapper">
+
+    <sql id="selectSoftSoftwareVo">
+        SELECT
+            software_id,
+            software_name,
+            software_code,
+            software_version,
+            software_latest_version,
+            software_description,
+            software_icon,
+            software_category,
+            software_tags,
+            software_download_url,
+            software_file_size,
+            software_md5,
+            software_sha256,
+            software_min_os_version,
+            software_cpu_arch,
+            software_source_id,
+            software_install_count,
+            software_rating,
+            software_is_official,
+            software_is_recommended,
+            software_is_free,
+            software_price,
+            software_status,
+            software_sort,
+            software_extra,
+            software_create_time,
+            software_update_time,
+            software_create_by,
+            software_update_by
+        FROM soft_software
+    </sql>
+
+    <select id="selectPageFor" resultType="com.chua.starter.software.support.entity.SoftSoftware">
+        <include refid="selectSoftSoftwareVo"/>
+        <where>
+            <if test="request.softwareName != null and request.softwareName != ''">
+                AND software_name LIKE CONCAT('%', #{request.softwareName}, '%')
+            </if>
+            <if test="request.softwareCode != null and request.softwareCode != ''">
+                AND software_code = #{request.softwareCode}
+            </if>
+            <if test="request.softwareCategory != null and request.softwareCategory != ''">
+                AND software_category = #{request.softwareCategory}
+            </if>
+            <if test="request.softwareStatus != null">
+                AND software_status = #{request.softwareStatus}
+            </if>
+            <if test="request.softwareSourceId != null and request.softwareSourceId != ''">
+                AND software_source_id = #{request.softwareSourceId}
+            </if>
+        </where>
+        ORDER BY
+            <if test="installedIds != null and installedIds.size() > 0">
+                CASE software_id
+                    <foreach collection="installedIds" item="id" open="WHEN" separator="WHEN" close="THEN 0 ELSE 1 END">
+                        #{id}
+                    </foreach>
+                END,
+            </if>
+            software_sort DESC,
+            software_install_count DESC,
+            software_create_time DESC
+    </select>
+
+    <update id="updateStatusBySourceId">
+        UPDATE soft_software
+        SET software_status = #{status},
+            software_update_time = NOW()
+        WHERE software_source_id = #{sourceId}
+          AND software_status != #{status}
+    </update>
+</mapper>

@@ -1,0 +1,256 @@
+package com.chua.starter.ai.support.service.impl;
+
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.ai.support.entity.SysAiToken;
+import com.chua.starter.ai.support.mapper.SysAiTokenMapper;
+import com.chua.starter.ai.support.service.SysAiTokenService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Base64;
+import java.util.List;
+
+import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;
+
+/**
+ * AI 令牌服务实现。
+ * <p>
+ * 负责 Token 的 CRUD、校验、分组绑定、用量统计和限流控制。
+ *
+ * @author CH
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class SysAiTokenServiceImpl implements SysAiTokenService {
+
+    private static final int STATUS_ENABLED = 1;
+
+    private final SysAiTokenMapper sysAiTokenMapper;
+
+    @Override
+    public List<SysAiToken> list() {
+        return sysAiTokenMapper.selectList(
+                Wrappers.lambdaQuery(SysAiToken.class)
+                        .eq(SysAiToken::getSysAiTokenDelete, 0)
+                        .orderByDesc(SysAiToken::getSysAiTokenId)
+        );
+    }
+
+    @Override
+    public List<SysAiToken> listByGroupId(Integer groupId) {
+        if (groupId == null) {
+            return list();
+        }
+        return sysAiTokenMapper.selectList(
+                Wrappers.lambdaQuery(SysAiToken.class)
+                        .eq(SysAiToken::getSysAiTokenGroupId, groupId)
+                        .eq(SysAiToken::getSysAiTokenDelete, 0)
+                        .orderByDesc(SysAiToken::getSysAiTokenId)
+        );
+    }
+
+    @Override
+    public SysAiToken save(SysAiToken token) {
+        if (StringUtils.isBlank(token.getSysAiTokenKey())) {
+            String rawKey = generateKey();
+            token.setSysAiTokenKey(rawKey);
+            token.setSysAiTokenKeyPrefix("sk-");
+            token.setSysAiTokenKeyHash(sha256(rawKey));
+        }
+        if (token.getSysAiTokenStatus() == null) {
+            token.setSysAiTokenStatus(1);
+        }
+        if (token.getSysAiTokenDelete() == null) {
+            token.setSysAiTokenDelete(0);
+        }
+        if (token.getSysAiTokenUseCount() == null) {
+            token.setSysAiTokenUseCount(0L);
+        }
+        if (token.getSysAiTokenTotalFee() == null) {
+            token.setSysAiTokenTotalFee(BigDecimal.ZERO);
+        }
+        sysAiTokenMapper.insert(token);
+        return token;
+    }
+
+    @Override
+    @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
+    public boolean update(SysAiToken token) {
+        return sysAiTokenMapper.updateById(token) > 0;
+    }
+
+    @Override
+    @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
+    public boolean deleteById(Integer tokenId) {
+        if (tokenId == null) {
+            return false;
+        }
+        SysAiToken entity = new SysAiToken();
+        entity.setSysAiTokenId(tokenId);
+        entity.setSysAiTokenDelete(1);
+        return sysAiTokenMapper.updateById(entity) > 0;
+    }
+
+    @Override
+    public SysAiToken findByTokenKey(String tokenKey) {
+        if (StringUtils.isBlank(tokenKey)) {
+            return null;
+        }
+        String hash = sha256(tokenKey);
+        return sysAiTokenMapper.selectOne(
+                Wrappers.lambdaQuery(SysAiToken.class)
+                        .eq(SysAiToken::getSysAiTokenKeyHash, hash)
+                        .eq(SysAiToken::getSysAiTokenDelete, 0)
+                        .last("LIMIT 1")
+        );
+    }
+
+    @Override
+    public SysAiToken verify(String tokenKey, Integer groupId) {
+        SysAiToken token = findByTokenKey(tokenKey);
+        if (token == null) {
+            return null;
+        }
+        // 状态检查
+        if (!Integer.valueOf(STATUS_ENABLED).equals(token.getSysAiTokenStatus())) {
+            return null;
+        }
+        // 过期检查
+        if (token.getSysAiTokenExpireTime() != null
+                && LocalDateTime.now().isAfter(token.getSysAiTokenExpireTime())) {
+            return null;
+        }
+        // 分组检查——Token 只能访问其绑定的分组
+        if (groupId != null && !groupId.equals(token.getSysAiTokenGroupId())) {
+            return null;
+        }
+        return token;
+    }
+
+    @Override
+    public Integer getGroupIdByTokenKey(String tokenKey) {
+        SysAiToken token = findByTokenKey(tokenKey);
+        return token != null ? token.getSysAiTokenGroupId() : null;
+    }
+
+    @Override
+    @Async("taskExecutor")
+    public void recordUsage(String tokenKey, int promptTokens, int completionTokens, BigDecimal cost) {
+        SysAiToken token = findByTokenKey(tokenKey);
+        if (token == null) {
+            return;
+        }
+        // 累加使用次数和 token 数
+        SysAiToken update = new SysAiToken();
+        update.setSysAiTokenId(token.getSysAiTokenId());
+        update.setSysAiTokenUseCount(
+                (token.getSysAiTokenUseCount() == null ? 0 : token.getSysAiTokenUseCount()) + 1
+        );
+        update.setSysAiTokenTotalTokens(
+                (token.getSysAiTokenTotalTokens() == null ? 0 : token.getSysAiTokenTotalTokens())
+                        + promptTokens + completionTokens
+        );
+        update.setSysAiTokenLastUsedTime(LocalDateTime.now());
+        // 费用累加
+        if (cost != null) {
+            BigDecimal currentInputFee = token.getSysAiTokenTotalInputFee() == null
+                    ? BigDecimal.ZERO : token.getSysAiTokenTotalInputFee();
+            BigDecimal currentOutputFee = token.getSysAiTokenTotalOutputFee() == null
+                    ? BigDecimal.ZERO : token.getSysAiTokenTotalOutputFee();
+            BigDecimal currentTotal = token.getSysAiTokenTotalFee() == null
+                    ? BigDecimal.ZERO : token.getSysAiTokenTotalFee();
+            update.setSysAiTokenTotalInputFee(currentInputFee.add(cost));
+            update.setSysAiTokenTotalOutputFee(currentOutputFee.add(cost));
+            update.setSysAiTokenTotalFee(currentTotal.add(cost));
+            // 今日费用
+            String today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
+            if (!today.equals(token.getSysAiTokenTodayDate())) {
+                update.setSysAiTokenTodayFee(cost);
+                update.setSysAiTokenTodayDate(today);
+            } else {
+                BigDecimal todayFee = token.getSysAiTokenTodayFee() == null
+                        ? BigDecimal.ZERO : token.getSysAiTokenTodayFee();
+                update.setSysAiTokenTodayFee(todayFee.add(cost));
+            }
+        }
+        sysAiTokenMapper.updateById(update);
+    }
+
+    @Override
+    public boolean checkRateLimit(String tokenKey) {
+        SysAiToken token = findByTokenKey(tokenKey);
+        if (token == null) {
+            return false;
+        }
+        Integer rateLimit = token.getSysAiTokenRateLimit();
+        if (rateLimit == null || rateLimit <= 0) {
+            return true; // 无限流
+        }
+        Integer rateCount = token.getSysAiTokenRateCount() == null ? 0 : token.getSysAiTokenRateCount();
+        LocalDateTime windowStart = token.getSysAiTokenRateWindowStart();
+        LocalDateTime now = LocalDateTime.now();
+        // 检查是否在新窗口
+        if (windowStart == null || windowStart.plusMinutes(1).isBefore(now)) {
+            // 新窗口：重置计数器
+            SysAiToken update = new SysAiToken();
+            update.setSysAiTokenId(token.getSysAiTokenId());
+            update.setSysAiTokenRateCount(1);
+            update.setSysAiTokenRateWindowStart(now);
+            sysAiTokenMapper.updateById(update);
+            return true;
+        }
+        if (rateCount < rateLimit) {
+            // 窗口内未触发限流
+            SysAiToken update = new SysAiToken();
+            update.setSysAiTokenId(token.getSysAiTokenId());
+            update.setSysAiTokenRateCount(rateCount + 1);
+            sysAiTokenMapper.updateById(update);
+            return true;
+        }
+        // 触发限流
+        return false;
+    }
+
+    /**
+     * 生成 sk- 前缀的随机密钥。
+     */
+    private static String generateKey() {
+        byte[] bytes = new byte[36];
+        new SecureRandom().nextBytes(bytes);
+        return "sk-" + Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
+                .replace("+", "-")
+                .replace("/", "_")
+                .substring(0, 48);
+    }
+
+    /**
+     * SHA-256 哈希，用于 Token 安全存储。
+     */
+    private static String sha256(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder();
+            for (byte b : hash) {
+                hex.append(String.format("%02x", b));
+            }
+            return hex.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 not available", e);
+        }
+    }
+}

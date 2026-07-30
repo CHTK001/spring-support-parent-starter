@@ -1,0 +1,49 @@
+package com.chua.starter.tencent.support.user;
+
+import com.chua.common.support.spi.annotations.Spi;
+import com.chua.starter.oauth.client.support.user.UserInfoService;
+import com.chua.starter.oauth.client.support.user.UserResume;
+import com.chua.starter.oauth.client.support.user.UserResult;
+import me.zhyd.oauth.model.AuthUser;
+import org.springframework.util.StringUtils;
+
+/**
+ * 微信小程序用户信息服务
+ *
+ * @author CH
+ * @since 2026/07/20
+ */
+@Spi("WECHAT_MINI")
+public class WechatMiniUserInfoService implements UserInfoService {
+
+    @Override
+    public UserResume checkLogin(String principal, String credential, String address, Object ext) {
+        String openid = principal;
+        if (!StringUtils.hasText(openid)) {
+            return new UserResume("openid 不能为空");
+        }
+
+        UserResume resume = new UserResume();
+        resume.setOpenId(openid);
+        resume.setLoginType("WECHAT_MINI");
+
+        if (ext instanceof AuthUser authUser) {
+            resume.setUsername(StringUtils.hasText(authUser.getUsername()) ? authUser.getUsername() : openid);
+            resume.setUnionId(StringUtils.hasText(authUser.getUuid()) ? authUser.getUuid() : openid);
+        } else {
+            resume.setUsername(openid);
+            resume.setUnionId(openid);
+        }
+
+        if (StringUtils.hasText(credential)) {
+            resume.setPhone(credential);
+        }
+
+        return resume;
+    }
+
+    @Override
+    public UserResume upgrade(UserResult userResult) {
+        return null;
+    }
+}

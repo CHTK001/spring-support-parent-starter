@@ -1,0 +1,1414 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support Parent Starter - 企业级Spring Boot应用支持框架
+
+    这是一个基于Spring Boot 3.x的企业级应用支持框架，提供了丰富的功能模块和组件。
+    帮助开发者快速构建企业级应用。
+
+    主要特性:
+    - 基于Spring Boot 3.x和Java 25
+    - 模块化设计，按需引入
+    - 企业级功能组件
+    - 统一配置管理
+    - 开箱即用的集成方案
+
+    @author CH
+    @version 4.0.0.41
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 继承Spring Boot父项目 -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.9</version>
+        <relativePath/>
+    </parent>
+
+    <!-- 项目基本信息 -->
+    <groupId>com.chua</groupId>
+    <artifactId>spring-support-parent-starter</artifactId>
+    <packaging>pom</packaging> 
+    <version>4.0.0.42</version>
+    
+    <name>Spring Support Parent Starter</name>
+    <description>Spring Boot 3.x企业级应用支持框架，提供模块化的功能组件和开箱即用的集成方案</description>
+    <url>https://gitee.com/chua/spring-support-parent-starter</url>
+    <inceptionYear>2024</inceptionYear>
+    
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    
+    <developers>
+        <developer>
+            <id>CH</id>
+            <name>CH</name>
+            <email>admin@chua.com</email>
+            <roles>
+                <role>architect</role>
+                <role>developer</role>
+            </roles>
+            <timezone>Asia/Shanghai</timezone>
+        </developer>
+    </developers>
+    
+    <scm>
+        <connection>scm:git:git:gitee.com:chua/spring-support-parent-starter.git</connection>
+        <developerConnection>scm:git:ssh:git@gitee.com:chua/spring-support-parent-starter.git</developerConnection>
+        <url>https://gitee.com/chua/spring-support-parent-starter</url>
+        <tag>HEAD</tag>
+    </scm>
+    
+    <issueManagement>
+        <system>Gitee Issues</system>
+        <url>https://gitee.com/chua/spring-support-parent-starter/issues</url>
+    </issueManagement>
+    <!-- 子模块列表 -->
+    <modules>
+        <!-- BOM单独管理，不在此构建 -->
+        <!-- <module>spring-support-bom</module> -->
+        <module>spring-support-datasource-starter</module>
+        <module>spring-support-common-starter</module>          <!-- 通用功能和工具类 -->
+        <module>spring-support-mybatis-starter</module>         <!-- MyBatis Plus集成 -->
+
+        <!-- 认证和安全模块 -->
+        <module>spring-support-oauth-client-starter</module>
+
+        <!-- 缓存和存储模块 -->
+        <module>spring-support-redis-starter</module>           <!-- Redis缓存集成 -->
+        <module>spring-support-filesystem-starter</module>      <!-- 统一文件存储抽象层 -->
+
+        <!-- API文档和接口模块 -->
+        <module>spring-support-swagger-starter</module>         <!-- Swagger API文档 -->
+        <module>spring-support-swagger2-starter</module>         <!-- Swagger 2.x 兼容模块 -->
+
+        <!-- 消息与队列抽象 -->
+        <module>spring-support-queue-starter</module>
+
+        <!-- Socket 通信模块系列 -->
+        <module>spring-support-socket-starter</module>          <!-- Socket 基础抽象层 -->
+        <module>spring-support-socket-websocket-starter</module><!-- WebSocket 实现（同端口） -->
+        <module>spring-support-socket-io-starter</module>        <!-- Socket.IO 实现 -->
+        <module>spring-support-socket-rsocket-starter</module>         <!-- RSocket 实现 -->
+        <module>spring-support-socket-sse-starter</module>             <!-- SSE 实现 -->
+        <module>spring-support-rpc-starter</module>             <!-- RPC远程调用 -->
+        <module>spring-support-sync-starter</module>
+
+        <!-- 搜索和数据处理模块 -->
+        <module>spring-support-elasticsearch-starter</module>   <!-- Elasticsearch搜索引擎 -->
+        <module>spring-support-spider-starter</module>          <!-- 爬虫中心（已从 api 迁入） -->
+
+        <module>spring-support-discovery-starter</module>       <!-- 服务发现 -->
+        <module>spring-support-configcenter-starter</module>    <!-- 配置中心 -->
+
+        <!-- 数据库扩展模块 -->
+
+<!-- 监控和日志模块 -->
+
+        <module>spring-support-tencent-starter</module> <!-- 腾讯云服务集成 -->
+        <module>spring-support-aliyun-starter</module>          <!-- 阿里云/支付宝生态集成 -->
+
+        <!-- 容错和稳定性模块 -->
+
+        <!-- 运维和管理模块 -->
+        <module>spring-support-ssh-starter</module>
+
+        <!-- 定时任务模块 -->
+        <module>spring-support-job-starter</module>             <!-- 定时任务调度模块 -->
+
+        <!-- AI深度学习模块 -->
+        <module>spring-support-ai-starter</module>
+
+        <!-- 消息推送模块 -->
+        <module>spring-support-message-starter</module>               <!-- 消息推送集成 -->
+
+        <!-- 邮箱管理模块 -->
+        <module>spring-support-email-starter</module>                 <!-- 邮箱收发管理 -->
+
+        <!-- 软件管理模块 -->
+        <module>spring-support-software-starter</module>              <!-- 软件源管理、安装卸载、检索升级 -->
+
+        <!-- 上报信息客户端模块 -->
+        <module>spring-support-report-client-starter</module>
+
+        <!-- 内网穿透模块（基于 ngrok-java） -->
+        <module>spring-support-ngrok-starter</module>
+    </modules>
+
+    <!-- 项目属性配置 -->
+    <properties>
+        <!-- Java版本配置 - 使用Java 25 LTS版本 -->
+        <java.version>25</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+
+        <!-- 项目版本管理 -->
+        <revision>4.0.0.41</revision>               <!-- 当前项目版本，使用revision便于统一管理 -->
+        <module.version>${project.version}</module.version>        <!-- 当前项目模块版本 -->
+        <!-- 工具类库版本与 utils-support-parent-starter 保持一致，当前为 4.0.0.34 -->
+        <utils.version>4.0.0.42</utils.version>
+        <spring.boot.version>3.5.9</spring.boot.version>
+        <reactor.core.version>3.8.6</reactor.core.version>
+        <!-- ============================================================
+            版本架构说明
+            ============================================================
+            spring-support-parent-starter: Spring Boot 3.5.9 (Spring Framework 6.x, javax.*)
+            utils-support-parent-starter:  Spring Boot 4.1.0 (Spring Framework 7.x, jakarta.*)
+            两个父体系独立构建，不要将它们的子模块混入同一个应用依赖树。
+            ============================================================ -->
+
+        <!-- 框架和库版本管理 -->
+        <lombok.version>1.18.52</lombok.version>              <!-- Lombok版本，支持 Java 25/26 -->
+        <maven.compiler.proc>full</maven.compiler.proc>      <!-- Java 25 下显式启用注解处理 -->
+        <mybatis-plus.version>3.5.16</mybatis-plus.version>  <!-- MyBatis Plus版本 -->
+        <mybatis-plus-join.version>1.5.6</mybatis-plus-join.version>  <!-- MyBatis Plus Join版本 -->
+        <dubbo.version>3.1.1</dubbo.version>                <!-- Dubbo RPC框架版本 -->
+        <resilience4j.version>2.2.0</resilience4j.version>  <!-- Resilience4j熔断降级框架版本 -->
+        <p6spy.version>3.9.1</p6spy.version>                <!-- P6Spy SQL监控版本 -->
+        <easy-captcha.version>1.6.2</easy-captcha.version>  <!-- 验证码生成器版本 -->
+        <jackson.version>2.19.4</jackson.version>           <!-- Jackson版本，与Spring Boot 3.5.9兼容 -->
+        <calcite.version>1.37.0</calcite.version>
+        <druid.version>1.2.20</druid.version>
+        <loki4j.version>2.0.0</loki4j.version>
+        <c3p0.version>0.10.1</c3p0.version>
+        <swagger.annotations.v3.version>2.2.15</swagger.annotations.v3.version>
+        <swagger.annotations.v2.version>1.6.14</swagger.annotations.v2.version>
+        <ngrok.version>1.1.1</ngrok.version>
+        <redisson.version>3.32.0</redisson.version>
+        <paho.mqtt.version>1.2.5</paho.mqtt.version>
+        <rocketmq.spring.version>2.3.1</rocketmq.spring.version>
+        <netty.socketio.version>2.0.12</netty.socketio.version>
+        <commons-io.version>2.21.0</commons-io.version>     <!-- Commons IO版本 -->
+        <commons-codec.version>1.20.0</commons-codec.version>     <!-- Commons Codec版本 -->
+        <commons-dbutils.version>1.8.1</commons-dbutils.version> <!-- Commons DBUtils版本 -->
+        <commons-compress.version>1.28.0</commons-compress.version>
+        <commons-exec.version>1.4.0</commons-exec.version>
+        <validation-api.version>2.0.1.Final</validation-api.version> <!-- Validation API版本 -->
+        <javax.annotation.version>1.3.2</javax.annotation.version>
+        <spel-extension.version>1.0.0</spel-extension.version>     <!-- SpEL扩展版本 -->
+        <mybatis-plus-generator.version>3.5.5</mybatis-plus-generator.version> <!-- MyBatis Plus代码生成器 -->
+        <guava.version>33.4.8-jre</guava.version>                              <!-- Google Guava工具库版本 -->
+        <slf4j.version>2.1.0-alpha1</slf4j.version>                           <!-- SLF4J版本 -->
+        <unirest.version>3.14.5</unirest.version>
+        <justauth.version>1.16.6</justauth.version>
+        <lock4j.version>2.2.5</lock4j.version>
+        <embedded-redis.version>0.7.3</embedded-redis.version>
+        <fastjson2.version>2.0.52</fastjson2.version>
+        <arthas.version>4.0.4</arthas.version>
+        <ssh-shell-spring-boot.version>2.7.0</ssh-shell-spring-boot.version>
+        <sshd.version>2.13.2</sshd.version>
+        <hutool.version>5.8.29</hutool.version>
+        <freemarker.version>2.3.32</freemarker.version>     <!-- FreeMarker模板引擎版本 -->
+        <jsch.version>0.1.55</jsch.version>                 <!-- JSch SSH 客户端版本 -->
+        <influxdb-client.version>3.4.0</influxdb-client.version> <!-- InfluxDB 2.x 客户端版本 -->
+        <ip2proxy.version>3.6.0</ip2proxy.version>                 <!-- IP2Proxy Java库版本 -->
+        <caffeine.version>3.2.0</caffeine.version>                  <!-- Caffeine缓存库版本 -->
+        <byte-buddy.version>1.17.8</byte-buddy.version>             <!-- ByteBuddy动态代理库版本 -->
+        <okhttp.version>4.12.0</okhttp.version>                     <!-- OkHttp HTTP客户端版本 -->
+        <wechatpay.version>0.2.17</wechatpay.version>               <!-- 微信支付 Java SDK 版本 -->
+        <alipay.sdk.version>4.40.483.ALL</alipay.sdk.version>       <!-- 支付宝 SDK 版本 -->
+        <statemachine.version>4.0.0</statemachine.version>           <!-- Spring State Machine 版本 -->
+        <os-maven-plugin.version>1.7.1</os-maven-plugin.version>    <!-- OS Maven Plugin 版本 -->
+        <seata.version>2.6.0</seata.version>                        <!-- Seata 分布式事务版本 -->
+        
+        <!-- Maven插件版本管理 -->
+        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+        <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
+        <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
+        <surefire.jvm.args></surefire.jvm.args>
+        <maven-javadoc-plugin.version>3.6.3</maven-javadoc-plugin.version>
+        <maven-release-plugin.version>3.0.1</maven-release-plugin.version>
+        <versions-maven-plugin.version>2.16.2</versions-maven-plugin.version>
+        <flatten-maven-plugin.version>1.6.0</flatten-maven-plugin.version>
+        <maven-enforcer-plugin.version>3.4.1</maven-enforcer-plugin.version>
+        <maven-gpg-plugin.version>3.2.4</maven-gpg-plugin.version>
+        <mockito.version>5.17.0</mockito.version>  <!-- Mockito版本，由spring-boot-dependencies BOM管理，此处显式声明供surefire argLine引用 -->
+        
+        <!-- 构建控制属性 -->
+        <skipTests>true</skipTests>  <!-- 默认跳过测试，可通过 mvn clean install -DskipTests=false 执行测试 -->
+        <maven.source.skip>true</maven.source.skip>
+        
+        <!-- Maven仓库配置 - 可通过profile或-D参数覆盖 -->
+        <maven.repo.releases.id>maven-releases</maven.repo.releases.id>
+        <!-- 以下仓库URL已替换为Maven Central，本地开发环境请通过settings.xml或-D参数覆盖 -->
+        <maven.repo.releases.url>https://repo1.maven.org/maven2/</maven.repo.releases.url>
+        <maven.repo.snapshots.id>maven-snapshots</maven.repo.snapshots.id>
+        <maven.repo.snapshots.url>https://repo1.maven.org/maven2/</maven.repo.snapshots.url>
+    </properties>
+
+    <!-- 父模块只提供Lombok作为通用依赖，其他依赖由子模块按需引入 -->
+    <dependencies>
+        <!-- Lombok - 简化Java代码编写，所有子模块都需要 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+
+    <!-- 依赖版本管理 -->
+    <dependencyManagement>
+        <dependencies>
+            <!-- Spring Boot BOM - 统一管理 Spring Boot 相关依赖版本 -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring.boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            
+            <!-- 第三方依赖版本管理（直接在父POM中管理，避免BOM循环依赖） -->
+            <dependency>
+                <groupId>io.projectreactor</groupId>
+                <artifactId>reactor-core</artifactId>
+                <version>${reactor.core.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>p6spy</groupId>
+                <artifactId>p6spy</artifactId>
+                <version>${p6spy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.calcite</groupId>
+                <artifactId>calcite-core</artifactId>
+                <version>${calcite.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>druid-spring-boot-3-starter</artifactId>
+                <version>${druid.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.mchange</groupId>
+                <artifactId>c3p0</artifactId>
+                <version>${c3p0.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.validation</groupId>
+                <artifactId>validation-api</artifactId>
+                <version>${validation-api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-annotations</artifactId>
+                <version>${swagger.annotations.v3.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ngrok</groupId>
+                <artifactId>ngrok-java</artifactId>
+                <version>${ngrok.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ngrok</groupId>
+                <artifactId>ngrok-java-native</artifactId>
+                <version>${ngrok.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-jsqlparser</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.yulichang</groupId>
+                <artifactId>mybatis-plus-join-boot-starter</artifactId>
+                <version>${mybatis-plus-join.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson</artifactId>
+                <version>${redisson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.paho</groupId>
+                <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
+                <version>${paho.mqtt.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.rocketmq</groupId>
+                <artifactId>rocketmq-spring-boot-starter</artifactId>
+                <version>${rocketmq.spring.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.corundumstudio.socketio</groupId>
+                <artifactId>netty-socketio</artifactId>
+                <version>${netty.socketio.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-codec</groupId>
+                <artifactId>commons-codec</artifactId>
+                <version>1.20.0</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>${commons-io.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            
+            <!-- Lombok 版本管理 - 显式声明以覆盖 Spring Boot 父 POM 中的版本 -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+                <scope>provided</scope>
+                <optional>true</optional>
+            </dependency>
+            
+            <!-- ========== Spring Boot 基础模块（可选） ========== -->
+            
+            <!-- Spring Boot Web Starter - Web应用基础，子模块按需引入 -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-web</artifactId>
+                <version>${spring.boot.version}</version>
+            </dependency>
+
+            <!-- Logback日志框架 + Loki4j日志汇聚 -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-logging</artifactId>
+            </dependency>
+            <dependency>
+                <groupId>com.github.loki4j</groupId>
+                <artifactId>loki-logback-appender</artifactId>
+                <version>${loki4j.version}</version>
+            </dependency>
+
+            <!-- Undertow Web容器 - 高性能Web服务器，替代Tomcat -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-undertow</artifactId>
+            </dependency>
+            
+            <!-- ========== Spring Support 模块依赖 ========== -->
+            
+            <!-- 基础功能模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-common-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-datasource-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-mybatis-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <!-- 认证和安全模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-oauth-client-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <!-- 缓存和存储模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-redis-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-filesystem-minio-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-filesystem-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <!-- API文档模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-swagger-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-swagger2-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <!-- 消息队列模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-queue-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            <!-- Socket通信模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-socket-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-socket-websocket-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-socket-io-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-socket-rsocket-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-socket-sse-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-rpc-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-sync-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <!-- 搜索和数据处理模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-elasticsearch-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-spider-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <!-- 服务发现和配置模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-discovery-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-configcenter-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- 监控和上报模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-report-client-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            
+            
+            <!-- 第三方服务集成 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-tencent-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-aliyun-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+<!-- 容错和策略模块 -->
+
+            <!-- 运维管理模块 -->
+            
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-ssh-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <!-- 定时任务模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-job-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <!-- AI深度学习模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-ai-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- 消息推送模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-message-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-proxy-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-api-support-common-configuration-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+
+            <!-- 注意：以下模块在项目中不存在，保留供未来扩展使用
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-report-server-start</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-unified-client-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-unified-server-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            -->
+
+            <!-- ========== Utils Support 工具类模块依赖 ========== -->
+
+            <!-- 微服务框架支持 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-mica-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-extension-starter</artifactId>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-mysql-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <!-- 网络通信框架 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-netty-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-deeplearning-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-deeplearning-onnx-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-datasource-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- Apache Calcite SQL解析引擎 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-calcite-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-nacos-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- 消息总线支持 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-zbus-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- Spring框架扩展工具 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-spring-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- Shell命令执行工具 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-shell-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- Hibernate ORM框架支持 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-hibernate-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-redis-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-httpclient-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-jdk15on-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-groovy-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-vertx-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- Jackson模块版本管理 -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-jdk8</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.module</groupId>
+                <artifactId>jackson-module-paramnames</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-guava-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- RPC远程调用框架 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-rpc-dubbo-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-elasticsearch-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- 注意：该模块在项目中不存在，如需使用请先创建
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-circuit-breaker-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            -->
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-armeria-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-rsocket-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- ========== 认证和安全模块 ========== -->
+
+            <!-- OAuth服务端认证模块 - 该模块在项目中不存在，如需使用请先创建
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-oauth-server-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            -->
+
+            <!-- WebJar静态资源模块 - 已注释
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-webjar-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            -->
+
+            <!-- ========== 存储和文件处理模块 ========== -->
+
+            <!-- ========== 监控和管理模块 ========== -->
+
+            <!-- 注意：该模块在项目中不存在，如需使用请先创建
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-monitor-client-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            -->
+
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-email-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-shardingv5-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-docker-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- Nginx配置管理工具 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-nginx-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- GeoIP2地理位置查询工具 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-geoip2-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- MinIO对象存储工具 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-minio-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- 通用工具类库 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-common-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-gateway-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-remote-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-milvus-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- Lucene全文搜索工具 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-lucene-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-tencent-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- 百度云SDK -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-baidu-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-winrm-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- OSHI系统硬件信息工具 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-oshi-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- Third-party dependencies -->
+            <dependency>
+                <groupId>kim.nzxy</groupId>
+                <artifactId>spel-extension</artifactId>
+                <version>${spel-extension.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.whvcse</groupId>
+                <artifactId>easy-captcha</artifactId>
+                <version>${easy-captcha.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.ben-manes.caffeine</groupId>
+                <artifactId>caffeine</artifactId>
+                <version>${caffeine.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ip2proxy</groupId>
+                <artifactId>ip2proxy-java</artifactId>
+                <version>${ip2proxy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy</artifactId>
+                <version>${byte-buddy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>okhttp</artifactId>
+                <version>${okhttp.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.wechatpay-apiv3</groupId>
+                <artifactId>wechatpay-java</artifactId>
+                <version>${wechatpay.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.wechatpay-apiv3</groupId>
+                <artifactId>wechatpay-java-core</artifactId>
+                <version>${wechatpay.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alipay.sdk</groupId>
+                <artifactId>alipay-sdk-java</artifactId>
+                <version>${alipay.sdk.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.statemachine</groupId>
+                <artifactId>spring-statemachine-core</artifactId>
+                <version>${statemachine.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.statemachine</groupId>
+                <artifactId>spring-statemachine-starter</artifactId>
+                <version>${statemachine.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.seata</groupId>
+                <artifactId>seata-all</artifactId>
+                <version>${seata.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.annotation</groupId>
+                <artifactId>javax.annotation-api</artifactId>
+                <version>${javax.annotation.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-generator</artifactId>
+                <version>${mybatis-plus-generator.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-dbutils</groupId>
+                <artifactId>commons-dbutils</artifactId>
+                <version>${commons-dbutils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.konghq</groupId>
+                <artifactId>unirest-java</artifactId>
+                <version>${unirest.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>me.zhyd.oauth</groupId>
+                <artifactId>JustAuth</artifactId>
+                <version>${justauth.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>lock4j-redis-template-spring-boot-starter</artifactId>
+                <version>${lock4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>it.ozimov</groupId>
+                <artifactId>embedded-redis</artifactId>
+                <version>${embedded-redis.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.swagger</groupId>
+                <artifactId>swagger-annotations</artifactId>
+                <version>${swagger.annotations.v2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-exec</artifactId>
+                <version>${commons-exec.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba.fastjson2</groupId>
+                <artifactId>fastjson2</artifactId>
+                <version>${fastjson2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>${commons-compress.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.taobao.arthas</groupId>
+                <artifactId>arthas-agent-attach</artifactId>
+                <version>${arthas.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.fonimus</groupId>
+                <artifactId>ssh-shell-spring-boot-starter</artifactId>
+                <version>${ssh-shell-spring-boot.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.sshd</groupId>
+                <artifactId>sshd-core</artifactId>
+                <version>${sshd.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.sshd</groupId>
+                <artifactId>sshd-scp</artifactId>
+                <version>${sshd.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.sshd</groupId>
+                <artifactId>sshd-sftp</artifactId>
+                <version>${sshd.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-core</artifactId>
+                <version>${hutool.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-resilience4j-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- SSH 客户端工具（包含 JSch） -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-ssh-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- ZooKeeper 中间件工具（包含 Curator） -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-zookeeper-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- InfluxDB 2.x 客户端 -->
+            <dependency>
+                <groupId>com.influxdb</groupId>
+                <artifactId>influxdb-client-java</artifactId>
+                <version>${influxdb-client.version}</version>
+            </dependency>
+
+            <!-- JSch SSH 客户端 -->
+            <dependency>
+                <groupId>com.jcraft</groupId>
+                <artifactId>jsch</artifactId>
+                <version>${jsch.version}</version>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+    <!-- 构建配置 -->
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>${maven-source-plugin.version}</version>
+                <configuration>
+                    <skipSource>${maven.source.skip}</skipSource>
+                </configuration>
+                <executions>
+                    <!-- 在package阶段生成源码jar包 - 已注释
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                    -->
+                    <execution>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Maven Surefire 测试插件 - 默认跳过测试，可通过参数启用 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven-surefire-plugin.version}</version>
+                <configuration>
+                    <skipTests>${skipTests}</skipTests>
+                    <argLine>${surefire.jvm.args} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
+                </configuration>
+            </plugin>
+            <!-- Maven JavaDoc插件 - 生成API文档 (已注释
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>${maven-javadoc-plugin.version}</version>
+                <configuration>
+                    <sourcepath>src/main/java</sourcepath>
+                    <detectJavaApiLink>false</detectJavaApiLink>
+                    <detectOfflineLinks>false</detectOfflineLinks>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            -->
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven-compiler-plugin.version}</version>
+                <configuration>
+                    <source>${maven.compiler.source}</source>            <!-- 源代码兼容性：Java 25 -->
+                    <target>${maven.compiler.target}</target>            <!-- 目标字节码版本：Java 25 -->
+                    <release>${java.version}</release>                   <!-- 发布版本：Java 25 -->
+                    <encoding>UTF-8</encoding>                          <!-- 编码格式 -->
+                    <proc>${maven.compiler.proc}</proc>
+                    <useIncrementalCompilation>false</useIncrementalCompilation>
+                    <fork>true</fork>
+                    <meminitial>512m</meminitial>
+                    <maxmem>2048m</maxmem>
+                    <compilerArgs>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.jvm=ALL-UNNAMED</arg>
+                        <arg>-J--add-exports=jdk.unsupported/sun.misc=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
+                        <arg>-parameters</arg>                          <!-- 保留参数名信息 -->
+                        <arg>-proc:full</arg>
+                    </compilerArgs>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+
+            <!-- Maven发布插件 - 管理项目版本发布 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>${maven-release-plugin.version}</version>
+                <configuration>
+                    <tagNameFormat>v@{project.version}</tagNameFormat>  <!-- Git标签格式 -->
+                    <autoVersionSubmodules>true</autoVersionSubmodules> <!-- 自动更新子模块版本 -->
+                </configuration>
+            </plugin>
+
+            <!-- Maven版本管理插件 - 管理依赖版本 -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>versions-maven-plugin</artifactId>
+                <version>${versions-maven-plugin.version}</version>
+            </plugin>
+            
+            <!-- Maven Enforcer Plugin - 强制Maven和JDK版本要求 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>${maven-enforcer-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>enforce-versions</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireMavenVersion>
+                                    <version>[3.6.3,)</version>
+                                    <message>Maven 3.6.3或更高版本是必需的</message>
+                                </requireMavenVersion>
+                                <requireJavaVersion>
+                                    <version>[25,)</version>
+                                    <message>Java 25或更高版本是必需的</message>
+                                </requireJavaVersion>
+                                <bannedDependencies>
+                                    <message>禁止使用commons-logging，请使用slf4j</message>
+                                </bannedDependencies>
+                                <requireReleaseDeps>
+                                    <message>Release构建中禁止使用SNAPSHOT依赖</message>
+                                    <onlyWhenRelease>true</onlyWhenRelease>
+                                    <excludes>
+                                        <exclude>org.projectlombok:lombok</exclude>
+                                    </excludes>
+                                </requireReleaseDeps>
+                            </rules>
+                            <fail>true</fail>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            
+            <!-- Flatten Maven Plugin - 支持${revision}变量，确保发布的POM正确解析 -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>${flatten-maven-plugin.version}</version>
+                <configuration>
+                    <updatePomFile>true</updatePomFile>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <!-- Profile配置 - 支持不同环境的构建参数 -->
+    <profiles>
+        <!-- 开发环境 -->
+        <profile>
+            <id>dev</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <skipTests>true</skipTests>
+                <maven.javadoc.skip>true</maven.javadoc.skip>
+                <maven.source.skip>true</maven.source.skip>
+            </properties>
+        </profile>
+        
+        <!-- 生产环境 -->
+        <profile>
+            <id>prod</id>
+            <properties>
+                <skipTests>false</skipTests>
+                <maven.javadoc.skip>false</maven.javadoc.skip>
+                <maven.source.skip>false</maven.source.skip>
+            </properties>
+            <build>
+                <plugins>
+                    <!-- 生产环境启用JavaDoc生成 -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>${maven-javadoc-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                                <configuration>
+                                    <doclint>none</doclint>
+                                    <source>${java.version}</source>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        
+        <!-- 发布到Maven中央仓库的profile -->
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <!-- GPG签名插件 -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>${maven-gpg-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+    
+    <!-- Maven仓库发布配置
+         注意：
+         1. 建议使用HTTPS而非HTTP
+         2. 应使用settings.xml中的<servers>配置凭证
+         3. 可通过-D参数或profile覆盖仓库URL
+         4. ID必须与settings.xml中的server id一致
+    -->
+    <repositories>
+        <repository>
+            <id>projectlombok.org</id>
+            <name>Project Lombok Edge Releases</name>
+            <url>https://projectlombok.org/edge-releases</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+    <distributionManagement>
+        <!-- 发布仓库 - 用于正式版本 -->
+        <repository>
+            <id>${maven.repo.releases.id}</id>
+            <name>Release Repository</name>
+            <url>${maven.repo.releases.url}</url>
+        </repository>
+        <!-- 快照仓库 - 用于SNAPSHOT版本 -->
+        <snapshotRepository>
+            <id>${maven.repo.snapshots.id}</id>
+            <name>Snapshot Repository</name>
+            <url>${maven.repo.snapshots.url}</url>
+        </snapshotRepository>
+    </distributionManagement>
+</project>
+
+
+
+
+
+

@@ -1,0 +1,41 @@
+# IDE / Editor
+.vscode/
+.idea/
+*.iml
+.cursor/
+.codex
+.m2temp/
+
+# Dependencies / Build
+target/
+node_modules/
+*.class
+
+# Temp / Cache
+.tmp*
+tmp/
+tep/
+logs/
+META-INF/
+*~
+*.log
+*bak
+*.swp
+
+# Project specific
+.claude
+_claude/
+_deploy
+.kiro
+/.kiro/
+seetaface6/
+
+# OS / System
+.DS_Store
+Thumbs.db
+
+# Test / Runtime
+.runtime/
+artifacts/
+2/
+cn/

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.ai.support.mapper.SysAiVincentStyleMapper">
+  <resultMap id="BaseResultMap" type="java.util.Map">
+    <!--@mbg.generated-->
+    <!--@Table sys_ai_vincent_style-->
+    <id column="sys_ai_vincent_style_id" jdbcType="INTEGER" property="sysAiVincentStyleId" />
+    <result column="sys_ai_vincent_style_name" jdbcType="VARCHAR" property="sysAiVincentStyleName" />
+    <result column="sys_ai_vincent_style_code" jdbcType="VARCHAR" property="sysAiVincentStyleCode" />
+    <result column="sys_ai_vincent_style_image" jdbcType="VARCHAR" property="sysAiVincentStyleImage" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    sys_ai_vincent_style_id, sys_ai_vincent_style_name, sys_ai_vincent_style_code, sys_ai_vincent_style_image
+  </sql>
+</mapper>

@@ -1,0 +1,582 @@
+﻿[INFO] Scanning for projects...
+[WARNING] 
+[WARNING] Some problems were encountered while building the effective model for com.chua:spring-support-datasource-starter:jar:4.0.0.42
+[WARNING] 'dependencies.dependency.(groupId:artifactId:type:classifier)' must be unique: org.aspectj:aspectjweaver:jar -> duplicate declaration of version (?) @ line 188, column 42
+[WARNING] 'dependencies.dependency.(groupId:artifactId:type:classifier)' must be unique: jakarta.servlet:jakarta.servlet-api:jar -> duplicate declaration of version (?) @ line 193, column 21
+[WARNING] 
+[WARNING] It is highly recommended to fix these problems because they threaten the stability of your build.
+[WARNING] 
+[WARNING] For this reason, future Maven versions might no longer support building such malformed projects.
+[WARNING] 
+[INFO] 
+[INFO] -----------< com.chua:spring-support-report-client-starter >------------
+[INFO] Building spring-support-report-client-starter 4.0.0.41
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- enforcer:3.4.1:enforce (enforce-versions) @ spring-support-report-client-starter ---
+[INFO] Skipping Rule Enforcement.
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ spring-support-report-client-starter ---
+[INFO] Copying 0 resource from src\main\resources to target\classes
+[INFO] Copying 2 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- flatten:1.6.0:flatten (flatten) @ spring-support-report-client-starter ---
+[INFO] Generating flattened POM of project com.chua:spring-support-report-client-starter:jar:4.0.0.41...
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ spring-support-report-client-starter ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 49 source files with javac [forked debug parameters release 25] to target\classes
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[16,50] 无法访问ApiFeatureManager
+  错误的类文件: C:\Users\Administrator\.m2\repository\com\chua\spring-support-common-starter\4.0.0.41\spring-support-common-starter-4.0.0.41.jar(/com/chua/starter/common/support/api/feature/ApiFeatureManager.class)
+    类文件具有错误的版本 69.0, 应为 65.0
+    请删除该文件或确保该文件位于正确的类路径子目录中。
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[17,43] 无法访问SyncClient
+  错误的类文件: C:\Users\Administrator\.m2\repository\com\chua\spring-support-sync-starter\4.0.0.41\spring-support-sync-starter-4.0.0.41.jar(/com/chua/starter/sync/support/client/SyncClient.class)
+    类文件具有错误的版本 69.0, 应为 65.0
+    请删除该文件或确保该文件位于正确的类路径子目录中。
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[18,50] 无法访问SyncAutoConfiguration
+  错误的类文件: C:\Users\Administrator\.m2\repository\com\chua\spring-support-sync-starter\4.0.0.41\spring-support-sync-starter-4.0.0.41.jar(/com/chua/starter/sync/support/configuration/SyncAutoConfiguration.class)
+    类文件具有错误的版本 69.0, 应为 65.0
+    请删除该文件或确保该文件位于正确的类路径子目录中。
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\JobAnnotationScanner.java:[5,46] 无法访问Job
+  错误的类文件: C:\Users\Administrator\.m2\repository\com\chua\spring-support-job-starter\4.0.0.41\spring-support-job-starter-4.0.0.41.jar(/com/chua/starter/job/support/annotation/Job.class)
+    类文件具有错误的版本 69.0, 应为 65.0
+    请删除该文件或确保该文件位于正确的类路径子目录中。
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\glue\SpringGlueFactory.java:[3,44] 无法访问SpringBeanUtils
+  错误的类文件: C:\Users\Administrator\.m2\repository\com\chua\utils-support-spring-starter\4.0.0.42\utils-support-spring-starter-4.0.0.42.jar(/com/chua/spring/support/configuration/SpringBeanUtils.class)
+    类文件具有错误的版本 69.0, 应为 65.0
+    请删除该文件或确保该文件位于正确的类路径子目录中。
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[4,40] 无法访问SyncMessageHandler
+  错误的类文件: C:\Users\Administrator\.m2\repository\com\chua\spring-support-sync-starter\4.0.0.41\spring-support-sync-starter-4.0.0.41.jar(/com/chua/starter/sync/support/spi/SyncMessageHandler.class)
+    类文件具有错误的版本 69.0, 应为 65.0
+    请删除该文件或确保该文件位于正确的类路径子目录中。
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[55,18] 找不到符号
+  符号:   类 SyncClient
+  位置: 类 ReportClientConfiguration
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[58,33] 找不到符号
+  符号:   类 ApiFeatureManager
+  位置: 类 ReportClientConfiguration
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[61,37] 找不到符号
+  符号:   类 SyncClient
+  位置: 类 ReportClientConfiguration
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[63,53] 找不到符号
+  符号:   类 ApiFeatureManager
+  位置: 类 ReportClientConfiguration
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\JobAnnotationScanner.java:[106,81] 找不到符号
+  符号:   类 Job
+  位置: 类 JobAnnotationScanner
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\JobReporter.java:[28,12] 找不到符号
+  符号:   类 SyncClient
+  位置: 类 JobReporter
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\JobReporter.java:[35,30] 找不到符号
+  符号:   类 SyncClient
+  位置: 类 JobReporter
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\DefaultJobExecute.java:[3,48] 程序包com.chua.starter.common.support.lang.code不存在
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\DefaultJobExecute.java:[4,55] 程序包com.chua.starter.common.support.protocol.request不存在
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\DefaultJobExecute.java:[5,55] 程序包com.chua.starter.common.support.protocol.request不存在
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\JobExecute.java:[3,55] 程序包com.chua.starter.common.support.protocol.request不存在
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\JobExecute.java:[4,55] 程序包com.chua.starter.common.support.protocol.request不存在
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\DefaultJobExecute.java:[34,31] 找不到符号
+  符号:   类 ServletRequest
+  位置: 类 DefaultJobExecute
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\DefaultJobExecute.java:[34,11] 找不到符号
+  符号:   类 ServletResponse
+  位置: 类 DefaultJobExecute
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\thread\JobThread.java:[3,48] 程序包com.chua.starter.common.support.lang.code不存在
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\thread\JobThread.java:[112,11] 找不到符号
+  符号:   类 ReturnResult
+  位置: 类 JobThread
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\JobExecute.java:[28,24] 找不到符号
+  符号:   类 ServletRequest
+  位置: 接口 JobExecute
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\JobExecute.java:[28,4] 找不到符号
+  符号:   类 ServletResponse
+  位置: 接口 JobExecute
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\handler\BeanJobHandler.java:[19,1] 找不到符号
+  符号: 类 Spi
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\log\JobFileAppender.java:[3,44] 找不到符号
+  符号:   类 FileUtils
+  位置: 程序包 com.chua.starter.common.support.utils
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\thread\JobThreadFactory.java:[27,42] 已在类 JobThreadFactory中定义了变量 log
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\report\AppRegisterReporter.java:[39,12] 找不到符号
+  符号:   类 SyncClient
+  位置: 类 AppRegisterReporter
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\report\AppRegisterReporter.java:[46,30] 找不到符号
+  符号:   类 SyncClient
+  位置: 类 AppRegisterReporter
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\report\DeviceMetricsReporter.java:[43,12] 找不到符号
+  符号:   类 SyncClient
+  位置: 类 DeviceMetricsReporter
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\report\DeviceMetricsReporter.java:[50,30] 找不到符号
+  符号:   类 SyncClient
+  位置: 类 DeviceMetricsReporter
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\report\UrlQpsReporter.java:[35,12] 找不到符号
+  符号:   类 SyncClient
+  位置: 类 UrlQpsReporter
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\report\UrlQpsReporter.java:[42,30] 找不到符号
+  符号:   类 SyncClient
+  位置: 类 UrlQpsReporter
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[22,42] 找不到符号
+  符号: 类 SyncMessageHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[24,18] 找不到符号
+  符号:   类 ApiFeatureManager
+  位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\FileHandler.java:[25,36] 找不到符号
+  符号: 类 SyncMessageHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\FileHandler.java:[24,1] 找不到符号
+  符号: 类 Spi
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\JobDispatchHandler.java:[24,43] 找不到符号
+  符号: 类 SyncMessageHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\JobDispatchHandler.java:[23,1] 找不到符号
+  符号: 类 Spi
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\LogPushHandler.java:[40,39] 找不到符号
+  符号: 类 SyncMessageHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\LogPushHandler.java:[39,1] 找不到符号
+  符号: 类 Spi
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\LogPushHandler.java:[70,12] 找不到符号
+  符号:   类 SyncClient
+  位置: 类 LogPushHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\LoggingConfigHandler.java:[29,45] 找不到符号
+  符号: 类 SyncMessageHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\LoggingConfigHandler.java:[28,1] 找不到符号
+  符号: 类 Spi
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\MyBatisConfigHandler.java:[33,45] 找不到符号
+  符号: 类 SyncMessageHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\MyBatisConfigHandler.java:[32,1] 找不到符号
+  符号: 类 Spi
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\NodeControlHandler.java:[38,43] 找不到符号
+  符号: 类 SyncMessageHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\NodeControlHandler.java:[37,1] 找不到符号
+  符号: 类 Spi
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\NodeMaintenanceHandler.java:[43,47] 找不到符号
+  符号: 类 SyncMessageHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\NodeMaintenanceHandler.java:[42,1] 找不到符号
+  符号: 类 Spi
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[47,20] 找不到符号
+  符号: 类 SyncAutoConfiguration
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[48,20] 找不到符号
+  符号: 类 SyncClient
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[49,19] 找不到符号
+  符号: 类 SyncClient
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\oshi\support\Cpu.java:[20,34] 找不到符号
+  符号:   方法 getSystemCpuTicks()
+  位置: 类型为CentralProcessor的变量 processor
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\oshi\support\Cpu.java:[34,32] 找不到符号
+  符号:   方法 getSystemCpuTicks()
+  位置: 类型为CentralProcessor的变量 processor
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\oshi\support\Cpu.java:[45,32] 找不到符号
+  符号:   方法 getSystemCpuTicks()
+  位置: 类型为CentralProcessor的变量 processor
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\oshi\support\Cpu.java:[56,32] 找不到符号
+  符号:   方法 getSystemCpuTicks()
+  位置: 类型为CentralProcessor的变量 processor
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\oshi\support\SysFile.java:[21,24] 找不到符号
+  符号:   方法 getMountPoint()
+  位置: 类型为OSFileStore的变量 fileStore
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[116,8] 找不到符号
+  符号:   类 ApiFeatureManager
+  位置: 类 ReportClientConfiguration
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[125,28] 找不到符号
+  符号:   方法 getAppReport()
+  位置: 类型为ReportProperties的变量 reportProperties
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[129,48] 找不到符号
+  符号:   方法 getInfo()
+  位置: 类型为ReportProperties的变量 reportProperties
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[133,58] 找不到符号
+  符号:   方法 getAppReport()
+  位置: 类型为ReportProperties的变量 reportProperties
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[138,28] 找不到符号
+  符号:   方法 getMetrics()
+  位置: 类型为ReportProperties的变量 reportProperties
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[142,45] 找不到符号
+  符号:   方法 getInfo()
+  位置: 类型为ReportProperties的变量 reportProperties
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[143,56] 找不到符号
+  符号:   方法 getMetrics()
+  位置: 类型为ReportProperties的变量 reportProperties
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[160,28] 找不到符号
+  符号:   方法 getUrlQps()
+  位置: 类型为ReportProperties的变量 reportProperties
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[164,51] 找不到符号
+  符号:   方法 getInfo()
+  位置: 类型为ReportProperties的变量 reportProperties
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[165,62] 找不到符号
+  符号:   方法 getUrlQps()
+  位置: 类型为ReportProperties的变量 reportProperties
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\JobAnnotationScanner.java:[73,20] 找不到符号
+  符号:   类 Job
+  位置: 类 JobAnnotationScanner
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\JobAnnotationScanner.java:[77,55] 找不到符号
+  符号:   类 Job
+  位置: 类 JobAnnotationScanner
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\JobAnnotationScanner.java:[78,79] 找不到符号
+  符号:   类 Job
+  位置: 类 JobAnnotationScanner
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\JobAnnotationScanner.java:[89,31] 找不到符号
+  符号:   类 Job
+  位置: 类 JobAnnotationScanner
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\JobAnnotationScanner.java:[91,12] 找不到符号
+  符号:   类 Job
+  位置: 类 JobAnnotationScanner
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\UrlQpsConfiguration.java:[36,63] 找不到符号
+  符号:   方法 getUrlQps()
+  位置: 类型为ReportProperties的变量 reportProperties
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\UrlQpsConfiguration.java:[37,50] 找不到符号
+  符号:   方法 getExcludePatterns()
+  位置: 类型为UrlQps的变量 urlQpsConfig
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\UrlQpsConfiguration.java:[52,8] 找不到符号
+  符号:   变量 log
+  位置: 类 UrlQpsConfiguration
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\DefaultJobExecute.java:[44,19] 找不到符号
+  符号:   变量 ServletResponse
+  位置: 类 DefaultJobExecute
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\DefaultJobExecute.java:[54,8] 找不到符号
+  符号:   类 ReturnResult
+  位置: 类 DefaultJobExecute
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\DefaultJobExecute.java:[57,19] 找不到符号
+  符号:   变量 ServletResponse
+  位置: 类 DefaultJobExecute
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\DefaultJobExecute.java:[60,19] 找不到符号
+  符号:   变量 ServletResponse
+  位置: 类 DefaultJobExecute
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\thread\JobThread.java:[116,19] 找不到符号
+  符号:   变量 ReturnResult
+  位置: 类 JobThread
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\thread\JobThread.java:[122,15] 找不到符号
+  符号:   变量 ReturnResult
+  位置: 类 JobThread
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\glue\SpringGlueFactory.java:[23,52] 找不到符号
+  符号:   变量 SpringBeanUtils
+  位置: 类 SpringGlueFactory
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\log\JobFileAppender.java:[97,8] 找不到符号
+  符号:   变量 FileUtils
+  位置: 类 JobFileAppender
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\thread\JobThreadFactory.java:[64,8] 找不到符号
+  符号:   变量 SpringBeanUtils
+  位置: 类 JobThreadFactory
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[26,4] 方法不会覆盖或实现超类型的方法
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[31,4] 方法不会覆盖或实现超类型的方法
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[36,4] 方法不会覆盖或实现超类型的方法
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[40,16] 找不到符号
+  符号:   变量 log
+  位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[44,28] 找不到符号
+  符号:   变量 MapUtils
+  位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[46,12] 找不到符号
+  符号:   变量 log
+  位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[54,20] 找不到符号
+  符号:   变量 log
+  位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[59,12] 找不到符号
+  符号:   变量 log
+  位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[68,27] 找不到符号
+  符号:   变量 MapUtils
+  位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[69,26] 找不到符号
+  符号:   变量 MapUtils
+  位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[72,12] 找不到符号
+  符号:   变量 log
+  位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[77,8] 找不到符号
+  符号:   变量 log
+  位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[88,12] 找不到符号
+  符号:   变量 log
+  位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[94,8] 找不到符号
+  符号:   变量 log
+  位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[103,8] 找不到符号
+  符号:   变量 log
+  位置: 类 ApiFeatureHandler
+[INFO] 100 errors 
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  19.126 s
+[INFO] Finished at: 2026-07-25T13:08:34+08:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.15.0:compile (default-compile) on project spring-support-report-client-starter: Compilation failure: Compilation failure: 
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[16,50] 无法访问ApiFeatureManager
+[ERROR]   错误的类文件: C:\Users\Administrator\.m2\repository\com\chua\spring-support-common-starter\4.0.0.41\spring-support-common-starter-4.0.0.41.jar(/com/chua/starter/common/support/api/feature/ApiFeatureManager.class)
+[ERROR]     类文件具有错误的版本 69.0, 应为 65.0
+[ERROR]     请删除该文件或确保该文件位于正确的类路径子目录中。
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[17,43] 无法访问SyncClient
+[ERROR]   错误的类文件: C:\Users\Administrator\.m2\repository\com\chua\spring-support-sync-starter\4.0.0.41\spring-support-sync-starter-4.0.0.41.jar(/com/chua/starter/sync/support/client/SyncClient.class)
+[ERROR]     类文件具有错误的版本 69.0, 应为 65.0
+[ERROR]     请删除该文件或确保该文件位于正确的类路径子目录中。
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[18,50] 无法访问SyncAutoConfiguration
+[ERROR]   错误的类文件: C:\Users\Administrator\.m2\repository\com\chua\spring-support-sync-starter\4.0.0.41\spring-support-sync-starter-4.0.0.41.jar(/com/chua/starter/sync/support/configuration/SyncAutoConfiguration.class)
+[ERROR]     类文件具有错误的版本 69.0, 应为 65.0
+[ERROR]     请删除该文件或确保该文件位于正确的类路径子目录中。
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\JobAnnotationScanner.java:[5,46] 无法访问Job
+[ERROR]   错误的类文件: C:\Users\Administrator\.m2\repository\com\chua\spring-support-job-starter\4.0.0.41\spring-support-job-starter-4.0.0.41.jar(/com/chua/starter/job/support/annotation/Job.class)
+[ERROR]     类文件具有错误的版本 69.0, 应为 65.0
+[ERROR]     请删除该文件或确保该文件位于正确的类路径子目录中。
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\glue\SpringGlueFactory.java:[3,44] 无法访问SpringBeanUtils
+[ERROR]   错误的类文件: C:\Users\Administrator\.m2\repository\com\chua\utils-support-spring-starter\4.0.0.42\utils-support-spring-starter-4.0.0.42.jar(/com/chua/spring/support/configuration/SpringBeanUtils.class)
+[ERROR]     类文件具有错误的版本 69.0, 应为 65.0
+[ERROR]     请删除该文件或确保该文件位于正确的类路径子目录中。
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[4,40] 无法访问SyncMessageHandler
+[ERROR]   错误的类文件: C:\Users\Administrator\.m2\repository\com\chua\spring-support-sync-starter\4.0.0.41\spring-support-sync-starter-4.0.0.41.jar(/com/chua/starter/sync/support/spi/SyncMessageHandler.class)
+[ERROR]     类文件具有错误的版本 69.0, 应为 65.0
+[ERROR]     请删除该文件或确保该文件位于正确的类路径子目录中。
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[55,18] 找不到符号
+[ERROR]   符号:   类 SyncClient
+[ERROR]   位置: 类 ReportClientConfiguration
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[58,33] 找不到符号
+[ERROR]   符号:   类 ApiFeatureManager
+[ERROR]   位置: 类 ReportClientConfiguration
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[61,37] 找不到符号
+[ERROR]   符号:   类 SyncClient
+[ERROR]   位置: 类 ReportClientConfiguration
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[63,53] 找不到符号
+[ERROR]   符号:   类 ApiFeatureManager
+[ERROR]   位置: 类 ReportClientConfiguration
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\JobAnnotationScanner.java:[106,81] 找不到符号
+[ERROR]   符号:   类 Job
+[ERROR]   位置: 类 JobAnnotationScanner
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\JobReporter.java:[28,12] 找不到符号
+[ERROR]   符号:   类 SyncClient
+[ERROR]   位置: 类 JobReporter
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\JobReporter.java:[35,30] 找不到符号
+[ERROR]   符号:   类 SyncClient
+[ERROR]   位置: 类 JobReporter
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\DefaultJobExecute.java:[3,48] 程序包com.chua.starter.common.support.lang.code不存在
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\DefaultJobExecute.java:[4,55] 程序包com.chua.starter.common.support.protocol.request不存在
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\DefaultJobExecute.java:[5,55] 程序包com.chua.starter.common.support.protocol.request不存在
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\JobExecute.java:[3,55] 程序包com.chua.starter.common.support.protocol.request不存在
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\JobExecute.java:[4,55] 程序包com.chua.starter.common.support.protocol.request不存在
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\DefaultJobExecute.java:[34,31] 找不到符号
+[ERROR]   符号:   类 ServletRequest
+[ERROR]   位置: 类 DefaultJobExecute
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\DefaultJobExecute.java:[34,11] 找不到符号
+[ERROR]   符号:   类 ServletResponse
+[ERROR]   位置: 类 DefaultJobExecute
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\thread\JobThread.java:[3,48] 程序包com.chua.starter.common.support.lang.code不存在
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\thread\JobThread.java:[112,11] 找不到符号
+[ERROR]   符号:   类 ReturnResult
+[ERROR]   位置: 类 JobThread
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\JobExecute.java:[28,24] 找不到符号
+[ERROR]   符号:   类 ServletRequest
+[ERROR]   位置: 接口 JobExecute
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\JobExecute.java:[28,4] 找不到符号
+[ERROR]   符号:   类 ServletResponse
+[ERROR]   位置: 接口 JobExecute
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\handler\BeanJobHandler.java:[19,1] 找不到符号
+[ERROR]   符号: 类 Spi
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\log\JobFileAppender.java:[3,44] 找不到符号
+[ERROR]   符号:   类 FileUtils
+[ERROR]   位置: 程序包 com.chua.starter.common.support.utils
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\thread\JobThreadFactory.java:[27,42] 已在类 JobThreadFactory中定义了变量 log
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\report\AppRegisterReporter.java:[39,12] 找不到符号
+[ERROR]   符号:   类 SyncClient
+[ERROR]   位置: 类 AppRegisterReporter
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\report\AppRegisterReporter.java:[46,30] 找不到符号
+[ERROR]   符号:   类 SyncClient
+[ERROR]   位置: 类 AppRegisterReporter
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\report\DeviceMetricsReporter.java:[43,12] 找不到符号
+[ERROR]   符号:   类 SyncClient
+[ERROR]   位置: 类 DeviceMetricsReporter
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\report\DeviceMetricsReporter.java:[50,30] 找不到符号
+[ERROR]   符号:   类 SyncClient
+[ERROR]   位置: 类 DeviceMetricsReporter
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\report\UrlQpsReporter.java:[35,12] 找不到符号
+[ERROR]   符号:   类 SyncClient
+[ERROR]   位置: 类 UrlQpsReporter
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\report\UrlQpsReporter.java:[42,30] 找不到符号
+[ERROR]   符号:   类 SyncClient
+[ERROR]   位置: 类 UrlQpsReporter
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[22,42] 找不到符号
+[ERROR]   符号: 类 SyncMessageHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[24,18] 找不到符号
+[ERROR]   符号:   类 ApiFeatureManager
+[ERROR]   位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\FileHandler.java:[25,36] 找不到符号
+[ERROR]   符号: 类 SyncMessageHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\FileHandler.java:[24,1] 找不到符号
+[ERROR]   符号: 类 Spi
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\JobDispatchHandler.java:[24,43] 找不到符号
+[ERROR]   符号: 类 SyncMessageHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\JobDispatchHandler.java:[23,1] 找不到符号
+[ERROR]   符号: 类 Spi
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\LogPushHandler.java:[40,39] 找不到符号
+[ERROR]   符号: 类 SyncMessageHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\LogPushHandler.java:[39,1] 找不到符号
+[ERROR]   符号: 类 Spi
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\LogPushHandler.java:[70,12] 找不到符号
+[ERROR]   符号:   类 SyncClient
+[ERROR]   位置: 类 LogPushHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\LoggingConfigHandler.java:[29,45] 找不到符号
+[ERROR]   符号: 类 SyncMessageHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\LoggingConfigHandler.java:[28,1] 找不到符号
+[ERROR]   符号: 类 Spi
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\MyBatisConfigHandler.java:[33,45] 找不到符号
+[ERROR]   符号: 类 SyncMessageHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\MyBatisConfigHandler.java:[32,1] 找不到符号
+[ERROR]   符号: 类 Spi
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\NodeControlHandler.java:[38,43] 找不到符号
+[ERROR]   符号: 类 SyncMessageHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\NodeControlHandler.java:[37,1] 找不到符号
+[ERROR]   符号: 类 Spi
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\NodeMaintenanceHandler.java:[43,47] 找不到符号
+[ERROR]   符号: 类 SyncMessageHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\NodeMaintenanceHandler.java:[42,1] 找不到符号
+[ERROR]   符号: 类 Spi
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[47,20] 找不到符号
+[ERROR]   符号: 类 SyncAutoConfiguration
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[48,20] 找不到符号
+[ERROR]   符号: 类 SyncClient
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[49,19] 找不到符号
+[ERROR]   符号: 类 SyncClient
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\oshi\support\Cpu.java:[20,34] 找不到符号
+[ERROR]   符号:   方法 getSystemCpuTicks()
+[ERROR]   位置: 类型为CentralProcessor的变量 processor
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\oshi\support\Cpu.java:[34,32] 找不到符号
+[ERROR]   符号:   方法 getSystemCpuTicks()
+[ERROR]   位置: 类型为CentralProcessor的变量 processor
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\oshi\support\Cpu.java:[45,32] 找不到符号
+[ERROR]   符号:   方法 getSystemCpuTicks()
+[ERROR]   位置: 类型为CentralProcessor的变量 processor
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\oshi\support\Cpu.java:[56,32] 找不到符号
+[ERROR]   符号:   方法 getSystemCpuTicks()
+[ERROR]   位置: 类型为CentralProcessor的变量 processor
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\oshi\support\SysFile.java:[21,24] 找不到符号
+[ERROR]   符号:   方法 getMountPoint()
+[ERROR]   位置: 类型为OSFileStore的变量 fileStore
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[116,8] 找不到符号
+[ERROR]   符号:   类 ApiFeatureManager
+[ERROR]   位置: 类 ReportClientConfiguration
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[125,28] 找不到符号
+[ERROR]   符号:   方法 getAppReport()
+[ERROR]   位置: 类型为ReportProperties的变量 reportProperties
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[129,48] 找不到符号
+[ERROR]   符号:   方法 getInfo()
+[ERROR]   位置: 类型为ReportProperties的变量 reportProperties
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[133,58] 找不到符号
+[ERROR]   符号:   方法 getAppReport()
+[ERROR]   位置: 类型为ReportProperties的变量 reportProperties
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[138,28] 找不到符号
+[ERROR]   符号:   方法 getMetrics()
+[ERROR]   位置: 类型为ReportProperties的变量 reportProperties
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[142,45] 找不到符号
+[ERROR]   符号:   方法 getInfo()
+[ERROR]   位置: 类型为ReportProperties的变量 reportProperties
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[143,56] 找不到符号
+[ERROR]   符号:   方法 getMetrics()
+[ERROR]   位置: 类型为ReportProperties的变量 reportProperties
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[160,28] 找不到符号
+[ERROR]   符号:   方法 getUrlQps()
+[ERROR]   位置: 类型为ReportProperties的变量 reportProperties
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[164,51] 找不到符号
+[ERROR]   符号:   方法 getInfo()
+[ERROR]   位置: 类型为ReportProperties的变量 reportProperties
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\ReportClientConfiguration.java:[165,62] 找不到符号
+[ERROR]   符号:   方法 getUrlQps()
+[ERROR]   位置: 类型为ReportProperties的变量 reportProperties
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\JobAnnotationScanner.java:[73,20] 找不到符号
+[ERROR]   符号:   类 Job
+[ERROR]   位置: 类 JobAnnotationScanner
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\JobAnnotationScanner.java:[77,55] 找不到符号
+[ERROR]   符号:   类 Job
+[ERROR]   位置: 类 JobAnnotationScanner
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\JobAnnotationScanner.java:[78,79] 找不到符号
+[ERROR]   符号:   类 Job
+[ERROR]   位置: 类 JobAnnotationScanner
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\JobAnnotationScanner.java:[89,31] 找不到符号
+[ERROR]   符号:   类 Job
+[ERROR]   位置: 类 JobAnnotationScanner
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\JobAnnotationScanner.java:[91,12] 找不到符号
+[ERROR]   符号:   类 Job
+[ERROR]   位置: 类 JobAnnotationScanner
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\UrlQpsConfiguration.java:[36,63] 找不到符号
+[ERROR]   符号:   方法 getUrlQps()
+[ERROR]   位置: 类型为ReportProperties的变量 reportProperties
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\UrlQpsConfiguration.java:[37,50] 找不到符号
+[ERROR]   符号:   方法 getExcludePatterns()
+[ERROR]   位置: 类型为UrlQps的变量 urlQpsConfig
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\configuration\UrlQpsConfiguration.java:[52,8] 找不到符号
+[ERROR]   符号:   变量 log
+[ERROR]   位置: 类 UrlQpsConfiguration
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\DefaultJobExecute.java:[44,19] 找不到符号
+[ERROR]   符号:   变量 ServletResponse
+[ERROR]   位置: 类 DefaultJobExecute
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\DefaultJobExecute.java:[54,8] 找不到符号
+[ERROR]   符号:   类 ReturnResult
+[ERROR]   位置: 类 DefaultJobExecute
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\DefaultJobExecute.java:[57,19] 找不到符号
+[ERROR]   符号:   变量 ServletResponse
+[ERROR]   位置: 类 DefaultJobExecute
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\execute\DefaultJobExecute.java:[60,19] 找不到符号
+[ERROR]   符号:   变量 ServletResponse
+[ERROR]   位置: 类 DefaultJobExecute
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\thread\JobThread.java:[116,19] 找不到符号
+[ERROR]   符号:   变量 ReturnResult
+[ERROR]   位置: 类 JobThread
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\thread\JobThread.java:[122,15] 找不到符号
+[ERROR]   符号:   变量 ReturnResult
+[ERROR]   位置: 类 JobThread
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\glue\SpringGlueFactory.java:[23,52] 找不到符号
+[ERROR]   符号:   变量 SpringBeanUtils
+[ERROR]   位置: 类 SpringGlueFactory
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\log\JobFileAppender.java:[97,8] 找不到符号
+[ERROR]   符号:   变量 FileUtils
+[ERROR]   位置: 类 JobFileAppender
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\job\thread\JobThreadFactory.java:[64,8] 找不到符号
+[ERROR]   符号:   变量 SpringBeanUtils
+[ERROR]   位置: 类 JobThreadFactory
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[26,4] 方法不会覆盖或实现超类型的方法
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[31,4] 方法不会覆盖或实现超类型的方法
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[36,4] 方法不会覆盖或实现超类型的方法
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[40,16] 找不到符号
+[ERROR]   符号:   变量 log
+[ERROR]   位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[44,28] 找不到符号
+[ERROR]   符号:   变量 MapUtils
+[ERROR]   位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[46,12] 找不到符号
+[ERROR]   符号:   变量 log
+[ERROR]   位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[54,20] 找不到符号
+[ERROR]   符号:   变量 log
+[ERROR]   位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[59,12] 找不到符号
+[ERROR]   符号:   变量 log
+[ERROR]   位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[68,27] 找不到符号
+[ERROR]   符号:   变量 MapUtils
+[ERROR]   位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[69,26] 找不到符号
+[ERROR]   符号:   变量 MapUtils
+[ERROR]   位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[72,12] 找不到符号
+[ERROR]   符号:   变量 log
+[ERROR]   位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[77,8] 找不到符号
+[ERROR]   符号:   变量 log
+[ERROR]   位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[88,12] 找不到符号
+[ERROR]   符号:   变量 log
+[ERROR]   位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[94,8] 找不到符号
+[ERROR]   符号:   变量 log
+[ERROR]   位置: 类 ApiFeatureHandler
+[ERROR] D:\ch\project\spring-support-parent-starter\spring-support-report-client-starter\src\main\java\com\chua\report\client\starter\sync\handler\ApiFeatureHandler.java:[103,8] 找不到符号
+[ERROR]   符号:   变量 log
+[ERROR]   位置: 类 ApiFeatureHandler
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

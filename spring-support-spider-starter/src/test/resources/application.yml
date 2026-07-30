@@ -1,0 +1,33 @@
+# =====================================================================
+# 测试用 application.yml：连接 172.16.0.40 的 MySQL，使用 spider 库。
+# =====================================================================
+server:
+  port: 19091
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: vue-xx-spider-xx
+  datasource:
+    url: jdbc:mysql://172.16.0.40:3306/spider?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4&allowPublicKeyRetrieval=true
+    username: spider
+    password: spider123
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/spider-schema.sql
+      continue-on-error: true
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+
+logging:
+  level:
+    com.chua.spider.support: info
+    com.chua.spider: info

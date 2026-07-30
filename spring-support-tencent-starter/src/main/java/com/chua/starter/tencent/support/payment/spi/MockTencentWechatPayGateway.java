@@ -1,0 +1,326 @@
+package com.chua.starter.tencent.support.payment.spi;
+
+import com.chua.common.support.spi.annotations.Spi;
+import com.chua.starter.tencent.support.payment.TencentWechatPayGateway;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatNotifyRequest;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatOrderResponse;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatPayNotifyPayload;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatPayRequest;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatPayResponse;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreNotifyPayload;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreRequest;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreResponse;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatRefundNotifyPayload;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatRefundRequest;
+import com.chua.starter.tencent.support.payment.dto.TencentWechatRefundResponse;
+import com.chua.starter.tencent.support.properties.TencentWechatPayProperties;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.util.StringUtils;
+
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+/**
+ * 微信支付 mock SPI，实现本地联调与前后端演示。
+ */
+@Spi({"mock", "wechat-mock"})
+public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Override
+    public TencentWechatPayResponse jsapiPay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
+        TencentWechatPayResponse result = new TencentWechatPayResponse();
+        result.setSuccess(true);
+        result.setSdkParams(buildSdkParams(request.getOrderNo(), properties.getAppId()));
+        result.setMessage("微信支付 mock JSAPI 下单成功");
+        result.setRawResponse(raw("wechat-mock", "JSAPI", request.getOrderNo()));
+        return result;
+    }
+
+    @Override
+    public TencentWechatPayResponse h5Pay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
+        TencentWechatPayResponse result = new TencentWechatPayResponse();
+        result.setSuccess(true);
+        result.setPayUrl("https://mock.wechat.local/pay/" + request.getOrderNo());
+        result.setMessage("微信支付 mock H5 下单成功");
+        result.setRawResponse(raw("wechat-mock", "H5", request.getOrderNo()));
+        return result;
+    }
+
+    @Override
+    public TencentWechatOrderResponse queryJsapiOrder(TencentWechatPayProperties properties, String orderNo) {
+        return buildOrderResponse(orderNo);
+    }
+
+    @Override
+    public TencentWechatOrderResponse queryH5Order(TencentWechatPayProperties properties, String orderNo) {
+        return buildOrderResponse(orderNo);
+    }
+
+    @Override
+    public boolean closeJsapiOrder(TencentWechatPayProperties properties, String orderNo) {
+        return true;
+    }
+
+    @Override
+    public boolean closeH5Order(TencentWechatPayProperties properties, String orderNo) {
+        return true;
+    }
+
+    @Override
+    public TencentWechatPayResponse nativePay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
+        TencentWechatPayResponse result = new TencentWechatPayResponse();
+        result.setSuccess(true);
+        result.setPayUrl("weixin://wxpay/bizpayurl?mock=1&out_trade_no=" + request.getOrderNo());
+        result.setMessage("微信支付 mock Native 下单成功");
+        result.setRawResponse(raw("wechat-mock", "NATIVE", request.getOrderNo()));
+        return result;
+    }
+
+    @Override
+    public TencentWechatOrderResponse queryNativeOrder(TencentWechatPayProperties properties, String orderNo) {
+        return buildOrderResponse(orderNo);
+    }
+
+    @Override
+    public boolean closeNativeOrder(TencentWechatPayProperties properties, String orderNo) {
+        return true;
+    }
+
+    @Override
+    public TencentWechatPayResponse appPay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
+        TencentWechatPayResponse result = new TencentWechatPayResponse();
+        result.setSuccess(true);
+        Map<String, Object> sdkParams = new LinkedHashMap<>();
+        sdkParams.put("appid", firstNonBlank(properties.getAppId(), "wx_mock_appid"));
+        sdkParams.put("partnerid", firstNonBlank(properties.getMerchantId(), "mock_mchid"));
+        sdkParams.put("prepayid", "mock_prepay_" + request.getOrderNo());
+        sdkParams.put("package", "Sign=WXPay");
+        sdkParams.put("noncestr", "mock_nonce_" + System.currentTimeMillis());
+        sdkParams.put("timestamp", String.valueOf(System.currentTimeMillis() / 1000));
+        sdkParams.put("sign", "mock_sign");
+        result.setSdkParams(sdkParams);
+        result.setMessage("微信支付 mock App 下单成功");
+        result.setRawResponse(raw("wechat-mock", "APP", request.getOrderNo()));
+        return result;
+    }
+
+    @Override
+    public TencentWechatOrderResponse queryAppOrder(TencentWechatPayProperties properties, String orderNo) {
+        return buildOrderResponse(orderNo);
+    }
+
+    @Override
+    public boolean closeAppOrder(TencentWechatPayProperties properties, String orderNo) {
+        return true;
+    }
+
+    @Override
+    public TencentWechatPayResponse miniProgramPay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
+        TencentWechatPayResponse result = new TencentWechatPayResponse();
+        result.setSuccess(true);
+        result.setSdkParams(buildSdkParams(request.getOrderNo(), firstNonBlank(properties.getAppId(), "wx_mock_appid")));
+        result.setMessage("微信支付 mock 小程序下单成功");
+        result.setRawResponse(raw("wechat-mock", "MINIPROGRAM", request.getOrderNo()));
+        return result;
+    }
+
+    @Override
+    public TencentWechatOrderResponse queryMiniProgramOrder(TencentWechatPayProperties properties, String orderNo) {
+        return buildOrderResponse(orderNo);
+    }
+
+    @Override
+    public boolean closeMiniProgramOrder(TencentWechatPayProperties properties, String orderNo) {
+        return true;
+    }
+
+    @Override
+    public TencentWechatPayScoreResponse createPayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
+        return buildPayScoreResponse(request, "CREATED", "微信支付分 mock 创建成功");
+    }
+
+    @Override
+    public TencentWechatPayScoreResponse queryPayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
+        return buildPayScoreResponse(request, "DOING", "微信支付分 mock 查询成功");
+    }
+
+    @Override
+    public TencentWechatPayScoreResponse completePayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
+        return buildPayScoreResponse(request, "COMPLETED", "微信支付分 mock 完结成功");
+    }
+
+    @Override
+    public TencentWechatPayScoreResponse cancelPayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
+        return buildPayScoreResponse(request, "CANCELED", "微信支付分 mock 取消成功");
+    }
+
+    @Override
+    public TencentWechatPayScoreNotifyPayload parsePayScoreNotify(TencentWechatPayProperties properties, TencentWechatNotifyRequest request) {
+        Map<String, Object> body = parseJsonBody(request.getBody());
+        TencentWechatPayScoreNotifyPayload payload = new TencentWechatPayScoreNotifyPayload();
+        String outOrderNo = firstNonBlank(textOf(body.get("out_order_no")), textOf(body.get("outOrderNo")));
+        payload.setOutOrderNo(outOrderNo);
+        payload.setServiceOrderNo(firstNonBlank(textOf(body.get("service_order_no")), textOf(body.get("serviceOrderNo")), "MOCK-PAYSCORE-" + outOrderNo));
+        payload.setAppId(firstNonBlank(textOf(body.get("appid")), textOf(body.get("appId")), properties.getAppId()));
+        payload.setServiceId(firstNonBlank(textOf(body.get("service_id")), textOf(body.get("serviceId"))));
+        payload.setOpenId(firstNonBlank(textOf(body.get("openid")), textOf(body.get("openId"))));
+        payload.setState(firstNonBlank(textOf(body.get("state")), textOf(body.get("service_state")), "DOING"));
+        payload.setFinishReason(firstNonBlank(textOf(body.get("finish_reason")), textOf(body.get("finishReason"))));
+        payload.setRawData(body);
+        return payload;
+    }
+
+    @Override
+    public TencentWechatRefundResponse refund(TencentWechatPayProperties properties, TencentWechatRefundRequest request) {
+        return buildRefundResponse(request, "SUCCESS", "微信支付 mock 退款成功");
+    }
+
+    @Override
+    public TencentWechatRefundResponse queryRefund(TencentWechatPayProperties properties, TencentWechatRefundRequest request) {
+        return buildRefundResponse(request, "SUCCESS", "微信支付 mock 退款查询成功");
+    }
+
+    @Override
+    public TencentWechatPayNotifyPayload parsePayNotify(TencentWechatPayProperties properties, TencentWechatNotifyRequest request) {
+        Map<String, Object> body = parseJsonBody(request.getBody());
+        TencentWechatPayNotifyPayload payload = new TencentWechatPayNotifyPayload();
+        String orderNo = firstNonBlank(textOf(body.get("outTradeNo")), textOf(body.get("orderNo")));
+        payload.setOrderNo(orderNo);
+        payload.setTransactionId(firstNonBlank(textOf(body.get("transactionId")), "MOCK-WX-TRADE-" + orderNo));
+        payload.setAppId(firstNonBlank(textOf(body.get("appId")), properties.getAppId(), "mock-app-id"));
+        payload.setMerchantId(firstNonBlank(textOf(body.get("merchantId")), properties.getMerchantId(), "mock-mchid"));
+        payload.setTradeState(firstNonBlank(textOf(body.get("tradeState")), resolveTradeState(orderNo)));
+        payload.setTradeStateDesc(firstNonBlank(textOf(body.get("tradeStateDesc")), "MOCK"));
+        payload.setTotalAmountFen(longValue(body.get("totalAmountFen")));
+        payload.setPayerTotalAmountFen(longValue(body.get("payerTotalAmountFen")));
+        return payload;
+    }
+
+    @Override
+    public TencentWechatRefundNotifyPayload parseRefundNotify(TencentWechatPayProperties properties, TencentWechatNotifyRequest request) {
+        Map<String, Object> body = parseJsonBody(request.getBody());
+        TencentWechatRefundNotifyPayload payload = new TencentWechatRefundNotifyPayload();
+        String orderNo = firstNonBlank(textOf(body.get("outTradeNo")), textOf(body.get("orderNo")));
+        String refundNo = firstNonBlank(textOf(body.get("outRefundNo")), textOf(body.get("refundNo")));
+        payload.setOrderNo(orderNo);
+        payload.setRefundNo(refundNo);
+        payload.setRefundId(firstNonBlank(textOf(body.get("refundId")), "MOCK-WX-REFUND-" + refundNo));
+        payload.setRefundStatus(firstNonBlank(textOf(body.get("refundStatus")), "SUCCESS"));
+        payload.setTotalAmountFen(longValue(body.get("totalAmountFen")));
+        payload.setRefundAmountFen(longValue(body.get("refundAmountFen")));
+        return payload;
+    }
+
+    private Map<String, Object> buildSdkParams(String orderNo, String appId) {
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("appId", firstNonBlank(appId, "mock-app-id"));
+        params.put("timeStamp", String.valueOf(System.currentTimeMillis() / 1000));
+        params.put("nonceStr", "mock-" + orderNo);
+        params.put("package", "prepay_id=mock_" + orderNo);
+        params.put("signType", "RSA");
+        params.put("paySign", "mock-sign");
+        return params;
+    }
+
+    private TencentWechatOrderResponse buildOrderResponse(String orderNo) {
+        TencentWechatOrderResponse result = new TencentWechatOrderResponse();
+        result.setSuccess(true);
+        result.setTransactionId("MOCK-WX-TRADE-" + orderNo);
+        result.setTradeState(resolveTradeState(orderNo));
+        result.setTradeStateDesc("微信支付 mock 查询成功");
+        result.setRawResponse(raw("wechat-mock", "QUERY", orderNo));
+        return result;
+    }
+
+    private TencentWechatRefundResponse buildRefundResponse(TencentWechatRefundRequest request, String refundStatus, String message) {
+        TencentWechatRefundResponse result = new TencentWechatRefundResponse();
+        result.setSuccess(true);
+        result.setRefundNo(request.getRefundNo());
+        result.setRefundId("MOCK-WX-REFUND-" + request.getRefundNo());
+        result.setRefundAmountFen(request.getRefundAmountFen());
+        result.setRefundStatus(refundStatus);
+        result.setMessage(message);
+        result.setRawResponse(raw("wechat-mock", "REFUND", request.getRefundNo()));
+        return result;
+    }
+
+    private TencentWechatPayScoreResponse buildPayScoreResponse(TencentWechatPayScoreRequest request, String state, String message) {
+        TencentWechatPayScoreResponse result = new TencentWechatPayScoreResponse();
+        result.setSuccess(true);
+        result.setOutOrderNo(request.getOutOrderNo());
+        result.setServiceOrderNo("MOCK-PAYSCORE-" + request.getOutOrderNo());
+        result.setState(state);
+        result.setPackageInfo("mock_package=1&out_order_no=" + request.getOutOrderNo());
+        result.setMessage(message);
+        result.setRawData(Map.of(
+                "out_order_no", request.getOutOrderNo(),
+                "service_order_no", "MOCK-PAYSCORE-" + request.getOutOrderNo(),
+                "state", state));
+        result.setRawResponse(raw("wechat-mock", "PAYSCORE", request.getOutOrderNo()));
+        return result;
+    }
+
+    private Map<String, Object> parseJsonBody(String body) {
+        if (!StringUtils.hasText(body)) {
+            return Map.of();
+        }
+        try {
+            return objectMapper.readValue(body, new TypeReference<Map<String, Object>>() {
+            });
+        } catch (Exception e) {
+            throw new IllegalStateException("微信支付 mock 通知体必须是 JSON", e);
+        }
+    }
+
+    private String raw(String provider, String scene, String value) {
+        return "{\"provider\":\"" + provider + "\",\"scene\":\"" + scene + "\",\"value\":\"" + value + "\",\"time\":\"" + LocalDateTime.now() + "\"}";
+    }
+
+    private String resolveTradeState(String orderNo) {
+        if (!StringUtils.hasText(orderNo)) {
+            return "SUCCESS";
+        }
+        String normalized = orderNo.toUpperCase();
+        if (normalized.contains("WAIT")) {
+            return "USERPAYING";
+        }
+        if (normalized.contains("CLOSE") || normalized.contains("CANCEL")) {
+            return "CLOSED";
+        }
+        if (normalized.contains("FAIL")) {
+            return "PAYERROR";
+        }
+        return "SUCCESS";
+    }
+
+    private Long longValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        try {
+            return Long.parseLong(String.valueOf(value));
+        } catch (Exception e) {
+            throw new IllegalStateException("微信支付 mock 金额格式错误: " + value, e);
+        }
+    }
+
+    private String textOf(Object value) {
+        return value == null ? null : String.valueOf(value);
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (StringUtils.hasText(value)) {
+                return value;
+            }
+        }
+        return null;
+    }
+}

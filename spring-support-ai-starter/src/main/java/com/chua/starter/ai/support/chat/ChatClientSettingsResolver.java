@@ -1,0 +1,130 @@
+package com.chua.starter.ai.support.chat;
+
+import com.chua.common.support.ai.chat.ChatClientSetting;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+
+/**
+ * 聊天客户端配置解析器。
+ *
+ * 当前版本仅从 sys_ai_global_setting(runtime) 读取 LLM 主链路配置。
+ *
+ * @author CH
+ * @since 2026/04/03
+ */
+public final class ChatClientSettingsResolver {
+
+    private static final String GROUP = "runtime";
+    private static final long DEFAULT_TIMEOUT_MILLIS = 30_000L;
+
+    private ChatClientSettingsResolver() {
+    }
+
+    public static ChatClientSettings resolve(SysAiGlobalSettingService sysAiGlobalSettingService) {
+        boolean enabled = getBoolean(sysAiGlobalSettingService, "enabled", true);
+        if (!enabled) {
+            throw new IllegalStateException("sys_ai_global_setting.runtime.enabled=false，ChatClient 已禁用");
+        }
+
+        String provider = firstNonBlank(
+                getValue(sysAiGlobalSettingService, "provider"),
+                "openai"
+        );
+        String factory = firstNonBlank(
+                getValue(sysAiGlobalSettingService, "factory"),
+                "default"
+        );
+
+        ChatClientSetting setting = ChatClientSetting.builder()
+                .provider(provider)
+                .baseUrl(firstNonBlank(
+                        getValue(sysAiGlobalSettingService, "provider_base_url"),
+                        getValue(sysAiGlobalSettingService, "provider_api_address")
+                ))
+                .appKey(firstNonBlank(
+                        getValue(sysAiGlobalSettingService, "provider_api_key"),
+                        getValue(sysAiGlobalSettingService, "provider_app_key")
+                ))
+                .appSecret(firstNonBlank(
+                        getValue(sysAiGlobalSettingService, "provider_app_secret"),
+                        getValue(sysAiGlobalSettingService, "provider_secret_key")
+                ))
+                .build();
+
+        return ChatClientSettings.builder()
+                .factory(factory)
+                .provider(provider)
+                .defaultModel(getValue(sysAiGlobalSettingService, "default_model"))
+                .compressionModel(getValue(sysAiGlobalSettingService, "compression_model"))
+                .systemPrompt(getValue(sysAiGlobalSettingService, "system_prompt"))
+                .temperature(getDouble(sysAiGlobalSettingService, "temperature"))
+                .maxTokens(getInteger(sysAiGlobalSettingService, "max_tokens"))
+                .timeoutMillis(getLong(sysAiGlobalSettingService, "timeout_millis", DEFAULT_TIMEOUT_MILLIS))
+                .inputOptimizationEnabled(getBoolean(sysAiGlobalSettingService, "input_optimization_enabled", false))
+                .contextCompressionEnabled(getBoolean(sysAiGlobalSettingService, "context_compression_enabled", false))
+                .contextCompressionThreshold(getInteger(sysAiGlobalSettingService, "context_compression_threshold", 12))
+                .contextCompressionRetainMessages(getInteger(sysAiGlobalSettingService, "context_compression_retain_messages", 6))
+                .baseSetting(setting)
+                .build();
+    }
+
+    private static String getValue(SysAiGlobalSettingService service, String field) {
+        return service.getValue(GROUP, field).orElse(null);
+    }
+
+    private static boolean getBoolean(SysAiGlobalSettingService service, String field, boolean defaultValue) {
+        return service.getBoolean(GROUP, field, defaultValue);
+    }
+
+    private static Integer getInteger(SysAiGlobalSettingService service, String field) {
+        return getInteger(service, field, null);
+    }
+
+    private static Integer getInteger(SysAiGlobalSettingService service, String field, Integer defaultValue) {
+        String value = getValue(service, field);
+        if (StringUtils.isBlank(value)) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException ignored) {
+            return defaultValue;
+        }
+    }
+
+    private static Double getDouble(SysAiGlobalSettingService service, String field) {
+        String value = getValue(service, field);
+        if (StringUtils.isBlank(value)) {
+            return null;
+        }
+        try {
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private static Long getLong(SysAiGlobalSettingService service, String field, long defaultValue) {
+        String value = getValue(service, field);
+        if (StringUtils.isBlank(value)) {
+            return defaultValue;
+        }
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException ignored) {
+            return defaultValue;
+        }
+    }
+
+    private static String firstNonBlank(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            if (StringUtils.isNotBlank(value)) {
+                return value;
+            }
+        }
+        return null;
+    }
+}

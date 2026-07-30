@@ -1,0 +1,263 @@
+package com.chua.starter.oauth.client.support.protocol;
+
+import com.chua.common.support.lang.json.Json;
+import com.chua.common.support.spi.annotations.Spi;
+import com.chua.starter.common.support.algorithm.crypto.Codec;
+import com.chua.common.support.utils.DigestUtils;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.starter.oauth.client.support.entity.AppKeySecret;
+import com.chua.starter.oauth.client.support.enums.AuthType;
+import com.chua.starter.oauth.client.support.enums.LogoutType;
+import com.chua.starter.oauth.client.support.enums.UpgradeType;
+import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
+import com.chua.starter.oauth.client.support.infomation.Information;
+import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
+import com.chua.starter.oauth.client.support.user.LoginAuthResult;
+import com.chua.starter.oauth.client.support.user.LoginResult;
+import com.chua.starter.oauth.client.support.user.UserResult;
+import com.chua.starter.oauth.client.support.user.UserResume;
+import com.google.common.collect.Sets;
+import jakarta.servlet.http.Cookie;
+
+import java.util.Collections;
+import java.util.Map;
+
+import static com.chua.common.support.constant.NameConstant.NULL;
+import static com.chua.starter.common.support.constant.Constant.ADMIN;
+import static com.chua.starter.common.support.constant.Constant.OPS;
+import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_ADMIN;
+import static com.chua.starter.oauth.client.support.execute.AuthClientExecute.DEFAULT_KEY;
+
+/**
+ * 静态协议实现类，用于处理静态认证逻辑。
+ * 该类通过SM4加密算法解析token或cookie中的用户信息，并构建认证信息。
+ */
+@Spi({"Static"})
+public class StaticProtocol extends AbstractProtocol {
+    /**
+     * SM4加密解密器，用于解析token和cookie中的用户信息
+     */
+    private static volatile Codec SM4;
+
+    /**
+     * 构造函数
+     *
+     * @param authClientProperties 认证客户端配置属性
+     */
+    public StaticProtocol(AuthClientProperties authClientProperties) {
+        super(authClientProperties);
+    }
+
+    /**
+     * 认证方法，根据cookie和token进行用户认证
+     *
+     * @param cookie      Cookie对象
+     * @param token       认证token
+     * @param subProtocol 子协议
+     * @return 认证信息对象
+     */
+    @Override
+    protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
+        initial();
+        return newAuthenticationInformation(token, new Cookie[]{cookie});
+    }
+
+    @Override
+    protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
+        return null;
+    }
+
+    /**
+     * 升级认证信息方法，根据cookie、token和升级类型进行认证信息升级
+     *
+     * @param cookie       Cookie对象
+     * @param token        认证token
+     * @param upgradeType  升级类型
+     * @param refreshToken 刷新token
+     * @return 认证信息对象
+     */
+    @Override
+    protected AuthenticationInformation upgradeInformation(Cookie cookie, String token, UpgradeType upgradeType, String refreshToken) {
+        initial();
+        return newAuthenticationInformation(token, new Cookie[]{cookie});
+    }
+
+    /**
+     * 初始化SM4加密解密器
+     */
+    private void initial() {
+        if (null == SM4) {
+            synchronized (this) {
+                if (null == SM4) {
+                    SM4 = Codec.build("SM4", DEFAULT_KEY);
+                }
+            }
+        }
+    }
+
+    private String encodeUserResult(UserResult userResult) {
+        try {
+            return SM4.encodeHex(Json.toJson(userResult));
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+
+    /**
+     * 创建新的认证信息对象
+     *
+     * @param token  认证token
+     * @param cookie Cookie数组
+     * @return 认证信息对象
+     */
+    private AuthenticationInformation newAuthenticationInformation(String token, Cookie[] cookie) {
+        UserResume userResume = new UserResume();
+        UserResult userResult = null;
+        // 如果token不为空且不为"null"，则尝试解析token
+        if (StringUtils.isNotBlank(token) && !NULL.equals(token)) {
+            try {
+                userResult = Json.fromJson(SM4.decodeHex(token), UserResult.class);
+            } catch (Exception ignored) {
+            }
+        }
+
+        // 如果通过token未能获取到用户信息，则尝试从cookie中解析
+        if (null == userResult && null != cookie) {
+            for (Cookie cookie1 : cookie) {
+                if (null == cookie1) {
+                    continue;
+                }
+                if (!"JSESSIONID".equals(cookie1.getName())) {
+                    String source;
+                    try {
+                        source = SM4.decodeHex(cookie1.getValue());
+                        userResult = Json.fromJson(source, UserResult.class);
+                    } catch (Exception e) {
+                        // 解析异常时继续尝试其他cookie
+                    }
+                    if (null != userResult) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (null == userResult || StringUtils.isBlank(userResult.getUsername())) {
+            return AuthenticationInformation.noAuth();
+        }
+
+        // 如果成功解析到用户信息，则设置用户名并保存到请求上下文
+        userResume.setUsername(userResult.getUsername());
+        userResume.setLoginType(userResult.getLoginType());
+        userResume.setNickName(userResult.getNickName());
+        userResume.setPhone(userResult.getPhone());
+        userResume.setTenantId(userResult.getTenantId());
+        userResume.setDeptId(userResult.getDeptId());
+        userResume.setAddress(userResult.getAddress());
+        userResume.setExt(userResult.getExt());
+        com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUsername(userResume.getUsername());
+
+        // 根据用户名设置角色信息
+        if (userResult.getRoles() != null && !userResult.getRoles().isEmpty()) {
+            userResume.setRoles(userResult.getRoles());
+        } else if (ADMIN.equalsIgnoreCase(userResume.getUsername())) {
+            userResume.setRoles(Sets.newHashSet(SUPER_ADMIN, ADMIN));
+        } else {
+            userResume.setRoles(Sets.newHashSet(OPS));
+        }
+        userResume.setUserId(StringUtils.defaultString(userResult.getUserId(), "1"));
+        userResume.setUid(StringUtils.defaultString(userResult.getUid(), DigestUtils.sha1(userResume.getUserId())));
+        userResume.setOpenId(StringUtils.defaultString(userResult.getOpenId(), userResume.getUid()));
+        userResume.setUnionId(StringUtils.defaultString(userResult.getUnionId(), userResume.getUid()));
+        userResume.setPermission(userResult.getPermission() == null ? Collections.emptySet() : userResult.getPermission());
+        userResume.setFingerprint(userResult.getFingerprint());
+        userResume.setExpireTime(userResult.getExpireTime());
+        // 将用户信息保存到请求上下文
+        com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUserInfo(userResume);
+        // 返回认证成功的信息
+        return new AuthenticationInformation(Information.OK, userResume);
+    }
+
+    /**
+     * 升级认证信息
+     *
+     * @param cookie        Cookie数组
+     * @param token         认证token
+     * @param upgradeType   升级类型
+     * @param refreshToken  刷新token
+     * @return 登录结果对象
+     */
+    @Override
+    public LoginResult upgrade(Cookie[] cookie, String token, UpgradeType upgradeType, String refreshToken) {
+        initial();
+        String sourceToken = StringUtils.isNotBlank(refreshToken) ? refreshToken : token;
+        if (StringUtils.isBlank(sourceToken)) {
+            return null;
+        }
+
+        AuthenticationInformation authenticationInformation = newAuthenticationInformation(sourceToken, cookie);
+        if (authenticationInformation == null
+                || authenticationInformation.getInformation() == null
+                || authenticationInformation.getInformation().getCode() != Information.OK.getCode()
+                || authenticationInformation.getReturnResult() == null) {
+            return null;
+        }
+
+        UserResume userResume = authenticationInformation.getReturnResult();
+        UserResult userResult = new UserResult();
+        userResult.setUid(userResume.getUid());
+        userResult.setUserId(userResume.getUserId());
+        userResult.setUsername(userResume.getUsername());
+        userResult.setNickName(userResume.getNickName());
+        userResult.setPhone(userResume.getPhone());
+        userResult.setAddress(userResume.getAddress());
+        userResult.setLoginType(userResume.getLoginType());
+        userResult.setTenantId(userResume.getTenantId());
+        userResult.setDeptId(userResume.getDeptId());
+        userResult.setOpenId(userResume.getOpenId());
+        userResult.setUnionId(userResume.getUnionId());
+        userResult.setFingerprint(userResume.getFingerprint());
+        userResult.setPermission(userResume.getPermission() == null ? Collections.emptySet() : userResume.getPermission());
+        userResult.setRoles(userResume.getRoles());
+        userResult.setExt(userResume.getExt());
+        userResult.setExpireTime(System.currentTimeMillis() / 1000 + 7L * 24 * 60 * 60);
+
+        String refreshedToken = encodeUserResult(userResult);
+        if (StringUtils.isBlank(refreshedToken)) {
+            return null;
+        }
+
+        userResult.setToken(refreshedToken);
+        userResult.setRefreshToken(refreshedToken);
+        return new LoginResult(refreshedToken, refreshedToken, userResume.getFingerprint(), userResult);
+    }
+
+    /**
+     * 获取访问令牌
+     *
+     * @param username  用户名
+     * @param password  密码
+     * @param authType  认证类型
+     * @param ext       扩展信息
+     * @return 登录认证结果对象
+     */
+    @Override
+    public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
+        return null;
+    }
+
+    /**
+     * 用户登出
+     *
+     * @param uid          用户ID
+     * @param logoutType   登出类型
+     * @param userResult   用户结果对象
+     * @return 登录认证结果对象
+     */
+    @Override
+    public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult) {
+        return null;
+    }
+}

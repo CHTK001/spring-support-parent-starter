@@ -1,0 +1,119 @@
+package com.chua.common.starter.support.network.quality;
+
+import com.ip2proxy.IP2Proxy;
+import java.io.Serializable;
+
+/**
+ * IP2Proxy LITE 查询结果模型
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
+public class IP2ProxyResult implements Serializable {
+
+    private static final String NOT_SUPPORTED = "NOT SUPPORTED";
+    private static final String EMPTY = "-";
+
+    private final IP2Proxy proxy;
+    private final String ip;
+
+    public IP2ProxyResult(IP2Proxy proxy, String ip) {
+        this.proxy = proxy;
+        this.ip = ip;
+    }
+
+    public boolean isValid() {
+        try {
+            return proxy != null && "".equals(getProxyType()) == false && NOT_SUPPORTED.equals(getProxyType()) == false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean isProxy() {
+        try {
+            return proxy != null && proxy.IsProxy(ip) == 1;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public String getProxyType() {
+        try {
+            return proxy != null ? coalesce(proxy.GetProxyType(ip)) : "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    public String getCountryCode() {
+        try {
+            return proxy != null ? coalesce(proxy.GetCountryShort(ip)) : "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    public String getCountryName() {
+        try {
+            return proxy != null ? coalesce(proxy.GetCountryLong(ip)) : "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    public String getRegionName() {
+        try {
+            return proxy != null ? coalesce(proxy.GetRegion(ip)) : "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    public String getCityName() {
+        try {
+            return proxy != null ? coalesce(proxy.GetCity(ip)) : "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    public String getIsp() {
+        try {
+            return proxy != null ? coalesce(proxy.GetISP(ip)) : "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    public String getUsageType() {
+        try {
+            return proxy != null ? coalesce(proxy.GetUsageType(ip)) : "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    public boolean isVpn() {
+        return "VPN".equalsIgnoreCase(getProxyType());
+    }
+
+    public boolean isTor() {
+        return "TOR".equalsIgnoreCase(getProxyType());
+    }
+
+    public boolean isDataCenter() {
+        return "DCH".equalsIgnoreCase(getProxyType());
+    }
+
+    public boolean isWebProxy() {
+        return "WEB".equalsIgnoreCase(getProxyType());
+    }
+
+    private static String coalesce(String s) {
+        if (s == null || NOT_SUPPORTED.equals(s) || "".equals(s) || "-".equals(s)) {
+            return "";
+        }
+        return s;
+    }
+}

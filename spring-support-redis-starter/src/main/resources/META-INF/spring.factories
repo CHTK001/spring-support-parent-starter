@@ -1,0 +1,6 @@
+com.chua.starter.core.support.eventbus.Eventbus=\
+  com.chua.starter.redis.support.eventbus.RedisEventbus
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  com.chua.starter.redis.support.RedisConfiguration,\
+  com.chua.starter.redis.support.CacheConfiguration,\
+  com.chua.starter.redis.support.LockTemplateConfiguration

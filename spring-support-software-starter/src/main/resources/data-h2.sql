@@ -1,0 +1,2 @@
+INSERT INTO soft_source (source_id, source_name, source_code, source_type, source_url, source_is_enabled, source_is_default, source_description) VALUES ('source_default', '默认官方源', 'default', 0, 'https://packages.example.com', TRUE, TRUE, '系统默认官方软件源');
+INSERT INTO soft_source (source_id, source_name, source_code, source_type, source_url, source_is_enabled, source_is_default, source_description) VALUES ('source_local', '本地系统源', 'LOCAL_SYSTEM_SOURCE', 3, NULL, TRUE, FALSE, '本地系统软件源');
