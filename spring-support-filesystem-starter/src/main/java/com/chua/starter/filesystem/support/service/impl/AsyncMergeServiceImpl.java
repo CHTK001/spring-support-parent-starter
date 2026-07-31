@@ -2,6 +2,7 @@ package com.chua.starter.filesystem.support.service.impl;
 
 import com.chua.common.support.storage.FileStorage;
 import com.chua.common.support.storage.PartETag;
+import com.chua.common.support.storage.request.PutObjectRequest;
 import com.chua.common.support.storage.result.ObjectResult;
 import com.chua.common.support.storage.result.PutObjectResult;
 import com.chua.common.support.utils.IoUtils;
@@ -85,7 +86,11 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
             uploadService.markFailed(uploadId, "存储不存在: " + storageType);
             return;
         }
-        PutObjectResult result = storage.putObject(key, merged);
+        PutObjectResult result = storage.putObject(PutObjectRequest.builder()
+                .content(merged)
+                .fileName(key != null && key.contains("/") ? key.substring(key.lastIndexOf("/") + 1) : key)
+                .filePath(key != null && key.contains("/") ? key.substring(0, key.lastIndexOf("/")) : null)
+                .build());
         if (result.getResultCode() != ObjectResult.ResultCode.SUCCESS) {
             int retry = task.getFilesystemUploadTaskRetryCount() != null ? task.getFilesystemUploadTaskRetryCount() + 1 : 1;
             task.setFilesystemUploadTaskRetryCount(retry);

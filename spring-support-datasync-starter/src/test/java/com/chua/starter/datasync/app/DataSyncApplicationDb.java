@@ -7,6 +7,15 @@ import com.chua.starter.datasync.mapping.DataSyncMappingManager;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 /**
  * DataSync 数据库模式集成测试启动应用。
@@ -18,7 +27,7 @@ public class DataSyncApplicationDb {
 
     public static void main(String[] args) throws Exception {
         ConfigurableApplicationContext context = new SpringApplicationBuilder()
-                .sources(DataSyncAutoConfiguration.class)
+                .sources(DataSyncApplicationDb.class)
                 .web(WebApplicationType.NONE)
                 .run(args);
 
@@ -44,5 +53,56 @@ public class DataSyncApplicationDb {
         System.in.read();
         server.stop();
         context.close();
+    }
+
+    @Configuration
+    static class TestConfig {
+        @Bean
+        @Primary
+        public DataSource dataSource() throws SQLException {
+            org.h2.jdbcx.JdbcDataSource ds = new org.h2.jdbcx.JdbcDataSource();
+            ds.setURL("jdbc:h2:mem:testdb-datasync;DB_CLOSE_DELAY=-1");
+            ds.setUser("sa");
+            ds.setPassword("");
+            try (Connection conn = ds.getConnection();
+                 Statement stmt = conn.createStatement()) {
+                stmt.execute("""
+                        CREATE TABLE IF NOT EXISTS datasync_mapping (
+                            mapping_id VARCHAR(255) PRIMARY KEY,
+                            input_id VARCHAR(255),
+                            source_id VARCHAR(255),
+                            output_id VARCHAR(255),
+                            sink_id VARCHAR(255),
+                            batch INT DEFAULT 100,
+                            cron_type VARCHAR(255),
+                            cron VARCHAR(255),
+                            params TEXT,
+                            enabled BOOLEAN DEFAULT TRUE,
+                            create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        )
+                        """);
+                stmt.execute("""
+                        CREATE TABLE IF NOT EXISTS datasync_field_mapping (
+                            id VARCHAR(255) PRIMARY KEY,
+                            mapping_id VARCHAR(255),
+                            source_field VARCHAR(255),
+                            target_field VARCHAR(255),
+                            converter VARCHAR(255),
+                            sort INT,
+                            FOREIGN KEY (mapping_id) REFERENCES datasync_mapping(mapping_id)
+                        )
+                        """);
+                stmt.execute("""
+                        INSERT INTO datasync_mapping (mapping_id, input_id, source_id, output_id, sink_id, batch, cron_type, cron, params, enabled)
+                        VALUES ('db-user-sync', 'user-input', 'user-source', 'user-output', 'user-sink', 100, 'fixed', '0/5 * * * * ?', '{}', TRUE)
+                        """);
+                stmt.execute("""
+                        INSERT INTO datasync_field_mapping (id, mapping_id, source_field, target_field, converter, sort)
+                        VALUES ('f1', 'db-user-sync', 'name', 'user_name', 'toString', 0)
+                        """);
+            }
+            return ds;
+        }
     }
 }
