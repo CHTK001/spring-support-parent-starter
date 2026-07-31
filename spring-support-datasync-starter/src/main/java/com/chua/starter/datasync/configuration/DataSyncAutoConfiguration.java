@@ -2,10 +2,13 @@ package com.chua.starter.datasync.configuration;
 
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
+import com.chua.starter.datasync.DefaultDataSyncServer;
 import com.chua.starter.datasync.agent.AgentServerManager;
 import com.chua.starter.datasync.agent.DataSyncAgentServer;
 import com.chua.starter.datasync.config.DirectoryConfigDefinition;
 import com.chua.starter.datasync.mapping.DataSyncFieldMapping;
+import com.chua.starter.datasync.mapping.DataSyncMappingManager;
+import com.chua.starter.datasync.mapping.DefaultDataSyncMappingManager;
 import com.chua.starter.datasync.scanner.ConfigFileParser;
 import com.chua.starter.datasync.scanner.DirectoryDataSyncMappingScanner;
 import com.chua.starter.datasync.scanner.JsonConfigFileParser;
@@ -36,8 +39,17 @@ public class DataSyncAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public com.chua.starter.datasync.DataSyncServer dataSyncServer(AgentServerManager agentServerManager) {
-        return new com.chua.starter.datasync.DefaultDataSyncServer(agentServerManager);
+    public DataSyncMappingManager dataSyncMappingManager() {
+        return new DefaultDataSyncMappingManager();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public com.chua.starter.datasync.DataSyncServer dataSyncServer(AgentServerManager agentServerManager,
+                                                                   DataSyncMappingManager mappingManager) {
+        com.chua.starter.datasync.DefaultDataSyncServer server = new com.chua.starter.datasync.DefaultDataSyncServer(agentServerManager);
+        server.setMappingManager(mappingManager);
+        return server;
     }
 
     @Bean
@@ -49,9 +61,10 @@ public class DataSyncAutoConfiguration {
     @Bean
     @ConditionalOnProperty(prefix = "plugin.datasync", name = "mapping-source", havingValue = "file")
     @ConditionalOnMissingBean
-    public DirectoryDataSyncMappingScanner directoryDataSyncMappingScanner(DatasyncProperties properties) {
+    public DirectoryDataSyncMappingScanner directoryDataSyncMappingScanner(DatasyncProperties properties,
+                                                                          DataSyncMappingManager mappingManager) {
         return new DirectoryDataSyncMappingScanner(
-                new com.chua.starter.datasync.mapping.DefaultDataSyncMappingManager(),
+                mappingManager,
                 new SimpleDirectoryConfigDefinition(properties.getFileMapping().getDirectoryPath()),
                 List.of(
                         new YamlConfigFileParser(),
@@ -66,7 +79,7 @@ public class DataSyncAutoConfiguration {
     @ConditionalOnMissingBean
     public DatabaseMappingLoader databaseMappingLoader(javax.sql.DataSource dataSource,
                                                        DatasyncProperties properties,
-                                                       com.chua.starter.datasync.mapping.DataSyncMappingManager mappingManager) {
+                                                       DataSyncMappingManager mappingManager) {
         return new DatabaseMappingLoader(dataSource, properties, mappingManager);
     }
 
