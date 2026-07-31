@@ -158,6 +158,10 @@ public class SyncServer implements InitializingBean, DisposableBean {
         }
     }
 
+    public void publish(String topic, Object data) {
+        broadcast(topic, data);
+    }
+
     public void broadcast(String instanceName, String topic, Object data) {
         SyncServerInstance instance = instances.get(instanceName);
         if (instance != null) {

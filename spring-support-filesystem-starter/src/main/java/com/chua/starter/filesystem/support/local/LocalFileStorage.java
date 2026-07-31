@@ -1,30 +1,45 @@
 package com.chua.starter.filesystem.support.local;
 
-import com.chua.common.support.storage.FileStorage;
+import com.chua.common.support.storage.AbstractFileStorage;
 import com.chua.common.support.storage.MultipartStorage;
 import com.chua.common.support.storage.PartETag;
+import com.chua.common.support.storage.metadata.Metadata;
+import com.chua.common.support.storage.request.ExistObjectRequest;
 import com.chua.common.support.storage.request.GetObjectRequest;
 import com.chua.common.support.storage.request.ListObjectRequest;
 import com.chua.common.support.storage.request.MultipartUploadPartRequest;
 import com.chua.common.support.storage.request.PutObjectRequest;
-import com.chua.common.support.storage.result.*;
+import com.chua.common.support.storage.result.DeleteObjectResult;
+import com.chua.common.support.storage.result.ExistObjectResult;
+import com.chua.common.support.storage.result.GetObjectResult;
+import com.chua.common.support.storage.result.ListObjectResult;
+import com.chua.common.support.storage.result.MultipartPartResult;
+import com.chua.common.support.storage.result.ObjectResult;
+import com.chua.common.support.storage.result.PutObjectResult;
 import com.chua.common.support.storage.setting.BucketSetting;
 
-import java.io.*;
-import java.nio.file.*;
-import java.util.*;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 本地文件系统存储 SPI 实现（仅用于集成测试）。
  *
- * <p>将对象写入本地磁盘目录，提供最小化的 {@link FileStorage} 接口，
+ * <p>将对象写入本地磁盘目录，提供最小化的 {@link com.chua.common.support.storage.FileStorage} 接口，
  * 用于在没有真实云存储的情况下验证分片上传链路。</p>
  *
  * @author CH
  * @since 4.0.0.42
  */
-public class LocalFileStorage implements FileStorage {
+public class LocalFileStorage extends AbstractFileStorage {
 
     /**
      * 本地存储根目录
@@ -37,8 +52,9 @@ public class LocalFileStorage implements FileStorage {
     private final Map<String, Map<Integer, Path>> multipartMap = new ConcurrentHashMap<>();
 
     public LocalFileStorage(BucketSetting setting) {
+        super(setting);
         String baseDir = System.getProperty("java.io.tmpdir") + "/filesystem-local-test/"
-                + Optional.ofNullable(setting.getBucket()).orElse("default");
+                + (bucket != null ? bucket : "default");
         this.rootPath = Paths.get(baseDir);
         try {
             Files.createDirectories(rootPath);
@@ -94,7 +110,6 @@ public class LocalFileStorage implements FileStorage {
             return GetObjectResult.builder()
                     .resultCode(ObjectResult.ResultCode.SUCCESS)
                     .inputStream(Files.newInputStream(target))
-                    .contentLength(Files.size(target))
                     .build();
         } catch (IOException e) {
             return GetObjectResult.builder()
@@ -125,20 +140,21 @@ public class LocalFileStorage implements FileStorage {
     }
 
     @Override
-    public ListObjectResult listObject(ListObjectRequest request) {
-        return ListObjectResult.builder()
+    public ExistObjectResult existObject(ExistObjectRequest request) {
+        String key = request.getKey();
+        boolean exists = key != null && Files.exists(rootPath.resolve(key));
+        return ExistObjectResult.builder()
                 .resultCode(ObjectResult.ResultCode.SUCCESS)
-                .objectNames(Collections.emptyList())
+                .exists(exists)
                 .build();
     }
 
     @Override
-    public boolean exist(String key) {
-        return Files.exists(rootPath.resolve(key));
-    }
-
-    @Override
-    public void close() {
+    public ListObjectResult listObject(ListObjectRequest request) {
+        return ListObjectResult.builder()
+                .resultCode(ObjectResult.ResultCode.SUCCESS)
+                .metadata(Collections.<Metadata>emptyList())
+                .build();
     }
 
     private String resolveKey(String filePath, String fileName) {
@@ -225,13 +241,16 @@ public class LocalFileStorage implements FileStorage {
         }
 
         @Override
-        public void abort(String uploadId) {
+        public DeleteObjectResult abort(String uploadId) {
             Map<Integer, Path> parts = multipartMap.remove(uploadId);
             if (parts != null) {
                 parts.values().forEach(p -> {
                     try { Files.deleteIfExists(p); } catch (IOException ignored) {}
                 });
             }
+            return DeleteObjectResult.builder()
+                    .resultCode(ObjectResult.ResultCode.SUCCESS)
+                    .build();
         }
     }
 }
