@@ -81,6 +81,10 @@ public class SysFileSystemUpload extends SysBase implements Serializable {
     @Schema(description = "上传完成时间")
     private LocalDateTime filesystemUploadTaskCompleteTime;
 
+    @TableField("filesystem_upload_task_retry_count")
+    @Schema(description = "合并重试次数")
+    private Integer filesystemUploadTaskRetryCount;
+
     public SysFileSystemUpload() {}
 
     public Long getFilesystemUploadTaskId() { return filesystemUploadTaskId; }
@@ -133,6 +137,9 @@ public class SysFileSystemUpload extends SysBase implements Serializable {
 
     public LocalDateTime getFilesystemUploadTaskCompleteTime() { return filesystemUploadTaskCompleteTime; }
     public void setFilesystemUploadTaskCompleteTime(LocalDateTime filesystemUploadTaskCompleteTime) { this.filesystemUploadTaskCompleteTime = filesystemUploadTaskCompleteTime; }
+
+    public Integer getFilesystemUploadTaskRetryCount() { return filesystemUploadTaskRetryCount; }
+    public void setFilesystemUploadTaskRetryCount(Integer filesystemUploadTaskRetryCount) { this.filesystemUploadTaskRetryCount = filesystemUploadTaskRetryCount; }
 
     public static class Status {
         public static final int PENDING = 0;

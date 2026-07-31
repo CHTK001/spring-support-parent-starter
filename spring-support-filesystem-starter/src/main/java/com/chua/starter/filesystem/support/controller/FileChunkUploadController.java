@@ -4,7 +4,6 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.storage.MultipartStorage;
 import com.chua.common.support.storage.PartETag;
 import com.chua.common.support.storage.FileStorage;
-import com.chua.common.support.storage.result.DeleteObjectResult;
 import com.chua.common.support.storage.result.MultipartPartResult;
 import com.chua.common.support.storage.result.PutObjectResult;
 import com.chua.common.support.storage.request.PutObjectRequest;
@@ -13,6 +12,7 @@ import com.chua.common.support.storage.metadata.Metadata;
 import com.chua.starter.common.support.logger.ModuleLog;
 import com.chua.starter.filesystem.support.entity.SysFileSystemUpload;
 import com.chua.starter.filesystem.support.service.SysFileSystemUploadService;
+import com.chua.starter.filesystem.support.service.SysFileSystemUploadChunkService;
 import com.chua.starter.filesystem.support.properties.FileStorageProperties;
 import com.chua.starter.filesystem.support.template.FileStorageTemplate;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,22 +27,16 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * 文件分片上传控制器。
- *
- * @author CH
- * @since 1.0
- */
 @RestController
 @RequiredArgsConstructor
 @Tag(name = "文件分片上传接口")
 public class FileChunkUploadController {
 
     private static final Logger LOG = LoggerFactory.getLogger(FileChunkUploadController.class);
-
     private static final ModuleLog MODULE_LOG = ModuleLog.of("FileSystem", FileChunkUploadController.class);
 
     private final SysFileSystemUploadService uploadService;
+    private final SysFileSystemUploadChunkService chunkService;
     private final FileStorageTemplate fileStorageTemplate;
     private final FileStorageProperties fileStorageProperties;
 
@@ -88,7 +82,7 @@ public class FileChunkUploadController {
         PutObjectRequest putRequest = PutObjectRequest.builder()
                 .fileName(fileName)
                 .filePath(null)
-                .metadata(com.chua.common.support.storage.metadata.Metadata.builder()
+                .metadata(Metadata.builder()
                         .contentType(contentType)
                         .build())
                 .build();
@@ -155,6 +149,9 @@ public class FileChunkUploadController {
             if (partResult.getResultCode() != com.chua.common.support.storage.result.ObjectResult.ResultCode.SUCCESS) {
                 return ReturnResult.illegal(partResult.getMessage());
             }
+
+            String storagePath = partResult.getStoragePath();
+            chunkService.saveChunk(uploadId, partNumber, partResult.getPartSize(), partResult.getEtag(), storagePath);
 
             SysFileSystemUpload task = uploadService.getByUploadId(uploadId);
             if (task != null) {

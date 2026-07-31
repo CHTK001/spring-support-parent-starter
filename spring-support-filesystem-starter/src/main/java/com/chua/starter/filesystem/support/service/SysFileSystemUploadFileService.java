@@ -1,0 +1,28 @@
+package com.chua.starter.filesystem.support.service;
+
+import com.baomidou.mybatisplus.extension.service.IService;
+import com.chua.starter.filesystem.support.entity.SysFileSystemUploadFile;
+
+/**
+ * 文件系统上传完成主体服务接口。
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
+public interface SysFileSystemUploadFileService extends IService<SysFileSystemUploadFile> {
+
+    /**
+     * 创建上传完成记录。
+     */
+    boolean createFromTask(String uploadId, String url, String etag);
+
+    /**
+     * 根据 uploadId 查询。
+     */
+    SysFileSystemUploadFile getByUploadId(String uploadId);
+
+    /**
+     * 删除主体记录。
+     */
+    boolean deleteByUploadId(String uploadId);
+}

@@ -8,13 +8,8 @@ import com.chua.starter.filesystem.support.service.SysFileSystemUploadService;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
-/**
- * 文件系统分片上传任务服务实现。
- *
- * @author CH
- * @since 1.0
- */
 @Service
 public class SysFileSystemUploadServiceImpl extends ServiceImpl<SysFileSystemUploadMapper, SysFileSystemUpload> implements SysFileSystemUploadService {
 
@@ -37,6 +32,7 @@ public class SysFileSystemUploadServiceImpl extends ServiceImpl<SysFileSystemUpl
         task.setFilesystemUploadTaskContentType(contentType);
         task.setFilesystemUploadTaskStatus(SysFileSystemUpload.Status.PENDING);
         task.setFilesystemUploadTaskStartTime(now);
+        task.setFilesystemUploadTaskRetryCount(0);
         task.setCreateTime(now);
         task.setUpdateTime(now);
         task.setCreateBy(0);
@@ -111,5 +107,18 @@ public class SysFileSystemUploadServiceImpl extends ServiceImpl<SysFileSystemUpl
                 SysFileSystemUpload.Status.UPLOADING,
                 SysFileSystemUpload.Status.PENDING_MERGE);
         return remove(wrapper) ? 1 : 0;
+    }
+
+    @Override
+    public List<SysFileSystemUpload> listPendingMerge() {
+        return list(new LambdaQueryWrapper<SysFileSystemUpload>()
+                .eq(SysFileSystemUpload::getFilesystemUploadTaskStatus, SysFileSystemUpload.Status.PENDING_MERGE));
+    }
+
+    @Override
+    public List<SysFileSystemUpload> listFailedRetryable() {
+        return list(new LambdaQueryWrapper<SysFileSystemUpload>()
+                .eq(SysFileSystemUpload::getFilesystemUploadTaskStatus, SysFileSystemUpload.Status.FAILED)
+                .lt(SysFileSystemUpload::getFilesystemUploadTaskRetryCount, 3));
     }
 }

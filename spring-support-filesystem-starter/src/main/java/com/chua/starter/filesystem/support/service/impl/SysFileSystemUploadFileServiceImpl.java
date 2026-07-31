@@ -1,0 +1,64 @@
+package com.chua.starter.filesystem.support.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.chua.starter.filesystem.support.entity.SysFileSystemUpload;
+import com.chua.starter.filesystem.support.entity.SysFileSystemUploadFile;
+import com.chua.starter.filesystem.support.mapper.SysFileSystemUploadFileMapper;
+import com.chua.starter.filesystem.support.service.SysFileSystemUploadFileService;
+import com.chua.starter.filesystem.support.service.SysFileSystemUploadService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+
+@Service
+@RequiredArgsConstructor
+public class SysFileSystemUploadFileServiceImpl
+        extends ServiceImpl<SysFileSystemUploadFileMapper, SysFileSystemUploadFile>
+        implements SysFileSystemUploadFileService {
+
+    private final SysFileSystemUploadService uploadService;
+
+    @Override
+    @Transactional
+    public boolean createFromTask(String uploadId, String url, String etag) {
+        SysFileSystemUpload task = uploadService.getByUploadId(uploadId);
+        if (task == null) {
+            return false;
+        }
+        SysFileSystemUploadFile file = new SysFileSystemUploadFile();
+        file.setFilesystemUploadFileUploadId(uploadId);
+        file.setFilesystemUploadFileName(task.getFilesystemUploadTaskFileName());
+        file.setFilesystemUploadFileOriginalName(task.getFilesystemUploadTaskOriginalName());
+        file.setFilesystemUploadFileSize(task.getFilesystemUploadTaskFileSize());
+        file.setFilesystemUploadFileStorageType(task.getFilesystemUploadTaskStorageType());
+        file.setFilesystemUploadFileBucket(task.getFilesystemUploadTaskBucket());
+        file.setFilesystemUploadFileKey(task.getFilesystemUploadTaskKey());
+        file.setFilesystemUploadFileUrl(url);
+        file.setFilesystemUploadFileContentType(task.getFilesystemUploadTaskContentType());
+        file.setFilesystemUploadFileEtag(etag);
+        file.setFilesystemUploadFileCompleteTime(LocalDateTime.now());
+        file.setCreateTime(LocalDateTime.now());
+        file.setUpdateTime(LocalDateTime.now());
+        file.setCreateBy(0);
+        file.setCreateName("system");
+        file.setUpdateBy(0);
+        file.setUpdateName("system");
+        return save(file);
+    }
+
+    @Override
+    public SysFileSystemUploadFile getByUploadId(String uploadId) {
+        return getOne(new LambdaQueryWrapper<SysFileSystemUploadFile>()
+                .eq(SysFileSystemUploadFile::getFilesystemUploadFileUploadId, uploadId));
+    }
+
+    @Override
+    @Transactional
+    public boolean deleteByUploadId(String uploadId) {
+        return remove(new LambdaQueryWrapper<SysFileSystemUploadFile>()
+                .eq(SysFileSystemUploadFile::getFilesystemUploadFileUploadId, uploadId));
+    }
+}

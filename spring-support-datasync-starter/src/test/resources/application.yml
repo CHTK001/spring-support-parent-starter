@@ -6,7 +6,7 @@ plugin:
     enabled: true
     mapping-source: file
     file-mapping:
-      directory-path: ./target/test-mappings
+      directory-path: ./src/test/resources/test-mappings
 
 spring:
   datasource:
