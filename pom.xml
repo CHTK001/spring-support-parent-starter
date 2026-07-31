@@ -103,7 +103,7 @@
         <module>spring-support-sync-starter</module>
 
         <!-- 搜索和数据处理模块 -->
-        <module>spring-support-elasticsearch-starter</module>   <!-- Elasticsearch搜索引擎 -->
+        <!-- spring-support-elasticsearch-starter 已删除 (lock/protocol/strategy/elasticsearch 4 个模块整体下线) -->
         <module>spring-support-spider-starter</module>          <!-- 爬虫中心（已从 api 迁入） -->
 
         <module>spring-support-discovery-starter</module>       <!-- 服务发现 -->
@@ -167,7 +167,7 @@
             ============================================================ -->
 
         <!-- 框架和库版本管理 -->
-        <lombok.version>1.18.52</lombok.version>              <!-- Lombok版本，支持 Java 25/26 -->
+        <lombok.version>1.18.46</lombok.version>              <!-- Lombok版本，支持 Java 25/26 -->
         <maven.compiler.proc>full</maven.compiler.proc>      <!-- Java 25 下显式启用注解处理 -->
         <mybatis-plus.version>3.5.16</mybatis-plus.version>  <!-- MyBatis Plus版本 -->
         <mybatis-plus-join.version>1.5.6</mybatis-plus-join.version>  <!-- MyBatis Plus Join版本 -->
@@ -526,12 +526,7 @@
                 <version>${project.version}</version>
             </dependency>
             
-            <!-- 搜索和数据处理模块 -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-elasticsearch-starter</artifactId>
-                <version>${project.version}</version>
-            </dependency>
+            <!-- 搜索和数据处理模块 - spring-support-elasticsearch-starter 已删除, 由 utils-support-springboot-starter 提供 ES 能力 (如有) -->
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-spider-starter</artifactId>
@@ -875,6 +870,14 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>utils-support-common-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- 策略/容错/分布式锁 等 spring-boot 整合能力
+                 (替代已下线的 spring-support-lock-starter + spring-support-strategy-starter) -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-springboot-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 
