@@ -48,3 +48,9 @@ Thumbs.db
 artifacts/
 2/
 cn/
+
+# SQLite 数据库文件
+sys
+*.db
+*.sqlite
+*.sqlite3
