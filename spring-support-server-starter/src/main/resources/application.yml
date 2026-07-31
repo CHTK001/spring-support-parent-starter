@@ -1,6 +1,11 @@
 spring:
   application:
     name: server-starter
+  main:
+    allow-circular-references: true
+  ai:
+    rag:
+      enabled: false
   autoconfigure:
     exclude:
       - com.chua.starter.ai.support.configuration.RagAutoConfiguration
@@ -12,3 +17,8 @@ spring:
     script:
       continue-on-error: true
       ignore-failed-drops: true
+
+plugin:
+  redis:
+    server:
+      enable: false
