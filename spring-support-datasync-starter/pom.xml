@@ -64,7 +64,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.5.0</version>
                 <configuration>
-                    <mainClass>com.chua.starter.datasync.app.DataSyncApplication</mainClass>
+                    <mainClass>${exec.mainClass}</mainClass>
                     <arguments>
                         <argument>--spring.config.additional-location=file:./src/test/resources/</argument>
                     </arguments>
