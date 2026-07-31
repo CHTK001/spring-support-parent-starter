@@ -66,16 +66,12 @@ public class SyncServerInstance {
         this.syncProperties = SyncProperties.copyOf(syncProperties);
     }
 
-    public void registerHandler(String topic, SyncMessageHandler handler) {
+    public void registerHandler(String topic, com.chua.common.support.network.sync.SyncMessageHandler handler) {
         if (topic == null || topic.isBlank() || handler == null) {
             return;
         }
-        List<SyncMessageHandler> handlers = handlerMap.computeIfAbsent(topic, k -> new CopyOnWriteArrayList<>());
-        boolean exists = handlers.stream()
-                .anyMatch(existing -> existing == handler
-                        || (existing.getClass().equals(handler.getClass())
-                        && Objects.equals(existing.getName(), handler.getName())));
-        if (!exists) {
+        List<com.chua.common.support.network.sync.SyncMessageHandler> handlers = handlerMap.computeIfAbsent(topic, k -> new CopyOnWriteArrayList<>());
+        if (handlers.stream().noneMatch(h -> h == handler)) {
             handlers.add(handler);
         }
     }
@@ -162,27 +158,31 @@ public class SyncServerInstance {
         if (syncServer == null || !running) {
             return;
         }
-        syncServer.broadcast(topic, data);
+        syncServer.publish(topic, data);
     }
 
-    public void broadcastToOthers(String excludeSessionId, String topic, Object data) {
+    public void broadcastToOthers(String excludeClientId, String topic, Object data) {
         if (syncServer == null || !running) {
             return;
         }
-        syncServer.broadcastToOthers(excludeSessionId, topic, data);
+        List<String> clients = syncServer.getConnectedClients();
+        for (String clientId : clients) {
+            if (!Objects.equals(clientId, excludeClientId)) {
+                syncServer.send(clientId, topic, data);
+            }
+        }
     }
 
     public int getConnectionCount() {
-        return syncServer != null ? syncServer.getConnectionCount() : 0;
+        return syncServer != null ? syncServer.getConnectedClients().size() : 0;
     }
 
     public Set<String> getSessionIds() {
-        return syncServer != null ? syncServer.getSessionIds() : new HashSet<>();
+        return syncServer != null ? new HashSet<>(syncServer.getConnectedClients()) : new HashSet<>();
     }
 
-    public String getSessionId(String clientId) {
-        return syncServer != null && clientId != null ? syncServer.getConnectedClients().stream()
-                .filter(clientId::equals).findFirst().orElse(null) : null;
+    public boolean containsClient(String clientId) {
+        return syncServer != null && clientId != null && syncServer.getConnectedClients().contains(clientId);
     }
 
     private class InternalServerListener implements SyncServerListener {
@@ -234,18 +234,11 @@ public class SyncServerInstance {
             return;
         }
         Map<String, Object> dataMap = data instanceof Map ? (Map<String, Object>) data : Map.of("data", data);
-        for (SyncMessageHandler handler : handlers) {
+        for (com.chua.common.support.network.sync.SyncMessageHandler handler : handlers) {
             try {
-                Object result = handler.handle(topic, dataMap);
-                if (result != null) {
-                    send(clientId, TOPIC_RESPONSE, Map.of(
-                            "requestId", dataMap.getOrDefault("requestId", ""),
-                            "topic", topic, "handler", handler.getName(),
-                            "success", true, "code", 200, "data", result,
-                            "timestamp", System.currentTimeMillis()));
-                }
+                handler.handle(topic, dataMap);
             } catch (Exception e) {
-                log.error("[SyncServer:{}] 处理器执行失败: handler={}, topic={}", instanceConfig.getName(), handler.getName(), topic, e);
+                log.error("[SyncServer:{}] 处理器执行失败: topic={}", instanceConfig.getName(), topic, e);
                 send(clientId, TOPIC_RESPONSE, Map.of(
                         "requestId", dataMap.getOrDefault("requestId", ""),
                         "topic", topic, "success", false, "code", 500,

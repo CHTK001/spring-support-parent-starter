@@ -1,9 +1,9 @@
 package com.chua.starter.sync.support.server;
 
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.network.sync.SyncMessageHandler;
 import com.chua.starter.sync.support.pojo.ClientInfo;
 import com.chua.starter.sync.support.properties.SyncProperties;
-import com.chua.starter.sync.support.spi.SyncMessageHandler;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import static com.chua.starter.common.support.logger.ModuleLog.*;
@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.Comparator;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
@@ -139,7 +138,6 @@ public class SyncServer implements InitializingBean, DisposableBean {
      * 注册处理器到实例
      */
     private void registerHandlersToInstance(SyncServerInstance instance, SyncProperties.ServerInstance config) {
-        // 合并全局配置和实例配置的 topics
         Map<String, String> topics = new HashMap<>(syncProperties.getTopics());
         if (config.getTopics() != null) {
             topics.putAll(config.getTopics());
@@ -147,28 +145,18 @@ public class SyncServer implements InitializingBean, DisposableBean {
 
         for (Map.Entry<String, String> entry : topics.entrySet()) {
             String topic = entry.getKey();
-            String handlerName = entry.getValue();
-
-            for (SyncMessageHandler handler : handlers) {
-                if (handlerName.equals(handler.getName()) || handler.supports(topic)) {
-                    instance.registerHandler(topic, handler);
-                }
+            for (com.chua.common.support.network.sync.SyncMessageHandler handler : handlers) {
+                instance.registerHandler(topic, handler);
             }
         }
     }
 
-    /**
-     * 动态注册消息处理器到所有实例
-     */
-    public void registerHandler(String topic, SyncMessageHandler handler) {
+    public void registerHandler(String topic, com.chua.common.support.network.sync.SyncMessageHandler handler) {
         if (topic == null || topic.isBlank() || handler == null) {
             return;
         }
 
-        boolean exists = handlers.stream()
-                .anyMatch(existing -> existing == handler
-                        || (existing.getClass().equals(handler.getClass())
-                        && Objects.equals(existing.getName(), handler.getName())));
+        boolean exists = handlers.stream().anyMatch(existing -> existing == handler);
         if (!exists) {
             handlers.add(handler);
         }
@@ -216,7 +204,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
      */
     public void send(String sessionId, String topic, Object data) {
         for (SyncServerInstance instance : instances.values()) {
-            if (instance.getSession(sessionId) != null) {
+            if (instance.containsClient(sessionId)) {
                 instance.send(sessionId, topic, data);
                 return;
             }
