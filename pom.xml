@@ -101,6 +101,7 @@
         <module>spring-support-socket-sse-starter</module>             <!-- SSE 实现 -->
         <module>spring-support-rpc-starter</module>             <!-- RPC远程调用 -->
         <module>spring-support-sync-starter</module>
+        <module>spring-support-datasync-starter</module>
 
         <!-- 搜索和数据处理模块 -->
         <!-- spring-support-elasticsearch-starter 已删除 (lock/protocol/strategy/elasticsearch 4 个模块整体下线) -->
