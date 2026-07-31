@@ -1,8 +1,5 @@
 package com.chua.starter.sync.support.message;
 
-import lombok.Builder;
-import lombok.Data;
-
 import java.util.Map;
 
 /**
@@ -13,8 +10,6 @@ import java.util.Map;
  * @since 2024/12/19
  * @version 1.0.0
  */
-@Data
-@Builder
 public class ServerWebSocketMessage {
 
     /**
@@ -36,4 +31,76 @@ public class ServerWebSocketMessage {
      * 时间戳 (毫秒)
      */
     private long timestamp;
+
+    public String getMessageType() {
+        return messageType;
+    }
+
+    public void setMessageType(String messageType) {
+        this.messageType = messageType;
+    }
+
+    public String getDataId() {
+        return dataId;
+    }
+
+    public void setDataId(String dataId) {
+        this.dataId = dataId;
+    }
+
+    public Map<String, Object> getData() {
+        return data;
+    }
+
+    public void setData(Map<String, Object> data) {
+        this.data = data;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private String messageType;
+        private String dataId;
+        private Map<String, Object> data;
+        private long timestamp;
+
+        public Builder messageType(String messageType) {
+            this.messageType = messageType;
+            return this;
+        }
+
+        public Builder dataId(String dataId) {
+            this.dataId = dataId;
+            return this;
+        }
+
+        public Builder data(Map<String, Object> data) {
+            this.data = data;
+            return this;
+        }
+
+        public Builder timestamp(long timestamp) {
+            this.timestamp = timestamp;
+            return this;
+        }
+
+        public ServerWebSocketMessage build() {
+            ServerWebSocketMessage message = new ServerWebSocketMessage();
+            message.setMessageType(messageType);
+            message.setDataId(dataId);
+            message.setData(data);
+            message.setTimestamp(timestamp);
+            return message;
+        }
+    }
 }

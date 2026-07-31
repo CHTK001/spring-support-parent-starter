@@ -1,6 +1,5 @@
 package com.chua.starter.sync.support.properties;
 
-import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.*;
@@ -17,7 +16,6 @@ import static com.chua.starter.sync.support.properties.SyncProperties.PRE;
  * @version 1.0.0
  * @since 2024/12/04
  */
-@Data
 @ConfigurationProperties(prefix = PRE, ignoreInvalidFields = true)
 public class SyncProperties {
 
@@ -48,6 +46,46 @@ public class SyncProperties {
      */
     private DataSyncConfig dataSync = new DataSyncConfig();
 
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public Map<String, String> getTopics() {
+        return topics;
+    }
+
+    public void setTopics(Map<String, String> topics) {
+        this.topics = topics;
+    }
+
+    public ServerConfig getServer() {
+        return server;
+    }
+
+    public void setServer(ServerConfig server) {
+        this.server = server;
+    }
+
+    public ClientConfig getClient() {
+        return client;
+    }
+
+    public void setClient(ClientConfig client) {
+        this.client = client;
+    }
+
+    public DataSyncConfig getDataSync() {
+        return dataSync;
+    }
+
+    public void setDataSync(DataSyncConfig dataSync) {
+        this.dataSync = dataSync;
+    }
+
     public static SyncProperties copyOf(SyncProperties source) {
         if (source == null) {
             return new SyncProperties();
@@ -67,24 +105,12 @@ public class SyncProperties {
     /**
      * 服务端配置
      */
-    @Data
     public static class ServerConfig {
 
         /**
          * 是否启用服务端
          */
         private boolean enable = false;
-
-        /**
-         * 是否启用
-         *
-         * @return 是否启用
-         * @author CH
-         * @since 1.0.0
-         */
-        public boolean isEnable() {
-            return enable;
-        }
 
         /**
          * 服务实例列表 (支持多端口)
@@ -120,6 +146,70 @@ public class SyncProperties {
          * 连接超时时间（毫秒）
          */
         private int connectTimeout = 10000;
+
+        public boolean isEnable() {
+            return enable;
+        }
+
+        public void setEnable(boolean enable) {
+            this.enable = enable;
+        }
+
+        public List<ServerInstance> getInstances() {
+            return instances;
+        }
+
+        public void setInstances(List<ServerInstance> instances) {
+            this.instances = instances;
+        }
+
+        public String getHost() {
+            return host;
+        }
+
+        public void setHost(String host) {
+            this.host = host;
+        }
+
+        public int getPort() {
+            return port;
+        }
+
+        public void setPort(int port) {
+            this.port = port;
+        }
+
+        public String getProtocol() {
+            return protocol;
+        }
+
+        public void setProtocol(String protocol) {
+            this.protocol = protocol;
+        }
+
+        public boolean isHeartbeat() {
+            return heartbeat;
+        }
+
+        public void setHeartbeat(boolean heartbeat) {
+            this.heartbeat = heartbeat;
+        }
+
+        public int getHeartbeatInterval() {
+            return heartbeatInterval;
+        }
+
+        public void setHeartbeatInterval(int heartbeatInterval) {
+            this.heartbeatInterval = heartbeatInterval;
+        }
+
+        public int getConnectTimeout() {
+            return connectTimeout;
+        }
+
+        public void setConnectTimeout(int connectTimeout) {
+            this.connectTimeout = connectTimeout;
+        }
 
         /**
          * 获取所有服务实例配置
@@ -158,49 +248,17 @@ public class SyncProperties {
 
     }
 
+    // ==================== 服务实例配置 ====================
+
     /**
      * 服务实例配置 (支持多端口)
      */
-    @Data
     public static class ServerInstance {
 
         /**
          * 实例名称 (用于标识)
          */
         private String name = UUID.randomUUID().toString();
-
-        /**
-         * 是否启用
-         *
-         * @return 是否启用
-         * @author CH
-         * @since 1.0.0
-         */
-        public boolean isEnable() {
-            return enable;
-        }
-
-        /**
-         * 获取实例名称
-         *
-         * @return 实例名称
-         * @author CH
-         * @since 1.0.0
-         */
-        public String getName() {
-            return name;
-        }
-
-        /**
-         * 获取主题映射
-         *
-         * @return 主题映射
-         * @author CH
-         * @since 1.0.0
-         */
-        public Map<String, String> getTopics() {
-            return topics;
-        }
 
         /**
          * 绑定地址
@@ -232,6 +290,62 @@ public class SyncProperties {
          */
         private Map<String, String> topics = new LinkedHashMap<>();
 
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getHost() {
+            return host;
+        }
+
+        public void setHost(String host) {
+            this.host = host;
+        }
+
+        public int getPort() {
+            return port;
+        }
+
+        public void setPort(int port) {
+            this.port = port;
+        }
+
+        public String getProtocol() {
+            return protocol;
+        }
+
+        public void setProtocol(String protocol) {
+            this.protocol = protocol;
+        }
+
+        public boolean isEnable() {
+            return enable;
+        }
+
+        public void setEnable(boolean enable) {
+            this.enable = enable;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public void setDescription(String description) {
+            this.description = description;
+        }
+
+        public Map<String, String> getTopics() {
+            return topics;
+        }
+
+        public void setTopics(Map<String, String> topics) {
+            this.topics = topics;
+        }
+
         public static ServerInstance copyOf(ServerInstance source) {
             ServerInstance target = new ServerInstance();
             if (source == null) {
@@ -255,24 +369,12 @@ public class SyncProperties {
     /**
      * 客户端配置
      */
-    @Data
     public static class ClientConfig {
 
         /**
          * 是否启用客户端
          */
         private boolean enable = false;
-
-        /**
-         * 是否启用
-         *
-         * @return 是否启用
-         * @author CH
-         * @since 1.0.0
-         */
-        public boolean isEnable() {
-            return enable;
-        }
 
         /**
          * 实例ID (默认自动生成)
@@ -368,16 +470,156 @@ public class SyncProperties {
          */
         private String offlineTopic = "sync/client/offline";
 
+        public boolean isEnable() {
+            return enable;
+        }
+
+        public void setEnable(boolean enable) {
+            this.enable = enable;
+        }
+
+        public String getInstanceId() {
+            return instanceId;
+        }
+
+        public void setInstanceId(String instanceId) {
+            this.instanceId = instanceId;
+        }
+
+        public String getIpAddress() {
+            return ipAddress;
+        }
+
+        public void setIpAddress(String ipAddress) {
+            this.ipAddress = ipAddress;
+        }
+
+        public String getProtocol() {
+            return protocol;
+        }
+
+        public void setProtocol(String protocol) {
+            this.protocol = protocol;
+        }
+
+        public String getServerHost() {
+            return serverHost;
+        }
+
+        public void setServerHost(String serverHost) {
+            this.serverHost = serverHost;
+        }
+
+        public int getServerPort() {
+            return serverPort;
+        }
+
+        public void setServerPort(int serverPort) {
+            this.serverPort = serverPort;
+        }
+
+        public String getServerAddress() {
+            return serverAddress;
+        }
+
+        public void setServerAddress(String serverAddress) {
+            this.serverAddress = serverAddress;
+        }
+
+        public boolean isHeartbeat() {
+            return heartbeat;
+        }
+
+        public void setHeartbeat(boolean heartbeat) {
+            this.heartbeat = heartbeat;
+        }
+
+        public int getHeartbeatInterval() {
+            return heartbeatInterval;
+        }
+
+        public void setHeartbeatInterval(int heartbeatInterval) {
+            this.heartbeatInterval = heartbeatInterval;
+        }
+
+        public int getConnectTimeout() {
+            return connectTimeout;
+        }
+
+        public void setConnectTimeout(int connectTimeout) {
+            this.connectTimeout = connectTimeout;
+        }
+
+        public boolean isAutoReconnect() {
+            return autoReconnect;
+        }
+
+        public void setAutoReconnect(boolean autoReconnect) {
+            this.autoReconnect = autoReconnect;
+        }
+
+        public int getMaxReconnectAttempts() {
+            return maxReconnectAttempts;
+        }
+
+        public void setMaxReconnectAttempts(int maxReconnectAttempts) {
+            this.maxReconnectAttempts = maxReconnectAttempts;
+        }
+
+        public long getReconnectInterval() {
+            return reconnectInterval;
+        }
+
+        public void setReconnectInterval(long reconnectInterval) {
+            this.reconnectInterval = reconnectInterval;
+        }
+
+        public String[] getCapabilities() {
+            return capabilities;
+        }
+
+        public void setCapabilities(String[] capabilities) {
+            this.capabilities = capabilities;
+        }
+
+        public Map<String, Object> getMetadata() {
+            return metadata;
+        }
+
+        public void setMetadata(Map<String, Object> metadata) {
+            this.metadata = metadata;
+        }
+
+        public boolean isAutoRegister() {
+            return autoRegister;
+        }
+
+        public void setAutoRegister(boolean autoRegister) {
+            this.autoRegister = autoRegister;
+        }
+
         public String getRegisterTopic() {
             return registerTopic;
+        }
+
+        public void setRegisterTopic(String registerTopic) {
+            this.registerTopic = registerTopic;
         }
 
         public String getHeartbeatTopic() {
             return heartbeatTopic;
         }
 
+        public void setHeartbeatTopic(String heartbeatTopic) {
+            this.heartbeatTopic = heartbeatTopic;
+        }
+
         public String getOfflineTopic() {
             return offlineTopic;
+        }
+
+        public void setOfflineTopic(String offlineTopic) {
+            this.offlineTopic = offlineTopic;
         }
 
         /**
@@ -447,51 +689,8 @@ public class SyncProperties {
     }
 
     /**
-     * 获取客户端配置
-     *
-     * @return 客户端配置
-     * @author CH
-     * @since 1.0.0
-     */
-    public ClientConfig getClient() {
-        return client;
-    }
-
-    /**
-     * 获取服务端配置
-     *
-     * @return 服务端配置
-     * @author CH
-     * @since 1.0.0
-     */
-    public ServerConfig getServer() {
-        return server;
-    }
-
-    /**
-     * 获取主题映射
-     *
-     * @return 主题映射
-     * @author CH
-     * @since 1.0.0
-     */
-    public Map<String, String> getTopics() {
-        return topics;
-    }
-
-    /**
-     * 获取数据同步配置
-     *
-     * @return 数据同步配置
-     */
-    public DataSyncConfig getDataSync() {
-        return dataSync;
-    }
-
-    /**
      * 数据同步交换配置
      */
-    @Data
     public static class DataSyncConfig {
 
         /**
@@ -513,6 +712,38 @@ public class SyncProperties {
          * 默认逻辑通道
          */
         private String defaultChannel = "default";
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getTopicPrefix() {
+            return topicPrefix;
+        }
+
+        public void setTopicPrefix(String topicPrefix) {
+            this.topicPrefix = topicPrefix;
+        }
+
+        public long getRequestTimeout() {
+            return requestTimeout;
+        }
+
+        public void setRequestTimeout(long requestTimeout) {
+            this.requestTimeout = requestTimeout;
+        }
+
+        public String getDefaultChannel() {
+            return defaultChannel;
+        }
+
+        public void setDefaultChannel(String defaultChannel) {
+            this.defaultChannel = defaultChannel;
+        }
 
         public static DataSyncConfig copyOf(DataSyncConfig source) {
             DataSyncConfig target = new DataSyncConfig();

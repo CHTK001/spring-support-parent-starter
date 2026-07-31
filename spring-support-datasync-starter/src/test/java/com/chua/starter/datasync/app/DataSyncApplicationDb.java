@@ -62,50 +62,45 @@ public class DataSyncApplicationDb {
             ds.setURL("jdbc:h2:mem:testdb-datasync;DB_CLOSE_DELAY=-1");
             ds.setUser("sa");
             ds.setPassword("");
-            try (Connection conn = ds.getConnection();
-                 Statement stmt = conn.createStatement()) {
-                stmt.execute("""
-                        CREATE TABLE IF NOT EXISTS datasync_mapping (
-                            mapping_id VARCHAR(255) PRIMARY KEY,
-                            input_id VARCHAR(255),
-                            source_id VARCHAR(255),
-                            output_id VARCHAR(255),
-                            sink_id VARCHAR(255),
-                            batch INT DEFAULT 100,
-                            cron_type VARCHAR(255),
-                            cron VARCHAR(255),
-                            params TEXT,
-                            enabled BOOLEAN DEFAULT TRUE,
-                            create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                        )
-                        """);
-                stmt.execute("""
-                        CREATE TABLE IF NOT EXISTS datasync_field_mapping (
-                            id VARCHAR(255) PRIMARY KEY,
-                            mapping_id VARCHAR(255),
-                            source_field VARCHAR(255),
-                            target_field VARCHAR(255),
-                            converter VARCHAR(255),
-                            sort INT,
-                            FOREIGN KEY (mapping_id) REFERENCES datasync_mapping(mapping_id)
-                        )
-                        """);
-                stmt.execute("""
-                        INSERT INTO datasync_mapping (mapping_id, input_id, source_id, output_id, sink_id, batch, cron_type, cron, params, enabled)
-                        VALUES ('db-user-sync', 'user-input', 'user-source', 'user-output', 'user-sink', 100, 'fixed', '0/5 * * * * ?', '{}', TRUE)
-                        """);
-                stmt.execute("""
-                        INSERT INTO datasync_field_mapping (id, mapping_id, source_field, target_field, converter, sort)
-                        VALUES ('f1', 'db-user-sync', 'name', 'user_name', 'toString', 0)
-                        """);
-            }
-            return ds;
+        try (Connection conn = ds.getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS datasync_mapping (
+                    datasync_mapping_id VARCHAR(255) PRIMARY KEY,
+                    datasync_mapping_input_id VARCHAR(255),
+                    datasync_mapping_source_id VARCHAR(255),
+                    datasync_mapping_output_id VARCHAR(255),
+                    datasync_mapping_sink_id VARCHAR(255),
+                    datasync_mapping_batch INT DEFAULT 100,
+                    datasync_mapping_cron_type VARCHAR(255),
+                    datasync_mapping_cron VARCHAR(255),
+                    datasync_mapping_params TEXT,
+                    datasync_mapping_enabled BOOLEAN DEFAULT TRUE,
+                    datasync_mapping_create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    datasync_mapping_update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """);
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS datasync_field_mapping (
+                    datasync_field_mapping_id VARCHAR(255) PRIMARY KEY,
+                    datasync_field_mapping_mapping_id VARCHAR(255),
+                    datasync_field_mapping_source_field VARCHAR(255),
+                    datasync_field_mapping_target_field VARCHAR(255),
+                    datasync_field_mapping_converter VARCHAR(255),
+                    datasync_field_mapping_sort INT,
+                    FOREIGN KEY (datasync_field_mapping_mapping_id) REFERENCES datasync_mapping(datasync_mapping_id)
+                )
+                """);
+            stmt.execute("""
+                INSERT INTO datasync_mapping (datasync_mapping_id, datasync_mapping_input_id, datasync_mapping_source_id, datasync_mapping_output_id, datasync_mapping_sink_id, datasync_mapping_batch, datasync_mapping_cron_type, datasync_mapping_cron, datasync_mapping_params, datasync_mapping_enabled)
+                VALUES ('db-user-sync', 'user-input', 'user-source', 'user-output', 'user-sink', 100, 'fixed', '0/5 * * * * ?', '{}', TRUE)
+                """);
+            stmt.execute("""
+                INSERT INTO datasync_field_mapping (datasync_field_mapping_id, datasync_field_mapping_mapping_id, datasync_field_mapping_source_field, datasync_field_mapping_target_field, datasync_field_mapping_converter, datasync_field_mapping_sort)
+                VALUES ('f1', 'db-user-sync', 'name', 'user_name', 'toString', 0)
+                """);
         }
-
-        @Bean
-        public com.chua.starter.datasync.mapping.DataSyncMappingManager dataSyncMappingManager() {
-            return new com.chua.starter.datasync.mapping.DefaultDataSyncMappingManager();
+            return ds;
         }
     }
 }

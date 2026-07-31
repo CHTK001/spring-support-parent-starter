@@ -7,10 +7,12 @@ import com.chua.starter.common.support.logger.ModuleLog;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.filesystem.support.controller.FileChunkUploadController;
+import com.chua.starter.filesystem.support.server.FileServerManager;
 import com.chua.starter.filesystem.support.entity.SysFileSystemUpload;
 import com.chua.starter.filesystem.support.mapper.SysFileSystemUploadMapper;
 import com.chua.starter.filesystem.support.properties.FileStorageProperties;
 import com.chua.starter.filesystem.support.properties.FileStorageUploadProperties;
+import com.chua.starter.filesystem.support.service.SysFileSystemUploadChunkService;
 import com.chua.starter.filesystem.support.service.SysFileSystemUploadService;
 import com.chua.starter.filesystem.support.template.FileStorageTemplate;
 import com.chua.starter.filesystem.support.utils.FileStorageSupport;
@@ -53,9 +55,10 @@ public class FileSystemAutoConfiguration {
     @ConditionalOnMissingBean
     public FileChunkUploadController fileChunkUploadController(
             SysFileSystemUploadService uploadService,
+            SysFileSystemUploadChunkService chunkService,
             FileStorageTemplate fileStorageTemplate,
             FileStorageProperties fileStorageProperties) {
-        return new FileChunkUploadController(uploadService, fileStorageTemplate, fileStorageProperties);
+        return new FileChunkUploadController(uploadService, chunkService, fileStorageTemplate, fileStorageProperties);
     }
 
     @Bean
@@ -68,10 +71,10 @@ public class FileSystemAutoConfiguration {
         };
     }
 
-    @Bean
-    public FileServerManager fileServerManager(FileStorageProperties properties, FileStorageTemplate template, ApplicationContext applicationContext) {
-        FileServerManager manager = new FileServerManager(properties, template, applicationContext);
-        manager.startAll();
-        return manager;
-    }
+    // @Bean
+    // public FileServerManager fileServerManager(FileStorageProperties properties, FileStorageTemplate template, ApplicationContext applicationContext) {
+    //     FileServerManager manager = new FileServerManager(properties, template, applicationContext);
+    //     manager.startAll();
+    //     return manager;
+    // }
 }

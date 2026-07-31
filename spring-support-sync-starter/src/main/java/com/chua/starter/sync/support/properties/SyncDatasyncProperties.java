@@ -1,6 +1,5 @@
 package com.chua.starter.sync.support.properties;
 
-import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.Map;
@@ -14,7 +13,6 @@ import java.util.Map;
  * @author CH
  * @since 2026/01/15
  */
-@Data
 @ConfigurationProperties(prefix = SyncDatasyncProperties.PRE, ignoreInvalidFields = true)
 public class SyncDatasyncProperties {
 
@@ -27,4 +25,12 @@ public class SyncDatasyncProperties {
      * 是否启用 DataSync 桥接
      */
     private boolean enabled = true;
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
 }

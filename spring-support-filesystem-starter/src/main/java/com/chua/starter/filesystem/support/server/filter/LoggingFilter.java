@@ -1,4 +1,4 @@
-"package com.chua.starter.filesystem.support.server.filter;
+package com.chua.starter.filesystem.support.server.filter;
 
 import com.sun.net.httpserver.HttpExchange;
 import lombok.extern.slf4j.Slf4j;
@@ -19,4 +19,3 @@ public class LoggingFilter implements ServerFilter {
         }
     }
 }
-"

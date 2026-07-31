@@ -10,8 +10,39 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * 文件系统分片上传任务服务实现。
+ *
+ * <p>继承 MyBatis-Plus {@link ServiceImpl} 获取 Base CRUD，
+ * 实现 {@link SysFileSystemUploadService} 中定义的分片上传特有业务逻辑。</p>
+ *
+ * @author CH
+ * @since 1.0
+ */
 @Service
-public class SysFileSystemUploadServiceImpl extends ServiceImpl<SysFileSystemUploadMapper, SysFileSystemUpload> implements SysFileSystemUploadService {
+public class SysFileSystemUploadServiceImpl
+        extends ServiceImpl<SysFileSystemUploadMapper, SysFileSystemUpload>
+        implements SysFileSystemUploadService {
+
+    /**
+     * 最大重试次数
+     */
+    private static final int MAX_RETRY = 3;
+
+    /**
+     * 系统默认操作人 ID
+     */
+    private static final int SYSTEM_USER_ID = 0;
+
+    /**
+     * 系统默认操作人名称
+     */
+    private static final String SYSTEM_USER_NAME = "system";
+
+    /**
+     * 初始已上传分片数
+     */
+    private static final int INITIAL_UPLOADED_CHUNKS = 0;
 
     @Override
     public SysFileSystemUpload createTask(String uploadId, String fileName, String originalName,
@@ -25,20 +56,20 @@ public class SysFileSystemUploadServiceImpl extends ServiceImpl<SysFileSystemUpl
         task.setFilesystemUploadTaskFileSize(fileSize);
         task.setFilesystemUploadTaskChunkSize(chunkSize);
         task.setFilesystemUploadTaskTotalChunks(totalChunks);
-        task.setFilesystemUploadTaskUploadedChunks(0);
+        task.setFilesystemUploadTaskUploadedChunks(INITIAL_UPLOADED_CHUNKS);
         task.setFilesystemUploadTaskStorageType(storageType);
         task.setFilesystemUploadTaskBucket(bucket);
         task.setFilesystemUploadTaskKey(key);
         task.setFilesystemUploadTaskContentType(contentType);
         task.setFilesystemUploadTaskStatus(SysFileSystemUpload.Status.PENDING);
         task.setFilesystemUploadTaskStartTime(now);
-        task.setFilesystemUploadTaskRetryCount(0);
+        task.setFilesystemUploadTaskRetryCount(INITIAL_UPLOADED_CHUNKS);
         task.setCreateTime(now);
         task.setUpdateTime(now);
-        task.setCreateBy(0);
-        task.setCreateName("system");
-        task.setUpdateBy(0);
-        task.setUpdateName("system");
+        task.setCreateBy(SYSTEM_USER_ID);
+        task.setCreateName(SYSTEM_USER_NAME);
+        task.setUpdateBy(SYSTEM_USER_ID);
+        task.setUpdateName(SYSTEM_USER_NAME);
         save(task);
         return task;
     }
@@ -119,6 +150,6 @@ public class SysFileSystemUploadServiceImpl extends ServiceImpl<SysFileSystemUpl
     public List<SysFileSystemUpload> listFailedRetryable() {
         return list(new LambdaQueryWrapper<SysFileSystemUpload>()
                 .eq(SysFileSystemUpload::getFilesystemUploadTaskStatus, SysFileSystemUpload.Status.FAILED)
-                .lt(SysFileSystemUpload::getFilesystemUploadTaskRetryCount, 3));
+                .lt(SysFileSystemUpload::getFilesystemUploadTaskRetryCount, MAX_RETRY));
     }
 }

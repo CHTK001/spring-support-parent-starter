@@ -5,7 +5,8 @@ import com.chua.common.support.network.sync.SyncClient;
 import com.chua.starter.sync.support.pojo.SyncResponse;
 import com.chua.starter.sync.support.properties.SyncProperties;
 import com.chua.common.support.network.server.SyncServer;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 
 import java.util.Collections;
@@ -22,8 +23,9 @@ import java.util.function.Predicate;
  * @author CH
  * @since 2026/03/23
  */
-@Slf4j
 public class SyncDataExchangeService {
+
+    private static final Logger log = LoggerFactory.getLogger(SyncDataExchangeService.class);
 
     private final ObjectProvider<SyncClient> syncClientProvider;
     private final ObjectProvider<SyncServer> syncServerProvider;

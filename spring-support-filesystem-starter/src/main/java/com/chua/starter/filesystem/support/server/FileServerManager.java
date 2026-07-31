@@ -84,9 +84,18 @@ public class FileServerManager implements AutoCloseable {
         server.start();
 
         if (server instanceof JdkHttpServer) {
-            HttpServer httpServer = ((JdkHttpServer) server).getHttpServer();
-            String contextPath = config.getContextPath() != null ? config.getContextPath() : "/";
-            httpServer.createContext(contextPath, createFileHandler(config));
+            HttpServer httpServer = null;
+            try {
+                java.lang.reflect.Field f = JdkHttpServer.class.getDeclaredField("server");
+                f.setAccessible(true);
+                httpServer = (HttpServer) f.get(server);
+            } catch (Exception e) {
+                log.warn("无法访问 JdkHttpServer.server 字段: {}", e.getMessage());
+            }
+            if (httpServer != null) {
+                String contextPath = config.getContextPath() != null ? config.getContextPath() : "/";
+                httpServer.createContext(contextPath, createFileHandler(config));
+            }
         } else {
             log.warn("Server type {} does not support custom handler registration, file serving unavailable", type);
         }
@@ -117,11 +126,11 @@ public class FileServerManager implements AutoCloseable {
 
     private HttpHandler createFileHandler(FileStorageProperties.ServerConfig config) {
         List<ServerFilter> filters = buildFilters(config);
-        ServerFilter finalHandler = this::handleFileRequest;
-        FilterChain chain = FilterChain.build(filters, finalHandler);
+        ServerFilter finalHandler = (exchange, chain) -> handleFileRequest(exchange);
+        FilterChain filterChain = FilterChain.build(filters, finalHandler);
         return exchange -> {
             try {
-                chain.doFilter(exchange);
+                filterChain.doFilter(exchange);
             } catch (Exception e) {
                 log.error("Error processing request", e);
                 exchange.sendResponseHeaders(HttpURLConnection.HTTP_INTERNAL_ERROR, -1);
@@ -175,7 +184,14 @@ public class FileServerManager implements AutoCloseable {
         String bucket = URLDecoder.decode(segments[1], StandardCharsets.UTF_8.name());
         String key = path.substring(segments[1].length() + 1);
         try {
-            byte[] data = storageTemplate.getDefaultStorage().read(bucket, key);
+            com.chua.common.support.storage.result.GetObjectResult getResult =
+                    storageTemplate.getDefaultStorage().getObject(key);
+            byte[] data = null;
+            if (getResult != null && getResult.getInputStream() != null) {
+                try (java.io.InputStream in = getResult.getInputStream()) {
+                    data = in.readAllBytes();
+                }
+            }
             if (data == null || data.length == 0) {
                 exchange.sendResponseHeaders(HttpURLConnection.HTTP_NOT_FOUND, -1);
                 return;

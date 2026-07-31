@@ -1,4 +1,4 @@
-"package com.chua.starter.filesystem.support.server.filter;
+package com.chua.starter.filesystem.support.server.filter;
 
 import com.sun.net.httpserver.HttpExchange;
 
@@ -14,4 +14,3 @@ public interface FilterChain {
         return new DefaultFilterChain(filters, finalHandler);
     }
 }
-"

@@ -4,7 +4,8 @@ import com.chua.starter.datasync.agent.DataSyncAgentServer;
 import com.chua.starter.sync.support.pojo.ClientInfo;
 import com.chua.starter.sync.support.server.SyncServer;
 import jakarta.annotation.PostConstruct;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -22,11 +23,12 @@ import java.util.function.BiConsumer;
  * @author CH
  * @since 2026/01/15
  */
-@Slf4j
 @AutoConfiguration
 @ConditionalOnClass(name = "com.chua.starter.datasync.agent.DataSyncAgentServer")
 @ConditionalOnProperty(prefix = "plugin.sync.datasync", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DataSyncAgentLifecycleConfiguration {
+
+    private static final Logger log = LoggerFactory.getLogger(DataSyncAgentLifecycleConfiguration.class);
 
     /**
      * 客户端能力标识：DataSync Agent

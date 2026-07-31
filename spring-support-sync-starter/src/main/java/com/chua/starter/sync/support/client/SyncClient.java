@@ -4,12 +4,14 @@ import com.chua.common.support.network.sync.SyncClient;
 import com.chua.common.support.network.sync.SyncFlowListener;
 import com.chua.common.support.network.sync.SyncMessageHandler;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.sync.support.pojo.ClientInfo;
 import com.chua.starter.sync.support.properties.SyncProperties;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.env.Environment;
 
 import java.util.List;
-import java.util.UUID;
+import java.util.Map;
 
 /**
  * 同步客户端包装器。
@@ -17,8 +19,9 @@ import java.util.UUID;
  * @author CH
  * @since 2026/07/31
  */
-@Slf4j
 public class SyncClient implements com.chua.common.support.network.sync.SyncClient {
+
+    private static final Logger log = LoggerFactory.getLogger(SyncClient.class);
 
     private final SyncProperties syncProperties;
     private final Environment environment;
@@ -41,8 +44,9 @@ public class SyncClient implements com.chua.common.support.network.sync.SyncClie
             if (this.delegate.getClientId() == null) {
                 this.delegate = new com.chua.common.support.network.sync.impl.WebSocketSyncClient("ws://" + serverAddress);
             }
+            ClientInfo clientInfo = buildClientInfo();
             for (com.chua.starter.sync.support.spi.SyncClientInfoCustomizer customizer : infoCustomizers) {
-                customizer.customize(this);
+                customizer.customize(clientInfo);
             }
             for (com.chua.starter.sync.support.spi.SyncClientCustomizer customizer : customizers) {
                 customizer.customize(this);
@@ -50,6 +54,24 @@ public class SyncClient implements com.chua.common.support.network.sync.SyncClie
         } catch (Exception e) {
             throw new IllegalStateException("创建 SyncClient 失败", e);
         }
+    }
+
+    private ClientInfo buildClientInfo() {
+        ClientInfo info = new ClientInfo();
+        info.setClientId(delegate.getClientId());
+        Map<String, Object> metadata = delegate.getMetadata();
+        if (metadata != null) {
+            if (metadata.get("clientIpAddress") != null) {
+                info.setClientIpAddress(String.valueOf(metadata.get("clientIpAddress")));
+            }
+            if (metadata.get("clientPort") != null) {
+                info.setClientPort(Integer.parseInt(String.valueOf(metadata.get("clientPort"))));
+            }
+            if (metadata.get("clientApplicationName") != null) {
+                info.setClientApplicationName(String.valueOf(metadata.get("clientApplicationName")));
+            }
+        }
+        return info;
     }
 
     @Override

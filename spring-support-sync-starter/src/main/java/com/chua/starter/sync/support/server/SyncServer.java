@@ -4,8 +4,8 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.network.sync.SyncMessageHandler;
 import com.chua.starter.sync.support.pojo.ClientInfo;
 import com.chua.starter.sync.support.properties.SyncProperties;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static com.chua.starter.common.support.logger.ModuleLog.*;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
@@ -16,18 +16,17 @@ import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-@Slf4j
 public class SyncServer implements InitializingBean, DisposableBean {
+
+    private static final Logger log = LoggerFactory.getLogger(SyncServer.class);
 
     public static final String TOPIC_HEALTH = SyncServerInstance.TOPIC_HEALTH;
     public static final String TOPIC_RESPONSE = SyncServerInstance.TOPIC_RESPONSE;
     public static final String TOPIC_CONNECT = SyncServerInstance.TOPIC_CONNECT;
     public static final String TOPIC_DISCONNECT = SyncServerInstance.TOPIC_DISCONNECT;
 
-    @Getter
     private final SyncProperties syncProperties;
 
-    @Getter
     private final Map<String, SyncServerInstance> instances = new ConcurrentHashMap<>();
 
     private final Map<String, ClientInfo> allClientsInternal = new ConcurrentHashMap<>();
@@ -40,6 +39,14 @@ public class SyncServer implements InitializingBean, DisposableBean {
 
     public SyncServer(SyncProperties syncProperties) {
         this.syncProperties = SyncProperties.copyOf(syncProperties);
+    }
+
+    public SyncProperties getSyncProperties() {
+        return syncProperties;
+    }
+
+    public Map<String, SyncServerInstance> getInstances() {
+        return instances;
     }
 
     @Override

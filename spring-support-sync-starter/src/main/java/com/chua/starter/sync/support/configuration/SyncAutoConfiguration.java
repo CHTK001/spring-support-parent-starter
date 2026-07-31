@@ -7,7 +7,8 @@ import com.chua.starter.sync.support.server.SyncServer;
 import com.chua.starter.sync.support.spi.SyncClientInfoCustomizer;
 import com.chua.starter.sync.support.spi.SyncClientCustomizer;
 import jakarta.annotation.PostConstruct;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static com.chua.starter.common.support.logger.ModuleLog.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.ObjectProvider;
@@ -29,10 +30,11 @@ import org.springframework.core.env.Environment;
  * @version 1.0.0
  * @since 2024/12/04
  */
-@Slf4j
 @AutoConfiguration
 @EnableConfigurationProperties(SyncProperties.class)
 public class SyncAutoConfiguration {
+
+    private static final Logger log = LoggerFactory.getLogger(SyncAutoConfiguration.class);
 
     @Autowired
     private Environment environment;

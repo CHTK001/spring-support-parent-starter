@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: filesystem-starter-test
+  datasource:
+    url: jdbc:h2:mem:fs;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: false
+
+plugin:
+  filesystem:
+    enable: true
+    default-provider: local
+    providers:
+      local:
+        bucket: default
+        type: local
+
+server:
+  port: 8080

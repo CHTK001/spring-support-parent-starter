@@ -1,11 +1,7 @@
 package com.chua.starter.sync.support.pojo;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -14,10 +10,6 @@ import java.util.Map;
  * @author CH
  * @since 2024/12/05
  */
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class ClientInfo implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -81,4 +73,175 @@ public class ClientInfo implements Serializable {
 
     /** 客户端支持的功能列表 */
     private String[] clientCapabilities;
+
+    public String getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
+    }
+
+    public String getClientApplicationName() {
+        return clientApplicationName;
+    }
+
+    public void setClientApplicationName(String clientApplicationName) {
+        this.clientApplicationName = clientApplicationName;
+    }
+
+    public String getClientApplicationActive() {
+        return clientApplicationActive;
+    }
+
+    public void setClientApplicationActive(String clientApplicationActive) {
+        this.clientApplicationActive = clientApplicationActive;
+    }
+
+    public String getClientInstanceId() {
+        return clientInstanceId;
+    }
+
+    public void setClientInstanceId(String clientInstanceId) {
+        this.clientInstanceId = clientInstanceId;
+    }
+
+    public String getClientContextPath() {
+        return clientContextPath;
+    }
+
+    public void setClientContextPath(String clientContextPath) {
+        this.clientContextPath = clientContextPath;
+    }
+
+    public String getClientUrl() {
+        return clientUrl;
+    }
+
+    public void setClientUrl(String clientUrl) {
+        this.clientUrl = clientUrl;
+    }
+
+    public String getClientActuatorPath() {
+        return clientActuatorPath;
+    }
+
+    public void setClientActuatorPath(String clientActuatorPath) {
+        this.clientActuatorPath = clientActuatorPath;
+    }
+
+    public String getClientIpAddress() {
+        return clientIpAddress;
+    }
+
+    public void setClientIpAddress(String clientIpAddress) {
+        this.clientIpAddress = clientIpAddress;
+    }
+
+    public int getClientPort() {
+        return clientPort;
+    }
+
+    public void setClientPort(int clientPort) {
+        this.clientPort = clientPort;
+    }
+
+    public String getClientHostname() {
+        return clientHostname;
+    }
+
+    public void setClientHostname(String clientHostname) {
+        this.clientHostname = clientHostname;
+    }
+
+    public String getClientOsName() {
+        return clientOsName;
+    }
+
+    public void setClientOsName(String clientOsName) {
+        this.clientOsName = clientOsName;
+    }
+
+    public String getClientJavaVersion() {
+        return clientJavaVersion;
+    }
+
+    public void setClientJavaVersion(String clientJavaVersion) {
+        this.clientJavaVersion = clientJavaVersion;
+    }
+
+    public long getClientPid() {
+        return clientPid;
+    }
+
+    public void setClientPid(long clientPid) {
+        this.clientPid = clientPid;
+    }
+
+    public long getClientStartTime() {
+        return clientStartTime;
+    }
+
+    public void setClientStartTime(long clientStartTime) {
+        this.clientStartTime = clientStartTime;
+    }
+
+    public long getClientUptime() {
+        return clientUptime;
+    }
+
+    public void setClientUptime(long clientUptime) {
+        this.clientUptime = clientUptime;
+    }
+
+    public long getClientRegisterTime() {
+        return clientRegisterTime;
+    }
+
+    public void setClientRegisterTime(long clientRegisterTime) {
+        this.clientRegisterTime = clientRegisterTime;
+    }
+
+    public long getClientLastHeartbeatTime() {
+        return clientLastHeartbeatTime;
+    }
+
+    public void setClientLastHeartbeatTime(long clientLastHeartbeatTime) {
+        this.clientLastHeartbeatTime = clientLastHeartbeatTime;
+    }
+
+    public boolean isClientOnline() {
+        return clientOnline;
+    }
+
+    public void setClientOnline(boolean clientOnline) {
+        this.clientOnline = clientOnline;
+    }
+
+    public Map<String, Object> getClientMetadata() {
+        return clientMetadata;
+    }
+
+    public void setClientMetadata(Map<String, Object> clientMetadata) {
+        this.clientMetadata = clientMetadata;
+    }
+
+    public String[] getClientCapabilities() {
+        return clientCapabilities;
+    }
+
+    public void setClientCapabilities(String[] clientCapabilities) {
+        this.clientCapabilities = clientCapabilities;
+    }
+
+    @Override
+    public String toString() {
+        return "ClientInfo{" +
+                "clientId='" + clientId + '\'' +
+                ", clientApplicationName='" + clientApplicationName + '\'' +
+                ", clientIpAddress='" + clientIpAddress + '\'' +
+                ", clientPort=" + clientPort +
+                ", clientOnline=" + clientOnline +
+                '}';
+    }
 }

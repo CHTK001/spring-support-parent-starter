@@ -6,7 +6,8 @@ import com.chua.common.support.network.sync.SyncClient;
 import com.chua.starter.sync.support.properties.SyncProperties;
 import com.chua.common.support.network.server.SyncServer;
 import jakarta.annotation.PostConstruct;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -26,15 +27,12 @@ import java.util.function.Function;
  * @author CH
  * @since 2026/01/15
  */
-@Slf4j
 @AutoConfiguration
 @ConditionalOnProperty(prefix = "plugin.sync.datasync", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class SyncDataSyncConfiguration {
 
-    /**
-     * 配置前缀
-     */
     private static final String PREFIX = "plugin.sync.datasync";
+    private static final Logger log = LoggerFactory.getLogger(SyncDataSyncConfiguration.class);
 
     /**
      * 环境变量工具

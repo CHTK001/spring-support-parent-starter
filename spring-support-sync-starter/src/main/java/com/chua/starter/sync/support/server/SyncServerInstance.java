@@ -7,8 +7,8 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.network.sync.SyncMessageHandler;
 import com.chua.starter.sync.support.pojo.ClientInfo;
 import com.chua.starter.sync.support.properties.SyncProperties;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
 import java.util.List;
@@ -28,8 +28,9 @@ import java.util.function.BiConsumer;
  * @version 1.0.0
  * @since 2024/12/05
  */
-@Slf4j
 public class SyncServerInstance {
+
+    private static final Logger log = LoggerFactory.getLogger(SyncServerInstance.class);
 
     public static final String TOPIC_HEALTH = "sync/health";
     public static final String TOPIC_RESPONSE = "sync/response";
@@ -39,24 +40,20 @@ public class SyncServerInstance {
     public static final String TOPIC_CLIENT_HEARTBEAT = "sync/client/heartbeat";
     public static final String TOPIC_CLIENT_OFFLINE = "sync/client/offline";
 
-    @Getter
     private final SyncProperties.ServerInstance instanceConfig;
 
     private final SyncProperties syncProperties;
 
-    @Getter
     private SyncServer syncServer;
 
     private final Map<String, List<SyncMessageHandler>> handlerMap = new ConcurrentHashMap<>();
 
-    @Getter
     private final Map<String, ClientInfo> clientInfoMap = new ConcurrentHashMap<>();
 
     private final List<BiConsumer<String, ClientInfo>> connectListeners = new CopyOnWriteArrayList<>();
 
     private final List<BiConsumer<String, ClientInfo>> disconnectListeners = new CopyOnWriteArrayList<>();
 
-    @Getter
     private volatile boolean running = false;
 
     private boolean listenersAttached = false;
@@ -64,6 +61,26 @@ public class SyncServerInstance {
     public SyncServerInstance(SyncProperties.ServerInstance instanceConfig, SyncProperties syncProperties) {
         this.instanceConfig = SyncProperties.ServerInstance.copyOf(instanceConfig);
         this.syncProperties = SyncProperties.copyOf(syncProperties);
+    }
+
+    public SyncProperties.ServerInstance getInstanceConfig() {
+        return instanceConfig;
+    }
+
+    public SyncProperties getSyncProperties() {
+        return syncProperties;
+    }
+
+    public SyncServer getSyncServer() {
+        return syncServer;
+    }
+
+    public Map<String, ClientInfo> getClientInfoMap() {
+        return clientInfoMap;
+    }
+
+    public boolean isRunning() {
+        return running;
     }
 
     public void registerHandler(String topic, com.chua.common.support.network.sync.SyncMessageHandler handler) {
@@ -272,7 +289,7 @@ public class SyncServerInstance {
     @SuppressWarnings("unchecked")
     private void handleClientRegister(String clientId, Object data) {
         try {
-            ClientInfo clientInfo = ClientInfo.builder().build();
+            ClientInfo clientInfo = new ClientInfo();
             if (data instanceof Map<?, ?> map) {
                 copyMapToClientInfo((Map<String, Object>) map, clientInfo);
             }

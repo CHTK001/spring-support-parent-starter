@@ -52,30 +52,30 @@ public class DatabaseMappingLoader implements InitializingBean {
 
         String sqlMapping = """
                 CREATE TABLE IF NOT EXISTS %s (
-                    mapping_id VARCHAR(255) PRIMARY KEY,
-                    input_id VARCHAR(255),
-                    source_id VARCHAR(255),
-                    output_id VARCHAR(255),
-                    sink_id VARCHAR(255),
-                    batch INT DEFAULT 100,
-                    cron_type VARCHAR(255),
-                    cron VARCHAR(255),
-                    params TEXT,
-                    enabled BOOLEAN DEFAULT TRUE,
-                    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    datasync_mapping_id VARCHAR(255) PRIMARY KEY,
+                    datasync_mapping_input_id VARCHAR(255),
+                    datasync_mapping_source_id VARCHAR(255),
+                    datasync_mapping_output_id VARCHAR(255),
+                    datasync_mapping_sink_id VARCHAR(255),
+                    datasync_mapping_batch INT DEFAULT 100,
+                    datasync_mapping_cron_type VARCHAR(255),
+                    datasync_mapping_cron VARCHAR(255),
+                    datasync_mapping_params TEXT,
+                    datasync_mapping_enabled BOOLEAN DEFAULT TRUE,
+                    datasync_mapping_create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    datasync_mapping_update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
                 """.formatted(mappingTable);
 
         String sqlField = """
                 CREATE TABLE IF NOT EXISTS %s (
-                    id VARCHAR(255) PRIMARY KEY,
-                    mapping_id VARCHAR(255),
-                    source_field VARCHAR(255),
-                    target_field VARCHAR(255),
-                    converter VARCHAR(255),
-                    sort INT,
-                    FOREIGN KEY (mapping_id) REFERENCES %s(mapping_id)
+                    datasync_field_mapping_id VARCHAR(255) PRIMARY KEY,
+                    datasync_field_mapping_mapping_id VARCHAR(255),
+                    datasync_field_mapping_source_field VARCHAR(255),
+                    datasync_field_mapping_target_field VARCHAR(255),
+                    datasync_field_mapping_converter VARCHAR(255),
+                    datasync_field_mapping_sort INT,
+                    FOREIGN KEY (datasync_field_mapping_mapping_id) REFERENCES %s(datasync_mapping_id)
                 )
                 """.formatted(fieldTable, mappingTable);
 
@@ -90,25 +90,25 @@ public class DatabaseMappingLoader implements InitializingBean {
 
     private void loadMappings(org.springframework.jdbc.core.JdbcTemplate jdbcTemplate, String prefix) {
         String mappingTable = prefix + "mapping";
-        String sql = String.format("SELECT * FROM %s WHERE enabled = TRUE", mappingTable);
+        String sql = String.format("SELECT * FROM %s WHERE datasync_mapping_enabled = TRUE", mappingTable);
         try {
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql);
             for (Map<String, Object> row : rows) {
-                String mappingId = (String) row.get("mapping_id");
+                String mappingId = (String) row.get("datasync_mapping_id");
                 List<DataSyncFieldMapping> fields = loadFieldMappings(jdbcTemplate, prefix, mappingId);
                 com.chua.common.support.task.scheduler.Trigger trigger = null;
                 DataSyncMapping mapping = new DefaultDataSyncMapping(
                         mappingId,
-                        (String) row.get("input_id"),
-                        (String) row.get("source_id"),
-                        (String) row.get("output_id"),
-                        (String) row.get("sink_id"),
+                        (String) row.get("datasync_mapping_input_id"),
+                        (String) row.get("datasync_mapping_source_id"),
+                        (String) row.get("datasync_mapping_output_id"),
+                        (String) row.get("datasync_mapping_sink_id"),
                         null,
                         fields,
-                        ((Number) row.getOrDefault("batch", 100)).intValue(),
-                        (String) row.get("cron_type"),
-                        (String) row.get("cron"),
-                        parseParams((String) row.get("params")),
+                        ((Number) row.getOrDefault("datasync_mapping_batch", 100)).intValue(),
+                        (String) row.get("datasync_mapping_cron_type"),
+                        (String) row.get("datasync_mapping_cron"),
+                        parseParams((String) row.get("datasync_mapping_params")),
                         trigger
                 );
                 mappingManager.addMapping(mapping);
@@ -123,15 +123,15 @@ public class DatabaseMappingLoader implements InitializingBean {
             org.springframework.jdbc.core.JdbcTemplate jdbcTemplate,
             String prefix, String mappingId) {
         String fieldTable = prefix + "field_mapping";
-        String sql = String.format("SELECT * FROM %s WHERE mapping_id = ? ORDER BY sort ASC", fieldTable);
+        String sql = String.format("SELECT * FROM %s WHERE datasync_field_mapping_mapping_id = ? ORDER BY datasync_field_mapping_sort ASC", fieldTable);
         List<DataSyncFieldMapping> fields = new ArrayList<>();
         try {
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, mappingId);
             for (Map<String, Object> row : rows) {
                 fields.add(new DatabaseDataSyncFieldMapping(
-                        (String) row.get("source_field"),
-                        (String) row.get("target_field"),
-                        (String) row.getOrDefault("converter", "toString")
+                        (String) row.get("datasync_field_mapping_source_field"),
+                        (String) row.get("datasync_field_mapping_target_field"),
+                        (String) row.getOrDefault("datasync_field_mapping_converter", "toString")
                 ));
             }
         } catch (Exception e) {

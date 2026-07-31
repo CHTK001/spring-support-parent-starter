@@ -1,48 +1,124 @@
 package com.chua.starter.filesystem.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.storage.FileStorage;
 import com.chua.common.support.storage.MultipartStorage;
 import com.chua.common.support.storage.PartETag;
-import com.chua.common.support.storage.FileStorage;
+import com.chua.common.support.storage.metadata.Metadata;
+import com.chua.common.support.storage.request.MultipartUploadPartRequest;
+import com.chua.common.support.storage.request.PutObjectRequest;
 import com.chua.common.support.storage.result.MultipartPartResult;
 import com.chua.common.support.storage.result.PutObjectResult;
-import com.chua.common.support.storage.request.PutObjectRequest;
-import com.chua.common.support.storage.request.MultipartUploadPartRequest;
-import com.chua.common.support.storage.metadata.Metadata;
 import com.chua.starter.common.support.logger.ModuleLog;
 import com.chua.starter.filesystem.support.entity.SysFileSystemUpload;
-import com.chua.starter.filesystem.support.service.SysFileSystemUploadService;
-import com.chua.starter.filesystem.support.service.SysFileSystemUploadChunkService;
 import com.chua.starter.filesystem.support.properties.FileStorageProperties;
+import com.chua.starter.filesystem.support.service.SysFileSystemUploadChunkService;
+import com.chua.starter.filesystem.support.service.SysFileSystemUploadService;
 import com.chua.starter.filesystem.support.template.FileStorageTemplate;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 文件分片上传接口。
+ *
+ * <p>提供分片上传任务的创建、分片上传、合并完成、取消、进度查询 5 个接口，
+ * 合并完成后由 {@link com.chua.starter.filesystem.support.service.AsyncMergeService}
+ * 异步调度写入对象存储。</p>
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 @RestController
 @RequiredArgsConstructor
 @Tag(name = "文件分片上传接口")
 public class FileChunkUploadController {
 
-    private static final Logger LOG = LoggerFactory.getLogger(FileChunkUploadController.class);
+    /**
+     * 默认分片大小（字节）
+     */
+    private static final long DEFAULT_CHUNK_SIZE = 5L * 1024L * 1024L;
+
+    /**
+     * 进度百分比基数
+     */
+    private static final double PERCENT_BASE = 100.0;
+
+    /**
+     * 远端 Key 路径分隔符
+     */
+    private static final String KEY_PATH_SEPARATOR = "/";
+
+    /**
+     * 日志记录器
+     */
     private static final ModuleLog MODULE_LOG = ModuleLog.of("FileSystem", FileChunkUploadController.class);
 
+    /**
+     * 上传任务服务
+     */
     private final SysFileSystemUploadService uploadService;
+
+    /**
+     * 分片详情服务
+     */
     private final SysFileSystemUploadChunkService chunkService;
+
+    /**
+     * 文件存储模板
+     */
     private final FileStorageTemplate fileStorageTemplate;
+
+    /**
+     * 文件存储配置
+     */
+    @SuppressWarnings("unused")
     private final FileStorageProperties fileStorageProperties;
 
+    /**
+     * 上传任务 ID → MultipartStorage 实例 的映射
+     */
     private final Map<String, MultipartStorage> multipartStorageMap = new ConcurrentHashMap<>();
+
+    /**
+     * 上传任务 ID → 分片 → 本地路径占位 的映射
+     */
+    private final Map<String, Map<Integer, String>> chunkTempPathMap = new ConcurrentHashMap<>();
+
+    /**
+     * 上传任务 ID → 实时进度 的映射
+     */
     private final Map<String, Map<String, Object>> progressMap = new ConcurrentHashMap<>();
 
+    /**
+     * 初始化分片上传任务。
+     *
+     * @param fileName     文件名称
+     * @param originalName 原始文件名
+     * @param fileSize     文件大小（字节）
+     * @param chunkSize    分片大小（字节），默认 5MB
+     * @param storageType  存储类型
+     * @param bucket       存储桶
+     * @param key          文件 Key
+     * @param contentType  内容类型
+     * @return 包含 uploadId/totalChunks 等信息的结果
+     */
     @Operation(summary = "初始化分片上传任务")
     @PostMapping("/chunk/create")
     public ReturnResult<Map<String, Object>> create(
@@ -55,6 +131,7 @@ public class FileChunkUploadController {
             @Parameter(description = "文件Key") @RequestParam(required = false) String key,
             @Parameter(description = "内容类型") @RequestParam(required = false) String contentType
     ) {
+        // 入参校验
         if (fileName == null || fileName.isEmpty()) {
             return ReturnResult.illegal("文件名称不能为空");
         }
@@ -62,14 +139,16 @@ public class FileChunkUploadController {
             return ReturnResult.illegal("文件大小必须大于0");
         }
         if (chunkSize == null || chunkSize <= 0) {
-            chunkSize = 5 * 1024 * 1024L;
+            chunkSize = DEFAULT_CHUNK_SIZE;
         }
 
+        // 计算总分片数
         int totalChunks = (int) Math.ceil((double) fileSize / chunkSize);
         if (totalChunks <= 0) {
             totalChunks = 1;
         }
 
+        // 生成上传任务 ID 与默认 Key
         String uploadId = UUID.randomUUID().toString().replace("-", "");
         String finalKey = key;
         if (finalKey == null || finalKey.isEmpty()) {
@@ -79,33 +158,36 @@ public class FileChunkUploadController {
             originalName = fileName;
         }
 
+        // 构造分片上传会话
         PutObjectRequest putRequest = PutObjectRequest.builder()
                 .fileName(fileName)
                 .filePath(null)
-                .metadata(Metadata.builder()
-                        .contentType(contentType)
-                        .build())
+                .metadata(Metadata.builder().contentType(contentType).build())
                 .build();
 
-        FileStorage fileStorage = getDefaultFileStorage();
+        FileStorage fileStorage = resolveStorage(storageType);
         if (fileStorage == null) {
             return ReturnResult.illegal("存储不存在: " + storageType + "/" + bucket);
         }
         MultipartStorage multipartStorage = fileStorage.createMultipartStorage();
         multipartStorageMap.put(uploadId, multipartStorage);
+
+        // 初始化远端分片上传任务
         MultipartPartResult result = multipartStorage.initiate(putRequest);
         if (result.getResultCode() != com.chua.common.support.storage.result.ObjectResult.ResultCode.SUCCESS) {
             multipartStorageMap.remove(uploadId);
             return ReturnResult.illegal(result.getMessage());
         }
 
-        String realUploadId = result.getUploadId();
-        if (realUploadId != null && !realUploadId.isEmpty()) {
+        // 若远端返回了自己的 uploadId，替换本地标识
+        String remoteUploadId = result.getUploadId();
+        if (remoteUploadId != null && !remoteUploadId.isEmpty()) {
             multipartStorageMap.remove(uploadId);
-            multipartStorageMap.put(realUploadId, multipartStorage);
-            uploadId = realUploadId;
+            multipartStorageMap.put(remoteUploadId, multipartStorage);
+            uploadId = remoteUploadId;
         }
 
+        // 持久化上传任务
         uploadService.createTask(uploadId, fileName, originalName, fileSize, chunkSize, totalChunks,
                 storageType, bucket, finalKey, contentType);
 
@@ -119,6 +201,14 @@ public class FileChunkUploadController {
         return ReturnResult.ok(data);
     }
 
+    /**
+     * 上传单个分片。
+     *
+     * @param uploadId   上传任务 ID
+     * @param partNumber 分片序号（1-based）
+     * @param file       分片文件
+     * @return 上传结果
+     */
     @Operation(summary = "上传分片")
     @PostMapping("/chunk/{uploadId}/part")
     public ReturnResult<Map<String, Object>> uploadPart(
@@ -150,21 +240,25 @@ public class FileChunkUploadController {
                 return ReturnResult.illegal(partResult.getMessage());
             }
 
-            String storagePath = partResult.getStoragePath();
+            // 分片本地路径由 MultipartStorage 内部维护，此处仅记录 partNumber 用于回溯
+            Map<Integer, String> chunkPathMap = chunkTempPathMap.computeIfAbsent(uploadId, k -> new HashMap<>());
+            chunkPathMap.put(partNumber, uploadId + KEY_PATH_SEPARATOR + partNumber);
+            String storagePath = partNumber.toString();
             chunkService.saveChunk(uploadId, partNumber, partResult.getPartSize(), partResult.getEtag(), storagePath);
 
+            // 更新任务状态与已上传分片数
             SysFileSystemUpload task = uploadService.getByUploadId(uploadId);
             if (task != null) {
                 int uploaded = task.getFilesystemUploadTaskUploadedChunks() + 1;
                 int total = task.getFilesystemUploadTaskTotalChunks();
-                if (uploaded >= total) {
-                    uploadService.updateStatus(uploadId, SysFileSystemUpload.Status.PENDING_MERGE);
-                } else {
-                    uploadService.updateStatus(uploadId, SysFileSystemUpload.Status.UPLOADING);
-                }
+                int nextStatus = uploaded >= total
+                        ? SysFileSystemUpload.Status.PENDING_MERGE
+                        : SysFileSystemUpload.Status.UPLOADING;
+                uploadService.updateStatus(uploadId, nextStatus);
                 uploadService.updateUploadedChunks(uploadId, uploaded);
             }
 
+            // 刷新内存进度
             Map<String, Object> progress = progressMap.computeIfAbsent(uploadId, k -> new HashMap<>());
             progress.put("uploadedChunks", task != null ? task.getFilesystemUploadTaskUploadedChunks() : partNumber);
             progress.put("totalChunks", task != null ? task.getFilesystemUploadTaskTotalChunks() : 1);
@@ -177,11 +271,17 @@ public class FileChunkUploadController {
             data.put("etag", partResult.getEtag());
             return ReturnResult.ok(data);
         } catch (Exception e) {
-            LOG.error("上传分片失败: {} part={}", uploadId, partNumber, e);
+            MODULE_LOG.error("上传分片失败: {} part={}", uploadId, partNumber, e);
             return ReturnResult.illegal("上传分片失败: " + e.getMessage());
         }
     }
 
+    /**
+     * 完成分片上传。
+     *
+     * @param uploadId 上传任务 ID
+     * @return 包含最终文件 URL 的结果
+     */
     @Operation(summary = "完成分片上传")
     @PostMapping("/chunk/{uploadId}/complete")
     public ReturnResult<Map<String, Object>> complete(
@@ -221,6 +321,7 @@ public class FileChunkUploadController {
             String fileUrl = putResult.getUrl();
             uploadService.markCompleted(uploadId, fileUrl);
             progressMap.remove(uploadId);
+            chunkTempPathMap.remove(uploadId);
 
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("uploadId", uploadId);
@@ -230,12 +331,18 @@ public class FileChunkUploadController {
             MODULE_LOG.info("分片上传完成: {} -> {}", task.getFilesystemUploadTaskFileName(), fileUrl);
             return ReturnResult.ok(data);
         } catch (Exception e) {
-            LOG.error("完成分片上传失败: " + uploadId, e);
+            MODULE_LOG.error("完成分片上传失败: {}", uploadId, e);
             uploadService.markFailed(uploadId, "完成上传失败: " + e.getMessage());
             return ReturnResult.illegal("完成上传失败: " + e.getMessage());
         }
     }
 
+    /**
+     * 取消分片上传。
+     *
+     * @param uploadId 上传任务 ID
+     * @return 空结果
+     */
     @Operation(summary = "取消分片上传")
     @DeleteMapping("/chunk/{uploadId}")
     public ReturnResult<Void> cancel(
@@ -251,6 +358,7 @@ public class FileChunkUploadController {
             }
             uploadService.markFailed(uploadId, "用户取消上传");
             progressMap.remove(uploadId);
+            chunkTempPathMap.remove(uploadId);
 
             SysFileSystemUpload task = uploadService.getByUploadId(uploadId);
             if (task != null && task.getFilesystemUploadTaskStatus() == SysFileSystemUpload.Status.PENDING) {
@@ -259,11 +367,17 @@ public class FileChunkUploadController {
             MODULE_LOG.info("取消分片上传: {}", uploadId);
             return ReturnResult.ok();
         } catch (Exception e) {
-            LOG.error("取消上传失败: " + uploadId, e);
+            MODULE_LOG.error("取消上传失败: {}", uploadId, e);
             return ReturnResult.illegal("取消失败: " + e.getMessage());
         }
     }
 
+    /**
+     * 查询上传进度。
+     *
+     * @param uploadId 上传任务 ID
+     * @return 进度信息
+     */
     @Operation(summary = "查询上传进度")
     @GetMapping("/chunk/{uploadId}/progress")
     public ReturnResult<Map<String, Object>> progress(
@@ -284,9 +398,9 @@ public class FileChunkUploadController {
             uploadedChunks = (int) progress.get("uploadedChunks");
         }
 
-        double percent = 0;
+        long percent = 0;
         if (totalChunks > 0) {
-            percent = Math.round((uploadedChunks * 100.0) / totalChunks);
+            percent = Math.round((uploadedChunks * PERCENT_BASE) / totalChunks);
         }
 
         Map<String, Object> data = new LinkedHashMap<>();
@@ -306,38 +420,36 @@ public class FileChunkUploadController {
         return ReturnResult.ok(data);
     }
 
+    /**
+     * 状态码 → 文本。
+     *
+     * @param status 状态码
+     * @return 中文文本
+     */
     private String getStatusText(int status) {
         return switch (status) {
-            case 0 -> "待上传";
-            case 1 -> "上传中";
-            case 2 -> "待合并";
-            case 3 -> "合并中";
-            case 4 -> "已完成";
-            case -1 -> "失败";
-            case -2 -> "已取消";
+            case SysFileSystemUpload.Status.PENDING -> "待上传";
+            case SysFileSystemUpload.Status.UPLOADING -> "上传中";
+            case SysFileSystemUpload.Status.PENDING_MERGE -> "待合并";
+            case SysFileSystemUpload.Status.MERGING -> "合并中";
+            case SysFileSystemUpload.Status.COMPLETED -> "已完成";
+            case SysFileSystemUpload.Status.FAILED -> "失败";
+            case SysFileSystemUpload.Status.CANCELLED -> "已取消";
             default -> "未知";
         };
     }
 
-    private FileStorage getDefaultFileStorage() {
-        FileStorage storage = fileStorageTemplate.getDefaultStorage();
-        if (storage == null) {
-            return new com.chua.common.support.storage.AbstractFileStorage(
-                    com.chua.common.support.storage.setting.BucketSetting.builder().bucket("default").build()) {
-                @Override
-                public com.chua.common.support.storage.result.GetObjectResult getObject(String key) { return null; }
-                @Override
-                public com.chua.common.support.storage.result.GetObjectResult getObject(com.chua.common.support.storage.request.GetObjectRequest r) { return null; }
-                @Override
-                public com.chua.common.support.storage.result.PutObjectResult putObject(com.chua.common.support.storage.request.PutObjectRequest r) { return null; }
-                @Override
-                public com.chua.common.support.storage.result.DeleteObjectResult deleteObject(String key) { return null; }
-                @Override
-                public com.chua.common.support.storage.result.ExistObjectResult existObject(com.chua.common.support.storage.request.ExistObjectRequest r) { return null; }
-                @Override
-                public com.chua.common.support.storage.result.ListObjectResult listObject(com.chua.common.support.storage.request.ListObjectRequest r) { return null; }
-            };
+    /**
+     * 解析存储后端名称，未匹配时回退到默认存储。
+     *
+     * @param storageType 存储类型
+     * @return FileStorage 实例
+     */
+    private FileStorage resolveStorage(String storageType) {
+        FileStorage storage = fileStorageTemplate.getStorage(storageType);
+        if (storage != null) {
+            return storage;
         }
-        return storage;
+        return fileStorageTemplate.getDefaultStorage();
     }
 }
