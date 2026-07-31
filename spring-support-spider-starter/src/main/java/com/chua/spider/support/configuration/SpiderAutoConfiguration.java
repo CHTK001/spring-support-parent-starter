@@ -1,7 +1,10 @@
 package com.chua.spider.support.configuration;
 
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 
 /**
@@ -15,4 +18,11 @@ import org.springframework.context.annotation.ComponentScan;
 @ComponentScan("com.chua.spider.support")
 @MapperScan("com.chua.spider.support.mapper")
 public class SpiderAutoConfiguration {
+
+    @Bean
+    public ServiceInfoContributor spiderServiceInfoContributor() {
+        return registry -> {
+            registry.registerFlag("spider", "爬虫", true, "爬虫模块");
+        };
+    }
 }

@@ -4,6 +4,7 @@ import com.chua.starter.tencent.support.factory.TencentWechatPayClientFactory;
 import com.chua.starter.tencent.support.properties.TencentMiniAppProperties;
 import com.chua.starter.tencent.support.properties.TencentWechatOpenPlatformProperties;
 import com.chua.starter.tencent.support.properties.TencentWechatPayProperties;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.tencent.support.auth.DefaultWechatOpenPlatformService;
 import com.chua.starter.tencent.support.auth.OpenIdConvertService;
 import com.chua.starter.tencent.support.auth.WechatOpenIdConvertService;
@@ -52,5 +53,12 @@ public class TencentConfiguration {
                 properties.getComponentAppSecret(),
                 properties.getDefaultMiniAppId()
         );
+    }
+
+    @Bean
+    public ServiceInfoContributor tencentServiceInfoContributor() {
+        return registry -> {
+            registry.registerFlag("tencent", "腾讯", true, "腾讯服务模块");
+        };
     }
 }

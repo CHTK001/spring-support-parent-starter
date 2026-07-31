@@ -3,6 +3,7 @@ package com.chua.starter.aliyun.support;
 import com.alipay.api.AlipayClient;
 import com.chua.starter.aliyun.support.factory.AliyunAlipayClientFactory;
 import com.chua.starter.aliyun.support.properties.AliyunAlipayProperties;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -33,5 +34,12 @@ public class AliyunConfiguration {
         log.info("[阿里云配置][支付宝] appId => {}", properties.getAppId());
         log.info("[阿里云配置][支付宝] serverUrl => {}", properties.resolveServerUrl());
         return factory.createClient(properties);
+    }
+
+    @Bean
+    public ServiceInfoContributor aliyunServiceInfoContributor() {
+        return registry -> {
+            registry.registerFlag("aliyun", "阿里云", true, "阿里云服务模块");
+        };
     }
 }

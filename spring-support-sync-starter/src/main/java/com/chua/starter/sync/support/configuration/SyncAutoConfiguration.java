@@ -1,6 +1,8 @@
 package com.chua.starter.sync.support.configuration;
 
 import com.chua.common.support.network.sync.SyncClient;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.sync.support.data.SyncDataExchangeService;
 import com.chua.starter.sync.support.properties.SyncProperties;
 import com.chua.common.support.network.server.SyncServer;
@@ -107,5 +109,12 @@ public class SyncAutoConfiguration {
                                                            SyncProperties syncProperties) {
         log.info("[Sync] 创建数据同步交换服务");
         return new SyncDataExchangeService(syncClientProvider, syncServerProvider, syncProperties);
+    }
+
+    @Bean
+    public ServiceInfoContributor syncServiceInfoContributor() {
+        return registry -> {
+            registry.registerFlag("sync", "数据同步", true, "数据同步模块");
+        };
     }
 }

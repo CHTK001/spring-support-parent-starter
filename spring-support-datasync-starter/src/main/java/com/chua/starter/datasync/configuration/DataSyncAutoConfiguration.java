@@ -1,5 +1,7 @@
 package com.chua.starter.datasync.configuration;
 
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.datasync.agent.AgentServerManager;
 import com.chua.starter.datasync.agent.DataSyncAgentServer;
 import com.chua.starter.datasync.config.DirectoryConfigDefinition;
@@ -124,5 +126,12 @@ public class DataSyncAutoConfiguration {
         public Map<String, Object> params() {
             return Map.of();
         }
+    }
+
+    @Bean
+    public ServiceInfoContributor dataSyncServiceInfoContributor() {
+        return registry -> {
+            registry.registerFlag("datasync", "数据同步", true, "数据同步模块");
+        };
     }
 }

@@ -14,6 +14,7 @@ import com.chua.report.client.starter.sync.handler.LoggingConfigHandler;
 import com.chua.report.client.starter.sync.handler.MyBatisConfigHandler;
 import com.chua.report.client.starter.sync.handler.NodeControlHandler;
 import com.chua.starter.common.support.api.feature.ApiFeatureManager;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.sync.support.client.SyncClient;
 import com.chua.starter.sync.support.configuration.SyncAutoConfiguration;
 import jakarta.annotation.PostConstruct;
@@ -196,5 +197,12 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     @ConditionalOnMissingBean
     public JobAnnotationScanner jobAnnotationScanner() {
         return new JobAnnotationScanner();
+    }
+
+    @Bean
+    public ServiceInfoContributor reportClientServiceInfoContributor() {
+        return registry -> {
+            registry.registerFlag("report-client", "上报客户端", true, "上报客户端模块");
+        };
     }
 }

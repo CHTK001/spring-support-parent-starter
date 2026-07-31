@@ -1,6 +1,8 @@
 package com.chua.starter.ngrok.support;
 
 import com.chua.ngrok.support.NgrokClient;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.ngrok.Http;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +14,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.context.WebServerInitializedEvent;
 import org.springframework.context.ApplicationListener;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.io.Resource;
@@ -405,10 +408,14 @@ public class NgrokAutoConfiguration {
      * Listener 句柄占位（保留扩展点；当前由 NgrokClient 内部持有所有 listener）。
      */
     private static final class ListenerHandle {
-        /**
-         * 当前是否进入 listen 模式
-         */
         @SuppressWarnings("unused")
         boolean listen;
+    }
+
+    @Bean
+    public ServiceInfoContributor ngrokServiceInfoContributor() {
+        return registry -> {
+            registry.registerFlag("ngrok", "内网穿透", true, "ngrok隧道模块");
+        };
     }
 }

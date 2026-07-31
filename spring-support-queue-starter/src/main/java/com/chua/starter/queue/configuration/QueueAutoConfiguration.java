@@ -3,6 +3,8 @@ package com.chua.starter.queue.configuration;
 import com.chua.starter.queue.MessageTemplate;
 import com.chua.starter.queue.properties.QueueProperties;
 import com.chua.starter.queue.template.LocalMessageTemplate;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -56,5 +58,12 @@ public class QueueAutoConfiguration {
             @Autowired(required = false) List<MessageTemplate> messageTemplates,
             ApplicationEventPublisher eventPublisher) {
         return new MessageListenerBeanPostProcessor(messageTemplates, queueProperties, eventPublisher);
+    }
+
+    @Bean
+    public ServiceInfoContributor queueServiceInfoContributor() {
+        return registry -> {
+            registry.registerFlag("queue", "消息队列", true, "消息队列模块");
+        };
     }
 }

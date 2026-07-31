@@ -13,6 +13,8 @@ import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerIntercept
 import com.baomidou.mybatisplus.extension.plugins.inner.TenantLineInnerInterceptor;
 import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
 import com.chua.starter.common.support.oauth.AuthService;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.common.support.data.materialized.MaterializedSqlDataSourceRouter;
 import com.chua.starter.datasource.properties.MultiDataSourceSettingProperties;
 import com.chua.starter.datasource.properties.MaterializedRouteProperties;
@@ -339,5 +341,12 @@ public class MybatisPlusConfiguration {
             return;
         }
         System.setProperty(propertyName, value);
+    }
+
+    @Bean
+    public ServiceInfoContributor mybatisPlusServiceInfoContributor() {
+        return registry -> {
+            registry.registerFlag("mybatis", "MyBatis", true, "MyBatis Plus模块");
+        };
     }
 }

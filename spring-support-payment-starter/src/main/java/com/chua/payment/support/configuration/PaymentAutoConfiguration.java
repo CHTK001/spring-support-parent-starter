@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.chua.payment.support.spi.UserOpenIdResolver;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -45,5 +47,12 @@ public class PaymentAutoConfiguration {
         scheduler.setWaitForTasksToCompleteOnShutdown(true);
         scheduler.setAwaitTerminationSeconds(30);
         return scheduler;
+    }
+
+    @Bean
+    public ServiceInfoContributor paymentServiceInfoContributor() {
+        return registry -> {
+            registry.registerFlag("payment", "支付", true, "支付模块");
+        };
     }
 }

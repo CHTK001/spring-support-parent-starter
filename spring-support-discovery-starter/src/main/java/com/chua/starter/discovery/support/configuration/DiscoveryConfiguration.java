@@ -7,6 +7,8 @@ import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.starter.common.support.project.Project;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.discovery.support.properties.DiscoveryListProperties;
 import com.chua.starter.discovery.support.properties.DiscoveryNodeProperties;
 import com.chua.starter.discovery.support.properties.DiscoveryProperties;
@@ -26,6 +28,7 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProce
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.EnvironmentAware;
+import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 
 import java.io.IOException;
@@ -233,5 +236,12 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         public void close() throws Exception {
             serviceDiscovery.close();
         }
+    }
+
+    @Bean
+    public ServiceInfoContributor discoveryServiceInfoContributor() {
+        return registry -> {
+            registry.registerFlag("discovery", "服务发现", true, "服务发现模块");
+        };
     }
 }

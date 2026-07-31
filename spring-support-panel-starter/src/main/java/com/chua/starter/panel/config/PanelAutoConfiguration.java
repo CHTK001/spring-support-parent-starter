@@ -1,5 +1,7 @@
 package com.chua.starter.panel.config;
 
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.panel.cache.InMemoryPanelConnectionCache;
 import com.chua.starter.ai.support.chat.ChatClient;
 import com.chua.starter.panel.cache.PanelConnectionCache;
@@ -359,5 +361,13 @@ public class PanelAutoConfiguration {
                 panelAiService,
                 panelRemarkService,
                 panelSqlTemplateService);
+    }
+
+    @Bean
+    public ServiceInfoContributor panelServiceInfoContributor() {
+        return registry -> {
+            registry.registerEndpoint("运维面板", "面板管理", "/panel/**", "面板管理");
+            registry.registerFlag("panel", "运维面板", true, "运维面板模块");
+        };
     }
 }

@@ -1,5 +1,7 @@
 package com.chua.starter.ssh.configuration;
 
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.ssh.properties.SshServerProperties;
 import com.chua.starter.ssh.service.SshServerService;
 import lombok.extern.slf4j.Slf4j;
@@ -41,5 +43,12 @@ public class SshAutoConfiguration {
     public SshServerService sshServerService(SshServerProperties properties) {
         log.info(" >>>>>>> 初始化SSH服务端服务，端口: {}", properties.getPort());
         return new SshServerService(properties);
+    }
+
+    @Bean
+    public ServiceInfoContributor sshServiceInfoContributor() {
+        return registry -> {
+            registry.registerFlag("ssh", "SSH", true, "SSH服务端模块");
+        };
     }
 }

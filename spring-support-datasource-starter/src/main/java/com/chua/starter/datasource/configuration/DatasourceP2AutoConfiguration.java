@@ -1,5 +1,6 @@
 package com.chua.starter.datasource.configuration;
 
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.datasource.support.*;
 import org.springframework.boot.actuate.autoconfigure.health.ConditionalOnEnabledHealthIndicator;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -71,5 +72,12 @@ public class DatasourceP2AutoConfiguration {
     @ConditionalOnProperty(prefix = "plugin.datasource.graceful-shutdown", name = "enabled", havingValue = "true", matchIfMissing = true)
     public GracefulShutdownListener gracefulShutdownListener() {
         return new GracefulShutdownListener();
+    }
+
+    @Bean
+    public ServiceInfoContributor datasourceServiceInfoContributor() {
+        return registry -> {
+            registry.registerFlag("datasource", "多数据源", true, "多数据源与连接池管理模块");
+        };
     }
 }

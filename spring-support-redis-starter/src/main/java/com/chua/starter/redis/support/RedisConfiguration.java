@@ -1,6 +1,8 @@
 package com.chua.starter.redis.support;
 
 import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.redis.support.listener.RedisListener;
 import com.chua.starter.redis.support.properties.RedisServerProperties;
 import com.chua.starter.redis.support.server.RedisEmbeddedServer;
@@ -309,5 +311,13 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     @Override
     public int getOrder() {
         return Ordered.HIGHEST_PRECEDENCE;
+    }
+
+    @Bean
+    public ServiceInfoContributor redisServiceInfoContributor() {
+        return registry -> {
+            registry.registerEndpoint("Redis", "Redis服务", "/redis/**", "Redis服务");
+            registry.registerFlag("redis", "Redis", true, "Redis缓存模块");
+        };
     }
 }

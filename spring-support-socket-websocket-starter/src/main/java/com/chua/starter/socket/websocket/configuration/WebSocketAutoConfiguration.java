@@ -1,5 +1,7 @@
 package com.chua.starter.socket.websocket.configuration;
 
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.socket.websocket.handler.DelegatingWebSocketHandler;
 import com.chua.starter.socket.websocket.handler.WebSocketMessageHandler;
 import com.chua.starter.socket.websocket.properties.WebSocketProperties;
@@ -97,5 +99,12 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
                         .setHeartbeatTime(properties.getHeartbeatInterval());
             }
         }
+    }
+
+    @Bean
+    public ServiceInfoContributor webSocketServiceInfoContributor() {
+        return registry -> {
+            registry.registerFlag("websocket", "WebSocket", true, "WebSocket模块");
+        };
     }
 }

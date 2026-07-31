@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.chua.common.support.storage.FileStorage;
 import com.chua.common.support.storage.setting.BucketSetting;
 import com.chua.starter.common.support.logger.ModuleLog;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.filesystem.support.controller.FileChunkUploadController;
 import com.chua.starter.filesystem.support.entity.SysFileSystemUpload;
 import com.chua.starter.filesystem.support.mapper.SysFileSystemUploadMapper;
@@ -53,5 +55,15 @@ public class FileSystemAutoConfiguration {
             FileStorageTemplate fileStorageTemplate,
             FileStorageProperties fileStorageProperties) {
         return new FileChunkUploadController(uploadService, fileStorageTemplate, fileStorageProperties);
+    }
+
+    @Bean
+    public ServiceInfoContributor fileSystemServiceInfoContributor() {
+        return registry -> {
+            registry.registerEndpoint("文件系统", "分片上传", "/chunk/create,upload,complete", "分片上传");
+            registry.registerEndpoint("文件系统", "文件预览", "preview", "文件预览");
+            registry.registerEndpoint("文件系统", "文件下载", "download", "文件下载");
+            registry.registerFlag("filesystem", "文件系统", true, "文件存储模块");
+        };
     }
 }

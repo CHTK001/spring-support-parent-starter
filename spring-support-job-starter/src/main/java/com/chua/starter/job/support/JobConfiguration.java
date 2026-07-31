@@ -223,4 +223,13 @@ public class JobConfiguration {
         }
         return table.resolve(tableName);
     }
+
+    @Bean
+    public ServiceInfoContributor jobServiceInfoContributor() {
+        return registry -> {
+            registry.registerEndpoint("任务调度", "任务调度", "/job/*", "任务调度");
+            registry.registerEndpoint("任务调度", "远程执行器", "/api/job/*", "远程执行器");
+            registry.registerFlag("job", "任务调度", true, "分布式任务调度模块");
+        };
+    }
 }

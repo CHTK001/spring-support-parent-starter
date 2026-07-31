@@ -8,6 +8,8 @@ import com.chua.common.support.ai.chat.aggregate.AggregateChatClientSetting;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.registry.AgentRegistry;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -142,5 +144,13 @@ public class AiConfiguration {
         }
 
         log.info("[AiConfiguration] AI 注册体系初始化完成");
+    }
+
+    @Bean
+    public ServiceInfoContributor aiServiceInfoContributor() {
+        return registry -> {
+            registry.registerEndpoint("AI", "AI接口", "/ai/**", "AI接口");
+            registry.registerFlag("ai", "AI", true, "AI模块");
+        };
     }
 }

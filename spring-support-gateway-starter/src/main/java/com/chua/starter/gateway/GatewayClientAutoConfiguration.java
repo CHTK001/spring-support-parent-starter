@@ -1,6 +1,8 @@
 package com.chua.starter.gateway;
 
 import com.chua.remote.support.agent.launch.AgentProperties;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -64,5 +66,12 @@ public class GatewayClientAutoConfiguration {
     @ConditionalOnMissingBean
     public GatewayClientAgent gatewayClientAgent(AgentProperties gatewayClientAgentProperties) {
         return new GatewayClientAgent(gatewayClientAgentProperties);
+    }
+
+    @Bean
+    public ServiceInfoContributor gatewayServiceInfoContributor() {
+        return registry -> {
+            registry.registerFlag("gateway", "网关", true, "网关客户端模块");
+        };
     }
 }

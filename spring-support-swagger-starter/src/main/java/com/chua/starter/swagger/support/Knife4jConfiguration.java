@@ -1,5 +1,7 @@
 package com.chua.starter.swagger.support;
 
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.github.xiaoymin.knife4j.spring.annotations.EnableKnife4j;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -135,4 +137,11 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
                 || ManagementPortType.get(environment).equals(ManagementPortType.DIFFERENT));
     }
 
+    @Bean
+    public ServiceInfoContributor knife4jServiceInfoContributor() {
+        return registry -> {
+            registry.registerEndpoint("文档", "接口文档", "/doc.html", "接口文档");
+            registry.registerFlag("knife4j", "文档", true, "Knife4j接口文档");
+        };
+    }
 }

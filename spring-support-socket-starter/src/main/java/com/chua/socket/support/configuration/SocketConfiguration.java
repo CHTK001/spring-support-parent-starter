@@ -5,6 +5,8 @@ import com.chua.socket.support.SocketListener;
 import com.chua.socket.support.properties.SocketProperties;
 import com.chua.socket.support.session.SocketSessionTemplate;
 import com.chua.socket.support.spi.SocketProvider;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import lombok.extern.slf4j.Slf4j;
 import static com.chua.starter.common.support.logger.ModuleLog.*;
 import org.springframework.beans.factory.DisposableBean;
@@ -186,5 +188,12 @@ public class SocketConfiguration {
                 entry.getValue().stop();
             }
         }
+    }
+
+    @Bean
+    public ServiceInfoContributor socketServiceInfoContributor() {
+        return registry -> {
+            registry.registerFlag("socket", "Socket通信", true, "Socket通信模块");
+        };
     }
 }

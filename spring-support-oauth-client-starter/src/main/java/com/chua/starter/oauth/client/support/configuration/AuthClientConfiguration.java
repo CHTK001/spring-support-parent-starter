@@ -3,6 +3,8 @@ package com.chua.starter.oauth.client.support.configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.chua.starter.common.support.oauth.AuthService;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.oauth.client.support.filter.AuthFilter;
 import com.chua.starter.oauth.client.support.interceptor.PermissionInterceptor;
 import com.chua.starter.oauth.client.support.interceptor.TokenForTypeInterceptor;
@@ -213,5 +215,13 @@ public class AuthClientConfiguration
         AuthClientProperties bean = getSpringBean();
         log.info("[AuthClientConfiguration] postProcessBeanFactory - 协议: {}, 地址: {}", bean.getProtocol(), bean.getAddress());
         OauthClientRuntimeContext.setAuthClientProperties(bean);
+    }
+
+    @Bean
+    public ServiceInfoContributor authClientServiceInfoContributor() {
+        return registry -> {
+            registry.registerEndpoint("认证授权", "认证接口", "/auth/**", "认证接口");
+            registry.registerFlag("oauth", "认证授权", true, "OAuth认证模块");
+        };
     }
 }

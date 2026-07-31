@@ -2,6 +2,8 @@ package com.chua.starter.configcenter.support.configuration;
 
 import com.chua.common.support.config.center.ConfigCenter;
 import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.configcenter.support.holder.ConfigCenterHolder;
 import com.chua.starter.configcenter.support.processor.ConfigValueBeanPostProcessor;
 import com.chua.starter.configcenter.support.processor.ValueAnnotationBeanPostProcessor;
@@ -119,5 +121,12 @@ public class ConfigValueAutoConfiguration {
     @PreDestroy
     public void destroy() {
         ConfigCenterHolder.shutdown();
+    }
+
+    @Bean
+    public ServiceInfoContributor configCenterServiceInfoContributor() {
+        return registry -> {
+            registry.registerFlag("configcenter", "配置中心", true, "配置中心模块");
+        };
     }
 }

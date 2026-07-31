@@ -3,6 +3,8 @@ package com.chua.starter.project.configuration;
 import com.chua.starter.common.support.properties.IpProperties;
 import com.chua.starter.common.support.service.IptablesService;
 import com.chua.starter.common.support.service.impl.IptablesServiceImpl;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -36,5 +38,12 @@ public class ProjectConfiguration {
     @ConditionalOnMissingBean
     public IptablesService iptablesService(IpProperties ipProperties) {
         return new IptablesServiceImpl(ipProperties);
+    }
+
+    @Bean
+    public ServiceInfoContributor projectServiceInfoContributor() {
+        return registry -> {
+            registry.registerFlag("project", "项目管理", true, "项目管理模块");
+        };
     }
 }

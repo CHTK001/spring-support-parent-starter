@@ -1,5 +1,7 @@
 package com.chua.starter.message.support;
 
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.message.support.properties.MessageProperties;
 import com.chua.starter.message.support.template.MessageTemplate;
 import lombok.extern.slf4j.Slf4j;
@@ -30,5 +32,12 @@ public class MessageConfiguration {
     public MessageTemplate messageTemplate(MessageProperties properties) {
         log.info("[Message] 初始化消息推送模板");
         return new MessageTemplate(properties);
+    }
+
+    @Bean
+    public ServiceInfoContributor messageServiceInfoContributor() {
+        return registry -> {
+            registry.registerFlag("message", "消息", true, "消息推送模块");
+        };
     }
 }
