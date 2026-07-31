@@ -39,24 +39,10 @@ public class SyncDataExchangeService {
         this.syncProperties = SyncProperties.copyOf(syncProperties);
     }
 
-    /**
-     * 客户端向服务端发送数据同步消息。
-     *
-     * @param channel 逻辑通道
-     * @param payload 负载
-     */
     public void publish(String channel, Object payload) {
         publish(channel, "SYNC_DATA", payload, Collections.emptyMap());
     }
 
-    /**
-     * 客户端向服务端发送数据同步消息。
-     *
-     * @param channel  逻辑通道
-     * @param eventType 事件类型
-     * @param payload  负载
-     * @param metadata 元数据
-     */
     public void publish(String channel, String eventType, Object payload, Map<String, Object> metadata) {
         SyncClient syncClient = requireSyncClient();
         String topic = resolveTopic(channel);
@@ -64,26 +50,10 @@ public class SyncDataExchangeService {
         log.debug("[SyncData] 客户端发送数据同步消息, topic={}, eventType={}", topic, eventType);
     }
 
-    /**
-     * 客户端发起同步请求。
-     *
-     * @param channel 逻辑通道
-     * @param payload 负载
-     * @return 同步响应
-     */
     public SyncResponse request(String channel, Object payload) {
         return request(channel, "SYNC_REQUEST", payload, Collections.emptyMap());
     }
 
-    /**
-     * 客户端发起同步请求。
-     *
-     * @param channel   逻辑通道
-     * @param eventType 事件类型
-     * @param payload   负载
-     * @param metadata  元数据
-     * @return 同步响应
-     */
     public SyncResponse request(String channel, String eventType, Object payload, Map<String, Object> metadata) {
         SyncClient syncClient = requireSyncClient();
         String topic = resolveTopic(channel);
@@ -92,78 +62,28 @@ public class SyncDataExchangeService {
         return SyncResponse.success(UUID.randomUUID().toString(), syncClient.getClientId(), payload);
     }
 
-    /**
-     * 服务端广播数据同步消息。
-     *
-     * @param channel 逻辑通道
-     * @param payload 负载
-     */
     public void broadcast(String channel, Object payload) {
         SyncServer syncServer = requireSyncServer();
         String topic = resolveTopic(channel);
         syncServer.publish(topic, payload);
     }
 
-    /**
-     * 服务端向指定会话发送数据同步消息。
-     *
-     * @param sessionId 会话ID
-     * @param channel   逻辑通道
-     * @param payload   负载
-     */
     public void sendToSession(String sessionId, String channel, Object payload) {
         SyncServer syncServer = requireSyncServer();
         String topic = resolveTopic(channel);
         syncServer.send(sessionId, topic, payload);
     }
 
-    /**
-     * 服务端向指定应用发送数据同步消息。
-     *
-     * @param appName  应用名
-     * @param channel  逻辑通道
-     * @param payload  负载
-     * @return 推送客户端数量
-     */
     public int sendToApplication(String appName, String channel, Object payload) {
         SyncServer syncServer = requireSyncServer();
         String topic = resolveTopic(channel);
-        int count = 0;
-        for (String clientId : syncServer.getConnectedClients()) {
-            Map<String, Object> meta = syncServer.getClientMetadata(clientId);
-            if (meta != null && appName.equals(meta.get("clientApplicationName"))) {
-                syncServer.send(clientId, topic, payload);
-                count++;
-            }
-        }
-        log.debug("[SyncData] 向应用 {} 的 {} 个节点发送消息, topic={}", appName, count, topic);
-        return count;
+        return syncServer.publishByAppName(appName, topic, payload);
     }
 
-    /**
-     * 服务端按客户端元数据定向发送数据同步消息。
-     *
-     * @param metadataKey   元数据键
-     * @param metadataValue 元数据值
-     * @param channel       逻辑通道
-     * @param payload       负载
-     * @return 推送客户端数量
-     */
     public int sendToMetadata(String metadataKey, Object metadataValue, String channel, Object payload) {
         return sendToMetadata(metadataKey, metadataValue, channel, "SYNC_METADATA", payload, Collections.emptyMap());
     }
 
-    /**
-     * 服务端按客户端元数据定向发送数据同步消息。
-     *
-     * @param metadataKey   元数据键
-     * @param metadataValue 元数据值
-     * @param channel       逻辑通道
-     * @param eventType     事件类型
-     * @param payload       负载
-     * @param metadata      元数据
-     * @return 推送客户端数量
-     */
     public int sendToMetadata(String metadataKey,
                               Object metadataValue,
                               String channel,
@@ -172,40 +92,13 @@ public class SyncDataExchangeService {
                               Map<String, Object> metadata) {
         SyncServer syncServer = requireSyncServer();
         String topic = resolveTopic(channel);
-        int count = 0;
-        for (String clientId : syncServer.getConnectedClients()) {
-            Map<String, Object> clientMeta = syncServer.getClientMetadata(clientId);
-            if (clientMeta != null && metadataValue.equals(clientMeta.get(metadataKey))) {
-                syncServer.send(clientId, topic, payload);
-                count++;
-            }
-        }
-        log.debug("[SyncData] 按元数据 {}={} 推送消息到 {} 个客户端, topic={}", metadataKey, metadataValue, count, topic);
-        return count;
+        return syncServer.publishByMetadata(metadataKey, metadataValue, topic, payload);
     }
 
-    /**
-     * 服务端按自定义过滤条件定向发送数据同步消息。
-     *
-     * @param filter   过滤条件
-     * @param channel  逻辑通道
-     * @param payload  负载
-     * @return 推送客户端数量
-     */
     public int sendToClients(Predicate<ClientInfo> filter, String channel, Object payload) {
         return sendToClients(filter, channel, "SYNC_FILTER", payload, Collections.emptyMap());
     }
 
-    /**
-     * 服务端按自定义过滤条件定向发送数据同步消息。
-     *
-     * @param filter    过滤条件
-     * @param channel   逻辑通道
-     * @param eventType 事件类型
-     * @param payload   负载
-     * @param metadata  元数据
-     * @return 推送客户端数量
-     */
     public int sendToClients(Predicate<ClientInfo> filter,
                              String channel,
                              String eventType,
@@ -213,54 +106,13 @@ public class SyncDataExchangeService {
                              Map<String, Object> metadata) {
         SyncServer syncServer = requireSyncServer();
         String topic = resolveTopic(channel);
-        int count = 0;
-        for (String clientId : syncServer.getConnectedClients()) {
-            Map<String, Object> clientMeta = syncServer.getClientMetadata(clientId);
-            ClientInfo clientInfo = new ClientInfo();
-            if (clientMeta != null) {
-                if (clientMeta.get("clientId") != null) {
-                    clientInfo.setClientId(String.valueOf(clientMeta.get("clientId")));
-                }
-                if (clientMeta.get("clientApplicationName") != null) {
-                    clientInfo.setClientApplicationName(String.valueOf(clientMeta.get("clientApplicationName")));
-                }
-                if (clientMeta.get("clientIpAddress") != null) {
-                    clientInfo.setClientIpAddress(String.valueOf(clientMeta.get("clientIpAddress")));
-                }
-                if (clientMeta.get("clientPort") != null) {
-                    clientInfo.setClientPort(Integer.parseInt(String.valueOf(clientMeta.get("clientPort"))));
-                }
-                if (clientMeta.get("clientOnline") != null) {
-                    clientInfo.setClientOnline(Boolean.parseBoolean(String.valueOf(clientMeta.get("clientOnline"))));
-                }
-                if (clientMeta.get("clientCapabilities") != null) {
-                    clientInfo.setClientCapabilities(String.valueOf(clientMeta.get("clientCapabilities")).split(","));
-                }
-                clientInfo.setClientMetadata(clientMeta);
-            }
-            if (filter.test(clientInfo)) {
-                syncServer.send(clientId, topic, payload);
-                count++;
-            }
-        }
-        log.debug("[SyncData] 按过滤条件推送消息到 {} 个客户端, topic={}", count, topic);
-        return count;
+        return syncServer.publishToClients(filter, topic, payload);
     }
 
-    /**
-     * 是否具备客户端能力。
-     *
-     * @return 是否存在客户端
-     */
     public boolean hasClient() {
         return syncClientProvider.getIfAvailable() != null;
     }
 
-    /**
-     * 是否具备服务端能力。
-     *
-     * @return 是否存在服务端
-     */
     public boolean hasServer() {
         return syncServerProvider.getIfAvailable() != null;
     }
