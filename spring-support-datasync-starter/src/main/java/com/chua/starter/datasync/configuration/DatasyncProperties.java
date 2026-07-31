@@ -54,11 +54,6 @@ public class DatasyncProperties {
         private String tablePrefix = "datasync_";
 
         /**
-         * 是否自动初始化表结构
-         */
-        private boolean autoInitTable = true;
-
-        /**
          * 数据库轮询间隔（Cron 表达式）
          */
         private String cron = "0/5 * * * * ?";

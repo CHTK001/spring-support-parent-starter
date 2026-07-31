@@ -1,6 +1,7 @@
 package com.chua.starter.sync.support.configuration;
 
-import com.chua.starter.sync.support.client.SyncClient;
+import com.chua.common.support.network.sync.SyncClient;
+import com.chua.starter.sync.support.client.SyncClientWrapper;
 import com.chua.starter.sync.support.data.SyncDataExchangeService;
 import com.chua.starter.sync.support.properties.SyncProperties;
 import com.chua.starter.sync.support.server.SyncServer;
@@ -85,7 +86,7 @@ public class SyncAutoConfiguration {
                                  ObjectProvider<SyncClientInfoCustomizer> syncClientInfoCustomizerProvider,
                                  ObjectProvider<SyncClientCustomizer> syncClientCustomizerProvider) {
         log.info("[Sync] 创建客户端");
-        return new SyncClient(
+        return new SyncClientWrapper(
                 syncProperties,
                 environment,
                 syncClientInfoCustomizerProvider.orderedStream().toList(),

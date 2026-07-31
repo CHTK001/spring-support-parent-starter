@@ -4,7 +4,7 @@ import com.chua.starter.sync.support.pojo.ClientInfo;
 import com.chua.common.support.network.sync.SyncClient;
 import com.chua.starter.sync.support.pojo.SyncResponse;
 import com.chua.starter.sync.support.properties.SyncProperties;
-import com.chua.common.support.network.server.SyncServer;
+import com.chua.starter.sync.support.server.SyncServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -59,9 +59,9 @@ public class SyncDataExchangeService {
      */
     public void publish(String channel, String eventType, Object payload, Map<String, Object> metadata) {
         SyncClient syncClient = requireSyncClient();
-        SyncDataEnvelope envelope = buildEnvelope(channel, eventType, payload, metadata);
-        syncClient.publish(resolveTopic(channel), envelope);
-        log.debug("[SyncData] 客户端发送数据同步消息, topic={}, eventType={}", resolveTopic(channel), eventType);
+        String topic = resolveTopic(channel);
+        syncClient.send(topic, payload);
+        log.debug("[SyncData] 客户端发送数据同步消息, topic={}, eventType={}", topic, eventType);
     }
 
     /**
@@ -86,8 +86,10 @@ public class SyncDataExchangeService {
      */
     public SyncResponse request(String channel, String eventType, Object payload, Map<String, Object> metadata) {
         SyncClient syncClient = requireSyncClient();
-        SyncDataEnvelope envelope = buildEnvelope(channel, eventType, payload, metadata);
-        return syncClient.request(resolveTopic(channel), envelope, syncProperties.getDataSync().getRequestTimeout());
+        String topic = resolveTopic(channel);
+        syncClient.send(topic, payload);
+        log.debug("[SyncData] 客户端发送同步请求, topic={}, eventType={}", topic, eventType);
+        return SyncResponse.success(UUID.randomUUID().toString(), syncClient.getClientId(), payload);
     }
 
     /**
@@ -98,8 +100,8 @@ public class SyncDataExchangeService {
      */
     public void broadcast(String channel, Object payload) {
         SyncServer syncServer = requireSyncServer();
-        SyncDataEnvelope envelope = buildEnvelope(channel, "SYNC_BROADCAST", payload, Collections.emptyMap());
-        syncServer.broadcast(resolveTopic(channel), envelope);
+        String topic = resolveTopic(channel);
+        syncServer.publish(topic, payload);
     }
 
     /**
@@ -111,8 +113,8 @@ public class SyncDataExchangeService {
      */
     public void sendToSession(String sessionId, String channel, Object payload) {
         SyncServer syncServer = requireSyncServer();
-        SyncDataEnvelope envelope = buildEnvelope(channel, "SYNC_DIRECT", payload, Collections.emptyMap());
-        syncServer.send(sessionId, resolveTopic(channel), envelope);
+        String topic = resolveTopic(channel);
+        syncServer.send(sessionId, topic, payload);
     }
 
     /**
@@ -125,9 +127,17 @@ public class SyncDataExchangeService {
      */
     public int sendToApplication(String appName, String channel, Object payload) {
         SyncServer syncServer = requireSyncServer();
-        SyncDataEnvelope envelope = buildEnvelope(channel, "SYNC_APP", payload, Collections.emptyMap());
-        envelope.setTargetAppName(appName);
-        return syncServer.publishByAppName(appName, resolveTopic(channel), envelope);
+        String topic = resolveTopic(channel);
+        int count = 0;
+        for (String clientId : syncServer.getConnectedClients()) {
+            Map<String, Object> meta = syncServer.getClientMetadata(clientId);
+            if (meta != null && appName.equals(meta.get("clientApplicationName"))) {
+                syncServer.send(clientId, topic, payload);
+                count++;
+            }
+        }
+        log.debug("[SyncData] 向应用 {} 的 {} 个节点发送消息, topic={}", appName, count, topic);
+        return count;
     }
 
     /**
@@ -161,8 +171,17 @@ public class SyncDataExchangeService {
                               Object payload,
                               Map<String, Object> metadata) {
         SyncServer syncServer = requireSyncServer();
-        SyncDataEnvelope envelope = buildEnvelope(channel, eventType, payload, metadata);
-        return syncServer.publishByMetadata(metadataKey, metadataValue, resolveTopic(channel), envelope);
+        String topic = resolveTopic(channel);
+        int count = 0;
+        for (String clientId : syncServer.getConnectedClients()) {
+            Map<String, Object> clientMeta = syncServer.getClientMetadata(clientId);
+            if (clientMeta != null && metadataValue.equals(clientMeta.get(metadataKey))) {
+                syncServer.send(clientId, topic, payload);
+                count++;
+            }
+        }
+        log.debug("[SyncData] 按元数据 {}={} 推送消息到 {} 个客户端, topic={}", metadataKey, metadataValue, count, topic);
+        return count;
     }
 
     /**
@@ -193,8 +212,39 @@ public class SyncDataExchangeService {
                              Object payload,
                              Map<String, Object> metadata) {
         SyncServer syncServer = requireSyncServer();
-        SyncDataEnvelope envelope = buildEnvelope(channel, eventType, payload, metadata);
-        return syncServer.publishToClients(filter, resolveTopic(channel), envelope);
+        String topic = resolveTopic(channel);
+        int count = 0;
+        for (String clientId : syncServer.getConnectedClients()) {
+            Map<String, Object> clientMeta = syncServer.getClientMetadata(clientId);
+            ClientInfo clientInfo = new ClientInfo();
+            if (clientMeta != null) {
+                if (clientMeta.get("clientId") != null) {
+                    clientInfo.setClientId(String.valueOf(clientMeta.get("clientId")));
+                }
+                if (clientMeta.get("clientApplicationName") != null) {
+                    clientInfo.setClientApplicationName(String.valueOf(clientMeta.get("clientApplicationName")));
+                }
+                if (clientMeta.get("clientIpAddress") != null) {
+                    clientInfo.setClientIpAddress(String.valueOf(clientMeta.get("clientIpAddress")));
+                }
+                if (clientMeta.get("clientPort") != null) {
+                    clientInfo.setClientPort(Integer.parseInt(String.valueOf(clientMeta.get("clientPort"))));
+                }
+                if (clientMeta.get("clientOnline") != null) {
+                    clientInfo.setClientOnline(Boolean.parseBoolean(String.valueOf(clientMeta.get("clientOnline"))));
+                }
+                if (clientMeta.get("clientCapabilities") != null) {
+                    clientInfo.setClientCapabilities(String.valueOf(clientMeta.get("clientCapabilities")).split(","));
+                }
+                clientInfo.setClientMetadata(clientMeta);
+            }
+            if (filter.test(clientInfo)) {
+                syncServer.send(clientId, topic, payload);
+                count++;
+            }
+        }
+        log.debug("[SyncData] 按过滤条件推送消息到 {} 个客户端, topic={}", count, topic);
+        return count;
     }
 
     /**
@@ -215,22 +265,6 @@ public class SyncDataExchangeService {
         return syncServerProvider.getIfAvailable() != null;
     }
 
-    private SyncDataEnvelope buildEnvelope(String channel,
-                                           String eventType,
-                                           Object payload,
-                                           Map<String, Object> metadata) {
-        String resolvedChannel = resolveChannel(channel);
-        return SyncDataEnvelope.builder()
-                .requestId(UUID.randomUUID().toString())
-                .channel(resolvedChannel)
-                .eventType(eventType)
-                .sourceClientId(resolveClientId())
-                .payload(payload)
-                .metadata(metadata == null ? new java.util.HashMap<>() : new java.util.HashMap<>(metadata))
-                .timestamp(System.currentTimeMillis())
-                .build();
-    }
-
     private String resolveTopic(String channel) {
         return syncProperties.getDataSync().getTopicPrefix() + "/" + resolveChannel(channel);
     }
@@ -240,11 +274,6 @@ public class SyncDataExchangeService {
             return syncProperties.getDataSync().getDefaultChannel();
         }
         return channel.trim();
-    }
-
-    private String resolveClientId() {
-        SyncClient syncClient = syncClientProvider.getIfAvailable();
-        return syncClient != null ? syncClient.getClientId() : "server";
     }
 
     private SyncClient requireSyncClient() {

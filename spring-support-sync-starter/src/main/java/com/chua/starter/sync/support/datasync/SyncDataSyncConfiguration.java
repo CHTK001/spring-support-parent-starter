@@ -4,7 +4,7 @@ import com.chua.starter.datasync.DataSyncServer;
 import com.chua.starter.datasync.agent.DataSyncAgentServer;
 import com.chua.common.support.network.sync.SyncClient;
 import com.chua.starter.sync.support.properties.SyncProperties;
-import com.chua.common.support.network.server.SyncServer;
+import com.chua.starter.sync.support.server.SyncServer;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

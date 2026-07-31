@@ -10,9 +10,14 @@ import org.springframework.beans.factory.InitializingBean;
 
 import javax.sql.DataSource;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 数据库映射加载器，启动时从数据库表加载 DataSync 映射配置。
+ * <p>
+ * 表结构由 {@code spring-support-datasource-starter} 自动执行
+ * {@code db/init/V1.0.0__init_datasync_mapping.sql} 初始化，此类仅负责查询映射数据。
+ * </p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -38,54 +43,10 @@ public class DatabaseMappingLoader implements InitializingBean {
         if (config == null || !config.isEnabled()) {
             return;
         }
+
         org.springframework.jdbc.core.JdbcTemplate jdbcTemplate =
                 new org.springframework.jdbc.core.JdbcTemplate(dataSource);
-        if (config.isAutoInitTable()) {
-            initTable(jdbcTemplate, config.getTablePrefix());
-        }
         loadMappings(jdbcTemplate, config.getTablePrefix());
-    }
-
-    private void initTable(org.springframework.jdbc.core.JdbcTemplate jdbcTemplate, String prefix) {
-        String mappingTable = prefix + "mapping";
-        String fieldTable = prefix + "field_mapping";
-
-        String sqlMapping = """
-                CREATE TABLE IF NOT EXISTS %s (
-                    datasync_mapping_id VARCHAR(255) PRIMARY KEY,
-                    datasync_mapping_input_id VARCHAR(255),
-                    datasync_mapping_source_id VARCHAR(255),
-                    datasync_mapping_output_id VARCHAR(255),
-                    datasync_mapping_sink_id VARCHAR(255),
-                    datasync_mapping_batch INT DEFAULT 100,
-                    datasync_mapping_cron_type VARCHAR(255),
-                    datasync_mapping_cron VARCHAR(255),
-                    datasync_mapping_params TEXT,
-                    datasync_mapping_enabled BOOLEAN DEFAULT TRUE,
-                    datasync_mapping_create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    datasync_mapping_update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-                """.formatted(mappingTable);
-
-        String sqlField = """
-                CREATE TABLE IF NOT EXISTS %s (
-                    datasync_field_mapping_id VARCHAR(255) PRIMARY KEY,
-                    datasync_field_mapping_mapping_id VARCHAR(255),
-                    datasync_field_mapping_source_field VARCHAR(255),
-                    datasync_field_mapping_target_field VARCHAR(255),
-                    datasync_field_mapping_converter VARCHAR(255),
-                    datasync_field_mapping_sort INT,
-                    FOREIGN KEY (datasync_field_mapping_mapping_id) REFERENCES %s(datasync_mapping_id)
-                )
-                """.formatted(fieldTable, mappingTable);
-
-        try {
-            jdbcTemplate.execute(sqlMapping);
-            jdbcTemplate.execute(sqlField);
-            log.info("DataSync 表结构初始化完成: {}, {}", mappingTable, fieldTable);
-        } catch (Exception e) {
-            log.warn("DataSync 表结构初始化失败（可能已存在或权限不足）", e);
-        }
     }
 
     private void loadMappings(org.springframework.jdbc.core.JdbcTemplate jdbcTemplate, String prefix) {

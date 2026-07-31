@@ -59,29 +59,29 @@ DataSync Spring Boot Starter，提供 DataSync 映射配置的 Spring Boot 自�
 ```sql
 -- 映射主表
 CREATE TABLE IF NOT EXISTS datasync_mapping (
-    mapping_id VARCHAR(255) PRIMARY KEY,
-    input_id VARCHAR(255),
-    source_id VARCHAR(255),
-    output_id VARCHAR(255),
-    sink_id VARCHAR(255),
-    batch INT DEFAULT 100,
-    cron_type VARCHAR(255),
-    cron VARCHAR(255),
-    params TEXT,
-    enabled BOOLEAN DEFAULT TRUE,
-    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    datasync_mapping_id VARCHAR(255) PRIMARY KEY,
+    datasync_mapping_input_id VARCHAR(255),
+    datasync_mapping_source_id VARCHAR(255),
+    datasync_mapping_output_id VARCHAR(255),
+    datasync_mapping_sink_id VARCHAR(255),
+    datasync_mapping_batch INT DEFAULT 100,
+    datasync_mapping_cron_type VARCHAR(255),
+    datasync_mapping_cron VARCHAR(255),
+    datasync_mapping_params TEXT,
+    datasync_mapping_enabled BOOLEAN DEFAULT TRUE,
+    datasync_mapping_create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    datasync_mapping_update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 字段映射表
 CREATE TABLE IF NOT EXISTS datasync_field_mapping (
-    id VARCHAR(255) PRIMARY KEY,
-    mapping_id VARCHAR(255),
-    source_field VARCHAR(255),
-    target_field VARCHAR(255),
-    converter VARCHAR(255),
-    sort INT,
-    FOREIGN KEY (mapping_id) REFERENCES datasync_mapping(mapping_id)
+    datasync_field_mapping_id VARCHAR(255) PRIMARY KEY,
+    datasync_field_mapping_mapping_id VARCHAR(255),
+    datasync_field_mapping_source_field VARCHAR(255),
+    datasync_field_mapping_target_field VARCHAR(255),
+    datasync_field_mapping_converter VARCHAR(255),
+    datasync_field_mapping_sort INT,
+    FOREIGN KEY (datasync_field_mapping_mapping_id) REFERENCES datasync_mapping(datasync_mapping_id)
 );
 ```
 
@@ -123,10 +123,10 @@ plugin:
 
 数据库插入示例：
 ```sql
-INSERT INTO datasync_mapping (mapping_id, input_id, source_id, output_id, sink_id, batch, cron, enabled)
-VALUES ('user-sync', 'user-input', 'user-source', 'user-output', 'user-sink', 100, '0 0/5 * * * ?', TRUE);
+INSERT INTO datasync_mapping (datasync_mapping_id, datasync_mapping_input_id, datasync_mapping_source_id, datasync_mapping_output_id, datasync_mapping_sink_id, datasync_mapping_batch, datasync_mapping_cron_type, datasync_mapping_cron, datasync_mapping_params, datasync_mapping_enabled)
+VALUES ('user-sync', 'user-input', 'user-source', 'user-output', 'user-sink', 100, 'fixed', '0/5 * * * * ?', '{}', TRUE);
 
-INSERT INTO datasync_field_mapping (id, mapping_id, source_field, target_field, converter, sort)
+INSERT INTO datasync_field_mapping (datasync_field_mapping_id, datasync_field_mapping_mapping_id, datasync_field_mapping_source_field, datasync_field_mapping_target_field, datasync_field_mapping_converter, datasync_field_mapping_sort)
 VALUES ('1', 'user-sync', 'name', 'user_name', 'toString', 0);
 ```
 
@@ -151,3 +151,4 @@ utils-support-datasync-starter
 - 数据库模式需要用户项目自行引入 JDBC 驱动（如 MySQL、PostgreSQL、H2）
 - 文件模式会递归扫描子目录
 - 数据库模式默认每 5 分钟轮询一次（可通过 `cron` 调整）
+- 数据库表结构由 `spring-support-datasource-starter` 自动执行 `src/main/resources/db/init/V1.0.0__init_datasync_mapping.sql` 建表，无需手动执行

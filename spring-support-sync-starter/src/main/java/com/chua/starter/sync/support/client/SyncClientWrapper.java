@@ -19,18 +19,18 @@ import java.util.Map;
  * @author CH
  * @since 2026/07/31
  */
-public class SyncClient implements com.chua.common.support.network.sync.SyncClient {
+public class SyncClientWrapper implements SyncClient {
 
-    private static final Logger log = LoggerFactory.getLogger(SyncClient.class);
+    private static final Logger log = LoggerFactory.getLogger(SyncClientWrapper.class);
 
     private final SyncProperties syncProperties;
     private final Environment environment;
     private SyncClient delegate;
 
-    public SyncClient(SyncProperties syncProperties,
-                      Environment environment,
-                      List<com.chua.starter.sync.support.spi.SyncClientInfoCustomizer> infoCustomizers,
-                      List<com.chua.starter.sync.support.spi.SyncClientCustomizer> customizers) {
+    public SyncClientWrapper(SyncProperties syncProperties,
+                             Environment environment,
+                             List<com.chua.starter.sync.support.spi.SyncClientInfoCustomizer> infoCustomizers,
+                             List<com.chua.starter.sync.support.spi.SyncClientCustomizer> customizers) {
         this.syncProperties = syncProperties;
         this.environment = environment;
         try {

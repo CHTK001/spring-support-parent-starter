@@ -18,6 +18,10 @@ import java.sql.Statement;
 
 /**
  * DataSync 数据库模式集成测试启动应用。
+ * <p>
+ * 表结构由 {@code spring-support-datasource-starter} 自动执行
+ * {@code db/init/V1.0.0__init_datasync_mapping.sql} 初始化。
+ * </p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -35,7 +39,6 @@ public class DataSyncApplicationDb {
         System.out.println("[APP-DB] plugin.datasync.mapping-source=" + properties.getMappingSource());
         System.out.println("[APP-DB] plugin.datasync.database-mapping.enabled=" + properties.getDatabaseMapping().isEnabled());
         System.out.println("[APP-DB] plugin.datasync.database-mapping.table-prefix=" + properties.getDatabaseMapping().getTablePrefix());
-        System.out.println("[APP-DB] plugin.datasync.database-mapping.auto-init-table=" + properties.getDatabaseMapping().isAutoInitTable());
 
         DefaultDataSyncServer server = context.getBean(DefaultDataSyncServer.class);
         DataSyncMappingManager mappingManager = server.mappingManager();
@@ -57,49 +60,11 @@ public class DataSyncApplicationDb {
     @Configuration
     static class DbTestConfig {
         @Bean
-        public DataSource dataSource() throws SQLException {
+        public DataSource dataSource() {
             org.h2.jdbcx.JdbcDataSource ds = new org.h2.jdbcx.JdbcDataSource();
             ds.setURL("jdbc:h2:mem:testdb-datasync;DB_CLOSE_DELAY=-1");
             ds.setUser("sa");
             ds.setPassword("");
-        try (Connection conn = ds.getConnection();
-             Statement stmt = conn.createStatement()) {
-            stmt.execute("""
-                CREATE TABLE IF NOT EXISTS datasync_mapping (
-                    datasync_mapping_id VARCHAR(255) PRIMARY KEY,
-                    datasync_mapping_input_id VARCHAR(255),
-                    datasync_mapping_source_id VARCHAR(255),
-                    datasync_mapping_output_id VARCHAR(255),
-                    datasync_mapping_sink_id VARCHAR(255),
-                    datasync_mapping_batch INT DEFAULT 100,
-                    datasync_mapping_cron_type VARCHAR(255),
-                    datasync_mapping_cron VARCHAR(255),
-                    datasync_mapping_params TEXT,
-                    datasync_mapping_enabled BOOLEAN DEFAULT TRUE,
-                    datasync_mapping_create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    datasync_mapping_update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-                """);
-            stmt.execute("""
-                CREATE TABLE IF NOT EXISTS datasync_field_mapping (
-                    datasync_field_mapping_id VARCHAR(255) PRIMARY KEY,
-                    datasync_field_mapping_mapping_id VARCHAR(255),
-                    datasync_field_mapping_source_field VARCHAR(255),
-                    datasync_field_mapping_target_field VARCHAR(255),
-                    datasync_field_mapping_converter VARCHAR(255),
-                    datasync_field_mapping_sort INT,
-                    FOREIGN KEY (datasync_field_mapping_mapping_id) REFERENCES datasync_mapping(datasync_mapping_id)
-                )
-                """);
-            stmt.execute("""
-                INSERT INTO datasync_mapping (datasync_mapping_id, datasync_mapping_input_id, datasync_mapping_source_id, datasync_mapping_output_id, datasync_mapping_sink_id, datasync_mapping_batch, datasync_mapping_cron_type, datasync_mapping_cron, datasync_mapping_params, datasync_mapping_enabled)
-                VALUES ('db-user-sync', 'user-input', 'user-source', 'user-output', 'user-sink', 100, 'fixed', '0/5 * * * * ?', '{}', TRUE)
-                """);
-            stmt.execute("""
-                INSERT INTO datasync_field_mapping (datasync_field_mapping_id, datasync_field_mapping_mapping_id, datasync_field_mapping_source_field, datasync_field_mapping_target_field, datasync_field_mapping_converter, datasync_field_mapping_sort)
-                VALUES ('f1', 'db-user-sync', 'name', 'user_name', 'toString', 0)
-                """);
-        }
             return ds;
         }
     }
