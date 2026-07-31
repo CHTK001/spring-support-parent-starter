@@ -54,3 +54,5 @@ sys
 *.db
 *.sqlite
 *.sqlite3
+
+*.err
