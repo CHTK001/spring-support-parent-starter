@@ -65,7 +65,7 @@ public class SyncDataExchangeService {
     public void broadcast(String channel, Object payload) {
         SyncServer syncServer = requireSyncServer();
         String topic = resolveTopic(channel);
-        syncServer.publish(topic, payload);
+        syncServer.broadcast(topic, payload);
     }
 
     public void sendToSession(String sessionId, String channel, Object payload) {
