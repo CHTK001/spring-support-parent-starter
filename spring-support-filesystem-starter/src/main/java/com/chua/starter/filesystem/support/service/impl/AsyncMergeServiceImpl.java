@@ -99,7 +99,7 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
             return;
         }
         chunkService.markMerged(uploadId);
-        fileService.createFromTask(uploadId, result.getUrl(), result.getEtag());
+        fileService.createFromTask(uploadId, result.getUrl(), null);
         uploadService.markCompleted(uploadId, result.getUrl());
         log.info("异步合并完成: {} -> {}", uploadId, result.getUrl());
     }
