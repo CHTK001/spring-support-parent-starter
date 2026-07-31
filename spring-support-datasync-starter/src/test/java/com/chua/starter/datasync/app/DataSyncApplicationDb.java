@@ -32,6 +32,7 @@ public class DataSyncApplicationDb {
         ConfigurableApplicationContext context = new SpringApplicationBuilder()
                 .sources(DataSyncApplicationDb.class, DataSyncAutoConfiguration.class, DbTestConfig.class)
                 .web(WebApplicationType.NONE)
+                .profiles("h2")
                 .run(args);
 
         DatasyncProperties properties = context.getBean(DatasyncProperties.class);
