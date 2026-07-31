@@ -368,6 +368,18 @@ public class SyncProperties {
          */
         private String offlineTopic = "sync/client/offline";
 
+        public String getRegisterTopic() {
+            return registerTopic;
+        }
+
+        public String getHeartbeatTopic() {
+            return heartbeatTopic;
+        }
+
+        public String getOfflineTopic() {
+            return offlineTopic;
+        }
+
         /**
          * 获取有效的服务端地址
          */

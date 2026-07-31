@@ -150,6 +150,7 @@ public class FileStorageProperties {
     public static class ServerConfig {
         private String name = "default";
         private boolean enable = true;
+        private String type = "jdk";
         private String host = "0.0.0.0";
         private int port = 9000;
         private boolean ssl = false;
@@ -159,6 +160,7 @@ public class FileStorageProperties {
         private String contextPath = "/";
         private long readTimeoutMillis = 30_000;
         private long writeTimeoutMillis = 30_000;
+        private List<String> filters = new ArrayList<>();
     }
 
     // ==================== 兼容老配置 (deprecated, 但保留解析能力) ====================

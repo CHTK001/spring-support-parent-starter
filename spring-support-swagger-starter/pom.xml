@@ -13,6 +13,12 @@
   </properties>
   <dependencies>
     <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-common-starter</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>com.github.xiaoymin</groupId>
       <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
       <version>${knife4j-springdoc-openapi-jakarta.version}</version>

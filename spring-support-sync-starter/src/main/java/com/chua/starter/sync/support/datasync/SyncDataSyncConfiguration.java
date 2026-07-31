@@ -198,38 +198,39 @@ public class SyncDataSyncConfiguration {
          * @param channel 通道名称
          * @param payload 消息负载
          */
-        public void publish(String channel, Object payload) {
-            SyncProperties syncProperties = syncPropertiesProvider.getIfAvailable();
-            if (syncProperties == null) {
-                return;
-            }
-            String resolvedChannel = resolveChannel(channel, syncProperties);
-            String topic = syncProperties.getDataSync().getTopicPrefix() + "/" + resolvedChannel;
-
-            SyncClient syncClient = syncClientProvider.getIfAvailable();
-            if (syncClient != null) {
-                syncClient.publish(topic, payload);
-            }
+    public void publish(String channel, Object payload) {
+        SyncProperties syncProperties = syncPropertiesProvider.getIfAvailable();
+        if (syncProperties == null) {
+            return;
         }
+        String resolvedChannel = resolveChannel(channel, syncProperties);
+        String topic = syncProperties.getDataSync().getTopicPrefix() + "/" + resolvedChannel;
 
-        /**
-         * 广播消息到所有客户端
-         *
-         * @param channel 通道名称
-         * @param payload 消息负载
-         */
-        public void broadcast(String channel, Object payload) {
-            SyncProperties syncProperties = syncPropertiesProvider.getIfAvailable();
-            if (syncProperties == null) {
-                return;
-            }
-            String resolvedChannel = resolveChannel(channel, syncProperties);
-
-            SyncServer syncServer = syncServerProvider.getIfAvailable();
-            if (syncServer != null) {
-                syncServer.broadcast(resolvedChannel, payload);
-            }
+        SyncClient syncClient = syncClientProvider.getIfAvailable();
+        if (syncClient != null) {
+            syncClient.send(topic, payload);
         }
+    }
+
+    /**
+     * 广播消息到所有客户端
+     *
+     * @param channel 通道名称
+     * @param payload 消息负载
+     */
+    public void broadcast(String channel, Object payload) {
+        SyncProperties syncProperties = syncPropertiesProvider.getIfAvailable();
+        if (syncProperties == null) {
+            return;
+        }
+        String resolvedChannel = resolveChannel(channel, syncProperties);
+        String topic = syncProperties.getDataSync().getTopicPrefix() + "/" + resolvedChannel;
+
+        SyncServer syncServer = syncServerProvider.getIfAvailable();
+        if (syncServer != null) {
+            syncServer.publish(topic, payload);
+        }
+    }
 
         /**
          * 解析通道名称

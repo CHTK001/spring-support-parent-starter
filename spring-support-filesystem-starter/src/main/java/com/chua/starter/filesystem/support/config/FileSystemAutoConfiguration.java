@@ -19,6 +19,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
@@ -65,5 +66,12 @@ public class FileSystemAutoConfiguration {
             registry.registerEndpoint("文件系统", "文件下载", "download", "文件下载");
             registry.registerFlag("filesystem", "文件系统", true, "文件存储模块");
         };
+    }
+
+    @Bean
+    public FileServerManager fileServerManager(FileStorageProperties properties, FileStorageTemplate template, ApplicationContext applicationContext) {
+        FileServerManager manager = new FileServerManager(properties, template, applicationContext);
+        manager.startAll();
+        return manager;
     }
 }
