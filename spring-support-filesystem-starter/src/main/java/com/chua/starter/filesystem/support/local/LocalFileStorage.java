@@ -27,6 +27,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -53,7 +54,9 @@ public class LocalFileStorage extends AbstractFileStorage {
 
     public LocalFileStorage(BucketSetting setting) {
         super(setting);
-        String baseDir = System.getProperty("java.io.tmpdir") + "/filesystem-local-test/"
+        String baseDir = Optional.ofNullable(System.getProperty("filesystem.temp.path"))
+                .orElse(System.getProperty("java.io.tmpdir"))
+                + "/filesystem-local-test/"
                 + (bucket != null ? bucket : "default");
         this.rootPath = Paths.get(baseDir);
         try {

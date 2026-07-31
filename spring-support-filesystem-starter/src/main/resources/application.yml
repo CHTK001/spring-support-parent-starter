@@ -13,6 +13,7 @@ spring:
 plugin:
   filesystem:
     enable: true
+    temp-path: ${java.io.tmpdir}/filesystem-chunks
     default-provider: local
     providers:
       local:

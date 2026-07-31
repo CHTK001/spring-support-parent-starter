@@ -74,6 +74,12 @@ public class FileStorageProperties {
      */
     private List<ServerConfig> servers = new ArrayList<>();
 
+    /**
+     * 分片上传临时目录 (用于存储分片文件)
+     * 不配置时默认使用系统临时目录 + /filesystem-chunks
+     */
+    private String tempPath;
+
     // ==================== 功能开关 ====================
 
     private boolean openWebjars = true;

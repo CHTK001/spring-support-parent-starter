@@ -4,6 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 
@@ -22,12 +23,25 @@ import javax.sql.DataSource;
 public class FileSystemApplication {
 
     /**
+     * 临时目录系统属性键
+     */
+    private static final String TEMP_PATH_KEY = "filesystem.temp.path";
+
+    /**
      * 程序入口。
      *
      * @param args 命令行参数
      */
     public static void main(String[] args) {
-        SpringApplication.run(FileSystemApplication.class, args);
+        SpringApplication app = new SpringApplication(FileSystemApplication.class);
+        app.addInitializers(ctx -> {
+            Environment env = ctx.getEnvironment();
+            String tempPath = env.getProperty("plugin.filesystem.temp-path");
+            if (tempPath != null && !tempPath.isEmpty()) {
+                System.setProperty(TEMP_PATH_KEY, tempPath);
+            }
+        });
+        app.run(args);
     }
 
     /**
