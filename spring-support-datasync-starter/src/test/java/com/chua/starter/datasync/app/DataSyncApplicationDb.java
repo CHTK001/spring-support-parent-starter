@@ -9,7 +9,6 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -27,7 +26,7 @@ public class DataSyncApplicationDb {
 
     public static void main(String[] args) throws Exception {
         ConfigurableApplicationContext context = new SpringApplicationBuilder()
-                .sources(DataSyncApplicationDb.class)
+                .sources(DataSyncApplicationDb.class, DataSyncAutoConfiguration.class, DbTestConfig.class)
                 .web(WebApplicationType.NONE)
                 .run(args);
 
@@ -56,9 +55,8 @@ public class DataSyncApplicationDb {
     }
 
     @Configuration
-    static class TestConfig {
+    static class DbTestConfig {
         @Bean
-        @Primary
         public DataSource dataSource() throws SQLException {
             org.h2.jdbcx.JdbcDataSource ds = new org.h2.jdbcx.JdbcDataSource();
             ds.setURL("jdbc:h2:mem:testdb-datasync;DB_CLOSE_DELAY=-1");
@@ -103,6 +101,11 @@ public class DataSyncApplicationDb {
                         """);
             }
             return ds;
+        }
+
+        @Bean
+        public com.chua.starter.datasync.mapping.DataSyncMappingManager dataSyncMappingManager() {
+            return new com.chua.starter.datasync.mapping.DefaultDataSyncMappingManager();
         }
     }
 }
