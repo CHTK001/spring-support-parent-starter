@@ -1,0 +1,128 @@
+package com.chua.starter.datasync.configuration;
+
+import com.chua.starter.datasync.agent.AgentServerManager;
+import com.chua.starter.datasync.agent.DataSyncAgentServer;
+import com.chua.starter.datasync.config.DirectoryConfigDefinition;
+import com.chua.starter.datasync.mapping.DataSyncFieldMapping;
+import com.chua.starter.datasync.scanner.ConfigFileParser;
+import com.chua.starter.datasync.scanner.DirectoryDataSyncMappingScanner;
+import com.chua.starter.datasync.scanner.JsonConfigFileParser;
+import com.chua.starter.datasync.scanner.PropertiesConfigFileParser;
+import com.chua.starter.datasync.scanner.YamlConfigFileParser;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * DataSync 自动配置。
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
+@AutoConfiguration
+@ConditionalOnClass(name = "com.chua.starter.datasync.DataSyncServer")
+@ConditionalOnProperty(prefix = "plugin.datasync", name = "enabled", havingValue = "true", matchIfMissing = true)
+@EnableConfigurationProperties(DatasyncProperties.class)
+public class DataSyncAutoConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean
+    public com.chua.starter.datasync.DataSyncServer dataSyncServer(AgentServerManager agentServerManager) {
+        return new com.chua.starter.datasync.DefaultDataSyncServer(agentServerManager);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public AgentServerManager agentServerManager() {
+        return new DataSyncAgentServer(null, null, "default-server");
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix = "plugin.datasync", name = "mapping-source", havingValue = "file")
+    @ConditionalOnMissingBean
+    public DirectoryDataSyncMappingScanner directoryDataSyncMappingScanner(DatasyncProperties properties) {
+        return new DirectoryDataSyncMappingScanner(
+                new com.chua.starter.datasync.mapping.DefaultDataSyncMappingManager(),
+                new SimpleDirectoryConfigDefinition(properties.getFileMapping().getDirectoryPath()),
+                List.of(
+                        new YamlConfigFileParser(),
+                        new JsonConfigFileParser(),
+                        new PropertiesConfigFileParser()
+                )
+        );
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix = "plugin.datasync.database-mapping", name = "enabled", havingValue = "true")
+    @ConditionalOnMissingBean
+    public DatabaseMappingLoader databaseMappingLoader(javax.sql.DataSource dataSource,
+                                                       DatasyncProperties properties,
+                                                       com.chua.starter.datasync.mapping.DataSyncMappingManager mappingManager) {
+        return new DatabaseMappingLoader(dataSource, properties, mappingManager);
+    }
+
+    private static class SimpleDirectoryConfigDefinition implements DirectoryConfigDefinition {
+        private final String directoryPath;
+
+        SimpleDirectoryConfigDefinition(String directoryPath) {
+            this.directoryPath = directoryPath;
+        }
+
+        @Override
+        public String directoryPath() {
+            return directoryPath;
+        }
+
+        @Override
+        public String inputId() {
+            return null;
+        }
+
+        @Override
+        public String sourceId() {
+            return null;
+        }
+
+        @Override
+        public String outputId() {
+            return null;
+        }
+
+        @Override
+        public String sinkId() {
+            return null;
+        }
+
+        @Override
+        public List<DataSyncFieldMapping> mappings() {
+            return List.of();
+        }
+
+        @Override
+        public int batch() {
+            return 100;
+        }
+
+        @Override
+        public String cronType() {
+            return null;
+        }
+
+        @Override
+        public String cron() {
+            return null;
+        }
+
+        @Override
+        public Map<String, Object> params() {
+            return Map.of();
+        }
+    }
+}

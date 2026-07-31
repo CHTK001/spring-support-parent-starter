@@ -56,13 +56,28 @@
             <optional>true</optional>
         </dependency>
 
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
+  <dependency>
+    <groupId>io.rsocket</groupId>
+    <artifactId>rsocket-core</artifactId>
+    <scope>provided</scope>
+  </dependency>
+  <dependency>
+    <groupId>io.rsocket</groupId>
+    <artifactId>rsocket-transport-netty</artifactId>
+    <scope>provided</scope>
+  </dependency>
+  <dependency>
+    <groupId>com.corundumstudio.socketio</groupId>
+    <artifactId>netty-socketio</artifactId>
+    <scope>provided</scope>
+  </dependency>
+  <dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-test</artifactId>
+    <scope>test</scope>
+  </dependency>
 
-    </dependencies>
+</dependencies>
 
     <build>
         <plugins>

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>4.0.0.42</version>
+    </parent>
+
+    <artifactId>spring-support-datasync-starter</artifactId>
+    <description>DataSync Spring Boot Starter：文件/数据库双源映射配置自动加载</description>
+
+    <dependencies>
+        <!-- Spring Boot 自动配置 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+
+        <!-- 配置属性绑定 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- DataSync 核心模块 -->
+        <dependency>
+        <groupId>com.chua</groupId>
+        <artifactId>utils-support-datasync-starter</artifactId>
+        <version>${utils.version}</version>
+        <scope>provided</scope>
+        </dependency>
+
+        <!-- 数据源（provided，由用户项目提供） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-datasource-starter</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- JSON 解析 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- 测试 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

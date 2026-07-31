@@ -1,17 +1,12 @@
 package com.chua.starter.sync.support.server;
 
 import com.chua.common.support.network.server.ServerSetting;
+import com.chua.common.support.network.server.SyncServer;
+import com.chua.common.support.network.server.SyncServerListener;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.starter.sync.support.SyncConnectionListener;
-import com.chua.starter.sync.support.SyncMessage;
-import com.chua.starter.sync.support.SyncMessageListener;
-import com.chua.starter.sync.support.SyncServer;
-import com.chua.starter.sync.support.SyncSession;
-import com.chua.starter.sync.support.SyncProtocol;
-import com.chua.common.support.network.server.ServerSetting;
+import com.chua.common.support.network.sync.SyncMessageHandler;
 import com.chua.starter.sync.support.pojo.ClientInfo;
 import com.chua.starter.sync.support.properties.SyncProperties;
-import com.chua.starter.sync.support.spi.SyncMessageHandler;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -64,9 +59,6 @@ public class SyncServerInstance {
     @Getter
     private volatile boolean running = false;
 
-    /**
-     * 监听器是否已注册到底层服务端。
-     */
     private boolean listenersAttached = false;
 
     public SyncServerInstance(SyncProperties.ServerInstance instanceConfig, SyncProperties syncProperties) {
@@ -105,8 +97,7 @@ public class SyncServerInstance {
         if (listenersAttached || syncServer == null) {
             return;
         }
-        syncServer.addConnectionListener(new InternalConnectionListener());
-        syncServer.addMessageListener(new InternalMessageListener());
+        syncServer.addListener(new InternalServerListener());
         listenersAttached = true;
     }
 
@@ -139,13 +130,9 @@ public class SyncServerInstance {
         setting.setPort(port);
         setting.setProtocol(protocol);
 
-        com.chua.common.support.spi.ServiceProvider<SyncProtocol> provider =
-                com.chua.common.support.spi.ServiceProvider.of(SyncProtocol.class);
-        SyncProtocol syncProtocol = provider.getNewExtension(protocol, protocol);
-        if (syncProtocol == null) {
-            throw new IllegalArgumentException("Unsupported sync protocol: " + protocol);
-        }
-        return syncProtocol.createServer(setting);
+        com.chua.common.support.spi.ServiceProvider<SyncServer> provider =
+                com.chua.common.support.spi.ServiceProvider.of(SyncServer.class);
+        return provider.getNewExtension(protocol, setting);
     }
 
     public void stop() {
@@ -193,180 +180,174 @@ public class SyncServerInstance {
         return syncServer != null ? syncServer.getSessionIds() : new HashSet<>();
     }
 
-    public SyncSession getSession(String sessionId) {
-        return syncServer != null ? syncServer.getSession(sessionId) : null;
+    public String getSessionId(String clientId) {
+        return syncServer != null && clientId != null ? syncServer.getConnectedClients().stream()
+                .filter(clientId::equals).findFirst().orElse(null) : null;
     }
 
-    private class InternalConnectionListener implements SyncConnectionListener {
-
+    private class InternalServerListener implements SyncServerListener {
         @Override
-        public void onConnect(SyncSession session) {
-            String sessionId = session.getSessionId();
-            log.info("[SyncServer:{}] 客户端连接: sessionId={}", instanceConfig.getName(), sessionId);
-            broadcastToOthers(sessionId, TOPIC_CONNECT, Map.of(
-                    "sessionId", sessionId, "event", "connect",
+        public void onClientConnected(String clientId, java.util.Map<String, Object> metadata) {
+            log.info("[SyncServer:{}] 客户端连接: clientId={}", instanceConfig.getName(), clientId);
+            broadcastToOthers(clientId, TOPIC_CONNECT, Map.of(
+                    "clientId", clientId, "event", "connect",
                     "onlineCount", getConnectionCount(), "timestamp", System.currentTimeMillis()));
         }
 
         @Override
-        public void onDisconnect(SyncSession session) {
-            String sessionId = session.getSessionId();
-            ClientInfo clientInfo = clientInfoMap.remove(sessionId);
-            log.info("[SyncServer:{}] 客户端断开: sessionId={}", instanceConfig.getName(), sessionId);
+        public void onClientDisconnected(String clientId) {
+            ClientInfo clientInfo = clientInfoMap.remove(clientId);
+            log.info("[SyncServer:{}] 客户端断开: clientId={}", instanceConfig.getName(), clientId);
             for (BiConsumer<String, ClientInfo> listener : disconnectListeners) {
                 try {
-                    listener.accept(sessionId, clientInfo);
+                    listener.accept(clientId, clientInfo);
                 } catch (Exception e) {
                     log.error("[SyncServer:{}] 断开监听器执行失败", instanceConfig.getName(), e);
                 }
             }
-            broadcastToOthers(sessionId, TOPIC_DISCONNECT, Map.of(
-                    "sessionId", sessionId, "event", "disconnect",
+            broadcastToOthers(clientId, TOPIC_DISCONNECT, Map.of(
+                    "clientId", clientId, "event", "disconnect",
                     "onlineCount", getConnectionCount(), "timestamp", System.currentTimeMillis()));
+        }
+
+        @Override
+        public void onMessage(String clientId, String topic, Object message) {
+            handleServerMessage(clientId, topic, message);
+        }
+
+        @Override
+        public void onError(String clientId, Throwable cause) {
+            log.error("[SyncServer:{}] 客户端错误: clientId={}", instanceConfig.getName(), clientId, cause);
         }
     }
 
-    private class InternalMessageListener implements SyncMessageListener {
-
-        @Override
-        @SuppressWarnings("unchecked")
-        public void onMessage(SyncSession session, SyncMessage message) {
-            String sessionId = session.getSessionId();
-            String topic = message.getTopic();
-            Object data = message.getData();
-
-            log.debug("[SyncServer:{}] 收到消息: sessionId={}, topic={}", instanceConfig.getName(), sessionId, topic);
-
-            if (handleSystemTopic(sessionId, topic, data)) {
-                return;
-            }
-
-            List<SyncMessageHandler> handlers = handlerMap.get(topic);
-            if ((handlers == null || handlers.isEmpty()) && syncProperties.getTopics().containsKey(topic)) {
-                handlers = handlerMap.get(topic);
-            }
-            if (handlers == null || handlers.isEmpty()) {
-                log.debug("[SyncServer:{}] 未找到主题处理器: {}", instanceConfig.getName(), topic);
-                return;
-            }
-
-            Map<String, Object> dataMap = data instanceof Map ? (Map<String, Object>) data : Map.of("data", data);
-            for (SyncMessageHandler handler : handlers) {
-                try {
-                    Object result = handler.handle(topic, sessionId, dataMap);
-                    if (result != null) {
-                        send(sessionId, TOPIC_RESPONSE, Map.of(
-                                "requestId", dataMap.getOrDefault("requestId", ""),
-                                "topic", topic, "handler", handler.getName(),
-                                "success", true, "code", 200, "data", result,
-                                "timestamp", System.currentTimeMillis()));
-                    }
-                } catch (Exception e) {
-                    log.error("[SyncServer:{}] 处理器执行失败: handler={}, topic={}",
-                            instanceConfig.getName(), handler.getName(), topic, e);
-                    send(sessionId, TOPIC_RESPONSE, Map.of(
-                            "requestId", dataMap.getOrDefault("requestId", ""),
-                            "topic", topic, "success", false, "code", 500,
-                            "message", e.getMessage(), "timestamp", System.currentTimeMillis()));
-                }
-            }
+    @SuppressWarnings("unchecked")
+    private void handleServerMessage(String clientId, String topic, Object data) {
+        if (handleSystemTopic(clientId, topic, data)) {
+            return;
         }
-
-        @SuppressWarnings("unchecked")
-        private boolean handleSystemTopic(String sessionId, String topic, Object data) {
-            if (TOPIC_HEALTH.equals(topic)) {
-                send(sessionId, TOPIC_HEALTH, Map.of("status", "UP", "instance", instanceConfig.getName(),
-                        "connections", getConnectionCount(), "timestamp", System.currentTimeMillis()));
-                return true;
-            }
-            if (isClientRegisterTopic(topic)) {
-                handleClientRegister(sessionId, data);
-                return true;
-            }
-            if (isClientHeartbeatTopic(topic)) {
-                handleClientHeartbeat(sessionId);
-                return true;
-            }
-            if (isClientOfflineTopic(topic)) {
-                handleClientOffline(sessionId);
-                return true;
-            }
-            return false;
+        List<SyncMessageHandler> handlers = handlerMap.get(topic);
+        if ((handlers == null || handlers.isEmpty()) && syncProperties.getTopics().containsKey(topic)) {
+            handlers = handlerMap.get(topic);
         }
-
-        @SuppressWarnings("unchecked")
-        private void handleClientRegister(String sessionId, Object data) {
+        if (handlers == null || handlers.isEmpty()) {
+            return;
+        }
+        Map<String, Object> dataMap = data instanceof Map ? (Map<String, Object>) data : Map.of("data", data);
+        for (SyncMessageHandler handler : handlers) {
             try {
-                ClientInfo clientInfo = ClientInfo.builder().build();
-                if (data instanceof Map<?, ?> map) {
-                    copyMapToClientInfo((Map<String, Object>) map, clientInfo);
-                }
-                clientInfoMap.put(sessionId, clientInfo);
-                log.info("[SyncServer:{}] 客户端注册: sessionId={}, app={}, ip={}:{}",
-                        instanceConfig.getName(), sessionId, clientInfo.getClientApplicationName(),
-                        clientInfo.getClientIpAddress(), clientInfo.getClientPort());
-                for (BiConsumer<String, ClientInfo> listener : connectListeners) {
-                    try {
-                        listener.accept(sessionId, clientInfo);
-                    } catch (Exception e) {
-                        log.error("[SyncServer:{}] 连接监听器执行失败", instanceConfig.getName(), e);
-                    }
+                Object result = handler.handle(topic, dataMap);
+                if (result != null) {
+                    send(clientId, TOPIC_RESPONSE, Map.of(
+                            "requestId", dataMap.getOrDefault("requestId", ""),
+                            "topic", topic, "handler", handler.getName(),
+                            "success", true, "code", 200, "data", result,
+                            "timestamp", System.currentTimeMillis()));
                 }
             } catch (Exception e) {
-                log.error("[SyncServer:{}] 处理客户端注册失败", instanceConfig.getName(), e);
+                log.error("[SyncServer:{}] 处理器执行失败: handler={}, topic={}", instanceConfig.getName(), handler.getName(), topic, e);
+                send(clientId, TOPIC_RESPONSE, Map.of(
+                        "requestId", dataMap.getOrDefault("requestId", ""),
+                        "topic", topic, "success", false, "code", 500,
+                        "message", e.getMessage(), "timestamp", System.currentTimeMillis()));
             }
         }
+    }
 
-        private void copyMapToClientInfo(Map<String, Object> map, ClientInfo clientInfo) {
-            if (map.containsKey("clientApplicationName")) {
-                clientInfo.setClientApplicationName(String.valueOf(map.get("clientApplicationName")));
-            }
-            if (map.containsKey("clientIpAddress")) {
-                clientInfo.setClientIpAddress(String.valueOf(map.get("clientIpAddress")));
-            }
-            if (map.containsKey("clientPort")) {
-                clientInfo.setClientPort(Integer.parseInt(String.valueOf(map.get("clientPort"))));
-            }
-            if (map.containsKey("clientId")) {
-                clientInfo.setClientId(String.valueOf(map.get("clientId")));
-            }
+    @SuppressWarnings("unchecked")
+    private boolean handleSystemTopic(String clientId, String topic, Object data) {
+        if (TOPIC_HEALTH.equals(topic)) {
+            send(clientId, TOPIC_HEALTH, Map.of("status", "UP", "instance", instanceConfig.getName(),
+                    "connections", getConnectionCount(), "timestamp", System.currentTimeMillis()));
+            return true;
         }
+        if (isClientRegisterTopic(topic)) {
+            handleClientRegister(clientId, data);
+            return true;
+        }
+        if (isClientHeartbeatTopic(topic)) {
+            handleClientHeartbeat(clientId);
+            return true;
+        }
+        if (isClientOfflineTopic(topic)) {
+            handleClientOffline(clientId);
+            return true;
+        }
+        return false;
+    }
 
-        private void handleClientHeartbeat(String sessionId) {
-            ClientInfo clientInfo = clientInfoMap.get(sessionId);
-            if (clientInfo != null) {
-                clientInfo.setClientLastHeartbeatTime(System.currentTimeMillis());
-                clientInfo.setClientOnline(true);
+    @SuppressWarnings("unchecked")
+    private void handleClientRegister(String clientId, Object data) {
+        try {
+            ClientInfo clientInfo = ClientInfo.builder().build();
+            if (data instanceof Map<?, ?> map) {
+                copyMapToClientInfo((Map<String, Object>) map, clientInfo);
             }
-        }
-
-        private void handleClientOffline(String sessionId) {
-            ClientInfo clientInfo = clientInfoMap.get(sessionId);
-            if (clientInfo != null) {
-                clientInfo.setClientOnline(false);
+            clientInfoMap.put(clientId, clientInfo);
+            log.info("[SyncServer:{}] 客户端注册: clientId={}, app={}, ip={}:{}",
+                    instanceConfig.getName(), clientId, clientInfo.getClientApplicationName(),
+                    clientInfo.getClientIpAddress(), clientInfo.getClientPort());
+            for (BiConsumer<String, ClientInfo> listener : connectListeners) {
+                try {
+                    listener.accept(clientId, clientInfo);
+                } catch (Exception e) {
+                    log.error("[SyncServer:{}] 连接监听器执行失败", instanceConfig.getName(), e);
+                }
             }
+        } catch (Exception e) {
+            log.error("[SyncServer:{}] 处理客户端注册失败", instanceConfig.getName(), e);
         }
+    }
 
-        private boolean isClientRegisterTopic(String topic) {
-            return matchesClientTopic(topic, syncProperties.getClient().getRegisterTopic(), TOPIC_CLIENT_REGISTER);
+    private void copyMapToClientInfo(Map<String, Object> map, ClientInfo clientInfo) {
+        if (map.containsKey("clientApplicationName")) {
+            clientInfo.setClientApplicationName(String.valueOf(map.get("clientApplicationName")));
         }
+        if (map.containsKey("clientIpAddress")) {
+            clientInfo.setClientIpAddress(String.valueOf(map.get("clientIpAddress")));
+        }
+        if (map.containsKey("clientPort")) {
+            clientInfo.setClientPort(Integer.parseInt(String.valueOf(map.get("clientPort"))));
+        }
+        if (map.containsKey("clientId")) {
+            clientInfo.setClientId(String.valueOf(map.get("clientId")));
+        }
+    }
 
-        private boolean isClientHeartbeatTopic(String topic) {
-            return matchesClientTopic(topic, syncProperties.getClient().getHeartbeatTopic(), TOPIC_CLIENT_HEARTBEAT);
+    private void handleClientHeartbeat(String clientId) {
+        ClientInfo clientInfo = clientInfoMap.get(clientId);
+        if (clientInfo != null) {
+            clientInfo.setClientLastHeartbeatTime(System.currentTimeMillis());
+            clientInfo.setClientOnline(true);
         }
+    }
 
-        private boolean isClientOfflineTopic(String topic) {
-            return matchesClientTopic(topic, syncProperties.getClient().getOfflineTopic(), TOPIC_CLIENT_OFFLINE);
+    private void handleClientOffline(String clientId) {
+        ClientInfo clientInfo = clientInfoMap.get(clientId);
+        if (clientInfo != null) {
+            clientInfo.setClientOnline(false);
         }
+    }
 
-        private boolean matchesClientTopic(String actualTopic, String configuredTopic, String defaultTopic) {
-            if (actualTopic == null || actualTopic.isBlank()) {
-                return false;
-            }
-            if (Objects.equals(actualTopic, configuredTopic)) {
-                return true;
-            }
-            return Objects.equals(actualTopic, defaultTopic);
+    private boolean isClientRegisterTopic(String topic) {
+        return matchesClientTopic(topic, syncProperties.getClient().getRegisterTopic(), TOPIC_CLIENT_REGISTER);
+    }
+
+    private boolean isClientHeartbeatTopic(String topic) {
+        return matchesClientTopic(topic, syncProperties.getClient().getHeartbeatTopic(), TOPIC_CLIENT_HEARTBEAT);
+    }
+
+    private boolean isClientOfflineTopic(String topic) {
+        return matchesClientTopic(topic, syncProperties.getClient().getOfflineTopic(), TOPIC_CLIENT_OFFLINE);
+    }
+
+    private boolean matchesClientTopic(String actualTopic, String configuredTopic, String defaultTopic) {
+        if (actualTopic == null || actualTopic.isBlank()) {
+            return false;
         }
+        if (Objects.equals(actualTopic, configuredTopic)) {
+            return true;
+        }
+        return Objects.equals(actualTopic, defaultTopic);
     }
 }

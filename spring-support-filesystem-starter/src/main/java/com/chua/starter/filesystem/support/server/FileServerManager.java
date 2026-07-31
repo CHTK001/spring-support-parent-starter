@@ -52,7 +52,7 @@ public class FileServerManager implements AutoCloseable {
      * 启动所有配置的文件服务器
      */
     public void startAll() {
-        List<FileStorageProperties.ServerConfig> servers = properties.servers;
+        List<FileStorageProperties.ServerConfig> servers = properties.getServers();
         if (servers == null || servers.isEmpty()) {
             log.info("未配置文件服务器，跳过启动");
             return;
@@ -63,15 +63,15 @@ public class FileServerManager implements AutoCloseable {
         log.info("├─ 服务器数量: {}", highlight(servers.size()));
 
         for (FileStorageProperties.ServerConfig serverConfig : servers) {
-            if (!serverConfig.enable) {
-                log.info("├─ 跳过禁用的服务器: {}", serverConfig.name);
+            if (!serverConfig.isEnable()) {
+                log.info("├─ 跳过禁用的服务器: {}", serverConfig.getName());
                 continue;
             }
 
             try {
                 startServer(serverConfig);
             } catch (Exception e) {
-                log.error("启动服务器失败: {} - {}", serverConfig.name, e.getMessage(), e);
+                log.error("启动服务器失败: {} - {}", serverConfig.getName(), e.getMessage(), e);
             }
         }
 
@@ -82,9 +82,9 @@ public class FileServerManager implements AutoCloseable {
      * 启动单个文件服务器
      */
     private void startServer(FileStorageProperties.ServerConfig config) throws Exception {
-        String serverName = config.name;
-        String host = config.host;
-        int port = config.port;
+        String serverName = config.getName();
+        String host = config.getHost();
+        int port = config.getPort();
 
         ServerSetting setting = ServerSetting.defaults();
         setting.setHost(host);

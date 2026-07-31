@@ -31,11 +31,11 @@
     <description>统一文件存储抽象层，支持 MinIO、OSS、COS 等多种存储后端</description>
 
     <dependencies>
-        <!-- Lombok -->
+        <!-- Lombok (编译期, 不会打入运行时 JAR; version 由父 pom dependencyManagement 提供) -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <scope>compile</scope>
+            <scope>provided</scope>
         </dependency>
 
         <!-- 基础工具包，包含 FileStorage 接口 -->
@@ -70,27 +70,8 @@
         </dependency>
     </dependencies>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
-                <configuration>
-                    <source>25</source>
-                    <target>25</target>
-                    <encoding>UTF-8</encoding>
-                    <proc>full</proc>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version>
-                        </path>
-                    </annotationProcessorPaths>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+    <!-- 继承父 pom 的 maven-compiler-plugin (3.13.0 + lombok annotation processor + add opens 配置)
+         子模块切勿重复声明 compiler plugin, 否则覆盖父 pom 的 fork / add-opens / lombok 配置,
+         导致 Lombok 在 Java 25 上 annotation processor 不工作, 编译报 "字段是 private 访问控制"。 -->
 
 </project>

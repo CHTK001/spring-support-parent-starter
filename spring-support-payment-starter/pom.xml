@@ -54,13 +54,11 @@
       <groupId>com.chua</groupId>
       <artifactId>spring-support-job-starter</artifactId>
     </dependency>
-    <!-- 暂时注释，等待 strategy-starter 编译安装后再启用 -->
-    <!--
+        <!-- 策略/容错由 utils-support-springboot-starter 提供 (spring-support-strategy-starter 已下线) -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>spring-support-strategy-starter</artifactId>
+            <artifactId>utils-support-springboot-starter</artifactId>
         </dependency>
-        -->
     <dependency>
       <groupId>com.fasterxml.jackson.dataformat</groupId>
       <artifactId>jackson-dataformat-xml</artifactId>

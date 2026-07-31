@@ -49,11 +49,11 @@ public class FileStorageTemplate implements AutoCloseable {
      * 初始化所有 Provider。
      */
     public void initialize() {
-        if (properties.providers == null || properties.providers.isEmpty()) {
+        if (properties.getProviders() == null || properties.getProviders().isEmpty()) {
             log.warn("未配置任何 Provider");
             return;
         }
-        for (Map.Entry<String, ProviderConfig> entry : properties.providers.entrySet()) {
+        for (Map.Entry<String, ProviderConfig> entry : properties.getProviders().entrySet()) {
             String name = entry.getKey();
             ProviderConfig config = entry.getValue();
             try {
@@ -62,7 +62,7 @@ public class FileStorageTemplate implements AutoCloseable {
                     storageMap.put(name, storage);
                     log.info("注册 Provider: {} ({})", highlight(name), highlight(inferType(config)));
                     if (defaultStorageName == null
-                            || (properties.defaultProvider != null && properties.defaultProvider.equals(name))) {
+                            || (properties.getDefaultProvider() != null && properties.getDefaultProvider().equals(name))) {
                         defaultStorageName = name;
                     }
                 }

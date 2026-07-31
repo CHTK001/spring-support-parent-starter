@@ -14,3 +14,4 @@ com.chua.starter.common.support.configuration.security.RequestFingerprintAutoCon
 com.chua.starter.common.support.cache.CacheConfiguration
 com.chua.starter.common.support.cache.CacheProxyCachingConfiguration
 com.chua.starter.common.support.cache.TenantedKeyGenerator
+com.chua.starter.common.support.serviceinfo.ServiceInfoAutoConfiguration

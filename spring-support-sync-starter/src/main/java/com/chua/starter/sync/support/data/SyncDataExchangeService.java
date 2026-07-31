@@ -1,10 +1,10 @@
 package com.chua.starter.sync.support.data;
 
 import com.chua.starter.sync.support.pojo.ClientInfo;
-import com.chua.starter.sync.support.client.SyncClient;
+import com.chua.common.support.network.sync.SyncClient;
 import com.chua.starter.sync.support.pojo.SyncResponse;
 import com.chua.starter.sync.support.properties.SyncProperties;
-import com.chua.starter.sync.support.server.SyncServer;
+import com.chua.common.support.network.server.SyncServer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 

@@ -11,6 +11,14 @@ target/
 node_modules/
 *.class
 
+# Maven flatten / effective plugin 临时产物 (按需自动重新生成)
+.flattened-pom.xml
+**/.flattened-pom.xml
+effective.xml
+effective-pom.xml
+**/effective.xml
+**/effective-pom.xml
+
 # Temp / Cache
 .tmp*
 tmp/
@@ -21,6 +29,7 @@ META-INF/
 *.log
 *bak
 *.swp
+.test-cp.txt
 
 # Project specific
 .claude
