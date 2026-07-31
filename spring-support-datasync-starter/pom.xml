@@ -14,61 +14,40 @@
     <description>DataSync Spring Boot Starter：文件/数据库双源映射配置自动加载</description>
 
     <dependencies>
-        <!-- Spring Boot 自动配置 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
-
-        <!-- 配置属性绑定 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
             <optional>true</optional>
         </dependency>
-
-        <!-- DataSync 核心模块 -->
         <dependency>
-        <groupId>com.chua</groupId>
-        <artifactId>utils-support-datasync-starter</artifactId>
-        <version>${utils.version}</version>
-        <scope>provided</scope>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-datasync-starter</artifactId>
+            <version>${utils.version}</version>
         </dependency>
-
-        <!-- 数据源（provided，由用户项目提供） -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-datasource-starter</artifactId>
-            <scope>provided</scope>
         </dependency>
-
-        <!-- JSON 解析 -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
-
-        <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <scope>provided</scope>
+            <optional>true</optional>
         </dependency>
-
-        <!-- 测试 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.assertj</groupId>
-            <artifactId>assertj-core</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -77,4 +56,20 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <configuration>
+                    <mainClass>com.chua.starter.datasync.app.DataSyncApplication</mainClass>
+                    <arguments>
+                        <argument>--spring.config.additional-location=file:./src/test/resources/</argument>
+                    </arguments>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

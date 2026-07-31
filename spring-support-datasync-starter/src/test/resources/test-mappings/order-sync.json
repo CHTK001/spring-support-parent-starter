@@ -1,0 +1,25 @@
+{
+  "mappingId": "order-sync",
+  "inputId": "order-input",
+  "sourceId": "order-source",
+  "outputId": "order-output",
+  "sinkId": "order-sink",
+  "batch": 20,
+  "cronType": "fixed",
+  "cron": "0/10 * * * * ?",
+  "params": {
+    "region": "CN"
+  },
+  "mappings": [
+    {
+      "sourceField": "orderId",
+      "targetField": "order_id",
+      "converter": "toString"
+    },
+    {
+      "sourceField": "amount",
+      "targetField": "order_amount",
+      "converter": "toDouble"
+    }
+  ]
+}

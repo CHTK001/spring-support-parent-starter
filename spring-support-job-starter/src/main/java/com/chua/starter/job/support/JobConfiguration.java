@@ -2,6 +2,8 @@ package com.chua.starter.job.support;
 
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.DynamicTableNameInnerInterceptor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.job.support.log.JobFileAppender;
 import com.chua.starter.job.support.log.JobLogBackupService;
 import com.chua.starter.job.support.log.JobLogDetailService;

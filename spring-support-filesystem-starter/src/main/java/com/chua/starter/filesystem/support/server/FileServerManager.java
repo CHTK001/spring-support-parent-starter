@@ -1,4 +1,4 @@
-"package com.chua.starter.filesystem.support.server;
+package com.chua.starter.filesystem.support.server;
 
 import com.chua.common.support.network.server.Server;
 import com.chua.common.support.network.server.impl.JdkHttpServer;
@@ -51,23 +51,23 @@ public class FileServerManager implements AutoCloseable {
             return;
         }
 
-        log.info(\"══════════════════════════════════════════════\");
-        log.info(\"文件服务器配置\");
-        log.info(\"├─ 服务器数量: {}\", highlight(servers.size()));
+        log.info("══════════════════════════════════════════════");
+        log.info("文件服务器配置");
+        log.info("├─ 服务器数量: {}", highlight(servers.size()));
 
         for (FileStorageProperties.ServerConfig serverConfig : servers) {
             if (!serverConfig.isEnable()) {
-                log.info(\"├─ 跳过禁用的服务器: {}\", serverConfig.getName());
+                log.info("├─ 跳过禁用的服务器: {}", serverConfig.getName());
                 continue;
             }
             try {
                 startServer(serverConfig);
             } catch (Exception e) {
-                log.error(\"启动服务器失败: {} - {}\", serverConfig.getName(), e.getMessage(), e);
+                log.error("启动服务器失败: {} - {}", serverConfig.getName(), e.getMessage(), e);
             }
         }
 
-        log.info(\"══════════════════════════════════════════════\");
+        log.info("══════════════════════════════════════════════");
     }
 
     private void startServer(FileStorageProperties.ServerConfig config) throws Exception {
@@ -85,21 +85,21 @@ public class FileServerManager implements AutoCloseable {
 
         if (server instanceof JdkHttpServer) {
             HttpServer httpServer = ((JdkHttpServer) server).getHttpServer();
-            String contextPath = config.getContextPath() != null ? config.getContextPath() : \"/\";
+            String contextPath = config.getContextPath() != null ? config.getContextPath() : "/";
             httpServer.createContext(contextPath, createFileHandler(config));
         } else {
-            log.warn(\"Server type {} does not support custom handler registration, file serving unavailable\", type);
+            log.warn("Server type {} does not support custom handler registration, file serving unavailable", type);
         }
 
         serverMap.put(serverName, server);
-        log.info(\"├─ 启动服务器: {} -> {}:{} [{}]\",
+        log.info("├─ 启动服务器: {} -> {}:{} [{}]",
                 highlight(serverName),
                 host, port,
                 success());
     }
 
     private Server createServer(String type, ServerSetting setting) throws Exception {
-        if (type == null || type.isEmpty() || \"jdk\".equalsIgnoreCase(type)) {
+        if (type == null || type.isEmpty() || "jdk".equalsIgnoreCase(type)) {
             return new JdkHttpServer(setting);
         }
         for (Server s : ServiceLoader.load(Server.class)) {
@@ -111,7 +111,7 @@ public class FileServerManager implements AutoCloseable {
             Class<?> clazz = Class.forName(type);
             return (Server) clazz.getDeclaredConstructor(ServerSetting.class).newInstance(setting);
         } catch (ClassNotFoundException e) {
-            throw new IllegalArgumentException(\"Unknown server type: \" + type + \", fallback to JDK\", e);
+            throw new IllegalArgumentException("Unknown server type: " + type + ", fallback to JDK", e);
         }
     }
 
@@ -123,7 +123,7 @@ public class FileServerManager implements AutoCloseable {
             try {
                 chain.doFilter(exchange);
             } catch (Exception e) {
-                log.error(\"Error processing request\", e);
+                log.error("Error processing request", e);
                 exchange.sendResponseHeaders(HttpURLConnection.HTTP_INTERNAL_ERROR, -1);
             } finally {
                 exchange.close();
@@ -155,7 +155,7 @@ public class FileServerManager implements AutoCloseable {
             Class<?> clazz = Class.forName(filterName);
             return (ServerFilter) clazz.getDeclaredConstructor().newInstance();
         } catch (Exception e) {
-            log.warn(\"Failed to instantiate filter: {}\", filterName, e);
+            log.warn("Failed to instantiate filter: {}", filterName, e);
             return null;
         }
     }
@@ -163,11 +163,11 @@ public class FileServerManager implements AutoCloseable {
     private void handleFileRequest(HttpExchange exchange) throws IOException {
         String path = exchange.getRequestURI().getPath();
         String method = exchange.getRequestMethod();
-        if (!\"GET\".equalsIgnoreCase(method)) {
+        if (!"GET".equalsIgnoreCase(method)) {
             exchange.sendResponseHeaders(HttpURLConnection.HTTP_BAD_METHOD, -1);
             return;
         }
-        String[] segments = path.split(\"/\");
+        String[] segments = path.split("/");
         if (segments.length < 3) {
             exchange.sendResponseHeaders(HttpURLConnection.HTTP_BAD_REQUEST, -1);
             return;
@@ -185,7 +185,7 @@ public class FileServerManager implements AutoCloseable {
                 os.write(data);
             }
         } catch (Exception e) {
-            log.error(\"File read error: {}\", e.getMessage());
+            log.error("File read error: {}", e.getMessage());
             exchange.sendResponseHeaders(HttpURLConnection.HTTP_INTERNAL_ERROR, -1);
         }
     }
@@ -194,9 +194,9 @@ public class FileServerManager implements AutoCloseable {
         for (Map.Entry<String, Server> entry : serverMap.entrySet()) {
             try {
                 entry.getValue().stop();
-                log.info(\"停止服务器: {} [{}]\", entry.getKey(), success());
+                log.info("停止服务器: {} [{}]", entry.getKey(), success());
             } catch (Exception e) {
-                log.error(\"停止服务器失败: {} [{}]\", entry.getKey(), failed(), e);
+                log.error("停止服务器失败: {} [{}]", entry.getKey(), failed(), e);
             }
         }
         serverMap.clear();
@@ -215,4 +215,4 @@ public class FileServerManager implements AutoCloseable {
     public void close() {
         stopAll();
     }
-}"
+}
