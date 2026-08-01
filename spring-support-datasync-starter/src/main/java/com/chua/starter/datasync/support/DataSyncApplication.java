@@ -77,6 +77,9 @@ public class DataSyncApplication {
         application.setDefaultProperties(defaults);
         ApplicationContext context = application.run(args);
 
+        // 验证 OSGi 集成（spring-support-osgi-starter 自动配置）
+        printOsgiStatus(context);
+
         // 打印配置
         DatasyncProperties properties = context.getBean(DatasyncProperties.class);
         System.out.println("[DATA-SYNC] enabled=" + properties.isEnabled());
@@ -107,6 +110,38 @@ public class DataSyncApplication {
         registerSampleSourcesAndSinks(server, databaseMode);
         System.out.println("[DATA-SYNC] 已注册测试 Source/Sink，等待定时调度执行");
         System.out.println("[DATA-SYNC] DataSyncServer 启动成功");
+    }
+
+    /**
+     * 打印 OSGi 集成状态。
+     *
+     * <p>验证 spring-support-osgi-starter 是否正确启动 Felix 框架、
+     * 安装 Gogo shell bundle，并暴露实时 ObjectContext。</p>
+     *
+     * @param context Spring 应用上下文
+     */
+    private static void printOsgiStatus(ApplicationContext context) {
+        try {
+            com.chua.starter.osgi.context.OsgiObjectContext osgiContext =
+                    context.getBean(com.chua.starter.osgi.context.OsgiObjectContext.class);
+            com.chua.common.support.osgi.OsgiLauncher launcher = osgiContext.getOsgiLauncher();
+            System.out.println("[OSGI] ObjectContext 类型: " + osgiContext.getClass().getSimpleName());
+            System.out.println("[OSGI] Bean 中 launcher: " + (launcher != null ? launcher.getClass().getSimpleName() : "null"));
+            System.out.println("[OSGI] Bean 中 框架激活: " + (launcher != null && launcher.isActive()));
+            com.chua.common.support.osgi.OsgiLauncher holder =
+                    com.chua.common.support.osgi.OsgiLauncherHolder.getInstance();
+            System.out.println("[OSGI] Holder 中 launcher: " + (holder != null ? holder.getClass().getSimpleName() : "null"));
+            System.out.println("[OSGI] Holder 中 框架激活: " + (holder != null && holder.isActive()));
+            launcher = holder != null ? holder : launcher;
+            if (launcher != null && launcher.isActive()) {
+                System.out.println("[OSGI] 已安装 Bundle 数: " + launcher.getBundles().size());
+                launcher.getBundles().forEach(b ->
+                        System.out.println("[OSGI]   Bundle: " + b.getSymbolicName()
+                                + " [" + b.getVersion() + "] " + b.getState()));
+            }
+        } catch (Exception e) {
+            System.out.println("[OSGI] OSGi 集成未激活: " + e.getMessage());
+        }
     }
 
     /**

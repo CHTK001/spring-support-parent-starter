@@ -56,3 +56,7 @@ sys
 *.sqlite3
 
 *.err
+
+# IDE/工具缓存
+.workbuddy/
+

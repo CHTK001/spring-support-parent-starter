@@ -581,6 +581,12 @@
                 <version>${project.version}</version>
             </dependency>
             
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-osgi-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
             <!-- 定时任务模块 -->
             <dependency>
                 <groupId>com.chua</groupId>

@@ -38,8 +38,7 @@
         </dependency>
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-springboot-starter</artifactId>
-            <version>${utils.version}</version>
+            <artifactId>spring-support-osgi-starter</artifactId>
         </dependency>
         <dependency>
             <groupId>com.chua</groupId>
