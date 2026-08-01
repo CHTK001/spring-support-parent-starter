@@ -4,13 +4,15 @@ server:
 plugin:
   datasync:
     enabled: true
-    mapping-source: file
     file-mapping:
       directory-path: ./src/main/resources/datasync/mappings
 
 spring:
   application:
     name: datasync-starter-test
+  sql:
+    init:
+      mode: never
 
 logging:
   level:
