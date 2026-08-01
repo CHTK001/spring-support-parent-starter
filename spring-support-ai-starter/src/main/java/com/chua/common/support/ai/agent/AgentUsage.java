@@ -1,16 +1,47 @@
 package com.chua.common.support.ai.agent;
 
+/**
+ * Agent 调用用量统计（token / cost / model）。
+ *
+ * @author CH
+ * @since 4.0.0
+ */
 public class AgentUsage {
 
+    /**
+     * 输入 token 数
+     */
     private Integer promptTokens;
+
+    /**
+     * 输出 token 数
+     */
     private Integer completionTokens;
+
+    /**
+     * 总 token 数
+     */
     private Integer totalTokens;
+
+    /**
+     * 成本（元）
+     */
     private Double cost;
+
+    /**
+     * 关联模型
+     */
     private String model;
 
+    /**
+     * 默认构造。
+     */
     public AgentUsage() {
     }
 
+    /**
+     * 全参构造。
+     */
     public AgentUsage(Integer promptTokens, Integer completionTokens, Integer totalTokens, Double cost, String model) {
         this.promptTokens = promptTokens;
         this.completionTokens = completionTokens;
@@ -30,15 +61,41 @@ public class AgentUsage {
     public String getModel() { return model; }
     public void setModel(String model) { this.model = model; }
 
+    /**
+     * @return 建造器实例
+     */
     public static AgentUsageBuilder builder() {
         return new AgentUsageBuilder();
     }
 
+    /**
+     * AgentUsage 建造器。
+     */
     public static class AgentUsageBuilder {
+
+        /**
+         * 输入 token 数
+         */
         private Integer promptTokens;
+
+        /**
+         * 输出 token 数
+         */
         private Integer completionTokens;
+
+        /**
+         * 总 token 数
+         */
         private Integer totalTokens;
+
+        /**
+         * 成本（元）
+         */
         private Double cost;
+
+        /**
+         * 关联模型
+         */
         private String model;
 
         public AgentUsageBuilder promptTokens(Integer promptTokens) { this.promptTokens = promptTokens; return this; }
@@ -47,6 +104,11 @@ public class AgentUsage {
         public AgentUsageBuilder cost(Double cost) { this.cost = cost; return this; }
         public AgentUsageBuilder model(String model) { this.model = model; return this; }
 
+        /**
+         * 构造 AgentUsage 实例。
+         *
+         * @return AgentUsage 实例
+         */
         public AgentUsage build() {
             return new AgentUsage(promptTokens, completionTokens, totalTokens, cost, model);
         }
