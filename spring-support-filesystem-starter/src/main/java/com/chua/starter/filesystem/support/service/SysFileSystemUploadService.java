@@ -55,6 +55,32 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
     boolean updateStatus(String uploadId, Integer status);
 
     /**
+     * 更新任务阶段。
+     *
+     * @param uploadId 上传任务 ID
+     * @param stage    目标阶段
+     * @return 是否更新成功
+     */
+    boolean updateStage(String uploadId, Integer stage);
+
+    /**
+     * 重置重试次数（阶段切换时调用，保证各阶段独立重试）。
+     *
+     * @param uploadId 上传任务 ID
+     * @return 是否更新成功
+     */
+    boolean resetRetryCount(String uploadId);
+
+    /**
+     * 递增重试次数（独立字段更新，避免覆盖 status/stage）。
+     *
+     * @param uploadId 上传任务 ID
+     * @param retry    新的重试次数
+     * @return 是否更新成功
+     */
+    boolean updateRetryCount(String uploadId, int retry);
+
+    /**
      * 标记任务完成。
      *
      * @param uploadId 上传任务 ID
@@ -94,6 +120,13 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
      * @return 待合并任务列表
      */
     List<SysFileSystemUpload> listPendingMerge();
+
+    /**
+     * 查询待上传 OSS 任务列表。
+     *
+     * @return 待上传 OSS 任务列表
+     */
+    List<SysFileSystemUpload> listPendingUpload();
 
     /**
      * 查询可重试的失败任务列表。

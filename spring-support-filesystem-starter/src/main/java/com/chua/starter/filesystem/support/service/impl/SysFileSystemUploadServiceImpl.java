@@ -1,6 +1,7 @@
 package com.chua.starter.filesystem.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.starter.filesystem.support.entity.SysFileSystemUpload;
 import com.chua.starter.filesystem.support.mapper.SysFileSystemUploadMapper;
@@ -62,6 +63,7 @@ public class SysFileSystemUploadServiceImpl
         task.setFilesystemUploadTaskKey(key);
         task.setFilesystemUploadTaskContentType(contentType);
         task.setFilesystemUploadTaskStatus(SysFileSystemUpload.Status.PENDING);
+        task.setFilesystemUploadTaskStage(SysFileSystemUpload.Stage.CHUNK_UPLOAD);
         task.setFilesystemUploadTaskStartTime(now);
         task.setFilesystemUploadTaskRetryCount(INITIAL_UPLOADED_CHUNKS);
         task.setCreateTime(now);
@@ -97,6 +99,30 @@ public class SysFileSystemUploadServiceImpl
         }
         task.setFilesystemUploadTaskStatus(status);
         return updateById(task);
+    }
+
+    @Override
+    public boolean updateStage(String uploadId, Integer stage) {
+        SysFileSystemUpload task = getByUploadId(uploadId);
+        if (task == null) {
+            return false;
+        }
+        task.setFilesystemUploadTaskStage(stage);
+        return updateById(task);
+    }
+
+    @Override
+    public boolean resetRetryCount(String uploadId) {
+        return update(new LambdaUpdateWrapper<SysFileSystemUpload>()
+                .eq(SysFileSystemUpload::getFilesystemUploadTaskUploadId, uploadId)
+                .set(SysFileSystemUpload::getFilesystemUploadTaskRetryCount, 0));
+    }
+
+    @Override
+    public boolean updateRetryCount(String uploadId, int retry) {
+        return update(new LambdaUpdateWrapper<SysFileSystemUpload>()
+                .eq(SysFileSystemUpload::getFilesystemUploadTaskUploadId, uploadId)
+                .set(SysFileSystemUpload::getFilesystemUploadTaskRetryCount, retry));
     }
 
     @Override
@@ -144,6 +170,12 @@ public class SysFileSystemUploadServiceImpl
     public List<SysFileSystemUpload> listPendingMerge() {
         return list(new LambdaQueryWrapper<SysFileSystemUpload>()
                 .eq(SysFileSystemUpload::getFilesystemUploadTaskStatus, SysFileSystemUpload.Status.PENDING_MERGE));
+    }
+
+    @Override
+    public List<SysFileSystemUpload> listPendingUpload() {
+        return list(new LambdaQueryWrapper<SysFileSystemUpload>()
+                .eq(SysFileSystemUpload::getFilesystemUploadTaskStatus, SysFileSystemUpload.Status.PENDING_UPLOAD));
     }
 
     @Override

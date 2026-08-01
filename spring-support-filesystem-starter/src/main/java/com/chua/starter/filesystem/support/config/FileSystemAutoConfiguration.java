@@ -57,8 +57,11 @@ public class FileSystemAutoConfiguration {
             SysFileSystemUploadService uploadService,
             SysFileSystemUploadChunkService chunkService,
             FileStorageTemplate fileStorageTemplate,
-            FileStorageProperties fileStorageProperties) {
-        return new FileChunkUploadController(uploadService, chunkService, fileStorageTemplate, fileStorageProperties);
+            FileStorageProperties fileStorageProperties,
+            FileStorageUploadProperties uploadProperties,
+            FileServerManager fileServerManager) {
+        return new FileChunkUploadController(uploadService, chunkService, fileStorageTemplate,
+                fileStorageProperties, uploadProperties, fileServerManager);
     }
 
     @Bean
@@ -71,10 +74,10 @@ public class FileSystemAutoConfiguration {
         };
     }
 
-    // @Bean
-    // public FileServerManager fileServerManager(FileStorageProperties properties, FileStorageTemplate template, ApplicationContext applicationContext) {
-    //     FileServerManager manager = new FileServerManager(properties, template, applicationContext);
-    //     manager.startAll();
-    //     return manager;
-    // }
+    @Bean
+    public FileServerManager fileServerManager(FileStorageProperties properties, FileStorageTemplate template, ApplicationContext applicationContext) {
+        FileServerManager manager = new FileServerManager(properties, template, applicationContext);
+        manager.startAll();
+        return manager;
+    }
 }

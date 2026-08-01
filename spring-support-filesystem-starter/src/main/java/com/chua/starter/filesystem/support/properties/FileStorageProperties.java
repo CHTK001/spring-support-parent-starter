@@ -82,13 +82,114 @@ public class FileStorageProperties {
 
     // ==================== 功能开关 ====================
 
+    /**
+     * 访问模式: view-仅预览, download-仅下载, both-两者都允许
+     */
+    private AccessMode mode = AccessMode.BOTH;
+
     private boolean openWebjars = true;
     private boolean openRemoteFile = false;
-    private boolean openPreview = true;
-    private boolean openDownload = true;
-    private boolean openRange = true;
-    private boolean openWatermark = false;
-    private String watermark;
+
+    /**
+     * 访问 URL 后缀（可选，如 "?size=800x600&format=jpg"），生成访问地址时拼接
+     */
+    private String urlSuffix;
+
+    /**
+     * 图片处理与预览设置（对应底层 FileOperationSetting）
+     */
+    private FileOperationConfig operation;
+
+    /**
+     * 访问模式枚举。
+     */
+    public enum AccessMode {
+        /**
+         * 仅预览
+         */
+        VIEW,
+        /**
+         * 仅下载
+         */
+        DOWNLOAD,
+        /**
+         * 预览与下载都允许
+         */
+        BOTH
+    }
+
+    /**
+     * 图片处理与预览配置（对应底层 FileOperationSetting）。
+     */
+    @Data
+    @Getter
+    @Setter
+    public static class FileOperationConfig {
+        /**
+         * 输出尺寸，如 "800x600" 或 "800"（等比）
+         */
+        private String size;
+        /**
+         * 输出格式，如 "jpg"、"png"
+         */
+        private String format;
+        /**
+         * 图片质量 (1-100)
+         */
+        private Integer quality;
+        /**
+         * 裁剪区域，如 "100,100,200,200"
+         */
+        private String crop;
+        /**
+         * 旋转角度 (0-360)
+         */
+        private Integer rotate;
+        /**
+         * 翻转方向: "horizontal"/"vertical"
+         */
+        private String flip;
+        /**
+         * 是否灰度
+         */
+        private Boolean grayscale;
+        /**
+         * 模糊半径
+         */
+        private Float blur;
+        /**
+         * 锐化强度
+         */
+        private Float sharpen;
+        /**
+         * 自动旋转校正
+         */
+        private Boolean autoOrient;
+        /**
+         * 文字水印
+         */
+        private String watermarkText;
+        /**
+         * 水印图片 URL
+         */
+        private String watermarkImage;
+        /**
+         * 强制下载（预览时也走 attachment）
+         */
+        private Boolean forceDownload;
+        /**
+         * PDF 页码 (1-based)
+         */
+        private Integer pdfPage;
+        /**
+         * PDF 页面尺寸
+         */
+        private String pdfPageSize;
+        /**
+         * PDF 页面方向
+         */
+        private String pdfOrientation;
+    }
 
     /**
      * 单个存储 Provider 配置 (对应一个 FileStorage SPI 实现)。
@@ -167,6 +268,38 @@ public class FileStorageProperties {
         private long readTimeoutMillis = 30_000;
         private long writeTimeoutMillis = 30_000;
         private List<String> filters = new ArrayList<>();
+        /**
+         * 最大请求大小（字节）
+         */
+        private long maxRequestSize = 10L * 1024 * 1024;
+        /**
+         * 最大连接数
+         */
+        private int maxConnections = 512;
+        /**
+         * 工作线程数
+         */
+        private int workerThreads = 8;
+        /**
+         * 响应超时（毫秒）
+         */
+        private long responseTimeoutMillis = 60_000;
+        /**
+         * 默认内容类型
+         */
+        private String contentType = "application/octet-stream";
+        /**
+         * 是否启用 gzip 压缩
+         */
+        private boolean gzipEnabled = false;
+        /**
+         * gzip 压缩最小字节数
+         */
+        private int gzipMinSize = 1024;
+        /**
+         * 字符集
+         */
+        private String charset = "UTF-8";
     }
 
     // ==================== 兼容老配置 (deprecated, 但保留解析能力) ====================

@@ -3,6 +3,7 @@ package com.chua.starter.filesystem.support.server;
 import com.chua.common.support.network.server.Server;
 import com.chua.common.support.network.server.impl.JdkHttpServer;
 import com.chua.common.support.network.server.ServerSetting;
+import com.chua.common.support.storage.FileStorage;
 import com.chua.starter.filesystem.support.properties.FileStorageProperties;
 import com.chua.starter.filesystem.support.server.filter.FilterChain;
 import com.chua.starter.filesystem.support.server.filter.LoggingFilter;
@@ -13,6 +14,7 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.context.ApplicationContext;
 
 import java.io.IOException;
@@ -28,22 +30,50 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static com.chua.starter.common.support.logger.ModuleLog.*;
 
+/**
+ * 文件服务器管理器。
+ *
+ * <p>根据 {@link FileStorageProperties#getServers()} 启动 HTTP 文件服务器，
+ * 提供按 bucket 读取存储对象的文件访问能力。</p>
+ *
+ * @author CH
+ * @since 4.0.0
+ */
 @Slf4j
 public class FileServerManager implements AutoCloseable {
 
+    /**
+     * 启动成功的服务器映射
+     */
     @Getter
     private final Map<String, Server> serverMap = new ConcurrentHashMap<>();
 
+    /**
+     * 文件存储配置
+     */
     private final FileStorageProperties properties;
+
+    /**
+     * 文件存储模板
+     */
     private final FileStorageTemplate storageTemplate;
+
+    /**
+     * Spring 应用上下文
+     */
     private final ApplicationContext applicationContext;
 
-    public FileServerManager(FileStorageProperties properties, FileStorageTemplate storageTemplate, ApplicationContext applicationContext) {
+    public FileServerManager(FileStorageProperties properties,
+                             FileStorageTemplate storageTemplate,
+                             ApplicationContext applicationContext) {
         this.properties = properties;
         this.storageTemplate = storageTemplate;
         this.applicationContext = applicationContext;
     }
 
+    /**
+     * 启动所有配置的文件服务器。
+     */
     public void startAll() {
         List<FileStorageProperties.ServerConfig> servers = properties.getServers();
         if (servers == null || servers.isEmpty()) {
@@ -70,15 +100,33 @@ public class FileServerManager implements AutoCloseable {
         log.info("══════════════════════════════════════════════");
     }
 
+    /**
+     * 启动单个文件服务器。
+     *
+     * @param config 服务器配置
+     * @throws Exception 启动失败时抛出
+     */
     private void startServer(FileStorageProperties.ServerConfig config) throws Exception {
         String serverName = config.getName();
         String host = config.getHost();
         int port = config.getPort();
         String type = config.getType();
+        String contextPath = config.getContextPath() != null ? config.getContextPath() : "/";
 
         ServerSetting setting = ServerSetting.defaults();
         setting.setHost(host);
         setting.setPort(port);
+        // 映射挑选的 ServerSetting 配置项
+        setting.setContextPath(contextPath);
+        setting.setMaxRequestSize(config.getMaxRequestSize());
+        setting.setMaxConnections(config.getMaxConnections());
+        setting.setWorkerThreads(config.getWorkerThreads());
+        setting.setResponseTimeout(config.getResponseTimeoutMillis());
+        setting.setContentType(config.getContentType());
+        setting.setGzipEnabled(config.isGzipEnabled());
+        setting.setGzipMinSize(config.getGzipMinSize());
+        setting.setCharset(config.getCharset());
+        setting.setReadTimeout((int) config.getReadTimeoutMillis());
 
         Server server = createServer(type, setting);
         server.start();
@@ -93,8 +141,15 @@ public class FileServerManager implements AutoCloseable {
                 log.warn("无法访问 JdkHttpServer.server 字段: {}", e.getMessage());
             }
             if (httpServer != null) {
-                String contextPath = config.getContextPath() != null ? config.getContextPath() : "/";
-                httpServer.createContext(contextPath, createFileHandler(config));
+                // JDK HttpServer 不允许 context="/" (根路径)，至少需要 /xxx
+                String effectiveContext = "/".equals(contextPath) ? "/files" : contextPath;
+                // 先移除 JdkHttpServer 内部注册的同路径 context，避免冲突
+                try {
+                    httpServer.removeContext(effectiveContext);
+                } catch (Exception e) {
+                    log.warn("移除内置 context 失败(可忽略): {}", e.getMessage());
+                }
+                httpServer.createContext(effectiveContext, createFileHandler(config, effectiveContext));
             }
         } else {
             log.warn("Server type {} does not support custom handler registration, file serving unavailable", type);
@@ -107,6 +162,14 @@ public class FileServerManager implements AutoCloseable {
                 success());
     }
 
+    /**
+     * 创建 Server 实例。
+     *
+     * @param type    server 类型（jdk 或 SPI 名称）
+     * @param setting 服务配置
+     * @return Server 实例
+     * @throws Exception 创建失败时抛出
+     */
     private Server createServer(String type, ServerSetting setting) throws Exception {
         if (type == null || type.isEmpty() || "jdk".equalsIgnoreCase(type)) {
             return new JdkHttpServer(setting);
@@ -124,9 +187,16 @@ public class FileServerManager implements AutoCloseable {
         }
     }
 
-    private HttpHandler createFileHandler(FileStorageProperties.ServerConfig config) {
+    /**
+     * 创建文件访问 HttpHandler。
+     *
+     * @param config      服务器配置
+     * @param contextPath context 前缀
+     * @return HttpHandler
+     */
+    private HttpHandler createFileHandler(FileStorageProperties.ServerConfig config, String contextPath) {
         List<ServerFilter> filters = buildFilters(config);
-        ServerFilter finalHandler = (exchange, chain) -> handleFileRequest(exchange);
+        ServerFilter finalHandler = (exchange, chain) -> handleFileRequest(exchange, contextPath);
         FilterChain filterChain = FilterChain.build(filters, finalHandler);
         return exchange -> {
             try {
@@ -140,6 +210,12 @@ public class FileServerManager implements AutoCloseable {
         };
     }
 
+    /**
+     * 构建过滤器链。
+     *
+     * @param config 服务器配置
+     * @return 过滤器列表
+     */
     private List<ServerFilter> buildFilters(FileStorageProperties.ServerConfig config) {
         List<ServerFilter> filters = new ArrayList<>();
         for (String filterName : config.getFilters()) {
@@ -154,6 +230,12 @@ public class FileServerManager implements AutoCloseable {
         return filters;
     }
 
+    /**
+     * 实例化过滤器。
+     *
+     * @param filterName 过滤器类名
+     * @return 过滤器实例
+     */
     private ServerFilter getFilterInstance(String filterName) {
         if (applicationContext != null) {
             try {
@@ -169,23 +251,84 @@ public class FileServerManager implements AutoCloseable {
         }
     }
 
-    private void handleFileRequest(HttpExchange exchange) throws IOException {
-        String path = exchange.getRequestURI().getPath();
+    /**
+     * 处理文件访问请求。
+     *
+     * <p>路径格式: {context}/{bucket}/{key} 或 {context}/view/{bucket}/{key} 或 {context}/download/{bucket}/{key}。
+     * 访问模式由 properties 的 mode 配置决定：前端请求意图与 mode 取交集，冲突时降级到 mode 允许的行为。</p>
+     *
+     * @param exchange    HttpExchange
+     * @param contextPath context 前缀
+     * @throws IOException IO 异常
+     */
+    private void handleFileRequest(HttpExchange exchange, String contextPath) throws IOException {
+        String fullPath = exchange.getRequestURI().getPath();
+        log.info("[FileServer] 收到请求: {} (context={})", fullPath, contextPath);
+        // 去掉 context 前缀
+        String path = fullPath;
+        if (contextPath != null && !"/".equals(contextPath) && fullPath.startsWith(contextPath)) {
+            path = fullPath.substring(contextPath.length());
+            if (!path.startsWith("/")) {
+                path = "/" + path;
+            }
+        }
         String method = exchange.getRequestMethod();
-        if (!"GET".equalsIgnoreCase(method)) {
+        if (!"GET".equalsIgnoreCase(method) && !"HEAD".equalsIgnoreCase(method)) {
             exchange.sendResponseHeaders(HttpURLConnection.HTTP_BAD_METHOD, -1);
             return;
         }
         String[] segments = path.split("/");
         if (segments.length < 3) {
+            log.warn("[FileServer] 路径格式错误: {}", path);
             exchange.sendResponseHeaders(HttpURLConnection.HTTP_BAD_REQUEST, -1);
             return;
         }
-        String bucket = URLDecoder.decode(segments[1], StandardCharsets.UTF_8.name());
-        String key = path.substring(segments[1].length() + 1);
+        // 第一段可为 view/download 前缀，用于指定前端访问意图
+        boolean forceDownload = false;
+        List<String> parts = new ArrayList<>(List.of(segments));
+        if (parts.size() > 1 && "view".equalsIgnoreCase(parts.get(1))) {
+            parts.remove(1);
+        } else if (parts.size() > 1 && "download".equalsIgnoreCase(parts.get(1))) {
+            forceDownload = true;
+            parts.remove(1);
+        }
+        // parts[0] 为空（前导斜杠），真实段从 index=1 开始: [bucket, key...]
+        if (parts.size() < 3) {
+            exchange.sendResponseHeaders(HttpURLConnection.HTTP_BAD_REQUEST, -1);
+            return;
+        }
+        String bucket = URLDecoder.decode(parts.get(1), StandardCharsets.UTF_8.name());
+        // key = 去掉 bucket 段后的路径
+        String key = String.join("/", parts.subList(2, parts.size()));
+        // 规范化，防目录穿越
+        key = FilenameUtils.normalize(key, true);
+        if (key == null) {
+            exchange.sendResponseHeaders(HttpURLConnection.HTTP_BAD_REQUEST, -1);
+            return;
+        }
+        // 根据配置的访问模式决定最终响应行为（前端意图与 mode 取交集，冲突时降级到 mode 允许的行为）
+        FileStorageProperties.AccessMode mode = properties.getMode();
+        boolean download = switch (mode) {
+            case VIEW -> false;         // 仅预览：即使前端请求下载，也降级为内联预览
+            case DOWNLOAD -> true;      // 仅下载：即使前端请求预览，也降级为附件下载
+            case BOTH -> forceDownload; // 两者皆可：按前端前缀决定
+        };
+        log.info("[FileServer] bucket={}, key={}, forceDownload={}, mode={}, download={}",
+                bucket, key, forceDownload, mode, download);
         try {
+            // 优先按 bucket 查找对应 FileStorage，找不到再回退到默认存储
+            FileStorage storage = storageTemplate.getStorage(bucket);
+            if (storage == null) {
+                storage = storageTemplate.getDefaultStorage();
+            }
+            if (storage == null) {
+                log.warn("[FileServer] 存储不存在: bucket={}", bucket);
+                exchange.sendResponseHeaders(HttpURLConnection.HTTP_NOT_FOUND, -1);
+                return;
+            }
             com.chua.common.support.storage.result.GetObjectResult getResult =
-                    storageTemplate.getDefaultStorage().getObject(key);
+                    storage.getObject(key);
+            log.info("[FileServer] getObject result: {}", getResult == null ? "null" : getResult.getResultCode());
             byte[] data = null;
             if (getResult != null && getResult.getInputStream() != null) {
                 try (java.io.InputStream in = getResult.getInputStream()) {
@@ -193,8 +336,16 @@ public class FileServerManager implements AutoCloseable {
                 }
             }
             if (data == null || data.length == 0) {
+                log.warn("[FileServer] 文件不存在或为空: {}", key);
                 exchange.sendResponseHeaders(HttpURLConnection.HTTP_NOT_FOUND, -1);
                 return;
+            }
+            log.info("[FileServer] 返回文件: {} size={}", key, data.length);
+            // 按最终收敛的 download 状态设置 Content-Disposition 头
+            if (download) {
+                String fileName = key.contains("/") ? key.substring(key.lastIndexOf('/') + 1) : key;
+                exchange.getResponseHeaders().set("Content-Disposition",
+                        "attachment; filename=\"" + fileName + "\"");
             }
             exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, data.length);
             try (OutputStream os = exchange.getResponseBody()) {
@@ -206,6 +357,9 @@ public class FileServerManager implements AutoCloseable {
         }
     }
 
+    /**
+     * 停止所有服务器。
+     */
     public void stopAll() {
         for (Map.Entry<String, Server> entry : serverMap.entrySet()) {
             try {
@@ -218,10 +372,22 @@ public class FileServerManager implements AutoCloseable {
         serverMap.clear();
     }
 
+    /**
+     * 获取服务器实例。
+     *
+     * @param name 服务器名称
+     * @return Server 实例
+     */
     public Server getServer(String name) {
         return serverMap.get(name);
     }
 
+    /**
+     * 判断服务器是否运行中。
+     *
+     * @param name 服务器名称
+     * @return true 表示运行中
+     */
     public boolean isRunning(String name) {
         Server server = serverMap.get(name);
         return server != null && server.isRunning();

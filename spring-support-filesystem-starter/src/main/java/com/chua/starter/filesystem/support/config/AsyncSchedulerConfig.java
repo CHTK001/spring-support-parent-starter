@@ -1,9 +1,1 @@
-package com.chua.starter.filesystem.support.config;
-
-import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.EnableScheduling;
-
-@Configuration
-@EnableScheduling
-public class AsyncSchedulerConfig {
-}
+package com.chua.starter.filesystem.support.config;import org.springframework.context.annotation.Configuration;import org.springframework.scheduling.annotation.EnableScheduling;@Configuration@EnableScheduling/** * AsyncSchedulerConfig （chua 模块）。 * * @author CH * @since 4.0.0 */public class AsyncSchedulerConfig {}
