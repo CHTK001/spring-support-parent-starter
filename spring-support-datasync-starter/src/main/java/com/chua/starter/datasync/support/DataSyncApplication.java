@@ -1,5 +1,8 @@
 package com.chua.starter.datasync.support;
 
+import com.chua.datasync.agent.support.source.DelimitedDataSyncAgentSource;
+import com.chua.datasync.agent.support.source.JdbcDataSyncAgentSource;
+import com.chua.datasync.agent.support.sink.CsvDataSyncAgentSink;
 import com.chua.starter.datasync.DefaultDataSyncServer;
 import com.chua.starter.datasync.configuration.DataSyncAutoConfiguration;
 import com.chua.starter.datasync.configuration.DatasyncProperties;
@@ -99,20 +102,81 @@ public class DataSyncApplication {
         // 启动 DataSyncServer
         DefaultDataSyncServer server = context.getBean(DefaultDataSyncServer.class);
         server.start();
+
+        // 注册测试 Source/Sink，使定时调度真正执行数据同步
+        registerSampleSourcesAndSinks(server, databaseMode);
+        System.out.println("[DATA-SYNC] 已注册测试 Source/Sink，等待定时调度执行");
         System.out.println("[DATA-SYNC] DataSyncServer 启动成功");
     }
 
     /**
-     * 配置嵌入式 H2 数据源并加载 schema 脚本。
+     * 注册示例 Source/Sink。
+     *
+     * <p>文件模式：Source 从 {@code datasync/samples} 目录的 CSV 文件读取数据，
+     * Sink 将转换后的数据写入 {@code target/datasync-out} 目录。
+     * 数据库模式：Source 从 MySQL {@code test_user} 表读取数据。</p>
+     *
+     * @param server       数据同步服务器
+     * @param databaseMode 是否数据库模式
+     */
+    private static void registerSampleSourcesAndSinks(DefaultDataSyncServer server, boolean databaseMode) {
+        // 确保 Sink 输出目录存在（DelimitedDataSyncAgentSink 不会自动创建父目录）
+        java.io.File outDir = new java.io.File("target/datasync-out");
+        if (!outDir.exists() && !outDir.mkdirs()) {
+            System.out.println("[DATA-SYNC] 创建输出目录失败: " + outDir.getAbsolutePath());
+        }
+
+        if (databaseMode) {
+            // user-sync: source=user-source -> sink=user-sink（从 MySQL 读取）
+            server.registerSource(new JdbcDataSyncAgentSource(
+                    "user-source", "user-input",
+                    "jdbc:mysql://172.16.0.40:3306/datasync_test?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai",
+                    "root", "root@",
+                    "SELECT name, age FROM test_user", "name", "age"));
+        } else {
+            // user-sync: source=user-source -> sink=user-sink
+            server.registerSource(new DelimitedDataSyncAgentSource(
+                    "user-source", "user-input",
+                    "src/main/resources/datasync/samples/user-source.csv", ","));
+
+            // order-sync: source=order-source -> sink=order-sink
+            server.registerSource(new DelimitedDataSyncAgentSource(
+                    "order-source", "order-input",
+                    "src/main/resources/datasync/samples/order-source.csv", ","));
+            server.registerSink(new CsvDataSyncAgentSink(
+                    "order-sink", "target/datasync-out/order-sink.csv"));
+        }
+
+        server.registerSink(new CsvDataSyncAgentSink(
+                "user-sink", "target/datasync-out/user-sink.csv"));
+    }
+
+    /**
+     * 配置数据源。
      *
      * <p>启动类已排除 {@link DataSourceInspect}（datasource-starter 动态数据源注册器），
      * 本数据源即为上下文唯一 DataSource，{@code DatabaseMappingLoader} 直接注入本数据源
-     * 查询 schema.sql 建好的映射表。</p>
+     * 查询映射表。</p>
      *
-     * @return H2 嵌入式数据源
+     * <p>文件模式使用嵌入式 H2（schema.sql 建表）；
+     * 数据库模式使用真实 MySQL（172.16.0.40，库 datasync_test）。</p>
+     *
+     * @return 数据源
      */
     @Bean
     public DataSource dataSource() {
+        String mode = System.getProperty("datasync.mode", "file");
+        if (MODE_DATABASE.equalsIgnoreCase(mode)) {
+            com.zaxxer.hikari.HikariDataSource dataSource = new com.zaxxer.hikari.HikariDataSource();
+            dataSource.setJdbcUrl("jdbc:mysql://172.16.0.40:3306/datasync_test"
+                    + "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai");
+            dataSource.setUsername("root");
+            dataSource.setPassword("root@");
+            dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
+            dataSource.setMaximumPoolSize(5);
+            dataSource.setMinimumIdle(1);
+            return dataSource;
+        }
         return new EmbeddedDatabaseBuilder()
                 .setType(EmbeddedDatabaseType.H2)
                 .setName("datasync-testdb")
