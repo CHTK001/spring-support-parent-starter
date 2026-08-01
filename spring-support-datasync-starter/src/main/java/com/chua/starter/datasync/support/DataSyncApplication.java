@@ -79,6 +79,8 @@ public class DataSyncApplication {
 
         // 验证 OSGi 集成（spring-support-osgi-starter 自动配置）
         printOsgiStatus(context);
+        // 后台线程周期验证 OSGi 服务被 ObjectContext 实时获取（手动 install bundle 后可见）
+        startOsgiRealtimeCheck(context);
 
         // 打印配置
         DatasyncProperties properties = context.getBean(DatasyncProperties.class);
@@ -113,6 +115,39 @@ public class DataSyncApplication {
     }
 
     /**
+     * 后台线程周期验证 OSGi 服务被 ObjectContext 实时获取。
+     *
+     * <p>通过 telnet/SSH 手动 install bundle 后，bundle 在 OSGi 框架内注册服务，
+     * 本线程每 3 秒通过 {@code OsgiObjectContext} 实时查询，
+     * 验证 OSGi 服务无需重启即被 ObjectContext 动态获取（无缓存）。</p>
+     *
+     * @param context Spring 应用上下文
+     */
+    private static void startOsgiRealtimeCheck(ApplicationContext context) {
+        com.chua.starter.osgi.context.OsgiObjectContext osgiContext =
+                context.getBean(com.chua.starter.osgi.context.OsgiObjectContext.class);
+        Thread checker = new Thread(() -> {
+            int lastCount = 0;
+            while (true) {
+                try {
+                    Thread.sleep(3000);
+                    java.util.Map<String, Runnable> services = osgiContext.getBeanOfTypes(Runnable.class);
+                    if (services.size() != lastCount) {
+                        lastCount = services.size();
+                        System.out.println("[OSGI-LIVE] ObjectContext 实时获取 Runnable 服务数=" + services.size());
+                        services.forEach((k, v) -> System.out.println("[OSGI-LIVE]   " + k + " -> "
+                                + (v != null ? v.getClass().getName() : "null")));
+                    }
+                } catch (Exception e) {
+                    System.out.println("[OSGI-LIVE] 检查失败: " + e.getMessage());
+                }
+            }
+        }, "osgi-realtime-check");
+        checker.setDaemon(true);
+        checker.start();
+    }
+
+    /**
      * 打印 OSGi 集成状态。
      *
      * <p>验证 spring-support-osgi-starter 是否正确启动 Felix 框架、
@@ -127,6 +162,22 @@ public class DataSyncApplication {
             com.chua.common.support.osgi.OsgiLauncher launcher = osgiContext.getOsgiLauncher();
             System.out.println("[OSGI] ObjectContext 类型: " + osgiContext.getClass().getSimpleName());
             System.out.println("[OSGI] Bean 中 launcher: " + (launcher != null ? launcher.getClass().getSimpleName() : "null"));
+            // 反射读取 Felix framework 状态
+            if (launcher != null) {
+                try {
+                    java.lang.reflect.Field fw = launcher.getClass().getDeclaredField("framework");
+                    fw.setAccessible(true);
+                    Object framework = fw.get(launcher);
+                    System.out.println("[OSGI] framework 对象: " + (framework != null ? framework.getClass().getSimpleName() : "null"));
+                    if (framework != null) {
+                        org.osgi.framework.Bundle b = (org.osgi.framework.Bundle) framework;
+                        System.out.println("[OSGI] framework.getState()=" + b.getState()
+                                + " (ACTIVE=" + org.osgi.framework.Bundle.ACTIVE + ")");
+                    }
+                } catch (Exception ex) {
+                    System.out.println("[OSGI] 反射读取 framework 失败: " + ex.getMessage());
+                }
+            }
             System.out.println("[OSGI] Bean 中 框架激活: " + (launcher != null && launcher.isActive()));
             com.chua.common.support.osgi.OsgiLauncher holder =
                     com.chua.common.support.osgi.OsgiLauncherHolder.getInstance();

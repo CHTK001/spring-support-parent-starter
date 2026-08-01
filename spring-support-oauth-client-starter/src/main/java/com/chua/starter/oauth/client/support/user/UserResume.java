@@ -109,8 +109,23 @@ public class UserResume {
      */
     private boolean admin;
 
+    /**
+     * 错误消息
+     */
+    private String message;
+
+    /**
+     * 用户编码
+     */
+    private String userCode;
+
+    /**
+     * 应用ID
+     */
+    private String appId;
+
     public UserResume(String message) {
-        this.username = message;
+        this.message = message;
     }
 
     public Object getOption(String key) {

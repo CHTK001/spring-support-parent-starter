@@ -77,6 +77,7 @@
         <!-- <module>spring-support-bom</module> -->
         <module>spring-support-datasource-starter</module>
         <module>spring-support-common-starter</module>          <!-- 通用功能和工具类 -->
+        <module>spring-support-cache-starter</module>           <!-- 缓存功能模块 -->
         <module>spring-support-mybatis-starter</module>         <!-- MyBatis Plus集成 -->
 
         <!-- 认证和安全模块 -->
@@ -414,6 +415,12 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-common-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-cache-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

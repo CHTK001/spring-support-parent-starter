@@ -3,6 +3,7 @@ package com.chua.starter.oauth.client.support.protocol;
 import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.lang.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.spi.annotations.Spi;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
@@ -39,6 +40,7 @@ import java.util.Map;
  * @version 1.0.0
  * @since 2025-12-02
  */
+@Spi({"rsocket"})
 @Slf4j
 public class RSocketProtocol extends AbstractProtocol {
 

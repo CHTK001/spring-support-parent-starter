@@ -8,6 +8,7 @@ import com.chua.common.support.lang.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.value.Value;
 import com.chua.starter.common.support.algorithm.crypto.Codec;
@@ -78,7 +79,8 @@ public abstract class AbstractProtocol implements Protocol {
      */
     public static void invalidateCache(String token) {
         if (CACHEABLE != null && token != null) {
-            CACHEABLE.remove(token);
+            String cacheKey = DigestUtils.sha256(token);
+            CACHEABLE.remove(cacheKey);
             log.info("[OAuth客户端]已清除用户缓存 - Token: {}***", 
                     token.length() > 8 ? token.substring(0, 8) : token);
         }
@@ -281,11 +283,9 @@ public abstract class AbstractProtocol implements Protocol {
     public AuthenticationInformation approve(Cookie[] cookies, String token, String subProtocol) {
         Cookie cookie = CookieUtil.get(cookies, "x-oauth-cookie");
         String cacheKey = getCacheKey(cookies, token);
-        if (hasCache(cacheKey)) {
-            AuthenticationInformation authenticationInformation = cacheAuthenticationInformation(cacheKey);
-            if (null != authenticationInformation) {
-                return authenticationInformation;
-            }
+        AuthenticationInformation cached = readAuthenticationInformation(cacheKey);
+        if (null != cached) {
+            return cached;
         }
 
         if (!hasValid(cookie, token)) {
@@ -293,7 +293,7 @@ public abstract class AbstractProtocol implements Protocol {
         }
         AuthenticationInformation authenticationInformation = approve(cookie, token, subProtocol);
 
-        CACHEABLE.put(cacheKey, Value.of(authenticationInformation));
+        writeAuthenticationInformation(cacheKey, authenticationInformation);
         return authenticationInformation;
     }
 
@@ -308,17 +308,17 @@ public abstract class AbstractProtocol implements Protocol {
         if (null == appKeySecret) {
             return AuthenticationInformation.noAuth();
         }
-        String cacheKey = appKeySecret.getBody();
-        if (hasCache(cacheKey)) {
-            AuthenticationInformation authenticationInformation = cacheAuthenticationInformation(cacheKey);
-            if (null != authenticationInformation) {
-                return authenticationInformation;
-            }
+        // 优先使用用户编码作为缓存 key，body 可能为空导致无法命中缓存
+        String cacheKey = StringUtils.isNotBlank(appKeySecret.getUserCode())
+                ? appKeySecret.getUserCode() : appKeySecret.getBody();
+        AuthenticationInformation cached = readAuthenticationInformation(cacheKey);
+        if (null != cached) {
+            return cached;
         }
 
         AuthenticationInformation authenticationInformation = authenticationUserCode(appKeySecret);
 
-        CACHEABLE.put(cacheKey, Value.of(authenticationInformation));
+        writeAuthenticationInformation(cacheKey, authenticationInformation);
         return authenticationInformation;
     }
     /**
@@ -356,8 +356,13 @@ public abstract class AbstractProtocol implements Protocol {
         if (null == cacheKey) {
             return false;
         }
-        Object value = CACHEABLE.get(cacheKey, Object.class);
-        return null != value;
+        try {
+            Object value = CACHEABLE.get(cacheKey, Object.class);
+            return null != value;
+        } catch (Exception e) {
+            log.warn("[OAuth客户端]缓存读取失败 - key: {}", cacheKey, e);
+            return false;
+        }
     }
 
 
@@ -445,7 +450,7 @@ public abstract class AbstractProtocol implements Protocol {
                 body = data.toString();
             }
 
-            if(path.endsWith("login")) {
+            if(path != null && path.endsWith("login")) {
                 LoginResult loginResult = Json.fromJson(body, LoginResult.class);
                 UserResume userResume = loginResult.getUserResume();
                 registerToRequest(userResume);
@@ -455,13 +460,13 @@ public abstract class AbstractProtocol implements Protocol {
                 return authenticationInformation;
             }
 
-            if(path.endsWith("logout")) {
+            if(path != null && path.endsWith("logout")) {
                 unregisterFromRequest(servletRequest);
                 return new AuthenticationInformation(Information.OK, null);
             }
 
             // temporary-token 路径：服务端返回的 data 是 token 字符串
-            if(path.endsWith("temporary-token")) {
+            if(path != null && path.endsWith("temporary-token")) {
                 AuthenticationInformation authenticationInformation = new AuthenticationInformation(OK, null);
                 authenticationInformation.setToken(body);
                 return authenticationInformation;
@@ -486,8 +491,12 @@ public abstract class AbstractProtocol implements Protocol {
         com.chua.starter.oauth.client.support.execute.AuthSessionUtils.removeUsername();
         com.chua.starter.oauth.client.support.execute.AuthSessionUtils.removeUserInfo();
         if (servletRequest != null) {
-            servletRequest.getSession().removeAttribute(com.chua.starter.oauth.client.support.execute.AuthSessionUtils.SESSION_USERID);
-            servletRequest.getSession().removeAttribute(com.chua.starter.oauth.client.support.execute.AuthSessionUtils.SESSION_TENANT_ID);
+            // 失败路径不强制创建 session，仅清理已存在的会话属性
+            jakarta.servlet.http.HttpSession session = servletRequest.getSession(false);
+            if (session != null) {
+                session.removeAttribute(com.chua.starter.oauth.client.support.execute.AuthSessionUtils.SESSION_USERID);
+                session.removeAttribute(com.chua.starter.oauth.client.support.execute.AuthSessionUtils.SESSION_TENANT_ID);
+            }
         }
         if(null != servletRequest) {
             CookieUtil.remove(servletRequest, ResponseUtils.getResponse(), "x-oauth-cookie");
@@ -518,46 +527,105 @@ public abstract class AbstractProtocol implements Protocol {
      * @param cacheKey 缓存key
      */
     protected void clearAuthenticationInformation(String cacheKey) {
-        CACHEABLE.remove(cacheKey);
+        if (null == cacheKey) {
+            return;
+        }
+        try {
+            CACHEABLE.remove(cacheKey);
+        } catch (Exception e) {
+            log.warn("[OAuth客户端]缓存清除失败 - key: {}", cacheKey, e);
+        }
     }
+
     /**
-     * 缓存认证信息
+     * 读取缓存认证信息
+     * <p>单次读取，命中且有效时回填请求上下文，无效缓存自动清除；
+     * 缓存读取异常时降级为未命中，不阻断鉴权主流程</p>
      *
      * @param cacheKey 缓存key
+     * @return 认证信息，未命中或无效返回 null
      */
-    protected AuthenticationInformation cacheAuthenticationInformation(String cacheKey) {
-        Object value = CACHEABLE.get(cacheKey, Object.class);
-        AuthenticationInformation authenticationInformation = (AuthenticationInformation) value;
-        if (null != authenticationInformation && authenticationInformation.getInformation().getCode() == 200) {
-            UserResume userResume = authenticationInformation.getReturnResult();
-            com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUsername(userResume.getUsername());
-            com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUserInfo(userResume);
-            var request = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getRequest();
-            if (request != null) {
+    protected AuthenticationInformation readAuthenticationInformation(String cacheKey) {
+        if (null == cacheKey) {
+            return null;
+        }
+        Object value;
+        try {
+            value = CACHEABLE.get(cacheKey, Object.class);
+        } catch (Exception e) {
+            log.warn("[OAuth客户端]缓存读取异常，降级为未命中 - key: {}", cacheKey, e);
+            return null;
+        }
+        if (null == value) {
+            return null;
+        }
+
+        AuthenticationInformation authenticationInformation;
+        try {
+            authenticationInformation = (AuthenticationInformation) value;
+        } catch (Exception e) {
+            clearAuthenticationInformation(cacheKey);
+            return null;
+        }
+        if (null == authenticationInformation
+                || authenticationInformation.getInformation() == null
+                || authenticationInformation.getInformation().getCode() != 200) {
+            clearAuthenticationInformation(cacheKey);
+            return null;
+        }
+
+        UserResume userResume = authenticationInformation.getReturnResult();
+        if (null == userResume) {
+            clearAuthenticationInformation(cacheKey);
+            return null;
+        }
+        com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUsername(userResume.getUsername());
+        com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUserInfo(userResume);
+        var request = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getRequest();
+        if (request != null) {
+            jakarta.servlet.http.HttpSession session = request.getSession(false);
+            if (session != null) {
                 if (userResume.getUserId() != null) {
-                    request.getSession().setAttribute(com.chua.starter.oauth.client.support.execute.AuthSessionUtils.SESSION_USERID, userResume.getUserId());
+                    session.setAttribute(com.chua.starter.oauth.client.support.execute.AuthSessionUtils.SESSION_USERID, userResume.getUserId());
                 }
                 if (userResume.getTenantId() != null) {
-                    request.getSession().setAttribute(com.chua.starter.oauth.client.support.execute.AuthSessionUtils.SESSION_TENANT_ID, userResume.getTenantId());
+                    session.setAttribute(com.chua.starter.oauth.client.support.execute.AuthSessionUtils.SESSION_TENANT_ID, userResume.getTenantId());
                 }
             }
-            return authenticationInformation;
-        } else {
-            CACHEABLE.remove(cacheKey);
         }
-        return null;
+        return authenticationInformation;
+    }
+
+    /**
+     * 写入缓存认证信息
+     * <p>缓存写入失败不影响鉴权主流程</p>
+     *
+     * @param cacheKey                 缓存key
+     * @param authenticationInformation 认证信息
+     */
+    protected void writeAuthenticationInformation(String cacheKey, AuthenticationInformation authenticationInformation) {
+        if (null == cacheKey || null == authenticationInformation) {
+            return;
+        }
+        try {
+            // 使用配置的缓存超时时间，确保认证缓存按 TTL 过期，权限变更后能及时刷新
+            CACHEABLE.put(cacheKey, Value.of(authenticationInformation), authClientProperties.getCacheTimeout());
+        } catch (Exception e) {
+            log.warn("[OAuth客户端]缓存写入失败，降级为不缓存 - key: {}", cacheKey, e);
+        }
     }
 
     /**
      * 获取缓存key
+     * <p>对 token 进行 SHA-256 哈希，避免长字符串直接作为缓存 key 造成存储/带宽浪费</p>
      *
      * @param cookies cookies
      * @param token   token
      * @return 缓存key
      */
     protected String getCacheKey(Cookie[] cookies, String token) {
-        if (StringUtils.isNotEmpty(StringUtils.ifValid(token, ""))) {
-            return token;
+        if (StringUtils.isNotBlank(token)) {
+            return DigestUtils.sha256(token);
         }
 
         if (null == cookies) {
@@ -569,7 +637,7 @@ public abstract class AbstractProtocol implements Protocol {
                 continue;
             }
             if ("x-oauth-cookie".equals(cookie.getName())) {
-                return cookie.getValue();
+                return DigestUtils.sha256(cookie.getValue());
             }
         }
 

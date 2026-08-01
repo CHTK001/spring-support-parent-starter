@@ -15,6 +15,16 @@ public class AuthConstant {
 
     public static final String CAPTCHA_SESSION_KEY = "captcha_session_key";
 
+    /**
+     * 访问令牌 Redis 键前缀
+     */
+    public static final String TOKEN_PRE = "oauth:token:";
+
+    /**
+     * 刷新令牌 Redis 键前缀
+     */
+    public static final String TOKEN_REFRESH_PRE = "oauth:refresh:";
+
     public static boolean isSuperAdmin(Set<String> roles) {
         return roles != null && roles.contains(SUPER_ADMIN);
     }

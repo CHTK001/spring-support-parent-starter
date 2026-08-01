@@ -16,8 +16,6 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import java.time.Duration;
 
 import static com.chua.starter.common.support.constant.CacheConstant.*;
-import static com.chua.starter.common.support.constant.Constant.REDIS_CACHE_HOUR;
-import static com.chua.starter.common.support.constant.Constant.REDIS_CACHE_MIN;
 import static com.chua.starter.common.support.jackson.configuration.JacksonConfiguration.createObjectMapper;
 
 /**

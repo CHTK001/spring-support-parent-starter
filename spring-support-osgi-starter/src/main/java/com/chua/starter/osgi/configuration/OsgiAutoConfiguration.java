@@ -21,7 +21,7 @@ import java.util.Map;
 /**
  * OSGi 自动配置。
  *
- * <p>集成 Felix OSGi 框架，支持 Gogo shell 远程管理（SSH/Telnet），
+ * <p>集成 Felix OSGi 框架，支持 Gogo shell 安装启动，
  * 并暴露实时查询 OSGi 服务的 {@link OsgiObjectContext} Bean。</p>
  *
  * @author CH
@@ -38,13 +38,15 @@ public class OsgiAutoConfiguration {
      * Gogo shell bundle 类标记（用于定位 jar 路径）。
      *
      * <p>顺序即安装顺序：先装 runtime（导出 org.apache.felix.service.command 包），
-     * 再装 command/shell（依赖该包），最后装 remote shell。</p>
+     * 再装 command/shell（依赖该包）。</p>
+     *
+     * <p>注：org.apache.felix.shell.remote（SSH/Telnet 远程管理）构件在当前离线环境中
+     * 不可用，故不在此安装；如需远程管理请手动补充该依赖。</p>
      */
     private static final String[] GOGO_MARKER_CLASSES = {
             "org.apache.felix.gogo.runtime.Closure",
             "org.apache.felix.gogo.command.Basic",
-            "org.apache.felix.gogo.shell.Shell",
-            "org.apache.felix.shell.remote.Activator"
+            "org.apache.felix.gogo.shell.Shell"
     };
 
     /**
@@ -98,7 +100,7 @@ public class OsgiAutoConfiguration {
     }
 
     /**
-     * 将 Gogo shell / remote shell bundle 安装并启动到 Felix 框架。
+     * 将 Gogo shell bundle 安装并启动到 Felix 框架。
      *
      * @param launcher OSGi 启动器
      */

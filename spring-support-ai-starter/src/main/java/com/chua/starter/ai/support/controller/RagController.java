@@ -214,4 +214,51 @@ public class RagController {
             return ReturnResult.error("搜索失败: " + e.getMessage());
         }
     }
+
+    @Operation(summary = "URL 抓取文档", description = "从指定 URL 抓取网页内容并添加为 RAG 文档")
+    @PostMapping("/document/url")
+    public ReturnResult<RagDocument> addDocumentByUrl(@RequestBody com.chua.starter.ai.support.model.UrlDocumentRequest request) {
+        String url = request.getUrl();
+        if (url == null || url.isBlank()) {
+            return ReturnResult.error("URL 不能为空");
+        }
+        try {
+            // 抓取网页内容（简单实现，使用 java.net.HttpURLConnection）
+            java.net.URL target = new java.net.URL(url);
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) target.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(10000);
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+            try (java.io.InputStream is = conn.getInputStream();
+                 java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream()) {
+                byte[] buffer = new byte[8192];
+                int len;
+                while ((len = is.read(buffer)) != -1) {
+                    baos.write(buffer, 0, len);
+                }
+                byte[] contentBytes = baos.toByteArray();
+                // 尝试提取文本内容（简单取前 2000 字符作为预览）
+                String content = new String(contentBytes, java.nio.charset.StandardCharsets.UTF_8);
+                // 去除 HTML 标签（非常粗略）
+                content = content.replaceAll("<[^>]+>", " ").replaceAll("\\s+", " ").trim();
+                if (content.length() > 2000) {
+                    content = content.substring(0, 2000) + "...";
+                }
+                // 使用文件名：URL 的最后一段
+                String fileName = url.substring(url.lastIndexOf('/') + 1);
+                if (fileName.isBlank() || !fileName.contains(".")) {
+                    fileName = "webpage_" + System.currentTimeMillis() + ".txt";
+                }
+                RagDocument doc = ragClient.uploadDocument(fileName, content.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                if ("FAILED".equals(doc.status())) {
+                    return ReturnResult.error(doc.errorMessage());
+                }
+                return ReturnResult.ok(doc);
+            }
+        } catch (Exception e) {
+            log.error("[RagController] URL 抓取失败: {}", e.getMessage());
+            return ReturnResult.error("URL 抓取失败: " + e.getMessage());
+        }
+    }
 }

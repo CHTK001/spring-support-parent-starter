@@ -19,6 +19,12 @@
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
+        <!-- 缓存功能模块 - 提供 CacheProvider 认证信息缓存抽象 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-cache-starter</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.konghq</groupId>
             <artifactId>unirest-java</artifactId>

@@ -68,19 +68,16 @@ public class AuthFilter implements Filter {
 
         WebRequest webRequest = new WebRequest(this.webRequest.getAuthProperties(), httpRequest, requestMappingHandlerMapping);
 
-        httpRequest.getSession().setAttribute("codec", true);
-
         // 白名单检查
         if (webRequest.isPass()) {
-            httpRequest.getSession().setAttribute("codec", false);
-            log.info("[AuthFilter白名单]请求通过白名单 - URI: {}, 方法: {}", requestURI, method);
+            log.debug("[AuthFilter白名单]请求通过白名单 - URI: {}, 方法: {}", requestURI, method);
             log.debug("[AuthFilter白名单]跳过认证，直接放行");
             chain.doFilter(request, response);
             log.debug("[AuthFilter]请求处理完成(白名单) - URI: {}, 耗时: {}ms", requestURI, System.currentTimeMillis() - startTime);
             return;
         }
 
-        log.info("[AuthFilter拦截]拦截到需要认证的请求 - URI: {}, 方法: {}, IP: {}", requestURI, method, remoteAddr);
+        log.debug("[AuthFilter拦截]拦截到需要认证的请求 - URI: {}, 方法: {}, IP: {}", requestURI, method, remoteAddr);
 
         // Token检查
         if (webRequest.isFailure()) {
@@ -105,9 +102,7 @@ public class AuthFilter implements Filter {
             return;
         }
 
-        log.info("[AuthFilter鉴权成功]鉴权通过 - URI: {}", requestURI);
-
-        // 验证浏览器指纹（仅对标记了@VerifyFingerprint注解的接口）
+        log.info("[AuthFilter鉴权成功]鉴权通过 - URI: {}", requestURI);        // 验证浏览器指纹（仅对标记了@VerifyFingerprint注解的接口）
         UserResume userResume = authentication.getReturnResult();
         Information fingerprintResult = verifyFingerprint(httpRequest, userResume);
         if (fingerprintResult != null && fingerprintResult != Information.OK) {
@@ -136,7 +131,7 @@ public class AuthFilter implements Filter {
             log.debug("[AuthFilter属性]设置userId到request属性 - userId: {}", userResume.getUserId());
         }
 
-        log.info("[AuthFilter完成]认证完成，继续处理请求 - 用户: {}, 用户ID: {}, URI: {}",
+        log.debug("[AuthFilter完成]认证完成，继续处理请求 - 用户: {}, 用户ID: {}, URI: {}",
                  userResume != null ? userResume.getUsername() : "anonymous",
                  userResume != null ? userResume.getUserId() : null,
                  requestURI);
@@ -162,9 +157,10 @@ public class AuthFilter implements Filter {
         String protocol = webRequest.getAuthProperties().getProtocol();
         if (protocol != null) {
             return switch (protocol.toLowerCase()) {
-                case "http", "lite" -> "OAUTH_HTTP";
+                case "http", "http-lite", "lite" -> "OAUTH_HTTP";
                 case "static" -> "OAUTH_STATIC";
                 case "websocket" -> "OAUTH_WEBSOCKET";
+                case "rsocket" -> "OAUTH_RSOCKET";
                 default -> "OAUTH_" + protocol.toUpperCase();
             };
         }
@@ -202,7 +198,7 @@ public class AuthFilter implements Filter {
         OAuthPrincipal principal = OAuthPrincipal.authenticated(userResume, authType);
         session.setAttribute("principal", principal);
 
-        log.info("[AuthFilter渲染]用户信息已存储到Session - 用户: {}, ID: {}, 认证类型: {}, 角色数: {}, 权限数: {}",
+        log.debug("[AuthFilter渲染]用户信息已存储到Session - 用户: {}, ID: {}, 认证类型: {}, 角色数: {}, 权限数: {}",
                  userResume.getUsername(), 
                  userResume.getUserId(), 
                  authType,

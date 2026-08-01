@@ -3,6 +3,7 @@ package com.chua.starter.oauth.client.support.execute;
 import com.chua.common.support.utils.BeanUtils;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -63,7 +64,12 @@ public final class AuthSessionUtils {
         if (request == null) {
             return null;
         }
-        Object attribute = request.getSession().getAttribute(SESSION_TENANT_ID);
+        // 读取操作不强制创建会话，避免无状态请求产生不必要的 Session
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            return null;
+        }
+        Object attribute = session.getAttribute(SESSION_TENANT_ID);
         return attribute == null ? null : attribute.toString();
     }
 
@@ -77,7 +83,12 @@ public final class AuthSessionUtils {
         if (request == null) {
             return null;
         }
-        Object attribute = request.getSession().getAttribute(SESSION_USERID);
+        // 读取操作不强制创建会话，避免无状态请求产生不必要的 Session
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            return null;
+        }
+        Object attribute = session.getAttribute(SESSION_USERID);
         return attribute == null ? null : attribute.toString();
     }
 
@@ -91,7 +102,12 @@ public final class AuthSessionUtils {
         if (request == null) {
             return null;
         }
-        Object attribute = request.getSession().getAttribute(SESSION_USERNAME);
+        // 读取操作不强制创建会话，避免无状态请求产生不必要的 Session
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            return null;
+        }
+        Object attribute = session.getAttribute(SESSION_USERNAME);
         return attribute == null ? null : attribute.toString();
     }
 
@@ -134,7 +150,12 @@ public final class AuthSessionUtils {
         if (request == null) {
             return null;
         }
-        Object attribute = request.getSession().getAttribute(SESSION_USER_INFO);
+        // 读取操作不强制创建会话，避免无状态请求产生不必要的 Session
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            return null;
+        }
+        Object attribute = session.getAttribute(SESSION_USER_INFO);
         if (attribute == null) {
             return null;
         }

@@ -347,8 +347,7 @@ public class AuthClientExecute {
             return null;
         }
         try {
-            Protocol protocol = ServiceProvider.of(Protocol.class)
-                    .getNewExtension(authClientProperties.getProtocol(), authClientProperties);
+            Protocol protocol = WebRequest.getProtocolExtension(authClientProperties);
             if (protocol == null) {
                 return null;
             }
@@ -426,8 +425,7 @@ public class AuthClientExecute {
      */
     public Protocol.OnlineUserResult getOnlineUsers(Protocol.OnlineUserQuery query) {
         try {
-            Protocol protocol = ServiceProvider.of(Protocol.class)
-                    .getNewExtension(authClientProperties.getProtocol(), authClientProperties);
+            Protocol protocol = WebRequest.getProtocolExtension(authClientProperties);
             if (protocol == null) {
                 return Protocol.OnlineUserResult.empty();
             }
@@ -511,8 +509,7 @@ public class AuthClientExecute {
         int actualExpire = Math.max(1, Math.min(expireSeconds, MAX_TEMPORARY_TOKEN_EXPIRE));
 
         try {
-            Protocol protocol = ServiceProvider.of(Protocol.class)
-                    .getNewExtension(authClientProperties.getProtocol(), authClientProperties);
+            Protocol protocol = WebRequest.getProtocolExtension(authClientProperties);
             if (protocol == null) {
                 return new LoginAuthResult(500, "协议服务不可用");
             }
@@ -579,7 +576,10 @@ public class AuthClientExecute {
             protocolName = request.getHeader("x-oauth-protocol");
         }
 
-        Protocol protocol = ServiceProvider.of(Protocol.class).getNewExtension(authClientProperties.getProtocol(), authClientProperties);
+        Protocol protocol = WebRequest.getProtocolExtension(authClientProperties);
+        if (protocol == null) {
+            return null;
+        }
         AuthenticationInformation approve = protocol.approve(null, token, protocolName);
 
         if (approve.getInformation().getCode() != 200) {

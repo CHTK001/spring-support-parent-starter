@@ -1,5 +1,6 @@
 package com.chua.starter.oauth.client.support.web;
 
+import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.ObjectUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.spi.ServiceProvider;
@@ -71,6 +72,12 @@ public class WebRequest {
     }
 
     private static final ConcurrentReferenceHashMap<HandlerMethod, HandlerMethod> PASS = new ConcurrentReferenceHashMap<>(1024);
+
+    /**
+     * 协议实例缓存（协议名+配置摘要 -> 协议实例），避免每次请求重复 SPI 查找与构造
+     * <p>key 包含配置摘要，防止同协议名不同配置（如 address/oauthUrl/加密方式）复用同一实例导致串配置</p>
+     */
+    private static final java.util.concurrent.ConcurrentHashMap<String, Protocol> PROTOCOL_CACHE = new java.util.concurrent.ConcurrentHashMap<>(8);
 
     /**
      * 是否通过
@@ -304,9 +311,14 @@ public class WebRequest {
             return AuthenticationInformation.passAuthenticationInformation();
         }
         
-        AuthenticationInformation result = ServiceProvider.of(Protocol.class)
-                .getNewExtension(protocol, authProperties)
-                .approve(cookie, token, authType);
+        Protocol protocolExtension = resolveProtocol();
+        if (protocolExtension == null) {
+            log.error("[WebRequest鉴权]协议未注册 - 协议: {}, 可用协议: {}", protocol,
+                    ServiceProvider.of(Protocol.class).names());
+            return AuthenticationInformation.noAuth();
+        }
+        
+        AuthenticationInformation result = protocolExtension.approve(cookie, token, authType);
         
         long costTime = System.currentTimeMillis() - startTime;
         
@@ -341,12 +353,15 @@ public class WebRequest {
      * @return 用户信息
      */
     public AuthenticationInformation authentication(AppKeySecret appKeySecret) {
-        // 快速获取认证数据
-        Cookie[] cookie = getCookie();
-        String token = getToken();
         // 快速确定协议类型
         log.debug("获取默认协议: {}", protocol);
-        return ServiceProvider.of(Protocol.class).getNewExtension(protocol, authProperties).authentication(appKeySecret);
+        Protocol protocolExtension = resolveProtocol();
+        if (protocolExtension == null) {
+            log.error("[WebRequest鉴权]协议未注册 - 协议: {}, 可用协议: {}", protocol,
+                    ServiceProvider.of(Protocol.class).names());
+            return AuthenticationInformation.noAuth();
+        }
+        return protocolExtension.authentication(appKeySecret);
     }
 
     /**
@@ -358,6 +373,68 @@ public class WebRequest {
         // 使用局部变量避免多次属性访问
         String defaultProtocol = authProperties != null ? authProperties.getProtocol() : null;
         return (defaultProtocol != null && !defaultProtocol.isEmpty()) ? defaultProtocol : "custom";
+    }
+
+    /**
+     * 解析认证协议扩展
+     * <p>通过 SPI 加载配置的协议实现，协议未注册时返回 null，由调用方降级处理</p>
+     *
+     * @return 协议实例，未注册返回 null
+     */
+    private Protocol resolveProtocol() {
+        return getProtocolExtension(authProperties);
+    }
+
+    /**
+     * 获取认证协议扩展（带进程内实例缓存）
+     * <p>协议配置全局唯一，实例无每请求状态，按协议名缓存单例避免每次请求重复 SPI 查找与构造</p>
+     *
+     * @param authProperties 认证配置
+     * @return 协议实例，未注册返回 null
+     */
+    public static Protocol getProtocolExtension(AuthClientProperties authProperties) {
+        if (null == authProperties) {
+            return null;
+        }
+        String cacheKey = protocolCacheKey(authProperties);
+        Protocol cached = PROTOCOL_CACHE.get(cacheKey);
+        if (null != cached) {
+            return cached;
+        }
+        String protocol = authProperties.getProtocol();
+        Protocol extension = ServiceProvider.of(Protocol.class).getNewExtension(protocol, authProperties);
+        if (null == extension) {
+            log.error("[WebRequest协议解析]协议扩展加载失败 - 协议: {}, 可用协议: {}", protocol,
+                    ServiceProvider.of(Protocol.class).names());
+            return null;
+        }
+        Protocol existing = PROTOCOL_CACHE.putIfAbsent(cacheKey, extension);
+        return null != existing ? existing : extension;
+    }
+
+    /**
+     * 构建协议缓存key
+     * <p>以协议名 + 影响协议运行行为的关键配置摘要作为 key，
+     * 保证不同配置的协议实例互不串用，同时避免敏感配置（如 SecretKey）明文进 key</p>
+     *
+     * @param authProperties 认证配置
+     * @return 缓存key
+     */
+    private static String protocolCacheKey(AuthClientProperties authProperties) {
+        AuthClientProperties.Aksk aksk = authProperties.getKey();
+        String akskPart = null == aksk ? "" : aksk.isEnabled() + "|"
+                + StringUtils.defaultString(aksk.getAccessKey(), "") + "|"
+                + StringUtils.defaultString(aksk.getSecretKey(), "");
+        String digest = DigestUtils.sha256(String.join("|",
+                StringUtils.defaultString(authProperties.getAddress(), ""),
+                StringUtils.defaultString(authProperties.getOauthUrl(), ""),
+                StringUtils.defaultString(authProperties.getTokenName(), ""),
+                StringUtils.defaultString(authProperties.getCookieName(), ""),
+                StringUtils.defaultString(authProperties.getEncryption(), ""),
+                String.valueOf(authProperties.isEnableEncryption()),
+                StringUtils.defaultString(authProperties.getBalance(), ""),
+                akskPart));
+        return authProperties.getProtocol() + "|" + digest;
     }
 
 
@@ -394,9 +471,16 @@ public class WebRequest {
         Cookie[] cookie = getCookie();
         String token = getToken();
 
+        Protocol protocolExtension = resolveProtocol();
+        if (protocolExtension == null) {
+            log.error("[WebRequest升级]协议未注册 - 协议: {}, 可用协议: {}", protocol,
+                    ServiceProvider.of(Protocol.class).names());
+            return null;
+        }
+
         // REFRESH 类型只需要 refreshToken，不需要现有的 accessToken
         if (upgradeType == UpgradeType.REFRESH && refreshToken != null && !refreshToken.isEmpty()) {
-            return ServiceProvider.of(Protocol.class).getNewExtension(protocol, authProperties).upgrade(cookie, token,
+            return protocolExtension.upgrade(cookie, token,
                     upgradeType, refreshToken);
         }
 
@@ -404,7 +488,7 @@ public class WebRequest {
         if ((cookie == null || cookie.length == 0) && (token == null || token.isEmpty())) {
             return null;
         }
-        return ServiceProvider.of(Protocol.class).getNewExtension(protocol, authProperties).upgrade(cookie, token,
+        return protocolExtension.upgrade(cookie, token,
                 upgradeType, refreshToken);
     }
 

@@ -1,14 +1,13 @@
 package com.chua.starter.oauth.client.support.execute;
 
-import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
-import com.chua.starter.oauth.client.support.protocol.Protocol;
 import com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
+import com.chua.starter.oauth.client.support.web.WebRequest;
 
 import java.util.Map;
 
@@ -25,24 +24,20 @@ import java.util.Map;
 public class DefaultProtocolExecutor implements ProtocolExecutor{
 
     private final AuthClientProperties authClientProperties;
-    private final String encryption;
-    private final String protocol;
 
     public DefaultProtocolExecutor() {
         this.authClientProperties = OauthClientRuntimeContext.getAuthClientProperties();
-        this.encryption = authClientProperties.getEncryption();
-        this.protocol = authClientProperties.getProtocol();
     }
 
     @Override
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
-        return ServiceProvider.of(Protocol.class).getNewExtension(protocol, authClientProperties)
+        return WebRequest.getProtocolExtension(authClientProperties)
                 .getAccessToken(username, password, authType, ext);
     }
 
     @Override
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult ) {
-        return ServiceProvider.of(Protocol.class).getNewExtension(protocol, authClientProperties)
+        return WebRequest.getProtocolExtension(authClientProperties)
                 .logout(uid, logoutType, userResult);
     }
 

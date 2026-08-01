@@ -1,6 +1,2 @@
-com.chua.starter.ai.support.configuration.AiConfiguration
-com.chua.starter.ai.support.configuration.AiCacheKeyGeneratorAliasConfiguration
-com.chua.starter.ai.support.configuration.AiCacheManagerFallbackConfiguration
-com.chua.starter.ai.support.configuration.AiProtocolServerConfiguration
-com.chua.starter.ai.support.configuration.RagAutoConfiguration
-# 当 plugin.protocol.enable=true 时，由 spring-support-ai-protocol-starter 接管 AI ProtocolServer 生命周期
+com.chua.starter.ai.support.configuration.AiGenerateAutoConfiguration
+com.chua.starter.ai.support.configuration.UsageAutoConfiguration

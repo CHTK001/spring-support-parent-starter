@@ -18,7 +18,6 @@
         <felix.gogo.runtime.version>1.1.6</felix.gogo.runtime.version>
         <felix.gogo.shell.version>1.1.4</felix.gogo.shell.version>
         <felix.gogo.command.version>1.1.2</felix.gogo.command.version>
-        <felix.shell.remote.version>1.2.0</felix.shell.remote.version>
     </properties>
 
     <dependencies>
@@ -50,11 +49,6 @@
             <groupId>org.apache.felix</groupId>
             <artifactId>org.apache.felix.gogo.command</artifactId>
             <version>${felix.gogo.command.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.felix</groupId>
-            <artifactId>org.apache.felix.shell.remote</artifactId>
-            <version>${felix.shell.remote.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

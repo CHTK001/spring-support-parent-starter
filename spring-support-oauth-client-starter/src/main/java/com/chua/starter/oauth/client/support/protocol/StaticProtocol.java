@@ -2,10 +2,10 @@ package com.chua.starter.oauth.client.support.protocol;
 
 import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.spi.annotations.Spi;
-import com.chua.starter.common.support.algorithm.crypto.Codec;
 import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.utils.RequestUtils;
+import com.chua.starter.oauth.client.support.algorithm.TokenCipher;
 import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
@@ -19,6 +19,7 @@ import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import com.google.common.collect.Sets;
 import jakarta.servlet.http.Cookie;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;
 import java.util.Map;
@@ -27,18 +28,14 @@ import static com.chua.common.support.constant.NameConstant.NULL;
 import static com.chua.starter.common.support.constant.Constant.ADMIN;
 import static com.chua.starter.common.support.constant.Constant.OPS;
 import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_ADMIN;
-import static com.chua.starter.oauth.client.support.execute.AuthClientExecute.DEFAULT_KEY;
 
 /**
  * 静态协议实现类，用于处理静态认证逻辑。
- * 该类通过SM4加密算法解析token或cookie中的用户信息，并构建认证信息。
+ * 该类通过 TokenCipher（SM4加密）解析token或cookie中的用户信息，并构建认证信息。
  */
+@Slf4j
 @Spi({"Static"})
 public class StaticProtocol extends AbstractProtocol {
-    /**
-     * SM4加密解密器，用于解析token和cookie中的用户信息
-     */
-    private static volatile Codec SM4;
 
     /**
      * 构造函数
@@ -59,13 +56,19 @@ public class StaticProtocol extends AbstractProtocol {
      */
     @Override
     protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
-        initial();
-        return newAuthenticationInformation(token, new Cookie[]{cookie});
+        try {
+            return newAuthenticationInformation(token, new Cookie[]{cookie});
+        } catch (Exception e) {
+            log.error("[StaticProtocol]approve异常 - 异常: {}", e.toString(), e);
+            return AuthenticationInformation.noAuth();
+        }
     }
 
     @Override
     protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
-        return null;
+        log.warn("[StaticProtocol]静态协议不支持AppKey认证 - appId: {}",
+                appKeySecret != null ? appKeySecret.getAppId() : null);
+        return AuthenticationInformation.noAuth();
     }
 
     /**
@@ -79,31 +82,8 @@ public class StaticProtocol extends AbstractProtocol {
      */
     @Override
     protected AuthenticationInformation upgradeInformation(Cookie cookie, String token, UpgradeType upgradeType, String refreshToken) {
-        initial();
         return newAuthenticationInformation(token, new Cookie[]{cookie});
     }
-
-    /**
-     * 初始化SM4加密解密器
-     */
-    private void initial() {
-        if (null == SM4) {
-            synchronized (this) {
-                if (null == SM4) {
-                    SM4 = Codec.build("SM4", DEFAULT_KEY);
-                }
-            }
-        }
-    }
-
-    private String encodeUserResult(UserResult userResult) {
-        try {
-            return SM4.encodeHex(Json.toJson(userResult));
-        } catch (Exception ignored) {
-            return null;
-        }
-    }
-
 
     /**
      * 创建新的认证信息对象
@@ -117,9 +97,9 @@ public class StaticProtocol extends AbstractProtocol {
         UserResult userResult = null;
         // 如果token不为空且不为"null"，则尝试解析token
         if (StringUtils.isNotBlank(token) && !NULL.equals(token)) {
-            try {
-                userResult = Json.fromJson(SM4.decodeHex(token), UserResult.class);
-            } catch (Exception ignored) {
+            userResult = TokenCipher.decryptToUser(token);
+            if (null == userResult) {
+                log.error("[StaticProtocol]token解密或解析失败 - token长度: {}", token.length());
             }
         }
 
@@ -130,13 +110,7 @@ public class StaticProtocol extends AbstractProtocol {
                     continue;
                 }
                 if (!"JSESSIONID".equals(cookie1.getName())) {
-                    String source;
-                    try {
-                        source = SM4.decodeHex(cookie1.getValue());
-                        userResult = Json.fromJson(source, UserResult.class);
-                    } catch (Exception e) {
-                        // 解析异常时继续尝试其他cookie
-                    }
+                    userResult = TokenCipher.decryptToUser(cookie1.getValue());
                     if (null != userResult) {
                         break;
                     }
@@ -191,7 +165,6 @@ public class StaticProtocol extends AbstractProtocol {
      */
     @Override
     public LoginResult upgrade(Cookie[] cookie, String token, UpgradeType upgradeType, String refreshToken) {
-        initial();
         String sourceToken = StringUtils.isNotBlank(refreshToken) ? refreshToken : token;
         if (StringUtils.isBlank(sourceToken)) {
             return null;
@@ -224,7 +197,7 @@ public class StaticProtocol extends AbstractProtocol {
         userResult.setExt(userResume.getExt());
         userResult.setExpireTime(System.currentTimeMillis() / 1000 + 7L * 24 * 60 * 60);
 
-        String refreshedToken = encodeUserResult(userResult);
+        String refreshedToken = TokenCipher.encrypt(userResult);
         if (StringUtils.isBlank(refreshedToken)) {
             return null;
         }

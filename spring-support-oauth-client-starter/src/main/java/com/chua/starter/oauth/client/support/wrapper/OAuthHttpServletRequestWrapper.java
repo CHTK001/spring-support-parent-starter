@@ -55,7 +55,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
                         OAuthPrincipal.authenticated(userResume, authType) : 
                         OAuthPrincipal.unauthenticated();
         
-        log.info("[请求包装]创建OAuth请求包装器 - 用户: {}, 认证类型: {}, 请求URI: {}", 
+        log.debug("[请求包装]创建OAuth请求包装器 - 用户: {}, 认证类型: {}, 请求URI: {}", 
                 remoteUser != null ? remoteUser : "匿名", 
                 authType != null ? authType : "无", 
                 request.getRequestURI());
@@ -85,7 +85,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
     public static OAuthHttpServletRequestWrapper authenticated(HttpServletRequest request, 
                                                               UserResume userResume, 
                                                               String authType) {
-        log.info("[请求包装]创建已认证的请求包装器 - 用户: {}, 认证类型: {}",
+        log.debug("[请求包装]创建已认证的请求包装器 - 用户: {}, 认证类型: {}",
                 userResume != null ? userResume.getUsername() : "null",
                 authType);
         return new OAuthHttpServletRequestWrapper(request, userResume, authType);
@@ -98,7 +98,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
      * @return 请求包装器
      */
     public static OAuthHttpServletRequestWrapper unauthenticated(HttpServletRequest request) {
-        log.info("[请求包装]创建未认证的请求包装器 - 请求URI: {}", request.getRequestURI());
+        log.debug("[请求包装]创建未认证的请求包装器 - 请求URI: {}", request.getRequestURI());
         return new OAuthHttpServletRequestWrapper(request, null, null);
     }
 

@@ -85,6 +85,12 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- 缓存功能模块 - 提供缓存常量 CacheConstant -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-cache-starter</artifactId>
+        </dependency>
+
         <!-- Caffeine Cache -->
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>

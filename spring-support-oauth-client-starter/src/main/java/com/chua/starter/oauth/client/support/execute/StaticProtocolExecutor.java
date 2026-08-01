@@ -1,13 +1,13 @@
 package com.chua.starter.oauth.client.support.execute;
 
-import com.chua.common.support.lang.json.Json;
+import com.chua.common.support.spi.annotations.Spi;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.common.support.algorithm.crypto.Codec;
 import com.chua.starter.common.support.utils.CookieUtil;
 import com.chua.starter.common.support.utils.RequestUtils;
 import com.chua.starter.common.support.utils.ResponseUtils;
+import com.chua.starter.oauth.client.support.algorithm.TokenCipher;
 import com.chua.starter.oauth.client.support.enums.AuthType;
 import com.chua.starter.oauth.client.support.enums.LogoutType;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static com.chua.starter.oauth.client.support.execute.AuthClientExecute.DEFAULT_KEY;
-
 /**
  * 实现了ProtocolExecutor接口的StaticProtocolExecutor类。
  * <p>
@@ -36,14 +34,13 @@ import static com.chua.starter.oauth.client.support.execute.AuthClientExecute.DE
  * @author CH
  * @since 2024/6/12
  */
+@Spi("static")
 public class StaticProtocolExecutor implements ProtocolExecutor {
 
     private final AuthClientProperties authClientProperties;
-    private final String encryption;
 
     public StaticProtocolExecutor() {
         this.authClientProperties = OauthClientRuntimeContext.getAuthClientProperties();
-        this.encryption = "SM4";
     }
 
     @Override
@@ -101,7 +98,7 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
                     userResult.setOpenId(userResult.getUid());
                     userResult.setUnionId(userResult.getUid());
 
-                    String token = encodeUserResult(userResult);
+                    String token = TokenCipher.encrypt(userResult);
                     if (StringUtils.isBlank(token)) {
                         loginAuthResult.setCode(500);
                         loginAuthResult.setMessage("静态登录令牌生成失败");
@@ -124,22 +121,13 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
 
     }
 
-    private String encodeUserResult(UserResult userResult) {
-        try {
-            return Codec.build(encryption, DEFAULT_KEY).encodeHex(Json.toJson(userResult));
-        } catch (Exception ignored) {
-            return null;
-        }
-    }
-
-
     /**
-     * 匹配
+     * 匹配用户与密码
      *
-     * @param userAndPassword 用户和密码
+     * @param userAndPassword 用户和密码列表
      * @param username        用户名
-     * @param password        暗语
-     * @return boolean
+     * @param password        密码
+     * @return 是否匹配
      */
     private boolean isMatch(List<String> userAndPassword, String username, String password) {
         if (userAndPassword.isEmpty()) {

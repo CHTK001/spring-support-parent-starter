@@ -5,7 +5,7 @@ package com.chua.starter.common.support.constant;
  *
  * @author CH
  */
-public interface Constant extends CacheConstant{
+public interface Constant {
 
     String LAN = "局域网";
     String DEFAULT_EXECUTOR_TASK = "taskExecutor";

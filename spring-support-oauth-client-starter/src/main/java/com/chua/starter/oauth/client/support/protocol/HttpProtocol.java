@@ -40,7 +40,7 @@ import java.util.Map;
  *
  * @author CH
  */
-@Spi({"http"})
+@Spi({"http", "http-lite"})
 @Slf4j
 public class HttpProtocol extends AbstractProtocol {
 

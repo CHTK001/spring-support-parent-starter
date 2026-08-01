@@ -57,6 +57,11 @@
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>
     </dependency>
+    <!-- 缓存功能模块 - 提供缓存常量 CacheConstant -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-cache-starter</artifactId>
+    </dependency>
     <!-- Redisson Redis客户端 - 提供高级的Redis功能和分布式对象 -->
     <dependency>
       <groupId>org.redisson</groupId>
