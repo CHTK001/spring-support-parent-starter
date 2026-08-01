@@ -1,0 +1,17 @@
+server:
+  port: 0
+
+plugin:
+  datasync:
+    enabled: true
+    mapping-source: file
+    file-mapping:
+      directory-path: ./src/main/resources/datasync/mappings
+
+spring:
+  application:
+    name: datasync-starter-test
+
+logging:
+  level:
+    com.chua.starter.datasync: DEBUG
