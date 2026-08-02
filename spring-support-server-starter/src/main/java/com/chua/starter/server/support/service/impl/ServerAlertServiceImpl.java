@@ -1,7 +1,7 @@
 package com.chua.starter.server.support.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.chua.starter.entity.service.SysMessage;
+import com.chua.socket.support.session.SocketSessionTemplate;
 import com.chua.starter.oauth.client.support.execute.AuthClientExecute;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
@@ -15,7 +15,6 @@ import com.chua.starter.server.support.model.ServerAlertSettings;
 import com.chua.starter.server.support.model.ServerMetricsSnapshot;
 import com.chua.starter.server.support.service.ServerAlertService;
 import com.chua.starter.server.support.service.ServerRealtimePublisher;
-import com.chua.starter.service.SysMessageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -26,6 +25,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -42,13 +42,48 @@ public class ServerAlertServiceImpl implements ServerAlertService {
     private static final String SYSTEM_AUDIT_USER_ID = "0";
     private static final String SYSTEM_AUDIT_USERNAME = "server-system";
 
+    /**
+     * Socket 消息事件名（与前端订阅保持一致）
+     */
+    private static final String SOCKET_EVENT_MESSAGE = "message";
+
+    /**
+     * 站内消息模块标识
+     */
+    private static final String MESSAGE_MODULE = "message";
+
+    /**
+     * 站内消息推送事件
+     */
+    private static final String MESSAGE_PUSH_EVENT = "push";
+
+    /**
+     * 消息级别：紧急
+     */
+    private static final String LEVEL_URGENT = "urgent";
+
+    /**
+     * 消息级别：高
+     */
+    private static final String LEVEL_HIGH = "high";
+
+    /**
+     * 消息级别：普通
+     */
+    private static final String LEVEL_NORMAL = "normal";
+
     private final ServerAlertSettingMapper serverAlertSettingMapper;
     private final ServerAlertEventMapper serverAlertEventMapper;
     private final ServerManagementProperties properties;
     private final ServerRealtimePublisher serverRealtimePublisher;
     private final ObjectProvider<StringRedisTemplate> stringRedisTemplateProvider;
-    private final ObjectProvider<SysMessageService> sysMessageServiceProvider;
     private final ObjectMapper objectMapper;
+
+    /**
+     * Socket 会话操作模板（未接入 socket 服务时为空，不影响告警主流程）
+     */
+    @Autowired(required = false)
+    private SocketSessionTemplate socketSessionTemplate;
 
     private final Map<String, String> localAlertStateCache = new ConcurrentHashMap<>();
 
@@ -228,6 +263,13 @@ public class ServerAlertServiceImpl implements ServerAlertService {
                 ZoneId.systemDefault());
     }
 
+    /**
+     * 需要时通过 socket 广播站内预警消息
+     *
+     * @param snapshot 服务器指标快照
+     * @param settings 告警设置
+     * @param event    告警事件
+     */
     private void pushAlertMessageIfNecessary(
             ServerMetricsSnapshot snapshot,
             ServerAlertSettings settings,
@@ -236,26 +278,21 @@ public class ServerAlertServiceImpl implements ServerAlertService {
         if (snapshot == null || settings == null || event == null || !Boolean.TRUE.equals(settings.getMessageEnabled())) {
             return;
         }
-        SysMessageService sysMessageService = sysMessageServiceProvider.getIfAvailable();
-        if (sysMessageService == null) {
+        if (socketSessionTemplate == null) {
             return;
         }
         try {
-            SysMessage message = new SysMessage();
-            message.setSysMessageTitle(buildMessageTitle(snapshot, event));
-            message.setSysMessageContent(buildMessageContent(snapshot, event));
-            message.setSysMessageType(SysMessage.Type.WARNING);
-            message.setSysMessageLevel(resolveMessageLevel(event.getSeverity()));
-            message.setSysMessageSenderId(0);
-            message.setSysMessageSenderName("服务器预警");
-            message.setSysMessageReceiverId(0);
-            message.setSysMessageBizType("SERVER_ALERT");
-            message.setSysMessageBizId(String.valueOf(event.getServerAlertEventId()));
-            message.setSysMessageSendTime(LocalDateTime.now());
-            message.setSysMessageRead(0);
-            message.setSysMessageStatus(SysMessage.Status.SENT);
-            message.setSysMessageUrl("/server/list");
-            runWithSystemAudit(() -> sysMessageService.sendMessage(message));
+            Map<String, Object> payload = new LinkedHashMap<>(10);
+            payload.put("module", MESSAGE_MODULE);
+            payload.put("event", MESSAGE_PUSH_EVENT);
+            payload.put("title", buildMessageTitle(snapshot, event));
+            payload.put("content", buildMessageContent(snapshot, event));
+            payload.put("level", resolveMessageLevel(event.getSeverity()));
+            payload.put("bizType", "SERVER_ALERT");
+            payload.put("bizId", String.valueOf(event.getServerAlertEventId()));
+            payload.put("url", "/server/list");
+            payload.put("sendTime", LocalDateTime.now().toString());
+            socketSessionTemplate.broadcast(SOCKET_EVENT_MESSAGE, objectMapper.writeValueAsString(payload));
         } catch (Exception ignored) {
         }
     }
@@ -313,14 +350,20 @@ public class ServerAlertServiceImpl implements ServerAlertService {
         return builder.toString();
     }
 
+    /**
+     * 解析告警级别对应的消息级别
+     *
+     * @param severity 告警级别（DANGER/WARNING 等）
+     * @return 消息级别标识
+     */
     private String resolveMessageLevel(String severity) {
         if ("DANGER".equalsIgnoreCase(severity)) {
-            return SysMessage.Level.URGENT;
+            return LEVEL_URGENT;
         }
         if ("WARNING".equalsIgnoreCase(severity)) {
-            return SysMessage.Level.HIGH;
+            return LEVEL_HIGH;
         }
-        return SysMessage.Level.NORMAL;
+        return LEVEL_NORMAL;
     }
 
     private String resolveSeverity(Double value, Double warning, Double danger) {
@@ -417,7 +460,7 @@ public class ServerAlertServiceImpl implements ServerAlertService {
                 .enabled(source.getEnabled() != null ? source.getEnabled() : Boolean.TRUE)
                 .messageEnabled(source.getMessageEnabled() != null
                         ? source.getMessageEnabled()
-                        : sysMessageServiceProvider.getIfAvailable() != null)
+                        : socketSessionTemplate != null)
                 .cpuWarningPercent(firstNonNull(source.getCpuWarningPercent(), metrics.getCpuWarningPercent()))
                 .cpuDangerPercent(firstNonNull(source.getCpuDangerPercent(), metrics.getCpuDangerPercent()))
                 .memoryWarningPercent(firstNonNull(source.getMemoryWarningPercent(), metrics.getMemoryWarningPercent()))

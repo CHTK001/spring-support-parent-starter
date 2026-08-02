@@ -10,6 +10,7 @@ import com.chua.starter.message.support.pojo.MessageContentSendRequest;
 import com.chua.starter.message.support.pojo.MessageSendRequest;
 import com.chua.starter.message.support.pojo.TemplatePreviewRequest;
 import com.chua.starter.message.support.pojo.TemplatePreviewResponse;
+import com.chua.starter.message.support.pojo.ChannelInfo;
 
 import java.util.List;
 
@@ -44,13 +45,13 @@ public interface SysMessageService {
     /**
      * 已注册消息渠道列表
      * <p>
-     * 返回所有通过 SPI 注册的 MessagePush 渠道标识（如 email、alibaba-sms、dingding 等），
-     * 用于前端「厂家编码」下拉选择。
+     * 遍历所有通过 SPI 注册的 MessagePush 渠道，返回其标识、中文名称、类型与支持能力，
+     * 用于前端「消息渠道」下拉选择。
      * </p>
      *
-     * @return 渠道标识列表
+     * @return 渠道信息列表
      */
-    List<String> listChannels();
+    List<ChannelInfo> listChannels();
 
     /**
      * 新增提供商

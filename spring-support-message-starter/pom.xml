@@ -53,6 +53,12 @@
             <artifactId>spring-support-mybatis-starter</artifactId>
         </dependency>
 
+        <!-- Socket 会话模板（站内消息渠道推送） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-socket-starter</artifactId>
+        </dependency>
+
         <!-- OAuth 客户端权限注解 -->
         <dependency>
             <groupId>com.chua</groupId>

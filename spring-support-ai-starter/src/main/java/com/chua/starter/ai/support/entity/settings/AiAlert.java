@@ -1,0 +1,97 @@
+package com.chua.starter.ai.support.entity.settings;
+
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.TableName;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.Data;
+
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
+/**
+ * 告警规则表，针对 AppKey 用量/费用/异常的阈值告警。
+ *
+ * @author CH
+ * @since 2026-08-03
+ */
+@Data
+@TableName("ai_alert")
+@ApiModel("告警规则")
+public class AiAlert implements Serializable {
+
+    /**
+     * 告警主键 ID
+     */
+    @TableId(type = IdType.AUTO)
+    @ApiModelProperty("告警主键 ID")
+    private Long alertId;
+
+    /**
+     * 告警规则名称
+     */
+    @TableField("alert_name")
+    @ApiModelProperty("告警规则名称")
+    private String alertName;
+
+    /**
+     * 关联的 AppKey ID（0 表示全部）
+     */
+    @TableField("alert_app_key_id")
+    @ApiModelProperty("关联的 AppKey ID")
+    private Long alertAppKeyId;
+
+    /**
+     * 触发条件表达式
+     */
+    @TableField("alert_condition")
+    @ApiModelProperty("触发条件表达式")
+    private String alertCondition;
+
+    /**
+     * 告警阈值
+     */
+    @TableField("alert_threshold")
+    @ApiModelProperty("告警阈值")
+    private Long alertThreshold;
+
+    /**
+     * 通知渠道（JSON 数组字符串）
+     */
+    @TableField("alert_channels")
+    @ApiModelProperty("通知渠道(JSON)")
+    private String alertChannels;
+
+    /**
+     * 是否启用
+     */
+    @TableField("alert_enabled")
+    @ApiModelProperty("是否启用")
+    private Boolean alertEnabled;
+
+    /**
+     * 创建时间
+     */
+    @TableField(value = "alert_create_time", fill = FieldFill.INSERT)
+    @ApiModelProperty("创建时间")
+    private LocalDateTime alertCreateTime;
+
+    /**
+     * 更新时间
+     */
+    @TableField(value = "alert_update_time", fill = FieldFill.INSERT_UPDATE)
+    @ApiModelProperty("更新时间")
+    private LocalDateTime alertUpdateTime;
+
+    /**
+     * 逻辑删除标记
+     */
+    @TableField("alert_deleted")
+    @TableLogic
+    @ApiModelProperty("逻辑删除标记")
+    private Integer alertDeleted;
+}

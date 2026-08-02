@@ -7,6 +7,7 @@ import com.chua.starter.common.support.lang.ReturnPageResult;
 import com.chua.starter.message.support.entity.SysMessageLog;
 import com.chua.starter.message.support.entity.SysMessageProvider;
 import com.chua.starter.message.support.entity.SysMessageTemplate;
+import com.chua.starter.message.support.pojo.ChannelInfo;
 import com.chua.starter.message.support.pojo.MessageContentSendRequest;
 import com.chua.starter.message.support.pojo.MessageSendRequest;
 import com.chua.starter.message.support.pojo.TemplatePreviewRequest;
@@ -84,12 +85,12 @@ public class SysMessageController {
      * 返回所有通过 SPI 注册的 MessagePush 渠道标识，用于前端「厂家编码」下拉选择。
      * </p>
      *
-     * @return 渠道标识列表
+     * @return 渠道信息列表
      */
     @Operation(summary = "已注册消息渠道列表")
     @GetMapping("/channel/list")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
-    public ReturnResult<List<String>> listChannels() {
+    public ReturnResult<List<ChannelInfo>> listChannels() {
         return ReturnResult.ok(sysMessageService.listChannels());
     }
 

@@ -21,6 +21,7 @@ import com.chua.starter.message.support.entity.SysMessageTemplate;
 import com.chua.starter.message.support.mapper.SysMessageLogMapper;
 import com.chua.starter.message.support.mapper.SysMessageProviderMapper;
 import com.chua.starter.message.support.mapper.SysMessageTemplateMapper;
+import com.chua.starter.message.support.pojo.ChannelInfo;
 import com.chua.starter.message.support.pojo.MessageContentSendRequest;
 import com.chua.starter.message.support.pojo.MessageSendRequest;
 import com.chua.starter.message.support.pojo.TemplatePreviewRequest;
@@ -36,6 +37,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -89,12 +91,17 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     @Override
-    public List<String> listChannels() {
-        return ServiceProvider.of(MessagePush.class)
-                .getExtensions()
-                .stream()
-                .sorted()
-                .toList();
+    public List<ChannelInfo> listChannels() {
+        List<ChannelInfo> result = new ArrayList<>();
+        ServiceProvider.of(MessagePush.class).forDefinitionEach(definition -> result.add(new ChannelInfo(
+                definition.getName(),
+                definition.getDescribe(),
+                definition.getDescribeType(),
+                definition.getDescribeDetail(),
+                definition.getSupportedTypes()
+        )));
+        result.sort(Comparator.comparing(ChannelInfo::channel));
+        return result;
     }
 
     @Override

@@ -133,9 +133,6 @@
         <!-- 消息推送模块 -->
         <module>spring-support-message-starter</module>               <!-- 消息推送集成 -->
 
-        <!-- 邮箱管理模块 -->
-        <module>spring-support-email-starter</module>                 <!-- 邮箱收发管理 -->
-
         <!-- 软件管理模块 -->
         <module>spring-support-software-starter</module>              <!-- 软件源管理、安装卸载、检索升级 -->
 
@@ -204,7 +201,6 @@
         <unirest.version>3.14.5</unirest.version>
         <justauth.version>1.16.6</justauth.version>
         <lock4j.version>2.2.5</lock4j.version>
-        <embedded-redis.version>0.7.3</embedded-redis.version>
         <fastjson2.version>2.0.52</fastjson2.version>
         <arthas.version>4.0.4</arthas.version>
         <ssh-shell-spring-boot.version>2.7.0</ssh-shell-spring-boot.version>
@@ -1037,11 +1033,6 @@
                 <groupId>com.baomidou</groupId>
                 <artifactId>lock4j-redis-template-spring-boot-starter</artifactId>
                 <version>${lock4j.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>it.ozimov</groupId>
-                <artifactId>embedded-redis</artifactId>
-                <version>${embedded-redis.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.swagger</groupId>

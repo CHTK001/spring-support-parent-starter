@@ -10,6 +10,7 @@ import com.chua.starter.sync.support.properties.SyncProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,15 @@ public class SyncServerInstance {
     public static final String TOPIC_CLIENT_REGISTER = "sync/client/register";
     public static final String TOPIC_CLIENT_HEARTBEAT = "sync/client/heartbeat";
     public static final String TOPIC_CLIENT_OFFLINE = "sync/client/offline";
+
+    /**
+     * 业务消息中注入的源客户端标识 Key
+     * <p>
+     * 新版 {@link SyncMessageHandler#handle(String, Object)} 不携带会话上下文，
+     * 服务端分发消息时将该 Key 写入消息体，处理器可据此反查源客户端信息。
+     * </p>
+     */
+    public static final String SYNC_MESSAGE_SOURCE_CLIENT_ID = "__syncClientId__";
 
     private final SyncProperties.ServerInstance instanceConfig;
 
@@ -250,7 +260,14 @@ public class SyncServerInstance {
         if (handlers == null || handlers.isEmpty()) {
             return;
         }
-        Map<String, Object> dataMap = data instanceof Map ? (Map<String, Object>) data : Map.of("data", data);
+        Map<String, Object> dataMap = new HashMap<>();
+        if (data instanceof Map<?, ?> rawMap) {
+            rawMap.forEach((key, value) -> dataMap.put(String.valueOf(key), value));
+        } else {
+            dataMap.put("data", data);
+        }
+        // 注入源客户端标识，供业务处理器反查会话上下文
+        dataMap.put(SYNC_MESSAGE_SOURCE_CLIENT_ID, clientId);
         for (com.chua.common.support.network.sync.SyncMessageHandler handler : handlers) {
             try {
                 handler.handle(topic, dataMap);
