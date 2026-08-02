@@ -1,7 +1,7 @@
 package com.chua.starter.sync.support.configuration;
 
-import com.chua.common.support.network.sync.SyncClient;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
+import com.chua.starter.sync.support.client.SyncClient;
 import com.chua.starter.sync.support.client.SyncClientWrapper;
 import com.chua.starter.sync.support.data.SyncDataExchangeService;
 import com.chua.starter.sync.support.properties.SyncProperties;

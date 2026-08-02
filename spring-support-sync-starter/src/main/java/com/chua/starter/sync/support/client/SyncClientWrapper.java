@@ -1,6 +1,5 @@
 package com.chua.starter.sync.support.client;
 
-import com.chua.common.support.network.sync.SyncClient;
 import com.chua.common.support.network.sync.SyncFlowListener;
 import com.chua.common.support.network.sync.SyncMessageHandler;
 import com.chua.common.support.spi.ServiceProvider;
@@ -19,13 +18,13 @@ import java.util.Map;
  * @author CH
  * @since 2026/07/31
  */
-public class SyncClientWrapper implements SyncClient {
+public class SyncClientWrapper implements com.chua.starter.sync.support.client.SyncClient {
 
     private static final Logger log = LoggerFactory.getLogger(SyncClientWrapper.class);
 
     private final SyncProperties syncProperties;
     private final Environment environment;
-    private SyncClient delegate;
+    private com.chua.common.support.network.sync.SyncClient delegate;
 
     public SyncClientWrapper(SyncProperties syncProperties,
                              Environment environment,
@@ -102,6 +101,23 @@ public class SyncClientWrapper implements SyncClient {
     @Override
     public void subscribe(String topic, SyncMessageHandler handler) {
         delegate.subscribe(topic, handler);
+    }
+
+    @Override
+    public void subscribe(String... topics) {
+        for (String topic : topics) {
+            delegate.subscribe(topic, null);
+        }
+    }
+
+    @Override
+    public void registerHandler(String topic, com.chua.starter.sync.support.spi.SyncMessageHandler handler) {
+        delegate.subscribe(topic, (sessionId, data) -> handler.handle(topic, sessionId, data));
+    }
+
+    @Override
+    public void publish(String topic, Map<String, Object> data) {
+        delegate.send(topic, data);
     }
 
     @Override

@@ -18,6 +18,8 @@
         <felix.gogo.runtime.version>1.1.6</felix.gogo.runtime.version>
         <felix.gogo.shell.version>1.1.4</felix.gogo.shell.version>
         <felix.gogo.command.version>1.1.2</felix.gogo.command.version>
+        <felix.shell.remote.version>1.2.0</felix.shell.remote.version>
+        <sshd.version>2.13.2</sshd.version>
     </properties>
 
     <dependencies>
@@ -62,6 +64,12 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.sshd</groupId>
+            <artifactId>sshd-core</artifactId>
+            <version>${sshd.version}</version>
             <optional>true</optional>
         </dependency>
     </dependencies>
