@@ -47,6 +47,10 @@
         </dependency>
         <dependency>
             <groupId>com.chua</groupId>
+            <artifactId>spring-support-ssh-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.chua</groupId>
             <artifactId>spring-support-datasource-starter</artifactId>
         </dependency>
         <dependency>
