@@ -1,3 +1,0 @@
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  com.chua.starter.ai.support.configuration.AiConfiguration,\
-  com.chua.starter.ai.support.configuration.AiProtocolServerConfiguration

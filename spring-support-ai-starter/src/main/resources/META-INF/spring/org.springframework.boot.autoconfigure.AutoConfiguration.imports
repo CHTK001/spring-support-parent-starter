@@ -1,2 +1,4 @@
 com.chua.starter.ai.support.configuration.AiGenerateAutoConfiguration
 com.chua.starter.ai.support.configuration.UsageAutoConfiguration
+com.chua.starter.ai.support.configuration.AiConfiguration
+com.chua.starter.ai.support.configuration.AiProtocolServerConfiguration

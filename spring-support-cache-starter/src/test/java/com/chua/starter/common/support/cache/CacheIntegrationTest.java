@@ -1,8 +1,8 @@
 package com.chua.starter.common.support.cache;
 
 import org.junit.jupiter.api.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.beans.factory.annotation.Inject;
 import com.chua.starter.common.support.cache.*;
 
 /**
@@ -10,18 +10,18 @@ import com.chua.starter.common.support.cache.*;
  *
  * @author CH
  */
-@SpringBootTest
+@SpringBootTest(classes = TestCacheApplication.class)
 public class CacheIntegrationTest {
 
-    @Inject
+    @Autowired
     private CacheManager cacheManager;
 
-    @Inject
+    @Autowired
     private CacheConfiguration cacheConfiguration;
 
     @Test
     @DisplayName("缓存管理器 Bean 应正确装配且可用")
-    void testCacheManagerBeanExists() {
+    void testBeanExists() {
         Assertions.assertNotNull(cacheManager, "CacheManager bean should be injected");
         Assertions.assertNotNull(cacheConfiguration, "CacheConfiguration bean should be injected");
     }
@@ -41,5 +41,5 @@ public class CacheIntegrationTest {
         Assertions.assertTrue(true, "Placeholder - implement with actual service method");
     }
 
-    // ----- 更多集成点测试可按需添加 -----
+    // ----- 更多集成测试可按需添加 -----
 }
