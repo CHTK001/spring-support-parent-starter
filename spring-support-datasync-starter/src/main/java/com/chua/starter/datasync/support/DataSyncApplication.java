@@ -77,6 +77,26 @@ public class DataSyncApplication {
         application.setDefaultProperties(defaults);
         ApplicationContext context = application.run(args);
 
+
+        // 验证 OSGi 和 SSH 集成
+        try {
+            Object osgiCtx = context.getBean("osgiBundleContext");
+            System.out.println("[OSGi] OsgiBundleContext: " + osgiCtx);
+        } catch (Exception e) {
+            System.out.println("[OSGi] OsgiBundleContext bean not found: " + e.getMessage());
+        }
+        try {
+            Object sshServer = context.getBean("sshServerService");
+            System.out.println("[SSH] sshServerService: " + sshServer);
+        } catch (Exception e) {
+            System.out.println("[SSH] sshServerService bean not found: " + e.getMessage());
+        }
+        try {
+            Object osgiSsh = context.getBean("osgiSshServer");
+            System.out.println("[SSH] osgiSshServer: " + osgiSsh);
+        } catch (Exception e) {
+            System.out.println("[SSH] osgiSshServer bean not found: " + e.getMessage());
+        }
         // 打印配置
         DatasyncProperties properties = context.getBean(DatasyncProperties.class);
         System.out.println("[DATA-SYNC] enabled=" + properties.isEnabled());
