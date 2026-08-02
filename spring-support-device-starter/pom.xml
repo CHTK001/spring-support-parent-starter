@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support Device Starter - 设备管理模块
+
+    提供海康、大华等主流安防厂商设备的统一接入管理能力，
+    包含设备接入、通道管理、视频、云台、门禁、事件、地图位置、
+    离线检测定时调度与 Excel 导出等功能。
+
+    @author CH
+    @since 4.0.0.42
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 继承父项目配置 -->
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>4.0.0.42</version>
+    </parent>
+
+    <!-- 项目基本信息 -->
+    <artifactId>spring-support-device-starter</artifactId>
+    <description>设备管理模块，支持海康/大华等多平台接入与视频、云台、门禁、事件、地图、离线检测能力</description>
+
+    <!-- 依赖配置 -->
+    <dependencies>
+        <!-- Web 支持 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- MyBatis Plus (Spring Boot 3) -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+
+        <!-- Spring Support Common -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Excel 导出 -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.5</version>
+        </dependency>
+    </dependencies>
+</project>

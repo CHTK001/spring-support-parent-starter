@@ -141,6 +141,12 @@
 
         <!-- 内网穿透模块（基于 ngrok-java） -->
         <module>spring-support-ngrok-starter</module>
+
+        <!-- 教育AI模块 -->
+        <module>spring-support-eduai-starter</module>
+
+        <!-- 设备管理模块（海康/大华等平台接入） -->
+        <module>spring-support-device-starter</module>
     </modules>
 
     <!-- 项目属性配置 -->

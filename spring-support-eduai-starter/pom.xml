@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support EduAI Starter - 教育AI集成模块
+
+    这是Spring Support框架的教育AI模块，提供AI辅助教学核心能力。
+    主要特性包括：
+
+    1. 题库管理 - 题目录入、导入、分类筛选
+    2. AI组卷 - 根据知识点/难度/题型自动生成试卷
+    3. AI阅卷 - 主观题自动批改，客观题自动判分
+    4. 知识库 - 文档向量检索，语义搜索
+    5. 错题库 - 错题自动记录，个性化复习推荐
+
+    @author CH
+    @version 4.0.0.42
+-->
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>4.0.0.42</version>
+    </parent>
+
+    <artifactId>spring-support-eduai-starter</artifactId>
+    <description>Spring Support框架教育AI模块，提供题库管理、AI组卷、AI阅卷、知识库、错题库等AI教学能力</description>
+
+    <dependencies>
+        <!-- 通用功能模块 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- MyBatis Plus 基础 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-mybatis-starter</artifactId>
+        </dependency>
+
+        <!-- Redis 缓存 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-redis-starter</artifactId>
+        </dependency>
+
+        <!-- 消息队列（异步阅卷任务） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-queue-starter</artifactId>
+        </dependency>
+
+        <!-- 深度学习/AI推理 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-deeplearning-starter</artifactId>
+        </dependency>
+
+        <!-- AI 聚合能力（对话、模型、用量） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-ai-starter</artifactId>
+        </dependency>
+
+        <!-- OAuth 客户端权限注解 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-oauth-client-starter</artifactId>
+        </dependency>
+
+        <!-- Swagger 注解 -->
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <release>25</release>
+                    <compilerArgs>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
+                    </compilerArgs>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

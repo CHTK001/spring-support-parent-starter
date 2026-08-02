@@ -46,6 +46,13 @@ public class AiGlobalSetting implements Serializable {
     private Integer settingUsageIntervalSec;
 
     /**
+     * 是否启用用量分析
+     */
+    @TableField("setting_enable_usage_analysis")
+    @ApiModelProperty("是否启用用量分析")
+    private Boolean settingEnableUsageAnalysis;
+
+    /**
      * 默认模型
      */
     @TableField("setting_default_model")

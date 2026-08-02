@@ -1,0 +1,85 @@
+package com.chua.starter.eduai.controller;
+
+import com.chua.common.support.lang.code.PageResult;
+import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.eduai.model.EduKnowledgeDoc;
+import com.chua.starter.eduai.model.dto.KnowledgeDocUploadDTO;
+import com.chua.starter.eduai.model.vo.KnowledgeDocVO;
+import com.chua.starter.eduai.service.IEduKnowledgeDocService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.*;
+
+/**
+ * 知识库文档管理控制器
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
+@Slf4j
+@RestController
+@RequestMapping("/v2/edu/knowledge-doc")
+@RequiredArgsConstructor
+@Tag(name = "知识库文档管理")
+public class EduKnowledgeDocController {
+
+    private final IEduKnowledgeDocService knowledgeDocService;
+
+    /**
+     * 分页查询知识库文档
+     *
+     * @param query    查询条件
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @return 分页结果
+     */
+    @Operation(summary = "分页查询知识库文档")
+    @GetMapping("/page")
+    public ReturnResult<PageResult<KnowledgeDocVO>> page(EduKnowledgeDoc query,
+                                                         @RequestParam(value = "page", defaultValue = "1") long page,
+                                                         @RequestParam(value = "pageSize", defaultValue = "10") long pageSize) {
+        return ReturnResult.ok(knowledgeDocService.pageQuery(query, page, pageSize));
+    }
+
+    /**
+     * 上传文档
+     *
+     * @param dto 文档上传数据
+     * @return 文档ID
+     */
+    @Operation(summary = "上传文档")
+    @PostMapping("/upload")
+    public ReturnResult<Long> upload(@RequestBody KnowledgeDocUploadDTO dto) {
+        return ReturnResult.ok(knowledgeDocService.uploadDoc(dto));
+    }
+
+    /**
+     * 语义检索
+     *
+     * @param keyword 检索关键字
+     * @param subject 学科
+     * @param limit   返回数量
+     * @return 检索结果
+     */
+    @Operation(summary = "语义检索")
+    @GetMapping("/search")
+    public ReturnResult<PageResult<KnowledgeDocVO>> search(@RequestParam String keyword,
+                                                           @RequestParam(required = false) String subject,
+                                                           @RequestParam(defaultValue = "10") int limit) {
+        return ReturnResult.ok(knowledgeDocService.search(keyword, subject, limit));
+    }
+
+    /**
+     * 删除文档
+     *
+     * @param id 文档ID
+     * @return 是否成功
+     */
+    @Operation(summary = "删除文档")
+    @DeleteMapping("/{id}")
+    public ReturnResult<Boolean> delete(@PathVariable Long id) {
+        return ReturnResult.ok(knowledgeDocService.deleteDoc(id));
+    }
+}

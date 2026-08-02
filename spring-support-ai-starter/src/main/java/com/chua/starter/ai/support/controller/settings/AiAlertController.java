@@ -1,6 +1,6 @@
 package com.chua.starter.ai.support.controller.settings;
 
-import com.chua.starter.ai.support.entity.settings.AiAlert;
+import com.chua.starter.ai.support.model.AiAlertDTO;
 import com.chua.starter.ai.support.service.settings.AiAlertService;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.annotations.Api;
@@ -41,25 +41,25 @@ public class AiAlertController {
     /**
      * 查询所有告警规则。
      *
-     * @return 告警列表
+     * @return 告警 DTO 列表
      */
     @Permission("admin")
     @ApiOperation("查询所有告警规则")
     @GetMapping
-    public List<AiAlert> list() {
+    public List<AiAlertDTO> list() {
         return alertService.list();
     }
 
     /**
      * 新建告警规则。
      *
-     * @param alert 告警实体
-     * @return 创建后的告警
+     * @param alert 告警 DTO
+     * @return 创建后的告警 DTO
      */
     @Permission("admin")
     @ApiOperation("新建告警规则")
     @PostMapping
-    public AiAlert create(@RequestBody AiAlert alert) {
+    public AiAlertDTO create(@RequestBody AiAlertDTO alert) {
         return alertService.create(alert);
     }
 
@@ -67,14 +67,14 @@ public class AiAlertController {
      * 更新告警规则。
      *
      * @param alertId 告警主键
-     * @param alert   告警实体
-     * @return 更新后的告警
+     * @param alert   告警 DTO
+     * @return 更新后的告警 DTO
      */
     @Permission("admin")
     @ApiOperation("更新告警规则")
     @PutMapping("/{alertId}")
-    public AiAlert update(@ApiParam("告警主键 ID") @PathVariable Long alertId,
-                          @RequestBody AiAlert alert) {
+    public AiAlertDTO update(@ApiParam("告警主键 ID") @PathVariable Long alertId,
+                             @RequestBody AiAlertDTO alert) {
         return alertService.update(alertId, alert);
     }
 
@@ -95,13 +95,13 @@ public class AiAlertController {
      *
      * @param alertId 告警主键
      * @param enabled 是否启用
-     * @return 更新后的告警
+     * @return 更新后的告警 DTO
      */
     @Permission("admin")
     @ApiOperation("切换告警启用状态")
     @PutMapping("/{alertId}/toggle")
-    public AiAlert toggle(@ApiParam("告警主键 ID") @PathVariable Long alertId,
-                          @ApiParam("是否启用") @RequestParam Boolean enabled) {
+    public AiAlertDTO toggle(@ApiParam("告警主键 ID") @PathVariable Long alertId,
+                             @ApiParam("是否启用") @RequestParam Boolean enabled) {
         return alertService.toggle(alertId, enabled);
     }
 }

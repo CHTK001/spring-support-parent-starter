@@ -1,6 +1,6 @@
 package com.chua.starter.ai.support.controller.settings;
 
-import com.chua.starter.ai.support.entity.settings.AiServiceStatus;
+import com.chua.starter.ai.support.model.AiServiceStatusDTO;
 import com.chua.starter.ai.support.service.settings.AiServiceStatusService;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.annotations.Api;
@@ -35,11 +35,11 @@ public class AiServiceStatusController {
     /**
      * 查询所有服务运行状态。
      *
-     * @return 服务状态列表
+     * @return 服务状态 DTO 列表
      */
     @ApiOperation("查询所有服务运行状态")
     @GetMapping("/status")
-    public List<AiServiceStatus> status() {
+    public List<AiServiceStatusDTO> status() {
         return statusService.list();
     }
 

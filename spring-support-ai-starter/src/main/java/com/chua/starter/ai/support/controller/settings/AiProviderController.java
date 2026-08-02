@@ -1,6 +1,6 @@
 package com.chua.starter.ai.support.controller.settings;
 
-import com.chua.starter.ai.support.entity.settings.AiProvider;
+import com.chua.starter.ai.support.model.AiProviderDTO;
 import com.chua.starter.ai.support.service.settings.AiProviderService;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.annotations.Api;
@@ -42,25 +42,25 @@ public class AiProviderController {
     /**
      * 查询所有供应商。
      *
-     * @return 供应商列表
+     * @return 供应商 DTO 列表
      */
     @Permission("admin")
     @ApiOperation("查询所有供应商")
     @GetMapping
-    public List<AiProvider> list() {
+    public List<AiProviderDTO> list() {
         return providerService.list();
     }
 
     /**
      * 新建供应商。
      *
-     * @param provider 供应商实体
-     * @return 创建后的供应商
+     * @param provider 供应商 DTO
+     * @return 创建后的供应商 DTO
      */
     @Permission("admin")
     @ApiOperation("新建供应商")
     @PostMapping
-    public AiProvider create(@RequestBody AiProvider provider) {
+    public AiProviderDTO create(@RequestBody AiProviderDTO provider) {
         return providerService.create(provider);
     }
 
@@ -68,14 +68,14 @@ public class AiProviderController {
      * 更新供应商。
      *
      * @param providerId 供应商主键
-     * @param provider   供应商实体
-     * @return 更新后的供应商
+     * @param provider   供应商 DTO
+     * @return 更新后的供应商 DTO
      */
     @Permission("admin")
     @ApiOperation("更新供应商")
     @PutMapping("/{providerId}")
-    public AiProvider update(@ApiParam("供应商主键 ID") @PathVariable Long providerId,
-                             @RequestBody AiProvider provider) {
+    public AiProviderDTO update(@ApiParam("供应商主键 ID") @PathVariable Long providerId,
+                                @RequestBody AiProviderDTO provider) {
         return providerService.update(providerId, provider);
     }
 
@@ -96,13 +96,13 @@ public class AiProviderController {
      *
      * @param providerId 供应商主键
      * @param enabled    是否启用
-     * @return 更新后的供应商
+     * @return 更新后的供应商 DTO
      */
     @Permission("admin")
     @ApiOperation("切换供应商启用状态")
     @PutMapping("/{providerId}/toggle")
-    public AiProvider toggle(@ApiParam("供应商主键 ID") @PathVariable Long providerId,
-                             @ApiParam("是否启用") @RequestParam Boolean enabled) {
+    public AiProviderDTO toggle(@ApiParam("供应商主键 ID") @PathVariable Long providerId,
+                                @ApiParam("是否启用") @RequestParam Boolean enabled) {
         return providerService.toggle(providerId, enabled);
     }
 }

@@ -53,6 +53,13 @@ public class AiGroup implements Serializable {
     private String groupModels;
 
     /**
+     * 分组绑定 AppKey ID 列表（JSON 数组字符串）
+     */
+    @TableField("group_app_key_ids")
+    @ApiModelProperty("分组绑定 AppKey ID 列表(JSON)")
+    private String groupAppKeyIds;
+
+    /**
      * 是否启用
      */
     @TableField("group_enabled")

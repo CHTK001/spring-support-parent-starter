@@ -1,0 +1,58 @@
+package com.chua.starter.device.support.controller;
+
+import com.chua.starter.device.support.service.DeviceSessionManager;
+import com.chua.starter.device.spi.DeviceSession;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * 门禁控制 Controller
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
+@RestController
+@RequestMapping("/api/device/access")
+@RequiredArgsConstructor
+public class AccessController {
+
+    /**
+     * 设备会话管理器
+     */
+    private final DeviceSessionManager sessionManager;
+
+    /**
+     * 远程开门
+     *
+     * @param deviceId 设备 ID
+     * @param doorId   门编号
+     */
+    @PostMapping("/unlock")
+    public void unlock(@RequestParam String deviceId,
+                       @RequestParam int doorId) {
+        DeviceSession session = sessionManager.getSession(deviceId);
+        if (session == null || !session.isOnline()) {
+            throw new RuntimeException("设备不在线");
+        }
+        session.remoteUnlock(doorId);
+    }
+
+    /**
+     * 查询门禁出入记录
+     *
+     * @param deviceId 设备 ID
+     * @param start    开始时间
+     * @param end      结束时间
+     * @return 出入记录
+     */
+    @GetMapping("/records")
+    public Object queryAccessRecords(@RequestParam String deviceId,
+                                     @RequestParam String start,
+                                     @RequestParam String end) {
+        return "门禁记录";
+    }
+}

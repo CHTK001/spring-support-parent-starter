@@ -1,0 +1,80 @@
+package com.chua.starter.eduai.model;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+
+import java.time.LocalDateTime;
+
+/**
+ * 错题记录实体
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
+@Data
+@TableName("edu_wrong_question")
+public class EduWrongQuestion {
+
+    /**
+     * 错题记录ID
+     */
+    @TableId(type = IdType.AUTO)
+    private Long wrongQuestionId;
+
+    /**
+     * 学生ID
+     */
+    private String wrongQuestionStudentId;
+
+    /**
+     * 题目ID
+     */
+    private Long wrongQuestionQuestionId;
+
+    /**
+     * 考试ID
+     */
+    private Long wrongQuestionExamId;
+
+    /**
+     * 错误次数
+     */
+    private Integer wrongQuestionWrongCount;
+
+    /**
+     * 掌握度
+     */
+    private Integer wrongQuestionMasteryLevel;
+
+    /**
+     * 最近错误时间
+     */
+    private LocalDateTime wrongQuestionLastWrongTime;
+
+    /**
+     * 最近复习时间
+     */
+    private LocalDateTime wrongQuestionLastReviewTime;
+
+    /**
+     * 复习次数
+     */
+    private Integer wrongQuestionReviewCount;
+
+    /**
+     * 状态
+     */
+    private Integer wrongQuestionStatus;
+
+    /**
+     * 创建时间
+     */
+    private LocalDateTime wrongQuestionCreateTime;
+
+    /**
+     * 更新时间
+     */
+    private LocalDateTime wrongQuestionUpdateTime;
+}

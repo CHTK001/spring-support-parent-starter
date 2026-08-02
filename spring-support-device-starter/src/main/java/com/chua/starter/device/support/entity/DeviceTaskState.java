@@ -1,0 +1,57 @@
+package com.chua.starter.device.support.entity;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+
+import java.time.LocalDateTime;
+
+/**
+ * 后台任务状态实体（Trigger 模式）
+ * <p>用于控制任务是否运行，避免并发执行。</p>
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
+@Data
+@TableName("device_task_state")
+public class DeviceTaskState {
+
+    /**
+     * 主键 ID
+     */
+    @TableId(value = "device_task_state_id", type = IdType.ASSIGN_UUID)
+    private String deviceTaskStateId;
+
+    /**
+     * 任务名称（唯一）
+     */
+    @TableField("device_task_state_name")
+    private String deviceTaskStateName;
+
+    /**
+     * 是否正在运行：0 否、1 是
+     */
+    @TableField("device_task_state_running")
+    private Boolean deviceTaskStateRunning;
+
+    /**
+     * 最后运行时间
+     */
+    @TableField("device_task_state_last_run_at")
+    private LocalDateTime deviceTaskStateLastRunAt;
+
+    /**
+     * 运行间隔（秒）
+     */
+    @TableField("device_task_state_interval")
+    private Integer deviceTaskStateInterval;
+
+    /**
+     * 任务描述
+     */
+    @TableField("device_task_state_description")
+    private String deviceTaskStateDescription;
+}

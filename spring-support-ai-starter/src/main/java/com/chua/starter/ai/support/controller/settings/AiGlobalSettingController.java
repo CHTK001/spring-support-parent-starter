@@ -1,6 +1,6 @@
 package com.chua.starter.ai.support.controller.settings;
 
-import com.chua.starter.ai.support.entity.settings.AiGlobalSetting;
+import com.chua.starter.ai.support.model.AiGlobalSettingDTO;
 import com.chua.starter.ai.support.service.settings.AiGlobalSettingService;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.annotations.Api;
@@ -32,25 +32,25 @@ public class AiGlobalSettingController {
     /**
      * 获取全局设置。
      *
-     * @return 全局设置
+     * @return 全局设置 DTO
      */
     @Permission("admin")
     @ApiOperation("获取全局设置")
     @GetMapping
-    public AiGlobalSetting get() {
+    public AiGlobalSettingDTO get() {
         return settingService.get();
     }
 
     /**
      * 更新全局设置。
      *
-     * @param setting 全局设置
-     * @return 更新后的全局设置
+     * @param setting 全局设置 DTO
+     * @return 更新后的全局设置 DTO
      */
     @Permission("admin")
     @ApiOperation("更新全局设置")
     @PutMapping
-    public AiGlobalSetting update(@RequestBody AiGlobalSetting setting) {
+    public AiGlobalSettingDTO update(@RequestBody AiGlobalSettingDTO setting) {
         return settingService.update(setting);
     }
 }

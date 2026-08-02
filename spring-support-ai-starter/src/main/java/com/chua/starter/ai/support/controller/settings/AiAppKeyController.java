@@ -1,6 +1,6 @@
 package com.chua.starter.ai.support.controller.settings;
 
-import com.chua.starter.ai.support.entity.settings.AiAppKey;
+import com.chua.starter.ai.support.model.AiAppKeyDTO;
 import com.chua.starter.ai.support.service.settings.AiAppKeyService;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.annotations.Api;
@@ -41,25 +41,25 @@ public class AiAppKeyController {
     /**
      * 查询所有 AppKey。
      *
-     * @return AppKey 列表
+     * @return AppKey DTO 列表
      */
     @Permission("admin")
     @ApiOperation("查询所有 AppKey")
     @GetMapping
-    public List<AiAppKey> list() {
+    public List<AiAppKeyDTO> list() {
         return appKeyService.list();
     }
 
     /**
      * 新建 AppKey。
      *
-     * @param appKey AppKey 实体
-     * @return 创建后的 AppKey
+     * @param appKey AppKey DTO
+     * @return 创建后的 AppKey DTO
      */
     @Permission("admin")
     @ApiOperation("新建 AppKey")
     @PostMapping
-    public AiAppKey create(@RequestBody AiAppKey appKey) {
+    public AiAppKeyDTO create(@RequestBody AiAppKeyDTO appKey) {
         return appKeyService.create(appKey);
     }
 
@@ -67,14 +67,14 @@ public class AiAppKeyController {
      * 更新 AppKey。
      *
      * @param appKeyId AppKey 主键
-     * @param appKey   AppKey 实体
-     * @return 更新后的 AppKey
+     * @param appKey   AppKey DTO
+     * @return 更新后的 AppKey DTO
      */
     @Permission("admin")
     @ApiOperation("更新 AppKey")
     @PutMapping("/{appKeyId}")
-    public AiAppKey update(@ApiParam("AppKey 主键 ID") @PathVariable Long appKeyId,
-                           @RequestBody AiAppKey appKey) {
+    public AiAppKeyDTO update(@ApiParam("AppKey 主键 ID") @PathVariable Long appKeyId,
+                              @RequestBody AiAppKeyDTO appKey) {
         return appKeyService.update(appKeyId, appKey);
     }
 
@@ -95,13 +95,13 @@ public class AiAppKeyController {
      *
      * @param appKeyId AppKey 主键
      * @param enabled  是否启用
-     * @return 更新后的 AppKey
+     * @return 更新后的 AppKey DTO
      */
     @Permission("admin")
     @ApiOperation("切换 AppKey 启用状态")
     @PutMapping("/{appKeyId}/toggle")
-    public AiAppKey toggle(@ApiParam("AppKey 主键 ID") @PathVariable Long appKeyId,
-                           @ApiParam("是否启用") @RequestParam Boolean enabled) {
+    public AiAppKeyDTO toggle(@ApiParam("AppKey 主键 ID") @PathVariable Long appKeyId,
+                              @ApiParam("是否启用") @RequestParam Boolean enabled) {
         return appKeyService.toggle(appKeyId, enabled);
     }
 }

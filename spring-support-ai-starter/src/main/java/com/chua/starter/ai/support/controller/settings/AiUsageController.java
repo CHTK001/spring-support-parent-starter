@@ -1,6 +1,6 @@
 package com.chua.starter.ai.support.controller.settings;
 
-import com.chua.starter.ai.support.entity.settings.AiUsage;
+import com.chua.starter.ai.support.model.AiUsageDTO;
 import com.chua.starter.ai.support.service.settings.AiUsageService;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.annotations.Api;
@@ -35,12 +35,12 @@ public class AiUsageController {
      * 查询用量，可按模型过滤。
      *
      * @param model 模型名称（可选）
-     * @return 用量列表
+     * @return 用量 DTO 列表
      */
     @Permission("admin")
     @ApiOperation("查询用量统计")
     @GetMapping
-    public List<AiUsage> query(@ApiParam("模型名称") @RequestParam(required = false) String model) {
+    public List<AiUsageDTO> query(@ApiParam("模型名称") @RequestParam(required = false) String model) {
         return usageService.query(model);
     }
 }

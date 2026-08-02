@@ -47,11 +47,6 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-redis</artifactId>
     </dependency>
-    <!-- 嵌入式Redis - 用于测试环境的内存Redis服务器 -->
-    <dependency>
-      <groupId>it.ozimov</groupId>
-      <artifactId>embedded-redis</artifactId>
-    </dependency>
     <!-- 通用功能模块 - 提供基础的工具类和通用功能 -->
     <dependency>
       <groupId>com.chua</groupId>

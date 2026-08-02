@@ -5,7 +5,6 @@ import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.redis.support.listener.RedisListener;
 import com.chua.starter.redis.support.properties.RedisServerProperties;
-import com.chua.starter.redis.support.server.RedisEmbeddedServer;
 import com.chua.starter.redis.support.service.RedisSearchService;
 import com.chua.starter.redis.support.service.SimpleRedisService;
 import com.chua.starter.redis.support.service.TimeSeriesService;
@@ -53,8 +52,7 @@ import java.util.List;
  * 通过 {@link RedisServerProperties} 暴露嵌入式服务器配置，
  * 同时基于 Spring Boot {@link RedisProperties} 创建远程连接客户端。</p>
  *
- * <p>加载顺序保证嵌入式服务器优先启动（{@code @DependsOn("embeddedServer")}），
- * 之后才创建 Redisson 客户端与时间序列、搜索等服务实例。</p>
+ * <p>创建 Redisson 客户端与时间序列、搜索等服务实例。</p>
  *
  * @author CH
  * @since 1.0.0
@@ -104,7 +102,6 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
      * @return 已配置完成的 RedissonClient 实例
      */
     @Bean(destroyMethod = "shutdown")
-    @DependsOn("embeddedServer")
     @ConditionalOnMissingBean
     public RedissonClient redissonClient(RedisProperties redisProperties) {
         log.info(">>>>> 开始创建Redisson客户端: => {}:{}", redisProperties.getHost(), redisProperties.getPort());
@@ -122,12 +119,11 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     }
 
     /**
-     * 创建时间序列服务实例，依赖嵌入式 Redis 服务器优先启动。
+     * 创建时间序列服务实例。
      *
      * @return 时间序列服务实现实例
      */
     @Bean
-    @DependsOn("embeddedServer")
     @ConditionalOnMissingBean
     public TimeSeriesService timeSeriesService() {
         return new TimeSeriesServiceImpl();
@@ -165,17 +161,6 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         redisServerProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate("plugin.redis.server", RedisServerProperties.class);
         new ModuleEnvironmentRegistration("plugin.redis.server", redisServerProperties, redisServerProperties.isEnable());
-    }
-
-    /**
-     * 创建嵌入式 Redis 服务器实例，基于 RedisServerProperties 配置启动本地 Redis。
-     *
-     * @return 嵌入式 Redis 服务器实例
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public RedisEmbeddedServer embeddedServer() {
-        return new RedisEmbeddedServer(redisServerProperties);
     }
 
     /**

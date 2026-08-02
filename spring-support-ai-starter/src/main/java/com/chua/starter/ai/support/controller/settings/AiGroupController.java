@@ -1,6 +1,6 @@
 package com.chua.starter.ai.support.controller.settings;
 
-import com.chua.starter.ai.support.entity.settings.AiGroup;
+import com.chua.starter.ai.support.model.AiGroupDTO;
 import com.chua.starter.ai.support.service.settings.AiGroupService;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.annotations.Api;
@@ -40,25 +40,25 @@ public class AiGroupController {
     /**
      * 查询所有分组。
      *
-     * @return 分组列表
+     * @return 分组 DTO 列表
      */
     @Permission("admin")
     @ApiOperation("查询所有分组")
     @GetMapping
-    public List<AiGroup> list() {
+    public List<AiGroupDTO> list() {
         return groupService.list();
     }
 
     /**
      * 新建分组。
      *
-     * @param group 分组实体
-     * @return 创建后的分组
+     * @param group 分组 DTO
+     * @return 创建后的分组 DTO
      */
     @Permission("admin")
     @ApiOperation("新建分组")
     @PostMapping
-    public AiGroup create(@RequestBody AiGroup group) {
+    public AiGroupDTO create(@RequestBody AiGroupDTO group) {
         return groupService.create(group);
     }
 
@@ -66,14 +66,14 @@ public class AiGroupController {
      * 更新分组。
      *
      * @param groupId 分组主键
-     * @param group   分组实体
-     * @return 更新后的分组
+     * @param group   分组 DTO
+     * @return 更新后的分组 DTO
      */
     @Permission("admin")
     @ApiOperation("更新分组")
     @PutMapping("/{groupId}")
-    public AiGroup update(@ApiParam("分组主键 ID") @PathVariable Long groupId,
-                          @RequestBody AiGroup group) {
+    public AiGroupDTO update(@ApiParam("分组主键 ID") @PathVariable Long groupId,
+                             @RequestBody AiGroupDTO group) {
         return groupService.update(groupId, group);
     }
 

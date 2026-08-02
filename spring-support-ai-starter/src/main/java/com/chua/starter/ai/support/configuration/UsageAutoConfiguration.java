@@ -4,6 +4,7 @@ import com.chua.starter.ai.support.interceptor.UsageRecorderInterceptor;
 import com.chua.starter.ai.support.mapper.SysAiPricingMapper;
 import com.chua.starter.ai.support.mapper.SysAiUsageDailyMapper;
 import com.chua.starter.ai.support.mapper.SysAiUsageMapper;
+import com.chua.starter.ai.support.mapper.settings.AiGlobalSettingMapper;
 import com.chua.starter.ai.support.schedule.UsageAggregationTask;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.ai.support.service.SysAiUsageService;
@@ -49,7 +50,8 @@ public class UsageAutoConfiguration {
 
     @Bean
     public UsageAggregationTask usageAggregationTask(SysAiUsageMapper usageMapper,
-                                                     SysAiUsageDailyMapper dailyMapper) {
-        return new UsageAggregationTask(usageMapper, dailyMapper);
+                                                     SysAiUsageDailyMapper dailyMapper,
+                                                     AiGlobalSettingMapper globalSettingMapper) {
+        return new UsageAggregationTask(usageMapper, dailyMapper, globalSettingMapper);
     }
 }

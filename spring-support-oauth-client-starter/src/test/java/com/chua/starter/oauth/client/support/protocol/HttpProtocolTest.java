@@ -239,8 +239,8 @@ class HttpProtocolTest {
         assertEquals("app-user", result.getReturnResult().getUsername());
 
         String body = capturedBody.get();
-        assertTrue(body.contains("appKeySecret") || body.contains("appKey") || body.contains("userCode"),
-                "AppKey 请求体应携带 AppKey 参数");
+        assertTrue(body.contains("x-oauth-app-id") && body.contains("x-oauth-user-code"),
+                "AppKey 请求体应携带 x-oauth-app-id 与 x-oauth-user-code");
     }
 
     /**
