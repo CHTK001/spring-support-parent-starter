@@ -33,6 +33,7 @@ META-INF/
 
 # 本地压测脚本（临时产物，不提交）
 benchmark.ps1
+login-body.json
 
 # Project specific
 .claude
