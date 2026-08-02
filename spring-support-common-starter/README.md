@@ -50,7 +50,7 @@ Spring Support Common Starter 是 Spring Support 框架的核心通用模块，�
 <dependency>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-common-starter</artifactId>
-    <version>4.0.0.32</version>
+    <version>4.0.0.42</version>
 </dependency>
 ```
 
@@ -378,6 +378,69 @@ GET /v1/option/get?type=base64编码的类型
 ```http
 GET /v1/option/objects/get?type=类型&name=名称
 ```
+
+### 8. 服务信息注册表（ServiceInfo）
+
+各业务 starter 可通过 `ServiceInfoRegistry` 注册自己的端点 URL 与开关状态（三态：true / false / null），
+启动后由框架统一渲染为启动横幅，并暴露聚合查询端点。
+
+#### 注册方式（推荐使用 Bean 贡献器）
+
+```java
+@Configuration
+public class MyConfiguration {
+
+    @Bean
+    public ServiceInfoContributor myServiceInfoContributor() {
+        return registry -> {
+            registry.registerEndpoint("文件系统", "分片上传", "/chunk/create,upload,complete", "分片上传");
+            registry.registerFlag("oss", "存储", true, "阿里云 OSS 已启用");
+        };
+    }
+}
+```
+
+#### 查询聚合信息
+
+```http
+GET /service-info
+```
+
+返回结构：
+
+```json
+{
+  "endpoints": { "group/name": { "group": "...", "name": "...", "url": "...", "description": "..." } },
+  "flags": { "group/name": { "name": "...", "group": "...", "value": true, "description": "..." } }
+}
+```
+
+### 9. 链路追踪与方法监控
+
+- 链路追踪上下文：`TrackContext` 提供 TraceId 贯穿请求链路，配合日志模板使用
+- 方法监控注解：`@Watch` 标记需监控的方法，由切面自动记录调用轨迹与耗时
+
+```java
+@Watch(description = "处理订单")
+public Order processOrder(OrderRequest request) {
+    return orderService.process(request);
+}
+```
+
+### 10. 媒体类型处理
+
+`media` 提供统一媒体信息处理器抽象 `MediaTypeHandler`，内置 JSON / XML / CSV 三种实现，
+用于不同媒体类型消息的解析与转换。
+
+### 11. Actuator 安全保护
+
+`actuator` 提供 Actuator 认证过滤器，可对 `/actuator` 端点做访问控制保护，避免生产环境敏感信息泄露。
+
+### 12. 常用工具类
+
+- `network.UserAgent`：User-Agent 解析（浏览器、操作系统、设备识别）
+- `project.Project`：项目/应用元信息模型
+- `watch`：方法调用链 Span 记录与追踪
 
 ## ⚙️ 高级配置
 

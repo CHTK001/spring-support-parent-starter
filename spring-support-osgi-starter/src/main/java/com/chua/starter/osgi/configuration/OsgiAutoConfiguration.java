@@ -3,6 +3,7 @@ package com.chua.starter.osgi.configuration;
 import com.chua.common.support.objects.ObjectContextConfig;
 import com.chua.common.support.osgi.OsgiLauncher;
 import com.chua.osgi.support.FelixOsgiLauncher;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.osgi.context.OsgiObjectContext;
 import com.chua.starter.osgi.properties.OsgiProperties;
 import lombok.extern.slf4j.Slf4j;
@@ -153,5 +154,15 @@ public class OsgiAutoConfiguration {
     @Bean
     public OsgiObjectContext osgiObjectContext(FelixOsgiLauncher launcher) {
         return new OsgiObjectContext(ObjectContextConfig.defaults(), launcher);
+    }
+
+    /**
+     * 注册 OSGi 模块服务信息。
+     *
+     * @return 服务信息贡献器
+     */
+    @Bean
+    public ServiceInfoContributor osgiServiceInfoContributor() {
+        return registry -> registry.registerFlag("osgi", "OSGi", true, "OSGi 插件框架");
     }
 }

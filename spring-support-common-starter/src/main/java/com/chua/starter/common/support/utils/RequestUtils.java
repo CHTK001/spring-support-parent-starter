@@ -24,6 +24,11 @@ public class RequestUtils {
     private static final String USERNAME_HEADER = "X-Username";
 
     /**
+     * 租户ID请求头名称
+     */
+    private static final String TENANT_ID_HEADER = "X-Tenant-Id";
+
+    /**
      * 获取当前请求的 HttpServletRequest 对象
      *
      * @return HttpServletRequest，如果无法获取则返回null
@@ -100,6 +105,39 @@ public class RequestUtils {
         Object usernameObj = request.getAttribute("username");
         if (null != usernameObj) {
             return usernameObj.toString();
+        }
+
+        return null;
+    }
+
+    /**
+     * 获取当前请求的租户ID
+     * <p>优先从请求头 X-Tenant-Id 获取，如果不存在则从请求属性中获取</p>
+     *
+     * @return 租户ID，如果无法获取则返回null
+     */
+    public static String getCurrentTenantId() {
+        HttpServletRequest request = getRequest();
+        if (null == request) {
+            return null;
+        }
+
+        // 优先从请求头获取
+        String tenantId = request.getHeader(TENANT_ID_HEADER);
+        if (null != tenantId && !tenantId.isEmpty()) {
+            return tenantId;
+        }
+
+        // 从请求属性中获取
+        Object tenantIdAttr = request.getAttribute(TENANT_ID_HEADER);
+        if (null != tenantIdAttr) {
+            return tenantIdAttr.toString();
+        }
+
+        // 尝试从其他常见属性名获取
+        Object tenantIdObj = request.getAttribute("tenantId");
+        if (null != tenantIdObj) {
+            return tenantIdObj.toString();
         }
 
         return null;

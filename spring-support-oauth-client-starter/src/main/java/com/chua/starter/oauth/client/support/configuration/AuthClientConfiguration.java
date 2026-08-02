@@ -11,6 +11,7 @@ import com.chua.starter.oauth.client.support.interceptor.TokenForTypeInterceptor
 import com.chua.starter.oauth.client.support.oauth.OauthAuthService;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.provider.UserStatisticProvider;
+import com.chua.starter.oauth.client.support.ratelimit.RateLimitFilter;
 import com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext;
 import com.chua.starter.oauth.client.support.web.WebRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -161,6 +162,36 @@ public class AuthClientConfiguration
                 .setFilter(new AuthFilter(new WebRequest(authClientProperties), requestMappingHandlerMapping));
 
         return authFilterFilterRegistrationBean;
+    }
+
+    /**
+     * OAuth 限流过滤器注册
+     * <p>
+     * 置于最高优先级，在认证过滤器之前对包括未认证流量在内的所有请求执行限流检查。
+     * </p>
+     *
+     * @param authClientProperties 客户端配置
+     * @return 过滤器注册Bean
+     */
+    @Bean("rateLimitFilterRegistrationBean")
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    public FilterRegistrationBean<RateLimitFilter> rateLimitFilterRegistrationBean(
+            AuthClientProperties authClientProperties) {
+        FilterRegistrationBean<RateLimitFilter> registrationBean = new FilterRegistrationBean<>();
+        registrationBean.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        registrationBean.setUrlPatterns(authClientProperties.getBlockAddress());
+        registrationBean.setName("rateLimitFilter");
+        registrationBean.setAsyncSupported(true);
+        registrationBean.setFilter(new RateLimitFilter(authClientProperties));
+        if (authClientProperties.getRateLimit() != null && authClientProperties.getRateLimit().isEnable()) {
+            log.info("[AuthClientConfiguration] OAuth限流已启用 - 接口QPS: {}/s, 登录IP限流: {}次/{}s, 账号锁定: 失败{}次锁{}分钟",
+                    authClientProperties.getRateLimit().getApi().getQps(),
+                    authClientProperties.getRateLimit().getLogin().getIpLimit(),
+                    authClientProperties.getRateLimit().getLogin().getIpWindowSeconds(),
+                    authClientProperties.getRateLimit().getLogin().getAccountFailLimit(),
+                    authClientProperties.getRateLimit().getLogin().getAccountLockMinutes());
+        }
+        return registrationBean;
     }
 
     @Override

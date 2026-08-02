@@ -4,16 +4,15 @@
 
 ## 📖 模块简介
 
-Spring Support Message Starter 是一个统一的消息通知模块，支持邮件、短信、微信公众号等多种通知渠道，提供统一的消息发送接口。
+Spring Support Message Starter 是一个统一的消息通知模块，提供消息提供商、消息模板管理以及统一的消息发送能力。
 
 ### ✨ 主要特性
 
-- 📧 **邮件发送** - 支持文本、HTML、附件邮件
-- 📱 **短信发送** - 支持阿里云、腾讯云短信服务
-- 💬 **微信通知** - 支持微信公众号模板消息
-- 📋 **模板管理** - 支持消息模板配置
-- 🔄 **异步发送** - 支持异步消息发送
-- 📊 **发送追踪** - 消息发送状态追踪
+- 🏢 **消息提供商** - 数据库表驱动管理各消息服务商配置（短信、邮件、微信、钉钉等）
+- 📋 **消息模板** - 数据库表驱动管理各渠道消息模板
+- 📤 **统一发送** - 通过 MessagePush SPI 实现统一消息发送
+- 📊 **推送日志** - 异步记录消息推送历史，支持分页查询
+- 🔄 **自动建表** - 适配 datasource-starter 自动执行 db/init 下的建表脚本
 
 ## 🚀 快速开始
 
@@ -23,152 +22,115 @@ Spring Support Message Starter 是一个统一的消息通知模块，支持邮�
 <dependency>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-message-starter</artifactId>
-    <version>4.0.0.33-SNAPSHOT</version>
+    <version>4.0.0.42</version>
 </dependency>
 ```
 
-## ⚙️ 配置说明
+### 渠道实现（可选依赖）
 
-### 邮件配置
+用户根据需要在自己的项目中添加对应的渠道依赖：
 
-| 参数名 | 类型 | 默认值 | 说明 |
-|------|------|------|------|
-| `plugin.message.email.enabled` | Boolean | false | 是否启用邮件 |
-| `spring.mail.host` | String | - | SMTP服务器地址 |
-| `spring.mail.port` | Integer | 587 | SMTP端口 |
-| `spring.mail.username` | String | - | 邮箱用户名 |
-| `spring.mail.password` | String | - | 邮箱密码 |
+- `utils-support-email-starter`    邮件
+- `utils-support-alibaba-starter`  阿里云短信
+- `utils-support-tencent-starter`  腾讯云短信
+- `utils-support-dingding-starter` 钉钉机器人
+- `utils-support-feishu-starter`   飞书消息
 
-### 短信配置
+## 🗄️ 数据表
 
-| 参数名 | 类型 | 默认值 | 说明 |
-|------|------|------|------|
-| `plugin.message.sms.enabled` | Boolean | false | 是否启用短信 |
-| `plugin.message.sms.provider` | String | aliyun | 短信服务商：aliyun, tencent |
-| `plugin.message.sms.access-key` | String | - | AccessKey |
-| `plugin.message.sms.secret-key` | String | - | SecretKey |
-| `plugin.message.sms.sign-name` | String | - | 短信签名 |
+模块内置 `db/init/V1.0__init_message.sql` 建表脚本，由 datasource-starter 自动执行：
 
-### 微信配置
+| 表名 | 说明 |
+|------|------|
+| `sys_message_provider` | 消息提供商表 - 管理各消息服务商配置 |
+| `sys_message_template` | 消息模板表 - 管理各渠道消息模板 |
+| `sys_message_log` | 消息推送日志表 - 记录推送历史 |
 
-| 参数名 | 类型 | 默认值 | 说明 |
-|------|------|------|------|
-| `plugin.message.wechat.enabled` | Boolean | false | 是否启用微信通知 |
-| `plugin.message.wechat.app-id` | String | - | 公众号AppID |
-| `plugin.message.wechat.app-secret` | String | - | 公众号AppSecret |
+日志表除基础信息外，还包含以下补充字段：
 
-### 配置示例
+| 字段 | 说明 |
+|------|------|
+| `sys_message_log_subject` | 消息主题（邮件标题等） |
+| `sys_message_log_message_id` | 消息ID（服务商返回，如邮件 Message-ID、短信回执 ID） |
+| `sys_message_batch_id` | 批次号（同一次发送请求的多个接收人共享） |
+| `sys_message_track_token` / `sys_message_read_status` / `sys_message_read_time` | 邮件阅读追踪 |
+
+## 🔌 接口说明
+
+### 提供商管理
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/v2/message/provider/page` | GET | 提供商分页查询 |
+| `/v2/message/provider/list` | GET | 提供商列表查询 |
+| `/v2/message/provider/save` | POST | 新增提供商 |
+| `/v2/message/provider/update` | PUT | 更新提供商 |
+| `/v2/message/provider/delete` | DELETE | 删除提供商 |
+
+### 模板管理
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/v2/message/template/page` | GET | 模板分页查询 |
+| `/v2/message/template/list` | GET | 模板列表查询 |
+| `/v2/message/template/save` | POST | 新增模板 |
+| `/v2/message/template/update` | PUT | 更新模板 |
+| `/v2/message/template/delete` | DELETE | 删除模板 |
+
+### 消息发送与日志
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/v2/message/send` | POST | 按模板发送消息 |
+| `/v2/message/send/content` | POST | 按内容发送消息 |
+| `/v2/message/channel/list` | GET | 已注册消息渠道列表（SPI） |
+| `/v2/message/template/preview` | POST | 模板内容渲染预览 |
+| `/v2/message/template/sync` | POST | 手动同步远端模板 |
+| `/v2/message/log/page` | GET | 推送日志分页查询 |
+| `/v2/message/log/clean` | POST | 清理推送日志（按日期） |
+| `/v2/message/track/{token}` | GET | 邮件阅读追踪接口（免鉴权） |
+
+## 📧 邮件阅读追踪
+
+发送 HTML 邮件时，可在内容末尾注入 1x1 透明追踪图（指向追踪接口），
+收件人打开邮件即触发该地址，后端将对应日志标记为已读。
 
 ```yaml
 plugin:
   message:
-    enable: true
-    
-    # 邮件配置
-    email:
-      enabled: true
-
-spring:
-  mail:
-    host: smtp.qq.com
-    port: 587
-    username: your-email@qq.com
-    password: your-password
-    properties:
-      mail.smtp.auth: true
-      mail.smtp.starttls.enable: true
-
-plugin:
-  message:
-    # 短信配置
-    sms:
-      enabled: true
-      provider: aliyun
-      access-key: your-access-key
-      secret-key: your-secret-key
-      sign-name: 您的签名
-    
-    # 微信配置
-    wechat:
-      enabled: true
-      app-id: your-app-id
-      app-secret: your-app-secret
+    track:
+      enabled: true                       # 是否开启阅读追踪（默认 false）
+      base-url: "http://your-host:8080"   # 追踪地址基础路径（用于拼接追踪图 URL）
 ```
+
+- 仅在**邮件渠道（email/smtp）+ HTML 内容类型**且开启追踪时生效
+- 追踪接口 `/v2/message/track/{token}` 免鉴权，返回 1x1 透明 GIF
+- 日志记录 `sys_message_track_token`、`sys_message_read_status`、`sys_message_read_time` 字段，前端日志页可筛选已读/未读
+
+## 🔁 重复消息防抖
+
+提供商可配置**防抖间隔**（`sys_message_provider_interval`，单位分钟，0 表示不限制）：
+
+- 间隔内，**同一接收人 + 相同模板**（按模板发送）或 **同一接收人 + 相同内容**（按内容发送）若已发送成功，则本次跳过不重复发送
+- 仅发送**成功**的记录参与防抖，失败记录允许重试
+- 跳过时返回 `success=true` + `errorMessage="间隔内已发送，防抖跳过"`，并照常记录日志
 
 ## 📝 使用示例
 
-### 发送邮件
+### 按模板发送短信
 
-```java
-@Service
-public class EmailService {
-
-    @Autowired
-    private JavaMailSender mailSender;
-    
-    public void sendSimpleEmail(String to, String subject, String content) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom("your-email@qq.com");
-        message.setTo(to);
-        message.setSubject(subject);
-        message.setText(content);
-        mailSender.send(message);
-    }
-    
-    public void sendHtmlEmail(String to, String subject, String htmlContent) 
-            throws MessagingException {
-        MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-        
-        helper.setFrom("your-email@qq.com");
-        helper.setTo(to);
-        helper.setSubject(subject);
-        helper.setText(htmlContent, true);
-        
-        mailSender.send(message);
-    }
-}
-```
-
-### 发送短信
-
-```java
-@Service
-public class SmsService {
-
-    @Autowired
-    private SmsTemplate smsTemplate;
-    
-    public void sendVerificationCode(String phone, String code) {
-        Map<String, String> params = new HashMap<>();
-        params.put("code", code);
-        
-        smsTemplate.send(phone, "SMS_TEMPLATE_ID", params);
-    }
-}
-```
-
-### 发送微信模板消息
-
-```java
-@Service
-public class WeChatService {
-
-    @Autowired
-    private WeChatTemplate weChatTemplate;
-    
-    public void sendTemplateMessage(String openId, String templateId, 
-                                    Map<String, String> data) {
-        weChatTemplate.send(openId, templateId, data);
-    }
+```json
+POST /v2/message/send
+{
+  "target": ["13800138000", "13900139000"],
+  "sysMessageTemplateId": 1,
+  "params": { "code": "123456" }
 }
 ```
 
 ## 🔗 相关链接
 
 - [返回主文档](../README.md)
-- [Spring Boot Mail文档](https://docs.spring.io/spring-boot/docs/current/reference/html/io.html#io.email)
-- [配置示例文件](../application-example.yml)
 
 ## 📄 许可证
 

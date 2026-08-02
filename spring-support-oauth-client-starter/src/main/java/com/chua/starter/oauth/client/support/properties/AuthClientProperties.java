@@ -92,6 +92,14 @@ public class AuthClientProperties {
     private CircuitBreakerConfig circuitBreaker = new CircuitBreakerConfig();
 
     /**
+     * 限流配置
+     * <p>
+     * OAuth 客户端限流能力，支持接口 QPS 限流与登录防暴力破解限流。
+     * </p>
+     */
+    private RateLimit rateLimit = new RateLimit();
+
+    /**
      * 客户端缓存鉴权信息(用于提高访问效率)(s)
      */
     private long cacheTimeout =  6 * 60 * 60;
@@ -403,5 +411,111 @@ public class AuthClientProperties {
          * 降级响应消息
          */
         private String fallbackMessage = "认证服务暂时不可用，请稍后重试";
+    }
+
+    /**
+     * 限流配置类
+     * <p>
+     * 配置前缀：<code>plugin.oauth.rate-limit</code>。
+     * </p>
+     */
+    @Data
+    public static class RateLimit {
+
+        /**
+         * 是否启用 OAuth 限流（总开关）
+         * <p>
+         * 默认值：false
+         * </p>
+         */
+        private boolean enable = false;
+
+        /**
+         * 登录限流配置
+         */
+        private LoginLimit login = new LoginLimit();
+
+        /**
+         * 全局接口限流配置
+         */
+        private ApiLimit api = new ApiLimit();
+
+        /**
+         * 登录限流配置类（防暴力破解）
+         */
+        @Data
+        public static class LoginLimit {
+
+            /**
+             * 是否启用登录限流
+             * <p>
+             * 默认值：true（在总开关 enable=true 前提下）
+             * </p>
+             */
+            private boolean enable = true;
+
+            /**
+             * 同一 IP 窗口内最大登录尝试次数
+             * <p>
+             * 默认值：30 次
+             * </p>
+             */
+            private int ipLimit = 30;
+
+            /**
+             * 登录 IP 限流窗口（秒）
+             * <p>
+             * 默认值：60 秒
+             * </p>
+             */
+            private long ipWindowSeconds = 60;
+
+            /**
+             * 同一账号失败多少次后锁定
+             * <p>
+             * 默认值：5 次
+             * </p>
+             */
+            private int accountFailLimit = 5;
+
+            /**
+             * 账号锁定时间（分钟）
+             * <p>
+             * 默认值：5 分钟
+             * </p>
+             */
+            private long accountLockMinutes = 5;
+        }
+
+        /**
+         * 全局接口限流配置类（防刷/防 DoS）
+         */
+        @Data
+        public static class ApiLimit {
+
+            /**
+             * 是否启用全局接口限流
+             * <p>
+             * 默认值：true（在总开关 enable=true 前提下）
+             * </p>
+             */
+            private boolean enable = true;
+
+            /**
+             * 同一 IP 窗口内最大请求次数（QPS）
+             * <p>
+             * 默认值：200 次/秒
+             * </p>
+             */
+            private int qps = 200;
+
+            /**
+             * 全局接口限流窗口（秒）
+             * <p>
+             * 默认值：1 秒
+             * </p>
+             */
+            private long windowSeconds = 1;
+        }
     }
 }

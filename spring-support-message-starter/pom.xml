@@ -6,12 +6,13 @@
     主要特性包括：
 
     1. 多渠道支持 - 钉钉、飞书、邮件、短信等
-    2. MessageTemplate - 简化消息发送的模板类
-    3. 统一配置 - 通过YAML配置多个渠道
-    4. 自动装配 - Spring Boot自动配置
+    2. 消息提供商 - 数据库表驱动管理各消息服务商配置
+    3. 消息模板 - 数据库表驱动管理各渠道消息模板
+    4. 统一发送 - 通过MessagePush SPI实现统一消息发送
+    5. 自动建表 - 适配datasource-starter自动执行db/init下的建表脚本
 
     @author CH
-    @version 4.0.0.41
+    @version 4.0.0.42
 -->
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xmlns="http://maven.apache.org/POM/4.0.0"
@@ -28,7 +29,7 @@
 
     <!-- 项目基本信息 -->
     <artifactId>spring-support-message-starter</artifactId>
-    <description>Spring Support框架消息推送模块，提供统一的多渠道消息推送功能</description>
+    <description>Spring Support框架消息推送模块，提供消息提供商、消息模板管理及统一消息推送功能</description>
 
     <!-- 项目属性配置 -->
 
@@ -44,11 +45,27 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-common-starter</artifactId>
-            <version>${utils.version}</version>
         </dependency>
 
-        <!--
-        可选依赖：各渠道实现
+        <!-- MyBatis Plus 基础 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-mybatis-starter</artifactId>
+        </dependency>
+
+        <!-- OAuth 客户端权限注解 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-oauth-client-starter</artifactId>
+        </dependency>
+
+        <!-- Swagger 注解 -->
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations</artifactId>
+        </dependency>
+
+        <!-- 各渠道实现为可选依赖
         用户根据需要在自己的项目中添加对应的渠道依赖：
         - utils-support-dingding-starter   钉钉机器人
         - utils-support-feishu-starter     飞书消息

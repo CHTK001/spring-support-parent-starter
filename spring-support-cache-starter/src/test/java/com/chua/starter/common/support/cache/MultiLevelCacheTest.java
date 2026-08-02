@@ -3,7 +3,7 @@ package com.chua.starter.common.support.cache;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import org.springframework.cache.Cache;
-import org.springframework.cache.ValueWrapper;
+import org.springframework.cache.Cache.ValueWrapper;
 
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -19,10 +19,13 @@ import java.util.concurrent.Callable;
 public class MultiLevelCacheTest {
 
     // ---- 辅助：构造两级的内存缓存 ----
-    private Cache l1() { return new SimpleMemoryCache("L1"); }
-    private Cache l2() { return new SimpleMemoryCache("L2"); }
+    private final SimpleMemoryCache l1Cache = new SimpleMemoryCache("L1");
+    private final SimpleMemoryCache l2Cache = new SimpleMemoryCache("L2");
+
+    private Cache l1() { return l1Cache; }
+    private Cache l2() { return l2Cache; }
     private MultiLevelCache twoLevelCache() {
-        return new MultiLevelCache("test", List.of(l1(), l2()), true);
+        return new MultiLevelCache("test", List.of(l1Cache, l2Cache), true);
     }
 
     @Test
@@ -43,11 +46,12 @@ public class MultiLevelCacheTest {
         ValueWrapper wrapper = cache.get("k2");
         assertNotNull(wrapper, "L2 的值应能被从 L1 未命中时查到");
         assertEquals("v2", wrapper.get(), "值应匹配");
-        assertEquals(0, cache.getHitCount(), "命中尚在 L1 未统计");
+        assertEquals(1, cache.getHitCount(), "L2 命中应计入命中计数");
         // L2 的值应回填到 L1
         ValueWrapper l1Wrapper = l1().get("k2");
         assertNotNull(l1Wrapper, "回填后 L1 应能查到");
         assertEquals("v2", l1Wrapper.get(), "回填值应相同");
+        assertEquals(1, cache.getBackfillCount(), "应有 1 次回填");
     }
 
     @Test
@@ -55,7 +59,7 @@ public class MultiLevelCacheTest {
         MultiLevelCache cache = twoLevelCache();
         // 空值占位符：缓存空值
         Object key = "nullKey";
-        cache.putNull(key有限的);
+        cache.putNull(key);
         ValueWrapper wrapper = cache.get(key);
         assertNotNull(wrapper, "空值占位符应返回非空包装器");
         assertNull(wrapper.get(), "包装器内应为 null");
@@ -100,22 +104,22 @@ public class MultiLevelCacheTest {
         MultiLevelCache cache = twoLevelCache();
         assertEquals(0, cache.getHitCount());
         assertEquals(0, cache.getMissCount());
-        assertEquals(0.0, cache.getHitRate(), 0.001Take);
+        assertEquals(0.0, cache.getHitRate(), 0.001);
 
         cache.get("missKey");
         assertEquals(1, cache.getMissCount());
-        assertEquals(0.0, cache.getHitRate(), 0.001Take);
+        assertEquals(0.0, cache.getHitRate(), 0.001);
 
         cache.put("hitKey", "hitValue");
         cache.get("hitKey");
         assertEquals(1, cache.getHitCount());
         double expectedRate = 1.0 / (1 + 1);
-        assertEquals(expectedRate, cache.getHitRate(), 0.001Take);
+        assertEquals(expectedRate, cache.getHitRate(), 0.001);
 
         cache.resetStats();
         assertEquals(0, cache.getHitCount());
         assertEquals(0, cache.getMissCount());
-        assertEquals(0.0, cache.getHitRate(), 0.001Take);
+        assertEquals(0.0, cache.getHitRate(), 0.001);
     }
 
     @Test
@@ -160,9 +164,10 @@ public class MultiLevelCacheTest {
         MultiLevelCache cache = new MultiLevelCache("testNullLoader", List.of(l1(), l2()), true);
         String loaded = cache.get("nullLoader", () -> null);
         assertNull(loaded, "当 valueLoader 返回 null 且 cacheNullValues=true 时，应缓存空值");
-        ValueWrapper l1W = l1().get("nullLoader");
-        assertNotNull(l1W, "空值应被缓存");
-        assertNull(l1W.get(), "空值包装器内应为 null");
+        // 通过 MultiLevelCache 读取（经过 NullValueWrapper 转换）
+        ValueWrapper wrapper = cache.get("nullLoader");
+        assertNotNull(wrapper, "空值应被缓存（通过 MultiLevelCache）");
+        assertNull(wrapper.get(), "通过 MultiLevelCache 读取时包装器内应为 null");
     }
 
     @Test
@@ -204,7 +209,7 @@ public class MultiLevelCacheTest {
     /**
      * 简单的内存缓存实现（用于辅助测试）
      */
-    private static class SimpleMemoryCache implements Cache {
+    private static class SimpleMemoryCache implements Cache, MultiLevelCache.PatternEvictable {
         private final String name;
         private final java.util.Map<Object, ValueWrapper> store = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -244,5 +249,11 @@ public class MultiLevelCacheTest {
 
         @Override
         public void clear() { store.clear(); }
+
+        @Override
+        public void evictByPattern(String pattern) {
+            String lowerPattern = pattern.toLowerCase();
+            store.keySet().removeIf(key -> key.toString().toLowerCase().contains(lowerPattern));
+        }
     }
 }

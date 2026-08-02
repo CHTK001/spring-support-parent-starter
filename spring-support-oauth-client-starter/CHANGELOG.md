@@ -1,5 +1,52 @@
 # 更新日志
 
+## [4.0.0.42] - 2025-05-08
+
+### ✨ 新增功能
+
+#### 登录单端/多端控制（在线数量限制）
+
+- **在线状态查询** - `AuthClientExecute.getOnlineStatus(uid)` 返回在线模式（SINGLE 单端 / MULTIPLE 多端）与最大在线设备数
+- **在线数量限制（服务端能力）** - OAuth 认证服务器（sso）`RedisTokenResolver` 在登录时校验 `maxOnlineCount`（默认 3），达到上限返回「已达到最大在线设备数量限制」，支持单端互踢与多端限额
+- **在线用户列表** - `getOnlineUsers(...)` 分页查询在线用户
+- **协议支持** - Http/Armeria 协议从服务端获取真实在线状态；static/OAuth2 协议返回默认多端模式（无状态部署不强制限制）
+
+#### Refresh 多种升级模式
+
+- **`UpgradeType` 三种模式**：
+  - `VERSION` - 升级账号信息（刷新用户信息）
+  - `TIMESTAMP` - 升级账号信息并重置时长（续期）
+  - `REFRESH` - 使用 refresh token 换发新 token
+- **接口** - `POST /v2/user/upgrade`（VERSION/TIMESTAMP，通过 `x-oauth-upgrade-type` 头指定）、`POST /v2/user/refresh-token`（REFRESH）
+
+#### AppKey 认证模式
+
+- **`AppKeySecret` 实体** - 支持 `appId` / `appSecret` / `userCode` / 自定义 `body` 参数
+- **`authentication(AppKeySecret)`** - 基于 AppKey 换取认证信息，缓存键优先使用 userCode
+- **协议支持** - Http/Armeria/RSocket 支持 AppKey 认证；static 协议不支持（降级 403）
+
+#### Refresh 换取临时令牌
+
+- **`createTemporaryTokenByRefreshToken(refreshToken, expireSeconds, allowedUrls)`** - 使用 refresh token 作为源凭证换取短期临时令牌（过期时间 1~3600 秒，可限定允许访问的 URL）
+- **`createTemporaryTokenByToken(sourceToken, ...)`** - 基于任意有效源令牌创建临时令牌
+- **协议支持** - Http/Armeria/RSocket 实现；OAuth2/static 协议不支持（返回 501）
+
+#### 三方/手机号登录语义化入口
+
+- **`thirdPartyLogin(account, credential, authType, ext)`** - 三方身份确认后换发令牌（微信小程序等场景）
+- **`smsLogin(account, ext)`** - 手机号/短信验证码场景换发令牌
+- 内部复用 `getAccessToken`，自动继承账号锁定限流埋点
+
+### 🔒 安全特性
+
+- **OAuth 限流能力** - 全局接口 QPS 限流 + 登录 IP 限流 + 账号失败锁定（`RateLimitFilter` 最高优先级，未认证流量同样受限）
+
+### ✅ 测试
+
+- 单元测试总数 **68 个，全部通过**：覆盖 VERSION/TIMESTAMP/REFRESH 升级、AppKey 认证（缓存与降级）、临时令牌、在线状态默认值、三方/短信登录、账号锁定、限流等
+
+---
+
 ## [4.0.0.34] - 2024-12-02
 
 ### ✨ 新增功能

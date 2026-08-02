@@ -43,7 +43,7 @@ Spring Support OAuth Client Starter 是一个功能强大的 OAuth 客户端模�
 <dependency>
     <groupId>com.chua</groupId>
     <artifactId>spring-support-oauth-client-starter</artifactId>
-    <version>4.0.0.35</version>
+    <version>4.0.0.42</version>
 </dependency>
 ```
 
@@ -318,10 +318,85 @@ public class AuthInterceptor implements HandlerInterceptor {
 }
 ```
 
+### 5. 登录单端/多端控制（在线数量限制）
+
+查询用户在线状态，判断当前为单端（SINGLE）还是多端（MULTIPLE）模式：
+
+```java
+AuthClientExecute client = AuthClientExecute.getInstance();
+
+// 获取指定用户在线状态（单端/多端、当前在线数、最大在线数）
+Protocol.OnlineStatus status = client.getOnlineStatus("userId");
+boolean multiple = status.isMultipleMode();   // 是否多端模式
+boolean canLogin = status.canLogin();         // 是否还可继续登录
+
+// 分页查询在线用户
+Protocol.OnlineUserResult onlineUsers = client.getOnlineUsers(null, null, 1, 100);
+```
+
+> **在线数量限制由认证服务器（sso）强制**：登录时校验 `maxOnlineCount`（默认 3），
+> 达到上限返回「已达到最大在线设备数量限制」；Http/Armeria 协议返回真实在线状态，
+> static/OAuth2 协议无状态部署时返回默认多端模式（不强制限制）。
+
+### 6. Refresh 多种升级模式
+
+`UpgradeType` 支持三种模式：
+
+```java
+AuthClientExecute client = AuthClientExecute.getInstance();
+
+// VERSION：升级账号信息（刷新用户信息）
+client.upgrade("access-token", UpgradeType.VERSION);
+
+// TIMESTAMP：升级账号信息并重置时长（续期）
+client.upgrade("access-token", UpgradeType.TIMESTAMP);
+
+// REFRESH：使用 refresh token 换发新 token
+client.upgrade("refresh-token", UpgradeType.REFRESH);
+```
+
+对应 HTTP 接口：`POST /v2/user/upgrade`（VERSION/TIMESTAMP，通过 `x-oauth-upgrade-type` 头指定）、
+`POST /v2/user/refresh-token`（REFRESH）。
+
+### 7. AppKey 认证模式
+
+基于 `appId` / `appSecret` 的客户端认证，无需用户密码：
+
+```java
+AppKeySecret appKeySecret = new AppKeySecret()
+        .setAppId("APP-1001")
+        .setAppSecret("secret")
+        .setUserCode("U-100");               // 缓存键优先使用 userCode
+// 可选自定义请求体（兼容服务端两种 body 形式）
+appKeySecret.setBody("{\"appKey\":\"xxx\",\"appSecret\":\"yyy\"}");
+
+AuthenticationInformation info = protocol.authentication(appKeySecret);
+```
+
+> Http/Armeria/RSocket 协议支持 AppKey 认证；static 协议不支持（降级返回 403）。
+
+### 8. 临时令牌（含 Refresh 换临时令牌）
+
+创建短期有效的临时令牌，可限定过期时间与允许访问的 URL：
+
+```java
+AuthClientExecute client = AuthClientExecute.getInstance();
+
+// 基于当前登录用户创建临时令牌（默认 10 秒过期）
+client.createTemporaryToken();
+
+// 基于任意有效源令牌创建
+client.createTemporaryTokenByToken("source-token", 60, List.of("/api/upload", "/api/download"));
+
+// 用 refresh token 换取临时令牌（access token 过期时的临时授权场景）
+client.createTemporaryTokenByRefreshToken("refresh-token", 60, List.of("/api/file/*"));
+```
+
+> 过期时间范围 1~3600 秒；Http/Armeria/RSocket 协议实现，OAuth2/static 协议返回 501。
+
 ## ⚙️ 高级配置
 
 ### 完整配置示例
-
 ```yaml
 plugin:
   oauth:

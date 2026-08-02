@@ -7,17 +7,20 @@ import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
+import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * 静态协议单元测试
@@ -120,6 +123,61 @@ class StaticProtocolTest {
     void upgradeEmptyTokenReturnsNull() {
         assertNull(protocol.upgrade(null, null, UpgradeType.REFRESH, null));
     }
+
+    /**
+     * upgrade（VERSION）基于旧令牌升级账号信息，返回新令牌
+     */
+    @Test
+    void upgradeVersionModeRefreshesToken() {
+        String token = buildToken("admin");
+        LoginResult result = protocol.upgrade(null, token, UpgradeType.VERSION, null);
+        assertNotNull(result);
+        assertNotNull(result.getToken());
+        UserResult decoded = TokenCipher.decryptToUser(result.getToken());
+        assertNotNull(decoded);
+        assertEquals("admin", decoded.getUsername());
+    }
+
+    /**
+     * upgrade（TIMESTAMP）基于旧令牌升级并续期，返回新令牌
+     */
+    @Test
+    void upgradeTimestampModeRefreshesToken() {
+        String token = buildToken("admin");
+        LoginResult result = protocol.upgrade(null, token, UpgradeType.TIMESTAMP, null);
+        assertNotNull(result);
+        assertNotNull(result.getToken());
+        assertNotNull(TokenCipher.decryptToUser(result.getToken()));
+    }
+
+    /**
+     * 静态协议在线状态返回默认值（多端模式）
+     */
+    @Test
+    void onlineStatusDefaultsToMultiple() {
+        Protocol.OnlineStatus status = protocol.getOnlineStatus("1");
+        assertNotNull(status);
+        assertEquals("MULTIPLE", status.getOnlineMode());
+        assertTrue(status.isMultipleMode());
+    }
+
+    /**
+     * 静态协议不维护在线用户列表，返回空
+     */
+    @Test
+    void onlineUsersEmptyForStaticProtocol() {
+        assertTrue(protocol.getOnlineUsers(null).getUsers().isEmpty());
+    }
+
+    /**
+     * 静态协议不支持临时令牌，返回 501
+     */
+    @Test
+    void createTemporaryTokenNotSupportedByStatic() {
+        LoginAuthResult result = protocol.createTemporaryToken("src-token", Map.of("expireTime", 10));
+        assertEquals(501, result.getCode());
+    }
+
 
     /**
      * 静态协议不支持 AppKey 认证，返回 403 降级

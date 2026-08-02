@@ -14,6 +14,7 @@ import com.chua.starter.oauth.client.support.enums.UpgradeType;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.protocol.Protocol;
+import com.chua.starter.oauth.client.support.ratelimit.RateLimitService;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
@@ -296,12 +297,62 @@ public class AuthClientExecute {
      */
     @Watch
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
+        // 账号锁定检查（OAuth 限流能力）
+        RateLimitService rateLimitService = RateLimitService.getInstance();
+        if (rateLimitService.isAccountLocked(username)) {
+            LoginAuthResult locked = new LoginAuthResult();
+            locked.setCode(com.chua.starter.oauth.client.support.infomation.Information.AUTHENTICATION_FAILURE.getCode());
+            locked.setMessage("账号已锁定，请稍后再试");
+            return locked;
+        }
+
         String protocol = authClientProperties.getProtocol();
         ProtocolExecutor protocolExecutor = ServiceProvider.of(ProtocolExecutor.class).getExtension(protocol);
         if (protocolExecutor == null) {
             protocolExecutor = ServiceProvider.of(ProtocolExecutor.class).getExtension("default");
         }
-        return protocolExecutor.getAccessToken(username, password, authType, ext);
+        LoginAuthResult result = protocolExecutor.getAccessToken(username, password, authType, ext);
+        // 登录结果埋点：成功清除失败计数，失败累加（达到阈值触发账号锁定）
+        if (result != null && result.getCode() != null
+                && result.getCode() == com.chua.starter.oauth.client.support.infomation.Information.OK.getCode()) {
+            rateLimitService.resetAccount(username);
+        } else {
+            rateLimitService.recordLoginFailure(username);
+        }
+        return result;
+    }
+
+    /**
+     * 三方登录：三方身份确认后直接换发访问令牌。
+     * <p>
+     * 适用于微信小程序、公众号、Gitee、GitHub 等三方登录场景，三方身份（如
+     * 微信 code 换取的手机号/openid）已在业务层确认，此处仅负责按三方凭证签发令牌。
+     * 内部复用 {@link #getAccessToken}，自动携带账号锁定限流埋点。
+     * </p>
+     *
+     * @param account    三方确认后的登录账号，例如微信手机号
+     * @param credential 三方凭证，例如微信 openid
+     * @param authType   认证类型，例如 {@link AuthType#WECHAT} / {@link AuthType#THIRD_PARTY}
+     * @param ext        额外参数，例如 {@code Map.of("openid", "xxx", "thirdPartyType", "wx_mini_app")}
+     * @return 登录认证结果
+     */
+    public LoginAuthResult thirdPartyLogin(String account, String credential, AuthType authType, Map<String, Object> ext) {
+        return getAccessToken(account, credential, authType, ext);
+    }
+
+    /**
+     * 手机号登录：以手机号（或用户标识）换发访问令牌。
+     * <p>
+     * 适用于短信验证码登录等已验证手机号归属的场景，验证码校验在业务层完成，
+     * 此处仅负责按账号签发令牌。内部复用 {@link #getAccessToken}，自动携带账号锁定限流埋点。
+     * </p>
+     *
+     * @param account 登录账号，例如手机号或用户ID
+     * @param ext     额外参数，例如 {@code Map.of("loginType", "sms", "phone", "13800000000")}
+     * @return 登录认证结果
+     */
+    public LoginAuthResult smsLogin(String account, Map<String, Object> ext) {
+        return getAccessToken(account, null, AuthType.SMS, ext);
     }
 
 
@@ -525,6 +576,24 @@ public class AuthClientExecute {
         } catch (Exception e) {
             return new LoginAuthResult(500, "创建临时令牌失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 根据刷新令牌创建临时令牌。
+     * <p>使用 refresh token 作为源凭证换取一个短期有效的临时令牌，
+     * 适用于 access token 已过期但希望进行临时授权访问的场景。
+     * 协议层是否接受 refresh token 作为源凭证取决于各协议实现与服务端支持。</p>
+     *
+     * @param refreshToken  刷新令牌
+     * @param expireSeconds 过期时间（秒），范围：1-3600
+     * @param allowedUrls   允许访问的URL列表，null或空表示允许所有URL
+     * @return 临时令牌结果
+     */
+    public LoginAuthResult createTemporaryTokenByRefreshToken(String refreshToken, int expireSeconds, List<String> allowedUrls) {
+        if (StringUtils.isBlank(refreshToken)) {
+            return new LoginAuthResult(400, "刷新令牌不能为空");
+        }
+        return createTemporaryTokenByToken(refreshToken, expireSeconds, allowedUrls);
     }
 
     /**

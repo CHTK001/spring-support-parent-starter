@@ -5,6 +5,7 @@ import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.lang.json.JsonObject;
 import com.chua.starter.common.support.algorithm.crypto.Codec;
 import com.chua.starter.common.support.utils.SignUtils;
+import com.chua.starter.oauth.client.support.entity.AppKeySecret;
 import com.chua.starter.oauth.client.support.infomation.AuthenticationInformation;
 import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
@@ -55,6 +56,8 @@ class HttpProtocolTest {
     void setUp() throws IOException {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/verify", this::handle);
+        server.createContext("/temporary-token", this::handle);
+        server.createContext("/online/status", this::handle);
         server.start();
         int port = server.getAddress().getPort();
 
@@ -62,6 +65,7 @@ class HttpProtocolTest {
         props.setProtocol("http");
         props.setAddress("127.0.0.1:" + port);
         props.setOauthUrl("/verify");
+        props.setTemporaryTokenPage("/temporary-token");
     }
 
     /**
@@ -216,6 +220,55 @@ class HttpProtocolTest {
         AuthenticationInformation result = approve();
         assertEquals(Information.AUTHENTICATION_FAILURE.getCode(), result.getInformation().getCode());
         assertTrue(tamperRejected, "服务端应能识别被篡改的请求（x-sign 与参数不匹配）");
+    }
+
+    /**
+     * AppKey 认证成功：携带 appId/appSecret 请求，服务端返回用户信息
+     */
+    @Test
+    void appKeyAuthenticationSuccess() {
+        props.setEnableEncryption(false);
+        responseBody = "{\"code\":\"00000\",\"data\":\"{\\\"username\\\":\\\"app-user\\\",\\\"userId\\\":\\\"2\\\"}\"}";
+
+        AppKeySecret appKeySecret = new AppKeySecret()
+                .setAppId("APP-1001")
+                .setUserCode("U-100");
+        AuthenticationInformation result = new HttpProtocol(props).authentication(appKeySecret);
+
+        assertEquals(Information.OK.getCode(), result.getInformation().getCode());
+        assertEquals("app-user", result.getReturnResult().getUsername());
+
+        String body = capturedBody.get();
+        assertTrue(body.contains("appKeySecret") || body.contains("appKey") || body.contains("userCode"),
+                "AppKey 请求体应携带 AppKey 参数");
+    }
+
+    /**
+     * 创建临时令牌成功：服务端 data 返回令牌字符串
+     */
+    @Test
+    void createTemporaryTokenSuccess() {
+        props.setEnableEncryption(false);
+        responseBody = "{\"code\":\"00000\",\"data\":\"temp-token-abc123\"}";
+
+        HttpProtocol http = new HttpProtocol(props);
+        com.chua.starter.oauth.client.support.user.LoginAuthResult result =
+                http.createTemporaryToken("source-token", Map.of("expireTime", 60));
+
+        assertEquals(200, result.getCode());
+        assertEquals("temp-token-abc123", result.getToken());
+    }
+
+    /**
+     * 在线状态查询：服务端返回在线状态数据
+     */
+    @Test
+    void onlineStatusParses() {
+        props.setEnableEncryption(false);
+        responseBody = "{\"code\":\"00000\",\"data\":\"{\\\"onlineCount\\\":1,\\\"maxOnlineCount\\\":3,\\\"onlineMode\\\":\\\"MULTIPLE\\\"}\"}";
+
+        Protocol.OnlineStatus status = new HttpProtocol(props).getOnlineStatus("1");
+        assertNotNull(status);
     }
 }
 
