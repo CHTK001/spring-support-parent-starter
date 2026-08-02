@@ -31,6 +31,9 @@ META-INF/
 *.swp
 .test-cp.txt
 
+# 本地压测脚本（临时产物，不提交）
+benchmark.ps1
+
 # Project specific
 .claude
 _claude/
