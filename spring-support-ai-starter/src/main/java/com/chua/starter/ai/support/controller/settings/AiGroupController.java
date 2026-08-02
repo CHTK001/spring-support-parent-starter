@@ -3,9 +3,9 @@ package com.chua.starter.ai.support.controller.settings;
 import com.chua.starter.ai.support.model.AiGroupDTO;
 import com.chua.starter.ai.support.service.settings.AiGroupService;
 import com.chua.starter.common.support.annotations.Permission;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,7 +29,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/v2/ai/groups")
 @RequiredArgsConstructor
-@Api(tags = "AI 设置 - 模型分组")
+@Tag(name = "AI 设置 - 模型分组")
 public class AiGroupController {
 
     /**
@@ -43,7 +43,7 @@ public class AiGroupController {
      * @return 分组 DTO 列表
      */
     @Permission("admin")
-    @ApiOperation("查询所有分组")
+    @Operation(summary = "查询所有分组")
     @GetMapping
     public List<AiGroupDTO> list() {
         return groupService.list();
@@ -56,7 +56,7 @@ public class AiGroupController {
      * @return 创建后的分组 DTO
      */
     @Permission("admin")
-    @ApiOperation("新建分组")
+    @Operation(summary = "新建分组")
     @PostMapping
     public AiGroupDTO create(@RequestBody AiGroupDTO group) {
         return groupService.create(group);
@@ -70,9 +70,9 @@ public class AiGroupController {
      * @return 更新后的分组 DTO
      */
     @Permission("admin")
-    @ApiOperation("更新分组")
+    @Operation(summary = "更新分组")
     @PutMapping("/{groupId}")
-    public AiGroupDTO update(@ApiParam("分组主键 ID") @PathVariable Long groupId,
+    public AiGroupDTO update(@Parameter(description = "分组主键 ID") @PathVariable Long groupId,
                              @RequestBody AiGroupDTO group) {
         return groupService.update(groupId, group);
     }
@@ -83,9 +83,9 @@ public class AiGroupController {
      * @param groupId 分组主键
      */
     @Permission("admin")
-    @ApiOperation("删除分组")
+    @Operation(summary = "删除分组")
     @DeleteMapping("/{groupId}")
-    public void delete(@ApiParam("分组主键 ID") @PathVariable Long groupId) {
+    public void delete(@Parameter(description = "分组主键 ID") @PathVariable Long groupId) {
         groupService.delete(groupId);
     }
 }

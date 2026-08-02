@@ -6,13 +6,13 @@ import com.chua.starter.device.spi.model.AccessRecord;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
 import com.chua.starter.device.spi.model.DeviceEvent;
 import com.chua.starter.device.spi.model.EventType;
-import com.chua.starter.device.spi.model.InputStream;
 import com.chua.starter.device.spi.model.PresetInfo;
 import com.chua.starter.device.spi.model.PtzCommand;
 import com.chua.starter.device.spi.model.RecordFile;
 import com.chua.starter.device.spi.model.TimeRange;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

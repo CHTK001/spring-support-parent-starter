@@ -3,8 +3,8 @@ package com.chua.starter.ai.support.controller.settings;
 import com.chua.starter.ai.support.model.AiGlobalSettingDTO;
 import com.chua.starter.ai.support.service.settings.AiGlobalSettingService;
 import com.chua.starter.common.support.annotations.Permission;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/v2/ai/global-settings")
 @RequiredArgsConstructor
-@Api(tags = "AI 设置 - 全局设置")
+@Tag(name = "AI 设置 - 全局设置")
 public class AiGlobalSettingController {
 
     /**
@@ -35,7 +35,7 @@ public class AiGlobalSettingController {
      * @return 全局设置 DTO
      */
     @Permission("admin")
-    @ApiOperation("获取全局设置")
+    @Operation(summary = "获取全局设置")
     @GetMapping
     public AiGlobalSettingDTO get() {
         return settingService.get();
@@ -48,7 +48,7 @@ public class AiGlobalSettingController {
      * @return 更新后的全局设置 DTO
      */
     @Permission("admin")
-    @ApiOperation("更新全局设置")
+    @Operation(summary = "更新全局设置")
     @PutMapping
     public AiGlobalSettingDTO update(@RequestBody AiGlobalSettingDTO setting) {
         return settingService.update(setting);

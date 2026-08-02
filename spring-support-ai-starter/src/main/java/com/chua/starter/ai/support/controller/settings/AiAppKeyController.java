@@ -3,9 +3,9 @@ package com.chua.starter.ai.support.controller.settings;
 import com.chua.starter.ai.support.model.AiAppKeyDTO;
 import com.chua.starter.ai.support.service.settings.AiAppKeyService;
 import com.chua.starter.common.support.annotations.Permission;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,7 +30,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/v2/ai/app-keys")
 @RequiredArgsConstructor
-@Api(tags = "AI 设置 - AppKey")
+@Tag(name = "AI 设置 - AppKey")
 public class AiAppKeyController {
 
     /**
@@ -44,7 +44,7 @@ public class AiAppKeyController {
      * @return AppKey DTO 列表
      */
     @Permission("admin")
-    @ApiOperation("查询所有 AppKey")
+    @Operation(summary = "查询所有 AppKey")
     @GetMapping
     public List<AiAppKeyDTO> list() {
         return appKeyService.list();
@@ -57,7 +57,7 @@ public class AiAppKeyController {
      * @return 创建后的 AppKey DTO
      */
     @Permission("admin")
-    @ApiOperation("新建 AppKey")
+    @Operation(summary = "新建 AppKey")
     @PostMapping
     public AiAppKeyDTO create(@RequestBody AiAppKeyDTO appKey) {
         return appKeyService.create(appKey);
@@ -71,9 +71,9 @@ public class AiAppKeyController {
      * @return 更新后的 AppKey DTO
      */
     @Permission("admin")
-    @ApiOperation("更新 AppKey")
+    @Operation(summary = "更新 AppKey")
     @PutMapping("/{appKeyId}")
-    public AiAppKeyDTO update(@ApiParam("AppKey 主键 ID") @PathVariable Long appKeyId,
+    public AiAppKeyDTO update(@Parameter(description = "AppKey 主键 ID") @PathVariable Long appKeyId,
                               @RequestBody AiAppKeyDTO appKey) {
         return appKeyService.update(appKeyId, appKey);
     }
@@ -84,9 +84,9 @@ public class AiAppKeyController {
      * @param appKeyId AppKey 主键
      */
     @Permission("admin")
-    @ApiOperation("删除 AppKey")
+    @Operation(summary = "删除 AppKey")
     @DeleteMapping("/{appKeyId}")
-    public void delete(@ApiParam("AppKey 主键 ID") @PathVariable Long appKeyId) {
+    public void delete(@Parameter(description = "AppKey 主键 ID") @PathVariable Long appKeyId) {
         appKeyService.delete(appKeyId);
     }
 
@@ -98,10 +98,10 @@ public class AiAppKeyController {
      * @return 更新后的 AppKey DTO
      */
     @Permission("admin")
-    @ApiOperation("切换 AppKey 启用状态")
+    @Operation(summary = "切换 AppKey 启用状态")
     @PutMapping("/{appKeyId}/toggle")
-    public AiAppKeyDTO toggle(@ApiParam("AppKey 主键 ID") @PathVariable Long appKeyId,
-                              @ApiParam("是否启用") @RequestParam Boolean enabled) {
+    public AiAppKeyDTO toggle(@Parameter(description = "AppKey 主键 ID") @PathVariable Long appKeyId,
+                              @Parameter(description = "是否启用") @RequestParam Boolean enabled) {
         return appKeyService.toggle(appKeyId, enabled);
     }
 }

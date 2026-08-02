@@ -3,9 +3,9 @@ package com.chua.starter.ai.support.controller.settings;
 import com.chua.starter.ai.support.model.AiServiceStatusDTO;
 import com.chua.starter.ai.support.service.settings.AiServiceStatusService;
 import com.chua.starter.common.support.annotations.Permission;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,7 +24,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/v2/ai/services")
 @RequiredArgsConstructor
-@Api(tags = "AI 设置 - 服务状态")
+@Tag(name = "AI 设置 - 服务状态")
 public class AiServiceStatusController {
 
     /**
@@ -37,7 +37,7 @@ public class AiServiceStatusController {
      *
      * @return 服务状态 DTO 列表
      */
-    @ApiOperation("查询所有服务运行状态")
+    @Operation(summary = "查询所有服务运行状态")
     @GetMapping("/status")
     public List<AiServiceStatusDTO> status() {
         return statusService.list();
@@ -49,9 +49,9 @@ public class AiServiceStatusController {
      * @param serviceName 服务名称
      */
     @Permission("admin")
-    @ApiOperation("启动服务")
+    @Operation(summary = "启动服务")
     @PostMapping("/{serviceName}/start")
-    public void start(@ApiParam("服务名称") @PathVariable String serviceName) {
+    public void start(@Parameter(description = "服务名称") @PathVariable String serviceName) {
         statusService.start(serviceName);
     }
 
@@ -61,9 +61,9 @@ public class AiServiceStatusController {
      * @param serviceName 服务名称
      */
     @Permission("admin")
-    @ApiOperation("停止服务")
+    @Operation(summary = "停止服务")
     @PostMapping("/{serviceName}/stop")
-    public void stop(@ApiParam("服务名称") @PathVariable String serviceName) {
+    public void stop(@Parameter(description = "服务名称") @PathVariable String serviceName) {
         statusService.stop(serviceName);
     }
 }

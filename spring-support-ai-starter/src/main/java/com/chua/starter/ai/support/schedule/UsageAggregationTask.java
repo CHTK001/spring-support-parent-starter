@@ -11,16 +11,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
-import org.springframework.scheduling.support.SimpleTriggerContext;
-import org.springframework.scheduling.support.Trigger;
-import org.springframework.scheduling.support.TriggerContext;
+import org.springframework.scheduling.Trigger;
+import org.springframework.scheduling.TriggerContext;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -80,7 +78,8 @@ public class UsageAggregationTask implements SchedulingConfigurer {
      */
     @Override
     public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
-        taskRegistrar.addTriggerTask(this::aggregate, this::nextTriggerTime);
+        Trigger trigger = this::nextTriggerTime;
+        taskRegistrar.addTriggerTask(this::aggregate, trigger);
     }
 
     /**
@@ -89,7 +88,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
      * @param triggerContext 触发器上下文
      * @return 下次执行时间
      */
-    private Date nextTriggerTime(TriggerContext triggerContext) {
+    private Instant nextTriggerTime(TriggerContext triggerContext) {
         long intervalSec = DEFAULT_INTERVAL_SEC;
         try {
             AiGlobalSetting setting = globalSettingMapper.selectById(SETTING_ID);
@@ -100,13 +99,12 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         } catch (Exception e) {
             log.debug("[UsageAggregation] 读取全局设置失败，使用默认间隔 {}", e.getMessage());
         }
-        Date last = triggerContext.lastScheduledExecutionTime();
+        java.util.Date last = triggerContext.lastScheduledExecutionTime();
         if (last == null) {
-            return new Date(System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(intervalSec));
+            return Instant.now().plusMillis(TimeUnit.SECONDS.toMillis(intervalSec));
         }
-        return new Date(last.getTime() + TimeUnit.SECONDS.toMillis(intervalSec));
+        return last.toInstant().plusMillis(TimeUnit.SECONDS.toMillis(intervalSec));
     }
-
     /**
      * 聚合执行入口。
      */

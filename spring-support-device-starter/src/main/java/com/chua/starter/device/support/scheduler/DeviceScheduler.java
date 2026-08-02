@@ -154,7 +154,7 @@ public class DeviceScheduler {
         List<DeviceInfo> devices = providerConfigService.listCheckableDevices();
         for (DeviceInfo device : devices) {
             DeviceConnectInfo info = buildConnectInfo(device);
-            int threshold = device.getDeviceInfoOfflineThreshold();
+            Integer threshold = device.getDeviceInfoOfflineThreshold();
             if (threshold == null || threshold <= 0) {
                 threshold = providerConfigService.getDefaultOfflineThreshold(device.getDeviceInfoVendor());
             }

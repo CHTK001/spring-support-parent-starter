@@ -3,9 +3,9 @@ package com.chua.starter.ai.support.controller.settings;
 import com.chua.starter.ai.support.model.AiUsageDTO;
 import com.chua.starter.ai.support.service.settings.AiUsageService;
 import com.chua.starter.common.support.annotations.Permission;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,7 +23,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/v2/ai/usage")
 @RequiredArgsConstructor
-@Api(tags = "AI 设置 - 用量统计")
+@Tag(name = "AI 设置 - 用量统计")
 public class AiUsageController {
 
     /**
@@ -38,9 +38,9 @@ public class AiUsageController {
      * @return 用量 DTO 列表
      */
     @Permission("admin")
-    @ApiOperation("查询用量统计")
+    @Operation(summary = "查询用量统计")
     @GetMapping
-    public List<AiUsageDTO> query(@ApiParam("模型名称") @RequestParam(required = false) String model) {
+    public List<AiUsageDTO> query(@Parameter(description = "模型名称") @RequestParam(required = false) String model) {
         return usageService.query(model);
     }
 }

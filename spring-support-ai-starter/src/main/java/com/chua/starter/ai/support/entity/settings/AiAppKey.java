@@ -6,8 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -21,77 +20,77 @@ import java.time.LocalDateTime;
  */
 @Data
 @TableName("ai_app_key")
-@ApiModel("AppKey")
+@Schema(name = "AppKey")
 public class AiAppKey implements Serializable {
 
     /**
      * AppKey 主键 ID
      */
     @TableId(type = IdType.AUTO)
-    @ApiModelProperty("AppKey 主键 ID")
+    @Schema(description = "AppKey 主键 ID")
     private Long appKeyId;
 
     /**
      * AppKey 名称
      */
     @TableField("app_key_name")
-    @ApiModelProperty("AppKey 名称")
+    @Schema(description = "AppKey 名称")
     private String appKeyName;
 
     /**
      * AppKey 密钥值（敏感信息）
      */
     @TableField("app_key_value")
-    @ApiModelProperty("AppKey 密钥值")
+    @Schema(description = "AppKey 密钥值")
     private String appKeyValue;
 
     /**
      * 关联供应商 ID
      */
     @TableField("app_key_provider_id")
-    @ApiModelProperty("关联供应商 ID")
+    @Schema(description = "关联供应商 ID")
     private Long appKeyProviderId;
 
     /**
      * 限定使用的模型（可空）
      */
     @TableField("app_key_model")
-    @ApiModelProperty("限定使用的模型")
+    @Schema(description = "限定使用的模型")
     private String appKeyModel;
 
     /**
      * 是否启用
      */
     @TableField("app_key_enabled")
-    @ApiModelProperty("是否启用")
+    @Schema(description = "是否启用")
     private Boolean appKeyEnabled;
 
     /**
      * 已使用次数
      */
     @TableField("app_key_use_count")
-    @ApiModelProperty("已使用次数")
+    @Schema(description = "已使用次数")
     private Long appKeyUseCount;
 
     /**
      * 过期时间
      */
     @TableField("app_key_expire_time")
-    @ApiModelProperty("过期时间")
+    @Schema(description = "过期时间")
     private LocalDateTime appKeyExpireTime;
 
     /**
      * 创建时间
      */
     @TableField(value = "app_key_create_time", fill = FieldFill.INSERT)
-    @ApiModelProperty("创建时间")
+    @Schema(description = "创建时间")
     private LocalDateTime appKeyCreateTime;
 
     /**
      * 更新时间
      */
     @TableField(value = "app_key_update_time", fill = FieldFill.INSERT_UPDATE)
-    @ApiModelProperty("更新时间")
+    @Schema(description = "更新时间")
     private LocalDateTime appKeyUpdateTime;
 
     /**
@@ -99,6 +98,6 @@ public class AiAppKey implements Serializable {
      */
     @TableField("app_key_deleted")
     @TableLogic
-    @ApiModelProperty("逻辑删除标记")
+    @Schema(description = "逻辑删除标记")
     private Integer appKeyDeleted;
 }

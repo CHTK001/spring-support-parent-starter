@@ -3,9 +3,9 @@ package com.chua.starter.ai.support.controller.settings;
 import com.chua.starter.ai.support.model.AiProviderDTO;
 import com.chua.starter.ai.support.service.settings.AiProviderService;
 import com.chua.starter.common.support.annotations.Permission;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,7 +31,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/v2/ai/providers")
 @RequiredArgsConstructor
-@Api(tags = "AI 设置 - 模型供应商")
+@Tag(name = "AI 设置 - 模型供应商")
 public class AiProviderController {
 
     /**
@@ -45,7 +45,7 @@ public class AiProviderController {
      * @return 供应商 DTO 列表
      */
     @Permission("admin")
-    @ApiOperation("查询所有供应商")
+    @Operation(summary = "查询所有供应商")
     @GetMapping
     public List<AiProviderDTO> list() {
         return providerService.list();
@@ -58,7 +58,7 @@ public class AiProviderController {
      * @return 创建后的供应商 DTO
      */
     @Permission("admin")
-    @ApiOperation("新建供应商")
+    @Operation(summary = "新建供应商")
     @PostMapping
     public AiProviderDTO create(@RequestBody AiProviderDTO provider) {
         return providerService.create(provider);
@@ -72,9 +72,9 @@ public class AiProviderController {
      * @return 更新后的供应商 DTO
      */
     @Permission("admin")
-    @ApiOperation("更新供应商")
+    @Operation(summary = "更新供应商")
     @PutMapping("/{providerId}")
-    public AiProviderDTO update(@ApiParam("供应商主键 ID") @PathVariable Long providerId,
+    public AiProviderDTO update(@Parameter(description = "供应商主键 ID") @PathVariable Long providerId,
                                 @RequestBody AiProviderDTO provider) {
         return providerService.update(providerId, provider);
     }
@@ -85,9 +85,9 @@ public class AiProviderController {
      * @param providerId 供应商主键
      */
     @Permission("admin")
-    @ApiOperation("删除供应商")
+    @Operation(summary = "删除供应商")
     @DeleteMapping("/{providerId}")
-    public void delete(@ApiParam("供应商主键 ID") @PathVariable Long providerId) {
+    public void delete(@Parameter(description = "供应商主键 ID") @PathVariable Long providerId) {
         providerService.delete(providerId);
     }
 
@@ -99,10 +99,10 @@ public class AiProviderController {
      * @return 更新后的供应商 DTO
      */
     @Permission("admin")
-    @ApiOperation("切换供应商启用状态")
+    @Operation(summary = "切换供应商启用状态")
     @PutMapping("/{providerId}/toggle")
-    public AiProviderDTO toggle(@ApiParam("供应商主键 ID") @PathVariable Long providerId,
-                                @ApiParam("是否启用") @RequestParam Boolean enabled) {
+    public AiProviderDTO toggle(@Parameter(description = "供应商主键 ID") @PathVariable Long providerId,
+                                @Parameter(description = "是否启用") @RequestParam Boolean enabled) {
         return providerService.toggle(providerId, enabled);
     }
 }

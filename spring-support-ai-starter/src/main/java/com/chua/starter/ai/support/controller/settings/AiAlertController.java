@@ -3,9 +3,9 @@ package com.chua.starter.ai.support.controller.settings;
 import com.chua.starter.ai.support.model.AiAlertDTO;
 import com.chua.starter.ai.support.service.settings.AiAlertService;
 import com.chua.starter.common.support.annotations.Permission;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,7 +30,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/v2/ai/alerts")
 @RequiredArgsConstructor
-@Api(tags = "AI 设置 - 告警规则")
+@Tag(name = "AI 设置 - 告警规则")
 public class AiAlertController {
 
     /**
@@ -44,7 +44,7 @@ public class AiAlertController {
      * @return 告警 DTO 列表
      */
     @Permission("admin")
-    @ApiOperation("查询所有告警规则")
+    @Operation(summary = "查询所有告警规则")
     @GetMapping
     public List<AiAlertDTO> list() {
         return alertService.list();
@@ -57,7 +57,7 @@ public class AiAlertController {
      * @return 创建后的告警 DTO
      */
     @Permission("admin")
-    @ApiOperation("新建告警规则")
+    @Operation(summary = "新建告警规则")
     @PostMapping
     public AiAlertDTO create(@RequestBody AiAlertDTO alert) {
         return alertService.create(alert);
@@ -71,9 +71,9 @@ public class AiAlertController {
      * @return 更新后的告警 DTO
      */
     @Permission("admin")
-    @ApiOperation("更新告警规则")
+    @Operation(summary = "更新告警规则")
     @PutMapping("/{alertId}")
-    public AiAlertDTO update(@ApiParam("告警主键 ID") @PathVariable Long alertId,
+    public AiAlertDTO update(@Parameter(description = "告警主键 ID") @PathVariable Long alertId,
                              @RequestBody AiAlertDTO alert) {
         return alertService.update(alertId, alert);
     }
@@ -84,9 +84,9 @@ public class AiAlertController {
      * @param alertId 告警主键
      */
     @Permission("admin")
-    @ApiOperation("删除告警规则")
+    @Operation(summary = "删除告警规则")
     @DeleteMapping("/{alertId}")
-    public void delete(@ApiParam("告警主键 ID") @PathVariable Long alertId) {
+    public void delete(@Parameter(description = "告警主键 ID") @PathVariable Long alertId) {
         alertService.delete(alertId);
     }
 
@@ -98,10 +98,10 @@ public class AiAlertController {
      * @return 更新后的告警 DTO
      */
     @Permission("admin")
-    @ApiOperation("切换告警启用状态")
+    @Operation(summary = "切换告警启用状态")
     @PutMapping("/{alertId}/toggle")
-    public AiAlertDTO toggle(@ApiParam("告警主键 ID") @PathVariable Long alertId,
-                             @ApiParam("是否启用") @RequestParam Boolean enabled) {
+    public AiAlertDTO toggle(@Parameter(description = "告警主键 ID") @PathVariable Long alertId,
+                             @Parameter(description = "是否启用") @RequestParam Boolean enabled) {
         return alertService.toggle(alertId, enabled);
     }
 }
