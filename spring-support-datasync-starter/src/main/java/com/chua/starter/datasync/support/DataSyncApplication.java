@@ -77,11 +77,6 @@ public class DataSyncApplication {
         application.setDefaultProperties(defaults);
         ApplicationContext context = application.run(args);
 
-        // 验证 OSGi 集成（spring-support-osgi-starter 自动配置）
-        printOsgiStatus(context);
-        // 后台线程周期验证 OSGi 服务被 ObjectContext 实时获取（手动 install bundle 后可见）
-        startOsgiRealtimeCheck(context);
-
         // 打印配置
         DatasyncProperties properties = context.getBean(DatasyncProperties.class);
         System.out.println("[DATA-SYNC] enabled=" + properties.isEnabled());
