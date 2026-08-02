@@ -27,11 +27,6 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
     </dependency>
-    <!-- Spring Boot WebSocket -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-websocket</artifactId>
-    </dependency>
     <!-- 邮件核心模块 -->
     <dependency>
       <groupId>com.chua</groupId>
@@ -42,12 +37,6 @@
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>
-    </dependency>
-    <!-- Swagger API 文档 -->
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>spring-support-swagger-starter</artifactId>
-      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>

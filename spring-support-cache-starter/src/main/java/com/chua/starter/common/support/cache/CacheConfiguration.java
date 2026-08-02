@@ -188,10 +188,13 @@ public class CacheConfiguration {
 
     /**
      * 缓存操作源（覆盖默认，使用自定义解析器）
+     * <p>无条件创建并标记 @Primary，确保 CacheInterceptor 始终使用
+     * 支持 key 与 keyGenerator 共用的 CacheCustomAnnotationParser；
+     * 若依赖 @ConditionalOnMissingBean 会被 @EnableCaching 默认的标准解析器抢注，
+     * 导致 key+keyGenerator 同时使用时报 IllegalStateException。</p>
      */
     @Bean
     @Primary
-    @ConditionalOnMissingBean(org.springframework.cache.interceptor.CacheOperationSource.class)
     public org.springframework.cache.interceptor.CacheOperationSource customCacheOperationSource(
             CacheCustomAnnotationParser parser) {
         return new org.springframework.cache.annotation.AnnotationCacheOperationSource(parser);

@@ -63,7 +63,8 @@ public class AesCodec {
     private IvParameterSpec generateIv() throws Exception {
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         md.update(keyBytes);
-        return new IvParameterSpec(md.digest());
+        // AES/CBC 要求 IV 必须为 16 字节，取 SHA-256 摘要前 16 字节
+        return new IvParameterSpec(Arrays.copyOf(md.digest(), 16));
     }
 
     private String bytesToHex(byte[] bytes) {

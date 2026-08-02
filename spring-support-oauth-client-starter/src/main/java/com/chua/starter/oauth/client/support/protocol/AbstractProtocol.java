@@ -559,6 +559,10 @@ public abstract class AbstractProtocol implements Protocol {
         if (null == value) {
             return null;
         }
+        // 写入时使用 Value 包装，读取时解包为实际认证信息
+        if (value instanceof com.chua.common.support.value.Value<?> wrapper) {
+            value = wrapper.getValue();
+        }
 
         AuthenticationInformation authenticationInformation;
         try {

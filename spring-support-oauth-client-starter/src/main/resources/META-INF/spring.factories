@@ -6,5 +6,4 @@ com.chua.starter.oauth.client.support.advice.AdviceResolver=\
   com.chua.starter.oauth.client.support.advice.OctetAdviceResolver,\
   com.chua.starter.oauth.client.support.advice.XmlAdviceResolver
 com.chua.starter.oauth.client.support.protocol.Protocol=\
-  com.chua.starter.oauth.client.support.protocol.HttpProtocol,\
-  com.chua.starter.oauth.client.support.protocol.GrpcProtocol
+  com.chua.starter.oauth.client.support.protocol.HttpProtocol

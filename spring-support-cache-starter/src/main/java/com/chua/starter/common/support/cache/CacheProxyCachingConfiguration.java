@@ -1,16 +1,13 @@
 package com.chua.starter.common.support.cache;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.cache.annotation.AnnotationCacheOperationSource;
 import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.cache.interceptor.CacheOperationSource;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
 
 /**
  * 缓存代理配置
  * <p>
- * 使用自定义的缓存注解解析器，支持 key 和 keyGenerator 同时使用。
+ * 自定义缓存操作源与解析器统一由 {@link CacheConfiguration} 提供（@Primary，无条件创建）。
+ * 本类仅保留 @EnableCaching，作为未显式声明 @EnableCaching 的应用的兜底入口；
+ * 若在此重复定义 customCacheOperationSource 会导致与 CacheConfiguration 同名 Bean 冲突。
  * </p>
  *
  * @author CH
@@ -19,15 +16,4 @@ import org.springframework.context.annotation.Primary;
  */
 @EnableCaching
 public class CacheProxyCachingConfiguration {
-
-    @Bean
-    @Primary
-    public CacheOperationSource customCacheOperationSource() {
-        return new AnnotationCacheOperationSource(cacheAnnotationParser());
-    }
-
-    @Bean
-    public CacheCustomAnnotationParser cacheAnnotationParser() {
-        return new CacheCustomAnnotationParser();
-    }
 }

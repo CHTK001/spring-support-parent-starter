@@ -59,12 +59,6 @@
             <version>${utils.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>javax.annotation</groupId>
-            <artifactId>javax.annotation-api</artifactId>
-            
-        </dependency>
-
         <!-- Jakarta Servlet API - 提供 Servlet 相关接口 -->
         <dependency>
             <groupId>jakarta.servlet</groupId>

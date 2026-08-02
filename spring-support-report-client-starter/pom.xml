@@ -16,17 +16,8 @@
       <artifactId>spring-support-ssh-starter</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-exec</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-oauth-client-starter</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.alibaba.fastjson2</groupId>
-      <artifactId>fastjson2</artifactId>
     </dependency>
     <dependency>
       <groupId>com.chua</groupId>
@@ -35,10 +26,6 @@
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-job-starter</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-registry-prometheus</artifactId>
     </dependency>
     <dependency>
       <groupId>com.chua</groupId>
