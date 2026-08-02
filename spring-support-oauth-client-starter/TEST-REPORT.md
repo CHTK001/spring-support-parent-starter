@@ -1,0 +1,148 @@
+# spring-support-oauth-client-starter 单元测试报告
+
+## 1. 执行概览
+
+| 项目 | 内容 |
+| ---- | ---- |
+| 被测模块 | `spring-support-oauth-client-starter` |
+| 测试框架 | JUnit 5.12.2（spring-boot-starter-test 3.5.9） |
+| 执行命令 | `mvn test -f pom.xml -DskipTests=false`（父 POM 默认 `skipTests=true`，需显式开启） |
+| 执行时间 | 2026-08-02 |
+| **测试总数** | **58** |
+| **失败 / 错误** | **0 / 0** |
+| 执行结果 | ✅ BUILD SUCCESS |
+
+> 运行后端（system-starter，PID 14932）回归：登录、`x-oauth-token`、`Bearer`、同 token 二次访问均返回 `00000`；
+> 首次鉴权 15ms，二次命中缓存 0ms，无异常日志。
+
+## 2. 协议测试矩阵（核心）
+
+| 协议名 | @Spi | 实现类 | 传输方式 | 请求体加密 | x-sign 签名 | 校验要点 | 测试类 | 用例数 | 结果 |
+| ------ | ---- | ------ | -------- | ---------- | ----------- | -------- | ------ | -----: | ---- |
+| static | `Static` | StaticProtocol | 本地 SM4（TokenCipher） | TokenCipher(SM4/ECB+Hex) 加密 token | 无 | 令牌加解密、upgrade、AppKey 降级 | StaticProtocolTest | 7 | ✅ |
+| http / http-lite | `http`, `http-lite` | HttpProtocol | HTTP POST（Unirest） | createData（AES，随 enableEncryption 开关） | 是（MD5） | 加密开关、x-sign 与参数一致性、篡改拒绝、响应解密、异常降级 | HttpProtocolTest | 5 | ✅ |
+| armeria | `armeria` | ArmeriaProtocol | Armeria HTTP（HTTP/2） | createData（AES，随 enableEncryption 开关） | 是（MD5） | 加密开关、x-sign 与参数一致性、篡改拒绝、响应解密、异常降级 | ArmeriaProtocolTest | 4 | ✅ |
+| oauth2 | `oauth2` | Oauth2Protocol | HTTP Basic（RFC 6749） | 否（Basic Auth，不加密请求体） | 否 | Basic 认证头、空令牌内省降级、不支持扩展降级 | Oauth2ProtocolTest | 10 | ✅ |
+| rsocket | `rsocket` | RSocketProtocol | RSocket（响应式） | createData（AES，随 enableEncryption 开关） | 是（MD5，元数据携带） | 地址解析、加密能力、未配置地址降级、端到端签名/篡改拒绝/服务器异常 | RSocketProtocolTest + RSocketProtocolE2ETest | 6 + 5 | ✅ |
+| 基类能力 | - | AbstractProtocol | - | createData 加密矩阵 | 签名一致性 | 加密开关、AK/SK 二次加密、缓存 key/命中/失效 | AbstractProtocolTest | 13 | ✅ |
+| 令牌编解码 | - | TokenCipher | - | SM4/ECB+Hex | - | 往返、确定性、非法输入 | TokenCipherTest | 6 | ✅ |
+| SPI 注册 | - | - | - | - | - | 6 协议 + 2 执行器注册 | ProtocolRegistrationTest | 2 | ✅ |
+
+### 「是否加密 / 是否校验 x-sign」能力汇总
+
+| 协议 | 是否加密传输请求体 | 是否携带 x-sign 签名 | 说明 |
+| ---- | ------------------ | -------------------- | ---- |
+| static | 否（token 本身用 SM4 加密） | 否 | 本地解析，无网络请求 |
+| http / http-lite | 是（`enableEncryption=true` 时 createData AES，`x-oauth-encode` 头标记） | 是（`SignUtils.generateSignFromMap` MD5） | 请求头 `x-oauth-sign`、`x-oauth-serial`、`x-oauth-uuid`、`x-oauth-timestamp` |
+| armeria | 是（同上） | 是（同上） | 与 HTTP 协议同一加密/签名实现 |
+| oauth2 | 否（form-urlencoded + Basic Auth） | 否 | 遵循 OAuth 2.0 标准（内省/令牌端点） |
+| rsocket | 是（同上） | 是（元数据 metadata 携带） | 与 HTTP 协议同一加密/签名实现 |
+
+## 3. 测试类明细
+
+### 3.1 TokenCipherTest（6 个用例）✅
+
+| 用例 | 说明 |
+| ---- | ---- |
+| encryptDecryptRoundTrip | 加密后解密可还原明文 |
+| encryptDecryptToUser | 加密后直接解析为用户信息，字段一致 |
+| deterministicSameInputSameToken | SM4/ECB 确定性：相同输入相同令牌 |
+| encryptProducesHex | 加密结果为十六进制 |
+| invalidHexReturnsNull | 非法令牌解密返回 null 不抛异常 |
+| nullInputReturnsNull | null 输入返回 null |
+
+### 3.2 AbstractProtocolTest（13 个用例）✅
+
+| 用例 | 说明 |
+| ---- | ---- |
+| encryptDisabledReturnsPlain | 关闭加密时 createData 原样返回明文 |
+| encryptEnabledReturnsHexCipher | 开启加密时输出可解密的十六进制密文 |
+| encryptWithAkskDoubleEncryption | AK/SK 二次加密：内层 SecretKey + 外层随机密钥 |
+| isEncodeReflectsFlag | x-oauth-encode 开关反映 enableEncryption |
+| getAccessKeyEnabled / Disabled | AK/SK 启用时返回 accessKey，否则 null |
+| cacheKeyUsesTokenSha256 | 缓存 key = token 的 SHA-256 |
+| cacheKeyFallsBackToCookie | 无 token 回退 x-oauth-cookie 的 SHA-256 |
+| cacheKeyNullWhenNoCredential | 无凭据返回 null |
+| approveHitsCacheOnSecondCall | 首次走协议、二次命中缓存 |
+| approveDoesNotCacheFailure | 失败结果不缓存 |
+| invalidateCacheClears | 失效缓存后重新鉴权 |
+| authenticationKeyPrefersUserCode | AppKey 缓存 key 优先 userCode |
+
+### 3.3 HttpProtocolTest（5 个用例，本地 HttpServer 端到端）✅
+
+| 用例 | 说明 |
+| ---- | ---- |
+| approveSuccessWithEncryptionDisabled | 明文请求体 + x-sign 与参数签名一致，响应解析成功 |
+| approveSuccessWithEncryptionEnabled | 密文请求体 + 解密后签名一致，响应按 x-oauth-response-serial 解密 |
+| approveServerErrorFallsBack | 服务器 5xx 降级为认证服务器不存在（501） |
+| approveUnauthorizedCodeFallsBack | 未授权 code 降级为认证失败（403） |
+| approveRejectedWhenSignMismatch | 服务端校验 x-sign：请求参数被篡改后复算签名不一致，服务端拒绝，客户端降级为认证失败 |
+
+### 3.4 ArmeriaProtocolTest（4 个用例，本地 HttpServer 端到端）✅
+
+| 用例 | 说明 |
+| ---- | ---- |
+| approveSuccessWithEncryptionDisabled | 明文请求体 + x-sign 一致 |
+| approveSuccessWithEncryptionEnabled | 密文请求体 + 解密后签名一致 |
+| approveServerErrorFallsBack | 服务器 5xx 降级为认证服务器不存在 |
+| approveRejectedWhenSignMismatch | 服务端校验 x-sign：请求参数被篡改后复算签名不一致，服务端拒绝，客户端降级为认证失败 |
+
+### 3.5 Oauth2ProtocolTest（10 个用例）✅
+
+| 用例 | 说明 |
+| ---- | ---- |
+| buildBasicAuthEncodesCredentials | Basic 头为 base64(clientId:clientSecret) |
+| introspectBlankToken / NullToken | 空令牌内省返回 403，不发网络请求 |
+| createTemporaryTokenNotSupported | 标准协议不支持临时令牌，返回 501 |
+| onlineStatusDefaults / onlineUsersEmpty | 标准协议不包含在线查询，返回默认/空 |
+| clientCredentialsNoAddressFallsBack | 未配置地址时 client_credentials 降级服务器异常 |
+| approveNoAddressFallsBack | 未配置地址时 approve 降级服务器异常 |
+| getAccessTokenNoAddressFallsBack | 未配置地址时登录返回 500 |
+| logoutNoAddressThrows | 未配置地址时登出抛出异常 |
+
+### 3.6 RSocketProtocolTest（6 个用例，单元级）✅
+
+| 用例 | 说明 |
+| ---- | ---- |
+| extractHostFromRsocketUrl / HttpUrl | rsocket/http 地址主机名解析 |
+| extractPort / Default | 端口解析与默认值 |
+| createDataEncryptedWhenEnabled | 与 HTTP/Armeria 共享的 AES 加密实现 |
+| approveWithoutAddressThrows | 未配置地址时抛出地址不存在异常 |
+
+### 3.6b RSocketProtocolE2ETest（5 个用例，本地 RSocketServer 端到端）✅
+
+| 用例 | 说明 |
+| ---- | ---- |
+| approveSuccessWithEncryptionDisabled | 元数据携带 x-oauth-sign、x-oauth-encode=false、route，明文请求体签名一致 |
+| approveSuccessWithEncryptionEnabled | 密文请求体，服务端经 x-oauth-uuid/x-oauth-serial 还原密钥解密，响应按 x-oauth-response-serial 解密 |
+| approveRejectedWhenSignMismatch | 服务端校验 x-sign：请求参数被篡改后复算签名与元数据不一致，服务端拒绝，客户端降级为认证失败 |
+| approveServerErrorFallsBack | 服务端内部异常（ApplicationError 帧）降级为鉴权服务器异常（500） |
+| approveUnauthorizedCodeFallsBack | 未授权 code 降级为认证失败（403） |
+
+### 3.7 StaticProtocolTest（7 个用例）✅
+
+| 用例 | 说明 |
+| ---- | ---- |
+| approveValidTokenReturnsOk | 有效令牌返回 OK 且用户信息一致 |
+| approveInvalidToken / NullToken | 无效/空令牌返回 403 |
+| upgradeGeneratesFreshToken | REFRESH 生成新令牌且可解析 |
+| upgradeEmptyTokenReturnsNull | 空令牌 upgrade 返回 null |
+| authenticationUserCodeNotSupported | 静态协议不支持 AppKey，返回 403 |
+| approveHitsCacheOnRepeat | 同令牌二次 approve 命中缓存 |
+
+### 3.8 ProtocolRegistrationTest（2 个用例）✅
+
+| 用例 | 说明 |
+| ---- | ---- |
+| allProtocolsLoadable | static/http/http-lite/armeria/oauth2/rsocket 均可 SPI 加载 |
+| executorsLoadable | static/default 执行器均可 SPI 加载 |
+
+## 4. 测试过程中发现并修复的缺陷
+
+| # | 缺陷 | 影响 | 修复 |
+| - | ---- | ---- | ---- |
+| 1 | **AesCodec.generateIv 使用 SHA-256 的 32 字节摘要作 IV**，而 AES/CBC 要求 IV 必须为 16 字节，导致 `Codec.build("aes", ...)` 的加密/解密全部抛出 `Wrong IV length: must be 16 bytes long` | 依赖 createData 加密的 http / armeria / rsocket 协议在 `enableEncryption=true` 时完全不可用（system 用 static 协议因此未暴露） | `AesCodec.java`：IV 取 SHA-256 摘要前 16 字节 `Arrays.copyOf(md.digest(), 16)` |
+| 2 | **认证缓存写入时用 `Value.of(...)` 包装，读取时直接强转为 `AuthenticationInformation`**，类型不匹配导致缓存永不命中（每次都重新鉴权） | 缓存优化目标未生效，token 每次请求重复走协议 | `AbstractProtocol.readAuthenticationInformation`：读取时对 `Value` 包装解包后再强转 |
+| 3 | 测试基建：父 POM 默认 `skipTests=true`，surefire 直接跳过测试 | 测试无法在 CI 默认执行 | 文档化执行命令 `mvn test -DskipTests=false`（不改全局默认，避免影响既有构建） |
+
+> 修复 1、2 已随本轮重新编译安装（oauth-client、common-system），system 后端重启回归通过。

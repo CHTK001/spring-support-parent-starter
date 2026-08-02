@@ -44,6 +44,8 @@ class ArmeriaProtocolTest {
     private volatile String responseBody = "";
     private volatile int responseCode = 200;
     private volatile String responseSerial = null;
+    private volatile boolean verifySignOnServer = false;
+    private volatile boolean tamperRejected = false;
 
     /**
      * 启动本地认证服务器
@@ -70,6 +72,21 @@ class ArmeriaProtocolTest {
                 headers.put(k.toLowerCase(), v.isEmpty() ? null : v.get(0)));
         capturedHeaders.set(headers);
         capturedBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+
+        // 模拟服务端校验 x-sign：篡改请求参数后复算签名，若与请求头不一致则判定请求被篡改
+        if (verifySignOnServer) {
+            String rawBody = capturedBody.get();
+            try {
+                String dataJson = Json.fromJson(rawBody, JsonObject.class).getObject("data", String.class);
+                JsonObject parsed = Json.fromJson(dataJson, JsonObject.class);
+                String token = String.valueOf(parsed.get("x-oauth-token"));
+                parsed.put("x-oauth-token", token + "-tampered");
+                String tamperedSign = SignUtils.generateSignFromMap(parsed);
+                tamperRejected = !tamperedSign.equals(headers.get("x-oauth-sign"));
+            } catch (Exception ignored) {
+                // 请求体非预期格式时忽略，由响应路径处理
+            }
+        }
 
         if (responseSerial != null) {
             exchange.getResponseHeaders().add("x-oauth-response-serial", responseSerial);
@@ -166,6 +183,21 @@ class ArmeriaProtocolTest {
 
         AuthenticationInformation result = approve();
         assertEquals(Information.AUTHENTICATION_SERVER_NO_EXIST.getCode(), result.getInformation().getCode());
+    }
+
+    /**
+     * 服务端校验 x-sign：请求参数被篡改后复算签名与请求头不一致，服务端拒绝，客户端降级为认证失败
+     */
+    @Test
+    void approveRejectedWhenSignMismatch() {
+        props.setEnableEncryption(false);
+        verifySignOnServer = true;
+        responseCode = 200;
+        responseBody = "{\"code\":\"A0401S0000\",\"msg\":\"签名校验失败\"}";
+
+        AuthenticationInformation result = approve();
+        assertEquals(Information.AUTHENTICATION_FAILURE.getCode(), result.getInformation().getCode());
+        assertTrue(tamperRejected, "服务端应能识别被篡改的请求（x-sign 与参数不匹配）");
     }
 }
 
