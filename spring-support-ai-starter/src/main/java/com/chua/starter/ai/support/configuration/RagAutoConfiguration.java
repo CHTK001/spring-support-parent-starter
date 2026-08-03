@@ -39,20 +39,17 @@ public class RagAutoConfiguration {
         // 从 sys_ai_global_setting 读取 LLM 配置
         ChatClient chatClient = createChatClient(globalSettingService);
         if (chatClient == null) {
-            log.warn("[RagAutoConfiguration] 未配置 ChatClient，RAG 将无法生成回答");
+            log.warn("[RagAutoConfiguration] 未配置 ChatClient，跳过 RagClient 创建");
+            return null;
         }
 
         // 构建 RagClient 配置
-        RagClientSetting.RagClientSettingBuilder builder = RagClientSetting.builder()
+        RagClientSetting setting = RagClientSetting.builder()
                 .topK(properties.getDefaultTopK())
                 .similarityThreshold(properties.getDefaultSimilarityThreshold())
-                .uploadDir(properties.getUploadDir());
-
-        if (chatClient != null) {
-            builder.chatClient(chatClient);
-        }
-
-        RagClientSetting setting = builder.build();
+                .uploadDir(properties.getUploadDir())
+                .chatClient(chatClient)
+                .build();
 
         // SPI 加载 RagClient（如 MemoryRagClient）
         RagClient client = RagClient.create("memory", setting);

@@ -15,6 +15,22 @@ public interface DeviceSession {
     List<RecordFile> queryRecords(int channel, TimeRange range);
     InputStream playback(int channel, TimeRange range);
 
+    /**
+     * 获取视频播放地址（HLS / FLV / RTSP 等 URL）
+     *
+     * @param channel  通道号
+     * @param protocol 协议类型，如 hls、flv、rtsp
+     * @return 拉流 URL
+     */
+    String getLiveUrl(int channel, String protocol);
+
+    /**
+     * 测试连接：探测当前会话是否仍可达
+     *
+     * @return 是否可达
+     */
+    boolean testConnection();
+
     // 云台
     void ptzControl(PtzCommand cmd, double speed);
     void setPreset(int presetId, String name);

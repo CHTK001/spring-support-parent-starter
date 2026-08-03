@@ -6,8 +6,8 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.configuration.RagProperties;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,12 +23,17 @@ import java.util.*;
 @Slf4j
 @RestController
 @RequestMapping("/v2/ai/rag")
-@RequiredArgsConstructor
+@ConditionalOnProperty(name = "rag.enabled", havingValue = "true")
 @Tag(name = "RAG 知识库", description = "RAG 文档管理、问答和配置接口")
 public class RagController {
 
     private final RagClient ragClient;
     private final RagProperties ragProperties;
+
+    public RagController(RagClient ragClient, RagProperties ragProperties) {
+        this.ragClient = ragClient;
+        this.ragProperties = ragProperties;
+    }
 
     // ── 文档管理 ─────────────────────────────────────────
 

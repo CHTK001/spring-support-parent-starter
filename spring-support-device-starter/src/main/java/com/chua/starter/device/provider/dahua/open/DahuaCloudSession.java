@@ -128,6 +128,12 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     }
 
     @Override
+    public String getLiveUrl(int channel, String protocol) {
+        JsonNode data = getLiveUrl(channel);
+        return data.path("url").asText(data.path("hls").asText(data.path("flv").asText("")));
+    }
+
+    @Override
     public void ptzControl(com.chua.starter.device.spi.model.PtzCommand cmd, double speed) {
         if (cmd == com.chua.starter.device.spi.model.PtzCommand.STOP) {
             return;

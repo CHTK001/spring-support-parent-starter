@@ -87,6 +87,7 @@
               <div class="flex-1">
                 <ReVideo
                   :url="videoUrl"
+                  :protocol="videoProtocol"
                   :channel="currentChannel"
                   @error="onVideoError"
                   class="rounded-xl overflow-hidden bg-black aspect-video"
@@ -100,6 +101,17 @@
                       :value="ch.deviceChannelNo"
                     />
                   </el-select>
+                  <el-select v-model="videoProtocol" placeholder="协议" size="small" style="width: 110px">
+                    <el-option label="HLS" value="hls" />
+                    <el-option label="FLV" value="flv" />
+                    <el-option label="RTSP" value="rtsp" />
+                  </el-select>
+                  <el-button size="small" type="primary" @click="reloadStream">
+                    <el-icon class="mr-1"><Refresh /></el-icon>刷新
+                  </el-button>
+                  <el-button size="small" type="primary" @click="reconnectDevice">
+                    <el-icon class="mr-1"><Refresh /></el-icon>重连
+                  </el-button>
                   <el-button size="small" type="primary" @click="openMultiView">
                     <el-icon class="mr-1"><Grid /></el-icon>多路播放
                   </el-button>
@@ -246,7 +258,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Grid, Camera, Timer, Download } from '@element-plus/icons-vue'
+import { Grid, Camera, Timer, Download, Refresh } from '@element-plus/icons-vue'
 
 import ReVideo from '../../components/ReVideo.vue'
 import ReDeviceTree from '../../components/ReDeviceTree.vue'
@@ -313,6 +325,7 @@ const activeTab = ref('overview')
 const timeline = ref<TimelineItem[]>([])
 const currentChannel = ref(1)
 const videoUrl = ref('')
+const videoProtocol = ref('hls')
 const multiViewVisible = ref(false)
 const multiLayout = ref(4)
 const multiChannels = ref<number[]>([])
@@ -348,15 +361,44 @@ function selectDevice(dev: DeviceInfo) {
   if (dev.channels && dev.channels.length) {
     currentChannel.value = dev.channels[0].deviceChannelNo
   }
-  loadVideo(dev.deviceInfoId, currentChannel.value)
+  reloadStream()
   fetchTimeline()
   loadPresets(dev.deviceInfoId)
   fetchAccessEvents()
   fetchEvents()
 }
 
-function loadVideo(deviceId: string, channel: number) {
-  videoUrl.value = `ws://localhost:8080/stream/${deviceId}/${channel}`
+/**
+ * 重新加载视频流：从后端获取真实 HLS/FLV URL
+ */
+function reloadStream() {
+  if (!selectedDevice.value) return
+  deviceApi
+    .getVideoStream(selectedDevice.value.deviceInfoId, currentChannel.value, videoProtocol.value)
+    .then((res: any) => {
+      videoUrl.value = String(res || '')
+      if (!videoUrl.value) {
+        ElMessage.warning('后端未返回拉流地址，请检查平台账号配置')
+      }
+    })
+    .catch(() => {
+      videoUrl.value = ''
+      ElMessage.error('获取视频流失败，请确认设备在线')
+    })
+}
+
+/**
+ * 重连设备
+ */
+function reconnectDevice() {
+  if (!selectedDevice.value) return
+  deviceApi
+    .reconnect(selectedDevice.value.deviceInfoId)
+    .then(() => {
+      ElMessage.success('设备重连成功')
+      reloadStream()
+    })
+    .catch(() => ElMessage.error('设备重连失败'))
 }
 
 function onVideoError(err: any) {
@@ -366,13 +408,33 @@ function onVideoError(err: any) {
 function openMultiView() {
   const n = multiLayout.value
   const chs = selectedDevice.value?.channels || []
+  const deviceId = selectedDevice.value?.deviceInfoId
   multiChannels.value = Array.from({ length: n }, (_, i) => (chs.length ? chs[i % chs.length].deviceChannelNo : 1))
-  multiUrls.value = multiChannels.value.map((ch) => `ws://localhost:8080/stream/${selectedDevice.value?.deviceInfoId}/${ch}`)
-  multiViewVisible.value = true
+  // 多路播放：依次拉取每个通道的真实 URL，失败回退空
+  Promise.all(
+    multiChannels.value.map((ch) =>
+      deviceApi
+        .getVideoStream(deviceId || '', ch, videoProtocol.value)
+        .then((res: any) => String(res || ''))
+        .catch(() => ''),
+    ),
+  ).then((urls) => {
+    multiUrls.value = urls
+    multiViewVisible.value = true
+  })
 }
 
 function onMultiChannelChange(payload: { index: number; value: number }) {
-  multiUrls.value[payload.index] = `ws://localhost:8080/stream/${selectedDevice.value?.deviceInfoId}/${payload.value}`
+  const deviceId = selectedDevice.value?.deviceInfoId
+  if (!deviceId) return
+  deviceApi
+    .getVideoStream(deviceId, payload.value, videoProtocol.value)
+    .then((res: any) => {
+      multiUrls.value[payload.index] = String(res || '')
+    })
+    .catch(() => {
+      multiUrls.value[payload.index] = ''
+    })
 }
 
 function captureImage() {

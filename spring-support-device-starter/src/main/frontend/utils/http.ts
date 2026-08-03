@@ -100,8 +100,8 @@ export const deviceApi = {
   syncOrg: () => post('/device/org/sync'),
   getOrgTree: (vendor?: string) => get('/device/org/tree', { params: { vendor } }),
   exportDevices: (orgId?: string) => get('/device/export', { params: { orgId }, responseType: 'blob' }),
-  getVideoStream: (deviceId: string, channel: number) =>
-    get('/device/video/stream', { params: { deviceId, channel } }),
+  getVideoStream: (deviceId: string, channel: number, protocol = 'hls') =>
+    get('/device/video/stream', { params: { deviceId, channel, protocol } }),
   ptzControl: (deviceId: string, cmd: string, speed = 0.5) =>
     post(`/device/ptz/control?deviceId=${deviceId}&cmd=${cmd}&speed=${speed}`),
   setPreset: (deviceId: string, presetId: number, name: string) =>
@@ -117,6 +117,10 @@ export const deviceApi = {
     get(`/device/access/records?deviceId=${deviceId}&start=${start}&end=${end}`),
   queryEvents: (params: { deviceId: string; type?: string; start?: string; end?: string }) =>
     get('/device/events', { params }),
+  // 设备状态
+  reconnect: (id: string) => post(`/device/${id}/reconnect`),
+  refreshStatus: (id: string) => post(`/device/${id}/refresh-status`),
+  testConnection: (info: any) => post('/device/test-connection', info),
   // 通道管理
   addChannel: (channel: any) => post('/device/channel', channel),
   updateChannel: (id: string, channel: any) => put(`/device/channel/${id}`, channel),

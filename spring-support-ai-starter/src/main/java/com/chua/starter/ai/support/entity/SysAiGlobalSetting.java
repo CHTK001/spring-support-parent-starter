@@ -30,7 +30,7 @@ public class SysAiGlobalSetting {
     @TableField("sys_ai_global_setting_sort")
     private Integer sysAiGlobalSettingSort;
 
-    @TableField("status")
+    @TableField("sys_ai_global_setting_status")
     private Integer sysAiGlobalSettingStatus;
 
     @TableField("create_time")

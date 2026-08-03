@@ -147,6 +147,14 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
     }
 
     @Override
+    public String getLiveUrl(int channel, String protocol) {
+        String p = protocol == null || protocol.isEmpty() ? "hls" : protocol;
+        JsonNode data = getLiveAddress(channel, p);
+        // 海康云耀返回字段示例：data.url / data.hls / data.hlsAddress
+        return data.path("url").asText(data.path("hls").asText(data.path("hlsAddress").asText("")));
+    }
+
+    @Override
     public void ptzControl(com.chua.starter.device.spi.model.PtzCommand cmd, double speed) {
         if (cmd == com.chua.starter.device.spi.model.PtzCommand.STOP) {
             return;

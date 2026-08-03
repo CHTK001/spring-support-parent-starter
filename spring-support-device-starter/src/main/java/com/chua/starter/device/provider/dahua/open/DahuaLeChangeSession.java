@@ -132,6 +132,14 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
     }
 
     @Override
+    public String getLiveUrl(int channel, String protocol) {
+        JsonNode data = getLiveUrl(channel);
+        // 乐橙返回 data.result.liveURL / hls / flv
+        JsonNode result = data.path("result");
+        return result.path("liveURL").asText(result.path("hls").asText(result.path("flv").asText("")));
+    }
+
+    @Override
     public void ptzControl(com.chua.starter.device.spi.model.PtzCommand cmd, double speed) {
         if (cmd == com.chua.starter.device.spi.model.PtzCommand.STOP) {
             return;

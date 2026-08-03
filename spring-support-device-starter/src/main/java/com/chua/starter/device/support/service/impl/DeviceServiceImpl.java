@@ -111,11 +111,23 @@ public class DeviceServiceImpl implements DeviceService {
 
     @Override
     public void syncOrganization() {
-        // 各厂商 Provider 可自行实现组织同步逻辑
         for (DeviceProvider provider : providers) {
             try {
-                // provider.syncOrganization();
-                log.info("组织同步: vendor={}", provider.getVendor());
+                List<com.chua.starter.device.spi.model.OrganizationNode> nodes = provider.fetchOrganizations();
+                if (nodes == null || nodes.isEmpty()) {
+                    log.info("组织同步: vendor={} 无组织节点", provider.getVendor());
+                    continue;
+                }
+                for (com.chua.starter.device.spi.model.OrganizationNode node : nodes) {
+                    DeviceOrganization org = new DeviceOrganization();
+                    org.setDeviceOrganizationId(provider.getVendor() + ":" + node.getOrgId());
+                    org.setDeviceOrganizationName(node.getOrgName());
+                    org.setDeviceOrganizationVendor(provider.getVendor());
+                    org.setDeviceOrganizationParentId(
+                            node.getParentId() == null ? null : provider.getVendor() + ":" + node.getParentId());
+                    deviceOrganizationMapper.insert(org);
+                }
+                log.info("组织同步: vendor={}, count={}", provider.getVendor(), nodes.size());
             } catch (Exception e) {
                 log.error("组织同步失败: vendor={}", provider.getVendor(), e);
             }
@@ -143,5 +155,77 @@ public class DeviceServiceImpl implements DeviceService {
         update.setDeviceInfoUpdatedAt(LocalDateTime.now());
         deviceInfoMapper.updateById(update);
         log.info("设备离线检测阈值更新: id={}, threshold={}秒", id, threshold);
+    }
+
+    @Override
+    public void reconnect(String id) {
+        DeviceInfo device = deviceInfoMapper.selectById(id);
+        if (device == null) {
+            throw new RuntimeException("设备不存在: " + id);
+        }
+        // 关闭旧会话
+        sessionManager.unregister(id);
+        // 按设备现有信息重建连接
+        DeviceConnectInfo info = new DeviceConnectInfo();
+        info.setVendor(device.getDeviceInfoVendor());
+        info.setIp(device.getDeviceInfoIp());
+        info.setPort(device.getDeviceInfoPort());
+        info.setUsername(device.getDeviceInfoUsername());
+        info.setPassword(device.getDeviceInfoPassword());
+        DeviceSession session = providers.stream()
+                .filter(p -> p.support(info))
+                .findFirst()
+                .map(p -> p.connect(info))
+                .orElse(null);
+        if (session == null) {
+            throw new RuntimeException("设备重连失败，无可用 Provider: " + id);
+        }
+        sessionManager.register(id, session);
+        DeviceInfo update = new DeviceInfo();
+        update.setDeviceInfoId(id);
+        update.setDeviceInfoOnline(Boolean.TRUE);
+        update.setDeviceInfoUpdatedAt(LocalDateTime.now());
+        deviceInfoMapper.updateById(update);
+        log.info("设备重连成功: id={}, ip={}", id, device.getDeviceInfoIp());
+    }
+
+    @Override
+    public void refreshStatus(String id) {
+        DeviceInfo device = deviceInfoMapper.selectById(id);
+        if (device == null) {
+            throw new RuntimeException("设备不存在: " + id);
+        }
+        DeviceSession session = sessionManager.getSession(id);
+        boolean online = session != null && session.isOnline() && session.testConnection();
+        DeviceInfo update = new DeviceInfo();
+        update.setDeviceInfoId(id);
+        update.setDeviceInfoOnline(online);
+        update.setDeviceInfoUpdatedAt(LocalDateTime.now());
+        deviceInfoMapper.updateById(update);
+        log.debug("设备状态刷新: id={}, online={}", id, online);
+    }
+
+    @Override
+    public boolean testConnection(DeviceConnectInfo info) {
+        DeviceSession session = providers.stream()
+                .filter(p -> p.support(info))
+                .findFirst()
+                .map(p -> {
+                    try {
+                        return p.connect(info);
+                    } catch (Exception e) {
+                        log.warn("设备连接失败: {}", e.getMessage());
+                        return null;
+                    }
+                })
+                .orElse(null);
+        if (session == null) {
+            return false;
+        }
+        try {
+            return session.testConnection();
+        } finally {
+            session.close();
+        }
     }
 }

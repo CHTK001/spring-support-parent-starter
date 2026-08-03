@@ -82,4 +82,27 @@ public interface DeviceService {
      * @param threshold 阈值（秒）
      */
     void updateOfflineThreshold(String id, int threshold);
+
+    /**
+     * 重新连接设备：关闭旧会话、按现有连接信息创建新会话并注册。
+     *
+     * @param id 设备 ID
+     */
+    void reconnect(String id);
+
+    /**
+     * 刷新设备状态：探测会话并更新数据库 online 字段。
+     *
+     * @param id 设备 ID
+     */
+    void refreshStatus(String id);
+
+    /**
+     * 测试连接：根据设备 ID 取出连接信息并发起一次 connect，
+     * <p>用于"添加设备前"或"重连前"的连通性探测。</p>
+     *
+     * @param info 设备连接信息
+     * @return 是否可达
+     */
+    boolean testConnection(DeviceConnectInfo info);
 }

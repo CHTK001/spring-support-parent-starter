@@ -6,6 +6,7 @@ import com.chua.starter.device.provider.dahua.sdk.DahuaRealSession;
 import com.chua.starter.device.spi.DeviceProvider;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
+import com.chua.starter.device.spi.model.OrganizationNode;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -93,5 +94,11 @@ public class DahuaProvider implements DeviceProvider {
             }
         }
         return new DahuaSession(info);
+    }
+
+    @Override
+    public java.util.List<OrganizationNode> fetchOrganizations() {
+        // 大华组织同步需在已连接的 OpenAPI 会话上下文中执行，由业务层处理。
+        return java.util.Collections.emptyList();
     }
 }

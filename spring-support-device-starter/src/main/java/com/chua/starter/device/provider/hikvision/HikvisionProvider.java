@@ -7,6 +7,7 @@ import com.chua.starter.device.provider.hikvision.sdk.HikvisionRealSession;
 import com.chua.starter.device.spi.DeviceProvider;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
+import com.chua.starter.device.spi.model.OrganizationNode;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -106,5 +107,12 @@ public class HikvisionProvider implements DeviceProvider {
             }
         }
         return new HikvisionSession(info);
+    }
+
+    @Override
+    public java.util.List<OrganizationNode> fetchOrganizations() {
+        // 海康组织同步需在已连接的 OpenAPI 会话上下文中执行，
+        // 当前 Provider 无会话状态，由业务层调用 session 后再行实现。
+        return java.util.Collections.emptyList();
     }
 }

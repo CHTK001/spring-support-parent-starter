@@ -328,6 +328,18 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     }
 
     @Override
+    public String getLiveUrl(int channel, String protocol) {
+        // 子类按平台实现获取 HLS/FLV URL；默认返回空
+        return "";
+    }
+
+    @Override
+    public boolean testConnection() {
+        // 默认通过 token 缓存判断：有效即认为可达
+        return tokenValid();
+    }
+
+    @Override
     public List<PresetInfo> listPresets() {
         return Collections.emptyList();
     }

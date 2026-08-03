@@ -162,4 +162,35 @@ public class DeviceController {
     public void updateOfflineThreshold(@PathVariable String id, @RequestParam int threshold) {
         deviceService.updateOfflineThreshold(id, threshold);
     }
+
+    /**
+     * 重新连接设备
+     *
+     * @param id 设备 ID
+     */
+    @PostMapping("/{id}/reconnect")
+    public void reconnect(@PathVariable String id) {
+        deviceService.reconnect(id);
+    }
+
+    /**
+     * 刷新设备在线状态
+     *
+     * @param id 设备 ID
+     */
+    @PostMapping("/{id}/refresh-status")
+    public void refreshStatus(@PathVariable String id) {
+        deviceService.refreshStatus(id);
+    }
+
+    /**
+     * 测试连接
+     *
+     * @param info 设备连接信息
+     * @return 是否可达
+     */
+    @PostMapping("/test-connection")
+    public boolean testConnection(@RequestBody DeviceConnectInfo info) {
+        return deviceService.testConnection(info);
+    }
 }
