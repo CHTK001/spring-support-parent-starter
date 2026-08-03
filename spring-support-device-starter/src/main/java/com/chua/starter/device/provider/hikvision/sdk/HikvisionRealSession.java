@@ -255,6 +255,23 @@ public class HikvisionRealSession implements DeviceSession {
     }
 
     @Override
+    public String getPlaybackUrl(int channel, TimeRange range) {
+        // JNA 直连模式不返回 URL，由前端调用 /video/playback 拿到 SDK 拉流字节流
+        return null;
+    }
+
+    @Override
+    public String getLiveUrl(int channel, String protocol) {
+        // JNA 直连模式不返回 URL，由前端调用 /video/stream 拿到 SDK 拉流字节流
+        return null;
+    }
+
+    @Override
+    public boolean testConnection() {
+        return isOnline();
+    }
+
+    @Override
     public InputStream playback(int channel, TimeRange range) {
         NET_DVR_PLAYBACK_COND cond = new NET_DVR_PLAYBACK_COND();
         cond.lChannel = channel;

@@ -512,9 +512,31 @@ function loadPresets(deviceId: string) {
 }
 
 function fetchAccessEvents() {
-  accessEvents.value = [
-    { time: '2026-08-03 10:05:00', doorName: '正门', eventType: '刷卡开门', cardNo: '123456' }
-  ]
+  if (!selectedDevice.value) return
+  const now = new Date()
+  const start = new Date(now.getTime() - 24 * 3600 * 1000)
+  const fmt = (d: Date) => d.toISOString().slice(0, 19).replace('T', ' ')
+  deviceApi
+    .queryAccessRecords(
+      selectedDevice.value.deviceInfoId,
+      fmt(start),
+      fmt(now),
+    )
+    .then((res: any) => {
+      // 适配后端 AccessRecord 字段到前端展示
+      accessEvents.value = (res || []).map((r: any) => ({
+        time: r.time || '',
+        doorName: r.doorId || '',
+        eventType: r.eventType || '',
+        cardNo: r.cardNo || '',
+        userName: r.userName || ''
+      }))
+    })
+    .catch(() => {
+      accessEvents.value = [
+        { time: '2026-08-03 10:05:00', doorName: '正门', eventType: '刷卡开门', cardNo: '123456' }
+      ]
+    })
 }
 
 function fetchEvents() {

@@ -4,6 +4,7 @@ import com.chua.common.support.task.scheduler.ScheduledTask;
 import com.chua.common.support.task.scheduler.TimeScheduler;
 import com.chua.starter.device.support.entity.DeviceInfo;
 import com.chua.starter.device.support.mapper.DeviceInfoMapper;
+import com.chua.starter.device.support.service.DeviceEventService;
 import com.chua.starter.device.support.service.DeviceProviderConfigService;
 import com.chua.starter.device.support.service.DeviceSessionManager;
 import com.chua.starter.device.support.service.DeviceTaskStateService;
@@ -46,11 +47,6 @@ public class DeviceScheduler {
     private static final String TASK_OFFLINE_CHECK = "deviceOfflineCheck";
 
     /**
-     * 事件轮询任务名
-     */
-    private static final String TASK_EVENT_POLL = "deviceEventPoll";
-
-    /**
      * 调度触发间隔（秒）
      */
     private static final long SCHEDULE_INTERVAL_SEC = 1;
@@ -71,6 +67,11 @@ public class DeviceScheduler {
     private final DeviceInfoMapper deviceInfoMapper;
 
     /**
+     * 事件服务
+     */
+    private final DeviceEventService eventService;
+
+    /**
      * 设备会话管理器
      */
     private final DeviceSessionManager sessionManager;
@@ -86,21 +87,15 @@ public class DeviceScheduler {
     private ScheduledTask offlineCheckTask;
 
     /**
-     * 事件轮询定时任务
-     */
-    private ScheduledTask eventPollTask;
-
-    /**
-     * 启动调度器：每秒触发一次，任务内部按 Trigger 判断。
+     * 启动调度器：每秒触发一次离线检测 Trigger 判断。
+     * <p>事件轮询由 {@link DeviceEventService#pollAllDevices()} 的 {@code @Scheduled} 调度，本类不再重复注册。</p>
      */
     @PostConstruct
     public void start() {
         timeScheduler = TimeScheduler.of();
         offlineCheckTask = timeScheduler.scheduleFixedRate(
                 TASK_OFFLINE_CHECK, this::executeOfflineCheck, SCHEDULE_INTERVAL_SEC, TimeUnit.SECONDS);
-        eventPollTask = timeScheduler.scheduleFixedRate(
-                TASK_EVENT_POLL, this::executeEventPoll, SCHEDULE_INTERVAL_SEC, TimeUnit.SECONDS);
-        log.info("设备定时调度器已启动，触发间隔 {} 秒", SCHEDULE_INTERVAL_SEC);
+        log.info("设备定时调度器已启动，触发间隔 {} 秒（事件轮询由 DeviceEventService @Scheduled 调度）", SCHEDULE_INTERVAL_SEC);
     }
 
     /**
@@ -152,31 +147,6 @@ public class DeviceScheduler {
                 log.warn("设备离线: id={}, ip={}", device.getDeviceInfoId(), device.getDeviceInfoIp());
             }
         }
-    }
-
-    /**
-     * 事件轮询 Trigger 判断
-     */
-    private void executeEventPoll() {
-        if (!taskStateService.shouldRun(TASK_EVENT_POLL)) {
-            return;
-        }
-        if (!taskStateService.markRunning(TASK_EVENT_POLL)) {
-            return;
-        }
-        try {
-            doEventPoll();
-        } finally {
-            taskStateService.markFinished(TASK_EVENT_POLL);
-        }
-    }
-
-    /**
-     * 执行事件轮询
-     */
-    private void doEventPoll() {
-        // 实际逻辑委托给 DeviceEventService
-        log.debug("事件轮询触发");
     }
 
     /**

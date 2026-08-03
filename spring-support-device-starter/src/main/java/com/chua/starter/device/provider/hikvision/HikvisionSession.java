@@ -114,8 +114,23 @@ public class HikvisionSession implements DeviceSession {
     }
 
     @Override
+    public String getLiveUrl(int channel, String protocol) {
+        return "";
+    }
+
+    @Override
+    public String getPlaybackUrl(int channel, TimeRange range) {
+        return null;
+    }
+
+    @Override
     public List<AccessRecord> queryAccessRecords(TimeRange range) {
         return new ArrayList<>();
+    }
+
+    @Override
+    public boolean testConnection() {
+        return online;
     }
 
     @Override

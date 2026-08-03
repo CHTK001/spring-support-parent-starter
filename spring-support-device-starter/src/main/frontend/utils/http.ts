@@ -102,6 +102,10 @@ export const deviceApi = {
   exportDevices: (orgId?: string) => get('/device/export', { params: { orgId }, responseType: 'blob' }),
   getVideoStream: (deviceId: string, channel: number, protocol = 'hls') =>
     get('/device/video/stream', { params: { deviceId, channel, protocol } }),
+  getPlaybackUrl: (deviceId: string, channel: number, start: string, end: string) =>
+    get('/device/video/playback', { params: { deviceId, channel, start, end } }),
+  queryVideoRecords: (deviceId: string, channel: number, start: string, end: string) =>
+    get('/device/video/records', { params: { deviceId, channel, start, end } }),
   ptzControl: (deviceId: string, cmd: string, speed = 0.5) =>
     post(`/device/ptz/control?deviceId=${deviceId}&cmd=${cmd}&speed=${speed}`),
   setPreset: (deviceId: string, presetId: number, name: string) =>

@@ -196,6 +196,23 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
+    public String getPlaybackUrl(int channel, TimeRange range) {
+        // JNA 直连模式不返回 URL
+        return null;
+    }
+
+    @Override
+    public String getLiveUrl(int channel, String protocol) {
+        // JNA 直连模式不返回 URL
+        return null;
+    }
+
+    @Override
+    public boolean testConnection() {
+        return isOnline();
+    }
+
+    @Override
     public InputStream playback(int channel, TimeRange range) {
         // 大华回放需配合 CLIENT_FindRecord / CLIENT_PlayBackByRecord API，此处简化
         return new ByteArrayInputStream(new byte[0]);

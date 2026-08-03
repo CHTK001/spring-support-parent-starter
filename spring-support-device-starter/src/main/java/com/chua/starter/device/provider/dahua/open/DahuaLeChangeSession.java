@@ -140,6 +140,19 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
     }
 
     @Override
+    public String getPlaybackUrl(int channel, com.chua.starter.device.spi.model.TimeRange range) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("deviceId", info.getDeviceSerial());
+        params.put("channelId", channel);
+        params.put("beginTime", range.getStart().toString());
+        params.put("endTime", range.getEnd().toString());
+        params.put("streamId", 0);
+        JsonNode data = assertOk(post("/playback", params));
+        JsonNode result = data.path("result");
+        return result.path("url").asText(result.path("hls").asText(""));
+    }
+
+    @Override
     public void ptzControl(com.chua.starter.device.spi.model.PtzCommand cmd, double speed) {
         if (cmd == com.chua.starter.device.spi.model.PtzCommand.STOP) {
             return;

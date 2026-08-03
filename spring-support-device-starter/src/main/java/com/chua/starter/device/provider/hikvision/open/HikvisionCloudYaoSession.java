@@ -154,6 +154,25 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
         return data.path("url").asText(data.path("hls").asText(data.path("hlsAddress").asText("")));
     }
 
+    /**
+     * 获取录像回放 URL（海康云耀）
+     *
+     * @param channel 通道号
+     * @param range   时间范围
+     * @return 回放 HLS URL
+     */
+    @Override
+    public String getPlaybackUrl(int channel, com.chua.starter.device.spi.model.TimeRange range) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("deviceSerial", info.getDeviceSerial());
+        params.put("channel", channel);
+        params.put("startTime", range.getStart().toString());
+        params.put("endTime", range.getEnd().toString());
+        params.put("protocol", "hls");
+        JsonNode data = assertOk(post("/api/v1/video/playback/url", params));
+        return data.path("url").asText(data.path("hls").asText(""));
+    }
+
     @Override
     public void ptzControl(com.chua.starter.device.spi.model.PtzCommand cmd, double speed) {
         if (cmd == com.chua.starter.device.spi.model.PtzCommand.STOP) {

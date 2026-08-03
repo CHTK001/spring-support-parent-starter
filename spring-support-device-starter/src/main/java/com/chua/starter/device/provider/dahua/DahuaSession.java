@@ -76,6 +76,26 @@ public class DahuaSession implements DeviceSession {
     }
 
     @Override
+    public String getLiveUrl(int channel, String protocol) {
+        return "";
+    }
+
+    @Override
+    public String getPlaybackUrl(int channel, TimeRange range) {
+        return null;
+    }
+
+    @Override
+    public List<AccessRecord> queryAccessRecords(TimeRange range) {
+        return new ArrayList<>();
+    }
+
+    @Override
+    public boolean testConnection() {
+        return online;
+    }
+
+    @Override
     public InputStream playback(int channel, TimeRange range) {
         log.debug("大华回放: channel={}, range={}", channel, range);
         return null;
@@ -109,11 +129,6 @@ public class DahuaSession implements DeviceSession {
     @Override
     public void remoteUnlock(int doorId) {
         log.info("大华远程开门: doorId={}", doorId);
-    }
-
-    @Override
-    public List<AccessRecord> queryAccessRecords(TimeRange range) {
-        return new ArrayList<>();
     }
 
     @Override

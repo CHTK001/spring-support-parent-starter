@@ -2,16 +2,17 @@ package com.chua.starter.device.support.controller;
 
 import com.chua.starter.device.support.service.DeviceSessionManager;
 import com.chua.starter.device.spi.DeviceSession;
+import com.chua.starter.device.spi.model.PresetInfo;
 import com.chua.starter.device.spi.model.PtzCommand;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -41,59 +42,55 @@ public class PtzController {
     public void control(@RequestParam String deviceId,
                         @RequestParam PtzCommand cmd,
                         @RequestParam(defaultValue = "0.5") double speed) {
-        DeviceSession session = sessionManager.getSession(deviceId);
-        if (session == null || !session.isOnline()) {
-            throw new RuntimeException("设备不在线");
-        }
+        DeviceSession session = requireOnline(deviceId);
         session.ptzControl(cmd, speed);
     }
 
     /**
      * 设置预置位
-     *
-     * @param deviceId 设备 ID
-     * @param presetId 预置位编号
-     * @param name     预置位名称
      */
     @PostMapping("/preset")
     public void setPreset(@RequestParam String deviceId,
                           @RequestParam int presetId,
                           @RequestParam String name) {
-        sessionManager.getSession(deviceId).setPreset(presetId, name);
+        requireOnline(deviceId).setPreset(presetId, name);
     }
 
     /**
      * 调用预置位
-     *
-     * @param deviceId 设备 ID
-     * @param presetId 预置位编号
      */
     @PostMapping("/preset/call")
     public void callPreset(@RequestParam String deviceId,
                            @RequestParam int presetId) {
-        sessionManager.getSession(deviceId).callPreset(presetId);
+        requireOnline(deviceId).callPreset(presetId);
     }
 
     /**
      * 删除预置位
-     *
-     * @param deviceId 设备 ID
-     * @param presetId 预置位编号
      */
     @DeleteMapping("/preset")
     public void deletePreset(@RequestParam String deviceId,
                              @RequestParam int presetId) {
-        sessionManager.getSession(deviceId).deletePreset(presetId);
+        requireOnline(deviceId).deletePreset(presetId);
     }
 
     /**
      * 获取预置位列表
-     *
-     * @param deviceId 设备 ID
-     * @return 预置位列表
      */
     @GetMapping("/preset/list")
-    public Object listPresets(@RequestParam String deviceId) {
-        return sessionManager.getSession(deviceId).listPresets();
+    public List<PresetInfo> listPresets(@RequestParam String deviceId) {
+        DeviceSession session = sessionManager.getSession(deviceId);
+        if (session == null || !session.isOnline()) {
+            return Collections.emptyList();
+        }
+        return session.listPresets();
+    }
+
+    private DeviceSession requireOnline(String deviceId) {
+        DeviceSession session = sessionManager.getSession(deviceId);
+        if (session == null || !session.isOnline()) {
+            throw new RuntimeException("设备不在线: " + deviceId);
+        }
+        return session;
     }
 }

@@ -334,6 +334,12 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     }
 
     @Override
+    public String getPlaybackUrl(int channel, TimeRange range) {
+        // 子类按平台实现获取回放 URL
+        return null;
+    }
+
+    @Override
     public boolean testConnection() {
         // 默认通过 token 缓存判断：有效即认为可达
         return tokenValid();

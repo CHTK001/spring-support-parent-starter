@@ -139,6 +139,17 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
     }
 
     @Override
+    public String getPlaybackUrl(int channel, com.chua.starter.device.spi.model.TimeRange range) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("deviceSerial", info.getDeviceSerial());
+        params.put("channel", channel);
+        params.put("startTime", range.getStart().toString());
+        params.put("endTime", range.getEnd().toString());
+        JsonNode data = assertOk(post("/api/v1/video/playback", params));
+        return data.path("url").asText(data.path("hls").asText(""));
+    }
+
+    @Override
     public void ptzControl(com.chua.starter.device.spi.model.PtzCommand cmd, double speed) {
         if (cmd == com.chua.starter.device.spi.model.PtzCommand.STOP) {
             return;

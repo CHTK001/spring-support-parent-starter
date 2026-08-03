@@ -2,6 +2,7 @@ package com.chua.starter.device.provider.dahua.open;
 
 import com.chua.starter.device.provider.platform.AbstractOpenApiSession;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
+import com.chua.starter.device.support.util.JsonMappers;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 
@@ -131,6 +132,28 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     public String getLiveUrl(int channel, String protocol) {
         JsonNode data = getLiveUrl(channel);
         return data.path("url").asText(data.path("hls").asText(data.path("flv").asText("")));
+    }
+
+    @Override
+    public String getPlaybackUrl(int channel, com.chua.starter.device.spi.model.TimeRange range) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("deviceSerial", info.getDeviceSerial());
+        params.put("channel", channel);
+        params.put("startTime", range.getStart().toString());
+        params.put("endTime", range.getEnd().toString());
+        JsonNode data = assertOk(post("/openapi/video/playback/url", params));
+        return data.path("url").asText(data.path("hls").asText(""));
+    }
+
+    @Override
+    public java.util.List<com.chua.starter.device.spi.model.AccessRecord> queryAccessRecords(
+            com.chua.starter.device.spi.model.TimeRange range) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("deviceSerial", info.getDeviceSerial());
+        params.put("startTime", range.getStart().toString());
+        params.put("endTime", range.getEnd().toString());
+        JsonNode data = assertOk(post("/openapi/access/records", params));
+        return JsonMappers.parseAccessRecords(data);
     }
 
     @Override

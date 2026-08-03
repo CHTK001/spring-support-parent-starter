@@ -28,6 +28,9 @@ spring:
   # 关闭 API 鉴权（app_key_enabled 默认 false），本地联调免 token
   profiles:
     active: dev
+  ai:
+    usage:
+      enabled: false
 
 rag:
   enabled: false
