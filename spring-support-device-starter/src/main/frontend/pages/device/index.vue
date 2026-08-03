@@ -115,9 +115,6 @@
                   <el-button size="small" type="primary" @click="openMultiView">
                     <el-icon class="mr-1"><Grid /></el-icon>多路播放
                   </el-button>
-                  <el-button size="small" @click="captureImage">
-                    <el-icon class="mr-1"><Camera /></el-icon>截图
-                  </el-button>
                 </div>
               </div>
             </div>
@@ -176,47 +173,77 @@
     />
 
     <!-- 添加设备 -->
-    <el-dialog v-model="addDialogVisible" title="添加设备" width="500">
-      <el-form :model="addForm" label-width="100">
+    <el-dialog v-model="addDialogVisible" title="添加设备" width="560" append-to-body>
+      <el-form :model="addForm" label-width="110">
         <el-form-item label="设备名称">
           <el-input v-model="addForm.deviceInfoName" />
         </el-form-item>
         <el-form-item label="厂商">
-          <el-select v-model="addForm.deviceInfoVendor">
+          <el-select v-model="addForm.vendor">
             <el-option label="海康" value="hikvision" />
             <el-option label="大华" value="dahua" />
           </el-select>
         </el-form-item>
-        <el-form-item label="大类">
-          <el-select v-model="addForm.deviceInfoCategory">
-            <el-option label="摄像头" value="camera" />
-            <el-option label="门禁" value="accessControl" />
-            <el-option label="报警" value="alarm" />
-            <el-option label="对讲" value="intercom" />
+        <el-form-item label="接入方式">
+          <el-radio-group v-model="addForm.authType">
+            <el-radio-button label="PLATFORM">平台</el-radio-button>
+            <el-radio-button label="SDK">SDK</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item v-if="addForm.authType === 'PLATFORM'" label="平台类型">
+          <el-select v-model="addForm.platformType">
+            <el-option-group label="海康">
+              <el-option label="海康云耀" value="cloud-yao" />
+              <el-option label="海康云眸" value="cloud-eye" />
+              <el-option label="海康安防平台" value="secure-platform" />
+            </el-option-group>
+            <el-option-group label="大华">
+              <el-option label="大华云睿" value="dahua-cloud" />
+              <el-option label="大华乐橙" value="lechange" />
+            </el-option-group>
           </el-select>
         </el-form-item>
-        <el-form-item label="小类">
-          <el-select v-model="addForm.deviceInfoSubCategory">
-            <el-option
-              v-for="opt in getSubCategoryOptions(addForm.deviceInfoCategory)"
-              :key="opt.value"
-              :label="opt.label"
-              :value="opt.value"
-            />
-          </el-select>
+        <el-form-item v-if="addForm.authType === 'PLATFORM'" label="AppKey">
+          <el-input v-model="addForm.appKey" />
         </el-form-item>
-        <el-form-item label="IP">
-          <el-input v-model="addForm.deviceInfoIp" />
+        <el-form-item v-if="addForm.authType === 'PLATFORM'" label="AppSecret">
+          <el-input v-model="addForm.appSecret" type="password" show-password />
         </el-form-item>
-        <el-form-item label="端口">
-          <el-input-number v-model="addForm.deviceInfoPort" :min="1" :max="65535" />
+        <el-form-item v-if="addForm.authType === 'PLATFORM'" label="设备序列号">
+          <el-input v-model="addForm.deviceSerial" />
         </el-form-item>
-        <el-form-item label="用户名">
-          <el-input v-model="addForm.deviceInfoUsername" />
-        </el-form-item>
-        <el-form-item label="密码">
-          <el-input v-model="addForm.deviceInfoPassword" type="password" show-password />
-        </el-form-item>
+        <template v-if="addForm.authType === 'SDK'">
+          <el-form-item label="大类">
+            <el-select v-model="addForm.deviceInfoCategory">
+              <el-option label="摄像头" value="camera" />
+              <el-option label="门禁" value="accessControl" />
+              <el-option label="报警" value="alarm" />
+              <el-option label="对讲" value="intercom" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="小类">
+            <el-select v-model="addForm.deviceInfoSubCategory">
+              <el-option
+                v-for="opt in getSubCategoryOptions(addForm.deviceInfoCategory)"
+                :key="opt.value"
+                :label="opt.label"
+                :value="opt.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="IP">
+            <el-input v-model="addForm.deviceInfoIp" />
+          </el-form-item>
+          <el-form-item label="端口">
+            <el-input-number v-model="addForm.deviceInfoPort" :min="1" :max="65535" />
+          </el-form-item>
+          <el-form-item label="用户名">
+            <el-input v-model="addForm.deviceInfoUsername" />
+          </el-form-item>
+          <el-form-item label="密码">
+            <el-input v-model="addForm.deviceInfoPassword" type="password" show-password />
+          </el-form-item>
+        </template>
       </el-form>
       <template #footer>
         <el-button @click="addDialogVisible = false">取消</el-button>
@@ -258,7 +285,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Grid, Camera, Timer, Download, Refresh } from '@element-plus/icons-vue'
+import { Grid, Timer, Download, Refresh } from '@element-plus/icons-vue'
 
 import ReVideo from '../../components/ReVideo.vue'
 import ReDeviceTree from '../../components/ReDeviceTree.vue'
@@ -274,52 +301,10 @@ import { deviceApi } from '../../utils/http'
 import { getCategoryLabel, getSubCategoryOptions } from '../../utils/deviceCategory'
 import type { DeviceInfo, OrgNode, TimelineItem, Preset, AccessEvent, DeviceEvent } from '../../types/device'
 
-// ==================== 状态 ====================
+// ==================== 状态（默认空，全部由真实接口填充） ====================
 
-const orgTree = ref<OrgNode[]>([
-  {
-    deviceOrganizationId: '1',
-    deviceOrganizationName: '总部',
-    children: [
-      { deviceOrganizationId: '2', deviceOrganizationName: '研发中心' },
-      { deviceOrganizationId: '3', deviceOrganizationName: '办公楼' }
-    ]
-  }
-])
-
-const devices = ref<DeviceInfo[]>([
-  {
-    deviceInfoId: 'd1',
-    deviceInfoOrgId: '2',
-    deviceInfoName: '大厅摄像头',
-    deviceInfoVendor: '海康',
-    deviceInfoModel: 'DS-2CD',
-    deviceInfoCategory: 'camera',
-    deviceInfoSubCategory: 'dome',
-    deviceInfoIp: '192.168.1.100',
-    deviceInfoPort: 8000,
-    deviceInfoOnline: true,
-    channels: [
-      { deviceChannelId: 'c1', deviceChannelDeviceId: 'd1', deviceChannelNo: 1, deviceChannelName: '大厅球机', deviceChannelType: 'video', deviceChannelStatus: 'enabled', deviceChannelSort: 1 },
-      { deviceChannelId: 'c2', deviceChannelDeviceId: 'd1', deviceChannelNo: 2, deviceChannelName: '门口枪机', deviceChannelType: 'video', deviceChannelStatus: 'enabled', deviceChannelSort: 2 }
-    ],
-    doors: []
-  },
-  {
-    deviceInfoId: 'd2',
-    deviceInfoOrgId: '3',
-    deviceInfoName: '门禁1号',
-    deviceInfoVendor: '大华',
-    deviceInfoModel: 'DH-ASC',
-    deviceInfoCategory: 'accessControl',
-    deviceInfoSubCategory: 'cardReader',
-    deviceInfoIp: '192.168.1.101',
-    deviceInfoPort: 37777,
-    deviceInfoOnline: false,
-    doors: [{ deviceDoorNo: 1, deviceDoorName: '正门', deviceDoorStatus: 'locked' }]
-  }
-])
-
+const orgTree = ref<OrgNode[]>([])
+const devices = ref<DeviceInfo[]>([])
 const selectedDevice = ref<DeviceInfo | null>(null)
 const activeTab = ref('overview')
 const timeline = ref<TimelineItem[]>([])
@@ -338,9 +323,18 @@ const events = ref<DeviceEvent[]>([])
 const eventFilter = ref({ type: '', dateRange: null as any })
 const eventRealtime = ref(true)
 const addDialogVisible = ref(false)
+const thresholdDialogVisible = ref(false)
+const deviceThreshold = ref<number>()
+const providerConfigs = ref<Record<string, number>>({})
+const providerConfigsLoaded = ref(false)
 const addForm = ref({
   deviceInfoName: '',
-  deviceInfoVendor: 'hikvision',
+  vendor: 'hikvision',
+  authType: 'PLATFORM',
+  platformType: 'cloud-eye',
+  appKey: '',
+  appSecret: '',
+  deviceSerial: '',
   deviceInfoCategory: 'camera',
   deviceInfoSubCategory: 'bullet',
   deviceInfoIp: '',
@@ -348,10 +342,6 @@ const addForm = ref({
   deviceInfoUsername: 'admin',
   deviceInfoPassword: ''
 })
-const thresholdDialogVisible = ref(false)
-const deviceThreshold = ref<number>()
-const providerConfigs = ref<Record<string, number>>({})
-const providerConfigsLoaded = ref(false)
 let pollTimer: any = null
 
 // ==================== 方法 ====================
@@ -381,9 +371,9 @@ function reloadStream() {
         ElMessage.warning('后端未返回拉流地址，请检查平台账号配置')
       }
     })
-    .catch(() => {
+    .catch((err: any) => {
       videoUrl.value = ''
-      ElMessage.error('获取视频流失败，请确认设备在线')
+      ElMessage.error('获取视频流失败: ' + (err?.response?.data?.message || err?.message || '未知错误'))
     })
 }
 
@@ -398,7 +388,7 @@ function reconnectDevice() {
       ElMessage.success('设备重连成功')
       reloadStream()
     })
-    .catch(() => ElMessage.error('设备重连失败'))
+    .catch((err: any) => ElMessage.error('设备重连失败: ' + (err?.response?.data?.message || err?.message || '未知错误')))
 }
 
 function onVideoError(err: any) {
@@ -410,7 +400,6 @@ function openMultiView() {
   const chs = selectedDevice.value?.channels || []
   const deviceId = selectedDevice.value?.deviceInfoId
   multiChannels.value = Array.from({ length: n }, (_, i) => (chs.length ? chs[i % chs.length].deviceChannelNo : 1))
-  // 多路播放：依次拉取每个通道的真实 URL，失败回退空
   Promise.all(
     multiChannels.value.map((ch) =>
       deviceApi
@@ -437,53 +426,69 @@ function onMultiChannelChange(payload: { index: number; value: number }) {
     })
 }
 
-function captureImage() {
-  ElMessage.success('截图已保存')
-}
-
 function ptzControl(cmd: string) {
   if (!selectedDevice.value) return
-  deviceApi.ptzControl(selectedDevice.value.deviceInfoId, cmd).catch(() => null)
-  timeline.value.unshift({
-    id: Date.now().toString(),
-    time: new Date().toLocaleString(),
-    type: 'primary',
-    content: `云台 ${cmd}`
-  })
+  deviceApi
+    .ptzControl(selectedDevice.value.deviceInfoId, cmd)
+    .then(() => {
+      timeline.value.unshift({
+        id: Date.now().toString(),
+        time: new Date().toLocaleString(),
+        type: 'primary',
+        content: `云台 ${cmd}`
+      })
+    })
+    .catch((err: any) => ElMessage.error('云台控制失败: ' + (err?.response?.data?.message || err?.message || '未知错误')))
 }
 
 function addPreset() {
   if (!selectedDevice.value) return
   const name = prompt('输入预置位名称')
   if (!name) return
-  deviceApi.setPreset(selectedDevice.value.deviceInfoId, Date.now(), name).catch(() => null)
-  presets.value.push({ devicePresetNo: Date.now(), devicePresetName: name })
-  ElMessage.success('添加预置位成功')
+  deviceApi
+    .setPreset(selectedDevice.value.deviceInfoId, Date.now(), name)
+    .then(() => {
+      presets.value.push({ devicePresetNo: Date.now(), devicePresetName: name })
+      ElMessage.success('添加预置位成功')
+    })
+    .catch((err: any) => ElMessage.error('添加预置位失败: ' + (err?.response?.data?.message || err?.message || '未知错误')))
 }
 
 function callPreset(id: number) {
   if (!selectedDevice.value) return
-  deviceApi.callPreset(selectedDevice.value.deviceInfoId, id).catch(() => null)
-  ElMessage.success(`调用预置位 ${id}`)
+  deviceApi
+    .callPreset(selectedDevice.value.deviceInfoId, id)
+    .then(() => ElMessage.success(`调用预置位 ${id}`))
+    .catch((err: any) => ElMessage.error('调用预置位失败: ' + (err?.response?.data?.message || err?.message || '未知错误')))
 }
 
 function deletePreset(id: number) {
   if (!selectedDevice.value) return
-  deviceApi.deletePreset(selectedDevice.value.deviceInfoId, id).catch(() => null)
-  presets.value = presets.value.filter((p: Preset) => p.devicePresetNo !== id)
+  deviceApi
+    .deletePreset(selectedDevice.value.deviceInfoId, id)
+    .then(() => {
+      presets.value = presets.value.filter((p: Preset) => p.devicePresetNo !== id)
+      ElMessage.success('删除预置位成功')
+    })
+    .catch((err: any) => ElMessage.error('删除预置位失败: ' + (err?.response?.data?.message || err?.message || '未知错误')))
 }
 
 function remoteUnlock(doorId: number) {
   if (!selectedDevice.value) return
-  deviceApi.unlock(selectedDevice.value.deviceInfoId, doorId)
+  deviceApi
+    .unlock(selectedDevice.value.deviceInfoId, doorId)
     .then(() => ElMessage.success(`门 ${doorId} 已开`))
-    .catch(() => ElMessage.success(`门 ${doorId} 已开（模拟）`))
+    .catch((err: any) => ElMessage.error('远程开门失败: ' + (err?.response?.data?.message || err?.message || '未知错误')))
 }
 
 function syncOrg() {
-  deviceApi.syncOrg()
-    .then(() => ElMessage.success('组织树同步成功'))
-    .catch(() => ElMessage.success('组织树同步成功（模拟）'))
+  deviceApi
+    .syncOrg()
+    .then(() => {
+      ElMessage.success('组织树同步成功')
+      fetchOrgTree()
+    })
+    .catch((err: any) => ElMessage.error('组织树同步失败: ' + (err?.response?.data?.message || err?.message || '未知错误')))
 }
 
 function onOrgSelect(org: OrgNode) {
@@ -491,11 +496,9 @@ function onOrgSelect(org: OrgNode) {
 }
 
 function fetchTimeline() {
-  timeline.value = [
-    { id: '1', time: '2026-08-03 10:00:00', type: 'primary', content: '设备上线' },
-    { id: '2', time: '2026-08-03 09:30:00', type: 'success', content: '云台向左移动' },
-    { id: '3', time: '2026-08-03 09:00:00', type: 'warning', content: '门禁刷卡异常' }
-  ]
+  // 时间轴数据由 DeviceEventService 真实记录驱动（设备事件落库）
+  // 此处先用占位接口，预留 /device/timeline 端点
+  timeline.value = []
 }
 
 function loadPresets(deviceId: string) {
@@ -504,10 +507,7 @@ function loadPresets(deviceId: string) {
       presets.value = res || []
     })
     .catch(() => {
-      presets.value = [
-        { devicePresetNo: 1, devicePresetName: '预置位1' },
-        { devicePresetNo: 2, devicePresetName: '预置位2' }
-      ]
+      presets.value = []
     })
 }
 
@@ -523,7 +523,6 @@ function fetchAccessEvents() {
       fmt(now),
     )
     .then((res: any) => {
-      // 适配后端 AccessRecord 字段到前端展示
       accessEvents.value = (res || []).map((r: any) => ({
         time: r.time || '',
         doorName: r.doorId || '',
@@ -533,9 +532,7 @@ function fetchAccessEvents() {
       }))
     })
     .catch(() => {
-      accessEvents.value = [
-        { time: '2026-08-03 10:05:00', doorName: '正门', eventType: '刷卡开门', cardNo: '123456' }
-      ]
+      accessEvents.value = []
     })
 }
 
@@ -547,14 +544,7 @@ function fetchEvents() {
       events.value = res || []
     })
     .catch(() => {
-      events.value = [
-        {
-          deviceEventRecordOccurredAt: '2026-08-03 10:01:00',
-          deviceEventRecordEventType: 'MOTION',
-          deviceEventRecordChannelNo: 1,
-          deviceEventRecordDetail: '画面变化'
-        }
-      ]
+      events.value = []
     })
 }
 
@@ -596,7 +586,7 @@ function loadProviderConfigs() {
       providerConfigs.value = res || {}
     })
     .catch(() => {
-      providerConfigs.value = { hikvision: 60, dahua: 60, ezviz: 120, isup: 90 }
+      providerConfigs.value = {}
     })
     .finally(() => {
       providerConfigsLoaded.value = true
@@ -620,11 +610,7 @@ function saveDeviceThreshold() {
       ElMessage.success('设备离线阈值已保存')
       thresholdDialogVisible.value = false
     })
-    .catch(() => {
-      selectedDevice.value!.deviceInfoOfflineThreshold = threshold
-      ElMessage.success('设备离线阈值已保存（模拟）')
-      thresholdDialogVisible.value = false
-    })
+    .catch((err: any) => ElMessage.error('保存失败: ' + (err?.response?.data?.message || err?.message || '未知错误')))
 }
 
 /**
@@ -636,14 +622,22 @@ function saveProviderConfig(vendor: string) {
   deviceApi
     .updateProviderConfig(vendor, threshold)
     .then(() => ElMessage.success(`${vendorLabel(vendor)} 阈值已更新`))
-    .catch(() => ElMessage.success(`${vendorLabel(vendor)} 阈值已更新（模拟）`))
+    .catch((err: any) => ElMessage.error('更新失败: ' + (err?.response?.data?.message || err?.message || '未知错误')))
 }
 
 /**
  * 厂商标识中文映射
  */
 function vendorLabel(vendor: string): string {
-  const map: Record<string, string> = { hikvision: '海康', dahua: '大华', ezviz: '萤石', isup: 'ISUP' }
+  const map: Record<string, string> = {
+    hikvision: '海康',
+    dahua: '大华',
+    'cloud-yao': '海康云耀',
+    'cloud-eye': '海康云眸',
+    'secure-platform': '海康安防',
+    'dahua-cloud': '大华云睿',
+    lechange: '大华乐橙'
+  }
   return map[vendor] || vendor
 }
 
@@ -663,37 +657,26 @@ function exportDevices() {
       URL.revokeObjectURL(url)
       ElMessage.success('导出成功')
     })
-    .catch(() => ElMessage.error('导出失败'))
+    .catch((err: any) => ElMessage.error('导出失败: ' + (err?.response?.data?.message || err?.message || '未知错误')))
 }
 
+/**
+ * 提交新增设备：直接发往后端，不做任何兜底
+ */
 function submitAdd() {
   deviceApi
     .add(addForm.value)
     .then((res: any) => {
-      devices.value.push(res)
+      if (res && res.deviceInfoId) {
+        devices.value.push(res)
+      } else {
+        fetchDevices()
+      }
       ElMessage.success('设备添加成功')
       addDialogVisible.value = false
     })
-    .catch(() => {
-      const newDev: DeviceInfo = {
-        deviceInfoId: 'd' + Date.now(),
-        deviceInfoOrgId: '1',
-        deviceInfoName: addForm.value.deviceInfoName,
-        deviceInfoVendor: addForm.value.deviceInfoVendor,
-        deviceInfoModel: '',
-        deviceInfoCategory: addForm.value.deviceInfoCategory as any,
-        deviceInfoSubCategory: addForm.value.deviceInfoSubCategory,
-        deviceInfoIp: addForm.value.deviceInfoIp,
-        deviceInfoPort: addForm.value.deviceInfoPort,
-        deviceInfoOnline: true,
-        channels: [
-          { deviceChannelId: 'c-new', deviceChannelDeviceId: '', deviceChannelNo: 1, deviceChannelName: '通道1', deviceChannelType: 'video', deviceChannelStatus: 'enabled', deviceChannelSort: 1 }
-        ],
-        doors: []
-      }
-      devices.value.push(newDev)
-      ElMessage.success('设备添加成功（模拟）')
-      addDialogVisible.value = false
+    .catch((err: any) => {
+      ElMessage.error('设备添加失败: ' + (err?.response?.data?.message || err?.message || '未知错误'))
     })
 }
 
@@ -712,27 +695,33 @@ onUnmounted(() => {
 })
 
 /**
- * 拉取设备列表（接口失败回退本地模拟数据）
+ * 拉取设备列表
  */
 function fetchDevices() {
   deviceApi
     .list()
     .then((res: any) => {
-      if (res && res.length) devices.value = res
+      devices.value = res || []
     })
-    .catch(() => null)
+    .catch((err: any) => {
+      ElMessage.error('加载设备列表失败: ' + (err?.response?.data?.message || err?.message || '未知错误'))
+      devices.value = []
+    })
 }
 
 /**
- * 拉取组织树（接口失败保留本地模拟数据）
+ * 拉取组织树
  */
 function fetchOrgTree() {
   deviceApi
     .getOrgTree()
     .then((res: any) => {
-      if (res && res.length) orgTree.value = res
+      orgTree.value = res || []
     })
-    .catch(() => null)
+    .catch((err: any) => {
+      ElMessage.error('加载组织树失败: ' + (err?.response?.data?.message || err?.message || '未知错误'))
+      orgTree.value = []
+    })
 }
 </script>
 

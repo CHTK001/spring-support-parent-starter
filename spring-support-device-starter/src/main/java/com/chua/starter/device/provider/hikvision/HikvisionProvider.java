@@ -9,6 +9,10 @@ import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.model.DeviceConnectInfo;
 import com.chua.starter.device.spi.model.OrganizationNode;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 /**
  * 海康设备 Provider
@@ -20,12 +24,15 @@ import lombok.extern.slf4j.Slf4j;
  *   <li>局域网 SDK 直连（{@code authType=SDK}）—— 海康 HCNetSDK JNA（需厂商提供 dll/so）</li>
  * </ul>
  *
- * <p>SDK 直连模式若 SDK 不可用（无 dll/so 或设备不可达）则自动回退到模拟会话。</p>
+ * <p>真实对接策略：连接失败时严格抛错，由业务层向用户暴露具体错误。</p>
+ * <p>仅当 {@code device.provider.fallback-mock=true} 时回退到 {@link HikvisionSession} 模拟会话，</p>
+ * <p>供本地无厂商账号时调试 UI 流程使用，<strong>生产环境严禁启用</strong>。</p>
  *
  * @author CH
  * @since 4.0.0.42
  */
 @Slf4j
+@Component
 public class HikvisionProvider implements DeviceProvider {
 
     /**
@@ -34,14 +41,14 @@ public class HikvisionProvider implements DeviceProvider {
     private static final String VENDOR = "hikvision";
 
     /**
+     * 平台接入模式
+     */
+    private static final String AUTH_PLATFORM = "PLATFORM";
+
+    /**
      * 局域网 SDK 直连
      */
     private static final String AUTH_SDK = "SDK";
-
-    /**
-     * 平台接入
-     */
-    private static final String AUTH_PLATFORM = "PLATFORM";
 
     /**
      * 海康云耀
@@ -57,6 +64,18 @@ public class HikvisionProvider implements DeviceProvider {
      * 海康安防平台（iSecure Center / 综合安防管理平台）
      */
     private static final String PLATFORM_SECURE = "secure-platform";
+
+    /**
+     * 是否允许回退到模拟会话（默认 false：严格真实对接）
+     */
+    private final boolean fallbackMock;
+
+    public HikvisionProvider(Environment environment) {
+        this.fallbackMock = environment.getProperty("device.provider.fallback-mock", boolean.class, false);
+        if (fallbackMock) {
+            log.warn("[HikvisionProvider] fallback-mock=true，连接失败时将回退模拟会话（仅限调试）");
+        }
+    }
 
     @Override
     public String getVendor() {
@@ -75,44 +94,45 @@ public class HikvisionProvider implements DeviceProvider {
 
         if (AUTH_PLATFORM.equalsIgnoreCase(info.getAuthType())) {
             String platform = info.getPlatformType();
-            if (PLATFORM_CLOUD_YAO.equalsIgnoreCase(platform)) {
-                try {
+            try {
+                if (PLATFORM_CLOUD_YAO.equalsIgnoreCase(platform)) {
                     return new HikvisionCloudYaoSession(info);
-                } catch (Exception e) {
-                    log.warn("海康云耀连接失败，回退模拟会话: {}", e.getMessage());
                 }
-            } else if (PLATFORM_CLOUD_EYE.equalsIgnoreCase(platform)) {
-                try {
+                if (PLATFORM_CLOUD_EYE.equalsIgnoreCase(platform)) {
                     return new HikvisionCloudEyeSession(info);
-                } catch (Exception e) {
-                    log.warn("海康云眸连接失败，回退模拟会话: {}", e.getMessage());
                 }
-            } else if (PLATFORM_SECURE.equalsIgnoreCase(platform)) {
-                try {
+                if (PLATFORM_SECURE.equalsIgnoreCase(platform)) {
                     return new HikvisionSecurePlatformSession(info);
-                } catch (Exception e) {
-                    log.warn("海康安防平台连接失败，回退模拟会话: {}", e.getMessage());
                 }
-            } else {
-                log.warn("海康平台类型未识别: {}，回退模拟会话", platform);
+                throw new IllegalArgumentException("海康平台类型不支持: " + platform
+                        + "（期望 cloud-yao / cloud-eye / secure-platform）");
+            } catch (Exception e) {
+                if (fallbackMock) {
+                    log.warn("海康平台连接失败，回退模拟会话: {}", e.getMessage());
+                    return new HikvisionSession(info);
+                }
+                throw new IllegalStateException("海康平台连接失败 [" + platform + "]: " + e.getMessage(), e);
             }
-            return new HikvisionSession(info);
         }
 
         if (AUTH_SDK.equalsIgnoreCase(info.getAuthType()) || info.getAuthType() == null) {
             try {
                 return new HikvisionRealSession(info);
             } catch (Exception e) {
-                log.warn("海康 SDK 直连失败，回退模拟会话: {}", e.getMessage());
+                if (fallbackMock) {
+                    log.warn("海康 SDK 直连失败，回退模拟会话: {}", e.getMessage());
+                    return new HikvisionSession(info);
+                }
+                throw new IllegalStateException("海康 SDK 直连失败: " + e.getMessage(), e);
             }
         }
-        return new HikvisionSession(info);
+
+        throw new IllegalArgumentException("不支持的海康认证类型: " + info.getAuthType());
     }
 
     @Override
-    public java.util.List<OrganizationNode> fetchOrganizations() {
-        // 海康组织同步需在已连接的 OpenAPI 会话上下文中执行，
-        // 当前 Provider 无会话状态，由业务层调用 session 后再行实现。
-        return java.util.Collections.emptyList();
+    public List<OrganizationNode> fetchOrganizations() {
+        // 组织同步需在已连接的 OpenAPI 会话上下文中执行，由业务层调用 session 后再行实现。
+        return List.of();
     }
 }
