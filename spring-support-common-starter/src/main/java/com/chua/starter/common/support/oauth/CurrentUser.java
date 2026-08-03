@@ -158,6 +158,10 @@ public class CurrentUser {
             return false;
         }
 
+        if (CollectionUtils.isEmpty(this.roles)) {
+            return false;
+        }
+
         if (role.contains(ANY)) {
             AntPathMatcher antPathMatcher = new AntPathMatcher();
             for (String s : roles) {

@@ -2,7 +2,6 @@ package com.chua.starter.common.support.service;
 
 import com.chua.common.support.network.ip.GeoCity;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.starter.common.support.constant.CacheConstant;
 import org.springframework.cache.annotation.Cacheable;
 
 /**
@@ -23,7 +22,7 @@ public interface IptablesService {
      * 示例成功返回: {@code ReturnResult.ok(GeoCity)} 包含城市、省份、国家等信息
      * 示例失败返回: {@code ReturnResult.failed("无法解析IP地址")} 包含错误原因
      */
-    @Cacheable(cacheManager = CacheConstant.REDIS_CACHE_MIN, cacheNames = CacheConstant.REDIS_CACHE_MIN, key = "#address")
+    @Cacheable(cacheManager = "redis-cache-600", cacheNames = "redis-cache-600", key = "#address")
     ReturnResult<GeoCity> transferAddress(String address);
 }
 
