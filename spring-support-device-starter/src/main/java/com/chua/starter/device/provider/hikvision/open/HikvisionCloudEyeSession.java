@@ -5,19 +5,13 @@ import com.chua.starter.device.spi.model.DeviceConnectInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
  * 海康云眸（Cloud Eye / iSecure Center 公有云版）OpenAPI 会话
- * <p>对接海康企业级视频云平台 OpenAPI，纯 Java HTTP 全平台可用。</p>
+ * <p>对接海康企业级视频云平台 OpenAPI，基于 common-starter HttpClient，全平台可用。</p>
  *
  * <h3>接入说明</h3>
  * <ul>
@@ -56,23 +50,8 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
      */
     private static final String PATH_DOOR_CONTROL = "/api/v1/door/control";
 
-    /**
-     * HTTP 客户端
-     */
-    private final HttpClient httpClient;
-
-    /**
-     * 平台 baseUrl
-     */
-    private final String baseUrl;
-
     public HikvisionCloudEyeSession(DeviceConnectInfo info) {
-        super(info);
-        Object extra = info.getExtra() == null ? null : info.getExtra().get("baseUrl");
-        this.baseUrl = extra instanceof String s ? s : DEFAULT_BASE_URL;
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofMillis(DEFAULT_CONNECT_TIMEOUT))
-                .build();
+        super(info, DEFAULT_BASE_URL);
         login();
     }
 
@@ -84,7 +63,7 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
         params.put("appKey", info.getAppKey());
         params.put("appSecret", info.getAppSecret());
         try {
-            JsonNode resp = doRequest("POST", PATH_LOGIN, params);
+            JsonNode resp = execute("POST", PATH_LOGIN, params, null);
             JsonNode data = assertOk(resp);
             String token = data.path("token").asText(null);
             long expires = data.path("expiresIn").asLong(7200L);
@@ -135,18 +114,7 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
         if (!PATH_LOGIN.equals(path)) {
             realParams.put("sign", sign(realParams));
         }
-        try {
-            String body = MAPPER.writeValueAsString(realParams);
-            HttpRequest req = HttpRequest.newBuilder(URI.create(baseUrl + path))
-                    .timeout(Duration.ofMillis(DEFAULT_READ_TIMEOUT))
-                    .header("Content-Type", "application/json;charset=UTF-8")
-                    .method(method.toUpperCase(), HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
-                    .build();
-            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-            return MAPPER.readTree(resp.body());
-        } catch (Exception e) {
-            throw new IllegalStateException("海康云眸 HTTP 调用失败: " + method + " " + path + " -> " + e.getMessage(), e);
-        }
+        return execute(method, path, realParams, null);
     }
 
     /**

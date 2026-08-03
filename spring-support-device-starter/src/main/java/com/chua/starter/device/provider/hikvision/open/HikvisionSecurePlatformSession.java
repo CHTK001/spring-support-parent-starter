@@ -5,12 +5,7 @@ import com.chua.starter.device.spi.model.DeviceConnectInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -18,7 +13,7 @@ import java.util.Map;
 
 /**
  * 海康安防平台（iSecure Center / 综合安防管理平台）OpenAPI 会话
- * <p>对接海康综合安防平台 OpenAPI（artemis 协议），纯 Java HTTP 全平台可用。</p>
+ * <p>对接海康综合安防平台 OpenAPI（artemis 协议），基于 common-starter HttpClient，全平台可用。</p>
  *
  * <h3>接入说明</h3>
  * <ul>
@@ -52,35 +47,15 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
      */
     private static final String PATH_DOOR_CONTROL = "/api/access/v1/door/control";
 
-    /**
-     * HTTP 客户端
-     */
-    private final HttpClient httpClient;
-
-    /**
-     * 平台 baseUrl
-     */
-    private final String baseUrl;
-
     public HikvisionSecurePlatformSession(DeviceConnectInfo info) {
-        super(info);
-        Object extra = info.getExtra() == null ? null : info.getExtra().get("baseUrl");
-        this.baseUrl = extra instanceof String s ? s : DEFAULT_BASE_URL;
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofMillis(DEFAULT_CONNECT_TIMEOUT))
-                .build();
+        super(info, DEFAULT_BASE_URL);
         // 安防平台通常无独立登录，AppKey/AppSecret 通过签名头传递
         this.accessToken = "artemis:" + info.getAppKey();
-        this.tokenExpiry = java.time.Instant.MAX;
+        this.tokenExpiry = Instant.MAX;
     }
 
     /**
      * artemis 网关签名：x-ca-signature = Base64(HMAC-SHA256(appSecret, StringToSign))
-     *
-     * @param method    HTTP 方法
-     * @param path      请求路径（含 query）
-     * @param headers   参与签名的请求头
-     * @return 签名字符串
      */
     private String artemisSign(String method, String path, Map<String, String> headers) {
         String stringToSign = method + "\n"
@@ -106,7 +81,6 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
         headers.put("x-ca-key", info.getAppKey());
         headers.put("x-ca-timestamp", timestamp);
         headers.put("x-ca-nonce", nonce);
-        headers.put("Accept", "application/json");
 
         String query = "";
         if (params != null && !params.isEmpty()) {
@@ -114,9 +88,9 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
             params.forEach((k, v) -> {
                 if (v != null) {
                     if (sb.length() > 0) sb.append("&");
-                    sb.append(java.net.URLEncoder.encode(k, StandardCharsets.UTF_8));
+                    sb.append(java.net.URLEncoder.encode(k, java.nio.charset.StandardCharsets.UTF_8));
                     sb.append("=");
-                    sb.append(java.net.URLEncoder.encode(String.valueOf(v), StandardCharsets.UTF_8));
+                    sb.append(java.net.URLEncoder.encode(String.valueOf(v), java.nio.charset.StandardCharsets.UTF_8));
                 }
             });
             query = sb.toString();
@@ -124,22 +98,7 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
         String fullPath = query.isEmpty() ? path : path + "?" + query;
         headers.put("x-ca-signature-headers", "x-ca-key,x-ca-timestamp,x-ca-nonce");
         headers.put("x-ca-signature", artemisSign(method, fullPath, headers));
-        try {
-            HttpRequest req = HttpRequest.newBuilder(URI.create(baseUrl + fullPath))
-                    .timeout(Duration.ofMillis(DEFAULT_READ_TIMEOUT))
-                    .header("Content-Type", "application/json;charset=UTF-8")
-                    .headers(headers.entrySet().stream()
-                            .flatMap(e -> java.util.stream.Stream.of(e.getKey(), e.getValue()))
-                            .toArray(String[]::new))
-                    .method(method.toUpperCase(),
-                            "GET".equalsIgnoreCase(method) ? HttpRequest.BodyPublishers.noBody()
-                                    : HttpRequest.BodyPublishers.ofString(MAPPER.writeValueAsString(params), StandardCharsets.UTF_8))
-                    .build();
-            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-            return MAPPER.readTree(resp.body());
-        } catch (Exception e) {
-            throw new IllegalStateException("海康安防平台 HTTP 调用失败: " + method + " " + path + " -> " + e.getMessage(), e);
-        }
+        return execute(method, fullPath, params, headers);
     }
 
     /**
@@ -167,7 +126,6 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     }
 
     private int mapArtemisDirection(com.chua.starter.device.spi.model.PtzCommand cmd) {
-        // artemis 云台方向码（参考 iSecure Center OpenAPI 文档）
         switch (cmd) {
             case UP: return 0;
             case DOWN: return 1;

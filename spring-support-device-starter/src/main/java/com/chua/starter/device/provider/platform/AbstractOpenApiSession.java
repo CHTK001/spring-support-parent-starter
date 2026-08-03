@@ -1,5 +1,8 @@
 package com.chua.starter.device.provider.platform;
 
+import com.chua.common.support.network.client.ClientResponse;
+import com.chua.common.support.network.client.HttpClientBuilder;
+import com.chua.common.support.network.client.HttpClientFactory;
 import com.chua.starter.device.spi.DeviceSession;
 import com.chua.starter.device.spi.EventListener;
 import com.chua.starter.device.spi.model.AccessRecord;
@@ -27,10 +30,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * 厂商平台 OpenAPI 会话基类（纯 Java HTTP）
- * <p>基于 JDK HttpClient 调用厂商 HTTP OpenAPI，不依赖任何本地动态库，全平台可用。</p>
+ * 厂商平台 OpenAPI 会话基类（基于 common-starter HttpClient）
+ * <p>复用公共模块的 {@link HttpClient}（JDK HttpClient 封装），不依赖任何本地动态库，全平台可用。</p>
  *
- * <p>当前覆盖海康云耀、云眸、安防平台以及大华云睿、乐橙等厂商平台，</p>
+ * <p>覆盖海康云耀、云眸、安防平台以及大华云睿、乐橙等厂商平台，</p>
  * <p>各平台接入的 endpoint、签名算法需按平台官方 OpenAPI 文档配置。</p>
  *
  * @author CH
@@ -75,6 +78,11 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     protected volatile Instant tokenExpiry = Instant.EPOCH;
 
     /**
+     * 平台 baseUrl
+     */
+    protected final String baseUrl;
+
+    /**
      * 事件订阅监听器
      */
     protected final Map<EventType, List<EventListener>> listeners = new ConcurrentHashMap<>();
@@ -87,10 +95,13 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     /**
      * 构造 OpenAPI 会话
      *
-     * @param info 设备连接信息
+     * @param info    设备连接信息
+     * @param baseUrl 平台默认 baseUrl
      */
-    protected AbstractOpenApiSession(DeviceConnectInfo info) {
+    protected AbstractOpenApiSession(DeviceConnectInfo info, String baseUrl) {
         this.info = info;
+        Object extra = info.getExtra() == null ? null : info.getExtra().get("baseUrl");
+        this.baseUrl = extra instanceof String s ? s : baseUrl;
     }
 
     /**
@@ -115,6 +126,47 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
      */
     protected JsonNode post(String path, Map<String, Object> params) {
         return doRequest("POST", path, params);
+    }
+
+    /**
+     * 调用 common-starter HttpClient 发起请求并解析响应 JSON
+     *
+     * @param method  HTTP 方法
+     * @param path    接口路径
+     * @param params  业务参数
+     * @param headers 自定义请求头（如签名头）
+     * @return 响应 JSON
+     */
+    protected JsonNode execute(String method, String path, Map<String, Object> params,
+                               Map<String, String> headers) {
+        try {
+            HttpClientBuilder builder = HttpClientFactory.of(baseUrl)
+                    .path(path)
+                    .json()
+                    .connectTimeout(DEFAULT_CONNECT_TIMEOUT)
+                    .readTimeout(DEFAULT_READ_TIMEOUT);
+            if (headers != null) {
+                headers.forEach(builder::header);
+            }
+            ClientResponse response;
+            if ("GET".equalsIgnoreCase(method)) {
+                if (params != null) {
+                    params.forEach((k, v) -> {
+                        if (v != null) {
+                            builder.query(k, String.valueOf(v));
+                        }
+                    });
+                }
+                response = builder.get();
+            } else {
+                Map<String, Object> body = params == null ? Collections.emptyMap() : params;
+                response = builder.body(body).post();
+            }
+            String respBody = response.getBodyString();
+            return MAPPER.readTree(respBody == null ? "{}" : respBody);
+        } catch (Exception e) {
+            throw new IllegalStateException("OpenAPI HTTP 调用失败: " + method + " " + path + " -> " + e.getMessage(), e);
+        }
     }
 
     @Override
@@ -176,31 +228,6 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     }
 
     @Override
-    public void remoteUnlock(int doorId) {
-        // 平台 OpenAPI 远程开门由具体平台实现重写
-    }
-
-    @Override
-    public void setPreset(int presetId, String name) {
-        // 平台 OpenAPI 预置位操作由具体平台实现重写
-    }
-
-    @Override
-    public void callPreset(int presetId) {
-        // 平台 OpenAPI 预置位操作由具体平台实现重写
-    }
-
-    @Override
-    public void deletePreset(int presetId) {
-        // 平台 OpenAPI 预置位操作由具体平台实现重写
-    }
-
-    @Override
-    public void ptzControl(PtzCommand cmd, double speed) {
-        // 平台 OpenAPI 云台控制由具体平台实现重写
-    }
-
-    @Override
     public List<PresetInfo> listPresets() {
         return Collections.emptyList();
     }
@@ -228,6 +255,31 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
         List<DeviceEvent> result = new ArrayList<>(eventQueue);
         eventQueue.clear();
         return result;
+    }
+
+    @Override
+    public void remoteUnlock(int doorId) {
+        // 平台 OpenAPI 远程开门由具体平台实现重写
+    }
+
+    @Override
+    public void setPreset(int presetId, String name) {
+        // 平台 OpenAPI 预置位操作由具体平台实现重写
+    }
+
+    @Override
+    public void callPreset(int presetId) {
+        // 平台 OpenAPI 预置位操作由具体平台实现重写
+    }
+
+    @Override
+    public void deletePreset(int presetId) {
+        // 平台 OpenAPI 预置位操作由具体平台实现重写
+    }
+
+    @Override
+    public void ptzControl(PtzCommand cmd, double speed) {
+        // 平台 OpenAPI 云台控制由具体平台实现重写
     }
 
     /**

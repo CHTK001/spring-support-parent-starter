@@ -5,13 +5,7 @@ import com.chua.starter.device.spi.model.DeviceConnectInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -19,7 +13,7 @@ import java.util.UUID;
 
 /**
  * 大华云睿（DH Cloud / DoLynk Cloud / ICC）平台 OpenAPI 会话
- * <p>对接大华云睿平台 OpenAPI，纯 Java HTTP 全平台可用。</p>
+ * <p>对接大华云睿平台 OpenAPI，基于 common-starter HttpClient，全平台可用。</p>
  *
  * <h3>接入说明</h3>
  * <ul>
@@ -57,23 +51,8 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
      */
     private static final String PATH_DOOR_CONTROL = "/openapi/access/control";
 
-    /**
-     * HTTP 客户端
-     */
-    private final HttpClient httpClient;
-
-    /**
-     * 平台 baseUrl
-     */
-    private final String baseUrl;
-
     public DahuaCloudSession(DeviceConnectInfo info) {
-        super(info);
-        Object extra = info.getExtra() == null ? null : info.getExtra().get("baseUrl");
-        this.baseUrl = extra instanceof String s ? s : DEFAULT_BASE_URL;
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofMillis(DEFAULT_CONNECT_TIMEOUT))
-                .build();
+        super(info, DEFAULT_BASE_URL);
         login();
     }
 
@@ -100,7 +79,7 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
             Map<String, Object> params = new LinkedHashMap<>();
             params.put("appKey", info.getAppKey());
             params.put("appSecret", info.getAppSecret());
-            JsonNode resp = doRequest("POST", PATH_LOGIN, params);
+            JsonNode resp = execute("POST", PATH_LOGIN, params, null);
             JsonNode data = assertOk(resp);
             String token = data.path("accessToken").asText(null);
             long expires = data.path("expiresIn").asLong(7200L);
@@ -132,17 +111,7 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
         realParams.put("time", time);
         realParams.put("nonce", nonce);
         realParams.put("sign", sign(time, nonce));
-        try {
-            HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(baseUrl + path))
-                    .timeout(Duration.ofMillis(DEFAULT_READ_TIMEOUT))
-                    .header("Content-Type", "application/json;charset=UTF-8");
-            String body = MAPPER.writeValueAsString(realParams);
-            builder.method(method.toUpperCase(), HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8));
-            HttpResponse<String> resp = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-            return MAPPER.readTree(resp.body());
-        } catch (Exception e) {
-            throw new IllegalStateException("大华云睿 HTTP 调用失败: " + method + " " + path + " -> " + e.getMessage(), e);
-        }
+        return execute(method, path, realParams, null);
     }
 
     public JsonNode getLiveUrl(int channel) {

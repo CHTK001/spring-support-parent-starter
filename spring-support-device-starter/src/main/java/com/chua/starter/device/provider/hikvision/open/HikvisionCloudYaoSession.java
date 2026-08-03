@@ -5,12 +5,6 @@ import com.chua.starter.device.spi.model.DeviceConnectInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -18,7 +12,7 @@ import java.util.stream.Collectors;
 
 /**
  * 海康云耀（Hik-Connect / HiDDNS 外网云）OpenAPI 会话
- * <p>对接海康消费级/中小项目云平台，纯 Java HTTP 全平台可用。</p>
+ * <p>对接海康消费级/中小项目云平台，基于 common-starter HttpClient，全平台可用。</p>
  *
  * <h3>接入说明</h3>
  * <ul>
@@ -58,27 +52,12 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
     private static final String PATH_DOOR_CONTROL = "/api/v1/access/control";
 
     /**
-     * HTTP 客户端
-     */
-    private final HttpClient httpClient;
-
-    /**
-     * 平台 baseUrl
-     */
-    private final String baseUrl;
-
-    /**
      * 构造云耀会话
      *
      * @param info 设备连接信息
      */
     public HikvisionCloudYaoSession(DeviceConnectInfo info) {
-        super(info);
-        Object extra = info.getExtra() == null ? null : info.getExtra().get("baseUrl");
-        this.baseUrl = extra instanceof String s ? s : DEFAULT_BASE_URL;
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofMillis(DEFAULT_CONNECT_TIMEOUT))
-                .build();
+        super(info, DEFAULT_BASE_URL);
         login();
     }
 
@@ -90,7 +69,7 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
         params.put("appKey", info.getAppKey());
         params.put("appSecret", info.getAppSecret());
         try {
-            JsonNode resp = doRequest("POST", PATH_TOKEN, params);
+            JsonNode resp = execute("POST", PATH_TOKEN, params, null);
             JsonNode data = assertOk(resp);
             String token = data.path("accessToken").asText(null);
             long expires = data.path("expiresIn").asLong(7200L);
@@ -145,28 +124,7 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
         if (!PATH_TOKEN.equals(path)) {
             realParams.put("sign", sign(realParams));
         }
-        try {
-            HttpRequest.Builder builder;
-            if ("GET".equalsIgnoreCase(method)) {
-                String query = realParams.entrySet().stream()
-                        .filter(e -> e.getValue() != null)
-                        .map(e -> urlEncode(e.getKey()) + "=" + urlEncode(String.valueOf(e.getValue())))
-                        .collect(Collectors.joining("&"));
-                builder = HttpRequest.newBuilder(URI.create(baseUrl + path + "?" + query))
-                        .timeout(Duration.ofMillis(DEFAULT_READ_TIMEOUT))
-                        .GET();
-            } else {
-                String body = MAPPER.writeValueAsString(realParams);
-                builder = HttpRequest.newBuilder(URI.create(baseUrl + path))
-                        .timeout(Duration.ofMillis(DEFAULT_READ_TIMEOUT))
-                        .header("Content-Type", "application/json;charset=UTF-8")
-                        .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8));
-            }
-            HttpResponse<String> resp = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-            return MAPPER.readTree(resp.body());
-        } catch (Exception e) {
-            throw new IllegalStateException("海康云耀 HTTP 调用失败: " + method + " " + path + " -> " + e.getMessage(), e);
-        }
+        return execute(method, path, realParams, null);
     }
 
     /**
@@ -223,9 +181,5 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
         params.put("doorId", doorId);
         params.put("command", 1);
         post(PATH_DOOR_CONTROL, params);
-    }
-
-    private static String urlEncode(String s) {
-        return java.net.URLEncoder.encode(s, StandardCharsets.UTF_8);
     }
 }

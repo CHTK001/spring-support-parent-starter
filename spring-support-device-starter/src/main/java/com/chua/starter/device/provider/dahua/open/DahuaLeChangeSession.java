@@ -5,13 +5,7 @@ import com.chua.starter.device.spi.model.DeviceConnectInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -19,7 +13,7 @@ import java.util.TreeMap;
 
 /**
  * 大华乐橙（IMOU / LeCheng）开放平台 OpenAPI 会话
- * <p>对接大华乐橙开放平台，纯 Java HTTP 全平台可用。</p>
+ * <p>对接大华乐橙开放平台，基于 common-starter HttpClient，全平台可用。</p>
  *
  * <h3>接入说明</h3>
  * <ul>
@@ -35,7 +29,7 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
     /**
      * 乐橙开放平台默认 baseUrl（按官方文档配置）
      */
-    private static final String DEFAULT_BASE_URL = "https://openapi.lechange.com:443/openapi";
+    private static final String DEFAULT_BASE_URL = "https://openapi.lechange.com/openapi";
 
     /**
      * 获取 accessToken 接口
@@ -52,29 +46,13 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
      */
     private static final String PATH_PTZ_CONTROL = "/ptz";
 
-    /**
-     * HTTP 客户端
-     */
-    private final HttpClient httpClient;
-
-    /**
-     * 平台 baseUrl
-     */
-    private final String baseUrl;
-
     public DahuaLeChangeSession(DeviceConnectInfo info) {
-        super(info);
-        Object extra = info.getExtra() == null ? null : info.getExtra().get("baseUrl");
-        this.baseUrl = extra instanceof String s ? s : DEFAULT_BASE_URL;
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofMillis(DEFAULT_CONNECT_TIMEOUT))
-                .build();
+        super(info, DEFAULT_BASE_URL);
         login();
     }
 
     /**
      * 乐橙签名：MD5(appSecret + system + params + time + nonce)。
-     * params 字段按 key 字典序拼接为 key1value1key2value2...
      */
     private String sign(Map<String, Object> params, String system, String time, String nonce) {
         TreeMap<String, Object> sorted = new TreeMap<>(params);
@@ -104,7 +82,7 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
             params.put("appKey", info.getAppKey());
             params.put("appSecret", info.getAppSecret());
             params.put("system", "openAPI");
-            JsonNode resp = doRequest("POST", PATH_TOKEN, params);
+            JsonNode resp = execute("POST", PATH_TOKEN, params, null);
             JsonNode data = assertOk(resp);
             JsonNode result = data.path("result");
             String token = result.path("accessToken").asText(null);
@@ -137,17 +115,7 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
         signParams.put("time", time);
         signParams.put("nonce", nonce);
         signParams.put("sign", sign(signParams, "openAPI", time, nonce));
-        try {
-            HttpRequest req = HttpRequest.newBuilder(URI.create(baseUrl + path))
-                    .timeout(Duration.ofMillis(DEFAULT_READ_TIMEOUT))
-                    .header("Content-Type", "application/json;charset=UTF-8")
-                    .POST(HttpRequest.BodyPublishers.ofString(MAPPER.writeValueAsString(realParams), StandardCharsets.UTF_8))
-                    .build();
-            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-            return MAPPER.readTree(resp.body());
-        } catch (Exception e) {
-            throw new IllegalStateException("乐橙 HTTP 调用失败: " + method + " " + path + " -> " + e.getMessage(), e);
-        }
+        return execute(method, path, realParams, null);
     }
 
     public JsonNode getLiveUrl(int channel) {
