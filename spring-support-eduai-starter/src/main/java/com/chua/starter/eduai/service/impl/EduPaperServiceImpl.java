@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.chua.common.support.lang.code.PageResult;
 import com.chua.starter.common.support.exception.BusinessException;
+import com.chua.starter.eduai.ai.EduAiService;
+import com.chua.starter.eduai.configuration.EduAiProperties;
 import com.chua.starter.eduai.mapper.EduPaperMapper;
 import com.chua.starter.eduai.mapper.EduPaperQuestionMapper;
 import com.chua.starter.eduai.mapper.EduQuestionMapper;
@@ -31,6 +33,14 @@ import java.util.stream.Collectors;
 /**
  * 试卷服务实现
  *
+ * <p>AI 组卷流程：
+ * <ol>
+ *   <li>先按学科/学段/年级/题型从题库中筛出候选题目（兜底数据）</li>
+ *   <li>调用 {@link EduAiService#generatePaperOutline} 让模型挑选合适的题目 ID</li>
+ *   <li>AI 不可用/返回为空时回退到候选前 N 条</li>
+ *   <li>写入 {@code edu_paper} 与 {@code edu_paper_question} 关联表</li>
+ * </ol>
+ *
  * @author CH
  * @since 4.0.0.42
  */
@@ -41,6 +51,8 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
 
     private final EduPaperQuestionMapper paperQuestionMapper;
     private final EduQuestionMapper questionMapper;
+    private final EduAiService eduAiService;
+    private final EduAiProperties properties;
 
     @Override
     public PageResult<PaperVO> pageQuery(PaperQueryDTO query) {
@@ -77,7 +89,6 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         }
         PaperVO vo = toVO(paper);
 
-        // 查询关联题目
         LambdaQueryWrapper<EduPaperQuestion> pqWrapper = new LambdaQueryWrapper<>();
         pqWrapper.eq(EduPaperQuestion::getPaperQuestionPaperId, paperId)
                 .orderByAsc(EduPaperQuestion::getPaperQuestionOrder);
@@ -96,7 +107,6 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
                 qv.setOptions(q.getQuestionOptions());
                 qv.setAnswer(q.getQuestionAnswer());
                 qv.setAnalysis(q.getQuestionAnalysis());
-                // 获取分值
                 relations.stream()
                         .filter(r -> r.getPaperQuestionQuestionId().equals(q.getQuestionId()))
                         .findFirst()
@@ -111,17 +121,15 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long generatePaper(PaperGenerateDTO dto) {
-        // TODO: 调用AI服务根据知识点、难度、题型生成题目列表
-        // 当前为模拟实现：随机选取若干题目
-        log.info("AI组卷: subject={}, knowledgePoints={}", dto.getSubject(), dto.getKnowledgePointIds());
+        log.info("[EduAi] AI 组卷: subject={}, knowledgePoints={}", dto.getSubject(), dto.getKnowledgePointIds());
 
-        // 创建试卷
+        // 1) 创建试卷草稿
         EduPaper paper = new EduPaper();
         paper.setPaperName(dto.getName());
         paper.setPaperSubject(dto.getSubject());
         paper.setPaperGradeLevel(dto.getGradeLevel());
         paper.setPaperGrade(dto.getGrade());
-        paper.setPaperTotalScore(dto.getTotalScore() != null ? dto.getTotalScore() : 100);
+        paper.setPaperTotalScore(dto.getTotalScore() != null ? dto.getTotalScore() : properties.getPaper().getMaxTotalScore());
         paper.setPaperDuration(dto.getDuration());
         paper.setPaperStatus(0); // 草稿
         paper.setPaperSource("AI");
@@ -129,56 +137,99 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         paper.setPaperUpdateTime(LocalDateTime.now());
         baseMapper.insert(paper);
 
-        // 模拟：从题库中随机取题（实际应调用AI）
-        List<EduQuestion> questions = questionMapper.selectList(
-                new LambdaQueryWrapper<EduQuestion>()
-                        .eq(EduQuestion::getQuestionSubject, dto.getSubject())
-                        .eq(EduQuestion::getQuestionStatus, 1)
-                        .last("limit " + (dto.getQuestionCount() != null ? dto.getQuestionCount() : 10))
-        );
+        int count = dto.getQuestionCount() != null ? dto.getQuestionCount() : properties.getPaper().getDefaultQuestionCount();
+        int perScore = dto.getScorePerQuestion() != null ? dto.getScorePerQuestion() : properties.getPaper().getDefaultScorePerQuestion();
 
-        int order = 1;
-        int totalScore = 0;
-        for (EduQuestion q : questions) {
-            EduPaperQuestion pq = new EduPaperQuestion();
-            pq.setPaperQuestionPaperId(paper.getPaperId());
-            pq.setPaperQuestionQuestionId(q.getQuestionId());
-            pq.setPaperQuestionOrder(order++);
-            int score = dto.getScorePerQuestion() != null ? dto.getScorePerQuestion() : 5;
-            pq.setPaperQuestionScore(score);
-            pq.setPaperQuestionCreateTime(LocalDateTime.now());
-            paperQuestionMapper.insert(pq);
-            totalScore += score;
+        // 2) 候选题目（兜底数据）
+        LambdaQueryWrapper<EduQuestion> candidateWrapper = new LambdaQueryWrapper<EduQuestion>()
+                .eq(EduQuestion::getQuestionSubject, dto.getSubject())
+                .eq(EduQuestion::getQuestionStatus, 1)
+                .orderByAsc(EduQuestion::getQuestionId)
+                .last("limit " + Math.max(count * 3, count));
+        List<EduQuestion> candidates = questionMapper.selectList(candidateWrapper);
+        if (candidates.isEmpty()) {
+            log.warn("[EduAi] 题库为空，无法组卷: subject={}", dto.getSubject());
+            return paper.getPaperId();
         }
 
-        // 更新试卷总分和题目数
+        // 3) 知识点评分过滤（如果指定）
+        List<Long> candidateIds = new ArrayList<>();
+        if (dto.getKnowledgePointIds() != null && !dto.getKnowledgePointIds().isEmpty()) {
+            for (EduQuestion q : candidates) {
+                String kpIds = q.getQuestionKnowledgePointIds();
+                if (!StringUtils.hasText(kpIds)) {
+                    continue;
+                }
+                for (Long kp : dto.getKnowledgePointIds()) {
+                    if (kpIds.contains(String.valueOf(kp))) {
+                        candidateIds.add(q.getQuestionId());
+                        break;
+                    }
+                }
+            }
+            if (candidateIds.isEmpty()) {
+                candidateIds = candidates.stream().map(EduQuestion::getQuestionId).collect(Collectors.toList());
+            }
+        } else {
+            candidateIds = candidates.stream().map(EduQuestion::getQuestionId).collect(Collectors.toList());
+        }
+
+        // 4) AI 挑选
+        List<String> types = null;
+        if (dto.getTypeConfigs() != null && !dto.getTypeConfigs().isEmpty()) {
+            types = dto.getTypeConfigs().stream()
+                    .map(PaperGenerateDTO.QuestionTypeConfig::getType)
+                    .collect(Collectors.toList());
+        }
+        List<Long> knowledgeIds = dto.getKnowledgePointIds();
+        List<Long> aiIds = eduAiService.generatePaperOutline(
+                dto.getSubject(), dto.getGradeLevel(), dto.getGrade(),
+                types, knowledgeIds, count, candidateIds);
+        if (aiIds.size() > count) {
+            aiIds = aiIds.subList(0, count);
+        }
+
+        // 5) 入库关联
+        int order = 1;
+        int totalScore = 0;
+        for (Long qid : aiIds) {
+            EduPaperQuestion pq = new EduPaperQuestion();
+            pq.setPaperQuestionPaperId(paper.getPaperId());
+            pq.setPaperQuestionQuestionId(qid);
+            pq.setPaperQuestionOrder(order++);
+            pq.setPaperQuestionScore(perScore);
+            pq.setPaperQuestionCreateTime(LocalDateTime.now());
+            paperQuestionMapper.insert(pq);
+            totalScore += perScore;
+        }
+
+        // 6) 回写试卷总分/题目数
         paper.setPaperTotalScore(totalScore);
-        paper.setPaperQuestionCount(questions.size());
+        paper.setPaperQuestionCount(aiIds.size());
+        paper.setPaperUpdateTime(LocalDateTime.now());
         baseMapper.updateById(paper);
 
-        log.info("AI组卷完成，试卷ID: {}, 题目数: {}", paper.getPaperId(), questions.size());
+        log.info("[EduAi] AI 组卷完成: paperId={}, questionCount={}", paper.getPaperId(), aiIds.size());
         return paper.getPaperId();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean replaceQuestion(Long paperId, Long oldQuestionId, Long newQuestionId) {
-        // 删除旧关联
         LambdaQueryWrapper<EduPaperQuestion> delWrapper = new LambdaQueryWrapper<>();
         delWrapper.eq(EduPaperQuestion::getPaperQuestionPaperId, paperId)
                 .eq(EduPaperQuestion::getPaperQuestionQuestionId, oldQuestionId);
         paperQuestionMapper.delete(delWrapper);
 
-        // 添加新关联
         EduPaperQuestion pq = new EduPaperQuestion();
         pq.setPaperQuestionPaperId(paperId);
         pq.setPaperQuestionQuestionId(newQuestionId);
         pq.setPaperQuestionOrder(0);
-        pq.setPaperQuestionScore(5);
+        pq.setPaperQuestionScore(properties.getPaper().getDefaultScorePerQuestion());
         pq.setPaperQuestionCreateTime(LocalDateTime.now());
         paperQuestionMapper.insert(pq);
 
-        log.info("替换题目成功，试卷: {}, 旧题: {}, 新题: {}", paperId, oldQuestionId, newQuestionId);
+        log.info("[EduAi] 替换题目成功: paperId={}, oldId={}, newId={}", paperId, oldQuestionId, newQuestionId);
         return true;
     }
 

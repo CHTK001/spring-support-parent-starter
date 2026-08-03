@@ -1,7 +1,10 @@
 package com.chua.starter.eduai.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.chua.starter.common.support.exception.BusinessException;
+import com.chua.starter.eduai.ai.EduAiService;
+import com.chua.starter.eduai.configuration.EduAiProperties;
 import com.chua.starter.eduai.mapper.EduAnswerSheetMapper;
 import com.chua.starter.eduai.mapper.EduMarkingResultMapper;
 import com.chua.starter.eduai.mapper.EduQuestionMapper;
@@ -11,20 +14,36 @@ import com.chua.starter.eduai.model.EduQuestion;
 import com.chua.starter.eduai.model.dto.MarkingConfirmDTO;
 import com.chua.starter.eduai.model.dto.MarkingSubmitDTO;
 import com.chua.starter.eduai.model.vo.MarkingResultVO;
+import com.chua.starter.eduai.queue.MarkingJob;
+import com.chua.starter.eduai.queue.MarkingMessageListener;
 import com.chua.starter.eduai.service.IEduMarkingService;
+import com.chua.starter.queue.MessageTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
  * 阅卷服务实现
+ *
+ * <p>同步路径（{@link #submitAnswerSheet}）：
+ * <ol>
+ *   <li>持久化 {@code edu_answer_sheet} 答题卡</li>
+ *   <li>生成 taskId，写入 {@code edu_marking_result} 状态 = PENDING</li>
+ *   <li>异步路径（{@link #markAsync}）通过 {@link MessageTemplate} 派发到
+ *       {@code edu.marking} 队列，由 {@link MarkingMessageListener} 异步消费</li>
+ *   <li>同步路径立即执行阅卷并把结果落库</li>
+ * </ol>
+ *
+ * <p>队列消费由 {@link MessageTemplate} Bean 驱动（默认实现来自 queue-starter 的 LocalMessageTemplate），
+ * 失败时记录错误到 {@code ai_comment} 列，前端轮询可观察到。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -34,14 +53,35 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class EduMarkingServiceImpl implements IEduMarkingService {
 
+    /**
+     * 阅卷队列名称。
+     */
+    public static final String QUEUE_NAME = "edu.marking";
+
+    /**
+     * 阅卷结果状态：待批改
+     */
+    private static final int STATUS_PENDING = 0;
+    /**
+     * 阅卷结果状态：AI 已批改
+     */
+    private static final int STATUS_AI_DONE = 1;
+    /**
+     * 阅卷结果状态：教师已确认
+     */
+    private static final int STATUS_TEACHER_DONE = 2;
+
     private final EduAnswerSheetMapper answerSheetMapper;
     private final EduMarkingResultMapper markingResultMapper;
     private final EduQuestionMapper questionMapper;
+    private final EduAiService eduAiService;
+    private final EduAiProperties properties;
+    private final MessageTemplate messageTemplate;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String submitAnswerSheet(MarkingSubmitDTO dto) {
-        // 保存答题卡
+        // 1. 持久化答题卡
         EduAnswerSheet sheet = new EduAnswerSheet();
         sheet.setAnswerSheetExamId(dto.getExamId());
         sheet.setAnswerSheetStudentId(dto.getStudentId());
@@ -52,36 +92,81 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         sheet.setAnswerSheetUpdateTime(LocalDateTime.now());
         answerSheetMapper.insert(sheet);
 
-        // 生成任务ID
+        // 2. 生成 taskId 并预占 marking_result
         String taskId = UUID.randomUUID().toString().replace("-", "");
-
-        // TODO: 调用AI阅卷服务（当前为模拟）
-        // 模拟批改每个题目
-        List<MarkingSubmitDTO.AnswerItem> answers = dto.getAnswers();
-        for (MarkingSubmitDTO.AnswerItem item : answers) {
-            EduQuestion question = questionMapper.selectById(item.getQuestionId());
-            if (question == null) {
-                continue;
-            }
+        for (MarkingSubmitDTO.AnswerItem item : dto.getAnswers()) {
             EduMarkingResult result = new EduMarkingResult();
             result.setMarkingResultAnswerSheetId(sheet.getAnswerSheetId());
             result.setMarkingResultQuestionId(item.getQuestionId());
             result.setMarkingResultTaskId(taskId);
-            result.setMarkingResultStatus(1); // AI已批改
-
-            // 模拟判断：简单比较答案
-            boolean correct = StringUtils.hasText(item.getAnswer()) &&
-                    item.getAnswer().trim().equalsIgnoreCase(question.getQuestionAnswer().trim());
-            int score = correct ? 5 : 0;
-            result.setMarkingResultAiScore(score);
-            result.setMarkingResultAiComment(correct ? "回答正确" : "回答有误");
+            result.setMarkingResultStatus(STATUS_PENDING);
             result.setMarkingResultCreateTime(LocalDateTime.now());
             result.setMarkingResultUpdateTime(LocalDateTime.now());
             markingResultMapper.insert(result);
         }
 
-        log.info("提交答题卡成功，任务ID: {}, 学生: {}", taskId, dto.getStudentId());
+        if (properties.getMarking().isAsync()) {
+            dispatchAsync(taskId, sheet.getAnswerSheetId(), dto.getAnswers());
+        } else {
+            markSync(taskId, dto.getAnswers());
+        }
+
+        log.info("[EduAi] 答题卡已提交: taskId={}, student={}, async={}",
+                taskId, dto.getStudentId(), properties.getMarking().isAsync());
         return taskId;
+    }
+
+    /**
+     * 把阅卷任务投递到队列，由 {@link MarkingMessageListener} 异步消费。
+     */
+    private void dispatchAsync(String taskId, Long answerSheetId, List<MarkingSubmitDTO.AnswerItem> answers) {
+        MarkingJob job = new MarkingJob();
+        job.setTaskId(taskId);
+        job.setAnswerSheetId(answerSheetId);
+        job.setItems(answers);
+        try {
+            Map<String, Object> headers = new HashMap<>();
+            headers.put("submittedAt", System.currentTimeMillis());
+            messageTemplate.sendAsync(QUEUE_NAME, job, headers);
+        } catch (Exception e) {
+            log.error("[EduAi] 队列投递失败，回退到同步阅卷: taskId={}, err={}", taskId, e.getMessage(), e);
+            markSync(taskId, answers);
+        }
+    }
+
+    /**
+     * 同步阅卷：阻塞直到全部题目批改完成。
+     */
+    public void markSync(String taskId, List<MarkingSubmitDTO.AnswerItem> answers) {
+        int maxScore = properties.getMarking().getMaxScore();
+        for (MarkingSubmitDTO.AnswerItem item : answers) {
+            EduQuestion question = questionMapper.selectById(item.getQuestionId());
+            if (question == null) {
+                continue;
+            }
+            EduAiService.MarkingOutcome outcome = eduAiService.markQuestionWithAi(
+                    question.getQuestionType(),
+                    question.getQuestionStem(),
+                    question.getQuestionAnswer(),
+                    item.getAnswer(),
+                    maxScore
+            );
+            applyOutcome(taskId, question, outcome);
+        }
+    }
+
+    /**
+     * 把单题批改结果写入 DB。
+     */
+    public void applyOutcome(String taskId, EduQuestion question, EduAiService.MarkingOutcome outcome) {
+        LambdaUpdateWrapper<EduMarkingResult> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(EduMarkingResult::getMarkingResultTaskId, taskId)
+                .eq(EduMarkingResult::getMarkingResultQuestionId, question.getQuestionId())
+                .set(EduMarkingResult::getMarkingResultAiScore, outcome.getScore())
+                .set(EduMarkingResult::getMarkingResultAiComment, outcome.getComment())
+                .set(EduMarkingResult::getMarkingResultStatus, STATUS_AI_DONE)
+                .set(EduMarkingResult::getMarkingResultUpdateTime, LocalDateTime.now());
+        markingResultMapper.update(null, wrapper);
     }
 
     @Override
@@ -97,19 +182,27 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         MarkingResultVO vo = new MarkingResultVO();
         vo.setTaskId(taskId);
         vo.setStatus(results.get(0).getMarkingResultStatus());
+        vo.setTotal(results.size());
 
         List<MarkingResultVO.QuestionResult> list = new ArrayList<>();
         int totalScore = 0;
+        boolean allDone = true;
         for (EduMarkingResult r : results) {
             MarkingResultVO.QuestionResult qr = new MarkingResultVO.QuestionResult();
             qr.setQuestionId(r.getMarkingResultQuestionId());
-            qr.setScore(r.getMarkingResultAiScore());
+            qr.setScore(r.getMarkingResultAiScore() == null ? 0 : r.getMarkingResultAiScore());
+            qr.setTeacherScore(r.getMarkingResultTeacherScore());
             qr.setComment(r.getMarkingResultAiComment());
+            qr.setTeacherComment(r.getMarkingResultTeacherComment());
             list.add(qr);
-            totalScore += r.getMarkingResultAiScore() != null ? r.getMarkingResultAiScore() : 0;
+            totalScore += qr.getScore();
+            if (r.getMarkingResultStatus() == null || r.getMarkingResultStatus() < STATUS_AI_DONE) {
+                allDone = false;
+            }
         }
         vo.setResults(list);
         vo.setTotalScore(totalScore);
+        vo.setFinished(allDone);
         return vo;
     }
 
@@ -123,11 +216,12 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             }
             result.setMarkingResultTeacherScore(adj.getScore());
             result.setMarkingResultTeacherComment(adj.getComment());
-            result.setMarkingResultStatus(2); // 教师已确认
+            result.setMarkingResultStatus(STATUS_TEACHER_DONE);
             result.setMarkingResultUpdateTime(LocalDateTime.now());
             markingResultMapper.updateById(result);
         }
-        log.info("教师确认阅卷完成，任务ID: {}", dto.getTaskId());
+        log.info("[EduAi] 教师确认阅卷: taskId={}, items={}", dto.getTaskId(),
+                dto.getAdjustments() == null ? 0 : dto.getAdjustments().size());
         return true;
     }
 }

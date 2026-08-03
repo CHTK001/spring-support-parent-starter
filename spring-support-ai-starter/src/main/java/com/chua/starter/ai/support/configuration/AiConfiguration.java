@@ -8,6 +8,8 @@ import com.chua.common.support.ai.chat.aggregate.AggregateChatClientSetting;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.registry.AgentRegistry;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
+import com.chua.starter.ai.support.service.AIDialogRecordService;
+import com.chua.starter.ai.support.service.impl.AIDialogLocalRecordService;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import lombok.extern.slf4j.Slf4j;
@@ -68,6 +70,16 @@ public class AiConfiguration {
     public AgentRegistry agentRegistry() {
         log.info("[AiConfiguration] 创建 AgentRegistry");
         return new AgentRegistry();
+    }
+
+    /**
+     * 对话记录服务——默认使用内存实现。
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public AIDialogRecordService aiDialogRecordService() {
+        log.info("[AiConfiguration] 创建 AIDialogRecordService（内存实现）");
+        return new AIDialogLocalRecordService();
     }
 
     /**

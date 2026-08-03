@@ -74,29 +74,26 @@ public class DataSyncApplication {
             defaults.put("plugin.datasync.mapping-source", "file");
             defaults.put("plugin.datasync.file-mapping.directory-path", MAPPING_DIR);
         }
+        // 启用 SSH 服务（端口 2222，admin/admin）
+        defaults.put("server.port", "28978");
+        defaults.put("plugin.ssh.server.enabled", "true");
+        defaults.put("plugin.ssh.server.port", "2222");
+        defaults.put("plugin.ssh.server.host", "127.0.0.1");
+        defaults.put("plugin.ssh.server.authentication.username", "admin");
+        defaults.put("plugin.ssh.server.authentication.password", "admin");
+        defaults.put("plugin.ssh.server.authentication.user-password", "admin");
+        defaults.put("plugin.ssh.server.authentication.password-enabled", "true");
+        defaults.put("plugin.ssh.server.file-transfer.sftp-enabled", "true");
+        defaults.put("plugin.ssh.server.file-transfer.root-directory", "./");
+        // OSGi shell 远程管理（端口 6666）
+        defaults.put("plugin.osgi.shell.enabled", "true");
+        defaults.put("plugin.osgi.shell.ssh-port", "6666");
+        defaults.put("plugin.osgi.shell.ssh-enabled", "true");
+        defaults.put("plugin.osgi.shell.username", "admin");
+        defaults.put("plugin.osgi.shell.password", "admin");
         application.setDefaultProperties(defaults);
         ApplicationContext context = application.run(args);
 
-
-        // 验证 OSGi 和 SSH 集成
-        try {
-            Object osgiCtx = context.getBean("osgiBundleContext");
-            System.out.println("[OSGi] OsgiBundleContext: " + osgiCtx);
-        } catch (Exception e) {
-            System.out.println("[OSGi] OsgiBundleContext bean not found: " + e.getMessage());
-        }
-        try {
-            Object sshServer = context.getBean("sshServerService");
-            System.out.println("[SSH] sshServerService: " + sshServer);
-        } catch (Exception e) {
-            System.out.println("[SSH] sshServerService bean not found: " + e.getMessage());
-        }
-        try {
-            Object osgiSsh = context.getBean("osgiSshServer");
-            System.out.println("[SSH] osgiSshServer: " + osgiSsh);
-        } catch (Exception e) {
-            System.out.println("[SSH] osgiSshServer bean not found: " + e.getMessage());
-        }
         // 打印配置
         DatasyncProperties properties = context.getBean(DatasyncProperties.class);
         System.out.println("[DATA-SYNC] enabled=" + properties.isEnabled());

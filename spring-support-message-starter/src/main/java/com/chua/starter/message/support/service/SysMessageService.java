@@ -11,6 +11,7 @@ import com.chua.starter.message.support.pojo.MessageSendRequest;
 import com.chua.starter.message.support.pojo.TemplatePreviewRequest;
 import com.chua.starter.message.support.pojo.TemplatePreviewResponse;
 import com.chua.starter.message.support.pojo.ChannelInfo;
+import com.chua.starter.message.support.pojo.SysMessageStationItem;
 
 import java.util.List;
 
@@ -191,4 +192,34 @@ public interface SysMessageService {
      * @return 是否已更新
      */
     ReturnResult<Boolean> markLogRead(String token);
+
+    /**
+     * 当前用户站内消息分页查询
+     * <p>
+     * 查询当前登录用户接收的站内消息（渠道 station），按发送时间倒序分页返回。
+     * </p>
+     *
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @return 分页结果
+     */
+    IPage<SysMessageStationItem> pageForStationMessage(long page, long pageSize);
+
+    /**
+     * 当前用户站内消息未读数
+     *
+     * @return 未读消息数
+     */
+    ReturnResult<Long> countStationMessageUnread();
+
+    /**
+     * 当前用户站内消息标记已读
+     * <p>
+     * 将当前用户所有未读站内消息标记为已读（lastId 为空时标记全部）。
+     * </p>
+     *
+     * @param lastId 已读游标（消息ID）；为空表示全部已读
+     * @return 是否已更新
+     */
+    ReturnResult<Boolean> markStationMessageRead(Integer lastId);
 }

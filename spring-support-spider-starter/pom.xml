@@ -1,4 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support Spider Starter - 爬虫中心
+
+    提供爬虫定义、采集数据、执行记录的 CRUD 与可视化编排基础。
+    实际爬取执行由 utils-support-spider-starter 提供的 Spider 引擎完成。
+    本模块作为 Spring Boot Starter 自动注册 Controller/Service/Mapper 与
+    ServiceInfoContributor 端点。
+
+    @author CH
+    @since 4.0.0.42
+-->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -11,7 +22,7 @@
     </parent>
 
     <artifactId>spring-support-spider-starter</artifactId>
-    <description>爬虫中心后端 - 爬虫定义、采集数据、执行日志、深度追踪</description>
+    <description>爬虫中心后端 - 爬虫定义、采集数据、执行日志、执行控制、深度可视化编排</description>
 
     <properties>
         <maven.compiler.source>${java.version}</maven.compiler.source>
@@ -21,27 +32,32 @@
 
     <dependencies>
 
+        <!-- 爬虫执行引擎 (真正运行的 Spider) -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-spider-starter</artifactId>
             <version>${utils.version}</version>
         </dependency>
 
+        <!-- API 文档 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-swagger-starter</artifactId>
         </dependency>
 
+        <!-- MyBatis Plus -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-mybatis-starter</artifactId>
         </dependency>
 
+        <!-- 数据源与 schema 初始化 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-datasource-starter</artifactId>
         </dependency>
 
+        <!-- ServiceInfoContributor 等通用能力 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>
@@ -78,6 +94,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- 测试启动 Tomcat (TestApplication 启动 Web) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
@@ -91,7 +114,39 @@
             <resource>
                 <directory>src/main/resources</directory>
             </resource>
+            <resource>
+                <directory>src/test/resources</directory>
+            </resource>
         </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.chua.starter.spider.SpiderTestApplication</mainClass>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerArgs combine.self="override">
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
+                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.jvm=ALL-UNNAMED</arg>
+                        <arg>-J--add-exports=jdk.unsupported/sun.misc=ALL-UNNAMED</arg>
+                        <arg>-parameters</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+        </plugins>
     </build>
 
 </project>

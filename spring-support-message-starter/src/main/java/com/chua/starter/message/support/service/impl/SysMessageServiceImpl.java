@@ -14,6 +14,8 @@ import com.chua.common.support.task.message.TemplateInfo;
 import com.chua.common.support.utils.ArrayUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.constant.Constant;
+import com.chua.starter.common.support.oauth.AuthService;
+import com.chua.starter.common.support.oauth.CurrentUser;
 import com.chua.starter.message.support.configuration.MessageTrackProperties;
 import com.chua.starter.message.support.entity.SysMessageLog;
 import com.chua.starter.message.support.entity.SysMessageProvider;
@@ -24,11 +26,13 @@ import com.chua.starter.message.support.mapper.SysMessageTemplateMapper;
 import com.chua.starter.message.support.pojo.ChannelInfo;
 import com.chua.starter.message.support.pojo.MessageContentSendRequest;
 import com.chua.starter.message.support.pojo.MessageSendRequest;
+import com.chua.starter.message.support.pojo.SysMessageStationItem;
 import com.chua.starter.message.support.pojo.TemplatePreviewRequest;
 import com.chua.starter.message.support.pojo.TemplatePreviewResponse;
 import com.chua.starter.message.support.service.SysMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -65,6 +69,11 @@ public class SysMessageServiceImpl implements SysMessageService {
     private final SysMessageTemplateMapper sysMessageTemplateMapper;
     private final SysMessageLogMapper sysMessageLogMapper;
     private final MessageTrackProperties messageTrackProperties;
+
+    /**
+     * 当前登录用户服务（可空：未接入认证时站内消息查询返回空）
+     */
+    private final ObjectProvider<AuthService> authServiceProvider;
 
     @Override
     public IPage<SysMessageProvider> pageForProvider(SysMessageProvider provider, long page, long pageSize) {
@@ -612,6 +621,93 @@ public class SysMessageServiceImpl implements SysMessageService {
         boolean updated = sysMessageLogMapper.updateById(update) > 0;
         return ReturnResult.of(updated);
     }
+
+    @Override
+    public IPage<SysMessageStationItem> pageForStationMessage(long page, long pageSize) {
+        String userId = currentUserId();
+        if (StringUtils.isBlank(userId)) {
+            return new Page<>(page, pageSize);
+        }
+        Page<SysMessageLog> logPage = sysMessageLogMapper.selectPage(new Page<>(page, pageSize),
+                Wrappers.<SysMessageLog>lambdaQuery()
+                        .eq(SysMessageLog::getSysMessageLogDelete, 0)
+                        .eq(SysMessageLog::getSysMessageLogChannel, STATION_CHANNEL)
+                        .eq(SysMessageLog::getSysMessageLogTarget, userId)
+                        .orderByDesc(SysMessageLog::getCreateTime));
+        return logPage.convert(SysMessageServiceImpl::toStationItem);
+    }
+
+    @Override
+    public ReturnResult<Long> countStationMessageUnread() {
+        String userId = currentUserId();
+        if (StringUtils.isBlank(userId)) {
+            return ReturnResult.ok(0L);
+        }
+        Long count = sysMessageLogMapper.selectCount(Wrappers.<SysMessageLog>lambdaQuery()
+                .eq(SysMessageLog::getSysMessageLogDelete, 0)
+                .eq(SysMessageLog::getSysMessageLogChannel, STATION_CHANNEL)
+                .eq(SysMessageLog::getSysMessageLogTarget, userId)
+                .and(wrapper -> wrapper.isNull(SysMessageLog::getSysMessageReadStatus)
+                        .or().eq(SysMessageLog::getSysMessageReadStatus, 0)));
+        return ReturnResult.ok(count == null ? 0L : count);
+    }
+
+    @Override
+    public ReturnResult<Boolean> markStationMessageRead(Integer lastId) {
+        String userId = currentUserId();
+        if (StringUtils.isBlank(userId)) {
+            return ReturnResult.illegal("未登录，无法标记已读");
+        }
+        LambdaQueryWrapper<SysMessageLog> wrapper = Wrappers.<SysMessageLog>lambdaQuery()
+                .eq(SysMessageLog::getSysMessageLogDelete, 0)
+                .eq(SysMessageLog::getSysMessageLogChannel, STATION_CHANNEL)
+                .eq(SysMessageLog::getSysMessageLogTarget, userId)
+                .and(w -> w.isNull(SysMessageLog::getSysMessageReadStatus)
+                        .or().eq(SysMessageLog::getSysMessageReadStatus, 0));
+        if (lastId != null) {
+            // 已读游标：标记 ID 小于等于游标的未读消息为已读
+            wrapper.le(SysMessageLog::getSysMessageLogId, lastId);
+        }
+        SysMessageLog update = new SysMessageLog();
+        update.setSysMessageReadStatus(1);
+        update.setSysMessageReadTime(LocalDateTime.now());
+        return ReturnResult.of(sysMessageLogMapper.update(update, wrapper) > 0);
+    }
+
+    /**
+     * 推送日志转站内消息项
+     *
+     * @param log 推送日志
+     * @return 站内消息项
+     */
+    private static SysMessageStationItem toStationItem(SysMessageLog log) {
+        SysMessageStationItem item = new SysMessageStationItem();
+        item.setId(log.getSysMessageLogId());
+        item.setSubject(log.getSysMessageLogSubject());
+        item.setContent(log.getSysMessageLogContent());
+        item.setSendTime(log.getCreateTime());
+        item.setReadStatus(log.getSysMessageReadStatus() == null ? 0 : log.getSysMessageReadStatus());
+        return item;
+    }
+
+    /**
+     * 获取当前登录用户ID（未接入认证时返回 null）
+     *
+     * @return 用户ID
+     */
+    private String currentUserId() {
+        AuthService authService = authServiceProvider.getIfAvailable();
+        if (authService == null) {
+            return null;
+        }
+        CurrentUser currentUser = authService.getCurrentUser();
+        return currentUser == null ? null : currentUser.getUserId();
+    }
+
+    /**
+     * 站内消息渠道标识
+     */
+    private static final String STATION_CHANNEL = "station";
 
     /**
      * 解析消息渠道标识

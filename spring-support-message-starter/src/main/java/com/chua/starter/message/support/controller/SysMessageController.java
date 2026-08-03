@@ -10,6 +10,7 @@ import com.chua.starter.message.support.entity.SysMessageTemplate;
 import com.chua.starter.message.support.pojo.ChannelInfo;
 import com.chua.starter.message.support.pojo.MessageContentSendRequest;
 import com.chua.starter.message.support.pojo.MessageSendRequest;
+import com.chua.starter.message.support.pojo.SysMessageStationItem;
 import com.chua.starter.message.support.pojo.TemplatePreviewRequest;
 import com.chua.starter.message.support.pojo.TemplatePreviewResponse;
 import com.chua.starter.message.support.service.SysMessageService;
@@ -281,6 +282,49 @@ public class SysMessageController {
                                                       @RequestParam(value = "page", defaultValue = "1") long page,
                                                       @RequestParam(value = "pageSize", defaultValue = "10") long pageSize) {
         return PageResultUtils.ok(sysMessageService.pageForLog(log, page, pageSize));
+    }
+
+    /**
+     * 当前用户站内消息分页查询
+     * <p>
+     * 返回当前登录用户接收的站内消息（渠道 station），按发送时间倒序分页。
+     * </p>
+     *
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @return 分页结果
+     */
+    @Operation(summary = "当前用户站内消息分页查询")
+    @GetMapping("/sys-message/page")
+    public ReturnPageResult<SysMessageStationItem> pageForStationMessage(@RequestParam(value = "page", defaultValue = "1") long page,
+                                                                         @RequestParam(value = "pageSize", defaultValue = "20") long pageSize) {
+        return PageResultUtils.ok(sysMessageService.pageForStationMessage(page, pageSize));
+    }
+
+    /**
+     * 当前用户站内消息未读数
+     *
+     * @return 未读数
+     */
+    @Operation(summary = "当前用户站内消息未读数")
+    @GetMapping("/sys-message/unread-count")
+    public ReturnResult<Long> countStationMessageUnread() {
+        return sysMessageService.countStationMessageUnread();
+    }
+
+    /**
+     * 当前用户站内消息标记已读
+     * <p>
+     * 将当前用户所有未读站内消息标记为已读；传 lastId 时仅标记该游标及之前的消息。
+     * </p>
+     *
+     * @param lastId 已读游标（消息ID），可空
+     * @return 是否已更新
+     */
+    @Operation(summary = "当前用户站内消息标记已读")
+    @PutMapping("/sys-message/read")
+    public ReturnResult<Boolean> markStationMessageRead(@RequestParam(required = false) Integer lastId) {
+        return sysMessageService.markStationMessageRead(lastId);
     }
 
     /**

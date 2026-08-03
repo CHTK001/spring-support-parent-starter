@@ -1,0 +1,241 @@
+package com.chua.starter.eduai.dimension.service;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.starter.common.support.exception.BusinessException;
+import com.chua.starter.eduai.dimension.entity.*;
+import com.chua.starter.eduai.dimension.mapper.*;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import java.util.List;
+
+/**
+ * 维度管理服务。
+ *
+ * <p>统一管理学段 (PRIMARY/JUNIOR/SENIOR/UNIVERSITY)、学科、年级、班级、学生、教师
+ * 5 个维度的 CRUD。其中：</p>
+ * <ul>
+ *   <li>学科 / 班级 / 学生 / 教师 — 本地独立管理（教育域口径不一致）</li>
+ *   <li>学生 / 教师 — 通过 {@code studentUserId} / {@code teacherUserId} 关联
+ *       {@code spring-support-common-starter} 的用户体系（避免重复存储）</li>
+ *   <li>学段 / 年级 — 由内置枚举 + edu_grade 表组合（仅做查询）</li>
+ * </ul>
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class EduDimensionService {
+
+    private final EduSubjectMapper subjectMapper;
+    private final EduGradeMapper gradeMapper;
+    private final EduClassMapper classMapper;
+    private final EduStudentMapper studentMapper;
+    private final EduTeacherMapper teacherMapper;
+
+    // ==================== 学科 ====================
+
+    public List<EduSubject> listSubjects(String gradeLevel) {
+        LambdaQueryWrapper<EduSubject> wrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(gradeLevel)) {
+            wrapper.like(EduSubject::getSubjectGradeLevels, gradeLevel);
+        }
+        wrapper.eq(EduSubject::getSubjectStatus, 1)
+                .orderByAsc(EduSubject::getSubjectSortOrder);
+        return subjectMapper.selectList(wrapper);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Long saveSubject(EduSubject entity) {
+        if (!StringUtils.hasText(entity.getSubjectCode()) || !StringUtils.hasText(entity.getSubjectName())) {
+            throw new BusinessException("学科编码与名称必填");
+        }
+        if (entity.getSubjectId() != null && entity.getSubjectId() > 0) {
+            subjectMapper.updateById(entity);
+            return entity.getSubjectId();
+        }
+        if (entity.getSubjectStatus() == null) {
+            entity.setSubjectStatus(1);
+        }
+        if (entity.getSubjectSortOrder() == null) {
+            entity.setSubjectSortOrder(0);
+        }
+        subjectMapper.insert(entity);
+        log.info("[EduAi] 新增学科: {} ({})", entity.getSubjectName(), entity.getSubjectCode());
+        return entity.getSubjectId();
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteSubject(Long id) {
+        if (id == null) return false;
+        int rows = subjectMapper.deleteById(id);
+        log.info("[EduAi] 删除学科: id={}, rows={}", id, rows);
+        return rows > 0;
+    }
+
+    // ==================== 年级 ====================
+
+    public List<EduGrade> listGrades(String gradeLevel) {
+        LambdaQueryWrapper<EduGrade> wrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(gradeLevel)) {
+            wrapper.eq(EduGrade::getGradeLevel, gradeLevel);
+        }
+        wrapper.orderByAsc(EduGrade::getGradeOrder);
+        return gradeMapper.selectList(wrapper);
+    }
+
+    // ==================== 班级 ====================
+
+    public List<EduClass> listClasses(String gradeLevel, Long teacherId) {
+        LambdaQueryWrapper<EduClass> wrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(gradeLevel)) {
+            wrapper.eq(EduClass::getClassGradeLevel, gradeLevel);
+        }
+        if (teacherId != null) {
+            wrapper.eq(EduClass::getClassTeacherId, teacherId);
+        }
+        wrapper.eq(EduClass::getClassStatus, 1)
+                .orderByAsc(EduClass::getClassId);
+        return classMapper.selectList(wrapper);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Long saveClass(EduClass entity) {
+        if (!StringUtils.hasText(entity.getClassCode()) || !StringUtils.hasText(entity.getClassName())) {
+            throw new BusinessException("班级编码与名称必填");
+        }
+        if (entity.getClassId() != null && entity.getClassId() > 0) {
+            classMapper.updateById(entity);
+            return entity.getClassId();
+        }
+        if (entity.getClassStatus() == null) {
+            entity.setClassStatus(1);
+        }
+        classMapper.insert(entity);
+        log.info("[EduAi] 新增班级: {} ({})", entity.getClassName(), entity.getClassCode());
+        return entity.getClassId();
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteClass(Long id) {
+        if (id == null) return false;
+        int rows = classMapper.deleteById(id);
+        log.info("[EduAi] 删除班级: id={}, rows={}", id, rows);
+        return rows > 0;
+    }
+
+    // ==================== 学生 ====================
+
+    public List<EduStudent> listStudents(Long classId, String gradeLevel, String grade) {
+        LambdaQueryWrapper<EduStudent> wrapper = new LambdaQueryWrapper<>();
+        if (classId != null) wrapper.eq(EduStudent::getStudentClassId, classId);
+        if (StringUtils.hasText(gradeLevel)) wrapper.eq(EduStudent::getStudentGradeLevel, gradeLevel);
+        if (StringUtils.hasText(grade)) wrapper.eq(EduStudent::getStudentGrade, grade);
+        wrapper.eq(EduStudent::getStudentStatus, 1)
+                .orderByAsc(EduStudent::getStudentId);
+        return studentMapper.selectList(wrapper);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Long saveStudent(EduStudent entity) {
+        if (!StringUtils.hasText(entity.getStudentNo())) {
+            throw new BusinessException("学号必填");
+        }
+        if (entity.getStudentId() != null && entity.getStudentId() > 0) {
+            studentMapper.updateById(entity);
+            return entity.getStudentId();
+        }
+        if (entity.getStudentStatus() == null) {
+            entity.setStudentStatus(1);
+        }
+        studentMapper.insert(entity);
+        log.info("[EduAi] 新增学生: {} ({})", entity.getStudentName(), entity.getStudentNo());
+        return entity.getStudentId();
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteStudent(Long id) {
+        if (id == null) return false;
+        return studentMapper.deleteById(id) > 0;
+    }
+
+    // ==================== 教师 ====================
+
+    public List<EduTeacher> listTeachers(String subjectCode) {
+        LambdaQueryWrapper<EduTeacher> wrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.hasText(subjectCode)) {
+            wrapper.eq(EduTeacher::getTeacherSubjectCode, subjectCode);
+        }
+        wrapper.eq(EduTeacher::getTeacherStatus, 1)
+                .orderByAsc(EduTeacher::getTeacherId);
+        return teacherMapper.selectList(wrapper);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Long saveTeacher(EduTeacher entity) {
+        if (!StringUtils.hasText(entity.getTeacherNo())) {
+            throw new BusinessException("工号必填");
+        }
+        if (entity.getTeacherId() != null && entity.getTeacherId() > 0) {
+            teacherMapper.updateById(entity);
+            return entity.getTeacherId();
+        }
+        if (entity.getTeacherStatus() == null) {
+            entity.setTeacherStatus(1);
+        }
+        teacherMapper.insert(entity);
+        log.info("[EduAi] 新增教师: {} ({})", entity.getTeacherName(), entity.getTeacherNo());
+        return entity.getTeacherId();
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteTeacher(Long id) {
+        if (id == null) return false;
+        return teacherMapper.deleteById(id) > 0;
+    }
+
+    /**
+     * 全量字典下拉：返回前端需要的 (学段枚举, 学科, 年级) 三元组。
+     * 用于考试/试卷表单的级联下拉。
+     */
+    public DimensionDropdown getDropdown() {
+        DimensionDropdown dropdown = new DimensionDropdown();
+        dropdown.setGradeLevels(List.of(
+                new EnumOption("PRIMARY", "小学"),
+                new EnumOption("JUNIOR", "初中"),
+                new EnumOption("SENIOR", "高中"),
+                new EnumOption("UNIVERSITY", "大学")
+        ));
+        dropdown.setSubjects(listSubjects(null));
+        dropdown.setGrades(listGrades(null));
+        return dropdown;
+    }
+
+    public static class DimensionDropdown {
+        private List<EnumOption> gradeLevels;
+        private List<EduSubject> subjects;
+        private List<EduGrade> grades;
+        public List<EnumOption> getGradeLevels() { return gradeLevels; }
+        public void setGradeLevels(List<EnumOption> gradeLevels) { this.gradeLevels = gradeLevels; }
+        public List<EduSubject> getSubjects() { return subjects; }
+        public void setSubjects(List<EduSubject> subjects) { this.subjects = subjects; }
+        public List<EduGrade> getGrades() { return grades; }
+        public void setGrades(List<EduGrade> grades) { this.grades = grades; }
+    }
+
+    public static class EnumOption {
+        private String value;
+        private String label;
+        public EnumOption() {}
+        public EnumOption(String value, String label) { this.value = value; this.label = label; }
+        public String getValue() { return value; }
+        public void setValue(String value) { this.value = value; }
+        public String getLabel() { return label; }
+        public void setLabel(String label) { this.label = label; }
+    }
+}

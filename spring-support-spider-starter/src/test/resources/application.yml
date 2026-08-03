@@ -10,9 +10,9 @@ spring:
   application:
     name: vue-xx-spider-xx
   datasource:
-    url: jdbc:mysql://172.16.0.40:3306/spider?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4&allowPublicKeyRetrieval=true
-    username: spider
-    password: spider123
+    url: jdbc:mysql://172.16.0.40:3306/spider?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8&useUnicode=true&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+    username: root
+    password: "root@"
     driver-class-name: com.mysql.cj.jdbc.Driver
   sql:
     init:
