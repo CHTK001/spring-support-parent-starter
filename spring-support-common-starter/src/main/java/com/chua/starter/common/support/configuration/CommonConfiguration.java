@@ -1,8 +1,5 @@
 package com.chua.starter.common.support.configuration;
 
-import com.chua.starter.common.support.objects.ConfigureObjectContext;
-import com.chua.starter.common.support.objects.DefaultConfigureObjectContext;
-import com.chua.starter.common.support.objects.ObjectContextSetting;
 import com.chua.starter.common.support.actuator.ActuatorProperties;
 import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.common.support.properties.*;
@@ -76,24 +73,6 @@ public class CommonConfiguration {
         }
         return new Object();
     }
-
-    /**
-     * 创建对象上下文配置实例。
-     * 当容器中没有提供ConfigureObjectContext实例时，使用此实现。
-     *
-     * @return {@link ConfigureObjectContext} 对象上下文配置实例
-     * @example <pre>
-     * // 使用示例
-     * &#64;Autowired
-     * private ConfigureObjectContext configureObjectContext;
-     * </pre>
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public ConfigureObjectContext configureObjectContext() {
-        return new DefaultConfigureObjectContext(ObjectContextSetting.builder().build());
-    }
-
 
     /**
      * 创建RestTemplate实例。

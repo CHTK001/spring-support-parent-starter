@@ -23,7 +23,7 @@ public class OsgiProperties {
     /**
      * Felix 框架持久化存储目录。
      */
-    private String storage = ".workbuddy/osgi-cache";
+    private String storage = "./osgi-cache";
 
     /**
      * Felix 框架初始启动级别。

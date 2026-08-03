@@ -79,11 +79,12 @@
             <artifactId>utils-support-common-starter</artifactId>
         </dependency>
 
-        <!-- 缓存功能模块 - 提供多级缓存、自定义缓存键与缓存常量 -->
-        <dependency>
+        <!-- 缓存功能模块 - 由消费方按需引入，避免反向依赖形成循环 -->
+        <!-- 如需缓存支持，请直接依赖 spring-support-cache-starter -->
+        <!--<dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-cache-starter</artifactId>
-        </dependency>
+        </dependency>-->
 
         <!-- Jakarta Servlet API - 提供 Servlet 相关接口 -->
         <dependency>
