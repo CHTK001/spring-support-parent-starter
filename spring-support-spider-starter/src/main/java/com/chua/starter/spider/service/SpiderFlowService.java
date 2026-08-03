@@ -90,6 +90,23 @@ public class SpiderFlowService {
         if (StringUtils.isBlank(flow.getFlowCode())) {
             throw new IllegalArgumentException("flowCode 不能为空");
         }
+
+        // 同步填充 flow_graph_json（前端 RelationGraph 完整图 JSON，供画布回填）
+        try {
+            String graphJson = objectMapper.writeValueAsString(java.util.Map.of(
+                    "flowCode", flow.getFlowCode(),
+                    "flowName", flow.getFlowName() == null ? "" : flow.getFlowName(),
+                    "flowRemark", flow.getFlowRemark() == null ? "" : flow.getFlowRemark(),
+                    "flowStatus", flow.getFlowStatus() == null ? 1 : flow.getFlowStatus(),
+                    "nodes", aggregate.nodes() == null ? List.of() : aggregate.nodes(),
+                    "edges", aggregate.edges() == null ? List.of() : aggregate.edges()
+            ));
+            flow.setFlowGraphJson(graphJson);
+            flow.setFlowNodeCount(aggregate.nodes() == null ? 0 : aggregate.nodes().size());
+        } catch (Exception e) {
+            throw new IllegalStateException("序列化 graphJson 失败: " + e.getMessage(), e);
+        }
+
         SpiderFlow existed = findByCode(flow.getFlowCode());
         int newVersion = 1;
         if (existed == null) {

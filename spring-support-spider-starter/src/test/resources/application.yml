@@ -17,7 +17,7 @@ spring:
   sql:
     init:
       mode: always
-      schema-locations: classpath:db/spider-schema.sql
+      schema-locations: classpath:db/spider-schema.sql,classpath:db/V1.2__init_flow.sql
       continue-on-error: true
 
 mybatis-plus:

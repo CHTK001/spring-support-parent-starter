@@ -12,17 +12,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * AI 对话聊天控制器。
@@ -32,7 +29,7 @@ import java.util.concurrent.CompletableFuture;
  * @author CH
  */
 @Tag(name = "AI Chat Dialog Controller", description = "AI 对话聊天接口")
-@Component
+@RestController
 @RequiredArgsConstructor
 @Slf4j
 @ApiReturnFormatIgnore
@@ -102,8 +99,6 @@ public class AIChatController {
             @RequestBody(required = false) List<ChatMessage> messages,
             @RequestParam(required = false) List<MultipartFile> files) {
 
-        SseEmitter emitter = new SseEmitter(300_000L);
-
         // 保存用户消息到记录
         if (messages != null) {
             for (ChatMessage msg : messages) {
@@ -128,19 +123,6 @@ public class AIChatController {
         StringBuilder assistantReply = new StringBuilder();
         SseEmitter facadeEmitter = aiChatFacadeService.stream(request);
 
-        // 转发 facadeEmitter 的事件并捕获 AI 回复
-        CompletableFuture.runAsync(() -> {
-            try {
-                // 直接将 facade 的 emitter 管道转发给调用方
-                // 由于 SseEmitter 无法直接组合，这里用简单策略：
-                // 在 emitter 上发送一个启动信号，然后把 facadeEmitter 返回给客户端
-                emitter.send(SseEmitter.event().comment("chat-start"));
-            } catch (IOException e) {
-                emitter.completeWithError(e);
-            }
-        });
-
-        // 由于 Spring MVC 的限制，直接返回 facadeEmitter 更合理
         // 在 facadeEmitter 完成后保存 AI 回复
         facadeEmitter.onCompletion(() -> {
             if (assistantReply.length() > 0) {
