@@ -322,29 +322,38 @@ public class SpiderFlowService {
             List<SpiderFlowNode> nodes = new java.util.ArrayList<>();
             for (Map<String, Object> n : rawNodes.isEmpty() ? graphNodes : rawNodes) {
                 SpiderFlowNode node = new SpiderFlowNode();
-                node.setFlowNodeKey(asString(n.getOrDefault("id", n.get("key"))));
-                node.setFlowNodeType(asString(n.getOrDefault("type", "script")));
-                node.setFlowNodeName(asString(n.getOrDefault("name", n.get("text"))));
-                node.setFlowNodeX(asInt(n.get("x"), 0));
-                node.setFlowNodeY(asInt(n.get("y"), 0));
+                // 兼容两种序列化格式：RelationGraph(id/text/type/x/y/data) 与 实体(flowNodeKey/flowNodeName/...)
+                node.setFlowNodeKey(firstKey(n, "flowNodeKey", "id", "key"));
+                node.setFlowNodeType(firstKey(n, "flowNodeType", "type"));
+                if (node.getFlowNodeType() == null) {
+                    node.setFlowNodeType("script");
+                }
+                node.setFlowNodeName(firstKey(n, "flowNodeName", "name", "text"));
+                node.setFlowNodeX(firstInt(n, "flowNodeX", "x"));
+                node.setFlowNodeY(firstInt(n, "flowNodeY", "y"));
                 node.setFlowNodeStatus(1);
-                // config 字段
-                @SuppressWarnings("unchecked")
-                Map<String, Object> data = (Map<String, Object>) n.getOrDefault("data", Map.of());
-                node.setFlowNodeConfig(objectMapper.writeValueAsString(data));
+                // config 字段：优先取实体格式 flowNodeConfig（字符串 JSON），否则取 RelationGraph 的 data 对象
+                Object config = n.get("flowNodeConfig");
+                if (config != null) {
+                    node.setFlowNodeConfig(config.toString());
+                } else {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> data = (Map<String, Object>) n.getOrDefault("data", Map.of());
+                    node.setFlowNodeConfig(objectMapper.writeValueAsString(data));
+                }
                 nodes.add(node);
             }
 
             List<SpiderFlowEdge> edges = new java.util.ArrayList<>();
             for (Map<String, Object> e : rawEdges.isEmpty() ? graphEdges : rawEdges) {
                 SpiderFlowEdge edge = new SpiderFlowEdge();
-                edge.setFlowEdgeFrom(asString(e.getOrDefault("from", e.get("fromNode"))));
-                edge.setFlowEdgeTo(asString(e.getOrDefault("to", e.get("toNode"))));
-                edge.setFlowEdgeText(asString(e.get("text")));
-                edge.setFlowEdgePriority(asInt(e.get("priority"), 0));
-                edge.setFlowEdgeCondField(asString(e.get("condField")));
-                edge.setFlowEdgeCondOp(asString(e.get("condOp")));
-                edge.setFlowEdgeCondValue(asString(e.get("condValue")));
+                edge.setFlowEdgeFrom(firstKey(e, "flowEdgeFrom", "from", "fromNode"));
+                edge.setFlowEdgeTo(firstKey(e, "flowEdgeTo", "to", "toNode"));
+                edge.setFlowEdgeText(firstKey(e, "flowEdgeText", "text"));
+                edge.setFlowEdgePriority(firstInt(e, "flowEdgePriority", "priority"));
+                edge.setFlowEdgeCondField(firstKey(e, "flowEdgeCondField", "condField"));
+                edge.setFlowEdgeCondOp(firstKey(e, "flowEdgeCondOp", "condOp"));
+                edge.setFlowEdgeCondValue(firstKey(e, "flowEdgeCondValue", "condValue"));
                 edges.add(edge);
             }
 
@@ -405,6 +414,43 @@ public class SpiderFlowService {
         } catch (NumberFormatException ex) {
             return def;
         }
+    }
+
+    /**
+     * 从 Map 中按候选 key 依次取值，返回第一个非空值。
+     *
+     * @param map      数据源
+     * @param keyNames 候选 key（按优先级）
+     * @return 第一个非空字符串值
+     */
+    private String firstKey(Map<String, Object> map, String... keyNames) {
+        for (String key : keyNames) {
+            Object v = map.get(key);
+            if (v != null && !v.toString().isEmpty()) {
+                return v.toString();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 从 Map 中按候选 key 依次取值并转 int（带默认值）。
+     *
+     * @param map      数据源
+     * @param keyNames 候选 key（按优先级）
+     * @return 第一个可解析的 int 值，全部失败时返回默认值
+     */
+    private int firstInt(Map<String, Object> map, String... keyNames) {
+        for (String key : keyNames) {
+            Object v = map.get(key);
+            if (v != null) {
+                int parsed = asInt(v, Integer.MIN_VALUE);
+                if (parsed != Integer.MIN_VALUE) {
+                    return parsed;
+                }
+            }
+        }
+        return 0;
     }
 
     /**
