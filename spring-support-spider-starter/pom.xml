@@ -124,7 +124,15 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <mainClass>com.chua.starter.spider.SpiderTestApplication</mainClass>
-                </configuration>
+                
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>com.uber.nullaway</groupId>
+                                <artifactId>nullaway</artifactId>
+                                <version>${nullaway.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
+</configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

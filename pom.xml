@@ -241,6 +241,12 @@
         <!-- 构建控制属性 -->
         <skipTests>true</skipTests>  <!-- 默认跳过测试，可通过 mvn clean install -DskipTests=false 执行测试 -->
         <maven.source.skip>true</maven.source.skip>
+
+        <!-- 空安全注解与编译期检查版本(Java 25 兼容矩阵) -->
+        <jspecify.version>1.0.1</jspecify.version>
+        <error.prone.version>2.50.0</error.prone.version>
+        <nullaway.version>0.13.8</nullaway.version>
+        <nullaway.mode>WARN</nullaway.mode>
         
         <!-- Maven仓库配置 - 可通过profile或-D参数覆盖 -->
         <maven.repo.releases.id>maven-releases</maven.repo.releases.id>
@@ -257,6 +263,13 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>${lombok.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- JSpecify 空安全注解 (NullAway 推荐配套) -->
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+            <version>${jspecify.version}</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -1326,6 +1339,24 @@
                 <skipTests>true</skipTests>
                 <maven.javadoc.skip>true</maven.javadoc.skip>
                 <maven.source.skip>true</maven.source.skip>
+                <nullaway.mode>WARN</nullaway.mode>
+            </properties>
+        </profile>
+
+        <!-- 严格模式:NullAway 升级到 ERROR,任何 NPE 违规直接阻断构建。
+             用法: mvn clean install -Pnullaway-strict -->
+        <profile>
+            <id>nullaway-strict</id>
+            <properties>
+                <nullaway.mode>ERROR</nullaway.mode>
+            </properties>
+        </profile>
+        <!-- 关闭空安全检查:
+             用法: mvn clean install -Pnullaway-off -->
+        <profile>
+            <id>nullaway-off</id>
+            <properties>
+                <nullaway.mode>OFF</nullaway.mode>
             </properties>
         </profile>
         
@@ -1403,6 +1434,17 @@
             </releases>
             <snapshots>
                 <enabled>true</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>central</id>
+            <name>Maven Central</name>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
             </snapshots>
         </repository>
     </repositories>

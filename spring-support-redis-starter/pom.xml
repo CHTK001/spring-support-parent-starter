@@ -95,6 +95,13 @@
               <groupId>org.projectlombok</groupId>
               <artifactId>lombok</artifactId>
             </path>
+
+                            <path>
+                                <groupId>com.uber.nullaway</groupId>
+                                <artifactId>nullaway</artifactId>
+                                <version>${nullaway.version}</version>
+                            </path>
+
           </annotationProcessorPaths>
           <!-- 启用预览特性 - 已注释
                     <compilerArgs>enable-preview</compilerArgs>

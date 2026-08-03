@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
     Spring Support Swagger2 Starter - Swagger 2.x 兼容模块
 
@@ -58,6 +58,13 @@
               <groupId>org.projectlombok</groupId>
               <artifactId>lombok</artifactId>
             </path>
+
+                            <path>
+                                <groupId>com.uber.nullaway</groupId>
+                                <artifactId>nullaway</artifactId>
+                                <version>${nullaway.version}</version>
+                            </path>
+
           </annotationProcessorPaths>
         </configuration>
       </plugin>

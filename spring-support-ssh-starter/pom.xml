@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
     Spring Support SSH Starter - SSH服务端集成模块
 
@@ -95,6 +95,13 @@
               <artifactId>lombok</artifactId>
               <version>${lombok.version}</version>
             </path>
+
+                            <path>
+                                <groupId>com.uber.nullaway</groupId>
+                                <artifactId>nullaway</artifactId>
+                                <version>${nullaway.version}</version>
+                            </path>
+
           </annotationProcessorPaths>
         </configuration>
       </plugin>
