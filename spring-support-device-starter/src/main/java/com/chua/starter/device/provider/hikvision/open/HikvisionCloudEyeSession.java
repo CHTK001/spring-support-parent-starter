@@ -112,7 +112,11 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
             realParams.put("token", accessToken);
         }
         if (!PATH_LOGIN.equals(path)) {
-            realParams.put("sign", sign(realParams));
+            String sign = sign(realParams);
+            realParams.put("sign", sign);
+            if (debugEnabled()) {
+                log.info("[OpenAPI-DEBUG] 海康云眸 签名: {}", sign.length() > 12 ? sign.substring(0, 12) + "..." : sign);
+            }
         }
         return execute(method, path, realParams, null);
     }

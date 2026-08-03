@@ -97,7 +97,12 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
         }
         String fullPath = query.isEmpty() ? path : path + "?" + query;
         headers.put("x-ca-signature-headers", "x-ca-key,x-ca-timestamp,x-ca-nonce");
-        headers.put("x-ca-signature", artemisSign(method, fullPath, headers));
+        String sig = artemisSign(method, fullPath, headers);
+        headers.put("x-ca-signature", sig);
+        if (debugEnabled()) {
+            log.info("[OpenAPI-DEBUG] 海康安防 artemis 签名: path={}, sig={}",
+                    fullPath, sig.length() > 12 ? sig.substring(0, 12) + "..." : sig);
+        }
         return execute(method, fullPath, params, headers);
     }
 

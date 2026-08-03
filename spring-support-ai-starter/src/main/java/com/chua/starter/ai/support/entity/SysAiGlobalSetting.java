@@ -12,22 +12,22 @@ public class SysAiGlobalSetting {
     @TableId(type = IdType.AUTO)
     private Long sysAiGlobalSettingId;
 
-    @TableField("group_name")
+    @TableField("sys_ai_global_setting_group")
     private String sysAiGlobalSettingGroup;
 
-    @TableField("field_name")
+    @TableField("sys_ai_global_setting_field")
     private String sysAiGlobalSettingField;
 
-    @TableField("field_value")
+    @TableField("sys_ai_global_setting_value")
     private String sysAiGlobalSettingValue;
 
-    @TableField("value_type")
+    @TableField("sys_ai_global_setting_value_type")
     private String sysAiGlobalSettingValueType;
 
-    @TableField("description")
+    @TableField("sys_ai_global_setting_description")
     private String sysAiGlobalSettingDescription;
 
-    @TableField("sort")
+    @TableField("sys_ai_global_setting_sort")
     private Integer sysAiGlobalSettingSort;
 
     @TableField("status")

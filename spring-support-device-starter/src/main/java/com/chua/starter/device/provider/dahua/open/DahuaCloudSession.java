@@ -110,7 +110,12 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
         realParams.put("appKey", info.getAppKey());
         realParams.put("time", time);
         realParams.put("nonce", nonce);
-        realParams.put("sign", sign(time, nonce));
+        String sig = sign(time, nonce);
+        realParams.put("sign", sig);
+        if (debugEnabled()) {
+            log.info("[OpenAPI-DEBUG] 大华云睿 签名: time={}, nonce={}, sign={}",
+                    time, nonce, sig.length() > 12 ? sig.substring(0, 12) + "..." : sig);
+        }
         return execute(method, path, realParams, null);
     }
 

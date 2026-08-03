@@ -114,7 +114,12 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
         Map<String, Object> signParams = new LinkedHashMap<>(realParams);
         signParams.put("time", time);
         signParams.put("nonce", nonce);
-        signParams.put("sign", sign(signParams, "openAPI", time, nonce));
+        String sig = sign(signParams, "openAPI", time, nonce);
+        signParams.put("sign", sig);
+        if (debugEnabled()) {
+            log.info("[OpenAPI-DEBUG] 乐橙 签名: time={}, nonce={}, sign={}",
+                    time, nonce, sig.length() > 12 ? sig.substring(0, 12) + "..." : sig);
+        }
         return execute(method, path, realParams, null);
     }
 

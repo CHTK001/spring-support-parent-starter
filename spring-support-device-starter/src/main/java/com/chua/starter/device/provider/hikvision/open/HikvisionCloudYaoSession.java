@@ -122,7 +122,11 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
             realParams.put("accessToken", accessToken);
         }
         if (!PATH_TOKEN.equals(path)) {
-            realParams.put("sign", sign(realParams));
+            String sign = sign(realParams);
+            realParams.put("sign", sign);
+            if (debugEnabled()) {
+                log.info("[OpenAPI-DEBUG] 海康云耀 签名: {}", sign.length() > 12 ? sign.substring(0, 12) + "..." : sign);
+            }
         }
         return execute(method, path, realParams, null);
     }

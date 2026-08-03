@@ -58,6 +58,18 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     protected static final long DEFAULT_READ_TIMEOUT = 30_000L;
 
     /**
+     * 调试开关系统属性：{@code -Ddevice.openapi.debug=true} 开启，
+     * <p>开启后将打印每个 OpenAPI 请求的 URL、headers（脱敏）、请求体、响应码与响应体前 N 字节，</p>
+     * <p>便于本地/灰度联调时与厂商官方 OpenAPI 文档核对 endpoint、字段与签名。</p>
+     */
+    public static final String DEBUG_PROPERTY = "device.openapi.debug";
+
+    /**
+     * 响应体打印长度上限（字节）
+     */
+    private static final int RESPONSE_LOG_MAX_BYTES = 2048;
+
+    /**
      * 设备连接信息
      */
     protected final DeviceConnectInfo info;
@@ -139,6 +151,10 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
      */
     protected JsonNode execute(String method, String path, Map<String, Object> params,
                                Map<String, String> headers) {
+        boolean debug = debugEnabled();
+        if (debug) {
+            logRequest(method, path, headers, params);
+        }
         try {
             HttpClientBuilder builder = HttpClientFactory.of(baseUrl)
                     .path(path)
@@ -163,10 +179,94 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
                 response = builder.body(body).post();
             }
             String respBody = response.getBodyString();
+            if (debug) {
+                logResponse(method, path, response, respBody);
+            }
             return MAPPER.readTree(respBody == null ? "{}" : respBody);
         } catch (Exception e) {
             throw new IllegalStateException("OpenAPI HTTP 调用失败: " + method + " " + path + " -> " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * 调试开关是否启用
+     *
+     * @return true 启用
+     */
+    protected static boolean debugEnabled() {
+        return Boolean.parseBoolean(System.getProperty(DEBUG_PROPERTY, "false"));
+    }
+
+    /**
+     * 打印请求调试日志（脱敏 secret/appKey）
+     */
+    private void logRequest(String method, String path, Map<String, String> headers, Map<String, Object> params) {
+        log.info("[OpenAPI-DEBUG] -> {} {}{}", method, baseUrl, path);
+        if (headers != null && !headers.isEmpty()) {
+            log.info("[OpenAPI-DEBUG] -> headers: {}", maskHeaders(headers));
+        }
+        if (params != null && !params.isEmpty()) {
+            log.info("[OpenAPI-DEBUG] -> body: {}", maskParams(params));
+        }
+    }
+
+    /**
+     * 打印响应调试日志
+     */
+    private void logResponse(String method, String path, ClientResponse response, String respBody) {
+        log.info("[OpenAPI-DEBUG] <- {} {}{} status={}", method, baseUrl, path, response.getStatusCode());
+        if (respBody != null && !respBody.isEmpty()) {
+            String snippet = respBody.length() > RESPONSE_LOG_MAX_BYTES
+                    ? respBody.substring(0, RESPONSE_LOG_MAX_BYTES) + "...(truncated)"
+                    : respBody;
+            log.info("[OpenAPI-DEBUG] <- body: {}", snippet);
+        }
+    }
+
+    /**
+     * 脱敏请求头：将含敏感字段（secret、token、signature）的值替换为 {@code ****xxxx} 形式。
+     */
+    private static Map<String, String> maskHeaders(Map<String, String> headers) {
+        java.util.LinkedHashMap<String, String> masked = new java.util.LinkedHashMap<>();
+        headers.forEach((k, v) -> {
+            String lk = k == null ? "" : k.toLowerCase();
+            if (lk.contains("secret") || lk.contains("signature") || lk.contains("token")) {
+                masked.put(k, v == null ? "null" : maskTail(v));
+            } else {
+                masked.put(k, v);
+            }
+        });
+        return masked;
+    }
+
+    /**
+     * 脱敏参数：将 appSecret/appKey 等敏感字段值替换。
+     */
+    private static Map<String, Object> maskParams(Map<String, Object> params) {
+        java.util.LinkedHashMap<String, Object> masked = new java.util.LinkedHashMap<>();
+        params.forEach((k, v) -> {
+            String lk = k == null ? "" : k.toLowerCase();
+            if (lk.contains("secret")) {
+                masked.put(k, v == null ? "null" : maskTail(String.valueOf(v)));
+            } else {
+                masked.put(k, v);
+            }
+        });
+        return masked;
+    }
+
+    /**
+     * 保留值前 2 位 + 末 2 位，中间用 **** 替换。
+     */
+    private static String maskTail(String v) {
+        if (v == null) {
+            return "null";
+        }
+        int len = v.length();
+        if (len <= 6) {
+            return "****";
+        }
+        return v.substring(0, 2) + "****" + v.substring(len - 2);
     }
 
     @Override
