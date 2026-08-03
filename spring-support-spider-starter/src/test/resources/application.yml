@@ -4,11 +4,16 @@
 server:
   port: 19091
   servlet:
-    context-path: /
+    # 前端 httpConfig.baseUrl=/spider-api，加上 Controller 的 /spider/** 前缀即完整对接路径
+    context-path: /spider-api
 
 spring:
   application:
     name: vue-xx-spider-xx
+  autoconfigure:
+    # 测试环境不启用缓存；排除 cache-starter 的自动配置类（其方法签名依赖 spring-data-redis，
+    # 而 redis 依赖为 optional，不引入会导致类 introspection 崩溃）
+    exclude: com.chua.starter.common.support.cache.CacheConfiguration
   datasource:
     url: jdbc:mysql://172.16.0.40:3306/spider?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8&useUnicode=true&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
     username: root

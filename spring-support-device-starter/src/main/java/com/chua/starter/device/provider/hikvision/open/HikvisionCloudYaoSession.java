@@ -1,0 +1,231 @@
+package com.chua.starter.device.provider.hikvision.open;
+
+import com.chua.starter.device.provider.platform.AbstractOpenApiSession;
+import com.chua.starter.device.spi.model.DeviceConnectInfo;
+import com.fasterxml.jackson.databind.JsonNode;
+import lombok.extern.slf4j.Slf4j;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+/**
+ * 海康云耀（Hik-Connect / HiDDNS 外网云）OpenAPI 会话
+ * <p>对接海康消费级/中小项目云平台，纯 Java HTTP 全平台可用。</p>
+ *
+ * <h3>接入说明</h3>
+ * <ul>
+ *   <li>海康开放平台地址、AppKey/AppSecret、签名算法需按海康云耀 OpenAPI 文档配置</li>
+ *   <li>本类提供签名 + HTTP 调用的统一实现，具体 endpoint 与字段以官方文档为准</li>
+ * </ul>
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
+@Slf4j
+public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
+
+    /**
+     * 海康云耀默认 baseUrl（按官方文档配置）
+     */
+    private static final String DEFAULT_BASE_URL = "https://api.hik-cloud.com";
+
+    /**
+     * accessToken 接口路径
+     */
+    private static final String PATH_TOKEN = "/api/v1/oauth/token";
+
+    /**
+     * 获取视频直播地址接口
+     */
+    private static final String PATH_LIVE_ADDRESS = "/api/v1/video/live/address";
+
+    /**
+     * 云台控制接口
+     */
+    private static final String PATH_PTZ_CONTROL = "/api/v1/ptz/control";
+
+    /**
+     * 远程开关门接口
+     */
+    private static final String PATH_DOOR_CONTROL = "/api/v1/access/control";
+
+    /**
+     * HTTP 客户端
+     */
+    private final HttpClient httpClient;
+
+    /**
+     * 平台 baseUrl
+     */
+    private final String baseUrl;
+
+    /**
+     * 构造云耀会话
+     *
+     * @param info 设备连接信息
+     */
+    public HikvisionCloudYaoSession(DeviceConnectInfo info) {
+        super(info);
+        Object extra = info.getExtra() == null ? null : info.getExtra().get("baseUrl");
+        this.baseUrl = extra instanceof String s ? s : DEFAULT_BASE_URL;
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofMillis(DEFAULT_CONNECT_TIMEOUT))
+                .build();
+        login();
+    }
+
+    /**
+     * 登录换取 accessToken（按海康云耀文档约定的 OAuth 流程）
+     */
+    private void login() {
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("appKey", info.getAppKey());
+        params.put("appSecret", info.getAppSecret());
+        try {
+            JsonNode resp = doRequest("POST", PATH_TOKEN, params);
+            JsonNode data = assertOk(resp);
+            String token = data.path("accessToken").asText(null);
+            long expires = data.path("expiresIn").asLong(7200L);
+            if (token == null || token.isEmpty()) {
+                throw new IllegalStateException("海康云耀 accessToken 为空");
+            }
+            cacheToken(token, expires);
+            log.info("海康云耀登录成功: deviceSerial={}", info.getDeviceSerial());
+        } catch (Exception e) {
+            throw new IllegalStateException("海康云耀登录失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 海康云耀通用签名：按参数键排序后拼接 + appSecret，HMAC-SHA256。
+     *
+     * @param params 参数
+     * @return 签名值
+     */
+    private String sign(Map<String, Object> params) {
+        String sorted = params.entrySet().stream()
+                .filter(e -> e.getValue() != null)
+                .sorted(Map.Entry.comparingByKey())
+                .map(e -> e.getKey() + "=" + e.getValue())
+                .collect(Collectors.joining("&"));
+        try {
+            javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+            mac.init(new javax.crypto.spec.SecretKeySpec(utf8(info.getAppSecret()), "HmacSHA256"));
+            byte[] digest = mac.doFinal(utf8(sorted));
+            StringBuilder sb = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            throw new IllegalStateException("海康云耀签名失败", e);
+        }
+    }
+
+    @Override
+    protected JsonNode doRequest(String method, String path, Map<String, Object> params) {
+        if (!tokenValid() && !PATH_TOKEN.equals(path)) {
+            login();
+        }
+        Map<String, Object> realParams = new LinkedHashMap<>();
+        if (params != null) {
+            realParams.putAll(params);
+        }
+        if (accessToken != null) {
+            realParams.put("accessToken", accessToken);
+        }
+        if (!PATH_TOKEN.equals(path)) {
+            realParams.put("sign", sign(realParams));
+        }
+        try {
+            HttpRequest.Builder builder;
+            if ("GET".equalsIgnoreCase(method)) {
+                String query = realParams.entrySet().stream()
+                        .filter(e -> e.getValue() != null)
+                        .map(e -> urlEncode(e.getKey()) + "=" + urlEncode(String.valueOf(e.getValue())))
+                        .collect(Collectors.joining("&"));
+                builder = HttpRequest.newBuilder(URI.create(baseUrl + path + "?" + query))
+                        .timeout(Duration.ofMillis(DEFAULT_READ_TIMEOUT))
+                        .GET();
+            } else {
+                String body = MAPPER.writeValueAsString(realParams);
+                builder = HttpRequest.newBuilder(URI.create(baseUrl + path))
+                        .timeout(Duration.ofMillis(DEFAULT_READ_TIMEOUT))
+                        .header("Content-Type", "application/json;charset=UTF-8")
+                        .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8));
+            }
+            HttpResponse<String> resp = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            return MAPPER.readTree(resp.body());
+        } catch (Exception e) {
+            throw new IllegalStateException("海康云耀 HTTP 调用失败: " + method + " " + path + " -> " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 获取视频直播地址（HLS）
+     *
+     * @param channel  通道号
+     * @param protocol 协议类型
+     * @return 视频地址数据
+     */
+    public JsonNode getLiveAddress(int channel, String protocol) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("deviceSerial", info.getDeviceSerial());
+        params.put("channel", channel);
+        params.put("protocol", protocol);
+        return assertOk(post(PATH_LIVE_ADDRESS, params));
+    }
+
+    @Override
+    public void ptzControl(com.chua.starter.device.spi.model.PtzCommand cmd, double speed) {
+        if (cmd == com.chua.starter.device.spi.model.PtzCommand.STOP) {
+            return;
+        }
+        Map<String, Object> params = new HashMap<>();
+        params.put("deviceSerial", info.getDeviceSerial());
+        params.put("channel", 1);
+        params.put("direction", mapDirection(cmd));
+        params.put("speed", Math.max(1, Math.min(255, Math.round(speed * 255))));
+        post(PATH_PTZ_CONTROL, params);
+    }
+
+    /**
+     * 海康云耀云台方向码（按官方文档约定）
+     */
+    private int mapDirection(com.chua.starter.device.spi.model.PtzCommand cmd) {
+        switch (cmd) {
+            case UP: return 0;
+            case DOWN: return 1;
+            case LEFT: return 2;
+            case RIGHT: return 3;
+            case ZOOM_IN: return 4;
+            case ZOOM_OUT: return 5;
+            case FOCUS_IN: return 6;
+            case FOCUS_OUT: return 7;
+            case IRIS_IN: return 8;
+            case IRIS_OUT: return 9;
+            default: return -1;
+        }
+    }
+
+    @Override
+    public void remoteUnlock(int doorId) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("deviceSerial", info.getDeviceSerial());
+        params.put("doorId", doorId);
+        params.put("command", 1);
+        post(PATH_DOOR_CONTROL, params);
+    }
+
+    private static String urlEncode(String s) {
+        return java.net.URLEncoder.encode(s, StandardCharsets.UTF_8);
+    }
+}

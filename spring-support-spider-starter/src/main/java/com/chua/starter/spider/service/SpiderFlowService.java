@@ -1,6 +1,7 @@
 package com.chua.starter.spider.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.spider.entity.SpiderFlow;
 import com.chua.starter.spider.entity.SpiderFlowEdge;
@@ -49,17 +50,17 @@ public class SpiderFlowService {
      * @param pageNo   页码
      * @param pageSize 每页大小
      * @param keyword  名称模糊查询
-     * @return 流程列表（按更新时间倒序）
+     * @return 流程分页结果（按更新时间倒序）
      */
-    public List<SpiderFlow> pageFlows(int pageNo, int pageSize, String keyword) {
+    public Page<SpiderFlow> pageFlows(int pageNo, int pageSize, String keyword) {
+        Page<SpiderFlow> page = new Page<>(pageNo, pageSize);
         LambdaQueryWrapper<SpiderFlow> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.isNotBlank(keyword)) {
-            wrapper.like(SpiderFlow::getFlowName, keyword).or().like(SpiderFlow::getFlowCode, keyword);
+            wrapper.and(w -> w.like(SpiderFlow::getFlowName, keyword)
+                    .or().like(SpiderFlow::getFlowCode, keyword));
         }
         wrapper.orderByDesc(SpiderFlow::getUpdateTime);
-        int offset = Math.max(0, (pageNo - 1) * pageSize);
-        wrapper.last("LIMIT " + offset + ", " + pageSize);
-        return flowMapper.selectList(wrapper);
+        return flowMapper.selectPage(page, wrapper);
     }
 
     /**

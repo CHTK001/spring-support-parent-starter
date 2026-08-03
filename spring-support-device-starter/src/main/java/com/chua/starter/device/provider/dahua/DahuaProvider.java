@@ -1,5 +1,7 @@
 package com.chua.starter.device.provider.dahua;
 
+import com.chua.starter.device.provider.dahua.open.DahuaCloudSession;
+import com.chua.starter.device.provider.dahua.open.DahuaLeChangeSession;
 import com.chua.starter.device.provider.dahua.sdk.DahuaRealSession;
 import com.chua.starter.device.spi.DeviceProvider;
 import com.chua.starter.device.spi.DeviceSession;
@@ -8,10 +10,14 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * 大华设备 Provider
- * <p>支持 SDK 与云睿平台两种接入方式。</p>
+ * <p>支持两大平台对接 + 局域网 SDK 直连：</p>
+ * <ul>
+ *   <li>大华云睿（{@code platformType=dahua-cloud}）—— 纯 Java HTTP OpenAPI</li>
+ *   <li>大华乐橙（{@code platformType=lechange}）—— 纯 Java HTTP OpenAPI</li>
+ *   <li>局域网 SDK 直连（{@code authType=SDK}）—— 大华 NetSDK JNA（需厂商提供 dll/so）</li>
+ * </ul>
  *
- * <p>SDK 直连模式优先加载 dhnetsdk 动态库进行真实对接，</p>
- * <p>SDK 不可用或连接失败时回退到模拟会话，保证框架可独立运行。</p>
+ * <p>SDK 直连模式若 SDK 不可用则自动回退到模拟会话。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -25,9 +31,24 @@ public class DahuaProvider implements DeviceProvider {
     private static final String VENDOR = "dahua";
 
     /**
-     * SDK 直连模式
+     * 局域网 SDK 直连
      */
     private static final String AUTH_SDK = "SDK";
+
+    /**
+     * 平台接入
+     */
+    private static final String AUTH_PLATFORM = "PLATFORM";
+
+    /**
+     * 大华云睿
+     */
+    private static final String PLATFORM_DAHUA_CLOUD = "dahua-cloud";
+
+    /**
+     * 大华乐橙
+     */
+    private static final String PLATFORM_LECHANGE = "lechange";
 
     @Override
     public String getVendor() {
@@ -41,17 +62,35 @@ public class DahuaProvider implements DeviceProvider {
 
     @Override
     public DeviceSession connect(DeviceConnectInfo info) {
-        log.info("大华设备连接: authType={}, ip={}", info.getAuthType(), info.getIp());
+        log.info("大华设备连接: authType={}, platformType={}, deviceSerial={}",
+                info.getAuthType(), info.getPlatformType(), info.getDeviceSerial());
+
+        if (AUTH_PLATFORM.equalsIgnoreCase(info.getAuthType())) {
+            String platform = info.getPlatformType();
+            if (PLATFORM_DAHUA_CLOUD.equalsIgnoreCase(platform)) {
+                try {
+                    return new DahuaCloudSession(info);
+                } catch (Exception e) {
+                    log.warn("大华云睿连接失败，回退模拟会话: {}", e.getMessage());
+                }
+            } else if (PLATFORM_LECHANGE.equalsIgnoreCase(platform)) {
+                try {
+                    return new DahuaLeChangeSession(info);
+                } catch (Exception e) {
+                    log.warn("大华乐橙连接失败，回退模拟会话: {}", e.getMessage());
+                }
+            } else {
+                log.warn("大华平台类型未识别: {}，回退模拟会话", platform);
+            }
+            return new DahuaSession(info);
+        }
+
         if (AUTH_SDK.equalsIgnoreCase(info.getAuthType()) || info.getAuthType() == null) {
             try {
-                DahuaRealSession session = new DahuaRealSession(info);
-                log.info("大华设备 SDK 真实连接成功: ip={}", info.getIp());
-                return session;
+                return new DahuaRealSession(info);
             } catch (Exception e) {
-                log.warn("大华 SDK 真实连接失败，回退模拟会话: {}", e.getMessage());
+                log.warn("大华 SDK 直连失败，回退模拟会话: {}", e.getMessage());
             }
-        } else {
-            log.info("大华平台接入（{}）暂以模拟会话处理", info.getAuthType());
         }
         return new DahuaSession(info);
     }

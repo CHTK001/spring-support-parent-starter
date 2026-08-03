@@ -1,6 +1,7 @@
 package com.chua.starter.spider.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.spider.entity.SpiderFlow;
 import com.chua.starter.spider.entity.SpiderFlowHistory;
@@ -69,7 +70,7 @@ public class SpiderFlowController {
      */
     @Operation(summary = "分页查询流程列表")
     @GetMapping("/page")
-    public ReturnResult<List<SpiderFlow>> page(
+    public ReturnResult<Page<SpiderFlow>> page(
             @RequestParam(defaultValue = "1") int pageNo,
             @RequestParam(defaultValue = "20") int pageSize,
             @RequestParam(required = false) String keyword) {
