@@ -64,9 +64,9 @@ public class DahuaProvider implements DeviceProvider {
     private final boolean fallbackMock;
 
     public DahuaProvider(Environment environment) {
-        this.fallbackMock = environment.getProperty("device.provider.fallback-mock", boolean.class, false);
+        this.fallbackMock = environment.getProperty("plugin.device.provider.fallback-mock", boolean.class, false);
         if (fallbackMock) {
-            log.warn("[DahuaProvider] fallback-mock=true，连接失败时将回退模拟会话（仅限调试）");
+            log.warn("[DahuaProvider] plugin.device.provider.fallback-mock=true，连接失败时将回退模拟会话（仅限调试）");
         }
     }
 

@@ -62,7 +62,7 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
      * <p>开启后将打印每个 OpenAPI 请求的 URL、headers（脱敏）、请求体、响应码与响应体前 N 字节，</p>
      * <p>便于本地/灰度联调时与厂商官方 OpenAPI 文档核对 endpoint、字段与签名。</p>
      */
-    public static final String DEBUG_PROPERTY = "device.openapi.debug";
+    public static final String DEBUG_PROPERTY = "plugin.device.openapi.debug";
 
     /**
      * 响应体打印长度上限（字节）

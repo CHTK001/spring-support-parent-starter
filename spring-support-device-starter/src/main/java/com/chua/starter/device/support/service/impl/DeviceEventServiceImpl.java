@@ -69,7 +69,7 @@ public class DeviceEventServiceImpl implements DeviceEventService {
     }
 
     @Override
-    @Scheduled(fixedDelayString = "${device.event.poll-interval:30000}")
+    @Scheduled(fixedDelayString = "${plugin.device.event.poll-interval:30000}")
     public void pollAllDevices() {
         sessionManager.getAllSessions().forEach((deviceId, session) -> {
             if (session.isOnline()) {
