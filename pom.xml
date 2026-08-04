@@ -1339,19 +1339,19 @@
                 <skipTests>true</skipTests>
                 <maven.javadoc.skip>true</maven.javadoc.skip>
                 <maven.source.skip>true</maven.source.skip>
-                <nullaway.mode>WARN</nullaway.mode>
-            </properties>
-        </profile>
-
-        <!-- 严格模式:NullAway 升级到 ERROR,任何 NPE 违规直接阻断构建。
-             用法: mvn clean install -Pnullaway-strict -->
-        <profile>
-            <id>nullaway-strict</id>
-            <properties>
                 <nullaway.mode>ERROR</nullaway.mode>
             </properties>
         </profile>
-        <!-- 关闭空安全检查:
+
+        <!-- 警告模式:NullAway 降级为 WARN,只报警告不阻断:
+             用法: mvn clean install -Pnullaway-warn -->
+        <profile>
+            <id>nullaway-warn</id>
+            <properties>
+                <nullaway.mode>WARN</nullaway.mode>
+            </properties>
+        </profile>
+        <!-- 关闭空安全检查,适合离线或临时跳过:
              用法: mvn clean install -Pnullaway-off -->
         <profile>
             <id>nullaway-off</id>
