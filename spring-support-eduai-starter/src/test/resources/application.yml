@@ -3,7 +3,7 @@
 # 队列使用默认 chronicle-queue（本地磁盘，无需 Redis）。
 # =====================================================================
 server:
-  port: 19091
+  port: 19095
   servlet:
     context-path: /
 
@@ -39,6 +39,8 @@ plugin:
       poll-interval-ms: 2000
     paper:
       max-questions: 30
+  queue:
+    type: local
 
 logging:
   level:

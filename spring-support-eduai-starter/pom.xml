@@ -41,10 +41,29 @@
             <artifactId>spring-support-mybatis-starter</artifactId>
         </dependency>
 
+        <!-- 数据源（提供 MaterializedSqlDataSourceRouter 等动态路由） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-datasource-starter</artifactId>
+        </dependency>
+
         <!-- Redis 缓存 -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-redis-starter</artifactId>
+        </dependency>
+
+        <!-- Spring Data Redis（spring-data-redis-serializer 等） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!-- Redisson（spring-support-redis-starter 内部依赖，未正确导入时手动补齐） -->
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson-spring-boot-starter</artifactId>
+            <version>3.36.0</version>
         </dependency>
 
         <!-- 消息队列（异步阅卷任务） -->

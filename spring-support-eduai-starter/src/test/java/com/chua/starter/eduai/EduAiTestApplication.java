@@ -9,16 +9,18 @@ import org.springframework.context.ConfigurableApplicationContext;
 
 /**
  * 教育 AI 后端测试启动类。
- * <p>仅用于本地自检，启动后访问 {@code http://localhost:19091/v2/edu/question/page?pageNum=1&pageSize=20} 验证。</p>
+ *
+ * <p>使用 {@code @SpringBootApplication(scanBasePackageClasses=...)} 时，
+ * 当前模块的 {@code AutoConfiguration.imports} 不会自动注册，因此这里显式
+ * {@code @Import(EduAiAutoConfiguration.class)} 引入 EduAi 模块的自动装配
+ * （包含 ComponentScan/MapperScan/ServiceInfoContributor 等）。</p>
  *
  * @author CH
  * @since 4.0.0.42
  */
 @Slf4j
-@SpringBootApplication(scanBasePackageClasses = {
-        EduQuestionController.class,
-        EduAiAutoConfiguration.class
-})
+@SpringBootApplication(scanBasePackageClasses = EduQuestionController.class)
+@org.springframework.context.annotation.Import(EduAiAutoConfiguration.class)
 public class EduAiTestApplication {
 
     /**
