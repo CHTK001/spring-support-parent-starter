@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.service.impl;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatResponse;
 import com.chua.common.support.ai.chat.ChatSyncResponse;
+import com.chua.common.support.ai.chat.ModelDefinition;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
@@ -92,6 +93,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     public Map<String, Object> call(AiChatRequest request) {
         // 从 request.parameters 提取分组 ID（由 Controller 注入）
         Integer groupId = extractGroupId(request);
+        // 深度思考 / 智能搜索开关并入 parameters，供底层 ChatClient 消费
+        injectFeatureFlags(request);
         ChatClient client = resolveChatClient(groupId, request.getModel());
 
         String prompt = buildPrompt(request);
@@ -135,6 +138,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     @Override
     public SseEmitter stream(AiChatRequest request) {
         Integer groupId = extractGroupId(request);
+        // 深度思考 / 智能搜索开关并入 parameters，供底层 ChatClient 消费
+        injectFeatureFlags(request);
         ChatClient client = resolveChatClient(groupId, request.getModel());
         String prompt = buildPrompt(request);
 
@@ -239,6 +244,43 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public List<ModelDefinition> modelDefinitions(Integer groupId) {
+        List<ModelDefinition> result = new ArrayList<>();
+        // 从全局（聚合）ChatClient 获取带能力的模型定义列表
+        ChatClient global = chatClientRegistry.getDefault();
+        if (global == null) {
+            return result;
+        }
+        try {
+            List<ModelDefinition> definitions = global.models();
+            if (definitions == null) {
+                return result;
+            }
+            // 有分组时仅保留该分组可访问的模型
+            Set<String> allowed = null;
+            if (groupId != null) {
+                List<Integer> groupModelIds = sysAiGroupService.getGroupModelIds(groupId);
+                if (groupModelIds.isEmpty()) {
+                    return Collections.emptyList();
+                }
+                allowed = chatClientRegistry.getModels();
+            }
+            for (ModelDefinition def : definitions) {
+                if (def == null || StringUtils.isBlank(def.getId())) {
+                    continue;
+                }
+                if (allowed != null && !allowed.contains(def.getId().toLowerCase())) {
+                    continue;
+                }
+                result.add(def);
+            }
+        } catch (Exception e) {
+            log.warn("[AiChatFacade] 模型定义列表获取失败: {}", e.getMessage());
+        }
+        return result;
+    }
+
     /**
      * 从 AiChatRequest 构建提示词字符串。
      * 优先使用 messages 格式，其次使用 prompt。
@@ -277,6 +319,27 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             return ((Number) gid).intValue();
         }
         return null;
+    }
+
+    /**
+     * 将 AiChatRequest 的深度思考 / 智能搜索开关并入 parameters，
+     * 供底层 ChatClient 在构建请求时读取并透传给大模型。
+     */
+    private void injectFeatureFlags(AiChatRequest request) {
+        if (request.getThink() == null && request.getSearch() == null) {
+            return;
+        }
+        Map<String, Object> parameters = request.getParameters();
+        if (parameters == null) {
+            parameters = new HashMap<>();
+            request.setParameters(parameters);
+        }
+        if (request.getThink() != null) {
+            parameters.put("think", request.getThink());
+        }
+        if (request.getSearch() != null) {
+            parameters.put("search", request.getSearch());
+        }
     }
 
     /**

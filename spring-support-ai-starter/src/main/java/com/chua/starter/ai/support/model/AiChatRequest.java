@@ -19,4 +19,12 @@ public class AiChatRequest {
     private Boolean stream;
     private String factory;
     private String provider;
+    /**
+     * 深度思考开关（由前端 ChatClient 透传，供支持该能力的模型开启推理）
+     */
+    private Boolean think;
+    /**
+     * 智能搜索开关（由前端 ChatClient 透传，供支持联网搜索的模型检索外部知识）
+     */
+    private Boolean search;
 }

@@ -6,6 +6,7 @@ import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.service.SysAiAppKeyService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+import com.chua.common.support.ai.chat.ModelDefinition;
 import com.chua.common.support.utils.StringUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -170,10 +171,26 @@ public class AiOpenaiController {
             ));
         }
         Integer groupId = resolveGroupId(servletRequest);
+        List<ModelDefinition> modelDefinitions = aiChatFacadeService.modelDefinitions(groupId);
+        if (!modelDefinitions.isEmpty()) {
+            List<Map<String, Object>> data = new ArrayList<>();
+            for (ModelDefinition def : modelDefinitions) {
+                data.add(Map.of(
+                        "id", def.getId(),
+                        "object", "model",
+                        "created", (int) (System.currentTimeMillis() / 1000),
+                        "owned_by", "system",
+                        "name", def.getName() != null ? def.getName() : def.getId(),
+                        "description", def.getDescription() != null ? def.getDescription() : "",
+                        "capabilities", def.getCapabilities() != null ? def.getCapabilities() : List.of()
+                ));
+            }
+            return ResponseEntity.ok(Map.of("object", "list", "data", data));
+        }
         List<String> modelIds = aiChatFacadeService.models(groupId);
         List<Map<String, Object>> data = new ArrayList<>();
         for (String id : modelIds) {
-            data.add(Map.of("id", id, "object", "model", "created", (int) (System.currentTimeMillis() / 1000), "owned_by", "system"));
+            data.add(Map.of("id", id, "object", "model", "created", (int) (System.currentTimeMillis() / 1000), "owned_by", "system", "name", id, "description", "", "capabilities", List.of()));
         }
         return ResponseEntity.ok(Map.of("object", "list", "data", data));
     }
@@ -437,6 +454,9 @@ public class AiOpenaiController {
             chatRequest.setParameters(new java.util.LinkedHashMap<>());
             chatRequest.getParameters().put("_groupId", groupId);
         }
+        // 深度思考 / 智能搜索开关透传
+        chatRequest.setThink(request.getThink());
+        chatRequest.setSearch(request.getSearch());
         if (request.getMessages() != null) {
             StringBuilder promptBuilder = new StringBuilder();
             for (OpenAiMessage msg : request.getMessages()) {
@@ -476,6 +496,14 @@ public class AiOpenaiController {
         private Double presencePenalty;
         private Map<String, Object> tools;
         private String toolChoice;
+        /**
+         * 深度思考开关（非 OpenAI 标准字段，由前端 ChatClient 透传）
+         */
+        private Boolean think;
+        /**
+         * 智能搜索开关（非 OpenAI 标准字段，由前端 ChatClient 透传）
+         */
+        private Boolean search;
     }
 
     @Data
