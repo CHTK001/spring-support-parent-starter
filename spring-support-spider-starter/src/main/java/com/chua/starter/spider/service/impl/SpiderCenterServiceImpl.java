@@ -19,6 +19,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -100,8 +101,12 @@ public class SpiderCenterServiceImpl implements SpiderCenterService {
         SpiderDefinition target = existing == null ? new SpiderDefinition() : existing;
         BeanUtils.copyProperties(req, target);
         if (existing == null) {
+            LocalDateTime now = LocalDateTime.now();
+            target.setCreateTime(now);
+            target.setUpdateTime(now);
             definitionMapper.insert(target);
         } else {
+            target.setUpdateTime(LocalDateTime.now());
             definitionMapper.updateById(target);
         }
         log.info("保存爬虫定义: code={}, depth={}, maxPages={}",
