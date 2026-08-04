@@ -40,7 +40,7 @@ plugin:
     paper:
       max-questions: 30
   queue:
-    type: local
+    type: chronicle
 
 logging:
   level:
