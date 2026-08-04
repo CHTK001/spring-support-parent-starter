@@ -1,0 +1,45 @@
+package com.chua.starter.monitor.support.service;
+
+import com.chua.starter.monitor.support.entity.MsMonitorMetricConfig;
+
+import java.util.List;
+
+/**
+ * 监控解析规则 Service
+ *
+ * @author CH
+ * @since 2026/8/4
+ */
+public interface MonitorMetricConfigService {
+
+    /**
+     * 创建
+     *
+     * @param entity 实体
+     * @return 创建后
+     */
+    MsMonitorMetricConfig create(MsMonitorMetricConfig entity);
+
+    /**
+     * 更新
+     *
+     * @param entity 实体
+     * @return 更新后
+     */
+    MsMonitorMetricConfig update(MsMonitorMetricConfig entity);
+
+    /**
+     * 删除
+     *
+     * @param id 主键
+     */
+    void delete(Long id);
+
+    /**
+     * 按任务列出
+     *
+     * @param taskId 任务 id
+     * @return 列表
+     */
+    List<MsMonitorMetricConfig> listByTask(Long taskId);
+}

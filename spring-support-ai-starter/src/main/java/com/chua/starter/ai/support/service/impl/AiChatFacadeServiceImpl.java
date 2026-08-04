@@ -246,6 +246,31 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
 
     @Override
     public List<ModelDefinition> modelDefinitions(Integer groupId) {
+        // 优先使用注册中心中的模型定义（由 AiChatClientConfiguration 按配置注册）
+        List<ModelDefinition> registered = chatClientRegistry.getModelDefinitions();
+        if (!registered.isEmpty()) {
+            // 有分组时仅保留该分组可访问的模型
+            Set<String> allowed = null;
+            if (groupId != null) {
+                List<Integer> groupModelIds = sysAiGroupService.getGroupModelIds(groupId);
+                if (groupModelIds.isEmpty()) {
+                    return Collections.emptyList();
+                }
+                allowed = chatClientRegistry.getModels();
+            }
+            List<ModelDefinition> result = new ArrayList<>();
+            for (ModelDefinition def : registered) {
+                if (def == null || StringUtils.isBlank(def.getId())) {
+                    continue;
+                }
+                if (allowed != null && !allowed.contains(def.getId().toLowerCase())) {
+                    continue;
+                }
+                result.add(def);
+            }
+            return result;
+        }
+
         List<ModelDefinition> result = new ArrayList<>();
         // 从全局（聚合）ChatClient 获取带能力的模型定义列表
         ChatClient global = chatClientRegistry.getDefault();

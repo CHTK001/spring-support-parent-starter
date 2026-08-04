@@ -16,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -36,7 +35,7 @@ import java.util.concurrent.CompletableFuture;
  * @author CH
  */
 @Tag(name = "AI OpenAI Protocol Controller", description = "OpenAI 标准协议接口与 CC Switch 控制接口")
-@Component
+@RestController
 @RequiredArgsConstructor
 @Slf4j
 @ApiReturnFormatIgnore

@@ -51,6 +51,13 @@
             <artifactId>utils-support-common-starter</artifactId>
         </dependency>
 
+        <!-- OpenAI 兼容协议 ChatClient（OpenAI/SiliconFlow/SenseTime/GitHub/Gitee） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-openai-starter</artifactId>
+            <version>4.0.0.42</version>
+        </dependency>
+
         <!-- Spring Support Common -->
         <dependency>
             <groupId>com.chua</groupId>

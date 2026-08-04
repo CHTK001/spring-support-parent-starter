@@ -61,6 +61,10 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
 
     @Override
     public boolean verifyBearerToken(String authorizationHeader, String clientIp) {
+        // 与 verifyAppKey 保持一致：app_key_enabled 关闭时免鉴权（本地联调默认关闭）
+        if (!isAppKeyEnabled()) {
+            return true;
+        }
         if (StringUtils.isBlank(authorizationHeader) || !authorizationHeader.startsWith(BEARER_PREFIX)) {
             return false;
         }

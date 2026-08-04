@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,7 +20,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @Tag(name = "AI OpenAI Extended Protocol Controller", description = "OpenAI 标准协议扩展接口（Images/Audio/Files/Fine-tuning）")
-@Component
+@RestController
 @ApiReturnFormatIgnore
 public class AiOpenaiExtendedController {
 

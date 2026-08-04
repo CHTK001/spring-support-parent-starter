@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.registry;
 
 import com.chua.common.support.ai.chat.ChatClient;
+import com.chua.common.support.ai.chat.ModelDefinition;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClient;
 import lombok.extern.slf4j.Slf4j;
 
@@ -76,6 +77,11 @@ public class ChatClientRegistry {
     private volatile AggregateChatClient aggregateClient;
 
     /**
+     * 已注册的模型定义列表（含 capabilities）
+     */
+    private final List<ModelDefinition> modelDefinitions = new CopyOnWriteArrayList<>();
+
+    /**
      * 所有已注册的 ChatClient 列表
      */
     private final List<ChatClient> allClients = new CopyOnWriteArrayList<>();
@@ -120,6 +126,31 @@ public class ChatClientRegistry {
      */
     public void register(String provider, ChatClient client) {
         register(provider, null, client);
+    }
+
+    /**
+     * 注册模型定义（带能力标签，供 /v1/models 与前端能力开关使用）。
+     *
+     * @param definition 模型定义，id 重复时覆盖
+     */
+    public void registerModel(ModelDefinition definition) {
+        if (definition == null || definition.getId() == null) {
+            return;
+        }
+        String id = definition.getId().toLowerCase();
+        modelDefinitions.removeIf(d -> id.equals(d.getId().toLowerCase()));
+        modelDefinitions.add(definition);
+        log.info("[ChatClientRegistry] 注册模型定义: id={}, name={}, capabilities={}",
+                definition.getId(), definition.getName(), definition.getCapabilities());
+    }
+
+    /**
+     * 获取全部已注册的模型定义。
+     *
+     * @return 模型定义列表
+     */
+    public List<ModelDefinition> getModelDefinitions() {
+        return Collections.unmodifiableList(modelDefinitions);
     }
 
     /**

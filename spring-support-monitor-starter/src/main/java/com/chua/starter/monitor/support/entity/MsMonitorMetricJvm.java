@@ -1,0 +1,97 @@
+package com.chua.starter.monitor.support.entity;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
+/**
+ * 监控 JVM 明细
+ *
+ * @author CH
+ * @since 2026/8/4
+ */
+@Data
+@EqualsAndHashCode(callSuper = false)
+@Schema(description = "监控 JVM 明细")
+@TableName("ms_monitor_metric_jvm")
+public class MsMonitorMetricJvm implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    /**
+     * 主键
+     */
+    @TableId(value = "id", type = IdType.AUTO)
+    @Schema(description = "主键", example = "1")
+    private Long id;
+
+    /**
+     * 监控主机 id
+     */
+    @TableField("monitor_id")
+    @Schema(description = "监控主机 id", example = "1")
+    private Long monitorId;
+
+    /**
+     * 堆已用(字节)
+     */
+    @TableField("heap_used_bytes")
+    @Schema(description = "堆已用(字节)", example = "536870912")
+    private Long heapUsedBytes;
+
+    /**
+     * 堆最大(字节)
+     */
+    @TableField("heap_max_bytes")
+    @Schema(description = "堆最大(字节)", example = "1073741824")
+    private Long heapMaxBytes;
+
+    /**
+     * 堆使用率(0-100)
+     */
+    @TableField("heap_usage_percent")
+    @Schema(description = "堆使用率", example = "50.0")
+    private Double heapUsagePercent;
+
+    /**
+     * Young GC 次数
+     */
+    @TableField("young_gc_count")
+    @Schema(description = "Young GC 次数", example = "1234")
+    private Long youngGcCount;
+
+    /**
+     * Full GC 次数
+     */
+    @TableField("full_gc_count")
+    @Schema(description = "Full GC 次数", example = "5")
+    private Long fullGcCount;
+
+    /**
+     * 活跃线程
+     */
+    @TableField("threads")
+    @Schema(description = "活跃线程", example = "120")
+    private Integer threads;
+
+    /**
+     * 守护线程
+     */
+    @TableField("daemon_threads")
+    @Schema(description = "守护线程", example = "20")
+    private Integer daemonThreads;
+
+    /**
+     * 采集时间
+     */
+    @TableField("collect_time")
+    @Schema(description = "采集时间", example = "2026-08-04T10:00:00")
+    private LocalDateTime collectTime;
+}
