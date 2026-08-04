@@ -36,3 +36,6 @@ logging:
   level:
     com.chua.spider.support: info
     com.chua.spider: info
+    org.springframework.web.servlet.mvc.method.annotation: DEBUG
+    org.springframework.web.servlet.handler: DEBUG
+    com.chua.starter.spider: DEBUG

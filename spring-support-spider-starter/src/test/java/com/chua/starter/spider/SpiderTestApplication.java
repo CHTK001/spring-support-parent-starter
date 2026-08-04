@@ -1,11 +1,12 @@
 package com.chua.starter.spider;
 
 import com.chua.starter.spider.configuration.SpiderAutoConfiguration;
-import com.chua.starter.spider.controller.SpiderCenterController;
 import lombok.extern.slf4j.Slf4j;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.ComponentScan;
 
 /**
  * 爬虫中心后端测试启动类。
@@ -15,9 +16,11 @@ import org.springframework.context.ConfigurableApplicationContext;
  * @since 4.0.0.42
  */
 @Slf4j
-@SpringBootApplication(scanBasePackages = {
+@SpringBootApplication
+@ComponentScan(basePackages = {
         "com.chua.starter.spider"
 })
+@MapperScan("com.chua.starter.spider.mapper")
 public class SpiderTestApplication {
 
     /**
@@ -30,4 +33,3 @@ public class SpiderTestApplication {
         log.info("爬虫中心后端启动成功 — 端口: {}", ctx.getEnvironment().getProperty("server.port"));
     }
 }
-

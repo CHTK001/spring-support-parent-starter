@@ -40,9 +40,11 @@ plugin:
     paper:
       max-questions: 30
   queue:
-    type: chronicle
+    type: local
 
 logging:
   level:
     com.chua.starter.eduai: info
     com.chua.common.support.ai: warn
+    org.springframework.boot.autoconfigure: debug
+    com.chua.starter.queue: debug

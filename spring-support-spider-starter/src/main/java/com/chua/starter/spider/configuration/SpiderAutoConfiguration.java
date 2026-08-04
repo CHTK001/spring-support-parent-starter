@@ -2,7 +2,6 @@ package com.chua.starter.spider.configuration;
 
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import lombok.extern.slf4j.Slf4j;
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -24,10 +23,10 @@ import org.springframework.context.annotation.ComponentScan;
         "com.chua.starter.spider.controller",
         "com.chua.starter.spider.service",
         "com.chua.starter.spider.service.impl",
+        "com.chua.starter.spider.executor",
         "com.chua.starter.spider.flow",
         "com.chua.starter.spider.flow.handler"
 })
-@MapperScan("com.chua.starter.spider.mapper")
 public class SpiderAutoConfiguration {
 
     /**
