@@ -32,6 +32,14 @@ mybatis-plus:
     db-config:
       id-type: auto
 
+plugin:
+  api:
+    cors:
+      enable: true
+      pattern:
+        - /spider-api/**
+        - /spider/**
+
 logging:
   level:
     com.chua.spider.support: info
