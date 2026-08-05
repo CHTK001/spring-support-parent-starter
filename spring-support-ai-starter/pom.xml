@@ -98,6 +98,19 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- 数据源模块 - 提供 Flyway-like 迁移器（db/init 脚本自动执行） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-datasource-starter</artifactId>
+        </dependency>
+
+        <!-- MySQL 驱动 -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- 缓存功能模块 - 提供缓存常量 CacheConstant -->
         <dependency>
             <groupId>com.chua</groupId>

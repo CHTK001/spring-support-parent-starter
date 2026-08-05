@@ -12,20 +12,10 @@ spring:
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
   datasource:
-    driver-class-name: org.h2.Driver
-    url: jdbc:h2:mem:aidb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false
-    username: sa
-    password:
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:schema-h2.sql
-      encoding: utf-8
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-  # 关闭 API 鉴权（app_key_enabled 默认 false），本地联调免 token
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://172.16.0.40:3306/ai_test?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&createDatabaseIfNotExist=true
+    username: root
+    password: "root@"
   profiles:
     active: dev
   ai:
