@@ -1,7 +1,15 @@
 package com.chua.starter.spider.config;
 
+import com.chua.common.support.task.flow.FlowNodeRegistry;
+import com.chua.starter.spider.node.SpiderConditionNode;
+import com.chua.starter.spider.node.SpiderExtractNode;
+import com.chua.starter.spider.node.SpiderMapNode;
+import com.chua.starter.spider.node.SpiderOutputNode;
+import com.chua.starter.spider.node.SpiderRequestNode;
+import com.chua.starter.spider.node.SpiderSubLoopNode;
+import com.chua.starter.spider.node.SpiderTransformNode;
 import com.chua.starter.spider.trace.SpiderTraceFilter;
-import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.Filter;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -15,7 +23,9 @@ import org.springframework.context.annotation.ComponentScan;
 /**
  * 爬虫中心自动配置。
  *
- * <p>负责装配组件扫描（service / controller / mapper）与全链路追踪过滤器。</p>
+ * <p>负责：组件扫描（service / controller / mapper）、全链路追踪过滤器，
+ * 以及将 7 个爬虫节点（request/extract/transform/subLoop/map/output/condition）
+ * 注册到 {@link FlowNodeRegistry}，供流程编排与节点清单使用。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -28,22 +38,87 @@ import org.springframework.context.annotation.ComponentScan;
 public class SpiderAutoConfiguration {
 
     /**
-     * 注册 MyBatis-Plus 公共字段自动填充处理器。
-     *
-     * <p>按 {@code SysBase} 字段约定在新增/更新时自动填充创建时间与更新时间，
-     * 由 mybatis-starter 的 SqlSessionFactory 关联到 GlobalConfig。</p>
-     *
-     * @return 公共字段自动填充处理器
+     * traceId 过滤器注册顺序
      */
-    @Bean
-    public MetaObjectHandler spiderMetaObjectHandler() {
-        return new SpiderMetaObjectHandler();
+    private static final int TRACE_FILTER_ORDER = 0;
+
+    /**
+     * 请求节点
+     */
+    private final SpiderRequestNode requestNode;
+
+    /**
+     * 提取节点
+     */
+    private final SpiderExtractNode extractNode;
+
+    /**
+     * 转换节点
+     */
+    private final SpiderTransformNode transformNode;
+
+    /**
+     * 循环节点
+     */
+    private final SpiderSubLoopNode subLoopNode;
+
+    /**
+     * 映射节点
+     */
+    private final SpiderMapNode mapNode;
+
+    /**
+     * 落库节点
+     */
+    private final SpiderOutputNode outputNode;
+
+    /**
+     * 条件节点
+     */
+    private final SpiderConditionNode conditionNode;
+
+    /**
+     * 构造器注入 7 个爬虫节点。
+     *
+     * @param requestNode   请求节点
+     * @param extractNode   提取节点
+     * @param transformNode 转换节点
+     * @param subLoopNode   循环节点
+     * @param mapNode       映射节点
+     * @param outputNode    落库节点
+     * @param conditionNode 条件节点
+     */
+    public SpiderAutoConfiguration(SpiderRequestNode requestNode,
+                                   SpiderExtractNode extractNode,
+                                   SpiderTransformNode transformNode,
+                                   SpiderSubLoopNode subLoopNode,
+                                   SpiderMapNode mapNode,
+                                   SpiderOutputNode outputNode,
+                                   SpiderConditionNode conditionNode) {
+        this.requestNode = requestNode;
+        this.extractNode = extractNode;
+        this.transformNode = transformNode;
+        this.subLoopNode = subLoopNode;
+        this.mapNode = mapNode;
+        this.outputNode = outputNode;
+        this.conditionNode = conditionNode;
     }
 
     /**
-     * traceId ������ע��˳����
+     * 注册 7 个爬虫节点到流程节点注册中心。
+     *
+     * <p>节点统一使用 {@code spider.} 前缀注册，供前端节点清单展示与流程 JSON 导入匹配。</p>
      */
-    private static final int TRACE_FILTER_ORDER = 0;
+    @PostConstruct
+    public void registerSpiderNodes() {
+        FlowNodeRegistry.register(requestNode.type(), requestNode, "HTTP 请求");
+        FlowNodeRegistry.register(extractNode.type(), extractNode, "字段提取");
+        FlowNodeRegistry.register(transformNode.type(), transformNode, "转换处理");
+        FlowNodeRegistry.register(subLoopNode.type(), subLoopNode, "数组循环");
+        FlowNodeRegistry.register(mapNode.type(), mapNode, "字段映射");
+        FlowNodeRegistry.register(outputNode.type(), outputNode, "数据落库");
+        FlowNodeRegistry.register(conditionNode.type(), conditionNode, "条件分支");
+    }
 
     /**
      * 注册全链路追踪过滤器 Bean。

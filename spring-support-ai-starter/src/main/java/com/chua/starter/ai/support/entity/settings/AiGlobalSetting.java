@@ -94,6 +94,41 @@ public class AiGlobalSetting implements Serializable {
     private Boolean settingStream;
 
     /**
+     * RAG 向量模型
+     */
+    @TableField("rag_embedding_model")
+    @Schema(description = "RAG 向量模型")
+    private String ragEmbeddingModel;
+
+    /**
+     * RAG 问答 LLM 模型
+     */
+    @TableField("rag_llm_model")
+    @Schema(description = "RAG 问答 LLM 模型")
+    private String ragLlmModel;
+
+    /**
+     * RAG OCR 识别模型
+     */
+    @TableField("rag_ocr_model")
+    @Schema(description = "RAG OCR 识别模型")
+    private String ragOcrModel;
+
+    /**
+     * RAG 上传文件目录
+     */
+    @TableField("rag_upload_dir")
+    @Schema(description = "RAG 上传文件目录")
+    private String ragUploadDir;
+
+    /**
+     * RAG 向量数据库
+     */
+    @TableField("rag_vector_storage")
+    @Schema(description = "RAG 向量数据库")
+    private String ragVectorStorage;
+
+    /**
      * 更新时间
      */
     @TableField(value = "setting_update_time", fill = FieldFill.INSERT_UPDATE)

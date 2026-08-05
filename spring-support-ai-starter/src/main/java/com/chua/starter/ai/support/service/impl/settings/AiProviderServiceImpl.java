@@ -55,7 +55,7 @@ public class AiProviderServiceImpl implements AiProviderService {
     public List<AiProviderDTO> list() {
         return providerMapper.selectList(
                         new LambdaQueryWrapper<AiProvider>()
-                                .orderByAsc(AiProvider::getProviderCreateTime))
+                                .orderByAsc(AiProvider::getCreateTime))
                 .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
@@ -72,8 +72,8 @@ public class AiProviderServiceImpl implements AiProviderService {
     public AiProviderDTO create(AiProviderDTO provider) {
         AiProvider entity = toEntity(provider);
         LocalDateTime now = LocalDateTime.now();
-        entity.setProviderCreateTime(now);
-        entity.setProviderUpdateTime(now);
+        entity.setCreateTime(now);
+        entity.setUpdateTime(now);
         if (entity.getProviderEnabled() == null) {
             entity.setProviderEnabled(true);
         }
@@ -97,7 +97,7 @@ public class AiProviderServiceImpl implements AiProviderService {
     public AiProviderDTO update(Long providerId, AiProviderDTO provider) {
         AiProvider entity = toEntity(provider);
         entity.setProviderId(providerId);
-        entity.setProviderUpdateTime(LocalDateTime.now());
+        entity.setUpdateTime(LocalDateTime.now());
         providerMapper.updateById(entity);
         log.debug("[AiProvider] 更新成功: id={}", providerId);
         return toDto(providerMapper.selectById(providerId));
@@ -128,7 +128,7 @@ public class AiProviderServiceImpl implements AiProviderService {
         LambdaUpdateWrapper<AiProvider> wrapper = new LambdaUpdateWrapper<AiProvider>()
                 .eq(AiProvider::getProviderId, providerId)
                 .set(AiProvider::getProviderEnabled, enabled)
-                .set(AiProvider::getProviderUpdateTime, LocalDateTime.now());
+                .set(AiProvider::getUpdateTime, LocalDateTime.now());
         providerMapper.update(null, wrapper);
         return toDto(providerMapper.selectById(providerId));
     }
@@ -152,7 +152,7 @@ public class AiProviderServiceImpl implements AiProviderService {
         dto.setApiKey(entity.getProviderApiKey());
         dto.setModels(parseList(entity.getProviderModels()));
         dto.setEnabled(entity.getProviderEnabled());
-        dto.setCreatedAt(entity.getProviderCreateTime() != null ? entity.getProviderCreateTime().format(FORMATTER) : null);
+        dto.setCreatedAt(entity.getCreateTime() != null ? entity.getCreateTime().format(FORMATTER) : null);
         return dto;
     }
 

@@ -1,5 +1,6 @@
 package com.chua.starter.oauth.client.support.user;
 
+import com.chua.common.support.lang.json.Json;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -121,6 +122,26 @@ public class UserResult extends UserResume implements Serializable {
      */
     public static UserResult emptyUserResult() {
         return _EMPTY;
+    }
+
+    /**
+     * 从用户简历转换用户认证结果
+     * <p>UserResult 与 UserResume 均使用 {@link Accessors @Accessors(chain = true)}，
+     * setter 返回自身而非 void，JavaBeans Introspector 无法识别其 write method，
+     * 导致 {@link com.chua.common.support.utils.BeanUtils#copyProperties(Object, Object)} 复制时字段全部丢失。
+     * 这里改用 JSON 序列化/反序列化完成转换，保证继承自 UserResume 的字段完整保留。</p>
+     *
+     * @param userResume 用户简历
+     * @return 用户认证结果
+     */
+    public static UserResult fromResume(UserResume userResume) {
+        if (null == userResume) {
+            return null;
+        }
+        if (userResume instanceof UserResult userResult) {
+            return userResult;
+        }
+        return Json.fromJson(Json.toJson(userResume), UserResult.class);
     }
 }
 

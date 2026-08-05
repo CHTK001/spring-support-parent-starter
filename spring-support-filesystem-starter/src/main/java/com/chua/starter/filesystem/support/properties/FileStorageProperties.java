@@ -60,6 +60,13 @@ public class FileStorageProperties {
     private boolean enable = false;
 
     /**
+     * 是否开放服务器目录浏览接口（安全开关，默认关闭）
+     * <p>开启后可通过 {@code GET /dir/list} 浏览服务器本地目录，用于前端目录选择器。
+     * 生产环境建议保持关闭，避免泄露服务器目录结构。</p>
+     */
+    private boolean dirList = false;
+
+    /**
      * 默认 Provider 名称 (用于 FileStorageTemplate.getDefaultStorage())
      */
     private String defaultProvider;

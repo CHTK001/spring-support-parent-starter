@@ -1,10 +1,10 @@
 package com.chua.starter.monitor.support.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.IdUtils;
-import com.chua.starter.monitor.support.entity.MsMonitorMetric;
-import com.chua.starter.monitor.support.mapper.MsMonitorMetricMapper;
-import com.chua.starter.monitor.support.mapper.MsMonitorMetricStatisticsMapper;
+import com.chua.starter.monitor.support.entity.*;
+import com.chua.starter.monitor.support.mapper.*;
 import com.chua.starter.monitor.support.service.MetricService;
 import com.chua.starter.monitor.support.spi.CollectResult;
 import com.chua.starter.monitor.support.spi.MetricPoint;
@@ -31,6 +31,13 @@ public class MetricServiceImpl implements MetricService {
 
     private final MsMonitorMetricMapper metricMapper;
     private final MsMonitorMetricStatisticsMapper statisticsMapper;
+    private final MsMonitorMetricCpuMapper cpuMapper;
+    private final MsMonitorMetricMemoryMapper memoryMapper;
+    private final MsMonitorMetricDiskMapper diskMapper;
+    private final MsMonitorMetricNetworkMapper networkMapper;
+    private final MsMonitorMetricJvmMapper jvmMapper;
+    private final MsMonitorRedisMetricMapper redisMetricMapper;
+    private final MsMonitorRedisMetricStatisticsMapper redisMetricStatsMapper;
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
 
@@ -105,5 +112,114 @@ public class MetricServiceImpl implements MetricService {
             log.error("小时聚合失败", e);
             return ReturnResult.error(e.getMessage());
         }
+    }
+
+    @Override
+    public ReturnResult<MsMonitorMetricCpu> getLatestCpu(Long monitorId) {
+        return ReturnResult.ok(cpuMapper.selectOne(
+                new LambdaQueryWrapper<MsMonitorMetricCpu>()
+                        .eq(MsMonitorMetricCpu::getMonitorId, monitorId)
+                        .orderByDesc(MsMonitorMetricCpu::getCollectTime)
+                        .last("LIMIT 1")));
+    }
+
+    @Override
+    public ReturnResult<MsMonitorMetricMemory> getLatestMemory(Long monitorId) {
+        return ReturnResult.ok(memoryMapper.selectOne(
+                new LambdaQueryWrapper<MsMonitorMetricMemory>()
+                        .eq(MsMonitorMetricMemory::getMonitorId, monitorId)
+                        .orderByDesc(MsMonitorMetricMemory::getCollectTime)
+                        .last("LIMIT 1")));
+    }
+
+    @Override
+    public ReturnResult<List<MsMonitorMetricDisk>> getLatestDisk(Long monitorId) {
+        return ReturnResult.ok(diskMapper.selectList(
+                new LambdaQueryWrapper<MsMonitorMetricDisk>()
+                        .eq(MsMonitorMetricDisk::getMonitorId, monitorId)
+                        .orderByDesc(MsMonitorMetricDisk::getCollectTime)
+                        .last("LIMIT 5")));
+    }
+
+    @Override
+    public ReturnResult<MsMonitorMetricNetwork> getLatestNetwork(Long monitorId) {
+        return ReturnResult.ok(networkMapper.selectOne(
+                new LambdaQueryWrapper<MsMonitorMetricNetwork>()
+                        .eq(MsMonitorMetricNetwork::getMonitorId, monitorId)
+                        .orderByDesc(MsMonitorMetricNetwork::getCollectTime)
+                        .last("LIMIT 1")));
+    }
+
+    @Override
+    public ReturnResult<MsMonitorMetricJvm> getLatestJvm(Long monitorId) {
+        return ReturnResult.ok(jvmMapper.selectOne(
+                new LambdaQueryWrapper<MsMonitorMetricJvm>()
+                        .eq(MsMonitorMetricJvm::getMonitorId, monitorId)
+                        .orderByDesc(MsMonitorMetricJvm::getCollectTime)
+                        .last("LIMIT 1")));
+    }
+
+    @Override
+    public ReturnResult<List<MsMonitorMetricCpu>> getCpuHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
+        return ReturnResult.ok(cpuMapper.selectList(
+                new LambdaQueryWrapper<MsMonitorMetricCpu>()
+                        .eq(MsMonitorMetricCpu::getMonitorId, monitorId)
+                        .ge(startTime != null, MsMonitorMetricCpu::getCollectTime, startTime)
+                        .le(endTime != null, MsMonitorMetricCpu::getCollectTime, endTime)
+                        .orderByAsc(MsMonitorMetricCpu::getCollectTime)
+                        .last("LIMIT 200")));
+    }
+
+    @Override
+    public ReturnResult<List<MsMonitorMetricMemory>> getMemoryHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
+        return ReturnResult.ok(memoryMapper.selectList(
+                new LambdaQueryWrapper<MsMonitorMetricMemory>()
+                        .eq(MsMonitorMetricMemory::getMonitorId, monitorId)
+                        .ge(startTime != null, MsMonitorMetricMemory::getCollectTime, startTime)
+                        .le(endTime != null, MsMonitorMetricMemory::getCollectTime, endTime)
+                        .orderByAsc(MsMonitorMetricMemory::getCollectTime)
+                        .last("LIMIT 200")));
+    }
+
+    @Override
+    public ReturnResult<List<MsMonitorMetricJvm>> getJvmHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
+        return ReturnResult.ok(jvmMapper.selectList(
+                new LambdaQueryWrapper<MsMonitorMetricJvm>()
+                        .eq(MsMonitorMetricJvm::getMonitorId, monitorId)
+                        .ge(startTime != null, MsMonitorMetricJvm::getCollectTime, startTime)
+                        .le(endTime != null, MsMonitorMetricJvm::getCollectTime, endTime)
+                        .orderByAsc(MsMonitorMetricJvm::getCollectTime)
+                        .last("LIMIT 200")));
+    }
+
+    @Override
+    public ReturnResult<List<MsMonitorMetricNetwork>> getNetworkHistory(Long monitorId, LocalDateTime startTime, LocalDateTime endTime) {
+        return ReturnResult.ok(networkMapper.selectList(
+                new LambdaQueryWrapper<MsMonitorMetricNetwork>()
+                        .eq(MsMonitorMetricNetwork::getMonitorId, monitorId)
+                        .ge(startTime != null, MsMonitorMetricNetwork::getCollectTime, startTime)
+                        .le(endTime != null, MsMonitorMetricNetwork::getCollectTime, endTime)
+                        .orderByAsc(MsMonitorMetricNetwork::getCollectTime)
+                        .last("LIMIT 200")));
+    }
+
+    @Override
+    public ReturnResult<MsMonitorRedisMetric> getLatestRedisMetric(Long taskId) {
+        return ReturnResult.ok(redisMetricMapper.selectOne(
+                new LambdaQueryWrapper<MsMonitorRedisMetric>()
+                        .eq(MsMonitorRedisMetric::getMonitorId, taskId)
+                        .orderByDesc(MsMonitorRedisMetric::getCollectTime)
+                        .last("LIMIT 1")));
+    }
+
+    @Override
+    public ReturnResult<List<MsMonitorRedisMetric>> getRedisMetricHistory(Long taskId, LocalDateTime startTime, LocalDateTime endTime) {
+        return ReturnResult.ok(redisMetricMapper.selectList(
+                new LambdaQueryWrapper<MsMonitorRedisMetric>()
+                        .eq(MsMonitorRedisMetric::getMonitorId, taskId)
+                        .ge(startTime != null, MsMonitorRedisMetric::getCollectTime, startTime)
+                        .le(endTime != null, MsMonitorRedisMetric::getCollectTime, endTime)
+                        .orderByAsc(MsMonitorRedisMetric::getCollectTime)
+                        .last("LIMIT 200")));
     }
 }

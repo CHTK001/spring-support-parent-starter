@@ -58,6 +58,25 @@
             <version>4.0.0.42</version>
         </dependency>
 
+        <!-- 深度学习能力（OCR 识别、向量模型等） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-deeplearning-starter</artifactId>
+        </dependency>
+
+        <!-- ONNX 模型注册器（OCR 识别、文本向量等模型实现） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-deeplearning-onnx-starter</artifactId>
+        </dependency>
+
+        <!-- 用量数据同步（datasearch UsageProvider 外部工具用量拉取） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-datasearch-starter</artifactId>
+            <version>4.0.0.42</version>
+        </dependency>
+
         <!-- Spring Support Common -->
         <dependency>
             <groupId>com.chua</groupId>

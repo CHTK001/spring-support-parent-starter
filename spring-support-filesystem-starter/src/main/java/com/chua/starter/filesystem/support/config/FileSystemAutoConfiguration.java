@@ -7,6 +7,7 @@ import com.chua.starter.common.support.logger.ModuleLog;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.filesystem.support.controller.FileChunkUploadController;
+import com.chua.starter.filesystem.support.controller.FileDirController;
 import com.chua.starter.filesystem.support.server.FileServerManager;
 import com.chua.starter.filesystem.support.entity.SysFileSystemUpload;
 import com.chua.starter.filesystem.support.mapper.SysFileSystemUploadMapper;
@@ -62,6 +63,12 @@ public class FileSystemAutoConfiguration {
             FileServerManager fileServerManager) {
         return new FileChunkUploadController(uploadService, chunkService, fileStorageTemplate,
                 fileStorageProperties, uploadProperties, fileServerManager);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public FileDirController fileDirController(FileStorageProperties properties) {
+        return new FileDirController(properties);
     }
 
     @Bean

@@ -88,6 +88,11 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
         dto.setTimeout(entity.getSettingTimeout());
         dto.setEnableCache(entity.getSettingEnableCache());
         dto.setStream(entity.getSettingStream());
+        dto.setRagEmbeddingModel(entity.getRagEmbeddingModel());
+        dto.setRagLlmModel(entity.getRagLlmModel());
+        dto.setRagOcrModel(entity.getRagOcrModel());
+        dto.setRagUploadDir(entity.getRagUploadDir());
+        dto.setRagVectorStorage(entity.getRagVectorStorage());
         return dto;
     }
 
@@ -129,6 +134,21 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
             if (dto.getStream() != null) {
                 entity.setSettingStream(dto.getStream());
             }
+            if (dto.getRagEmbeddingModel() != null) {
+                entity.setRagEmbeddingModel(dto.getRagEmbeddingModel());
+            }
+            if (dto.getRagLlmModel() != null) {
+                entity.setRagLlmModel(dto.getRagLlmModel());
+            }
+            if (dto.getRagOcrModel() != null) {
+                entity.setRagOcrModel(dto.getRagOcrModel());
+            }
+            if (dto.getRagUploadDir() != null) {
+                entity.setRagUploadDir(dto.getRagUploadDir());
+            }
+            if (dto.getRagVectorStorage() != null) {
+                entity.setRagVectorStorage(dto.getRagVectorStorage());
+            }
             return entity;
         }
         entity.setSettingChatClientEnabled(dto.getChatClientEnabled());
@@ -140,6 +160,11 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
         entity.setSettingTimeout(dto.getTimeout());
         entity.setSettingEnableCache(dto.getEnableCache());
         entity.setSettingStream(dto.getStream());
+        entity.setRagEmbeddingModel(dto.getRagEmbeddingModel());
+        entity.setRagLlmModel(dto.getRagLlmModel());
+        entity.setRagOcrModel(dto.getRagOcrModel());
+        entity.setRagUploadDir(dto.getRagUploadDir());
+        entity.setRagVectorStorage(dto.getRagVectorStorage());
         return entity;
     }
 }

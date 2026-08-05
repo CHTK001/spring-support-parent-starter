@@ -89,6 +89,12 @@
             <artifactId>swagger-annotations</artifactId>
         </dependency>
 
+        <!-- JSONPath 解析（spider.extract 节点提取字段） -->
+        <dependency>
+            <groupId>com.jayway.jsonpath</groupId>
+            <artifactId>json-path</artifactId>
+        </dependency>
+
         <!-- Web 能力（REST / SseEmitter / Filter） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

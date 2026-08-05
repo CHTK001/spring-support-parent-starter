@@ -4,7 +4,6 @@ import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.ObjectUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.BeanUtils;
 import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
 import com.chua.common.support.annotation.Ignore;
 import com.chua.starter.oauth.client.support.entity.AppKeySecret;
@@ -512,8 +511,7 @@ public class WebRequest {
             return null;
         }
 
-        UserResult userResult = new UserResult();
-        BeanUtils.copyProperties(returnResult, userResult);
+        UserResult userResult = UserResult.fromResume(returnResult);
         request.getSession().setAttribute(AuthSessionUtils.SESSION_USER_INFO, userResult);
         return userResult;
     }

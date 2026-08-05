@@ -1,6 +1,9 @@
 package com.chua.starter.ai.support.schedule;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.common.support.ai.AiUsage;
+import com.chua.common.support.datasearch.usage.spi.UsageProvider;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.entity.SysAiUsage;
 import com.chua.starter.ai.support.entity.SysAiUsageDaily;
 import com.chua.starter.ai.support.entity.settings.AiGlobalSetting;
@@ -16,6 +19,7 @@ import org.springframework.scheduling.TriggerContext;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -27,11 +31,17 @@ import java.util.stream.Collectors;
 /**
  * AI 用量聚合任务
  * <p>
- * 采用动态 {@link Trigger} 调度，执行间隔从 {@code ai_global_setting} 表的
- * {@code setting_usage_interval_sec} 字段读取（前端"上报间隔"配置），
- * 未配置时兜底为 1 小时一次。
+ * 采用动态 {@link Trigger} 调度，执行开关与间隔从 {@code ai_global_setting} 表读取：
+ * <ul>
+ *   <li>开关：{@code setting_enable_usage_analysis}（前端"启用用量分析"），关闭时跳过执行</li>
+ *   <li>间隔：{@code setting_usage_interval_sec}（前端"上报频率"，最小 10 秒），未配置时默认 1 小时</li>
+ * </ul>
  * <p>
- * 每次执行聚合上次执行时间点至当前时间内的用量明细数据。
+ * 每次执行：
+ * <ol>
+ *   <li>通过 datasearch 的 {@link UsageProvider} SPI 拉取所有外部工具用量，写入本地用量表</li>
+ *   <li>聚合上次执行时间点至当前时间内的用量明细数据到日汇总表</li>
+ * </ol>
  *
  * @author CH
  * @since 4.0.0.42
@@ -50,6 +60,11 @@ public class UsageAggregationTask implements SchedulingConfigurer {
      * 未配置时的默认执行间隔（秒）
      */
     private static final long DEFAULT_INTERVAL_SEC = 3600;
+
+    /**
+     * 最小执行间隔（秒），防止配置过小导致死循环
+     */
+    private static final long MIN_INTERVAL_SEC = 10;
 
     /**
      * 用量 Mapper
@@ -79,11 +94,23 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     @Override
     public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
         Trigger trigger = this::nextTriggerTime;
-        taskRegistrar.addTriggerTask(this::aggregate, trigger);
+        taskRegistrar.addTriggerTask(this::run, trigger);
     }
 
     /**
-     * 计算下次执行时间：读取全局配置间隔，未配置时使用默认值。
+     * 调度入口：先校验开关，关闭时跳过。
+     */
+    public void run() {
+        if (!isUsageEnabled()) {
+            log.debug("[UsageAggregation] 用量分析未启用，跳过本次执行");
+            return;
+        }
+        syncExternalUsage();
+        aggregate();
+    }
+
+    /**
+     * 计算下次执行时间：读取全局配置间隔（最小 10s），未配置时使用默认值。
      *
      * @param triggerContext 触发器上下文
      * @return 下次执行时间
@@ -99,12 +126,98 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         } catch (Exception e) {
             log.debug("[UsageAggregation] 读取全局设置失败，使用默认间隔 {}", e.getMessage());
         }
+        if (intervalSec < MIN_INTERVAL_SEC) {
+            intervalSec = MIN_INTERVAL_SEC;
+        }
         java.util.Date last = triggerContext.lastScheduledExecutionTime();
         if (last == null) {
             return Instant.now().plusMillis(TimeUnit.SECONDS.toMillis(intervalSec));
         }
         return last.toInstant().plusMillis(TimeUnit.SECONDS.toMillis(intervalSec));
     }
+
+    /**
+     * 判断用量分析是否启用（全量表 setting_enable_usage_analysis，默认启用）。
+     *
+     * @return true 表示启用
+     */
+    private boolean isUsageEnabled() {
+        try {
+            AiGlobalSetting setting = globalSettingMapper.selectById(SETTING_ID);
+            return setting == null || setting.getSettingEnableUsageAnalysis() == null
+                    || setting.getSettingEnableUsageAnalysis();
+        } catch (Exception e) {
+            log.debug("[UsageAggregation] 读取用量开关失败，按启用处理: {}", e.getMessage());
+            return true;
+        }
+    }
+
+    /**
+     * 通过 datasearch UsageProvider SPI 拉取所有外部工具用量，写入本地用量表。
+     */
+    @Transactional
+    public void syncExternalUsage() {
+        try {
+            Map<String, UsageProvider> providers = ServiceProvider.of(UsageProvider.class).list();
+            if (providers == null || providers.isEmpty()) {
+                log.debug("[UsageAggregation] 未发现 UsageProvider 实现");
+                return;
+            }
+            int total = 0;
+            for (Map.Entry<String, UsageProvider> entry : providers.entrySet()) {
+                try {
+                    List<AiUsage> usages = entry.getValue().getUsage();
+                    if (usages == null || usages.isEmpty()) {
+                        continue;
+                    }
+                    for (AiUsage usage : usages) {
+                        SysAiUsage record = toSysAiUsage(entry.getKey(), usage);
+                        if (record != null) {
+                            usageMapper.insert(record);
+                            total++;
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("[UsageAggregation] UsageProvider[{}] 同步失败: {}", entry.getKey(), e.getMessage());
+                }
+            }
+            if (total > 0) {
+                log.info("[UsageAggregation] 已同步 {} 条外部用量（共 {} 个 Provider）", total, providers.size());
+            }
+        } catch (Exception e) {
+            log.warn("[UsageAggregation] 外部用量同步失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 将 common 的 AiUsage 映射为本地用量记录。
+     *
+     * @param providerName Provider 名称（作为 groupName 前缀）
+     * @param usage        AiUsage 用量数据
+     * @return 本地用量记录
+     */
+    private SysAiUsage toSysAiUsage(String providerName, AiUsage usage) {
+        if (usage == null) {
+            return null;
+        }
+        SysAiUsage record = new SysAiUsage();
+        record.setGroupName(providerName);
+        record.setProvider(usage.getProvider() != null ? usage.getProvider() : providerName);
+        record.setModel(usage.getModel());
+        record.setCallType("external");
+        record.setPromptTokens(usage.getInputTokens());
+        record.setCompletionTokens(usage.getOutputTokens());
+        record.setTotalTokens(usage.getTotalTokens());
+        record.setInputCost(usage.getInputCost() != null ? usage.getInputCost().doubleValue() : null);
+        record.setOutputCost(usage.getOutputCost() != null ? usage.getOutputCost().doubleValue() : null);
+        record.setTotalCost(usage.getTotalCost() != null ? usage.getTotalCost().doubleValue() : null);
+        record.setRequestId(usage.getRequestId());
+        record.setCallTime(usage.getStartTime() != null
+                ? LocalDateTime.ofInstant(Instant.ofEpochMilli(usage.getStartTime()), java.time.ZoneId.systemDefault())
+                : LocalDateTime.now());
+        return record;
+    }
+
     /**
      * 聚合执行入口。
      */

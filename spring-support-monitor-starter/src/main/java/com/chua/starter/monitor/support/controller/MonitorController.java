@@ -4,13 +4,20 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsMonitor;
 import com.chua.starter.monitor.support.entity.MsMonitorConfig;
 import com.chua.starter.monitor.support.entity.MsMonitorGateway;
+import com.chua.starter.monitor.support.entity.MsMonitorMetricCpu;
 import com.chua.starter.monitor.support.entity.MsMonitorMetricConfig;
+import com.chua.starter.monitor.support.entity.MsMonitorMetricDisk;
+import com.chua.starter.monitor.support.entity.MsMonitorMetricJvm;
+import com.chua.starter.monitor.support.entity.MsMonitorMetricMemory;
+import com.chua.starter.monitor.support.entity.MsMonitorMetricNetwork;
+import com.chua.starter.monitor.support.entity.MsMonitorRedisMetric;
 import com.chua.starter.monitor.support.entity.MsMonitorTask;
 import com.chua.starter.monitor.support.enums.ServiceType;
 import com.chua.starter.monitor.support.registry.ProviderRegistry;
 import com.chua.starter.monitor.support.service.MonitorConfigService;
 import com.chua.starter.monitor.support.service.MonitorGatewayService;
 import com.chua.starter.monitor.support.service.MonitorMetricConfigService;
+import com.chua.starter.monitor.support.service.MetricService;
 import com.chua.starter.monitor.support.service.MonitorService;
 import com.chua.starter.monitor.support.service.MonitorTaskService;
 import com.chua.starter.monitor.support.spi.CollectContext;
@@ -56,6 +63,8 @@ public class MonitorController {
     private final MonitorConfigService configService;
     /** 网关 Service */
     private final MonitorGatewayService gatewayService;
+    /** 指标 Service */
+    private final MetricService metricService;
     /** Provider 注册中心 */
     private final ProviderRegistry providerRegistry;
 
@@ -186,6 +195,89 @@ public class MonitorController {
     @GetMapping("/gateway")
     public ReturnResult<List<MsMonitorGateway>> listGateway(@RequestParam Long monitorId) {
         return gatewayService.listByMonitor(monitorId);
+    }
+
+    // ==================== 指标查询 ====================
+
+    @Operation(summary = "获取最新 CPU 指标")
+    @GetMapping("/metric/cpu/{monitorId}")
+    public ReturnResult<MsMonitorMetricCpu> getLatestCpu(@PathVariable Long monitorId) {
+        return metricService.getLatestCpu(monitorId);
+    }
+
+    @Operation(summary = "获取最新内存指标")
+    @GetMapping("/metric/memory/{monitorId}")
+    public ReturnResult<MsMonitorMetricMemory> getLatestMemory(@PathVariable Long monitorId) {
+        return metricService.getLatestMemory(monitorId);
+    }
+
+    @Operation(summary = "获取最新磁盘指标")
+    @GetMapping("/metric/disk/{monitorId}")
+    public ReturnResult<List<MsMonitorMetricDisk>> getLatestDisk(@PathVariable Long monitorId) {
+        return metricService.getLatestDisk(monitorId);
+    }
+
+    @Operation(summary = "获取最新网络指标")
+    @GetMapping("/metric/network/{monitorId}")
+    public ReturnResult<MsMonitorMetricNetwork> getLatestNetwork(@PathVariable Long monitorId) {
+        return metricService.getLatestNetwork(monitorId);
+    }
+
+    @Operation(summary = "获取最新 JVM 指标")
+    @GetMapping("/metric/jvm/{monitorId}")
+    public ReturnResult<MsMonitorMetricJvm> getLatestJvm(@PathVariable Long monitorId) {
+        return metricService.getLatestJvm(monitorId);
+    }
+
+    @Operation(summary = "获取 CPU 历史指标")
+    @GetMapping("/metric/cpu/history/{monitorId}")
+    public ReturnResult<List<MsMonitorMetricCpu>> getCpuHistory(
+            @PathVariable Long monitorId,
+            @RequestParam(required = false) Long hours) {
+        java.time.LocalDateTime start = hours != null ? java.time.LocalDateTime.now().minusHours(hours) : null;
+        return metricService.getCpuHistory(monitorId, start, null);
+    }
+
+    @Operation(summary = "获取内存历史指标")
+    @GetMapping("/metric/memory/history/{monitorId}")
+    public ReturnResult<List<MsMonitorMetricMemory>> getMemoryHistory(
+            @PathVariable Long monitorId,
+            @RequestParam(required = false) Long hours) {
+        java.time.LocalDateTime start = hours != null ? java.time.LocalDateTime.now().minusHours(hours) : null;
+        return metricService.getMemoryHistory(monitorId, start, null);
+    }
+
+    @Operation(summary = "获取 JVM 历史指标")
+    @GetMapping("/metric/jvm/history/{monitorId}")
+    public ReturnResult<List<MsMonitorMetricJvm>> getJvmHistory(
+            @PathVariable Long monitorId,
+            @RequestParam(required = false) Long hours) {
+        java.time.LocalDateTime start = hours != null ? java.time.LocalDateTime.now().minusHours(hours) : null;
+        return metricService.getJvmHistory(monitorId, start, null);
+    }
+
+    @Operation(summary = "获取网络历史指标")
+    @GetMapping("/metric/network/history/{monitorId}")
+    public ReturnResult<List<MsMonitorMetricNetwork>> getNetworkHistory(
+            @PathVariable Long monitorId,
+            @RequestParam(required = false) Long hours) {
+        java.time.LocalDateTime start = hours != null ? java.time.LocalDateTime.now().minusHours(hours) : null;
+        return metricService.getNetworkHistory(monitorId, start, null);
+    }
+
+    @Operation(summary = "获取 Redis 最新指标")
+    @GetMapping("/metric/redis/{monitorId}")
+    public ReturnResult<MsMonitorRedisMetric> getLatestRedisMetric(@PathVariable Long monitorId) {
+        return metricService.getLatestRedisMetric(monitorId);
+    }
+
+    @Operation(summary = "获取 Redis 历史指标")
+    @GetMapping("/metric/redis/history/{monitorId}")
+    public ReturnResult<List<MsMonitorRedisMetric>> getRedisMetricHistory(
+            @PathVariable Long monitorId,
+            @RequestParam(required = false) Long hours) {
+        java.time.LocalDateTime start = hours != null ? java.time.LocalDateTime.now().minusHours(hours) : null;
+        return metricService.getRedisMetricHistory(monitorId, start, null);
     }
 
     // ==================== Redis 操作 ====================

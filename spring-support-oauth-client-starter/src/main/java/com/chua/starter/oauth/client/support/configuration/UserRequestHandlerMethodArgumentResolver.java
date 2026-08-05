@@ -128,10 +128,19 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         Object o = cacheValue.get(paramName);
 
         if (null == o) {
-            Map<String, Object> beanMap = com.chua.starter.common.support.bean.BeanMap.of(cacheValue.get("ext"), true);
-            o = MapUtils.getString(beanMap, paramName);
-            if (null == o) {
-                o = MapUtils.getString(beanMap, NamingCase.toCamelCase(paramName));
+            // ext 为扩展信息 Map，直接按键取值；兼容 ext 为 POJO 的情况走 BeanMap
+            Object extValue = cacheValue.get("ext");
+            if (extValue instanceof Map<?, ?> extMap) {
+                o = extMap.get(paramName);
+                if (null == o) {
+                    o = extMap.get(NamingCase.toCamelCase(paramName));
+                }
+            } else {
+                Map<String, Object> beanMap = com.chua.starter.common.support.bean.BeanMap.of(extValue, true);
+                o = MapUtils.getString(beanMap, paramName);
+                if (null == o) {
+                    o = MapUtils.getString(beanMap, NamingCase.toCamelCase(paramName));
+                }
             }
         }
 

@@ -72,4 +72,34 @@ public class AiGlobalSettingDTO implements Serializable {
      */
     @Schema(description = "是否流式输出")
     private Boolean stream;
+
+    /**
+     * RAG 向量模型
+     */
+    @Schema(description = "RAG 向量模型")
+    private String ragEmbeddingModel;
+
+    /**
+     * RAG 问答 LLM 模型
+     */
+    @Schema(description = "RAG 问答 LLM 模型")
+    private String ragLlmModel;
+
+    /**
+     * RAG OCR 识别模型
+     */
+    @Schema(description = "RAG OCR 识别模型")
+    private String ragOcrModel;
+
+    /**
+     * RAG 上传文件目录
+     */
+    @Schema(description = "RAG 上传文件目录")
+    private String ragUploadDir;
+
+    /**
+     * RAG 向量数据库
+     */
+    @Schema(description = "RAG 向量数据库")
+    private String ragVectorStorage;
 }

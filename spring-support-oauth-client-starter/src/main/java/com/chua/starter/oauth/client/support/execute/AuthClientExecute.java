@@ -3,7 +3,6 @@ package com.chua.starter.oauth.client.support.execute;
 import com.chua.common.support.constant.CommonConstant;
 import com.chua.common.support.exception.AuthenticationException;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.utils.BeanUtils;
 import com.chua.common.support.utils.DigestUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.value.Value;
@@ -114,8 +113,7 @@ public class AuthClientExecute {
         }
 
         if (attribute instanceof UserResume userResume) {
-            UserResult userResult = new UserResult();
-            BeanUtils.copyProperties(userResume, userResult);
+            UserResult userResult = UserResult.fromResume(userResume);
             request.getSession().setAttribute(AuthSessionUtils.SESSION_USER_INFO, userResult);
             return userResult;
         }
@@ -655,12 +653,7 @@ public class AuthClientExecute {
             return null;
         }
         UserResume returnResult = approve.getReturnResult();
-        UserResult userResult;
-        if (returnResult instanceof UserResult ur) {
-            userResult = ur;
-        } else {
-            userResult = BeanUtils.copyProperties(returnResult, UserResult.class);
-        }
+        UserResult userResult = UserResult.fromResume(returnResult);
         CACHE.put(token, Value.of(userResult));
         return userResult;
     }
