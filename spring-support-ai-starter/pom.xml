@@ -77,6 +77,12 @@
             <version>4.0.0.42</version>
         </dependency>
 
+        <!-- 文件系统（服务器目录浏览、分片上传） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-filesystem-starter</artifactId>
+        </dependency>
+
         <!-- Spring Support Common -->
         <dependency>
             <groupId>com.chua</groupId>

@@ -20,10 +20,16 @@ spring:
     active: dev
   ai:
     usage:
-      enabled: false
+      enabled: true
 
 rag:
-  enabled: false
+  enabled: true
+
+# 文件系统：目录浏览接口默认关闭，需显式开启（安全问题）
+plugin:
+  filesystem:
+    enable: true
+    dir-list: false
 
 mybatis-plus:
   configuration:
