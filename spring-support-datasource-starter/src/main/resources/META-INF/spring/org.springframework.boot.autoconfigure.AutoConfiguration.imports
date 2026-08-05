@@ -3,3 +3,4 @@ com.chua.starter.datasource.configuration.MaterializedRouteAutoConfiguration
 com.chua.starter.datasource.support.MethodPointcutAdvisor
 com.chua.starter.datasource.configuration.DataSourceScriptConfiguration
 com.chua.starter.datasource.support.DataSourceInspect
+com.chua.starter.datasource.configuration.DocumentAutoConfiguration
