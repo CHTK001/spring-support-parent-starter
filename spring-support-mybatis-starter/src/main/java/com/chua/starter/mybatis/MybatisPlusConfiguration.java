@@ -4,6 +4,7 @@ import org.slf4j.LoggerFactory;
 
 import com.baomidou.mybatisplus.autoconfigure.ConfigurationCustomizer;
 import com.baomidou.mybatisplus.core.config.GlobalConfig;
+import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.baomidou.mybatisplus.extension.parser.JsqlParserGlobal;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionInterceptor;
@@ -307,10 +308,16 @@ public class MybatisPlusConfiguration {
     @ConditionalOnMissingBean
     public SqlSessionFactory sqlSessionFactory(DataSource dataSource,
                                                MybatisPlusInterceptor mybatisPlusInterceptor,
-                                               GlobalConfig globalConfig) throws Exception {
+                                               GlobalConfig globalConfig,
+                                               ObjectProvider<MetaObjectHandler> metaObjectHandlerProvider) throws Exception {
         var factoryBean = new MybatisSqlSessionFactoryBean();
         factoryBean.setDataSource(dataSource);
         factoryBean.setPlugins(mybatisPlusInterceptor);
+        // 关联容器中的 MetaObjectHandler，实现公共字段自动填充（如 SysBase 的 create_time/update_time）
+        MetaObjectHandler metaObjectHandler = metaObjectHandlerProvider.getIfAvailable();
+        if (null != metaObjectHandler) {
+            globalConfig.setMetaObjectHandler(metaObjectHandler);
+        }
         factoryBean.setGlobalConfig(globalConfig);
         var sqlSessionFactory = factoryBean.getObject();
         log.info("[OAuth][MyBatis]SqlSessionFactory 已创建");

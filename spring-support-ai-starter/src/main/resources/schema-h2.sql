@@ -740,7 +740,8 @@ CREATE TABLE IF NOT EXISTS `ai_app_key` (
     `app_key_group_id` BIGINT DEFAULT NULL COMMENT '绑定分组 ID（分组的 key 只能用分组下的模型）',
     `app_key_enabled` INT DEFAULT 1 COMMENT '是否启用',
     `app_key_use_count` BIGINT DEFAULT 0 COMMENT '已使用次数',
-    `app_key_expire_time` DATETIME DEFAULT NULL COMMENT '过期时间',
+    `app_key_max_use` BIGINT DEFAULT NULL COMMENT '次数上限（null 表示不限）',
+    `app_key_expire_time` DATETIME DEFAULT NULL COMMENT '过期时间（null 表示不限）',
     `app_key_create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `app_key_update_time` DATETIME DEFAULT NULL COMMENT '更新时间',
     `app_key_deleted` INT DEFAULT 0 COMMENT '逻辑删除标记'

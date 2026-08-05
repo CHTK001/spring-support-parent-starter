@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.controller.settings;
 
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.model.AiAppKeyDTO;
 import com.chua.starter.ai.support.service.settings.AiAppKeyService;
 import com.chua.starter.common.support.annotations.Permission;
@@ -22,7 +23,7 @@ import java.util.List;
 /**
  * AppKey 控制器，提供 AppKey 的增删改查与启停切换。
  *
- * <p>所有写接口均受 {@code @Permission("admin")} 保护。</p>
+ * <p>所有写接口均受 {@code @Permission("admin")} 保护，统一返回 {@link ReturnResult}。</p>
  *
  * @author CH
  * @since 2026-08-03
@@ -41,12 +42,12 @@ public class AiAppKeyController {
     /**
      * 查询所有 AppKey。
      *
-     * @return AppKey DTO 列表
+     * @return 操作结果
      */
     @Permission("admin")
     @Operation(summary = "查询所有 AppKey")
     @GetMapping
-    public List<AiAppKeyDTO> list() {
+    public ReturnResult<List<AiAppKeyDTO>> list() {
         return appKeyService.list();
     }
 
@@ -54,12 +55,12 @@ public class AiAppKeyController {
      * 新建 AppKey。
      *
      * @param appKey AppKey DTO
-     * @return 创建后的 AppKey DTO
+     * @return 操作结果
      */
     @Permission("admin")
     @Operation(summary = "新建 AppKey")
     @PostMapping
-    public AiAppKeyDTO create(@RequestBody AiAppKeyDTO appKey) {
+    public ReturnResult<AiAppKeyDTO> create(@RequestBody AiAppKeyDTO appKey) {
         return appKeyService.create(appKey);
     }
 
@@ -68,13 +69,13 @@ public class AiAppKeyController {
      *
      * @param appKeyId AppKey 主键
      * @param appKey   AppKey DTO
-     * @return 更新后的 AppKey DTO
+     * @return 操作结果
      */
     @Permission("admin")
     @Operation(summary = "更新 AppKey")
     @PutMapping("/{appKeyId}")
-    public AiAppKeyDTO update(@Parameter(description = "AppKey 主键 ID") @PathVariable Long appKeyId,
-                              @RequestBody AiAppKeyDTO appKey) {
+    public ReturnResult<AiAppKeyDTO> update(@Parameter(description = "AppKey 主键 ID") @PathVariable Long appKeyId,
+                                            @RequestBody AiAppKeyDTO appKey) {
         return appKeyService.update(appKeyId, appKey);
     }
 
@@ -82,12 +83,13 @@ public class AiAppKeyController {
      * 删除 AppKey（逻辑删除）。
      *
      * @param appKeyId AppKey 主键
+     * @return 操作结果
      */
     @Permission("admin")
     @Operation(summary = "删除 AppKey")
     @DeleteMapping("/{appKeyId}")
-    public void delete(@Parameter(description = "AppKey 主键 ID") @PathVariable Long appKeyId) {
-        appKeyService.delete(appKeyId);
+    public ReturnResult<Void> delete(@Parameter(description = "AppKey 主键 ID") @PathVariable Long appKeyId) {
+        return appKeyService.delete(appKeyId);
     }
 
     /**
@@ -95,13 +97,13 @@ public class AiAppKeyController {
      *
      * @param appKeyId AppKey 主键
      * @param enabled  是否启用
-     * @return 更新后的 AppKey DTO
+     * @return 操作结果
      */
     @Permission("admin")
     @Operation(summary = "切换 AppKey 启用状态")
     @PutMapping("/{appKeyId}/toggle")
-    public AiAppKeyDTO toggle(@Parameter(description = "AppKey 主键 ID") @PathVariable Long appKeyId,
-                              @Parameter(description = "是否启用") @RequestParam Boolean enabled) {
+    public ReturnResult<AiAppKeyDTO> toggle(@Parameter(description = "AppKey 主键 ID") @PathVariable Long appKeyId,
+                                            @Parameter(description = "是否启用") @RequestParam Boolean enabled) {
         return appKeyService.toggle(appKeyId, enabled);
     }
 }

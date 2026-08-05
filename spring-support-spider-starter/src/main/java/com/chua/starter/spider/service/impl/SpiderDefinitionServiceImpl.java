@@ -41,14 +41,14 @@ public class SpiderDefinitionServiceImpl
 
     @CacheEvict(allEntries = true)
     @Override
-    public boolean saveWithTime(SpiderDefinition entity) {
-        return super.saveWithTime(entity);
+    public boolean save(SpiderDefinition entity) {
+        return super.save(entity);
     }
 
     @CacheEvict(allEntries = true)
     @Override
-    public boolean updateWithTime(SpiderDefinition entity) {
-        return super.updateWithTime(entity);
+    public boolean updateById(SpiderDefinition entity) {
+        return super.updateById(entity);
     }
 
     @CacheEvict(allEntries = true)

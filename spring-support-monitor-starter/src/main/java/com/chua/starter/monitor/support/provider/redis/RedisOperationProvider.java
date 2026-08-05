@@ -85,6 +85,15 @@ public class RedisOperationProvider implements OperationProvider {
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
+    /**
+     * 同步执行 key 扫描
+     *
+     * @param ctx     操作上下文
+     * @param pattern 匹配模式
+     * @param cursor  游标
+     * @param count   期望返回条数
+     * @return 扫描结果
+     */
     private ScanResult doScanKeys(CollectContext ctx, String pattern, String cursor, int count) {
         try (RedisClient client = buildClient(ctx)) {
             Set<String> keys = client.keys(pattern != null ? pattern : "*");
@@ -92,6 +101,12 @@ public class RedisOperationProvider implements OperationProvider {
         }
     }
 
+    /**
+     * 构建 Redis 客户端
+     *
+     * @param ctx 操作上下文
+     * @return Redis 客户端
+     */
     private RedisClient buildClient(CollectContext ctx) {
         JsonObject config = Json.getJsonObject(ctx.getTask().getCollectConfig());
         String host = str(config.getObject("redis_host"));
@@ -108,6 +123,12 @@ public class RedisOperationProvider implements OperationProvider {
                 .build();
     }
 
+    /**
+     * 对象转字符串
+     *
+     * @param o 对象
+     * @return 字符串
+     */
     private static String str(Object o) {
         return StringUtils.toString(o);
     }

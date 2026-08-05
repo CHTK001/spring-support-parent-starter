@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.service.settings;
 
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.model.AiAppKeyDTO;
 
 import java.util.List;
@@ -15,40 +16,41 @@ public interface AiAppKeyService {
     /**
      * 查询所有 AppKey。
      *
-     * @return AppKey DTO 列表
+     * @return 操作结果（data 为 AppKey DTO 列表）
      */
-    List<AiAppKeyDTO> list();
+    ReturnResult<List<AiAppKeyDTO>> list();
 
     /**
      * 新建 AppKey。
      *
      * @param appKey AppKey DTO
-     * @return 创建后的 AppKey DTO
+     * @return 操作结果（data 为创建后的 AppKey DTO）
      */
-    AiAppKeyDTO create(AiAppKeyDTO appKey);
+    ReturnResult<AiAppKeyDTO> create(AiAppKeyDTO appKey);
 
     /**
      * 更新 AppKey。
      *
      * @param appKeyId AppKey 主键
      * @param appKey   AppKey DTO
-     * @return 更新后的 AppKey DTO
+     * @return 操作结果（data 为更新后的 AppKey DTO）
      */
-    AiAppKeyDTO update(Long appKeyId, AiAppKeyDTO appKey);
+    ReturnResult<AiAppKeyDTO> update(Long appKeyId, AiAppKeyDTO appKey);
 
     /**
      * 删除 AppKey（逻辑删除）。
      *
      * @param appKeyId AppKey 主键
+     * @return 操作结果
      */
-    void delete(Long appKeyId);
+    ReturnResult<Void> delete(Long appKeyId);
 
     /**
      * 切换 AppKey 启用状态。
      *
      * @param appKeyId AppKey 主键
      * @param enabled  是否启用
-     * @return 更新后的 AppKey DTO
+     * @return 操作结果（data 为更新后的 AppKey DTO）
      */
-    AiAppKeyDTO toggle(Long appKeyId, Boolean enabled);
+    ReturnResult<AiAppKeyDTO> toggle(Long appKeyId, Boolean enabled);
 }

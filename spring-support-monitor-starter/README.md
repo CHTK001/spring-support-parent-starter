@@ -18,14 +18,15 @@
 | 依赖 | 说明 |
 |---|---|
 | `spring-support-cache-starter` | 缓存键生成器 (`tenantedKeyGenerator`) |
-| `spring-support-mybatis-starter` | BaseMapper + SysBase 基类 |
+| `spring-support-mybatis-starter` | MyBatis-Plus 集成 |
 | `spring-support-datasource-starter` | JDBC 数据源 |
 | `spring-support-swagger-starter` | OpenAPI 3 + knife4j |
 | `spring-support-ai-starter` | ChatClient (AI 分析) |
 | `utils-support-common-starter` | Trigger / Cron |
-| `utils-support-oshi-starter` | 本地 OS 指标 |
+| `utils-support-metrics-starter` | 本地 OS 指标 (native) |
 | `utils-support-ssh-starter` | 远程 SSH 终端 |
 | `utils-support-redis-starter` | Lettuce Redis 客户端 |
+| `utils-support-prometheus-starter` | Prometheus 客户端 |
 
 ## 表清单（14 张）
 
@@ -64,10 +65,10 @@
 
 | Provider | Service Type | 适用 |
 |---|---|---|
-| `LOCAL` | SERVER | oshi 直采本机（macOS 跳过） |
-| `TERMINAL` | SERVER / REDIS / DB | SSH 执行自定义命令 |
+| `LOCAL` | SERVER | metrics-starter 直采本机（macOS 跳过） |
+| `TERMINAL` | SERVER / REDIS / DB | SSH 执行自定义命令（utils-support-ssh-starter） |
 | `HTTP` | SERVER | 拉取 actuator/exporter 接口 |
-| `PROMETHEUS` | SERVER / REDIS / DB / MQ | 统一 Prometheus |
+| `PROMETHEUS` | SERVER / REDIS / DB / MQ | 统一 Prometheus（utils-support-prometheus-starter） |
 
 通过双键 `(ServiceType, ProviderType)` 在 `ProviderRegistry` 中路由。
 

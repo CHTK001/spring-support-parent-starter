@@ -1,5 +1,6 @@
 package com.chua.starter.monitor.support.controller;
 
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsMonitor;
 import com.chua.starter.monitor.support.entity.MsMonitorConfig;
 import com.chua.starter.monitor.support.entity.MsMonitorGateway;
@@ -45,43 +46,49 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class MonitorController {
 
+    /** 资产 Service */
     private final MonitorService monitorService;
+    /** 任务 Service */
     private final MonitorTaskService taskService;
+    /** 指标配置 Service */
     private final MonitorMetricConfigService metricConfigService;
+    /** 全局配置 Service */
     private final MonitorConfigService configService;
+    /** 网关 Service */
     private final MonitorGatewayService gatewayService;
+    /** Provider 注册中心 */
     private final ProviderRegistry providerRegistry;
 
     // ==================== 资产 CRUD ====================
 
     @Operation(summary = "新增资产")
     @PostMapping
-    public MsMonitor createMonitor(@RequestBody MsMonitor monitor) {
+    public ReturnResult<MsMonitor> createMonitor(@RequestBody MsMonitor monitor) {
         return monitorService.create(monitor);
     }
 
     @Operation(summary = "更新资产")
     @PutMapping("/{id}")
-    public MsMonitor updateMonitor(@PathVariable Long id, @RequestBody MsMonitor monitor) {
+    public ReturnResult<MsMonitor> updateMonitor(@PathVariable Long id, @RequestBody MsMonitor monitor) {
         monitor.setId(id);
         return monitorService.update(monitor);
     }
 
     @Operation(summary = "删除资产")
     @DeleteMapping("/{id}")
-    public void deleteMonitor(@PathVariable Long id) {
-        monitorService.delete(id);
+    public ReturnResult<Void> deleteMonitor(@PathVariable Long id) {
+        return monitorService.delete(id);
     }
 
     @Operation(summary = "查询单个资产")
     @GetMapping("/{id}")
-    public MsMonitor getMonitor(@PathVariable Long id) {
+    public ReturnResult<MsMonitor> getMonitor(@PathVariable Long id) {
         return monitorService.findById(id);
     }
 
     @Operation(summary = "资产列表")
     @GetMapping
-    public List<MsMonitor> listMonitor() {
+    public ReturnResult<List<MsMonitor>> listMonitor() {
         return monitorService.listAll();
     }
 
@@ -89,32 +96,32 @@ public class MonitorController {
 
     @Operation(summary = "新增任务")
     @PostMapping("/task")
-    public MsMonitorTask createTask(@RequestBody MsMonitorTask task) {
+    public ReturnResult<MsMonitorTask> createTask(@RequestBody MsMonitorTask task) {
         return taskService.create(task);
     }
 
     @Operation(summary = "更新任务")
     @PutMapping("/task/{id}")
-    public MsMonitorTask updateTask(@PathVariable Long id, @RequestBody MsMonitorTask task) {
+    public ReturnResult<MsMonitorTask> updateTask(@PathVariable Long id, @RequestBody MsMonitorTask task) {
         task.setId(id);
         return taskService.update(task);
     }
 
     @Operation(summary = "删除任务")
     @DeleteMapping("/task/{id}")
-    public void deleteTask(@PathVariable Long id) {
-        taskService.delete(id);
+    public ReturnResult<Void> deleteTask(@PathVariable Long id) {
+        return taskService.delete(id);
     }
 
     @Operation(summary = "查询单个任务")
     @GetMapping("/task/{id}")
-    public MsMonitorTask getTask(@PathVariable Long id) {
+    public ReturnResult<MsMonitorTask> getTask(@PathVariable Long id) {
         return taskService.findById(id);
     }
 
     @Operation(summary = "按主机查询任务")
     @GetMapping("/task")
-    public List<MsMonitorTask> listTask(@RequestParam(required = false) Long monitorId) {
+    public ReturnResult<List<MsMonitorTask>> listTask(@RequestParam(required = false) Long monitorId) {
         if (monitorId != null) {
             return taskService.listByMonitor(monitorId);
         }
@@ -125,19 +132,19 @@ public class MonitorController {
 
     @Operation(summary = "新增解析规则")
     @PostMapping("/metric-config")
-    public MsMonitorMetricConfig createMetricConfig(@RequestBody MsMonitorMetricConfig config) {
+    public ReturnResult<MsMonitorMetricConfig> createMetricConfig(@RequestBody MsMonitorMetricConfig config) {
         return metricConfigService.create(config);
     }
 
     @Operation(summary = "删除解析规则")
     @DeleteMapping("/metric-config/{id}")
-    public void deleteMetricConfig(@PathVariable Long id) {
-        metricConfigService.delete(id);
+    public ReturnResult<Void> deleteMetricConfig(@PathVariable Long id) {
+        return metricConfigService.delete(id);
     }
 
     @Operation(summary = "按任务查询解析规则")
     @GetMapping("/metric-config")
-    public List<MsMonitorMetricConfig> listMetricConfig(@RequestParam Long taskId) {
+    public ReturnResult<List<MsMonitorMetricConfig>> listMetricConfig(@RequestParam Long taskId) {
         return metricConfigService.listByTask(taskId);
     }
 
@@ -145,19 +152,19 @@ public class MonitorController {
 
     @Operation(summary = "获取所有配置")
     @GetMapping("/config")
-    public Map<String, String> getAllConfig() {
+    public ReturnResult<Map<String, String>> getAllConfig() {
         return configService.getAll();
     }
 
     @Operation(summary = "获取单个配置")
     @GetMapping("/config/{key}")
-    public String getConfig(@PathVariable String key) {
-        return configService.getString(key);
+    public ReturnResult<String> getConfig(@PathVariable String key) {
+        return ReturnResult.ok(configService.getString(key));
     }
 
     @Operation(summary = "写入配置")
     @PostMapping("/config")
-    public MsMonitorConfig upsertConfig(@RequestBody MsMonitorConfig config) {
+    public ReturnResult<MsMonitorConfig> upsertConfig(@RequestBody MsMonitorConfig config) {
         return configService.upsert(config);
     }
 
@@ -165,19 +172,19 @@ public class MonitorController {
 
     @Operation(summary = "新增网关")
     @PostMapping("/gateway")
-    public MsMonitorGateway createGateway(@RequestBody MsMonitorGateway gateway) {
+    public ReturnResult<MsMonitorGateway> createGateway(@RequestBody MsMonitorGateway gateway) {
         return gatewayService.create(gateway);
     }
 
     @Operation(summary = "删除网关")
     @DeleteMapping("/gateway/{id}")
-    public void deleteGateway(@PathVariable Long id) {
-        gatewayService.delete(id);
+    public ReturnResult<Void> deleteGateway(@PathVariable Long id) {
+        return gatewayService.delete(id);
     }
 
     @Operation(summary = "按主机查询网关")
     @GetMapping("/gateway")
-    public List<MsMonitorGateway> listGateway(@RequestParam Long monitorId) {
+    public ReturnResult<List<MsMonitorGateway>> listGateway(@RequestParam Long monitorId) {
         return gatewayService.listByMonitor(monitorId);
     }
 
@@ -188,7 +195,7 @@ public class MonitorController {
     public Mono<OperationProvider.ScanResult> scanKeys(
             @PathVariable Long taskId,
             @RequestParam(defaultValue = "*") String pattern) {
-        MsMonitorTask task = taskService.findById(taskId);
+        MsMonitorTask task = taskService.findById(taskId).getData();
         if (task == null) {
             return Mono.error(new IllegalArgumentException("任务不存在"));
         }
@@ -196,7 +203,7 @@ public class MonitorController {
         if (op.isEmpty()) {
             return Mono.error(new UnsupportedOperationException("未找到 Redis 操作 Provider"));
         }
-        MsMonitor monitor = monitorService.findById(task.getMonitorId());
+        MsMonitor monitor = monitorService.findById(task.getMonitorId()).getData();
         CollectContext ctx = CollectContext.builder().task(task).monitor(monitor).build();
         return op.get().scanKeys(ctx, pattern, null, 100);
     }
@@ -241,8 +248,14 @@ public class MonitorController {
         });
     }
 
+    /**
+     * 解析 Redis 操作 Provider
+     *
+     * @param taskId 任务 id
+     * @return 响应式操作 Provider
+     */
     private Mono<OperationProvider> resolveOperation(Long taskId) {
-        MsMonitorTask task = taskService.findById(taskId);
+        MsMonitorTask task = taskService.findById(taskId).getData();
         if (task == null) {
             return Mono.error(new IllegalArgumentException("任务不存在"));
         }
@@ -253,9 +266,15 @@ public class MonitorController {
         return Mono.just(op.get());
     }
 
+    /**
+     * 构建采集上下文
+     *
+     * @param taskId 任务 id
+     * @return 采集上下文
+     */
     private CollectContext buildContext(Long taskId) {
-        MsMonitorTask task = taskService.findById(taskId);
-        MsMonitor monitor = task != null ? monitorService.findById(task.getMonitorId()) : null;
+        MsMonitorTask task = taskService.findById(taskId).getData();
+        MsMonitor monitor = task != null ? monitorService.findById(task.getMonitorId()).getData() : null;
         return CollectContext.builder().task(task).monitor(monitor).build();
     }
 }

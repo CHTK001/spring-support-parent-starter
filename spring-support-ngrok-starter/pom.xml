@@ -25,6 +25,11 @@
         </dependency>
         <dependency>
             <groupId>com.chua</groupId>
+            <artifactId>spring-support-common-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.chua</groupId>
             <artifactId>utils-support-ngrok-starter</artifactId>
             <version>${project.version}</version>
         </dependency>

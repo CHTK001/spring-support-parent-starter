@@ -60,7 +60,11 @@ public class ServerHttpProvider implements MetricProvider {
 
     /**
      * 同步执行 HTTP 请求
+     *
+     * @param context 采集上下文
+     * @return 采集结果
      */
+
     private CollectResult doCollect(CollectContext context) {
         CollectResult result = new CollectResult();
         result.setTask(context.getTask());
@@ -128,6 +132,9 @@ public class ServerHttpProvider implements MetricProvider {
 
     /**
      * 解析 JSON 响应中的数值字段为指标点
+     *
+     * @param json   JSON 字符串
+     * @param result 采集结果
      */
     private void parseJsonFields(String json, CollectResult result) {
         JsonObject obj = Json.getJsonObject(json);
@@ -146,6 +153,9 @@ public class ServerHttpProvider implements MetricProvider {
 
     /**
      * 判断响应是否为 JSON
+     *
+     * @param body 响应体
+     * @return true 表示为 JSON
      */
     private boolean isJson(String body) {
         if (body == null) {
@@ -158,6 +168,9 @@ public class ServerHttpProvider implements MetricProvider {
 
     /**
      * 对象转字符串
+     *
+     * @param o 对象
+     * @return 字符串
      */
     private static String str(Object o) {
         return o == null ? null : String.valueOf(o);
@@ -165,6 +178,9 @@ public class ServerHttpProvider implements MetricProvider {
 
     /**
      * 对象转 Integer
+     *
+     * @param o 对象
+     * @return Integer, 转换失败返回 null
      */
     private static Integer intOrNull(Object o) {
         if (o == null) {

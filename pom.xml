@@ -899,15 +899,10 @@
                 <version>${utils.version}</version>
             </dependency>
 
-            <!-- 通用工具类库 -->
+<!-- 通用工具类库 -->
             <dependency>
                 <groupId>com.chua</groupId>
-<artifactId>utils-support-common-starter</artifactId>
-                <version>${utils.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>utils-support-flow-starter</artifactId>
+                <artifactId>utils-support-common-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 

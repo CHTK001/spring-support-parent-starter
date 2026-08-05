@@ -8,14 +8,9 @@ spring:
     name: spider-center
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://172.16.0.40:3306/spider?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://172.16.0.40:3306/spider?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
     username: root
-    password: root
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:schema.sql
-      encoding: utf-8
+    password: root@
 
 # 爬虫模块开关（默认开启）
 spider:

@@ -76,7 +76,7 @@ public class SpiderEnvController {
     @PostMapping
     @Operation(summary = "新增环境变量")
     public ReturnResult<Boolean> save(@RequestBody SpiderEnv entity) {
-        return ReturnResult.ok(envService.saveWithTime(entity));
+        return ReturnResult.ok(envService.save(entity));
     }
 
     /**
@@ -88,7 +88,7 @@ public class SpiderEnvController {
     @PutMapping
     @Operation(summary = "更新环境变量")
     public ReturnResult<Boolean> update(@RequestBody SpiderEnv entity) {
-        return ReturnResult.ok(envService.updateWithTime(entity));
+        return ReturnResult.ok(envService.updateById(entity));
     }
 
     /**

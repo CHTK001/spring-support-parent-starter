@@ -2,8 +2,13 @@ package com.chua.starter.ai.support.service.impl.settings;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.entity.settings.AiAppKey;
+import com.chua.starter.ai.support.entity.settings.AiGroup;
+import com.chua.starter.ai.support.entity.settings.AiProvider;
 import com.chua.starter.ai.support.mapper.settings.AiAppKeyMapper;
+import com.chua.starter.ai.support.mapper.settings.AiGroupMapper;
+import com.chua.starter.ai.support.mapper.settings.AiProviderMapper;
 import com.chua.starter.ai.support.model.AiAppKeyDTO;
 import com.chua.starter.ai.support.service.settings.AiAppKeyService;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -36,35 +42,47 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
      * AppKey Mapper
      */
     private final AiAppKeyMapper appKeyMapper;
+    private final AiProviderMapper providerMapper;
+    private final AiGroupMapper groupMapper;
 
     /**
      * 查询所有 AppKey。
      *
-     * @return AppKey DTO 列表
+     * @return 操作结果
      */
     @Override
-    public List<AiAppKeyDTO> list() {
-        return appKeyMapper.selectList(
+    public ReturnResult<List<AiAppKeyDTO>> list() {
+        List<AiAppKey> keys = appKeyMapper.selectList(
                         new LambdaQueryWrapper<AiAppKey>()
-                                .orderByAsc(AiAppKey::getAppKeyCreateTime))
-                .stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
+                                .orderByDesc(AiAppKey::getCreateTime))
+                .stream().toList();
+
+        Map<Long, String> providerNames = providerMapper.selectList(null).stream()
+                .collect(Collectors.toMap(AiProvider::getProviderId, AiProvider::getProviderName, (a, b) -> a));
+        Map<Long, String> groupNames = groupMapper.selectList(null).stream()
+                .collect(Collectors.toMap(AiGroup::getGroupId, AiGroup::getGroupName, (a, b) -> a));
+
+        return ReturnResult.ok(keys.stream()
+                .map(k -> toDto(k, providerNames.get(k.getAppKeyProviderId()), groupNames.get(k.getAppKeyGroupId())))
+                .collect(Collectors.toList()));
     }
 
     /**
      * 新建 AppKey。
      *
      * @param appKey AppKey DTO
-     * @return 创建后的 AppKey DTO
+     * @return 操作结果
      */
     @Override
     @Transactional
-    public AiAppKeyDTO create(AiAppKeyDTO appKey) {
+    public ReturnResult<AiAppKeyDTO> create(AiAppKeyDTO appKey) {
+        if (appKey == null || appKey.getName() == null || appKey.getName().isBlank()) {
+            return ReturnResult.illegal("AppKey 名称不能为空");
+        }
         AiAppKey entity = toEntity(appKey);
         LocalDateTime now = LocalDateTime.now();
-        entity.setAppKeyCreateTime(now);
-        entity.setAppKeyUpdateTime(now);
+        entity.setCreateTime(now);
+        entity.setUpdateTime(now);
         if (entity.getAppKeyEnabled() == null) {
             entity.setAppKeyEnabled(true);
         }
@@ -76,7 +94,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         }
         appKeyMapper.insert(entity);
         log.debug("[AiAppKey] 新建成功: id={}, name={}", entity.getAppKeyId(), entity.getAppKeyName());
-        return toDto(entity);
+        return ReturnResult.ok(toDto(entity, resolveProvider(entity.getAppKeyProviderId()), resolveGroup(entity.getAppKeyGroupId())));
     }
 
     /**
@@ -84,28 +102,41 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
      *
      * @param appKeyId AppKey 主键
      * @param appKey   AppKey DTO
-     * @return 更新后的 AppKey DTO
+     * @return 操作结果
      */
     @Override
     @Transactional
-    public AiAppKeyDTO update(Long appKeyId, AiAppKeyDTO appKey) {
+    public ReturnResult<AiAppKeyDTO> update(Long appKeyId, AiAppKeyDTO appKey) {
+        if (appKeyId == null) {
+            return ReturnResult.illegal("AppKey ID 不能为空");
+        }
+        AiAppKey existing = appKeyMapper.selectById(appKeyId);
+        if (existing == null) {
+            return ReturnResult.error("AppKey 不存在");
+        }
         AiAppKey entity = toEntity(appKey);
         entity.setAppKeyId(appKeyId);
-        entity.setAppKeyUpdateTime(LocalDateTime.now());
+        entity.setCreateTime(existing.getCreateTime());
+        entity.setUpdateTime(LocalDateTime.now());
         appKeyMapper.updateById(entity);
-        return toDto(appKeyMapper.selectById(appKeyId));
+        return ReturnResult.ok(toDto(appKeyMapper.selectById(appKeyId), resolveProvider(entity.getAppKeyProviderId()), resolveGroup(entity.getAppKeyGroupId())));
     }
 
     /**
      * 删除 AppKey（逻辑删除）。
      *
      * @param appKeyId AppKey 主键
+     * @return 操作结果
      */
     @Override
     @Transactional
-    public void delete(Long appKeyId) {
+    public ReturnResult<Void> delete(Long appKeyId) {
+        if (appKeyId == null) {
+            return ReturnResult.illegal("AppKey ID 不能为空");
+        }
         appKeyMapper.deleteById(appKeyId);
         log.debug("[AiAppKey] 删除成功: id={}", appKeyId);
+        return ReturnResult.ok();
     }
 
     /**
@@ -113,26 +144,39 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
      *
      * @param appKeyId AppKey 主键
      * @param enabled  是否启用
-     * @return 更新后的 AppKey DTO
+     * @return 操作结果
      */
     @Override
     @Transactional
-    public AiAppKeyDTO toggle(Long appKeyId, Boolean enabled) {
+    public ReturnResult<AiAppKeyDTO> toggle(Long appKeyId, Boolean enabled) {
+        if (appKeyId == null) {
+            return ReturnResult.illegal("AppKey ID 不能为空");
+        }
         LambdaUpdateWrapper<AiAppKey> wrapper = new LambdaUpdateWrapper<AiAppKey>()
                 .eq(AiAppKey::getAppKeyId, appKeyId)
                 .set(AiAppKey::getAppKeyEnabled, enabled)
-                .set(AiAppKey::getAppKeyUpdateTime, LocalDateTime.now());
+                .set(AiAppKey::getUpdateTime, LocalDateTime.now());
         appKeyMapper.update(null, wrapper);
-        return toDto(appKeyMapper.selectById(appKeyId));
+        AiAppKey entity = appKeyMapper.selectById(appKeyId);
+        return ReturnResult.ok(toDto(entity, resolveProvider(entity.getAppKeyProviderId()), resolveGroup(entity.getAppKeyGroupId())));
+    }
+
+    private String resolveProvider(Long providerId) {
+        if (providerId == null) return null;
+        AiProvider provider = providerMapper.selectById(providerId);
+        return provider != null ? provider.getProviderName() : null;
+    }
+
+    private String resolveGroup(Long groupId) {
+        if (groupId == null) return null;
+        AiGroup group = groupMapper.selectById(groupId);
+        return group != null ? group.getGroupName() : null;
     }
 
     /**
      * 实体转 DTO。
-     *
-     * @param entity AppKey 实体
-     * @return AppKey DTO
      */
-    private AiAppKeyDTO toDto(AiAppKey entity) {
+    private AiAppKeyDTO toDto(AiAppKey entity, String providerName, String groupName) {
         if (entity == null) {
             return null;
         }
@@ -141,17 +185,20 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         dto.setName(entity.getAppKeyName());
         dto.setKey(entity.getAppKeyValue());
         dto.setProvider(entity.getAppKeyProviderId());
+        dto.setProviderName(providerName);
         dto.setModel(entity.getAppKeyModel());
+        dto.setGroupId(entity.getAppKeyGroupId());
+        dto.setGroupName(groupName);
+        dto.setUseCount(entity.getAppKeyUseCount());
+        dto.setMaxUse(entity.getAppKeyMaxUse());
+        dto.setExpireTime(entity.getAppKeyExpireTime() != null ? entity.getAppKeyExpireTime().format(FORMATTER) : null);
         dto.setEnabled(entity.getAppKeyEnabled());
-        dto.setCreatedAt(entity.getAppKeyCreateTime() != null ? entity.getAppKeyCreateTime().format(FORMATTER) : null);
+        dto.setCreatedAt(entity.getCreateTime() != null ? entity.getCreateTime().format(FORMATTER) : null);
         return dto;
     }
 
     /**
      * DTO 转实体。
-     *
-     * @param dto AppKey DTO
-     * @return AppKey 实体
      */
     private AiAppKey toEntity(AiAppKeyDTO dto) {
         AiAppKey entity = new AiAppKey();
@@ -159,7 +206,13 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         entity.setAppKeyValue(dto.getKey());
         entity.setAppKeyProviderId(dto.getProvider());
         entity.setAppKeyModel(dto.getModel());
+        entity.setAppKeyGroupId(dto.getGroupId());
         entity.setAppKeyEnabled(dto.getEnabled());
+        entity.setAppKeyUseCount(dto.getUseCount());
+        entity.setAppKeyMaxUse(dto.getMaxUse());
+        if (dto.getExpireTime() != null && !dto.getExpireTime().isBlank()) {
+            entity.setAppKeyExpireTime(LocalDateTime.parse(dto.getExpireTime(), FORMATTER));
+        }
         return entity;
     }
 }

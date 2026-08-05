@@ -112,7 +112,7 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
 
     @Override
     public void registerHandler(String topic, com.chua.starter.sync.support.spi.SyncMessageHandler handler) {
-        delegate.subscribe(topic, (sessionId, data) -> handler.handle(topic, sessionId, data));
+        delegate.subscribe(topic, (sessionId, message) -> handler.handle(topic, sessionId, (java.util.Map<String, Object>) message));
     }
 
     @Override

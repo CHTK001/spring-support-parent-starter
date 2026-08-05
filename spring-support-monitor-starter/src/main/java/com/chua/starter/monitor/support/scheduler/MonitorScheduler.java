@@ -40,19 +40,29 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class MonitorScheduler {
 
+    /** 默认调度间隔(毫秒) */
     private static final long DEFAULT_INTERVAL_MS = 10_000L;
+    /** 最大并发数 */
     private static final int CONCURRENCY = 50;
 
+    /** 任务 Service */
     private final MonitorTaskService taskService;
+    /** 资产 Service */
     private final MonitorService monitorService;
+    /** 指标 Service */
     private final MetricService metricService;
+    /** 配置 Service */
     private final MonitorConfigService configService;
+    /** Provider 注册中心 */
     private final ProviderRegistry providerRegistry;
 
+    /**
+     * 调度入口, 每 10 秒执行一次
+     */
     @Scheduled(fixedRate = 10_000)
     public void tick() {
-        List<MsMonitorTask> tasks = taskService.listEnabled();
-        if (tasks.isEmpty()) {
+        List<MsMonitorTask> tasks = taskService.listEnabled().getData();
+        if (tasks == null || tasks.isEmpty()) {
             return;
         }
         LocalDateTime now = LocalDateTime.now();
@@ -67,6 +77,13 @@ public class MonitorScheduler {
                 );
     }
 
+    /**
+     * 判断任务是否到达触发时间
+     *
+     * @param task 任务
+     * @param now  当前时间
+     * @return true 表示应触发
+     */
     private boolean isTriggered(MsMonitorTask task, LocalDateTime now) {
         String cron = task.getMonitorTaskCron();
         if (cron == null || cron.isEmpty()) {
@@ -86,6 +103,12 @@ public class MonitorScheduler {
         }
     }
 
+    /**
+     * 执行采集任务
+     *
+     * @param task 任务
+     * @return 响应式采集结果
+     */
     private reactor.core.publisher.Mono<CollectResult> execute(MsMonitorTask task) {
         ServiceType serviceType = ServiceType.of(task.getServiceType());
         ProviderType providerType = ProviderType.of(task.getProvider());
@@ -95,7 +118,7 @@ public class MonitorScheduler {
                     serviceType, providerType, task.getId());
             return reactor.core.publisher.Mono.empty();
         }
-        MsMonitor monitor = monitorService.findById(task.getMonitorId());
+        MsMonitor monitor = monitorService.findById(task.getMonitorId()).getData();
         if (monitor == null) {
             log.warn("[MonitorScheduler] 主机不存在 task={} monitorId={}", task.getId(), task.getMonitorId());
             return reactor.core.publisher.Mono.empty();
@@ -107,7 +130,8 @@ public class MonitorScheduler {
         return providerOpt.get().collect(context)
                 .flatMap(result -> {
                     taskService.markLastRunTime(task.getId());
-                    return metricService.writeCollectResult(result).thenReturn(result);
+                    metricService.writeCollectResult(result);
+                    return reactor.core.publisher.Mono.just(result);
                 })
                 .subscribeOn(Schedulers.boundedElastic());
     }

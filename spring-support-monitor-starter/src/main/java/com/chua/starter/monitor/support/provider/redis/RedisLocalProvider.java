@@ -1,5 +1,7 @@
 package com.chua.starter.monitor.support.provider.redis;
 
+import com.chua.common.support.lang.json.Json;
+import com.chua.common.support.lang.json.JsonObject;
 import com.chua.common.support.utils.NumberUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.redis.support.client.RedisClient;
@@ -14,24 +16,6 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import redis.clients.jedis.Jedis;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import com.chua.common.support.lang.json.JsonObject;
-import com.chua.redis.support.client.RedisClient;
-import com.chua.starter.monitor.support.enums.ProviderType;
-import com.chua.starter.monitor.support.enums.ServiceType;
-import com.chua.starter.monitor.support.spi.CollectContext;
-import com.chua.starter.monitor.support.spi.CollectResult;
-import com.chua.starter.monitor.support.spi.MetricPoint;
-import com.chua.starter.monitor.support.spi.MetricProvider;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -69,7 +53,11 @@ public class RedisLocalProvider implements MetricProvider {
 
     /**
      * 同步执行 INFO 采集
+     *
+     * @param context 采集上下文
+     * @return 采集结果
      */
+
     private CollectResult doCollect(CollectContext context) {
         CollectResult result = new CollectResult();
         result.setTask(context.getTask());
@@ -176,6 +164,10 @@ public class RedisLocalProvider implements MetricProvider {
 
     /**
      * 添加指标点
+     *
+     * @param result 采集结果
+     * @param name   指标名
+     * @param value  指标值
      */
     private void addMetric(CollectResult result, String name, Double value) {
         if (value == null) {
@@ -220,6 +212,9 @@ public class RedisLocalProvider implements MetricProvider {
 
     /**
      * 对象转字符串
+     *
+     * @param o 对象
+     * @return 字符串
      */
     private static String str(Object o) {
         return o == null ? null : String.valueOf(o);
@@ -227,6 +222,9 @@ public class RedisLocalProvider implements MetricProvider {
 
     /**
      * 对象转 int
+     *
+     * @param o 对象
+     * @return int, 转换失败返回 0
      */
     private static int intOrZero(Object o) {
         if (o == null) {

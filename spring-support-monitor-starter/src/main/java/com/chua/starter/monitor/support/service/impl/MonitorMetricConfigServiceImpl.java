@@ -1,19 +1,22 @@
 package com.chua.starter.monitor.support.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.utils.IdUtils;
 import com.chua.starter.monitor.support.entity.MsMonitorMetricConfig;
-import com.chua.starter.monitor.support.mapper.MsMonitorMetricConfigMapper;
 import com.chua.starter.monitor.support.service.MonitorMetricConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 监控解析规则 Service 实现
+ * 监控指标配置 Service 实现
  *
  * @author CH
  * @since 2026/8/4
@@ -23,43 +26,67 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MonitorMetricConfigServiceImpl implements MonitorMetricConfigService {
 
-    /**
-     * 缓存名
-     */
-    public static final String CACHE = "monitorMetricConfig";
-
-    /**
-     * Mapper
-     */
-    private final MsMonitorMetricConfigMapper mapper;
+    /** JDBC 模板 */
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
-    @CacheEvict(allEntries = true, cacheNames = CACHE)
-    public MsMonitorMetricConfig create(MsMonitorMetricConfig entity) {
-        mapper.insert(entity);
-        log.info("[MonitorMetricConfig] 创建解析规则 task={} metric={}",
-                entity.getTaskId(), entity.getMetricName());
-        return entity;
+    @CacheEvict(allEntries = true, cacheNames = "monitorMetricConfig")
+    public ReturnResult<MsMonitorMetricConfig> create(MsMonitorMetricConfig entity) {
+        try {
+            if (entity.getId() == null) {
+                entity.setId(IdUtils.createSnowflakeId());
+            }
+            jdbcTemplate.update(
+                "INSERT INTO ms_monitor_metric_config(id, task_id, metric_name, target_table, parse_rule, " +
+                "metric_unit, remark, create_time, update_time) VALUES(?,?,?,?,?,?,?,?,?)",
+                entity.getId(), entity.getTaskId(), entity.getMetricName(), entity.getTargetTable(),
+                entity.getParseRule(), entity.getMetricUnit(), entity.getRemark(),
+                LocalDateTime.now(), LocalDateTime.now());
+            return ReturnResult.ok(entity);
+        } catch (Exception e) {
+            log.error("创建指标配置失败", e);
+            return ReturnResult.error(e.getMessage());
+        }
     }
 
     @Override
-    @CacheEvict(allEntries = true, cacheNames = CACHE)
-    public MsMonitorMetricConfig update(MsMonitorMetricConfig entity) {
-        mapper.updateById(entity);
-        return entity;
+    @CacheEvict(allEntries = true, cacheNames = "monitorMetricConfig")
+    public ReturnResult<MsMonitorMetricConfig> update(MsMonitorMetricConfig entity) {
+        try {
+            jdbcTemplate.update(
+                "UPDATE ms_monitor_metric_config SET metric_name=?, target_table=?, parse_rule=?, " +
+                "metric_unit=?, remark=?, update_time=? WHERE id=?",
+                entity.getMetricName(), entity.getTargetTable(), entity.getParseRule(),
+                entity.getMetricUnit(), entity.getRemark(), LocalDateTime.now(), entity.getId());
+            return ReturnResult.ok(entity);
+        } catch (Exception e) {
+            log.error("更新指标配置失败", e);
+            return ReturnResult.error(e.getMessage());
+        }
     }
 
     @Override
-    @CacheEvict(allEntries = true, cacheNames = CACHE)
-    public void delete(Long id) {
-        mapper.deleteById(id);
+    @CacheEvict(allEntries = true, cacheNames = "monitorMetricConfig")
+    public ReturnResult<Void> delete(Long id) {
+        try {
+            jdbcTemplate.update("DELETE FROM ms_monitor_metric_config WHERE id=?", id);
+            return ReturnResult.ok();
+        } catch (Exception e) {
+            log.error("删除指标配置失败", e);
+            return ReturnResult.error(e.getMessage());
+        }
     }
 
     @Override
-    @Cacheable(cacheNames = CACHE, key = "'monitor.metricConfig:task:' + #taskId")
-    public List<MsMonitorMetricConfig> listByTask(Long taskId) {
-        LambdaQueryWrapper<MsMonitorMetricConfig> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(MsMonitorMetricConfig::getTaskId, taskId);
-        return mapper.selectList(wrapper);
+    @Cacheable(cacheNames = "monitorMetricConfig", key = "'monitor.metricConfig:task:' + #taskId")
+    public ReturnResult<List<MsMonitorMetricConfig>> listByTask(Long taskId) {
+        try {
+            return ReturnResult.ok(jdbcTemplate.query(
+                "SELECT * FROM ms_monitor_metric_config WHERE task_id=?",
+                new BeanPropertyRowMapper<>(MsMonitorMetricConfig.class), taskId));
+        } catch (Exception e) {
+            log.error("按任务查询指标配置失败", e);
+            return ReturnResult.error(e.getMessage());
+        }
     }
 }

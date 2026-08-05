@@ -87,7 +87,11 @@ public class ServerLocalProvider implements MetricProvider {
 
     /**
      * 同步执行本地采集
+     *
+     * @param context 采集上下文
+     * @return 采集结果
      */
+
     private CollectResult doCollect(CollectContext context) {
         CollectResult result = new CollectResult();
         result.setTask(context.getTask());
@@ -129,6 +133,9 @@ public class ServerLocalProvider implements MetricProvider {
 
     /**
      * 采集 CPU
+     *
+     * @param snapshot 指标快照
+     * @param result   采集结果
      */
     private void collectCpu(MetricsSnapshot snapshot, CollectResult result) {
         List<CpuCore> cpuCores = snapshot.getCpuCores();
@@ -163,6 +170,9 @@ public class ServerLocalProvider implements MetricProvider {
 
     /**
      * 采集内存
+     *
+     * @param snapshot 指标快照
+     * @param result   采集结果
      */
     private void collectMemory(MetricsSnapshot snapshot, CollectResult result) {
         long total = snapshot.getSwapTotal();
@@ -196,6 +206,9 @@ public class ServerLocalProvider implements MetricProvider {
 
     /**
      * 采集磁盘
+     *
+     * @param snapshot 指标快照
+     * @param result   采集结果
      */
     private void collectDisk(MetricsSnapshot snapshot, CollectResult result) {
         List<DiskInfo> disks = snapshot.getDisks();
@@ -233,6 +246,9 @@ public class ServerLocalProvider implements MetricProvider {
 
     /**
      * 采集磁盘 IO(累计值, 由上层按差值计算速率)
+     *
+     * @param snapshot 指标快照
+     * @param result   采集结果
      */
     private void collectDiskIo(MetricsSnapshot snapshot, CollectResult result) {
         List<DiskIo> ioList = snapshot.getDiskIo();
@@ -263,6 +279,9 @@ public class ServerLocalProvider implements MetricProvider {
 
     /**
      * 采集网络(累计值)
+     *
+     * @param snapshot 指标快照
+     * @param result   采集结果
      */
     private void collectNetwork(MetricsSnapshot snapshot, CollectResult result) {
         List<NetworkInterface> nets = snapshot.getNetworks();
@@ -293,6 +312,9 @@ public class ServerLocalProvider implements MetricProvider {
 
     /**
      * 采集系统负载
+     *
+     * @param snapshot 指标快照
+     * @param result   采集结果
      */
     private void collectSystemLoad(MetricsSnapshot snapshot, CollectResult result) {
         SystemLoad load = snapshot.getLoad();

@@ -70,6 +70,12 @@ public class AiAppKeyDTO implements Serializable {
     private Long useCount;
 
     /**
+     * 次数上限（null 表示不限）
+     */
+    @Schema(description = "次数上限")
+    private Long maxUse;
+
+    /**
      * 过期时间
      */
     @Schema(description = "过期时间")

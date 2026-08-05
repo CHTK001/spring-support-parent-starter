@@ -41,7 +41,7 @@ public interface MetricProvider {
     /**
      * 判断是否支持当前任务
      *
-     * @param context 上下文
+     * @param context 采集上下文
      * @return true 表示支持
      */
     default boolean supports(CollectContext context) {

@@ -1,6 +1,12 @@
 package com.chua.starter.spider.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -13,28 +19,52 @@ import lombok.EqualsAndHashCode;
  * @author CH
  * @since 4.0.0.42
  */
-@EqualsAndHashCode(callSuper = true)
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("spider_flow")
-public class SpiderFlow extends SpiderBase {
+@Schema(name = "流程编排")
+public class SpiderFlow extends SysBase {
+
+    /**
+     * 主键 ID（自增）
+     */
+    @TableId(type = IdType.AUTO)
+    @Schema(description = "主键 ID")
+    private Long id;
 
     /**
      * 关联爬虫定义 ID
      */
+    @TableField("definition_id")
+    @Schema(description = "关联爬虫定义 ID")
     private Long definitionId;
 
     /**
      * 流程名称
      */
+    @TableField("name")
+    @Schema(description = "流程名称")
     private String name;
 
     /**
      * 节点 JSON（ReFlow 导出）
      */
+    @TableField("nodes_json")
+    @Schema(description = "节点 JSON")
     private String nodesJson;
 
     /**
      * 连线 JSON（ReFlow 导出）
      */
+    @TableField("edges_json")
+    @Schema(description = "连线 JSON")
     private String edgesJson;
+
+    /**
+     * 逻辑删除标记（0 未删除 / 1 已删除）
+     */
+    @TableField("sys_deleted")
+    @TableLogic
+    @Schema(description = "逻辑删除标记")
+    private Integer sysDeleted;
 }

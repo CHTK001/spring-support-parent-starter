@@ -1,7 +1,12 @@
 package com.chua.starter.spider.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.fasterxml.jackson.annotation.JsonFormat;
+import com.chua.starter.mybatis.pojo.SysBase;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -16,54 +21,87 @@ import java.time.LocalDateTime;
  * @author CH
  * @since 4.0.0.42
  */
-@EqualsAndHashCode(callSuper = true)
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("spider_definition")
-public class SpiderDefinition extends SpiderBase {
+@Schema(name = "爬虫定义")
+public class SpiderDefinition extends SysBase {
+
+    /**
+     * 主键 ID（自增）
+     */
+    @TableId(type = IdType.AUTO)
+    @Schema(description = "主键 ID")
+    private Long id;
 
     /**
      * 爬虫唯一编码
      */
+    @TableField("code")
+    @Schema(description = "爬虫唯一编码")
     private String code;
 
     /**
      * 爬虫名称
      */
+    @TableField("name")
+    @Schema(description = "爬虫名称")
     private String name;
 
     /**
      * 描述
      */
+    @TableField("description")
+    @Schema(description = "描述")
     private String description;
 
     /**
      * 关联流程 ID（spider_flow.id）
      */
+    @TableField("flow_id")
+    @Schema(description = "关联流程 ID")
     private Long flowId;
 
     /**
      * 是否启用（1 启用 / 0 停用）
      */
+    @TableField("enabled")
+    @Schema(description = "是否启用")
     private Integer enabled;
 
     /**
      * 定时 cron 表达式，为空则不自动调度
      */
+    @TableField("cron_expression")
+    @Schema(description = "定时 cron 表达式")
     private String cronExpression;
 
     /**
      * 上次执行时间
      */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @TableField("last_run_at")
+    @Schema(description = "上次执行时间")
     private LocalDateTime lastRunAt;
 
     /**
      * 上次执行状态（SUCCESS/FAIL/RUNNING）
      */
+    @TableField("last_status")
+    @Schema(description = "上次执行状态")
     private String lastStatus;
 
     /**
      * 上次执行消息
      */
+    @TableField("last_message")
+    @Schema(description = "上次执行消息")
     private String lastMessage;
+
+    /**
+     * 逻辑删除标记（0 未删除 / 1 已删除）
+     */
+    @TableField("sys_deleted")
+    @TableLogic
+    @Schema(description = "逻辑删除标记")
+    private Integer sysDeleted;
 }

@@ -65,7 +65,7 @@ public class SpiderFlowController {
     @PostMapping
     @Operation(summary = "新增流程编排")
     public ReturnResult<Boolean> save(@RequestBody SpiderFlow entity) {
-        return ReturnResult.ok(flowService.saveWithTime(entity));
+        return ReturnResult.ok(flowService.save(entity));
     }
 
     /**
@@ -77,7 +77,7 @@ public class SpiderFlowController {
     @PutMapping
     @Operation(summary = "更新流程编排")
     public ReturnResult<Boolean> update(@RequestBody SpiderFlow entity) {
-        return ReturnResult.ok(flowService.updateWithTime(entity));
+        return ReturnResult.ok(flowService.updateById(entity));
     }
 
     /**

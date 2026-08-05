@@ -1,14 +1,12 @@
 package com.chua.starter.monitor.support.service;
 
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsMonitorTask;
 
 import java.util.List;
 
 /**
  * 监控任务 Service
- * <p>
- * 提供任务增删查改与启停控制, 启用缓存降低数据库压力。
- * </p>
  *
  * @author CH
  * @since 2026/8/4
@@ -19,60 +17,63 @@ public interface MonitorTaskService {
      * 创建任务
      *
      * @param task 任务实体
-     * @return 创建后的实体(包含 id)
+     * @return 创建结果
      */
-    MsMonitorTask create(MsMonitorTask task);
+    ReturnResult<MsMonitorTask> create(MsMonitorTask task);
 
     /**
      * 更新任务
      *
      * @param task 任务实体
-     * @return 更新后的实体
+     * @return 更新结果
      */
-    MsMonitorTask update(MsMonitorTask task);
+    ReturnResult<MsMonitorTask> update(MsMonitorTask task);
 
     /**
      * 删除任务
      *
      * @param id 主键
+     * @return 删除结果
      */
-    void delete(Long id);
+    ReturnResult<Void> delete(Long id);
 
     /**
-     * 查询单个任务
+     * 按 ID 查询
      *
      * @param id 主键
-     * @return 任务实体
+     * @return 查询结果
      */
-    MsMonitorTask findById(Long id);
+    ReturnResult<MsMonitorTask> findById(Long id);
 
     /**
-     * 查询所有启用的任务
+     * 查询已启用的任务列表
      *
      * @return 任务列表
      */
-    List<MsMonitorTask> listEnabled();
+    ReturnResult<List<MsMonitorTask>> listEnabled();
 
     /**
-     * 按主机查询任务
+     * 按监控主机查询任务
      *
      * @param monitorId 主机 id
      * @return 任务列表
      */
-    List<MsMonitorTask> listByMonitor(Long monitorId);
+    ReturnResult<List<MsMonitorTask>> listByMonitor(Long monitorId);
 
     /**
-     * 启用/禁用
+     * 设置启用/禁用
+     *
+     * @param id      主键
+     * @param enabled 启用状态
+     * @return 操作结果
+     */
+    ReturnResult<Void> setEnabled(Long id, Integer enabled);
+
+    /**
+     * 标记上次运行时间
      *
      * @param id 主键
-     * @param enabled 1启用 0禁用
+     * @return 操作结果
      */
-    void setEnabled(Long id, Integer enabled);
-
-    /**
-     * 记录最近一次执行时间
-     *
-     * @param id 任务 id
-     */
-    void markLastRunTime(Long id);
+    ReturnResult<Void> markLastRunTime(Long id);
 }

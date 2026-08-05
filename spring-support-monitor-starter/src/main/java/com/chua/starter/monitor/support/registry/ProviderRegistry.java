@@ -138,7 +138,7 @@ public class ProviderRegistry {
     /**
      * 用于测试与文档展示
      *
-     * @return 已注册 Provider 描述
+     * @return 已注册 Provider 描述 Map
      */
     public Map<String, String> describe() {
         Map<String, String> out = new HashMap<>();

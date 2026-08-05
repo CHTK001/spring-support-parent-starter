@@ -87,7 +87,11 @@ public class PrometheusProvider implements MetricProvider {
 
     /**
      * 同步执行 PromQL 查询
+     *
+     * @param context 采集上下文
+     * @return 采集结果
      */
+
     private CollectResult doCollect(CollectContext context) {
         CollectResult result = new CollectResult();
         result.setTask(context.getTask());
@@ -123,6 +127,10 @@ public class PrometheusProvider implements MetricProvider {
 
     /**
      * 解析查询结果为指标点
+     *
+     * @param queryResult 查询结果
+     * @param promql      PromQL 语句
+     * @param result      采集结果
      */
     private void parseQueryResult(QueryResult queryResult, String promql, CollectResult result) {
         if (queryResult == null || !queryResult.hasData()) {

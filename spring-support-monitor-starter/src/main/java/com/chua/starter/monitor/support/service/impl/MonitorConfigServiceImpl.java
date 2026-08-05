@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsMonitorConfig;
 import com.chua.starter.monitor.support.mapper.MsMonitorConfigMapper;
 import com.chua.starter.monitor.support.service.MonitorConfigService;
@@ -15,109 +16,74 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * 监控全局配置 Service 实现
- *
- * @author CH
- * @since 2026/8/4
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class MonitorConfigServiceImpl implements MonitorConfigService {
 
-    /**
-     * 配置缓存名
-     */
-    public static final String CACHE = "monitorConfig";
-
-    /**
-     * Mapper
-     */
     private final MsMonitorConfigMapper configMapper;
 
     @Override
-    @Cacheable(cacheNames = CACHE, key = "'monitor.config:key:' + #key")
-    public Optional<MsMonitorConfig> findByKey(String key) {
-        LambdaQueryWrapper<MsMonitorConfig> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(MsMonitorConfig::getMonitorConfigKey, key);
-        return Optional.ofNullable(configMapper.selectOne(wrapper));
+    @Cacheable(cacheNames = "monitorConfig", key = "'monitor.config:key:' + #key")
+    public ReturnResult<MsMonitorConfig> findByKey(String key) {
+        try {
+            LambdaQueryWrapper<MsMonitorConfig> w = new LambdaQueryWrapper<>();
+            w.eq(MsMonitorConfig::getMonitorConfigKey, key);
+            return ReturnResult.ok(configMapper.selectOne(w));
+        } catch (Exception e) { return ReturnResult.error(e.getMessage()); }
     }
 
-    @Override
-    public String getString(String key) {
-        return getString(key, "");
-    }
+    @Override public String getString(String key) { return getString(key, ""); }
 
     @Override
     public String getString(String key, String defaultValue) {
-        return findByKey(key).map(MsMonitorConfig::getMonitorConfigValue).orElse(defaultValue);
+        Optional<MsMonitorConfig> opt = Optional.ofNullable(findByKey(key).getData());
+        return opt.map(MsMonitorConfig::getMonitorConfigValue).orElse(defaultValue);
     }
 
     @Override
     public int getInt(String key, int defaultValue) {
-        String value = getString(key);
-        if (value == null || value.isEmpty()) {
-            return defaultValue;
-        }
-        try {
-            return Integer.parseInt(value);
-        } catch (NumberFormatException e) {
-            log.warn("[MonitorConfig] 解析 int 失败 key={} value={}", key, value);
-            return defaultValue;
-        }
+        try { return Integer.parseInt(getString(key)); } catch (NumberFormatException e) { return defaultValue; }
     }
 
     @Override
     public long getLong(String key, long defaultValue) {
-        String value = getString(key);
-        if (value == null || value.isEmpty()) {
-            return defaultValue;
-        }
-        try {
-            return Long.parseLong(value);
-        } catch (NumberFormatException e) {
-            log.warn("[MonitorConfig] 解析 long 失败 key={} value={}", key, value);
-            return defaultValue;
-        }
+        try { return Long.parseLong(getString(key)); } catch (NumberFormatException e) { return defaultValue; }
     }
 
     @Override
     public boolean getBoolean(String key, boolean defaultValue) {
-        String value = getString(key);
-        if (value == null || value.isEmpty()) {
-            return defaultValue;
-        }
-        return Boolean.parseBoolean(value);
+        String val = getString(key);
+        return val == null || val.isEmpty() ? defaultValue : Boolean.parseBoolean(val);
     }
 
     @Override
-    @Cacheable(cacheNames = CACHE, key = "'monitor.config:all'")
-    public Map<String, String> getAll() {
-        Map<String, String> out = new HashMap<>();
-        for (MsMonitorConfig c : listAll()) {
-            out.put(c.getMonitorConfigKey(), c.getMonitorConfigValue());
-        }
-        return out;
+    @Cacheable(cacheNames = "monitorConfig", key = "'monitor.config:all'")
+    public ReturnResult<Map<String, String>> getAll() {
+        try {
+            Map<String, String> map = new HashMap<>();
+            for (MsMonitorConfig c : listAll()) map.put(c.getMonitorConfigKey(), c.getMonitorConfigValue());
+            return ReturnResult.ok(map);
+        } catch (Exception e) { return ReturnResult.error(e.getMessage()); }
     }
 
     @Override
-    public List<MsMonitorConfig> listAll() {
-        return configMapper.selectList(null);
-    }
+    public List<MsMonitorConfig> listAll() { return configMapper.selectList(null); }
 
     @Override
-    @CacheEvict(allEntries = true, cacheNames = CACHE)
-    public MsMonitorConfig upsert(MsMonitorConfig entity) {
-        Optional<MsMonitorConfig> existing = findByKey(entity.getMonitorConfigKey());
-        if (existing.isPresent()) {
-            MsMonitorConfig old = existing.get();
-            old.setMonitorConfigValue(entity.getMonitorConfigValue());
-            old.setMonitorConfigDesc(entity.getMonitorConfigDesc());
-            configMapper.updateById(old);
-            return old;
-        }
-        configMapper.insert(entity);
-        return entity;
+    @CacheEvict(allEntries = true, cacheNames = "monitorConfig")
+    public ReturnResult<MsMonitorConfig> upsert(MsMonitorConfig entity) {
+        try {
+            ReturnResult<MsMonitorConfig> existing = findByKey(entity.getMonitorConfigKey());
+            if (existing.getData() != null) {
+                MsMonitorConfig old = existing.getData();
+                old.setMonitorConfigValue(entity.getMonitorConfigValue());
+                old.setMonitorConfigDesc(entity.getMonitorConfigDesc());
+                configMapper.updateById(old);
+                return ReturnResult.ok(old);
+            }
+            configMapper.insert(entity);
+            return ReturnResult.ok(entity);
+        } catch (Exception e) { return ReturnResult.error(e.getMessage()); }
     }
 }

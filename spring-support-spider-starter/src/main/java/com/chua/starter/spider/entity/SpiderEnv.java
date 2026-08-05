@@ -1,6 +1,12 @@
 package com.chua.starter.spider.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -13,28 +19,52 @@ import lombok.EqualsAndHashCode;
  * @author CH
  * @since 4.0.0.42
  */
-@EqualsAndHashCode(callSuper = true)
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("spider_env")
-public class SpiderEnv extends SpiderBase {
+@Schema(name = "环境变量")
+public class SpiderEnv extends SysBase {
+
+    /**
+     * 主键 ID（自增）
+     */
+    @TableId(type = IdType.AUTO)
+    @Schema(description = "主键 ID")
+    private Long id;
 
     /**
      * 变量名（如 COOKIE、TOKEN）
      */
+    @TableField("env_key")
+    @Schema(description = "变量名")
     private String envKey;
 
     /**
      * 变量值
      */
+    @TableField("env_value")
+    @Schema(description = "变量值")
     private String envValue;
 
     /**
      * 描述
      */
+    @TableField("description")
+    @Schema(description = "描述")
     private String description;
 
     /**
      * 是否启用（1 启用 / 0 停用）
      */
+    @TableField("enabled")
+    @Schema(description = "是否启用")
     private Integer enabled;
+
+    /**
+     * 逻辑删除标记（0 未删除 / 1 已删除）
+     */
+    @TableField("sys_deleted")
+    @TableLogic
+    @Schema(description = "逻辑删除标记")
+    private Integer sysDeleted;
 }

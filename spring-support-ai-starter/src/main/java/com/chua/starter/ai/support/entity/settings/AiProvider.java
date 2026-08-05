@@ -6,11 +6,10 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-
-import java.io.Serializable;
-import java.time.LocalDateTime;
+import lombok.EqualsAndHashCode;
 
 /**
  * 模型供应商表，存储 AI 提供商的基础信息、接入地址、可用模型与启用状态。
@@ -19,9 +18,10 @@ import java.time.LocalDateTime;
  * @since 2026-08-03
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("ai_provider")
 @Schema(name = "模型供应商")
-public class AiProvider implements Serializable {
+public class AiProvider extends SysBase {
 
     /**
      * 供应商主键 ID
@@ -78,20 +78,6 @@ public class AiProvider implements Serializable {
     @TableField("provider_enabled")
     @Schema(description = "是否启用")
     private Boolean providerEnabled;
-
-    /**
-     * 创建时间
-     */
-    @TableField(value = "provider_create_time", fill = FieldFill.INSERT)
-    @Schema(description = "创建时间")
-    private LocalDateTime providerCreateTime;
-
-    /**
-     * 更新时间
-     */
-    @TableField(value = "provider_update_time", fill = FieldFill.INSERT_UPDATE)
-    @Schema(description = "更新时间")
-    private LocalDateTime providerUpdateTime;
 
     /**
      * 逻辑删除标记

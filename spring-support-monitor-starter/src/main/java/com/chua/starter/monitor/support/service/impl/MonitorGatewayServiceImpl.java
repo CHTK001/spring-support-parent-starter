@@ -1,6 +1,8 @@
 package com.chua.starter.monitor.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.utils.IdUtils;
 import com.chua.starter.monitor.support.entity.MsMonitorGateway;
 import com.chua.starter.monitor.support.mapper.MsMonitorGatewayMapper;
 import com.chua.starter.monitor.support.service.MonitorGatewayService;
@@ -23,48 +25,64 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MonitorGatewayServiceImpl implements MonitorGatewayService {
 
-    /**
-     * 缓存名
-     */
-    public static final String CACHE = "monitorGateway";
-
-    /**
-     * Mapper
-     */
-    private final MsMonitorGatewayMapper mapper;
+    /** 网关 Mapper */
+    private final MsMonitorGatewayMapper gatewayMapper;
 
     @Override
-    @CacheEvict(allEntries = true, cacheNames = CACHE)
-    public MsMonitorGateway create(MsMonitorGateway entity) {
-        if (entity.getGatewayEnabled() == null) {
-            entity.setGatewayEnabled(1);
+    @CacheEvict(allEntries = true, cacheNames = "monitorGateway")
+    public ReturnResult<MsMonitorGateway> create(MsMonitorGateway entity) {
+        try {
+            if (entity.getId() == null) {
+                entity.setId(IdUtils.createSnowflakeId());
+            }
+            if (entity.getGatewayEnabled() == null) {
+                entity.setGatewayEnabled(1);
+            }
+            if (entity.getGatewayType() == null) {
+                entity.setGatewayType("GUACAMOLE");
+            }
+            gatewayMapper.insert(entity);
+            return ReturnResult.ok(entity);
+        } catch (Exception e) {
+            log.error("创建网关失败", e);
+            return ReturnResult.error(e.getMessage());
         }
-        if (entity.getGatewayType() == null) {
-            entity.setGatewayType("GUACAMOLE");
+    }
+
+    @Override
+    @CacheEvict(allEntries = true, cacheNames = "monitorGateway")
+    public ReturnResult<MsMonitorGateway> update(MsMonitorGateway entity) {
+        try {
+            gatewayMapper.updateById(entity);
+            return ReturnResult.ok(entity);
+        } catch (Exception e) {
+            log.error("更新网关失败", e);
+            return ReturnResult.error(e.getMessage());
         }
-        mapper.insert(entity);
-        log.info("[MonitorGateway] 创建网关 id={} name={}", entity.getId(), entity.getGatewayName());
-        return entity;
     }
 
     @Override
-    @CacheEvict(allEntries = true, cacheNames = CACHE)
-    public MsMonitorGateway update(MsMonitorGateway entity) {
-        mapper.updateById(entity);
-        return entity;
+    @CacheEvict(allEntries = true, cacheNames = "monitorGateway")
+    public ReturnResult<Void> delete(Long id) {
+        try {
+            gatewayMapper.deleteById(id);
+            return ReturnResult.ok();
+        } catch (Exception e) {
+            log.error("删除网关失败", e);
+            return ReturnResult.error(e.getMessage());
+        }
     }
 
     @Override
-    @CacheEvict(allEntries = true, cacheNames = CACHE)
-    public void delete(Long id) {
-        mapper.deleteById(id);
-    }
-
-    @Override
-    @Cacheable(cacheNames = CACHE, key = "'monitor.gateway:monitor:' + #monitorId")
-    public List<MsMonitorGateway> listByMonitor(Long monitorId) {
-        LambdaQueryWrapper<MsMonitorGateway> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(MsMonitorGateway::getMonitorId, monitorId);
-        return mapper.selectList(wrapper);
+    @Cacheable(cacheNames = "monitorGateway", key = "'monitor.gateway:monitor:' + #monitorId")
+    public ReturnResult<List<MsMonitorGateway>> listByMonitor(Long monitorId) {
+        try {
+            LambdaQueryWrapper<MsMonitorGateway> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(MsMonitorGateway::getMonitorId, monitorId);
+            return ReturnResult.ok(gatewayMapper.selectList(wrapper));
+        } catch (Exception e) {
+            log.error("按主机查询网关失败", e);
+            return ReturnResult.error(e.getMessage());
+        }
     }
 }

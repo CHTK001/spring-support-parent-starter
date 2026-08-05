@@ -1,12 +1,13 @@
 package com.chua.starter.monitor.support.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsMonitor;
 
 import java.util.List;
 
 /**
- * 监控资产 Service
+ * 监控 Service
  *
  * @author CH
  * @since 2026/8/4
@@ -14,58 +15,59 @@ import java.util.List;
 public interface MonitorService {
 
     /**
-     * 创建资产
+     * 创建
      *
-     * @param monitor 实体
-     * @return 创建后的实体
+     * @param monitor 监控实体
+     * @return 创建结果
      */
-    MsMonitor create(MsMonitor monitor);
+    ReturnResult<MsMonitor> create(MsMonitor monitor);
 
     /**
-     * 更新资产
+     * 更新
      *
-     * @param monitor 实体
-     * @return 更新后的实体
+     * @param monitor 监控实体
+     * @return 更新结果
      */
-    MsMonitor update(MsMonitor monitor);
+    ReturnResult<MsMonitor> update(MsMonitor monitor);
 
     /**
-     * 删除资产
-     *
-     * @param id 主键
-     */
-    void delete(Long id);
-
-    /**
-     * 查询单个
+     * 删除
      *
      * @param id 主键
-     * @return 实体
+     * @return 删除结果
      */
-    MsMonitor findById(Long id);
+    ReturnResult<Void> delete(Long id);
 
     /**
-     * 列出全部
+     * 按 ID 查询
+     *
+     * @param id 主键
+     * @return 查询结果
+     */
+    ReturnResult<MsMonitor> findById(Long id);
+
+    /**
+     * 查询全部
      *
      * @return 列表
      */
-    List<MsMonitor> listAll();
+    ReturnResult<List<MsMonitor>> listAll();
 
     /**
-     * 按服务类型列出
+     * 按服务类型查询
      *
      * @param serviceType 服务类型
      * @return 列表
      */
-    List<MsMonitor> listByServiceType(String serviceType);
+    ReturnResult<List<MsMonitor>> listByServiceType(String serviceType);
 
     /**
      * 分页查询
      *
-     * @param pageNum 页码
+     * @param pageNum  页码
      * @param pageSize 每页大小
-     * @param keyword 关键字(可选)
+     * @param keyword  关键词
      * @return 分页结果
      */
-    Page<MsMonitor> page(long pageNum, long pageSize, String keyword);
+    ReturnResult<Page<MsMonitor>> page(long pageNum, long pageSize, String keyword);
 }

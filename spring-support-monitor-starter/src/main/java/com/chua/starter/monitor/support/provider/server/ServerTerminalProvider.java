@@ -64,6 +64,7 @@ public class ServerTerminalProvider implements MetricProvider {
      * @param context 采集上下文
      * @return 采集结果
      */
+
     private CollectResult doCollect(CollectContext context) {
         CollectResult result = new CollectResult();
         result.setTask(context.getTask());

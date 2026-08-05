@@ -33,11 +33,6 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-mybatis-starter</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-core</artifactId>
-            <version>3.5.16</version>
-        </dependency>
 
         <!-- 缓存 -->
         <dependency>
@@ -104,6 +99,7 @@
                 <configuration>
                     <source>25</source>
                     <target>25</target>
+                    <fork>false</fork>
                     <release/>
                 </configuration>
             </plugin>

@@ -102,7 +102,8 @@ public class CaptchaProvider {
         if (captchaTypeEnum == CaptchaTypeEnum.CHINESE || captchaTypeEnum == CaptchaTypeEnum.CHINESE_GIF) {
             randomInt = RandomUtils.randomInt(4, 5);
         } else if (captchaTypeEnum != CaptchaTypeEnum.ARITHMETIC) {
-            randomInt = RandomUtils.randomInt(6, 7);
+            // 缩短验证码长度为 4 位，避免前端输入框显示不全
+            randomInt = 4;
         }
         return producer(captchaTypeEnum, randomInt);
     }

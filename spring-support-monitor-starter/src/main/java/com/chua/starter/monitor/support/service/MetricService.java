@@ -1,8 +1,8 @@
 package com.chua.starter.monitor.support.service;
 
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.spi.CollectResult;
 import com.chua.starter.monitor.support.spi.MetricPoint;
-import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,9 +22,9 @@ public interface MetricService {
      * 批量写入一次采集结果
      *
      * @param result 采集结果
-     * @return 响应式
+     * @return 写入结果
      */
-    Mono<Void> writeCollectResult(CollectResult result);
+    ReturnResult<Void> writeCollectResult(CollectResult result);
 
     /**
      * 直接写入指标点列表(指定主机)
@@ -32,14 +32,14 @@ public interface MetricService {
      * @param monitorId 主机 id
      * @param points 指标点
      * @param collectTime 采集时间
-     * @return 响应式
+     * @return 写入结果
      */
-    Mono<Void> writePoints(Long monitorId, List<MetricPoint> points, LocalDateTime collectTime);
+    ReturnResult<Void> writePoints(Long monitorId, List<MetricPoint> points, LocalDateTime collectTime);
 
     /**
      * 触发小时聚合
      *
-     * @return 响应式
+     * @return 聚合结果
      */
-    Mono<Void> aggregateHourly();
+    ReturnResult<Void> aggregateHourly();
 }

@@ -1,27 +1,31 @@
 package com.chua.starter.ai.support.entity.settings;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * AppKey 表，存储供应商接入凭证与过期策略。
+ * AppKey 表，存储供应商接入凭证、次数限制与过期策略。
+ *
+ * <p>次数限制与过期时间二选一：{@link #appKeyMaxUse} 为次数上限，
+ * {@link #appKeyExpireTime} 为过期时间，均为空表示不限。</p>
  *
  * @author CH
  * @since 2026-08-03
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("ai_app_key")
 @Schema(name = "AppKey")
-public class AiAppKey implements Serializable {
+public class AiAppKey extends SysBase {
 
     /**
      * AppKey 主键 ID
@@ -80,25 +84,18 @@ public class AiAppKey implements Serializable {
     private Long appKeyUseCount;
 
     /**
-     * 过期时间
+     * 次数上限（null 表示不限）
+     */
+    @TableField("app_key_max_use")
+    @Schema(description = "次数上限")
+    private Long appKeyMaxUse;
+
+    /**
+     * 过期时间（null 表示不限）
      */
     @TableField("app_key_expire_time")
     @Schema(description = "过期时间")
     private LocalDateTime appKeyExpireTime;
-
-    /**
-     * 创建时间
-     */
-    @TableField(value = "app_key_create_time", fill = FieldFill.INSERT)
-    @Schema(description = "创建时间")
-    private LocalDateTime appKeyCreateTime;
-
-    /**
-     * 更新时间
-     */
-    @TableField(value = "app_key_update_time", fill = FieldFill.INSERT_UPDATE)
-    @Schema(description = "更新时间")
-    private LocalDateTime appKeyUpdateTime;
 
     /**
      * 逻辑删除标记

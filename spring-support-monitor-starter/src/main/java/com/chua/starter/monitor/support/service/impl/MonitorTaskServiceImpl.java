@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsMonitorTask;
 import com.chua.starter.monitor.support.mapper.MsMonitorTaskMapper;
 import com.chua.starter.monitor.support.service.MonitorTaskService;
@@ -24,82 +25,107 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MonitorTaskServiceImpl implements MonitorTaskService {
 
-    /**
-     * 任务缓存名
-     */
-    public static final String CACHE = "monitorTask";
-
-    /**
-     * Mapper
-     */
+    /** 任务 Mapper */
     private final MsMonitorTaskMapper taskMapper;
 
     @Override
-    @CacheEvict(allEntries = true, cacheNames = CACHE)
-    public MsMonitorTask create(MsMonitorTask task) {
-        if (task.getMonitorTaskEnabled() == null) {
-            task.setMonitorTaskEnabled(1);
+    @CacheEvict(allEntries = true, cacheNames = "monitorTask")
+    public ReturnResult<MsMonitorTask> create(MsMonitorTask task) {
+        try {
+            if (task.getMonitorTaskEnabled() == null) {
+                task.setMonitorTaskEnabled(1);
+            }
+            if (task.getMonitorTaskTimeout() == null) {
+                task.setMonitorTaskTimeout(5000);
+            }
+            taskMapper.insert(task);
+            return ReturnResult.ok(task);
+        } catch (Exception e) {
+            return ReturnResult.error(e.getMessage());
         }
-        if (task.getMonitorTaskTimeout() == null) {
-            task.setMonitorTaskTimeout(5000);
+    }
+
+    @Override
+    @CacheEvict(allEntries = true, cacheNames = "monitorTask")
+    public ReturnResult<MsMonitorTask> update(MsMonitorTask task) {
+        try {
+            taskMapper.updateById(task);
+            return ReturnResult.ok(task);
+        } catch (Exception e) {
+            return ReturnResult.error(e.getMessage());
         }
-        taskMapper.insert(task);
-        log.info("[MonitorTask] 创建任务 id={} name={}", task.getId(), task.getMonitorTaskName());
-        return task;
     }
 
     @Override
-    @CacheEvict(allEntries = true, cacheNames = CACHE)
-    public MsMonitorTask update(MsMonitorTask task) {
-        taskMapper.updateById(task);
-        log.info("[MonitorTask] 更新任务 id={}", task.getId());
-        return task;
+    @CacheEvict(allEntries = true, cacheNames = "monitorTask")
+    public ReturnResult<Void> delete(Long id) {
+        try {
+            taskMapper.deleteById(id);
+            return ReturnResult.ok();
+        } catch (Exception e) {
+            return ReturnResult.error(e.getMessage());
+        }
     }
 
     @Override
-    @CacheEvict(allEntries = true, cacheNames = CACHE)
-    public void delete(Long id) {
-        taskMapper.deleteById(id);
-        log.info("[MonitorTask] 删除任务 id={}", id);
+    @Cacheable(cacheNames = "monitorTask", key = "'monitor.task:id:' + #id")
+    public ReturnResult<MsMonitorTask> findById(Long id) {
+        try {
+            return ReturnResult.ok(taskMapper.selectById(id));
+        } catch (Exception e) {
+            return ReturnResult.error(e.getMessage());
+        }
     }
 
     @Override
-    @Cacheable(cacheNames = CACHE, key = "'monitor.task:id:' + #id")
-    public MsMonitorTask findById(Long id) {
-        return taskMapper.selectById(id);
+    @Cacheable(cacheNames = "monitorTask", key = "'monitor.task:enabled'")
+    public ReturnResult<List<MsMonitorTask>> listEnabled() {
+        try {
+            LambdaQueryWrapper<MsMonitorTask> w = new LambdaQueryWrapper<>();
+            w.eq(MsMonitorTask::getMonitorTaskEnabled, 1);
+            return ReturnResult.ok(taskMapper.selectList(w));
+        } catch (Exception e) {
+            return ReturnResult.error(e.getMessage());
+        }
     }
 
     @Override
-    @Cacheable(cacheNames = CACHE, key = "'monitor.task:enabled'")
-    public List<MsMonitorTask> listEnabled() {
-        LambdaQueryWrapper<MsMonitorTask> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(MsMonitorTask::getMonitorTaskEnabled, 1);
-        return taskMapper.selectList(wrapper);
+    @Cacheable(cacheNames = "monitorTask", key = "'monitor.task:monitor:' + #monitorId")
+    public ReturnResult<List<MsMonitorTask>> listByMonitor(Long monitorId) {
+        try {
+            LambdaQueryWrapper<MsMonitorTask> w = new LambdaQueryWrapper<>();
+            w.eq(MsMonitorTask::getMonitorId, monitorId);
+            return ReturnResult.ok(taskMapper.selectList(w));
+        } catch (Exception e) {
+            return ReturnResult.error(e.getMessage());
+        }
     }
 
     @Override
-    @Cacheable(cacheNames = CACHE, key = "'monitor.task:monitor:' + #monitorId")
-    public List<MsMonitorTask> listByMonitor(Long monitorId) {
-        LambdaQueryWrapper<MsMonitorTask> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(MsMonitorTask::getMonitorId, monitorId);
-        return taskMapper.selectList(wrapper);
+    @CacheEvict(allEntries = true, cacheNames = "monitorTask")
+    public ReturnResult<Void> setEnabled(Long id, Integer enabled) {
+        try {
+            MsMonitorTask t = new MsMonitorTask();
+            t.setId(id);
+            t.setMonitorTaskEnabled(enabled);
+            taskMapper.updateById(t);
+            return ReturnResult.ok();
+        } catch (Exception e) {
+            return ReturnResult.error(e.getMessage());
+        }
     }
 
     @Override
-    @CacheEvict(allEntries = true, cacheNames = CACHE)
-    public void setEnabled(Long id, Integer enabled) {
-        MsMonitorTask task = new MsMonitorTask();
-        task.setId(id);
-        task.setMonitorTaskEnabled(enabled);
-        taskMapper.updateById(task);
-    }
-
-    @Override
-    @CacheEvict(allEntries = true, cacheNames = CACHE)
-    public void markLastRunTime(Long id) {
-        MsMonitorTask task = new MsMonitorTask();
-        task.setId(id);
-        task.setLastRunTime(LocalDateTime.now());
-        taskMapper.updateById(task);
+    @CacheEvict(allEntries = true, cacheNames = "monitorTask")
+    public ReturnResult<Void> markLastRunTime(Long id) {
+        try {
+            MsMonitorTask t = new MsMonitorTask();
+            t.setId(id);
+            t.setLastRunTime(LocalDateTime.now());
+            taskMapper.updateById(t);
+            return ReturnResult.ok();
+        } catch (Exception e) {
+            return ReturnResult.error(e.getMessage());
+        }
     }
 }

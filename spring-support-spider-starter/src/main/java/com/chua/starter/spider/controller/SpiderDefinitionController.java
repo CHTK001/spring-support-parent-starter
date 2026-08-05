@@ -86,7 +86,7 @@ public class SpiderDefinitionController {
     @PostMapping
     @Operation(summary = "新增爬虫定义")
     public ReturnResult<Boolean> save(@RequestBody SpiderDefinition entity) {
-        return ReturnResult.ok(definitionService.saveWithTime(entity));
+        return ReturnResult.ok(definitionService.save(entity));
     }
 
     /**
@@ -98,7 +98,7 @@ public class SpiderDefinitionController {
     @PutMapping
     @Operation(summary = "更新爬虫定义")
     public ReturnResult<Boolean> update(@RequestBody SpiderDefinition entity) {
-        return ReturnResult.ok(definitionService.updateWithTime(entity));
+        return ReturnResult.ok(definitionService.updateById(entity));
     }
 
     /**

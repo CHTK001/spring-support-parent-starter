@@ -75,6 +75,12 @@
             <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
         </dependency>
 
+        <!-- Spring Support MyBatis（SysBase 审计基类） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-mybatis-starter</artifactId>
+        </dependency>
+
         <!-- Swagger Annotations -->
         <dependency>
             <groupId>io.swagger.core.v3</groupId>

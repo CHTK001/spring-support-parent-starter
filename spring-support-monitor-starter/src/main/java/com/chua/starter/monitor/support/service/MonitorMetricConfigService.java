@@ -1,5 +1,6 @@
 package com.chua.starter.monitor.support.service;
 
+import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsMonitorMetricConfig;
 
 import java.util.List;
@@ -16,24 +17,25 @@ public interface MonitorMetricConfigService {
      * 创建
      *
      * @param entity 实体
-     * @return 创建后
+     * @return 创建结果
      */
-    MsMonitorMetricConfig create(MsMonitorMetricConfig entity);
+    ReturnResult<MsMonitorMetricConfig> create(MsMonitorMetricConfig entity);
 
     /**
      * 更新
      *
      * @param entity 实体
-     * @return 更新后
+     * @return 更新结果
      */
-    MsMonitorMetricConfig update(MsMonitorMetricConfig entity);
+    ReturnResult<MsMonitorMetricConfig> update(MsMonitorMetricConfig entity);
 
     /**
      * 删除
      *
      * @param id 主键
+     * @return 删除结果
      */
-    void delete(Long id);
+    ReturnResult<Void> delete(Long id);
 
     /**
      * 按任务列出
@@ -41,5 +43,5 @@ public interface MonitorMetricConfigService {
      * @param taskId 任务 id
      * @return 列表
      */
-    List<MsMonitorMetricConfig> listByTask(Long taskId);
+    ReturnResult<List<MsMonitorMetricConfig>> listByTask(Long taskId);
 }

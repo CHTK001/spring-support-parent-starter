@@ -106,7 +106,7 @@ public class SyncAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "plugin.sync.data-sync", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public SyncDataExchangeService syncDataExchangeService(ObjectProvider<SyncClient> syncClientProvider,
+    public SyncDataExchangeService syncDataExchangeService(ObjectProvider<com.chua.common.support.network.sync.SyncClient> syncClientProvider,
                                                            ObjectProvider<SyncServer> syncServerProvider,
                                                            SyncProperties syncProperties) {
         log.info("[Sync] 创建数据同步交换服务");
