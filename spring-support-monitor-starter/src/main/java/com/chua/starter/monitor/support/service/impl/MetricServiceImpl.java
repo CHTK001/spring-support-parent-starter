@@ -1,7 +1,7 @@
 package com.chua.starter.monitor.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.chua.common.support.utils.StringUtils;
+import com.chua.common.support.lang.json.Json;
 import com.chua.starter.monitor.support.entity.MsMonitorMetric;
 import com.chua.starter.monitor.support.entity.MsMonitorMetricCpu;
 import com.chua.starter.monitor.support.entity.MsMonitorMetricDisk;
@@ -96,7 +96,7 @@ public class MetricServiceImpl implements MetricService {
             if (name == null) {
                 continue;
             }
-            String tags = StringUtils.toJson(p.getTags());
+            String tags = Json.toJson(p.getTags());
             String table = p.getTargetTable();
 
             // 按 target_table 路由到结构化子表
@@ -180,22 +180,22 @@ public class MetricServiceImpl implements MetricService {
         }
 
         if (!general.isEmpty()) {
-            metricMapper.insertBatch(general);
+            general.forEach(metricMapper::insert);
         }
         if (!cpus.isEmpty()) {
-            cpuMapper.insertBatch(cpus);
+            cpus.forEach(cpuMapper::insert);
         }
         if (!memories.isEmpty()) {
-            memoryMapper.insertBatch(memories);
+            memories.forEach(memoryMapper::insert);
         }
         if (!disks.isEmpty()) {
-            diskMapper.insertBatch(disks);
+            disks.forEach(diskMapper::insert);
         }
         if (!nets.isEmpty()) {
-            networkMapper.insertBatch(nets);
+            nets.forEach(networkMapper::insert);
         }
         if (!jvms.isEmpty()) {
-            jvmMapper.insertBatch(jvms);
+            jvms.forEach(jvmMapper::insert);
         }
     }
 

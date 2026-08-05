@@ -1,0 +1,31 @@
+# 爬虫中心示例配置
+# 复制到宿主应用 application.yml 后按需修改
+server:
+  port: 19091
+
+spring:
+  application:
+    name: spider-center
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://172.16.0.40:3306/spider?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai
+    username: root
+    password: root
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+      encoding: utf-8
+
+# 爬虫模块开关（默认开启）
+spider:
+  enable: true
+  path: /spider-api/spider
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: AUTO
+  mapper-locations: classpath*:mapper/**/*.xml

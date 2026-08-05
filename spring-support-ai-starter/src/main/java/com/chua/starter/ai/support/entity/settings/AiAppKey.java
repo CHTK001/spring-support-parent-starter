@@ -59,6 +59,13 @@ public class AiAppKey implements Serializable {
     private String appKeyModel;
 
     /**
+     * 绑定分组 ID（分组的 key 只能用分组下的模型）
+     */
+    @TableField("app_key_group_id")
+    @Schema(description = "绑定分组 ID")
+    private Long appKeyGroupId;
+
+    /**
      * 是否启用
      */
     @TableField("app_key_enabled")

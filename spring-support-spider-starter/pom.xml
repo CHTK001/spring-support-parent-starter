@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support Spider Starter - 爬虫中心模块
+
+    基于 utils-support-flow-starter（流程编排）+ Trigger/CronExpression（定时调度）
+    + spring-support-cache-starter（@Cacheable 缓存）的最小可用爬虫中心。
+
+    能力清单：
+    1. 爬虫定义管理 - spider_definition 表，支持启用/停用、cron 表达式
+    2. 流程编排存储 - spider_flow 表，保存前端 ReFlow 导出的 nodes_json / edges_json
+    3. 采集数据落地 - spider_data_record 表，output 节点写入
+    4. 执行日志与快照 - spider_execution_log 表，串联 traceId 全链路
+    5. 环境变量管理 - spider_env 表，支持 {{env.KEY}} 插值
+    6. 定时调度 - SpiderScheduler 每秒轮询，CronExpression 比对触发
+
+    @author CH
+    @version 4.0.0.42
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>4.0.0.42</version>
+    </parent>
+
+    <artifactId>spring-support-spider-starter</artifactId>
+    <version>4.0.0.42</version>
+    <description>Spring Support 框架爬虫中心模块，基于 flow 编排 + cron 调度的最小可用爬虫系统</description>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <dependencies>
+        <!-- Lombok 编译期注解 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- 通用能力（ReturnResult 等） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- 缓存能力（@Cacheable / @CacheEvict / Caffeine） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-cache-starter</artifactId>
+        </dependency>
+
+        <!-- 数据源能力（MySQL 连接池） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-datasource-starter</artifactId>
+        </dependency>
+
+        <!-- MyBatis-Plus 持久化 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-mybatis-starter</artifactId>
+        </dependency>
+
+        <!-- 流程编排引擎（节点 / traceId / 快照） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-flow-starter</artifactId>
+        </dependency>
+
+        <!-- 通用工具（CronExpression 等） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-common-starter</artifactId>
+        </dependency>
+
+        <!-- OpenAPI 注解（@Tag / @Operation） -->
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations</artifactId>
+        </dependency>
+
+        <!-- Web 能力（REST / SseEmitter / Filter） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- 单元测试 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- H2 内存数据库（单元测试） -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

@@ -40,10 +40,40 @@ public class AiAppKeyDTO implements Serializable {
     private Long provider;
 
     /**
+     * 供应商名称（只读展示）
+     */
+    @Schema(description = "供应商名称")
+    private String providerName;
+
+    /**
      * 限定使用的模型
      */
     @Schema(description = "限定使用的模型")
     private String model;
+
+    /**
+     * 绑定分组 ID
+     */
+    @Schema(description = "绑定分组 ID")
+    private Long groupId;
+
+    /**
+     * 分组名称（只读展示）
+     */
+    @Schema(description = "分组名称")
+    private String groupName;
+
+    /**
+     * 已使用次数
+     */
+    @Schema(description = "已使用次数")
+    private Long useCount;
+
+    /**
+     * 过期时间
+     */
+    @Schema(description = "过期时间")
+    private String expireTime;
 
     /**
      * 是否启用

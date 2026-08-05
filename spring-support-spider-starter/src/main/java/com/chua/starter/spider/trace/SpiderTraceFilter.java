@@ -1,0 +1,60 @@
+package com.chua.starter.spider.trace;
+
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.MDC;
+
+import java.io.IOException;
+import java.util.UUID;
+
+/**
+ * 全链路追踪过滤器。
+ *
+ * <p>为每个进入的请求生成 traceId：优先循 {@code X-Trace-Id} 请求头，
+ * 缺失则生成 UUID；写入 MDC（key 与 flow 引擎 traceId 一致），并回写
+ * 到响应头 {@code X-Trace-Id}，请求结束后清理 MDC，避免线程污染。</p>
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
+public class SpiderTraceFilter implements Filter {
+
+    /**
+     * traceId 请求头 / 响应头名称
+     */
+    private static final String TRACE_ID_HEADER = "X-Trace-Id";
+
+    /**
+     * MDC 中 traceId 的 key（与 flow-starter 引擎使用的 key 保持一致）
+     */
+    private static final String TRACE_ID_MDC_KEY = "traceId";
+
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+            throws IOException, ServletException {
+        HttpServletRequest httpRequest = (HttpServletRequest) request;
+        HttpServletResponse httpResponse = (HttpServletResponse) response;
+
+        // 优先复用上游传入的 traceId，否则生成新的
+        String traceId = httpRequest.getHeader(TRACE_ID_HEADER);
+        if (traceId == null || traceId.isBlank()) {
+            traceId = UUID.randomUUID().toString().replace("-", "");
+        }
+
+        // 写入 MDC，运行期间所有日志携带该 traceId
+        MDC.put(TRACE_ID_MDC_KEY, traceId);
+        httpResponse.setHeader(TRACE_ID_HEADER, traceId);
+
+        try {
+            chain.doFilter(request, response);
+        } finally {
+            // 结束后清理，避免线程池复用导致 traceId 串扰
+            MDC.remove(TRACE_ID_MDC_KEY);
+        }
+    }
+}

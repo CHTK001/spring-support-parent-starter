@@ -107,7 +107,7 @@
 
         <!-- 搜索和数据处理模块 -->
         <!-- spring-support-elasticsearch-starter 已删除 (lock/protocol/strategy/elasticsearch 4 个模块整体下线) -->
-        <module>spring-support-spider-starter</module>          <!-- 爬虫中心（已从 api 迁入） -->
+        <module>spring-support-spider-starter</module>          <!-- 爬虫中心（重构：基于 utils flow + cron + cache） -->
 
         <module>spring-support-discovery-starter</module>       <!-- 服务发现 -->
         <module>spring-support-configcenter-starter</module>    <!-- 配置中心 -->
@@ -147,6 +147,9 @@
 
         <!-- 设备管理模块（海康/大华等平台接入） -->
         <module>spring-support-device-starter</module>
+
+        <!-- 服务器与中间件监控模块 -->
+        <module>spring-support-monitor-starter</module>
     </modules>
 
     <!-- 项目属性配置 -->
@@ -556,7 +559,7 @@
                 <artifactId>spring-support-spider-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            
+
             <!-- 服务发现和配置模块 -->
             <dependency>
                 <groupId>com.chua</groupId>
@@ -899,7 +902,19 @@
             <!-- 通用工具类库 -->
             <dependency>
                 <groupId>com.chua</groupId>
-                <artifactId>utils-support-common-starter</artifactId>
+<artifactId>utils-support-common-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-flow-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+
+            <!-- 流程编排引擎（爬虫中心使用） -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-flow-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 
