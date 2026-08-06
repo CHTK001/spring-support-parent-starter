@@ -132,6 +132,9 @@ public class TableDeptRegister implements DeptRegister {
         }
 
         if (DataFilterTypeEnum.DEPT == dataPermission) {
+            if (StringUtils.isEmpty(currentUser.getDeptId())) {
+                return NO_DATA;
+            }
             EqualsTo equalsTo = new EqualsTo();
             equalsTo.setLeftExpression(createDeptColumn());
             equalsTo.setRightExpression(new LongValue(currentUser.getDeptId()));
@@ -141,6 +144,9 @@ public class TableDeptRegister implements DeptRegister {
         if (DataFilterTypeEnum.DEPT_AND_SUB == dataPermission) {
             // 使用 LIKE 前缀查询替代 find_in_set，可以利用索引
             // SQL: sys_dept_id IN (SELECT sys_dept_id FROM sys_dept WHERE sys_dept_tree_id LIKE 'xxx%')
+            if (StringUtils.isEmpty(currentUser.getDeptId())) {
+                return NO_DATA;
+            }
             InExpression inExpression = new InExpression();
             inExpression.setLeftExpression(createDeptColumn());
 
@@ -334,6 +340,9 @@ public class TableDeptRegister implements DeptRegister {
      * @return 如果表包含部门ID字段则返回true，否则返回false
      */
     private boolean findDeptIdFromTable(TableInfo tableInfo) {
+        if (tableInfo.getKeyColumn() != null && tableInfo.getKeyColumn().equalsIgnoreCase(deptIdColumn)) {
+            return true;
+        }
         for (TableFieldInfo tableFieldInfo : tableInfo.getFieldList()) {
             if (tableFieldInfo.getColumn().equalsIgnoreCase(deptIdColumn)) {
                 return true;

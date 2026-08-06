@@ -35,49 +35,49 @@ public class MsMonitorMetricDisk implements Serializable {
     /**
      * 监控主机 id
      */
-    @TableField("monitor_id")
+    @TableField("ms_monitor_metric_disk_monitor_id")
     @Schema(description = "监控主机 id", example = "1")
     private Long monitorId;
 
     /**
      * 挂载点
      */
-    @TableField("mount_point")
+    @TableField("ms_monitor_metric_disk_mount_point")
     @Schema(description = "挂载点", example = "/")
     private String mountPoint;
 
     /**
      * 文件系统
      */
-    @TableField("file_system")
+    @TableField("ms_monitor_metric_disk_file_system")
     @Schema(description = "文件系统", example = "ext4")
     private String fileSystem;
 
     /**
      * 总磁盘(字节)
      */
-    @TableField("total_bytes")
+    @TableField("ms_monitor_metric_disk_total_bytes")
     @Schema(description = "总磁盘(字节)", example = "536870912000")
     private Long totalBytes;
 
     /**
      * 已用(字节)
      */
-    @TableField("used_bytes")
+    @TableField("ms_monitor_metric_disk_used_bytes")
     @Schema(description = "已用(字节)", example = "268435456000")
     private Long usedBytes;
 
     /**
      * 使用率(0-100)
      */
-    @TableField("usage_percent")
+    @TableField("ms_monitor_metric_disk_usage_percent")
     @Schema(description = "使用率", example = "50.0")
     private Double usagePercent;
 
     /**
      * 采集时间
      */
-    @TableField("collect_time")
+    @TableField("ms_monitor_metric_disk_collect_time")
     @Schema(description = "采集时间", example = "2026-08-04T10:00:00")
     private LocalDateTime collectTime;
 }

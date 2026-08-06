@@ -44,4 +44,13 @@ public class AiModelDTO implements Serializable {
 
     @Schema(description = "创建时间")
     private String createdAt;
+
+    @Schema(description = "输入单价（每 1k tokens）")
+    private java.math.BigDecimal inputPrice;
+
+    @Schema(description = "输出单价（每 1k tokens）")
+    private java.math.BigDecimal outputPrice;
+
+    @Schema(description = "缓存命中单价（每 1k tokens）")
+    private java.math.BigDecimal cachePrice;
 }

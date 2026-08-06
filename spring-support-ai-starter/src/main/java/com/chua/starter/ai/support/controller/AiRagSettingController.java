@@ -2,6 +2,7 @@ package com.chua.starter.ai.support.controller;
 
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.embedding.EmbeddingClient;
+import com.chua.common.support.ai.splitter.TextSplitterProvider;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.vector.VectorStorageProvider;
@@ -27,12 +28,13 @@ import java.util.stream.Collectors;
 /**
  * RAG 配置控制器 —— 提供 RAG 配置页所需的下拉数据源。
  * <p>
- * 返回四类选项：
+ * 返回五类选项：
  * <ul>
  *   <li>embeddingModels — 向量模型（EmbeddingClient SPI 提供商 + deeplearning 向量模型）</li>
  *   <li>ocrModels — OCR 识别模型（deeplearning ModelRegistry 中文字识别类模型）</li>
  *   <li>llmModels — LLM 模型（ai_model 表，能力含 chat）</li>
  *   <li>vectorStorages — 向量数据库（VectorStorageProvider SPI）</li>
+ *   <li>splitters — 文本切片策略（TextSplitterProvider SPI）</li>
  * </ul>
  *
  * @author CH
@@ -50,9 +52,9 @@ public class AiRagSettingController {
     /**
      * 获取 RAG 配置选项。
      *
-     * @return 四类下拉数据源
+     * @return 五类下拉数据源
      */
-    @Operation(summary = "获取 RAG 配置选项", description = "向量模型、OCR 模型、LLM 模型、向量数据库选项")
+    @Operation(summary = "获取 RAG 配置选项", description = "向量模型、OCR 模型、LLM 模型、向量数据库、文本切片策略选项")
     @GetMapping("/options")
     public ReturnResult<Map<String, Object>> options() {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -60,6 +62,7 @@ public class AiRagSettingController {
         result.put("ocrModels", listOcrModels());
         result.put("llmModels", listLlmModels());
         result.put("vectorStorages", listVectorStorages());
+        result.put("splitters", listSplitters());
         return ReturnResult.ok(result);
     }
 
@@ -161,6 +164,22 @@ public class AiRagSettingController {
                     .collect(Collectors.toList());
         } catch (Exception e) {
             log.warn("[RagSetting] 枚举向量数据库失败: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
+     * 文本切片策略列表：TextSplitterProvider SPI。
+     *
+     * @return 提供者名称列表
+     */
+    private List<String> listSplitters() {
+        try {
+            return TextSplitterProvider.providers().stream()
+                    .map(String::toLowerCase)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.warn("[RagSetting] 枚举文本切片策略失败: {}", e.getMessage());
             return List.of();
         }
     }

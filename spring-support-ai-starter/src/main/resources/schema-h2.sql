@@ -288,9 +288,15 @@ DROP TABLE IF EXISTS `sys_ai_app_key`;
 CREATE TABLE IF NOT EXISTS `sys_ai_app_key` (
   `sys_ai_app_key_id` INT NOT NULL AUTO_INCREMENT COMMENT '应用密钥主键ID',
   `sys_ai_app_key_app_id` VARCHAR(128) DEFAULT NULL COMMENT '应用ID',
-  `sys_ai_app_key_app_key` VARCHAR(128) NOT NULL COMMENT '访问Key',
-  `sys_ai_app_key_secret` VARCHAR(256) NOT NULL COMMENT '访问Secret',
+  `sys_ai_app_key_app_key` VARCHAR(128) DEFAULT NULL COMMENT '访问Key',
+  `sys_ai_app_key_secret` VARCHAR(256) DEFAULT NULL COMMENT '访问Secret',
   `sys_ai_app_key_name` VARCHAR(255) DEFAULT NULL COMMENT '密钥名称',
+  `sys_ai_app_key_value` VARCHAR(512) DEFAULT NULL COMMENT '密钥值',
+  `sys_ai_app_key_provider_id` BIGINT DEFAULT NULL COMMENT '关联供应商 ID',
+  `sys_ai_app_key_model` VARCHAR(255) DEFAULT NULL COMMENT '限定使用的模型',
+  `sys_ai_app_key_max_use` BIGINT DEFAULT NULL COMMENT '次数上限（null 表示不限）',
+  `sys_ai_app_key_enabled` INT DEFAULT 1 COMMENT '是否启用',
+  `sys_ai_app_key_expire_datetime` DATETIME DEFAULT NULL COMMENT '过期时间（null 表示不限）',
   `sys_user_id` INT DEFAULT NULL COMMENT '所属用户ID',
   `sys_ai_app_key_status` INT NOT NULL DEFAULT 1 COMMENT '状态',
   `sys_ai_app_key_delete` INT NOT NULL DEFAULT 0 COMMENT '删除标记',
@@ -651,6 +657,9 @@ CREATE TABLE IF NOT EXISTS `sys_ai_group` (
     `sys_ai_group_id` INT AUTO_INCREMENT PRIMARY KEY COMMENT '分组主键',
     `sys_ai_group_name` VARCHAR(128) NOT NULL COMMENT '分组名称',
     `sys_ai_group_desc` VARCHAR(256) DEFAULT '' COMMENT '分组描述',
+    `sys_ai_group_models` TEXT DEFAULT NULL COMMENT '关联模型列表(JSON)',
+    `sys_ai_group_app_key_ids` TEXT DEFAULT NULL COMMENT '绑定 AppKey ID 列表(JSON)',
+    `sys_ai_group_enabled` INT DEFAULT 1 COMMENT '是否启用',
     `sys_ai_group_sort` INT DEFAULT 0 COMMENT '排序值',
     `sys_ai_group_status` INT DEFAULT 1 COMMENT '状态：1 启用，0 禁用',
     `sys_ai_group_delete` INT DEFAULT 0 COMMENT '删除标记：0 未删除，1 已删除',
@@ -673,140 +682,119 @@ CREATE TABLE IF NOT EXISTS `sys_ai_group_model` (
 ) COMMENT='分组-模型关联表';
 
 -- ============================================================
--- 24. AI 供应商表（新设置体系）
+-- 24. AI 供应商表
 -- ============================================================
-DROP TABLE IF EXISTS `ai_provider`;
-CREATE TABLE IF NOT EXISTS `ai_provider` (
-    `provider_id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '供应商主键',
-    `provider_name` VARCHAR(255) NOT NULL COMMENT '供应商名称',
-    `provider_type` VARCHAR(64) NOT NULL COMMENT '供应商类型(openai/anthropic/gemini/qwen/custom)',
-    `provider_base_url` VARCHAR(512) DEFAULT NULL COMMENT '接入 Base URL',
-    `provider_api_key` VARCHAR(512) DEFAULT NULL COMMENT 'API Key',
-    `provider_logo` VARCHAR(1024) DEFAULT NULL COMMENT 'Logo 图片地址',
-    `provider_models` TEXT DEFAULT NULL COMMENT '可用模型列表(JSON)',
-    `provider_enabled` INT DEFAULT 1 COMMENT '是否启用',
-    `provider_create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `provider_update_time` DATETIME DEFAULT NULL COMMENT '更新时间',
-    `provider_deleted` INT DEFAULT 0 COMMENT '逻辑删除标记',
-    UNIQUE KEY `uk_ai_provider_name` (`provider_name`)
+DROP TABLE IF EXISTS `sys_ai_provider`;
+CREATE TABLE IF NOT EXISTS `sys_ai_provider` (
+    `sys_ai_provider_id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '供应商主键',
+    `sys_ai_provider_name` VARCHAR(255) NOT NULL COMMENT '供应商名称',
+    `sys_ai_provider_type` VARCHAR(64) NOT NULL COMMENT '供应商类型(openai/anthropic/gemini/qwen/custom)',
+    `sys_ai_provider_base_url` VARCHAR(512) DEFAULT NULL COMMENT '接入 Base URL',
+    `sys_ai_provider_api_key` VARCHAR(512) DEFAULT NULL COMMENT 'API Key',
+    `sys_ai_provider_logo` VARCHAR(1024) DEFAULT NULL COMMENT 'Logo 图片地址',
+    `sys_ai_provider_models` TEXT DEFAULT NULL COMMENT '可用模型列表(JSON)',
+    `sys_ai_provider_enabled` INT DEFAULT 1 COMMENT '是否启用',
+    `sys_ai_provider_deleted` INT DEFAULT 0 COMMENT '逻辑删除标记',
+    `create_name` VARCHAR(64) DEFAULT NULL COMMENT '创建人名称',
+    `create_by` BIGINT DEFAULT NULL COMMENT '创建人ID',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME DEFAULT NULL COMMENT '更新时间',
+    `update_name` VARCHAR(64) DEFAULT NULL COMMENT '更新人名称',
+    `update_by` BIGINT DEFAULT NULL COMMENT '更新人ID',
+    UNIQUE KEY `uk_sys_ai_provider_name` (`sys_ai_provider_name`)
 ) COMMENT='模型供应商表';
-
--- ============================================================
--- 25. AI 模型分组表（新设置体系）
--- ============================================================
-DROP TABLE IF EXISTS `ai_group`;
-CREATE TABLE IF NOT EXISTS `ai_group` (
-    `group_id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '分组主键',
-    `group_name` VARCHAR(128) NOT NULL COMMENT '分组名称',
-    `group_description` VARCHAR(256) DEFAULT NULL COMMENT '分组描述',
-    `group_models` TEXT DEFAULT NULL COMMENT '分组关联模型列表(JSON)',
-    `group_app_key_ids` TEXT DEFAULT NULL COMMENT '绑定 AppKey ID 列表(JSON)',
-    `group_enabled` INT DEFAULT 1 COMMENT '是否启用',
-    `group_create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `group_update_time` DATETIME DEFAULT NULL COMMENT '更新时间',
-    `group_deleted` INT DEFAULT 0 COMMENT '逻辑删除标记',
-    UNIQUE KEY `uk_ai_group_name` (`group_name`)
-) COMMENT='模型分组表';
 
 -- ============================================================
 -- 26. AI 模型定义表（关联供应商，含能力标签）
 -- ============================================================
-DROP TABLE IF EXISTS `ai_model`;
-CREATE TABLE IF NOT EXISTS `ai_model` (
-    `model_id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '模型主键',
-    `model_name` VARCHAR(255) NOT NULL COMMENT '模型显示名称',
-    `model_code` VARCHAR(255) NOT NULL COMMENT '模型标识(gpt-4o, deepseek-chat)',
-    `model_provider_id` BIGINT DEFAULT NULL COMMENT '关联供应商 ID',
-    `model_capabilities` VARCHAR(512) DEFAULT NULL COMMENT '能力标签(逗号分隔: chat,vision,think,search)',
-    `model_description` VARCHAR(512) DEFAULT NULL COMMENT '模型描述',
-    `model_enabled` INT DEFAULT 1 COMMENT '是否启用',
-    `model_sort` INT DEFAULT 0 COMMENT '排序值',
-    `model_create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `model_update_time` DATETIME DEFAULT NULL COMMENT '更新时间',
-    `model_deleted` INT DEFAULT 0 COMMENT '逻辑删除标记',
-    UNIQUE KEY `uk_ai_model_code` (`model_code`)
+DROP TABLE IF EXISTS `sys_ai_model`;
+CREATE TABLE IF NOT EXISTS `sys_ai_model` (
+    `sys_ai_model_id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '模型主键',
+    `sys_ai_model_name` VARCHAR(255) NOT NULL COMMENT '模型显示名称',
+    `sys_ai_model_code` VARCHAR(255) NOT NULL COMMENT '模型标识(gpt-4o, deepseek-chat)',
+    `sys_ai_model_provider_id` BIGINT DEFAULT NULL COMMENT '关联供应商 ID',
+    `sys_ai_model_capabilities` VARCHAR(512) DEFAULT NULL COMMENT '能力标签(逗号分隔: chat,vision,think,search)',
+    `sys_ai_model_description` VARCHAR(512) DEFAULT NULL COMMENT '模型描述',
+    `sys_ai_model_enabled` INT DEFAULT 1 COMMENT '是否启用',
+    `sys_ai_model_sort` INT DEFAULT 0 COMMENT '排序值',
+    `sys_ai_model_create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `sys_ai_model_update_time` DATETIME DEFAULT NULL COMMENT '更新时间',
+    `sys_ai_model_deleted` INT DEFAULT 0 COMMENT '逻辑删除标记',
+    `sys_ai_model_input_price` DECIMAL(12,4) DEFAULT 0.0000 COMMENT '输入单价(每1k tokens)',
+    `sys_ai_model_output_price` DECIMAL(12,4) DEFAULT 0.0000 COMMENT '输出单价(每1k tokens)',
+    `sys_ai_model_cache_price` DECIMAL(12,4) DEFAULT 0.0000 COMMENT '缓存单价(每1k tokens)',
+    UNIQUE KEY `uk_sys_ai_model_code` (`sys_ai_model_code`)
 ) COMMENT='AI 模型定义表';
 
 -- ============================================================
--- 27. AI AppKey 表（新设置体系）
+-- 29. AI 服务运行状态表
 -- ============================================================
-DROP TABLE IF EXISTS `ai_app_key`;
-CREATE TABLE IF NOT EXISTS `ai_app_key` (
-    `app_key_id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'AppKey 主键',
-    `app_key_name` VARCHAR(255) NOT NULL COMMENT 'AppKey 名称',
-    `app_key_value` VARCHAR(512) NOT NULL COMMENT 'AppKey 密钥值',
-    `app_key_provider_id` BIGINT DEFAULT NULL COMMENT '关联供应商 ID',
-    `app_key_model` VARCHAR(255) DEFAULT NULL COMMENT '限定使用的模型',
-    `app_key_group_id` BIGINT DEFAULT NULL COMMENT '绑定分组 ID（分组的 key 只能用分组下的模型）',
-    `app_key_enabled` INT DEFAULT 1 COMMENT '是否启用',
-    `app_key_use_count` BIGINT DEFAULT 0 COMMENT '已使用次数',
-    `app_key_max_use` BIGINT DEFAULT NULL COMMENT '次数上限（null 表示不限）',
-    `app_key_expire_time` DATETIME DEFAULT NULL COMMENT '过期时间（null 表示不限）',
-    `app_key_create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `app_key_update_time` DATETIME DEFAULT NULL COMMENT '更新时间',
-    `app_key_deleted` INT DEFAULT 0 COMMENT '逻辑删除标记'
-) COMMENT='AI AppKey 表';
-
--- ============================================================
--- 28. AI 全局设置表（新设置体系）
--- ============================================================
-DROP TABLE IF EXISTS `ai_global_setting`;
-CREATE TABLE IF NOT EXISTS `ai_global_setting` (
-    `setting_id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '设置主键',
-    `setting_chat_client_enabled` INT DEFAULT 1 COMMENT '是否启用 ChatClient 聚合',
-    `setting_usage_interval_sec` INT DEFAULT 60 COMMENT '用量自动刷新间隔(秒)',
-    `setting_enable_usage_analysis` INT DEFAULT 1 COMMENT '是否启用用量分析',
-    `setting_default_model` VARCHAR(255) DEFAULT NULL COMMENT '默认模型',
-    `setting_temperature` DECIMAL(4,2) DEFAULT 0.70 COMMENT '默认温度',
-    `setting_max_tokens` INT DEFAULT 2048 COMMENT '默认最大 tokens',
-    `setting_timeout` INT DEFAULT 30 COMMENT '默认请求超时(秒)',
-    `setting_enable_cache` INT DEFAULT 1 COMMENT '是否启用缓存',
-    `setting_stream` INT DEFAULT 1 COMMENT '是否流式输出',
-    `setting_update_time` DATETIME DEFAULT NULL COMMENT '更新时间'
-) COMMENT='AI 全局设置表';
-
--- ============================================================
--- 29. AI 服务运行状态表（新设置体系）
--- ============================================================
-DROP TABLE IF EXISTS `ai_service_status`;
-CREATE TABLE IF NOT EXISTS `ai_service_status` (
-    `status_id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '状态主键',
-    `status_service_name` VARCHAR(255) NOT NULL COMMENT '服务名称',
-    `status_running` INT DEFAULT 0 COMMENT '是否运行中',
-    `status_pid` BIGINT DEFAULT NULL COMMENT '进程 PID',
-    `status_start_time` DATETIME DEFAULT NULL COMMENT '启动时间',
-    `status_uptime_sec` BIGINT DEFAULT 0 COMMENT '运行时长(秒)',
-    `status_update_time` DATETIME DEFAULT NULL COMMENT '更新时间'
+DROP TABLE IF EXISTS `sys_ai_service_status`;
+CREATE TABLE IF NOT EXISTS `sys_ai_service_status` (
+    `sys_ai_service_status_id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '状态主键',
+    `sys_ai_service_status_service_name` VARCHAR(255) NOT NULL COMMENT '服务名称',
+    `sys_ai_service_status_running` INT DEFAULT 0 COMMENT '是否运行中',
+    `sys_ai_service_status_pid` BIGINT DEFAULT NULL COMMENT '进程 PID',
+    `sys_ai_service_status_start_time` DATETIME DEFAULT NULL COMMENT '启动时间',
+    `sys_ai_service_status_uptime_sec` BIGINT DEFAULT 0 COMMENT '运行时长(秒)',
+    `sys_ai_service_status_update_time` DATETIME DEFAULT NULL COMMENT '更新时间'
 ) COMMENT='AI 服务运行状态表';
 
 -- ============================================================
--- 30. AI 用量统计表（新设置体系）
+-- 31. AI 告警规则表
 -- ============================================================
-DROP TABLE IF EXISTS `ai_usage`;
-CREATE TABLE IF NOT EXISTS `ai_usage` (
-    `usage_id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '用量主键',
-    `usage_model` VARCHAR(255) NOT NULL COMMENT '模型名称',
-    `usage_app_key_id` BIGINT DEFAULT NULL COMMENT '关联的 AppKey ID',
-    `usage_request_count` BIGINT DEFAULT 0 COMMENT '请求次数',
-    `usage_prompt_tokens` BIGINT DEFAULT 0 COMMENT '提示 tokens',
-    `usage_completion_tokens` BIGINT DEFAULT 0 COMMENT '生成 tokens',
-    `usage_total_tokens` BIGINT DEFAULT 0 COMMENT '总 tokens',
-    `usage_timestamp` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '统计时间戳'
-) COMMENT='AI 用量统计表';
+DROP TABLE IF EXISTS `sys_ai_alert`;
+CREATE TABLE IF NOT EXISTS `sys_ai_alert` (
+    `sys_ai_alert_id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '告警主键',
+    `sys_ai_alert_name` VARCHAR(255) NOT NULL COMMENT '告警名称',
+    `sys_ai_alert_app_key_id` BIGINT DEFAULT NULL COMMENT '关联 AppKey ID',
+    `sys_ai_alert_condition` VARCHAR(128) NOT NULL COMMENT '告警条件',
+    `sys_ai_alert_threshold` BIGINT NOT NULL COMMENT '告警阈值',
+    `sys_ai_alert_channels` VARCHAR(512) DEFAULT NULL COMMENT '通知渠道',
+    `sys_ai_alert_enabled` INT DEFAULT 1 COMMENT '是否启用',
+    `sys_ai_alert_create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `sys_ai_alert_update_time` DATETIME DEFAULT NULL COMMENT '更新时间',
+    `sys_ai_alert_deleted` INT DEFAULT 0 COMMENT '逻辑删除标记'
+) COMMENT='AI 告警规则表';
 
 -- ============================================================
--- 31. AI 告警规则表（新设置体系）
+-- 30. AI 用量明细表
 -- ============================================================
-DROP TABLE IF EXISTS `ai_alert`;
-CREATE TABLE IF NOT EXISTS `ai_alert` (
-    `alert_id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '告警主键',
-    `alert_name` VARCHAR(255) NOT NULL COMMENT '告警名称',
-    `alert_app_key_id` BIGINT DEFAULT NULL COMMENT '关联 AppKey ID',
-    `alert_condition` VARCHAR(128) NOT NULL COMMENT '告警条件',
-    `alert_threshold` BIGINT NOT NULL COMMENT '告警阈值',
-    `alert_channels` VARCHAR(512) DEFAULT NULL COMMENT '通知渠道',
-    `alert_enabled` INT DEFAULT 1 COMMENT '是否启用',
-    `alert_create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `alert_update_time` DATETIME DEFAULT NULL COMMENT '更新时间',
-    `alert_deleted` INT DEFAULT 0 COMMENT '逻辑删除标记'
-) COMMENT='AI 告警规则表';
+DROP TABLE IF EXISTS `sys_ai_usage`;
+CREATE TABLE IF NOT EXISTS `sys_ai_usage` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '用量主键',
+    `group_name` VARCHAR(64) DEFAULT NULL COMMENT '分组：chat/image/video/colorize/vision/rag',
+    `provider` VARCHAR(64) DEFAULT NULL COMMENT '供应商',
+    `model` VARCHAR(255) NOT NULL COMMENT '模型名称',
+    `call_type` VARCHAR(32) DEFAULT NULL COMMENT '调用类型：sync/async',
+    `prompt_tokens` INT DEFAULT 0 COMMENT '提示 tokens',
+    `completion_tokens` INT DEFAULT 0 COMMENT '生成 tokens',
+    `total_tokens` INT DEFAULT 0 COMMENT '总 tokens',
+    `input_cost` DOUBLE DEFAULT 0 COMMENT '输入费用(元)',
+    `output_cost` DOUBLE DEFAULT 0 COMMENT '输出费用(元)',
+    `total_cost` DOUBLE DEFAULT 0 COMMENT '总费用(元)',
+    `request_id` VARCHAR(64) DEFAULT NULL COMMENT '请求 ID',
+    `user_id` VARCHAR(64) DEFAULT NULL COMMENT '用户标识',
+    `call_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '调用时间',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间'
+) COMMENT='AI 用量明细表';
+
+-- ============================================================
+-- 30.1 AI 用量日汇总表
+-- ============================================================
+DROP TABLE IF EXISTS `sys_ai_usage_daily`;
+CREATE TABLE IF NOT EXISTS `sys_ai_usage_daily` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',
+    `stat_date` DATE DEFAULT NULL COMMENT '统计日期',
+    `group_name` VARCHAR(64) DEFAULT NULL COMMENT '分组',
+    `provider` VARCHAR(64) DEFAULT NULL COMMENT '供应商',
+    `model` VARCHAR(255) NOT NULL COMMENT '模型名称',
+    `total_calls` INT DEFAULT 0 COMMENT '总调用次数',
+    `total_prompt_tokens` INT DEFAULT 0 COMMENT '提示 tokens',
+    `total_completion_tokens` INT DEFAULT 0 COMMENT '生成 tokens',
+    `total_tokens` INT DEFAULT 0 COMMENT '总 tokens',
+    `total_cost` DOUBLE DEFAULT 0 COMMENT '总费用(元)',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间'
+) COMMENT='AI 用量日汇总表';

@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS `spider_definition` (
     `flow_id`         BIGINT                DEFAULT NULL   COMMENT '关联流程 ID（spider_flow.id）',
     `enabled`         TINYINT      NOT NULL DEFAULT 0      COMMENT '是否启用（1 启用 / 0 停用）',
     `cron_expression` VARCHAR(64)           DEFAULT NULL   COMMENT '定时 cron 表达式，为空则不自动调度',
+    `executor_type`   VARCHAR(16)           DEFAULT NULL   COMMENT '执行类型（ONCE 一次 / SCHEDULE 定时）',
     `last_run_at`     DATETIME              DEFAULT NULL   COMMENT '上次执行时间',
     `last_status`     VARCHAR(16)           DEFAULT NULL   COMMENT '上次执行状态（SUCCESS/FAIL/RUNNING）',
     `last_message`    VARCHAR(512)          DEFAULT NULL   COMMENT '上次执行消息',

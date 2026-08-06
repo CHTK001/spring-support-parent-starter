@@ -72,6 +72,7 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
     @Override
     public Expression getSqlSegment(Table table, Expression where, String mappedStatementId) {
         if (!metaDataScopeProperties.isEnable()) {
+            log.debug("[数据权限] 未启用 enable=false, mappedStatementId={}, table={}", mappedStatementId, table.getName());
             return null;
         }
 
@@ -87,11 +88,15 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
             // 获取当前用户
             CurrentUser currentUser = getCurrentUser();
             if (currentUser == null) {
+                log.debug("[数据权限] 当前用户为空, mappedStatementId={}, table={}", mappedStatementId, table.getName());
                 return null;
             }
 
             // 确定数据权限类型
             DataFilterTypeEnum dataPermission = determineDataPermission(dataScopeInfo, currentUser);
+
+            log.debug("[数据权限] mappedStatementId={}, table={}, dataPermission={}, dataPermissionRule={}, roles={}",
+                    mappedStatementId, table.getName(), dataPermission, currentUser.getDataPermissionRule(), currentUser.getRoles());
 
             return dataScopeFilter(table, currentUser, metaDataScopeProperties, where, dataPermission, dataScopeInfo);
         } catch (Exception e) {

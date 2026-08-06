@@ -70,6 +70,11 @@
             <artifactId>utils-support-deeplearning-onnx-starter</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-jvector-starter</artifactId>
+        </dependency>
+
         <!-- 用量数据同步（datasearch UsageProvider 外部工具用量拉取） -->
         <dependency>
             <groupId>com.chua</groupId>

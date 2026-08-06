@@ -9,8 +9,8 @@
     <select id="selectByAppKey" resultType="com.chua.starter.ai.support.entity.SysAiAppKey">
         SELECT *
         FROM sys_ai_app_key
-        WHERE app_key = #{appKey}
-          AND delete_flag = 0
+        WHERE sys_ai_app_key_app_key = #{appKey}
+          AND sys_ai_app_key_delete = 0
         LIMIT 1
     </select>
 
@@ -21,7 +21,7 @@
         SELECT *
         FROM sys_ai_app_key
         WHERE sys_ai_app_key_group_id = #{groupId}
-          AND delete_flag = 0
+          AND sys_ai_app_key_delete = 0
         ORDER BY create_time DESC
     </select>
 

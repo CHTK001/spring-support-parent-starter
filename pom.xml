@@ -703,6 +703,11 @@
             </dependency>
             <dependency>
                 <groupId>com.chua</groupId>
+                <artifactId>utils-support-jvector-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
                 <artifactId>utils-support-datasource-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>

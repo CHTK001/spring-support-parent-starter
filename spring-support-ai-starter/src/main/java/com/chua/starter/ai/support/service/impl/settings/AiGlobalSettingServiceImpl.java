@@ -1,18 +1,27 @@
 package com.chua.starter.ai.support.service.impl.settings;
 
-import com.chua.starter.ai.support.entity.settings.AiGlobalSetting;
-import com.chua.starter.ai.support.mapper.settings.AiGlobalSettingMapper;
+import com.chua.starter.ai.support.configuration.GlobalChatClientManager;
+import com.chua.starter.ai.support.configuration.GlobalSettingReader;
+import com.chua.starter.ai.support.configuration.RagClientManager;
 import com.chua.starter.ai.support.model.AiGlobalSettingDTO;
+import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.settings.AiGlobalSettingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
- * 全局设置服务实现类（单条记录 id=1）
+ * 全局设置服务实现类。
+ *
+ * <p>全局设置存储于 {@code sys_ai_global_setting} 键值表（分组 {@code global}），
+ * 各字段以键值行保存，与旧版 runtime 配置共用同一张表。</p>
  *
  * @author CH
  * @since 2026-08-03
@@ -23,31 +32,62 @@ import java.time.LocalDateTime;
 public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
 
     /**
-     * 全局设置单条记录主键
+     * 全局设置键值分组
      */
-    private static final Long SETTING_ID = 1L;
+    private static final String GROUP = "global";
 
     /**
-     * 全局设置 Mapper
+     * 键值全局设置服务
      */
-    private final AiGlobalSettingMapper settingMapper;
+    private final SysAiGlobalSettingService sysAiGlobalSettingService;
 
     /**
-     * 获取全局设置，不存在时返回空 DTO。
+     * 全局设置读取工具
+     */
+    private final GlobalSettingReader settingReader;
+
+    /**
+     * 全局 RAG 客户端管理器（保存后热重建）
+     */
+    private final RagClientManager ragClientManager;
+
+    /**
+     * 全局 ChatClient 管理器（保存后热重建全局 ChatClient 与主 Agent）
+     */
+    private final GlobalChatClientManager globalChatClientManager;
+
+    /**
+     * 获取全局设置。
      *
      * @return 全局设置 DTO
      */
     @Override
     public AiGlobalSettingDTO get() {
-        AiGlobalSetting entity = settingMapper.selectById(SETTING_ID);
-        if (entity == null) {
-            return new AiGlobalSettingDTO();
-        }
-        return toDto(entity);
+        AiGlobalSettingDTO dto = new AiGlobalSettingDTO();
+        dto.setChatClientEnabled(settingReader.getBool(GROUP, "chat_client_enabled", true));
+        dto.setEnableUsageAnalysis(settingReader.getBool(GROUP, "enable_usage_analysis", true));
+        dto.setUsageReportInterval(settingReader.getIntOrNull(GROUP, "usage_report_interval"));
+        dto.setDefaultModel(settingReader.getStr(GROUP, "default_model"));
+        dto.setTemperature(settingReader.getDecimalOrNull(GROUP, "temperature"));
+        dto.setMaxTokens(settingReader.getIntOrNull(GROUP, "max_tokens"));
+        dto.setTimeout(settingReader.getIntOrNull(GROUP, "timeout"));
+        dto.setEnableCache(settingReader.getBool(GROUP, "enable_cache", true));
+        dto.setStream(settingReader.getBool(GROUP, "stream", true));
+        dto.setSystemPrompt(settingReader.getStr(GROUP, "system_prompt"));
+        dto.setRagEmbeddingModel(settingReader.getStr(GROUP, "rag_embedding_model"));
+        dto.setRagLlmModel(settingReader.getStr(GROUP, "rag_llm_model"));
+        dto.setRagOcrModel(settingReader.getStr(GROUP, "rag_ocr_model"));
+        dto.setRagUploadDir(settingReader.getStr(GROUP, "rag_upload_dir"));
+        dto.setRagVectorStorage(settingReader.getStr(GROUP, "rag_vector_storage"));
+        dto.setRagSystemPrompt(settingReader.getStr(GROUP, "rag_system_prompt"));
+        dto.setRagChunkSize(settingReader.getIntOrNull(GROUP, "rag_chunk_size"));
+        dto.setRagChunkOverlap(settingReader.getIntOrNull(GROUP, "rag_chunk_overlap"));
+        dto.setRagSplitter(settingReader.getStr(GROUP, "rag_splitter"));
+        return dto;
     }
 
     /**
-     * 更新全局设置，无记录时新建。
+     * 更新全局设置，非空字段覆盖写入键值表。
      *
      * @param setting 全局设置 DTO
      * @return 更新后的全局设置 DTO
@@ -55,116 +95,58 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
     @Override
     @Transactional
     public AiGlobalSettingDTO update(AiGlobalSettingDTO setting) {
-        AiGlobalSetting entity = toEntity(setting);
-        AiGlobalSetting exist = settingMapper.selectById(SETTING_ID);
-        if (exist == null) {
-            entity.setSettingId(SETTING_ID);
-            entity.setSettingUpdateTime(LocalDateTime.now());
-            settingMapper.insert(entity);
-            log.debug("[AiGlobalSetting] 初始化配置成功");
-        } else {
-            entity.setSettingId(SETTING_ID);
-            entity.setSettingUpdateTime(LocalDateTime.now());
-            settingMapper.updateById(entity);
-            log.debug("[AiGlobalSetting] 更新配置成功");
+        Map<String, Object> request = new LinkedHashMap<>();
+        request.put("group", GROUP);
+        List<Map<String, Object>> fields = new ArrayList<>();
+        putIfNotNull(fields, "chat_client_enabled", setting.getChatClientEnabled());
+        putIfNotNull(fields, "enable_usage_analysis", setting.getEnableUsageAnalysis());
+        putIfNotNull(fields, "usage_report_interval", setting.getUsageReportInterval());
+        putIfNotNull(fields, "default_model", setting.getDefaultModel());
+        putIfNotNull(fields, "temperature", setting.getTemperature());
+        putIfNotNull(fields, "max_tokens", setting.getMaxTokens());
+        putIfNotNull(fields, "timeout", setting.getTimeout());
+        putIfNotNull(fields, "enable_cache", setting.getEnableCache());
+        putIfNotNull(fields, "stream", setting.getStream());
+        putIfNotNull(fields, "system_prompt", setting.getSystemPrompt());
+        putIfNotNull(fields, "rag_embedding_model", setting.getRagEmbeddingModel());
+        putIfNotNull(fields, "rag_llm_model", setting.getRagLlmModel());
+        putIfNotNull(fields, "rag_ocr_model", setting.getRagOcrModel());
+        putIfNotNull(fields, "rag_upload_dir", setting.getRagUploadDir());
+        putIfNotNull(fields, "rag_vector_storage", setting.getRagVectorStorage());
+        putIfNotNull(fields, "rag_system_prompt", setting.getRagSystemPrompt());
+        putIfNotNull(fields, "rag_chunk_size", setting.getRagChunkSize());
+        putIfNotNull(fields, "rag_chunk_overlap", setting.getRagChunkOverlap());
+        putIfNotNull(fields, "rag_splitter", setting.getRagSplitter());
+        request.put("fields", fields);
+        sysAiGlobalSettingService.replace(request);
+        log.debug("[AiGlobalSetting] 全局配置已保存到键值表 {}", GROUP);
+
+        // 全局配置热更新：重建全局 ChatClient / 主 Agent 与 RAG 客户端
+        try {
+            globalChatClientManager.rebuild();
+        } catch (Exception e) {
+            log.warn("[AiGlobalSetting] 全局 ChatClient 热更新失败: {}", e.getMessage());
         }
-        return toDto(settingMapper.selectById(SETTING_ID));
+        try {
+            ragClientManager.rebuild();
+        } catch (Exception e) {
+            log.warn("[AiGlobalSetting] RAG 客户端热更新失败: {}", e.getMessage());
+        }
+        return get();
     }
 
     /**
-     * 实体转 DTO。
-     *
-     * @param entity 全局设置实体
-     * @return 全局设置 DTO
+     * 非空值写入字段列表。
      */
-    private AiGlobalSettingDTO toDto(AiGlobalSetting entity) {
-        AiGlobalSettingDTO dto = new AiGlobalSettingDTO();
-        dto.setChatClientEnabled(entity.getSettingChatClientEnabled());
-        dto.setEnableUsageAnalysis(entity.getSettingEnableUsageAnalysis());
-        dto.setUsageReportInterval(entity.getSettingUsageIntervalSec());
-        dto.setDefaultModel(entity.getSettingDefaultModel());
-        dto.setTemperature(entity.getSettingTemperature());
-        dto.setMaxTokens(entity.getSettingMaxTokens());
-        dto.setTimeout(entity.getSettingTimeout());
-        dto.setEnableCache(entity.getSettingEnableCache());
-        dto.setStream(entity.getSettingStream());
-        dto.setRagEmbeddingModel(entity.getRagEmbeddingModel());
-        dto.setRagLlmModel(entity.getRagLlmModel());
-        dto.setRagOcrModel(entity.getRagOcrModel());
-        dto.setRagUploadDir(entity.getRagUploadDir());
-        dto.setRagVectorStorage(entity.getRagVectorStorage());
-        return dto;
-    }
-
-    /**
-     * DTO 转实体，空值保留不覆盖。
-     *
-     * @param dto 全局设置 DTO
-     * @return 全局设置实体
-     */
-    private AiGlobalSetting toEntity(AiGlobalSettingDTO dto) {
-        AiGlobalSetting entity = new AiGlobalSetting();
-        AiGlobalSetting exist = settingMapper.selectById(SETTING_ID);
-        if (exist != null) {
-            entity.setSettingId(SETTING_ID);
-            if (dto.getChatClientEnabled() != null) {
-                entity.setSettingChatClientEnabled(dto.getChatClientEnabled());
-            }
-            if (dto.getEnableUsageAnalysis() != null) {
-                entity.setSettingEnableUsageAnalysis(dto.getEnableUsageAnalysis());
-            }
-            if (dto.getUsageReportInterval() != null) {
-                entity.setSettingUsageIntervalSec(dto.getUsageReportInterval());
-            }
-            if (dto.getDefaultModel() != null) {
-                entity.setSettingDefaultModel(dto.getDefaultModel());
-            }
-            if (dto.getTemperature() != null) {
-                entity.setSettingTemperature(dto.getTemperature());
-            }
-            if (dto.getMaxTokens() != null) {
-                entity.setSettingMaxTokens(dto.getMaxTokens());
-            }
-            if (dto.getTimeout() != null) {
-                entity.setSettingTimeout(dto.getTimeout());
-            }
-            if (dto.getEnableCache() != null) {
-                entity.setSettingEnableCache(dto.getEnableCache());
-            }
-            if (dto.getStream() != null) {
-                entity.setSettingStream(dto.getStream());
-            }
-            if (dto.getRagEmbeddingModel() != null) {
-                entity.setRagEmbeddingModel(dto.getRagEmbeddingModel());
-            }
-            if (dto.getRagLlmModel() != null) {
-                entity.setRagLlmModel(dto.getRagLlmModel());
-            }
-            if (dto.getRagOcrModel() != null) {
-                entity.setRagOcrModel(dto.getRagOcrModel());
-            }
-            if (dto.getRagUploadDir() != null) {
-                entity.setRagUploadDir(dto.getRagUploadDir());
-            }
-            if (dto.getRagVectorStorage() != null) {
-                entity.setRagVectorStorage(dto.getRagVectorStorage());
-            }
-            return entity;
+    private void putIfNotNull(List<Map<String, Object>> fields, String field, Object value) {
+        if (value == null) {
+            return;
         }
-        entity.setSettingChatClientEnabled(dto.getChatClientEnabled());
-        entity.setSettingEnableUsageAnalysis(dto.getEnableUsageAnalysis());
-        entity.setSettingUsageIntervalSec(dto.getUsageReportInterval());
-        entity.setSettingDefaultModel(dto.getDefaultModel());
-        entity.setSettingTemperature(dto.getTemperature());
-        entity.setSettingMaxTokens(dto.getMaxTokens());
-        entity.setSettingTimeout(dto.getTimeout());
-        entity.setSettingEnableCache(dto.getEnableCache());
-        entity.setSettingStream(dto.getStream());
-        entity.setRagEmbeddingModel(dto.getRagEmbeddingModel());
-        entity.setRagLlmModel(dto.getRagLlmModel());
-        entity.setRagOcrModel(dto.getRagOcrModel());
-        entity.setRagUploadDir(dto.getRagUploadDir());
-        entity.setRagVectorStorage(dto.getRagVectorStorage());
-        return entity;
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("field", field);
+        item.put("value", String.valueOf(value));
+        item.put("valueType", "STRING");
+        item.put("description", field);
+        fields.add(item);
     }
 }

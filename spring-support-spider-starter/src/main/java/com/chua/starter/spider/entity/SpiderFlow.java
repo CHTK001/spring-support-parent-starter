@@ -40,6 +40,20 @@ public class SpiderFlow extends SysBase {
     private Long definitionId;
 
     /**
+     * 流程编码（前端 flowCode）
+     */
+    @TableField("code")
+    @Schema(description = "流程编码（前端 flowCode）")
+    private String code;
+
+    /**
+     * 是否启用（1 启用 / 0 停用）
+     */
+    @TableField("enabled")
+    @Schema(description = "是否启用")
+    private Integer enabled;
+
+    /**
      * 流程名称
      */
     @TableField("name")

@@ -35,35 +35,56 @@ public class MsMonitorMetricCpu implements Serializable {
     /**
      * 监控主机 id
      */
-    @TableField("monitor_id")
+    @TableField("ms_monitor_metric_cpu_monitor_id")
     @Schema(description = "监控主机 id", example = "1")
     private Long monitorId;
 
     /**
      * CPU 型号
      */
-    @TableField("cpu_model")
+    @TableField("ms_monitor_metric_cpu_cpu_model")
     @Schema(description = "CPU 型号", example = "Intel(R) Xeon(R) CPU E5-2680 v4 @ 2.40GHz")
     private String cpuModel;
 
     /**
      * 核数
      */
-    @TableField("cpu_cores")
+    @TableField("ms_monitor_metric_cpu_cpu_cores")
     @Schema(description = "核数", example = "8")
     private Integer cpuCores;
 
     /**
      * 使用率(0-100)
      */
-    @TableField("cpu_usage")
+    @TableField("ms_monitor_metric_cpu_cpu_usage")
     @Schema(description = "使用率", example = "23.5")
     private Double cpuUsage;
 
     /**
+     * 1 分钟平均负载
+     */
+    @TableField("ms_monitor_metric_cpu_load1")
+    @Schema(description = "1 分钟平均负载", example = "0.85")
+    private Double load1;
+
+    /**
+     * 5 分钟平均负载
+     */
+    @TableField("ms_monitor_metric_cpu_load5")
+    @Schema(description = "5 分钟平均负载", example = "0.72")
+    private Double load5;
+
+    /**
+     * 15 分钟平均负载
+     */
+    @TableField("ms_monitor_metric_cpu_load15")
+    @Schema(description = "15 分钟平均负载", example = "0.68")
+    private Double load15;
+
+    /**
      * 采集时间
      */
-    @TableField("collect_time")
+    @TableField("ms_monitor_metric_cpu_collect_time")
     @Schema(description = "采集时间", example = "2026-08-04T10:00:00")
     private LocalDateTime collectTime;
 }

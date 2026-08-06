@@ -1,5 +1,6 @@
 package com.chua.starter.spider.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.starter.spider.entity.SpiderDefinition;
 import com.chua.starter.spider.mapper.SpiderDefinitionMapper;
@@ -10,13 +11,15 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
  * 爬虫定义服务实现。
  *
  * <p>启用列表使用 {@link Cacheable} 缓存，缓存在 Caffeine 中；
- * 新增/更新/删除时通过 {@link CacheEvict} 清理全部缓存项，保证一致性。</p>
+ * 新增/更新/删除时通过 {@link CacheEvict} 清理全部缓存项，保证一致性。
+ * 调度器回写 {@code last_run_at} 走 {@link #markRunAtOnly}，绕开缓存清理。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -37,6 +40,17 @@ public class SpiderDefinitionServiceImpl
     public List<SpiderDefinition> listEnabled() {
         return list(Wrappers.<SpiderDefinition>lambdaQuery()
                 .eq(SpiderDefinition::getEnabled, Integer.valueOf(1)));
+    }
+
+    @Override
+    public boolean markRunAtOnly(Long id, LocalDateTime lastRunAt) {
+        if (id == null || lastRunAt == null) {
+            return false;
+        }
+        LambdaUpdateWrapper<SpiderDefinition> wrapper = Wrappers.<SpiderDefinition>lambdaUpdate()
+                .eq(SpiderDefinition::getId, id)
+                .set(SpiderDefinition::getLastRunAt, lastRunAt);
+        return baseMapper.update(null, wrapper) > 0;
     }
 
     @CacheEvict(allEntries = true)

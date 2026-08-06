@@ -4,13 +4,16 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsMonitor;
 import com.chua.starter.monitor.support.entity.MsMonitorConfig;
 import com.chua.starter.monitor.support.entity.MsMonitorGateway;
+import com.chua.starter.monitor.support.entity.MsMonitorMetric;
 import com.chua.starter.monitor.support.entity.MsMonitorMetricCpu;
 import com.chua.starter.monitor.support.entity.MsMonitorMetricConfig;
 import com.chua.starter.monitor.support.entity.MsMonitorMetricDisk;
 import com.chua.starter.monitor.support.entity.MsMonitorMetricJvm;
 import com.chua.starter.monitor.support.entity.MsMonitorMetricMemory;
 import com.chua.starter.monitor.support.entity.MsMonitorMetricNetwork;
+import com.chua.starter.monitor.support.entity.MsMonitorMetricStatistics;
 import com.chua.starter.monitor.support.entity.MsMonitorRedisMetric;
+import com.chua.starter.monitor.support.entity.MsMonitorRedisMetricStatistics;
 import com.chua.starter.monitor.support.entity.MsMonitorTask;
 import com.chua.starter.monitor.support.enums.ServiceType;
 import com.chua.starter.monitor.support.registry.ProviderRegistry;
@@ -128,6 +131,12 @@ public class MonitorController {
         return taskService.findById(id);
     }
 
+    @Operation(summary = "设置任务启用/禁用")
+    @PutMapping("/task/{id}/enabled")
+    public ReturnResult<Void> setTaskEnabled(@PathVariable Long id, @RequestParam Integer enabled) {
+        return taskService.setEnabled(id, enabled);
+    }
+
     @Operation(summary = "按主机查询任务")
     @GetMapping("/task")
     public ReturnResult<List<MsMonitorTask>> listTask(@RequestParam(required = false) Long monitorId) {
@@ -143,6 +152,13 @@ public class MonitorController {
     @PostMapping("/metric-config")
     public ReturnResult<MsMonitorMetricConfig> createMetricConfig(@RequestBody MsMonitorMetricConfig config) {
         return metricConfigService.create(config);
+    }
+
+    @Operation(summary = "更新解析规则")
+    @PutMapping("/metric-config/{id}")
+    public ReturnResult<MsMonitorMetricConfig> updateMetricConfig(@PathVariable Long id, @RequestBody MsMonitorMetricConfig config) {
+        config.setId(id);
+        return metricConfigService.update(config);
     }
 
     @Operation(summary = "删除解析规则")
@@ -189,6 +205,13 @@ public class MonitorController {
     @DeleteMapping("/gateway/{id}")
     public ReturnResult<Void> deleteGateway(@PathVariable Long id) {
         return gatewayService.delete(id);
+    }
+
+    @Operation(summary = "更新网关")
+    @PutMapping("/gateway/{id}")
+    public ReturnResult<MsMonitorGateway> updateGateway(@PathVariable Long id, @RequestBody MsMonitorGateway gateway) {
+        gateway.setId(id);
+        return gatewayService.update(gateway);
     }
 
     @Operation(summary = "按主机查询网关")
@@ -265,6 +288,22 @@ public class MonitorController {
         return metricService.getNetworkHistory(monitorId, start, null);
     }
 
+    /**
+     * 获取磁盘历史指标
+     *
+     * @param monitorId 监控 ID
+     * @param hours     过去 N 小时（可选）
+     * @return 磁盘历史指标列表
+     */
+    @Operation(summary = "获取磁盘历史指标")
+    @GetMapping("/metric/disk/history/{monitorId}")
+    public ReturnResult<List<MsMonitorMetricDisk>> getDiskHistory(
+            @PathVariable Long monitorId,
+            @RequestParam(required = false) Long hours) {
+        java.time.LocalDateTime start = hours != null ? java.time.LocalDateTime.now().minusHours(hours) : null;
+        return metricService.getDiskHistory(monitorId, start, null);
+    }
+
     @Operation(summary = "获取 Redis 最新指标")
     @GetMapping("/metric/redis/{monitorId}")
     public ReturnResult<MsMonitorRedisMetric> getLatestRedisMetric(@PathVariable Long monitorId) {
@@ -278,6 +317,60 @@ public class MonitorController {
             @RequestParam(required = false) Long hours) {
         java.time.LocalDateTime start = hours != null ? java.time.LocalDateTime.now().minusHours(hours) : null;
         return metricService.getRedisMetricHistory(monitorId, start, null);
+    }
+
+    /**
+     * 获取通用指标历史
+     *
+     * @param monitorId 监控 ID
+     * @param metricName 指标名（可选）
+     * @param hours      过去 N 小时（可选）
+     * @return 通用指标列表
+     */
+    @Operation(summary = "获取通用指标历史")
+    @GetMapping("/metric/generic/history/{monitorId}")
+    public ReturnResult<List<MsMonitorMetric>> getGenericMetricHistory(
+            @PathVariable Long monitorId,
+            @RequestParam(required = false) String metricName,
+            @RequestParam(required = false) Long hours) {
+        java.time.LocalDateTime start = hours != null ? java.time.LocalDateTime.now().minusHours(hours) : null;
+        return metricService.getGenericMetricHistory(monitorId, metricName, start, null);
+    }
+
+    /**
+     * 获取通用指标小时聚合统计
+     *
+     * @param monitorId 监控 ID
+     * @param metricName 指标名（可选）
+     * @param hours      过去 N 小时（可选，默认 24）
+     * @return 聚合统计列表
+     */
+    @Operation(summary = "获取通用指标小时聚合统计")
+    @GetMapping("/metric/statistics/{monitorId}")
+    public ReturnResult<List<MsMonitorMetricStatistics>> getMetricStatistics(
+            @PathVariable Long monitorId,
+            @RequestParam(required = false) String metricName,
+            @RequestParam(required = false, defaultValue = "24") Long hours) {
+        java.time.LocalDateTime start = hours != null ? java.time.LocalDateTime.now().minusHours(hours) : null;
+        return metricService.getMetricStatistics(monitorId, metricName, start, null);
+    }
+
+    /**
+     * 获取 Redis 指标小时聚合统计
+     *
+     * @param monitorId 监控 ID
+     * @param metricName 指标名（可选）
+     * @param hours      过去 N 小时（可选，默认 24）
+     * @return Redis 聚合统计列表
+     */
+    @Operation(summary = "获取 Redis 指标小时聚合统计")
+    @GetMapping("/metric/redis-statistics/{monitorId}")
+    public ReturnResult<List<MsMonitorRedisMetricStatistics>> getRedisMetricStatistics(
+            @PathVariable Long monitorId,
+            @RequestParam(required = false) String metricName,
+            @RequestParam(required = false, defaultValue = "24") Long hours) {
+        java.time.LocalDateTime start = hours != null ? java.time.LocalDateTime.now().minusHours(hours) : null;
+        return metricService.getRedisMetricStatistics(monitorId, metricName, start, null);
     }
 
     // ==================== Redis 操作 ====================
@@ -337,6 +430,87 @@ public class MonitorController {
         return resolveOperation(taskId).flatMap(op -> {
             CollectContext ctx = buildContext(taskId);
             return op.expire(ctx, key, Duration.ofSeconds(ttlSeconds));
+        });
+    }
+
+    /**
+     * 获取缓存前缀汇总（按前缀分组统计 key 数量）
+     *
+     * @param taskId 任务 id
+     * @param prefix 前缀匹配模式（可选，默认 "*"）
+     * @return 缓存前缀汇总列表
+     */
+    @Operation(summary = "获取缓存前缀汇总")
+    @GetMapping("/operation/redis/{taskId}/cache-summary")
+    public Mono<List<Map<String, Object>>> getCacheSummary(
+            @PathVariable Long taskId,
+            @RequestParam(defaultValue = "*") String prefix) {
+        return resolveOperation(taskId).flatMap(op -> {
+            CollectContext ctx = buildContext(taskId);
+            return op.scanKeys(ctx, prefix, null, 10000)
+                    .map(result -> {
+                        Map<String, List<String>> grouped = new java.util.LinkedHashMap<>();
+                        if (result.keys() != null) {
+                            for (String key : result.keys()) {
+                                String group = key.contains(":") ? key.substring(0, key.indexOf(":") + 1) + "*" : key;
+                                grouped.computeIfAbsent(group, k -> new java.util.ArrayList<>()).add(key);
+                            }
+                        }
+                        String cursor = result.nextCursor();
+                        int maxIterations = 10;
+                        int iteration = 0;
+                        while (cursor != null && !"0".equals(cursor) && iteration < maxIterations) {
+                            final String c = cursor;
+                            OperationProvider.ScanResult next = op.scanKeys(ctx, prefix, c, 1000).block();
+                            if (next != null && next.keys() != null) {
+                                for (String key : next.keys()) {
+                                    String group = key.contains(":") ? key.substring(0, key.indexOf(":") + 1) + "*" : key;
+                                    grouped.computeIfAbsent(group, k -> new java.util.ArrayList<>()).add(key);
+                                }
+                                cursor = next.nextCursor();
+                            } else {
+                                break;
+                            }
+                            iteration++;
+                        }
+                        List<Map<String, Object>> resultList = new java.util.ArrayList<>();
+                        for (Map.Entry<String, List<String>> entry : grouped.entrySet()) {
+                            Map<String, Object> item = new java.util.LinkedHashMap<>();
+                            item.put("prefix", entry.getKey());
+                            item.put("count", entry.getValue().size());
+                            resultList.add(item);
+                        }
+                        resultList.sort((a, b) -> Integer.compare((int) b.get("count"), (int) a.get("count")));
+                        return resultList;
+                    });
+        });
+    }
+
+    /**
+     * 获取 Redis key 的详细信息（类型、TTL、大小、值）
+     *
+     * @param taskId 任务 id
+     * @param key    key 名称
+     * @return key 详细信息
+     */
+    @Operation(summary = "获取 Redis key 详细信息")
+    @GetMapping("/operation/redis/{taskId}/kv/{key}/detail")
+    public Mono<Map<String, Object>> getKeyDetail(@PathVariable Long taskId, @PathVariable String key) {
+        return resolveOperation(taskId).flatMap(op -> {
+            CollectContext ctx = buildContext(taskId);
+            return Mono.zip(
+                    op.getValue(ctx, key).defaultIfEmpty(""),
+                    op.ttl(ctx, key).defaultIfEmpty(-1L),
+                    op.type(ctx, key).defaultIfEmpty("STRING")
+            ).map(tuple -> {
+                Map<String, Object> detail = new java.util.LinkedHashMap<>();
+                detail.put("key", key);
+                detail.put("value", tuple.getT1());
+                detail.put("ttl", tuple.getT2());
+                detail.put("type", tuple.getT3());
+                detail.put("size", tuple.getT1() != null ? tuple.getT1().length() : 0);
+                return detail;
+            });
         });
     }
 

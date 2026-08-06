@@ -1,8 +1,10 @@
 package com.chua.starter.common.support.lang;
 
 import com.chua.common.support.lang.code.PageResult;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * 分页返回结果封装类
@@ -14,6 +16,8 @@ import lombok.Data;
  */
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ReturnPageResult<T> {
 
     /**

@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.List;
@@ -71,6 +72,7 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     public List<MsMonitorConfig> listAll() { return configMapper.selectList(null); }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorConfig")
     public ReturnResult<MsMonitorConfig> upsert(MsMonitorConfig entity) {
         try {

@@ -13,52 +13,64 @@ import java.time.LocalDateTime;
  * @author CH
  */
 @Data
-@TableName("ai_model")
+@TableName("sys_ai_model")
 @Schema(name = "AI 模型定义")
 public class AiModel implements Serializable {
 
-    @TableId(type = IdType.AUTO)
+    @TableId(value = "sys_ai_model_id", type = IdType.AUTO)
     @Schema(description = "模型主键")
     private Long modelId;
 
-    @TableField("model_name")
+    @TableField("sys_ai_model_name")
     @Schema(description = "模型显示名称")
     private String modelName;
 
-    @TableField("model_code")
+    @TableField("sys_ai_model_code")
     @Schema(description = "模型标识（gpt-4o, deepseek-chat）")
     private String modelCode;
 
-    @TableField("model_provider_id")
+    @TableField("sys_ai_model_provider_id")
     @Schema(description = "关联供应商 ID")
     private Long modelProviderId;
 
-    @TableField("model_capabilities")
+    @TableField("sys_ai_model_capabilities")
     @Schema(description = "能力标签（逗号分隔: chat,vision,think,search）")
     private String modelCapabilities;
 
-    @TableField("model_description")
+    @TableField("sys_ai_model_description")
     @Schema(description = "模型描述")
     private String modelDescription;
 
-    @TableField("model_enabled")
+    @TableField("sys_ai_model_enabled")
     @Schema(description = "是否启用")
     private Boolean modelEnabled;
 
-    @TableField("model_sort")
+    @TableField("sys_ai_model_sort")
     @Schema(description = "排序值")
     private Integer modelSort;
 
-    @TableField(value = "model_create_time", fill = FieldFill.INSERT)
+    @TableField(value = "sys_ai_model_create_time", fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
     private LocalDateTime modelCreateTime;
 
-    @TableField(value = "model_update_time", fill = FieldFill.INSERT_UPDATE)
+    @TableField(value = "sys_ai_model_update_time", fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
     private LocalDateTime modelUpdateTime;
 
-    @TableField("model_deleted")
+    @TableField("sys_ai_model_deleted")
     @TableLogic
     @Schema(description = "逻辑删除标记")
     private Integer modelDeleted;
+
+    @TableField("sys_ai_model_input_price")
+    @Schema(description = "输入单价（每 1k tokens）")
+    private java.math.BigDecimal modelInputPrice;
+
+    @TableField("sys_ai_model_output_price")
+    @Schema(description = "输出单价（每 1k tokens）")
+    private java.math.BigDecimal modelOutputPrice;
+
+    @TableField("sys_ai_model_cache_price")
+    @Schema(description = "缓存命中单价（每 1k tokens）")
+    private java.math.BigDecimal modelCachePrice;
 }

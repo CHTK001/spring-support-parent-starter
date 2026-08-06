@@ -23,4 +23,16 @@ public interface SpiderDefinitionService extends SpiderBaseService<SpiderDefinit
      * @return 已启用定义列表
      */
     List<SpiderDefinition> listEnabled();
+
+    /**
+     * 仅回写最近执行时间，不触发缓存清理。
+     *
+     * <p>供调度器定时回写 {@code last_run_at} 使用，绕过 {@code @CacheEvict}
+     * 全量失效，避免每秒调度反复击穿启用列表缓存。</p>
+     *
+     * @param id        主键
+     * @param lastRunAt 最近执行时间
+     * @return 是否成功
+     */
+    boolean markRunAtOnly(Long id, java.time.LocalDateTime lastRunAt);
 }

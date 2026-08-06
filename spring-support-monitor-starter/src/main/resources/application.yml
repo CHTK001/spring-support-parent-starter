@@ -7,7 +7,9 @@ spring:
   autoconfigure:
     exclude:
       - com.chua.metrics.support.MetricsAutoConfiguration
-      - com.chua.starter.ai.support.configuration.RagAutoConfiguration
+  ai:
+    generate:
+      enabled: false
 
   datasource:
     url: jdbc:h2:mem:monitordb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false
@@ -26,6 +28,11 @@ mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+plugin:
+  api:
+    request-decode:
+      enable: false
 
 logging:
   level:

@@ -5,13 +5,18 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.monitor.support.entity.MsMonitor;
+import com.chua.starter.monitor.support.entity.MsMonitorGateway;
+import com.chua.starter.monitor.support.entity.MsMonitorTask;
+import com.chua.starter.monitor.support.mapper.MsMonitorGatewayMapper;
 import com.chua.starter.monitor.support.mapper.MsMonitorMapper;
+import com.chua.starter.monitor.support.mapper.MsMonitorTaskMapper;
 import com.chua.starter.monitor.support.service.MonitorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -28,8 +33,13 @@ public class MonitorServiceImpl implements MonitorService {
 
     /** 监控 Mapper */
     private final MsMonitorMapper monitorMapper;
+    /** 任务 Mapper, 用于级联删除 */
+    private final MsMonitorTaskMapper monitorTaskMapper;
+    /** 网关 Mapper, 用于级联删除 */
+    private final MsMonitorGatewayMapper monitorGatewayMapper;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitor")
     public ReturnResult<MsMonitor> create(MsMonitor monitor) {
         try {
@@ -45,6 +55,7 @@ public class MonitorServiceImpl implements MonitorService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitor")
     public ReturnResult<MsMonitor> update(MsMonitor monitor) {
         try {
@@ -57,9 +68,15 @@ public class MonitorServiceImpl implements MonitorService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitor")
     public ReturnResult<Void> delete(Long id) {
         try {
+            // 级联删除关联的任务和网关
+            monitorTaskMapper.delete(new LambdaQueryWrapper<MsMonitorTask>()
+                    .eq(MsMonitorTask::getMonitorId, id));
+            monitorGatewayMapper.delete(new LambdaQueryWrapper<MsMonitorGateway>()
+                    .eq(MsMonitorGateway::getMonitorId, id));
             monitorMapper.deleteById(id);
             return ReturnResult.ok();
         } catch (Exception e) {

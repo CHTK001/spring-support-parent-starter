@@ -11,6 +11,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,6 +31,7 @@ public class MonitorMetricConfigServiceImpl implements MonitorMetricConfigServic
     private final JdbcTemplate jdbcTemplate;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorMetricConfig")
     public ReturnResult<MsMonitorMetricConfig> create(MsMonitorMetricConfig entity) {
         try {
@@ -37,8 +39,8 @@ public class MonitorMetricConfigServiceImpl implements MonitorMetricConfigServic
                 entity.setId(IdUtils.createSnowflakeId());
             }
             jdbcTemplate.update(
-                "INSERT INTO ms_monitor_metric_config(id, task_id, metric_name, target_table, parse_rule, " +
-                "metric_unit, remark, create_time, update_time) VALUES(?,?,?,?,?,?,?,?,?)",
+                "INSERT INTO ms_monitor_metric_config(id, ms_monitor_metric_config_task_id, ms_monitor_metric_config_metric_name, ms_monitor_metric_config_target_table, ms_monitor_metric_config_parse_rule, " +
+                "ms_monitor_metric_config_metric_unit, ms_monitor_metric_config_remark, ms_monitor_metric_config_create_time, ms_monitor_metric_config_update_time) VALUES(?,?,?,?,?,?,?,?,?)",
                 entity.getId(), entity.getTaskId(), entity.getMetricName(), entity.getTargetTable(),
                 entity.getParseRule(), entity.getMetricUnit(), entity.getRemark(),
                 LocalDateTime.now(), LocalDateTime.now());
@@ -50,12 +52,13 @@ public class MonitorMetricConfigServiceImpl implements MonitorMetricConfigServic
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorMetricConfig")
     public ReturnResult<MsMonitorMetricConfig> update(MsMonitorMetricConfig entity) {
         try {
             jdbcTemplate.update(
-                "UPDATE ms_monitor_metric_config SET metric_name=?, target_table=?, parse_rule=?, " +
-                "metric_unit=?, remark=?, update_time=? WHERE id=?",
+                "UPDATE ms_monitor_metric_config SET ms_monitor_metric_config_metric_name=?, ms_monitor_metric_config_target_table=?, ms_monitor_metric_config_parse_rule=?, " +
+                "ms_monitor_metric_config_metric_unit=?, ms_monitor_metric_config_remark=?, ms_monitor_metric_config_update_time=? WHERE id=?",
                 entity.getMetricName(), entity.getTargetTable(), entity.getParseRule(),
                 entity.getMetricUnit(), entity.getRemark(), LocalDateTime.now(), entity.getId());
             return ReturnResult.ok(entity);
@@ -66,6 +69,7 @@ public class MonitorMetricConfigServiceImpl implements MonitorMetricConfigServic
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorMetricConfig")
     public ReturnResult<Void> delete(Long id) {
         try {
@@ -82,7 +86,7 @@ public class MonitorMetricConfigServiceImpl implements MonitorMetricConfigServic
     public ReturnResult<List<MsMonitorMetricConfig>> listByTask(Long taskId) {
         try {
             return ReturnResult.ok(jdbcTemplate.query(
-                "SELECT * FROM ms_monitor_metric_config WHERE task_id=?",
+                "SELECT * FROM ms_monitor_metric_config WHERE ms_monitor_metric_config_task_id=?",
                 new BeanPropertyRowMapper<>(MsMonitorMetricConfig.class), taskId));
         } catch (Exception e) {
             log.error("按任务查询指标配置失败", e);

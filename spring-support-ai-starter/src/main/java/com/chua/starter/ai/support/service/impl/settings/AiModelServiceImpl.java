@@ -106,6 +106,9 @@ public class AiModelServiceImpl implements AiModelService {
         dto.setDescription(entity.getModelDescription());
         dto.setEnabled(entity.getModelEnabled());
         dto.setSort(entity.getModelSort());
+        dto.setInputPrice(entity.getModelInputPrice());
+        dto.setOutputPrice(entity.getModelOutputPrice());
+        dto.setCachePrice(entity.getModelCachePrice());
         dto.setCreatedAt(entity.getModelCreateTime() != null ? entity.getModelCreateTime().format(FORMATTER) : null);
         return dto;
     }
@@ -119,6 +122,9 @@ public class AiModelServiceImpl implements AiModelService {
         entity.setModelDescription(dto.getDescription());
         entity.setModelEnabled(dto.getEnabled());
         entity.setModelSort(dto.getSort());
+        entity.setModelInputPrice(dto.getInputPrice());
+        entity.setModelOutputPrice(dto.getOutputPrice());
+        entity.setModelCachePrice(dto.getCachePrice());
         return entity;
     }
 

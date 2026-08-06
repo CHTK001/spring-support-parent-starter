@@ -57,7 +57,7 @@ public final class UserAgent {
             return false;
         }
         String ua = userAgent.toLowerCase();
-        return ua.contains("bot") || ua.contains("spider") || ua.contains("crawler") || ua.contains("curl") || ua.contains("python") || ua.contains("http");
+        return ua.contains("bot") || ua.contains("spider") || ua.contains("crawler") || ua.contains("python") || ua.contains("http");
     }
 
     /**

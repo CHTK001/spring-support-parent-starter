@@ -33,21 +33,21 @@ public class MsMonitorConfig extends SysBase {
     /**
      * 配置项 key
      */
-    @TableField("monitor_config_key")
+    @TableField("ms_monitor_config_key")
     @Schema(description = "配置项 key", example = "monitor.data.retention.days")
     private String monitorConfigKey;
 
     /**
      * 配置项 value
      */
-    @TableField("monitor_config_value")
+    @TableField("ms_monitor_config_value")
     @Schema(description = "配置项 value", example = "30")
     private String monitorConfigValue;
 
     /**
      * 配置项描述
      */
-    @TableField("monitor_config_desc")
+    @TableField("ms_monitor_config_desc")
     @Schema(description = "配置项描述", example = "历史数据保留天数")
     private String monitorConfigDesc;
 }

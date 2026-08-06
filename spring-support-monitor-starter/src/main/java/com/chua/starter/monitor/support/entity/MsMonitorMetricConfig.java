@@ -36,28 +36,28 @@ public class MsMonitorMetricConfig extends SysBase {
     /**
      * 关联任务 id
      */
-    @TableField("task_id")
+    @TableField("ms_monitor_metric_config_task_id")
     @Schema(description = "关联任务 id", example = "1")
     private Long taskId;
 
     /**
      * 指标名
      */
-    @TableField("metric_name")
+    @TableField("ms_monitor_metric_config_metric_name")
     @Schema(description = "指标名", example = "cpu_usage")
     private String metricName;
 
     /**
      * 目标表
      */
-    @TableField("target_table")
+    @TableField("ms_monitor_metric_config_target_table")
     @Schema(description = "目标表", example = "ms_monitor_metric_cpu")
     private String targetTable;
 
     /**
      * 解析规则 JSON
      */
-    @TableField("parse_rule")
+    @TableField("ms_monitor_metric_config_parse_rule")
     @Schema(description = "解析规则 JSON",
             example = "{\"type\":\"regex\",\"pattern\":\"Cpu\\(s\\):\\s+(\\d+\\.\\d+)\",\"group\":1}")
     private String parseRule;
@@ -65,14 +65,14 @@ public class MsMonitorMetricConfig extends SysBase {
     /**
      * 指标单位
      */
-    @TableField("metric_unit")
+    @TableField("ms_monitor_metric_config_metric_unit")
     @Schema(description = "指标单位", example = "%")
     private String metricUnit;
 
     /**
      * 备注
      */
-    @TableField("remark")
+    @TableField("ms_monitor_metric_config_remark")
     @Schema(description = "备注", example = "top 命令输出的整体 CPU 使用率")
     private String remark;
 }

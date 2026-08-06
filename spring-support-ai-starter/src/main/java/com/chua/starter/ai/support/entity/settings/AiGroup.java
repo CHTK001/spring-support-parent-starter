@@ -19,70 +19,70 @@ import java.time.LocalDateTime;
  * @since 2026-08-03
  */
 @Data
-@TableName("ai_group")
+@TableName("sys_ai_group")
 @Schema(name = "模型分组")
 public class AiGroup implements Serializable {
 
     /**
      * 分组主键 ID
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(value = "sys_ai_group_id", type = IdType.AUTO)
     @Schema(description = "分组主键 ID")
     private Long groupId;
 
     /**
      * 分组名称
      */
-    @TableField("group_name")
+    @TableField("sys_ai_group_name")
     @Schema(description = "分组名称")
     private String groupName;
 
     /**
      * 分组描述
      */
-    @TableField("group_description")
+    @TableField("sys_ai_group_desc")
     @Schema(description = "分组描述")
     private String groupDescription;
 
     /**
-     * 分组关联模型列表（JSON 字符串）
+     * 关联模型列表（JSON 数组字符串）
      */
-    @TableField("group_models")
-    @Schema(description = "分组关联模型列表(JSON)")
+    @TableField("sys_ai_group_models")
+    @Schema(description = "关联模型列表(JSON)")
     private String groupModels;
 
     /**
-     * 分组绑定 AppKey ID 列表（JSON 数组字符串）
+     * 绑定 AppKey ID 列表（JSON 数组字符串）
      */
-    @TableField("group_app_key_ids")
-    @Schema(description = "分组绑定 AppKey ID 列表(JSON)")
+    @TableField("sys_ai_group_app_key_ids")
+    @Schema(description = "绑定 AppKey ID 列表(JSON)")
     private String groupAppKeyIds;
 
     /**
      * 是否启用
      */
-    @TableField("group_enabled")
+    @TableField("sys_ai_group_enabled")
     @Schema(description = "是否启用")
     private Boolean groupEnabled;
 
     /**
      * 创建时间
      */
-    @TableField(value = "group_create_time", fill = FieldFill.INSERT)
+    @TableField(value = "create_time", fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
     private LocalDateTime groupCreateTime;
 
     /**
      * 更新时间
      */
-    @TableField(value = "group_update_time", fill = FieldFill.INSERT_UPDATE)
+    @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
     private LocalDateTime groupUpdateTime;
 
     /**
      * 逻辑删除标记
      */
-    @TableField("group_deleted")
+    @TableField("sys_ai_group_delete")
     @TableLogic
     @Schema(description = "逻辑删除标记")
     private Integer groupDeleted;

@@ -77,6 +77,13 @@ public class SpiderDefinition extends SysBase {
     private String cronExpression;
 
     /**
+     * 执行类型（ONCE 一次 / SCHEDULE 定时），为空时按 cron 是否配置自动判定
+     */
+    @TableField("executor_type")
+    @Schema(description = "执行类型（ONCE 一次 / SCHEDULE 定时）")
+    private String executorType;
+
+    /**
      * 上次执行时间
      */
     @TableField("last_run_at")
@@ -96,6 +103,55 @@ public class SpiderDefinition extends SysBase {
     @TableField("last_message")
     @Schema(description = "上次执行消息")
     private String lastMessage;
+
+    /**
+     * 入口 URL
+     */
+    @TableField("entry_url")
+    @Schema(description = "入口 URL")
+    private String entryUrl;
+
+    /**
+     * 站点主机
+     */
+    @TableField("site_host")
+    @Schema(description = "站点主机")
+    private String siteHost;
+
+    /**
+     * 是否深度采集（1/0）
+     */
+    @TableField("collect_deep_url")
+    @Schema(description = "是否深度采集")
+    private Integer collectDeepUrl;
+
+    /**
+     * 最大深度
+     */
+    @TableField("max_depth")
+    @Schema(description = "最大深度")
+    private Integer maxDepth;
+
+    /**
+     * 最大页数
+     */
+    @TableField("max_pages")
+    @Schema(description = "最大页数")
+    private Integer maxPages;
+
+    /**
+     * 执行轮次
+     */
+    @TableField("executor_rounds")
+    @Schema(description = "执行轮次")
+    private Integer executorRounds;
+
+    /**
+     * 备注
+     */
+    @TableField("remark")
+    @Schema(description = "备注")
+    private String remark;
 
     /**
      * 逻辑删除标记（0 未删除 / 1 已删除）

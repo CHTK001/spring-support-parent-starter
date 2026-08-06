@@ -35,42 +35,42 @@ public class MsMonitorMetricMemory implements Serializable {
     /**
      * 监控主机 id
      */
-    @TableField("monitor_id")
+    @TableField("ms_monitor_metric_memory_monitor_id")
     @Schema(description = "监控主机 id", example = "1")
     private Long monitorId;
 
     /**
      * 总内存(字节)
      */
-    @TableField("total_bytes")
+    @TableField("ms_monitor_metric_memory_total_bytes")
     @Schema(description = "总内存(字节)", example = "17179869184")
     private Long totalBytes;
 
     /**
      * 已用(字节)
      */
-    @TableField("used_bytes")
+    @TableField("ms_monitor_metric_memory_used_bytes")
     @Schema(description = "已用(字节)", example = "8589934592")
     private Long usedBytes;
 
     /**
      * 空闲(字节)
      */
-    @TableField("free_bytes")
+    @TableField("ms_monitor_metric_memory_free_bytes")
     @Schema(description = "空闲(字节)", example = "8589934592")
     private Long freeBytes;
 
     /**
      * 使用率(0-100)
      */
-    @TableField("usage_percent")
+    @TableField("ms_monitor_metric_memory_usage_percent")
     @Schema(description = "使用率", example = "50.0")
     private Double usagePercent;
 
     /**
      * 采集时间
      */
-    @TableField("collect_time")
+    @TableField("ms_monitor_metric_memory_collect_time")
     @Schema(description = "采集时间", example = "2026-08-04T10:00:00")
     private LocalDateTime collectTime;
 }

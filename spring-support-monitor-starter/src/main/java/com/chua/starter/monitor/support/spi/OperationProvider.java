@@ -86,11 +86,33 @@ public interface OperationProvider {
     }
 
     /**
+     * 获取 key 的剩余存活时间
+     *
+     * @param ctx 操作上下文
+     * @param key 目标 key
+     * @return TTL（秒），-1 表示永久，-2 表示 key 不存在
+     */
+    default Mono<Long> ttl(CollectContext ctx, String key) {
+        return Mono.error(new UnsupportedOperationException("该 Provider 不支持 ttl"));
+    }
+
+    /**
+     * 获取 key 的类型
+     *
+     * @param ctx 操作上下文
+     * @param key 目标 key
+     * @return key 类型（STRING, LIST, HASH, SET, ZSET 等）
+     */
+    default Mono<String> type(CollectContext ctx, String key) {
+        return Mono.error(new UnsupportedOperationException("该 Provider 不支持 type"));
+    }
+
+    /**
      * 扫描结果
      *
      * @param keys 本次返回的 keys
      * @param nextCursor 下一次游标, null 表示已结束
      */
-    record ScanResult(List<String> keys, String nextCursor) {
+    public record ScanResult(List<String> keys, String nextCursor) {
     }
 }

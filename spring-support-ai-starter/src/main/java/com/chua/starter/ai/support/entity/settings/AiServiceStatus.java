@@ -18,56 +18,56 @@ import java.time.LocalDateTime;
  * @since 2026-08-03
  */
 @Data
-@TableName("ai_service_status")
+@TableName("sys_ai_service_status")
 @Schema(name = "服务运行状态")
 public class AiServiceStatus implements Serializable {
 
     /**
-     * 状态主键 ID
+     * 状态记录 ID
      */
-    @TableId(type = IdType.AUTO)
-    @Schema(description = "状态主键 ID")
+    @TableId(value = "sys_ai_service_status_id", type = IdType.AUTO)
+    @Schema(description = "状态记录 ID")
     private Long statusId;
 
     /**
      * 服务名称
      */
-    @TableField("status_service_name")
+    @TableField("sys_ai_service_status_service_name")
     @Schema(description = "服务名称")
     private String statusServiceName;
 
     /**
      * 是否运行中
      */
-    @TableField("status_running")
+    @TableField("sys_ai_service_status_running")
     @Schema(description = "是否运行中")
     private Boolean statusRunning;
 
     /**
      * 进程 PID
      */
-    @TableField("status_pid")
+    @TableField("sys_ai_service_status_pid")
     @Schema(description = "进程 PID")
     private Long statusPid;
 
     /**
      * 启动时间
      */
-    @TableField("status_start_time")
+    @TableField("sys_ai_service_status_start_time")
     @Schema(description = "启动时间")
     private LocalDateTime statusStartTime;
 
     /**
      * 运行时长（秒）
      */
-    @TableField("status_uptime_sec")
+    @TableField("sys_ai_service_status_uptime_sec")
     @Schema(description = "运行时长(秒)")
     private Long statusUptimeSec;
 
     /**
      * 更新时间
      */
-    @TableField(value = "status_update_time", fill = FieldFill.INSERT_UPDATE)
+    @TableField(value = "sys_ai_service_status_update_time", fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
     private LocalDateTime statusUpdateTime;
 }

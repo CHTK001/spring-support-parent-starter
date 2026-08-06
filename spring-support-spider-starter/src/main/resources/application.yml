@@ -1,7 +1,7 @@
 # 爬虫中心示例配置
 # 复制到宿主应用 application.yml 后按需修改
 server:
-  port: 19091
+  port: 18171
 
 spring:
   application:
@@ -15,7 +15,22 @@ spring:
 # 爬虫模块开关（默认开启）
 spider:
   enable: true
-  path: /spider-api/spider
+  path: /spider
+
+# 多级缓存：启用列表走 Caffeine 缓存，防止定时调度每秒查询数据库
+plugin:
+  cache:
+    enabled: true
+    levels:
+      - caffeine
+    caffeine:
+      maximum-size: 10000
+      expire-after-write: 10
+      record-stats: true
+    key:
+      with-tenant: false
+      with-application: false
+      with-platform: false
 
 mybatis-plus:
   configuration:

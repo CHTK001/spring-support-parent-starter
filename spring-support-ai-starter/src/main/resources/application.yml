@@ -33,14 +33,11 @@ spring:
     usage:
       enabled: false
 
-rag:
-  enabled: false
-
 # 文件系统：目录浏览接口默认关闭，需显式开启（安全问题）
 plugin:
   filesystem:
     enable: true
-    dir-list: false
+    dir-list: true
 
 mybatis-plus:
   configuration:

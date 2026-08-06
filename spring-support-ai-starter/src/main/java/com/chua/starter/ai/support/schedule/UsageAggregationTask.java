@@ -4,12 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.ai.AiUsage;
 import com.chua.common.support.datasearch.usage.spi.UsageProvider;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.ai.support.configuration.GlobalSettingReader;
 import com.chua.starter.ai.support.entity.SysAiUsage;
 import com.chua.starter.ai.support.entity.SysAiUsageDaily;
-import com.chua.starter.ai.support.entity.settings.AiGlobalSetting;
 import com.chua.starter.ai.support.mapper.SysAiUsageDailyMapper;
 import com.chua.starter.ai.support.mapper.SysAiUsageMapper;
-import com.chua.starter.ai.support.mapper.settings.AiGlobalSettingMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
@@ -52,9 +51,9 @@ import java.util.stream.Collectors;
 public class UsageAggregationTask implements SchedulingConfigurer {
 
     /**
-     * 全局设置单条记录主键
+     * 全局设置键值分组（用量开关与上报间隔）
      */
-    private static final Long SETTING_ID = 1L;
+    private static final String GROUP = "global";
 
     /**
      * 未配置时的默认执行间隔（秒）
@@ -67,6 +66,11 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     private static final long MIN_INTERVAL_SEC = 10;
 
     /**
+     * 全局设置读取工具（分组 global：用量开关与上报间隔）
+     */
+    private final GlobalSettingReader settingReader;
+
+    /**
      * 用量 Mapper
      */
     private final SysAiUsageMapper usageMapper;
@@ -75,11 +79,6 @@ public class UsageAggregationTask implements SchedulingConfigurer {
      * 日汇总 Mapper
      */
     private final SysAiUsageDailyMapper dailyMapper;
-
-    /**
-     * 全局设置 Mapper
-     */
-    private final AiGlobalSettingMapper globalSettingMapper;
 
     /**
      * 上次聚合开始时间，用于增量聚合
@@ -116,16 +115,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
      * @return 下次执行时间
      */
     private Instant nextTriggerTime(TriggerContext triggerContext) {
-        long intervalSec = DEFAULT_INTERVAL_SEC;
-        try {
-            AiGlobalSetting setting = globalSettingMapper.selectById(SETTING_ID);
-            if (setting != null && setting.getSettingUsageIntervalSec() != null
-                    && setting.getSettingUsageIntervalSec() > 0) {
-                intervalSec = setting.getSettingUsageIntervalSec();
-            }
-        } catch (Exception e) {
-            log.debug("[UsageAggregation] 读取全局设置失败，使用默认间隔 {}", e.getMessage());
-        }
+        long intervalSec = settingReader.getInt(GROUP, "usage_report_interval", (int) DEFAULT_INTERVAL_SEC);
         if (intervalSec < MIN_INTERVAL_SEC) {
             intervalSec = MIN_INTERVAL_SEC;
         }
@@ -137,19 +127,12 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     }
 
     /**
-     * 判断用量分析是否启用（全量表 setting_enable_usage_analysis，默认启用）。
+     * 判断用量分析是否启用（global 分组 enable_usage_analysis，默认启用）。
      *
      * @return true 表示启用
      */
     private boolean isUsageEnabled() {
-        try {
-            AiGlobalSetting setting = globalSettingMapper.selectById(SETTING_ID);
-            return setting == null || setting.getSettingEnableUsageAnalysis() == null
-                    || setting.getSettingEnableUsageAnalysis();
-        } catch (Exception e) {
-            log.debug("[UsageAggregation] 读取用量开关失败，按启用处理: {}", e.getMessage());
-            return true;
-        }
+        return settingReader.getBool(GROUP, "enable_usage_analysis", true);
     }
 
     /**

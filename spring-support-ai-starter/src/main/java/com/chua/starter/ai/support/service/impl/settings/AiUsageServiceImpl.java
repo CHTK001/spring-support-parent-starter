@@ -62,7 +62,7 @@ public class AiUsageServiceImpl implements AiUsageService {
     private AiUsageDTO toDto(AiUsage entity) {
         AiUsageDTO dto = new AiUsageDTO();
         dto.setModel(entity.getUsageModel());
-        dto.setRequests(entity.getUsageRequestCount());
+        dto.setRequests(1L);
         dto.setPromptTokens(entity.getUsagePromptTokens());
         dto.setCompletionTokens(entity.getUsageCompletionTokens());
         dto.setTotalTokens(entity.getUsageTotalTokens());

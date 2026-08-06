@@ -19,6 +19,8 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
+import org.springframework.core.Ordered;
 
 import java.util.List;
 import java.util.Map;
@@ -116,6 +118,7 @@ public class AiConfiguration {
      * 容器就绪后初始化注册中心。
      */
     @EventListener(ApplicationReadyEvent.class)
+    @Order(Ordered.HIGHEST_PRECEDENCE)
     public void onApplicationReady(ApplicationReadyEvent event) {
         ApplicationContext context = event.getApplicationContext();
         ChatClientRegistry chatClientRegistry = context.getBean(ChatClientRegistry.class);

@@ -19,77 +19,77 @@ import java.time.LocalDateTime;
  * @since 2026-08-03
  */
 @Data
-@TableName("ai_alert")
+@TableName("sys_ai_alert")
 @Schema(name = "告警规则")
 public class AiAlert implements Serializable {
 
     /**
-     * 告警主键 ID
+     * 告警规则 ID
      */
-    @TableId(type = IdType.AUTO)
-    @Schema(description = "告警主键 ID")
+    @TableId(value = "sys_ai_alert_id", type = IdType.AUTO)
+    @Schema(description = "告警规则 ID")
     private Long alertId;
 
     /**
      * 告警规则名称
      */
-    @TableField("alert_name")
+    @TableField("sys_ai_alert_name")
     @Schema(description = "告警规则名称")
     private String alertName;
 
     /**
-     * 关联的 AppKey ID（0 表示全部）
+     * 关联 AppKey ID（0 表示全局）
      */
-    @TableField("alert_app_key_id")
-    @Schema(description = "关联的 AppKey ID")
+    @TableField("sys_ai_alert_app_key_id")
+    @Schema(description = "关联 AppKey ID")
     private Long alertAppKeyId;
 
     /**
-     * 触发条件表达式
+     * 告警条件（表达式）
      */
-    @TableField("alert_condition")
-    @Schema(description = "触发条件表达式")
+    @TableField("sys_ai_alert_condition")
+    @Schema(description = "告警条件（表达式）")
     private String alertCondition;
 
     /**
      * 告警阈值
      */
-    @TableField("alert_threshold")
+    @TableField("sys_ai_alert_threshold")
     @Schema(description = "告警阈值")
     private Long alertThreshold;
 
     /**
      * 通知渠道（JSON 数组字符串）
      */
-    @TableField("alert_channels")
+    @TableField("sys_ai_alert_channels")
     @Schema(description = "通知渠道(JSON)")
     private String alertChannels;
 
     /**
      * 是否启用
      */
-    @TableField("alert_enabled")
+    @TableField("sys_ai_alert_enabled")
     @Schema(description = "是否启用")
     private Boolean alertEnabled;
 
     /**
      * 创建时间
      */
-    @TableField(value = "alert_create_time", fill = FieldFill.INSERT)
+    @TableField(value = "sys_ai_alert_create_time", fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
     private LocalDateTime alertCreateTime;
 
     /**
      * 更新时间
      */
-    @TableField(value = "alert_update_time", fill = FieldFill.INSERT_UPDATE)
+    @TableField(value = "sys_ai_alert_update_time", fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
     private LocalDateTime alertUpdateTime;
 
     /**
      * 逻辑删除标记
      */
-    @TableField("alert_deleted")
+    @TableField("sys_ai_alert_deleted")
     @TableLogic
     @Schema(description = "逻辑删除标记")
     private Integer alertDeleted;

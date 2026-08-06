@@ -31,13 +31,13 @@ public class SysAiAppKey {
     /**
      * 访问 Key
      */
-    @TableField("app_key")
+    @TableField("sys_ai_app_key_app_key")
     private String sysAiAppKeyAppKey;
 
     /**
      * 访问 Secret
      */
-    @TableField("app_secret")
+    @TableField("sys_ai_app_key_secret")
     private String sysAiAppKeySecret;
 
     /**
@@ -53,13 +53,13 @@ public class SysAiAppKey {
     /**
      * 状态：1 启用，0 禁用
      */
-    @TableField("status")
+    @TableField("sys_ai_app_key_status")
     private Integer sysAiAppKeyStatus;
 
     /**
      * 删除标记：0 未删除，1 已删除
      */
-    @TableField("delete_flag")
+    @TableField("sys_ai_app_key_delete")
     private Integer sysAiAppKeyDelete;
 
     /**
@@ -90,7 +90,7 @@ public class SysAiAppKey {
     /**
      * 使用次数
      */
-    @TableField("use_count")
+    @TableField("sys_ai_app_key_use_count")
     private Long sysAiAppKeyUseCount;
 
     /**

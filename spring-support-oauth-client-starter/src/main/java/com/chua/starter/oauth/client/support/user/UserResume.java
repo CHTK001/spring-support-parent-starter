@@ -1,5 +1,6 @@
 package com.chua.starter.oauth.client.support.user;
 
+import com.chua.starter.common.support.constant.DataFilterTypeEnum;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -123,6 +124,16 @@ public class UserResume {
      * 应用ID
      */
     private String appId;
+
+    /**
+     * 数据权限类型
+     */
+    private DataFilterTypeEnum dataPermission;
+
+    /**
+     * 数据权限规则（部门ID集合）
+     */
+    private String dataPermissionRule;
 
     public UserResume(String message) {
         this.message = message;

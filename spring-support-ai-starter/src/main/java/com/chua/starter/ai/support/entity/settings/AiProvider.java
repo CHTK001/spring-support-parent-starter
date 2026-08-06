@@ -1,6 +1,5 @@
 package com.chua.starter.ai.support.entity.settings;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -19,70 +18,70 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("ai_provider")
+@TableName("sys_ai_provider")
 @Schema(name = "模型供应商")
 public class AiProvider extends SysBase {
 
     /**
      * 供应商主键 ID
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(value = "sys_ai_provider_id", type = IdType.AUTO)
     @Schema(description = "供应商主键 ID")
     private Long providerId;
 
     /**
      * 供应商名称（如 OpenAI、Claude）
      */
-    @TableField("provider_name")
+    @TableField("sys_ai_provider_name")
     @Schema(description = "供应商名称")
     private String providerName;
 
     /**
      * 供应商类型（openai / anthropic / gemini / qwen / custom）
      */
-    @TableField("provider_type")
+    @TableField("sys_ai_provider_type")
     @Schema(description = "供应商类型")
     private String providerType;
 
     /**
      * 接入 Base URL
      */
-    @TableField("provider_base_url")
+    @TableField("sys_ai_provider_base_url")
     @Schema(description = "接入 Base URL")
     private String providerBaseUrl;
 
     /**
      * 提供商 API Key
      */
-    @TableField("provider_api_key")
+    @TableField("sys_ai_provider_api_key")
     @Schema(description = "API Key")
     private String providerApiKey;
 
     /**
      * Logo 图片地址
      */
-    @TableField("provider_logo")
+    @TableField("sys_ai_provider_logo")
     @Schema(description = "Logo 图片地址")
     private String providerLogo;
 
     /**
      * 可用模型列表（JSON 字符串）
      */
-    @TableField("provider_models")
+    @TableField("sys_ai_provider_models")
     @Schema(description = "可用模型列表(JSON)")
     private String providerModels;
 
     /**
      * 是否启用
      */
-    @TableField("provider_enabled")
+    @TableField("sys_ai_provider_enabled")
     @Schema(description = "是否启用")
     private Boolean providerEnabled;
 
     /**
      * 逻辑删除标记
      */
-    @TableField("provider_deleted")
+    @TableField("sys_ai_provider_deleted")
     @TableLogic
     @Schema(description = "逻辑删除标记")
     private Integer providerDeleted;

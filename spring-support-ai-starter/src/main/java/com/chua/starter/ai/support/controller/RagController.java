@@ -3,11 +3,11 @@ package com.chua.starter.ai.support.controller;
 import com.chua.common.support.ai.rag.*;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.ai.support.configuration.RagClientManager;
 import com.chua.starter.ai.support.configuration.RagProperties;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,22 +17,29 @@ import java.util.*;
 
 /**
  * RAG REST 控制器——基于 common-starter 的 RagClient + RagDocumentLifeCycle 真实实现。
+ * <p>使用 {@link RagClientManager} 获取当前全局 RAG 客户端，支持配置热更新。</p>
  *
  * @author CH
  */
 @Slf4j
 @RestController
 @RequestMapping("/v2/ai/rag")
-@ConditionalOnProperty(name = "rag.enabled", havingValue = "true")
 @Tag(name = "RAG 知识库", description = "RAG 文档管理、问答和配置接口")
 public class RagController {
 
-    private final RagClient ragClient;
+    private final RagClientManager ragClientManager;
     private final RagProperties ragProperties;
 
-    public RagController(RagClient ragClient, RagProperties ragProperties) {
-        this.ragClient = ragClient;
+    public RagController(RagClientManager ragClientManager, RagProperties ragProperties) {
+        this.ragClientManager = ragClientManager;
         this.ragProperties = ragProperties;
+    }
+
+    /**
+     * 获取当前全局 RAG 客户端（可能为 null）。
+     */
+    private RagClient ragClient() {
+        return ragClientManager.current();
     }
 
     // ── 文档管理 ─────────────────────────────────────────
@@ -50,7 +57,7 @@ public class RagController {
             return ReturnResult.error("文件名不能为空");
         }
         try {
-            RagDocument doc = ragClient.uploadDocument(fileName, file.getBytes());
+            RagDocument doc = ragClient().uploadDocument(fileName, file.getBytes());
             if ("FAILED".equals(doc.status())) {
                 return ReturnResult.error(doc.errorMessage());
             }
@@ -71,7 +78,7 @@ public class RagController {
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        List<RagDocument> docs = ragClient.listDocuments(page, pageSize);
+        List<RagDocument> docs = ragClient().listDocuments(page, pageSize);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("records", docs);
         result.put("total", docs.size());
@@ -83,14 +90,14 @@ public class RagController {
     @Operation(summary = "删除文档", description = "删除文档及其向量索引")
     @DeleteMapping("/document/{id}")
     public ReturnResult<Boolean> deleteDocument(@PathVariable String id) {
-        boolean deleted = ragClient.deleteDocument(id);
+        boolean deleted = ragClient().deleteDocument(id);
         return deleted ? ReturnResult.ok(true) : ReturnResult.error("文档不存在");
     }
 
     @Operation(summary = "文档内容预览", description = "读取文档原始文本内容（仅限文本文件）")
     @GetMapping("/document/{id}/content")
     public ReturnResult<String> getDocumentContent(@PathVariable String id) {
-        String content = ragClient.readDocumentContent(id);
+        String content = ragClient().readDocumentContent(id);
         if (content == null) {
             return ReturnResult.error("文档内容不可读取或文件不存在");
         }
@@ -116,7 +123,7 @@ public class RagController {
                 : ragProperties.getDefaultSimilarityThreshold();
 
         try {
-            RagResponse response = ragClient.query(query, topK, threshold);
+            RagResponse response = ragClient().query(query, topK, threshold);
             Map<String, Object> resp = new LinkedHashMap<>();
             resp.put("answer", response.answer());
             resp.put("sources", response.sources().stream().map(s -> Map.of(
@@ -142,8 +149,8 @@ public class RagController {
         status.put("uploadDir", ragProperties.getUploadDir());
         status.put("defaultTopK", ragProperties.getDefaultTopK());
         status.put("defaultSimilarityThreshold", ragProperties.getDefaultSimilarityThreshold());
-        status.put("ragClientReady", ragClient != null);
-        status.put("documentCount", ragClient != null ? ragClient.documentCount() : 0);
+        status.put("ragClientReady", ragClient() != null);
+        status.put("documentCount", ragClient() != null ? ragClient().documentCount() : 0);
         return ReturnResult.ok(status);
     }
 
@@ -151,7 +158,7 @@ public class RagController {
     @PostMapping("/reset")
     public ReturnResult<Integer> reset() {
         try {
-            int count = ragClient.reindex();
+            int count = ragClient().reindex();
             return ReturnResult.ok(count, "重新索引完成，共 " + count + " 个文档");
         } catch (Exception e) {
             return ReturnResult.error("重新索引失败: " + e.getMessage());
@@ -206,7 +213,7 @@ public class RagController {
         }
         try {
             // Common-starter RagClient 的向量搜索通过 query 方法实现
-            RagResponse response = ragClient.query(query, topK, 0.1);
+            RagResponse response = ragClient().query(query, topK, 0.1);
             List<Map<String, Object>> items = response.sources().stream().map(s -> {
                 Map<String, Object> item = new LinkedHashMap<>();
                 item.put("documentId", s.documentId());
@@ -255,7 +262,7 @@ public class RagController {
                 if (fileName.isBlank() || !fileName.contains(".")) {
                     fileName = "webpage_" + System.currentTimeMillis() + ".txt";
                 }
-                RagDocument doc = ragClient.uploadDocument(fileName, content.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                RagDocument doc = ragClient().uploadDocument(fileName, content.getBytes(java.nio.charset.StandardCharsets.UTF_8));
                 if ("FAILED".equals(doc.status())) {
                     return ReturnResult.error(doc.errorMessage());
                 }

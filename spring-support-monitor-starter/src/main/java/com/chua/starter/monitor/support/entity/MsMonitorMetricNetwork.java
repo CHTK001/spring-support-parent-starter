@@ -35,42 +35,42 @@ public class MsMonitorMetricNetwork implements Serializable {
     /**
      * 监控主机 id
      */
-    @TableField("monitor_id")
+    @TableField("ms_monitor_metric_network_monitor_id")
     @Schema(description = "监控主机 id", example = "1")
     private Long monitorId;
 
     /**
      * 网卡名
      */
-    @TableField("interface_name")
+    @TableField("ms_monitor_metric_network_interface_name")
     @Schema(description = "网卡名", example = "eth0")
     private String interfaceName;
 
     /**
      * 接收字节数
      */
-    @TableField("rx_bytes")
+    @TableField("ms_monitor_metric_network_rx_bytes")
     @Schema(description = "接收字节数", example = "1073741824")
     private Long rxBytes;
 
     /**
      * 发送字节数
      */
-    @TableField("tx_bytes")
+    @TableField("ms_monitor_metric_network_tx_bytes")
     @Schema(description = "发送字节数", example = "536870912")
     private Long txBytes;
 
     /**
      * 网卡速率(bps)
      */
-    @TableField("speed_bps")
+    @TableField("ms_monitor_metric_network_speed_bps")
     @Schema(description = "网卡速率(bps)", example = "1000000000")
     private Long speedBps;
 
     /**
      * 采集时间
      */
-    @TableField("collect_time")
+    @TableField("ms_monitor_metric_network_collect_time")
     @Schema(description = "采集时间", example = "2026-08-04T10:00:00")
     private LocalDateTime collectTime;
 }

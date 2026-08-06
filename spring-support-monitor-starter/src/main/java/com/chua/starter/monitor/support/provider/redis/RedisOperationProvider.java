@@ -6,17 +6,19 @@ import com.chua.common.support.utils.NumberUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.redis.support.client.RedisClient;
 import com.chua.starter.monitor.support.enums.ServiceType;
+import com.chua.starter.monitor.support.service.MonitorConfigService;
 import com.chua.starter.monitor.support.spi.CollectContext;
 import com.chua.starter.monitor.support.spi.OperationProvider;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import redis.clients.jedis.params.ScanParams;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Redis 操作 Provider
@@ -30,7 +32,18 @@ import java.util.Set;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class RedisOperationProvider implements OperationProvider {
+
+    /**
+     * 允许删除的配置键
+     */
+    private static final String CONFIG_KEY_ALLOW_DELETE = "monitor.redis.allowDelete";
+
+    /**
+     * 全局配置 Service
+     */
+    private final MonitorConfigService configService;
 
     @Override
     public ServiceType serviceType() {
@@ -69,6 +82,9 @@ public class RedisOperationProvider implements OperationProvider {
     @Override
     public Mono<Long> deleteKeys(CollectContext ctx, List<String> keys) {
         return Mono.fromCallable(() -> {
+            if (!configService.getBoolean(CONFIG_KEY_ALLOW_DELETE, false)) {
+                throw new UnsupportedOperationException("Redis 删除操作已禁用，请设置 monitor.redis.allowDelete=true");
+            }
             try (RedisClient client = buildClient(ctx)) {
                 return client.del(keys.toArray(new String[0]));
             }
@@ -85,8 +101,26 @@ public class RedisOperationProvider implements OperationProvider {
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
+    @Override
+    public Mono<Long> ttl(CollectContext ctx, String key) {
+        return Mono.fromCallable(() -> {
+            try (RedisClient client = buildClient(ctx)) {
+                return client.ttl(key);
+            }
+        }).subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @Override
+    public Mono<String> type(CollectContext ctx, String key) {
+        return Mono.fromCallable(() -> {
+            try (RedisClient client = buildClient(ctx)) {
+                return client.type(key);
+            }
+        }).subscribeOn(Schedulers.boundedElastic());
+    }
+
     /**
-     * 同步执行 key 扫描
+     * 同步执行 key 扫描 (使用 Jedis SCAN 游标迭代, 避免 KEYS 阻塞)
      *
      * @param ctx     操作上下文
      * @param pattern 匹配模式
@@ -94,10 +128,26 @@ public class RedisOperationProvider implements OperationProvider {
      * @param count   期望返回条数
      * @return 扫描结果
      */
-    private ScanResult doScanKeys(CollectContext ctx, String pattern, String cursor, int count) {
+    private OperationProvider.ScanResult doScanKeys(CollectContext ctx, String pattern, String cursor, int count) {
         try (RedisClient client = buildClient(ctx)) {
-            Set<String> keys = client.keys(pattern != null ? pattern : "*");
-            return new ScanResult(new ArrayList<>(keys), null);
+            String scanCursor = (cursor != null && !cursor.isEmpty() && !"0".equals(cursor)) ? cursor : "0";
+            int scanCount = count > 0 ? count : 100;
+            List<String> keys = new ArrayList<>();
+            try (redis.clients.jedis.Jedis jedis = client.getPool().getResource()) {
+                ScanParams params = new ScanParams();
+                params.match(pattern != null ? pattern : "*");
+                params.count(scanCount);
+                String nextCursor = scanCursor;
+                do {
+                    redis.clients.jedis.resps.ScanResult<String> result = jedis.scan(nextCursor, params);
+                    List<String> resultKeys = result.getResult();
+                    if (resultKeys != null) {
+                        keys.addAll(resultKeys);
+                    }
+                    nextCursor = result.getCursor();
+                } while (!"0".equals(nextCursor) && keys.size() < scanCount * 10);
+            }
+            return new OperationProvider.ScanResult(keys, "0".equals(scanCursor) ? null : scanCursor);
         }
     }
 

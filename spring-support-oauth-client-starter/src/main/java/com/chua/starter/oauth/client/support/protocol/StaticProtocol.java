@@ -148,6 +148,8 @@ public class StaticProtocol extends AbstractProtocol {
         userResume.setPermission(userResult.getPermission() == null ? Collections.emptySet() : userResult.getPermission());
         userResume.setFingerprint(userResult.getFingerprint());
         userResume.setExpireTime(userResult.getExpireTime());
+        userResume.setDataPermission(userResult.getDataPermission());
+        userResume.setDataPermissionRule(userResult.getDataPermissionRule());
         // 将用户信息保存到请求上下文
         com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUserInfo(userResume);
         // 返回认证成功的信息
@@ -195,6 +197,8 @@ public class StaticProtocol extends AbstractProtocol {
         userResult.setPermission(userResume.getPermission() == null ? Collections.emptySet() : userResume.getPermission());
         userResult.setRoles(userResume.getRoles());
         userResult.setExt(userResume.getExt());
+        userResult.setDataPermission(userResume.getDataPermission());
+        userResult.setDataPermissionRule(userResume.getDataPermissionRule());
         userResult.setExpireTime(System.currentTimeMillis() / 1000 + 7L * 24 * 60 * 60);
 
         String refreshedToken = TokenCipher.encrypt(userResult);

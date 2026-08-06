@@ -74,6 +74,12 @@ public class AiGlobalSettingDTO implements Serializable {
     private Boolean stream;
 
     /**
+     * 全局 ChatClient 默认系统提示词
+     */
+    @Schema(description = "全局 ChatClient 默认系统提示词")
+    private String systemPrompt;
+
+    /**
      * RAG 向量模型
      */
     @Schema(description = "RAG 向量模型")
@@ -102,4 +108,28 @@ public class AiGlobalSettingDTO implements Serializable {
      */
     @Schema(description = "RAG 向量数据库")
     private String ragVectorStorage;
+
+    /**
+     * RAG 问答系统提示词
+     */
+    @Schema(description = "RAG 问答系统提示词")
+    private String ragSystemPrompt;
+
+    /**
+     * RAG 文本切片大小（字符）
+     */
+    @Schema(description = "RAG 文本切片大小(字符)")
+    private Integer ragChunkSize;
+
+    /**
+     * RAG 文本切片重叠（字符）
+     */
+    @Schema(description = "RAG 文本切片重叠(字符)")
+    private Integer ragChunkOverlap;
+
+    /**
+     * RAG 文本切片策略（TextSplitter SPI 名称，默认 sentence）
+     */
+    @Schema(description = "RAG 文本切片策略")
+    private String ragSplitter;
 }

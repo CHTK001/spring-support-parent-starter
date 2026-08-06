@@ -35,21 +35,21 @@ public class MsMonitorTask extends SysBase {
     /**
      * 关联监控资产 id
      */
-    @TableField("monitor_id")
+    @TableField("ms_monitor_task_monitor_id")
     @Schema(description = "关联监控资产 id", example = "1")
     private Long monitorId;
 
     /**
      * 任务名称
      */
-    @TableField("monitor_task_name")
+    @TableField("ms_monitor_task_name")
     @Schema(description = "任务名称", example = "Redis INFO 采集")
     private String monitorTaskName;
 
     /**
      * 服务类型
      */
-    @TableField("service_type")
+    @TableField("ms_monitor_task_service_type")
     @Schema(description = "服务类型: SERVER / REDIS / MYSQL / PG / ORACLE / MSSQL / MQ",
             example = "REDIS")
     private String serviceType;
@@ -57,14 +57,14 @@ public class MsMonitorTask extends SysBase {
     /**
      * 采集方式
      */
-    @TableField("provider")
+    @TableField("ms_monitor_task_provider")
     @Schema(description = "采集方式: LOCAL / TERMINAL / HTTP / PROMETHEUS", example = "LOCAL")
     private String provider;
 
     /**
      * 采集参数 JSON
      */
-    @TableField("collect_config")
+    @TableField("ms_monitor_task_collect_config")
     @Schema(description = "采集参数 JSON, 含账号密码/连接信息/命令/PromQL 等",
             example = "{\"redis_host\":\"192.168.1.10\",\"redis_port\":6379,\"redis_password\":\"***\"}")
     private String collectConfig;
@@ -72,35 +72,35 @@ public class MsMonitorTask extends SysBase {
     /**
      * cron 表达式
      */
-    @TableField("monitor_task_cron")
+    @TableField("ms_monitor_task_cron")
     @Schema(description = "cron 表达式", example = "0/10 * * * * ?")
     private String monitorTaskCron;
 
     /**
      * 超时(毫秒)
      */
-    @TableField("monitor_task_timeout")
+    @TableField("ms_monitor_task_timeout")
     @Schema(description = "超时(毫秒)", example = "5000")
     private Integer monitorTaskTimeout;
 
     /**
      * 是否启用
      */
-    @TableField("monitor_task_enabled")
+    @TableField("ms_monitor_task_enabled")
     @Schema(description = "是否启用 1启用 0禁用", example = "1")
     private Integer monitorTaskEnabled;
 
     /**
      * 备注
      */
-    @TableField("monitor_task_remark")
+    @TableField("ms_monitor_task_remark")
     @Schema(description = "备注", example = "Redis INFO 关键指标 10 秒一采")
     private String monitorTaskRemark;
 
     /**
      * 最近一次触发时间
      */
-    @TableField("last_run_time")
+    @TableField("ms_monitor_task_last_run_time")
     @Schema(description = "最近一次触发时间", example = "2026-08-04T10:00:00")
     private LocalDateTime lastRunTime;
 }
