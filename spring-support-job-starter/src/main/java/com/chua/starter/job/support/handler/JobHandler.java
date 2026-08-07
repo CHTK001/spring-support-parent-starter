@@ -1,55 +1,52 @@
 package com.chua.starter.job.support.handler;
 
 /**
- * 作业处理程序接口
- * <p>
- * 定义了任务执行的核心方法,所有任务处理器都需要实现此接口。
- * 当前保留实现:
- * <ul>
- *     <li>{@link BeanJobHandler} - Spring Bean 方式的任务处理器</li>
- * </ul>
- * </p>
+ * 任务执行入口接口。
+ *
+ * <p>由 {@link JobHandlerFactory} 单例注册表统一维护;
+ * 调度事件消费侧通过 {@link #execute()} 触发实际逻辑。</p>
  *
  * @author CH
- * @version 1.0.0
- * @since 2024/12/12
+ * @since 4.0.0.42
  */
 public interface JobHandler {
 
     /**
-     * 执行具体任务的方法
-     * <p>
-     * 实现类需要在此方法中编写具体的业务逻辑。
-     * 任务参数可通过 {@link com.chua.starter.job.support.thread.JobContext} 获取。
-     * </p>
+     * 处理器唯一名称
      *
-     * @throws Exception 任务执行过程中可能抛出的异常
+     * @return 名称
+     */
+    String name();
+
+    /**
+     * 任务描述
+     *
+     * @return 描述, 默认空字符串
+     */
+    default String desc() {
+        return "";
+    }
+
+    /**
+     * 执行任务
+     *
+     * @throws Exception 执行失败时抛出
      */
     void execute() throws Exception;
 
     /**
-     * 初始化方法
-     * <p>
-     * 在任务线程启动时调用，用于执行初始化操作。
-     * 可用于初始化资源、连接等。
-     * </p>
+     * 初始化钩子, 首次执行前调用一次
      *
-     * @throws Exception 初始化过程中可能抛出的异常
+     * @throws Exception 初始化失败时抛出
      */
     default void init() throws Exception {
-        // 默认空实现
     }
 
     /**
-     * 销毁方法
-     * <p>
-     * 在任务线程销毁时调用，用于执行清理操作。
-     * 可用于释放资源、关闭连接等。
-     * </p>
+     * 销毁钩子, 注销时调用一次
      *
-     * @throws Exception 销毁过程中可能抛出的异常
+     * @throws Exception 销毁失败时抛出
      */
     default void destroy() throws Exception {
-        // 默认空实现
     }
 }

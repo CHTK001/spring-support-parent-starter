@@ -34,7 +34,7 @@ public class AiServiceStatusDTO implements Serializable {
     private Long pid;
 
     /**
-     * 运行时长（秒）
+     * 运行时长(秒)
      */
     @Schema(description = "运行时长(秒)")
     private Long uptime;

@@ -5,12 +5,14 @@ import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.redis.support.listener.RedisListener;
 import com.chua.starter.redis.support.properties.RedisServerProperties;
+import com.chua.common.support.lang.datasource.kv.KvEngine;
+import com.chua.starter.redis.support.service.TimeSeriesService;
 import com.chua.starter.redis.support.service.RedisSearchService;
 import com.chua.starter.redis.support.service.SimpleRedisService;
-import com.chua.starter.redis.support.service.TimeSeriesService;
+import com.chua.starter.redis.support.service.impl.TimeSeriesServiceImpl;
 import com.chua.starter.redis.support.service.impl.RedisSearchServiceImpl;
 import com.chua.starter.redis.support.service.impl.SimpleRedisServiceImpl;
-import com.chua.starter.redis.support.service.impl.TimeSeriesServiceImpl;
+import com.chua.starter.redis.support.kv.RedisKvEngine;
 import com.chua.starter.redis.support.utils.StringUtils;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
@@ -149,6 +151,19 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     @ConditionalOnMissingBean
     public SimpleRedisService simpleRedisService() {
         return new SimpleRedisServiceImpl();
+    }
+
+    /**
+     * 创建统一 KV 引擎实例，基于 {@link StringRedisTemplate} 实现 {@link KvEngine} 接口。
+     * <p>提供 get/put/delete/incr/expire/ttl 等基础 KV 操作，以及 findAllByPrefix 前缀查询。</p>
+     *
+     * @param stringRedisTemplate Spring Data Redis 字符串操作模板
+     * @return KV 引擎实现实例
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public KvEngine kvEngine(StringRedisTemplate stringRedisTemplate) {
+        return new RedisKvEngine(stringRedisTemplate);
     }
 
     /**

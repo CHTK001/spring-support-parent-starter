@@ -5,26 +5,77 @@ import lombok.Data;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * AI 对话请求模型。
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 @Data
 public class AiChatRequest {
 
-    private String model;
-    private String prompt;
-    private String systemPrompt;
-    private Double temperature;
-    private Integer maxTokens;
-    private List<Map<String, Object>> messages;
-    private List<String> imageUrls;
-    private Map<String, Object> parameters;
-    private Boolean stream;
-    private String factory;
-    private String provider;
     /**
-     * 深度思考开关（由前端 ChatClient 透传，供支持该能力的模型开启推理）
+     * 模型名称
+     */
+    private String model;
+
+    /**
+     * 用户输入
+     */
+    private String prompt;
+
+    /**
+     * 系统提示词
+     */
+    private String systemPrompt;
+
+    /**
+     * 采样温度
+     */
+    private Double temperature;
+
+    /**
+     * 最大生成 tokens
+     */
+    private Integer maxTokens;
+
+    /**
+     * 历史消息列表
+     */
+    private List<Map<String, Object>> messages;
+
+    /**
+     * 图片地址列表
+     */
+    private List<String> imageUrls;
+
+    /**
+     * 扩展参数
+     */
+    private Map<String, Object> parameters;
+
+    /**
+     * 是否流式输出
+     */
+    private Boolean stream;
+
+    /**
+     * 厂商工厂类型
+     */
+    private String factory;
+
+    /**
+     * 厂商提供者
+     */
+    private String provider;
+
+    /**
+     * 思考模式开关（透传 ChatClient，支持深度思考类模型）
      */
     private Boolean think;
+
     /**
-     * 智能搜索开关（由前端 ChatClient 透传，供支持联网搜索的模型检索外部知识）
+     * 搜索开关（透传 ChatClient，支持联网搜索类模型）
      */
     private Boolean search;
 }

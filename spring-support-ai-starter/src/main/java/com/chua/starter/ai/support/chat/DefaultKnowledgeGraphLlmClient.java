@@ -5,12 +5,31 @@ import com.chua.common.support.ai.chat.ChatResponse.State;
 import com.chua.common.support.utils.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * 默认知识图谱 LLM 客户端。
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 @Slf4j
 public class DefaultKnowledgeGraphLlmClient implements KnowledgeGraphLlmClient {
 
+    /**
+     * 知识图谱 LLM 设置
+     */
     private final KnowledgeGraphSettings settings;
+
+    /**
+     * 底层 ChatClient
+     */
     private final ChatClient chatClient;
 
+    /**
+     * 全参构造。
+     *
+     * @param settings   知识图谱 LLM 设置
+     * @param chatClient 底层 ChatClient
+     */
     public DefaultKnowledgeGraphLlmClient(KnowledgeGraphSettings settings, ChatClient chatClient) {
         this.settings = settings;
         this.chatClient = chatClient;

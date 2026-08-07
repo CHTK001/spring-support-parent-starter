@@ -11,23 +11,58 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
+/**
+ * 默认 ChatClient 实现（模拟响应）。
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 @Slf4j
 public class DefaultChatClient implements ChatClient {
 
+    /**
+     * 模型名称
+     */
     private final String modelName;
+
+    /**
+     * 厂商工厂类型
+     */
     private final String factory;
+
+    /**
+     * 厂商提供者
+     */
     private final String provider;
 
+    /**
+     * 简易构造，默认使用 default/mock 工厂与提供者。
+     *
+     * @param modelName 模型名称
+     */
     public DefaultChatClient(String modelName) {
         this(modelName, "default", "mock");
     }
 
+    /**
+     * 全参构造。
+     *
+     * @param modelName 模型名称
+     * @param factory   厂商工厂类型
+     * @param provider  厂商提供者
+     */
     public DefaultChatClient(String modelName, String factory, String provider) {
         this.modelName = modelName;
         this.factory = factory;
         this.provider = provider;
     }
 
+    /**
+     * 发送单条消息并返回模拟响应。
+     *
+     * @param message 用户消息
+     * @return 模拟响应
+     */
     public ChatResponse send(String message) {
         log.info("[AI] 模拟响应: {}", message);
         return ChatResponse.builder()
@@ -36,31 +71,68 @@ public class DefaultChatClient implements ChatClient {
                 .build();
     }
 
+    /**
+     * 携带系统提示词发送消息并返回模拟响应。
+     *
+     * @param systemPrompt 系统提示词
+     * @param message      用户消息
+     * @return 模拟响应
+     */
     public ChatResponse send(String systemPrompt, String message) {
         log.info("[AI] 系统提示: {}, 消息: {}", systemPrompt, message);
         return send(message);
     }
 
+    /**
+     * 获取模型名称。
+     *
+     * @return 模型名称
+     */
     public String getModelName() {
         return modelName;
     }
 
+    /**
+     * 获取厂商工厂类型。
+     *
+     * @return 厂商工厂类型
+     */
     public String getFactory() {
         return factory;
     }
 
+    /**
+     * 获取厂商提供者。
+     *
+     * @return 厂商提供者
+     */
     public String getProvider() {
         return provider;
     }
 
+    /**
+     * 获取默认模型名称。
+     *
+     * @return 默认模型名称
+     */
     public String getDefaultModel() {
         return modelName;
     }
 
+    /**
+     * 获取服务端点，模拟实现返回 null。
+     *
+     * @return 服务端点
+     */
     public String getEndpoint() {
         return null;
     }
 
+    /**
+     * 获取模型列表，模拟实现返回空列表。
+     *
+     * @return 模型列表
+     */
     public List<ModelDefinition> listModels() {
         return List.of();
     }

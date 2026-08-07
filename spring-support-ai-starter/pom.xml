@@ -58,6 +58,13 @@
             <version>4.0.0.42</version>
         </dependency>
 
+        <!-- 智谱 GLM ChatClient（zhipu/glm SPI） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-zhipu-starter</artifactId>
+            <version>4.0.0.42</version>
+        </dependency>
+
         <!-- 深度学习能力（OCR 识别、向量模型等） -->
         <dependency>
             <groupId>com.chua</groupId>

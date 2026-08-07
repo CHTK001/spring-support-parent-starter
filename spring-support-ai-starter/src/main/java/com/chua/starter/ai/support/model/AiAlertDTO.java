@@ -46,7 +46,7 @@ public class AiAlertDTO implements Serializable {
     private Long threshold;
 
     /**
-     * 通知渠道（JSON 数组字符串）
+     * 通知渠道(JSON)
      */
     @Schema(description = "通知渠道(JSON)")
     private String channels;

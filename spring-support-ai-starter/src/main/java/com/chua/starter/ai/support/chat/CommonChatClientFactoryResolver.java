@@ -2,7 +2,6 @@ package com.chua.starter.ai.support.chat;
 
 import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.ai.chat.ChatClient;
-import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
 
 /**
@@ -29,22 +28,29 @@ final class CommonChatClientFactoryResolver {
     }
 
     private static com.chua.common.support.ai.chat.ChatClient createRaw(String factoryName, ChatClientSetting setting) {
-        ServiceProvider<ChatClient> provider =
-                ServiceProvider.of(ChatClient.class);
-        ChatClient client = StringUtils.isBlank(factoryName)
-                ? provider.getDefault()
-                : provider.getNewExtension(factoryName);
-        if (client == null) {
-            client = provider.getDefault();
+        ChatClientSetting chatClientSetting = ChatClientSetting.builder()
+                .provider(factoryName)
+                .appKey(setting != null ? setting.getAppKey() : null)
+                .baseUrl(setting != null ? setting.getBaseUrl() : null)
+                .build();
+        // 始终携带 setting 创建，保证 ZhipuChatClient 等无无参构造的实现能注入 apiKey/baseUrl
+        try {
+            com.chua.common.support.ai.chat.ChatClient client = ChatClient.create(chatClientSetting);
+            if (client != null) {
+                return client;
+            }
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(CommonChatClientFactoryResolver.class)
+                    .warn("[CommonChatClientFactoryResolver] 创建 ChatClient[provider={}] 失败: {}",
+                            factoryName, e.getMessage());
         }
-        if (client == null) {
-            ChatClientSetting chatClientSetting = ChatClientSetting.builder()
-                    .provider(factoryName)
-                    .appKey(setting != null ? setting.getAppKey() : null)
-                    .baseUrl(setting != null ? setting.getBaseUrl() : null)
-                    .build();
-            return ChatClient.create(chatClientSetting);
+        if (StringUtils.isBlank(factoryName)) {
+            return null;
         }
-        return client;
+        return ChatClient.create(ChatClientSetting.builder()
+                .provider(factoryName)
+                .appKey(setting != null ? setting.getAppKey() : null)
+                .baseUrl(setting != null ? setting.getBaseUrl() : null)
+                .build());
     }
 }

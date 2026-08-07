@@ -9,6 +9,7 @@ import com.chua.common.support.ai.chat.ChatResponse;
 import com.chua.common.support.ai.chat.ChatResponse.State;
 import com.chua.common.support.ai.chat.ModelDefinition;
 import com.chua.common.support.utils.StringUtils;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -28,8 +29,12 @@ import java.util.function.Consumer;
  * @author CH
  * @since 2026/04/03
  */
+@Slf4j
 public class DefaultScopeChatClient implements ChatClient {
 
+    /**
+     * 输入优化提示词模板
+     */
     private static final String INPUT_OPTIMIZATION_PROMPT = """
             你是输入优化器。
             请在不改变用户真实意图的前提下，把下面输入改写成更清晰、可执行、适合模型理解的版本。
@@ -39,6 +44,9 @@ public class DefaultScopeChatClient implements ChatClient {
             %s
             """;
 
+    /**
+     * 上下文压缩提示词模板
+     */
     private static final String CONTEXT_COMPRESSION_PROMPT = """
             你是上下文压缩器。
             请把下面历史消息压缩成短工作记忆，保留任务目标、约束、关键决定、未完成事项和重要实体。
@@ -49,22 +57,62 @@ public class DefaultScopeChatClient implements ChatClient {
             %s
             """;
 
+    /**
+     * 上下文压缩最大字符数
+     */
     private static final int COMPRESSION_MAX_CHARS = 2000;
 
+    /**
+     * ChatClient 设置
+     */
     private final ChatClientSettings settings;
+
+    /**
+     * 底层 ChatClient 工厂函数（按模型与连接设置创建）
+     */
     private final BiFunction<String, ChatClientSetting, com.chua.common.support.ai.chat.ChatClient> delegateFactory;
+
+    /**
+     * 缓存的模型列表
+     */
     private volatile List<ModelDefinition> cachedModels = List.of();
+
+    /**
+     * 上下文压缩专用 ChatClient
+     */
     private final ChatClient compressionChatClient;
+
+    /**
+     * 工具注册表
+     */
     private final Map<String, AiTool> toolRegistry = new ConcurrentHashMap<>();
 
+    /**
+     * 简易构造。
+     *
+     * @param settings ChatClient 设置
+     */
     public DefaultScopeChatClient(ChatClientSettings settings) {
         this(settings, null, CommonChatClientFactoryResolver::create);
     }
 
+    /**
+     * 构造（带压缩客户端）。
+     *
+     * @param settings              ChatClient 设置
+     * @param compressionChatClient 压缩专用 ChatClient
+     */
     public DefaultScopeChatClient(ChatClientSettings settings, ChatClient compressionChatClient) {
         this(settings, compressionChatClient, CommonChatClientFactoryResolver::create);
     }
 
+    /**
+     * 全参构造。
+     *
+     * @param settings             ChatClient 设置
+     * @param compressionChatClient 压缩专用 ChatClient
+     * @param delegateFactory      底层 ChatClient 工厂函数
+     */
     DefaultScopeChatClient(ChatClientSettings settings,
                            ChatClient compressionChatClient,
                            BiFunction<String, ChatClientSetting, com.chua.common.support.ai.chat.ChatClient> delegateFactory) {
@@ -127,6 +175,13 @@ public class DefaultScopeChatClient implements ChatClient {
         com.chua.common.support.ai.chat.ChatClient delegate = null;
         try {
             delegate = createDelegate(normalized, context);
+            if (delegate == null) {
+                log.warn("[DefaultScopeChatClient] 底层 ChatClient 创建失败（未配置有效的 LLM provider/apiKey），返回提示响应");
+                return ChatResponse.builder()
+                        .state(State.STOP)
+                        .content("[AI] 尚未配置可用的模型服务，请先在全局设置中配置 LLM provider 与 API Key。")
+                        .build();
+            }
             ChatExecutionResult execution = executeSync(delegate, normalized, input);
             return ChatResponse.builder()
                     .state(State.STOP)
@@ -145,6 +200,16 @@ public class DefaultScopeChatClient implements ChatClient {
         com.chua.common.support.ai.chat.ChatClient delegate = null;
         try {
             delegate = createDelegate(normalized, context);
+            if (delegate == null) {
+                log.warn("[DefaultScopeChatClient] 底层 ChatClient 创建失败（未配置有效的 LLM provider/apiKey），返回提示响应");
+                if (consumer != null) {
+                    consumer.accept("[AI] 尚未配置可用的模型服务，请先在全局设置中配置 LLM provider 与 API Key。");
+                }
+                if (onComplete != null) {
+                    onComplete.run();
+                }
+                return;
+            }
             Consumer<com.chua.common.support.ai.chat.ChatResponse> wrappedConsumer = response -> {
                 if (response != null) {
                     consumer.accept(response.getContent());
@@ -417,10 +482,12 @@ public class DefaultScopeChatClient implements ChatClient {
                 }
             }
         }
-        for (String imageUrl : scope.getImageUrls()) {
-            if (imageUrl != null && !imageUrl.isBlank()) {
-                if (delegate instanceof ExtensibleChatClient ec) {
-                    ec.addImage(imageUrl);
+        if (scope.getImageUrls() != null) {
+            for (String imageUrl : scope.getImageUrls()) {
+                if (imageUrl != null && !imageUrl.isBlank()) {
+                    if (delegate instanceof ExtensibleChatClient ec) {
+                        ec.addImage(imageUrl);
+                    }
                 }
             }
         }

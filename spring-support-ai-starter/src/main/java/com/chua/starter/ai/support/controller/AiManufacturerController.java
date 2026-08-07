@@ -17,7 +17,15 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Files;
@@ -42,9 +50,19 @@ import java.util.UUID;
 @RequestMapping("/v2/ai/manufacturer")
 public class AiManufacturerController {
 
+    /**
+     * 厂商门面服务
+     */
     private final AiManufacturerFacadeService aiManufacturerFacadeService;
+
+    /**
+     * 模型价格同步服务
+     */
     private final AiModelPriceSyncService aiModelPriceSyncService;
 
+    /**
+     * 运行目录（用于 Logo 文件存储）
+     */
     @Value("${user.dir:.}")
     private String userDir;
 
@@ -79,6 +97,14 @@ public class AiManufacturerController {
             @Parameter(description = "厂商编码") @RequestParam String code) {
         aiModelPriceSyncService.replaceModels(code);
         return ReturnResult.success();
+    }
+
+    @Operation(summary = "从厂商 API 直拉模型列表并同步到模型表")
+    @PutMapping("sync-models")
+    public ReturnResult<?> syncModels(
+            @Parameter(description = "厂商编码") @RequestParam String code) {
+        int count = aiManufacturerFacadeService.syncModels(code);
+        return ReturnResult.ok(count, "模型同步完成，共 " + count + " 个");
     }
 
     @Operation(summary = "保存厂商信息")
@@ -135,3 +161,4 @@ public class AiManufacturerController {
                 .body(resource);
     }
 }
+

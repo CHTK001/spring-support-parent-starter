@@ -198,7 +198,8 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
         }
         Integer rateLimit = token.getSysAiTokenRateLimit();
         if (rateLimit == null || rateLimit <= 0) {
-            return true; // 无限流
+            // 无限流
+            return true;
         }
         Integer rateCount = token.getSysAiTokenRateCount() == null ? 0 : token.getSysAiTokenRateCount();
         LocalDateTime windowStart = token.getSysAiTokenRateWindowStart();
@@ -254,3 +255,4 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
         }
     }
 }
+

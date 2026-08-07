@@ -17,7 +17,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -119,6 +126,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             response.put("choices", Collections.singletonList(
                     Map.of("index", 0, "message", message, "finish_reason", "stop")
             ));
+            // 顶层透传文本内容，供 OpenAI 兼容控制器直接消费（result.get("text")）
+            response.put("text", result);
 
             Map<String, Object> usage = new LinkedHashMap<>();
             usage.put("prompt_tokens", 0);
@@ -143,7 +152,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         ChatClient client = resolveChatClient(groupId, request.getModel());
         String prompt = buildPrompt(request);
 
-        SseEmitter emitter = new SseEmitter(300_000L); // 5 分钟超时
+        // 5 分钟超时
+        SseEmitter emitter = new SseEmitter(300_000L);
 
         String modelName = request.getModel() != null ? request.getModel() : "default";
         String chatId = "chatcmpl-" + UUID.randomUUID().toString().substring(0, 8);
@@ -381,3 +391,4 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 .replace("\t", "\\t");
     }
 }
+

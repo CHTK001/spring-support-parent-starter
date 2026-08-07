@@ -12,7 +12,12 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
 import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;
 
@@ -24,12 +29,16 @@ import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE
  * 提供缓存以降低高频读取（如认证守卫的 app_key_enabled 开关）带来的 DB 压力。
  *
  * @author CH
+ * @since 2026-08-03
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService {
 
+    /**
+     * 全局设置 Mapper
+     */
     private final SysAiGlobalSettingMapper sysAiGlobalSettingMapper;
 
     /**

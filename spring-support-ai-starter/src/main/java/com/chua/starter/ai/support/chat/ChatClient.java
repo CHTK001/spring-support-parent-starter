@@ -7,6 +7,12 @@ import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.ai.chat.ChatResponse;
 import com.chua.common.support.ai.chat.ModelDefinition;
 
+/**
+ * 全局 ChatClient 接口，封装厂商无关的对话、工具调用与模型管理能力。
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 public interface ChatClient extends com.chua.common.support.ai.chat.ChatClient {
 
     ChatResponse chat(ChatScope scope);

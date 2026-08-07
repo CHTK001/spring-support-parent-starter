@@ -1,44 +1,88 @@
 package com.chua.starter.ai.support.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
+/**
+ * AI 模板实体，对应表 {@code sys_ai_template}。
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 @Data
 @TableName("sys_ai_template")
 public class SysAiTemplate {
 
+    /**
+     * 模板主键 ID
+     */
     @TableId(type = IdType.AUTO)
     private Integer sysAiTemplateId;
 
-    @TableField("module_id")
+    /**
+     * 所属模块 ID
+     */
+    @TableField("sys_ai_module_id")
     private Integer sysAiModuleId;
 
-    @TableField("template_type")
+    /**
+     * 模板类型
+     */
+    @TableField("sys_ai_template_type")
     private String sysAiTemplateType;
 
-    @TableField("template_category")
+    /**
+     * 模板分类
+     */
+    @TableField("sys_ai_template_category")
     private String sysAiTemplateCategory;
 
-    @TableField("template_name")
+    /**
+     * 模板名称
+     */
+    @TableField("sys_ai_template_name")
     private String sysAiTemplateName;
 
-    @TableField("template_remark")
+    /**
+     * 模板备注
+     */
+    @TableField("sys_ai_template_remark")
     private String sysAiTemplateRemark;
 
-    @TableField("template_content")
+    /**
+     * 模板内容（推荐提示词）
+     */
+    @TableField("sys_ai_template_recommend_prompt")
     private String sysAiTemplateContent;
 
-    @TableField("status")
+    /**
+     * 状态：1 启用，0 停用
+     */
+    @TableField("sys_ai_template_status")
     private Integer sysAiTemplateStatus;
 
-    @TableField("sort")
+    /**
+     * 排序值
+     */
+    @TableField("sys_ai_template_sort")
     private Integer sysAiTemplateSort;
 
+    /**
+     * 创建时间
+     */
     @TableField("create_time")
     private LocalDateTime createTime;
 
+    /**
+     * 更新时间
+     */
     @TableField("update_time")
     private LocalDateTime updateTime;
 }
+

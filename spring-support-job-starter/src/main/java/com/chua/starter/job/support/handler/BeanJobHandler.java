@@ -1,89 +1,106 @@
 package com.chua.starter.job.support.handler;
 
-import com.chua.common.support.spi.annotations.Spi;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Method;
 
 /**
- * Spring Bean方式的作业处理程序
- * <p>
- * 通过反射调用Spring Bean中标注了@Job注解的方法来执行任务。
- * 支持配置初始化方法和销毁方法。
- * </p>
+ * 基于 Spring Bean + 反射的任务处理器。
+ *
+ * <p>{@link com.chua.starter.job.support.annotation.Job} 标注的方法
+ * 由 {@link JobAnnotationScanner} 包装为本处理器并注册。</p>
  *
  * @author CH
- * @version 1.0.0
- * @since 2024/03/11
+ * @since 4.0.0.42
  */
-@Spi("bean")
 @Slf4j
+@Getter
 public class BeanJobHandler implements JobHandler {
 
     /**
-     * 目标Bean对象
+     * 处理器名称
+     */
+    private final String name;
+
+    /**
+     * 任务描述
+     */
+    private final String desc;
+
+    /**
+     * 目标 bean 实例
      */
     private final Object target;
 
     /**
-     * 执行方法
+     * execute 方法
      */
     private final Method method;
 
     /**
-     * 初始化方法
+     * init 方法, 可为 null
      */
     private final Method initMethod;
 
     /**
-     * 销毁方法
+     * destroy 方法, 可为 null
      */
     private final Method destroyMethod;
 
     /**
-     * 构造函数
+     * 构造 Bean 任务处理器。
      *
-     * @param target        目标Bean对象
-     * @param method        执行方法
-     * @param initMethod    初始化方法，可为null
-     * @param destroyMethod 销毁方法，可为null
+     * @param name          处理器名称
+     * @param desc          任务描述
+     * @param target        目标 bean
+     * @param method        execute 方法
+     * @param initMethod    init 方法, 允许为 null
+     * @param destroyMethod destroy 方法, 允许为 null
      */
-    public BeanJobHandler(Object target, Method method, Method initMethod, Method destroyMethod) {
+    public BeanJobHandler(String name,
+                          String desc,
+                          Object target,
+                          Method method,
+                          Method initMethod,
+                          Method destroyMethod) {
+        this.name = name;
+        this.desc = desc;
         this.target = target;
         this.method = method;
         this.initMethod = initMethod;
         this.destroyMethod = destroyMethod;
+        method.setAccessible(true);
+        if (initMethod != null) {
+            initMethod.setAccessible(true);
+        }
+        if (destroyMethod != null) {
+            destroyMethod.setAccessible(true);
+        }
     }
 
     @Override
     public void execute() throws Exception {
-        log.debug("开始执行Bean任务: {}#{}", target.getClass().getSimpleName(), method.getName());
-        if (method.getParameterCount() > 0) {
-            throw new IllegalStateException("@Job 方法不支持带参数执行: "
-                    + target.getClass().getSimpleName() + "#" + method.getName());
-        }
+        log.debug("[job] execute handler={} target={}#{}",
+                name, target.getClass().getSimpleName(), method.getName());
         method.invoke(target);
-        log.debug("Bean任务执行完成: {}#{}", target.getClass().getSimpleName(), method.getName());
     }
 
     @Override
     public void init() throws Exception {
-        if (initMethod != null) {
-            log.debug("执行Bean任务初始化方法: {}#{}", target.getClass().getSimpleName(), initMethod.getName());
-            initMethod.invoke(target);
+        if (initMethod == null) {
+            return;
         }
+        log.debug("[job] init handler={}", name);
+        initMethod.invoke(target);
     }
 
     @Override
     public void destroy() throws Exception {
-        if (destroyMethod != null) {
-            log.debug("执行Bean任务销毁方法: {}#{}", target.getClass().getSimpleName(), destroyMethod.getName());
-            destroyMethod.invoke(target);
+        if (destroyMethod == null) {
+            return;
         }
-    }
-
-    @Override
-    public String toString() {
-        return super.toString() + "[" + target.getClass().getSimpleName() + "#" + method.getName() + "]";
+        log.debug("[job] destroy handler={}", name);
+        destroyMethod.invoke(target);
     }
 }

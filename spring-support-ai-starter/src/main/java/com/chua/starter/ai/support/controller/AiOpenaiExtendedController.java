@@ -10,7 +10,15 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
@@ -19,14 +27,34 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * OpenAI 标准协议扩展控制器，提供 Images/Audio/Files/Fine-tuning 等扩展接口。
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 @Tag(name = "AI OpenAI Extended Protocol Controller", description = "OpenAI 标准协议扩展接口（Images/Audio/Files/Fine-tuning）")
 @RestController
 @ApiReturnFormatIgnore
+@RequestMapping("/v2/ai")
 public class AiOpenaiExtendedController {
 
+    /**
+     * 对话门面服务
+     */
     private final AiChatFacadeService aiChatFacadeService;
+
+    /**
+     * 访问守卫服务
+     */
     private final AiAccessGuardService aiAccessGuardService;
 
+    /**
+     * 全参构造。
+     *
+     * @param aiChatFacadeService  对话门面服务
+     * @param aiAccessGuardService 访问守卫服务
+     */
     public AiOpenaiExtendedController(
             AiChatFacadeService aiChatFacadeService,
             AiAccessGuardService aiAccessGuardService) {
@@ -398,3 +426,4 @@ public class AiOpenaiExtendedController {
         return body;
     }
 }
+

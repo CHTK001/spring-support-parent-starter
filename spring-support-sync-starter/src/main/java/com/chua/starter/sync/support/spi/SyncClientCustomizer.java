@@ -1,6 +1,6 @@
 package com.chua.starter.sync.support.spi;
 
-import com.chua.common.support.network.sync.SyncClient;
+import com.chua.starter.sync.support.client.SyncClient;
 
 /**
  * SyncClient 连接前自定义扩展点。

@@ -3,32 +3,113 @@ package com.chua.starter.ai.support.chat;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 对话作用域，封装单次对话的模型参数、上下文与附加信息。
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 @Getter
 @Setter
 public class ChatScope {
 
+    /**
+     * 系统提示词
+     */
     private String systemPrompt;
+
+    /**
+     * 模型名称
+     */
     private String model;
+
+    /**
+     * 采样温度
+     */
     private Double temperature;
+
+    /**
+     * 最大生成 tokens
+     */
     private Integer maxTokens;
+
+    /**
+     * 请求超时时间（毫秒）
+     */
     private Long timeoutMillis;
+
+    /**
+     * 是否启用输入优化
+     */
     private boolean inputOptimizationEnabled;
+
+    /**
+     * 是否启用上下文压缩
+     */
     private boolean contextCompressionEnabled;
+
+    /**
+     * 上下文压缩触发阈值
+     */
     private int contextCompressionThreshold;
+
+    /**
+     * 上下文压缩保留消息条数
+     */
     private int contextCompressionRetainMessages;
+
+    /**
+     * 是否启用 MCP 工具
+     */
     private boolean mcpEnabled;
+
+    /**
+     * 图片地址列表
+     */
     private List<String> imageUrls;
+
+    /**
+     * 用户输入
+     */
     private String input;
+
+    /**
+     * 对话上下文
+     */
     private ChatContext context;
+
+    /**
+     * 扩展参数
+     */
     private Map<String, Object> parameters;
 
+    /**
+     * 空参构造。
+     */
     public ChatScope() {
     }
 
+    /**
+     * 全参构造。
+     *
+     * @param systemPrompt                    系统提示词
+     * @param model                           模型名称
+     * @param temperature                     采样温度
+     * @param maxTokens                       最大生成 tokens
+     * @param timeoutMillis                   请求超时时间（毫秒）
+     * @param inputOptimizationEnabled        是否启用输入优化
+     * @param contextCompressionEnabled       是否启用上下文压缩
+     * @param contextCompressionThreshold     上下文压缩触发阈值
+     * @param contextCompressionRetainMessages 上下文压缩保留消息条数
+     * @param mcpEnabled                      是否启用 MCP 工具
+     * @param imageUrls                       图片地址列表
+     * @param input                           用户输入
+     * @param context                         对话上下文
+     * @param parameters                      扩展参数
+     */
     public ChatScope(String systemPrompt, String model, Double temperature, Integer maxTokens, Long timeoutMillis,
                      boolean inputOptimizationEnabled, boolean contextCompressionEnabled,
                      int contextCompressionThreshold, int contextCompressionRetainMessages,
@@ -50,10 +131,20 @@ public class ChatScope {
         this.parameters = parameters;
     }
 
+    /**
+     * 创建 Builder。
+     *
+     * @return Builder 实例
+     */
     public static ChatScopeBuilder builder() {
         return new ChatScopeBuilder();
     }
 
+    /**
+     * 基于当前实例创建 Builder。
+     *
+     * @return Builder 实例
+     */
     public ChatScopeBuilder toBuilder() {
         return ChatScope.builder()
                 .systemPrompt(systemPrompt)
@@ -72,37 +163,243 @@ public class ChatScope {
                 .parameters(parameters);
     }
 
+    /**
+     * ChatScope Builder。
+     *
+     * @author CH
+     * @since 4.0.0.42
+     */
     public static class ChatScopeBuilder {
+
+        /**
+         * 系统提示词
+         */
         private String systemPrompt;
+
+        /**
+         * 模型名称
+         */
         private String model;
+
+        /**
+         * 采样温度
+         */
         private Double temperature;
+
+        /**
+         * 最大生成 tokens
+         */
         private Integer maxTokens;
+
+        /**
+         * 请求超时时间（毫秒）
+         */
         private Long timeoutMillis;
+
+        /**
+         * 是否启用输入优化
+         */
         private boolean inputOptimizationEnabled;
+
+        /**
+         * 是否启用上下文压缩
+         */
         private boolean contextCompressionEnabled;
+
+        /**
+         * 上下文压缩触发阈值
+         */
         private int contextCompressionThreshold;
+
+        /**
+         * 上下文压缩保留消息条数
+         */
         private int contextCompressionRetainMessages;
+
+        /**
+         * 是否启用 MCP 工具
+         */
         private boolean mcpEnabled;
+
+        /**
+         * 图片地址列表
+         */
         private List<String> imageUrls;
+
+        /**
+         * 用户输入
+         */
         private String input;
+
+        /**
+         * 对话上下文
+         */
         private ChatContext context;
+
+        /**
+         * 扩展参数
+         */
         private Map<String, Object> parameters;
 
-        public ChatScopeBuilder systemPrompt(String systemPrompt) { this.systemPrompt = systemPrompt; return this; }
-        public ChatScopeBuilder model(String model) { this.model = model; return this; }
-        public ChatScopeBuilder temperature(Double temperature) { this.temperature = temperature; return this; }
-        public ChatScopeBuilder maxTokens(Integer maxTokens) { this.maxTokens = maxTokens; return this; }
-        public ChatScopeBuilder timeoutMillis(Long timeoutMillis) { this.timeoutMillis = timeoutMillis; return this; }
-        public ChatScopeBuilder inputOptimizationEnabled(boolean inputOptimizationEnabled) { this.inputOptimizationEnabled = inputOptimizationEnabled; return this; }
-        public ChatScopeBuilder contextCompressionEnabled(boolean contextCompressionEnabled) { this.contextCompressionEnabled = contextCompressionEnabled; return this; }
-        public ChatScopeBuilder contextCompressionThreshold(int contextCompressionThreshold) { this.contextCompressionThreshold = contextCompressionThreshold; return this; }
-        public ChatScopeBuilder contextCompressionRetainMessages(int contextCompressionRetainMessages) { this.contextCompressionRetainMessages = contextCompressionRetainMessages; return this; }
-        public ChatScopeBuilder mcpEnabled(boolean mcpEnabled) { this.mcpEnabled = mcpEnabled; return this; }
-        public ChatScopeBuilder imageUrls(List<String> imageUrls) { this.imageUrls = imageUrls; return this; }
-        public ChatScopeBuilder input(String input) { this.input = input; return this; }
-        public ChatScopeBuilder context(ChatContext context) { this.context = context; return this; }
-        public ChatScopeBuilder parameters(Map<String, Object> parameters) { this.parameters = parameters; return this; }
+        /**
+         * 设置系统提示词。
+         *
+         * @param systemPrompt 系统提示词
+         * @return 当前 Builder
+         */
+        public ChatScopeBuilder systemPrompt(String systemPrompt) {
+            this.systemPrompt = systemPrompt;
+            return this;
+        }
 
+        /**
+         * 设置模型名称。
+         *
+         * @param model 模型名称
+         * @return 当前 Builder
+         */
+        public ChatScopeBuilder model(String model) {
+            this.model = model;
+            return this;
+        }
+
+        /**
+         * 设置采样温度。
+         *
+         * @param temperature 采样温度
+         * @return 当前 Builder
+         */
+        public ChatScopeBuilder temperature(Double temperature) {
+            this.temperature = temperature;
+            return this;
+        }
+
+        /**
+         * 设置最大生成 tokens。
+         *
+         * @param maxTokens 最大生成 tokens
+         * @return 当前 Builder
+         */
+        public ChatScopeBuilder maxTokens(Integer maxTokens) {
+            this.maxTokens = maxTokens;
+            return this;
+        }
+
+        /**
+         * 设置请求超时时间。
+         *
+         * @param timeoutMillis 请求超时时间（毫秒）
+         * @return 当前 Builder
+         */
+        public ChatScopeBuilder timeoutMillis(Long timeoutMillis) {
+            this.timeoutMillis = timeoutMillis;
+            return this;
+        }
+
+        /**
+         * 设置是否启用输入优化。
+         *
+         * @param inputOptimizationEnabled 是否启用输入优化
+         * @return 当前 Builder
+         */
+        public ChatScopeBuilder inputOptimizationEnabled(boolean inputOptimizationEnabled) {
+            this.inputOptimizationEnabled = inputOptimizationEnabled;
+            return this;
+        }
+
+        /**
+         * 设置是否启用上下文压缩。
+         *
+         * @param contextCompressionEnabled 是否启用上下文压缩
+         * @return 当前 Builder
+         */
+        public ChatScopeBuilder contextCompressionEnabled(boolean contextCompressionEnabled) {
+            this.contextCompressionEnabled = contextCompressionEnabled;
+            return this;
+        }
+
+        /**
+         * 设置上下文压缩触发阈值。
+         *
+         * @param contextCompressionThreshold 上下文压缩触发阈值
+         * @return 当前 Builder
+         */
+        public ChatScopeBuilder contextCompressionThreshold(int contextCompressionThreshold) {
+            this.contextCompressionThreshold = contextCompressionThreshold;
+            return this;
+        }
+
+        /**
+         * 设置上下文压缩保留消息条数。
+         *
+         * @param contextCompressionRetainMessages 上下文压缩保留消息条数
+         * @return 当前 Builder
+         */
+        public ChatScopeBuilder contextCompressionRetainMessages(int contextCompressionRetainMessages) {
+            this.contextCompressionRetainMessages = contextCompressionRetainMessages;
+            return this;
+        }
+
+        /**
+         * 设置是否启用 MCP 工具。
+         *
+         * @param mcpEnabled 是否启用 MCP 工具
+         * @return 当前 Builder
+         */
+        public ChatScopeBuilder mcpEnabled(boolean mcpEnabled) {
+            this.mcpEnabled = mcpEnabled;
+            return this;
+        }
+
+        /**
+         * 设置图片地址列表。
+         *
+         * @param imageUrls 图片地址列表
+         * @return 当前 Builder
+         */
+        public ChatScopeBuilder imageUrls(List<String> imageUrls) {
+            this.imageUrls = imageUrls;
+            return this;
+        }
+
+        /**
+         * 设置用户输入。
+         *
+         * @param input 用户输入
+         * @return 当前 Builder
+         */
+        public ChatScopeBuilder input(String input) {
+            this.input = input;
+            return this;
+        }
+
+        /**
+         * 设置对话上下文。
+         *
+         * @param context 对话上下文
+         * @return 当前 Builder
+         */
+        public ChatScopeBuilder context(ChatContext context) {
+            this.context = context;
+            return this;
+        }
+
+        /**
+         * 设置扩展参数。
+         *
+         * @param parameters 扩展参数
+         * @return 当前 Builder
+         */
+        public ChatScopeBuilder parameters(Map<String, Object> parameters) {
+            this.parameters = parameters;
+            return this;
+        }
+
+        /**
+         * 构建 ChatScope 实例。
+         *
+         * @return ChatScope 实例
+         */
         public ChatScope build() {
             return new ChatScope(systemPrompt, model, temperature, maxTokens, timeoutMillis,
                     inputOptimizationEnabled, contextCompressionEnabled, contextCompressionThreshold,

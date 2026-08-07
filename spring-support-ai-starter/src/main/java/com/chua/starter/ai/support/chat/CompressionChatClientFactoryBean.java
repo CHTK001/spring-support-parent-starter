@@ -16,11 +16,26 @@ import org.springframework.beans.factory.FactoryBean;
  */
 public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient> {
 
+    /**
+     * 配置分组
+     */
     private static final String GROUP = "runtime";
 
+    /**
+     * 全局设置服务
+     */
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
+
+    /**
+     * 当前生效的压缩 ChatClient（可能为 null，回落到主 ChatClient）
+     */
     private volatile ChatClient chatClient;
 
+    /**
+     * 构造压缩 ChatClient FactoryBean，启动即尝试构建。
+     *
+     * @param sysAiGlobalSettingService 全局设置服务
+     */
     public CompressionChatClientFactoryBean(SysAiGlobalSettingService sysAiGlobalSettingService) {
         this.sysAiGlobalSettingService = sysAiGlobalSettingService;
         this.chatClient = buildClientSafe();

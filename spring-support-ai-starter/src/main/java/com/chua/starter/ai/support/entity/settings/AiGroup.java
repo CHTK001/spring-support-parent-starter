@@ -26,10 +26,16 @@ public class AiGroup implements Serializable {
     /**
      * 分组主键 ID
      */
+    /**
+     * 分组主键 ID
+     */
     @TableId(value = "sys_ai_group_id", type = IdType.AUTO)
     @Schema(description = "分组主键 ID")
     private Long groupId;
 
+    /**
+     * 分组名称
+     */
     /**
      * 分组名称
      */
@@ -40,12 +46,18 @@ public class AiGroup implements Serializable {
     /**
      * 分组描述
      */
+    /**
+     * 分组描述
+     */
     @TableField("sys_ai_group_desc")
     @Schema(description = "分组描述")
     private String groupDescription;
 
     /**
      * 关联模型列表（JSON 数组字符串）
+     */
+    /**
+     * 关联模型列表(JSON)
      */
     @TableField("sys_ai_group_models")
     @Schema(description = "关联模型列表(JSON)")
@@ -54,10 +66,16 @@ public class AiGroup implements Serializable {
     /**
      * 绑定 AppKey ID 列表（JSON 数组字符串）
      */
+    /**
+     * 绑定 AppKey ID 列表(JSON)
+     */
     @TableField("sys_ai_group_app_key_ids")
     @Schema(description = "绑定 AppKey ID 列表(JSON)")
     private String groupAppKeyIds;
 
+    /**
+     * 是否启用
+     */
     /**
      * 是否启用
      */
@@ -68,6 +86,9 @@ public class AiGroup implements Serializable {
     /**
      * 创建时间
      */
+    /**
+     * 创建时间
+     */
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
     private LocalDateTime groupCreateTime;
@@ -75,10 +96,16 @@ public class AiGroup implements Serializable {
     /**
      * 更新时间
      */
+    /**
+     * 更新时间
+     */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
     private LocalDateTime groupUpdateTime;
 
+    /**
+     * 逻辑删除标记
+     */
     /**
      * 逻辑删除标记
      */

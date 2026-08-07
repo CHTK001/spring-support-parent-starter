@@ -4,25 +4,304 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Job 模块配置属性 (骨架版)。
- * <p>
- * 仅保留当前保留类所需要的字段:模块开关、日志路径。
- * 与 sys_job 表 / 远程执行器 / 注解同步等历史能力相关的配置已移除。
- * </p>
+ * 自研调度模块配置属性。
+ *
+ * <p>配置前缀 {@code plugin.job},内部拆分为:</p>
+ * <ul>
+ *   <li>{@link Role} - 三选: SCHEDULER / EXECUTOR / SINGLE</li>
+ *   <li>{@link ClusterConfig} - 集群身份与单秒扫描间隔</li>
+ *   <li>{@link SyncConfig} - 长链同步,再拆 {@code scheduler} 与 {@code executor}</li>
+ *   <li>{@link PoolConfig} - 执行线程池</li>
+ * </ul>
+ *
+ * <h3>三模式拓扑</h3>
+ * <ul>
+ *   <li>SCHEDULER: 起 Leader 单秒扫描 + 对外暴露长链路</li>
+ *   <li>EXECUTOR: 连上 Scheduler, 消费 cmd, 上行 log</li>
+ *   <li>SINGLE: 单机模式, 不连别人, 内部 Leader + Bus + Executor 闭环</li>
+ * </ul>
+ *
+ * <h3>完整配置示例</h3>
+ * <pre>
+ * plugin:
+ *   job:
+ *     enable: true
+ *     role: SCHEDULER
+ *     node-id: ""
+ *     cluster:
+ *       group: payment
+ *       scan-interval-ms: 1000
+ *       pre-read-ms: 5000
+ *       lease-seconds: 15
+ *     sync:
+ *       scheduler:
+ *         listen-host: 0.0.0.0
+ *         listen-port: 8081
+ *       executor:
+ *         server-url: ""
+ *         reconnect-base-ms: 500
+ *         reconnect-max-ms: 30000
+ *     pool:
+ *       core-size: 8
+ *       max-size: 32
+ *       queue-size: 1000
+ * </pre>
  *
  * @author CH
- * @see JobConfiguration
+ * @since 4.0.0.42
  */
 @Data
 @ConfigurationProperties(prefix = JobProperties.PRE)
 public class JobProperties {
 
-    /** 配置前缀 */
+    /**
+     * 配置前缀
+     */
     public static final String PRE = "plugin.job";
 
-    /** 是否启用 Job 模块 */
+    /**
+     * 是否启用调度模块,默认 false
+     */
     private boolean enable = false;
 
-    /** 日志文件存储路径 (复用保留类 JobFileAppender 初始化) */
-    private String logPath = "/data/applogs/job/jobhandler";
+    /**
+     * 进程角色,默认 SCHEDULER
+     */
+    private Role role = Role.SCHEDULER;
+
+    /**
+     * 当前节点唯一标识,留空时自动按 hostName-pid 推导
+     */
+    private String nodeId;
+
+    /**
+     * 集群配置
+     */
+    private final ClusterConfig cluster = new ClusterConfig();
+
+    /**
+     * 长链同步配置 (嵌套 scheduler/executor)
+     */
+    private final SyncConfig sync = new SyncConfig();
+
+    /**
+     * 执行线程池配置
+     */
+    private final PoolConfig pool = new PoolConfig();
+
+    /**
+     * 当前角色是否为 SCHEDULER
+     *
+     * @return 是 SCHEDULER 返回 true
+     */
+    public boolean isScheduler() {
+        return role == Role.SCHEDULER;
+    }
+
+    /**
+     * 当前角色是否为 EXECUTOR
+     *
+     * @return 是 EXECUTOR 返回 true
+     */
+    public boolean isExecutor() {
+        return role == Role.EXECUTOR;
+    }
+
+    /**
+     * 当前角色是否为 SINGLE
+     *
+     * @return 是 SINGLE 返回 true
+     */
+    public boolean isSingle() {
+        return role == Role.SINGLE;
+    }
+
+    /**
+     * 进程角色枚举。
+     *
+     * @author CH
+     * @since 4.0.0.42
+     */
+    public enum Role {
+
+        /**
+         * 调度中心模式: Leader 单秒扫描 + 暴露长链同步
+         */
+        SCHEDULER,
+
+        /**
+         * 执行器模式: 连上 Scheduler, 消费 cmd, 上行 log
+         */
+        EXECUTOR,
+
+        /**
+         * 单机模式: 纯进程内闭环, 既不连别人, 也不暴露
+         */
+        SINGLE
+    }
+
+    /**
+     * 集群配置。
+     *
+     * @author CH
+     * @since 4.0.0.42
+     */
+    @Data
+    public static class ClusterConfig {
+
+        /**
+         * 默认预读时间窗 (毫秒)
+         */
+        public static final long DEFAULT_PRE_READ_MS = 5000L;
+
+        /**
+         * 默认 Leader 租约时长 (秒)
+         */
+        public static final int DEFAULT_LEASE_SECONDS = 15;
+
+        /**
+         * 默认扫描间隔 (毫秒)
+         */
+        public static final long DEFAULT_SCAN_INTERVAL_MS = 1000L;
+
+        /**
+         * 命名空间, 同一 group 内 Leader 唯一
+         */
+        private String group = "default";
+
+        /**
+         * 单秒扫描间隔, 默认 1000ms
+         */
+        private long scanIntervalMs = DEFAULT_SCAN_INTERVAL_MS;
+
+        /**
+         * 预读时间窗, 默认 5000ms
+         */
+        private long preReadMs = DEFAULT_PRE_READ_MS;
+
+        /**
+         * Leader 抢占租约时长, 默认 15s
+         */
+        private int leaseSeconds = DEFAULT_LEASE_SECONDS;
+    }
+
+    /**
+     * 长链同步配置, 内部拆分 scheduler 与 executor。
+     *
+     * @author CH
+     * @since 4.0.0.42
+     */
+    @Data
+    public static class SyncConfig {
+
+        /**
+         * 调度中心侧配置 (role=SCHEDULER 或 SINGLE 时生效, SINGLE 仅占位)
+         */
+        private final SchedulerConfig scheduler = new SchedulerConfig();
+
+        /**
+         * 执行器侧配置 (role=EXECUTOR 时生效)
+         */
+        private final ExecutorConfig executor = new ExecutorConfig();
+    }
+
+    /**
+     * Scheduler 长链配置。
+     *
+     * @author CH
+     * @since 4.0.0.42
+     */
+    @Data
+    public static class SchedulerConfig {
+
+        /**
+         * 默认监听端口
+         */
+        public static final int DEFAULT_LISTEN_PORT = 8081;
+
+        /**
+         * 监听主机
+         */
+        private String listenHost = "0.0.0.0";
+
+        /**
+         * 监听端口
+         */
+        private int listenPort = DEFAULT_LISTEN_PORT;
+    }
+
+    /**
+     * Executor 长链配置。
+     *
+     * @author CH
+     * @since 4.0.0.42
+     */
+    @Data
+    public static class ExecutorConfig {
+
+        /**
+         * 默认重连退避起点 (毫秒)
+         */
+        public static final int DEFAULT_RECONNECT_BASE_MS = 500;
+
+        /**
+         * 默认重连退避上限 (毫秒)
+         */
+        public static final int DEFAULT_RECONNECT_MAX_MS = 30000;
+
+        /**
+         * 调度中心长链 URL, 例如 ws://10.0.0.11:8081
+         */
+        private String serverUrl;
+
+        /**
+         * 重连退避起点
+         */
+        private int reconnectBaseMs = DEFAULT_RECONNECT_BASE_MS;
+
+        /**
+         * 重连退避上限
+         */
+        private int reconnectMaxMs = DEFAULT_RECONNECT_MAX_MS;
+    }
+
+    /**
+     * 执行线程池配置。
+     *
+     * @author CH
+     * @since 4.0.0.42
+     */
+    @Data
+    public static class PoolConfig {
+
+        /**
+         * 默认核心线程数
+         */
+        public static final int DEFAULT_CORE_SIZE = 8;
+
+        /**
+         * 默认最大线程数
+         */
+        public static final int DEFAULT_MAX_SIZE = 32;
+
+        /**
+         * 默认队列容量
+         */
+        public static final int DEFAULT_QUEUE_CAPACITY = 1000;
+
+        /**
+         * 核心线程数
+         */
+        private int coreSize = DEFAULT_CORE_SIZE;
+
+        /**
+         * 最大线程数
+         */
+        private int maxSize = DEFAULT_MAX_SIZE;
+
+        /**
+         * 任务队列容量
+         */
+        private int queueSize = DEFAULT_QUEUE_CAPACITY;
+    }
 }

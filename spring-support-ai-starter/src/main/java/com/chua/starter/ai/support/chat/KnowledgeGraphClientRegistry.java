@@ -25,13 +25,38 @@ import java.util.concurrent.ConcurrentMap;
 @Component
 public class KnowledgeGraphClientRegistry {
 
+    /**
+     * 配置分组
+     */
     private static final String RUNTIME_GROUP = "runtime";
 
+    /**
+     * 全局设置服务
+     */
     private final SysAiGlobalSettingService globalSettingService;
+
+    /**
+     * 知识库 Mapper
+     */
     private final SysAiKnowledgeLibraryMapper libraryMapper;
+
+    /**
+     * ChatClient 提供者
+     */
     private final ObjectProvider<ChatClient> chatClientProvider;
+
+    /**
+     * 知识库 LLM 客户端缓存
+     */
     private final ConcurrentMap<Integer, KnowledgeGraphLlmClient> clientCache = new ConcurrentHashMap<>();
 
+    /**
+     * 全参构造。
+     *
+     * @param globalSettingService 全局设置服务
+     * @param libraryMapper        知识库 Mapper
+     * @param chatClientProvider   ChatClient 提供者
+     */
     public KnowledgeGraphClientRegistry(SysAiGlobalSettingService globalSettingService,
                                         SysAiKnowledgeLibraryMapper libraryMapper,
                                         ObjectProvider<ChatClient> chatClientProvider) {
@@ -78,6 +103,9 @@ public class KnowledgeGraphClientRegistry {
 
     // ── private ─────────────────────────────────────────────────────
 
+    /**
+     * 全局默认知识图谱 LLM 客户端（懒构建）
+     */
     private volatile KnowledgeGraphLlmClient defaultClient;
 
     private KnowledgeGraphLlmClient getDefaultClient() {

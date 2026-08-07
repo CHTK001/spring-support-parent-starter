@@ -1,54 +1,36 @@
 package com.chua.starter.job.support.handler;
 
-import lombok.extern.slf4j.Slf4j;
-
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * 作业处理程序工厂
- * <p>
- * 采用单例模式，负责管理所有已注册的JobHandler实例。
- * 使用ConcurrentHashMap保证线程安全。
- * </p>
+ * 任务处理器注册表 (单例)。
+ *
+ * <p>Spring 容器启动后由 {@link JobAnnotationScanner} 注册 {@link BeanJobHandler};
+ * 运行时调度事件消费侧通过 {@link #get(String)} 查找处理器。</p>
  *
  * @author CH
- * @version 1.0.0
- * @since 2024/03/11
+ * @since 4.0.0.42
  */
-@Slf4j
-public class JobHandlerFactory {
+public final class JobHandlerFactory {
 
     /**
-     * 单例实例
+     * 注册表实例
      */
     private static final JobHandlerFactory INSTANCE = new JobHandlerFactory();
 
     /**
-     * JobHandler存储仓库
-     * key: 处理器名称
-     * value: JobHandler实例
+     * 处理器存储, key 为处理器名称
      */
-    private static final ConcurrentMap<String, JobHandler> JOB_HANDLER_REPOSITORY = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, JobHandler> handlers = new ConcurrentHashMap<>(32);
 
-    /**
-     * Job 配置存储仓库
-     * key: 处理器名称
-     * value: 配置属性映射 (scheduleType, scheduleTime, executeTimeout, misfireStrategy, ...)
-     */
-    private static final ConcurrentMap<String, Map<String, String>> JOB_CONFIG_REPOSITORY = new ConcurrentHashMap<>();
-
-    /**
-     * 私有构造函数，防止外部实例化
-     */
     private JobHandlerFactory() {
     }
 
     /**
-     * 获取工厂单例实例
+     * 获取单例实例。
      *
      * @return 工厂实例
      */
@@ -57,88 +39,79 @@ public class JobHandlerFactory {
     }
 
     /**
-     * 注册作业处理器
-     * <p>
-     * 如果处理器名称已存在，则不会覆盖原有处理器。
-     * </p>
+     * 注册处理器。 同名处理器已存在时覆盖并返回旧值。
      *
-     * @param name       处理器名称
-     * @param jobHandler 作业处理程序实例
-     * @return 如果名称已存在返回原有处理器，否则返回null
+     * @param handler 处理器实例
+     * @return 被覆盖的旧处理器, 允许为 null
      */
-    public JobHandler register(String name, JobHandler jobHandler) {
-        log.debug("注册JobHandler: {}", name);
-        JobHandler existing = JOB_HANDLER_REPOSITORY.putIfAbsent(name, jobHandler);
-        if (existing != null) {
-            log.warn("JobHandler已存在, 跳过注册: {}", name);
+    public JobHandler register(JobHandler handler) {
+        if (handler == null) {
+            throw new IllegalArgumentException("handler 不能为空");
         }
-        return existing;
+        return handlers.put(handler.name(), handler);
     }
 
     /**
-     * 根据名称获取处理器
+     * 按名称注销处理器。
      *
      * @param name 处理器名称
-     * @return JobHandler实例，如果不存在返回null
+     * @return 被注销的处理器, 允许为 null
+     */
+    public JobHandler deregister(String name) {
+        return handlers.remove(name);
+    }
+
+    /**
+     * 按名称获取处理器。
+     *
+     * @param name 处理器名称
+     * @return 处理器实例, 不存在时为 null
      */
     public JobHandler get(String name) {
-        return JOB_HANDLER_REPOSITORY.get(name);
+        return handlers.get(name);
     }
 
     /**
-     * 获取所有已注册的处理器名称
-     *
-     * @return 处理器名称集合
-     */
-    public Set<String> keys() {
-        return JOB_HANDLER_REPOSITORY.keySet();
-    }
-
-    /**
-     * 获取已注册处理器数量
-     *
-     * @return 处理器数量
-     */
-    public int size() {
-        return JOB_HANDLER_REPOSITORY.size();
-    }
-
-    /**
-     * 判断处理器是否已注册
+     * 是否已注册。
      *
      * @param name 处理器名称
-     * @return 如果已注册返回true
+     * @return 已注册返回 true
      */
     public boolean contains(String name) {
-        return JOB_HANDLER_REPOSITORY.containsKey(name);
+        return handlers.containsKey(name);
     }
 
     /**
-     * 注册 Job 配置
+     * 所有处理器名称。
      *
-     * @param name   处理器名称
-     * @param config 配置属性映射
+     * @return 名称集合
      */
-    public static void registerConfig(String name, Map<String, String> config) {
-        JOB_CONFIG_REPOSITORY.put(name, config);
+    public Set<String> names() {
+        return Set.copyOf(handlers.keySet());
     }
 
     /**
-     * 获取 Job 配置
+     * 所有处理器实例 (只读快照)。
      *
-     * @param name 处理器名称
-     * @return 配置属性映射，不存在返回 null
+     * @return 处理器集合
      */
-    public static Map<String, String> getConfig(String name) {
-        return JOB_CONFIG_REPOSITORY.get(name);
+    public Collection<JobHandler> all() {
+        return java.util.Collections.unmodifiableCollection(handlers.values());
     }
 
     /**
-     * 获取所有 Job 配置
+     * 已注册数量。
      *
-     * @return 处理器名称 -> 配置属性映射
+     * @return 数量
      */
-    public static Map<String, Map<String, String>> getAllConfigs() {
-        return new HashMap<>(JOB_CONFIG_REPOSITORY);
+    public int size() {
+        return handlers.size();
+    }
+
+    /**
+     * 清空注册表, 测试场景使用。
+     */
+    public void clear() {
+        handlers.clear();
     }
 }

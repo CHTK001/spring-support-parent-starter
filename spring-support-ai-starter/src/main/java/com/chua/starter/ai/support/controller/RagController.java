@@ -1,6 +1,9 @@
 package com.chua.starter.ai.support.controller;
 
-import com.chua.common.support.ai.rag.*;
+import com.chua.common.support.ai.rag.RagClient;
+import com.chua.common.support.ai.rag.RagDocument;
+import com.chua.common.support.ai.rag.RagResponse;
+import com.chua.common.support.ai.rag.VectorService;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.configuration.RagClientManager;
@@ -9,11 +12,23 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * RAG REST 控制器——基于 common-starter 的 RagClient + RagDocumentLifeCycle 真实实现。
@@ -27,7 +42,14 @@ import java.util.*;
 @Tag(name = "RAG 知识库", description = "RAG 文档管理、问答和配置接口")
 public class RagController {
 
+    /**
+     * 全局 RAG 客户端管理器
+     */
     private final RagClientManager ragClientManager;
+
+    /**
+     * RAG 配置属性
+     */
     private final RagProperties ragProperties;
 
     public RagController(RagClientManager ragClientManager, RagProperties ragProperties) {
@@ -274,3 +296,6 @@ public class RagController {
         }
     }
 }
+
+
+

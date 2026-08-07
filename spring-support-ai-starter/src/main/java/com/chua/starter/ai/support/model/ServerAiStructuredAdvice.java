@@ -17,9 +17,28 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ServerAiStructuredAdvice {
 
+    /**
+     * 分析摘要
+     */
     private String summary;
+
+    /**
+     * 风险等级
+     */
     private String riskLevel;
+
+    /**
+     * 处置建议
+     */
     private String suggestion;
+
+    /**
+     * 提供者
+     */
     private String provider;
+
+    /**
+     * 模型名称
+     */
     private String model;
 }

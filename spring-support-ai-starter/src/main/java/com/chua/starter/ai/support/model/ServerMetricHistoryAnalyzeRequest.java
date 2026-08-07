@@ -17,11 +17,38 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ServerMetricHistoryAnalyzeRequest {
 
+    /**
+     * 服务器名称
+     */
     private String serverName;
+
+    /**
+     * 服务器编码
+     */
     private String serverCode;
+
+    /**
+     * 主机地址
+     */
     private String host;
+
+    /**
+     * 指标类型
+     */
     private String metricType;
+
+    /**
+     * 采样数量
+     */
     private Integer sampleCount;
+
+    /**
+     * 历史指标摘要
+     */
     private String historySummary;
+
+    /**
+     * 告警列表
+     */
     private java.util.List<String> alerts;
 }

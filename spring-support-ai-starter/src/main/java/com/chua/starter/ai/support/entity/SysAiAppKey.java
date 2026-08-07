@@ -1,6 +1,10 @@
 package com.chua.starter.ai.support.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -103,21 +107,40 @@ public class SysAiAppKey {
      */
     private String sysAiAppKeyRemark;
 
+    /**
+     * 创建人名称
+     */
     @TableField(fill = FieldFill.INSERT)
     private String createName;
 
+    /**
+     * 创建人 ID
+     */
     @TableField(fill = FieldFill.INSERT)
     private Integer createBy;
 
+    /**
+     * 创建时间
+     */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
+    /**
+     * 更新时间
+     */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
+    /**
+     * 更新人名称
+     */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private String updateName;
 
+    /**
+     * 更新人 ID
+     */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private Integer updateBy;
 }
+

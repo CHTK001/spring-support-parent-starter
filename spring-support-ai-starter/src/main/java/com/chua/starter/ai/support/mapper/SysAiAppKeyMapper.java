@@ -7,10 +7,28 @@ import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
+/**
+ * AI AppKey Mapper。
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 @Mapper
 public interface SysAiAppKeyMapper extends BaseMapper<SysAiAppKey> {
 
+    /**
+     * 按分组 ID 查询 AppKey 列表。
+     *
+     * @param groupId 分组 ID
+     * @return AppKey 列表
+     */
     List<SysAiAppKey> selectByGroupId(@Param("groupId") Integer groupId);
 
+    /**
+     * 按 AppKey 查询。
+     *
+     * @param appKey AppKey
+     * @return AppKey 实体，不存在时返回 null
+     */
     SysAiAppKey selectByAppKey(@Param("appKey") String appKey);
 }

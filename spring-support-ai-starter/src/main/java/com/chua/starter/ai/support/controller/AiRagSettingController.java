@@ -47,6 +47,9 @@ import java.util.stream.Collectors;
 @Tag(name = "RAG 配置", description = "RAG 配置下拉数据源")
 public class AiRagSettingController {
 
+    /**
+     * AI 模型服务
+     */
     private final AiModelService aiModelService;
 
     /**

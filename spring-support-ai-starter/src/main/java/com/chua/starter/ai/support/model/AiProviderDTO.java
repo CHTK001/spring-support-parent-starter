@@ -47,7 +47,7 @@ public class AiProviderDTO implements Serializable {
     private String baseUrl;
 
     /**
-     * 提供商 API Key
+     * API Key
      */
     @Schema(description = "API Key")
     private String apiKey;

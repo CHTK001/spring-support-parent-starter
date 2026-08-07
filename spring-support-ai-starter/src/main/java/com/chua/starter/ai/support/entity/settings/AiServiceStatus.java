@@ -25,10 +25,16 @@ public class AiServiceStatus implements Serializable {
     /**
      * 状态记录 ID
      */
+    /**
+     * 状态记录 ID
+     */
     @TableId(value = "sys_ai_service_status_id", type = IdType.AUTO)
     @Schema(description = "状态记录 ID")
     private Long statusId;
 
+    /**
+     * 服务名称
+     */
     /**
      * 服务名称
      */
@@ -39,10 +45,16 @@ public class AiServiceStatus implements Serializable {
     /**
      * 是否运行中
      */
+    /**
+     * 是否运行中
+     */
     @TableField("sys_ai_service_status_running")
     @Schema(description = "是否运行中")
     private Boolean statusRunning;
 
+    /**
+     * 进程 PID
+     */
     /**
      * 进程 PID
      */
@@ -53,6 +65,9 @@ public class AiServiceStatus implements Serializable {
     /**
      * 启动时间
      */
+    /**
+     * 启动时间
+     */
     @TableField("sys_ai_service_status_start_time")
     @Schema(description = "启动时间")
     private LocalDateTime statusStartTime;
@@ -60,10 +75,16 @@ public class AiServiceStatus implements Serializable {
     /**
      * 运行时长（秒）
      */
+    /**
+     * 运行时长(秒)
+     */
     @TableField("sys_ai_service_status_uptime_sec")
     @Schema(description = "运行时长(秒)")
     private Long statusUptimeSec;
 
+    /**
+     * 更新时间
+     */
     /**
      * 更新时间
      */

@@ -1,6 +1,11 @@
 package com.chua.starter.ai.support.entity.settings;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -17,60 +22,104 @@ import java.time.LocalDateTime;
 @Schema(name = "AI 模型定义")
 public class AiModel implements Serializable {
 
+    /**
+     * 模型主键
+     */
     @TableId(value = "sys_ai_model_id", type = IdType.AUTO)
     @Schema(description = "模型主键")
     private Long modelId;
 
+    /**
+     * 模型显示名称
+     */
     @TableField("sys_ai_model_name")
     @Schema(description = "模型显示名称")
     private String modelName;
 
+    /**
+     * 模型标识（gpt-4o, deepseek-chat）
+     */
     @TableField("sys_ai_model_code")
     @Schema(description = "模型标识（gpt-4o, deepseek-chat）")
     private String modelCode;
 
+    /**
+     * 关联供应商 ID
+     */
     @TableField("sys_ai_model_provider_id")
     @Schema(description = "关联供应商 ID")
     private Long modelProviderId;
 
+    /**
+     * 能力标签（逗号分隔: chat,vision,think,search）
+     */
     @TableField("sys_ai_model_capabilities")
     @Schema(description = "能力标签（逗号分隔: chat,vision,think,search）")
     private String modelCapabilities;
 
+    /**
+     * 模型描述
+     */
     @TableField("sys_ai_model_description")
     @Schema(description = "模型描述")
     private String modelDescription;
 
+    /**
+     * 是否启用
+     */
     @TableField("sys_ai_model_enabled")
     @Schema(description = "是否启用")
     private Boolean modelEnabled;
 
+    /**
+     * 排序值
+     */
     @TableField("sys_ai_model_sort")
     @Schema(description = "排序值")
     private Integer modelSort;
 
+    /**
+     * 创建时间
+     */
     @TableField(value = "sys_ai_model_create_time", fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
     private LocalDateTime modelCreateTime;
 
+    /**
+     * 更新时间
+     */
     @TableField(value = "sys_ai_model_update_time", fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
     private LocalDateTime modelUpdateTime;
 
+    /**
+     * 逻辑删除标记
+     */
     @TableField("sys_ai_model_deleted")
     @TableLogic
     @Schema(description = "逻辑删除标记")
     private Integer modelDeleted;
 
+    /**
+     * 输入单价（每 1k tokens）
+     */
     @TableField("sys_ai_model_input_price")
     @Schema(description = "输入单价（每 1k tokens）")
     private java.math.BigDecimal modelInputPrice;
 
+    /**
+     * 输出单价（每 1k tokens）
+     */
     @TableField("sys_ai_model_output_price")
     @Schema(description = "输出单价（每 1k tokens）")
     private java.math.BigDecimal modelOutputPrice;
 
+    /**
+     * 缓存命中单价（每 1k tokens）
+     */
     @TableField("sys_ai_model_cache_price")
     @Schema(description = "缓存命中单价（每 1k tokens）")
     private java.math.BigDecimal modelCachePrice;
 }
+
+

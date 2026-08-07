@@ -40,7 +40,7 @@ public class AiAppKeyDTO implements Serializable {
     private Long provider;
 
     /**
-     * 供应商名称（只读展示）
+     * 供应商名称
      */
     @Schema(description = "供应商名称")
     private String providerName;
@@ -58,7 +58,7 @@ public class AiAppKeyDTO implements Serializable {
     private Long groupId;
 
     /**
-     * 分组名称（只读展示）
+     * 分组名称
      */
     @Schema(description = "分组名称")
     private String groupName;
@@ -70,7 +70,7 @@ public class AiAppKeyDTO implements Serializable {
     private Long useCount;
 
     /**
-     * 次数上限（null 表示不限）
+     * 次数上限
      */
     @Schema(description = "次数上限")
     private Long maxUse;

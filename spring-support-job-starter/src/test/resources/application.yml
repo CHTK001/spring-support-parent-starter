@@ -1,0 +1,25 @@
+spring:
+  main:
+    banner-mode: off
+    web-application-type: none
+  main.banner-mode: off
+
+plugin:
+  job:
+    enable: true
+    role: SINGLE
+    cluster:
+      group: test-single
+      scan-interval-ms: 200
+      pre-read-ms: 1000
+      lease-seconds: 60
+    pool:
+      core-size: 2
+      max-size: 4
+      queue-size: 64
+
+logging:
+  level:
+    root: WARN
+    com.chua.starter.job: INFO
+    com.chua.starter.job.support: INFO

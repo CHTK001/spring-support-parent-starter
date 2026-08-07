@@ -39,7 +39,8 @@ public class AiBalanceServiceImpl implements AiBalanceService {
     @Override
     public boolean checkBalance(Integer groupId) {
         if (groupId == null) {
-            return true; // 无分组 = 系统内部，不限余额
+            // 无分组 = 系统内部，不限余额
+            return true;
         }
         var tokens = sysAiTokenService.listByGroupId(groupId);
         if (tokens == null || tokens.isEmpty()) {
@@ -120,3 +121,4 @@ public class AiBalanceServiceImpl implements AiBalanceService {
         return getAvailableBalance(groupId);
     }
 }
+

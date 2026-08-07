@@ -30,10 +30,16 @@ public class AiAppKey extends SysBase {
     /**
      * AppKey 主键 ID
      */
+    /**
+     * AppKey 主键 ID
+     */
     @TableId(value = "sys_ai_app_key_id", type = IdType.AUTO)
     @Schema(description = "AppKey 主键 ID")
     private Long appKeyId;
 
+    /**
+     * AppKey 名称
+     */
     /**
      * AppKey 名称
      */
@@ -44,10 +50,16 @@ public class AiAppKey extends SysBase {
     /**
      * AppKey 密钥值
      */
+    /**
+     * AppKey 密钥值
+     */
     @TableField("sys_ai_app_key_value")
     @Schema(description = "AppKey 密钥值")
     private String appKeyValue;
 
+    /**
+     * 关联供应商 ID
+     */
     /**
      * 关联供应商 ID
      */
@@ -58,10 +70,16 @@ public class AiAppKey extends SysBase {
     /**
      * 限定使用的模型（可空）
      */
+    /**
+     * 限定使用的模型
+     */
     @TableField("sys_ai_app_key_model")
     @Schema(description = "限定使用的模型")
     private String appKeyModel;
 
+    /**
+     * 绑定分组 ID
+     */
     /**
      * 绑定分组 ID
      */
@@ -72,10 +90,16 @@ public class AiAppKey extends SysBase {
     /**
      * 是否启用
      */
+    /**
+     * 是否启用
+     */
     @TableField("sys_ai_app_key_enabled")
     @Schema(description = "是否启用")
     private Boolean appKeyEnabled;
 
+    /**
+     * 已使用次数
+     */
     /**
      * 已使用次数
      */
@@ -86,6 +110,9 @@ public class AiAppKey extends SysBase {
     /**
      * 次数上限（null 表示不限）
      */
+    /**
+     * 次数上限
+     */
     @TableField("sys_ai_app_key_max_use")
     @Schema(description = "次数上限")
     private Long appKeyMaxUse;
@@ -93,10 +120,16 @@ public class AiAppKey extends SysBase {
     /**
      * 过期时间（null 表示不限）
      */
+    /**
+     * 过期时间
+     */
     @TableField("sys_ai_app_key_expire_datetime")
     @Schema(description = "过期时间")
     private LocalDateTime appKeyExpireTime;
 
+    /**
+     * 逻辑删除标记
+     */
     /**
      * 逻辑删除标记
      */

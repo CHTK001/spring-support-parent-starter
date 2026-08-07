@@ -24,10 +24,16 @@ public class AiUsage implements Serializable {
     /**
      * 用量主键 ID
      */
+    /**
+     * 用量主键 ID
+     */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "用量主键 ID")
     private Long usageId;
 
+    /**
+     * 模型名称
+     */
     /**
      * 模型名称
      */
@@ -38,10 +44,16 @@ public class AiUsage implements Serializable {
     /**
      * 请求次数（无独立列，统计时按明细行数计算）
      */
+    /**
+     * 请求次数
+     */
     @TableField(exist = false)
     @Schema(description = "请求次数")
     private Long usageRequestCount;
 
+    /**
+     * 提示 tokens
+     */
     /**
      * 提示 tokens
      */
@@ -52,6 +64,9 @@ public class AiUsage implements Serializable {
     /**
      * 生成 tokens
      */
+    /**
+     * 生成 tokens
+     */
     @TableField("completion_tokens")
     @Schema(description = "生成 tokens")
     private Long usageCompletionTokens;
@@ -59,10 +74,16 @@ public class AiUsage implements Serializable {
     /**
      * 总 tokens
      */
+    /**
+     * 总 tokens
+     */
     @TableField("total_tokens")
     @Schema(description = "总 tokens")
     private Long usageTotalTokens;
 
+    /**
+     * 统计时间戳
+     */
     /**
      * 统计时间戳
      */

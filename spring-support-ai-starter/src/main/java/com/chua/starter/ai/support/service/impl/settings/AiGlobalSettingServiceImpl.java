@@ -89,34 +89,38 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
     /**
      * 更新全局设置，非空字段覆盖写入键值表。
      *
+     * <p>为规避 {@code replace} 先删后插导致的字段丢失，未提交（null）字段
+     * 回退为当前已生效的旧值，保证每次写入全量字段集。</p>
+     *
      * @param setting 全局设置 DTO
      * @return 更新后的全局设置 DTO
      */
     @Override
     @Transactional
     public AiGlobalSettingDTO update(AiGlobalSettingDTO setting) {
+        AiGlobalSettingDTO old = get();
         Map<String, Object> request = new LinkedHashMap<>();
         request.put("group", GROUP);
         List<Map<String, Object>> fields = new ArrayList<>();
-        putIfNotNull(fields, "chat_client_enabled", setting.getChatClientEnabled());
-        putIfNotNull(fields, "enable_usage_analysis", setting.getEnableUsageAnalysis());
-        putIfNotNull(fields, "usage_report_interval", setting.getUsageReportInterval());
-        putIfNotNull(fields, "default_model", setting.getDefaultModel());
-        putIfNotNull(fields, "temperature", setting.getTemperature());
-        putIfNotNull(fields, "max_tokens", setting.getMaxTokens());
-        putIfNotNull(fields, "timeout", setting.getTimeout());
-        putIfNotNull(fields, "enable_cache", setting.getEnableCache());
-        putIfNotNull(fields, "stream", setting.getStream());
-        putIfNotNull(fields, "system_prompt", setting.getSystemPrompt());
-        putIfNotNull(fields, "rag_embedding_model", setting.getRagEmbeddingModel());
-        putIfNotNull(fields, "rag_llm_model", setting.getRagLlmModel());
-        putIfNotNull(fields, "rag_ocr_model", setting.getRagOcrModel());
-        putIfNotNull(fields, "rag_upload_dir", setting.getRagUploadDir());
-        putIfNotNull(fields, "rag_vector_storage", setting.getRagVectorStorage());
-        putIfNotNull(fields, "rag_system_prompt", setting.getRagSystemPrompt());
-        putIfNotNull(fields, "rag_chunk_size", setting.getRagChunkSize());
-        putIfNotNull(fields, "rag_chunk_overlap", setting.getRagChunkOverlap());
-        putIfNotNull(fields, "rag_splitter", setting.getRagSplitter());
+        putIfNotNull(fields, "chat_client_enabled", setting.getChatClientEnabled(), old.getChatClientEnabled());
+        putIfNotNull(fields, "enable_usage_analysis", setting.getEnableUsageAnalysis(), old.getEnableUsageAnalysis());
+        putIfNotNull(fields, "usage_report_interval", setting.getUsageReportInterval(), old.getUsageReportInterval());
+        putIfNotNull(fields, "default_model", setting.getDefaultModel(), old.getDefaultModel());
+        putIfNotNull(fields, "temperature", setting.getTemperature(), old.getTemperature());
+        putIfNotNull(fields, "max_tokens", setting.getMaxTokens(), old.getMaxTokens());
+        putIfNotNull(fields, "timeout", setting.getTimeout(), old.getTimeout());
+        putIfNotNull(fields, "enable_cache", setting.getEnableCache(), old.getEnableCache());
+        putIfNotNull(fields, "stream", setting.getStream(), old.getStream());
+        putIfNotNull(fields, "system_prompt", setting.getSystemPrompt(), old.getSystemPrompt());
+        putIfNotNull(fields, "rag_embedding_model", setting.getRagEmbeddingModel(), old.getRagEmbeddingModel());
+        putIfNotNull(fields, "rag_llm_model", setting.getRagLlmModel(), old.getRagLlmModel());
+        putIfNotNull(fields, "rag_ocr_model", setting.getRagOcrModel(), old.getRagOcrModel());
+        putIfNotNull(fields, "rag_upload_dir", setting.getRagUploadDir(), old.getRagUploadDir());
+        putIfNotNull(fields, "rag_vector_storage", setting.getRagVectorStorage(), old.getRagVectorStorage());
+        putIfNotNull(fields, "rag_system_prompt", setting.getRagSystemPrompt(), old.getRagSystemPrompt());
+        putIfNotNull(fields, "rag_chunk_size", setting.getRagChunkSize(), old.getRagChunkSize());
+        putIfNotNull(fields, "rag_chunk_overlap", setting.getRagChunkOverlap(), old.getRagChunkOverlap());
+        putIfNotNull(fields, "rag_splitter", setting.getRagSplitter(), old.getRagSplitter());
         request.put("fields", fields);
         sysAiGlobalSettingService.replace(request);
         log.debug("[AiGlobalSetting] 全局配置已保存到键值表 {}", GROUP);
@@ -136,15 +140,21 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
     }
 
     /**
-     * 非空值写入字段列表。
+     * 非空值写入字段列表；前端未提交（null）时回退旧值，避免 replace 先删后插丢字段。
+     *
+     * @param fields      字段列表
+     * @param field       字段名
+     * @param value       新值
+     * @param fallback    旧值（前端未提交时使用）
      */
-    private void putIfNotNull(List<Map<String, Object>> fields, String field, Object value) {
-        if (value == null) {
+    private void putIfNotNull(List<Map<String, Object>> fields, String field, Object value, Object fallback) {
+        Object effective = value != null ? value : fallback;
+        if (effective == null) {
             return;
         }
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("field", field);
-        item.put("value", String.valueOf(value));
+        item.put("value", String.valueOf(effective));
         item.put("valueType", "STRING");
         item.put("description", field);
         fields.add(item);

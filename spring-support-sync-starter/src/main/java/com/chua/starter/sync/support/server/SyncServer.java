@@ -114,6 +114,36 @@ public class SyncServer implements InitializingBean, DisposableBean {
         }
     }
 
+    /**
+     * 注册主题处理器（业务 SPI 版本）。
+     * <p>
+     * 与客户端 {@link com.chua.starter.sync.support.client.SyncClient#registerHandler(String, com.chua.starter.sync.support.spi.SyncMessageHandler)}
+     * 暴露一致的处理器注册入口，内部将 SPI 处理器适配到底层会话分发，
+     * 并注入来源客户端标识供业务处理器反查会话上下文。
+     * </p>
+     *
+     * @param topic   主题
+     * @param handler 业务处理器
+     */
+    public void registerHandler(String topic, com.chua.starter.sync.support.spi.SyncMessageHandler handler) {
+        if (topic == null || topic.isBlank() || handler == null) {
+            return;
+        }
+
+        com.chua.common.support.network.sync.SyncMessageHandler adapter = (t, message) -> {
+            Map<String, Object> dataMap = new HashMap<>();
+            if (message instanceof Map<?, ?> rawMap) {
+                rawMap.forEach((key, value) -> dataMap.put(String.valueOf(key), value));
+            } else {
+                dataMap.put("data", message);
+            }
+            Object source = dataMap.remove(SyncServerInstance.SYNC_MESSAGE_SOURCE_CLIENT_ID);
+            String sessionId = source == null ? null : String.valueOf(source);
+            handler.handle(topic, sessionId, dataMap);
+        };
+        registerHandler(topic, adapter);
+    }
+
     public void addConnectListener(BiConsumer<String, ClientInfo> listener) {
         connectListeners.add(listener);
     }

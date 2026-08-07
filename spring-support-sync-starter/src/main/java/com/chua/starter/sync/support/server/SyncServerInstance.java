@@ -1,5 +1,6 @@
 package com.chua.starter.sync.support.server;
 
+import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.network.server.ServerSetting;
 import com.chua.common.support.network.server.SyncServer;
 import com.chua.common.support.network.server.SyncServerListener;
@@ -7,6 +8,7 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.network.sync.SyncMessageHandler;
 import com.chua.starter.sync.support.pojo.ClientInfo;
 import com.chua.starter.sync.support.properties.SyncProperties;
+import com.chua.starter.sync.support.security.SyncCryptoUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -131,6 +133,7 @@ public class SyncServerInstance {
         }
         if (syncServer == null) {
             syncServer = createUnderlyingServer();
+            setSyncServer(syncServer);
         }
         try {
             syncServer.start();
@@ -178,14 +181,14 @@ public class SyncServerInstance {
         if (syncServer == null || !running) {
             return;
         }
-        syncServer.send(sessionId, topic, data);
+        syncServer.send(sessionId, topic, SyncCryptoUtils.encrypt(data, syncProperties));
     }
 
     public void broadcast(String topic, Object data) {
         if (syncServer == null || !running) {
             return;
         }
-        syncServer.publish(topic, data);
+        syncServer.publish(topic, SyncCryptoUtils.encrypt(data, syncProperties));
     }
 
     public void broadcastToOthers(String excludeClientId, String topic, Object data) {
@@ -193,9 +196,10 @@ public class SyncServerInstance {
             return;
         }
         List<String> clients = syncServer.getConnectedClients();
+        Object outbound = SyncCryptoUtils.encrypt(data, syncProperties);
         for (String clientId : clients) {
             if (!Objects.equals(clientId, excludeClientId)) {
-                syncServer.send(clientId, topic, data);
+                syncServer.send(clientId, topic, outbound);
             }
         }
     }
@@ -250,6 +254,9 @@ public class SyncServerInstance {
 
     @SuppressWarnings("unchecked")
     private void handleServerMessage(String clientId, String topic, Object data) {
+        data = SyncCryptoUtils.decrypt(parseIfNeeded(data), syncProperties);
+        log.info("[SyncServer:{}] 收到消息: clientId={}, topic={}, data={}",
+                instanceConfig.getName(), clientId, topic, data);
         if (handleSystemTopic(clientId, topic, data)) {
             return;
         }
@@ -311,9 +318,9 @@ public class SyncServerInstance {
                 copyMapToClientInfo((Map<String, Object>) map, clientInfo);
             }
             clientInfoMap.put(clientId, clientInfo);
-            log.info("[SyncServer:{}] 客户端注册: clientId={}, app={}, ip={}:{}",
+            log.info("[SyncServer:{}] 客户端注册: clientId={}, app={}, ip={}:{}, metadata={}",
                     instanceConfig.getName(), clientId, clientInfo.getClientApplicationName(),
-                    clientInfo.getClientIpAddress(), clientInfo.getClientPort());
+                    clientInfo.getClientIpAddress(), clientInfo.getClientPort(), clientInfo.getClientMetadata());
             for (BiConsumer<String, ClientInfo> listener : connectListeners) {
                 try {
                     listener.accept(clientId, clientInfo);
@@ -338,6 +345,14 @@ public class SyncServerInstance {
         }
         if (map.containsKey("clientId")) {
             clientInfo.setClientId(String.valueOf(map.get("clientId")));
+        }
+        if (map.containsKey("clientMetadata")) {
+            Object metadata = map.get("clientMetadata");
+            if (metadata instanceof Map<?, ?> rawMetadata) {
+                Map<String, Object> converted = new HashMap<>();
+                rawMetadata.forEach((key, value) -> converted.put(String.valueOf(key), value));
+                clientInfo.setClientMetadata(converted);
+            }
         }
     }
 
@@ -376,5 +391,26 @@ public class SyncServerInstance {
             return true;
         }
         return Objects.equals(actualTopic, defaultTopic);
+    }
+
+    /**
+     * 将传输层收到的字符串消息解析为结构化对象（JSON -> Map）。
+     * <p>
+     * 底层协议（如 WebSocket）按文本帧传输，消息体为 JSON 字符串，
+     * 解析后方可与加密解密逻辑统一处理。
+     * </p>
+     *
+     * @param message 收到的消息
+     * @return 解析后的对象，无法解析时原样返回
+     */
+    private Object parseIfNeeded(Object message) {
+        if (!(message instanceof String text) || text.isBlank()) {
+            return message;
+        }
+        try {
+            return Json.fromJson(text, Map.class);
+        } catch (Exception e) {
+            return message;
+        }
     }
 }

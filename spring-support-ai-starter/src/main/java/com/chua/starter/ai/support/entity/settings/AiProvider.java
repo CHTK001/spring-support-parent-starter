@@ -25,12 +25,18 @@ public class AiProvider extends SysBase {
     /**
      * 供应商主键 ID
      */
+    /**
+     * 供应商主键 ID
+     */
     @TableId(value = "sys_ai_provider_id", type = IdType.AUTO)
     @Schema(description = "供应商主键 ID")
     private Long providerId;
 
     /**
      * 供应商名称（如 OpenAI、Claude）
+     */
+    /**
+     * 供应商名称
      */
     @TableField("sys_ai_provider_name")
     @Schema(description = "供应商名称")
@@ -39,10 +45,16 @@ public class AiProvider extends SysBase {
     /**
      * 供应商类型（openai / anthropic / gemini / qwen / custom）
      */
+    /**
+     * 供应商类型
+     */
     @TableField("sys_ai_provider_type")
     @Schema(description = "供应商类型")
     private String providerType;
 
+    /**
+     * 接入 Base URL
+     */
     /**
      * 接入 Base URL
      */
@@ -53,10 +65,16 @@ public class AiProvider extends SysBase {
     /**
      * 提供商 API Key
      */
+    /**
+     * API Key
+     */
     @TableField("sys_ai_provider_api_key")
     @Schema(description = "API Key")
     private String providerApiKey;
 
+    /**
+     * Logo 图片地址
+     */
     /**
      * Logo 图片地址
      */
@@ -67,6 +85,9 @@ public class AiProvider extends SysBase {
     /**
      * 可用模型列表（JSON 字符串）
      */
+    /**
+     * 可用模型列表(JSON)
+     */
     @TableField("sys_ai_provider_models")
     @Schema(description = "可用模型列表(JSON)")
     private String providerModels;
@@ -74,10 +95,16 @@ public class AiProvider extends SysBase {
     /**
      * 是否启用
      */
+    /**
+     * 是否启用
+     */
     @TableField("sys_ai_provider_enabled")
     @Schema(description = "是否启用")
     private Boolean providerEnabled;
 
+    /**
+     * 逻辑删除标记
+     */
     /**
      * 逻辑删除标记
      */

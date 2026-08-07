@@ -42,6 +42,15 @@ public class SyncProperties {
     private ClientConfig client = new ClientConfig();
 
     /**
+     * 同步消息传输加密密钥。
+     * <p>
+     * 服务端与客户端需配置一致。配置后，消息 payload 在传输层自动 AES-GCM 加密，
+     * 使用方（业务 handler）无感知；未配置时明文传输（向后兼容）。
+     * </p>
+     */
+    private String cryptoSecret;
+
+    /**
      * 数据同步交换配置
      */
     private DataSyncConfig dataSync = new DataSyncConfig();
@@ -97,7 +106,16 @@ public class SyncProperties {
         target.server = ServerConfig.copyOf(source.server);
         target.client = ClientConfig.copyOf(source.client);
         target.dataSync = DataSyncConfig.copyOf(source.dataSync);
+        target.cryptoSecret = source.cryptoSecret;
         return target;
+    }
+
+    public String getCryptoSecret() {
+        return cryptoSecret;
+    }
+
+    public void setCryptoSecret(String cryptoSecret) {
+        this.cryptoSecret = cryptoSecret;
     }
 
     // ==================== 服务端配置 ====================

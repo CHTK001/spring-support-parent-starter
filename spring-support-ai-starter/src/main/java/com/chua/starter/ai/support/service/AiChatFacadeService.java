@@ -7,12 +7,36 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * AI 对话门面服务接口。
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 public interface AiChatFacadeService {
 
+    /**
+     * 同步对话调用。
+     *
+     * @param request 对话请求
+     * @return 对话结果
+     */
     Map<String, Object> call(AiChatRequest request);
 
+    /**
+     * 流式对话调用。
+     *
+     * @param request 对话请求
+     * @return SSE 发射器
+     */
     org.springframework.web.servlet.mvc.method.annotation.SseEmitter stream(AiChatRequest request);
 
+    /**
+     * 获取分组可用模型列表。
+     *
+     * @param groupId 分组 ID
+     * @return 模型列表
+     */
     default List<String> models(Integer groupId) {
         return Collections.emptyList();
     }

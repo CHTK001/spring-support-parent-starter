@@ -26,10 +26,16 @@ public class AiAlert implements Serializable {
     /**
      * 告警规则 ID
      */
+    /**
+     * 告警规则 ID
+     */
     @TableId(value = "sys_ai_alert_id", type = IdType.AUTO)
     @Schema(description = "告警规则 ID")
     private Long alertId;
 
+    /**
+     * 告警规则名称
+     */
     /**
      * 告警规则名称
      */
@@ -40,10 +46,16 @@ public class AiAlert implements Serializable {
     /**
      * 关联 AppKey ID（0 表示全局）
      */
+    /**
+     * 关联 AppKey ID
+     */
     @TableField("sys_ai_alert_app_key_id")
     @Schema(description = "关联 AppKey ID")
     private Long alertAppKeyId;
 
+    /**
+     * 告警条件（表达式）
+     */
     /**
      * 告警条件（表达式）
      */
@@ -54,6 +66,9 @@ public class AiAlert implements Serializable {
     /**
      * 告警阈值
      */
+    /**
+     * 告警阈值
+     */
     @TableField("sys_ai_alert_threshold")
     @Schema(description = "告警阈值")
     private Long alertThreshold;
@@ -61,10 +76,16 @@ public class AiAlert implements Serializable {
     /**
      * 通知渠道（JSON 数组字符串）
      */
+    /**
+     * 通知渠道(JSON)
+     */
     @TableField("sys_ai_alert_channels")
     @Schema(description = "通知渠道(JSON)")
     private String alertChannels;
 
+    /**
+     * 是否启用
+     */
     /**
      * 是否启用
      */
@@ -75,6 +96,9 @@ public class AiAlert implements Serializable {
     /**
      * 创建时间
      */
+    /**
+     * 创建时间
+     */
     @TableField(value = "sys_ai_alert_create_time", fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
     private LocalDateTime alertCreateTime;
@@ -82,10 +106,16 @@ public class AiAlert implements Serializable {
     /**
      * 更新时间
      */
+    /**
+     * 更新时间
+     */
     @TableField(value = "sys_ai_alert_update_time", fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
     private LocalDateTime alertUpdateTime;
 
+    /**
+     * 逻辑删除标记
+     */
     /**
      * 逻辑删除标记
      */

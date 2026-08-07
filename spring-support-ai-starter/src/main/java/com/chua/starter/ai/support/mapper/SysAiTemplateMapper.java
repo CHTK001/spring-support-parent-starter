@@ -4,6 +4,12 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.ai.support.entity.SysAiTemplate;
 import org.apache.ibatis.annotations.Mapper;
 
+/**
+ * AI 模板 Mapper。
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 @Mapper
 public interface SysAiTemplateMapper extends BaseMapper<SysAiTemplate> {
 }

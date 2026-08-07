@@ -58,8 +58,20 @@ public class RagClientManager {
      * 全局设置读取工具
      */
     private final GlobalSettingReader settingReader;
+
+    /**
+     * 全局 ChatClient 注册表（按模型解析 RAG LLM）
+     */
     private final ChatClientRegistry chatClientRegistry;
+
+    /**
+     * RAG 配置属性（默认值兜底）
+     */
     private final RagProperties properties;
+
+    /**
+     * Spring BeanFactory（动态注册/替换 globalRagClient Bean）
+     */
     private final DefaultListableBeanFactory beanFactory;
 
     /**
