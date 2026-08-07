@@ -21,6 +21,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 监控指标 Service 实现
@@ -160,26 +161,111 @@ public class MetricServiceImpl implements MetricService {
         try {
             LocalDateTime hourEnd = LocalDateTime.now().truncatedTo(ChronoUnit.HOURS);
             LocalDateTime hourStart = hourEnd.minusHours(1);
-            // 聚合通用指标
-             String sql = "MERGE INTO ms_monitor_metric_statistics(ms_monitor_metric_statistics_monitor_id, ms_monitor_metric_statistics_metric_name, ms_monitor_metric_statistics_hour_bucket, ms_monitor_metric_statistics_avg_value, ms_monitor_metric_statistics_min_value, ms_monitor_metric_statistics_max_value, ms_monitor_metric_statistics_count_value) KEY(ms_monitor_metric_statistics_monitor_id, ms_monitor_metric_statistics_metric_name, ms_monitor_metric_statistics_hour_bucket) " +
-                     "SELECT ms_monitor_metric_monitor_id, ms_monitor_metric_metric_name, ?, AVG(ms_monitor_metric_metric_value), MIN(ms_monitor_metric_metric_value), MAX(ms_monitor_metric_metric_value), COUNT(*) " +
-                     "FROM ms_monitor_metric " +
-                     "WHERE ms_monitor_metric_collect_time >= ? AND ms_monitor_metric_collect_time < ? " +
-                     "GROUP BY ms_monitor_metric_monitor_id, ms_monitor_metric_metric_name";
-             int updated = jdbcTemplate.update(sql, hourStart, hourStart, hourEnd);
-             // 聚合 Redis 指标
-             String redisSql = "MERGE INTO ms_monitor_redis_metric_statistics(ms_monitor_redis_metric_statistics_monitor_id, ms_monitor_redis_metric_statistics_metric_name, ms_monitor_redis_metric_statistics_hour_bucket, ms_monitor_redis_metric_statistics_avg_value, ms_monitor_redis_metric_statistics_min_value, ms_monitor_redis_metric_statistics_max_value, ms_monitor_redis_metric_statistics_count_value) KEY(ms_monitor_redis_metric_statistics_monitor_id, ms_monitor_redis_metric_statistics_metric_name, ms_monitor_redis_metric_statistics_hour_bucket) " +
-                     "SELECT ms_monitor_redis_metric_monitor_id, ms_monitor_redis_metric_metric_name, ?, AVG(ms_monitor_redis_metric_metric_value), MIN(ms_monitor_redis_metric_metric_value), MAX(ms_monitor_redis_metric_metric_value), COUNT(*) " +
-                     "FROM ms_monitor_redis_metric " +
-                     "WHERE ms_monitor_redis_metric_collect_time >= ? AND ms_monitor_redis_metric_collect_time < ? " +
-                     "GROUP BY ms_monitor_redis_metric_monitor_id, ms_monitor_redis_metric_metric_name";
-            int redisUpdated = jdbcTemplate.update(redisSql, hourStart, hourStart, hourEnd);
-            log.info("小时聚合完成, 通用 {} 行, Redis {} 行, 时段 {} ~ {}", updated, redisUpdated, hourStart, hourEnd);
+            log.info("开始小时聚合, 时段 {} ~ {}", hourStart, hourEnd);
+
+            // ---- 聚合通用指标 ----
+            List<MsMonitorMetric> metricList = metricMapper.selectList(
+                    new LambdaQueryWrapper<MsMonitorMetric>()
+                            .ge(MsMonitorMetric::getCollectTime, hourStart)
+                            .lt(MsMonitorMetric::getCollectTime, hourEnd));
+
+            List<MsMonitorMetricStatistics> existingStats = statisticsMapper.selectList(
+                    new LambdaQueryWrapper<MsMonitorMetricStatistics>()
+                            .eq(MsMonitorMetricStatistics::getHourBucket, hourStart));
+
+            Map<StatisticsKey, MsMonitorMetricStatistics> statMap = existingStats.stream()
+                    .collect(Collectors.toMap(
+                            s -> new StatisticsKey(s.getMonitorId(), s.getMetricName()),
+                            s -> s));
+
+            Map<StatisticsKey, List<MsMonitorMetric>> grouped = metricList.stream()
+                    .collect(Collectors.groupingBy(
+                            m -> new StatisticsKey(m.getMonitorId(), m.getMetricName())));
+
+            List<MsMonitorMetricStatistics> statsToSave = new ArrayList<>();
+            for (Map.Entry<StatisticsKey, List<MsMonitorMetric>> entry : grouped.entrySet()) {
+                StatisticsKey key = entry.getKey();
+                List<MsMonitorMetric> items = entry.getValue();
+                if (items.isEmpty()) {
+                    continue;
+                }
+                MsMonitorMetricStatistics stat = statMap.getOrDefault(key, new MsMonitorMetricStatistics());
+                stat.setMonitorId(key.monitorId);
+                stat.setMetricName(key.metricName);
+                stat.setHourBucket(hourStart);
+                stat.setAvgValue(items.stream().mapToDouble(MsMonitorMetric::getMetricValue).average().orElse(0.0));
+                stat.setMinValue(items.stream().mapToDouble(MsMonitorMetric::getMetricValue).min().orElse(0.0));
+                stat.setMaxValue(items.stream().mapToDouble(MsMonitorMetric::getMetricValue).max().orElse(0.0));
+                stat.setCountValue((long) items.size());
+                statsToSave.add(stat);
+            }
+            if (statsToSave.isEmpty()) {
+                log.info("小时聚合完成, 无通用指标数据");
+            } else {
+                for (MsMonitorMetricStatistics stat : statsToSave) {
+                    if (stat.getId() == null) {
+                        statisticsMapper.insert(stat);
+                    } else {
+                        statisticsMapper.updateById(stat);
+                    }
+                }
+                log.info("小时聚合完成, 通用指标 {} 行, 时段 {} ~ {}", statsToSave.size(), hourStart, hourEnd);
+            }
+
+            // ---- 聚合 Redis 指标 ----
+            List<MsMonitorRedisMetric> redisList = redisMetricMapper.selectList(
+                    new LambdaQueryWrapper<MsMonitorRedisMetric>()
+                            .ge(MsMonitorRedisMetric::getCollectTime, hourStart)
+                            .lt(MsMonitorRedisMetric::getCollectTime, hourEnd));
+
+            List<MsMonitorRedisMetricStatistics> existingRedisStats = redisMetricStatsMapper.selectList(
+                    new LambdaQueryWrapper<MsMonitorRedisMetricStatistics>()
+                            .eq(MsMonitorRedisMetricStatistics::getHourBucket, hourStart));
+
+            Map<StatisticsKey, MsMonitorRedisMetricStatistics> redisStatMap = existingRedisStats.stream()
+                    .collect(Collectors.toMap(
+                            s -> new StatisticsKey(s.getMonitorId(), s.getMetricName()),
+                            s -> s));
+
+            Map<StatisticsKey, List<MsMonitorRedisMetric>> redisGrouped = redisList.stream()
+                    .collect(Collectors.groupingBy(
+                            m -> new StatisticsKey(m.getMonitorId(), m.getMetricName())));
+
+            int redisCount = 0;
+            for (Map.Entry<StatisticsKey, List<MsMonitorRedisMetric>> entry : redisGrouped.entrySet()) {
+                StatisticsKey key = entry.getKey();
+                List<MsMonitorRedisMetric> items = entry.getValue();
+                if (items.isEmpty()) {
+                    continue;
+                }
+                MsMonitorRedisMetricStatistics stat = redisStatMap.getOrDefault(key, new MsMonitorRedisMetricStatistics());
+                stat.setMonitorId(key.monitorId);
+                stat.setMetricName(key.metricName);
+                stat.setHourBucket(hourStart);
+                stat.setAvgValue(items.stream().mapToDouble(MsMonitorRedisMetric::getMetricValue).average().orElse(0.0));
+                stat.setMinValue(items.stream().mapToDouble(MsMonitorRedisMetric::getMetricValue).min().orElse(0.0));
+                stat.setMaxValue(items.stream().mapToDouble(MsMonitorRedisMetric::getMetricValue).max().orElse(0.0));
+                stat.setCountValue((long) items.size());
+                if (stat.getId() == null) {
+                    redisMetricStatsMapper.insert(stat);
+                } else {
+                    redisMetricStatsMapper.updateById(stat);
+                }
+                redisCount++;
+            }
+            log.info("小时聚合完成, Redis 指标 {} 行, 时段 {} ~ {}", redisCount, hourStart, hourEnd);
+
             return ReturnResult.ok();
         } catch (Exception e) {
             log.error("小时聚合失败", e);
             return ReturnResult.error(e.getMessage());
         }
+    }
+
+    /**
+     * 统计聚合唯一键（monitorId + metricName）
+     */
+    private record StatisticsKey(Long monitorId, String metricName) {
     }
 
     @Override
