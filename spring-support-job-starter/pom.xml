@@ -54,32 +54,4 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <fork>true</fork>
-                    <!--
-                        重置 compilerArgs / annotationProcessorPaths, JDK 25 下父 pom 默认的 add-opens 会被 javac 拒绝。
-                    -->
-                    <compilerArgs>
-                    </compilerArgs>
-                    <annotationProcessorPaths>
-                    </annotationProcessorPaths>
-                    <release>17</release>
-                    <generatedSourcesDirectory>${project.build.directory}/generated-sources/annotations</generatedSourcesDirectory>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <encoding>UTF-8</encoding>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
 </project>
