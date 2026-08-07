@@ -65,13 +65,6 @@ public class JobFileAppender {
             logPathDir.mkdirs();
         }
         logBasePath = logPathDir.getPath();
-
-        // 创建 glue 目录
-        File glueBaseDir = new File(logPathDir, "gluesource");
-        if (!glueBaseDir.exists()) {
-            glueBaseDir.mkdirs();
-        }
-        glueSrcPath = glueBaseDir.getPath();
     }
 
     public static String getLogPath() {

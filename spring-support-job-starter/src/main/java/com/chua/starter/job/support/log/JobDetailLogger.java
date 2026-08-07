@@ -1,13 +1,13 @@
 package com.chua.starter.job.support.log;
 
 import com.chua.common.support.lang.json.Json;
-import com.chua.starter.job.support.scheduler.JobConfig;
 import com.chua.starter.job.support.thread.JobContext;
 
 /**
- * 任务详细日志静态门面。
+ * 任务详细日志静态门面 (骨架版)。
  * <p>
- * 业务 Job 可以直接调用该类向任务日志详情表和任务日志文件同时写入结构化明细。
+ * 当前保留 API 形状以便未来重构接回结构化日志写入,
+ * 但所有方法退化为 no-op,不再依赖已删除的 JobLogDetailService。
  * </p>
  */
 public final class JobDetailLogger {
@@ -16,46 +16,46 @@ public final class JobDetailLogger {
     }
 
     public static boolean info(String content) {
-        return detail("INFO", content, null, null);
+        return false;
     }
 
     public static boolean info(String content, String phase, Integer progress) {
-        return detail("INFO", content, phase, progress);
+        return false;
     }
 
     public static boolean warn(String content) {
-        return detail("WARN", content, null, null);
+        return false;
     }
 
     public static boolean error(String content) {
-        return detail("ERROR", content, null, null);
+        return false;
     }
 
     public static boolean error(String content, Throwable throwable) {
-        JobLogDetailService service = JobConfig.getInstance().jobLogDetailService();
-        if (service == null || JobContext.getJobContext() == null) {
+        if (JobContext.getJobContext() == null) {
             return false;
         }
-        service.error(JobContext.getJobContext(), content, throwable);
         return true;
     }
 
     public static boolean detail(String level, String content, String phase, Integer progress) {
-        JobLogDetailService service = JobConfig.getInstance().jobLogDetailService();
-        if (service == null || JobContext.getJobContext() == null) {
+        if (JobContext.getJobContext() == null) {
             return false;
         }
-        service.log(JobContext.getJobContext(), level, content, phase, progress);
         return true;
     }
 
     public static boolean detailObject(String level, String title, Object value, String phase, Integer progress) {
+        @SuppressWarnings("unused")
         String payload;
         try {
             payload = value == null ? "null" : Json.toJson(value);
         } catch (Exception ignored) {
             payload = String.valueOf(value);
         }
-        return detail(level, title + ": " + payload, phase, progress);
+        if (JobContext.getJobContext() == null) {
+            return false;
+        }
+        return true;
     }
 }

@@ -3,12 +3,10 @@ package com.chua.starter.job.support.handler;
 /**
  * 作业处理程序接口
  * <p>
- * 定义了任务执行的核心方法，所有任务处理器都需要实现此接口。
- * 支持以下几种类型的任务处理器：
+ * 定义了任务执行的核心方法,所有任务处理器都需要实现此接口。
+ * 当前保留实现:
  * <ul>
- *     <li>{@link BeanJobHandler} - Spring Bean方式的任务处理器</li>
- *     <li>{@link GlueJobHandler} - Groovy脚本方式的任务处理器</li>
- *     <li>{@link ScriptJobHandler} - Shell/Python等脚本方式的任务处理器</li>
+ *     <li>{@link BeanJobHandler} - Spring Bean 方式的任务处理器</li>
  * </ul>
  * </p>
  *

@@ -7,53 +7,24 @@
     <version>4.0.0.42</version>
   </parent>
   <artifactId>spring-support-job-starter</artifactId>
-  <description>定时任务调度模块 - 基于注解的任务调度框架</description>
+  <description>Job 注解与 handler 注册骨架模块 - 仅保留 @Job 扫描与本地 handler 注册能力</description>
   <dependencies>
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>spring-support-mybatis-starter</artifactId>
-    </dependency>
-    <dependency>
       <groupId>cn.hutool</groupId>
       <artifactId>hutool-core</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.groovy</groupId>
-      <artifactId>groovy</artifactId>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter</artifactId>
     </dependency>
     <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-web</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-test</artifactId>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-undertow</artifactId>
-        <version>${spring.boot.version}</version>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.mysql</groupId>
-      <artifactId>mysql-connector-j</artifactId>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.h2database</groupId>
-      <artifactId>h2</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>spring-support-discovery-starter</artifactId>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.chua</groupId>

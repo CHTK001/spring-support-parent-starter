@@ -1,32 +1,21 @@
 package com.chua.starter.job.support.callback;
 
-import com.chua.starter.job.support.entity.SysJob;
-import com.chua.starter.job.support.entity.SysJobLog;
 import com.chua.starter.job.support.thread.JobContext;
 import lombok.Builder;
 import lombok.Data;
 
 /**
- * 任务执行回调上下文。
+ * 任务执行回调上下文 (骨架版)。
+ * <p>
+ * 历史版本含 SysJob / SysJobLog 字段,因对应的实体类与 mapper 已被删除,
+ * 暂时只保留 {@link JobContext} 与基本上下文字段,待重构期间补充持久化。
+ * </p>
  */
 @Data
 @Builder
 public class JobExecutionCallbackContext {
 
-    /**
-     * 回调阶段。
-     */
     private String phase;
-
-    /**
-     * 当前任务。
-     */
-    private SysJob job;
-
-    /**
-     * 当前执行日志。
-     */
-    private SysJobLog jobLog;
 
     /**
      * 当前线程的任务上下文。
@@ -34,12 +23,12 @@ public class JobExecutionCallbackContext {
     private JobContext jobContext;
 
     /**
-     * 当前重试次数，从 1 开始。
+     * 当前重试次数,从 1 开始。
      */
     private int attempt;
 
     /**
-     * 总执行次数，包括首次执行和重试。
+     * 总执行次数,包括首次执行和重试。
      */
     private int maxAttempts;
 
