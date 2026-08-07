@@ -45,7 +45,7 @@ import org.slf4j.LoggerFactory;
  */
 @Configuration
 @EnableConfigurationProperties(ApiCorsProperties.class)
-@ConditionalOnProperty(name = "plugin.api.cors.enable", matchIfMissing = false, havingValue = "true")
+@ConditionalOnProperty(name = "plugin.api.cors.enable", matchIfMissing = true, havingValue = "true")
 public class ApiCorsConfiguration  {
     private static final Logger log = LoggerFactory.getLogger(ApiCorsConfiguration.class);
         private static final String X_HEADER_VERSION = "x-response-version";

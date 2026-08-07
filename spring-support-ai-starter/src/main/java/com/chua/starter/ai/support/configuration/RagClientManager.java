@@ -14,7 +14,6 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.common.support.vector.VectorCompareAlgorithm;
 import com.chua.common.support.vector.VectorStorage;
 import com.chua.common.support.vector.VectorStorageProvider;
-import com.chua.jvector.support.configuration.JVectorStorageProperties;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -246,14 +245,8 @@ public class RagClientManager {
                 : properties.getVectorStorage();
         VectorCompareAlgorithm algorithm = VectorCompareAlgorithm.cosine();
         if ("jvector".equals(name)) {
-            JVectorStorageProperties props = new JVectorStorageProperties();
-            props.setMode(JVectorStorageProperties.Mode.ON_DISK);
-            String indexPath = StringUtils.hasText(uploadDir)
-                    ? uploadDir + "/index"
-                    : properties.getUploadDir() + "/index";
-            props.setIndexPath(indexPath);
-            log.info("[RagClientManager] 向量存储使用 jvector(ON_DISK): indexPath={}", indexPath);
-            return VectorStorageProvider.create("jvector", DEFAULT_EMBEDDING_DIMENSIONS, algorithm, props);
+            log.info("[RagClientManager] 向量存储使用 jvector(ON_DISK)");
+            return VectorStorageProvider.create("jvector", DEFAULT_EMBEDDING_DIMENSIONS, algorithm);
         }
         log.info("[RagClientManager] 向量存储使用 memory（无落盘）");
         return VectorStorageProvider.create("memory", DEFAULT_EMBEDDING_DIMENSIONS, algorithm);
