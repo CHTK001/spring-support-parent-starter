@@ -1,18 +1,20 @@
 spring:
   main:
     banner-mode: off
-    web-application-type: none
   main.banner-mode: off
 
 plugin:
   job:
     enable: true
-    role: SINGLE
     cluster:
-      group: test-single
+      group: default
       scan-interval-ms: 200
       pre-read-ms: 1000
       lease-seconds: 60
+    sync:
+      scheduler:
+        listen-host: 0.0.0.0
+        listen-port: 8081
     pool:
       core-size: 2
       max-size: 4

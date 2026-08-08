@@ -28,8 +28,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @SpringBootTest(
         classes = {SingleModeTest.TestApp.class},
-        webEnvironment = SpringBootTest.WebEnvironment.NONE
+        webEnvironment = SpringBootTest.WebEnvironment.NONE,
+        properties = {
+                "plugin.job.role=SINGLE",
+                "plugin.job.cluster.group=test-single"
+        }
 )
+@org.springframework.test.annotation.DirtiesContext(
+        classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 class SingleModeTest {
 
     /**

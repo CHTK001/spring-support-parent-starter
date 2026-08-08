@@ -15,7 +15,8 @@ import com.chua.starter.job.support.log.StdoutJobLogSink;
 import com.chua.starter.job.support.loop.JobLeaderLoop;
 import com.chua.starter.job.support.schedule.ScheduledAnnotationScanner;
 import com.chua.starter.job.support.sync.ExecutorSyncBinder;
-import com.chua.starter.job.support.sync.ExecutorSyncBinder;
+import com.chua.starter.job.support.sync.InMemorySyncClient;
+import com.chua.starter.job.support.sync.InMemorySyncServer;
 import com.chua.starter.job.support.sync.JobSyncBus;
 import com.chua.starter.job.support.sync.SchedulerSyncBinder;
 import jakarta.annotation.PostConstruct;
@@ -211,6 +212,7 @@ public class JobAutoConfiguration {
 
     /**
      * Scheduler 端: 注册到仓库公共 SyncServer。
+     * <p>SPI 未发现实现时 (精简部署或单元测试),自动 fallback 到 {@link InMemorySyncServer}。</p>
      */
     @Bean
     @ConditionalOnMissingBean
@@ -218,7 +220,8 @@ public class JobAutoConfiguration {
     public SyncServer jobSyncServer() {
         SyncServer server = ServiceProvider.of(SyncServer.class).getExtension();
         if (server == null) {
-            throw new IllegalStateException("未找到 SyncServer SPI 实现, 请检查 utils-support-common-starter 依赖");
+            log.warn("[job] 未找到 SyncServer SPI 实现, fallback 到 InMemorySyncServer (精简部署或测试环境)");
+            return new InMemorySyncServer();
         }
         return server;
     }
@@ -288,6 +291,7 @@ public class JobAutoConfiguration {
 
     /**
      * EXECUTOR 端: 注册到仓库公共 SyncClient。
+     * <p>SPI 未发现实现时 fallback 到 {@link InMemorySyncClient}。</p>
      */
     @Bean
     @ConditionalOnMissingBean
@@ -295,7 +299,8 @@ public class JobAutoConfiguration {
     public SyncClient jobSyncClient() {
         SyncClient client = ServiceProvider.of(SyncClient.class).getExtension();
         if (client == null) {
-            throw new IllegalStateException("未找到 SyncClient SPI 实现, 请检查 utils-support-common-starter 依赖");
+            log.warn("[job] 未找到 SyncClient SPI 实现, fallback 到 InMemorySyncClient (精简部署或测试环境)");
+            return new InMemorySyncClient();
         }
         return client;
     }
