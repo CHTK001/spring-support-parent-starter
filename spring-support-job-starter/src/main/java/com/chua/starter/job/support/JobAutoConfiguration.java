@@ -420,6 +420,14 @@ public class JobAutoConfiguration {
         public JobSampleSeeder(JobRepository repository, JobHandlerFactory factory) {
             this.repository = repository;
             this.factory = factory;
+        }
+
+        /**
+         * Spring 上下文刷新完成后回调 (此时所有 SmartInitializingSingleton 已跑完, @Job 处理器已注册)。
+         * 仅根上下文 refresh 时触发 (排除子容器)。
+         */
+        @org.springframework.context.event.EventListener
+        public void onContextRefreshed(org.springframework.context.event.ContextRefreshedEvent event) {
             seed();
         }
 
@@ -435,6 +443,7 @@ public class JobAutoConfiguration {
                     definition.setEnabled(true);
                     definition.setDesc(handler.desc());
                     inMemory.upsert(definition);
+                    log.info("[job] seeder 注册任务 name={} cron=* * * * * *", handler.name());
                 }
             }
         }
@@ -447,7 +456,7 @@ public class JobAutoConfiguration {
     public void describeOnStart() {
         log.info("[job] 模块已启用, role={} nodeId={} group={} sync.scheduler={}:{} sync.executor.url={}",
                 properties.getRole(),
-                jobNodeId(),
+                properties.getNodeId(),
                 properties.getCluster().getGroup(),
                 properties.getSync().getScheduler().getListenHost(),
                 properties.getSync().getScheduler().getListenPort(),

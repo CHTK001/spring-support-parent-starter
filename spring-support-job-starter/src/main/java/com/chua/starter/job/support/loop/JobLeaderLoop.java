@@ -131,10 +131,12 @@ public class JobLeaderLoop {
      */
     private void tick(long preReadMs) {
         if (!leaderElector.isLeader()) {
+            log.warn("[job] tick 跳过 (非 Leader) nodeId={}", nodeId);
             return;
         }
         long now = System.currentTimeMillis();
         List<JobDefinition> due = repository.findDue(now, preReadMs, DEFAULT_PRE_READ);
+        log.info("[job] tick leader=true due.size={} now={}", due.size(), now);
         if (due.isEmpty()) {
             return;
         }

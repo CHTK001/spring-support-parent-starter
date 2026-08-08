@@ -1,6 +1,5 @@
 package com.chua.starter.job.support.handler;
 
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Method;
@@ -15,7 +14,6 @@ import java.lang.reflect.Method;
  * @since 4.0.0.42
  */
 @Slf4j
-@Getter
 public class BeanJobHandler implements JobHandler {
 
     /**
@@ -77,6 +75,16 @@ public class BeanJobHandler implements JobHandler {
         if (destroyMethod != null) {
             destroyMethod.setAccessible(true);
         }
+    }
+
+    @Override
+    public String name() {
+        return name;
+    }
+
+    @Override
+    public String desc() {
+        return desc == null ? "" : desc;
     }
 
     @Override

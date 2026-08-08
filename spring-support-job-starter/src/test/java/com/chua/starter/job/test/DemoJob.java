@@ -19,7 +19,7 @@ public class DemoJob {
     /**
      * sample handler
      */
-    @Job("demo")
+    @Job(value = "demo", cron = "0/1 * * * * ?")
     public void execute() {
         invokeCount++;
     }

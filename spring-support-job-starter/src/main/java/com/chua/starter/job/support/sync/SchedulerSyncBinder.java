@@ -2,6 +2,7 @@ package com.chua.starter.job.support.sync;
 
 import com.chua.common.support.network.sync.SyncMessageHandler;
 import com.chua.common.support.network.server.SyncServer;
+import com.chua.common.support.network.server.SyncServerListener;
 import com.chua.starter.job.support.log.JobLogEvent;
 import com.chua.starter.job.support.log.JobLogSink;
 import jakarta.annotation.PostConstruct;
@@ -9,7 +10,7 @@ import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Map;
+import java.util.function.BiConsumer;
 
 /**
  * 调度中心侧同步绑定器 (role=SCHEDULER)。
@@ -54,9 +55,9 @@ public class SchedulerSyncBinder {
     private final String nodeId;
 
     /**
-     * cmd 转发器
+     * cmd 转发器 (持有, 用于注销)
      */
-    private BiConsumerMarker cmdForwarder;
+    private BiConsumer<String, Object> cmdForwarder;
 
     /**
      * log 接收器
@@ -64,20 +65,12 @@ public class SchedulerSyncBinder {
     private SyncMessageHandler logHandler;
 
     /**
-     * 注册接收器
-     */
-    private SyncMessageHandler regHandler;
-
-    /**
      * 启动绑定。
      */
     @PostConstruct
     public void start() {
         // 本地 bus 上的 cmd 推到所有 executor
-        cmdForwarder = (topic, source, payload) -> {
-            if (!JobSyncTopics.TASK_COMMAND.equals(topic)) {
-                return;
-            }
+        cmdForwarder = (source, payload) -> {
             try {
                 syncServer.publish(JobSyncTopics.TASK_COMMAND, payload);
             } catch (Throwable ex) {
@@ -97,11 +90,14 @@ public class SchedulerSyncBinder {
                 log.warn("[job] logSink 写入失败 cause={}", ex.getMessage(), ex);
             }
         };
-        syncServer.addListener((clientId, topic, message) -> {
-            if (JobSyncTopics.TASK_LOG.equals(topic)) {
-                logHandler.handle(topic, message);
-            } else if (JobSyncTopics.REGISTER.equals(topic)) {
-                log.info("[job] executor 上线 clientId={} payload={}", clientId, message);
+        syncServer.addListener(new SyncServerListener() {
+            @Override
+            public void onMessage(String clientId, String topic, Object message) {
+                if (JobSyncTopics.TASK_LOG.equals(topic)) {
+                    logHandler.handle(topic, message);
+                } else if (JobSyncTopics.REGISTER.equals(topic)) {
+                    log.info("[job] executor 上线 clientId={} payload={}", clientId, message);
+                }
             }
         });
 
@@ -117,13 +113,5 @@ public class SchedulerSyncBinder {
             bus.unsubscribe(JobSyncTopics.TASK_COMMAND, cmdForwarder);
         }
         log.info("[job] SCHEDULER 同步绑定器已关闭 nodeId={}", nodeId);
-    }
-
-    /**
-     * BiConsumer 形式回调的轻量包装。
-     */
-    @FunctionalInterface
-    public interface BiConsumerMarker {
-        void accept(String topic, String source, Object payload);
     }
 }

@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
+import java.util.function.BiConsumer;
 
 /**
  * 执行器侧同步绑定器 (role=EXECUTOR)。
@@ -59,9 +60,9 @@ public class ExecutorSyncBinder {
     private SyncMessageHandler cmdHandler;
 
     /**
-     * log 投递 marker (防止相同 lambda 被误删)
+     * log 转发器 (持有, 用于注销)
      */
-    private BiConsumerMarker logForwarder;
+    private BiConsumer<String, Object> logForwarder;
 
     /**
      * 启动绑定。
@@ -71,7 +72,7 @@ public class ExecutorSyncBinder {
         cmdHandler = (topic, payload) -> bus.publish(topic, nodeId, payload);
         syncClient.subscribe(JobSyncTopics.TASK_COMMAND, cmdHandler);
 
-        BiConsumerMarker forward = (topic, source, payload) -> {
+        logForwarder = (source, payload) -> {
             if (!(payload instanceof JobLogEvent)) {
                 return;
             }
@@ -81,8 +82,7 @@ public class ExecutorSyncBinder {
                 log.warn("[job] 上行 TASK_LOG 失败 cause={}", ex.getMessage());
             }
         };
-        logForwarder = forward;
-        bus.subscribe(JobSyncTopics.TASK_LOG, forward);
+        bus.subscribe(JobSyncTopics.TASK_LOG, logForwarder);
 
         try {
             syncClient.send(JobSyncTopics.REGISTER, buildRegisterPayload());
@@ -124,13 +124,5 @@ public class ExecutorSyncBinder {
                 "role", "EXECUTOR",
                 "serverUrl", properties.getSync().getExecutor().getServerUrl()
         );
-    }
-
-    /**
-     * BiConsumer 形式回调的轻量包装 (有名字,便于从总线删除)。
-     */
-    @FunctionalInterface
-    public interface BiConsumerMarker {
-        void accept(String topic, String source, Object payload);
     }
 }

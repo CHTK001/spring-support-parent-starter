@@ -14,6 +14,7 @@ import org.springframework.util.ClassUtils;
 
 import java.lang.reflect.Method;
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -103,9 +104,11 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
         } else if (ann.fixedRate() > 0) {
             taskScheduler.schedule(task, new PeriodicTrigger(Duration.ofMillis(ann.fixedRate())));
         } else if (ann.fixedDelay() > 0) {
-            taskScheduler.scheduleWithFixedDelay(task,
-                    Duration.ofMillis(ann.initialDelay()),
-                    Duration.ofMillis(ann.fixedDelay()));
+            long delayMs = ann.fixedDelay();
+            long initialMs = Math.max(0L, ann.initialDelay());
+            PeriodicTrigger trigger = new PeriodicTrigger(delayMs, TimeUnit.MILLISECONDS);
+            trigger.setInitialDelay(initialMs);
+            taskScheduler.schedule(task, trigger);
         } else {
             log.warn("[job] @Scheduled 缺少有效配置, 跳过 name={}", name);
             return;

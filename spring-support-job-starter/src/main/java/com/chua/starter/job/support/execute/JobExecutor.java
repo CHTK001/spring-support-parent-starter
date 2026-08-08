@@ -7,7 +7,7 @@ import com.chua.starter.job.support.sync.JobSyncBus;
 import com.chua.starter.job.support.sync.JobSyncTopics;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.LinkedBlockingQueue;
+import java.util.ArrayDeque;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -82,7 +82,7 @@ public class JobExecutor {
     /**
      * cmd 监听器引用 (持有, 用于注销)
      */
-    private final java.util.function.BiConsumer<String, Object> cmdListener = this::onCommand;
+    private final java.util.function.BiConsumer<String, Object> cmdListener = (topic, payload) -> onCommand(topic, payload);
 
     /**
      * 构造执行器, 使用默认线程池。
@@ -118,15 +118,14 @@ public class JobExecutor {
      * @param topic   topic 名 (固定为 TASK_COMMAND)
      * @param payload 业务负载 (任务名)
      */
-    private void onCommand(String topic, Object payload) {
-        if (!JobSyncTopics.TASK_COMMAND.equals(topic)) {
-            return;
-        }
+    private void onCommand(String source, Object payload) {
+        log.info("[job] 收到 cmd source={} payload={}", source, payload);
         if (!(payload instanceof String jobName)) {
             return;
         }
         JobHandler handler = factory.get(jobName);
         if (handler == null) {
+            log.warn("[job] handler 未注册 job={}", jobName);
             bus.publish(JobSyncTopics.TASK_LOG, nodeId,
                     JobLogEvent.skipped(jobName, "handler 未注册", nodeId));
             dropped.incrementAndGet();
@@ -147,11 +146,13 @@ public class JobExecutor {
      * @param handler 处理器
      */
     private void invoke(String jobName, JobHandler handler) {
+        log.info("[job] invoke start job={} handler={}", jobName, handler.getClass().getSimpleName());
         long start = System.currentTimeMillis();
         try {
             handler.execute();
             long cost = System.currentTimeMillis() - start;
             processed.incrementAndGet();
+            log.info("[job] invoke ok job={} cost={}ms", jobName, cost);
             bus.publish(JobSyncTopics.TASK_LOG, nodeId,
                     JobLogEvent.success(jobName, cost, start, nodeId));
         } catch (Throwable ex) {
@@ -226,7 +227,7 @@ public class JobExecutor {
                 DEFAULT_MAX_SIZE,
                 60L,
                 TimeUnit.SECONDS,
-                new LinkedBlockingQueue<>(DEFAULT_QUEUE_CAPACITY),
+                new java.util.concurrent.LinkedBlockingQueue<>(DEFAULT_QUEUE_CAPACITY),
                 namedThreadFactory(),
                 new ThreadPoolExecutor.AbortPolicy());
     }

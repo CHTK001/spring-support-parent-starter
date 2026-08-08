@@ -6,8 +6,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.Date;
 
 /**
@@ -57,8 +55,7 @@ public class MybatisJobLogSink implements JobLogSink {
         entity.setSysJobLogNodeId(event.nodeId());
         Date executedAt = new Date(event.executedAtMs());
         entity.setSysJobLogTriggerTime(executedAt);
-        ZoneId zone = ZoneId.systemDefault();
-        entity.setSysJobLogTriggerDate(LocalDate.ofInstant(executedAt.toInstant(), zone));
+        entity.setSysJobLogTriggerDate(executedAt);
         entity.setSysJobLogFilePath(null);
         entity.setSysJobLogIsDeleted(0);
         return entity;

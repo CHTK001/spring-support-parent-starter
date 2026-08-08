@@ -46,6 +46,21 @@ public @interface Job {
     String desc() default "";
 
     /**
+     * cron 表达式 (例如 {@code "0/3 * * * * ?"}). 三选一; 同时配置时优先级 cron > fixedDelay > fixedRate。
+     */
+    String cron() default "";
+
+    /**
+     * 固定间隔触发, 单位毫秒。
+     */
+    long fixedDelay() default 0L;
+
+    /**
+     * 固定频率触发, 单位毫秒。
+     */
+    long fixedRate() default 0L;
+
+    /**
      * 初始化方法名,与 execute 方法同处一个类, 无参
      */
     String init() default "";
