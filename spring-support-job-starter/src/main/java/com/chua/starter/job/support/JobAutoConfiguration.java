@@ -218,7 +218,11 @@ public class JobAutoConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SCHEDULER", matchIfMissing = true)
     public SyncServer jobSyncServer() {
-        SyncServer server = ServiceProvider.of(SyncServer.class).getExtension();
+        if (properties.getSync().isInMemory()) {
+            log.info("[job] sync.in-memory=true, 强制使用 InMemorySyncServer (跳过 SPI)");
+            return new InMemorySyncServer();
+        }
+        SyncServer server = ServiceProvider.of(SyncServer.class).getExtension("rsocket", "http", "websocket");
         if (server == null) {
             log.warn("[job] 未找到 SyncServer SPI 实现, fallback 到 InMemorySyncServer (精简部署或测试环境)");
             return new InMemorySyncServer();
@@ -297,7 +301,11 @@ public class JobAutoConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "EXECUTOR")
     public SyncClient jobSyncClient() {
-        SyncClient client = ServiceProvider.of(SyncClient.class).getExtension();
+        if (properties.getSync().isInMemory()) {
+            log.info("[job] sync.in-memory=true, 强制使用 InMemorySyncClient (跳过 SPI)");
+            return new InMemorySyncClient();
+        }
+        SyncClient client = ServiceProvider.of(SyncClient.class).getExtension("rsocket", "socketio");
         if (client == null) {
             log.warn("[job] 未找到 SyncClient SPI 实现, fallback 到 InMemorySyncClient (精简部署或测试环境)");
             return new InMemorySyncClient();

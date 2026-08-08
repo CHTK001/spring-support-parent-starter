@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         properties = {
                 "plugin.job.role=SCHEDULER",
                 "plugin.job.cluster.group=test-scheduler",
+                "plugin.job.sync.in-memory=true",
                 "plugin.job.sync.scheduler.listen-port=18081"
         }
 )

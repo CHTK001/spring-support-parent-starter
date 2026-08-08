@@ -34,6 +34,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *       pre-read-ms: 5000
  *       lease-seconds: 15
  *     sync:
+ *       in-memory: false
  *       scheduler:
  *         listen-host: 0.0.0.0
  *         listen-port: 8081
@@ -193,6 +194,12 @@ public class JobProperties {
      */
     @Data
     public static class SyncConfig {
+
+        /**
+         * 是否强制使用内存 SPI 实现 (跳过真实 RSocket/HTTP 选取)。
+         * <p>主要用于单元测试和精简部署,默认 false。</p>
+         */
+        private boolean inMemory = false;
 
         /**
          * 调度中心侧配置 (role=SCHEDULER 或 SINGLE 时生效, SINGLE 仅占位)

@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         webEnvironment = SpringBootTest.WebEnvironment.NONE,
         properties = {
                 "plugin.job.role=EXECUTOR",
-                "plugin.job.cluster.group=test-executor"
+                "plugin.job.sync.in-memory=true",
         }
 )
 @org.springframework.test.annotation.DirtiesContext(
