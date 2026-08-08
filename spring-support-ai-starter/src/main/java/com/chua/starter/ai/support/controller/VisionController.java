@@ -31,7 +31,7 @@ import java.util.Base64;
  */
 @Slf4j
 @RestController
-@RequestMapping("/v2/ai/vision")
+@RequestMapping("/v2/vision")
 @RequiredArgsConstructor
 @Tag(name = "AI 识图", description = "图像识别、OCR、视觉问答")
 public class VisionController {

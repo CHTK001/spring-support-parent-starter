@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @since 2026-08-03
  */
 @RestController
-@RequestMapping("/v2/ai/global-settings")
+@RequestMapping("/v2/global-settings")
 @RequiredArgsConstructor
 @Tag(name = "AI 设置 - 全局设置")
 public class AiGlobalSettingController {

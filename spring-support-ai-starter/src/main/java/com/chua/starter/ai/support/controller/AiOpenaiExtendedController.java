@@ -36,7 +36,7 @@ import java.util.UUID;
 @Tag(name = "AI OpenAI Extended Protocol Controller", description = "OpenAI 标准协议扩展接口（Images/Audio/Files/Fine-tuning）")
 @RestController
 @ApiReturnFormatIgnore
-@RequestMapping("/v2/ai")
+@RequestMapping("/v2")
 public class AiOpenaiExtendedController {
 
     /**

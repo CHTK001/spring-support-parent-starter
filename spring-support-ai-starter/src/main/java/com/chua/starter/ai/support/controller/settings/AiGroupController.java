@@ -27,7 +27,7 @@ import java.util.List;
  * @since 2026-08-03
  */
 @RestController
-@RequestMapping("/v2/ai/groups")
+@RequestMapping("/v2/groups")
 @RequiredArgsConstructor
 @Tag(name = "AI 设置 - 模型分组")
 public class AiGroupController {

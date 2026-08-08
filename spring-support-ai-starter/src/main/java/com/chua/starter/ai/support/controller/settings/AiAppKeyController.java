@@ -29,7 +29,7 @@ import java.util.List;
  * @since 2026-08-03
  */
 @RestController
-@RequestMapping("/v2/ai/app-keys")
+@RequestMapping("/v2/app-keys")
 @RequiredArgsConstructor
 @Tag(name = "AI 设置 - AppKey")
 public class AiAppKeyController {

@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @RestController
-@RequestMapping("/v2/ai/rag")
+@RequestMapping("/v2/rag")
 @RequiredArgsConstructor
 @Tag(name = "RAG 配置", description = "RAG 配置下拉数据源")
 public class AiRagSettingController {

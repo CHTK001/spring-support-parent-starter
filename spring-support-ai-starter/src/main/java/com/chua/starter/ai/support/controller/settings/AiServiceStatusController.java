@@ -22,7 +22,7 @@ import java.util.List;
  * @since 2026-08-03
  */
 @RestController
-@RequestMapping("/v2/ai/services")
+@RequestMapping("/v2/services")
 @RequiredArgsConstructor
 @Tag(name = "AI 设置 - 服务状态")
 public class AiServiceStatusController {

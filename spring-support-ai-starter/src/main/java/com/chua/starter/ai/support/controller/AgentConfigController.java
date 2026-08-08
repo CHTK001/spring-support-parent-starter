@@ -40,7 +40,7 @@ import java.util.Set;
  */
 @Slf4j
 @RestController
-@RequestMapping("/v2/ai/agent-config")
+@RequestMapping("/v2/agent-config")
 @RequiredArgsConstructor
 @Tag(name = "Agent 配置管理", description = "Agent 编排与 Agent-as-Model 接口")
 public class AgentConfigController {

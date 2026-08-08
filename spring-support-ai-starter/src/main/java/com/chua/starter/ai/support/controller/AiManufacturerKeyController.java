@@ -30,7 +30,7 @@ import java.util.List;
 @Tag(name = "AI Manufacturer Key Controller", description = "AI 厂商 API Key 管理相关接口")
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/v2/ai/manufacturer-key")
+@RequestMapping("/v2/manufacturer-key")
 public class AiManufacturerKeyController {
 
     /**

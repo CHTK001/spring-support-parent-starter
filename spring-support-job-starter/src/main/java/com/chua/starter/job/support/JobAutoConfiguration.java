@@ -305,7 +305,7 @@ public class JobAutoConfiguration {
             log.info("[job] sync.in-memory=true, 强制使用 InMemorySyncClient (跳过 SPI)");
             return new InMemorySyncClient();
         }
-        SyncClient client = ServiceProvider.of(SyncClient.class).getExtension("rsocket", "socketio");
+        SyncClient client = ServiceProvider.of(SyncClient.class).getExtension("rsocket", "websocket", "http", "socketio");
         if (client == null) {
             log.warn("[job] 未找到 SyncClient SPI 实现, fallback 到 InMemorySyncClient (精简部署或测试环境)");
             return new InMemorySyncClient();

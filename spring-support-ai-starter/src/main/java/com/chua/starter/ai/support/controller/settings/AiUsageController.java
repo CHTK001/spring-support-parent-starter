@@ -21,7 +21,7 @@ import java.util.List;
  * @since 2026-08-03
  */
 @RestController
-@RequestMapping("/v2/ai/usage")
+@RequestMapping("/v2/usage")
 @RequiredArgsConstructor
 @Tag(name = "AI 设置 - 用量统计")
 public class AiUsageController {

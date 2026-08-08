@@ -47,7 +47,7 @@ import java.util.UUID;
 @Tag(name = "AI Manufacturer Controller", description = "AI 厂商管理相关接口")
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/v2/ai/manufacturer")
+@RequestMapping("/v2/manufacturer")
 public class AiManufacturerController {
 
     /**
@@ -142,7 +142,7 @@ public class AiManufacturerController {
         Files.createDirectories(folder);
         Path target = folder.resolve(storedName);
         file.transferTo(target);
-        return ReturnResult.ok("/v2/ai/manufacturer/logo/" + storedName);
+        return ReturnResult.ok("/v2/manufacturer/logo/" + storedName);
     }
 
     @Operation(summary = "获取厂商标志")

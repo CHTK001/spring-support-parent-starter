@@ -28,7 +28,7 @@ import java.util.List;
  * @since 2026-08-03
  */
 @RestController
-@RequestMapping("/v2/ai/alerts")
+@RequestMapping("/v2/alerts")
 @RequiredArgsConstructor
 @Tag(name = "AI 设置 - 告警规则")
 public class AiAlertController {

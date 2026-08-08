@@ -39,7 +39,7 @@ import java.util.Base64;
  */
 @Slf4j
 @RestController
-@RequestMapping("/v2/ai/generate")
+@RequestMapping("/v2/generate")
 @RequiredArgsConstructor
 @Tag(name = "AI 生成", description = "文生图、文生视频、上色等 AI 生成接口")
 public class AiGenerateController {

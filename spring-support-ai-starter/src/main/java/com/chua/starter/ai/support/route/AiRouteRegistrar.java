@@ -77,7 +77,7 @@ public class AiRouteRegistrar implements ApplicationContextAware {
         // 注册 Agent 模型列表
         if (agentController != null) {
             register.registerMapping(new ServletHandlerMappingDefinition(
-                    "/v2/ai/agent-models", HttpMethod.GET,
+                    "/v2/agent-models", HttpMethod.GET,
                     req -> invokeControllerMethod(agentController, "listAgentModels",
                             new Class<?>[]{})));
             count++;
@@ -86,7 +86,7 @@ public class AiRouteRegistrar implements ApplicationContextAware {
         // 注册 RAG 查询
         if (ragController != null) {
             register.registerMapping(new ServletHandlerMappingDefinition(
-                    "/v2/ai/rag/query", HttpMethod.POST,
+                    "/v2/rag/query", HttpMethod.POST,
                     req -> invokeControllerMethod(ragController, "query",
                             new Class<?>[]{Map.class}, req != null && req instanceof Map
                                     ? req : Map.of())));

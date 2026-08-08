@@ -29,7 +29,7 @@ import java.util.List;
  * @since 2026-08-03
  */
 @RestController
-@RequestMapping("/v2/ai/providers")
+@RequestMapping("/v2/providers")
 @RequiredArgsConstructor
 @Tag(name = "AI 设置 - 模型供应商")
 public class AiProviderController {

@@ -26,7 +26,7 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
-@RequestMapping("/v2/ai/usage")
+@RequestMapping("/v2/usage")
 @RequiredArgsConstructor
 @Tag(name = "AI 用量", description = "查询 AI 调用用量统计")
 public class UsageController {

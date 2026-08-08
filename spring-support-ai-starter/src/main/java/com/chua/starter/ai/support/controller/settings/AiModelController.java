@@ -25,7 +25,7 @@ import java.util.List;
  * @author CH
  */
 @RestController
-@RequestMapping("/v2/ai/models")
+@RequestMapping("/v2/models")
 @RequiredArgsConstructor
 @Tag(name = "AI 设置 - 模型定义")
 public class AiModelController {

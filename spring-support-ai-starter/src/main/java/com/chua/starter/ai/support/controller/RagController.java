@@ -38,7 +38,7 @@ import java.util.Set;
  */
 @Slf4j
 @RestController
-@RequestMapping("/v2/ai/rag")
+@RequestMapping("/v2/rag")
 @Tag(name = "RAG 知识库", description = "RAG 文档管理、问答和配置接口")
 public class RagController {
 

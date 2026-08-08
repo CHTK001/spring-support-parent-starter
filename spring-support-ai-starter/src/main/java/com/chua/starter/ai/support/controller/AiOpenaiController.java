@@ -47,7 +47,7 @@ import java.util.concurrent.CompletableFuture;
 @RequiredArgsConstructor
 @Slf4j
 @ApiReturnFormatIgnore
-@RequestMapping("/v2/ai")
+@RequestMapping("/v2")
 public class AiOpenaiController {
 
     private final AiChatFacadeService aiChatFacadeService;
