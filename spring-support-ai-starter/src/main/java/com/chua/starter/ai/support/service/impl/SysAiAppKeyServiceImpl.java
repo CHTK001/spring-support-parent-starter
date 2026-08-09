@@ -5,6 +5,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.entity.SysAiAppKey;
 import com.chua.starter.ai.support.mapper.SysAiAppKeyMapper;
 import com.chua.starter.ai.support.service.SysAiAppKeyService;
+import com.chua.starter.ai.support.util.KeyGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -65,7 +66,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     public SysAiAppKey save(SysAiAppKey entity) {
         // 自动生成 sk- 格式密钥
         if (StringUtils.isBlank(entity.getSysAiAppKeyAppKey())) {
-            entity.setSysAiAppKeyAppKey(generateKey());
+            entity.setSysAiAppKeyAppKey(KeyGenerator.generateKey());
         }
         if (StringUtils.isBlank(entity.getSysAiAppKeySecret())) {
             entity.setSysAiAppKeySecret(entity.getSysAiAppKeyAppKey());
@@ -75,15 +76,6 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
         entity.setSysAiAppKeyUseCount(entity.getSysAiAppKeyUseCount() == null ? 0 : entity.getSysAiAppKeyUseCount());
         sysAiAppKeyMapper.insert(entity);
         return entity;
-    }
-
-    private static String generateKey() {
-        byte[] bytes = new byte[36];
-        new SecureRandom().nextBytes(bytes);
-        return "sk-" + Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
-                .replace("+", "-")
-                .replace("/", "_")
-                .substring(0, 48);
     }
 
     @Override

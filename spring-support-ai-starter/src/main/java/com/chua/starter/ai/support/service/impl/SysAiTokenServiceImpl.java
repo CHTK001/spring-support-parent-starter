@@ -5,6 +5,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.entity.SysAiToken;
 import com.chua.starter.ai.support.mapper.SysAiTokenMapper;
 import com.chua.starter.ai.support.service.SysAiTokenService;
+import com.chua.starter.ai.support.util.KeyGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -66,7 +67,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     @Override
     public SysAiToken save(SysAiToken token) {
         if (StringUtils.isBlank(token.getSysAiTokenKey())) {
-            String rawKey = generateKey();
+            String rawKey = KeyGenerator.generateKey();
             token.setSysAiTokenKey(rawKey);
             token.setSysAiTokenKeyPrefix("sk-");
             token.setSysAiTokenKeyHash(sha256(rawKey));
@@ -246,18 +247,6 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
             }
         }
         return true;
-    }
-
-    /**
-     * 生成 sk- 前缀的随机密钥。
-     */
-    private static String generateKey() {
-        byte[] bytes = new byte[36];
-        new SecureRandom().nextBytes(bytes);
-        return "sk-" + Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
-                .replace("+", "-")
-                .replace("/", "_")
-                .substring(0, 48);
     }
 
     /**

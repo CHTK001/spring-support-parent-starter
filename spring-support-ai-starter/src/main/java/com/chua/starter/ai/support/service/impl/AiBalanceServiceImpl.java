@@ -11,17 +11,19 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 /**
- * AI 余额/计费服务实现。
- * <p>
- * 基于 {@link SysAiTokenService} 的 Token 费用统计实现余额检查与扣费。
- * 余额 = Token 记录的 {@code totalFee} 预算上限。
+ * AI 预算/费用累计服务实现。
  *
- * <h3>计费模型</h3>
+ * <p>基于 {@link SysAiTokenService} 的 Token 费用统计实现预算检查与费用累计。
+ * 当前实现为「费用累计」模式，非传统余额扣减模式：</p>
+ *
  * <ul>
- *   <li>余额扣减 = 输入费用 × prompt_tokens + 输出费用 × completion_tokens</li>
- *   <li>扣费通过 {@link SysAiTokenService#recordUsage} 累积到 Token 记录</li>
- *   <li>checkBalance 仅检查 Token 状态和限流，不检查余额耗尽</li>
+ *   <li>{@code totalFee} 是累计消费总额（非剩余余额），每次调用增加</li>
+ *   <li>{@code checkBalance} 检查分组下是否有启用的 Token（非余额检查）</li>
+ *   <li>{@code deduct} 向 Token 的 {@code totalFee} 累加费用（非扣减余额）</li>
+ *   <li>{@code getAvailableBalance} 返回累计消费总额（非可用余额）</li>
  * </ul>
+ *
+ * <p>如需传统余额模式，需新增 {@code sys_ai_balance} 表的余额字段并重构此服务。</p>
  *
  * @author CH
  */
