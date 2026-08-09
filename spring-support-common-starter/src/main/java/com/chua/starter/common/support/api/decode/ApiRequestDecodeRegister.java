@@ -4,7 +4,7 @@ import com.chua.common.support.function.Upgrade;
 import com.chua.common.support.utils.IoUtils;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.common.support.api.properties.ApiProperties;
-import com.chua.starter.common.support.application.GlobalSettingFactory;
+import com.chua.common.support.application.GlobalSettingFactory;
 import org.apache.commons.codec.binary.Hex;
 
 import org.springframework.util.AntPathMatcher;

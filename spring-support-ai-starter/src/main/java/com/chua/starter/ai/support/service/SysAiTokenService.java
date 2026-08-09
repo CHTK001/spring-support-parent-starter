@@ -95,4 +95,15 @@ public interface SysAiTokenService {
      * @return true 表示未触发限流，false 表示已触发
      */
     boolean checkRateLimit(String tokenKey);
+
+    /**
+     * 按分组检查限流：取该分组下第一个启用的 Token 执行限流判定。
+     *
+     * <p>用于 AppKey/Bearer 协议鉴权链路，将 Token 的 rate_limit 能力接入运行时。
+     * 分组无 Token 时不限流（放行），避免阻断未配置计量计费的分组。</p>
+     *
+     * @param groupId 分组 ID（null 直接放行）
+     * @return true 表示未触发限流，false 表示已触发
+     */
+    boolean checkRateLimitByGroup(Integer groupId);
 }

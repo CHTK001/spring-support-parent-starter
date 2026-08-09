@@ -800,6 +800,23 @@ CREATE TABLE IF NOT EXISTS `sys_ai_usage_daily` (
 ) COMMENT='AI 用量日汇总表';
 
 -- ============================================================
+-- 31. AI 模型设置表
+-- ============================================================
+DROP TABLE IF EXISTS `sys_ai_model_setting`;
+CREATE TABLE IF NOT EXISTS `sys_ai_model_setting` (
+    `sys_ai_model_setting_id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '模型设置主键',
+    `module_id` INT DEFAULT NULL COMMENT '所属模块 ID',
+    `model_code` VARCHAR(255) DEFAULT NULL COMMENT '模型编码',
+    `model_name` VARCHAR(255) DEFAULT NULL COMMENT '模型名称',
+    `model_provider` VARCHAR(128) DEFAULT NULL COMMENT '模型厂商',
+    `model_value` VARCHAR(512) DEFAULT NULL COMMENT '模型值（如 baseUrl / model 标识）',
+    `status` INT DEFAULT 1 COMMENT '状态：1 启用，0 停用',
+    `sort` INT DEFAULT 0 COMMENT '排序值',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间'
+) COMMENT='AI 模型设置表';
+
+-- ============================================================
 -- 32. 清理旧 ai_* 冗余表（存在则删除）
 -- ============================================================
 DROP TABLE IF EXISTS `ai_provider`;

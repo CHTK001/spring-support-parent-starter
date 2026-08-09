@@ -11,6 +11,7 @@ import com.chua.starter.ai.support.model.GenerateResult;
 import com.chua.starter.ai.support.model.ImageGenRequest;
 import com.chua.starter.ai.support.model.VideoGenRequest;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +51,7 @@ public class AiGenerateController {
 
     private final SysAiGlobalSettingService settingService;
 
+    @Permission("admin")
     @Operation(summary = "文生图", description = "根据提示词生成图片，返回图片URL")
     @PostMapping("/image")
     public ReturnResult<GenerateResult> generateImage(@RequestBody ImageGenRequest request) {
@@ -118,6 +120,7 @@ public class AiGenerateController {
         }
     }
 
+    @Permission("admin")
     @Operation(summary = "文生视频", description = "根据提示词生成视频（异步任务，返回视频URL）")
     @PostMapping("/video")
     public ReturnResult<GenerateResult> generateVideo(@RequestBody VideoGenRequest request) {
@@ -179,6 +182,7 @@ public class AiGenerateController {
         }
     }
 
+    @Permission("admin")
     @Operation(summary = "上色", description = "对上传的黑白或灰度图片进行上色（基于图生图，返回URL或Base64）")
     @PostMapping(value = "/colorize", consumes = "multipart/form-data")
     public ReturnResult<GenerateResult> colorize(@RequestParam("file") MultipartFile file) {

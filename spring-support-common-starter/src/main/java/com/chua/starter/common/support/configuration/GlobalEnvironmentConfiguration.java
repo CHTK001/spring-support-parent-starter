@@ -1,5 +1,5 @@
 package com.chua.starter.common.support.configuration;
-import com.chua.starter.common.support.application.GlobalSettingFactory;
+import com.chua.common.support.application.GlobalSettingFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Bean;

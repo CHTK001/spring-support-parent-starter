@@ -98,6 +98,12 @@ public class SysAiAppKey {
     private Long sysAiAppKeyUseCount;
 
     /**
+     * 次数上限（null 表示不限）
+     */
+    @TableField("sys_ai_app_key_max_use")
+    private Long sysAiAppKeyMaxUse;
+
+    /**
      * 授权范围
      */
     private String sysAiAppKeyScope;

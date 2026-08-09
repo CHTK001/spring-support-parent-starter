@@ -7,6 +7,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.registry.AgentRegistry;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -51,6 +52,7 @@ public class AgentConfigController {
 
     // ==================== Agent-as-Model ====================
 
+    @Permission("admin")
     @Operation(summary = "注册 Agent 为模型", description = "将指定 Agent 包装为 AgentModelDefinition 并注册到 ChatClientRegistry，使其作为模型对外暴露")
     @PostMapping("/register-as-model")
     public ReturnResult<Map<String, Object>> registerAgentAsModel(@RequestBody Map<String, Object> body) {
@@ -100,6 +102,7 @@ public class AgentConfigController {
         }
     }
 
+    @Permission("admin")
     @Operation(summary = "注销 Agent 模型", description = "从 ChatClientRegistry 移除 Agent 模型注册")
     @DeleteMapping("/unregister-model/{modelName}")
     public ReturnResult<Map<String, Object>> unregisterAgentModel(@PathVariable String modelName) {
@@ -176,6 +179,7 @@ public class AgentConfigController {
         return ReturnResult.ok(result);
     }
 
+    @Permission("admin")
     @Operation(summary = "保存 Agent 编排", description = "持久化 Agent 的编排配置（子Agent关联、模式等）")
     @PostMapping("/orchestration/save")
     public ReturnResult<Map<String, Object>> saveOrchestration(@RequestBody Map<String, Object> body) {

@@ -6,6 +6,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.entity.SysAiManufacturer;
 import com.chua.starter.ai.support.service.AiManufacturerFacadeService;
 import com.chua.starter.ai.support.service.AiModelPriceSyncService;
+import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -66,12 +67,14 @@ public class AiManufacturerController {
     @Value("${user.dir:.}")
     private String userDir;
 
+    @Permission("admin")
     @Operation(summary = "获取厂商列表")
     @GetMapping("list")
     public ReturnResult<?> list() {
         return ReturnResult.ok(aiManufacturerFacadeService.list());
     }
 
+    @Permission("admin")
     @Operation(summary = "获取支持的工厂列表")
     @GetMapping("factories")
     public ReturnResult<?> factories() {
@@ -83,6 +86,7 @@ public class AiManufacturerController {
         return ReturnResult.ok(names);
     }
 
+    @Permission("admin")
     @Operation(summary = "同步模型价格（从 ChatClient 获取并更新）")
     @PutMapping("update-model-prices")
     public ReturnResult<?> updateModelPrices(
@@ -91,6 +95,7 @@ public class AiManufacturerController {
         return ReturnResult.success();
     }
 
+    @Permission("admin")
     @Operation(summary = "替换厂商模型（从 API 拉取最新模型列表，先删后插，保留本地模型）")
     @PutMapping("replace-models")
     public ReturnResult<?> replaceModels(
@@ -99,6 +104,7 @@ public class AiManufacturerController {
         return ReturnResult.success();
     }
 
+    @Permission("admin")
     @Operation(summary = "从厂商 API 直拉模型列表并同步到模型表")
     @PutMapping("sync-models")
     public ReturnResult<?> syncModels(
@@ -107,24 +113,28 @@ public class AiManufacturerController {
         return ReturnResult.ok(count, "模型同步完成，共 " + count + " 个");
     }
 
+    @Permission("admin")
     @Operation(summary = "保存厂商信息")
     @PostMapping("save")
     public ReturnResult<?> save(@Parameter(description = "厂商实体") @RequestBody SysAiManufacturer manufacturer) {
         return ReturnResult.ok(aiManufacturerFacadeService.save(manufacturer));
     }
 
+    @Permission("admin")
     @Operation(summary = "更新厂商信息")
     @PutMapping("update")
     public ReturnResult<?> update(@Parameter(description = "厂商实体") @RequestBody SysAiManufacturer manufacturer) {
         return ReturnResult.of(aiManufacturerFacadeService.update(manufacturer));
     }
 
+    @Permission("admin")
     @Operation(summary = "删除厂商")
     @DeleteMapping("delete")
     public ReturnResult<?> delete(@Parameter(description = "厂商标识") @RequestParam Integer sysAiManufacturerId) {
         return ReturnResult.of(aiManufacturerFacadeService.delete(sysAiManufacturerId));
     }
 
+    @Permission("admin")
     @Operation(summary = "上传厂商标志")
     @SneakyThrows
     @PostMapping(value = "upload-logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

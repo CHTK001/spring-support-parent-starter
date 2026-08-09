@@ -2,10 +2,12 @@ package com.chua.starter.ai.support.service;
 
 import com.chua.common.support.ai.chat.ModelDefinition;
 import com.chua.starter.ai.support.model.AiChatRequest;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * AI 对话门面服务接口。
@@ -29,7 +31,19 @@ public interface AiChatFacadeService {
      * @param request 对话请求
      * @return SSE 发射器
      */
-    org.springframework.web.servlet.mvc.method.annotation.SseEmitter stream(AiChatRequest request);
+    default SseEmitter stream(AiChatRequest request) {
+        return stream(request, null);
+    }
+
+    /**
+     * 流式对话调用，并在流结束后通过 {@code onComplete} 回调返回完整回复内容。
+     *
+     * @param request    对话请求
+     * @param onComplete 完成后回调（携带完整回复文本，可能为 null），可为 null
+     * @return SSE 发射器
+     */
+    SseEmitter stream(AiChatRequest request,
+                      Consumer<String> onComplete);
 
     /**
      * 获取分组可用模型列表。

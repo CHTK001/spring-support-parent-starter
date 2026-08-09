@@ -1,8 +1,10 @@
 package com.chua.starter.ai.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.entity.SysAiManufacturerKey;
 import com.chua.starter.ai.support.service.SysAiManufacturerKeyService;
+import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,6 +26,8 @@ import java.util.List;
  *
  * <p>提供厂商 API Key 的增删改查、按厂商编码查询与启停切换接口。</p>
  *
+ * <p>所有接口均受 {@code @Permission("admin")} 保护，查询接口对 Key 明文进行脱敏处理。</p>
+ *
  * @author CH
  * @since 4.0.0.42
  */
@@ -39,27 +43,64 @@ public class AiManufacturerKeyController {
     private final SysAiManufacturerKeyService manufacturerKeyService;
 
     /**
-     * 查询全部厂商 API Key。
+     * 对 API Key 与 Secret 进行脱敏，避免明文泄露。
      *
-     * @return API Key 列表
+     * @param list 原始 Key 列表
      */
-    @Operation(summary = "查询全部厂商 API Key")
-    @GetMapping("list")
-    public ReturnResult<List<SysAiManufacturerKey>> list() {
-        return ReturnResult.ok(manufacturerKeyService.list());
+    private void maskSecrets(List<SysAiManufacturerKey> list) {
+        if (list == null) {
+            return;
+        }
+        for (SysAiManufacturerKey key : list) {
+            key.setSysAiManufacturerKeyValue(mask(key.getSysAiManufacturerKeyValue()));
+            key.setSysAiManufacturerKeySecret(mask(key.getSysAiManufacturerKeySecret()));
+        }
     }
 
     /**
-     * 按厂商编码查询 API Key。
+     * 脱敏单值，保留首尾各 2 位，中间以星号替代。
+     *
+     * @param value 明文
+     * @return 脱敏结果
+     */
+    private String mask(String value) {
+        if (StringUtils.isBlank(value)) {
+            return value;
+        }
+        if (value.length() <= 4) {
+            return "****";
+        }
+        return value.substring(0, 2) + "****" + value.substring(value.length() - 2);
+    }
+
+    /**
+     * 查询全部厂商 API Key，Key 与 Secret 脱敏返回。
+     *
+     * @return API Key 列表
+     */
+    @Permission("admin")
+    @Operation(summary = "查询全部厂商 API Key")
+    @GetMapping("list")
+    public ReturnResult<List<SysAiManufacturerKey>> list() {
+        List<SysAiManufacturerKey> list = manufacturerKeyService.list();
+        maskSecrets(list);
+        return ReturnResult.ok(list);
+    }
+
+    /**
+     * 按厂商编码查询 API Key，Key 与 Secret 脱敏返回。
      *
      * @param manufacturerCode 厂商编码
      * @return API Key 列表
      */
+    @Permission("admin")
     @Operation(summary = "按厂商编码查询 API Key")
     @GetMapping("list-by-code")
     public ReturnResult<List<SysAiManufacturerKey>> listByManufacturerCode(
             @Parameter(description = "厂商编码") @RequestParam String manufacturerCode) {
-        return ReturnResult.ok(manufacturerKeyService.listByManufacturerCode(manufacturerCode));
+        List<SysAiManufacturerKey> list = manufacturerKeyService.listByManufacturerCode(manufacturerCode);
+        maskSecrets(list);
+        return ReturnResult.ok(list);
     }
 
     /**
@@ -68,6 +109,7 @@ public class AiManufacturerKeyController {
      * @param manufacturerKey API Key 实体
      * @return 保存后的实体
      */
+    @Permission("admin")
     @Operation(summary = "新增厂商 API Key")
     @PostMapping("save")
     public ReturnResult<SysAiManufacturerKey> save(
@@ -81,6 +123,7 @@ public class AiManufacturerKeyController {
      * @param manufacturerKey API Key 实体
      * @return 是否成功
      */
+    @Permission("admin")
     @Operation(summary = "更新厂商 API Key")
     @PutMapping("update")
     public ReturnResult<Boolean> update(
@@ -94,6 +137,7 @@ public class AiManufacturerKeyController {
      * @param id 主键 ID
      * @return 是否成功
      */
+    @Permission("admin")
     @Operation(summary = "删除厂商 API Key")
     @DeleteMapping("delete")
     public ReturnResult<Boolean> delete(
@@ -108,6 +152,7 @@ public class AiManufacturerKeyController {
      * @param enabled 是否启用
      * @return 是否成功
      */
+    @Permission("admin")
     @Operation(summary = "切换 API Key 启停状态")
     @PutMapping("toggle")
     public ReturnResult<Boolean> toggle(

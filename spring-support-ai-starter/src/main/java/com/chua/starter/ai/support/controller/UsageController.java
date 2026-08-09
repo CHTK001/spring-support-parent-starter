@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.controller;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.entity.SysAiUsage;
 import com.chua.starter.ai.support.service.SysAiUsageService;
+import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ public class UsageController {
      */
     private final SysAiUsageService usageService;
 
+    @Permission("admin")
     @Operation(summary = "用量列表", description = "分页查询用量明细")
     @GetMapping("/list")
     public ReturnResult<List<SysAiUsage>> list(
@@ -50,6 +52,7 @@ public class UsageController {
         return ReturnResult.ok(list);
     }
 
+    @Permission("admin")
     @Operation(summary = "用量统计", description = "汇总统计")
     @GetMapping("/statistics")
     public ReturnResult<Map<String, Object>> statistics(

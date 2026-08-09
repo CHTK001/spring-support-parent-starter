@@ -105,4 +105,20 @@ public class AiProviderController {
                                 @Parameter(description = "是否启用") @RequestParam Boolean enabled) {
         return providerService.toggle(providerId, enabled);
     }
+
+    /**
+     * 启用供应商为 OpenAI 兼容服务。
+     *
+     * <p>将供应商连接信息写入 runtime 全局配置并热重建全局 ChatClient，
+     * 使 {@code /v2/v1/chat/completions} 等 OpenAI 兼容端点立即可用。</p>
+     *
+     * @param providerId 供应商主键
+     * @return 更新后的供应商 DTO
+     */
+    @Permission("admin")
+    @Operation(summary = "启用 OpenAI 兼容服务")
+    @PostMapping("/{providerId}/activate")
+    public AiProviderDTO activate(@Parameter(description = "供应商主键 ID") @PathVariable Long providerId) {
+        return providerService.activate(providerId);
+    }
 }

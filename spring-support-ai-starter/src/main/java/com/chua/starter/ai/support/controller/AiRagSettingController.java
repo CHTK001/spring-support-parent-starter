@@ -9,6 +9,7 @@ import com.chua.common.support.vector.VectorStorageProvider;
 import com.chua.deeplearning.support.engine.ModelRegistry;
 import com.chua.starter.ai.support.model.AiModelDTO;
 import com.chua.starter.ai.support.service.settings.AiModelService;
+import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -57,6 +58,7 @@ public class AiRagSettingController {
      *
      * @return 五类下拉数据源
      */
+    @Permission("admin")
     @Operation(summary = "获取 RAG 配置选项", description = "向量模型、OCR 模型、LLM 模型、向量数据库、文本切片策略选项")
     @GetMapping("/options")
     public ReturnResult<Map<String, Object>> options() {

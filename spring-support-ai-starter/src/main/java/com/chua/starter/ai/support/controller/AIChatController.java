@@ -127,18 +127,12 @@ public class AIChatController {
             request.setMessages(msgList);
         }
 
-        // 调用 AI 门面进行流式回复，收集完整回复用于保存
-        StringBuilder assistantReply = new StringBuilder();
-        SseEmitter facadeEmitter = aiChatFacadeService.stream(request);
-
-        // 在 facadeEmitter 完成后保存 AI 回复
-        facadeEmitter.onCompletion(() -> {
-            if (assistantReply.length() > 0) {
-                aiDialogRecordService.addMessage(dialogId, ChatMessage.assistant(assistantReply.toString()));
+        // 调用 AI 门面进行流式回复，收集完整回复保存为 assistant 消息
+        return aiChatFacadeService.stream(request, reply -> {
+            if (reply != null && !reply.isEmpty()) {
+                aiDialogRecordService.addMessage(dialogId, ChatMessage.assistant(reply));
             }
         });
-
-        return facadeEmitter;
     }
 }
 

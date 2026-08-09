@@ -8,6 +8,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.configuration.RagClientManager;
 import com.chua.starter.ai.support.configuration.RagProperties;
+import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -66,6 +67,7 @@ public class RagController {
 
     // ── 文档管理 ─────────────────────────────────────────
 
+    @Permission("admin")
     @Operation(summary = "上传文档", description = "上传文件并自动索引到知识库")
     @PostMapping(value = "/document/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ReturnResult<RagDocument> uploadDocument(
@@ -109,6 +111,7 @@ public class RagController {
         return ReturnResult.ok(result);
     }
 
+    @Permission("admin")
     @Operation(summary = "删除文档", description = "删除文档及其向量索引")
     @DeleteMapping("/document/{id}")
     public ReturnResult<Boolean> deleteDocument(@PathVariable String id) {
@@ -128,6 +131,7 @@ public class RagController {
 
     // ── 问答 ─────────────────────────────────────────────
 
+    @Permission("admin")
     @Operation(summary = "RAG 问答", description = "基于已索引文档进行问答，返回答案和引用来源")
     @PostMapping("/query")
     public ReturnResult<Map<String, Object>> query(
@@ -176,6 +180,7 @@ public class RagController {
         return ReturnResult.ok(status);
     }
 
+    @Permission("admin")
     @Operation(summary = "重置索引", description = "清空向量存储并重新索引所有文档")
     @PostMapping("/reset")
     public ReturnResult<Integer> reset() {
@@ -249,6 +254,7 @@ public class RagController {
         }
     }
 
+    @Permission("admin")
     @Operation(summary = "URL 抓取文档", description = "从指定 URL 抓取网页内容并添加为 RAG 文档")
     @PostMapping("/document/url")
     public ReturnResult<RagDocument> addDocumentByUrl(@RequestBody com.chua.starter.ai.support.model.UrlDocumentRequest request) {

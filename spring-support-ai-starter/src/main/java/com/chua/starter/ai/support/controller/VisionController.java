@@ -4,6 +4,7 @@ import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +47,7 @@ public class VisionController {
      */
     private final SysAiGlobalSettingService settingService;
 
+    @Permission("admin")
     @Operation(summary = "图像描述", description = "识别图片内容并返回文字描述")
     @PostMapping("/describe")
     public ReturnResult<String> describe(@RequestParam("file") MultipartFile file,
@@ -64,6 +66,7 @@ public class VisionController {
         }
     }
 
+    @Permission("admin")
     @Operation(summary = "OCR识别", description = "识别图片中的文字")
     @PostMapping("/ocr")
     public ReturnResult<String> ocr(@RequestParam("file") MultipartFile file) {
@@ -81,6 +84,7 @@ public class VisionController {
         }
     }
 
+    @Permission("admin")
     @Operation(summary = "视觉问答", description = "针对图片内容提问")
     @PostMapping("/ask")
     public ReturnResult<String> ask(@RequestParam("file") MultipartFile file,

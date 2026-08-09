@@ -226,6 +226,28 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
         return false;
     }
 
+    @Override
+    public boolean checkRateLimitByGroup(Integer groupId) {
+        if (groupId == null) {
+            return true;
+        }
+        List<SysAiToken> tokens = listByGroupId(groupId);
+        if (tokens == null || tokens.isEmpty()) {
+            // 分组未配置 Token：不阻断（未启用计量限流的分组放行）
+            return true;
+        }
+        // 遍历启用 Token，任一触发限流则整组拒绝
+        for (SysAiToken token : tokens) {
+            if (token.getSysAiTokenStatus() != null && token.getSysAiTokenStatus() == 1
+                    && token.getSysAiTokenKey() != null
+                    && !checkRateLimit(token.getSysAiTokenKey())) {
+                log.warn("[SysAiToken] 分组 {} 触达限流，拒绝请求", groupId);
+                return false;
+            }
+        }
+        return true;
+    }
+
     /**
      * 生成 sk- 前缀的随机密钥。
      */

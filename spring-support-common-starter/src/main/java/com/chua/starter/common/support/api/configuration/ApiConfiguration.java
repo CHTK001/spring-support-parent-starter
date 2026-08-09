@@ -8,7 +8,7 @@ import com.chua.starter.common.support.api.encode.ApiResponseEncodeResponseBodyA
 import com.chua.starter.common.support.api.properties.ApiProperties;
 import com.chua.starter.common.support.api.response.ApiExceptionAdvice;
 import com.chua.starter.common.support.api.response.ApiUniformResponseBodyAdvice;
-import com.chua.starter.common.support.application.GlobalSettingFactory;
+import com.chua.common.support.application.GlobalSettingFactory;
 import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
 import jakarta.annotation.Priority;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;

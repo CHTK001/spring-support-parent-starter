@@ -4,7 +4,9 @@ import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatResponse;
 import com.chua.common.support.ai.chat.ChatSyncResponse;
 import com.chua.common.support.ai.chat.ModelDefinition;
+import com.chua.common.support.ai.AiUsage;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.ai.support.interceptor.UsageRecorderInterceptor;
 import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
@@ -26,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -55,6 +58,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final ChatClientRegistry chatClientRegistry;
     private final SysAiGroupService sysAiGroupService;
     private final SysAiTokenService sysAiTokenService;
+    private final UsageRecorderInterceptor usageRecorderInterceptor;
 
     /**
      * 根据分组 ID 与请求模型名解析 ChatClient。
@@ -108,11 +112,15 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         long start = System.currentTimeMillis();
 
         try {
-            String result = client.chatSync(prompt);
+            ChatSyncResponse chatSyncResponse = client.chatSyncWithResponse(prompt);
+            String result = chatSyncResponse != null ? chatSyncResponse.getText() : null;
             long elapsed = System.currentTimeMillis() - start;
             log.debug("[AiChatFacade] call 完成: model={}, groupId={}, elapsed={}ms, len={}",
                     request.getModel(), groupId, elapsed,
                     result != null ? result.length() : 0);
+
+            // 记录用量（异步）
+            recordUsage(groupId, client, request.getModel(), "sync", chatSyncResponse != null ? chatSyncResponse.getUsage() : null);
 
             Map<String, Object> response = new LinkedHashMap<>();
             response.put("id", "chatcmpl-" + UUID.randomUUID().toString().substring(0, 8));
@@ -129,11 +137,12 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             // 顶层透传文本内容，供 OpenAI 兼容控制器直接消费（result.get("text")）
             response.put("text", result);
 
-            Map<String, Object> usage = new LinkedHashMap<>();
-            usage.put("prompt_tokens", 0);
-            usage.put("completion_tokens", 0);
-            usage.put("total_tokens", 0);
-            response.put("usage", usage);
+            AiUsage usage = chatSyncResponse != null ? chatSyncResponse.getUsage() : null;
+            Map<String, Object> usageOut = new LinkedHashMap<>();
+            usageOut.put("prompt_tokens", usage != null && usage.getInputTokens() != null ? usage.getInputTokens() : 0);
+            usageOut.put("completion_tokens", usage != null && usage.getOutputTokens() != null ? usage.getOutputTokens() : 0);
+            usageOut.put("total_tokens", usage != null && usage.getTotalTokens() != null ? usage.getTotalTokens() : 0);
+            response.put("usage", usageOut);
 
             return response;
         } catch (Exception e) {
@@ -145,7 +154,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     @Override
-    public SseEmitter stream(AiChatRequest request) {
+    public SseEmitter stream(AiChatRequest request, Consumer<String> onComplete) {
         Integer groupId = extractGroupId(request);
         // 深度思考 / 智能搜索开关并入 parameters，供底层 ChatClient 消费
         injectFeatureFlags(request);
@@ -161,6 +170,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
 
         // 防止重复 complete
         AtomicBoolean done = new AtomicBoolean(false);
+        // 累积完整回复内容，供 onComplete 回调使用
+        StringBuilder fullReply = new StringBuilder();
 
         // 使用 ChatClient 原生流式 API，对接主流模型的 SSE Chunk 输出
         client.chat(prompt, response -> {
@@ -173,6 +184,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                     case STREAMING -> {
                         String content = response.getContent();
                         if (content != null && !content.isEmpty()) {
+                            fullReply.append(content);
                             String sseData = String.format(
                                     "{\"id\":\"%s\",\"object\":\"chat.completion.chunk\",\"created\":%d," +
                                     "\"model\":\"%s\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"%s\"},\"finish_reason\":null}]}",
@@ -181,6 +193,19 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                         }
                     }
                     case STOP -> {
+                        // 兼容同步/聚合式 ChatClient（如 DefaultScopeChatClient）：
+                        // 其底层一次性交付完整内容，这里需在 STOP 前补发内容 delta，否则内容会丢失
+                        String content = response.getContent();
+                        if (content != null && !content.isEmpty()) {
+                            fullReply.append(content);
+                            String dataChunk = String.format(
+                                    "{\"id\":\"%s\",\"object\":\"chat.completion.chunk\",\"created\":%d," +
+                                    "\"model\":\"%s\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"%s\"},\"finish_reason\":null}]}",
+                                    chatId, created, modelName, escapeJson(content));
+                            emitter.send(SseEmitter.event().data(dataChunk, MediaType.TEXT_PLAIN));
+                        }
+                        // 记录用量（异步），STOP 携带完整 usage
+                        recordUsage(groupId, client, modelName, "async", response.getUsage());
                         if (done.compareAndSet(false, true)) {
                             String finalChunk = String.format(
                                     "{\"id\":\"%s\",\"object\":\"chat.completion.chunk\",\"created\":%d," +
@@ -190,6 +215,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                             emitter.send(SseEmitter.event().data("[DONE]", MediaType.TEXT_PLAIN));
                             emitter.complete();
                         }
+                        // 流结束，回调完整回复
+                        notifyComplete(onComplete, fullReply);
                     }
                     case ERROR -> {
                         log.error("[AiChatFacade] stream 错误: model={}, groupId={}, error={}",
@@ -215,6 +242,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                     emitter.complete();
                 } catch (IOException ignored) {
                 }
+                // 兜底完成回调
+                notifyComplete(onComplete, fullReply);
             }
         }, throwable -> {
             log.error("[AiChatFacade] stream 失败: model={}, groupId={}",
@@ -231,6 +260,24 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         });
 
         return emitter;
+    }
+
+    /**
+     * 触发完成回调。
+     *
+     * @param onComplete 完成回调
+     * @param fullReply  累积的完整回复
+     */
+    private static void notifyComplete(Consumer<String> onComplete, StringBuilder fullReply) {
+        if (onComplete == null) {
+            return;
+        }
+        try {
+            String reply = fullReply.length() > 0 ? fullReply.toString() : null;
+            onComplete.accept(reply);
+        } catch (Exception ex) {
+            log.warn("[AiChatFacade] 完成回调执行失败: {}", ex.getMessage());
+        }
     }
 
     @Override
@@ -374,6 +421,66 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         }
         if (request.getSearch() != null) {
             parameters.put("search", request.getSearch());
+        }
+    }
+
+    /**
+     * 解析分组名称（无分组返回 null）。
+     *
+     * @param groupId 分组 ID
+     * @return 分组名称
+     */
+    private String resolveGroupName(Integer groupId) {
+        if (groupId == null) {
+            return null;
+        }
+        try {
+            return sysAiGroupService.list().stream()
+                    .filter(g -> groupId.equals(g.getSysAiGroupId()))
+                    .map(g -> g.getSysAiGroupName())
+                    .findFirst()
+                    .orElse(null);
+        } catch (Exception e) {
+            log.debug("[AiChatFacade] 解析分组名失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 异步记录本次调用用量。
+     *
+     * @param groupId 分组 ID（无分组为 null）
+     * @param client  消息客户端
+     * @param model   模型名称
+     * @param callType 调用类型（sync/async）
+     * @param usage   用量信息
+     */
+    private void recordUsage(Integer groupId, ChatClient client, String model, String callType, AiUsage usage) {
+        if (usageRecorderInterceptor == null) {
+            return;
+        }
+        AiUsage effective = usage;
+        if (effective == null) {
+            effective = AiUsage.builder().build();
+        }
+        String provider = effective.getProvider();
+        if (provider == null && client instanceof com.chua.starter.ai.support.chat.ChatClient sc) {
+            provider = sc.getProvider();
+        }
+        if (provider == null) {
+            provider = "unknown";
+        }
+        try {
+            usageRecorderInterceptor.record(
+                    resolveGroupName(groupId),
+                    provider,
+                    model,
+                    callType,
+                    effective,
+                    null,
+                    null);
+        } catch (Exception e) {
+            log.debug("[AiChatFacade] 记录用量失败: {}", e.getMessage());
         }
     }
 

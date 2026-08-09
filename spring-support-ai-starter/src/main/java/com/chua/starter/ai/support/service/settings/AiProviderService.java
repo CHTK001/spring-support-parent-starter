@@ -51,4 +51,14 @@ public interface AiProviderService {
      * @return 更新后的供应商 DTO
      */
     AiProviderDTO toggle(Long providerId, Boolean enabled);
+
+    /**
+     * 启用供应商为 OpenAI 兼容服务（写入 runtime 分组配置并热重建全局 ChatClient）。
+     *
+     * <p>执行后立即可通过 {@code /v2/v1/chat/completions} 等 OpenAI 兼容端点请求。</p>
+     *
+     * @param providerId 供应商主键
+     * @return 更新后的供应商 DTO
+     */
+    AiProviderDTO activate(Long providerId);
 }

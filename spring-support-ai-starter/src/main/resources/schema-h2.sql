@@ -798,3 +798,34 @@ CREATE TABLE IF NOT EXISTS `sys_ai_usage_daily` (
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间'
 ) COMMENT='AI 用量日汇总表';
+
+-- ============================================================
+-- 32. AI 定价表（官方价格）
+-- ============================================================
+DROP TABLE IF EXISTS `sys_ai_pricing`;
+CREATE TABLE IF NOT EXISTS `sys_ai_pricing` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',
+    `provider` VARCHAR(64) DEFAULT NULL COMMENT '服务商',
+    `model` VARCHAR(255) DEFAULT NULL COMMENT '模型名称',
+    `input_price_per1k` DOUBLE DEFAULT 0 COMMENT '输入价格(每1k tokens 元)',
+    `output_price_per1k` DOUBLE DEFAULT 0 COMMENT '输出价格(每1k tokens 元)',
+    `currency` VARCHAR(16) DEFAULT 'CNY' COMMENT '币种',
+    `effective_date` DATETIME DEFAULT NULL COMMENT '生效日期',
+    `source` VARCHAR(32) DEFAULT 'manual' COMMENT '来源：manual 手动 / sync 官方同步',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间'
+) COMMENT='AI 定价表';
+
+DROP TABLE IF EXISTS `sys_ai_model_setting`;
+CREATE TABLE IF NOT EXISTS `sys_ai_model_setting` (
+    `sys_ai_model_setting_id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '模型设置主键',
+    `module_id` INT DEFAULT NULL COMMENT '所属模块 ID',
+    `model_code` VARCHAR(255) DEFAULT NULL COMMENT '模型编码',
+    `model_name` VARCHAR(255) DEFAULT NULL COMMENT '模型名称',
+    `model_provider` VARCHAR(128) DEFAULT NULL COMMENT '模型厂商',
+    `model_value` VARCHAR(512) DEFAULT NULL COMMENT '模型值（如 baseUrl / model 标识）',
+    `status` INT DEFAULT 1 COMMENT '状态：1 启用，0 停用',
+    `sort` INT DEFAULT 0 COMMENT '排序值',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间'
+) COMMENT='AI 模型设置表';

@@ -2,9 +2,12 @@ package com.chua.starter.ai.support.service.impl.settings;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.ai.support.configuration.GlobalChatClientManager;
 import com.chua.starter.ai.support.entity.settings.AiProvider;
 import com.chua.starter.ai.support.mapper.settings.AiProviderMapper;
 import com.chua.starter.ai.support.model.AiProviderDTO;
+import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.settings.AiProviderService;
 import com.chua.starter.common.support.text.json.Json;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -18,6 +21,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -42,9 +46,24 @@ public class AiProviderServiceImpl implements AiProviderService {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /**
+     * runtime 全局配置分组
+     */
+    private static final String RUNTIME_GROUP = "runtime";
+
+    /**
      * 供应商 Mapper
      */
     private final AiProviderMapper providerMapper;
+
+    /**
+     * 键值全局设置服务
+     */
+    private final SysAiGlobalSettingService sysAiGlobalSettingService;
+
+    /**
+     * 全局 ChatClient 管理器（激活后热重建）
+     */
+    private final GlobalChatClientManager globalChatClientManager;
 
     /**
      * 查询所有启用状态的供应商。
@@ -131,6 +150,84 @@ public class AiProviderServiceImpl implements AiProviderService {
                 .set(AiProvider::getUpdateTime, LocalDateTime.now());
         providerMapper.update(null, wrapper);
         return toDto(providerMapper.selectById(providerId));
+    }
+
+    /**
+     * 启用供应商为 OpenAI 兼容服务：将供应商连接信息写入 runtime 分组键值配置，
+     * 开启 OpenAI REST 端口与 AppKey 鉴权开关，并热重建全局 ChatClient。
+     *
+     * @param providerId 供应商主键
+     * @return 更新后的供应商 DTO
+     */
+    @Override
+    @Transactional
+    public AiProviderDTO activate(Long providerId) {
+        AiProvider provider = providerMapper.selectById(providerId);
+        if (provider == null) {
+            throw new IllegalStateException("供应商不存在: id=" + providerId);
+        }
+        if (StringUtils.isBlank(provider.getProviderBaseUrl())) {
+            throw new IllegalStateException("供应商缺少 Base URL，无法启用服务");
+        }
+        if (StringUtils.isBlank(provider.getProviderApiKey())) {
+            throw new IllegalStateException("供应商缺少 API Key，无法启用服务");
+        }
+        List<String> models = parseList(provider.getProviderModels());
+        if (models.isEmpty()) {
+            throw new IllegalStateException("供应商未配置可用模型，无法启用服务");
+        }
+
+        // 组装 runtime 分组键值配置（先删后插，全量写入）
+        String baseUrl = provider.getProviderBaseUrl();
+        // OpenAI 兼容标准要求 baseUrl 指向 /v1 根路径；未带 /v1 时自动补齐
+        if (baseUrl != null && !baseUrl.endsWith("/")) {
+            if (!baseUrl.endsWith("/v1") && !baseUrl.contains("/v1/")) {
+                baseUrl = baseUrl + "/v1";
+            }
+        }
+        List<Map<String, Object>> fields = new ArrayList<>();
+        addField(fields, "provider", provider.getProviderType() != null ? provider.getProviderType() : "openai");
+        addField(fields, "factory", provider.getProviderType() != null ? provider.getProviderType() : "openai");
+        addField(fields, "provider_base_url", baseUrl);
+        addField(fields, "provider_api_key", provider.getProviderApiKey());
+        addField(fields, "default_model", models.get(0));
+        addField(fields, "openaiRestEnabled", "true");
+        addField(fields, "app_key_enabled", "true");
+        Map<String, Object> request = new java.util.LinkedHashMap<>();
+        request.put("group", RUNTIME_GROUP);
+        request.put("fields", fields);
+        sysAiGlobalSettingService.replace(request);
+        log.info("[AiProvider] 供应商 {} 已激活为 OpenAI 兼容服务: baseUrl={}, model={}",
+                provider.getProviderName(), baseUrl, models.get(0));
+
+        // 确保供应商启用
+        if (!Boolean.TRUE.equals(provider.getProviderEnabled())) {
+            LambdaUpdateWrapper<AiProvider> enableWrapper = new LambdaUpdateWrapper<AiProvider>()
+                    .eq(AiProvider::getProviderId, providerId)
+                    .set(AiProvider::getProviderEnabled, true)
+                    .set(AiProvider::getUpdateTime, LocalDateTime.now());
+            providerMapper.update(null, enableWrapper);
+        }
+
+        // 热重建全局 ChatClient，使新配置立即生效
+        globalChatClientManager.rebuild();
+        return toDto(providerMapper.selectById(providerId));
+    }
+
+    /**
+     * 组装单条 runtime 键值配置项。
+     *
+     * @param fields 配置项列表
+     * @param field  字段名
+     * @param value  字段值
+     */
+    private void addField(List<Map<String, Object>> fields, String field, String value) {
+        Map<String, Object> item = new java.util.LinkedHashMap<>();
+        item.put("field", field);
+        item.put("value", value);
+        item.put("valueType", "STRING");
+        item.put("description", field);
+        fields.add(item);
     }
 
     /**

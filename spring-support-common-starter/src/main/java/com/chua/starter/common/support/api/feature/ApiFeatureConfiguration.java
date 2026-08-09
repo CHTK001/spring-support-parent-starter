@@ -1,8 +1,10 @@
 package com.chua.starter.common.support.api.feature;
+
 import com.chua.starter.common.support.api.annotations.ApiFeature;
 import com.chua.starter.common.support.api.interceptor.ApiControlInterceptor;
 import com.chua.starter.common.support.api.properties.ApiProperties;
 import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,75 +18,146 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-
 /**
- * API 功能开关配置
- * <p>
- * 自动扫描并注册所有 @ApiFeature 注解标记的功能开关。
- * </p>
+ * API 功能开关自动配置。
+ *
+ * <p>扫描 Spring MVC 控制器中所有 {@link ApiFeature} 注解标记的方法/类，
+ * 注册到 {@link ApiFeatureManager} 中统一管理；同时注册
+ * {@link ApiControlInterceptor} 拦截器，对未启用的功能开关返回 403。</p>
+ *
+ * <h2>启用条件</h2>
+ * <pre>
+ *   # application.yml
+ *   plugin:
+ *     api:
+ *       feature:
+ *         enable: true   # 默认 true
+ * </pre>
  *
  * @author CH
  * @since 2024/12/08
  * @version 1.0.0
  */
+@Slf4j
 @Configuration
 @ConditionalOnProperty(name = "plugin.api.feature.enable", havingValue = "true", matchIfMissing = true)
-public class ApiFeatureConfiguration implements WebMvcConfigurer  {
-    private static final Logger log = LoggerFactory.getLogger(ApiFeatureConfiguration.class);
+public class ApiFeatureConfiguration implements WebMvcConfigurer {
+
     /**
-     * 构造函数
-     *
-     * @param apiProperties ApiProperties
-     * @param environment Environment
-     * @param requestMappingHandlerMapping RequestMappingHandlerMapping
+     * 全路径拦截模式：拦截所有 HTTP 请求
      */
-    public ApiFeatureConfiguration(ApiProperties apiProperties, Environment environment, RequestMappingHandlerMapping requestMappingHandlerMapping) {
+    private static final String PATH_PATTERN_ALL = "/**";
+
+    /**
+     * 排除路径：Spring Boot 默认错误页
+     */
+    private static final String PATH_PATTERN_ERROR = "/error";
+
+    /**
+     * 排除路径：Spring Boot Actuator 全部端点
+     */
+    private static final String PATH_PATTERN_ACTUATOR = "/actuator/**";
+
+    /**
+     * 日志横幅：上边框
+     */
+    private static final String LOG_BANNER_TOP =
+            "╔══════════════════════════════════════════════════════════════════════════════";
+
+    /**
+     * 日志横幅：下边框
+     */
+    private static final String LOG_BANNER_BOTTOM =
+            "╚══════════════════════════════════════════════════════════════════════════════";
+
+    /**
+     * 日志横幅：中间内容模板（带一个占位符用于注册数量）
+     */
+    private static final String LOG_BANNER_MIDDLE_TEMPLATE = "║ [功能开关]已扫描注册 {} 个 @ApiFeature 功能开关";
+
+    /**
+     * API 配置属性
+     */
+    private final ApiProperties apiProperties;
+
+    /**
+     * Spring 环境对象，用于读取运行时配置
+     */
+    private final Environment environment;
+
+    /**
+     * Spring MVC 请求映射处理器，用于枚举所有 Controller 方法
+     */
+    private final RequestMappingHandlerMapping requestMappingHandlerMapping;
+
+    /**
+     * 构造器：注入 API 配置、Spring 环境与请求映射处理器。
+     *
+     * @param apiProperties                 API 配置属性
+     * @param environment                   Spring 环境对象
+     * @param requestMappingHandlerMapping  Spring MVC 请求映射处理器
+     */
+    public ApiFeatureConfiguration(ApiProperties apiProperties,
+                                   Environment environment,
+                                   RequestMappingHandlerMapping requestMappingHandlerMapping) {
         this.apiProperties = apiProperties;
         this.environment = environment;
         this.requestMappingHandlerMapping = requestMappingHandlerMapping;
     }
 
-        private final ApiProperties apiProperties;
-    private final Environment environment;
-    private final RequestMappingHandlerMapping requestMappingHandlerMapping;
-
+    /**
+     * 创建 {@link ApiFeatureManager} Bean，统一管理所有 @ApiFeature 功能开关。
+     *
+     * @return 功能开关管理器实例
+     */
     @Bean
     public ApiFeatureManager apiFeatureManager() {
         return new ApiFeatureManager();
     }
 
+    /**
+     * 创建 {@link ApiControlInterceptor} Bean，用于拦截未启用的功能开关。
+     *
+     * @param featureManager 功能开关管理器
+     * @return API 控制拦截器实例
+     */
     @Bean
     public ApiControlInterceptor apiControlInterceptor(ApiFeatureManager featureManager) {
         return new ApiControlInterceptor(apiProperties, environment, featureManager);
     }
 
+    /**
+     * 注册 API 控制拦截器，覆盖全部路径，排除错误页与 Actuator 端点。
+     *
+     * @param registry Spring MVC 拦截器注册表
+     */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(apiControlInterceptor(apiFeatureManager()))
-                .addPathPatterns("/**")
-                .excludePathPatterns("/error", "/actuator/**");
+                .addPathPatterns(PATH_PATTERN_ALL)
+                .excludePathPatterns(PATH_PATTERN_ERROR, PATH_PATTERN_ACTUATOR);
     }
 
     /**
-     * 启动时扫描所有 @ApiFeature 注解
+     * 启动时扫描 Spring MVC 中所有 {@link ApiFeature} 注解标记的方法或类，
+     * 注册到 {@link ApiFeatureManager} 中。
+     *
+     * <p>查找顺序：先方法级注解，再类级注解。同一功能开关 value 重复注册时，
+     * 后注册的会覆盖前者。</p>
      */
     @PostConstruct
     public void scanApiFeatures() {
         Map<RequestMappingInfo, HandlerMethod> handlerMethods = requestMappingHandlerMapping.getHandlerMethods();
-        var featureManager = apiFeatureManager();
+        ApiFeatureManager featureManager = apiFeatureManager();
 
         int count = 0;
         for (Map.Entry<RequestMappingInfo, HandlerMethod> entry : handlerMethods.entrySet()) {
             HandlerMethod handlerMethod = entry.getValue();
             RequestMappingInfo mappingInfo = entry.getKey();
 
-            // 方法级别注解
+            // 先尝试方法级别注解，未命中再回退到类级别注解
             ApiFeature apiFeature = AnnotationUtils.findAnnotation(handlerMethod.getMethod(), ApiFeature.class);
             if (apiFeature == null) {
-                // 类级别注解
                 apiFeature = AnnotationUtils.findAnnotation(handlerMethod.getBeanType(), ApiFeature.class);
             }
 
@@ -95,9 +168,9 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer  {
         }
 
         if (count > 0) {
-            log.info("╔══════════════════════════════════════════════════════════════════════════════");
-            log.info("║ [功能开关]已扫描注册 {} 个 @ApiFeature 功能开关", count);
-            log.info("╚══════════════════════════════════════════════════════════════════════════════");
+            log.info(LOG_BANNER_TOP);
+            log.info(LOG_BANNER_MIDDLE_TEMPLATE, count);
+            log.info(LOG_BANNER_BOTTOM);
         }
     }
 }

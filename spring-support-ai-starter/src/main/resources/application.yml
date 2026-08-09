@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8091
   servlet:
     context-path: /api/ai
 
@@ -33,7 +33,7 @@ spring:
     active: dev
   ai:
     usage:
-      enabled: false
+      enabled: true
 
 # 文件系统：目录浏览接口默认关闭，需显式开启（安全问题）
 plugin:
