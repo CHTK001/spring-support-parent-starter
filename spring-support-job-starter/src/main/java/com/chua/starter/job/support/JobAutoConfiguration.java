@@ -222,7 +222,7 @@ public class JobAutoConfiguration {
             log.info("[job] sync.in-memory=true, 强制使用 InMemorySyncServer (跳过 SPI)");
             return new InMemorySyncServer();
         }
-        SyncServer server = ServiceProvider.of(SyncServer.class).getExtension("rsocket", "http", "websocket");
+        SyncServer server = ServiceProvider.of(SyncServer.class).getExtension("rsocket", "netty-tcp", "netty-udp", "tcp", "udp", "websocket", "http");
         if (server == null) {
             log.warn("[job] 未找到 SyncServer SPI 实现, fallback 到 InMemorySyncServer (精简部署或测试环境)");
             return new InMemorySyncServer();
@@ -305,7 +305,7 @@ public class JobAutoConfiguration {
             log.info("[job] sync.in-memory=true, 强制使用 InMemorySyncClient (跳过 SPI)");
             return new InMemorySyncClient();
         }
-        SyncClient client = ServiceProvider.of(SyncClient.class).getExtension("rsocket", "websocket", "http", "socketio");
+        SyncClient client = ServiceProvider.of(SyncClient.class).getExtension("rsocket", "netty-tcp", "netty-udp", "tcp", "udp", "websocket", "http", "socketio");
         if (client == null) {
             log.warn("[job] 未找到 SyncClient SPI 实现, fallback 到 InMemorySyncClient (精简部署或测试环境)");
             return new InMemorySyncClient();
