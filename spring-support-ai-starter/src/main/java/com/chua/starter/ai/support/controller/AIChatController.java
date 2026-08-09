@@ -16,9 +16,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -33,6 +31,7 @@ import java.util.Map;
  * AI 对话聊天控制器。
  * <p>
  * 提供会话管理（创建/删除/查询）和基于 SSE 的流式聊天能力。
+ * 继承 {@link BaseAiController} 以便统一使用基础服务能力。
  *
  * @author CH
  */
@@ -41,7 +40,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 @ApiReturnFormatIgnore
-public class AIChatController {
+public class AIChatController extends BaseAiController {
 
     private final AIDialogRecordService aiDialogRecordService;
     private final AiChatFacadeService aiChatFacadeService;

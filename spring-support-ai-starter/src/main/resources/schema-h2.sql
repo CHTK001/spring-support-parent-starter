@@ -295,6 +295,8 @@ CREATE TABLE IF NOT EXISTS `sys_ai_app_key` (
   `sys_ai_app_key_provider_id` BIGINT DEFAULT NULL COMMENT '关联供应商 ID',
   `sys_ai_app_key_model` VARCHAR(255) DEFAULT NULL COMMENT '限定使用的模型',
   `sys_ai_app_key_max_use` BIGINT DEFAULT NULL COMMENT '次数上限（null 表示不限）',
+  `sys_ai_app_key_max_tokens` BIGINT DEFAULT NULL COMMENT 'Token 总量上限（null 表示不限）',
+  `sys_ai_app_key_total_tokens` BIGINT DEFAULT 0 COMMENT '已使用 Token 累计值',
   `sys_ai_app_key_enabled` INT DEFAULT 1 COMMENT '是否启用',
   `sys_ai_app_key_expire_datetime` DATETIME DEFAULT NULL COMMENT '过期时间（null 表示不限）',
   `sys_user_id` INT DEFAULT NULL COMMENT '所属用户ID',
