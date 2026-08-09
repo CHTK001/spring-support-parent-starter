@@ -1,8 +1,6 @@
 package com.chua.starter.ai.support.controller;
 
-import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.model.AiChatRequest;
-import com.chua.starter.ai.support.service.AiAccessGuardService;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,7 +12,6 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -28,76 +25,73 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * OpenAI 标准协议扩展控制器，提供 Images/Audio/Files/Fine-tuning 等扩展接口。
+ * OpenAI 标准协议扩展控制器，提供 Images / Audio / Files / Fine-tuning 等扩展接口。
+ *
+ * <p>继承 {@link BaseAiController} 统一使用 Bearer Token 鉴权。
+ * 所有接口均需通过 {@link #authCheck(HttpServletRequest)} 校验后才可访问。</p>
+ *
+ * <h3>接口列表</h3>
+ * <ul>
+ *   <li>{@code POST /v2/v1/images/generations} — 图像生成</li>
+ *   <li>{@code POST /v2/v1/images/edits} — 图像编辑</li>
+ *   <li>{@code POST /v2/v1/images/variations} — 图像变体</li>
+ *   <li>{@code POST /v2/v1/audio/transcriptions} — 音频转录</li>
+ *   <li>{@code POST /v2/v1/audio/translations} — 音频翻译</li>
+ *   <li>{@code POST /v2/v1/moderations} — 内容审核</li>
+ *   <li>{@code POST /v2/v1/files} — 文件上传</li>
+ *   <li>{@code GET /v2/v1/files} — 文件列表</li>
+ *   <li>{@code GET /v2/v1/files/{file_id}} — 文件检索</li>
+ *   <li>{@code DELETE /v2/v1/files/{file_id}} — 文件删除</li>
+ *   <li>{@code GET /v2/v1/files/{file_id}/content} — 文件内容检索</li>
+ *   <li>{@code POST /v2/v1/fine_tuning/jobs} — 创建微调任务</li>
+ *   <li>{@code GET /v2/v1/fine_tuning/jobs} — 微调任务列表</li>
+ *   <li>{@code GET /v2/v1/fine_tuning/jobs/{job_id}} — 微调任务详情</li>
+ *   <li>{@code POST /v2/v1/fine_tuning/jobs/{job_id}/cancel} — 取消微调任务</li>
+ * </ul>
  *
  * @author CH
  * @since 4.0.0.42
  */
-@Tag(name = "AI OpenAI Extended Protocol Controller", description = "OpenAI 标准协议扩展接口（Images/Audio/Files/Fine-tuning）")
+@Tag(name = "AI OpenAI Extended Protocol Controller", description = "OpenAI 标准协议扩展接口（Images / Audio / Files / Fine-tuning）")
 @RestController
 @ApiReturnFormatIgnore
 @RequestMapping("/v2")
-public class AiOpenaiExtendedController {
+public class AiOpenaiExtendedController extends BaseAiController {
 
     /**
-     * 对话门面服务
+     * AI 对话门面服务，负责模型路由与对话执行
      */
     private final AiChatFacadeService aiChatFacadeService;
 
     /**
-     * 访问守卫服务
-     */
-    private final AiAccessGuardService aiAccessGuardService;
-
-    /**
-     * 全参构造。
+     * 构造函数，注入扩展控制器所需的服务。
      *
-     * @param aiChatFacadeService  对话门面服务
-     * @param aiAccessGuardService 访问守卫服务
+     * <p>鉴权相关服务由基类 {@link BaseAiController} 通过 {@code @Autowired} 注入。</p>
+     *
+     * @param aiChatFacadeService AI 对话门面服务
      */
-    public AiOpenaiExtendedController(
-            AiChatFacadeService aiChatFacadeService,
-            AiAccessGuardService aiAccessGuardService) {
+    public AiOpenaiExtendedController(AiChatFacadeService aiChatFacadeService) {
         this.aiChatFacadeService = aiChatFacadeService;
-        this.aiAccessGuardService = aiAccessGuardService;
-    }
-
-    private boolean authCheck(HttpServletRequest request) {
-        String appKey = request.getHeader("x-ai-app-key");
-        String appSecret = request.getHeader("x-ai-app-secret");
-        if (StringUtils.isBlank(appKey) || StringUtils.isBlank(appSecret)) {
-            String auth = request.getHeader("Authorization");
-            if (!StringUtils.isBlank(auth) && auth.startsWith("Bearer ")) {
-                appKey = auth.substring(7).trim();
-                appSecret = appKey;
-            }
-        }
-        if (StringUtils.isBlank(appKey)) {
-            return false;
-        }
-        return aiAccessGuardService.verifyAppKey(appKey, appSecret, request.getRemoteAddr());
-    }
-
-    private ResponseEntity<Map<String, Object>> authError() {
-        return ResponseEntity.status(401).body(Map.of(
-                "error", Map.of("message", "AI AppKey 校验失败", "type", "authentication_error")
-        ));
-    }
-
-    private ResponseEntity<Map<String, Object>> serverError(String message) {
-        return ResponseEntity.ok(Map.of(
-                "error", Map.of("message", message, "type", "api_error")
-        ));
     }
 
     // ==================== OpenAI Image Generation ====================
 
+    /**
+     * OpenAI Image Generation 图像生成接口。
+     *
+     * <p>接收图像生成请求，调用对话门面服务处理后返回结果。</p>
+     *
+     * @param request         请求体（包含 prompt、model 等）
+     * @param servletRequest  HTTP 请求
+     * @return 图像生成响应
+     */
     @Operation(summary = "OpenAI Image Generation", description = "OpenAI 标准协议图像生成接口")
     @PostMapping("/v1/images/generations")
     public ResponseEntity<Map<String, Object>> imageGeneration(@RequestBody Map<String, Object> request,
                                                                 HttpServletRequest servletRequest) {
+        // 鉴权校验
         if (!authCheck(servletRequest)) {
-            return authError();
+            return authErrorResponse();
         }
         try {
             String prompt = (String) request.getOrDefault("prompt", "");
@@ -122,6 +116,18 @@ public class AiOpenaiExtendedController {
 
     // ==================== OpenAI Image Edits ====================
 
+    /**
+     * OpenAI Image Edits 图像编辑接口。
+     *
+     * <p>上传原始图像与编辑描述，返回编辑后的图像。</p>
+     *
+     * @param image           原始图像文件
+     * @param prompt          编辑描述
+     * @param model           模型名称
+     * @param n               生成数量
+     * @param servletRequest  HTTP 请求
+     * @return 图像编辑响应
+     */
     @Operation(summary = "OpenAI Image Edits", description = "OpenAI 标准协议图像编辑接口")
     @PostMapping(value = "/v1/images/edits", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> imageEdits(@RequestParam("image") MultipartFile image,
@@ -129,11 +135,15 @@ public class AiOpenaiExtendedController {
                                                            @RequestParam(value = "model", required = false) String model,
                                                            @RequestParam(value = "n", required = false, defaultValue = "1") Integer n,
                                                            HttpServletRequest servletRequest) {
+        // 鉴权校验
         if (!authCheck(servletRequest)) {
-            return authError();
+            return authErrorResponse();
         }
+        // 文件判空
         if (image == null || image.isEmpty()) {
-            return ResponseEntity.ok(Map.of("error", Map.of("message", "No image file provided", "type", "invalid_request_error")));
+            return ResponseEntity.ok(Map.of(
+                    "error", Map.of("message", "No image file provided", "type", "invalid_request_error")
+            ));
         }
         try {
             AiChatRequest chatRequest = new AiChatRequest();
@@ -148,17 +158,32 @@ public class AiOpenaiExtendedController {
 
     // ==================== OpenAI Image Variations ====================
 
+    /**
+     * OpenAI Image Variations 图像变体接口。
+     *
+     * <p>上传原始图像，生成风格相似的变体图像。</p>
+     *
+     * @param image           原始图像文件
+     * @param model           模型名称
+     * @param n               生成数量
+     * @param servletRequest  HTTP 请求
+     * @return 图像变体响应
+     */
     @Operation(summary = "OpenAI Image Variations", description = "OpenAI 标准协议图像变体接口")
     @PostMapping(value = "/v1/images/variations", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> imageVariations(@RequestParam("image") MultipartFile image,
                                                                 @RequestParam(value = "model", required = false) String model,
                                                                 @RequestParam(value = "n", required = false, defaultValue = "1") Integer n,
                                                                 HttpServletRequest servletRequest) {
+        // 鉴权校验
         if (!authCheck(servletRequest)) {
-            return authError();
+            return authErrorResponse();
         }
+        // 文件判空
         if (image == null || image.isEmpty()) {
-            return ResponseEntity.ok(Map.of("error", Map.of("message", "No image file provided", "type", "invalid_request_error")));
+            return ResponseEntity.ok(Map.of(
+                    "error", Map.of("message", "No image file provided", "type", "invalid_request_error")
+            ));
         }
         try {
             AiChatRequest chatRequest = new AiChatRequest();
@@ -173,17 +198,32 @@ public class AiOpenaiExtendedController {
 
     // ==================== OpenAI Audio Transcription ====================
 
+    /**
+     * OpenAI Audio Transcription 音频转录接口。
+     *
+     * <p>上传音频文件，返回文本转录结果。</p>
+     *
+     * @param file            音频文件
+     * @param model           模型名称
+     * @param prompt          提示词
+     * @param servletRequest  HTTP 请求
+     * @return 转录文本
+     */
     @Operation(summary = "OpenAI Audio Transcription", description = "OpenAI 标准协议音频转录接口")
     @PostMapping(value = "/v1/audio/transcriptions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> audioTranscriptions(@RequestParam("file") MultipartFile file,
-                                                                     @RequestParam("model") String model,
-                                                                     @RequestParam(value = "prompt", required = false) String prompt,
-                                                                     HttpServletRequest servletRequest) {
+                                                                    @RequestParam("model") String model,
+                                                                    @RequestParam(value = "prompt", required = false) String prompt,
+                                                                    HttpServletRequest servletRequest) {
+        // 鉴权校验
         if (!authCheck(servletRequest)) {
-            return authError();
+            return authErrorResponse();
         }
+        // 文件判空
         if (file == null || file.isEmpty()) {
-            return ResponseEntity.ok(Map.of("error", Map.of("message", "No audio file provided", "type", "invalid_request_error")));
+            return ResponseEntity.ok(Map.of(
+                    "error", Map.of("message", "No audio file provided", "type", "invalid_request_error")
+            ));
         }
         try {
             AiChatRequest chatRequest = new AiChatRequest();
@@ -199,17 +239,32 @@ public class AiOpenaiExtendedController {
 
     // ==================== OpenAI Audio Translation ====================
 
+    /**
+     * OpenAI Audio Translation 音频翻译接口。
+     *
+     * <p>上传非英语音频文件，返回英语翻译文本。</p>
+     *
+     * @param file            音频文件
+     * @param model           模型名称
+     * @param prompt          提示词
+     * @param servletRequest  HTTP 请求
+     * @return 翻译文本
+     */
     @Operation(summary = "OpenAI Audio Translation", description = "OpenAI 标准协议音频翻译接口")
     @PostMapping(value = "/v1/audio/translations", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> audioTranslations(@RequestParam("file") MultipartFile file,
-                                                                   @RequestParam("model") String model,
-                                                                   @RequestParam(value = "prompt", required = false) String prompt,
-                                                                   HttpServletRequest servletRequest) {
+                                                                  @RequestParam("model") String model,
+                                                                  @RequestParam(value = "prompt", required = false) String prompt,
+                                                                  HttpServletRequest servletRequest) {
+        // 鉴权校验
         if (!authCheck(servletRequest)) {
-            return authError();
+            return authErrorResponse();
         }
+        // 文件判空
         if (file == null || file.isEmpty()) {
-            return ResponseEntity.ok(Map.of("error", Map.of("message", "No audio file provided", "type", "invalid_request_error")));
+            return ResponseEntity.ok(Map.of(
+                    "error", Map.of("message", "No audio file provided", "type", "invalid_request_error")
+            ));
         }
         try {
             AiChatRequest chatRequest = new AiChatRequest();
@@ -225,12 +280,22 @@ public class AiOpenaiExtendedController {
 
     // ==================== OpenAI Moderations ====================
 
+    /**
+     * OpenAI Moderations 内容审核接口。
+     *
+     * <p>对输入文本进行内容安全审核，返回各类别的违规评分。</p>
+     *
+     * @param request         请求体（包含 input 文本）
+     * @param servletRequest  HTTP 请求
+     * @return 审核结果
+     */
     @Operation(summary = "OpenAI Moderations", description = "OpenAI 标准协议内容审核接口")
     @PostMapping("/v1/moderations")
     public ResponseEntity<Map<String, Object>> moderations(@RequestBody Map<String, Object> request,
                                                             HttpServletRequest servletRequest) {
+        // 鉴权校验
         if (!authCheck(servletRequest)) {
-            return authError();
+            return authErrorResponse();
         }
         try {
             String input = (String) request.getOrDefault("input", "");
@@ -247,13 +312,24 @@ public class AiOpenaiExtendedController {
 
     // ==================== OpenAI Files ====================
 
+    /**
+     * OpenAI Upload File 文件上传接口。
+     *
+     * <p>上传文件到 OpenAI 兼容存储，返回文件元信息。</p>
+     *
+     * @param file            文件
+     * @param purpose         用途（如 fine-tune）
+     * @param servletRequest  HTTP 请求
+     * @return 文件元信息
+     */
     @Operation(summary = "OpenAI Upload File", description = "OpenAI 标准协议文件上传接口")
     @PostMapping(value = "/v1/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Object>> uploadFile(@RequestParam("file") MultipartFile file,
                                                            @RequestParam("purpose") String purpose,
                                                            HttpServletRequest servletRequest) {
+        // 鉴权校验
         if (!authCheck(servletRequest)) {
-            return authError();
+            return authErrorResponse();
         }
         String fileId = "file-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         Map<String, Object> body = fileResponse(fileId, "upload");
@@ -263,95 +339,174 @@ public class AiOpenaiExtendedController {
         return ResponseEntity.ok(body);
     }
 
+    /**
+     * OpenAI List Files 文件列表接口。
+     *
+     * @param purpose         用途过滤
+     * @param servletRequest  HTTP 请求
+     * @return 文件列表
+     */
     @Operation(summary = "OpenAI List Files", description = "OpenAI 标准协议文件列表接口")
     @GetMapping("/v1/files")
     public ResponseEntity<Map<String, Object>> listFiles(@RequestParam(value = "purpose", required = false) String purpose,
                                                           HttpServletRequest servletRequest) {
+        // 鉴权校验
         if (!authCheck(servletRequest)) {
-            return authError();
+            return authErrorResponse();
         }
         return ResponseEntity.ok(Map.of("object", "list", "data", List.of()));
     }
 
+    /**
+     * OpenAI Retrieve File 文件检索接口。
+     *
+     * @param fileId          文件 ID
+     * @param servletRequest  HTTP 请求
+     * @return 文件元信息
+     */
     @Operation(summary = "OpenAI Retrieve File", description = "OpenAI 标准协议文件检索接口")
     @GetMapping("/v1/files/{file_id}")
     public ResponseEntity<Map<String, Object>> retrieveFile(@PathVariable("file_id") String fileId,
                                                              HttpServletRequest servletRequest) {
+        // 鉴权校验
         if (!authCheck(servletRequest)) {
-            return authError();
+            return authErrorResponse();
         }
         return ResponseEntity.ok(fileResponse(fileId, "retrieve"));
     }
 
+    /**
+     * OpenAI Delete File 文件删除接口。
+     *
+     * @param fileId          文件 ID
+     * @param servletRequest  HTTP 请求
+     * @return 删除结果
+     */
     @Operation(summary = "OpenAI Delete File", description = "OpenAI 标准协议文件删除接口")
     @DeleteMapping("/v1/files/{file_id}")
     public ResponseEntity<Map<String, Object>> deleteFile(@PathVariable("file_id") String fileId,
                                                            HttpServletRequest servletRequest) {
+        // 鉴权校验
         if (!authCheck(servletRequest)) {
-            return authError();
+            return authErrorResponse();
         }
         return ResponseEntity.ok(Map.of("id", fileId, "object", "file", "deleted", true));
     }
 
+    /**
+     * OpenAI Retrieve File Content 文件内容检索接口。
+     *
+     * @param fileId          文件 ID
+     * @param servletRequest  HTTP 请求
+     * @return 文件内容（当前实现返回不可用提示）
+     */
     @Operation(summary = "OpenAI Retrieve File Content", description = "OpenAI 标准协议文件内容检索接口")
     @GetMapping("/v1/files/{file_id}/content")
     public ResponseEntity<Map<String, Object>> retrieveFileContent(@PathVariable("file_id") String fileId,
                                                                     HttpServletRequest servletRequest) {
+        // 鉴权校验
         if (!authCheck(servletRequest)) {
-            return authError();
+            return authErrorResponse();
         }
-        return ResponseEntity.ok(Map.of("error", Map.of("message", "File content not available", "type", "not_found")));
+        return ResponseEntity.ok(Map.of(
+                "error", Map.of("message", "File content not available", "type", "not_found")
+        ));
     }
 
     // ==================== OpenAI Fine-tuning Jobs ====================
 
+    /**
+     * OpenAI Create Fine-tuning Job 创建微调任务接口。
+     *
+     * @param request         请求体
+     * @param servletRequest  HTTP 请求
+     * @return 微调任务信息
+     */
     @Operation(summary = "OpenAI Create Fine-tuning Job", description = "OpenAI 标准协议创建微调任务接口")
     @PostMapping("/v1/fine_tuning/jobs")
     public ResponseEntity<Map<String, Object>> createFineTuningJob(@RequestBody Map<String, Object> request,
                                                                     HttpServletRequest servletRequest) {
+        // 鉴权校验
         if (!authCheck(servletRequest)) {
-            return authError();
+            return authErrorResponse();
         }
         return ResponseEntity.ok(fineTuneResponse("queued"));
     }
 
+    /**
+     * OpenAI List Fine-tuning Jobs 微调任务列表接口。
+     *
+     * @param after           分页游标
+     * @param limit           每页数量
+     * @param servletRequest  HTTP 请求
+     * @return 微调任务列表
+     */
     @Operation(summary = "OpenAI List Fine-tuning Jobs", description = "OpenAI 标准协议微调任务列表接口")
     @GetMapping("/v1/fine_tuning/jobs")
     public ResponseEntity<Map<String, Object>> listFineTuningJobs(@RequestParam(value = "after", required = false) String after,
                                                                    @RequestParam(value = "limit", required = false, defaultValue = "20") Integer limit,
                                                                    HttpServletRequest servletRequest) {
+        // 鉴权校验
         if (!authCheck(servletRequest)) {
-            return authError();
+            return authErrorResponse();
         }
         return ResponseEntity.ok(Map.of("object", "list", "data", List.of()));
     }
 
+    /**
+     * OpenAI Retrieve Fine-tuning Job 微调任务详情接口。
+     *
+     * @param jobId           任务 ID
+     * @param servletRequest  HTTP 请求
+     * @return 微调任务详情
+     */
     @Operation(summary = "OpenAI Retrieve Fine-tuning Job", description = "OpenAI 标准协议微调任务详情接口")
     @GetMapping("/v1/fine_tuning/jobs/{job_id}")
     public ResponseEntity<Map<String, Object>> retrieveFineTuningJob(@PathVariable("job_id") String jobId,
                                                                       HttpServletRequest servletRequest) {
+        // 鉴权校验
         if (!authCheck(servletRequest)) {
-            return authError();
+            return authErrorResponse();
         }
         return ResponseEntity.ok(fineTuneResponse("unknown"));
     }
 
+    /**
+     * OpenAI Cancel Fine-tuning Job 取消微调任务接口。
+     *
+     * @param jobId           任务 ID
+     * @param servletRequest  HTTP 请求
+     * @return 取消结果
+     */
     @Operation(summary = "OpenAI Cancel Fine-tuning Job", description = "OpenAI 标准协议取消微调任务接口")
     @PostMapping("/v1/fine_tuning/jobs/{job_id}/cancel")
     public ResponseEntity<Map<String, Object>> cancelFineTuningJob(@PathVariable("job_id") String jobId,
                                                                     HttpServletRequest servletRequest) {
+        // 鉴权校验
         if (!authCheck(servletRequest)) {
-            return authError();
+            return authErrorResponse();
         }
         return ResponseEntity.ok(fineTuneResponse("cancelled"));
     }
 
-    // ==================== Response Builders ====================
+    // ==================== 响应构建器 ====================
 
+    /**
+     * 构建图像生成响应的基础结构。
+     *
+     * @return 空图像响应体（含 created 时间戳）
+     */
     private static Map<String, Object> imageResponse() {
         return new LinkedHashMap<>(Map.of("created", (int) (System.currentTimeMillis() / 1000), "data", List.of()));
     }
 
+    /**
+     * 构建图像编辑/变体响应。
+     *
+     * @param n      生成数量
+     * @param result 对话结果
+     * @return 图像编辑/变体响应体
+     */
     private static Map<String, Object> imageEditVariationResponse(Integer n, Map<String, Object> result) {
         String text = result != null ? (String) result.get("text") : null;
         List<Map<String, Object>> data = new ArrayList<>();
@@ -369,6 +524,13 @@ public class AiOpenaiExtendedController {
         return body;
     }
 
+    /**
+     * 构建内容审核响应。
+     *
+     * <p>返回所有审核类别均为 false（未触发违规），评分均为 0。</p>
+     *
+     * @return 审核响应体
+     */
     private static Map<String, Object> moderationResponse() {
         String id = "mod-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         Map<String, Object> categories = new LinkedHashMap<>();
@@ -398,6 +560,13 @@ public class AiOpenaiExtendedController {
         return body;
     }
 
+    /**
+     * 构建文件元信息响应。
+     *
+     * @param fileId 文件 ID
+     * @param status 状态
+     * @return 文件元信息
+     */
     private static Map<String, Object> fileResponse(String fileId, String status) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("id", fileId);
@@ -410,6 +579,12 @@ public class AiOpenaiExtendedController {
         return body;
     }
 
+    /**
+     * 构建微调任务响应。
+     *
+     * @param status 任务状态
+     * @return 微调任务信息
+     */
     private static Map<String, Object> fineTuneResponse(String status) {
         String jobId = "ftjob-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         Map<String, Object> body = new LinkedHashMap<>();
@@ -425,5 +600,16 @@ public class AiOpenaiExtendedController {
         body.put("hyperparameters", Map.of("n_epochs", "auto"));
         return body;
     }
-}
 
+    /**
+     * 构建服务端错误响应。
+     *
+     * @param message 错误描述
+     * @return 错误响应体
+     */
+    private ResponseEntity<Map<String, Object>> serverError(String message) {
+        return ResponseEntity.ok(Map.of(
+                "error", Map.of("message", message, "type", "api_error")
+        ));
+    }
+}

@@ -118,7 +118,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     }
 
     /**
-     * 校验 AppKey 记录自身有效性（存在、启用、未过期、次数上限、IP 白名单）。
+     * 校验 AppKey 记录自身有效性（存在、启用、未过期、次数上限、Token 配额、IP 白名单）。
      *
      * @param dbAppKey AppKey 记录
      * @param ip       客户端 IP
@@ -141,6 +141,16 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
             if (used >= maxUse) {
                 log.warn("[SysAiAppKey] AppKey {} 已达次数上限({}/{})，拒绝访问",
                         dbAppKey.getSysAiAppKeyAppKey(), used, maxUse);
+                return false;
+            }
+        }
+        // Token 总量配额校验：达到 maxTokens 后拒绝放行
+        Long maxTokens = dbAppKey.getSysAiAppKeyMaxTokens();
+        if (maxTokens != null && maxTokens > 0) {
+            Long totalTokens = dbAppKey.getSysAiAppKeyTotalTokens() == null ? 0L : dbAppKey.getSysAiAppKeyTotalTokens();
+            if (totalTokens >= maxTokens) {
+                log.warn("[SysAiAppKey] AppKey {} 已达 Token 配额上限({}/{})，拒绝访问",
+                        dbAppKey.getSysAiAppKeyAppKey(), totalTokens, maxTokens);
                 return false;
             }
         }
@@ -176,6 +186,32 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
             sysAiAppKeyMapper.updateById(update);
         } catch (Exception e) {
             log.debug("更新 AppKey 使用信息失败: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    @Async("taskExecutor")
+    public void updateTokenQuotaByAppKey(String appKey, long tokens) {
+        if (StringUtils.isBlank(appKey)) {
+            return;
+        }
+        try {
+            SysAiAppKey key = getByAppKey(appKey);
+            if (key == null) {
+                return;
+            }
+            if (tokens <= 0) {
+                return;
+            }
+            SysAiAppKey update = new SysAiAppKey();
+            update.setSysAiAppKeyId(key.getSysAiAppKeyId());
+            update.setSysAiAppKeyTotalTokens(
+                    (key.getSysAiAppKeyTotalTokens() == null ? 0L : key.getSysAiAppKeyTotalTokens()) + tokens
+            );
+            sysAiAppKeyMapper.updateById(update);
+            log.debug("[SysAiAppKey] AppKey {} Token 累计更新: +{}", appKey, tokens);
+        } catch (Exception e) {
+            log.debug("更新 AppKey Token 配额失败: {}", e.getMessage());
         }
     }
 

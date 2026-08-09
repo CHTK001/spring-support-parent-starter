@@ -19,12 +19,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import com.chua.starter.ai.support.entity.SysAiModule;
+import com.chua.starter.ai.support.service.SysAiAppKeyService;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -58,6 +61,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final ChatClientRegistry chatClientRegistry;
     private final SysAiGroupService sysAiGroupService;
     private final SysAiTokenService sysAiTokenService;
+    private final SysAiAppKeyService sysAiAppKeyService;
     private final UsageRecorderInterceptor usageRecorderInterceptor;
 
     /**
@@ -66,6 +70,14 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      *   <li>无分组 → 全局聚合 ChatClient（系统自用）</li>
      *   <li>有分组 + 指定 model → 按 model 从注册中心查找</li>
      *   <li>有分组 + 未指定 model → 使用默认 ChatClient</li>
+     * </ul>
+     */
+    /**
+     * 根据分组 ID 与请求模型名解析 ChatClient。
+     * <ul>
+     *   <li>无分组 → 全局聚合 ChatClient（系统自用）</li>
+     *   <li>有分组 + 指定 model → 校验 model 是否属于分组白名单，通过后按 model 查找</li>
+     *   <li>有分组 + 未指定 model → 使用分组默认 ChatClient</li>
      * </ul>
      */
     private ChatClient resolveChatClient(Integer groupId, String model) {
@@ -80,14 +92,19 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         }
 
         // 外部 API 调用（有分组）：按分组模型隔离
-        List<Integer> groupModelIds = sysAiGroupService.getGroupModelIds(groupId);
-        if (groupModelIds.isEmpty()) {
+        Set<String> allowedCodes = getAllowedModelCodes(groupId);
+        if (allowedCodes.isEmpty()) {
             log.warn("[AiChatFacade] 分组 {} 无关联模型，回退到全局 ChatClient", groupId);
             return chatClientRegistry.getDefault();
         }
 
-        // 指定了 model → 按 model 查找
+        // 指定了 model → 校验模型是否属于分组白名单
         if (StringUtils.isNotBlank(model)) {
+            String modelLower = model.toLowerCase();
+            if (!allowedCodes.contains(modelLower)) {
+                log.warn("[AiChatFacade] 模型 {} 不在分组 {} 的白名单中，拒绝访问", model, groupId);
+                throw new IllegalStateException("模型 " + model + " 不在当前分组的白名单中");
+            }
             ChatClient specificClient = chatClientRegistry.getByModel(model);
             if (specificClient != null) {
                 log.debug("[AiChatFacade] 使用指定模型 ChatClient: model={}, groupId={}", model, groupId);
@@ -100,10 +117,32 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         return chatClientRegistry.getDefault();
     }
 
+    /**
+     * 获取分组允许的模型编码集合。
+     *
+     * @param groupId 分组 ID
+     * @return 模型编码集合（小写），无分组或分组无模型时返回空集合
+     */
+    private Set<String> getAllowedModelCodes(Integer groupId) {
+        if (groupId == null) {
+            return Collections.emptySet();
+        }
+        List<SysAiModule> groupModels = sysAiGroupService.getGroupModels(groupId);
+        if (groupModels == null || groupModels.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return groupModels.stream()
+                .map(SysAiModule::getSysAiModuleCode)
+                .filter(Objects::nonNull)
+                .map(String::toLowerCase)
+                .collect(Collectors.toSet());
+    }
+
     @Override
     public Map<String, Object> call(AiChatRequest request) {
-        // 从 request.parameters 提取分组 ID（由 Controller 注入）
+        // 从 request.parameters 提取分组 ID 与 AppKey（由 Controller 注入）
         Integer groupId = extractGroupId(request);
+        String appKey = extractAppKey(request);
         // 深度思考 / 智能搜索开关并入 parameters，供底层 ChatClient 消费
         injectFeatureFlags(request);
         ChatClient client = resolveChatClient(groupId, request.getModel());
@@ -120,7 +159,10 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                     result != null ? result.length() : 0);
 
             // 记录用量（异步）
-            recordUsage(groupId, client, request.getModel(), "sync", chatSyncResponse != null ? chatSyncResponse.getUsage() : null);
+            AiUsage usage = chatSyncResponse != null ? chatSyncResponse.getUsage() : null;
+            recordUsage(groupId, client, request.getModel(), "sync", usage);
+            // 更新 AppKey Token 配额（异步）
+            updateTokenQuota(appKey, usage);
 
             Map<String, Object> response = new LinkedHashMap<>();
             response.put("id", "chatcmpl-" + UUID.randomUUID().toString().substring(0, 8));
@@ -137,7 +179,6 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             // 顶层透传文本内容，供 OpenAI 兼容控制器直接消费（result.get("text")）
             response.put("text", result);
 
-            AiUsage usage = chatSyncResponse != null ? chatSyncResponse.getUsage() : null;
             Map<String, Object> usageOut = new LinkedHashMap<>();
             usageOut.put("prompt_tokens", usage != null && usage.getInputTokens() != null ? usage.getInputTokens() : 0);
             usageOut.put("completion_tokens", usage != null && usage.getOutputTokens() != null ? usage.getOutputTokens() : 0);
@@ -156,6 +197,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     @Override
     public SseEmitter stream(AiChatRequest request, Consumer<String> onComplete) {
         Integer groupId = extractGroupId(request);
+        String appKey = extractAppKey(request);
         // 深度思考 / 智能搜索开关并入 parameters，供底层 ChatClient 消费
         injectFeatureFlags(request);
         ChatClient client = resolveChatClient(groupId, request.getModel());
@@ -206,6 +248,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                         }
                         // 记录用量（异步），STOP 携带完整 usage
                         recordUsage(groupId, client, modelName, "async", response.getUsage());
+                        // 更新 AppKey Token 配额（异步）
+                        updateTokenQuota(appKey, response.getUsage());
                         if (done.compareAndSet(false, true)) {
                             String finalChunk = String.format(
                                     "{\"id\":\"%s\",\"object\":\"chat.completion.chunk\",\"created\":%d," +
@@ -286,41 +330,35 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         if (groupId == null) {
             return new ArrayList<>(chatClientRegistry.getModels());
         }
-        // 有分组：仅返回该分组绑定的模型
-        List<Integer> groupModelIds = sysAiGroupService.getGroupModelIds(groupId);
-        if (groupModelIds.isEmpty()) {
+        // 有分组：仅返回该分组白名单内的模型
+        Set<String> allowedCodes = getAllowedModelCodes(groupId);
+        if (allowedCodes.isEmpty()) {
             return Collections.emptyList();
         }
-        // 从注册中心筛选分组模型
+        // 从注册中心筛选分组白名单内的模型
         Set<String> allModels = chatClientRegistry.getModels();
         return allModels.stream()
-                .filter(model -> {
-                    // 简单的模型名匹配（实际可按模块ID→模块编码映射）
-                    return true;
-                })
+                .filter(model -> allowedCodes.contains(model.toLowerCase()))
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<ModelDefinition> modelDefinitions(Integer groupId) {
+        // 有分组时获取分组白名单
+        Set<String> allowedCodes = groupId != null ? getAllowedModelCodes(groupId) : null;
+        if (allowedCodes != null && allowedCodes.isEmpty()) {
+            return Collections.emptyList();
+        }
+
         // 优先使用注册中心中的模型定义（由 AiChatClientConfiguration 按配置注册）
         List<ModelDefinition> registered = chatClientRegistry.getModelDefinitions();
         if (!registered.isEmpty()) {
-            // 有分组时仅保留该分组可访问的模型
-            Set<String> allowed = null;
-            if (groupId != null) {
-                List<Integer> groupModelIds = sysAiGroupService.getGroupModelIds(groupId);
-                if (groupModelIds.isEmpty()) {
-                    return Collections.emptyList();
-                }
-                allowed = chatClientRegistry.getModels();
-            }
             List<ModelDefinition> result = new ArrayList<>();
             for (ModelDefinition def : registered) {
                 if (def == null || StringUtils.isBlank(def.getId())) {
                     continue;
                 }
-                if (allowed != null && !allowed.contains(def.getId().toLowerCase())) {
+                if (allowedCodes != null && !allowedCodes.contains(def.getId().toLowerCase())) {
                     continue;
                 }
                 result.add(def);
@@ -339,20 +377,11 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             if (definitions == null) {
                 return result;
             }
-            // 有分组时仅保留该分组可访问的模型
-            Set<String> allowed = null;
-            if (groupId != null) {
-                List<Integer> groupModelIds = sysAiGroupService.getGroupModelIds(groupId);
-                if (groupModelIds.isEmpty()) {
-                    return Collections.emptyList();
-                }
-                allowed = chatClientRegistry.getModels();
-            }
             for (ModelDefinition def : definitions) {
                 if (def == null || StringUtils.isBlank(def.getId())) {
                     continue;
                 }
-                if (allowed != null && !allowed.contains(def.getId().toLowerCase())) {
+                if (allowedCodes != null && !allowedCodes.contains(def.getId().toLowerCase())) {
                     continue;
                 }
                 result.add(def);
@@ -401,6 +430,44 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             return ((Number) gid).intValue();
         }
         return null;
+    }
+
+    /**
+     * 从 parameters 中提取 AppKey（由 Controller 在认证时注入）。
+     *
+     * @param request 对话请求
+     * @return AppKey 字符串，不存在时返回 {@code null}
+     */
+    private String extractAppKey(AiChatRequest request) {
+        if (request.getParameters() == null) {
+            return null;
+        }
+        Object appKey = request.getParameters().get("_appKey");
+        if (appKey == null) {
+            return null;
+        }
+        return String.valueOf(appKey);
+    }
+
+    /**
+     * 异步更新 AppKey 的 Token 消耗配额。
+     *
+     * @param appKey AppKey 值，为空时跳过
+     * @param usage  本次调用用量信息
+     */
+    private void updateTokenQuota(String appKey, AiUsage usage) {
+        if (StringUtils.isBlank(appKey) || usage == null) {
+            return;
+        }
+        Integer total = usage.getTotalTokens();
+        if (total == null || total <= 0) {
+            return;
+        }
+        try {
+            sysAiAppKeyService.updateTokenQuotaByAppKey(appKey, total.longValue());
+        } catch (Exception e) {
+            log.debug("[AiChatFacade] 更新 AppKey Token 配额失败: {}", e.getMessage());
+        }
     }
 
     /**

@@ -104,6 +104,18 @@ public class SysAiAppKey {
     private Long sysAiAppKeyMaxUse;
 
     /**
+     * Token 总量上限（null 表示不限），用于控制 AppKey 累计消耗的 Token 总数
+     */
+    @TableField("sys_ai_app_key_max_tokens")
+    private Long sysAiAppKeyMaxTokens;
+
+    /**
+     * 已使用 Token 累计值，每次对话成功后累加
+     */
+    @TableField("sys_ai_app_key_total_tokens")
+    private Long sysAiAppKeyTotalTokens;
+
+    /**
      * 授权范围
      */
     private String sysAiAppKeyScope;

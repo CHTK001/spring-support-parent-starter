@@ -1,15 +1,12 @@
 package com.chua.starter.ai.support.controller;
 
-import com.chua.starter.ai.support.model.AiChatRequest;
-import com.chua.starter.ai.support.service.AiAccessGuardService;
-import com.chua.starter.ai.support.service.AiChatFacadeService;
-import com.chua.starter.ai.support.service.SysAiAppKeyService;
-import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
-import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.chua.common.support.utils.StringUtils;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.chua.starter.ai.support.model.AiChatRequest;
+import com.chua.starter.ai.support.service.AiChatFacadeService;
+import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -20,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -30,19 +26,22 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * AI 多协议标准网关控制器
+ * AI 多协议标准网关控制器。
  *
- * <p>提供与 {@link com.chua.common.support.ai.chat.protocol.AiProtocolServerFilter} 等价的
- * Spring MVC 路由映射，将 Claude（/v1/messages）、OpenAI Responses（/v1/responses）、
- * Gemini（/v1beta/models/**）等外部协议请求收敛到统一的 AppKey 鉴权与对话链路。</p>
+ * <p>提供与 {@code AiProtocolServerFilter} 等价的 Spring MVC 路由映射，
+ * 将 Claude、OpenAI Responses、Gemini 等外部协议请求收敛到统一的 AppKey 鉴权与对话链路。</p>
  *
+ * <h3>接口列表</h3>
  * <ul>
  *   <li>Claude Messages — {@code POST /v2/v1/messages}</li>
  *   <li>OpenAI Responses — {@code POST /v2/v1/responses}</li>
  *   <li>Gemini — {@code POST /v2/v1beta/models/...}</li>
  * </ul>
  *
+ * <p>继承 {@link BaseAiController} 统一使用 Bearer Token 鉴权与分组解析。</p>
+ *
  * @author CH
+ * @since 4.0.0.42
  */
 @Tag(name = "AI Protocol Gateway Controller", description = "Claude / Responses / Gemini 等第三方协议兼容入口")
 @RestController
@@ -50,79 +49,24 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 @ApiReturnFormatIgnore
 @RequestMapping("/v2")
-public class AiProtocolController {
+public class AiProtocolController extends BaseAiController {
 
     /**
-     * AI 对话门面服务
+     * AI 对话门面服务，负责模型路由与对话执行
      */
     private final AiChatFacadeService aiChatFacadeService;
 
     /**
-     * AppKey 访问守卫服务
+     * SSE 超时时间（毫秒）
      */
-    private final AiAccessGuardService aiAccessGuardService;
-
-    /**
-     * 全局设置服务
-     */
-    private final SysAiGlobalSettingService sysAiGlobalSettingService;
-
-    /**
-     * AppKey 服务
-     */
-    private final SysAiAppKeyService sysAiAppKeyService;
-
-    /**
-     * JSON 解析器
-     */
-    private final ObjectMapper objectMapper;
-
-    /**
-     * AppKey 校验。
-     *
-     * @param request HTTP 请求
-     * @return 校验是否通过
-     */
-    private boolean authCheck(HttpServletRequest request) {
-        String auth = request.getHeader("Authorization");
-        return aiAccessGuardService.verifyBearerToken(auth, request.getRemoteAddr());
-    }
-
-    /**
-     * 解析 AppKey 所属分组 ID。
-     *
-     * @param request HTTP 请求
-     * @return 分组 ID
-     */
-    private Integer resolveGroupId(HttpServletRequest request) {
-        String auth = request.getHeader("Authorization");
-        if (StringUtils.isBlank(auth) || !auth.startsWith("Bearer ")) {
-            return null;
-        }
-        String token = auth.substring(7).trim();
-        if (StringUtils.isBlank(token)) {
-            return null;
-        }
-        Integer gid = sysAiAppKeyService.getGroupIdByAppKey(token);
-        log.debug("resolveGroupId: token={}, groupId={}", token, gid);
-        return gid;
-    }
-
-    /**
-     * REST API 总开关。与 OpenAI 端点共用 runtime.openaiRestEnabled 开关。
-     *
-     * @return 是否启用
-     */
-    private boolean restEnabled() {
-        return sysAiGlobalSettingService.getBoolean("runtime", "openaiRestEnabled", true);
-    }
+    private static final long SSE_TIMEOUT_MILLIS = 30_000L;
 
     // ==================== Claude Messages ====================
 
     /**
      * Claude Messages 协议入口。
      *
-     * <p>请求体遵循 Anthropic Messages API 结构：
+     * <p>请求体遵循 Anthropic Messages API 结构：</p>
      * <pre>{@code
      * {
      *   "model": "claude-sonnet-4-20250514",
@@ -140,24 +84,31 @@ public class AiProtocolController {
     @PostMapping("/v1/messages")
     public Object messages(@RequestBody(required = false) Map<String, Object> body,
                            HttpServletRequest servletRequest) {
+        // 检查 REST 开关
         if (!restEnabled()) {
             return ResponseEntity.ok(Map.of(
-                    "type", "error", "error", Map.of("type", "not_found_error", "message", "REST 端口未启用")
+                    "type", "error",
+                    "error", Map.of("type", "not_found_error", "message", "REST 端口未启用")
             ));
         }
+        // 鉴权校验
         if (!authCheck(servletRequest)) {
             return ResponseEntity.status(401).body(Map.of(
-                    "type", "error", "error", Map.of("type", "authentication_error", "message", "AI AppKey 校验失败")
+                    "type", "error",
+                    "error", Map.of("type", "authentication_error", "message", "AI AppKey 校验失败")
             ));
         }
+        // 请求体判空
         if (body == null) {
             return ResponseEntity.badRequest().body(buildClaudeError(null, "请求体不能为空"));
         }
         boolean stream = Boolean.TRUE.equals(body.get("stream"));
         String model = toString(body.get("model"));
+        // 流式模式
         if (stream) {
             return claudeStream(body, model, servletRequest);
         }
+        // 同步模式
         try {
             AiChatRequest chatRequest = buildChatRequest(body, servletRequest);
             Map<String, Object> result = aiChatFacadeService.call(chatRequest);
@@ -168,33 +119,45 @@ public class AiProtocolController {
     }
 
     /**
-     * Claude 流式响应。
+     * Claude 流式响应（SSE）。
      *
-     * @param body            请求体
-     * @param model           模型名称
-     * @param servletRequest  HTTP 请求
+     * <p>按 Claude 协议顺序发送 {@code message_start}、{@code content_block_start}、
+     * {@code content_block_delta}、{@code content_block_stop}、{@code message_delta}、
+     * {@code message_stop} 事件。</p>
+     *
+     * @param body           请求体
+     * @param model          模型名称
+     * @param servletRequest HTTP 请求
      * @return SSE 发射器
      */
     private SseEmitter claudeStream(Map<String, Object> body, String model, HttpServletRequest servletRequest) {
-        SseEmitter emitter = new SseEmitter(30_000L);
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
         CompletableFuture.runAsync(() -> {
             try {
+                // 发送消息开始事件
                 emitter.send(SseEmitter.event().name("message_start")
-                        .data("{\"type\":\"message_start\",\"message\":" + toJson(buildClaudeStartResponse(model)) + "}", MediaType.APPLICATION_JSON));
+                        .data("{\"type\":\"message_start\",\"message\":"
+                                + toJson(buildClaudeStartResponse(model)) + "}", MediaType.APPLICATION_JSON));
+                // 发送内容块开始事件
                 emitter.send(SseEmitter.event().name("content_block_start")
                         .data("{\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}", MediaType.APPLICATION_JSON));
+                // 执行对话
                 AiChatRequest chatRequest = buildChatRequest(body, servletRequest);
                 Map<String, Object> result = aiChatFacadeService.call(chatRequest);
                 String text = result != null ? toString(result.get("text")) : "";
+                // 发送内容增量事件
                 if (text != null && !text.isEmpty()) {
                     emitter.send(SseEmitter.event().name("content_block_delta")
                             .data("{\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":"
                                     + toJson(text) + "}}", MediaType.APPLICATION_JSON));
                 }
+                // 发送内容块结束事件
                 emitter.send(SseEmitter.event().name("content_block_stop")
                         .data("{\"type\":\"content_block_stop\",\"index\":0}", MediaType.APPLICATION_JSON));
+                // 发送消息增量事件
                 emitter.send(SseEmitter.event().name("message_delta")
                         .data("{\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\",\"stop_sequence\":null},\"usage\":{\"output_tokens\":0}}", MediaType.APPLICATION_JSON));
+                // 发送消息结束事件
                 emitter.send(SseEmitter.event().name("message_stop")
                         .data("{\"type\":\"message_stop\"}", MediaType.APPLICATION_JSON));
                 emitter.complete();
@@ -202,6 +165,7 @@ public class AiProtocolController {
                 try {
                     emitter.send(SseEmitter.event().name("error").data(ex.getMessage(), MediaType.TEXT_PLAIN));
                 } catch (IOException ignored) {
+                    // 忽略发送失败
                 }
                 emitter.completeWithError(ex);
             }
@@ -214,7 +178,7 @@ public class AiProtocolController {
     /**
      * OpenAI Responses 协议。
      *
-     * <p>请求体遵循 OpenAI Responses API 结构：
+     * <p>请求体遵循 OpenAI Responses API 结构：</p>
      * <pre>{@code
      * {
      *   "model": "gpt-4o",
@@ -231,27 +195,36 @@ public class AiProtocolController {
     @PostMapping("/v1/responses")
     public Object responses(@RequestBody(required = false) Map<String, Object> body,
                             HttpServletRequest servletRequest) {
+        // 检查 REST 开关
         if (!restEnabled()) {
             return ResponseEntity.ok(Map.of(
-                    "object", "response", "status", "disabled", "output", List.of(),
+                    "object", "response",
+                    "status", "disabled",
+                    "output", List.of(),
                     "output_text", "REST 协议未启用"
             ));
         }
+        // 鉴权校验
         if (!authCheck(servletRequest)) {
             return ResponseEntity.status(401).body(Map.of(
-                    "object", "response", "error", Map.of("type", "authentication_error", "message", "AI AppKey 校验失败")
+                    "object", "response",
+                    "error", Map.of("type", "authentication_error", "message", "AI AppKey 校验失败")
             ));
         }
+        // 请求体判空
         if (body == null) {
             return ResponseEntity.badRequest().body(Map.of(
-                    "object", "response", "error", Map.of("type", "invalid_request_error", "message", "请求体不能为空")
+                    "object", "response",
+                    "error", Map.of("type", "invalid_request_error", "message", "请求体不能为空")
             ));
         }
         boolean stream = Boolean.TRUE.equals(body.get("stream"));
         String model = toString(body.get("model"));
+        // 流式模式
         if (stream) {
             return responsesStream(body, model, servletRequest);
         }
+        // 同步模式
         try {
             AiChatRequest chatRequest = buildResponsesChatRequest(body, servletRequest);
             Map<String, Object> result = aiChatFacadeService.call(chatRequest);
@@ -264,55 +237,80 @@ public class AiProtocolController {
     /**
      * Responses 流式响应（SSE）。
      *
-     * @param body            请求体
-     * @param model           模型名称
-     * @param servletRequest  HTTP 请求
+     * <p>按 Responses 协议顺序发送 {@code response.created}、{@code response.output_item.added}、
+     * {@code response.content_part.added}、{@code response.output_text.delta}、
+     * {@code response.output_text.done}、{@code response.content_part.done}、
+     * {@code response.output_item.done}、{@code response.completed} 事件。</p>
+     *
+     * @param body           请求体
+     * @param model          模型名称
+     * @param servletRequest HTTP 请求
      * @return SSE 发射器
      */
     private SseEmitter responsesStream(Map<String, Object> body, String model, HttpServletRequest servletRequest) {
-        SseEmitter emitter = new SseEmitter(30_000L);
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
         CompletableFuture.runAsync(() -> {
             try {
                 String responseId = "resp_" + UUID.randomUUID().toString().replace("-", "");
                 String messageId = "msg_" + UUID.randomUUID().toString().replace("-", "");
+                // 执行对话
                 AiChatRequest chatRequest = buildResponsesChatRequest(body, servletRequest);
                 Map<String, Object> result = aiChatFacadeService.call(chatRequest);
                 String text = result != null ? toString(result.get("text")) : "";
 
                 Map<String, Object> started = buildCcsResponse(responseId, messageId, model, "", "in_progress");
                 started.put("output", List.of());
+                // 发送响应创建事件
                 emitter.send(SseEmitter.event().name("response.created")
-                        .data("{\"type\":\"response.created\",\"response\":" + toJson(started) + "}", MediaType.APPLICATION_JSON));
+                        .data("{\"type\":\"response.created\",\"response\":"
+                                + toJson(started) + "}", MediaType.APPLICATION_JSON));
+                // 发送输出项添加事件
                 emitter.send(SseEmitter.event().name("response.output_item.added")
-                        .data("{\"type\":\"response.output_item.added\",\"output_index\":0,\"item\":" + toJson(buildCcsMessage(messageId, "", "in_progress")) + "}", MediaType.APPLICATION_JSON));
+                        .data("{\"type\":\"response.output_item.added\",\"output_index\":0,\"item\":"
+                                + toJson(buildCcsMessage(messageId, "", "in_progress")) + "}", MediaType.APPLICATION_JSON));
+                // 发送内容部分添加事件
                 emitter.send(SseEmitter.event().name("response.content_part.added")
-                        .data("{\"type\":\"response.content_part.added\",\"item_id\":\"" + messageId + "\",\"output_index\":0,\"content_index\":0,\"part\":{\"type\":\"output_text\",\"text\":\"\",\"annotations\":[]}}", MediaType.APPLICATION_JSON));
+                        .data("{\"type\":\"response.content_part.added\",\"item_id\":\"" + messageId
+                                + "\",\"output_index\":0,\"content_index\":0,\"part\":{\"type\":\"output_text\",\"text\":\"\",\"annotations\":[]}}", MediaType.APPLICATION_JSON));
 
+                // 分块发送文本增量事件
                 if (text != null && !text.isEmpty()) {
                     int chunkSize = 80;
                     for (int i = 0; i < text.length(); i += chunkSize) {
                         int end = Math.min(i + chunkSize, text.length());
                         String chunk = text.substring(i, end);
                         emitter.send(SseEmitter.event().name("response.output_text.delta")
-                                .data("{\"type\":\"response.output_text.delta\",\"item_id\":\"" + messageId + "\",\"output_index\":0,\"content_index\":0,\"delta\":"
+                                .data("{\"type\":\"response.output_text.delta\",\"item_id\":\"" + messageId
+                                        + "\",\"output_index\":0,\"content_index\":0,\"delta\":"
                                         + toJson(chunk) + "}", MediaType.APPLICATION_JSON));
                     }
                 }
+                // 发送文本完成事件
                 emitter.send(SseEmitter.event().name("response.output_text.done")
-                        .data("{\"type\":\"response.output_text.done\",\"item_id\":\"" + messageId + "\",\"output_index\":0,\"content_index\":0,\"text\":"
+                        .data("{\"type\":\"response.output_text.done\",\"item_id\":\"" + messageId
+                                + "\",\"output_index\":0,\"content_index\":0,\"text\":"
                                 + toJson(text != null ? text : "") + "}", MediaType.APPLICATION_JSON));
+                // 发送内容部分完成事件
                 emitter.send(SseEmitter.event().name("response.content_part.done")
-                        .data("{\"type\":\"response.content_part.done\",\"item_id\":\"" + messageId + "\",\"output_index\":0,\"content_index\":0,\"part\":"
-                                + toJson(Map.of("type", "output_text", "text", text != null ? text : "", "annotations", List.of())) + "}", MediaType.APPLICATION_JSON));
+                        .data("{\"type\":\"response.content_part.done\",\"item_id\":\"" + messageId
+                                + "\",\"output_index\":0,\"content_index\":0,\"part\":"
+                                + toJson(Map.of("type", "output_text", "text", text != null ? text : "", "annotations", List.of()))
+                                + "}", MediaType.APPLICATION_JSON));
+                // 发送输出项完成事件
                 emitter.send(SseEmitter.event().name("response.output_item.done")
-                        .data("{\"type\":\"response.output_item.done\",\"output_index\":0,\"item\":" + toJson(buildCcsMessage(messageId, text != null ? text : "", "completed")) + "}", MediaType.APPLICATION_JSON));
+                        .data("{\"type\":\"response.output_item.done\",\"output_index\":0,\"item\":"
+                                + toJson(buildCcsMessage(messageId, text != null ? text : "", "completed")) + "}", MediaType.APPLICATION_JSON));
+                // 发送响应完成事件
                 emitter.send(SseEmitter.event().name("response.completed")
-                        .data("{\"type\":\"response.completed\",\"response\":" + toJson(buildCcsResponse(responseId, messageId, model, text != null ? text : "", "completed")) + "}", MediaType.APPLICATION_JSON));
+                        .data("{\"type\":\"response.completed\",\"response\":"
+                                + toJson(buildCcsResponse(responseId, messageId, model, text != null ? text : "", "completed"))
+                                + "}", MediaType.APPLICATION_JSON));
                 emitter.complete();
             } catch (Exception ex) {
                 try {
                     emitter.send(SseEmitter.event().name("error").data(ex.getMessage(), MediaType.TEXT_PLAIN));
                 } catch (IOException ioex) {
+                    // 忽略发送失败
                 }
                 emitter.completeWithError(ex);
             }
@@ -325,19 +323,24 @@ public class AiProtocolController {
     /**
      * Gemini 协议入口。
      *
-     * <p>支持 /v1beta/models/{model}:generateContent 与流式 generateContent 变体。</p>
+     * <p>支持 {@code /v1beta/models/{model}:generateContent} 与流式
+     * {@code streamGenerateContent} 变体。</p>
      *
-     * @param servletRequest HTTP 请求（路径以 servletRequest.getRequestURI() 解析）
-     * @param body           请求体
+     * @param request HTTP 请求（路径以 {@code request.getRequestURI()} 解析）
+     * @param body    请求体
      * @return Gemini 响应
      */
-@Operation(summary = "Gemini", description = "Google Gemini 1beta 协议入口")
+    @Operation(summary = "Gemini", description = "Google Gemini 1beta 协议入口")
     @PostMapping("/v1beta/models/**")
     public Object gemini(HttpServletRequest request,
                          @RequestBody(required = false) Map<String, Object> body) {
+        // 检查 REST 开关
         if (!restEnabled()) {
-            return ResponseEntity.ok(Map.of("error", Map.of("code", 400, "message", "REST 协议未启用", "status", "INVALID_ARGUMENT")));
+            return ResponseEntity.ok(Map.of(
+                    "error", Map.of("code", 400, "message", "REST 协议未启用", "status", "INVALID_ARGUMENT")
+            ));
         }
+        // 鉴权校验
         if (!authCheck(request)) {
             return ResponseEntity.status(401).body(Map.of(
                     "error", Map.of("code", 401, "message", "AI AppKey 校验失败", "status", "UNAUTHENTICATED")
@@ -350,16 +353,20 @@ public class AiProtocolController {
     /**
      * Gemini 处理逻辑。
      *
-     * @param fullPath        请求路径
+     * <p>从请求路径解析模型名称与动作（generateContent / streamGenerateContent），
+     * 构建对话请求并执行。</p>
+     *
+     * @param fullPath        请求完整路径
      * @param body            请求体
      * @param servletRequest  HTTP 请求
-     * @return 响应
+     * @return Gemini 响应
      */
     private Object handleGemini(String fullPath, Map<String, Object> body, HttpServletRequest servletRequest) {
         String suffix = "/v1beta/models/";
         int idx = fullPath.lastIndexOf(suffix);
         String rest = idx >= 0 ? fullPath.substring(idx + suffix.length()) : fullPath;
         int colonIdx = rest.lastIndexOf(':');
+        // 路径格式校验
         if (colonIdx < 0) {
             return ResponseEntity.badRequest().body(Map.of(
                     "error", Map.of("code", 400, "message", "Invalid Gemini path: " + fullPath, "status", "INVALID_ARGUMENT")
@@ -374,8 +381,9 @@ public class AiProtocolController {
             Map<String, Object> result = aiChatFacadeService.call(chatRequest);
             String text = result != null ? toString(result.get("text")) : "";
 
+            // 流式模式
             if (isStream) {
-                SseEmitter emitter = new SseEmitter(30_000L);
+                SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
                 CompletableFuture.runAsync(() -> {
                     try {
                         Map<String, Object> candidate = buildGeminiCandidate(model, text);
@@ -389,6 +397,7 @@ public class AiProtocolController {
                 return emitter;
             }
 
+            // 非流式响应
             Map<String, Object> geminiResp = new LinkedHashMap<>();
             geminiResp.put("candidates", List.of(buildGeminiCandidate(model, text)));
             Map<String, Object> usage = new LinkedHashMap<>();
@@ -409,8 +418,8 @@ public class AiProtocolController {
     /**
      * 构建通用对话请求（prompt 提取优先使用 messages）。
      *
-     * @param body            请求体
-     * @param servletRequest  HTTP 请求
+     * @param body           请求体
+     * @param servletRequest HTTP 请求
      * @return 对话请求
      */
     private AiChatRequest buildChatRequest(Map<String, Object> body, HttpServletRequest servletRequest) {
@@ -426,8 +435,8 @@ public class AiProtocolController {
     /**
      * 构建 Responses ChatRequest。
      *
-     * @param body            请求体
-     * @param servletRequest  HTTP 请求
+     * @param body           请求体
+     * @param servletRequest HTTP 请求
      * @return 对话请求
      */
     private AiChatRequest buildResponsesChatRequest(Map<String, Object> body, HttpServletRequest servletRequest) {
@@ -442,8 +451,8 @@ public class AiProtocolController {
     /**
      * 构建 Gemini ChatRequest。
      *
-     * @param body            请求体
-     * @param servletRequest  HTTP 请求
+     * @param body           请求体
+     * @param servletRequest HTTP 请求
      * @return 对话请求
      */
     private AiChatRequest buildGeminiChatRequest(Map<String, Object> body, HttpServletRequest servletRequest) {
@@ -462,9 +471,15 @@ public class AiProtocolController {
      */
     private void applyGroup(AiChatRequest request, HttpServletRequest servletRequest) {
         Integer groupId = resolveGroupId(servletRequest);
-        if (groupId != null) {
+        String appKey = resolveAppKey(servletRequest);
+        if (groupId != null || StringUtils.isNotBlank(appKey)) {
             request.setParameters(new LinkedHashMap<>());
-            request.getParameters().put("_groupId", groupId);
+            if (groupId != null) {
+                request.getParameters().put("_groupId", groupId);
+            }
+            if (StringUtils.isNotBlank(appKey)) {
+                request.getParameters().put("_appKey", appKey);
+            }
         }
     }
 
@@ -596,15 +611,15 @@ public class AiProtocolController {
         if (value == null) {
             return null;
         }
-        if (value instanceof String s) {
-            return s;
+        if (value instanceof String) {
+            return (String) value;
         }
         if (value instanceof List<?> list) {
             StringBuilder sb = new StringBuilder();
             for (Object item : list) {
                 String t = extractText(item);
                 if (t != null && !t.isBlank()) {
-                    if (!sb.isEmpty()) {
+                    if (sb.length() > 0) {
                         sb.append('\n');
                     }
                     sb.append(t.trim());
@@ -629,7 +644,7 @@ public class AiProtocolController {
         return String.valueOf(value);
     }
 
-    // ==================== Response Builders ====================
+    // ==================== 响应构建器 ====================
 
     /**
      * 构建 Claude 起始响应（流式 message_start 事件）。
@@ -676,8 +691,8 @@ public class AiProtocolController {
     /**
      * 构建 Claude 错误响应。
      *
-     * @param model         模型名称
-     * @param errorMessage  错误消息
+     * @param model        模型名称
+     * @param errorMessage 错误消息
      * @return 错误响应体
      */
     private Map<String, Object> buildClaudeError(String model, String errorMessage) {
@@ -706,8 +721,8 @@ public class AiProtocolController {
     /**
      * 构建 Responses 错误响应。
      *
-     * @param model         模型名称
-     * @param errorMessage  错误消息
+     * @param model        模型名称
+     * @param errorMessage 错误消息
      * @return 错误响应体
      */
     private Map<String, Object> buildResponsesError(String model, String errorMessage) {
@@ -783,7 +798,7 @@ public class AiProtocolController {
         return candidate;
     }
 
-    // ==================== Helpers ====================
+    // ==================== 工具方法 ====================
 
     /**
      * 对象转字符串。

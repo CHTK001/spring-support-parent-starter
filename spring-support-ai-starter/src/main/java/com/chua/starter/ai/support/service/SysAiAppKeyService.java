@@ -96,4 +96,15 @@ public interface SysAiAppKeyService {
      * @param maxUse            次数上限，null 表示不限
      */
     void updateExpireCompatible(Long id, Long expireEpochSecond, Long maxUse);
+
+    /**
+     * 更新 AppKey 的 Token 消耗累计值。
+     *
+     * <p>每次对话成功后异步调用，将本次消耗的 Token 数累加到
+     * {@code sys_ai_app_key_total_tokens} 字段。</p>
+     *
+     * @param appKey  AppKey 值
+     * @param tokens  本次消耗的 Token 数
+     */
+    void updateTokenQuotaByAppKey(String appKey, long tokens);
 }
