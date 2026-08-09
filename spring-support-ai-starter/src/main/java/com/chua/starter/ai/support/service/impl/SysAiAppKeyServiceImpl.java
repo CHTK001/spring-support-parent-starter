@@ -18,6 +18,7 @@ import java.util.Base64;
 import java.util.List;
 
 import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;
+import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_MIN;
 
 /**
  * AI 应用密钥服务实现。
@@ -37,8 +38,8 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
 
     @Override
     @Cacheable(
-            cacheManager = REDIS_CACHE_ALWAYS,
-            cacheNames = REDIS_CACHE_ALWAYS,
+            cacheManager = REDIS_CACHE_MIN,
+            cacheNames = REDIS_CACHE_MIN,
             key = "'sys:ai:app-key:' + #appKey",
             keyGenerator = "customTenantedKeyGenerator",
             unless = "#result == null"
@@ -173,17 +174,17 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
             return;
         }
         try {
-            SysAiAppKey key = getByAppKey(appKey);
-            if (key == null) {
-                return;
-            }
-            SysAiAppKey update = new SysAiAppKey();
-            update.setSysAiAppKeyId(key.getSysAiAppKeyId());
-            update.setSysAiAppKeyUseCount(
-                    (key.getSysAiAppKeyUseCount() == null ? 0 : key.getSysAiAppKeyUseCount()) + 1
-            );
-            update.setSysAiAppKeyLastUsedTime(System.currentTimeMillis());
-            sysAiAppKeyMapper.updateById(update);
+            // SQL 原子自增，避免并发下丢失更新
+            sysAiAppKeyMapper.updateUseCount(appKey);
+            // 更新最后使用时间
+            SysAiAppKey updateTime = new SysAiAppKey();
+            updateTime.setSysAiAppKeyAppKey(appKey);
+            updateTime.setSysAiAppKeyLastUsedTime(System.currentTimeMillis());
+            sysAiAppKeyMapper.update(
+                    null,
+                    Wrappers.lambdaUpdate(SysAiAppKey.class)
+                            .eq(SysAiAppKey::getSysAiAppKeyAppKey, appKey)
+                            .set(SysAiAppKey::getSysAiAppKeyLastUsedTime, System.currentTimeMillis()));
         } catch (Exception e) {
             log.debug("更新 AppKey 使用信息失败: {}", e.getMessage());
         }
@@ -192,23 +193,12 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     @Override
     @Async("taskExecutor")
     public void updateTokenQuotaByAppKey(String appKey, long tokens) {
-        if (StringUtils.isBlank(appKey)) {
+        if (StringUtils.isBlank(appKey) || tokens <= 0) {
             return;
         }
         try {
-            SysAiAppKey key = getByAppKey(appKey);
-            if (key == null) {
-                return;
-            }
-            if (tokens <= 0) {
-                return;
-            }
-            SysAiAppKey update = new SysAiAppKey();
-            update.setSysAiAppKeyId(key.getSysAiAppKeyId());
-            update.setSysAiAppKeyTotalTokens(
-                    (key.getSysAiAppKeyTotalTokens() == null ? 0L : key.getSysAiAppKeyTotalTokens()) + tokens
-            );
-            sysAiAppKeyMapper.updateById(update);
+            // SQL 原子自增，避免并发下丢失更新
+            sysAiAppKeyMapper.addTokenQuota(appKey, tokens);
             log.debug("[SysAiAppKey] AppKey {} Token 累计更新: +{}", appKey, tokens);
         } catch (Exception e) {
             log.debug("更新 AppKey Token 配额失败: {}", e.getMessage());
@@ -216,6 +206,12 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     }
 
     @Override
+    @Cacheable(
+            cacheManager = REDIS_CACHE_MIN,
+            cacheNames = REDIS_CACHE_MIN,
+            key = "'sys:ai:app-key-group:' + #appKey",
+            unless = "#result == null"
+    )
     public Integer getGroupIdByAppKey(String appKey) {
         if (StringUtils.isBlank(appKey)) {
             return null;

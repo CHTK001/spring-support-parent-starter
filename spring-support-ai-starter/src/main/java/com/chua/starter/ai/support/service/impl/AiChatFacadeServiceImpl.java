@@ -94,8 +94,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         // 外部 API 调用（有分组）：按分组模型隔离
         Set<String> allowedCodes = getAllowedModelCodes(groupId);
         if (allowedCodes.isEmpty()) {
-            log.warn("[AiChatFacade] 分组 {} 无关联模型，回退到全局 ChatClient", groupId);
-            return chatClientRegistry.getDefault();
+            log.warn("[AiChatFacade] 分组 {} 无关联模型，拒绝访问", groupId);
+            throw new IllegalStateException("分组 " + groupId + " 未关联任何模型，无法提供服务");
         }
 
         // 指定了 model → 校验模型是否属于分组白名单
@@ -110,11 +110,13 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 log.debug("[AiChatFacade] 使用指定模型 ChatClient: model={}, groupId={}", model, groupId);
                 return specificClient;
             }
-            log.warn("[AiChatFacade] 指定模型 {} 不在注册中心，回退全局", model);
+            log.warn("[AiChatFacade] 指定模型 {} 不在注册中心，拒绝访问", model, groupId);
+            throw new IllegalStateException("模型 " + model + " 未在注册中心找到，请先配置该模型");
         }
 
-        // 未指定 model 或指定模型不存在 → 使用默认
-        return chatClientRegistry.getDefault();
+        // 未指定 model → 拒绝（有分组时必须明确指定模型）
+        log.warn("[AiChatFacade] 分组 {} 请求未指定模型，拒绝访问", groupId);
+        throw new IllegalStateException("分组 " + groupId + " 的请求必须指定模型名称");
     }
 
     /**
@@ -265,12 +267,16 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                     case ERROR -> {
                         log.error("[AiChatFacade] stream 错误: model={}, groupId={}, error={}",
                                 request.getModel(), groupId, response.getErrorMessage());
+                        // ERROR 仍记录已消耗的用量与配额
+                        recordUsage(groupId, client, modelName, "async", response.getUsage());
+                        updateTokenQuota(appKey, response.getUsage());
                         if (done.compareAndSet(false, true)) {
                             emitter.send(SseEmitter.event().name("error")
                                     .data("{\"error\":\"" + escapeJson(response.getErrorMessage()) + "\"}",
                                             MediaType.TEXT_PLAIN));
                             emitter.complete();
                         }
+                        notifyComplete(onComplete, fullReply);
                     }
                 }
             } catch (IOException e) {
@@ -300,6 +306,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 } catch (IOException ignored) {
                 }
                 emitter.completeWithError(throwable);
+                notifyComplete(onComplete, fullReply);
             }
         });
 

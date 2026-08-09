@@ -31,4 +31,19 @@ public interface SysAiAppKeyMapper extends BaseMapper<SysAiAppKey> {
      * @return AppKey 实体，不存在时返回 null
      */
     SysAiAppKey selectByAppKey(@Param("appKey") String appKey);
+
+    /**
+     * 原子自增使用次数。
+     *
+     * @param appKey AppKey
+     */
+    void updateUseCount(@Param("appKey") String appKey);
+
+    /**
+     * 原子累加 Token 消耗量。
+     *
+     * @param appKey  AppKey
+     * @param tokens  本次消耗 Token 数
+     */
+    void addTokenQuota(@Param("appKey") String appKey, @Param("tokens") long tokens);
 }

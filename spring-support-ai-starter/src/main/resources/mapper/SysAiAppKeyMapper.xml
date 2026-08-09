@@ -25,4 +25,24 @@
         ORDER BY create_time DESC
     </select>
 
+<!--
+        原子自增使用次数。
+    -->
+    <update id="updateUseCount">
+        UPDATE sys_ai_app_key
+        SET sys_ai_app_key_use_count = COALESCE(sys_ai_app_key_use_count, 0) + 1
+        WHERE sys_ai_app_key_app_key = #{appKey}
+          AND sys_ai_app_key_delete = 0
+    </update>
+
+    <!--
+        原子累加 Token 消耗量。
+    -->
+    <update id="addTokenQuota">
+        UPDATE sys_ai_app_key
+        SET sys_ai_app_key_total_tokens = COALESCE(sys_ai_app_key_total_tokens, 0) + #{tokens}
+        WHERE sys_ai_app_key_app_key = #{appKey}
+          AND sys_ai_app_key_delete = 0
+    </update>
+
 </mapper>
