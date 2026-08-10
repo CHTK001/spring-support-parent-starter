@@ -173,7 +173,7 @@ public class GlobalChatClientManager {
     private ChatClientSettings buildSettings() {
         boolean enabled = settingReader.getBool(GROUP, "chat_client_enabled", true);
         com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry.getInstance().registerFlag(
-                "chat-client", "AI", enabled, "全局 ChatClient", null);
+                "chat-client", "AI", enabled, "全局 ChatClient");
         if (!enabled) {
             log.warn("[GlobalChatClient] chatClientEnabled=false，全局 ChatClient 已禁用");
             return null;
