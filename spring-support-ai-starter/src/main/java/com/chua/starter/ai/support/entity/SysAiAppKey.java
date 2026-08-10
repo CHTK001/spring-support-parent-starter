@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -64,12 +65,37 @@ public class SysAiAppKey {
      * 删除标记：0 未删除，1 已删除
      */
     @TableField("sys_ai_app_key_delete")
+    @TableLogic
     private Integer sysAiAppKeyDelete;
 
     /**
      * 分组 ID——Token/AppKey 绑定的分组
      */
     private Integer sysAiAppKeyGroupId;
+
+    /**
+     * 关联供应商 ID（面板层字段）
+     */
+    @TableField("sys_ai_app_key_provider_id")
+    private Long sysAiAppKeyProviderId;
+
+    /**
+     * 限定使用的模型（面板层字段）
+     */
+    @TableField("sys_ai_app_key_model")
+    private String sysAiAppKeyModel;
+
+    /**
+     * 是否启用（面板层字段，与状态列互斥使用）
+     */
+    @TableField("sys_ai_app_key_enabled")
+    private Boolean sysAiAppKeyEnabled;
+
+    /**
+     * 过期时间（DATETIME，面板层字段，与 epoch 秒过期列并存）
+     */
+    @TableField("sys_ai_app_key_expire_datetime")
+    private LocalDateTime sysAiAppKeyExpireDatetime;
 
     /**
      * 过期时间戳（秒）

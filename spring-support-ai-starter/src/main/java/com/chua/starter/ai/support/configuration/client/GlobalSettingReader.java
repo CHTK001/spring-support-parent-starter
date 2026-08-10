@@ -1,4 +1,4 @@
-package com.chua.starter.ai.support.configuration;
+package com.chua.starter.ai.support.configuration.client;
 
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import lombok.RequiredArgsConstructor;

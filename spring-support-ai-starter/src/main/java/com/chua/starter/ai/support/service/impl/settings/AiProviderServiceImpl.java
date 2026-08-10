@@ -41,11 +41,6 @@ public class AiProviderServiceImpl implements AiProviderService {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
-     * JSON 序列化器
-     */
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-
-    /**
      * runtime 全局配置分组
      */
     private static final String RUNTIME_GROUP = "runtime";
@@ -64,6 +59,11 @@ public class AiProviderServiceImpl implements AiProviderService {
      * 全局 ChatClient 管理器（激活后热重建）
      */
     private final GlobalChatClientManager globalChatClientManager;
+
+    /**
+     * Jackson JSON 序列化器（注入框架实例）
+     */
+    private final ObjectMapper mapper;
 
     /**
      * 查询所有启用状态的供应商。
@@ -314,7 +314,7 @@ public class AiProviderServiceImpl implements AiProviderService {
             return new ArrayList<>();
         }
         try {
-            return MAPPER.readValue(content, new TypeReference<List<String>>() {
+            return mapper.readValue(content, new TypeReference<List<String>>() {
             });
         } catch (Exception e) {
             log.warn("[AiProvider] 模型列表解析失败: {}", e.getMessage());

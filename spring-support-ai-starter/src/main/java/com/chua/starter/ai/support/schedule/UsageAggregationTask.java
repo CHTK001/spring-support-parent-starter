@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.ai.AiUsage;
 import com.chua.common.support.datasearch.usage.spi.UsageProvider;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.starter.ai.support.configuration.GlobalSettingReader;
+import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.entity.SysAiUsage;
 import com.chua.starter.ai.support.entity.SysAiUsageDaily;
 import com.chua.starter.ai.support.mapper.SysAiUsageDailyMapper;

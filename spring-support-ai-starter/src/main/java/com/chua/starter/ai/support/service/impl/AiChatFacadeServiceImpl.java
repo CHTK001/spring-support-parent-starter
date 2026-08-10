@@ -21,6 +21,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import com.chua.starter.ai.support.entity.SysAiModule;
 import com.chua.starter.ai.support.service.SysAiAppKeyService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -63,6 +64,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final SysAiTokenService sysAiTokenService;
     private final SysAiAppKeyService sysAiAppKeyService;
     private final UsageRecorderInterceptor usageRecorderInterceptor;
+    private final ObjectMapper objectMapper;
 
     /**
      * 根据分组 ID 与请求模型名解析 ChatClient。
@@ -507,7 +509,13 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-     * 解析分组名称（无分组返回 null）。
+     * 分组名称缓存：groupId → groupName，避免每次用量记录全表查询。
+     */
+    private final java.util.concurrent.ConcurrentHashMap<Integer, String> groupNameCache =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * 解析分组名称（无分组返回 null），带缓存。
      *
      * @param groupId 分组 ID
      * @return 分组名称
@@ -516,6 +524,16 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         if (groupId == null) {
             return null;
         }
+        return groupNameCache.computeIfAbsent(groupId, this::loadGroupName);
+    }
+
+    /**
+     * 从数据库加载分组名称。
+     *
+     * @param groupId 分组 ID
+     * @return 分组名称
+     */
+    private String loadGroupName(Integer groupId) {
         try {
             return sysAiGroupService.list().stream()
                     .filter(g -> groupId.equals(g.getSysAiGroupId()))
@@ -567,17 +585,17 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-     * JSON 字符串转义（简单实现）。
+     * JSON 字符串转义，使用 Jackson 序列化确保安全。
      */
-    private static String escapeJson(String s) {
+    private String escapeJson(String s) {
         if (s == null) {
             return "";
         }
-        return s.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
+        try {
+            return objectMapper.writeValueAsString(s);
+        } catch (Exception e) {
+            return "\"\"";
+        }
     }
 }
 

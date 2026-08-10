@@ -1,4 +1,4 @@
-package com.chua.starter.ai.support.configuration;
+package com.chua.starter.ai.support.configuration.rag;
 
 import com.chua.common.support.ai.rag.GlobalSettingProvider;
 import com.chua.common.support.spi.annotations.Spi;

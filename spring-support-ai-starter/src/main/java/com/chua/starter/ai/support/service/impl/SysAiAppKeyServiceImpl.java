@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -63,10 +62,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     }
 
     @Override
-    @Caching(evict = {
-            @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true),
-            @CacheEvict(cacheManager = REDIS_CACHE_MIN, cacheNames = REDIS_CACHE_MIN, allEntries = true)
-    })
+    @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
     public SysAiAppKey save(SysAiAppKey entity) {
         // 自动生成 sk- 格式密钥
         if (StringUtils.isBlank(entity.getSysAiAppKeyAppKey())) {
@@ -83,19 +79,13 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     }
 
     @Override
-    @Caching(evict = {
-            @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true),
-            @CacheEvict(cacheManager = REDIS_CACHE_MIN, cacheNames = REDIS_CACHE_MIN, allEntries = true)
-    })
+    @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
     public boolean update(SysAiAppKey entity) {
         return sysAiAppKeyMapper.updateById(entity) > 0;
     }
 
     @Override
-    @Caching(evict = {
-            @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true),
-            @CacheEvict(cacheManager = REDIS_CACHE_MIN, cacheNames = REDIS_CACHE_MIN, allEntries = true)
-    })
+    @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
     public boolean deleteById(Integer id) {
         if (id == null) {
             return false;
@@ -227,59 +217,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
         return result != null ? result.getSysAiAppKeyGroupId() : null;
     }
 
-    /**
-     * 在同一行补写 OpenAI 兼容鉴权列。
-     *
-     * @param id      面板 AppKey 主键（兼容列按 id 定位）
-     * @param key     兼容鉴权密钥
-     * @param status  状态：1 启用，0 禁用
-     * @param groupId 分组 ID（可空）
-     */
-    @Override
-    @Caching(evict = {
-            @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true),
-            @CacheEvict(cacheManager = REDIS_CACHE_MIN, cacheNames = REDIS_CACHE_MIN, allEntries = true)
-    })
-    public void updateCompatibleColumns(Long id, String key, Integer status, Integer groupId) {
-        if (id == null || StringUtils.isBlank(key)) {
-            return;
-        }
-        sysAiAppKeyMapper.update(
-                null,
-                Wrappers.lambdaUpdate(SysAiAppKey.class)
-                        .eq(SysAiAppKey::getSysAiAppKeyId, id.intValue())
-                        .set(SysAiAppKey::getSysAiAppKeyAppKey, key)
-                        .set(SysAiAppKey::getSysAiAppKeySecret, key)
-                        .set(SysAiAppKey::getSysAiAppKeyStatus, status)
-                        .set(SysAiAppKey::getSysAiAppKeyDelete, 0)
-                        .set(SysAiAppKey::getSysAiAppKeyGroupId, groupId)
-                        .set(SysAiAppKey::getUpdateTime, java.time.LocalDateTime.now()));
-    }
-
-    /**
-     * 同步面板记录的过期时间与次数上限为协议鉴权列。
-     *
-     * @param id                面板 AppKey 主键
-     * @param expireEpochSecond 过期时间（epoch 秒），null 表示永不
-     * @param maxUse            次数上限，null 表示不限
-     */
-    @Override
-    @Caching(evict = {
-            @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true),
-            @CacheEvict(cacheManager = REDIS_CACHE_MIN, cacheNames = REDIS_CACHE_MIN, allEntries = true)
-    })
-    public void updateExpireCompatible(Long id, Long expireEpochSecond, Long maxUse) {
-        if (id == null) {
-            return;
-        }
-        sysAiAppKeyMapper.update(
-                null,
-                Wrappers.lambdaUpdate(SysAiAppKey.class)
-                        .eq(SysAiAppKey::getSysAiAppKeyId, id.intValue())
-                        .set(SysAiAppKey::getSysAiAppKeyExpireTime, expireEpochSecond)
-                        .set(SysAiAppKey::getSysAiAppKeyMaxUse, maxUse)
-                        .set(SysAiAppKey::getUpdateTime, java.time.LocalDateTime.now()));
-    }
+    
 
     private boolean isExpired(SysAiAppKey appKey) {
         Long expireTime = resolveExpireTime(appKey);
@@ -289,19 +227,14 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
         return System.currentTimeMillis() / MILLIS_PER_SECOND > expireTime;
     }
 
-    /**
-     * 解析 AppKey 过期时间（epoch 秒）。
-     *
-     * <p>{@code sys_ai_app_key_expire_time} 统一存储 epoch 秒（由面板同步与种子写入约定），
-     * 直接返回，不再做毫秒转换（避免单位不一致导致 Key 被误判为已过期）。</p>
-     *
-     * @param appKey AppKey 记录
-     * @return 过期时间（epoch 秒），未设置时返回 null
-     */
     private Long resolveExpireTime(SysAiAppKey appKey) {
-        if (appKey == null || appKey.getSysAiAppKeyExpireTime() == null) {
+        if (appKey == null) {
             return null;
         }
-        return appKey.getSysAiAppKeyExpireTime();
+        if (appKey.getSysAiAppKeyExpireTime() != null) {
+            return java.time.Instant.ofEpochMilli(appKey.getSysAiAppKeyExpireTime())
+                    .atZone(java.time.ZoneId.systemDefault()).toEpochSecond();
+        }
+        return null;
     }
 }

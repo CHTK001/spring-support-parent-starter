@@ -237,16 +237,61 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
             // 分组未配置 Token：不阻断（未启用计量限流的分组放行）
             return true;
         }
-        // 遍历启用 Token，任一触发限流则整组拒绝
+        // 遍历启用 Token，直接使用已加载的实体检查限流，避免逐条再查库
         for (SysAiToken token : tokens) {
             if (token.getSysAiTokenStatus() != null && token.getSysAiTokenStatus() == 1
                     && token.getSysAiTokenKey() != null
-                    && !checkRateLimit(token.getSysAiTokenKey())) {
+                    && !checkRateLimit(token)) {
                 log.warn("[SysAiToken] 分组 {} 触达限流，拒绝请求", groupId);
                 return false;
             }
         }
         return true;
+    }
+
+    /**
+     * 基于已加载的 Token 实体检查限流，避免额外 DB 查询。
+     *
+     * @param token Token 实体（需包含 rateLimit/rateCount/rateWindowStart 字段）
+     * @return true 表示未触发限流
+     */
+    private boolean checkRateLimit(SysAiToken token) {
+        Integer rateLimit = token.getSysAiTokenRateLimit();
+        if (rateLimit == null || rateLimit <= 0) {
+            return true;
+        }
+        Integer rateCount = token.getSysAiTokenRateCount() == null ? 0 : token.getSysAiTokenRateCount();
+        LocalDateTime windowStart = token.getSysAiTokenRateWindowStart();
+        LocalDateTime now = LocalDateTime.now();
+        if (windowStart == null || windowStart.plusMinutes(1).isBefore(now)) {
+            token.setSysAiTokenRateCount(1);
+            token.setSysAiTokenRateWindowStart(now);
+            persistRateLimit(token);
+            return true;
+        }
+        if (rateCount < rateLimit) {
+            token.setSysAiTokenRateCount(rateCount + 1);
+            persistRateLimit(token);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 持久化限流计数。
+     *
+     * @param token 更新后的 Token 实体
+     */
+    private void persistRateLimit(SysAiToken token) {
+        try {
+            SysAiToken update = new SysAiToken();
+            update.setSysAiTokenId(token.getSysAiTokenId());
+            update.setSysAiTokenRateCount(token.getSysAiTokenRateCount());
+            update.setSysAiTokenRateWindowStart(token.getSysAiTokenRateWindowStart());
+            sysAiTokenMapper.updateById(update);
+        } catch (Exception e) {
+            log.warn("[SysAiToken] 持久化限流计数失败: {}", e.getMessage());
+        }
     }
 
     /**
