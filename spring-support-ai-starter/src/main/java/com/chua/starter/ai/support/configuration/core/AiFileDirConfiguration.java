@@ -1,4 +1,4 @@
-package com.chua.starter.ai.support.configuration;
+package com.chua.starter.ai.support.configuration.core;
 
 import com.chua.starter.filesystem.support.controller.FileDirController;
 import com.chua.starter.filesystem.support.properties.FileStorageProperties;

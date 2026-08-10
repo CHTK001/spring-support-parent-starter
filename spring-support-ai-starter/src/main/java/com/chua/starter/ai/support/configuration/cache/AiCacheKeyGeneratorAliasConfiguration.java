@@ -1,4 +1,4 @@
-package com.chua.starter.ai.support.configuration;
+package com.chua.starter.ai.support.configuration.cache;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;

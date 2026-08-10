@@ -1,4 +1,4 @@
-package com.chua.starter.ai.support.configuration;
+package com.chua.starter.ai.support.configuration.rag;
 
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import org.springframework.boot.autoconfigure.AutoConfiguration;

@@ -1,4 +1,4 @@
-package com.chua.starter.ai.support.configuration;
+package com.chua.starter.ai.support.configuration.ocr;
 
 import com.chua.common.support.file.txtractor.TextExtractResult;
 import com.chua.common.support.file.txtractor.TextExtractor;

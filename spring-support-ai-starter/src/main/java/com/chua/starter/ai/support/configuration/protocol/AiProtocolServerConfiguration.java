@@ -1,4 +1,4 @@
-package com.chua.starter.ai.support.configuration;
+package com.chua.starter.ai.support.configuration.protocol;
 
 import com.chua.common.support.ai.chat.protocol.AiProtocolServerFilter;
 import com.chua.common.support.spi.ServiceProvider;
