@@ -72,14 +72,16 @@ public class DataSourceContextSupport {
 
     /**
      * 添加数据源
+     * <p>若 SQL 监听已启用，注册前会统一包装数据源（幂等），实现纯 JDBC 层 SQL 监控。</p>
      *
      * @param name       名称
      * @param dataSource 添加数据源
      */
     public static void addDatasource(String name, DataSource dataSource) {
-        TARGET_DATA_SOURCES.put(name, dataSource);
+        DataSource target = com.chua.starter.datasource.monitor.DataSourceSqlMonitor.wrapIfEnabled(name, dataSource);
+        TARGET_DATA_SOURCES.put(name, target);
         // 自动检测并注册数据源分组（如 slave_1 → slave 组）
-        DataSourceGroupRegistry.register(name, dataSource);
+        DataSourceGroupRegistry.register(name, target);
     }
 
     /**

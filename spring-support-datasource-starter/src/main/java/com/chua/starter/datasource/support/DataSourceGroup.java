@@ -40,12 +40,21 @@ public class DataSourceGroup {
     }
 
     /**
-     * 添加组成员
+     * 添加组成员（幂等，同名数据源不重复添加）
      *
      * @param dataSource     数据源实例
      * @param dataSourceName 数据源名称
      */
     public void addMember(DataSource dataSource, String dataSourceName) {
+        int index = dataSourceNames.indexOf(dataSourceName);
+        if (index >= 0) {
+            // 同名成员替换为最新实例（如监控补包装后替换引用）
+            if (dataSources.get(index) != dataSource) {
+                dataSources.set(index, dataSource);
+                log.info("[数据源分组] 分组 '{}' 更新成员: {}", groupName, dataSourceName);
+            }
+            return;
+        }
         this.dataSources.add(dataSource);
         this.dataSourceNames.add(dataSourceName);
         log.info("[数据源分组] 分组 '{}' 添加成员: {}, 当前成员数: {}", groupName, dataSourceName, dataSources.size());
