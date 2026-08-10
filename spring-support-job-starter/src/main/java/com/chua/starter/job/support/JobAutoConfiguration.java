@@ -467,6 +467,11 @@ public class JobAutoConfiguration {
      */
     @PostConstruct
     public void describeOnStart() {
+        com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry.getInstance().registerFlag(
+                "job", "分布式任务",
+                properties.isEnable(),
+                "[role=" + properties.getRole() + "] [nodeId=" + properties.getNodeId() + "]",
+                "[group=" + properties.getCluster().getGroup() + "]");
         log.info("[job] 模块已启用, role={} nodeId={} group={} sync.scheduler={}:{} sync.executor.url={}",
                 properties.getRole(),
                 properties.getNodeId(),

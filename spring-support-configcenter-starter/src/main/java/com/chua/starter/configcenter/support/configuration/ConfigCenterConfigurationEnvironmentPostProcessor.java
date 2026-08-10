@@ -5,6 +5,7 @@ import com.chua.common.support.config.center.ConfigListener;
 import com.chua.common.support.config.center.ConfigCenterSetting;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.configcenter.support.holder.ConfigCenterHolder;
 import com.chua.starter.configcenter.support.properties.ConfigCenterProperties;
 import lombok.extern.slf4j.Slf4j;
@@ -54,10 +55,14 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         
         ConfigCenterProperties configCenterProperties = Binder.get(environment)
                 .bindOrCreate(ConfigCenterProperties.PRE, ConfigCenterProperties.class);
+        ServiceInfoRegistry registry = ServiceInfoRegistry.getInstance();
         if (!configCenterProperties.isEnable()) {
             log.warn("[配置中心]配置中心未启用");
+            registry.registerFlag("config-center", "配置中心", false, "远程配置中心", null);
             return;
         }
+        registry.registerFlag("config-center", "配置中心", true,
+                "远程配置中心 [协议: " + configCenterProperties.getProtocol() + "]", null);
         
         log.info("[配置中心]开始加载配置中心: {}", configCenterProperties.getProtocol());
         String active = environment.getProperty("spring.profiles.active");
@@ -91,8 +96,12 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         if (configCenterProperties.getHotReload().isEnabled()) {
             registerConfigListener(configCenter, configCenterProperties);
             log.info("[配置中心]热更新已启用");
+            ServiceInfoRegistry.getInstance().registerFlag(
+                    "config-hot-reload", "配置中心", true, "配置中心热更新", null);
         } else {
             log.info("[配置中心]热更新已禁用");
+            ServiceInfoRegistry.getInstance().registerFlag(
+                    "config-hot-reload", "配置中心", false, "配置中心热更新", null);
         }
         
         log.info("[配置中心]配置中心初始化完成，支持监听: {}", configCenter.isSupportListener());

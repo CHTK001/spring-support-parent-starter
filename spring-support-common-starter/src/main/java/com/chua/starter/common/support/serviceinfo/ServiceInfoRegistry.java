@@ -55,8 +55,24 @@ public final class ServiceInfoRegistry {
      * @param description 描述
      */
     public void registerFlag(String name, String group, Boolean value, String description) {
+        registerFlag(name, group, value, description, null);
+    }
+
+    /**
+     * 注册/覆盖一个带附加上下文的开关标志。
+     *
+     * <p>用于呈现类似 {@code [开启] [平台: system]} 这种带运行信息的开关。
+     * 横幅输出时会原样附加在开关名后。</p>
+     *
+     * @param name        标志名
+     * @param group       分组
+     * @param value       true / false / null
+     * @param description 描述
+     * @param suffix      附加上下文 (例如 {@code "[平台: system]"}、{@code "[环境: dev,test]"}); 为 null 时不输出
+     */
+    public void registerFlag(String name, String group, Boolean value, String description, String suffix) {
         String key = group + "/" + name;
-        flags.put(key, new FlagInfo(name, group, value, description));
+        flags.put(key, new FlagInfo(name, group, value, description, suffix));
     }
 
     public Map<String, EndpointInfo> getEndpoints() {
@@ -113,18 +129,21 @@ public final class ServiceInfoRegistry {
         private final String group;
         private final Boolean value;
         private final String description;
+        private final String suffix;
 
-        public FlagInfo(String name, String group, Boolean value, String description) {
+        public FlagInfo(String name, String group, Boolean value, String description, String suffix) {
             this.name = name;
             this.group = group;
             this.value = value;
             this.description = description;
+            this.suffix = suffix;
         }
 
         public String getName() { return name; }
         public String getGroup() { return group; }
         public Boolean getValue() { return value; }
         public String getDescription() { return description; }
+        public String getSuffix() { return suffix; }
 
         @Override
         public boolean equals(Object o) {

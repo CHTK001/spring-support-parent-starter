@@ -361,6 +361,10 @@ public class NgrokAutoConfiguration {
         if (urls.isEmpty()) {
             return;
         }
+        for (String url : urls) {
+            com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry.getInstance()
+                    .registerEndpoint("公网隧道", "ngrok", url, "Ngrok 公网隧道");
+        }
         log.info("");
         log.info("=========================================================");
         log.info("  Ngrok 隧道已建立，本机服务已暴露到公网");

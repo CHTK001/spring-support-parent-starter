@@ -3,6 +3,7 @@ package com.chua.starter.common.support.configuration;
 import com.chua.starter.common.support.api.properties.ApiProperties;
 import com.chua.starter.common.support.properties.CaptchaProperties;
 import com.chua.starter.common.support.provider.CaptchaProvider;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -32,7 +33,8 @@ public class CaptchaConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = CaptchaProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
     public CaptchaProvider captchaProvider() {
-        log.info(">>>>>>> 开启检验码接口");
+        ServiceInfoRegistry.getInstance().registerFlag(
+                "captcha", "校验码", true, "图形验证码接口", null);
         return new CaptchaProvider();
     }
 }

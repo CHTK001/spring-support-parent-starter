@@ -10,6 +10,7 @@ import com.chua.starter.common.support.api.response.ApiExceptionAdvice;
 import com.chua.starter.common.support.api.response.ApiUniformResponseBodyAdvice;
 import com.chua.common.support.application.GlobalSettingFactory;
 import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import jakarta.annotation.Priority;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -53,9 +54,6 @@ import java.util.concurrent.Executors;
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware  {
     private static final Logger log = LoggerFactory.getLogger(ApiConfiguration.class);
-        private static final String ANSI_GREEN = "\u001B[32m";
-    private static final String ANSI_RED = "\u001B[31m";
-    private static final String ANSI_RESET = "\u001B[0m";
 
     private ApiProperties apiProperties;
     private Environment environment;
@@ -75,40 +73,55 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware  
     }
 
     private void logControlStatus() {
+        ServiceInfoRegistry registry = ServiceInfoRegistry.getInstance();
+
         ApiProperties.Version version = apiProperties.getVersion();
         if (version != null && version.isEnable()) {
-            log.info("[API控制] [@ApiVersion] [版本控制] [{}开启{}]", ANSI_GREEN, ANSI_RESET);
+            registry.registerFlag("@ApiVersion", "API控制", true,
+                    "版本控制", null);
         } else {
-            log.info("[API控制] [@ApiVersion] [版本控制] [{}关闭{}]", ANSI_RED, ANSI_RESET);
+            registry.registerFlag("@ApiVersion", "API控制", false,
+                    "版本控制", null);
         }
+
         ApiProperties.Platform platform = apiProperties.getPlatform();
+        String platformSuffix = platform != null ? "[平台: " + platform.getPlatformName() + "]" : null;
         if (platform != null && platform.isEnable()) {
-            log.info("[API控制] [@ApiPlatform] [平台控制] [{}开启{}] [平台: {}]", ANSI_GREEN, ANSI_RESET, platform.getPlatformName());
+            registry.registerFlag("@ApiPlatform", "API控制", true,
+                    "平台控制", platformSuffix);
         } else {
-            log.info("[API控制] [@ApiPlatform] [平台控制] [{}关闭{}]", ANSI_RED, ANSI_RESET);
+            registry.registerFlag("@ApiPlatform", "API控制", false,
+                    "平台控制", platformSuffix);
         }
-        log.info("[API控制] [@ApiProfile] [环境控制] [{}开启{}]", ANSI_GREEN, ANSI_RESET);
+
+        registry.registerFlag("@ApiProfile", "API控制", true,
+                "环境控制", null);
+
         ApiProperties.DeprecatedConfig deprecated = apiProperties.getDeprecated();
-        log.info("[API控制] [@ApiDeprecated] [废弃提示] [{}{}{}]",
-                deprecated != null && deprecated.isEnable() ? ANSI_GREEN : ANSI_RED,
-                deprecated != null && deprecated.isEnable() ? "开启" : "关闭", ANSI_RESET);
+        registry.registerFlag("@ApiDeprecated", "API控制",
+                deprecated != null && deprecated.isEnable(),
+                "废弃提示", null);
+
         ApiProperties.FeatureConfig feature = apiProperties.getFeature();
-        log.info("[API控制] [@ApiFeature] [功能开关] [{}{}{}]",
-                feature != null && feature.isEnable() ? ANSI_GREEN : ANSI_RED,
-                feature != null && feature.isEnable() ? "开启" : "关闭", ANSI_RESET);
+        registry.registerFlag("@ApiFeature", "API控制",
+                feature != null && feature.isEnable(),
+                "功能开关", null);
+
         ApiProperties.InternalConfig internal = apiProperties.getInternal();
-        log.info("[API控制] [@ApiInternal] [内部接口] [{}{}{}]",
-                internal != null && internal.isEnable() ? ANSI_GREEN : ANSI_RED,
-                internal != null && internal.isEnable() ? "开启" : "关闭", ANSI_RESET);
+        registry.registerFlag("@ApiInternal", "API控制",
+                internal != null && internal.isEnable(),
+                "内部接口", null);
+
         ApiProperties.MockConfig mock = apiProperties.getMock();
-        log.info("[API控制] [@ApiMock] [Mock模式] [{}{}{}]{}",
-                mock != null && mock.isEnable() ? ANSI_GREEN : ANSI_RED,
-                mock != null && mock.isEnable() ? "开启" : "关闭", ANSI_RESET,
-                mock != null && mock.isEnable() ? " [环境: " + mock.getProfiles() + "]" : "");
+        String mockSuffix = (mock != null && mock.isEnable()) ? "[环境: " + mock.getProfiles() + "]" : null;
+        registry.registerFlag("@ApiMock", "API控制",
+                mock != null && mock.isEnable(),
+                "Mock模式", mockSuffix);
+
         ApiProperties.GrayConfig gray = apiProperties.getGray();
-        log.info("[API控制] [@ApiGray] [灰度发布] [{}{}{}]",
-                gray != null && gray.isEnable() ? ANSI_GREEN : ANSI_RED,
-                gray != null && gray.isEnable() ? "开启" : "关闭", ANSI_RESET);
+        registry.registerFlag("@ApiGray", "API控制",
+                gray != null && gray.isEnable(),
+                "灰度发布", null);
     }
 
     // ==================== 响应编码配置 ====================

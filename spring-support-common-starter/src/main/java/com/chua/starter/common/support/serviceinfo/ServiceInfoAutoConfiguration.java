@@ -5,7 +5,9 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.Ordered;
 import org.springframework.core.env.Environment;
+import org.springframework.core.annotation.Order;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -45,6 +47,7 @@ public class ServiceInfoAutoConfiguration {
     }
 
     @Bean
+    @Order(Ordered.LOWEST_PRECEDENCE)
     public ServiceInfoRunner serviceInfoRunner(ApplicationContext context, Environment environment) {
         return new ServiceInfoRunner(context, environment);
     }
@@ -115,7 +118,7 @@ public class ServiceInfoAutoConfiguration {
          * 启动信息横幅: 唯一允许渲染 ANSI 转义的位置。
          */
         private void printBanner(ServiceInfoRegistry registry) {
-            String sep = AnsiStyle.separator(60, '=');
+            String sep = AnsiStyle.separator(80, '=');
             StringBuilder sb = new StringBuilder();
             sb.append('\n').append(sep).append('\n');
             sb.append(AnsiStyle.bold(AnsiStyle.yellow("  服务信息"))).append('\n');
@@ -125,7 +128,7 @@ public class ServiceInfoAutoConfiguration {
                 sb.append(AnsiStyle.cyan("[端点]")).append('\n');
                 for (ServiceInfoRegistry.EndpointInfo ep : registry.getEndpoints().values()) {
                     sb.append("  ")
-                            .append(pad(ep.getGroup() + "/" + ep.getName(), 30))
+                            .append(pad(ep.getGroup() + "/" + ep.getName(), 32))
                             .append(' ').append(AnsiStyle.yellow(ep.getUrl()))
                             .append(AnsiStyle.gray("  ; " + ep.getDescription()))
                             .append('\n');
@@ -134,12 +137,25 @@ public class ServiceInfoAutoConfiguration {
 
             if (!registry.getFlags().isEmpty()) {
                 sb.append(AnsiStyle.cyan("[开关]")).append('\n');
+                java.util.Map<String, java.util.List<ServiceInfoRegistry.FlagInfo>> byGroup =
+                        new java.util.LinkedHashMap<>();
                 for (ServiceInfoRegistry.FlagInfo flag : registry.getFlags().values()) {
-                    sb.append("  ")
-                            .append(AnsiStyle.triFlag(flag.getValue())).append(' ')
-                            .append(pad(flag.getGroup() + "/" + flag.getName(), 30))
-                            .append(' ').append(flag.getDescription())
-                            .append('\n');
+                    byGroup.computeIfAbsent(flag.getGroup(), k -> new java.util.ArrayList<>()).add(flag);
+                }
+                for (java.util.Map.Entry<String, java.util.List<ServiceInfoRegistry.FlagInfo>> e : byGroup.entrySet()) {
+                    sb.append("  ").append(AnsiStyle.bold(e.getKey())).append('\n');
+                    for (ServiceInfoRegistry.FlagInfo flag : e.getValue()) {
+                        sb.append("    ")
+                                .append(pad(flag.getName(), 28))
+                                .append(' ').append(AnsiStyle.cnLabel(flag.getValue()));
+                        if (flag.getSuffix() != null && !flag.getSuffix().isEmpty()) {
+                            sb.append(' ').append(AnsiStyle.cyan(flag.getSuffix()));
+                        }
+                        if (flag.getDescription() != null && !flag.getDescription().isEmpty()) {
+                            sb.append(' ').append(AnsiStyle.gray("; " + flag.getDescription()));
+                        }
+                        sb.append('\n');
+                    }
                 }
             }
 

@@ -1,4 +1,5 @@
 package com.chua.starter.common.support.api.cors;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -95,7 +96,8 @@ public class ApiCorsConfiguration  {
         }
 
         // 3. 返回新的 CorsFilter
-        log.info("[ApiCors] 开启跨域处理");
+        ServiceInfoRegistry.getInstance().registerFlag(
+                "cors", "API控制", true, "跨域处理", null);
         CorsFilter corsFilter = new CorsFilter(corsConfigurationSource);
         FilterRegistrationBean<CorsFilter> filterRegistrationBean = new FilterRegistrationBean<>(corsFilter);
         filterRegistrationBean.setOrder(Ordered.HIGHEST_PRECEDENCE);

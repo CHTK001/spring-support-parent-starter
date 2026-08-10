@@ -81,6 +81,34 @@ public final class AnsiStyle {
     }
 
     /**
+     * 中文开关标签的颜色化输出:
+     * <ul>
+     *     <li>{@code true}  -> 绿色 {@code [开启]}</li>
+     *     <li>{@code false} -> 红色 {@code [关闭]}</li>
+     *     <li>{@code null}  -> 灰色 {@code [未配置]}</li>
+     * </ul>
+     *
+     * <p>用于 {@link ServiceInfoAutoConfiguration} 渲染类似
+     * {@code [API控制] [@ApiVersion] [版本控制] [开启]} 的横幅行。</p>
+     */
+    public static String cnLabel(Boolean value) {
+        if (value == null) {
+            return color(GRAY, "[未配置]");
+        } else if (value) {
+            return color(GREEN, "[开启]");
+        } else {
+            return color(RED, "[关闭]");
+        }
+    }
+
+    /**
+     * 包裹一段文本, 用指定 ANSI 代码染色。
+     */
+    public static String wrap(String ansiCode, String text) {
+        return color(ansiCode, text);
+    }
+
+    /**
      * 水平分隔线。
      */
     public static String separator(int width, char ch) {

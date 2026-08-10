@@ -3,6 +3,7 @@ package com.chua.starter.sync.support.datasync;
 import com.chua.starter.datasync.DataSyncServer;
 import com.chua.starter.datasync.agent.DataSyncAgentServer;
 import com.chua.common.support.network.sync.SyncClient;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.sync.support.properties.SyncProperties;
 import com.chua.starter.sync.support.server.SyncServer;
 import jakarta.annotation.PostConstruct;
@@ -81,6 +82,9 @@ public class SyncDataSyncConfiguration {
     @PostConstruct
     public void init() {
         Boolean enable = environment.getProperty(PREFIX + ".enabled", Boolean.class, false);
+        ServiceInfoRegistry.getInstance().registerFlag(
+                "sync-datasync-bridge", "数据同步", enable,
+                "Spring Sync -> DataSync 桥接", null);
         if (!Boolean.TRUE.equals(enable)) {
             log.info("[SyncDataSync] 未启用 DataSync 桥接功能");
             return;

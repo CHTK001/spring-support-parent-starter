@@ -67,6 +67,10 @@ public class DataSyncAgentLifecycleConfiguration {
     public void init() {
         SyncServer syncServer = syncServerProvider.getIfAvailable();
         DataSyncAgentServer agentServer = dataSyncAgentServerProvider.getIfAvailable();
+        boolean enabled = syncServer != null && agentServer != null;
+        com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry.getInstance().registerFlag(
+                "sync-agent-bridge", "数据同步", enabled,
+                "DataSync Agent 生命周期桥接", null);
         if (syncServer == null || agentServer == null) {
             log.info("[SyncDataSync] Agent 生命周期桥接未启用（SyncServer 或 DataSyncAgentServer 不存在）");
             return;

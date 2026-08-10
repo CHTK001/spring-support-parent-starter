@@ -251,7 +251,6 @@ public class MybatisPlusConfiguration {
         return configuration -> {
             // 只读拦截器优先级最高，需要第一个添加
             if (mybatisProperties.isReadOnly()) {
-                log.warn("数据库只读模式已开启，所有写操作将被拒绝");
                 configuration.addInterceptor(new ReadOnlyInterceptor(mybatisProperties));
             }
             if (materializedSqlRouter != null && materializedRouteProperties != null && materializedRouteProperties.isEnabled()) {
@@ -353,7 +352,13 @@ public class MybatisPlusConfiguration {
     @Bean
     public ServiceInfoContributor mybatisPlusServiceInfoContributor() {
         return registry -> {
-            registry.registerFlag("mybatis", "MyBatis", true, "MyBatis Plus模块");
+            registry.registerFlag("mybatis", "MyBatis", true, "MyBatis Plus模块", null);
+            registry.registerFlag("read-only", "MyBatis",
+                    mybatisProperties.isReadOnly(),
+                    "数据库只读模式 (拒绝写操作)", null);
+            registry.registerFlag("data-scope", "MyBatis",
+                    methodSecurityInterceptor.isEnable(),
+                    "数据权限拦截", null);
         };
     }
 }

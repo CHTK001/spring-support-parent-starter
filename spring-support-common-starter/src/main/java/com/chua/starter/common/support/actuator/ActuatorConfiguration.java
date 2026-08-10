@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.actuator;
 import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import jakarta.annotation.PostConstruct;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -59,6 +60,9 @@ public class ActuatorConfiguration  {
      */
     @PostConstruct
     public void registerEnvironment() {
+        ServiceInfoRegistry registry = ServiceInfoRegistry.getInstance();
+        registry.registerFlag("actuator-auth", "监控", actuatorProperties.isEnableAuth(),
+                "Actuator 认证过滤器", null);
         new ModuleEnvironmentRegistration("plugin.actuator", actuatorProperties, actuatorProperties.isEnable());
     }
 
@@ -75,8 +79,6 @@ public class ActuatorConfiguration  {
     @ConditionalOnMissingBean(name = "actuatorAuthenticationFilterRegistration")
     @ConditionalOnProperty(name = "plugin.actuator.enable-auth", havingValue = "true")
     public FilterRegistrationBean<ActuatorAuthenticationFilter> actuatorAuthenticationFilterRegistration() {
-        log.info(">>>>>>> 注册 Actuator 认证过滤器 [plugin.actuator.enable-auth=true]");
-        
         FilterRegistrationBean<ActuatorAuthenticationFilter> registration = new FilterRegistrationBean<>();
         registration.setFilter(new ActuatorAuthenticationFilter(actuatorProperties));
         registration.addUrlPatterns("/actuator/*");

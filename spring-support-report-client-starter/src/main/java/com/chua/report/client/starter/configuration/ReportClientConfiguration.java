@@ -202,7 +202,16 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     @Bean
     public ServiceInfoContributor reportClientServiceInfoContributor() {
         return registry -> {
-            registry.registerFlag("report-client", "上报客户端", true, "上报客户端模块");
+            registry.registerFlag("report-client", "上报客户端",
+                    reportProperties.isEnable(), "上报客户端模块", null);
+            registry.registerFlag("app-report", "上报客户端",
+                    reportProperties.getAppReport().isEnabled(),
+                    "应用注册与心跳上报", null);
+            registry.registerFlag("device-metrics", "上报客户端",
+                    reportProperties.getMetrics().isEnabled(),
+                    "设备指标上报", null);
+            registry.registerFlag("node-control", "上报客户端",
+                    true, "节点远程控制 (重启/关闭)", null);
         };
     }
 }
