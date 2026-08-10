@@ -13,7 +13,6 @@ import com.chua.starter.common.support.api.encode.ApiContentNegotiationStrategy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.boot.autoconfigure.web.servlet.WebMvcRegistrations;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.convert.ApplicationConversionService;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -50,7 +49,7 @@ import org.slf4j.LoggerFactory;
  * @author CH
  */
 @EnableConfigurationProperties({MessageConverterProperties.class})
-public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, ApplicationContextAware, WebMvcRegistrations {
+public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, ApplicationContextAware {
     private static final Logger log = LoggerFactory.getLogger(MessageConverterWebMvcConfigurer.class);
     /**
      * 构造函数

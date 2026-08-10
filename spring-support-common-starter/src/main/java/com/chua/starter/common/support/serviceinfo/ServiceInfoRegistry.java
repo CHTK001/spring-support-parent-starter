@@ -17,12 +17,29 @@ import java.util.Objects;
  * ServiceInfoRegistry.getInstance().registerFlag("OSS", "存储", true, "阿里云 OSS 已启用");
  * }</pre>
  *
+ * <h3>线程安全与生命周期</h3>
+ * <ul>
+ *   <li>单例生命周期与 JVM 一致, 不受 Spring 上下文关闭影响。</li>
+ *   <li>Map 操作使用 {@link LinkedHashMap}, 非线程安全。
+ *       调用方应保证在 Spring 容器初始化阶段 (主线程) 调用,
+ *       不要在运行时并发注册。</li>
+ *   <li>多 {@code ApplicationContext} 场景 (如 Spring Boot 测试嵌套上下文)
+ *       会共享同一 Registry 实例, 可能造成状态污染。
+ *       测试场景可调用 {@link #reset()} 清空。</li>
+ * </ul>
+ *
  * @author CH
  * @since 4.0.0.42
  */
 public final class ServiceInfoRegistry {
 
     private static final ServiceInfoRegistry INSTANCE = new ServiceInfoRegistry();
+
+    /**
+     * Map key 分隔符: 使用 NUL 字符避免与 {@code group} 或 {@code name} 中的
+     * 常见字符 (如 '/'、'-') 冲突。
+     */
+    private static final String KEY_SEP = "\u0000";
 
     private final Map<String, EndpointInfo> endpoints = new LinkedHashMap<>();
     private final Map<String, FlagInfo> flags = new LinkedHashMap<>();
@@ -42,7 +59,7 @@ public final class ServiceInfoRegistry {
      * @param description 描述
      */
     public void registerEndpoint(String group, String name, String url, String description) {
-        String key = group + "/" + name;
+        String key = keyOf(group, name);
         endpoints.put(key, new EndpointInfo(group, name, url, description));
     }
 
@@ -71,8 +88,36 @@ public final class ServiceInfoRegistry {
      * @param suffix      附加上下文 (例如 {@code "[平台: system]"}、{@code "[环境: dev,test]"}); 为 null 时不输出
      */
     public void registerFlag(String name, String group, Boolean value, String description, String suffix) {
-        String key = group + "/" + name;
+        String key = keyOf(group, name);
         flags.put(key, new FlagInfo(name, group, value, description, suffix));
+    }
+
+    private static String keyOf(String group, String name) {
+        return (group == null ? "" : group) + KEY_SEP + (name == null ? "" : name);
+    }
+
+    /**
+     * 根据 group/name 查找已注册的开关。
+     *
+     * @param group 分组
+     * @param name  开关名
+     * @return 找到的 FlagInfo, 未找到返回 null
+     */
+    public FlagInfo findFlag(String group, String name) {
+        if (group == null || name == null) return null;
+        return flags.get(keyOf(group, name));
+    }
+
+    /**
+     * 根据 group/name 查找已注册的端点。
+     *
+     * @param group 分组
+     * @param name  端点名
+     * @return 找到的 EndpointInfo, 未找到返回 null
+     */
+    public EndpointInfo findEndpoint(String group, String name) {
+        if (group == null || name == null) return null;
+        return endpoints.get(keyOf(group, name));
     }
 
     public Map<String, EndpointInfo> getEndpoints() {
@@ -91,6 +136,16 @@ public final class ServiceInfoRegistry {
         data.put("endpoints", endpoints);
         data.put("flags", flags);
         return data;
+    }
+
+    /**
+     * 清空所有已注册的端点和开关。
+     *
+     * <p>仅供测试场景使用; 生产代码不应调用此方法。</p>
+     */
+    public void reset() {
+        endpoints.clear();
+        flags.clear();
     }
 
     public static class EndpointInfo {

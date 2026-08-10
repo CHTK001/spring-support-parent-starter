@@ -194,6 +194,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
+        <!-- Spring Boot WebMVC自动配置（Boot 4 模块化拆分，提供 WebMvcRegistrations 等） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-webmvc</artifactId>
+        </dependency>
         <!-- Tomcat 嵌入式服务器 - 可选依赖，用于虚拟线程配置 -->
         <dependency>
             <groupId>org.apache.tomcat.embed</groupId>
@@ -205,11 +210,13 @@
         <dependency>
             <groupId>io.undertow</groupId>
             <artifactId>undertow-core</artifactId>
+            <version>2.3.10.Final</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>io.undertow</groupId>
             <artifactId>undertow-servlet</artifactId>
+            <version>2.3.10.Final</version>
             <scope>provided</scope>
         </dependency>
 
@@ -217,6 +224,12 @@
         <groupId>org.springframework</groupId>
         <artifactId>spring-webmvc</artifactId>
         <scope>provided</scope>
+    </dependency>
+
+    <!-- Spring Boot WebMVC 自动装配 (Spring Boot 4.x split 出独立 jar) -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-webmvc</artifactId>
     </dependency>
 
     <!-- Spring JDBC - 提供 DataAccessException 等数据访问异常类 -->

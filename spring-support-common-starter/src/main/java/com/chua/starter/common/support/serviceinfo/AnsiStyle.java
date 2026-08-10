@@ -19,21 +19,44 @@ public final class AnsiStyle {
 
     private static final Logger log = LoggerFactory.getLogger(AnsiStyle.class);
 
-    /** 是否启用颜色: 由环境变量 {@code NO_COLOR} 或 {@code TERM=dumb} 控制 */
-    public static final boolean ENABLED = computeEnabled();
+    /**
+     * 是否启用颜色: 由 {@link System#getenv(String) 环境变量} 动态读取。
+     * <ul>
+     *     <li>{@code NO_COLOR} 存在 → 关闭 (遵循 no-color.org 标准)</li>
+     *     <li>{@code TERM=dumb} → 关闭</li>
+     *     <li>其它情况 → 启用</li>
+     * </ul>
+     *
+     * <p>使用 {@link ThreadLocal} 缓存, 避免每次调用都访问环境变量;
+     * 测试场景可调用 {@link #reset()} 清缓存。</p>
+     */
+    private static final ThreadLocal<Boolean> ENABLED_CACHE = new ThreadLocal<>();
 
-    public static final String RESET = wrap("\u001B[0m");
-    public static final String BOLD = wrap("\u001B[1m");
-    public static final String DIM = wrap("\u001B[2m");
-    public static final String RED = wrap("\u001B[31m");
-    public static final String GREEN = wrap("\u001B[32m");
-    public static final String YELLOW = wrap("\u001B[33m");
-    public static final String BLUE = wrap("\u001B[34m");
-    public static final String CYAN = wrap("\u001B[36m");
-    public static final String GRAY = wrap("\u001B[90m");
-    public static final String BG_RED = wrap("\u001B[41m");
+    public static final String RESET = "\u001B[0m";
+    public static final String BOLD = "\u001B[1m";
+    public static final String DIM = "\u001B[2m";
+    public static final String RED = "\u001B[31m";
+    public static final String GREEN = "\u001B[32m";
+    public static final String YELLOW = "\u001B[33m";
+    public static final String BLUE = "\u001B[34m";
+    public static final String CYAN = "\u001B[36m";
+    public static final String GRAY = "\u001B[90m";
+    public static final String BG_RED = "\u001B[41m";
 
     private AnsiStyle() {}
+
+    /**
+     * 当前是否启用 ANSI 颜色。
+     */
+    public static boolean isEnabled() {
+        Boolean cached = ENABLED_CACHE.get();
+        if (cached != null) {
+            return cached;
+        }
+        boolean enabled = computeEnabled();
+        ENABLED_CACHE.set(enabled);
+        return enabled;
+    }
 
     private static boolean computeEnabled() {
         try {
@@ -46,12 +69,22 @@ public final class AnsiStyle {
         }
     }
 
+    /**
+     * 清空当前线程的 enabled 缓存。
+     *
+     * <p>主要用于单元测试, 在修改 {@code NO_COLOR} 等环境变量后调用。
+     * 生产代码不应调用此方法。</p>
+     */
+    public static void reset() {
+        ENABLED_CACHE.remove();
+    }
+
     private static String wrap(String code) {
-        return ENABLED ? code : "";
+        return isEnabled() ? code : "";
     }
 
     public static String color(String code, String text) {
-        return ENABLED ? code + text + RESET : text;
+        return isEnabled() ? code + text + RESET : text;
     }
 
     public static String red(String s) { return color(RED, s); }
@@ -114,6 +147,6 @@ public final class AnsiStyle {
     public static String separator(int width, char ch) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < width; i++) sb.append(ch);
-        return ENABLED ? CYAN + sb.toString() + RESET : sb.toString();
+        return isEnabled() ? CYAN + sb.toString() + RESET : sb.toString();
     }
 }

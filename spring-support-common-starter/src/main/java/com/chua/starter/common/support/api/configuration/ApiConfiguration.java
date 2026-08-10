@@ -15,7 +15,7 @@ import jakarta.annotation.Priority;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.web.servlet.WebMvcRegistrations;
+import org.springframework.boot.webmvc.autoconfigure.WebMvcRegistrations;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.EnvironmentAware;
@@ -63,9 +63,7 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware  
     @Override
     public RequestMappingHandlerMapping getRequestMappingHandlerMapping() {
         if (apiProperties.isControlEnabled()) {
-            log.info("[API控制] [注册开始]");
             logControlStatus();
-            log.info("[API控制] [注册完成]");
             return new ApiVersionRequestMappingHandlerMapping(apiProperties, environment);
         }
         log.debug("[API控制] 未开启版本/平台控制，使用默认 RequestMappingHandlerMapping");
@@ -76,52 +74,44 @@ public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware  
         ServiceInfoRegistry registry = ServiceInfoRegistry.getInstance();
 
         ApiProperties.Version version = apiProperties.getVersion();
-        if (version != null && version.isEnable()) {
-            registry.registerFlag("@ApiVersion", "API控制", true,
-                    "版本控制", null);
-        } else {
-            registry.registerFlag("@ApiVersion", "API控制", false,
-                    "版本控制", null);
-        }
+        registry.registerFlag("api-version", "API控制",
+                version != null && version.isEnable(),
+                "@ApiVersion 版本控制", null);
 
         ApiProperties.Platform platform = apiProperties.getPlatform();
         String platformSuffix = platform != null ? "[平台: " + platform.getPlatformName() + "]" : null;
-        if (platform != null && platform.isEnable()) {
-            registry.registerFlag("@ApiPlatform", "API控制", true,
-                    "平台控制", platformSuffix);
-        } else {
-            registry.registerFlag("@ApiPlatform", "API控制", false,
-                    "平台控制", platformSuffix);
-        }
+        registry.registerFlag("api-platform", "API控制",
+                platform != null && platform.isEnable(),
+                "@ApiPlatform 平台控制", platformSuffix);
 
-        registry.registerFlag("@ApiProfile", "API控制", true,
-                "环境控制", null);
+        registry.registerFlag("api-profile", "API控制", true,
+                "@ApiProfile 环境控制", null);
 
         ApiProperties.DeprecatedConfig deprecated = apiProperties.getDeprecated();
-        registry.registerFlag("@ApiDeprecated", "API控制",
+        registry.registerFlag("api-deprecated", "API控制",
                 deprecated != null && deprecated.isEnable(),
-                "废弃提示", null);
+                "@ApiDeprecated 废弃提示", null);
 
         ApiProperties.FeatureConfig feature = apiProperties.getFeature();
-        registry.registerFlag("@ApiFeature", "API控制",
+        registry.registerFlag("api-feature", "API控制",
                 feature != null && feature.isEnable(),
-                "功能开关", null);
+                "@ApiFeature 功能开关", null);
 
         ApiProperties.InternalConfig internal = apiProperties.getInternal();
-        registry.registerFlag("@ApiInternal", "API控制",
+        registry.registerFlag("api-internal", "API控制",
                 internal != null && internal.isEnable(),
-                "内部接口", null);
+                "@ApiInternal 内部接口", null);
 
         ApiProperties.MockConfig mock = apiProperties.getMock();
         String mockSuffix = (mock != null && mock.isEnable()) ? "[环境: " + mock.getProfiles() + "]" : null;
-        registry.registerFlag("@ApiMock", "API控制",
+        registry.registerFlag("api-mock", "API控制",
                 mock != null && mock.isEnable(),
-                "Mock模式", mockSuffix);
+                "@ApiMock Mock模式", mockSuffix);
 
         ApiProperties.GrayConfig gray = apiProperties.getGray();
-        registry.registerFlag("@ApiGray", "API控制",
+        registry.registerFlag("api-gray", "API控制",
                 gray != null && gray.isEnable(),
-                "灰度发布", null);
+                "@ApiGray 灰度发布", null);
     }
 
     // ==================== 响应编码配置 ====================
