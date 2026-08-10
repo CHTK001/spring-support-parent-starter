@@ -8,6 +8,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
@@ -63,14 +64,14 @@ public class MonitoringDataSource implements DataSource {
     public Connection getConnection() throws SQLException {
         Connection connection = delegate.getConnection();
         activeConnections.incrementAndGet();
-        return new MonitoringConnection(connection, dataSourceName, monitor).proxy();
+        return new MonitoringConnection(connection, dataSourceName, monitor, closeCallback()).proxy();
     }
 
     @Override
     public Connection getConnection(String username, String password) throws SQLException {
         Connection connection = delegate.getConnection(username, password);
         activeConnections.incrementAndGet();
-        return new MonitoringConnection(connection, dataSourceName, monitor).proxy();
+        return new MonitoringConnection(connection, dataSourceName, monitor, closeCallback()).proxy();
     }
 
     @Override
@@ -136,6 +137,20 @@ public class MonitoringDataSource implements DataSource {
      */
     public int getActiveConnections() {
         return activeConnections.get();
+    }
+
+    /**
+     * 构建连接关闭回调（幂等：连接被重复 close 时仅递减一次）
+     *
+     * @return 关闭回调
+     */
+    private Runnable closeCallback() {
+        AtomicBoolean closed = new AtomicBoolean(false);
+        return () -> {
+            if (closed.compareAndSet(false, true)) {
+                activeConnections.decrementAndGet();
+            }
+        };
     }
 
     @Override

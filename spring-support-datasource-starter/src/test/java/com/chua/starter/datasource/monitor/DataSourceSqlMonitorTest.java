@@ -8,6 +8,7 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -177,5 +179,115 @@ class DataSourceSqlMonitorTest {
 
         assertEquals(1, callbackCount.get());
         assertEquals(1, listenerMonitor.getStatistics("master").getTotalCount().get());
+    }
+
+    /**
+     * 测试并发包装幂等：同一数据源并发 wrap 只生成一个包装实例
+     */
+    @Test
+    void testConcurrentWrapIdempotent() throws Exception {
+        HikariDataSource dataSource = new HikariDataSource();
+        dataSource.setJdbcUrl("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1");
+
+        List<DataSource> results = java.util.Collections.synchronizedList(new ArrayList<>());
+        List<Thread> threads = new ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            Thread thread = new Thread(() -> results.add(monitor.wrap(dataSource, "master")));
+            threads.add(thread);
+            thread.start();
+        }
+        for (Thread thread : threads) {
+            thread.join();
+        }
+
+        assertEquals(8, results.size());
+        assertSame(results.get(0), results.get(1));
+        assertEquals(1, results.stream().distinct().count());
+    }
+
+    /**
+     * 测试活跃连接数随 close 增减且重复 close 只递减一次
+     */
+    @Test
+    void testActiveConnectionsTracking() throws Exception {
+        HikariDataSource dataSource = new HikariDataSource();
+        dataSource.setJdbcUrl("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1");
+
+        DataSource wrapped = monitor.wrap(dataSource, "master");
+        MonitoringDataSource monitoringDataSource = (MonitoringDataSource) wrapped;
+        assertEquals(0, monitoringDataSource.getActiveConnections());
+
+        Connection connection = wrapped.getConnection();
+        assertEquals(1, monitoringDataSource.getActiveConnections());
+
+        connection.close();
+        assertEquals(0, monitoringDataSource.getActiveConnections());
+
+        // 重复 close 不再递减
+        connection.close();
+        assertEquals(0, monitoringDataSource.getActiveConnections());
+    }
+
+    /**
+     * 测试 prepareStatement 全重载参数透传（String[] 生成主键回填路径不抛 CCE）
+     */
+    @Test
+    void testPrepareStatementOverloads() throws Exception {
+        HikariDataSource dataSource = new HikariDataSource();
+        dataSource.setJdbcUrl("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1");
+        dataSource.setDriverClassName("org.h2.Driver");
+
+        DataSource wrapped = monitor.wrap(dataSource, "master");
+        try (Connection connection = wrapped.getConnection()) {
+            Statement statement = connection.createStatement();
+            statement.execute("create table if not exists prep_t(id int auto_increment primary key, name varchar(50))");
+            statement.close();
+
+            // String[] 列名回填重载（MyBatis 生成主键路径）
+            try (PreparedStatement ps = connection.prepareStatement(
+                    "insert into prep_t(name) values(?)", new String[]{"id"})) {
+                ps.setString(1, "x");
+                assertEquals(1, ps.executeUpdate());
+            }
+            // int[] 列索引回填重载
+            try (PreparedStatement ps = connection.prepareStatement(
+                    "insert into prep_t(name) values(?)", new int[]{1})) {
+                ps.setString(1, "y");
+                assertEquals(1, ps.executeUpdate());
+            }
+            // 四参 resultSetType/concurrency/holdability
+            try (PreparedStatement ps = connection.prepareStatement(
+                    "select * from prep_t", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY, ResultSet.CLOSE_CURSORS_AT_COMMIT)) {
+                assertNotNull(ps.executeQuery());
+            }
+        }
+
+        assertTrue(monitor.getStatistics("master").getTotalCount().get() >= 4);
+    }
+
+    /**
+     * 测试统计淘汰同步清理：容量满触发淘汰时 statisticsMap 同步收缩
+     */
+    @Test
+    void testStatisticsEvictionSynchronized() {
+        SqlMonitorProperties properties = new SqlMonitorProperties();
+        properties.setEnabled(true);
+        properties.setMaxTrackedDataSources(3);
+        properties.setOverflowPolicy(com.chua.common.support.collection.OverflowPolicy.EVICT_ELDEST);
+        ApplicationEventPublisher publisher = event -> {
+        };
+        DataSourceSqlMonitor boundedMonitor = new DataSourceSqlMonitor(publisher, List.of(), properties);
+
+        boundedMonitor.recordExecution("ds1", "select 1", 1, true, null);
+        boundedMonitor.recordExecution("ds2", "select 1", 1, true, null);
+        boundedMonitor.recordExecution("ds3", "select 1", 1, true, null);
+        // 第 4 个触发淘汰 ds1
+        boundedMonitor.recordExecution("ds4", "select 1", 1, true, null);
+
+        assertEquals(3, boundedMonitor.getAllStatistics().size());
+        assertNull(boundedMonitor.getStatistics("ds1"));
+        assertNotNull(boundedMonitor.getStatistics("ds2"));
+        assertNotNull(boundedMonitor.getStatistics("ds3"));
+        assertNotNull(boundedMonitor.getStatistics("ds4"));
     }
 }

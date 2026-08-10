@@ -27,7 +27,7 @@ public class MonitoringStatement implements InvocationHandler {
      * 执行方法集合
      */
     private static final String[] EXECUTE_METHODS = {
-            "execute", "executeQuery", "executeUpdate", "executeLargeUpdate", "executeBatch"
+            "execute", "executeQuery", "executeUpdate", "executeLargeUpdate", "executeBatch", "executeLargeBatch"
     };
 
     /**
@@ -111,14 +111,15 @@ public class MonitoringStatement implements InvocationHandler {
         // 拦截执行方法，计时上报
         for (String execMethod : EXECUTE_METHODS) {
             if (execMethod.equals(name)) {
-                long start = System.currentTimeMillis();
+                // 使用 nanoTime 计时，避免受系统时钟调整影响
+                long start = System.nanoTime();
                 try {
                     Object result = invokeTarget(method, args);
-                    long costMs = System.currentTimeMillis() - start;
+                    long costMs = (System.nanoTime() - start) / 1_000_000;
                     monitor.recordExecution(dataSourceName, resolveSql(args), costMs, true, null);
                     return result;
                 } catch (Throwable e) {
-                    long costMs = System.currentTimeMillis() - start;
+                    long costMs = (System.nanoTime() - start) / 1_000_000;
                     monitor.recordExecution(dataSourceName, resolveSql(args), costMs, false, e.getMessage());
                     throw e;
                 }

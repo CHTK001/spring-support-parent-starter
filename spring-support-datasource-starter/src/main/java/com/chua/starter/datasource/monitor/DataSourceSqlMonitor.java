@@ -192,11 +192,21 @@ public class DataSourceSqlMonitor {
         MonitoringDataSource wrapped = new MonitoringDataSource(dataSource, dataSourceName, this);
         // 有界集合控制缓存规模，防止数据源实例动态增长导致内存膨胀
         synchronized (trackedWrappedKeys) {
+            // 同步块内二次查询，防止并发下同一数据源生成多个包装实例
+            cached = wrappedCache.get(dataSource);
+            if (cached != null) {
+                return cached;
+            }
             if (trackedWrappedKeys.add(dataSource)) {
                 wrappedCache.put(dataSource, wrapped);
             }
+            // 容量满被淘汰的 key 需同步清理缓存，避免 wrappedCache 无限增长
+            DataSource evicted = trackedWrappedKeys.lastEvicted();
+            if (evicted != null) {
+                wrappedCache.remove(evicted);
+            }
+            return wrapped;
         }
-        return wrapped;
     }
 
     /**
@@ -221,6 +231,11 @@ public class DataSourceSqlMonitor {
                 if (statistics == null) {
                     if (trackedDataSources.add(dataSourceName)) {
                         statistics = statisticsMap.computeIfAbsent(dataSourceName, SqlStatistics::new);
+                        // 容量满被淘汰的数据源名需同步清理统计，避免 statisticsMap 无限增长
+                        String evicted = trackedDataSources.lastEvicted();
+                        if (evicted != null) {
+                            statisticsMap.remove(evicted);
+                        }
                     } else if (log.isDebugEnabled()) {
                         log.debug("[SqlMonitor] 数据源统计已达上限({}), 跳过数据源 '{}' 的统计聚合",
                                 properties.getMaxTrackedDataSources(), dataSourceName);

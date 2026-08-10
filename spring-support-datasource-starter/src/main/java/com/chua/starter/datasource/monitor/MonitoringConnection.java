@@ -6,9 +6,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.sql.CallableStatement;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.Statement;
 
 /**
@@ -43,6 +41,11 @@ public class MonitoringConnection implements InvocationHandler {
     private final DataSourceSqlMonitor monitor;
 
     /**
+     * 连接关闭时的回调（用于连接数统计递减），可为 null
+     */
+    private final Runnable onClose;
+
+    /**
      * 监控连接构造器
      *
      * @param delegate       目标连接
@@ -50,9 +53,22 @@ public class MonitoringConnection implements InvocationHandler {
      * @param monitor        监控门面
      */
     public MonitoringConnection(Connection delegate, String dataSourceName, DataSourceSqlMonitor monitor) {
+        this(delegate, dataSourceName, monitor, null);
+    }
+
+    /**
+     * 监控连接构造器（带关闭回调）
+     *
+     * @param delegate       目标连接
+     * @param dataSourceName 数据源名称
+     * @param monitor        监控门面
+     * @param onClose        连接关闭回调，可为 null
+     */
+    public MonitoringConnection(Connection delegate, String dataSourceName, DataSourceSqlMonitor monitor, Runnable onClose) {
         this.delegate = delegate;
         this.dataSourceName = dataSourceName;
         this.monitor = monitor;
+        this.onClose = onClose;
     }
 
     /**
@@ -71,35 +87,27 @@ public class MonitoringConnection implements InvocationHandler {
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         String name = method.getName();
 
-        // 创建 Statement 的入口：返回监控 Statement
-        if ("createStatement".equals(name)) {
-            Statement statement;
-            if (args == null || args.length == 0) {
-                statement = delegate.createStatement();
-            } else if (args.length == 2) {
-                statement = delegate.createStatement((int) args[0], (int) args[1]);
-            } else {
-                statement = delegate.createStatement((int) args[0], (int) args[1], (int) args[2]);
+        // 关闭连接：透传并触发关闭回调（幂等，多次 close 仅回调一次）
+        if ("close".equals(name)) {
+            try {
+                return invokeTarget(method, args);
+            } finally {
+                if (onClose != null) {
+                    onClose.run();
+                }
             }
-            return MonitoringStatement.wrap(statement, dataSourceName, monitor);
         }
-        if ("prepareStatement".equals(name)) {
-            PreparedStatement statement;
-            String sql = (String) args[0];
-            if (args.length == 1) {
-                statement = delegate.prepareStatement(sql);
-            } else if (args.length == 2) {
-                statement = delegate.prepareStatement(sql, (int) args[1]);
-            } else if (args.length == 3 && args[1] instanceof Integer) {
-                statement = delegate.prepareStatement(sql, (int) args[1], (int) args[2]);
-            } else {
-                statement = delegate.prepareStatement(sql, (int[]) args[1]);
+
+        // 创建 Statement 的入口：统一反射分派，避免手工解析重载参数导致
+        // (String, String[]) / (String, int[]) 等重载被误强转为 int 抛 ClassCastException
+        if ("createStatement".equals(name) || "prepareStatement".equals(name) || "prepareCall".equals(name)) {
+            Object result = invokeTarget(method, args);
+            if (result instanceof Statement statement) {
+                // 提取 SQL 文本：仅当第一个参数为 String（execute(sql) 形式）时携带
+                String sql = args != null && args.length > 0 && args[0] instanceof String sqlText ? sqlText : null;
+                return MonitoringStatement.wrap(statement, dataSourceName, monitor, sql);
             }
-            return MonitoringStatement.wrap(statement, dataSourceName, monitor, sql);
-        }
-        if ("prepareCall".equals(name)) {
-            CallableStatement statement = delegate.prepareCall((String) args[0]);
-            return MonitoringStatement.wrap(statement, dataSourceName, monitor, (String) args[0]);
+            return result;
         }
 
         // Object 基础方法透传
