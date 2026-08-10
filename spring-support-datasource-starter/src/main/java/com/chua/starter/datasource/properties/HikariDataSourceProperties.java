@@ -2,7 +2,7 @@ package com.chua.starter.datasource.properties;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceProperties;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
 

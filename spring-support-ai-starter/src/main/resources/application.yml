@@ -27,7 +27,7 @@ spring:
       encoding: utf-8
   h2:
     console:
-      enabled: true
+      enabled: false
       path: /h2-console
   profiles:
     active: dev
@@ -39,11 +39,11 @@ spring:
 plugin:
   filesystem:
     enable: true
-    dir-list: true
+    dir-list: false
 
 mybatis-plus:
   configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
   global-config:
     db-config:
       id-type: ASSIGN_ID

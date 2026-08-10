@@ -106,6 +106,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             allEntries = true)
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public void replace(Object request) {
         if (!(request instanceof Map)) {
             log.warn("[SysAiGlobalSetting] replace 参数类型不支持: {}", request.getClass());
@@ -148,5 +149,45 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
         }
 
         log.info("[SysAiGlobalSetting] 分组 {} 配置已更新，共 {} 项", group, fields.size());
+    }
+
+    /**
+     * 增量写入/更新单字段配置，不影响分组内其它已有字段。
+     */
+    @Override
+    @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
+            allEntries = true)
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public void upsertValue(String group, String field, String value, String description) {
+        if (group == null || group.isBlank() || field == null || field.isBlank()) {
+            log.warn("[SysAiGlobalSetting] upsertValue 缺少 group/field 参数");
+            return;
+        }
+        SysAiGlobalSetting existing = sysAiGlobalSettingMapper.selectOne(
+                Wrappers.<SysAiGlobalSetting>lambdaQuery()
+                        .eq(SysAiGlobalSetting::getSysAiGlobalSettingGroup, group)
+                        .eq(SysAiGlobalSetting::getSysAiGlobalSettingField, field));
+        LocalDateTime now = LocalDateTime.now();
+        if (existing != null) {
+            existing.setSysAiGlobalSettingValue(value);
+            if (description != null) {
+                existing.setSysAiGlobalSettingDescription(description);
+            }
+            existing.setUpdateTime(now);
+            sysAiGlobalSettingMapper.updateById(existing);
+        } else {
+            SysAiGlobalSetting setting = new SysAiGlobalSetting();
+            setting.setSysAiGlobalSettingGroup(group);
+            setting.setSysAiGlobalSettingField(field);
+            setting.setSysAiGlobalSettingValue(value);
+            setting.setSysAiGlobalSettingValueType("STRING");
+            setting.setSysAiGlobalSettingDescription(description != null ? description : "");
+            setting.setSysAiGlobalSettingSort(0);
+            setting.setSysAiGlobalSettingStatus(1);
+            setting.setCreateTime(now);
+            setting.setUpdateTime(now);
+            sysAiGlobalSettingMapper.insert(setting);
+        }
+        log.debug("[SysAiGlobalSetting] upsertValue: group={}, field={}, value={}", group, field, value);
     }
 }

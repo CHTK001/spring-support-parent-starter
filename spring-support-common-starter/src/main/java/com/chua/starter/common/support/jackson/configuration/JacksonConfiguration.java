@@ -26,7 +26,6 @@ import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.jackson.JsonMixinModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
@@ -139,14 +138,13 @@ public class JacksonConfiguration {
 
         objectMapper.registerModule(javaTimeModule);
         objectMapper.registerModule(new Jdk8Module());
-        objectMapper.registerModule(new JsonMixinModule());
+        // JsonMixinModule 基于 Jackson 3 (tools.jackson), 此处使用 Jackson 2 ObjectMapper, 不注册
         // ParameterNamesModule 由 Spring Boot 自动注册，无需手动添加
         // objectMapper.registerModule(new ParameterNamesModule());
         if (log.isTraceEnabled()) {
-            log.trace("[Jackson配置]注册模块: JavaTimeModule={}, Jdk8Module={}, JsonMixinModule={}",
+            log.trace("[Jackson配置]注册模块: JavaTimeModule={}, Jdk8Module={}",
                     JavaTimeModule.class.getName(),
-                    Jdk8Module.class.getName(),
-                    JsonMixinModule.class.getName());
+                    Jdk8Module.class.getName());
         }
         if(log.isDebugEnabled()) {
             log.debug("[Jackson配置]ObjectMapper 创建完成, 类型: {}", objectMapper.getClass().getName());

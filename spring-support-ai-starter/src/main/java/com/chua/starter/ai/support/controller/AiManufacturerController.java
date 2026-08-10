@@ -35,6 +35,8 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -142,10 +144,18 @@ public class AiManufacturerController {
         if (file == null || file.isEmpty()) {
             return ReturnResult.illegal("文件不能为空");
         }
+        // 文件大小限制：不超过 2MB，防止打满磁盘
+        if (file.getSize() > 2 * 1024 * 1024) {
+            return ReturnResult.illegal("图片大小不能超过 2MB");
+        }
+        // 扩展名白名单：禁止 SVG（可执行脚本导致存储型 XSS）及其它危险类型
         String originalName = file.getOriginalFilename();
         String extension = "";
         if (originalName != null && originalName.contains(".")) {
-            extension = originalName.substring(originalName.lastIndexOf('.'));
+            extension = originalName.substring(originalName.lastIndexOf('.')).toLowerCase(Locale.ROOT);
+        }
+        if (!ALLOWED_LOGO_EXTENSIONS.contains(extension)) {
+            return ReturnResult.illegal("仅支持上传 png/jpg/jpeg/gif/webp/ico 格式图片");
         }
         String storedName = UUID.randomUUID().toString().replace("-", "") + extension;
         Path folder = Paths.get(userDir, ".runtime", "ai", "manufacturer", "logo");
@@ -159,16 +169,29 @@ public class AiManufacturerController {
     @SneakyThrows
     @GetMapping(value = "logo/{fileName:.+}")
     public ResponseEntity<Resource> logo(@Parameter(description = "文件名称") @PathVariable String fileName) {
-        Path file = Paths.get(userDir, ".runtime", "ai", "manufacturer", "logo", fileName).normalize();
-        Resource resource = new UrlResource(file.toUri());
-        if (!resource.exists()) {
+        Path folder = Paths.get(userDir, ".runtime", "ai", "manufacturer", "logo").toAbsolutePath().normalize();
+        Path file = folder.resolve(fileName).normalize();
+        // 防路径穿越：解析后的文件必须位于 logo 目录内
+        if (!file.startsWith(folder) || !Files.exists(file) || !Files.isRegularFile(file)) {
             return ResponseEntity.notFound().build();
         }
+        Resource resource = new UrlResource(file.toUri());
         String contentType = Files.probeContentType(file);
+        // SVG 等可执行脚本类型强制附件下载，防止浏览器直接执行（存储型 XSS 防护）
+        boolean dangerous = contentType != null && contentType.toLowerCase(Locale.ROOT).contains("svg");
         return ResponseEntity.ok()
                 .header(HttpHeaders.CACHE_CONTROL, "no-cache")
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        dangerous ? "attachment; filename=\"" + fileName + "\"" : "inline")
                 .contentType(contentType == null ? MediaType.APPLICATION_OCTET_STREAM : MediaType.parseMediaType(contentType))
                 .body(resource);
     }
+
+    /**
+     * 允许上传的厂商标志扩展名白名单。
+     */
+    private static final Set<String> ALLOWED_LOGO_EXTENSIONS = Set.of(
+            ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico"
+    );
 }
 

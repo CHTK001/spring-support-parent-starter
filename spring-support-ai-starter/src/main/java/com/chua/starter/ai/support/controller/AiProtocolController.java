@@ -144,7 +144,7 @@ public class AiProtocolController extends BaseAiController {
                 // 执行对话
                 AiChatRequest chatRequest = buildChatRequest(body, servletRequest);
                 Map<String, Object> result = aiChatFacadeService.call(chatRequest);
-                String text = result != null ? toString(result.get("text")) : "";
+                String text = resolveResultText(result);
                 // 发送内容增量事件
                 if (text != null && !text.isEmpty()) {
                     emitter.send(SseEmitter.event().name("content_block_delta")
@@ -256,7 +256,7 @@ public class AiProtocolController extends BaseAiController {
                 // 执行对话
                 AiChatRequest chatRequest = buildResponsesChatRequest(body, servletRequest);
                 Map<String, Object> result = aiChatFacadeService.call(chatRequest);
-                String text = result != null ? toString(result.get("text")) : "";
+                String text = resolveResultText(result);
 
                 Map<String, Object> started = buildCcsResponse(responseId, messageId, model, "", "in_progress");
                 started.put("output", List.of());
@@ -379,7 +379,7 @@ public class AiProtocolController extends BaseAiController {
         try {
             AiChatRequest chatRequest = buildGeminiChatRequest(body, servletRequest);
             Map<String, Object> result = aiChatFacadeService.call(chatRequest);
-            String text = result != null ? toString(result.get("text")) : "";
+            String text = resolveResultText(result);
 
             // 流式模式
             if (isStream) {
@@ -811,6 +811,30 @@ public class AiProtocolController extends BaseAiController {
             return null;
         }
         return String.valueOf(value);
+    }
+
+    /**
+     * 从 {@link AiChatFacadeService#call} 的返回结果中提取文本。
+     *
+     * <p>调用失败时 call() 返回 {@code {error:{message:...}}} 结构，
+     * 这里把错误信息作为文本返回，避免前端收到空内容。</p>
+     *
+     * @param result call 返回结果
+     * @return 文本内容（错误时返回错误信息）
+     */
+    private String resolveResultText(Map<String, Object> result) {
+        if (result == null) {
+            return "";
+        }
+        if (result.containsKey("error")) {
+            Object error = result.get("error");
+            if (error instanceof Map) {
+                Object msg = ((Map<?, ?>) error).get("message");
+                return toString(msg != null ? msg : "模型调用失败");
+            }
+            return toString(error);
+        }
+        return toString(result.get("text"));
     }
 
     /**

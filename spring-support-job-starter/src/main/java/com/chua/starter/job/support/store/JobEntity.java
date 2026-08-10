@@ -38,7 +38,7 @@ public class JobEntity extends SysBase implements Serializable {
     /**
      * 任务 ID (主键)
      */
-    @TableId(value = "sys_job_id", type = IdType.AUTO)
+    @TableId(value = "sys_job_id", type = IdType.ASSIGN_ID)
     private Long sysJobId;
 
     /**
@@ -52,6 +52,18 @@ public class JobEntity extends SysBase implements Serializable {
      */
     @TableField("sys_job_name")
     private String sysJobName;
+
+    /**
+     * 任务负责人
+     */
+    @TableField("sys_job_author")
+    private String sysJobAuthor;
+
+    /**
+     * 告警邮箱 (多个用逗号分隔)
+     */
+    @TableField("sys_job_alarm_email")
+    private String sysJobAlarmEmail;
 
     /**
      * 命名空间 (隔离多项目)
@@ -112,6 +124,12 @@ public class JobEntity extends SysBase implements Serializable {
      */
     @TableField("sys_job_remote_executor_address")
     private String sysJobRemoteExecutorAddress;
+
+    /**
+     * 日志存储模式 (DATABASE / FILE)
+     */
+    @TableField("sys_job_storage_mode")
+    private String sysJobStorageMode;
 
     /**
      * 失败重试次数

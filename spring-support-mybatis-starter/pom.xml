@@ -65,10 +65,10 @@
       <groupId>com.github.yulichang</groupId>
       <artifactId>mybatis-plus-join-boot-starter</artifactId>
     </dependency>
-    <!-- MyBatis Plus Spring Boot 3集成 - 核心ORM框架 -->
+    <!-- MyBatis Plus Spring Boot 4集成 - 核心ORM框架 -->
     <dependency>
       <groupId>com.baomidou</groupId>
-      <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+      <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
     </dependency>
     <!-- MyBatis Plus SQL解析器 - 提供SQL解析和处理功能 -->
     <dependency>

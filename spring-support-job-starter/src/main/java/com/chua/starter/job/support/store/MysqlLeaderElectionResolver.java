@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.starter.job.support.cluster.LeaderElectionResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 
 /**
  * MyBatis-Plus 行级抢占版 Leader 选举实现, 基于 {@code sys_job_cluster} 表。
@@ -39,6 +40,20 @@ public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
         long now = System.currentTimeMillis();
         long leaseUntil = now + leaseSeconds * 1000L;
         try {
+            ClusterEntity existing = clusterMapper.selectById(group);
+            if (existing == null) {
+                try {
+                    ClusterEntity seed = new ClusterEntity();
+                    seed.setSysJobClusterId(group);
+                    seed.setSysJobClusterLeaderNode(null);
+                    seed.setSysJobClusterLeaseUntilMs(0L);
+                    seed.setSysJobClusterVersion(0L);
+                    clusterMapper.insert(seed);
+                    log.info("[job] 初始化集群命名空间 group={}", group);
+                } catch (DuplicateKeyException ignored) {
+                    // 并发下其他节点已初始化, 忽略后走常规抢占
+                }
+            }
             int rows = clusterMapper.update(
                     null,
                     Wrappers.<ClusterEntity>lambdaUpdate()

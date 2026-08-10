@@ -84,6 +84,20 @@ public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyServ
             log.warn("[SysAiManufacturerKey] update 失败: ID 为空");
             return false;
         }
+        SysAiManufacturerKey existing = manufacturerKeyMapper.selectById(manufacturerKey.getSysAiManufacturerKeyId());
+        // 编辑时脱敏占位值或空值不覆盖真实密钥
+        if (manufacturerKey.getSysAiManufacturerKeyValue() != null
+                && (manufacturerKey.getSysAiManufacturerKeyValue().isBlank()
+                || manufacturerKey.getSysAiManufacturerKeyValue().contains("****"))) {
+            manufacturerKey.setSysAiManufacturerKeyValue(
+                    existing != null ? existing.getSysAiManufacturerKeyValue() : null);
+        }
+        if (manufacturerKey.getSysAiManufacturerKeySecret() != null
+                && (manufacturerKey.getSysAiManufacturerKeySecret().isBlank()
+                || manufacturerKey.getSysAiManufacturerKeySecret().contains("****"))) {
+            manufacturerKey.setSysAiManufacturerKeySecret(
+                    existing != null ? existing.getSysAiManufacturerKeySecret() : null);
+        }
         manufacturerKey.setUpdateTime(LocalDateTime.now());
         return manufacturerKeyMapper.updateById(manufacturerKey) > 0;
     }

@@ -48,4 +48,14 @@ public interface SysAiGlobalSettingService {
      * @param request 替换请求（含 group 与 fields）
      */
     void replace(Object request);
+
+    /**
+     * 增量写入/更新单字段配置，不影响分组内其它已有字段。
+     *
+     * @param group  分组
+     * @param field  字段名
+     * @param value  字段值
+     * @param description 字段描述（可选）
+     */
+    void upsertValue(String group, String field, String value, String description);
 }

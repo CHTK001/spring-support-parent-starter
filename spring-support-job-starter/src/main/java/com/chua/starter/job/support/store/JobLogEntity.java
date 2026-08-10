@@ -36,7 +36,7 @@ public class JobLogEntity extends SysBase implements Serializable {
     /**
      * 日志 ID
      */
-    @TableId(value = "sys_job_log_id", type = IdType.AUTO)
+    @TableId(value = "sys_job_log_id", type = IdType.ASSIGN_ID)
     private Long sysJobLogId;
 
     /**

@@ -110,7 +110,13 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 log.debug("[AiChatFacade] 使用指定模型 ChatClient: model={}, groupId={}", model, groupId);
                 return specificClient;
             }
-            log.warn("[AiChatFacade] 指定模型 {} 不在注册中心，拒绝访问", model, groupId);
+            // 模型在白名单但未单独注册到注册中心时，回退全局 ChatClient（该客户端按请求模型动态路由）
+            ChatClient global = chatClientRegistry.getDefault();
+            if (global != null) {
+                log.debug("[AiChatFacade] 模型 {} 未单独注册，回退全局 ChatClient（按请求模型路由）", model);
+                return global;
+            }
+            log.warn("[AiChatFacade] 指定模型 {} 不在注册中心且无全局客户端可用，拒绝访问", model, groupId);
             throw new IllegalStateException("模型 " + model + " 未在注册中心找到，请先配置该模型");
         }
 
@@ -238,9 +244,11 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                     }
                     case STOP -> {
                         // 兼容同步/聚合式 ChatClient（如 DefaultScopeChatClient）：
-                        // 其底层一次性交付完整内容，这里需在 STOP 前补发内容 delta，否则内容会丢失
+                        // 这类客户端不产生 STREAMING 事件，只在 STOP 一次性交付完整内容，
+                        // 需在 STOP 前补发内容 delta，否则内容会丢失。
+                        // 若此前已有 STREAMING 内容（真流式），STOP 的 content 与已发内容重复，跳过避免重复输出。
                         String content = response.getContent();
-                        if (content != null && !content.isEmpty()) {
+                        if (content != null && !content.isEmpty() && fullReply.indexOf(content) < 0) {
                             fullReply.append(content);
                             String dataChunk = String.format(
                                     "{\"id\":\"%s\",\"object\":\"chat.completion.chunk\",\"created\":%d," +

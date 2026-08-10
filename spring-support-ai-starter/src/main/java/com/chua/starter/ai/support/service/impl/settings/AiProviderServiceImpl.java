@@ -76,7 +76,14 @@ public class AiProviderServiceImpl implements AiProviderService {
                         new LambdaQueryWrapper<AiProvider>()
                                 .orderByAsc(AiProvider::getCreateTime))
                 .stream()
-                .map(this::toDto)
+                .map(p -> {
+                    AiProviderDTO dto = toDto(p);
+                    // 列表接口密钥脱敏，防止明文泄露
+                    if (dto != null) {
+                        dto.setApiKey(maskSecret(dto.getApiKey()));
+                    }
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -114,7 +121,16 @@ public class AiProviderServiceImpl implements AiProviderService {
     @Override
     @Transactional
     public AiProviderDTO update(Long providerId, AiProviderDTO provider) {
+        AiProvider existing = providerMapper.selectById(providerId);
+        if (existing == null) {
+            return null;
+        }
         AiProvider entity = toEntity(provider);
+        // 编辑时 apiKey 为空或为脱敏占位值则不覆盖，保留真实密钥
+        if (entity.getProviderApiKey() == null || entity.getProviderApiKey().isBlank()
+                || entity.getProviderApiKey().contains("****")) {
+            entity.setProviderApiKey(existing.getProviderApiKey());
+        }
         entity.setProviderId(providerId);
         entity.setUpdateTime(LocalDateTime.now());
         providerMapper.updateById(entity);
@@ -269,6 +285,22 @@ public class AiProviderServiceImpl implements AiProviderService {
         entity.setProviderModels(toJsonArray(dto.getModels()));
         entity.setProviderEnabled(dto.getEnabled());
         return entity;
+    }
+
+    /**
+     * 密钥脱敏：保留前 2 位与后 2 位，中间以 **** 代替。
+     *
+     * @param value 明文密钥
+     * @return 脱敏值
+     */
+    private String maskSecret(String value) {
+        if (value == null || value.isBlank()) {
+            return value;
+        }
+        if (value.length() <= 4) {
+            return "****";
+        }
+        return value.substring(0, 2) + "****" + value.substring(value.length() - 2);
     }
 
     /**

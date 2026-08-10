@@ -34,11 +34,11 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
             .build();
 
     /**
-     * Bearer token 校验缓存，5s TTL — 降低"禁用/删除 Key 后僵尸窗口"，
-     * 与 app_key_enabled 开关缓存保持同一量级
+     * Bearer token 校验缓存，2s TTL — 尽量缩短"禁用/删除 Key 后僵尸窗口"，
+     * 同时避免每次请求都查询远端 DB/Redis
      */
     private static final Cache<String, Boolean> BEARER_TOKEN_CACHE = Caffeine.newBuilder()
-            .expireAfterWrite(5, TimeUnit.SECONDS)
+            .expireAfterWrite(2, TimeUnit.SECONDS)
             .maximumSize(1000)
             .build();
 

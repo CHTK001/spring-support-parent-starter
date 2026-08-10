@@ -104,7 +104,14 @@ public class ChatClientRegistry {
             return;
         }
 
-        providerIndex.put(provider.toLowerCase(), client);
+        // 幂等：同一 provider（热更新/重复注册）时先注销旧 client，避免 allClients 无限膨胀
+        ChatClient previous = providerIndex.put(provider.toLowerCase(), client);
+        if (previous != null && previous != client) {
+            allClients.remove(previous);
+            // 同时清理旧 client 的模型索引（该模型现在指向新 client）
+            modelIndex.entrySet().removeIf(e -> e.getValue() == previous);
+            capabilityIndex.values().forEach(list -> list.remove(previous));
+        }
 
         if (modelName != null) {
             modelIndex.put(modelName.toLowerCase(), client);

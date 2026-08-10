@@ -70,7 +70,14 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
                 .collect(Collectors.toMap(AiGroup::getGroupId, AiGroup::getGroupName, (a, b) -> a));
 
         return ReturnResult.ok(keys.stream()
-                .map(k -> toDto(k, providerNames.get(k.getAppKeyProviderId()), groupNames.get(k.getAppKeyGroupId())))
+                .map(k -> {
+                    AiAppKeyDTO dto = toDto(k, providerNames.get(k.getAppKeyProviderId()), groupNames.get(k.getAppKeyGroupId()));
+                    // 列表接口密钥脱敏，防止明文泄露
+                    if (dto != null) {
+                        dto.setKey(maskSecret(dto.getKey()));
+                    }
+                    return dto;
+                })
                 .collect(Collectors.toList()));
     }
 
@@ -261,6 +268,22 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         if (groupId == null) return null;
         AiGroup group = groupMapper.selectById(groupId);
         return group != null ? group.getGroupName() : null;
+    }
+
+    /**
+     * 密钥脱敏：保留前 2 位与后 2 位，中间以 **** 代替。
+     *
+     * @param value 明文密钥
+     * @return 脱敏值
+     */
+    private String maskSecret(String value) {
+        if (value == null || value.isBlank()) {
+            return value;
+        }
+        if (value.length() <= 4) {
+            return "****";
+        }
+        return value.substring(0, 2) + "****" + value.substring(value.length() - 2);
     }
 
     /**

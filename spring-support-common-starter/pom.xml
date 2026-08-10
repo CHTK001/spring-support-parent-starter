@@ -232,6 +232,12 @@
         <artifactId>spring-boot-webmvc</artifactId>
     </dependency>
 
+    <!-- Spring Boot Jackson 支持 (Spring Boot 4.x split 出独立 jar, 提供 JsonMixinModule 等) -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-jackson</artifactId>
+    </dependency>
+
     <!-- Spring JDBC - 提供 DataAccessException 等数据访问异常类 -->
     <dependency>
         <groupId>org.springframework.boot</groupId>

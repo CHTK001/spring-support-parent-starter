@@ -145,25 +145,25 @@ SELECT * FROM (
   UNION ALL
   SELECT 'baishan', '白山智算',
     NULL, 'https://api.edgefn.net/v1',
-    'sk-XwXQgMSOQmkxnwGe90A88eB5Df0444C2A926C3F22d096013',
+    'sk-REPLACE_WITH_BAISHAN_KEY',
     1, 0, 1, 10,
     '白山智算 API，支持 KAT-Coder / DeepSeek-R1 等模型'
   UNION ALL
   SELECT 'infer-ai', 'Infer AI',
     NULL, 'https://newapis.xyz/v1',
-    'sk-17958f039b5dd013b46a3ff38511c05957ec7ccfef59cc538fb61adecab8bdb3',
+    'sk-REPLACE_WITH_INFER_KEY',
     1, 1, 1, 20,
     'Claude Code 使用的 Infer AI 代理，支持 deepseek-v4-pro（Claude 协议）'
   UNION ALL
   SELECT 'claude-test', 'Claude 测试',
     NULL, 'https://newapis.xyz/v1',
-    'sk-17958f039b5dd013b46a3ff38511c05957ec7ccfef59cc538fb61adecab8bdb3',
+    'sk-REPLACE_WITH_INFER_KEY',
     1, 1, 1, 25,
     'Claude 协议测试厂家，支持 deepseek-v4-pro'
   UNION ALL
   SELECT 'modelscope', 'ModelScope',
     NULL, 'https://api-inference.modelscope.cn/v1',
-    'ms-2cd4a2af-8112-4da3-bea6-f2c5f0539eab',
+    'ms-REPLACE_WITH_MODELSCOPE_KEY',
     1, 0, 1, 30,
     '阿里 ModelScope 推理 API，支持 Qwen3 等模型'
   UNION ALL
@@ -268,28 +268,28 @@ SELECT * FROM (
   -- ── Z.AI（智谱生态） ────────────────────────────
   SELECT 'zai', 'Z.AI（智谱生态）',
     NULL, 'https://api.z.ai/api/paas/v4',
-    'acb7372b94c3428bb75c03f695fcb2ee.p82pPKkxRovK8dqz',
+    'REPLACE_WITH_ZHIPU_KEY',
     1, 0, 1, 185,
     'Z.AI API（智谱生态），提供 GLM-4.7 / GLM-4.6 / Cogview / CogVideo 等旗舰模型'
   UNION ALL
   -- ── OpenRouter ─────────────────────────────────────
   SELECT 'openrouter', 'OpenRouter',
     NULL, 'https://openrouter.ai/api/v1/chat/completions',
-    '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',
+    'sk-or-REPLACE_WITH_OPENROUTER_KEY',
     1, 0, 1, 195,
     'OpenRouter API 聚合平台，提供多种开源/商业模型的统一访问入口'
   UNION ALL
   -- ── DeepSeek 本地 ─────────────────────────────────────
   SELECT 'deepseek-default', 'DeepSeek 本地',
     NULL, 'http://127.0.0.1:27777/v1',
-    'sk-0c6cba372c13a3d8dc09a542611bfee77216efb915a9a865',
+    'sk-REPLACE_WITH_DEEPSEEK_KEY',
     1, 0, 1, 200,
     '本地部署的 DeepSeek 模型，兼容 OpenAI API'
   UNION ALL
   -- ── Sixthsense（Claude Code 兼容） ──────────────────
   SELECT 'sixthsense', 'Sixthsense LLM',
     NULL, 'https://sixthsense-llm.com',
-    'sk-LPLetF4MWBM2nCYA3QgHFfPShr0Pnu1fz1ZRGCk2DPeIjQlr',
+    'sk-REPLACE_WITH_SIXTHSENSE_KEY',
     0, 1, 1, 205,
     'Sixthsense LLM API，Claude Code 兼容协议，支持 deepseek-v4-flash-l'
   UNION ALL
@@ -1065,7 +1065,7 @@ SELECT * FROM (
   UNION ALL
   SELECT 'runtime', 'timeout_millis', '30000', 'NUMBER', '默认超时时间(毫秒)', 35, 1, 'system', 1, 'system', 1
   UNION ALL
-  SELECT 'runtime', 'app_key_enabled', 'false', 'BOOLEAN', '是否启用 AI AppKey 校验', 40, 1, 'system', 1, 'system', 1
+  SELECT 'runtime', 'app_key_enabled', 'true', 'BOOLEAN', '是否启用 AI AppKey 校验', 40, 1, 'system', 1, 'system', 1
   UNION ALL
   SELECT 'runtime', 'input_optimization_enabled', 'false', 'BOOLEAN', '是否启用输入优化', 45, 1, 'system', 1, 'system', 1
   UNION ALL
@@ -1077,7 +1077,7 @@ SELECT * FROM (
   UNION ALL
   SELECT 'runtime', 'provider_base_url', 'https://open.bigmodel.cn/api/paas/v4/', 'STRING', '智谱 AI 基础地址（必须以 / 结尾）', 70, 1, 'system', 1, 'system', 1
   UNION ALL
-  SELECT 'runtime', 'provider_api_key', 'acb7372b94c3428bb75c03f695fcb2ee.p82pPKkxRovK8dqz', 'STRING', '智谱 API Key', 71, 1, 'system', 1, 'system', 1
+  SELECT 'runtime', 'provider_api_key', 'REPLACE_WITH_ZHIPU_KEY', 'STRING', '智谱 API Key', 71, 1, 'system', 1, 'system', 1
   UNION ALL
   SELECT 'runtime', 'charge_enabled', 'false', 'BOOLEAN', '每次请求扣减额度', 41, 1, 'system', 1, 'system', 1
   UNION ALL

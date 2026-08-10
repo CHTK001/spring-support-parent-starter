@@ -90,6 +90,17 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
             log.warn("[AiManufacturerFacade] update 失败: ID 为空");
             return false;
         }
+        // 编辑/启停时脱敏占位值或空值不覆盖真实密钥（含 **** 的占位符直接置 null，避免覆盖损坏）
+        if (manufacturer.getSysAiManufacturerAppKey() != null
+                && (manufacturer.getSysAiManufacturerAppKey().isBlank()
+                || manufacturer.getSysAiManufacturerAppKey().contains("****"))) {
+            manufacturer.setSysAiManufacturerAppKey(null);
+        }
+        if (manufacturer.getSysAiManufacturerApiSecret() != null
+                && (manufacturer.getSysAiManufacturerApiSecret().isBlank()
+                || manufacturer.getSysAiManufacturerApiSecret().contains("****"))) {
+            manufacturer.setSysAiManufacturerApiSecret(null);
+        }
         manufacturer.setUpdateTime(LocalDateTime.now());
         return sysAiManufacturerMapper.updateById(manufacturer) > 0;
     }

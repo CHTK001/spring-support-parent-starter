@@ -401,23 +401,15 @@ public class AiOpenaiController extends BaseAiController {
     /**
      * 持久化 CC Model 配置到全局设置表。
      *
-     * <p>使用 {@link SysAiGlobalSettingService#replace(Object)} 的替换模式，
-     * 在 {@code runtime} 分组下写入或覆盖指定键的值。</p>
+     * <p>使用 {@link SysAiGlobalSettingService#upsertValue(String, String, String, String)}
+     * 增量写入指定键，避免 replace 先删后插清空 runtime 分组下 provider/key 等其它配置。</p>
      *
      * @param key   存储键（如 {@code cc.model} 或 {@code cc.model.2}）
      * @param model 模型名称
      */
     @SuppressWarnings("unchecked")
     private void persistCcModel(String key, String model) {
-        Map<String, Object> request = new LinkedHashMap<>();
-        request.put("group", CC_SETTING_GROUP);
-        Map<String, Object> field = new LinkedHashMap<>();
-        field.put("field", key);
-        field.put("value", model);
-        field.put("valueType", "STRING");
-        field.put("description", "CC Switch 选中模型");
-        request.put("fields", List.of(field));
-        sysAiGlobalSettingService.replace(request);
+        sysAiGlobalSettingService.upsertValue(CC_SETTING_GROUP, key, model, "CC Switch 选中模型");
     }
 
     // ==================== 响应构建器 ====================
@@ -442,6 +434,20 @@ public class AiOpenaiController extends BaseAiController {
         choice.put("index", 0);
         choice.put("message", message);
         choice.put("finish_reason", "stop");
+
+        // 模型调用失败（call() 返回 {error:{...}}）时，把错误信息作为 content 返回，避免前端收到 200 空文本
+        if (result != null && result.containsKey("error")) {
+            Object error = result.get("error");
+            String errorMsg;
+            if (error instanceof Map) {
+                Object msg = ((Map<?, ?>) error).get("message");
+                errorMsg = msg != null ? String.valueOf(msg) : "模型调用失败";
+            } else {
+                errorMsg = String.valueOf(error);
+            }
+            message.put("content", errorMsg);
+            choice.put("message", message);
+        }
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("id", id);
@@ -497,6 +503,16 @@ public class AiOpenaiController extends BaseAiController {
     private Map<String, Object> buildOpenAiCompletionResponse(Map<String, Object> result, String model, String prompt) {
         String id = "cmpl-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         String text = result != null ? (String) result.get("text") : "";
+        // 模型调用失败（call() 返回 {error:{...}}）时，把错误信息作为 text 返回
+        if (result != null && result.containsKey("error")) {
+            Object error = result.get("error");
+            if (error instanceof Map) {
+                Object msg = ((Map<?, ?>) error).get("message");
+                text = msg != null ? String.valueOf(msg) : "模型调用失败";
+            } else {
+                text = String.valueOf(error);
+            }
+        }
         String resolvedModel = model != null ? model : "unknown";
         Map<String, Object> choice = new LinkedHashMap<>();
         choice.put("text", text);

@@ -25,6 +25,7 @@ import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
+import com.chua.starter.oauth.client.support.user.UserRoleResolver;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -473,6 +474,8 @@ public abstract class AbstractProtocol implements Protocol {
             }
 
             UserResult userResume = Json.fromJson(body, UserResult.class);
+            // /verify 等鉴权路径返回的 roles 可能为空，此处统一补充角色，保证菜单/接口权限判断正确
+            supplementRoles(userResume);
             AuthenticationInformation authenticationInformation = new AuthenticationInformation(OK, userResume);
             authenticationInformation.setToken(userResume.getToken());
             authenticationInformation.setRefreshToken(userResume.getRefreshToken());
@@ -508,6 +511,7 @@ public abstract class AbstractProtocol implements Protocol {
      * @return {@link LoginAuthResult}
      */
     public static void registerToRequest(UserResume userResume) {
+        supplementRoles(userResume);
         com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUsername(userResume.getUsername());
         var request = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getRequest();
         if (request != null) {
@@ -519,6 +523,66 @@ public abstract class AbstractProtocol implements Protocol {
             }
         }
         com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUserInfo(userResume);
+    }
+
+    /**
+     * 补充用户角色
+     * <p>
+     * http / http-lite 协议下，oauth 服务端 /verify 返回的 roles 可能为空
+     * （如服务端角色查询未命中），此时通过 SPI（UserRoleResolver）由业务侧补充。
+     * </p>
+     *
+     * @param userResume 用户信息
+     */
+    private static void supplementRoles(UserResume userResume) {
+        if (userResume == null) {
+            return;
+        }
+        java.util.Set<String> roles = userResume.getRoles();
+        if (roles != null && !roles.isEmpty()) {
+            return;
+        }
+        try {
+            UserRoleResolver resolver = resolveUserRoleResolver();
+            log.info("[OAuth角色补充] 解析结果 resolver={}, userId={}, username={}, roles={}",
+                    resolver != null ? resolver.getClass().getSimpleName() : "null",
+                    userResume.getUserId(), userResume.getUsername(), roles);
+            if (resolver == null) {
+                return;
+            }
+            java.util.Set<String> supplement = resolver.resolve(userResume.getUserId(), userResume.getUsername());
+            if (supplement != null && !supplement.isEmpty()) {
+                userResume.setRoles(supplement);
+                log.info("[OAuth角色补充] userId={}, roles={}", userResume.getUserId(), supplement);
+            }
+        } catch (Exception e) {
+            log.info("[OAuth角色补充] 失败: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 解析用户角色解析器
+     * <p>
+     * 优先从 Spring 容器获取（@Service + @Spi 的跨包实现），
+     * 其次回退到 SPI 同包扫描。
+     * </p>
+     *
+     * @return 用户角色解析器，未找到时返回 null
+     */
+    private static UserRoleResolver resolveUserRoleResolver() {
+        try {
+            java.util.Collection<UserRoleResolver> beans =
+                    com.chua.spring.support.configuration.SpringBeanUtils.getBeanList(UserRoleResolver.class);
+            log.info("[OAuth角色补充] Spring 容器候选数量: {}", beans.size());
+            for (UserRoleResolver bean : beans) {
+                if (bean != null) {
+                    return bean;
+                }
+            }
+        } catch (Exception e) {
+            log.info("[OAuth角色补充] Spring 获取失败: {}", e.getMessage());
+        }
+        return ServiceProvider.of(UserRoleResolver.class).getExtension("default");
     }
 
     /**
