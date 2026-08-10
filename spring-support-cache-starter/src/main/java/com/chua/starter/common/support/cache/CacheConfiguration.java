@@ -5,6 +5,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -92,6 +93,7 @@ public class CacheConfiguration {
     @Bean(name = CacheProperties.REDIS_BEAN_NAME)
     @ConditionalOnMissingBean(name = CacheProperties.REDIS_BEAN_NAME)
     @ConditionalOnClass({RedisConnectionFactory.class, RedisCacheManager.class})
+    @ConditionalOnBean(RedisConnectionFactory.class)
     @ConditionalOnProperty(prefix = CacheProperties.PRE, name = "enabled", havingValue = "true")
     public CacheManager redisCacheManager(
             CacheProperties properties,

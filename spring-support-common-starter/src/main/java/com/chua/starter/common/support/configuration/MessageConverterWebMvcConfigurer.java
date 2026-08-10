@@ -133,7 +133,14 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
             log.info("[消息转换器]已注册 MappingJackson2HttpMessageConverter 到位置: {}, 转换器类型: {}", 
                     index - 1, mappingJackson2HttpMessageConverter.getClass().getName());
         } else {
-            log.warn("[消息转换器]未找到 AllEncompassingFormHttpMessageConverter, 跳过注册 MappingJackson2HttpMessageConverter");
+            log.warn("[消息转换器]未找到 AllEncompassingFormHttpMessageConverter, 追加注册 MappingJackson2HttpMessageConverter");
+            JacksonProperties jacksonProperties = applicationContext.getBean(JacksonProperties.class);
+            ObjectMapper objectMapper = JacksonConfiguration.createObjectMapper(false, jacksonProperties.isIncludeNull());
+            MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter = new MappingJackson2HttpMessageConverter(objectMapper);
+            mappingJackson2HttpMessageConverter.setDefaultCharset(StandardCharsets.UTF_8);
+            mappingJackson2HttpMessageConverter.setPrettyPrint(true);
+            converters.add(mappingJackson2HttpMessageConverter);
+            log.info("[消息转换器]已追加注册 MappingJackson2HttpMessageConverter, 当前转换器数量: {}", converters.size());
         }
 //        registerFastjson(converters);
     }

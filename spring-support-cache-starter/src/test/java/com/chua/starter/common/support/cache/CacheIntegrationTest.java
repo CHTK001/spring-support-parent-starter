@@ -6,6 +6,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Import;
 import org.springframework.stereotype.Service;
 import org.springframework.test.context.TestPropertySource;
 
@@ -15,7 +16,14 @@ import org.springframework.test.context.TestPropertySource;
  * @author CH
  */
 @SpringBootTest(classes = TestCacheApplication.class)
-@TestPropertySource(properties = "plugin.cache.enabled=true")
+@Import(CacheIntegrationTest.CacheTestService.class)
+@TestPropertySource(properties = {
+        "plugin.cache.enabled=true",
+        "spring.datasource.url=jdbc:h2:mem:cache-test;DB_CLOSE_DELAY=-1",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.datasource.username=sa",
+        "spring.datasource.password="
+})
 public class CacheIntegrationTest {
 
     @Autowired

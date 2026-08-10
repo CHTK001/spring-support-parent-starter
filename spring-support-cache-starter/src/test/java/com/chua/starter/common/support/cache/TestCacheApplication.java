@@ -2,8 +2,8 @@ package com.chua.starter.common.support.cache;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
-import org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration;
+import org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration;
+import org.springframework.boot.data.redis.autoconfigure.DataRedisRepositoriesAutoConfiguration;
 
 /**
  * 缓存模块测试启动器 — 启用缓存自动配置
@@ -12,8 +12,8 @@ import org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoCo
  * @since 2026/8/2
  */
 @SpringBootApplication(exclude = {
-        RedisAutoConfiguration.class,
-        RedisRepositoriesAutoConfiguration.class
+        DataRedisAutoConfiguration.class,
+        DataRedisRepositoriesAutoConfiguration.class
 })
 public class TestCacheApplication {
 
