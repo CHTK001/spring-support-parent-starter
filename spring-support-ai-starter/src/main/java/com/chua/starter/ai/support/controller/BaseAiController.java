@@ -39,6 +39,21 @@ import java.util.concurrent.CompletableFuture;
 public abstract class BaseAiController {
 
     /**
+     * Bearer Token 前缀
+     */
+    protected static final String BEARER_PREFIX = "Bearer ";
+
+    /**
+     * Bearer Token 前缀长度
+     */
+    protected static final int BEARER_PREFIX_LENGTH = BEARER_PREFIX.length();
+
+    /**
+     * SSE 事件流超时时间（毫秒）
+     */
+    protected static final long SSE_TIMEOUT_MILLIS = 30_000L;
+
+    /**
      * 访问守卫服务，提供 AppKey 与 Bearer Token 校验能力
      */
     @Autowired
@@ -77,6 +92,24 @@ public abstract class BaseAiController {
     }
 
     /**
+     * 从 Authorization 请求头中提取 Bearer Token。
+     *
+     * @param request HTTP 请求
+     * @return Bearer Token，无法提取时返回 {@code null}
+     */
+    private String extractBearerToken(HttpServletRequest request) {
+        String auth = request.getHeader("Authorization");
+        if (StringUtils.isBlank(auth) || !auth.startsWith(BEARER_PREFIX)) {
+            return null;
+        }
+        String token = auth.substring(BEARER_PREFIX_LENGTH).trim();
+        if (StringUtils.isBlank(token)) {
+            return null;
+        }
+        return token;
+    }
+
+    /**
      * 从 Authorization 请求头中解析 AppKey 所属的分组 ID。
      *
      * <p>提取 Bearer Token 后调用 {@link SysAiAppKeyService#getGroupIdByAppKey(String)}
@@ -86,12 +119,8 @@ public abstract class BaseAiController {
      * @return 分组 ID，若无法解析则返回 {@code null}
      */
     protected Integer resolveGroupId(HttpServletRequest request) {
-        String auth = request.getHeader("Authorization");
-        if (StringUtils.isBlank(auth) || !auth.startsWith("Bearer ")) {
-            return null;
-        }
-        String token = auth.substring(7).trim();
-        if (StringUtils.isBlank(token)) {
+        String token = extractBearerToken(request);
+        if (token == null) {
             return null;
         }
         Integer gid = sysAiAppKeyService.getGroupIdByAppKey(token);
@@ -109,15 +138,7 @@ public abstract class BaseAiController {
      * @return Bearer Token 字符串，无法提取时返回 {@code null}
      */
     protected String resolveAppKey(HttpServletRequest request) {
-        String auth = request.getHeader("Authorization");
-        if (StringUtils.isBlank(auth) || !auth.startsWith("Bearer ")) {
-            return null;
-        }
-        String token = auth.substring(7).trim();
-        if (StringUtils.isBlank(token)) {
-            return null;
-        }
-        return token;
+        return extractBearerToken(request);
     }
 
     /**
