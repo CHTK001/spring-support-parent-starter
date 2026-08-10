@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.configuration.generate;
 
+import com.chua.starter.ai.support.configuration.core.AiProperties;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

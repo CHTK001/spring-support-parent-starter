@@ -1,5 +1,7 @@
 package com.chua.starter.ai.support.configuration.rag;
 
+import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
+import com.chua.starter.ai.support.configuration.ocr.OcrTextExtractor;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.embedding.EmbeddingClient;
 import com.chua.common.support.ai.embedding.MemoryEmbeddingClient;

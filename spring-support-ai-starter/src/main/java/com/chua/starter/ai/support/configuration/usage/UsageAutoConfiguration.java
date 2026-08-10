@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.configuration.usage;
 
+import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.interceptor.UsageRecorderInterceptor;
 import com.chua.starter.ai.support.mapper.SysAiPricingMapper;
 import com.chua.starter.ai.support.mapper.SysAiUsageDailyMapper;

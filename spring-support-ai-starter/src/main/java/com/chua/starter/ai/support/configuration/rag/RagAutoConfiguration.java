@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.configuration.rag;
 
+import com.chua.starter.ai.support.configuration.client.GlobalSettingInitializer;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
