@@ -6,6 +6,7 @@ import com.chua.starter.job.support.execute.JobExecutor;
 import com.chua.starter.job.support.handler.JobHandlerFactory;
 import com.chua.starter.job.support.loop.JobLeaderLoop;
 import org.junit.jupiter.api.Test;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -47,6 +48,7 @@ class SingleModeTest {
             JobAutoConfiguration.class,
             DemoJob.class
     })
+    @MapperScan("com.chua.starter.job.support.store")
     @org.springframework.boot.autoconfigure.SpringBootApplication
     static class TestApp {
     }

@@ -8,6 +8,7 @@ import com.chua.starter.job.support.loop.JobLeaderLoop;
 import com.chua.starter.job.support.sync.InMemorySyncServer;
 import com.chua.starter.job.support.sync.JobSyncTopics;
 import org.junit.jupiter.api.Test;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -50,6 +51,7 @@ class SchedulerModeTest {
             JobAutoConfiguration.class,
             DemoJob.class
     })
+    @MapperScan("com.chua.starter.job.support.store")
     @org.springframework.boot.autoconfigure.SpringBootApplication
     static class TestApp {
     }
