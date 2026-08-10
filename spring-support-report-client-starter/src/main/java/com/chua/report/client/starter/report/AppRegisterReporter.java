@@ -37,15 +37,6 @@ public class AppRegisterReporter {
     @Setter
     private SyncClient syncClient;
 
-    /**
-     * 设置 SyncClient
-     *
-     * @param syncClient SyncClient 实例
-     */
-    public void setSyncClient(SyncClient syncClient) {
-        this.syncClient = syncClient;
-    }
-
     private ScheduledExecutorService scheduler;
     private volatile boolean running = false;
 
@@ -53,60 +44,17 @@ public class AppRegisterReporter {
     @Setter
     private String applicationName;
 
-    /**
-     * 设置应用名称
-     *
-     * @param applicationName 应用名称
-     */
-    public void setApplicationName(String applicationName) {
-        this.applicationName = applicationName;
-    }
     @Setter
     private String[] activeProfiles;
-
-    /**
-     * 设置激活的配置文件
-     *
-     * @param activeProfiles 激活的配置文件数组
-     */
-    public void setActiveProfiles(String[] activeProfiles) {
-        this.activeProfiles = activeProfiles;
-    }
 
     @Setter
     private String host;
 
-    /**
-     * 设置主机地址
-     *
-     * @param host 主机地址
-     */
-    public void setHost(String host) {
-        this.host = host;
-    }
     @Setter
     private String contextPath;
 
-    /**
-     * 设置上下文路径
-     *
-     * @param contextPath 上下文路径
-     */
-    public void setContextPath(String contextPath) {
-        this.contextPath = contextPath;
-    }
-
     @Setter
     private Integer serverPort;
-
-    /**
-     * 设置服务器端口
-     *
-     * @param serverPort 服务器端口
-     */
-    public void setServerPort(Integer serverPort) {
-        this.serverPort = serverPort;
-    }
 
     private String ipAddress;
     private String hostname;
@@ -114,15 +62,6 @@ public class AppRegisterReporter {
     // 上报间隔（秒）
     @Setter
     private long reportInterval = 30;
-
-    /**
-     * 设置上报间隔
-     *
-     * @param reportInterval 上报间隔（秒）
-     */
-    public void setReportInterval(long reportInterval) {
-        this.reportInterval = reportInterval;
-    }
 
     // 启动时间
     private long startTime;

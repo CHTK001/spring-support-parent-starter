@@ -33,53 +33,17 @@ public class UrlQpsReporter {
     @Setter
     private SyncClient syncClient;
 
-    /**
-     * 设置 SyncClient
-     *
-     * @param syncClient SyncClient 实例
-     */
-    public void setSyncClient(SyncClient syncClient) {
-        this.syncClient = syncClient;
-    }
-
     @Getter
     @Setter
     private String appName;
-
-    /**
-     * 设置应用名称
-     *
-     * @param appName 应用名称
-     */
-    public void setAppName(String appName) {
-        this.appName = appName;
-    }
 
     @Getter
     @Setter
     private String host;
 
-    /**
-     * 设置主机地址
-     *
-     * @param host 主机地址
-     */
-    public void setHost(String host) {
-        this.host = host;
-    }
-
     @Getter
     @Setter
     private long intervalSeconds = 30;
-
-    /**
-     * 设置上报间隔
-     *
-     * @param intervalSeconds 上报间隔（秒）
-     */
-    public void setIntervalSeconds(long intervalSeconds) {
-        this.intervalSeconds = intervalSeconds;
-    }
 
     /**
      * URL 统计数据

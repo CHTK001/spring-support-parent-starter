@@ -26,15 +26,6 @@ public class GlueJobHandler implements JobHandler {
     private final long glueUpdatetime;
 
     /**
-     * 获取 GLUE 代码更新时间戳
-     *
-     * @return GLUE 代码更新时间戳
-     */
-    public long getGlueUpdatetime() {
-        return glueUpdatetime;
-    }
-
-    /**
      * 实际执行的JobHandler
      */
     private final JobHandler jobHandler;

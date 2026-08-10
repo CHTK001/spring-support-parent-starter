@@ -64,15 +64,6 @@ public class JobContext {
     private final String jobLogFileName;
 
     /**
-     * 获取日志文件名
-     *
-     * @return 日志文件名
-     */
-    public String getJobLogFileName() {
-        return jobLogFileName;
-    }
-
-    /**
      * 分片索引（从0开始）
      */
     @Getter

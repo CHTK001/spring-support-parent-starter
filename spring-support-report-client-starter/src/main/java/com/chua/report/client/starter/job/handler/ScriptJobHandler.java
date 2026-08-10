@@ -36,15 +36,6 @@ public class ScriptJobHandler implements JobHandler {
     private final long glueUpdatetime;
 
     /**
-     * 获取 GLUE 更新时间戳
-     *
-     * @return GLUE 更新时间戳
-     */
-    public long getGlueUpdatetime() {
-        return glueUpdatetime;
-    }
-
-    /**
      * 脚本源码
      */
     private final String gluesource;

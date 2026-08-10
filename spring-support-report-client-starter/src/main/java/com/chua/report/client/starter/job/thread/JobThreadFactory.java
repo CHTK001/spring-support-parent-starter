@@ -7,8 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import static org.slf4j.LoggerFactory.getLogger;
-
 /**
  * 作业线程工厂
  * <p>
@@ -22,8 +20,6 @@ import static org.slf4j.LoggerFactory.getLogger;
  */
 @Slf4j
 public class JobThreadFactory {
-    private static final org.slf4j.Logger log = getLogger(JobThreadFactory.class);
-
 
     /**
      * 单例实例

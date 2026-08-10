@@ -26,15 +26,6 @@ public class JobReporter {
     @Setter
     private SyncClient syncClient;
 
-    /**
-     * 设置 SyncClient
-     *
-     * @param syncClient SyncClient 实例
-     */
-    public void setSyncClient(SyncClient syncClient) {
-        this.syncClient = syncClient;
-    }
-
     public static JobReporter getInstance() {
         return INSTANCE;
     }

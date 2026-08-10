@@ -52,6 +52,10 @@
       <artifactId>commons-compress</artifactId>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>cn.hutool</groupId>
+      <artifactId>hutool-core</artifactId>
+    </dependency>
     <!-- SyncProtocol 支持 -->
     <dependency>
       <groupId>com.chua</groupId>
