@@ -127,14 +127,9 @@
         <!-- 定时任务模块 -->
         <module>spring-support-job-starter</module>             <!-- 定时任务调度模块 -->
 
-        <!-- AI深度学习模块 -->
-        <module>spring-support-ai-starter</module>
-
-        <!-- 消息推送模块 -->
-        <module>spring-support-message-starter</module>               <!-- 消息推送集成 -->
-
-        <!-- 软件管理模块 -->
-        <module>spring-support-software-starter</module>              <!-- 软件源管理、安装卸载、检索升级 -->
+        <!-- 支付模块 -->
+        <!-- spring-support-payment-starter: 已下线(预先就 broken: 依赖 spring-support-strategy-starter, SB 4 升级失败), 暂不加入主构建 -->
+        <!-- <module>spring-support-payment-starter</module> -->
 
         <!-- 上报信息客户端模块 -->
         <module>spring-support-report-client-starter</module>
@@ -150,6 +145,15 @@
 
         <!-- 服务器与中间件监控模块 -->
         <module>spring-support-monitor-starter</module>
+
+        <!-- AI深度学习模块 -->
+        <module>spring-support-ai-starter</module>
+
+        <!-- 消息推送模块 -->
+        <module>spring-support-message-starter</module>               <!-- 消息推送集成 -->
+
+        <!-- 软件管理模块 -->
+        <module>spring-support-software-starter</module>              <!-- 软件源管理、安装卸载、检索升级 -->
     </modules>
 
     <!-- 项目属性配置 -->
@@ -340,6 +344,12 @@
                 <groupId>com.baomidou</groupId>
                 <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
                 <version>${mybatis-plus.version}</version>
+            </dependency>
+            <!-- Spring Boot 4.x 模块: spring-boot-webmvc 不再由 spring-boot-starter-parent 隐式管理 -->
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-webmvc</artifactId>
+                <version>${spring.boot.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.baomidou</groupId>

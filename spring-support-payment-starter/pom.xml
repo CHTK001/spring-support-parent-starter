@@ -13,14 +13,21 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-undertow</artifactId>
-      <version>${spring.boot.version}</version>
-    </dependency>
+    <!-- SB 4.x 中 undertow starter 已下线, 使用 spring-boot-starter-web 替代 -->
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-common-starter</artifactId>
+    </dependency>
+    <!-- MyBatis Plus 依赖 -->
+    <dependency>
+      <groupId>com.baomidou</groupId>
+      <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
+      <version>${mybatis-plus.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.baomidou</groupId>
+      <artifactId>mybatis-plus-jsqlparser</artifactId>
+      <version>${mybatis-plus.version}</version>
     </dependency>
     <dependency>
       <groupId>com.chua</groupId>
