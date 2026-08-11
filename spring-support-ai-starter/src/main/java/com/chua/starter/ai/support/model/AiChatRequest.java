@@ -30,6 +30,11 @@ public class AiChatRequest {
     private String systemPrompt;
 
     /**
+     * AI 角色编码（人设，如 java-dev/ui-designer），由后端解析为系统提示词
+     */
+    private String roleCode;
+
+    /**
      * 采样温度
      */
     private Double temperature;

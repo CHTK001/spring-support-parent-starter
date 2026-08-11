@@ -11,6 +11,7 @@ import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import com.chua.starter.ai.support.service.SysAiGroupService;
+import com.chua.starter.ai.support.service.SysAiRoleService;
 import com.chua.starter.ai.support.service.SysAiTokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -63,6 +64,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final SysAiGroupService sysAiGroupService;
     private final SysAiTokenService sysAiTokenService;
     private final SysAiAppKeyService sysAiAppKeyService;
+    private final SysAiRoleService sysAiRoleService;
     private final UsageRecorderInterceptor usageRecorderInterceptor;
     private final ObjectMapper objectMapper;
 
@@ -414,8 +416,27 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * 优先使用 messages 格式，其次使用 prompt。
      */
     private String buildPrompt(AiChatRequest request) {
+        // 如果指定了角色编码，加载角色并设置系统提示词
+        if (StringUtils.isNotBlank(request.getRoleCode())) {
+            SysAiRole role = resolveRole(request.getRoleCode());
+            if (role != null) {
+                if (StringUtils.isBlank(request.getSystemPrompt())) {
+                    request.setSystemPrompt(role.getSysAiRoleSystemPrompt());
+                }
+                if (StringUtils.isBlank(request.getModel()) && StringUtils.isNotBlank(role.getSysAiRoleModel())) {
+                    request.setModel(role.getSysAiRoleModel());
+                }
+                if (request.getTemperature() == null && role.getSysAiRoleTemperature() != null) {
+                    request.setTemperature(role.getSysAiRoleTemperature());
+                }
+            }
+        }
+        // 系统提示词前置到 prompt 中，让 ChatClient 收到完整人设
+        StringBuilder sb = new StringBuilder();
+        if (StringUtils.isNotBlank(request.getSystemPrompt())) {
+            sb.append("[system]: ").append(request.getSystemPrompt()).append("\n");
+        }
         if (request.getMessages() != null && !request.getMessages().isEmpty()) {
-            StringBuilder sb = new StringBuilder();
             for (Map<String, Object> msg : request.getMessages()) {
                 Object role = msg.get("role");
                 Object content = msg.get("content");
@@ -427,9 +448,14 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             return sb.toString().trim();
         }
         if (StringUtils.isNotBlank(request.getPrompt())) {
-            return request.getPrompt();
+            if (sb.length() > 0) {
+                sb.append(request.getPrompt());
+            } else {
+                return request.getPrompt();
+            }
         }
-        return "";
+        String result = sb.toString().trim();
+        return result.isEmpty() ? "" : result;
     }
 
     /**
@@ -591,6 +617,21 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                     null);
         } catch (Exception e) {
             log.debug("[AiChatFacade] 记录用量失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 根据角色编码解析角色（人设）。
+     *
+     * @param roleCode 角色编码
+     * @return 角色实体，不存在时返回 {@code null}
+     */
+    private SysAiRole resolveRole(String roleCode) {
+        try {
+            return sysAiRoleService.getByCode(roleCode);
+        } catch (Exception e) {
+            log.debug("[AiChatFacade] 角色解析失败: code={}, {}", roleCode, e.getMessage());
+            return null;
         }
     }
 

@@ -684,6 +684,27 @@ CREATE TABLE IF NOT EXISTS `sys_ai_group_model` (
 ) COMMENT='分组-模型关联表';
 
 -- ============================================================
+-- 23.5 AI 角色（人设）表
+-- ============================================================
+DROP TABLE IF EXISTS `sys_ai_role`;
+CREATE TABLE IF NOT EXISTS `sys_ai_role` (
+    `sys_ai_role_id` INT AUTO_INCREMENT PRIMARY KEY COMMENT '角色主键',
+    `sys_ai_role_name` VARCHAR(128) NOT NULL COMMENT '角色名称',
+    `sys_ai_role_code` VARCHAR(64) NOT NULL COMMENT '角色编码',
+    `sys_ai_role_description` VARCHAR(512) DEFAULT NULL COMMENT '角色描述',
+    `sys_ai_role_system_prompt` TEXT NOT NULL COMMENT '系统提示词（人设核心）',
+    `sys_ai_role_model` VARCHAR(128) DEFAULT NULL COMMENT '绑定默认模型',
+    `sys_ai_role_temperature` DOUBLE DEFAULT NULL COMMENT '采样温度',
+    `sys_ai_role_sort` INT DEFAULT 0 COMMENT '排序值',
+    `sys_ai_role_status` INT DEFAULT 1 COMMENT '状态：1启用0禁用',
+    `sys_ai_role_delete` INT DEFAULT 0 COMMENT '删除标记：0未删除1已删除',
+    `create_name` VARCHAR(255) DEFAULT NULL COMMENT '创建人名称',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+    UNIQUE KEY `uk_sys_ai_role_code` (`sys_ai_role_code`)
+) COMMENT='AI 角色（人设）表';
+
+-- ============================================================
 -- 24. AI 供应商表
 -- ============================================================
 DROP TABLE IF EXISTS `sys_ai_provider`;
