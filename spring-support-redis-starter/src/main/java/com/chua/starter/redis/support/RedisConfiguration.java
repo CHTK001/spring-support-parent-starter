@@ -27,7 +27,7 @@ import org.redisson.config.Config;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
+import org.springframework.boot.data.redis.autoconfigure.DataRedisProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
@@ -52,7 +52,7 @@ import java.util.List;
  *
  * <p>该配置在 {@code plugin.redis.server.enable=true}（默认开启）时生效，
  * 通过 {@link RedisServerProperties} 暴露嵌入式服务器配置，
- * 同时基于 Spring Boot {@link RedisProperties} 创建远程连接客户端。</p>
+ * 同时基于 Spring Boot {@link DataRedisProperties} 创建远程连接客户端。</p>
  *
  * <p>创建 Redisson 客户端与时间序列、搜索等服务实例。</p>
  *
@@ -105,7 +105,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
      */
     @Bean(destroyMethod = "shutdown")
     @ConditionalOnMissingBean
-    public RedissonClient redissonClient(RedisProperties redisProperties) {
+    public RedissonClient redissonClient(DataRedisProperties redisProperties) {
         log.info(">>>>> 开始创建Redisson客户端: => {}:{}", redisProperties.getHost(), redisProperties.getPort());
         Config config = new Config();
         config.useSingleServer()

@@ -50,6 +50,40 @@ public class AuthFilter implements Filter {
         this.requestMappingHandlerMapping = requestMappingHandlerMapping;
     }
 
+    /**
+     * 动态添加白名单规则
+     * <p>
+     * 支持 Ant 风格的 URL Pattern，例如 /v2/face/**，添加后立即生效，无需重启。
+     * </p>
+     *
+     * @param pattern 白名单规则
+     */
+    public void addWhitelist(String pattern) {
+        webRequest.getAuthProperties().addWhitelist(pattern);
+        log.debug("[AuthFilter]动态添加白名单规则 - {}", pattern);
+    }
+
+    /**
+     * 动态删除白名单规则
+     * <p>
+     * 删除后立即生效，无需重启。仅删除通过 {@link #addWhitelist(String)} 动态添加的规则。
+     * </p>
+     *
+     * @param pattern 白名单规则
+     */
+    public void removeWhitelist(String pattern) {
+        webRequest.getAuthProperties().removeWhitelist(pattern);
+        log.debug("[AuthFilter]动态删除白名单规则 - {}", pattern);
+    }
+
+    /**
+     * 清空所有动态添加的白名单规则
+     */
+    public void clearWhitelist() {
+        webRequest.getAuthProperties().clearDynamicWhitelist();
+        log.debug("[AuthFilter]清空动态白名单规则");
+    }
+
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
 

@@ -143,8 +143,8 @@ public class AuthClientConfiguration
     @ConditionalOnMissingClass("com.chua.starter.oauth.server.support.SsoServer")
     @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     public FilterRegistrationBean<AuthFilter> authFilterFilterRegistrationBean(
-            RequestMappingHandlerMapping requestMappingHandlerMapping,
-            AuthClientProperties authClientProperties) {
+            RequestMappingHandlerMapping requestMappingHandlerMapping) {
+        AuthClientProperties authClientProperties = getSpringBean();
         log.info("[AuthClientConfiguration] 初始化认证过滤器 - 协议: {}, 地址: {}, enable: {}",
                 authClientProperties.getProtocol(),
                 authClientProperties.getAddress(),
@@ -156,12 +156,31 @@ public class AuthClientConfiguration
         authFilterFilterRegistrationBean.setUrlPatterns(authClientProperties.getBlockAddress());
         authFilterFilterRegistrationBean.setName("authFilterFilterRegistrationBean");
         authFilterFilterRegistrationBean.setAsyncSupported(true);
-        // 创建增强的AuthFilter，支持Principal和HttpServletRequest增强
         // 使用 Spring Bean 确保白名单更新能被感知
-        authFilterFilterRegistrationBean
-                .setFilter(new AuthFilter(new WebRequest(authClientProperties), requestMappingHandlerMapping));
+        authFilterFilterRegistrationBean.setFilter(authFilter(requestMappingHandlerMapping));
 
         return authFilterFilterRegistrationBean;
+    }
+
+    /**
+     * OAuth 认证过滤器 Bean
+     * <p>
+     * 作为 Spring Bean 暴露，支持注入后动态添加/删除白名单规则：
+     * <ul>
+     *     <li>{@link AuthFilter#addWhitelist(String)} - 动态添加白名单规则</li>
+     *     <li>{@link AuthFilter#removeWhitelist(String)} - 动态删除白名单规则</li>
+     *     <li>{@link AuthFilter#clearWhitelist()} - 清空动态白名单</li>
+     * </ul>
+     * </p>
+     *
+     * @param requestMappingHandlerMapping Spring MVC请求映射处理器
+     * @return 认证过滤器实例
+     */
+    @Bean
+    @ConditionalOnMissingClass("com.chua.starter.oauth.server.support.SsoServer")
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    public AuthFilter authFilter(RequestMappingHandlerMapping requestMappingHandlerMapping) {
+        return new AuthFilter(new WebRequest(getSpringBean()), requestMappingHandlerMapping);
     }
 
     /**
@@ -175,8 +194,8 @@ public class AuthClientConfiguration
      */
     @Bean("rateLimitFilterRegistrationBean")
     @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-    public FilterRegistrationBean<RateLimitFilter> rateLimitFilterRegistrationBean(
-            AuthClientProperties authClientProperties) {
+    public FilterRegistrationBean<RateLimitFilter> rateLimitFilterRegistrationBean() {
+        AuthClientProperties authClientProperties = getSpringBean();
         FilterRegistrationBean<RateLimitFilter> registrationBean = new FilterRegistrationBean<>();
         registrationBean.setOrder(Ordered.HIGHEST_PRECEDENCE);
         registrationBean.setUrlPatterns(authClientProperties.getBlockAddress());
@@ -208,12 +227,21 @@ public class AuthClientConfiguration
     }
     
     /**
-     * 获取 Spring 管理的 AuthClientProperties Bean
-     * 确保与 WhitelistFileWatcher 使用同一个实例
+     * 获取 OAuth 客户端配置实例
+     * <p>
+     * 优先使用 Spring 管理的 {@link AuthClientProperties} Bean，若该 Bean 因过早实例化未完成
+     * 配置绑定，则回退到 Binder 绑定成功的实例，确保 protocol/address/whitelist 等配置有效。
+     * </p>
      */
     private AuthClientProperties getSpringBean() {
         try {
-            return applicationContext.getBean(AuthClientProperties.class);
+            AuthClientProperties bean = applicationContext.getBean(AuthClientProperties.class);
+            if (null == bean.getAddress() && null != this.authProperties && null != this.authProperties.getAddress()) {
+                log.debug("[AuthClientConfiguration] AuthClientProperties Bean 未绑定配置，回退到 Binder 实例 - 协议: {}, 地址: {}",
+                        this.authProperties.getProtocol(), this.authProperties.getAddress());
+                return this.authProperties;
+            }
+            return bean;
         } catch (Exception e) {
             return authProperties;
         }
@@ -243,9 +271,17 @@ public class AuthClientConfiguration
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         OauthClientRuntimeContext.setBeanFactory(beanFactory);
-        AuthClientProperties bean = getSpringBean();
+        // BDRPP 阶段 @ConfigurationProperties Bean 可能尚未完成绑定，优先使用 Binder 绑定成功的实例
+        AuthClientProperties bean = (null != this.authProperties && null != this.authProperties.getAddress())
+                ? this.authProperties : getSpringBean();
         log.info("[AuthClientConfiguration] postProcessBeanFactory - 协议: {}, 地址: {}", bean.getProtocol(), bean.getAddress());
         OauthClientRuntimeContext.setAuthClientProperties(bean);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public WhitelistFileWatcher whitelistFileWatcher(AuthClientProperties authClientProperties) {
+        return new WhitelistFileWatcher(authClientProperties);
     }
 
     @Bean

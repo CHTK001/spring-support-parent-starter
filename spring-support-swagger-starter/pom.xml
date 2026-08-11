@@ -40,6 +40,11 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-actuator-autoconfigure</artifactId>
     </dependency>
+    <!-- Boot 4.x 模块：WebMvcEndpointHandlerMapping 从 actuator 拆分到 spring-boot-webmvc -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-webmvc</artifactId>
+    </dependency>
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-common-starter</artifactId>

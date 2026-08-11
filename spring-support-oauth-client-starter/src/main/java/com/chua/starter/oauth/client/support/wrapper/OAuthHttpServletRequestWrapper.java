@@ -26,6 +26,12 @@ import java.util.Arrays;
 public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper {
 
     /**
+     * 内容缓存上限（字节）。Spring Boot 4.x 中 ContentCachingRequestWrapper
+     * 仅提供 (request, contentCacheLimit) 双参构造，此处传 1MB 缓存请求体。
+     */
+    private static final int DEFAULT_CONTENT_CACHE_LIMIT = 1024 * 1024;
+
+    /**
      * OAuth Principal
      */
     private final OAuthPrincipal principal;
@@ -48,7 +54,7 @@ public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper
      * @param authType 认证类型
      */
     public OAuthHttpServletRequestWrapper(HttpServletRequest request, UserResume userResume, String authType) {
-        super(request);
+        super(request, DEFAULT_CONTENT_CACHE_LIMIT);
         this.authType = authType;
         this.remoteUser = userResume != null ? userResume.getUsername() : null;
         this.principal = userResume != null ? 

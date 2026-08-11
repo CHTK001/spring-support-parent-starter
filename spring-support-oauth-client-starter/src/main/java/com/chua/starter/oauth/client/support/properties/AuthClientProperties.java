@@ -57,14 +57,47 @@ public class AuthClientProperties {
     }
 
     /**
-     * 获取完整白名单（内置默认 + yaml 自定义）
+     * 获取完整白名单（内置默认 + yaml 自定义 + 动态添加）
      */
     public List<String> getEffectiveWhitelist() {
         List<String> effective = new java.util.ArrayList<>(DEFAULT_WHITELIST);
         if (whitelist != null) {
             effective.addAll(whitelist);
         }
+        effective.addAll(dynamicWhitelist);
         return effective;
+    }
+
+    /**
+     * 动态白名单（运行时可增删，线程安全）
+     */
+    private final java.util.Set<String> dynamicWhitelist = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /**
+     * 动态添加白名单规则
+     *
+     * @param pattern URL Pattern，支持 Ant 风格，例如 /v2/face/**
+     */
+    public void addWhitelist(String pattern) {
+        if (null != pattern && !pattern.isBlank()) {
+            dynamicWhitelist.add(pattern.trim());
+        }
+    }
+
+    /**
+     * 动态删除白名单规则
+     *
+     * @param pattern 已添加的 URL Pattern
+     */
+    public void removeWhitelist(String pattern) {
+        dynamicWhitelist.remove(pattern);
+    }
+
+    /**
+     * 清空动态白名单
+     */
+    public void clearDynamicWhitelist() {
+        dynamicWhitelist.clear();
     }
     /**
      * 连接超时时间（毫秒）
