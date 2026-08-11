@@ -6,6 +6,8 @@ import com.chua.common.support.taskdistribution.manager.ResultBuffer;
 import com.chua.common.support.taskdistribution.manager.TaskManager;
 import com.chua.common.support.taskdistribution.node.NodeTable;
 import com.chua.common.support.taskdistribution.spi.TaskExecutorRegistry;
+import com.chua.common.support.taskdistribution.store.FileTaskStore;
+import com.chua.common.support.taskdistribution.store.InMemoryTaskStore;
 import com.chua.common.support.taskdistribution.store.TaskStore;
 import com.chua.common.support.taskdistribution.task.TaskIdGenerator;
 import com.chua.starter.taskdistribution.support.properties.TaskDistributionProperties;
@@ -33,6 +35,23 @@ import java.util.List;
 @EnableConfigurationProperties(TaskDistributionProperties.class)
 @ConditionalOnProperty(prefix = "taskdistribution", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class TaskDistributionAutoConfiguration {
+
+    /**
+     * 持久化存储 Bean（按 storeType 选择 memory / file）。
+     *
+     * @param properties 配置属性
+     * @return TaskStore 实例
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public TaskStore taskStore(TaskDistributionProperties properties) {
+        String storeType = properties.getStoreType();
+        if ("file".equalsIgnoreCase(storeType)) {
+            log.info("任务分发使用文件存储: {}", properties.getStorePath());
+            return new FileTaskStore(properties.getStorePath());
+        }
+        return new InMemoryTaskStore();
+    }
 
     /**
      * 节点注册表 Bean。
