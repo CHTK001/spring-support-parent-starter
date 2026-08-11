@@ -2,6 +2,7 @@ package com.chua.starter.ai.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.chua.starter.ai.support.configuration.face.FaceSettingsChangedEvent;
 import com.chua.starter.ai.support.entity.SysAiGlobalSetting;
 import com.chua.starter.ai.support.mapper.SysAiGlobalSettingMapper;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -40,6 +42,11 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
      * 全局设置 Mapper
      */
     private final SysAiGlobalSettingMapper sysAiGlobalSettingMapper;
+
+    /**
+     * Spring 应用事件发布器（配置变更后通知各能力模块热重建）
+     */
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 根据分组和字段名查询配置值（带缓存）。
@@ -149,6 +156,13 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
         }
 
         log.info("[SysAiGlobalSetting] 分组 {} 配置已更新，共 {} 项", group, fields.size());
+
+        // 发布配置变更事件，触发对应能力模块热重建（如人脸识别实时生效）
+        try {
+            eventPublisher.publishEvent(new FaceSettingsChangedEvent(group));
+        } catch (Exception e) {
+            log.warn("[SysAiGlobalSetting] 发布配置变更事件失败: {}", e.getMessage());
+        }
     }
 
     /**

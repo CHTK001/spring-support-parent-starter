@@ -257,6 +257,18 @@ public class JobAutoConfiguration {
             log.warn("[job] 未找到 SyncServer SPI 实现, fallback 到 InMemorySyncServer (精简部署或测试环境)");
             return new InMemorySyncServer();
         }
+        // 注入配置的监听 host/port, 使 NettyTcpSyncServer 等真实实现绑定到目标端口
+        try {
+            com.chua.common.support.network.server.ServerSetting setting = server.getSetting();
+            if (setting != null) {
+                setting.setHost(properties.getSync().getScheduler().getListenHost());
+                setting.setPort(properties.getSync().getScheduler().getListenPort());
+                log.info("[job] SyncServer 监听地址注入 host={} port={}",
+                        setting.getHost(), setting.getPort());
+            }
+        } catch (Throwable ex) {
+            log.warn("[job] SyncServer 监听地址注入失败 cause={}", ex.getMessage());
+        }
         return server;
     }
 
