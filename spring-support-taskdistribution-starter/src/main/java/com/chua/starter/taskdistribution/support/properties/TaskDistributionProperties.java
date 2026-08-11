@@ -42,7 +42,7 @@ public class TaskDistributionProperties {
     private int consumerThreads = 1;
 
     /**
-     * 持久化存储类型：memory / file（默认 memory）
+     * 持久化存储类型：memory / file / db（默认 memory）
      */
     private String storeType = "memory";
 

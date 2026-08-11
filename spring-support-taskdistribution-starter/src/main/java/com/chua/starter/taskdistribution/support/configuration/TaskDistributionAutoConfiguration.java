@@ -10,9 +10,12 @@ import com.chua.common.support.taskdistribution.store.FileTaskStore;
 import com.chua.common.support.taskdistribution.store.InMemoryTaskStore;
 import com.chua.common.support.taskdistribution.store.TaskStore;
 import com.chua.common.support.taskdistribution.task.TaskIdGenerator;
+import com.chua.starter.taskdistribution.support.mapper.TaskStoreMapper;
 import com.chua.starter.taskdistribution.support.properties.TaskDistributionProperties;
+import com.chua.starter.taskdistribution.support.store.DbTaskStore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -37,18 +40,27 @@ import java.util.List;
 public class TaskDistributionAutoConfiguration {
 
     /**
-     * 持久化存储 Bean（按 storeType 选择 memory / file）。
+     * 持久化存储 Bean（按 storeType 选择 memory / file / db）。
      *
      * @param properties 配置属性
+     * @param mapper     数据库 Mapper（storeType = db 时自动注入）
      * @return TaskStore 实例
      */
     @Bean
     @ConditionalOnMissingBean
-    public TaskStore taskStore(TaskDistributionProperties properties) {
+    public TaskStore taskStore(TaskDistributionProperties properties,
+                               @Autowired(required = false) TaskStoreMapper mapper) {
         String storeType = properties.getStoreType();
         if ("file".equalsIgnoreCase(storeType)) {
             log.info("任务分发使用文件存储: {}", properties.getStorePath());
             return new FileTaskStore(properties.getStorePath());
+        }
+        if ("db".equalsIgnoreCase(storeType)) {
+            if (mapper != null) {
+                log.info("任务分发使用数据库存储");
+                return new DbTaskStore(mapper);
+            }
+            log.warn("storeType=db 但未引入 mybatis 依赖或未配置数据源，回退到内存存储");
         }
         return new InMemoryTaskStore();
     }
