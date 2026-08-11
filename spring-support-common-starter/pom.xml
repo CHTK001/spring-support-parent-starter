@@ -194,11 +194,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
-        <!-- Spring Boot WebMVC自动配置（Boot 4 模块化拆分，升级到 Boot 4.x 时恢复）
+        <!-- Spring Boot WebMVC自动配置（Boot 4 模块化拆分，ApiConfiguration 使用 WebMvcRegistrations） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-webmvc</artifactId>
-        </dependency> -->
+        </dependency>
         <!-- Tomcat 嵌入式服务器 - 可选依赖，用于虚拟线程配置 -->
         <dependency>
             <groupId>org.apache.tomcat.embed</groupId>
@@ -228,12 +228,6 @@
 
     <!-- Spring Boot WebMVC 自动装配 (Spring Boot 3.x 集成在 spring-boot-autoconfigure 中) -->
     <!-- Spring Boot 4.x 起独立为 spring-boot-webmvc，升级时需恢复此依赖并调整 import 包路径 -->
-
-    <!-- Spring Boot Jackson 支持 (Spring Boot 4.x split 出独立 jar, 提供 JsonMixinModule 等) -->
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-jackson</artifactId>
-    </dependency>
 
     <!-- Spring JDBC - 提供 DataAccessException 等数据访问异常类 -->
     <dependency>

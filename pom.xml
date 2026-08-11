@@ -20,11 +20,11 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- 继承Spring Boot父项目 -->
+<!-- 继承Spring Boot父项目 -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.9</version>
+        <version>4.1.0</version>
         <relativePath/>
     </parent>
 
@@ -165,7 +165,7 @@
         <module.version>${project.version}</module.version>        <!-- 当前项目模块版本 -->
         <!-- 工具类库版本与 utils-support-parent-starter 保持一致，当前为 4.0.0.34 -->
         <utils.version>4.0.0.42</utils.version>
-        <spring.boot.version>3.5.9</spring.boot.version>
+        <spring.boot.version>4.1.0</spring.boot.version>
         <reactor.core.version>3.8.6</reactor.core.version>
         <!-- ============================================================
             版本架构说明
@@ -178,15 +178,15 @@
         <!-- 框架和库版本管理 -->
         <lombok.version>1.18.46</lombok.version>              <!-- Lombok版本，支持 Java 25/26 -->
         <maven.compiler.proc>full</maven.compiler.proc>      <!-- Java 25 下显式启用注解处理 -->
-        <mybatis-plus.version>3.5.16</mybatis-plus.version>  <!-- MyBatis Plus版本 -->
-        <mybatis-plus-join.version>1.5.6</mybatis-plus-join.version>  <!-- MyBatis Plus Join版本 -->
+        <mybatis-plus.version>3.5.17</mybatis-plus.version>  <!-- MyBatis Plus版本 -->
+        <mybatis-plus-join.version>1.5.9</mybatis-plus-join.version>  <!-- MyBatis Plus Join版本 -->
         <dubbo.version>3.1.1</dubbo.version>                <!-- Dubbo RPC框架版本 -->
         <resilience4j.version>2.2.0</resilience4j.version>  <!-- Resilience4j熔断降级框架版本 -->
         <p6spy.version>3.9.1</p6spy.version>                <!-- P6Spy SQL监控版本 -->
         <easy-captcha.version>1.6.2</easy-captcha.version>  <!-- 验证码生成器版本 -->
         <jackson.version>2.19.4</jackson.version>           <!-- Jackson版本，与Spring Boot 3.5.9兼容 -->
         <calcite.version>1.37.0</calcite.version>
-        <druid.version>1.2.20</druid.version>
+        <druid.version>1.2.28</druid.version>
         <loki4j.version>2.0.0</loki4j.version>
         <c3p0.version>0.10.1</c3p0.version>
         <swagger.annotations.v3.version>2.2.15</swagger.annotations.v3.version>
@@ -209,7 +209,7 @@
         <slf4j.version>2.1.0-alpha1</slf4j.version>                           <!-- SLF4J版本 -->
         <unirest.version>3.14.5</unirest.version>
         <justauth.version>1.16.6</justauth.version>
-        <lock4j.version>2.2.5</lock4j.version>
+        <lock4j.version>2.2.7</lock4j.version>
         <fastjson2.version>2.0.52</fastjson2.version>
         <arthas.version>4.0.4</arthas.version>
         <ssh-shell-spring-boot.version>2.7.0</ssh-shell-spring-boot.version>
@@ -308,7 +308,7 @@
             </dependency>
             <dependency>
                 <groupId>com.alibaba</groupId>
-                <artifactId>druid-spring-boot-3-starter</artifactId>
+                <artifactId>druid-spring-boot-4-starter</artifactId>
                 <version>${druid.version}</version>
             </dependency>
             <dependency>
@@ -332,13 +332,13 @@
                 <version>${ngrok.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.ngrok</groupId>
-                <artifactId>ngrok-java-native</artifactId>
-                <version>${ngrok.version}</version>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.baomidou</groupId>
-                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+                <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
                 <version>${mybatis-plus.version}</version>
             </dependency>
             <dependency>
