@@ -25,9 +25,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * 自定义注解 + AOP的方式实现数据源动态切换
  *
@@ -37,7 +34,6 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class DynamicDataSourceAspect {
-    private static final Logger log = LoggerFactory.getLogger(DynamicDataSourceAspect.class);
     /**
      * 上下文
      */

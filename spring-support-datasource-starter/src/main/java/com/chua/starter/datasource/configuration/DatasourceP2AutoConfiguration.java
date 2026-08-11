@@ -2,7 +2,6 @@ package com.chua.starter.datasource.configuration;
 
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.datasource.support.*;
-import org.springframework.boot.actuate.autoconfigure.health.ConditionalOnEnabledHealthIndicator;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -51,8 +50,7 @@ public class DatasourceP2AutoConfiguration {
      * </p>
      */
     @Bean
-    @ConditionalOnClass(name = "org.springframework.boot.actuate.health.HealthIndicator")
-    @ConditionalOnEnabledHealthIndicator("dataSource")
+    @ConditionalOnClass(name = "org.springframework.boot.health.contributor.HealthIndicator")
     @ConditionalOnProperty(prefix = "plugin.datasource.health", name = "enabled", havingValue = "true", matchIfMissing = true)
     public DataSourceHealthIndicator dataSourceHealthIndicator() {
         return new DataSourceHealthIndicator();
