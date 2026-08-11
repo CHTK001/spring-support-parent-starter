@@ -21,6 +21,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import com.chua.starter.ai.support.entity.SysAiModule;
+import com.chua.starter.ai.support.entity.SysAiRole;
 import com.chua.starter.ai.support.service.SysAiAppKeyService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;

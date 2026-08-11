@@ -30,10 +30,11 @@ public interface GenerateTaskService {
      * @param prompt   提示词
      * @param model    模型
      * @param duration 时长（秒）
+     * @param size     尺寸（可选）
      * @param style    风格（可选）
      * @return 生成任务
      */
-    GenerateTask createVideoTask(String prompt, String model, Integer duration, String style);
+    GenerateTask createVideoTask(String prompt, String model, Integer duration, String size, String style);
 
     /**
      * 查询任务状态。

@@ -8,8 +8,10 @@ import com.chua.common.support.ai.video.VideoClientSetting;
 import com.chua.common.support.ai.video.VideoResponse;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.model.GenerateResult;
+import com.chua.starter.ai.support.model.GenerateTask;
 import com.chua.starter.ai.support.model.ImageGenRequest;
 import com.chua.starter.ai.support.model.VideoGenRequest;
+import com.chua.starter.ai.support.service.GenerateTaskService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,6 +34,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Base64;
+import java.util.List;
 
 /**
  * AI 生成控制器（文生图、文生视频、上色）
@@ -50,6 +53,7 @@ public class AiGenerateController {
     private static final String GROUP_COLORIZE = "colorize";
 
     private final SysAiGlobalSettingService settingService;
+    private final GenerateTaskService generateTaskService;
 
     @Permission("admin")
     @Operation(summary = "文生图", description = "根据提示词生成图片，返回图片URL")
@@ -236,6 +240,54 @@ public class AiGenerateController {
             ImageIO.write(image, "png", baos);
             return Base64.getEncoder().encodeToString(baos.toByteArray());
         }
+    }
+
+    @Permission("admin")
+    @Operation(summary = "创建文生图任务", description = "提交文生图任务，返回任务ID（异步，前端轮询查询状态）")
+    @PostMapping("/task/image")
+    public ReturnResult<GenerateTask> createImageTask(@RequestBody ImageGenRequest request) {
+        if (request.getPrompt() == null || request.getPrompt().isBlank()) {
+            return ReturnResult.error("提示词不能为空");
+        }
+        String apiKey = settingService.getValue(GROUP_IMAGE, "provider_api_key").orElse("");
+        if (apiKey.isBlank()) {
+            return ReturnResult.error("图片生成未配置 API Key，请在 sys_ai_global_setting 中设置 image.provider_api_key");
+        }
+        return ReturnResult.ok(generateTaskService.createImageTask(
+                request.getPrompt(), request.getModel(), request.getSize(), request.getStyle(), request.getQuality()));
+    }
+
+    @Permission("admin")
+    @Operation(summary = "创建文生视频任务", description = "提交文生视频任务，返回任务ID（异步，前端轮询查询状态）")
+    @PostMapping("/task/video")
+    public ReturnResult<GenerateTask> createVideoTask(@RequestBody VideoGenRequest request) {
+        if (request.getPrompt() == null || request.getPrompt().isBlank()) {
+            return ReturnResult.error("提示词不能为空");
+        }
+        String apiKey = settingService.getValue(GROUP_VIDEO, "provider_api_key").orElse("");
+        if (apiKey.isBlank()) {
+            return ReturnResult.error("视频生成未配置 API Key，请在 sys_ai_global_setting 中设置 video.provider_api_key");
+        }
+        return ReturnResult.ok(generateTaskService.createVideoTask(
+                request.getPrompt(), request.getModel(), request.getDuration(), request.getSize(), request.getStyle()));
+    }
+
+    @Permission("admin")
+    @Operation(summary = "查询生成任务状态", description = "根据任务ID查询生成进度，前端轮询使用")
+    @GetMapping("/task/{taskId}")
+    public ReturnResult<GenerateTask> queryTask(@PathVariable String taskId) {
+        GenerateTask task = generateTaskService.getTask(taskId);
+        if (task == null) {
+            return ReturnResult.error("任务不存在或已过期: " + taskId);
+        }
+        return ReturnResult.ok(task);
+    }
+
+    @Permission("admin")
+    @Operation(summary = "生成历史记录", description = "查询最近的文生图/文生视频任务历史")
+    @GetMapping("/task/list")
+    public ReturnResult<List<GenerateTask>> listTasks(@RequestParam(required = false) String type) {
+        return ReturnResult.ok(generateTaskService.listRecent(type, 50));
     }
 }
 

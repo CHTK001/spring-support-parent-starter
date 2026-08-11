@@ -101,11 +101,12 @@ public class GenerateTaskServiceImpl implements GenerateTaskService {
      * @param prompt   提示词
      * @param model    模型
      * @param duration 时长
+     * @param size     尺寸
      * @param style    风格
      * @return 生成任务
      */
     @Override
-    public GenerateTask createVideoTask(String prompt, String model, Integer duration, String style) {
+    public GenerateTask createVideoTask(String prompt, String model, Integer duration, String size, String style) {
         String apiKey = settingService.getValue(GROUP_VIDEO, "provider_api_key").orElse("");
         String baseUrl = settingService.getValue(GROUP_VIDEO, "provider_base_url").orElse("");
         String defaultModel = settingService.getValue(GROUP_VIDEO, "default_model").orElse("sora");
@@ -124,7 +125,7 @@ public class GenerateTaskServiceImpl implements GenerateTaskService {
         taskStore.put(task.getTaskId(), task);
 
         // 异步执行生成
-        executeVideoAsync(task, apiKey, baseUrl, provider, effectiveModel, effectiveDuration, style);
+        executeVideoAsync(task, apiKey, baseUrl, provider, effectiveModel, effectiveDuration, size, style);
         return task;
     }
 
@@ -228,18 +229,26 @@ public class GenerateTaskServiceImpl implements GenerateTaskService {
      * @param provider 提供方
      * @param model    模型
      * @param duration 时长
+     * @param size     尺寸
      * @param style    风格
      */
     @Async("taskExecutor")
     public void executeVideoAsync(GenerateTask task, String apiKey, String baseUrl, String provider,
-                                  String model, int duration, String style) {
+                                  String model, int duration, String size, String style) {
         try {
             VideoClient client = VideoClient.create(VideoClientSetting.builder()
                     .provider(provider)
                     .appKey(apiKey)
                     .baseUrl(baseUrl)
                     .build());
-            String taskId = client.model(model).duration(duration).style(style).createTask(task.getPrompt());
+            String taskId;
+            if (size != null && size.contains("x")) {
+                String[] parts = size.split("x");
+                taskId = client.model(model).size(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]))
+                        .duration(duration).style(style).createTask(task.getPrompt());
+            } else {
+                taskId = client.model(model).duration(duration).style(style).createTask(task.getPrompt());
+            }
             int maxRetry = 120;
             for (int retry = 0; retry < maxRetry; retry++) {
                 VideoResponse resp = client.queryTask(taskId);
