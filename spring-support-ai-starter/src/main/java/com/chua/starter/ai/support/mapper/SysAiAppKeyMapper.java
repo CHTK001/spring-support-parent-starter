@@ -33,17 +33,21 @@ public interface SysAiAppKeyMapper extends BaseMapper<SysAiAppKey> {
     SysAiAppKey selectByAppKey(@Param("appKey") String appKey);
 
     /**
-     * 原子自增使用次数。
+     * 原子自增使用次数，避免并发下丢失更新。
      *
-     * @param appKey AppKey
+     * <p>对应 SQL：{@code SET sys_ai_app_key_use_count = COALESCE(sys_ai_app_key_use_count, 0) + 1}</p>
+     *
+     * @param appKey AppKey 值
      */
     void updateUseCount(@Param("appKey") String appKey);
 
     /**
-     * 原子累加 Token 消耗量。
+     * 原子累加 Token 消耗量，避免并发下丢失更新。
      *
-     * @param appKey  AppKey
-     * @param tokens  本次消耗 Token 数
+     * <p>对应 SQL：{@code SET sys_ai_app_key_total_tokens = COALESCE(sys_ai_app_key_total_tokens, 0) + #{tokens}}</p>
+     *
+     * @param appKey  AppKey 值
+     * @param tokens  本次消耗的 Token 数
      */
     void addTokenQuota(@Param("appKey") String appKey, @Param("tokens") long tokens);
 }

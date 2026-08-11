@@ -510,6 +510,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
 
     /**
      * 分组名称缓存：groupId → groupName，避免每次用量记录全表查询。
+     *
+     * <p>首次访问时通过 {@link #loadGroupName(Integer)} 从数据库加载，
+     * 后续请求直接返回缓存值，直至 JVM 重启。</p>
      */
     private final java.util.concurrent.ConcurrentHashMap<Integer, String> groupNameCache =
             new java.util.concurrent.ConcurrentHashMap<>();
@@ -517,8 +520,11 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     /**
      * 解析分组名称（无分组返回 null），带缓存。
      *
+     * <p>优先从 {@link #groupNameCache} 获取，缓存未命中时调用
+     * {@link #loadGroupName(Integer)} 加载并缓存。</p>
+     *
      * @param groupId 分组 ID
-     * @return 分组名称
+     * @return 分组名称，分组不存在时返回 {@code null}
      */
     private String resolveGroupName(Integer groupId) {
         if (groupId == null) {
@@ -530,8 +536,12 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     /**
      * 从数据库加载分组名称。
      *
+     * <p>通过 {@link SysAiGroupService#list()} 全量查询分组列表，
+     * 按 ID 匹配后返回分组名称。此方法仅在首次访问时调用一次，
+     * 后续命中缓存避免重复全表查询。</p>
+     *
      * @param groupId 分组 ID
-     * @return 分组名称
+     * @return 分组名称，分组不存在时返回 {@code null}
      */
     private String loadGroupName(Integer groupId) {
         try {
@@ -585,16 +595,26 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-     * JSON 字符串转义，使用 Jackson 序列化确保安全。
+     * JSON 字符串转义。
+     *
+     * <p>返回不含外层引号的纯转义文本，供外层 {@code "content":"%s"} 模板二次包裹，
+     * 避免产生 {@code "content":""hello""} 的非法 JSON。</p>
+     *
+     * @param s 原始文本
+     * @return 已转义且不带外层引号的文本；为 null 时返回空串
      */
     private String escapeJson(String s) {
         if (s == null) {
             return "";
         }
         try {
-            return objectMapper.writeValueAsString(s);
+            String encoded = objectMapper.writeValueAsString(s);
+            if (encoded.length() >= 2 && encoded.startsWith("\"") && encoded.endsWith("\"")) {
+                return encoded.substring(1, encoded.length() - 1);
+            }
+            return encoded;
         } catch (Exception e) {
-            return "\"\"";
+            return "";
         }
     }
 }

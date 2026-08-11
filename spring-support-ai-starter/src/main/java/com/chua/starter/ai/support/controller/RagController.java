@@ -5,7 +5,10 @@ import com.chua.common.support.ai.rag.RagDocument;
 import com.chua.common.support.ai.rag.RagResponse;
 import com.chua.common.support.ai.rag.VectorService;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.network.client.ClientResponse;
+import com.chua.common.support.network.client.HttpClientFactory;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.configuration.rag.RagClientManager;
 import com.chua.starter.ai.support.configuration.rag.RagProperties;
 import com.chua.starter.common.support.annotations.Permission;
@@ -25,6 +28,12 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -80,6 +89,11 @@ public class RagController {
         if (fileName == null || fileName.isBlank()) {
             return ReturnResult.error("文件名不能为空");
         }
+        // 文件类型白名单校验，防止上传恶意可执行文件
+        String contentType = file.getContentType();
+        if (contentType != null && !ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase())) {
+            return ReturnResult.error("不支持的文件类型: " + contentType);
+        }
         try {
             RagDocument doc = ragClient().uploadDocument(fileName, file.getBytes());
             if ("FAILED".equals(doc.status())) {
@@ -92,6 +106,7 @@ public class RagController {
         }
     }
 
+    @Permission("admin")
     @Operation(summary = "文档列表", description = "分页查询已上传文档")
     @GetMapping("/document/list")
     public ReturnResult<Map<String, Object>> listDocuments(
@@ -105,7 +120,8 @@ public class RagController {
         List<RagDocument> docs = ragClient().listDocuments(page, pageSize);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("records", docs);
-        result.put("total", docs.size());
+        // 使用真实总数（documentCount），而非当前页 docs.size()，保证前端分页正确
+        result.put("total", ragClient().documentCount());
         result.put("page", page);
         result.put("pageSize", pageSize);
         return ReturnResult.ok(result);
@@ -119,6 +135,7 @@ public class RagController {
         return deleted ? ReturnResult.ok(true) : ReturnResult.error("文档不存在");
     }
 
+    @Permission("admin")
     @Operation(summary = "文档内容预览", description = "读取文档原始文本内容（仅限文本文件）")
     @GetMapping("/document/{id}/content")
     public ReturnResult<String> getDocumentContent(@PathVariable String id) {
@@ -137,16 +154,14 @@ public class RagController {
     public ReturnResult<Map<String, Object>> query(
             @RequestBody Map<String, Object> body) {
         String query = body.getOrDefault("query", "").toString();
-        if (query.isBlank()) {
+        if (StringUtils.isBlank(query)) {
             return ReturnResult.error("查询内容不能为空");
         }
 
-        int topK = body.containsKey("topK")
-                ? Integer.parseInt(body.get("topK").toString())
-                : ragProperties.getDefaultTopK();
-        double threshold = body.containsKey("threshold")
-                ? Double.parseDouble(body.get("threshold").toString())
-                : ragProperties.getDefaultSimilarityThreshold();
+        // 安全解析 topK，非法值回退默认配置，避免 NumberFormatException
+        int topK = parsePositiveInt(body.get("topK"), ragProperties.getDefaultTopK());
+        // 安全解析 threshold，限制在 0~1 区间
+        double threshold = parseThreshold(body.get("threshold"), ragProperties.getDefaultSimilarityThreshold());
 
         try {
             RagResponse response = ragClient().query(query, topK, threshold);
@@ -239,8 +254,9 @@ public class RagController {
             return ReturnResult.error("查询内容不能为空");
         }
         try {
-            // Common-starter RagClient 的向量搜索通过 query 方法实现
-            RagResponse response = ragClient().query(query, topK, 0.1);
+            // 向量搜索阈值默认取配置值，避免硬编码
+            double threshold = ragProperties.getDefaultSimilarityThreshold();
+            RagResponse response = ragClient().query(query, topK, threshold);
             List<Map<String, Object>> items = response.sources().stream().map(s -> {
                 Map<String, Object> item = new LinkedHashMap<>();
                 item.put("documentId", s.documentId());
@@ -259,46 +275,168 @@ public class RagController {
     @PostMapping("/document/url")
     public ReturnResult<RagDocument> addDocumentByUrl(@RequestBody com.chua.starter.ai.support.model.UrlDocumentRequest request) {
         String url = request.getUrl();
-        if (url == null || url.isBlank()) {
+        if (StringUtils.isBlank(url)) {
             return ReturnResult.error("URL 不能为空");
         }
+        // SSRF 防护：协议白名单 + 内网地址拦截
         try {
-            // 抓取网页内容（简单实现，使用 java.net.HttpURLConnection）
-            java.net.URL target = new java.net.URL(url);
-            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) target.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(10000);
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0");
-            try (java.io.InputStream is = conn.getInputStream();
-                 java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream()) {
-                byte[] buffer = new byte[8192];
-                int len;
-                while ((len = is.read(buffer)) != -1) {
-                    baos.write(buffer, 0, len);
-                }
-                byte[] contentBytes = baos.toByteArray();
-                // 尝试提取文本内容（简单取前 2000 字符作为预览）
-                String content = new String(contentBytes, java.nio.charset.StandardCharsets.UTF_8);
-                // 去除 HTML 标签（非常粗略）
-                content = content.replaceAll("<[^>]+>", " ").replaceAll("\\s+", " ").trim();
-                if (content.length() > 2000) {
-                    content = content.substring(0, 2000) + "...";
-                }
-                // 使用文件名：URL 的最后一段
-                String fileName = url.substring(url.lastIndexOf('/') + 1);
-                if (fileName.isBlank() || !fileName.contains(".")) {
-                    fileName = "webpage_" + System.currentTimeMillis() + ".txt";
-                }
-                RagDocument doc = ragClient().uploadDocument(fileName, content.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                if ("FAILED".equals(doc.status())) {
-                    return ReturnResult.error(doc.errorMessage());
-                }
-                return ReturnResult.ok(doc);
+            if (!isSafeUrl(url)) {
+                return ReturnResult.error("URL 不合法：仅允许 http/https 公网地址");
             }
+        } catch (Exception e) {
+            log.error("[RagController] URL 校验失败: {}", e.getMessage());
+            return ReturnResult.error("URL 不合法: " + e.getMessage());
+        }
+        try {
+            // 复用 common-starter 统一 HTTP 客户端（带连接池/超时管理）
+            ClientResponse response = HttpClientFactory.getClient().get(url);
+            if (response == null || !response.isSuccess()) {
+                int code = response != null ? response.getStatusCode() : -1;
+                return ReturnResult.error("URL 抓取失败，HTTP 状态码: " + code);
+            }
+            byte[] contentBytes = response.getBody();
+            if (contentBytes == null || contentBytes.length == 0) {
+                return ReturnResult.error("URL 内容为空");
+            }
+            // 去除 HTML 标签后作为文本内容
+            String content = new String(contentBytes, StandardCharsets.UTF_8)
+                    .replaceAll("<[^>]+>", " ")
+                    .replaceAll("\\s+", " ")
+                    .trim();
+            if (content.length() > URL_CONTENT_MAX_LENGTH) {
+                content = content.substring(0, URL_CONTENT_MAX_LENGTH) + "...";
+            }
+            // 使用文件名：URL 的最后一段，无扩展名时回退
+            String fileName = url.substring(url.lastIndexOf('/') + 1);
+            if (fileName.isBlank() || !fileName.contains(".")) {
+                fileName = "webpage_" + System.currentTimeMillis() + ".txt";
+            }
+            RagDocument doc = ragClient().uploadDocument(fileName, content.getBytes(StandardCharsets.UTF_8));
+            if ("FAILED".equals(doc.status())) {
+                return ReturnResult.error(doc.errorMessage());
+            }
+            return ReturnResult.ok(doc);
         } catch (Exception e) {
             log.error("[RagController] URL 抓取失败: {}", e.getMessage());
             return ReturnResult.error("URL 抓取失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * URL 抓取内容最大长度。
+     */
+    private static final int URL_CONTENT_MAX_LENGTH = 2000;
+
+    /**
+     * 合法协议白名单。
+     */
+    private static final Set<String> SAFE_PROTOCOLS = Set.of("http", "https");
+
+    /**
+     * 文档上传允许的 MIME 类型白名单，防止上传可执行文件等危险内容。
+     */
+    private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
+            "text/plain", "text/markdown", "text/html", "text/css", "text/xml",
+            "application/json", "application/pdf", "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-powerpoint",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    );
+
+    /**
+     * SSRF 防护：校验 URL 协议与解析后的目标地址。
+     *
+     * <p>仅允许 http/https 协议且目标主机解析为非内网、非回环、非链路本地的公网地址，
+     * 防止服务端被利用访问内网资源。</p>
+     *
+     * @param url 待校验的 URL
+     * @return 合法返回 true，非法抛出异常
+     * @throws URISyntaxException URL 格式非法
+     * @throws java.net.UnknownHostException 主机无法解析
+     */
+    private boolean isSafeUrl(String url) throws Exception {
+        URI uri = new URI(url);
+        String protocol = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase();
+        if (!SAFE_PROTOCOLS.contains(protocol)) {
+            return false;
+        }
+        String host = uri.getHost();
+        if (StringUtils.isBlank(host)) {
+            return false;
+        }
+        // 域名解析为全部 IP 逐个校验，任一命中内网即拒绝
+        InetAddress[] addresses = InetAddress.getAllByName(host);
+        for (InetAddress address : addresses) {
+            if (isInternalAddress(address)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 判断 IP 地址是否为内网/回环/链路本地等不可信地址。
+     *
+     * @param address IP 地址
+     * @return 命中内网等不可信地址返回 true
+     */
+    private boolean isInternalAddress(InetAddress address) {
+        if (address == null || !(address instanceof Inet4Address)
+                && !(address instanceof Inet6Address)) {
+            return true;
+        }
+        if (address.isLoopbackAddress() || address.isAnyLocalAddress()
+                || address.isLinkLocalAddress() || address.isSiteLocalAddress()) {
+            return true;
+        }
+        // 兼容部分 JVM 上下文：多播地址不可作为抓取目标
+        return address.isMulticastAddress();
+    }
+
+    /**
+     * 安全解析正整数。
+     *
+     * <p>避免对用户输入直接调用 {@code Integer.parseInt} 导致 NumberFormatException。</p>
+     *
+     * @param value  原始值（可能是 String/Number/null）
+     * @param defVal 解析失败时返回的默认值
+     * @return 解析后的正整数值，非法时返回默认值
+     */
+    private int parsePositiveInt(Object value, int defVal) {
+        if (value == null) {
+            return defVal;
+        }
+        try {
+            int parsed = (value instanceof Number num) ? num.intValue() : Integer.parseInt(value.toString());
+            return parsed > 0 ? parsed : defVal;
+        } catch (NumberFormatException e) {
+            log.warn("[RagController] topK 参数非法: {}", value);
+            return defVal;
+        }
+    }
+
+    /**
+     * 安全解析相似度阈值，限制在 0~1 区间。
+     *
+     * @param value  原始值（可能是 String/Number/null）
+     * @param defVal 解析失败时返回的默认值
+     * @return 解析后的阈值，非法或越界时返回默认值
+     */
+    private double parseThreshold(Object value, double defVal) {
+        if (value == null) {
+            return defVal;
+        }
+        try {
+            double parsed = (value instanceof Number num) ? num.doubleValue() : Double.parseDouble(value.toString());
+            if (parsed < 0 || parsed > 1) {
+                return defVal;
+            }
+            return parsed;
+        } catch (NumberFormatException e) {
+            log.warn("[RagController] threshold 参数非法: {}", value);
+            return defVal;
         }
     }
 }

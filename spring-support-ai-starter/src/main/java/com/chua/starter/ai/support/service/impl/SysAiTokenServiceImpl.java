@@ -252,33 +252,45 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     /**
      * 基于已加载的 Token 实体检查限流，避免额外 DB 查询。
      *
+     * <p>复用 {@link #listByGroupId(Integer)} 已加载的数据，直接检查限流计数器，
+     * 无需再按 Token Key 逐条查库。将原 N 次 DB 查询降为 1 次。</p>
+     *
      * @param token Token 实体（需包含 rateLimit/rateCount/rateWindowStart 字段）
-     * @return true 表示未触发限流
+     * @return true 表示未触发限流，可以继续请求
      */
     private boolean checkRateLimit(SysAiToken token) {
         Integer rateLimit = token.getSysAiTokenRateLimit();
         if (rateLimit == null || rateLimit <= 0) {
+            // 未配置限流，放行
             return true;
         }
         Integer rateCount = token.getSysAiTokenRateCount() == null ? 0 : token.getSysAiTokenRateCount();
         LocalDateTime windowStart = token.getSysAiTokenRateWindowStart();
         LocalDateTime now = LocalDateTime.now();
+        // 检查是否进入新的 1 分钟窗口
         if (windowStart == null || windowStart.plusMinutes(1).isBefore(now)) {
+            // 新窗口：重置计数器为 1（本次请求）
             token.setSysAiTokenRateCount(1);
             token.setSysAiTokenRateWindowStart(now);
             persistRateLimit(token);
             return true;
         }
         if (rateCount < rateLimit) {
+            // 窗口内未超限，递增计数
             token.setSysAiTokenRateCount(rateCount + 1);
             persistRateLimit(token);
             return true;
         }
+        // 窗口内已达上限，拒绝请求
         return false;
     }
 
     /**
-     * 持久化限流计数。
+     * 持久化限流计数到数据库。
+     *
+     * <p>将内存中的 {@link SysAiToken#getSysAiTokenRateCount()} 和
+     * {@link SysAiToken#getSysAiTokenRateWindowStart()} 写回数据库，
+     * 确保限流状态在重启后仍可延续。</p>
      *
      * @param token 更新后的 Token 实体
      */

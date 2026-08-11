@@ -15,7 +15,7 @@ import jakarta.annotation.Priority;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.webmvc.autoconfigure.WebMvcRegistrations;
+
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.EnvironmentAware;
@@ -52,23 +52,13 @@ import java.util.concurrent.Executors;
 @EnableConfigurationProperties(ApiProperties.class)
 @Priority(0)
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
-public class ApiConfiguration implements WebMvcRegistrations, EnvironmentAware  {
+public class ApiConfiguration implements EnvironmentAware  {
     private static final Logger log = LoggerFactory.getLogger(ApiConfiguration.class);
 
     private ApiProperties apiProperties;
     private Environment environment;
 
     // ==================== 版本控制配置 ====================
-
-    @Override
-    public RequestMappingHandlerMapping getRequestMappingHandlerMapping() {
-        if (apiProperties.isControlEnabled()) {
-            logControlStatus();
-            return new ApiVersionRequestMappingHandlerMapping(apiProperties, environment);
-        }
-        log.debug("[API控制] 未开启版本/平台控制，使用默认 RequestMappingHandlerMapping");
-        return new RequestMappingHandlerMapping();
-    }
 
     private void logControlStatus() {
         ServiceInfoRegistry registry = ServiceInfoRegistry.getInstance();

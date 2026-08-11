@@ -162,7 +162,7 @@ public abstract class BaseAiController {
      * @return SSE 发射器
      */
     protected SseEmitter disabledEmitter(String message) {
-        SseEmitter emitter = new SseEmitter(30_000L);
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
         CompletableFuture.runAsync(() -> {
             try {
                 emitter.send(SseEmitter.event().name("error").data(message, MediaType.TEXT_PLAIN));
@@ -183,7 +183,7 @@ public abstract class BaseAiController {
      * @return SSE 发射器
      */
     protected SseEmitter authErrorEmitter() {
-        SseEmitter emitter = new SseEmitter(30_000L);
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
         CompletableFuture.runAsync(() -> {
             try {
                 emitter.send(SseEmitter.event().name("error").data("AI AppKey 校验失败", MediaType.TEXT_PLAIN));

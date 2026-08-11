@@ -12,6 +12,7 @@ import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.SysAiSessionCompressionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -45,6 +46,16 @@ import java.util.Map;
 @Slf4j
 @ApiReturnFormatIgnore
 public class AIChatController extends BaseAiController {
+
+    /**
+     * 压缩上下文拼接时的摘要最大长度
+     */
+    private static final int SUMMARY_MAX_LENGTH = 4000;
+
+    /**
+     * 压缩上下文总量上限
+     */
+    private static final int COMPRESSED_CONTEXT_MAX_LENGTH = 16000;
 
     private final AIDialogRecordService aiDialogRecordService;
     private final AiChatFacadeService aiChatFacadeService;
@@ -115,7 +126,8 @@ public class AIChatController extends BaseAiController {
     public SseEmitter chat(
             @PathVariable Long dialogId,
             @RequestBody(required = false) List<ChatMessage> messages,
-            @RequestParam(required = false) List<MultipartFile> files) {
+            @RequestParam(required = false) List<MultipartFile> files,
+            HttpServletRequest servletRequest) {
 
         // 保存用户消息到记录
         if (messages != null) {
@@ -157,6 +169,21 @@ public class AIChatController extends BaseAiController {
         }
         if (!msgList.isEmpty()) {
             request.setMessages(msgList);
+        }
+
+        // 注入 AppKey 与分组 ID 到扩展参数，供用量统计与配额同步使用
+        String appKey = resolveAppKey(servletRequest);
+        if (appKey != null) {
+            Map<String, Object> parameters = request.getParameters();
+            if (parameters == null) {
+                parameters = new LinkedHashMap<>();
+                request.setParameters(parameters);
+            }
+            parameters.put("_appKey", appKey);
+            Integer groupId = resolveGroupId(servletRequest);
+            if (groupId != null) {
+                parameters.put("_groupId", groupId);
+            }
         }
 
         // 调用 AI 门面进行流式回复，收集完整回复保存为 assistant 消息并更新压缩上下文
@@ -219,7 +246,7 @@ public class AIChatController extends BaseAiController {
             StringBuilder context = new StringBuilder();
             if (summary.length() > 0) {
                 context.append("[Compressed Context]\n")
-                        .append(summary.length() > 4000 ? summary.substring(0, 4000) : summary);
+                        .append(summary.length() > SUMMARY_MAX_LENGTH ? summary.substring(0, SUMMARY_MAX_LENGTH) : summary);
             }
             for (ChatMessage msg : retained) {
                 String role = msg.getRole() != null ? msg.getRole() : "user";
@@ -232,7 +259,9 @@ public class AIChatController extends BaseAiController {
                 return;
             }
             // 上下文上限，防止无限膨胀
-            String finalContext = context.length() > 16000 ? context.substring(0, 16000) : context.toString();
+            String finalContext = context.length() > COMPRESSED_CONTEXT_MAX_LENGTH
+                    ? context.substring(0, COMPRESSED_CONTEXT_MAX_LENGTH)
+                    : context.toString();
             SysAiSessionCompression compression = new SysAiSessionCompression();
             compression.setSysAiSessionId(dialogId);
             compression.setSysAiCompressionMessageCount((long) history.size());
