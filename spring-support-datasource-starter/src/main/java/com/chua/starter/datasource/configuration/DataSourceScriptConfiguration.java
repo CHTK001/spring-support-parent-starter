@@ -898,26 +898,49 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
 
         /**
          * 创建版本记录表
-         * 兼容多种数据库类型，字段名使用表名前缀
+         * <p>
+         * 兼容多种数据库类型, 字段名使用表名前缀。
+         * MySQL/PostgreSQL 保持原语法 (含 COMMENT 列注释);
+         * SQLite/H2 不支持列注释和 UNIQUE KEY, 自动降级为方言兼容语法。
+         * </p>
          */
         private void createVersionTable() {
             String tableName = dataSourceScriptProperties.getVersionTable();
             // 提取表名作为字段前缀（去掉可能的schema前缀）
             String tablePrefix = extractTablePrefix(tableName);
 
-            String createTableSql = String.format("""
-                CREATE TABLE IF NOT EXISTS %s (
-                    %s_id INT AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID',
-                    %s_version VARCHAR(32) COMMENT '脚本版本号',
-                    %s_script_name VARCHAR(200) NOT NULL COMMENT '脚本文件名',
-                    %s_script_type VARCHAR(16) COMMENT '脚本类型：INIT-初始化，ADD-增量',
-                    %s_description VARCHAR(100) COMMENT '脚本描述信息',
-                    %s_checksum VARCHAR(64) COMMENT '脚本文件MD5校验和',
-                    %s_executed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '脚本执行时间',
-                    %s_success VARCHAR(8) COMMENT '执行状态：true-成功，false-失败',
-                    UNIQUE KEY uk_script_name_version (%s_script_name, %s_version)
-                )
-            """, tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix);
+            boolean sqlite = isSqliteDatabase();
+
+            String createTableSql;
+            if (sqlite) {
+                createTableSql = String.format("""
+                    CREATE TABLE IF NOT EXISTS %s (
+                        %s_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        %s_version VARCHAR(32),
+                        %s_script_name VARCHAR(200) NOT NULL,
+                        %s_script_type VARCHAR(16),
+                        %s_description VARCHAR(100),
+                        %s_checksum VARCHAR(64),
+                        %s_executed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        %s_success VARCHAR(8),
+                        CONSTRAINT uk_script_name_version UNIQUE (%s_script_name, %s_version)
+                    )
+                    """, tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix);
+            } else {
+                createTableSql = String.format("""
+                    CREATE TABLE IF NOT EXISTS %s (
+                        %s_id INT AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID',
+                        %s_version VARCHAR(32) COMMENT '脚本版本号',
+                        %s_script_name VARCHAR(200) NOT NULL COMMENT '脚本文件名',
+                        %s_script_type VARCHAR(16) COMMENT '脚本类型：INIT-初始化，ADD-增量',
+                        %s_description VARCHAR(100) COMMENT '脚本描述信息',
+                        %s_checksum VARCHAR(64) COMMENT '脚本文件MD5校验和',
+                        %s_executed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '脚本执行时间',
+                        %s_success VARCHAR(8) COMMENT '执行状态：true-成功，false-失败',
+                        UNIQUE KEY uk_script_name_version (%s_script_name, %s_version)
+                    )
+                    """, tableName, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix, tablePrefix);
+            }
 
             try {
                 jdbc.execute(createTableSql);
@@ -926,6 +949,24 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                 }
             } catch (DataAccessException e) {
                 log.warn("创建版本记录表时发生异常（表可能已存在）: {}", e.getMessage());
+            }
+        }
+
+        /**
+         * 判断当前数据源是否 SQLite。
+         *
+         * @return 是否 SQLite
+         */
+        private boolean isSqliteDatabase() {
+            try (java.sql.Connection connection = ds.getConnection()) {
+                String productName = connection.getMetaData().getDatabaseProductName();
+                if (productName == null) {
+                    return false;
+                }
+                return productName.toLowerCase(java.util.Locale.ROOT).contains("sqlite");
+            } catch (java.sql.SQLException e) {
+                log.debug("判断数据库类型失败: {}", e.getMessage());
+                return false;
             }
         }
 

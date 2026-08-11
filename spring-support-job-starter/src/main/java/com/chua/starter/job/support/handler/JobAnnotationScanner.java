@@ -1,10 +1,14 @@
 package com.chua.starter.job.support.handler;
 
 import com.chua.starter.job.support.annotation.Job;
+import com.chua.starter.job.support.dispatch.JobDefinition;
+import com.chua.starter.job.support.dispatch.JobRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.MethodIntrospector;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.util.ClassUtils;
@@ -12,15 +16,28 @@ import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * {@link Job} 注解扫描器,负责注册本地任务处理器。
+ * {@link Job} 注解扫描器, 负责注册本地任务处理器, 并在单例初始化完成后
+ * 将扫描到的任务定义同步到 {@link JobRepository} (MyBatis/InMemory)。
  *
  * @author CH
  * @since 4.0.0.42
  */
 @Slf4j
-public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializingSingleton {
+public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializingSingleton, ApplicationContextAware {
+
+    /**
+     * 收集到的 JobDefinition 列表 (在 postProcessAfterInitialization 阶段累积)
+     */
+    private final List<JobDefinition> collectedDefinitions = new ArrayList<>();
+
+    /**
+     * Spring 上下文 (用于 afterSingletonsInstantiated 阶段按类型查找 JobRepository)
+     */
+    private ApplicationContext applicationContext;
 
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
@@ -46,6 +63,28 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
     @Override
     public void afterSingletonsInstantiated() {
         log.info("[job] @Job 扫描完成, 共注册 {} 个处理器", JobHandlerFactory.getInstance().size());
+        // 同步到 JobRepository, 让 JobLeaderLoop 调度时能查到任务
+        if (collectedDefinitions.isEmpty() || applicationContext == null) {
+            return;
+        }
+        try {
+            JobRepository repository = applicationContext.getBeanProvider(JobRepository.class)
+                    .getIfAvailable();
+            if (repository == null) {
+                return;
+            }
+            for (JobDefinition definition : collectedDefinitions) {
+                repository.upsert(definition);
+            }
+            log.info("[job] @Job 任务定义同步到仓库 {} 条", collectedDefinitions.size());
+        } catch (Exception ex) {
+            log.warn("[job] @Job 任务仓库同步失败 cause={}", ex.getMessage());
+        }
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
     }
 
     /**
@@ -83,6 +122,15 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
             throw new IllegalStateException("@Job 名冲突, name=" + name);
         }
         JobHandlerFactory.getInstance().register(handler);
+        // 收集 JobDefinition 用于同步到仓库
+        JobDefinition definition = new JobDefinition();
+        definition.setName(name);
+        definition.setCron(job.cron());
+        definition.setEnabled(true);
+        definition.setDesc(job.desc());
+        synchronized (collectedDefinitions) {
+            collectedDefinitions.add(definition);
+        }
         log.info("[job] 注册处理器 name={} desc={}", name, job.desc());
     }
 

@@ -85,8 +85,8 @@ public class ExecutorSyncBinder {
         bus.subscribe(JobSyncTopics.TASK_LOG, logForwarder);
 
         try {
-            syncClient.send(JobSyncTopics.REGISTER, buildRegisterPayload());
             syncClient.connect();
+            syncClient.send(JobSyncTopics.REGISTER, buildRegisterPayload());
             log.info("[job] EXECUTOR 已连接 serverUrl={} nodeId={}",
                     properties.getSync().getExecutor().getServerUrl(), nodeId);
         } catch (Exception ex) {

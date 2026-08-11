@@ -66,6 +66,59 @@ public class MybatisJobRepository implements JobRepository {
     }
 
     /**
+     * 将注解扫描出的任务定义同步到 {@code sys_job} 表 (按 {@code sys_job_execute_bean} 唯一。
+     * 已存在则更新调度配置, 不存在则新建触发状态=启用 的本地任务行)。
+     */
+    @Override
+    public void upsert(JobDefinition definition) {
+        if (definition == null || definition.getName() == null) {
+            return;
+        }
+        try {
+            JobEntity existing = jobMapper.selectOne(Wrappers.<JobEntity>lambdaQuery()
+                    .eq(JobEntity::getSysJobExecuteBean, definition.getName()));
+            if (existing == null) {
+                JobEntity entity = toEntity(definition);
+                jobMapper.insert(entity);
+                log.info("[job] 注解任务持久化成功 name={}", definition.getName());
+            } else if (definition.getCron() != null && !definition.getCron().equals(existing.getSysJobScheduleTime())) {
+                if (existing.getSysJobNo() == null || existing.getSysJobNo().isBlank()) {
+                    existing.setSysJobNo(definition.getName());
+                }
+                existing.setSysJobScheduleTime(definition.getCron());
+                existing.setSysJobName(definition.getName());
+                existing.setSysJobDesc(definition.getDesc());
+                existing.setSysJobTriggerStatus(1);
+                existing.setSysJobIsDeleted(0);
+                jobMapper.updateById(existing);
+                log.info("[job] 注解任务调度配置更新 name={} cron={}", definition.getName(), definition.getCron());
+            }
+        } catch (Exception ex) {
+            log.warn("[job] 注解任务持久化失败 name={} cause={}", definition.getName(), ex.getMessage());
+        }
+    }
+
+    /**
+     * 将 JobDefinition 转换为待持久化的实体。注解模式下无 sys_job_no, 用 name 作为 sys_job_no 以满足 NOT NULL 约束。
+     *
+     * @param definition 任务定义
+     * @return 实体
+     */
+    private JobEntity toEntity(JobDefinition definition) {
+        JobEntity entity = new JobEntity();
+        entity.setSysJobNo(definition.getName());
+        entity.setSysJobName(definition.getName());
+        entity.setSysJobExecuteBean(definition.getName());
+        entity.setSysJobScheduleTime(definition.getCron());
+        entity.setSysJobScheduleType("CRON");
+        entity.setSysJobTriggerStatus(1);
+        entity.setSysJobIsDeleted(0);
+        entity.setSysJobDesc(definition.getDesc());
+        entity.setSysJobGlueType("BEAN");
+        return entity;
+    }
+
+    /**
      * 计算下次触发时间。
      *
      * @param entity 任务实体
