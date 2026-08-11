@@ -65,7 +65,7 @@
       <groupId>com.github.yulichang</groupId>
       <artifactId>mybatis-plus-join-boot-starter</artifactId>
     </dependency>
-    <!-- MyBatis Plus Spring Boot 4集成 - 核心ORM框架 -->
+    <!-- MyBatis Plus Spring Boot 集成 - 核心ORM框架 -->
     <dependency>
       <groupId>com.baomidou</groupId>
       <artifactId>mybatis-plus-spring-boot4-starter</artifactId>

@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.application;
 
+import com.chua.common.support.application.GlobalSettingFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

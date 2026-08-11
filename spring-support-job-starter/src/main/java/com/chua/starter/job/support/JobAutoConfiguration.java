@@ -226,7 +226,33 @@ public class JobAutoConfiguration {
             log.info("[job] sync.in-memory=true, 强制使用 InMemorySyncServer (跳过 SPI)");
             return new InMemorySyncServer();
         }
-        SyncServer server = ServiceProvider.of(SyncServer.class).getExtension("rsocket", "netty-tcp", "netty-udp", "tcp", "udp", "websocket", "http");
+        ServiceProvider<SyncServer> sp = ServiceProvider.of(SyncServer.class);
+        log.info("[job][diag] SyncServer SPI keys={} loader={} ctxLoader={}", sp.names(),
+                SyncServer.class.getClassLoader(),
+                Thread.currentThread().getContextClassLoader());
+        try {
+            java.util.Enumeration<java.net.URL> rs = Thread.currentThread().getContextClassLoader()
+                    .getResources("META-INF/extensions/com.chua.common.support.network.server.SyncServer");
+            java.util.List<String> urls = new java.util.ArrayList<>();
+            while (rs.hasMoreElements()) { urls.add(rs.nextElement().toString()); }
+            log.info("[job][diag] SyncServer SPI resource URLs={}", urls);
+        } catch (Throwable ex) {
+            log.warn("[job][diag] SyncServer SPI resource enumeration failed cause={}", ex.getMessage());
+        }
+        String[] keys = {"rsocket", "netty-tcp", "netty-udp", "tcp", "udp", "websocket", "http"};
+        SyncServer server = null;
+        for (String k : keys) {
+            try {
+                SyncServer s = sp.getExtension(k);
+                log.info("[job][diag] try key={} -> class={} extClassLoader={}",
+                        k, s == null ? "NULL" : s.getClass().getName(), s == null ? "-" : s.getClass().getClassLoader());
+                if (s != null) { server = s; break; }
+            } catch (Throwable t) {
+                log.warn("[job][diag] key={} threw cause={}", k, t.getClass().getName() + ":" + t.getMessage(), t);
+            }
+        }
+        log.info("[job][diag] SyncServer final result class={}",
+                server == null ? "NULL" : server.getClass().getName());
         if (server == null) {
             log.warn("[job] 未找到 SyncServer SPI 实现, fallback 到 InMemorySyncServer (精简部署或测试环境)");
             return new InMemorySyncServer();

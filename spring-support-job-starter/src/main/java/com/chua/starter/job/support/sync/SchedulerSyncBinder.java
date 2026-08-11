@@ -1,8 +1,8 @@
 package com.chua.starter.job.support.sync;
 
-import com.chua.common.support.network.sync.SyncMessageHandler;
 import com.chua.common.support.network.server.SyncServer;
 import com.chua.common.support.network.server.SyncServerListener;
+import com.chua.common.support.network.sync.SyncMessageHandler;
 import com.chua.starter.job.support.log.JobLogEvent;
 import com.chua.starter.job.support.log.JobLogSink;
 import jakarta.annotation.PostConstruct;
@@ -101,6 +101,17 @@ public class SchedulerSyncBinder {
             }
         });
 
+        if ("com.chua.common.support.network.server.AbstractServer".equals(
+                syncServer.getClass().getSuperclass().getName())) {
+            try {
+                syncServer.getClass().getSuperclass().getMethod("start").invoke(syncServer);
+                log.info("[job] SyncServer 已启动, 等待 Executor 连接");
+            } catch (NoSuchMethodException nsme) {
+                // 父类没有 start 方法 (可能版本不匹配), 通过 publish lazy start
+            } catch (Throwable ex) {
+                log.warn("[job] SyncServer start 失败 cause={}", ex.getMessage());
+            }
+        }
         log.info("[job] SCHEDULER 同步绑定器已启动 nodeId={}", nodeId);
     }
 

@@ -55,6 +55,7 @@ import org.slf4j.LoggerFactory;
  * @version 1.0.0
  * @since 2023/09/08
  */
+@SuppressWarnings("removal")
 public class ParameterLogFilter implements Filter {
     private static final Logger log = LoggerFactory.getLogger(ParameterLogFilter.class);
         public static final DateTimeFormatter DATE_TIME_FORMATTER = ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
@@ -85,7 +86,7 @@ public class ParameterLogFilter implements Filter {
         long startTime = System.currentTimeMillis();
         request.setAttribute(REQUEST_START_TIME, startTime);
 
-        ContentCachingRequestWrapper requestWrapper = new ContentCachingRequestWrapper(request);
+        ContentCachingRequestWrapper requestWrapper = new ContentCachingRequestWrapper(request, 8192);
         ContentCachingResponseWrapper responseWrapper = new ContentCachingResponseWrapper(response);
         
         String connection = requestWrapper.getHeader("upgrade");

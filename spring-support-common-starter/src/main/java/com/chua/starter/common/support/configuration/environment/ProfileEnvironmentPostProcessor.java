@@ -50,6 +50,7 @@ import org.slf4j.LoggerFactory;
  * @since 2024/12/4
  * @version 2.0.0
  */
+@SuppressWarnings("removal")
 public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
     private static final Logger log = LoggerFactory.getLogger(ProfileEnvironmentPostProcessor.class);
         /**

@@ -101,6 +101,12 @@
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
+        <!-- OAuth 客户端鉴权（@Permission 管理端接口鉴权，对接外部 oauth 服务端） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-oauth-client-starter</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>

@@ -105,8 +105,8 @@
         <!-- Druid连接池 - 阿里巴巴高性能数据库连接池 -->
         <dependency>
             <groupId>com.alibaba</groupId>
-            <artifactId>druid-spring-boot-3-starter</artifactId>
-            <version>1.2.20</version>
+            <artifactId>druid-spring-boot-4-starter</artifactId>
+            <version>${druid.version}</version>
             <scope>provided</scope>
         </dependency>
 

@@ -123,6 +123,7 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
         return elements;
     }
 
+    @SuppressWarnings("removal")
     private List<AnnotatedMethodElement> findAnnotatedMethodMetadata(final Class<?> beanClass) {
         final List<AnnotatedMethodElement> elements = new LinkedList();
         ReflectionUtils.doWithMethods(beanClass, new ReflectionUtils.MethodCallback() {

@@ -2,7 +2,7 @@ package com.chua.starter.ai.support.configuration.cache;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.cache.CacheProperties;
+import org.springframework.boot.cache.autoconfigure.CacheProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;

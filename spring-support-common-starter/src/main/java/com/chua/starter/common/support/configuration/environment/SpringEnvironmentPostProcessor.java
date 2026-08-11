@@ -14,6 +14,7 @@ import java.util.Properties;
  *
  * @author CH
  */
+@SuppressWarnings("removal")
 public class SpringEnvironmentPostProcessor implements EnvironmentPostProcessor {
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {

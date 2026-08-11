@@ -3,7 +3,7 @@ package com.chua.starter.ai.support.service.impl.settings;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.chua.common.support.utils.StringUtils;
-import com.chua.starter.ai.support.configuration.GlobalChatClientManager;
+import com.chua.starter.ai.support.configuration.client.GlobalChatClientManager;
 import com.chua.starter.ai.support.entity.settings.AiProvider;
 import com.chua.starter.ai.support.mapper.settings.AiProviderMapper;
 import com.chua.starter.ai.support.model.AiProviderDTO;

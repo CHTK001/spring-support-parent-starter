@@ -1,8 +1,8 @@
 package com.chua.starter.ai.support.service.impl.settings;
 
-import com.chua.starter.ai.support.configuration.GlobalChatClientManager;
-import com.chua.starter.ai.support.configuration.GlobalSettingReader;
-import com.chua.starter.ai.support.configuration.RagClientManager;
+import com.chua.starter.ai.support.configuration.client.GlobalChatClientManager;
+import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
+import com.chua.starter.ai.support.configuration.rag.RagClientManager;
 import com.chua.starter.ai.support.model.AiGlobalSettingDTO;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.settings.AiGlobalSettingService;

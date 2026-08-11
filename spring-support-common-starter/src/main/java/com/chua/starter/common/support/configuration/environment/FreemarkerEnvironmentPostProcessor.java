@@ -13,6 +13,7 @@ import java.util.Properties;
  *
  * @author CH
  */
+@SuppressWarnings("removal")
 public class FreemarkerEnvironmentPostProcessor implements EnvironmentPostProcessor {
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {

@@ -48,6 +48,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author CH
  */
+@SuppressWarnings({"removal", "deprecation"})
 @EnableConfigurationProperties({MessageConverterProperties.class})
 public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, ApplicationContextAware {
     private static final Logger log = LoggerFactory.getLogger(MessageConverterWebMvcConfigurer.class);

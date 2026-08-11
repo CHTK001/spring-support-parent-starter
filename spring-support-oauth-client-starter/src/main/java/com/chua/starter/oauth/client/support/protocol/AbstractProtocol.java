@@ -29,6 +29,7 @@ import com.chua.starter.oauth.client.support.user.UserRoleResolver;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationContext;
 import com.chua.common.support.utils.BeanUtils;
 
 import java.util.Objects;
@@ -570,17 +571,33 @@ public abstract class AbstractProtocol implements Protocol {
      * @return 用户角色解析器，未找到时返回 null
      */
     private static UserRoleResolver resolveUserRoleResolver() {
+        ApplicationContext context = null;
         try {
-            java.util.Collection<UserRoleResolver> beans =
-                    com.chua.spring.support.configuration.SpringBeanUtils.getBeanList(UserRoleResolver.class);
-            log.info("[OAuth角色补充] Spring 容器候选数量: {}", beans.size());
-            for (UserRoleResolver bean : beans) {
-                if (bean != null) {
-                    return bean;
-                }
+            context = OauthClientRuntimeContext.getApplicationContext();
+        } catch (Exception ignore) {
+            // 运行时上下文未初始化，忽略
+        }
+        if (context == null) {
+            try {
+                context = com.chua.spring.support.configuration.SpringBeanUtils.getApplicationContextOrNull();
+            } catch (Exception ignore) {
+                // ThreadLocal 上下文未初始化，忽略
             }
-        } catch (Exception e) {
-            log.info("[OAuth角色补充] Spring 获取失败: {}", e.getMessage());
+        }
+        if (context != null) {
+            try {
+                java.util.Collection<UserRoleResolver> beans = context.getBeansOfType(UserRoleResolver.class).values();
+                log.info("[OAuth角色补充] Spring 容器候选数量: {}", beans.size());
+                for (UserRoleResolver bean : beans) {
+                    if (bean != null) {
+                        return bean;
+                    }
+                }
+            } catch (Exception e) {
+                log.info("[OAuth角色补充] Spring 获取失败: {}", e.getMessage());
+            }
+        } else {
+            log.info("[OAuth角色补充] Spring 上下文未初始化，回退 SPI");
         }
         return ServiceProvider.of(UserRoleResolver.class).getExtension("default");
     }
