@@ -5,6 +5,7 @@ import com.chua.common.support.taskdistribution.dispatcher.InMemoryDispatcherPro
 import com.chua.common.support.taskdistribution.manager.ResultBuffer;
 import com.chua.common.support.taskdistribution.manager.TaskManager;
 import com.chua.common.support.taskdistribution.node.NodeTable;
+import com.chua.common.support.taskdistribution.spi.TaskExecutor;
 import com.chua.common.support.taskdistribution.spi.TaskExecutorRegistry;
 import com.chua.common.support.taskdistribution.store.FileTaskStore;
 import com.chua.common.support.taskdistribution.store.InMemoryTaskStore;
@@ -15,7 +16,7 @@ import com.chua.starter.taskdistribution.support.properties.TaskDistributionProp
 import com.chua.starter.taskdistribution.support.store.DbTaskStore;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -70,7 +71,7 @@ public class TaskDistributionAutoConfiguration {
      *
      * @return NodeTable 实例
      */
-    @Bean
+    @Bean(destroyMethod = "destroy")
     @ConditionalOnMissingBean
     public NodeTable nodeTable() {
         return new NodeTable();
@@ -82,7 +83,7 @@ public class TaskDistributionAutoConfiguration {
      * @param store 持久化存储（可选，无则纯内存）
      * @return TaskManager 实例
      */
-    @Bean
+    @Bean(destroyMethod = "destroy")
     @ConditionalOnMissingBean
     public TaskManager taskManager(TaskStore store) {
         TaskManager manager = new TaskManager();
@@ -101,7 +102,7 @@ public class TaskDistributionAutoConfiguration {
      *
      * @return ResultBuffer 实例
      */
-    @Bean
+    @Bean(destroyMethod = "close")
     @ConditionalOnMissingBean
     public ResultBuffer resultBuffer() {
         return new ResultBuffer();
@@ -124,7 +125,7 @@ public class TaskDistributionAutoConfiguration {
      * @param properties 配置属性
      * @return DispatcherProvider 实例
      */
-    @Bean
+    @Bean(destroyMethod = "close")
     @ConditionalOnMissingBean
     public DispatcherProvider dispatcherProvider(TaskDistributionProperties properties) {
         int batchSize = properties.getBatchSize();
@@ -143,27 +144,29 @@ public class TaskDistributionAutoConfiguration {
      * @param nodeTable  节点注册表
      * @param executors  用户自定义 TaskExecutor 列表
      */
-    @Autowired(required = false)
-    public void configureTaskDistribution(
+    @Bean
+    public ApplicationRunner taskDistributionInitializer(
             TaskDistributionProperties properties,
             TaskExecutorRegistry registry,
             NodeTable nodeTable,
-            List<com.chua.common.support.taskdistribution.spi.TaskExecutor<?>> executors
-    ) {
-        String nodeId = properties.getNodeId();
-        if (nodeId == null || nodeId.isEmpty()) {
-            nodeId = "node-" + System.currentTimeMillis();
-            properties.setNodeId(nodeId);
-        }
-        TaskIdGenerator.setDefaultNodeId(nodeId);
-        log.info("任务分发初始化完成, nodeId: {}, strategy: {}, batchSize: {}, consumerThreads: {}",
-                nodeId, properties.getStrategy(), properties.getBatchSize(), properties.getConsumerThreads());
-
-        if (executors != null) {
-            for (com.chua.common.support.taskdistribution.spi.TaskExecutor<?> executor : executors) {
-                registry.register(executor);
-                log.debug("注册任务执行器: {}", executor.taskType());
+            @Autowired(required = false)
+            List<TaskExecutor<?>> executors) {
+        return args -> {
+            String nodeId = properties.getNodeId();
+            if (nodeId == null || nodeId.isEmpty()) {
+                nodeId = "node-" + System.currentTimeMillis();
+                properties.setNodeId(nodeId);
             }
-        }
+            TaskIdGenerator.setDefaultNodeId(nodeId);
+            log.info("任务分发初始化完成, nodeId: {}, strategy: {}, batchSize: {}, consumerThreads: {}",
+                    nodeId, properties.getStrategy(), properties.getBatchSize(), properties.getConsumerThreads());
+
+            if (executors != null) {
+                for (TaskExecutor<?> executor : executors) {
+                    registry.register(executor);
+                    log.debug("注册任务执行器: {}", executor.taskType());
+                }
+            }
+        };
     }
 }

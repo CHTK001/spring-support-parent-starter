@@ -43,6 +43,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Swagger API 文档注解（provided，不强制依赖） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-swagger-starter</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- 测试 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
