@@ -48,6 +48,7 @@ import java.util.Map;
 public class ServiceInfoAutoConfiguration {
 
     @Bean
+    @ConditionalOnMissingBean
     public ServiceInfoController serviceInfoController() {
         return new ServiceInfoController();
     }
