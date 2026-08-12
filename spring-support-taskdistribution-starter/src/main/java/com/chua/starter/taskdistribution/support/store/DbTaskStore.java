@@ -101,7 +101,8 @@ public class DbTaskStore implements TaskStore {
         try {
             mapper.update(null, new LambdaUpdateWrapper<SysTaskStore>()
                     .eq(SysTaskStore::getTaskId, taskId)
-                    .set(SysTaskStore::getTaskStatus, status.name()));
+                    .set(SysTaskStore::getTaskStatus, status.name())
+                    .set(SysTaskStore::getUpdateTime, LocalDateTime.now()));
         } catch (Exception e) {
             log.warn("更新任务状态失败: {}", taskId, e);
         }
@@ -130,16 +131,22 @@ public class DbTaskStore implements TaskStore {
     }
 
     /**
-     * 插入或更新（upsert 语义）。
+     * 插入或更新（upsert 语义，基于 taskId 同步保证原子性）。
      *
      * @param entity 实体
      */
     private void upsert(SysTaskStore entity) {
-        SysTaskStore existing = mapper.selectById(entity.getTaskId());
-        if (existing == null) {
-            mapper.insert(entity);
-        } else {
-            mapper.updateById(entity);
+        synchronized (entity.getTaskId().intern()) {
+            try {
+                mapper.insert(entity);
+            } catch (Exception e) {
+                // 主键冲突，执行更新
+                try {
+                    mapper.updateById(entity);
+                } catch (Exception updateEx) {
+                    log.warn("更新任务记录失败: {}", entity.getTaskId(), updateEx);
+                }
+            }
         }
     }
 
