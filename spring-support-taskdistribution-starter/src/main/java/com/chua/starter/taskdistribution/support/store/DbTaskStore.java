@@ -3,6 +3,7 @@ package com.chua.starter.taskdistribution.support.store;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.chua.common.support.lang.json.Json;
+import com.chua.common.support.taskdistribution.dispatcher.MdcDecorator;
 import com.chua.common.support.taskdistribution.store.TaskStore;
 import com.chua.common.support.taskdistribution.task.Task;
 import com.chua.common.support.taskdistribution.task.TaskResult;
@@ -10,6 +11,7 @@ import com.chua.common.support.taskdistribution.task.TaskStatus;
 import com.chua.starter.taskdistribution.support.entity.SysTaskStore;
 import com.chua.starter.taskdistribution.support.mapper.TaskStoreMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -82,9 +84,18 @@ public class DbTaskStore implements TaskStore {
         cache.put(task.getTaskId(), entity);
 
         try {
+            if (task.getTaskId() != null) {
+                MDC.put(MdcDecorator.KEY_TASK_ID, task.getTaskId());
+            }
+            if (task.getTraceId() != null) {
+                MDC.put(MdcDecorator.KEY_TRACE_ID, task.getTraceId());
+            }
             upsert(entity);
         } catch (Exception e) {
             log.warn("保存任务失败: {}", task.getTaskId(), e);
+        } finally {
+            MDC.remove(MdcDecorator.KEY_TASK_ID);
+            MDC.remove(MdcDecorator.KEY_TRACE_ID);
         }
     }
 
@@ -99,12 +110,17 @@ public class DbTaskStore implements TaskStore {
             entity.setUpdateTime(LocalDateTime.now());
         }
         try {
+            if (taskId != null) {
+                MDC.put(MdcDecorator.KEY_TASK_ID, taskId);
+            }
             mapper.update(null, new LambdaUpdateWrapper<SysTaskStore>()
                     .eq(SysTaskStore::getTaskId, taskId)
                     .set(SysTaskStore::getTaskStatus, status.name())
                     .set(SysTaskStore::getUpdateTime, LocalDateTime.now()));
         } catch (Exception e) {
             log.warn("更新任务状态失败: {}", taskId, e);
+        } finally {
+            MDC.remove(MdcDecorator.KEY_TASK_ID);
         }
     }
 
@@ -124,9 +140,14 @@ public class DbTaskStore implements TaskStore {
         cache.put(result.getTaskId(), entity);
 
         try {
+            if (result.getTaskId() != null) {
+                MDC.put(MdcDecorator.KEY_TASK_ID, result.getTaskId());
+            }
             upsert(entity);
         } catch (Exception e) {
             log.warn("保存结果失败: {}", result.getTaskId(), e);
+        } finally {
+            MDC.remove(MdcDecorator.KEY_TASK_ID);
         }
     }
 
