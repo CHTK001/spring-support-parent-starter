@@ -62,6 +62,7 @@ public class FaceGlobalSettingProvider implements GlobalSettingProvider {
         return List.of(
                 new SettingItem("detector_model", "scrfd-face-detector", "STRING", "人脸检测模型（scrfd-face-detector / ultra-face / yolo-face-detector / yolo-face-person / faceplugin-face-detect-slim / anime-face-detector / anime-face-yolov8）", 1),
                 new SettingItem("feature_model", "faceplugin-face-feature", "STRING", "人脸特征模型（faceplugin-face-feature / r50-face-feature / face-feature / common-face-rec / arc-face / ada-face）", 2),
+                new SettingItem("feature_dimension", "256", "NUMBER", "人脸特征向量维度（faceplugin-face-feature=256，r50-face-feature=512，需与特征模型匹配）", 21),
                 new SettingItem("vector_storage", "jvector", "STRING", "人脸向量库（jvector / memory / milvus）", 3),
                 new SettingItem("vector_algorithm", "COSINE", "STRING", "向量检索算法（COSINE / EUCLIDEAN / DOT）", 4),
                 new SettingItem("compare_threshold", "0.5", "NUMBER", "1:1 人脸比对相似度阈值", 5),

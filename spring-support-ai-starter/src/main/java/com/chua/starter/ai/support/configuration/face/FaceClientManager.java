@@ -402,21 +402,21 @@ public class FaceClientManager {
      * 配置热更新：按最新配置重建全部人脸实例，替换引用并关闭旧实例。
      */
     public synchronized void rebuild() {
+        VectorStorage oldVectorStorage = this.vectorStorage;
+        VectorStorage nextVectorStorage = buildVectorStorage();
+        this.vectorStorage = nextVectorStorage;
         FaceIdentify nextIdentify = buildIdentify();
         FacePipeline nextPipeline = buildPipeline();
-        VectorStorage nextVectorStorage = buildVectorStorage();
         LivenessDetector nextLiveness = buildLiveness();
         FaceQualityAssessor nextQuality = buildQualityAssessor();
 
         FaceIdentify oldIdentify = identify;
         FacePipeline oldPipeline = pipeline;
-        VectorStorage oldVectorStorage = vectorStorage;
         LivenessDetector oldLiveness = liveness;
         FaceQualityAssessor oldQuality = qualityAssessor;
 
         this.identify = nextIdentify;
         this.pipeline = nextPipeline;
-        this.vectorStorage = nextVectorStorage;
         this.liveness = nextLiveness;
         this.qualityAssessor = nextQuality;
 
@@ -443,7 +443,8 @@ public class FaceClientManager {
     private FaceIdentify buildIdentify() {
         FaceDetector detector = FaceDetector.create(settingReader.getStr(GROUP, "detector_model"));
         FeatureExtractor extractor = FeatureExtractor.create(settingReader.getStr(GROUP, "feature_model"));
-        VectorStorage storage = buildVectorStorage();
+        // 复用缓存的向量库实例，保证 identify / search / enroll 使用同一存储
+        VectorStorage storage = currentVectorStorage();
         LivenessDetector liveness = buildLiveness();
         boolean requireLive = settingReader.getBool(GROUP, "liveness_enabled", false);
         float livenessThreshold = readFloat("liveness_threshold", 0.5f);
@@ -489,7 +490,8 @@ public class FaceClientManager {
         }
         String algorithm = settingReader.getStr(GROUP, "vector_algorithm");
         VectorCompareAlgorithm compare = resolveAlgorithm(algorithm);
-        return VectorStorageProvider.create(name, DEFAULT_FEATURE_DIMENSION, compare);
+        int dimension = settingReader.getInt(GROUP, "feature_dimension", DEFAULT_FEATURE_DIMENSION);
+        return VectorStorageProvider.create(name, dimension, compare);
     }
 
     /**

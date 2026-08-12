@@ -141,6 +141,13 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- 测试 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- 数据源模块 - 提供 Flyway-like 迁移器（db/init 脚本自动执行） -->
         <dependency>
             <groupId>com.chua</groupId>
