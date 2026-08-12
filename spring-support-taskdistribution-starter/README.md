@@ -4,6 +4,37 @@
 
 ---
 
+## 装配流程
+
+```mermaid
+flowchart TB
+    Start([Spring Boot 启动]) --> Load[加载 starter]
+    Load --> Bind[绑定 TaskDistributionProperties]
+    Bind --> TS{TaskStore<br/>storeType?}
+    TS -->|memory| IMTS[InMemoryTaskStore]
+    TS -->|file| FTS[FileTaskStore]
+    TS -->|db| DTS[DbTaskStore]
+    TS -->|未配置 mapper| Fallback[warn + 回退到内存]
+
+    IMTS --> TM[TaskManager]
+    FTS --> TM
+    DTS --> TM
+    Fallback --> TM
+
+    TM --> Recover[recover 未完成任务]
+    Recover --> NT[NodeTable]
+    TM --> RB[ResultBuffer]
+    TM --> DP[DispatcherProvider<br/>start 消费线程]
+    DP --> TER[TaskExecutorRegistry]
+    TER --> Runner[ApplicationRunner<br/>注册 @Component 扫描到的 TaskExecutor]
+    Runner --> Ready([就绪])
+
+    style Fallback fill:#faa
+    style Ready fill:#bfb
+```
+
+---
+
 ## 引入
 
 ```xml
