@@ -59,7 +59,7 @@ public class FaceConfigController {
      *
      * @return 配置列表（field/value/valueType/description/sort）
      */
-    // TEST-BYPASS @Permission("admin")
+    @Permission("admin")
     @Operation(summary = "获取人脸识别配置", description = "返回 face 分组全部配置项及当前值")
     @GetMapping
     public ReturnResult<List<Map<String, Object>>> config() {
@@ -110,7 +110,7 @@ public class FaceConfigController {
      * @param body 配置请求（group + fields）
      * @return 更新结果
      */
-    // TEST-BYPASS @Permission("admin")
+    @Permission("admin")
     @Operation(summary = "更新人脸识别配置", description = "整组替换 face 配置并触发热重建")
     @PutMapping
     public ReturnResult<?> update(@RequestBody Map<String, Object> body) {
@@ -127,7 +127,7 @@ public class FaceConfigController {
      *
      * @return 模型清单
      */
-    // TEST-BYPASS @Permission("admin")
+    @Permission("admin")
     @Operation(summary = "人脸模型清单", description = "枚举可用的人脸检测/特征/活体/超分等模型")
     @GetMapping("/models")
     public ReturnResult<Map<String, List<String>>> models() {
