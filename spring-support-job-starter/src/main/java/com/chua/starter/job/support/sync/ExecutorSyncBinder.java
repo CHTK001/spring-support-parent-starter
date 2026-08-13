@@ -10,6 +10,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 
 /**
@@ -20,6 +24,7 @@ import java.util.function.BiConsumer;
  *   <li>subscribe {@link JobSyncTopics#TASK_COMMAND} → 派发到本地 {@link JobSyncBus}</li>
  *   <li>本地 {@code JobSyncBus} 的 {@link JobSyncTopics#TASK_LOG} 事件 → send 上行给 Scheduler</li>
  *   <li>启动时 send {@link JobSyncTopics#REGISTER} 上报</li>
+ *   <li>连接失败时由内部 daemon 周期重试, 避免 server 尚不可用时 EXECUTOR 永远失联</li>
  * </ul>
  *
  * @author CH
@@ -65,6 +70,16 @@ public class ExecutorSyncBinder {
     private BiConsumer<String, Object> logForwarder;
 
     /**
+     * 重连守护调度
+     */
+    private ScheduledExecutorService reconnectExecutor;
+
+    /**
+     * 标记是否已注册 (成功后置 true, 避免重复 log)
+     */
+    private final AtomicBoolean registered = new AtomicBoolean(false);
+
+    /**
      * 启动绑定。
      */
     @PostConstruct
@@ -86,13 +101,39 @@ public class ExecutorSyncBinder {
         };
         bus.subscribe(JobSyncTopics.TASK_LOG, logForwarder);
 
+        // 同步尝试一次, 失败后由守护线程周期重试
+        tryConnectAndRegister();
+
+        reconnectExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "job-executor-reconnect");
+            t.setDaemon(true);
+            return t;
+        });
+        reconnectExecutor.scheduleWithFixedDelay(() -> {
+            if (registered.get()) {
+                return;
+            }
+            try {
+                tryConnectAndRegister();
+            } catch (Throwable ex) {
+                log.debug("[job] reconnect 失败 cause={}", ex.getMessage());
+            }
+        }, 5L, 5L, TimeUnit.SECONDS);
+    }
+
+    /**
+     * 同步尝试连接 + REGISTER 上行一次。
+     */
+    private void tryConnectAndRegister() {
         try {
             syncClient.connect();
             syncClient.send(JobSyncTopics.REGISTER, buildRegisterPayload());
-            log.info("[job] EXECUTOR 已连接 serverUrl={} nodeId={}",
-                    properties.getSync().getExecutor().getServerUrl(), nodeId);
+            if (registered.compareAndSet(false, true)) {
+                log.info("[job] EXECUTOR 已连接 serverUrl={} nodeId={}",
+                        properties.getSync().getExecutor().getServerUrl(), nodeId);
+            }
         } catch (Exception ex) {
-            log.warn("[job] ExecutorSyncBinder 启动失败 cause={}", ex.getMessage());
+            log.warn("[job] ExecutorSyncBinder 连接失败 cause={}", ex.getMessage());
         }
     }
 
@@ -101,6 +142,9 @@ public class ExecutorSyncBinder {
      */
     @PreDestroy
     public void shutdown() {
+        if (reconnectExecutor != null) {
+            reconnectExecutor.shutdownNow();
+        }
         if (cmdHandler != null) {
             syncClient.unsubscribe(JobSyncTopics.TASK_COMMAND);
         }
