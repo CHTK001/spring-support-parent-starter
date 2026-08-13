@@ -10,6 +10,8 @@ import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 
 /**
@@ -17,7 +19,8 @@ import java.util.function.BiConsumer;
  *
  * <p>持有仓库公共 {@link SyncServer}, 完成:</p>
  * <ul>
- *   <li>本地 {@code JobSyncBus} 的 {@link JobSyncTopics#TASK_COMMAND} 事件 → publish 推给所有 Executor</li>
+ *   <li>本地 {@code JobSyncBus} 的 {@link JobSyncTopics#TASK_COMMAND} 事件 → 通过 {@code syncServer.send}
+ *       路由到 <b>单个</b> 在线 Executor (粘性轮询), 实现多 Executor HA 去重, 避免每个执行器都触发任务</li>
  *   <li>subscribe {@link JobSyncTopics#TASK_LOG} → 写入 {@link JobLogSink} (默认 stdout)</li>
  *   <li>subscribe {@link JobSyncTopics#REGISTER} → 仅打日志</li>
  * </ul>
@@ -65,27 +68,50 @@ public class SchedulerSyncBinder {
     private SyncMessageHandler logHandler;
 
     /**
+     * 粘性轮询计数, 累加后取模 client 数, 保证每个 due 任务落在同一 executor 直到 client 列表变化。
+     */
+    private final AtomicLong stickyCounter = new AtomicLong(0L);
+
+    /**
      * 启动绑定。
      */
     @PostConstruct
     public void start() {
-        // 本地 bus 上的 cmd 推到所有 executor
+        // 本地 bus 上的 cmd 推给 <b>一个</b> executor (粘性轮询)
         cmdForwarder = (source, payload) -> {
             try {
-                syncServer.publish(JobSyncTopics.TASK_COMMAND, payload);
+                List<String> clients = syncServer.getConnectedClients();
+                if (clients == null || clients.isEmpty()) {
+                    // 0 在线 executor: 退化为 broadcast (历史行为, 等待下次 tick)
+                    syncServer.publish(JobSyncTopics.TASK_COMMAND, payload);
+                    log.debug("[job] 无在线 executor, broadcast fallback payload={}", payload);
+                    return;
+                }
+                long idx = Math.floorMod(stickyCounter.getAndIncrement(), (long) clients.size());
+                String clientId = clients.get((int) idx);
+                syncServer.send(JobSyncTopics.TASK_COMMAND, clientId, payload);
+                log.debug("[job] cmd 路由 clientId={} idx={}/{} payload={}",
+                        clientId, idx, clients.size(), payload);
             } catch (Throwable ex) {
-                log.warn("[job] publish 失败 cause={}", ex.getMessage());
+                log.warn("[job] send 失败 cause={}", ex.getMessage());
             }
         };
         bus.subscribe(JobSyncTopics.TASK_COMMAND, cmdForwarder);
 
         // 接收 executor 上行的 task-log
         logHandler = (topic, payload) -> {
-            if (!(payload instanceof JobLogEvent)) {
+            // wire 上收到的是 String (Netty 行协议), 用 JobLogEvent.fromJson 反序列化
+            JobLogEvent event = null;
+            if (payload instanceof JobLogEvent) {
+                event = (JobLogEvent) payload;
+            } else if (payload instanceof String) {
+                event = JobLogEvent.fromJson((String) payload);
+            }
+            if (event == null) {
                 return;
             }
             try {
-                logSink.write((JobLogEvent) payload);
+                logSink.write(event);
             } catch (Throwable ex) {
                 log.warn("[job] logSink 写入失败 cause={}", ex.getMessage(), ex);
             }

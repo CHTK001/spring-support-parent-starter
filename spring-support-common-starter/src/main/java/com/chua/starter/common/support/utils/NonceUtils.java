@@ -6,8 +6,6 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.util.StringUtils;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -38,8 +36,8 @@ public class NonceUtils {
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    /** 排除的参数字段（如 file 等） */
-    private static final Set<String> EXCLUDED_PARAM_KEYS = Set.of("file", "files");
+    /** 排除的参数字段（与前端 collectParams 中 /^file$/i 正则一致，仅排除 file） */
+    private static final Set<String> EXCLUDED_PARAM_KEYS = Set.of("file");
 
     /** 签名密钥，可通过 setSecretKey 或配置注入，默认与 NonceSignProperties.DEFAULT_SECRET 保持一致 */
     private static volatile String secretKey = NonceSignProperties.DEFAULT_SECRET;
@@ -285,15 +283,13 @@ public class NonceUtils {
     public static String generateSign(HttpServletRequest request, String nonce, String fingerprint, long timestamp) {
         try {
             Map<String, String> filteredParams = collectParams(request);
-            List<String> pairs = new ArrayList<>();
-            for (String key : new TreeSet<>(filteredParams.keySet())) {
-                pairs.add(key + "=" + filteredParams.get(key));
-            }
-            String paramsString = String.join("&", pairs);
-            String paramsMd5 = md5Hash(paramsString);
+            // filterBlank=false: 与前端 collectParams 一致，保留空字符串值
+            String paramsString = com.chua.common.support.utils.SignUtils.buildSortedParamString(
+                    filteredParams, EXCLUDED_PARAM_KEYS, "&", "=", false);
+            String paramsMd5 = com.chua.common.support.utils.DigestUtils.md5(paramsString);
             String sk = secretKey != null ? secretKey : NonceSignProperties.DEFAULT_SECRET;
             String signInput = nonce + fingerprint + timestamp + paramsMd5 + sk;
-            return md5Hash(signInput);
+            return com.chua.common.support.utils.DigestUtils.md5(signInput);
         } catch (Exception e) {
             log.error("生成签名时发生异常", e);
             return "";
@@ -394,26 +390,7 @@ public class NonceUtils {
                 .substring(0, Math.min(length, 20)); // 限制长度
     }
 
-    /**
-     * MD5 哈希（UTF-8，与前端一致）
-     *
-     * @param input 输入字符串
-     * @return 32 位十六进制
-     */
-    private static String md5Hash(String input) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder(32);
-            for (byte b : digest) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (Exception e) {
-            log.warn("MD5 计算异常", e);
-            return "";
-        }
-    }
+
 
     /**
      * Nonce验证结果

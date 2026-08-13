@@ -446,24 +446,32 @@ public class DefaultScopeChatClient implements ChatClient {
         if (resolveModel(scope) != null && !resolveModel(scope).isBlank()) {
             if (delegate instanceof ExtensibleChatClient ec) {
                 ec.model(resolveModel(scope));
+            } else {
+                delegate.model(resolveModel(scope));
             }
         }
         String systemPrompt = scope.getSystemPrompt();
         if (systemPrompt != null && !systemPrompt.isBlank()) {
             if (delegate instanceof ExtensibleChatClient ec) {
                 ec.system(systemPrompt);
+            } else {
+                delegate.system(systemPrompt);
             }
         }
         Double temperature = scope.getTemperature();
         if (temperature != null) {
             if (delegate instanceof ExtensibleChatClient ec) {
                 ec.temperature(temperature);
+            } else {
+                delegate.temperature(temperature);
             }
         }
         Integer maxTokens = scope.getMaxTokens();
         if (maxTokens != null) {
             if (delegate instanceof ExtensibleChatClient ec) {
                 ec.maxTokens(maxTokens);
+            } else {
+                delegate.maxTokens(maxTokens);
             }
         }
         if (context != null && context.getHistory() != null) {

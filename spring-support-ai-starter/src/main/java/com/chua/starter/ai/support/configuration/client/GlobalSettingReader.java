@@ -129,4 +129,17 @@ public class GlobalSettingReader {
             return null;
         }
     }
+
+    /**
+     * 读取小数值，解析失败时返回默认值。
+     *
+     * @param group        分组
+     * @param field        字段名
+     * @param defaultValue 默认值
+     * @return 小数值
+     */
+    public double getDouble(String group, String field, double defaultValue) {
+        BigDecimal value = getDecimalOrNull(group, field);
+        return value != null ? value.doubleValue() : defaultValue;
+    }
 }

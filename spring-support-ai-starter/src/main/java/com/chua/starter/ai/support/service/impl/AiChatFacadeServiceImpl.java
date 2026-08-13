@@ -86,13 +86,19 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      * </ul>
      */
     private ChatClient resolveChatClient(Integer groupId, String model) {
-        // 系统内部调用（无分组）：使用全局聚合 ChatClient
+        // 系统内部调用（无分组）：优先使用聚合 ChatClient（复用实例，按模型路由）
         if (groupId == null) {
+            ChatClient aggregate = chatClientRegistry.getAggregate();
+            if (aggregate instanceof com.chua.common.support.ai.chat.aggregate.AggregateChatClient ac
+                    && ac.clientCount() > 0) {
+                log.debug("[AiChatFacade] 使用聚合 ChatClient（系统内部调用）");
+                return ac;
+            }
             ChatClient global = chatClientRegistry.getDefault();
             if (global == null) {
                 throw new IllegalStateException("全局 ChatClient 未初始化，请检查 AiConfiguration 配置");
             }
-            log.debug("[AiChatFacade] 使用全局 ChatClient（系统内部调用）");
+            log.debug("[AiChatFacade] 使用全局 ChatClient（系统内部调用，聚合客户端不可用或无底层客户端）");
             return global;
         }
 

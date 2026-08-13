@@ -77,7 +77,9 @@ public class ExecutorSyncBinder {
                 return;
             }
             try {
-                syncClient.send(JobSyncTopics.TASK_LOG, payload);
+                // 序列化为 JSON 而非 toString(), 服务端可反序列化为 JobLogEvent
+                String json = ((JobLogEvent) payload).toJson();
+                syncClient.send(JobSyncTopics.TASK_LOG, json);
             } catch (Throwable ex) {
                 log.warn("[job] 上行 TASK_LOG 失败 cause={}", ex.getMessage());
             }

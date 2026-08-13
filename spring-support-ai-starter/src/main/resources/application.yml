@@ -16,15 +16,17 @@ spring:
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
       - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
   datasource:
-    driver-class-name: org.h2.Driver
-    url: jdbc:h2:mem:aidb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false
-    username: sa
-    password:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://172.16.0.40:3306/ai_test?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+    username: root
+    password: root@
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 5000
   sql:
     init:
-      mode: always
-      schema-locations: classpath:schema-h2.sql
-      encoding: utf-8
+      mode: never
   h2:
     console:
       enabled: false

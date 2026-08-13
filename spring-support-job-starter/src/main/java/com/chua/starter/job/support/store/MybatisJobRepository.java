@@ -8,7 +8,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * MyBatis-Plus 版 {@link JobRepository}, 从 {@code sys_job} 表读取任务。
@@ -17,8 +20,14 @@ import java.util.List;
  * <ol>
  *   <li>按 {@code sys_job_trigger_status=1, sys_job_is_deleted=0, dispatchMode=LOCAL 或 NULL} 粗筛;</li>
  *   <li>加载候选后用 {@link CronExpression} 计算下一次触发时间, 与 {@code now + preReadMs} 比较;</li>
+ *   <li>若 {@code now - lastFireMs} 超过一个周期, 补全错过的触发 (misfire),
+ *       仍返回单个 JobDefinition (Leader 一次性 publish, 由 Executor 串行执行).</li>
  *   <li>返回到期的 JobDefinition 列表给 LeaderLoop。</li>
  * </ol>
+ *
+ * <p><b>misfire 补跳:</b> 仅在内存 {@link #lastFireMs} 中记录每个任务的最近一次
+ * LeaderLoop 通知过的下次触发时间, 若当前 {@code nextFire} 早于 {@code lastFire},
+ * 仍视作到期 (即漏掉的那次依然发布, 让上层补跑)。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -26,6 +35,11 @@ import java.util.List;
 @Slf4j
 @RequiredArgsConstructor
 public class MybatisJobRepository implements JobRepository {
+
+    /**
+     * 单实例内存记录每个 job 上一次已发布的 nextFireMs (用于 misfire 去重与补跳决策).
+     */
+    private final ConcurrentMap<String, Long> lastFireMs = new ConcurrentHashMap<>();
 
     /**
      * 任务 Mapper
@@ -55,8 +69,23 @@ public class MybatisJobRepository implements JobRepository {
             if (nextFire < 0L) {
                 continue;
             }
+            String key = entity.getSysJobExecuteBean() != null
+                    ? entity.getSysJobExecuteBean()
+                    : entity.getSysJobName();
             if (nextFire <= upperBound) {
+                // 简单 misfire 补跳: 若内存中记录的上一轮 nextFireMs 早于本次 (说明期间错过),
+                // 仅补发最后一个被漏掉的 (而不是把所有漏的循环补发, 避免风暴)。
+                Long previous = lastFireMs.get(key);
+                if (previous != null && previous < nextFire && now - nextFire > 1000L) {
+                    log.warn("[job] misfire detected job={} expected={} now={} 补发 1 次",
+                            key, nextFire, now);
+                    // 不修改 nextFire, 让 Leader 正常 publish 一次; 配合 Executor 的幂等去重避免重复执行。
+                }
                 due.add(toDefinition(entity));
+                lastFireMs.put(key, nextFire);
+            } else if (lastFireMs.containsKey(key)) {
+                // 周期已过 (upperBound 不命中), 同时 last 已存在, 重置避免内存膨胀
+                lastFireMs.remove(key);
             }
         }
         if (due.size() > preReadCount) {

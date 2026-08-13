@@ -1,24 +1,25 @@
 package com.chua.starter.common.support.utils;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import com.chua.common.support.utils.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
- * 签名计算工具类
+ * 签名计算工具类（Spring 侧门面）
+ *
+ * <p>本类作为 {@link com.chua.common.support.utils.SignUtils} 的薄封装，
+ * 保留原有公共 API 不变，内部全部委托给核心工具类实现，
+ * 避免重复的 MD5/SHA256 计算逻辑。</p>
+ *
+ * @author CH
+ * @see com.chua.common.support.utils.SignUtils
  */
 public class SignUtils {
-    private static final Logger log = LoggerFactory.getLogger(SignUtils.class);
-        /**
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SignUtils.class);
+
+    /**
      * 默认的参数连接符
      */
     private static final String DEFAULT_SEPARATOR = "&";
@@ -32,6 +33,11 @@ public class SignUtils {
      * 需要排除的参数名称
      */
     private static final Set<String> DEFAULT_EXCLUDE_KEYS = Set.of("sign", "signature");
+
+    private SignUtils() {
+    }
+
+    // ==================== MD5 签名 ====================
 
     /**
      * 根据Map参数计算MD5签名
@@ -51,12 +57,11 @@ public class SignUtils {
      * @return MD5签名字符串
      */
     public static String calculateMd5Sign(Map<String, Object> params, String secretKey) {
-        String paramString = buildSortedParamString(params);
-        if (StringUtils.isNotEmpty(secretKey)) {
-            paramString += secretKey;
-        }
-        return md5Hex(paramString);
+        return com.chua.common.support.utils.SignUtils.signDirectKey(params, secretKey,
+                DEFAULT_KEY_VALUE_SEPARATOR, DEFAULT_SEPARATOR, DEFAULT_EXCLUDE_KEYS);
     }
+
+    // ==================== SHA256 签名 ====================
 
     /**
      * 根据Map参数计算SHA256签名
@@ -74,19 +79,12 @@ public class SignUtils {
      * @return SHA256签名字符串
      */
     public static String calculateSha256Sign(Map<String, Object> params, String secretKey) {
-        String paramString = buildSortedParamString(params);
-        if (StringUtils.isNotEmpty(secretKey)) {
-            paramString += secretKey;
-        }
-        return sha256Hex(paramString);
+        return com.chua.common.support.utils.SignUtils.signSha256(params, secretKey,
+                DEFAULT_KEY_VALUE_SEPARATOR, DEFAULT_SEPARATOR, DEFAULT_EXCLUDE_KEYS);
     }
 
-    /**
-     * 验证MD5签名
-     *
-     * @param expectedSign 期望的签名值
-     * @return 验证结果
-     */
+    // ==================== MD5 签名（JsonObject 兼容） ====================
+
     /**
      * 根据JsonObject参数生成MD5签名。
      *
@@ -97,6 +95,14 @@ public class SignUtils {
         return calculateMd5Sign(jsonObject);
     }
 
+    // ==================== 签名验证 ====================
+
+    /**
+     * 验证MD5签名
+     *
+     * @param expectedSign 期望的签名值
+     * @return 验证结果
+     */
     public static boolean verifyMd5Sign(Map<String, Object> params, String expectedSign) {
         return verifyMd5Sign(params, expectedSign, null);
     }
@@ -112,8 +118,7 @@ public class SignUtils {
         if (StringUtils.isEmpty(expectedSign)) {
             return false;
         }
-        String actualSign = calculateMd5Sign(params, secretKey);
-        return expectedSign.equalsIgnoreCase(actualSign);
+        return com.chua.common.support.utils.SignUtils.verifyDirectKey(params, expectedSign, secretKey, DEFAULT_EXCLUDE_KEYS);
     }
 
     /**
@@ -137,9 +142,10 @@ public class SignUtils {
         if (StringUtils.isEmpty(expectedSign)) {
             return false;
         }
-        String actualSign = calculateSha256Sign(params, secretKey);
-        return expectedSign.equalsIgnoreCase(actualSign);
+        return com.chua.common.support.utils.SignUtils.verifySha256(params, expectedSign, secretKey, DEFAULT_EXCLUDE_KEYS);
     }
+
+    // ==================== 构建排序参数字符串 ====================
 
     /**
      * 构建排序后的参数字符串
@@ -172,22 +178,10 @@ public class SignUtils {
                                                 Set<String> excludeKeys,
                                                 String separator,
                                                 String keyValueSeparator) {
-        if (params == null || params.isEmpty()) {
-            return "";
-        }
-
-        Set<String> excludeSet = excludeKeys != null ? excludeKeys : Collections.emptySet();
-        String sep = separator != null ? separator : DEFAULT_SEPARATOR;
-        String kvSep = keyValueSeparator != null ? keyValueSeparator : DEFAULT_KEY_VALUE_SEPARATOR;
-
-        return params.entrySet().stream()
-                .filter(entry -> entry.getKey() != null && entry.getValue() != null)
-                .filter(entry -> !excludeSet.contains(entry.getKey().toLowerCase()))
-                .filter(entry -> StringUtils.isNotEmpty(String.valueOf(entry.getValue())))
-                .sorted(Map.Entry.comparingByKey())
-                .map(entry -> entry.getKey() + kvSep + entry.getValue())
-                .collect(Collectors.joining(sep));
+        return com.chua.common.support.utils.SignUtils.buildSortedParamString(params, excludeKeys, separator, keyValueSeparator);
     }
+
+    // ==================== 构建签名参数 Map ====================
 
     /**
      * 构建签名参数Map（包含签名字段）
@@ -197,10 +191,7 @@ public class SignUtils {
      * @return 包含签名的参数Map
      */
     public static Map<String, Object> buildSignedParams(Map<String, Object> params, String secretKey) {
-        Map<String, Object> signedParams = new HashMap<>(params);
-        String sign = calculateMd5Sign(params, secretKey);
-        signedParams.put("sign", sign);
-        return signedParams;
+        return com.chua.common.support.utils.SignUtils.buildSignedParams(params, secretKey);
     }
 
     /**
@@ -212,10 +203,7 @@ public class SignUtils {
      * @return 包含签名的参数Map
      */
     public static Map<String, Object> buildSignedParams(Map<String, Object> params, String secretKey, String signKey) {
-        Map<String, Object> signedParams = new HashMap<>(params);
-        String sign = calculateMd5Sign(params, secretKey);
-        signedParams.put(signKey, sign);
-        return signedParams;
+        return com.chua.common.support.utils.SignUtils.buildSignedParams(params, secretKey, signKey);
     }
 
     /**
@@ -226,11 +214,10 @@ public class SignUtils {
      * @return 包含签名的参数Map
      */
     public static Map<String, Object> buildSha256SignedParams(Map<String, Object> params, String secretKey) {
-        Map<String, Object> signedParams = new HashMap<>(params);
-        String sign = calculateSha256Sign(params, secretKey);
-        signedParams.put("sign", sign);
-        return signedParams;
+        return com.chua.common.support.utils.SignUtils.buildSha256SignedParams(params, secretKey);
     }
+
+    // ==================== 提取并验证签名 ====================
 
     /**
      * 从参数Map中提取并验证签名
@@ -258,7 +245,7 @@ public class SignUtils {
         }
 
         String expectedSign = String.valueOf(params.get(signKey));
-        Map<String, Object> paramsWithoutSign = new HashMap<>(params);
+        Map<String, Object> paramsWithoutSign = new java.util.HashMap<>(params);
         paramsWithoutSign.remove(signKey);
 
         boolean result = verifyMd5Sign(paramsWithoutSign, expectedSign, secretKey);
@@ -268,45 +255,7 @@ public class SignUtils {
         return result;
     }
 
-    /**
-     * 计算 MD5 十六进制摘要
-     *
-     * @param input 输入字符串
-     * @return MD5 十六进制字符串
-     */
-    private static String md5Hex(String input) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder();
-            for (byte b : digest) {
-                sb.append(String.format("%02x", b & 0xff));
-            }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("MD5 algorithm not available", e);
-        }
-    }
-
-    /**
-     * 计算 SHA-256 十六进制摘要
-     *
-     * @param input 输入字符串
-     * @return SHA-256 十六进制字符串
-     */
-    private static String sha256Hex(String input) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder();
-            for (byte b : digest) {
-                sb.append(String.format("%02x", b & 0xff));
-            }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 algorithm not available", e);
-        }
-    }
+    // ==================== 调试 ====================
 
     /**
      * 打印调试信息
