@@ -105,19 +105,40 @@ public class AiRuntimeSettingController {
     }
 
     /**
-     * 更新对话路由配置（整组替换，触发热重建）。
+     * 更新对话路由配置（增量更新，触发热重建）。
      *
-     * @param body 配置请求（group + fields）
+     * <p>逐字段写入，避免整组替换删除未提交的其它配置项。</p>
+     *
+     * @param body 配置请求（fields 列表）
      * @return 更新结果
      */
     @Permission("admin")
-    @Operation(summary = "更新对话路由配置", description = "整组替换 runtime 配置并触发热重建全局 ChatClient")
+    @Operation(summary = "更新对话路由配置", description = "增量更新 runtime 配置并触发热重建全局 ChatClient")
     @PutMapping
     public ReturnResult<?> update(@RequestBody Map<String, Object> body) {
-        Map<String, Object> replaceBody = new LinkedHashMap<>();
-        replaceBody.put("group", GROUP);
-        replaceBody.put("fields", body.getOrDefault("fields", body));
-        settingService.replace(replaceBody);
+        Object fieldsObj = body.getOrDefault("fields", body);
+        if (!(fieldsObj instanceof List<?> fields) || fields.isEmpty()) {
+            return ReturnResult.ok("配置字段列表为空");
+        }
+        // 逐字段增量写入，避免整组替换删除未提交的其它配置
+        for (Object item : fields) {
+            if (!(item instanceof Map<?, ?> field)) {
+                continue;
+            }
+            Object fieldNameObj = field.get("field");
+            if (fieldNameObj == null) {
+                continue;
+            }
+            String fieldName = fieldNameObj.toString();
+            if (fieldName.isBlank()) {
+                continue;
+            }
+            Object valueObj = field.get("value");
+            String value = valueObj != null ? valueObj.toString() : "";
+            Object descObj = field.get("description");
+            String description = descObj != null ? descObj.toString() : "";
+            settingService.upsertValue(GROUP, fieldName, value, description);
+        }
         try {
             globalChatClientManager.rebuild();
         } catch (Exception e) {
