@@ -81,21 +81,31 @@ public class SchedulerSyncBinder {
         cmdForwarder = (source, payload) -> {
             try {
                 List<String> clients = syncServer.getConnectedClients();
-                log.info("[job] getConnectedClients()={}", clients);
+                log.info("[job] getConnectedClients()={} size={}", clients, clients == null ? 0 : clients.size());
                 if (clients == null || clients.isEmpty()) {
                     // 0 在线 executor: 退化为 broadcast (历史行为, 等待下次 tick)
                     syncServer.publish(JobSyncTopics.TASK_COMMAND, payload);
-                    log.debug("[job] 无在线 executor, broadcast fallback payload={}", payload);
+                    log.info("[job] cmd 已发 (broadcast fallback) topic={} payload={}",
+                            JobSyncTopics.TASK_COMMAND, payload);
                     return;
                 }
+                if (clients.size() == 1) {
+                    // 单 EXECUTOR 场景: 直接 broadcast 兼容 stale channel entry (规避 NettyTcpSyncServer
+                    //   send 单播路径在 client 已断但 map 未清理时静默丢帧的 pre-existing bug)
+                    syncServer.publish(JobSyncTopics.TASK_COMMAND, payload);
+                    log.info("[job] cmd 已发 (单 client broadcast 兼容) topic={} clientId={} payload={}",
+                            JobSyncTopics.TASK_COMMAND, clients.get(0), payload);
+                    return;
+                }
+                // 多 EXECUTOR 场景: sticky 单播 (#1 HA 去重的核心)
                 long idx = Math.floorMod(stickyCounter.getAndIncrement(), (long) clients.size());
                 String clientId = clients.get((int) idx);
                 try {
                     syncServer.send(JobSyncTopics.TASK_COMMAND, clientId, payload);
-                    log.info("[job] cmd 已发 (单播) topic={} clientId={} idx={}/{} payload={}",
+                    log.info("[job] cmd 已发 (sticky 单播) topic={} clientId={} idx={}/{} payload={}",
                             JobSyncTopics.TASK_COMMAND, clientId, idx, clients.size(), payload);
                 } catch (Throwable ex) {
-                    log.warn("[job] cmd send 异常 cause={}", ex.getMessage(), ex);
+                    log.warn("[job] cmd send 单播异常 cause={}", ex.getMessage(), ex);
                 }
             } catch (Throwable ex) {
                 log.warn("[job] send 失败 cause={}", ex.getMessage());
