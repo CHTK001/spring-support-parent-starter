@@ -7,6 +7,7 @@ import com.chua.common.support.ai.agent.AgentUsage;
 import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.ai.chat.ChatResponse;
 import com.chua.common.support.ai.chat.ChatResponse.State;
+import com.chua.common.support.ai.chat.ChatSyncResponse;
 import com.chua.common.support.ai.chat.ModelDefinition;
 import com.chua.common.support.utils.StringUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -186,6 +187,7 @@ public class DefaultScopeChatClient implements ChatClient {
             return ChatResponse.builder()
                     .state(State.STOP)
                     .content(execution.text())
+                    .usage(toAiUsage(execution.usage()))
                     .build();
         } finally {
             closeQuietly(delegate);
@@ -323,6 +325,18 @@ public class DefaultScopeChatClient implements ChatClient {
     }
 
     @Override
+    public ChatSyncResponse chatSyncWithResponse(String input) {
+        ChatResponse response = chat(ChatScope.builder().input(input).build());
+        if (response == null) {
+            return ChatSyncResponse.builder().build();
+        }
+        return ChatSyncResponse.builder()
+                .text(response.getContent())
+                .usage(response.getUsage())
+                .build();
+    }
+
+    @Override
     public String chatSync(String input, long timeoutMillis) {
         ChatScope scope = ChatScope.builder()
                 .input(input)
@@ -436,8 +450,46 @@ public class DefaultScopeChatClient implements ChatClient {
                                             ChatScope scope,
                                             String input) {
         long timeout = resolveTimeout(scope);
-        String text = timeout > 0 ? delegate.chatSync(input, timeout) : delegate.chatSync(input);
-        return new ChatExecutionResult(text, null, Map.of());
+        // 优先通过 chatSyncWithResponse 获取带用量数据的结果
+        ChatSyncResponse syncResponse = delegate.chatSyncWithResponse(input);
+        String text = syncResponse != null ? syncResponse.getText() : null;
+        return new ChatExecutionResult(text, toAgentUsage(syncResponse != null ? syncResponse.getUsage() : null), Map.of());
+    }
+
+    /**
+     * 将底层 AiUsage 转换为 AgentUsage（空值安全）。
+     *
+     * @param usage 底层用量
+     * @return AgentUsage；usage 为 null 时返回 null
+     */
+    private AgentUsage toAgentUsage(com.chua.common.support.ai.AiUsage usage) {
+        if (usage == null) {
+            return null;
+        }
+        return AgentUsage.builder()
+                .promptTokens(usage.getInputTokens())
+                .completionTokens(usage.getOutputTokens())
+                .totalTokens(usage.getTotalTokens())
+                .model(usage.getModel())
+                .build();
+    }
+
+    /**
+     * 将 AgentUsage 转回 AiUsage（空值安全）。
+     *
+     * @param usage Agent 用量
+     * @return AiUsage；usage 为 null 时返回 null
+     */
+    private com.chua.common.support.ai.AiUsage toAiUsage(AgentUsage usage) {
+        if (usage == null) {
+            return null;
+        }
+        return com.chua.common.support.ai.AiUsage.builder()
+                .inputTokens(usage.getPromptTokens())
+                .outputTokens(usage.getCompletionTokens())
+                .totalTokens(usage.getTotalTokens())
+                .model(usage.getModel())
+                .build();
     }
 
     private com.chua.common.support.ai.chat.ChatClient createDelegate(ChatScope scope, ChatContext context) {

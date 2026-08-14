@@ -98,7 +98,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
 
     @Override
     public boolean verify(String appKey, String secret, String ip) {
-        SysAiAppKey dbAppKey = getByAppKey(appKey);
+        SysAiAppKey dbAppKey = queryAppKeyUncached(appKey);
         if (!isValidAppKey(dbAppKey, ip)) {
             return false;
         }
@@ -107,7 +107,20 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
 
     @Override
     public boolean verifyAppKeyOnly(String appKey, String ip) {
-        return isValidAppKey(getByAppKey(appKey), ip);
+        return isValidAppKey(queryAppKeyUncached(appKey), ip);
+    }
+
+    /**
+     * 绕过缓存实时查询 AppKey（限流/配额检查需要最新 DB 值）。
+     *
+     * @param appKey AppKey
+     * @return AppKey 记录；不存在返回 null
+     */
+    private SysAiAppKey queryAppKeyUncached(String appKey) {
+        if (StringUtils.isBlank(appKey)) {
+            return null;
+        }
+        return sysAiAppKeyMapper.selectByAppKey(appKey);
     }
 
     /**
