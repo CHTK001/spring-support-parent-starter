@@ -18,8 +18,8 @@ public final class UserAgent {
      * @return UserAgent 实例
      */
     public static UserAgentInfo parseUserAgentString(String userAgentString) {
-        if (userAgentString == null) {
-            return new UserAgentInfo(Browser.UNKNOWN, OperatingSystem.UNKNOWN);
+        if (userAgentString == null || userAgentString.isBlank()) {
+            return new UserAgentInfo(null, null);
         }
         String lower = userAgentString.toLowerCase();
         Browser browser = Browser.UNKNOWN;
@@ -100,7 +100,7 @@ public final class UserAgent {
 
         @Override
         public String toString() {
-            return name();
+            return this == UNKNOWN ? null : name();
         }
     }
 
@@ -116,7 +116,7 @@ public final class UserAgent {
         UNKNOWN;
 
         public String getName() {
-            return name();
+            return this == UNKNOWN ? null : name();
         }
     }
 }
