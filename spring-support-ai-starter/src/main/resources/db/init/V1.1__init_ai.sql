@@ -1913,7 +1913,7 @@ SELECT * FROM (
   UNION ALL
   SELECT 'runtime', 'provider_base_url', 'https://open.bigmodel.cn/api/paas/v4/', 'STRING', '智谱 AI 基础地址（必须以 / 结尾）', 70, 1, 'system', 1, 'system', 1
   UNION ALL
-  SELECT 'runtime', 'provider_api_key', 'REPLACE_WITH_ZHIPU_KEY', 'STRING', '智谱 API Key', 71, 1, 'system', 1, 'system', 1
+  SELECT 'runtime', 'provider_api_key', '', 'STRING', '智谱 API Key', 71, 1, 'system', 1, 'system', 1
   UNION ALL
   SELECT 'runtime', 'charge_enabled', 'false', 'BOOLEAN', '每次请求扣减额度', 41, 1, 'system', 1, 'system', 1
   UNION ALL
