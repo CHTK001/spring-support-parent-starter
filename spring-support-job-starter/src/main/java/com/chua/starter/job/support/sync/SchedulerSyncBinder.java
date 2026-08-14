@@ -90,7 +90,7 @@ public class SchedulerSyncBinder {
                 long idx = Math.floorMod(stickyCounter.getAndIncrement(), (long) clients.size());
                 String clientId = clients.get((int) idx);
                 syncServer.send(JobSyncTopics.TASK_COMMAND, clientId, payload);
-                log.debug("[job] cmd 路由 clientId={} idx={}/{} payload={}",
+                log.info("[job] cmd 路由 clientId={} idx={}/{} payload={}",
                         clientId, idx, clients.size(), payload);
             } catch (Throwable ex) {
                 log.warn("[job] send 失败 cause={}", ex.getMessage());
