@@ -84,7 +84,11 @@ public class ExecutorSyncBinder {
      */
     @PostConstruct
     public void start() {
-        cmdHandler = (topic, payload) -> bus.publish(topic, nodeId, payload);
+        cmdHandler = (topic, payload) -> {
+            log.info("[job] EXECUTOR cmdHandler 收到 topic={} payload={} payloadClass={}",
+                    topic, payload, payload == null ? "null" : payload.getClass().getName());
+            bus.publish(topic, nodeId, payload);
+        };
         syncClient.subscribe(JobSyncTopics.TASK_COMMAND, cmdHandler);
 
         logForwarder = (source, payload) -> {

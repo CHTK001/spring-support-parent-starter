@@ -81,6 +81,7 @@ public class SchedulerSyncBinder {
         cmdForwarder = (source, payload) -> {
             try {
                 List<String> clients = syncServer.getConnectedClients();
+                log.info("[job] getConnectedClients()={}", clients);
                 if (clients == null || clients.isEmpty()) {
                     // 0 在线 executor: 退化为 broadcast (历史行为, 等待下次 tick)
                     syncServer.publish(JobSyncTopics.TASK_COMMAND, payload);
@@ -89,9 +90,13 @@ public class SchedulerSyncBinder {
                 }
                 long idx = Math.floorMod(stickyCounter.getAndIncrement(), (long) clients.size());
                 String clientId = clients.get((int) idx);
-                syncServer.send(JobSyncTopics.TASK_COMMAND, clientId, payload);
-                log.info("[job] cmd 路由 clientId={} idx={}/{} payload={}",
-                        clientId, idx, clients.size(), payload);
+                try {
+                    syncServer.send(JobSyncTopics.TASK_COMMAND, clientId, payload);
+                    log.info("[job] cmd 已发 (单播) topic={} clientId={} idx={}/{} payload={}",
+                            JobSyncTopics.TASK_COMMAND, clientId, idx, clients.size(), payload);
+                } catch (Throwable ex) {
+                    log.warn("[job] cmd send 异常 cause={}", ex.getMessage(), ex);
+                }
             } catch (Throwable ex) {
                 log.warn("[job] send 失败 cause={}", ex.getMessage());
             }
