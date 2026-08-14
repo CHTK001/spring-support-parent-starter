@@ -6,6 +6,7 @@ import com.chua.starter.common.support.annotations.SysLog;
 import com.chua.starter.common.support.logger.AbstractLoggerPointcutAdvisor;
 import com.chua.starter.common.support.logger.LoggerIgnore;
 import com.chua.starter.common.support.logger.SysLoggerInfo;
+import com.chua.starter.common.support.network.UserAgent;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -71,6 +72,13 @@ public class SysLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
         sysLoggerInfo.setLogModule(StringUtils.defaultString(sysLog.module(), module));
         sysLoggerInfo.setLogCost((System.currentTimeMillis() - startTime));
         sysLoggerInfo.setClientIp(getClientIp());
+        String ua = getHeader("User-Agent");
+        if (ua != null) {
+            UserAgent.UserAgentInfo agentInfo = UserAgent.parseUserAgentString(ua);
+            sysLoggerInfo.setUa(ua);
+            sysLoggerInfo.setBrowser(agentInfo.getBrowser() != null ? agentInfo.getBrowser().toString() : null);
+            sysLoggerInfo.setSystem(agentInfo.getOperatingSystem() != null ? agentInfo.getOperatingSystem().getName() : null);
+        }
 
         if (sysLog.logArgs()) {
             String json = buildParamJson(invocation);
