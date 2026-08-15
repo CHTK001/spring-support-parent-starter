@@ -16,7 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 基于Spring的RPC客户端实现
  * <p>
- * 使用Spring的ApplicationContext来查找和调用远程服务
+ * 委托真实的 {@link RpcClient}（json/native/dubbo/sofa 等协议）发起网络调用，
+ * 并对远程代理附加拦截器、重试、熔断等 Spring 增强能力。
  * </p>
  *
  * @author CH
@@ -30,6 +31,11 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
     private final RpcConsumerConfig consumerConfig;
     private final String appName;
     private final Map<Class<?>, Object> proxyCache = new ConcurrentHashMap<>();
+
+    /**
+     * 真实协议客户端委托（懒初始化），避免 SPI 构造阶段触发注册中心连接
+     */
+    private volatile RpcClient delegate;
 
     public SpringRpcClient(List<RpcRegistryConfig> registryConfigs,
                           RpcConsumerConfig consumerConfig,
@@ -51,19 +57,65 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
     }
 
     /**
-     * 创建代理对象
+     * 解析真实 RPC 协议名：优先取注册配置中显式指定的 RPC 协议（json/native/dubbo/sofa），
+     * 否则回退 JSON-RPC（纯 JDK HTTP 实现，无需额外依赖）。
+     *
+     * @return SPI 协议名
+     */
+    private String resolveProtocol() {
+        if (registryConfigs != null) {
+            for (RpcRegistryConfig config : registryConfigs) {
+                String protocol = config.getProtocol();
+                if (protocol != null) {
+                    String lower = protocol.toLowerCase();
+                    if ("json".equals(lower) || "native".equals(lower)
+                            || "dubbo".equals(lower) || "sofa".equals(lower)) {
+                        return lower;
+                    }
+                }
+            }
+        }
+        return "json";
+    }
+
+    /**
+     * 懒创建真实协议客户端委托
+     *
+     * @return 真实 RPC 客户端
+     */
+    private RpcClient delegate() {
+        RpcClient current = delegate;
+        if (current == null) {
+            synchronized (this) {
+                current = delegate;
+                if (current == null) {
+                    current = RpcClient.createClient(resolveProtocol(), registryConfigs, consumerConfig, appName);
+                    delegate = current;
+                }
+            }
+        }
+        return current;
+    }
+
+    /**
+     * 创建代理对象，底层委托真实 RPC 客户端发起网络调用
      */
     private <T> Object createProxy(Class<T> targetType) {
         return Proxy.newProxyInstance(
             targetType.getClassLoader(),
             new Class<?>[]{targetType},
-            new SpringRpcInvocationHandler<>(targetType, applicationContext, consumerConfig)
+            new SpringRpcInvocationHandler<>(targetType, delegate(), applicationContext, consumerConfig)
         );
     }
 
     @Override
     public void close() throws Exception {
         proxyCache.clear();
+        RpcClient current = delegate;
+        delegate = null;
+        if (current != null) {
+            current.close();
+        }
         log.info("[Spring RPC] 客户端已关闭");
     }
 }

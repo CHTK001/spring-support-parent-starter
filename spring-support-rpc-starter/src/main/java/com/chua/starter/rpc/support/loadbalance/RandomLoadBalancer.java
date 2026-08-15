@@ -2,11 +2,11 @@ package com.chua.starter.rpc.support.loadbalance;
 
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 /**
- * 随机负载均衡策略
+ * 随机负载均衡策略（委托 {@link com.chua.common.support.lang.balance.LoadBalance} SPI 的 random 实现）
  *
  * @author CH
  * @since 2025-03-20
@@ -14,17 +14,14 @@ import java.util.Random;
 @Component
 public class RandomLoadBalancer implements RpcLoadBalancer {
 
-    private final Random random = new Random();
-
     @Override
     public <T> T select(List<T> providers) {
         if (providers == null || providers.isEmpty()) {
             return null;
         }
-        if (providers.size() == 1) {
-            return providers.get(0);
-        }
-        return providers.get(random.nextInt(providers.size()));
+        return com.chua.common.support.lang.balance.LoadBalance.auto("random",
+                com.chua.common.support.lang.balance.BalanceConfig.builder().build())
+                .select(new ArrayList<>(providers));
     }
 
     @Override

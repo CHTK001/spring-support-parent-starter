@@ -240,6 +240,10 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
         BindResult<RpcProperties> bindResult = Binder.get(environment).bind(RpcProperties.PRE, RpcProperties.class);
         if(bindResult.isBound()) {
             rpcProperties = bindResult.get();
+            // 未显式配置 token 时，由 accessKey/secretKey/serviceKey 派生，避免配置死区
+            if (rpcProperties.getConsumer().getToken() == null) {
+                rpcProperties.getConsumer().setToken(deriveToken(rpcProperties));
+            }
             this.rpcClient = RpcClient.createClient(rpcProperties.getType().name(),
                     rpcProperties.getRegistry(),
                     rpcProperties.getConsumer(),
@@ -249,6 +253,25 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
         rpcProperties = new RpcProperties();
         rpcProperties.setEnable(false);
 
+    }
+
+    /**
+     * 由 {@link RpcProperties#getAccessKey()}、{@link RpcProperties#getSecretKey()}、
+     * {@link RpcProperties#getServiceKey()} 派生调用令牌。
+     *
+     * @param properties RPC 配置
+     * @return 派生令牌，字段均未配置时返回 {@code null}
+     */
+    private static String deriveToken(RpcProperties properties) {
+        String accessKey = properties.getAccessKey();
+        String secretKey = properties.getSecretKey();
+        String serviceKey = properties.getServiceKey();
+        boolean any = StringUtils.hasText(accessKey) || StringUtils.hasText(secretKey) || StringUtils.hasText(serviceKey);
+        if (!any) {
+            return null;
+        }
+        return com.chua.common.support.utils.DigestUtils.md5Hex(
+                accessKey + ":" + secretKey + ":" + serviceKey);
     }
 
 }

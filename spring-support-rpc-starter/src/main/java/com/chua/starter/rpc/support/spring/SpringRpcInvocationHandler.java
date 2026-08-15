@@ -1,5 +1,6 @@
 package com.chua.starter.rpc.support.spring;
 
+import com.chua.common.support.network.rpc.RpcClient;
 import com.chua.common.support.network.rpc.RpcConsumerConfig;
 import com.chua.starter.rpc.support.circuitbreaker.RpcCircuitBreaker;
 import com.chua.starter.rpc.support.circuitbreaker.RpcCircuitBreakerManager;
@@ -16,7 +17,8 @@ import java.util.List;
 /**
  * Spring RPC调用处理器
  * <p>
- * 处理RPC调用，支持拦截器、重试、熔断等功能
+ * 处理RPC调用，支持拦截器、重试、熔断等功能。
+ * 底层委托真实的 {@link RpcClient} 发起网络调用，避免旧实现的「本地 Bean + 反射直调」伪远程问题。
  * </p>
  *
  * @author CH
@@ -26,6 +28,7 @@ import java.util.List;
 public class SpringRpcInvocationHandler<T> implements InvocationHandler {
 
     private final Class<T> targetType;
+    private final RpcClient rpcClient;
     private final ApplicationContext applicationContext;
     private final RpcConsumerConfig consumerConfig;
     private final RpcRetryPolicy retryPolicy;
@@ -33,9 +36,11 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
     private List<RpcInterceptor> interceptors;
 
     public SpringRpcInvocationHandler(Class<T> targetType,
-                                     ApplicationContext applicationContext,
-                                     RpcConsumerConfig consumerConfig) {
+                                      RpcClient rpcClient,
+                                      ApplicationContext applicationContext,
+                                      RpcConsumerConfig consumerConfig) {
         this.targetType = targetType;
+        this.rpcClient = rpcClient;
         this.applicationContext = applicationContext;
         this.consumerConfig = consumerConfig;
         this.retryPolicy = createRetryPolicy(consumerConfig);
@@ -93,14 +98,9 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
 
         while (retryCount <= retryPolicy.getMaxRetries()) {
             try {
-                // 查找Spring Bean
-                T bean = findBean();
-                if (bean == null) {
-                    throw new RuntimeException("未找到服务实现: " + targetType.getName());
-                }
-
-                // 执行调用
-                Object result = method.invoke(bean, args);
+                // 通过真实 RPC 客户端获取远程服务代理（网络调用），而非本地 bean 直调
+                T remote = rpcClient.get(targetType);
+                Object result = method.invoke(remote, args);
 
                 // 记录成功
                 if (circuitBreaker != null) {
@@ -142,6 +142,11 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
                     }
                 }
 
+                // 统一业务/传输语义：业务异常不重试，避免放大非幂等接口副作用
+                if (e instanceof com.chua.common.support.network.rpc.RpcException re && re.isBusiness()) {
+                    throw e;
+                }
+
                 // 判断是否可重试
                 if (retryPolicy.isRetryableException(e) && retryPolicy.shouldRetry(retryCount)) {
                     log.warn("[Spring RPC] 调用失败，准备重试: service={}, retryCount={}",
@@ -159,10 +164,13 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
 
     /**
      * 查找Spring Bean
+     *
+     * @deprecated 伪远程实现遗留方法，已由 {@link #rpcClient} 网络调用替代
      */
+    @Deprecated
     private T findBean() {
         try {
-            return applicationContext.getBean(targetType);
+            return (T) applicationContext.getBean(targetType);
         } catch (Exception e) {
             log.debug("[Spring RPC] 未找到Bean: {}", targetType.getName());
             return null;

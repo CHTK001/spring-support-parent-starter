@@ -47,7 +47,8 @@ public class RpcRetryPolicy {
     private Class<? extends Throwable>[] retryableExceptions = new Class[]{
         java.net.SocketTimeoutException.class,
         java.net.ConnectException.class,
-        java.io.IOException.class
+        java.io.IOException.class,
+        com.chua.common.support.network.rpc.RpcException.class
     };
 
     /**
