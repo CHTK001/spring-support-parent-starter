@@ -12,16 +12,12 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.web.context.WebServerInitializedEvent;
-import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
-import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import org.springframework.boot.web.server.WebServer;
 
 import java.io.IOException;
 import java.net.URL;
@@ -33,7 +29,7 @@ import java.util.List;
 /**
  * Ngrok 自动配置：Spring Boot 启动后自动建立 ngrok 隧道，将本机服务暴露到公网。
  *
- * <p>触发时机：{@link WebServerInitializedEvent}（此时 {@code server.port} 已确定）
+ * <p>触发时机：{@link ApplicationReadyEvent}（此时 {@code server.port} 已确定）
  * → 建立 Session → 启动 HTTP 转发隧道。</p>
  *
  * <p>关闭时机：{@link ContextClosedEvent} → 关闭 Session。</p>
@@ -76,15 +72,15 @@ public class NgrokAutoConfiguration {
     }
 
     /**
-     * 在 Web 容器初始化完成后建立 ngrok 隧道。
+     * 在应用就绪后建立 ngrok 隧道。
      *
-     * <p>使用 {@link WebServerInitializedEvent} 而非 {@link ApplicationReadyEvent}，
-     * 是为了能在 Spring 完全启动前就拿到真实的 server.port（处理随机端口场景）。</p>
+     * <p>使用 {@link ApplicationReadyEvent} 而非 WebServerInitializedEvent
+     * （后者在 Spring Boot 4.x 已移除），应用就绪时 server.port 已确定。</p>
      *
-     * @param event Web 容器初始化事件
+     * @param event 应用就绪事件
      */
     @EventListener
-    public void onWebServerInitialized(WebServerInitializedEvent event) {
+    public void onApplicationReady(ApplicationReadyEvent event) {
         if (client != null) {
             return;
         }
@@ -120,22 +116,13 @@ public class NgrokAutoConfiguration {
 
     /**
      * 解析本地端口（处理 {@code server.port=0} 随机端口场景）。
+     *
+     * @param event 应用就绪事件
      */
-    private int resolveLocalPort(WebServerInitializedEvent event) {
-        try {
-            WebServer webServer = event.getWebServer();
-            if (webServer != null) {
-                int port = webServer.getPort();
-                if (port > 0) {
-                    return port;
-                }
-            }
-        } catch (Exception e) {
-            log.debug("[Ngrok] 从 WebServer 获取端口失败: {}", e.getMessage());
-        }
-        // 回退到 server.port
+    private int resolveLocalPort(ApplicationReadyEvent event) {
+        // 优先从 server.port 属性解析
         String portStr = event.getApplicationContext().getEnvironment().getProperty("server.port");
-        if (portStr != null && !portStr.isBlank()) {
+        if (portStr != null && !portStr.isBlank() && !"0".equals(portStr)) {
             try {
                 return Integer.parseInt(portStr);
             } catch (NumberFormatException ignored) {
