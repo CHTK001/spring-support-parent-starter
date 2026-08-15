@@ -2,10 +2,12 @@ package com.chua.starter.job.support.store;
 
 import com.chua.starter.job.support.log.JobLogEvent;
 import com.chua.starter.job.support.log.JobLogSink;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 /**
@@ -15,13 +17,22 @@ import java.util.Date;
  * @since 4.0.0.42
  */
 @Slf4j
-@RequiredArgsConstructor
 public class MybatisJobLogSink implements JobLogSink {
 
-    /**
-     * 日志 Mapper
-     */
+    private static final DateTimeFormatter DATE_FMT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.systemDefault());
+
     private final JobLogMapper jobLogMapper;
+    private final boolean fileLoggingEnabled;
+
+    public MybatisJobLogSink(JobLogMapper jobLogMapper) {
+        this(jobLogMapper, true);
+    }
+
+    public MybatisJobLogSink(JobLogMapper jobLogMapper, boolean fileLoggingEnabled) {
+        this.jobLogMapper = jobLogMapper;
+        this.fileLoggingEnabled = fileLoggingEnabled;
+    }
 
     @Override
     public void write(JobLogEvent event) {
@@ -56,8 +67,20 @@ public class MybatisJobLogSink implements JobLogSink {
         Date executedAt = new Date(event.executedAtMs());
         entity.setSysJobLogTriggerTime(executedAt);
         entity.setSysJobLogTriggerDate(executedAt);
-        entity.setSysJobLogFilePath(null);
+        if (fileLoggingEnabled) {
+            entity.setSysJobLogFilePath(resolveLogFilePath(event));
+        }
         entity.setSysJobLogIsDeleted(0);
         return entity;
+    }
+
+    private String resolveLogFilePath(JobLogEvent event) {
+        String dateDir = DATE_FMT.format(Instant.now());
+        String jobName = sanitize(event.jobName() != null ? event.jobName() : "unknown");
+        return dateDir + "/" + jobName + "/" + event.executedAtMs() + ".log";
+    }
+
+    private static String sanitize(String name) {
+        return name.replaceAll("[/\\\\:*?\"<>|]", "_");
     }
 }

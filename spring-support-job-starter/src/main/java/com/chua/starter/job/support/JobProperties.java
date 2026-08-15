@@ -91,6 +91,11 @@ public class JobProperties {
     private final PoolConfig pool = new PoolConfig();
 
     /**
+     * 日志配置
+     */
+    private final LogConfig log = new LogConfig();
+
+    /**
      * 当前角色是否为 SCHEDULER
      *
      * @return 是 SCHEDULER 返回 true
@@ -310,5 +315,45 @@ public class JobProperties {
          * 任务队列容量
          */
         private int queueSize = DEFAULT_QUEUE_CAPACITY;
+    }
+
+    /**
+     * 日志配置。
+     *
+     * @author CH
+     * @since 4.0.0.42
+     */
+    @Data
+    public static class LogConfig {
+
+        /**
+         * 默认日志根目录
+         */
+        public static final String DEFAULT_BASE_PATH = "./logs/job";
+
+        /**
+         * 默认异步队列容量
+         */
+        public static final int DEFAULT_QUEUE_SIZE = 4096;
+
+        /**
+         * 是否启用文件日志
+         */
+        private boolean enabled = false;
+
+        /**
+         * 日志根目录
+         */
+        private String basePath = DEFAULT_BASE_PATH;
+
+        /**
+         * 是否启用异步写入
+         */
+        private boolean async = true;
+
+        /**
+         * 异步队列容量
+         */
+        private int queueSize = DEFAULT_QUEUE_SIZE;
     }
 }

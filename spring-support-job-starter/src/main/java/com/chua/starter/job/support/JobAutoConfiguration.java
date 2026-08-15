@@ -10,6 +10,8 @@ import com.chua.starter.job.support.dispatch.JobRepository;
 import com.chua.starter.job.support.execute.JobExecutor;
 import com.chua.starter.job.support.handler.JobAnnotationScanner;
 import com.chua.starter.job.support.handler.JobHandlerFactory;
+import com.chua.starter.job.support.log.AsyncLogWriter;
+import com.chua.starter.job.support.log.FileJobLogSink;
 import com.chua.starter.job.support.log.JobLogSink;
 import com.chua.starter.job.support.log.StdoutJobLogSink;
 import com.chua.starter.job.support.loop.JobLeaderLoop;
@@ -33,6 +35,8 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 import java.lang.management.ManagementFactory;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -179,13 +183,34 @@ public class JobAutoConfiguration {
 
     /**
      * MyBatis-Plus 任务日志落库 (覆盖默认 stdout)。
+     * 当 {@code plugin.job.log.enabled=true} 时额外启用文件日志和异步写入。
      */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnClass(name = "com.baomidou.mybatisplus.core.mapper.BaseMapper")
     @org.springframework.context.annotation.Primary
     public JobLogSink mybatisJobLogSink(com.chua.starter.job.support.store.JobLogMapper jobLogMapper) {
-        return new com.chua.starter.job.support.store.MybatisJobLogSink(jobLogMapper);
+        List<JobLogSink> sinks = new ArrayList<>(2);
+        com.chua.starter.job.support.store.MybatisJobLogSink dbSink =
+                new com.chua.starter.job.support.store.MybatisJobLogSink(jobLogMapper, properties.getLog().isEnabled());
+        sinks.add(dbSink);
+        if (properties.getLog().isEnabled()) {
+            FileJobLogSink fileSink = new FileJobLogSink(properties.getLog().getBasePath());
+            sinks.add(fileSink);
+            log.info("[job] 文件日志已启用 basePath={}", properties.getLog().getBasePath());
+        }
+        if (sinks.size() == 1) {
+            if (properties.getLog().isAsync()) {
+                AsyncLogWriter async = new AsyncLogWriter(sinks, properties.getLog().getQueueSize(), "job-async-log-writer");
+                log.info("[job] 异步日志已启用 queueSize={}", properties.getLog().getQueueSize());
+                return async;
+            }
+            return dbSink;
+        }
+        AsyncLogWriter async = new AsyncLogWriter(sinks, properties.getLog().getQueueSize(), "job-async-log-writer");
+        log.info("[job] 组合日志已启用 (DB+File) async={} queueSize={}",
+                properties.getLog().isAsync(), properties.getLog().getQueueSize());
+        return async;
     }
 
     /**

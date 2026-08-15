@@ -5,7 +5,6 @@ import com.chua.common.support.vector.VectorCompareAlgorithm;
 import com.chua.common.support.vector.VectorStorage;
 import com.chua.common.support.vector.VectorStorageProvider;
 import com.chua.deeplearning.support.face.FaceDetector;
-import com.chua.deeplearning.support.face.FaceIdentify;
 import com.chua.deeplearning.support.face.FacePipeline;
 import com.chua.deeplearning.support.face.FaceQualityAssessor;
 import com.chua.deeplearning.support.feature.FeatureExtractor;
@@ -65,11 +64,6 @@ public class FaceClientManager {
 
     /**
      * 当前生效的识别管线（懒构建，热更新时替换）
-     */
-    private volatile FaceIdentify identify;
-
-    /**
-     * 当前生效的检测管线（懒构建，热更新时替换）
      */
     private volatile FacePipeline pipeline;
 
@@ -132,24 +126,6 @@ public class FaceClientManager {
      * 当前生效的人脸关键点提取器（单独能力）
      */
     private volatile FeatureExtractor landmarkExtractor;
-
-    /**
-     * 获取当前识别管线（懒加载）。
-     *
-     * @return 人脸识别管线
-     */
-    public FaceIdentify currentIdentify() {
-        FaceIdentify current = identify;
-        if (current == null) {
-            synchronized (this) {
-                if (identify == null) {
-                    identify = buildIdentify();
-                }
-                current = identify;
-            }
-        }
-        return current;
-    }
 
     /**
      * 获取当前检测管线（懒加载）。
@@ -405,17 +381,14 @@ public class FaceClientManager {
         VectorStorage oldVectorStorage = this.vectorStorage;
         VectorStorage nextVectorStorage = buildVectorStorage();
         this.vectorStorage = nextVectorStorage;
-        FaceIdentify nextIdentify = buildIdentify();
         FacePipeline nextPipeline = buildPipeline();
         LivenessDetector nextLiveness = buildLiveness();
         FaceQualityAssessor nextQuality = buildQualityAssessor();
 
-        FaceIdentify oldIdentify = identify;
         FacePipeline oldPipeline = pipeline;
         LivenessDetector oldLiveness = liveness;
         FaceQualityAssessor oldQuality = qualityAssessor;
 
-        this.identify = nextIdentify;
         this.pipeline = nextPipeline;
         this.liveness = nextLiveness;
         this.qualityAssessor = nextQuality;
@@ -436,33 +409,7 @@ public class FaceClientManager {
     }
 
     /**
-     * 构建完整识别管线（detect + liveness + feature + vector 检索）。
-     *
-     * @return 识别管线
-     */
-    private FaceIdentify buildIdentify() {
-        FaceDetector detector = FaceDetector.create(settingReader.getStr(GROUP, "detector_model"));
-        FeatureExtractor extractor = FeatureExtractor.create(settingReader.getStr(GROUP, "feature_model"));
-        // 复用缓存的向量库实例，保证 identify / search / enroll 使用同一存储
-        VectorStorage storage = currentVectorStorage();
-        LivenessDetector liveness = buildLiveness();
-        boolean requireLive = settingReader.getBool(GROUP, "liveness_enabled", false);
-        float livenessThreshold = readFloat("liveness_threshold", 0.5f);
-        int topK = settingReader.getInt(GROUP, "top_k", 5);
-
-        return FaceIdentify.builder()
-                .detector(detector)
-                .liveness(liveness)
-                .featureExtractor(extractor)
-                .vectorStorage(storage)
-                .topK(topK)
-                .requireLive(requireLive)
-                .livenessThreshold(livenessThreshold)
-                .build();
-    }
-
-    /**
-     * 构建检测管线（detect + crop + liveness）。
+     * 构建检测管线（detect + crop + liveness + feature + 检索 + 辅助能力）。
      *
      * @return 检测管线
      */

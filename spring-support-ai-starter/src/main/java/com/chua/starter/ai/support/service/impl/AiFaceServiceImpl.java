@@ -118,7 +118,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     @Override
     public boolean enroll(String id, byte[] imageData, Map<String, Object> metadata) {
         float[] feature = extractFeature(imageData);
-        return faceClientManager.currentIdentify().enroll(id, feature, metadata, id);
+        return faceClientManager.currentPipeline().enroll(id, feature, metadata, id);
     }
 
     /**

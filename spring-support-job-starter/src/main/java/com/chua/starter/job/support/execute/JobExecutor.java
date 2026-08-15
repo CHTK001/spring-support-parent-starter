@@ -3,6 +3,7 @@ package com.chua.starter.job.support.execute;
 import com.chua.starter.job.support.handler.JobHandler;
 import com.chua.starter.job.support.handler.JobHandlerFactory;
 import com.chua.starter.job.support.log.JobLogEvent;
+import com.chua.starter.job.support.log.JobLogHelper;
 import com.chua.starter.job.support.sync.JobSyncBus;
 import com.chua.starter.job.support.sync.JobSyncTopics;
 import lombok.extern.slf4j.Slf4j;
@@ -152,15 +153,20 @@ public class JobExecutor {
             handler.execute();
             long cost = System.currentTimeMillis() - start;
             processed.incrementAndGet();
+            String logContent = JobLogHelper.getAndClear();
             log.info("[job] invoke ok job={} cost={}ms", jobName, cost);
             bus.publish(JobSyncTopics.TASK_LOG, nodeId,
-                    JobLogEvent.success(jobName, cost, start, nodeId));
+                    JobLogEvent.success(jobName, cost, start, nodeId, logContent));
         } catch (Throwable ex) {
             long cost = System.currentTimeMillis() - start;
             processed.incrementAndGet();
-            log.error("[job] 执行失败 job={} cause={}", jobName, ex.getMessage(), ex);
+            String logContent = JobLogHelper.getAndClear();
+            if (logContent == null) logContent = "";
+            String exMsg = ex.getMessage();
+            logContent += "Exception: " + (exMsg != null ? exMsg : ex.getClass().getSimpleName()) + "\n";
+            log.error("[job] 执行失败 job={} cause={}", jobName, exMsg, ex);
             bus.publish(JobSyncTopics.TASK_LOG, nodeId,
-                    JobLogEvent.failure(jobName, cost, ex, start, nodeId));
+                    JobLogEvent.failure(jobName, cost, ex, start, nodeId, logContent));
         }
     }
 
