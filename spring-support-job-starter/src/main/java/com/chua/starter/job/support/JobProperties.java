@@ -337,6 +337,16 @@ public class JobProperties {
         public static final int DEFAULT_QUEUE_SIZE = 4096;
 
         /**
+         * 默认日志保留天数
+         */
+        public static final int DEFAULT_RETENTION_DAYS = 30;
+
+        /**
+         * 默认清理 cron
+         */
+        public static final String DEFAULT_CLEANUP_CRON = "0 0 0 * * ?";
+
+        /**
          * 是否启用文件日志
          */
         private boolean enabled = false;
@@ -355,5 +365,20 @@ public class JobProperties {
          * 异步队列容量
          */
         private int queueSize = DEFAULT_QUEUE_SIZE;
+
+        /**
+         * 是否启用日志自动清理
+         */
+        private boolean cleanupEnabled = false;
+
+        /**
+         * 日志保留天数 (超过该天数的日志将被清理)
+         */
+        private int cleanupRetentionDays = DEFAULT_RETENTION_DAYS;
+
+        /**
+         * 日志清理定时 cron 表达式
+         */
+        private String cleanupCron = DEFAULT_CLEANUP_CRON;
     }
 }
