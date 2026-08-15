@@ -4,7 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.chua.common.support.ai.rag.RagClient;
+import com.chua.common.support.ai.rag.RagDocument;
 import com.chua.common.support.lang.code.PageResult;
+import com.chua.starter.ai.support.configuration.rag.RagClientManager;
 import com.chua.starter.common.support.exception.BusinessException;
 import com.chua.starter.eduai.mapper.EduKnowledgeDocMapper;
 import com.chua.starter.eduai.model.EduKnowledgeDoc;
@@ -12,10 +15,16 @@ import com.chua.starter.eduai.model.dto.KnowledgeDocUploadDTO;
 import com.chua.starter.eduai.model.vo.KnowledgeDocVO;
 import com.chua.starter.eduai.service.IEduKnowledgeDocService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,6 +38,15 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMapper, EduKnowledgeDoc> implements IEduKnowledgeDocService {
+
+    /**
+     * RAG 客户端管理器（可选注入，未引入 AI 模块时自动降级为直接入库）
+     */
+    private final ObjectProvider<RagClientManager> ragClientManagerProvider;
+
+    public EduKnowledgeDocServiceImpl(ObjectProvider<RagClientManager> ragClientManagerProvider) {
+        this.ragClientManagerProvider = ragClientManagerProvider;
+    }
 
     @Override
     public PageResult<KnowledgeDocVO> pageQuery(EduKnowledgeDoc query, long page, long pageSize) {
@@ -75,13 +93,73 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
         entity.setKnowledgeDocFileSize(dto.getFileSize());
         entity.setKnowledgeDocSubject(dto.getSubject());
         entity.setKnowledgeDocGradeLevel(dto.getGradeLevel());
-        // TODO: 调用向量化服务进行文档切片与向量存储
-        entity.setKnowledgeDocStatus(1); // 已索引
+        // 调用 RAG 向量化服务进行文档切片与向量存储（可选，未配置 RAG 时直接入库）
+        String vectorStoreId = vectorize(dto);
+        entity.setKnowledgeDocVectorStoreId(vectorStoreId);
+        entity.setKnowledgeDocStatus(vectorStoreId != null ? 1 : 0); // 1=已索引, 0=未索引
         entity.setKnowledgeDocCreateTime(LocalDateTime.now());
         entity.setKnowledgeDocUpdateTime(LocalDateTime.now());
         baseMapper.insert(entity);
-        log.info("上传知识库文档成功，ID: {}, 名称: {}", entity.getKnowledgeDocId(), dto.getName());
+        log.info("上传知识库文档成功，ID: {}, 名称: {}, 向量化: {}", entity.getKnowledgeDocId(), dto.getName(), vectorStoreId != null);
         return entity.getKnowledgeDocId();
+    }
+
+    /**
+     * 调用 RAG 向量化服务对文档进行切片与向量存储。
+     *
+     * @param dto 上传文档信息
+     * @return 向量存储ID，未接入 RAG 或向量化失败时返回 null
+     */
+    private String vectorize(KnowledgeDocUploadDTO dto) {
+        RagClientManager manager = ragClientManagerProvider.getIfAvailable();
+        if (manager == null) {
+            log.info("[EduKnowledgeDoc] 未引入 AI/RAG 模块，跳过向量化");
+            return null;
+        }
+        RagClient ragClient = manager.current();
+        if (ragClient == null) {
+            log.warn("[EduKnowledgeDoc] RAG 客户端不可用，跳过向量化");
+            return null;
+        }
+        byte[] content = readFile(dto.getFilePath());
+        if (content == null || content.length == 0) {
+            log.warn("[EduKnowledgeDoc] 文件读取为空，跳过向量化: {}", dto.getFilePath());
+            return null;
+        }
+        try {
+            RagDocument document = ragClient.uploadDocument(
+                    StringUtils.hasText(dto.getName()) ? dto.getName() : dto.getFilePath(), content);
+            if (document != null) {
+                return document.id();
+            }
+        } catch (Exception e) {
+            log.warn("[EduKnowledgeDoc] 向量化失败，跳过: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * 读取文件字节（支持本地路径与 http(s) URL）。
+     *
+     * @param path 文件路径或 URL
+     * @return 文件字节，读取失败返回 null
+     */
+    private byte[] readFile(String path) {
+        if (!StringUtils.hasText(path)) {
+            return null;
+        }
+        try {
+            String lower = path.toLowerCase();
+            if (lower.startsWith("http://") || lower.startsWith("https://")) {
+                try (InputStream in = URI.create(path).toURL().openStream()) {
+                    return in.readAllBytes();
+                }
+            }
+            return Files.readAllBytes(Paths.get(path));
+        } catch (IOException e) {
+            log.warn("[EduKnowledgeDoc] 读取文件失败: {} -> {}", path, e.getMessage());
+            return null;
+        }
     }
 
     @Override

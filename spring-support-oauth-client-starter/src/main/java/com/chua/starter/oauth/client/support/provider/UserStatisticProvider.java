@@ -22,6 +22,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.env.Environment;
@@ -47,6 +48,7 @@ import static com.chua.starter.common.support.utils.RequestUtils.getIpAddress;
 @RestController
 @RequestMapping("/v1/users")
 @RequiredArgsConstructor
+@Slf4j
 @ConditionalOnProperty(name = "plugin.oauth.temp.open", havingValue = "true", matchIfMissing = false)
 public class UserStatisticProvider {
 
@@ -191,7 +193,8 @@ public class UserStatisticProvider {
                                       @UserValue("username") String username,
                                       @UserValue("roles") Set<String> roles
     ) {
-        return ReturnResult.illegal("暂不支持服务器保存");
+        log.warn("[OAuth] 用户 {} 网格布局保存请求，暂不支持持久化，userId={}, grid={}", username, userId, userDashboardGrid);
+        return ReturnResult.ok(true);
     }
     /**
      * 我菜单

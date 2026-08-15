@@ -1,6 +1,8 @@
 package com.chua.rsocket.support.session;
 
 import com.chua.socket.support.SocketListener;
+import com.chua.socket.support.annotations.OnEvent;
+import com.chua.socket.support.handler.EventListenerProcessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.chua.socket.support.properties.SocketProperties;
 import com.chua.socket.support.session.SocketSession;
@@ -38,6 +40,11 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private final SocketProperties properties;
     private final List<SocketListener> listeners;
+
+    /**
+     * 事件监听器处理器（扫描 @OnEvent 注解并分发事件）
+     */
+    private final EventListenerProcessor eventListenerProcessor;
     
     /**
      * 会话缓存：clientId -> sessions
@@ -54,6 +61,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     public RSocketSessionTemplateImpl(SocketProperties properties, List<SocketListener> listeners) {
         this.properties = properties;
         this.listeners = listeners;
+        this.eventListenerProcessor = new EventListenerProcessor(listeners);
     }
 
     @Override
@@ -119,7 +127,13 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
             String event = (String) msg.get("event");
             Object data = msg.get("data");
             
-            // TODO: 通过注解处理器调用对应的事件处理方法
+            // 通过 EventListenerProcessor 调用 @OnEvent 注解对应的事件处理方法
+            RSocketSessionImpl socketSession = (RSocketSessionImpl) getSession(session.getId());
+            if (socketSession != null && event != null) {
+                eventListenerProcessor.fireEvent(event, socketSession, data);
+            } else {
+                log.debug("[RSocket] 未找到会话或事件名为空，跳过分发: sessionId={}, event={}", session.getId(), event);
+            }
             
         } catch (Exception e) {
             log.error("[RSocket] 消息解析失败: {}", payload, e);

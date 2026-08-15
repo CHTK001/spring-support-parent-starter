@@ -4,6 +4,8 @@ import com.chua.report.client.starter.job.TriggerParam;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.report.client.starter.job.execute.DefaultJobExecute;
 import com.chua.report.client.starter.job.execute.JobExecute;
+import com.chua.report.client.starter.job.thread.JobThread;
+import com.chua.report.client.starter.job.thread.JobThreadFactory;
 import com.chua.report.client.starter.sync.MonitorTopics;
 import com.chua.starter.common.support.protocol.request.ServletRequest;
 import com.chua.starter.common.support.protocol.request.ServletResponse;
@@ -81,7 +83,10 @@ public class JobDispatchHandler implements SyncMessageHandler {
     private Object handleCancel(Map<String, Object> data) {
         int jobId = getInt(data, "jobId");
         log.info("[JobHandler] 收到任务取消: jobId={}", jobId);
-        // TODO: 实现任务取消逻辑
+        JobThread jobThread = JobThreadFactory.removeJobThread(jobId, "任务被取消");
+        if (jobThread == null) {
+            return Map.of("code", 404, "message", "任务不存在或已结束", "jobId", jobId);
+        }
         return Map.of("code", 200, "message", "cancelled", "jobId", jobId);
     }
 

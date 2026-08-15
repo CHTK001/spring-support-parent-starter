@@ -44,7 +44,8 @@ public class PaymentChannelRegistry {
                 .findFirst()
                 .orElseThrow(() -> new PaymentException("暂不支持的支付方式: "
                         + channelType
-                        + (StringUtils.hasText(channelSubType) ? "/" + channelSubType : "")));
+                        + (StringUtils.hasText(channelSubType) ? "/" + channelSubType : "")
+                        + ", 已注册渠道数: " + channels().size()));
     }
 
     public boolean supports(String channelType, String channelSubType) {

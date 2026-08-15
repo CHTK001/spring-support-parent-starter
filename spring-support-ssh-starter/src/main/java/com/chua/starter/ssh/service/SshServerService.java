@@ -6,6 +6,8 @@ import static com.chua.starter.common.support.logger.ModuleLog.*;
 import org.apache.sshd.common.file.virtualfs.VirtualFileSystemFactory;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.auth.password.PasswordAuthenticator;
+import org.apache.sshd.server.auth.pubkey.RejectAllPublickeyAuthenticator;
+import org.apache.sshd.server.config.keys.AuthorizedKeysAuthenticator;
 import org.apache.sshd.server.forward.AcceptAllForwardingFilter;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
@@ -13,6 +15,7 @@ import org.apache.sshd.server.shell.ProcessShellFactory;
 import org.apache.sshd.sftp.server.SftpSubsystemFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -118,9 +121,16 @@ public class SshServerService implements InitializingBean, DisposableBean {
             });
         }
 
-        // 公钥认证功能待实现
+        // 公钥认证：从 publicKeyFile 加载授权公钥
         if (auth.isPublicKey()) {
-            log.warn("[SSH] 公钥认证尚未实现，请关注后续版本. 当前仅支持密码认证模式");
+            if (StringUtils.hasText(auth.getPublicKeyFile())) {
+                sshServer.setPublickeyAuthenticator(
+                        new AuthorizedKeysAuthenticator(Paths.get(auth.getPublicKeyFile())));
+                log.info("[SSH] 公钥认证已启用 [{}]", highlight(auth.getPublicKeyFile()));
+            } else {
+                log.warn("[SSH] 公钥认证已开启但未配置 public-key-file, 使用拒绝策略");
+                sshServer.setPublickeyAuthenticator(RejectAllPublickeyAuthenticator.INSTANCE);
+            }
         }
     }
 
