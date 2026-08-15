@@ -38,16 +38,10 @@ import java.util.concurrent.Executors;
  * <p>
  * 整合版本控制、平台标识、编解码等 API 相关配置。
  * </p>
- * <p>
- * <b>注意：</b> 此配置类已迁移至 {@code utils-support-springboot-starter} 模块
- * （包路径：{@code com.chua.springboot.support.api}）。
- * 旧路径保留用于向后兼容，新项目请使用 {@code utils-support-springboot-starter} 中的实现。
- * </p>
  *
  * @author CH
  * @since 2024/12/07
  * @version 1.0.0
- * @deprecated 请使用 {@code com.chua.springboot.support.api.configuration.ApiConfiguration}
  */
 @EnableConfigurationProperties(ApiProperties.class)
 @Priority(0)
