@@ -3,7 +3,10 @@ package com.chua.starter.queue.audit;
 import com.chua.starter.queue.Message;
 import com.chua.starter.queue.interceptor.MessageInterceptor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -22,10 +25,17 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Component
 @ConditionalOnProperty(prefix = "plugin.queue.audit", name = "enabled", havingValue = "true")
-public class MessageAuditInterceptor implements MessageInterceptor {
+public class MessageAuditInterceptor implements MessageInterceptor, ApplicationEventPublisherAware {
+
+    private ApplicationEventPublisher eventPublisher;
 
     private final ConcurrentHashMap<String, MessageAuditLog> auditLogs = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Long> startTimes = new ConcurrentHashMap<>();
+
+    @Override
+    public void setApplicationEventPublisher(ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
+    }
 
     @Override
     public Message beforeSend(Message message) {
@@ -55,13 +65,11 @@ public class MessageAuditInterceptor implements MessageInterceptor {
                 auditLog.setErrorStack(getStackTrace(error));
             }
 
-            // 持久化审计日志（这里只是记录到内存，实际应该写入数据库）
-            logAudit(auditLog);
+            // 持久化审计日志（发布事件，由监听方写入数据库或其他存储）
+            publishAuditLog(auditLog);
 
-            // 清理（可选）
-            if (auditLogs.size() > 10000) {
-                auditLogs.remove(message.getId());
-            }
+            // 无论大小都清理对应记录，避免内存泄漏
+            auditLogs.remove(message.getId());
         }
     }
 
@@ -93,13 +101,11 @@ public class MessageAuditInterceptor implements MessageInterceptor {
                 auditLog.setErrorStack(getStackTrace(error));
             }
 
-            // 持久化审计日志
-            logAudit(auditLog);
+            // 持久化审计日志（发布事件，由监听方写入数据库或其他存储）
+            publishAuditLog(auditLog);
 
-            // 清理
-            if (auditLogs.size() > 10000) {
-                auditLogs.remove(message.getId() + "_receive");
-            }
+            // 无论大小都清理对应记录，避免内存泄漏
+            auditLogs.remove(message.getId() + "_receive");
         }
     }
 
@@ -145,15 +151,17 @@ public class MessageAuditInterceptor implements MessageInterceptor {
     }
 
     /**
-     * 记录审计日志
+     * 发布审计日志事件，由外部监听器持久化
      */
-    private void logAudit(MessageAuditLog auditLog) {
+    private void publishAuditLog(MessageAuditLog auditLog) {
         log.info("[Audit] 消息审计: operation={}, destination={}, status={}, duration={}ms, messageId={}",
             auditLog.getOperation(), auditLog.getDestination(), auditLog.getStatus(),
             auditLog.getDuration(), auditLog.getMessageId());
 
-        // TODO: 持久化到数据库
-        // auditLogRepository.save(auditLog);
+        // 发布 Spring 事件，供监听器持久化到数据库或其它存储
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new MessageAuditEvent(this, auditLog));
+        }
     }
 
     /**

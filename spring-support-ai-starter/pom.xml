@@ -65,6 +65,13 @@
             <version>4.0.0.42</version>
         </dependency>
 
+        <!-- Z.AI ChatClient（zai SPI） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-zai-starter</artifactId>
+            <version>4.0.0.42</version>
+        </dependency>
+
         <!-- 深度学习能力（OCR 识别、向量模型等） -->
         <dependency>
             <groupId>com.chua</groupId>

@@ -12,14 +12,9 @@ import com.chua.starter.oauth.client.support.infomation.Information;
 import com.chua.starter.oauth.client.support.properties.AuthClientProperties;
 import com.chua.starter.oauth.client.support.resilience.OAuthClientResilience;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
-import com.chua.starter.oauth.client.support.user.LoginResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import jakarta.servlet.http.Cookie;
-import kong.unirest.HttpResponse;
-import kong.unirest.Unirest;
-import kong.unirest.UnirestException;
-import kong.unirest.UnirestInstance;
 import lombok.extern.slf4j.Slf4j;
 import me.zhyd.oauth.exception.AuthException;
 
@@ -52,37 +47,9 @@ public class Oauth2Protocol extends AbstractProtocol {
      */
     private final OAuthClientResilience resilience;
 
-    /**
-     * HTTP客户端实例
-     */
-    private static volatile UnirestInstance httpClient;
-    private static final Object HTTP_CLIENT_LOCK = new Object();
-
     public Oauth2Protocol(AuthClientProperties authClientProperties) {
         super(authClientProperties);
         this.resilience = new OAuthClientResilience(authClientProperties);
-        initHttpClient(authClientProperties);
-    }
-
-    /**
-     * 初始化HTTP客户端
-     */
-    private void initHttpClient(AuthClientProperties config) {
-        if (httpClient == null) {
-            synchronized (HTTP_CLIENT_LOCK) {
-                if (httpClient == null) {
-                    httpClient = Unirest.spawnInstance();
-                    httpClient.config()
-                            .connectTimeout((int) config.getConnectTimeout())
-                            .socketTimeout((int) config.getReadTimeout())
-                            .concurrency(200, 20)
-                            .automaticRetries(false)
-                            .verifySsl(true);
-                    log.info("[OAuth2客户端]HTTP客户端初始化完成 - 连接超时: {}ms, 读取超时: {}ms",
-                            config.getConnectTimeout(), config.getReadTimeout());
-                }
-            }
-        }
     }
 
     @Override
@@ -94,9 +61,8 @@ public class Oauth2Protocol extends AbstractProtocol {
     @Override
     protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
         // OAuth 2.0 使用 client_credentials 模式，凭据来自客户端配置
-        String clientId = authClientProperties.getKey().getAccessKey();
-        String clientSecret = authClientProperties.getKey().getSecretKey();
-        return clientCredentialsGrant(clientId, clientSecret, null);
+        return clientCredentialsGrant(authClientProperties.getKey().getAccessKey(),
+                authClientProperties.getKey().getSecretKey(), null);
     }
 
     @Override
@@ -112,27 +78,21 @@ public class Oauth2Protocol extends AbstractProtocol {
     @Override
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
         log.debug("OAuth2 获取访问令牌 - username: {}, authType: {}", username, authType);
-
-        String selectedUrl = selectUrl();
+        var selectedUrl = selectUrl();
         if (selectedUrl == null) {
             return new LoginAuthResult(500, "认证服务器不可用");
         }
-
         try {
-            String tokenUrl = StringUtils.endWithAppend(selectedUrl, "/") + "oauth2/token";
-            
-            HttpResponse<String> response = getHttpClient()
-                    .post(tokenUrl)
+            var tokenUrl = StringUtils.endWithAppend(selectedUrl, "/") + "oauth2/token";
+            var response = formPost(tokenUrl)
                     .header("Authorization", buildBasicAuth())
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .field("grant_type", "password")
-                    .field("username", username)
-                    .field("password", password)
-                    .field("scope", ext != null ? (String) ext.get("scope") : null)
-                    .asString();
-
+                    .formData("grant_type", "password")
+                    .formData("username", username)
+                    .formData("password", password)
+                    .formData("scope", ext != null ? (String) ext.get("scope") : null)
+                    .post();
             return parseTokenResponse(response);
-        } catch (UnirestException e) {
+        } catch (Exception e) {
             log.error("[OAuth2客户端]获取令牌失败", e);
             return new LoginAuthResult(500, "获取令牌失败: " + e.getMessage());
         }
@@ -141,30 +101,26 @@ public class Oauth2Protocol extends AbstractProtocol {
     @Override
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult) {
         log.debug("OAuth2 登出 - uid: {}, logoutType: {}", uid, logoutType);
-
-        String selectedUrl = selectUrl();
+        var selectedUrl = selectUrl();
         if (selectedUrl == null) {
             throw new AuthException("认证服务器不可用");
         }
-
         try {
-            String revokeUrl = StringUtils.endWithAppend(selectedUrl, "/") + "oauth2/revoke";
-            String token = userResult != null ? userResult.getToken() : uid;
-
-            HttpResponse<String> response = getHttpClient()
-                    .post(revokeUrl)
+            var revokeUrl = StringUtils.endWithAppend(selectedUrl, "/") + "oauth2/revoke";
+            var token = userResult != null ? userResult.getToken() : uid;
+            var response = formPost(revokeUrl)
                     .header("Authorization", buildBasicAuth())
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .field("token", token)
-                    .asString();
-
+                    .formData("token", token)
+                    .post();
             // RFC 7009: 无论成功与否服务端都返回200
-            if (response.getStatus() == 200 || response.getStatus() == 204) {
+            var status = response.getStatusCode();
+            if (status == 200 || status == 204) {
                 return LoginAuthResult.OK;
             }
-            
-            throw new AuthException("登出失败: HTTP " + response.getStatus());
-        } catch (UnirestException e) {
+            throw new AuthException("登出失败: HTTP " + status);
+        } catch (AuthException e) {
+            throw e;
+        } catch (Exception e) {
             log.error("[OAuth2客户端]登出失败", e);
             throw new AuthException("登出失败: " + e.getMessage());
         }
@@ -178,13 +134,11 @@ public class Oauth2Protocol extends AbstractProtocol {
 
     @Override
     public OnlineStatus getOnlineStatus(String uid) {
-        // OAuth 2.0 标准不包含在线状态查询
         return OnlineStatus.defaultStatus();
     }
 
     @Override
     public OnlineUserResult getOnlineUsers(OnlineUserQuery query) {
-        // OAuth 2.0 标准不包含在线用户列表
         return OnlineUserResult.empty();
     }
 
@@ -192,33 +146,22 @@ public class Oauth2Protocol extends AbstractProtocol {
 
     /**
      * 使用客户端凭据模式获取令牌
-     *
-     * @param clientId     客户端ID
-     * @param clientSecret 客户端密钥
-     * @param scope        权限范围
-     * @return 认证信息
      */
     public AuthenticationInformation clientCredentialsGrant(String clientId, String clientSecret, String scope) {
         log.debug("OAuth2 client_credentials授权 - clientId: {}", clientId);
-
-        String selectedUrl = selectUrl();
+        var selectedUrl = selectUrl();
         if (selectedUrl == null) {
             return AuthenticationInformation.authServerError();
         }
-
         try {
-            String tokenUrl = StringUtils.endWithAppend(selectedUrl, "/") + "oauth2/token";
-
-            HttpResponse<String> response = getHttpClient()
-                    .post(tokenUrl)
+            var tokenUrl = StringUtils.endWithAppend(selectedUrl, "/") + "oauth2/token";
+            var response = formPost(tokenUrl)
                     .header("Authorization", buildBasicAuth(clientId, clientSecret))
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .field("grant_type", "client_credentials")
-                    .field("scope", scope)
-                    .asString();
-
+                    .formData("grant_type", "client_credentials")
+                    .formData("scope", scope)
+                    .post();
             return parseAuthResponse(response);
-        } catch (UnirestException e) {
+        } catch (Exception e) {
             log.error("[OAuth2客户端]client_credentials授权失败", e);
             return AuthenticationInformation.authServerError();
         }
@@ -226,31 +169,22 @@ public class Oauth2Protocol extends AbstractProtocol {
 
     /**
      * 使用刷新令牌获取新的访问令牌
-     *
-     * @param refreshToken 刷新令牌
-     * @return 认证信息
      */
     public AuthenticationInformation refreshTokenGrant(String refreshToken) {
         log.debug("OAuth2 refresh_token授权");
-
-        String selectedUrl = selectUrl();
+        var selectedUrl = selectUrl();
         if (selectedUrl == null) {
             return AuthenticationInformation.authServerError();
         }
-
         try {
-            String tokenUrl = StringUtils.endWithAppend(selectedUrl, "/") + "oauth2/token";
-
-            HttpResponse<String> response = getHttpClient()
-                    .post(tokenUrl)
+            var tokenUrl = StringUtils.endWithAppend(selectedUrl, "/") + "oauth2/token";
+            var response = formPost(tokenUrl)
                     .header("Authorization", buildBasicAuth())
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .field("grant_type", "refresh_token")
-                    .field("refresh_token", refreshToken)
-                    .asString();
-
+                    .formData("grant_type", "refresh_token")
+                    .formData("refresh_token", refreshToken)
+                    .post();
             return parseAuthResponse(response);
-        } catch (UnirestException e) {
+        } catch (Exception e) {
             log.error("[OAuth2客户端]refresh_token授权失败", e);
             return AuthenticationInformation.authServerError();
         }
@@ -258,51 +192,37 @@ public class Oauth2Protocol extends AbstractProtocol {
 
     /**
      * 令牌内省 (RFC 7662)
-     *
-     * @param token 要验证的令牌
-     * @return 认证信息
      */
     public AuthenticationInformation introspectToken(String token) {
         log.debug("OAuth2 令牌内省");
-
         if (StringUtils.isBlank(token)) {
             return AuthenticationInformation.noAuth();
         }
-
-        String selectedUrl = selectUrl();
+        var selectedUrl = selectUrl();
         if (selectedUrl == null) {
             return AuthenticationInformation.authServerError();
         }
-
         try {
-            String introspectUrl = StringUtils.endWithAppend(selectedUrl, "/") + "oauth2/introspect";
-
-            HttpResponse<String> response = getHttpClient()
-                    .post(introspectUrl)
+            var introspectUrl = StringUtils.endWithAppend(selectedUrl, "/") + "oauth2/introspect";
+            var response = formPost(introspectUrl)
                     .header("Authorization", buildBasicAuth())
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .field("token", token)
-                    .asString();
-
-            if (response.getStatus() != 200) {
+                    .formData("token", token)
+                    .post();
+            if (response.getStatusCode() != 200) {
                 return AuthenticationInformation.authServerError();
             }
-
-            Map<String, Object> result = Json.fromJson(response.getBody(), Map.class);
+            var result = Json.fromJson(response.getBodyString(), Map.class);
             if (result == null || !Boolean.TRUE.equals(result.get("active"))) {
                 return AuthenticationInformation.noAuth();
             }
-
-            // 构建用户信息
-            UserResult userResult = new UserResult();
+            var userResult = new UserResult();
             userResult.setUserId(getStringValue(result, "sub"));
             userResult.setUsername(getStringValue(result, "username"));
             userResult.setToken(token);
-
-            AuthenticationInformation authInfo = new AuthenticationInformation(Information.OK, userResult);
+            var authInfo = new AuthenticationInformation(Information.OK, userResult);
             authInfo.setToken(token);
             return authInfo;
-        } catch (UnirestException e) {
+        } catch (Exception e) {
             log.error("[OAuth2客户端]令牌内省失败", e);
             return AuthenticationInformation.authServerError();
         }
@@ -310,43 +230,32 @@ public class Oauth2Protocol extends AbstractProtocol {
 
     /**
      * 获取用户信息
-     *
-     * @param accessToken 访问令牌
-     * @return 用户信息
      */
     public UserResume getUserInfo(String accessToken) {
         log.debug("OAuth2 获取用户信息");
-
-        String selectedUrl = selectUrl();
+        var selectedUrl = selectUrl();
         if (selectedUrl == null) {
             return null;
         }
-
         try {
-            String userinfoUrl = StringUtils.endWithAppend(selectedUrl, "/") + "oauth2/userinfo";
-
-            HttpResponse<String> response = getHttpClient()
-                    .get(userinfoUrl)
+            var userinfoUrl = StringUtils.endWithAppend(selectedUrl, "/") + "oauth2/userinfo";
+            var response = com.chua.common.support.network.client.HttpClientFactory.of(userinfoUrl)
                     .header("Authorization", "Bearer " + accessToken)
-                    .asString();
-
-            if (response.getStatus() != 200) {
+                    .get();
+            if (response.getStatusCode() != 200) {
                 return null;
             }
-
-            Map<String, Object> result = Json.fromJson(response.getBody(), Map.class);
+            var result = Json.fromJson(response.getBodyString(), Map.class);
             if (result == null) {
                 return null;
             }
-
-            UserResult userResult = new UserResult();
+            var userResult = new UserResult();
             userResult.setUserId(getStringValue(result, "sub"));
             userResult.setUsername(getStringValue(result, "preferred_username"));
             userResult.setNickName(getStringValue(result, "name"));
             userResult.setToken(accessToken);
-
             return userResult;
-        } catch (UnirestException e) {
+        } catch (Exception e) {
             log.error("[OAuth2客户端]获取用户信息失败", e);
             return null;
         }
@@ -354,8 +263,13 @@ public class Oauth2Protocol extends AbstractProtocol {
 
     // ==================== 辅助方法 ====================
 
-    private UnirestInstance getHttpClient() {
-        return httpClient != null ? httpClient : Unirest.primaryInstance();
+    /**
+     * 构建 OAuth2 表单 POST 客户端(application/x-www-form-urlencoded)
+     */
+    private com.chua.common.support.network.client.HttpClientBuilder formPost(String url) {
+        return com.chua.common.support.network.client.HttpClientFactory.of(url)
+                .form()
+                .header("Content-Type", "application/x-www-form-urlencoded");
     }
 
     /**
@@ -372,66 +286,57 @@ public class Oauth2Protocol extends AbstractProtocol {
      * 构建Basic认证头
      */
     private String buildBasicAuth(String clientId, String clientSecret) {
-        String credentials = clientId + ":" + clientSecret;
-        String encoded = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
-        return "Basic " + encoded;
+        var credentials = clientId + ":" + clientSecret;
+        return "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
     }
 
     /**
      * 解析Token响应
      */
-    private LoginAuthResult parseTokenResponse(HttpResponse<String> response) {
-        if (response.getStatus() != 200) {
-            Map<String, Object> error = Json.fromJson(response.getBody(), Map.class);
-            String errorDesc = error != null ? getStringValue(error, "error_description") : "未知错误";
-            return new LoginAuthResult(response.getStatus(), errorDesc);
+    private LoginAuthResult parseTokenResponse(com.chua.common.support.network.client.ClientResponse response) {
+        if (response.getStatusCode() != 200) {
+            var error = Json.fromJson(response.getBodyString(), Map.class);
+            var errorDesc = error != null ? getStringValue(error, "error_description") : "未知错误";
+            return new LoginAuthResult(response.getStatusCode(), errorDesc);
         }
-
-        Map<String, Object> result = Json.fromJson(response.getBody(), Map.class);
+        var result = Json.fromJson(response.getBodyString(), Map.class);
         if (result == null) {
             return new LoginAuthResult(500, "解析响应失败");
         }
-
-        LoginAuthResult authResult = new LoginAuthResult();
+        var authResult = new LoginAuthResult();
         authResult.setCode(200);
         authResult.setToken(getStringValue(result, "access_token"));
         authResult.setRefreshToken(getStringValue(result, "refresh_token"));
-
-        // 构建用户信息
-        UserResult userResult = new UserResult();
+        var userResult = new UserResult();
         userResult.setToken(authResult.getToken());
         userResult.setRefreshToken(authResult.getRefreshToken());
-        Object expiresIn = result.get("expires_in");
-        if (expiresIn instanceof Number) {
-            userResult.setExpireTime(((Number) expiresIn).longValue());
+        var expiresIn = result.get("expires_in");
+        if (expiresIn instanceof Number number) {
+            userResult.setExpireTime(number.longValue());
         }
         authResult.setUserResume(userResult);
-
         return authResult;
     }
 
     /**
      * 解析认证响应
      */
-    private AuthenticationInformation parseAuthResponse(HttpResponse<String> response) {
-        if (response.getStatus() != 200) {
+    private AuthenticationInformation parseAuthResponse(com.chua.common.support.network.client.ClientResponse response) {
+        if (response.getStatusCode() != 200) {
             return new AuthenticationInformation(Information.AUTHENTICATION_FAILURE, null);
         }
-
-        Map<String, Object> result = Json.fromJson(response.getBody(), Map.class);
+        var result = Json.fromJson(response.getBodyString(), Map.class);
         if (result == null) {
             return AuthenticationInformation.authServerError();
         }
-
-        UserResult userResult = new UserResult();
+        var userResult = new UserResult();
         userResult.setToken(getStringValue(result, "access_token"));
         userResult.setRefreshToken(getStringValue(result, "refresh_token"));
-        Object expiresIn = result.get("expires_in");
-        if (expiresIn instanceof Number) {
-            userResult.setExpireTime(((Number) expiresIn).longValue());
+        var expiresIn = result.get("expires_in");
+        if (expiresIn instanceof Number number) {
+            userResult.setExpireTime(number.longValue());
         }
-
-        AuthenticationInformation authInfo = new AuthenticationInformation(Information.OK, userResult);
+        var authInfo = new AuthenticationInformation(Information.OK, userResult);
         authInfo.setToken(userResult.getToken());
         authInfo.setRefreshToken(userResult.getRefreshToken());
         return authInfo;
@@ -441,7 +346,7 @@ public class Oauth2Protocol extends AbstractProtocol {
         if (map == null) {
             return null;
         }
-        Object value = map.get(key);
+        var value = map.get(key);
         return value != null ? value.toString() : null;
     }
 }

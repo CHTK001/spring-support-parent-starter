@@ -9,14 +9,11 @@ import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
 import com.chua.starter.configcenter.support.holder.ConfigCenterHolder;
 import com.chua.starter.configcenter.support.properties.ConfigCenterProperties;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.boot.env.OriginTrackedMapPropertySource;
-import org.springframework.boot.env.SystemEnvironmentPropertySourceEnvironmentPostProcessor;
 import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MutablePropertySources;
@@ -36,7 +33,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @EnableConfigurationProperties(ConfigCenterProperties.class)
 public class ConfigCenterConfigurationEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
-    private static final Logger log = LoggerFactory.getLogger(ConfigCenterConfigurationEnvironmentPostProcessor.class);
 
     /**
      * 已加载的配置文件名称
@@ -304,6 +300,6 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
 
     @Override
     public int getOrder() {
-        return SystemEnvironmentPropertySourceEnvironmentPostProcessor.DEFAULT_ORDER - 100;
+        return Ordered.LOWEST_PRECEDENCE - 100;
     }
 }

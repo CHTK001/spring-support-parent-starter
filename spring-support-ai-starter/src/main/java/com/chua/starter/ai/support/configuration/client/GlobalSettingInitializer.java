@@ -29,7 +29,10 @@ public class GlobalSettingInitializer implements ApplicationRunner {
     private final SysAiGlobalSettingService globalSettingService;
 
     /**
-     * 启动时注册所有 SPI 模块的默认全局配置项（仅首次）。
+     * 启动时同步所有 SPI 模块的默认全局配置项。
+     *
+     * <p>动态同步语义：分组已有部分配置时，仅补充 provider 定义但 DB 缺失的配置项，
+     * 不覆盖用户已配置的值；分组为空时全量注册。</p>
      *
      * @param args 启动参数
      */
@@ -46,33 +49,48 @@ public class GlobalSettingInitializer implements ApplicationRunner {
         for (GlobalSettingProvider gsp : providers) {
             try {
                 String group = gsp.group();
-                // 检查是否已有配置项
                 List<Map<String, Object>> existing = globalSettingService.list(group);
-                if (!existing.isEmpty()) {
-                    log.debug("[GlobalSettingInitializer] 分组 '{}' 已有 {} 项配置，跳过", group, existing.size());
+                List<GlobalSettingProvider.SettingItem> items = gsp.getItems();
+                if (items.isEmpty()) {
+                    continue;
+                }
+                if (existing.isEmpty()) {
+                    // 全量注册
+                    List<Map<String, Object>> fields = items.stream()
+                            .map(item -> {
+                                Map<String, Object> field = new java.util.LinkedHashMap<>();
+                                field.put("field", item.field());
+                                field.put("value", item.defaultValue());
+                                field.put("valueType", item.valueType());
+                                field.put("description", item.description());
+                                field.put("sort", item.sort());
+                                return field;
+                            })
+                            .toList();
+                    Map<String, Object> request = new java.util.LinkedHashMap<>();
+                    request.put("group", group);
+                    request.put("fields", fields);
+                    globalSettingService.replace(request);
+                    log.info("[GlobalSettingInitializer] 已注册分组 '{}' ({}): {} 项配置",
+                            group, gsp.groupName(), fields.size());
                     continue;
                 }
 
-                // 构造默认配置项
-                List<Map<String, Object>> fields = gsp.getItems().stream()
-                        .map(item -> {
-                            Map<String, Object> field = new java.util.LinkedHashMap<>();
-                            field.put("field", item.field());
-                            field.put("value", item.defaultValue());
-                            field.put("valueType", item.valueType());
-                            field.put("description", item.description());
-                            field.put("sort", item.sort());
-                            return field;
-                        })
-                        .toList();
-
-                Map<String, Object> request = new java.util.LinkedHashMap<>();
-                request.put("group", group);
-                request.put("fields", fields);
-
-                globalSettingService.replace(request);
-                log.info("[GlobalSettingInitializer] 已注册分组 '{}' ({}): {} 项配置",
-                        group, gsp.groupName(), fields.size());
+                // 增量同步：仅补缺失项，不覆盖已有值
+                java.util.Set<String> existingFields = existing.stream()
+                        .map(m -> String.valueOf(m.get("field")))
+                        .collect(java.util.stream.Collectors.toSet());
+                int added = 0;
+                for (GlobalSettingProvider.SettingItem item : items) {
+                    if (existingFields.contains(item.field())) {
+                        continue;
+                    }
+                    globalSettingService.upsertField(group, item.field(), item.defaultValue(),
+                            item.valueType(), item.description(), item.sort());
+                    added++;
+                }
+                log.info("[GlobalSettingInitializer] 分组 '{}' ({}): 已有 {} 项，新增 {} 项配置",
+                        group, gsp.groupName(), existing.size(), added);
             } catch (Exception e) {
                 log.warn("[GlobalSettingInitializer] 注册分组 '{}' 失败: {}", gsp.group(), e.getMessage());
             }

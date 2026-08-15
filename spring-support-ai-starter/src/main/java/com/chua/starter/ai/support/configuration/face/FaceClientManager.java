@@ -475,7 +475,41 @@ public class FaceClientManager {
             builder.requireLive(settingReader.getBool(GROUP, "liveness_enabled", false));
             builder.livenessThreshold(readFloat("liveness_threshold", 0.5f));
         }
+        // 识别链路（feature + 向量库）
+        String featureModel = settingReader.getStr(GROUP, "feature_model");
+        if (StringUtils.isNotBlank(featureModel)) {
+            builder.feature(featureModel);
+        }
+        builder.vectorStorage(currentVectorStorage());
+        builder.topK(settingReader.getInt(GROUP, "top_k", 5));
+        // 辅助能力（enabled 开关 + 配置模型均满足才注入，保持懒加载）
+        injectOptional(builder, "anime_enabled", "anime_detector_model", (m) -> builder.anime(m));
+        injectOptional(builder, "super_resolution_enabled", "super_resolution_model", (m) -> builder.superResolution(m));
+        injectOptional(builder, "restore_enabled", "restore_model", (m) -> builder.restore(m));
+        injectOptional(builder, "attribute_enabled", "attribute_model", (m) -> builder.attribute(m));
+        injectOptional(builder, "emotion_enabled", "emotion_model", (m) -> builder.emotion(m));
+        injectOptional(builder, "landmark_enabled", "landmark_model", (m) -> builder.landmark(m));
+        injectOptional(builder, "deepfake_enabled", "deepfake_model", (m) -> builder.deepfake(m));
         return builder.build();
+    }
+
+    /**
+     * 可选模型注入：启用开关为 true（未配置时默认开启）且配置了模型 ID 才注入构建器。
+     *
+     * @param builder      构建器
+     * @param enabledField 启用开关字段
+     * @param field        模型字段
+     * @param inject       注入动作
+     */
+    private void injectOptional(FacePipeline.Builder builder, String enabledField, String field,
+                                java.util.function.Consumer<String> inject) {
+        if (!settingReader.getBool(GROUP, enabledField, true)) {
+            return;
+        }
+        String model = settingReader.getStr(GROUP, field);
+        if (StringUtils.isNotBlank(model)) {
+            inject.accept(model);
+        }
     }
 
     /**

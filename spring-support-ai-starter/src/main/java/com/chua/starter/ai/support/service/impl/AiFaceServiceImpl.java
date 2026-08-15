@@ -66,7 +66,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public List<FaceDetectionHit> detectPipeline(byte[] imageData) {
-        return faceClientManager.currentPipeline().detect(imageData);
+        return faceClientManager.currentPipeline().detectPipeline(imageData);
     }
 
     /**
@@ -131,20 +131,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public boolean enrollPipeline(String id, byte[] imageData, Map<String, Object> metadata) {
-        List<FaceDetectionHit> hits = faceClientManager.currentPipeline().detect(imageData);
-        if (hits == null || hits.isEmpty()) {
-            return false;
-        }
-        FaceDetectionHit largest = hits.stream()
-                .max(java.util.Comparator.comparingDouble((FaceDetectionHit h) ->
-                        h.box() == null ? 0d : (double) h.box().width() * h.box().height()))
-                .orElse(null);
-        if (largest == null || largest.faceImage() == null) {
-            return false;
-        }
-        float[] feature = faceClientManager.currentFeatureExtractor().extract(largest.faceImage());
-        return faceClientManager.currentIdentify()
-                .enroll(id, feature, metadata == null ? Map.of() : metadata, id);
+        return faceClientManager.currentPipeline().enrollPipeline(id, imageData, metadata);
     }
 
     /**
@@ -155,7 +142,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public FaceIdentifyHit identify(byte[] imageData) {
-        return faceClientManager.currentIdentify().identifyLargest(imageData);
+        return faceClientManager.currentPipeline().identifyPipelineLargest(imageData);
     }
 
     /**
@@ -166,7 +153,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public FaceIdentifyHit identifyPipeline(byte[] imageData) {
-        return faceClientManager.currentIdentify().identifyLargest(imageData);
+        return faceClientManager.currentPipeline().identifyPipelineLargest(imageData);
     }
 
     /**
@@ -198,7 +185,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public boolean verify(String id, byte[] imageData) {
-        FaceIdentifyHit hit = faceClientManager.currentIdentify().identifyLargest(imageData);
+        FaceIdentifyHit hit = faceClientManager.currentPipeline().identifyPipelineLargest(imageData);
         if (hit == null) {
             return false;
         }
@@ -352,19 +339,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public Map<String, List<String>> listModels() {
-        return Map.ofEntries(
-                Map.entry("detector", List.of("scrfd-face-detector", "ultra-face", "yolo-face-detector", "yolo-face-person", "faceplugin-face-detect-slim")),
-                Map.entry("animeDetector", List.of("anime-face-detector", "anime-face-yolov8")),
-                Map.entry("feature", List.of("r50-face-feature", "face-feature", "common-face-rec", "arc-face", "ada-face", "faceplugin-face-feature")),
-                Map.entry("liveness", List.of("face-anti-spoof", "mini-vision-liveness", "face-liveness-dinov2", "face-liveness-mobilevit")),
-                Map.entry("superResolution", List.of("gfpgan-face-super-resolution", "real-esrgan")),
-                Map.entry("restore", List.of("codeformer")),
-                Map.entry("attribute", List.of("age-race-gender", "age-gender-onnx", "yolo-face-age")),
-                Map.entry("emotion", List.of("emotion-ferplus", "yolo-face-emotion", "fer-plus")),
-                Map.entry("landmark", List.of("faceplugin-face-landmark")),
-                Map.entry("deepfake", List.of("deepfake-detector")),
-                Map.entry("vectorStorage", List.of("jvector", "memory", "milvus"))
-        );
+        return faceClientManager.currentPipeline().listModels();
     }
 
     /**

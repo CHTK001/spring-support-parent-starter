@@ -52,10 +52,22 @@ public interface SysAiGlobalSettingService {
     /**
      * 增量写入/更新单字段配置，不影响分组内其它已有字段。
      *
-     * @param group  分组
-     * @param field  字段名
-     * @param value  字段值
+     * @param group 分组
+     * @param field 字段名
+     * @param value 字段值
      * @param description 字段描述（可选）
      */
     void upsertValue(String group, String field, String value, String description);
+
+    /**
+     * 完整写入/更新单字段配置（含类型与排序），不影响分组内其它已有字段。
+     *
+     * @param group       分组
+     * @param field       字段名
+     * @param value       字段值
+     * @param valueType   值类型：STRING / NUMBER / BOOLEAN
+     * @param description 字段描述（可选）
+     * @param sort        排序序号
+     */
+    void upsertField(String group, String field, String value, String valueType, String description, int sort);
 }

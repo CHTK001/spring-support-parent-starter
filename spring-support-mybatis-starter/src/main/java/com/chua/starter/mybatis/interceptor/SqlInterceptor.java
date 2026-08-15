@@ -2,11 +2,8 @@ package com.chua.starter.mybatis.interceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-// TODO: 这些类在新结构中找不到，暂时注释掉格式化功能
-// import com.chua.common.support.http.HttpConstant;
-// import com.chua.common.support.lang.formatter.DmlFormatter;
-// import com.chua.common.support.lang.formatter.Formatter;
-// import com.chua.common.support.lang.formatter.HighlightingFormatter;
+import com.chua.common.support.lang.format.DmlFormatter;
+import com.chua.common.support.lang.format.Formatter;
 import com.chua.common.support.utils.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.cache.CacheKey;
@@ -54,9 +51,10 @@ public class SqlInterceptor implements Interceptor {
 
     private static final SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-    // TODO: 暂时注释掉格式化功能，待找到新的 Formatter 类后恢复
-    // static final DmlFormatter FORMATTER = new DmlFormatter();
-    // static final Formatter HIGHLIGHTING_FORMATTER = HighlightingFormatter.INSTANCE;
+    /**
+     * SQL 格式化器
+     */
+    static final Formatter FORMATTER = new DmlFormatter();
 
     /**
      * 重写intercept，拦截sql，拼接完整sql语句
@@ -132,8 +130,7 @@ public class SqlInterceptor implements Interceptor {
             str.append("[TraceId]").append(traceId).append("\n");
         }
         str.append("[方法]").append(sqlId).append("\n");
-        // TODO: 暂时使用简单的字符串格式化，待找到新的 Formatter 类后恢复
-        str.append("[sql]\r\n").append(MAP.get("sql").toString());
+        str.append("[sql]\r\n").append(FORMATTER.format(MAP.get("sql").toString()));
         str.append("\n");
 //        str.append("[参数映射]").append(parameterMappings);
 //        str.append("\n");

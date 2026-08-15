@@ -216,11 +216,16 @@
             <scope>provided</scope>
         </dependency>
 
-    <dependency>
-        <groupId>org.springframework</groupId>
-        <artifactId>spring-webmvc</artifactId>
-        <scope>provided</scope>
-    </dependency>
+<dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+            <scope>provided</scope>
+        </dependency>
 
     <!-- Spring Boot 4.x 起独立为 spring-boot-webmvc，提供 WebMvcRegistrations 等 -->
     <dependency>

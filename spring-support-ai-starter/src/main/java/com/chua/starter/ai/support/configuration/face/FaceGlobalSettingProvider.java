@@ -74,12 +74,19 @@ public class FaceGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("liveness_threshold", "0.5", "NUMBER", "活体分数阈值", 11),
                 new SettingItem("quality_enabled", "false", "BOOLEAN", "是否启用质量评估（模糊/人脸占比过滤）", 12),
                 new SettingItem("anime_detector_model", "anime-face-detector", "STRING", "动漫人脸检测模型（anime-face-detector / anime-face-yolov8）", 13),
+                new SettingItem("anime_enabled", "true", "BOOLEAN", "是否启用动漫人脸检测", 22),
                 new SettingItem("super_resolution_model", "gfpgan-face-super-resolution", "STRING", "人脸超分模型（gfpgan-face-super-resolution / real-esrgan）", 14),
+                new SettingItem("super_resolution_enabled", "true", "BOOLEAN", "是否启用超分能力", 23),
                 new SettingItem("restore_model", "codeformer", "STRING", "人脸修复模型（codeformer）", 15),
+                new SettingItem("restore_enabled", "true", "BOOLEAN", "是否启用修复能力", 24),
                 new SettingItem("attribute_model", "age-race-gender", "STRING", "人脸属性模型（age-race-gender / age-gender-onnx / yolo-face-age / google-net-age-recognition）", 16),
+                new SettingItem("attribute_enabled", "true", "BOOLEAN", "是否启用属性分析", 25),
                 new SettingItem("emotion_model", "emotion-ferplus", "STRING", "人脸表情模型（emotion-ferplus / yolo-face-emotion / fer-plus）", 17),
+                new SettingItem("emotion_enabled", "true", "BOOLEAN", "是否启用表情识别", 26),
                 new SettingItem("landmark_model", "faceplugin-face-landmark", "STRING", "人脸关键点模型（faceplugin-face-landmark）", 18),
+                new SettingItem("landmark_enabled", "true", "BOOLEAN", "是否启用关键点定位", 27),
                 new SettingItem("deepfake_model", "deepfake-detector", "STRING", "换脸检测模型（deepfake-detector）", 19),
+                new SettingItem("deepfake_enabled", "true", "BOOLEAN", "是否启用换脸检测", 28),
                 new SettingItem("device", "cpu", "STRING", "推理设备（cpu / cuda）", 20)
         );
     }

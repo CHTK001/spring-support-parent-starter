@@ -24,11 +24,6 @@ import com.chua.starter.oauth.client.support.user.UserResult;
 import com.google.common.base.Strings;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
-import kong.unirest.HttpRequestWithBody;
-import kong.unirest.HttpResponse;
-import kong.unirest.Unirest;
-import kong.unirest.UnirestException;
-import kong.unirest.UnirestInstance;
 import lombok.extern.slf4j.Slf4j;
 import me.zhyd.oauth.exception.AuthException;
 import org.slf4j.MDC;
@@ -49,37 +44,9 @@ public class HttpProtocol extends AbstractProtocol {
      */
     private final OAuthClientResilience resilience;
 
-    /**
-     * HTTP客户端实例（配置超时）
-     */
-    private static volatile UnirestInstance httpClient;
-    private static final Object HTTP_CLIENT_LOCK = new Object();
-
     public HttpProtocol(AuthClientProperties authClientProperties) {
         super(authClientProperties);
         this.resilience = new OAuthClientResilience(authClientProperties);
-        initHttpClient(authClientProperties);
-    }
-
-    /**
-     * 初始化HTTP客户端（配置超时）
-     */
-    private void initHttpClient(AuthClientProperties config) {
-        if (httpClient == null) {
-            synchronized (HTTP_CLIENT_LOCK) {
-                if (httpClient == null) {
-                    httpClient = Unirest.spawnInstance();
-                    httpClient.config()
-                            .connectTimeout((int) config.getConnectTimeout())
-                            .socketTimeout((int) config.getReadTimeout())
-                            .concurrency(200, 20)
-                            .automaticRetries(false)  // 使用自定义重试机制
-                            .verifySsl(true);
-                    log.info("[OAuth客户端]HTTP客户端初始化完成 - 连接超时: {}ms, 读取超时: {}ms",
-                            config.getConnectTimeout(), config.getReadTimeout());
-                }
-            }
-        }
     }
 
     @Override
@@ -399,6 +366,19 @@ public class HttpProtocol extends AbstractProtocol {
      * @param upgradeType 升级类型，用于指定升级策略（如基于版本号或时间戳）
      * @return AuthenticationInformation 返回认证结果，包含认证状态和用户信息
      */
+    /**
+     * 大小写不敏感读取响应头
+     */
+    private String headerIgnoreCase(com.chua.common.support.network.http.HttpHeader headers, String name) {
+        if (headers == null) return null;
+        var value = headers.get(name);
+        if (value != null) return value;
+        return headers.toMap().entrySet().stream()
+                .filter(e -> e.getKey() != null && e.getKey().equalsIgnoreCase(name))
+                .map(Map.Entry::getValue)
+                .findFirst().orElse(null);
+    }
+
     protected AuthenticationInformation createAuthenticationInformation(JsonObject jsonObject, UpgradeType upgradeType, String path) {
         // 使用弹性处理器执行请求（含熔断和重试）
         return resilience.executeWithResilience(
@@ -445,38 +425,35 @@ public class HttpProtocol extends AbstractProtocol {
             
             traceContext.endSpan(); // 结束构建请求 Span
 
-            HttpResponse<String> httpResponse = null;
+            com.chua.common.support.network.client.ClientResponse httpResponse = null;
             // Span: HTTP调用
             TraceSpan httpSpan = traceContext.startSpan("client_http_call");
             try {
-                // 使用配置好超时的HTTP客户端
-                UnirestInstance client = httpClient != null ? httpClient : Unirest.primaryInstance();
-                
-                // 构建POST请求
-                HttpRequestWithBody withBody = client.post(
-                        StringUtils.endWithAppend(StringUtils.startWithAppend(selectedUrl, "http://"), "/") +
-                                StringUtils.startWithMove(path, "/"));
+                // 使用 common-starter HttpClient(替代 unirest)
+                String url = StringUtils.endWithAppend(StringUtils.startWithAppend(selectedUrl, "http://"), "/") +
+                        StringUtils.startWithMove(path, "/");
 
-                // 设置基础请求头
-                HttpRequestWithBody requestWithBody = withBody
-                        .header("x-oauth-timestamp", timestamp)
-                        .header("x-oauth-uuid", key1)
-                        .header("x-oauth-encode", String.valueOf(isEncode()))
-                        .header("x-oauth-serial", createData(key, key1))
-                        .header("x-oauth-sign", SignUtils.generateSignFromMap(jsonObject));
-                
+                com.chua.common.support.network.client.HttpClientBuilder client =
+                        com.chua.common.support.network.client.HttpClientFactory.of(url)
+                                .json()
+                                .header("x-oauth-timestamp", timestamp)
+                                .header("x-oauth-uuid", key1)
+                                .header("x-oauth-encode", String.valueOf(isEncode()))
+                                .header("x-oauth-serial", createData(key, key1))
+                                .header("x-oauth-sign", SignUtils.generateSignFromMap(jsonObject));
+
                 // 添加 AK/SK 请求头（如果启用）
                 String accessKey = getAccessKey();
                 if (StringUtils.isNotBlank(accessKey)) {
-                    requestWithBody = requestWithBody.header("x-oauth-ak", accessKey);
+                    client = client.header("x-oauth-ak", accessKey);
                 }
-                
+
                 // 添加认证类型请求头（x-oauth-type）
                 HttpServletRequest currentRequest = RequestUtils.getRequest();
                 if (currentRequest != null) {
                     String authType = currentRequest.getHeader("x-oauth-type");
                     if (StringUtils.isNotBlank(authType)) {
-                        requestWithBody = requestWithBody.header("x-oauth-type", authType);
+                        client = client.header("x-oauth-type", authType);
                     }
                 }
 
@@ -484,17 +461,17 @@ public class HttpProtocol extends AbstractProtocol {
                 if (currentRequest != null) {
                     String authorization = currentRequest.getHeader("Authorization");
                     if (StringUtils.isNotBlank(authorization) && authorization.startsWith("Bearer ")) {
-                        requestWithBody = requestWithBody.header("Authorization", authorization);
+                        client = client.header("Authorization", authorization);
                         // 设置认证类型为 bearer，服务端根据此通过 SPI 选择 BearerAuthorizationHandler
-                        requestWithBody = requestWithBody.header("x-oauth-type", "bearer");
+                        client = client.header("x-oauth-type", "bearer");
                         log.debug("[HttpProtocol] 透传 Authorization: Bearer 头到服务端, x-oauth-type=bearer");
                         // 同时在请求体中放入 token，兼容加密协议解析
                         jsonObject.put("x-oauth-token", authorization.substring(7).trim());
                     }
                 }
-                
+
                 // 传递追踪头用于链路追踪
-                requestWithBody = requestWithBody
+                client = client
                         .header("x-trace-id", traceContext.getTraceId())
                         .header("x-trace-timestamp", String.valueOf(traceContext.getStartTimestamp()))
                         .header("x-trace-app-name", traceContext.getClientAppName() != null ? traceContext.getClientAppName() : "")
@@ -502,29 +479,22 @@ public class HttpProtocol extends AbstractProtocol {
 
                 // 如果有升级类型，则添加相应请求头
                 if (null != upgradeType) {
-                    requestWithBody = requestWithBody.header("x-oauth-upgrade-type", upgradeType.name());
+                    client = client.header("x-oauth-upgrade-type", upgradeType.name());
                 }
 
                 // 发送请求并获取响应
-                httpResponse = requestWithBody.contentType("application/json")
-                        .body(JsonObject.create()
-                                .fluentPut("data", createData(jsonObject, key)).toJSONString())
-                        .asString();
+                httpResponse = client.body(JsonObject.create()
+                        .fluentPut("data", createData(jsonObject, key)).toJSONString())
+                        .post();
 
-            } catch (UnirestException e) {
+            } catch (Exception e) {
                 traceContext.endSpan(); // 结束HTTP调用 Span
                 // 完整记录请求异常信息
-                log.error("[OAuth客户端]认证请求异常 - traceId: {}, URL: {}, 路径: {}, 异常类型: {}, 异常信息: {}", 
+                log.error("[OAuth客户端]认证请求异常 - traceId: {}, URL: {}, 路径: {}, 异常类型: {}, 异常信息: {}",
                         traceContext.getTraceId(), selectedUrl, path, e.getClass().getSimpleName(), e.getMessage());
                 if (log.isDebugEnabled()) {
                     log.debug("[OAuth客户端]认证请求异常堆栈", e);
                 }
-                return AuthenticationInformation.authServerError();
-            } catch (Exception e) {
-                traceContext.endSpan(); // 结束HTTP调用 Span
-                // 捕获其他未预期异常
-                log.error("[OAuth客户端]认证请求未知异常 - traceId: {}, URL: {}, 路径: {}, 异常: {}", 
-                        traceContext.getTraceId(), selectedUrl, path, e.getMessage(), e);
                 return AuthenticationInformation.authServerError();
             }
             traceContext.endSpan(); // 结束HTTP调用 Span
@@ -540,8 +510,8 @@ public class HttpProtocol extends AbstractProtocol {
                 }
 
                 // 获取响应状态码和内容
-                int status = httpResponse.getStatus();
-                String body = httpResponse.getBody();
+                int status = httpResponse.getStatusCode();
+                String body = httpResponse.getBodyString();
 
                 // 判断响应是否为服务器错误或空数据
                 if (status >= 400 && status < 600) {
@@ -562,7 +532,7 @@ public class HttpProtocol extends AbstractProtocol {
                             traceContext.getTraceId(), selectedUrl, path, traceContext.getTotalCostMs());
                     log.debug("[OAuth客户端]追踪详情: {}", traceContext.getSpansSummary());
                     return createAuthenticationInformation(Json.fromJson(body, ReturnResult.class),
-                            httpResponse.getHeaders().getFirst("x-oauth-response-serial"),
+                            headerIgnoreCase(httpResponse.getHeaders(), "x-oauth-response-serial"),
                             path);
                 }
 
