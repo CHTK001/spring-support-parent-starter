@@ -54,7 +54,22 @@ function Get-Status([string]$method, [string]$path, [string]$body = "", [string]
 }
 
 # ============================================================
-# 0. 编译并启动服务
+# 0. 清理残留服务（避免上次运行未退出、占用 8091 导致误测旧 H2 库）
+# ============================================================
+Write-Host "检查端口 8091 残留进程 ..." -ForegroundColor Yellow
+$conns = Get-NetTCPConnection -LocalPort 8091 -State Listen -ErrorAction SilentlyContinue
+foreach ($c in $conns) {
+    try {
+        Stop-Process -Id $c.OwningProcess -Force -ErrorAction Stop
+        Write-Host "  已清理残留进程 PID=$($c.OwningProcess)" -ForegroundColor DarkYellow
+    } catch {
+        Write-Host "  无法清理 PID=$($c.OwningProcess): $($_.Exception.Message)" -ForegroundColor DarkRed
+    }
+}
+Start-Sleep -Seconds 2
+
+# ============================================================
+# 0.1 编译并启动服务
 # ============================================================
 Write-Host "正在编译 spring-support-ai-starter ..." -ForegroundColor Yellow
 Push-Location $RootDir
@@ -404,12 +419,14 @@ Write-Step "人脸真实检测（scrfd ONNX 模型）"
 
 # 配置 face 分组：scrfd 检测器 + r50 特征 + memory 向量库 + codeformer 修复
 Invoke-Check "配置人脸检测模型" {
-    $faceBody = '{"group":"face","fields":[{"field":"detector_model","value":"scrfd-face-detector"},{"field":"feature_model","value":"r50-face-feature"},{"field":"vector_storage","value":"memory"},{"field":"liveness_enabled","value":"false"},{"field":"restore_model","value":"codeformer"},{"field":"restore_enabled","value":"true"}]}'
+    $faceBody = '{"group":"face","fields":[{"field":"detector_model","value":"scrfd-face-detector"},{"field":"feature_model","value":"r50-face-feature"},{"field":"vector_storage","value":"memory"},{"field":"feature_dimension","value":"10861"},{"field":"liveness_enabled","value":"false"},{"field":"restore_model","value":"codeformer"},{"field":"restore_enabled","value":"true"}]}'
     (Get-Body "PUT" "/v2/runtime/config" $faceBody) -match "已更新"
 }
 
 # 生成测试人脸图片并真实检测
 $faceImage = Join-Path $env:TEMP "ai-verify-face.png"
+# 真实人脸测试图（scrfd 可检测到人脸，用于 enroll/verify/identify 全链路）
+$realFaceImage = "G:\images\face_align_0.png"
 Add-Type -AssemblyName System.Drawing
 $bmp = New-Object System.Drawing.Bitmap(200, 200)
 $g = [System.Drawing.Graphics]::FromImage($bmp)
@@ -449,6 +466,25 @@ Invoke-Check "人脸特征比对真实执行（compare）" {
               "-F", "fileA=@$faceImage", "-F", "fileB=@$faceImage")
     $resp = & curl.exe $args 2>&1
     ($resp -match '"code"\s*:\s*"00000"') -or ($resp -match 'score')
+}
+
+# ===== 人脸登记/核验/识别全链路（enroll → verify → identify，r50 特征 + memory 向量库，真实人脸图） =====
+Invoke-Check "人脸登记真实执行（enroll）" {
+    $resp = & curl.exe -s --max-time 90 -X POST "$BaseUrl/v2/face/enroll" `
+        -H "Authorization: Bearer sk-chat-verify" `
+        -F "id=verify-user-001" -F "file=@$realFaceImage" -F "metadata={\"name\":\"测试用户\"}" 2>&1
+    ($resp -match '登记成功') -or ($resp -match '"code"\s*:\s*"00000"')
+}
+Invoke-Check "人脸核验真实执行（verify，已登记人脸应匹配）" {
+    $resp = & curl.exe -s --max-time 90 -X POST "$BaseUrl/v2/face/verify" `
+        -H "Authorization: Bearer sk-chat-verify" `
+        -F "id=verify-user-001" -F "file=@$realFaceImage" 2>&1
+    ($resp -match '"matched"\s*:\s*true')
+}
+Invoke-Check "人脸识别真实执行（identify，已登记人脸应命中）" {
+    $resp = & curl.exe -s --max-time 90 -X POST "$BaseUrl/v2/face/identify" `
+        -H "Authorization: Bearer sk-chat-verify" -F "file=@$realFaceImage" 2>&1
+    ($resp -match '"matched"\s*:\s*true') -or ($resp -match 'verify-user-001') -or ($resp -match '"code"\s*:\s*"00000"')
 }
 
 # ===== 人脸辅助能力（活体/动漫/属性/表情/关键点/质量/换脸 + 检索） =====
