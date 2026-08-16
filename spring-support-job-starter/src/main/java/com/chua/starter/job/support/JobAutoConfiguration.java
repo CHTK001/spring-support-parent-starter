@@ -1,6 +1,7 @@
 package com.chua.starter.job.support;
 
 import com.chua.common.support.network.sync.SyncClient;
+import com.chua.common.support.network.sync.impl.TcpSyncClient;
 import com.chua.common.support.network.server.SyncServer;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.job.support.cluster.LeaderElector;
@@ -38,6 +39,7 @@ import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -59,7 +61,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Configuration
 @EnableConfigurationProperties(JobProperties.class)
-@ConditionalOnProperty(prefix = JobProperties.PRE, name = "enable", havingValue = "true")
+@ConditionalOnProperty(prefix = JobProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 public class JobAutoConfiguration {
 
@@ -245,7 +247,7 @@ public class JobAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SCHEDULER", matchIfMissing = true)
+    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SCHEDULER")
     public SyncServer jobSyncServer() {
         if (properties.getSync().isInMemory()) {
             log.info("[job] sync.in-memory=true, 强制使用 InMemorySyncServer (跳过 SPI)");
@@ -264,7 +266,7 @@ public class JobAutoConfiguration {
         } catch (Throwable ex) {
             log.warn("[job][diag] SyncServer SPI resource enumeration failed cause={}", ex.getMessage());
         }
-        String[] keys = {"rsocket", "netty-tcp", "netty-udp", "tcp", "udp", "websocket", "http"};
+        String[] keys = {"rsocket", "tcp", "udp", "websocket", "http"};
         SyncServer server = null;
         for (String k : keys) {
             try {
@@ -282,7 +284,7 @@ public class JobAutoConfiguration {
             log.warn("[job] 未找到 SyncServer SPI 实现, fallback 到 InMemorySyncServer (精简部署或测试环境)");
             return new InMemorySyncServer();
         }
-        // 注入配置的监听 host/port, 使 NettyTcpSyncServer 等真实实现绑定到目标端口
+        // 注入配置的监听 host/port, 使 TcpSyncServer 等真实实现绑定到目标端口
         try {
             com.chua.common.support.network.server.ServerSetting setting = server.getSetting();
             if (setting != null) {
@@ -302,7 +304,7 @@ public class JobAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SCHEDULER", matchIfMissing = true)
+    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SCHEDULER")
     public SchedulerSyncBinder jobSchedulerSyncBinder(SyncServer jobSyncServer,
                                                      JobSyncBus jobSyncBus,
                                                      JobLogSink jobLogSink,
@@ -322,7 +324,7 @@ public class JobAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SCHEDULER", matchIfMissing = true)
+    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SCHEDULER")
     public JobLeaderLoop jobLeaderLoop(LeaderElector jobLeaderElector,
                                        com.chua.starter.job.support.cluster.LeaderElectionResolver jobLeaderElectionResolver,
                                        JobRepository jobRepository,
@@ -342,7 +344,7 @@ public class JobAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SCHEDULER", matchIfMissing = true)
+    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SCHEDULER")
     public com.chua.starter.job.support.cluster.ClusterElectionHeartbeat jobClusterElectionHeartbeat(
             LeaderElector jobLeaderElector,
             com.chua.starter.job.support.cluster.LeaderElectionResolver jobLeaderElectionResolver) {
@@ -362,7 +364,11 @@ public class JobAutoConfiguration {
 
     /**
      * EXECUTOR 端: 注册到仓库公共 SyncClient。
-     * <p>SPI 未发现实现时 fallback 到 {@link InMemorySyncClient}。</p>
+     * <p>
+     * 优先走仓库 SPI 获取网络协议客户端 (tcp/udp/websocket/http/socketio)；
+     * 由于 {@link TcpSyncClient} 无无参构造、其一键 SPI 实例化在部分 SPI 环境下返回 null,
+     * 当 SPI 未命中或指向 InMemory 时, 直接以配置的 server-url 构造真实 {@link TcpSyncClient}。
+     * </p>
      */
     @Bean
     @ConditionalOnMissingBean
@@ -372,12 +378,16 @@ public class JobAutoConfiguration {
             log.info("[job] sync.in-memory=true, 强制使用 InMemorySyncClient (跳过 SPI)");
             return new InMemorySyncClient();
         }
-        SyncClient client = ServiceProvider.of(SyncClient.class).getExtension("rsocket", "netty-tcp", "netty-udp", "tcp", "udp", "websocket", "http", "socketio");
-        if (client == null) {
-            log.warn("[job] 未找到 SyncClient SPI 实现, fallback 到 InMemorySyncClient (精简部署或测试环境)");
-            return new InMemorySyncClient();
+        SyncClient spiClient = ServiceProvider.of(SyncClient.class)
+                .getExtension("rsocket", "tcp", "udp", "websocket", "http", "socketio");
+        if (spiClient != null && !(spiClient instanceof InMemorySyncClient)) {
+            log.info("[job] SyncClient SPI 命中 impl={}", spiClient.getClass().getName());
+            return spiClient;
         }
-        return client;
+        String serverUrl = properties.getSync().getExecutor().getServerUrl();
+        log.warn("[job] SyncClient SPI 未命中有效实现 (got={}), 直接构造 TcpSyncClient serverUrl={}",
+                spiClient == null ? "null" : spiClient.getClass().getName(), serverUrl);
+        return new TcpSyncClient(serverUrl);
     }
 
     /**
@@ -395,7 +405,7 @@ public class JobAutoConfiguration {
     /**
      * EXECUTOR 角色: 任务执行器。
      */
-    @Bean
+    @Bean(destroyMethod = "shutdown")
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "EXECUTOR")
     public JobExecutor jobExecutor(JobHandlerFactory jobHandlerFactory,
@@ -413,7 +423,7 @@ public class JobAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SINGLE")
+    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SINGLE", matchIfMissing = true)
     public JobLeaderLoop jobSingleLeaderLoop(LeaderElector jobLeaderElector,
                                             com.chua.starter.job.support.cluster.LeaderElectionResolver jobLeaderElectionResolver,
                                             JobRepository jobRepository,
@@ -433,7 +443,7 @@ public class JobAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SINGLE")
+    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SINGLE", matchIfMissing = true)
     public com.chua.starter.job.support.cluster.ClusterElectionHeartbeat jobSingleClusterHeartbeat(
             LeaderElector jobLeaderElector,
             com.chua.starter.job.support.cluster.LeaderElectionResolver jobLeaderElectionResolver) {
@@ -450,9 +460,9 @@ public class JobAutoConfiguration {
     /**
      * SINGLE 角色: 本地执行器, 消费本地 bus cmd 事件并执行。
      */
-    @Bean
+    @Bean(destroyMethod = "shutdown")
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SINGLE")
+    @ConditionalOnProperty(prefix = JobProperties.PRE, name = "role", havingValue = "SINGLE", matchIfMissing = true)
     public JobExecutor jobSingleExecutor(JobHandlerFactory jobHandlerFactory,
                                           JobSyncBus jobSyncBus,
                                           String jobNodeId) {
@@ -549,11 +559,24 @@ public class JobAutoConfiguration {
     }
 
     /**
-     * 构建执行线程池, 数值取自 {@link JobProperties.PoolConfig}。
+     * 构建执行器, 按 {@code plugin.job.pool.virtual} 切换实现。
      *
-     * @return 线程池
+     * <ul>
+     *   <li>true (默认): 虚拟线程执行器 (per-task, 无 max/queue 限制, 阻塞型任务吞吐最高);</li>
+     *   <li>false: 平台线程池 {@code ThreadPoolExecutor} (core/max/queue + AbortPolicy)。</li>
+     * </ul>
+     *
+     * @return 执行器
      */
-    private ThreadPoolExecutor buildExecutor() {
+    private ExecutorService buildExecutor() {
+        if (properties.getPool().isVirtual()) {
+            log.info("[job] 已启用虚拟线程执行器 pool.virtual=true (per-task 虚拟线程)");
+            return JobExecutor.defaultExecutor();
+        }
+        log.info("[job] 使用平台线程池 pool.virtual=false core={} max={} queue={}",
+                properties.getPool().getCoreSize(),
+                properties.getPool().getMaxSize(),
+                properties.getPool().getQueueSize());
         return new ThreadPoolExecutor(
                 properties.getPool().getCoreSize(),
                 properties.getPool().getMaxSize(),

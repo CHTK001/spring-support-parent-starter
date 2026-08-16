@@ -26,7 +26,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * plugin:
  *   job:
  *     enable: true
- *     role: SCHEDULER
+ *     role: SINGLE
  *     node-id: ""
  *     cluster:
  *       group: payment
@@ -43,9 +43,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *         reconnect-base-ms: 500
  *         reconnect-max-ms: 30000
  *     pool:
- *       core-size: 8
- *       max-size: 32
- *       queue-size: 1000
+ *       virtual: true
+ *       core-size: 16
+ *       max-size: 64
+ *       queue-size: 128
  * </pre>
  *
  * @author CH
@@ -61,14 +62,14 @@ public class JobProperties {
     public static final String PRE = "plugin.job";
 
     /**
-     * 是否启用调度模块,默认 false
+     * 是否启用调度模块,默认 true,引入即开箱即用
      */
-    private boolean enable = false;
+    private boolean enable = true;
 
     /**
-     * 进程角色,默认 SCHEDULER
+     * 进程角色,默认 SINGLE (单机自闭环,开箱即用)
      */
-    private Role role = Role.SCHEDULER;
+    private Role role = Role.SINGLE;
 
     /**
      * 当前节点唯一标识,留空时自动按 hostName-pid 推导
@@ -287,19 +288,19 @@ public class JobProperties {
     public static class PoolConfig {
 
         /**
-         * 默认核心线程数
+         * 默认核心线程数 (对齐常见逻辑处理器数量, 就近吞吐峰值)
          */
-        public static final int DEFAULT_CORE_SIZE = 8;
+        public static final int DEFAULT_CORE_SIZE = 16;
 
         /**
-         * 默认最大线程数
+         * 默认最大线程数 (4×core, 阻塞型突发削峰)
          */
-        public static final int DEFAULT_MAX_SIZE = 32;
+        public static final int DEFAULT_MAX_SIZE = 64;
 
         /**
-         * 默认队列容量
+         * 默认队列容量 (小队列快速扩容削峰, 避免大队列吞掉 max 弹性)
          */
-        public static final int DEFAULT_QUEUE_CAPACITY = 1000;
+        public static final int DEFAULT_QUEUE_CAPACITY = 128;
 
         /**
          * 核心线程数
@@ -315,6 +316,15 @@ public class JobProperties {
          * 任务队列容量
          */
         private int queueSize = DEFAULT_QUEUE_CAPACITY;
+
+        /**
+         * 是否启用虚拟线程执行器, 默认开启。
+         *
+         * <p>开启时使用 {@code Executors.newVirtualThreadPerTaskExecutor()}
+         * (每任务一个虚拟线程, 阻塞型任务大幅提升吞吐, 无 max/queue 限制);
+         * 关闭时回退到 {@link ThreadPoolExecutor} (core/max/queue 平台线程池)。</p>
+         */
+        private boolean virtual = true;
     }
 
     /**

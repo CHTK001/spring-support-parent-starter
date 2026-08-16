@@ -144,9 +144,7 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
         if (id == null) {
             return false;
         }
-        SysAiRole role = new SysAiRole();
-        role.setSysAiRoleId(id);
-        role.setSysAiRoleDelete(1);
-        return sysAiRoleMapper.updateById(role) > 0;
+        // 使用 MyBatis-Plus 内置 deleteById：@TableLogic 逻辑删除（SET delete=1）
+        return sysAiRoleMapper.deleteById(id) > 0;
     }
 }

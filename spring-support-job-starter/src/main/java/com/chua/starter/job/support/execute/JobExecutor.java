@@ -9,6 +9,7 @@ import com.chua.starter.job.support.sync.JobSyncTopics;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayDeque;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -19,8 +20,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * EXECUTOR / SINGLE 角色任务执行入口。
  *
  * <p>消费 {@link JobSyncBus} 上的 {@link JobSyncTopics#TASK_COMMAND} 事件,
- * 提交到内置 {@link ThreadPoolExecutor}, handler 成功执行后构造
- * {@link JobLogEvent} 通过 bus 上的 {@link JobSyncTopics#TASK_LOG} 投递。</p>
+ * 提交到内置执行器, handler 成功执行后构造
+ * {@link JobLogEvent} 通过 bus 上的 {@link JobSyncTopics#TASK_LOG} 投递。
+ * 执行器可为平台 {@link ThreadPoolExecutor} 或虚拟线程执行器 (见 {@link #defaultExecutor()})。</p>
  *
  * <p>SCHEDULER 角色不会注入本类; SINGLE 角色既消费也执行。</p>
  *
@@ -66,9 +68,9 @@ public class JobExecutor {
     private final String nodeId;
 
     /**
-     * 执行线程池
+     * 执行器 (可为平台线程池或虚拟线程执行器)
      */
-    private final ThreadPoolExecutor executor;
+    private final ExecutorService executor;
 
     /**
      * 已处理任务计数
@@ -81,12 +83,18 @@ public class JobExecutor {
     private final AtomicLong dropped = new AtomicLong(0L);
 
     /**
+     * 已执行 init 生命周期钩子的 handler 名称集合 (惰性, 每 handler 仅一次)
+     */
+    private final java.util.Set<String> initializedHandlers =
+            java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /**
      * cmd 监听器引用 (持有, 用于注销)
      */
     private final java.util.function.BiConsumer<String, Object> cmdListener = (topic, payload) -> onCommand(topic, payload);
 
     /**
-     * 构造执行器, 使用默认线程池。
+     * 构造执行器, 使用默认线程池 (虚拟线程执行器)。
      *
      * @param factory 处理器注册表
      * @param bus     进程内总线
@@ -102,10 +110,10 @@ public class JobExecutor {
      * @param factory  处理器注册表
      * @param bus      进程内总线
      * @param nodeId   当前节点标识
-     * @param executor 自定义线程池
+     * @param executor 自定义执行器
      */
     public JobExecutor(JobHandlerFactory factory, JobSyncBus bus, String nodeId,
-                       ThreadPoolExecutor executor) {
+                       ExecutorService executor) {
         this.factory = factory;
         this.bus = bus;
         this.nodeId = nodeId;
@@ -150,6 +158,7 @@ public class JobExecutor {
         log.info("[job] invoke start job={} handler={}", jobName, handler.getClass().getSimpleName());
         long start = System.currentTimeMillis();
         try {
+            lazyInit(handler);
             handler.execute();
             long cost = System.currentTimeMillis() - start;
             processed.incrementAndGet();
@@ -171,7 +180,21 @@ public class JobExecutor {
     }
 
     /**
-     * 关闭执行器, 释放线程池。
+     * 惰性执行 handler 的 init 生命周期钩子 (每个 handler 仅执行一次)。
+     *
+     * @param handler 处理器
+     * @throws Exception init 钩子异常
+     */
+    private void lazyInit(JobHandler handler) throws Exception {
+        if (!initializedHandlers.add(handler.name())) {
+            return;
+        }
+        handler.init();
+        log.info("[job] 生命周期钩子 init handler={}", handler.name());
+    }
+
+    /**
+     * 关闭执行器, 释放线程池, 并回调所有已 init handler 的 destroy 生命周期钩子。
      */
     public void shutdown() {
         bus.unsubscribe(JobSyncTopics.TASK_COMMAND, cmdListener);
@@ -183,6 +206,18 @@ public class JobExecutor {
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             executor.shutdownNow();
+        }
+        for (String name : initializedHandlers) {
+            JobHandler handler = factory.get(name);
+            if (handler == null) {
+                continue;
+            }
+            try {
+                handler.destroy();
+                log.info("[job] 生命周期钩子 destroy handler={}", name);
+            } catch (Throwable ex) {
+                log.warn("[job] handler destroy 异常 name={} cause={}", name, ex.getMessage());
+            }
         }
     }
 
@@ -223,11 +258,23 @@ public class JobExecutor {
     }
 
     /**
-     * 默认线程池。
+     * 默认执行器: 虚拟线程执行器 (每任务一个虚拟线程, 阻塞型任务吞吐优势显著)。
+     *
+     * @return ExecutorService
+     */
+    public static ExecutorService defaultExecutor() {
+        return java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor();
+    }
+
+    /**
+     * 平台线程池执行器 (core/max/queue + AbortPolicy), 供 {@code pool.virtual=false} 时使用。
+     *
+     * <p>注意: {@link java.util.concurrent.LinkedBlockingQueue} 只有队列填满后才扩线程至 max,
+     * 默认 queue=1000 下线程数恒等于 core。</p>
      *
      * @return ThreadPoolExecutor
      */
-    public static ThreadPoolExecutor defaultExecutor() {
+    public static ThreadPoolExecutor platformExecutor() {
         return new ThreadPoolExecutor(
                 DEFAULT_CORE_SIZE,
                 DEFAULT_MAX_SIZE,

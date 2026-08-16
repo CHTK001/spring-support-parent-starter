@@ -90,10 +90,8 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
         if (id == null) {
             return false;
         }
-        SysAiAppKey entity = new SysAiAppKey();
-        entity.setSysAiAppKeyId(id);
-        entity.setSysAiAppKeyDelete(1);
-        return sysAiAppKeyMapper.updateById(entity) > 0;
+        // 使用 MyBatis-Plus 内置 deleteById：@TableLogic 逻辑删除（SET delete=1）
+        return sysAiAppKeyMapper.deleteById(id) > 0;
     }
 
     @Override

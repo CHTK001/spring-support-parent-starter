@@ -90,7 +90,7 @@ public class SchedulerSyncBinder {
                     return;
                 }
                 if (clients.size() == 1) {
-                    // 单 EXECUTOR 场景: 直接 broadcast 兼容 stale channel entry (规避 NettyTcpSyncServer
+                    // 单 EXECUTOR 场景: 直接 broadcast 兼容 stale channel entry (规避 TcpSyncServer
                     //   send 单播路径在 client 已断但 map 未清理时静默丢帧的 pre-existing bug)
                     syncServer.publish(JobSyncTopics.TASK_COMMAND, payload);
                     log.info("[job] cmd 已发 (单 client broadcast 兼容) topic={} clientId={} payload={}",
@@ -98,10 +98,12 @@ public class SchedulerSyncBinder {
                     return;
                 }
                 // 多 EXECUTOR 场景: sticky 单播 (#1 HA 去重的核心)
+                // 注意: SyncServer.send 签名固定为 (clientId, topic, message), 顺序不可颠倒,
+                //       否则粘性单播会把 clientId 与 topic 互换, 造成派发全部落空。
                 long idx = Math.floorMod(stickyCounter.getAndIncrement(), (long) clients.size());
                 String clientId = clients.get((int) idx);
                 try {
-                    syncServer.send(JobSyncTopics.TASK_COMMAND, clientId, payload);
+                    syncServer.send(clientId, JobSyncTopics.TASK_COMMAND, payload);
                     log.info("[job] cmd 已发 (sticky 单播) topic={} clientId={} idx={}/{} payload={}",
                             JobSyncTopics.TASK_COMMAND, clientId, idx, clients.size(), payload);
                 } catch (Throwable ex) {
@@ -135,6 +137,8 @@ public class SchedulerSyncBinder {
             @Override
             public void onMessage(String clientId, String topic, Object message) {
                 if (JobSyncTopics.TASK_LOG.equals(topic)) {
+                    log.info("[job] SCHEDULER 收到上行 TASK_LOG clientId={} messageType={}",
+                            clientId, message == null ? "null" : message.getClass().getSimpleName());
                     logHandler.handle(topic, message);
                 } else if (JobSyncTopics.REGISTER.equals(topic)) {
                     log.info("[job] executor 上线 clientId={} payload={}", clientId, message);

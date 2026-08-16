@@ -1,0 +1,64 @@
+# 本地测试配置（H2 内存数据库 + db/init 脚本 + 关闭外部依赖）
+# 启动方式：mvn -pl spring-support-ai-starter spring-boot:run -Dspring-boot.run.profiles=local
+# 或打包后：java -jar spring-support-ai-starter-4.0.0.42.jar --spring.profiles.active=local
+server:
+  port: 8091
+  servlet:
+    context-path: /api/ai
+
+spring:
+  application:
+    name: ai-starter
+  autoconfigure:
+    exclude:
+      - com.chua.starter.datasource.configuration.ShardingSphereAutoConfiguration
+      - com.chua.starter.filesystem.support.config.FileSystemAutoConfiguration
+      - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchClientAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:ai_local;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;DB_CLOSE_DELAY=-1;NON_KEYWORDS=VALUE
+    username: sa
+    password:
+  sql:
+    init:
+      mode: never
+  ai:
+    usage:
+      enabled: true
+    generate:
+      enabled: false
+    rag:
+      enabled: true
+      vector-storage: memory
+      embedding-engine: memory
+
+# 本地联调：关闭外部 OAuth / 协议服务器 / 文件系统
+plugin:
+  oauth:
+    enable: false
+  protocol:
+    enable: false
+  filesystem:
+    enable: false
+    dir-list: false
+  datasource:
+    script:
+      enable: true
+      scan-mode: ONCE
+      script-path: "classpath*:db/init/*.sql"
+      database-type: h2
+
+logging:
+  level:
+    com.chua.starter.ai.support: info
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+  global-config:
+    db-config:
+      id-type: ASSIGN_ID
+  mapper-locations: classpath*:mapper/**/*.xml

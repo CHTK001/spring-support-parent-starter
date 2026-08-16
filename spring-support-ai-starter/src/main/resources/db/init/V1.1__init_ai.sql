@@ -2106,7 +2106,7 @@ INSERT IGNORE INTO `sys_ai_model` (
     `sys_ai_model_create_time`, `sys_ai_model_update_time`
 ) VALUES (
     1, 'MockGPT-4o', 'mock-gpt-4o',
-    1, 'chat', 1, 0,
+    1, '["chat"]', 1, 0,
     CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 );
 
@@ -2143,3 +2143,29 @@ INSERT IGNORE INTO `sys_ai_app_key` (
     0, NULL, NULL, 0,
     'system', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 );
+
+-- ============================================================
+-- 27. AI 定价表（用量统计按 provider+model 查询单价）
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `sys_ai_pricing` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID',
+    `provider` VARCHAR(64) DEFAULT NULL COMMENT '服务商',
+    `model` VARCHAR(128) DEFAULT NULL COMMENT '模型名称',
+    `input_price_per1k` DECIMAL(18,6) DEFAULT 0 COMMENT '输入价格（每1k tokens，单位元）',
+    `output_price_per1k` DECIMAL(18,6) DEFAULT 0 COMMENT '输出价格（每1k tokens，单位元）',
+    `currency` VARCHAR(16) DEFAULT 'CNY' COMMENT '币种：CNY/USD',
+    `effective_date` DATETIME DEFAULT NULL COMMENT '生效日期',
+    `source` VARCHAR(32) DEFAULT 'manual' COMMENT '来源：manual（手动）/ sync（官方同步）',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间'
+) COMMENT='AI 定价表（官方价格）';
+
+INSERT IGNORE INTO `sys_ai_pricing` (
+    `provider`, `model`, `input_price_per1k`, `output_price_per1k`,
+    `currency`, `effective_date`, `source`
+) VALUES
+    ('mock', 'mock-gpt-4o', 0.000000, 0.000000, 'CNY', CURRENT_TIMESTAMP, 'manual'),
+    ('openai', 'gpt-4o', 0.015000, 0.060000, 'USD', CURRENT_TIMESTAMP, 'manual'),
+    ('openai', 'gpt-4o-mini', 0.001500, 0.006000, 'USD', CURRENT_TIMESTAMP, 'manual'),
+    ('deepseek', 'deepseek-chat', 0.002000, 0.008000, 'CNY', CURRENT_TIMESTAMP, 'manual'),
+    ('zhipu', 'glm-4-flash', 0.000000, 0.000000, 'CNY', CURRENT_TIMESTAMP, 'manual');

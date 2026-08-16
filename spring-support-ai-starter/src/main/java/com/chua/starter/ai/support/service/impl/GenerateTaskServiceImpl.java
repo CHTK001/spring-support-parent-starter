@@ -1,14 +1,13 @@
 package com.chua.starter.ai.support.service.impl;
 
 import com.chua.common.support.ai.image.ImageClient;
-import com.chua.common.support.ai.image.ImageClientSetting;
 import com.chua.common.support.ai.image.ImageResponse;
 import com.chua.common.support.ai.video.VideoClient;
-import com.chua.common.support.ai.video.VideoClientSetting;
 import com.chua.common.support.ai.video.VideoResponse;
+import com.chua.deeplearning.support.capability.ModelCapabilities;
+import com.chua.starter.ai.support.configuration.client.AiCapabilityResolver;
 import com.chua.starter.ai.support.model.GenerateTask;
 import com.chua.starter.ai.support.service.GenerateTaskService;
-import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -36,24 +35,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class GenerateTaskServiceImpl implements GenerateTaskService {
 
     /**
-     * 分组：图片
-     */
-    private static final String GROUP_IMAGE = "image";
-
-    /**
-     * 分组：视频
-     */
-    private static final String GROUP_VIDEO = "video";
-
-    /**
      * 内存任务表：taskId → 任务
      */
     private final Map<String, GenerateTask> taskStore = new ConcurrentHashMap<>();
 
     /**
-     * 全局设置服务
+     * 统一能力解析器
      */
-    private final SysAiGlobalSettingService settingService;
+    private final AiCapabilityResolver capabilityResolver;
 
     /**
      * 创建文生图任务。
@@ -67,12 +56,10 @@ public class GenerateTaskServiceImpl implements GenerateTaskService {
      */
     @Override
     public GenerateTask createImageTask(String prompt, String model, String size, String style, String quality) {
-        String apiKey = settingService.getValue(GROUP_IMAGE, "provider_api_key").orElse("");
-        String baseUrl = settingService.getValue(GROUP_IMAGE, "provider_base_url").orElse("");
-        String defaultModel = settingService.getValue(GROUP_IMAGE, "default_model").orElse("dall-e-3");
-        String provider = settingService.getValue(GROUP_IMAGE, "provider").orElse("openai");
-        int width = Integer.parseInt(settingService.getValue(GROUP_IMAGE, "width").orElse("1024"));
-        int height = Integer.parseInt(settingService.getValue(GROUP_IMAGE, "height").orElse("1024"));
+        AiCapabilityResolver.CapabilityConfig config = capabilityResolver.resolve(ModelCapabilities.TEXT_TO_IMAGE);
+        String defaultModel = config.model().isBlank() ? "dall-e-3" : config.model();
+        int width = capabilityResolver.getInt(ModelCapabilities.TEXT_TO_IMAGE, "width", 1024);
+        int height = capabilityResolver.getInt(ModelCapabilities.TEXT_TO_IMAGE, "height", 1024);
 
         if (size != null && size.contains("x")) {
             String[] parts = size.split("x");
@@ -91,7 +78,7 @@ public class GenerateTaskServiceImpl implements GenerateTaskService {
         taskStore.put(task.getTaskId(), task);
 
         // 异步执行生成
-        executeImageAsync(task, apiKey, baseUrl, provider, effectiveModel, width, height, style, quality);
+        executeImageAsync(task, config, effectiveModel, width, height, style, quality);
         return task;
     }
 
@@ -107,12 +94,10 @@ public class GenerateTaskServiceImpl implements GenerateTaskService {
      */
     @Override
     public GenerateTask createVideoTask(String prompt, String model, Integer duration, String size, String style) {
-        String apiKey = settingService.getValue(GROUP_VIDEO, "provider_api_key").orElse("");
-        String baseUrl = settingService.getValue(GROUP_VIDEO, "provider_base_url").orElse("");
-        String defaultModel = settingService.getValue(GROUP_VIDEO, "default_model").orElse("sora");
-        String provider = settingService.getValue(GROUP_VIDEO, "provider").orElse("openai");
+        AiCapabilityResolver.CapabilityConfig config = capabilityResolver.resolve(ModelCapabilities.TEXT_TO_VIDEO);
+        String defaultModel = config.model().isBlank() ? "sora" : config.model();
         int effectiveDuration = duration != null ? duration
-                : Integer.parseInt(settingService.getValue(GROUP_VIDEO, "duration").orElse("5"));
+                : capabilityResolver.getInt(ModelCapabilities.TEXT_TO_VIDEO, "duration", 5);
         String effectiveModel = model != null ? model : defaultModel;
 
         GenerateTask task = new GenerateTask();
@@ -125,7 +110,7 @@ public class GenerateTaskServiceImpl implements GenerateTaskService {
         taskStore.put(task.getTaskId(), task);
 
         // 异步执行生成
-        executeVideoAsync(task, apiKey, baseUrl, provider, effectiveModel, effectiveDuration, size, style);
+        executeVideoAsync(task, config, effectiveModel, effectiveDuration, size, style);
         return task;
     }
 
@@ -167,9 +152,7 @@ public class GenerateTaskServiceImpl implements GenerateTaskService {
      * 异步执行文生图生成。
      *
      * @param task     任务
-     * @param apiKey   API Key
-     * @param baseUrl  基础地址
-     * @param provider 提供方
+     * @param config   能力配置
      * @param model    模型
      * @param width    宽度
      * @param height   高度
@@ -177,14 +160,10 @@ public class GenerateTaskServiceImpl implements GenerateTaskService {
      * @param quality  质量
      */
     @Async("taskExecutor")
-    public void executeImageAsync(GenerateTask task, String apiKey, String baseUrl, String provider,
+    public void executeImageAsync(GenerateTask task, AiCapabilityResolver.CapabilityConfig config,
                                   String model, int width, int height, String style, String quality) {
         try {
-            ImageClient client = ImageClient.create(ImageClientSetting.builder()
-                    .provider(provider)
-                    .appKey(apiKey)
-                    .baseUrl(baseUrl)
-                    .build());
+            ImageClient client = capabilityResolver.createImageClient(config);
             String taskId = client.model(model).size(width, height).style(style).quality(quality)
                     .createTask(task.getPrompt());
             // 轮询直到完成
@@ -224,23 +203,17 @@ public class GenerateTaskServiceImpl implements GenerateTaskService {
      * 异步执行文生视频生成。
      *
      * @param task     任务
-     * @param apiKey   API Key
-     * @param baseUrl  基础地址
-     * @param provider 提供方
+     * @param config   能力配置
      * @param model    模型
      * @param duration 时长
      * @param size     尺寸
      * @param style    风格
      */
     @Async("taskExecutor")
-    public void executeVideoAsync(GenerateTask task, String apiKey, String baseUrl, String provider,
+    public void executeVideoAsync(GenerateTask task, AiCapabilityResolver.CapabilityConfig config,
                                   String model, int duration, String size, String style) {
         try {
-            VideoClient client = VideoClient.create(VideoClientSetting.builder()
-                    .provider(provider)
-                    .appKey(apiKey)
-                    .baseUrl(baseUrl)
-                    .build());
+            VideoClient client = capabilityResolver.createVideoClient(config);
             String taskId;
             if (size != null && size.contains("x")) {
                 String[] parts = size.split("x");

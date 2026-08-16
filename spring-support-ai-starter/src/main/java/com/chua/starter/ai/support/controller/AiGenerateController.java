@@ -1,19 +1,20 @@
 package com.chua.starter.ai.support.controller;
 
 import com.chua.common.support.ai.image.ImageClient;
-import com.chua.common.support.ai.image.ImageClientSetting;
 import com.chua.common.support.ai.image.ImageResponse;
 import com.chua.common.support.ai.video.VideoClient;
-import com.chua.common.support.ai.video.VideoClientSetting;
 import com.chua.common.support.ai.video.VideoResponse;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.deeplearning.support.capability.ModelCapabilities;
+import com.chua.starter.ai.support.configuration.client.AiCapabilityResolver;
 import com.chua.starter.ai.support.model.GenerateResult;
 import com.chua.starter.ai.support.model.GenerateTask;
 import com.chua.starter.ai.support.model.ImageGenRequest;
 import com.chua.starter.ai.support.model.VideoGenRequest;
 import com.chua.starter.ai.support.service.GenerateTaskService;
-import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.common.support.annotations.Permission;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -48,28 +49,28 @@ import java.util.List;
 @Tag(name = "AI 生成", description = "文生图、文生视频、上色等 AI 生成接口")
 public class AiGenerateController {
 
-    private static final String GROUP_IMAGE = "image";
-    private static final String GROUP_VIDEO = "video";
-    private static final String GROUP_COLORIZE = "colorize";
+    /**
+     * 统一能力解析器
+     */
+    private final AiCapabilityResolver capabilityResolver;
 
-    private final SysAiGlobalSettingService settingService;
+    /**
+     * 生成任务服务
+     */
     private final GenerateTaskService generateTaskService;
 
     @Permission("admin")
     @Operation(summary = "文生图", description = "根据提示词生成图片，返回图片URL")
     @PostMapping("/image")
     public ReturnResult<GenerateResult> generateImage(@RequestBody ImageGenRequest request) {
-        // 从数据库读取配置
-        String provider = settingService.getValue(GROUP_IMAGE, "provider").orElse("openai");
-        String apiKey = settingService.getValue(GROUP_IMAGE, "provider_api_key").orElse("");
-        String baseUrl = settingService.getValue(GROUP_IMAGE, "provider_base_url").orElse("");
-        String model = settingService.getValue(GROUP_IMAGE, "default_model").orElse("dall-e-3");
-        int width = Integer.parseInt(settingService.getValue(GROUP_IMAGE, "width").orElse("1024"));
-        int height = Integer.parseInt(settingService.getValue(GROUP_IMAGE, "height").orElse("1024"));
-
-        if (apiKey.isBlank()) {
+        // 通过能力标签统一解析配置
+        AiCapabilityResolver.CapabilityConfig config = capabilityResolver.resolve(ModelCapabilities.TEXT_TO_IMAGE);
+        if (config.apiKey().isBlank()) {
             return ReturnResult.error("图片生成未配置 API Key，请在 sys_ai_global_setting 中设置 image.provider_api_key");
         }
+        String model = config.model().isBlank() ? "dall-e-3" : config.model();
+        int width = capabilityResolver.getInt(ModelCapabilities.TEXT_TO_IMAGE, "width", 1024);
+        int height = capabilityResolver.getInt(ModelCapabilities.TEXT_TO_IMAGE, "height", 1024);
 
         // 请求参数覆盖
         if (request.getModel() != null) {
@@ -82,11 +83,7 @@ public class AiGenerateController {
         }
 
         try {
-            ImageClient client = ImageClient.create(ImageClientSetting.builder()
-                    .provider(provider)
-                    .appKey(apiKey)
-                    .baseUrl(baseUrl)
-                    .build());
+            ImageClient client = capabilityResolver.createImageClient(config);
 
             // 使用异步任务，获取图片URL
             String taskId = client
@@ -128,16 +125,13 @@ public class AiGenerateController {
     @Operation(summary = "文生视频", description = "根据提示词生成视频（异步任务，返回视频URL）")
     @PostMapping("/video")
     public ReturnResult<GenerateResult> generateVideo(@RequestBody VideoGenRequest request) {
-        // 从数据库读取配置
-        String provider = settingService.getValue(GROUP_VIDEO, "provider").orElse("openai");
-        String apiKey = settingService.getValue(GROUP_VIDEO, "provider_api_key").orElse("");
-        String baseUrl = settingService.getValue(GROUP_VIDEO, "provider_base_url").orElse("");
-        String model = settingService.getValue(GROUP_VIDEO, "default_model").orElse("sora");
-        int duration = Integer.parseInt(settingService.getValue(GROUP_VIDEO, "duration").orElse("5"));
-
-        if (apiKey.isBlank()) {
+        // 通过能力标签统一解析配置
+        AiCapabilityResolver.CapabilityConfig config = capabilityResolver.resolve(ModelCapabilities.TEXT_TO_VIDEO);
+        if (config.apiKey().isBlank()) {
             return ReturnResult.error("视频生成未配置 API Key，请在 sys_ai_global_setting 中设置 video.provider_api_key");
         }
+        String model = config.model().isBlank() ? "sora" : config.model();
+        int duration = capabilityResolver.getInt(ModelCapabilities.TEXT_TO_VIDEO, "duration", 5);
 
         if (request.getModel() != null) {
             model = request.getModel();
@@ -147,11 +141,7 @@ public class AiGenerateController {
         }
 
         try {
-            VideoClient client = VideoClient.create(VideoClientSetting.builder()
-                    .provider(provider)
-                    .appKey(apiKey)
-                    .baseUrl(baseUrl)
-                    .build());
+            VideoClient client = capabilityResolver.createVideoClient(config);
 
             String taskId = client
                     .model(model)
@@ -194,15 +184,12 @@ public class AiGenerateController {
             return ReturnResult.error("上传文件不能为空");
         }
 
-        // 从数据库读取配置
-        String provider = settingService.getValue(GROUP_COLORIZE, "provider").orElse("openai");
-        String apiKey = settingService.getValue(GROUP_COLORIZE, "provider_api_key").orElse("");
-        String baseUrl = settingService.getValue(GROUP_COLORIZE, "provider_base_url").orElse("");
-        String model = settingService.getValue(GROUP_COLORIZE, "default_model").orElse("dall-e-3");
-
-        if (apiKey.isBlank()) {
+        // 通过能力标签统一解析配置
+        AiCapabilityResolver.CapabilityConfig config = capabilityResolver.resolve(AiCapabilityResolver.COLORIZE);
+        if (config.apiKey().isBlank()) {
             return ReturnResult.error("上色未配置 API Key，请在 sys_ai_global_setting 中设置 colorize.provider_api_key");
         }
+        String model = config.model().isBlank() ? "dall-e-3" : config.model();
 
         try {
             BufferedImage inputImage = ImageIO.read(file.getInputStream());
@@ -210,11 +197,7 @@ public class AiGenerateController {
                 return ReturnResult.error("无法解析图片文件");
             }
 
-            ImageClient client = ImageClient.create(ImageClientSetting.builder()
-                    .provider(provider)
-                    .appKey(apiKey)
-                    .baseUrl(baseUrl)
-                    .build());
+            ImageClient client = capabilityResolver.createImageClient(config);
 
             // 上色目前只能同步（图生图），返回BufferedImage，转Base64
             BufferedImage result = client
@@ -249,7 +232,7 @@ public class AiGenerateController {
         if (request.getPrompt() == null || request.getPrompt().isBlank()) {
             return ReturnResult.error("提示词不能为空");
         }
-        String apiKey = settingService.getValue(GROUP_IMAGE, "provider_api_key").orElse("");
+        String apiKey = capabilityResolver.getStr(ModelCapabilities.TEXT_TO_IMAGE, "provider_api_key", "");
         if (apiKey.isBlank()) {
             return ReturnResult.error("图片生成未配置 API Key，请在 sys_ai_global_setting 中设置 image.provider_api_key");
         }
@@ -264,7 +247,7 @@ public class AiGenerateController {
         if (request.getPrompt() == null || request.getPrompt().isBlank()) {
             return ReturnResult.error("提示词不能为空");
         }
-        String apiKey = settingService.getValue(GROUP_VIDEO, "provider_api_key").orElse("");
+        String apiKey = capabilityResolver.getStr(ModelCapabilities.TEXT_TO_VIDEO, "provider_api_key", "");
         if (apiKey.isBlank()) {
             return ReturnResult.error("视频生成未配置 API Key，请在 sys_ai_global_setting 中设置 video.provider_api_key");
         }
