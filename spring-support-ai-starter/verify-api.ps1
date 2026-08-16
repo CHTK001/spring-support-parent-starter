@@ -64,7 +64,9 @@ Write-Host "正在启动服务（H2 本地 profile）..." -ForegroundColor Yello
 $job = Start-Job -ScriptBlock {
     param($dir)
     Set-Location $dir
-    cmd /c "mvn -o -pl spring-support-ai-starter spring-boot:run -Dspring-boot.run.profiles=local -Dpmd.skip=true -Dspring-boot.run.jvmArguments=--enable-preview -Ddeeplearning.model.root-dir=G:/work/models -Ddeeplearning.model.cache-dir=G:/work/models" 2>&1 | Out-File "C:\Users\yemen\AppData\Local\Temp\opencode\run-app.log"
+    # 模型目录统一：通过 JAVA_TOOL_OPTIONS 注入（fork JVM 启动时自动读取）
+    $env:JAVA_TOOL_OPTIONS = "-Ddeeplearning.model.root-dir=G:/work/models -Ddeeplearning.model.cache-dir=G:/work/models"
+    cmd /c "mvn -o -pl spring-support-ai-starter spring-boot:run -Dspring-boot.run.profiles=local -Dpmd.skip=true -Dspring-boot.run.jvmArguments=--enable-preview" 2>&1 | Out-File "C:\Users\yemen\AppData\Local\Temp\opencode\run-app.log"
 } -ArgumentList $RootDir
 
 # 等待服务就绪（最多 120 秒）
