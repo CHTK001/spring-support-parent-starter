@@ -5,9 +5,8 @@ import com.chua.starter.ai.support.entity.settings.AiGroup;
 import com.chua.starter.ai.support.mapper.settings.AiGroupMapper;
 import com.chua.starter.ai.support.model.AiGroupDTO;
 import com.chua.starter.ai.support.service.settings.AiGroupService;
-import com.chua.starter.common.support.text.json.Json;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.chua.common.support.converter.Converter;
+import com.chua.common.support.lang.json.Json;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,11 +33,6 @@ public class AiGroupServiceImpl implements AiGroupService {
      * 时间格式化器
      */
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-    /**
-     * JSON 序列化器
-     */
-    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /**
      * 分组 Mapper
@@ -155,16 +149,7 @@ public class AiGroupServiceImpl implements AiGroupService {
      * @return 字符串列表
      */
     private List<String> parseStringList(String content) {
-        if (content == null || content.isBlank()) {
-            return new ArrayList<>();
-        }
-        try {
-            return MAPPER.readValue(content, new TypeReference<List<String>>() {
-            });
-        } catch (Exception e) {
-            log.warn("[AiGroup] 模型列表解析失败: {}", e.getMessage());
-            return new ArrayList<>();
-        }
+        return Converter.convertIfListNecessary(content, String.class);
     }
 
     /**
@@ -174,15 +159,6 @@ public class AiGroupServiceImpl implements AiGroupService {
      * @return Long 列表
      */
     private List<Long> parseLongList(String content) {
-        if (content == null || content.isBlank()) {
-            return new ArrayList<>();
-        }
-        try {
-            return MAPPER.readValue(content, new TypeReference<List<Long>>() {
-            });
-        } catch (Exception e) {
-            log.warn("[AiGroup] AppKey 列表解析失败: {}", e.getMessage());
-            return new ArrayList<>();
-        }
+        return Converter.convertIfListNecessary(content, Long.class);
     }
 }

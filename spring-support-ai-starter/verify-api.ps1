@@ -382,6 +382,19 @@ Invoke-Check "RAG 文档列表含上传文档" {
     ($resp -match "ai-verify-rag-doc") -or ($resp -match "rag-doc") -or ($resp -match "records")
 }
 
+Invoke-Check "RAG 文档详情（不存在）返回错误" {
+    (Get-Body "GET" "/v2/rag/document/nonexist/content") -match "不可读取|不存在"
+}
+
+Invoke-Check "RAG 删除文档（不存在）返回错误" {
+    (Get-Body "DELETE" "/v2/rag/document/nonexist") -match "不存在"
+}
+
+Invoke-Check "RAG URL 抓取非法 URL 返回错误" {
+    $s = (Get-Status "POST" "/v2/rag/document/url" '{"url":"http://192.168.1.1"}')
+    ($s -ge 400) -or ((Get-Body "POST" "/v2/rag/document/url" '{"url":"http://192.168.1.1"}') -match "不合法|失败|错误")
+}
+
 # ============================================================
 # 12. 人脸真实检测（scrfd ONNX 模型）
 # ============================================================
@@ -434,6 +447,56 @@ Invoke-Check "人脸特征比对真实执行（compare）" {
               "-F", "fileA=@$faceImage", "-F", "fileB=@$faceImage")
     $resp = & curl.exe $args 2>&1
     ($resp -match '"code"\s*:\s*"00000"') -or ($resp -match 'score')
+}
+
+# ===== 人脸辅助能力（活体/动漫/属性/表情/关键点/质量/换脸 + 检索） =====
+# 注意：anime/attributes/emotion/landmark/deepfake 依赖独立辅助模型（未配置时返回错误码），
+# 故断言「接口可达」（返回业务响应 code 或错误），而非模型推理成功。
+Invoke-Check "人脸活体检测可达" {
+    $resp = & curl.exe -s --max-time 60 -X POST "$BaseUrl/v2/face/liveness" `
+        -H "Authorization: Bearer sk-chat-verify" -F "file=@$faceImage" 2>&1
+    ($resp -match '"code"') -and ($resp -notmatch '401')
+}
+Invoke-Check "人脸动漫检测可达" {
+    $resp = & curl.exe -s --max-time 60 -X POST "$BaseUrl/v2/face/anime-detect" `
+        -H "Authorization: Bearer sk-chat-verify" -F "file=@$faceImage" 2>&1
+    ($resp -match '"code"') -and ($resp -notmatch '401')
+}
+Invoke-Check "人脸属性分析可达" {
+    $resp = & curl.exe -s --max-time 60 -X POST "$BaseUrl/v2/face/attributes" `
+        -H "Authorization: Bearer sk-chat-verify" -F "file=@$faceImage" 2>&1
+    ($resp -match '"code"') -and ($resp -notmatch '401')
+}
+Invoke-Check "人脸表情识别可达" {
+    $resp = & curl.exe -s --max-time 60 -X POST "$BaseUrl/v2/face/emotion" `
+        -H "Authorization: Bearer sk-chat-verify" -F "file=@$faceImage" 2>&1
+    ($resp -match '"code"') -and ($resp -notmatch '401')
+}
+Invoke-Check "人脸关键点可达" {
+    $resp = & curl.exe -s --max-time 60 -X POST "$BaseUrl/v2/face/landmark" `
+        -H "Authorization: Bearer sk-chat-verify" -F "file=@$faceImage" 2>&1
+    ($resp -match '"code"') -and ($resp -notmatch '401')
+}
+Invoke-Check "人脸质量评估可达" {
+    $resp = & curl.exe -s --max-time 60 -X POST "$BaseUrl/v2/face/quality" `
+        -H "Authorization: Bearer sk-chat-verify" -F "file=@$faceImage" 2>&1
+    ($resp -match '"code"') -and ($resp -notmatch '401')
+}
+Invoke-Check "人脸换脸检测可达" {
+    $resp = & curl.exe -s --max-time 60 -X POST "$BaseUrl/v2/face/deepfake" `
+        -H "Authorization: Bearer sk-chat-verify" -F "file=@$faceImage" 2>&1
+    ($resp -match '"code"') -and ($resp -notmatch '401')
+}
+Invoke-Check "人脸超分缺参数 4xx" {
+    $s = (Get-Status "POST" "/v2/face/super-resolution" "" $auth)
+    ($s -ge 400) -and ($s -ne "401")
+}
+Invoke-Check "人脸修复缺参数 4xx" {
+    $s = (Get-Status "POST" "/v2/face/restore" "" $auth)
+    ($s -ge 400) -and ($s -ne "401")
+}
+Invoke-Check "人脸检索空特征返回错误" {
+    (Get-Body "GET" "/v2/face/search?feature=") -match "错误|失败|格式"
 }
 
 # ============================================================
