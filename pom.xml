@@ -792,7 +792,7 @@
 
             <dependency>
                 <groupId>com.chua</groupId>
-                <artifactId>utils-support-vertx-starter</artifactId>
+                <artifactId>utils-support-network-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
 

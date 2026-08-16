@@ -86,7 +86,7 @@ public class ExecutorSyncBinder {
     private final AtomicLong lastReconnectAttemptMs = new AtomicLong(0L);
 
     /**
-     * 已注册后的心跳重连间隔 (毫秒), 在 NettyTcpSyncClient.isConnected()
+     * 已注册后的心跳重连间隔 (毫秒), 在 TcpSyncClient.isConnected()
      * 永远返回 true 的 pre-existing bug 下作为唯一兜底
      */
     private static final long HEARTBEAT_INTERVAL_MS = 30_000L;
@@ -104,13 +104,16 @@ public class ExecutorSyncBinder {
         syncClient.subscribe(JobSyncTopics.TASK_COMMAND, cmdHandler);
 
         logForwarder = (source, payload) -> {
-            if (!(payload instanceof JobLogEvent)) {
+            if (!(payload instanceof JobLogEvent event)) {
                 return;
             }
             try {
                 // 序列化为 JSON 而非 toString(), 服务端可反序列化为 JobLogEvent
-                String json = ((JobLogEvent) payload).toJson();
+                String json = event.toJson();
                 syncClient.send(JobSyncTopics.TASK_LOG, json);
+                log.info("[job] EXECUTOR 上行 TASK_LOG topic={} job={} status={} jsonSnippet={}",
+                        JobSyncTopics.TASK_LOG, event.jobName(), event.status(),
+                        json.length() > 120 ? json.substring(0, 120) + "..." : json);
             } catch (Throwable ex) {
                 log.warn("[job] 上行 TASK_LOG 失败 cause={}", ex.getMessage());
             }
@@ -145,7 +148,7 @@ public class ExecutorSyncBinder {
         reconnectExecutor.scheduleWithFixedDelay(() -> {
             // 周期心跳式重连策略:
             //   - 已 registered 时每 HEARTBEAT_INTERVAL_MS 调一次 syncClient.disconnect()+connect() 强制重建连接
-            //     解决 NettyTcpSyncClient 在对端 (scheduler) 重启后因 channel.close 没通知 listener 而永久失联的问题
+            //     解决 TcpSyncClient 在对端 (scheduler) 重启后因连接断开没通知 listener 而永久失联的问题
             //   - 期间任何 SyncFlowListener.onStop / onError 触发 registered=false 时, 立即进入 tryConnectAndRegister 分支
             //   - 未 registered 时直接走 tryConnectAndRegister 立即重连 (5s 周期)
             long lastTryMs = lastReconnectAttemptMs.get();

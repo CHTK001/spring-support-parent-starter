@@ -9,9 +9,8 @@ import com.chua.starter.ai.support.mapper.settings.AiProviderMapper;
 import com.chua.starter.ai.support.model.AiProviderDTO;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.ai.support.service.settings.AiProviderService;
+import com.chua.common.support.converter.Converter;
 import com.chua.starter.common.support.text.json.Json;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -59,11 +58,6 @@ public class AiProviderServiceImpl implements AiProviderService {
      * 全局 ChatClient 管理器（激活后热重建）
      */
     private final GlobalChatClientManager globalChatClientManager;
-
-    /**
-     * Jackson JSON 序列化器（注入框架实例）
-     */
-    private final ObjectMapper mapper;
 
     /**
      * 查询所有启用状态的供应商。
@@ -310,16 +304,7 @@ public class AiProviderServiceImpl implements AiProviderService {
      * @return 字符串列表
      */
     private List<String> parseList(String content) {
-        if (content == null || content.isBlank()) {
-            return new ArrayList<>();
-        }
-        try {
-            return mapper.readValue(content, new TypeReference<List<String>>() {
-            });
-        } catch (Exception e) {
-            log.warn("[AiProvider] 模型列表解析失败: {}", e.getMessage());
-            return new ArrayList<>();
-        }
+        return Converter.convertIfListNecessary(content, String.class);
     }
 
     /**

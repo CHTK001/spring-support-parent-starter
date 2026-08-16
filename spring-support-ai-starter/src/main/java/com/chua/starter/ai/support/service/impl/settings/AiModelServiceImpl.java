@@ -1,15 +1,16 @@
 package com.chua.starter.ai.support.service.impl.settings;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.starter.ai.support.entity.SysAiManufacturer;
 import com.chua.starter.ai.support.entity.settings.AiModel;
 import com.chua.starter.ai.support.entity.settings.AiProvider;
+import com.chua.starter.ai.support.mapper.SysAiManufacturerMapper;
 import com.chua.starter.ai.support.mapper.settings.AiModelMapper;
 import com.chua.starter.ai.support.mapper.settings.AiProviderMapper;
 import com.chua.starter.ai.support.model.AiModelDTO;
 import com.chua.starter.ai.support.service.settings.AiModelService;
-import com.chua.starter.common.support.text.json.Json;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.chua.common.support.converter.Converter;
+import com.chua.common.support.lang.json.Json;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,10 +34,10 @@ import java.util.stream.Collectors;
 public class AiModelServiceImpl implements AiModelService {
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final AiModelMapper modelMapper;
     private final AiProviderMapper providerMapper;
+    private final SysAiManufacturerMapper manufacturerMapper;
 
     @Override
     public List<AiModelDTO> list() {
@@ -49,7 +50,9 @@ public class AiModelServiceImpl implements AiModelService {
                 .collect(Collectors.toMap(AiProvider::getProviderId, AiProvider::getProviderName,
                         (a, b) -> a));
 
-        return models.stream().map(m -> toDto(m, providerNames.get(m.getModelProviderId()))).collect(Collectors.toList());
+        return models.stream()
+                .map(m -> toDto(m, resolveProviderName(m.getModelProviderId(), providerNames)))
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -67,7 +70,7 @@ public class AiModelServiceImpl implements AiModelService {
         }
         modelMapper.insert(entity);
         log.debug("[AiModel] 新建成功: id={}, code={}", entity.getModelId(), entity.getModelCode());
-        return toDto(entity, resolveProviderName(entity.getModelProviderId()));
+        return toDto(entity, resolveProviderName(entity.getModelProviderId(), null));
     }
 
     @Override
@@ -78,7 +81,7 @@ public class AiModelServiceImpl implements AiModelService {
         entity.setModelUpdateTime(LocalDateTime.now());
         modelMapper.updateById(entity);
         log.debug("[AiModel] 更新成功: id={}", modelId);
-        return toDto(modelMapper.selectById(modelId), resolveProviderName(entity.getModelProviderId()));
+        return toDto(modelMapper.selectById(modelId), resolveProviderName(entity.getModelProviderId(), null));
     }
 
     @Override
@@ -88,10 +91,31 @@ public class AiModelServiceImpl implements AiModelService {
         log.debug("[AiModel] 删除成功: id={}", modelId);
     }
 
-    private String resolveProviderName(Long providerId) {
-        if (providerId == null) return null;
-        AiProvider provider = providerMapper.selectById(providerId);
-        return provider != null ? provider.getProviderName() : null;
+    /**
+     * 解析供应商名称：优先模型供应商表，回退厂商表（兼容 syncModels 写入的 manufacturerId）。
+     *
+     * @param providerId   关联 ID（可能是 providerId 或 manufacturerId）
+     * @param providerNames 预加载的供应商名称映射（可为 null）
+     * @return 供应商/厂商名称，未找到返回 null
+     */
+    private String resolveProviderName(Long providerId, Map<Long, String> providerNames) {
+        if (providerId == null) {
+            return null;
+        }
+        if (providerNames != null) {
+            String name = providerNames.get(providerId);
+            if (name != null) {
+                return name;
+            }
+        } else {
+            AiProvider provider = providerMapper.selectById(providerId);
+            if (provider != null) {
+                return provider.getProviderName();
+            }
+        }
+        // 回退厂商表
+        SysAiManufacturer manufacturer = manufacturerMapper.selectById(providerId.intValue());
+        return manufacturer != null ? manufacturer.getSysAiManufacturerName() : null;
     }
 
     private AiModelDTO toDto(AiModel entity, String providerName) {
@@ -129,13 +153,7 @@ public class AiModelServiceImpl implements AiModelService {
     }
 
     private List<String> parseList(String content) {
-        if (content == null || content.isBlank()) return new ArrayList<>();
-        try {
-            return MAPPER.readValue(content, new TypeReference<List<String>>() {});
-        } catch (Exception e) {
-            log.warn("[AiModel] 能力列表解析失败: {}", e.getMessage());
-            return new ArrayList<>();
-        }
+        return Converter.convertIfListNecessary(content, String.class);
     }
 
     private String toJsonArray(List<String> values) {

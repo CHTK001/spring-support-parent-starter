@@ -16,9 +16,19 @@ public class JobDefinition {
     private String name;
 
     /**
-     * cron 表达式
+     * cron 表达式 (三选一; 优先级 cron > fixedDelay > fixedRate)
      */
     private String cron;
+
+    /**
+     * 固定延迟, 单位毫秒 (前一次执行完成后等待该时长触发; cron 为空且本值 > 0 时生效)
+     */
+    private long fixedDelayMs;
+
+    /**
+     * 固定频率, 单位毫秒 (以固定间隔触发, 不等前一次完成; 仅 cron 与 fixedDelay 均未配置时生效)
+     */
+    private long fixedRateMs;
 
     /**
      * 是否启用
@@ -100,6 +110,42 @@ public class JobDefinition {
      */
     public void setDesc(String desc) {
         this.desc = desc;
+    }
+
+    /**
+     * 获取固定延迟 (毫秒)。
+     *
+     * @return 固定延迟毫秒数, 未配置为 0
+     */
+    public long getFixedDelayMs() {
+        return fixedDelayMs;
+    }
+
+    /**
+     * 设置固定延迟 (毫秒)。
+     *
+     * @param fixedDelayMs 固定延迟毫秒数
+     */
+    public void setFixedDelayMs(long fixedDelayMs) {
+        this.fixedDelayMs = fixedDelayMs;
+    }
+
+    /**
+     * 获取固定频率 (毫秒)。
+     *
+     * @return 固定频率毫秒数, 未配置为 0
+     */
+    public long getFixedRateMs() {
+        return fixedRateMs;
+    }
+
+    /**
+     * 设置固定频率 (毫秒)。
+     *
+     * @param fixedRateMs 固定频率毫秒数
+     */
+    public void setFixedRateMs(long fixedRateMs) {
+        this.fixedRateMs = fixedRateMs;
     }
 
     @Override

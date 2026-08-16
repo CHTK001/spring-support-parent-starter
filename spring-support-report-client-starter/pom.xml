@@ -41,7 +41,7 @@
     </dependency>
     <dependency>
       <groupId>com.chua</groupId>
-      <artifactId>utils-support-vertx-starter</artifactId>
+      <artifactId>utils-support-network-starter</artifactId>
     </dependency>
     <dependency>
       <groupId>com.chua</groupId>

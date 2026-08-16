@@ -18,6 +18,10 @@ final class CommonChatClientFactoryResolver {
     /**
      * 按工厂名称创建 common ChatClient。
      *
+     * <p>provider 优先取 {@code setting.provider}（真实厂商标识），
+     * 缺失时回退 {@code factoryName}。避免 factory 与 provider 混用
+     * 导致 SPI 无法找到对应 ChatClient（如 factory=default 但 provider=openai）。</p>
+     *
      * @param factoryName 工厂名称
      * @param setting     大模型设置
      * @return common ChatClient
@@ -28,8 +32,11 @@ final class CommonChatClientFactoryResolver {
     }
 
     private static com.chua.common.support.ai.chat.ChatClient createRaw(String factoryName, ChatClientSetting setting) {
+        String provider = setting != null && StringUtils.isNotBlank(setting.getProvider())
+                ? setting.getProvider()
+                : factoryName;
         ChatClientSetting chatClientSetting = ChatClientSetting.builder()
-                .provider(factoryName)
+                .provider(provider)
                 .appKey(setting != null ? setting.getAppKey() : null)
                 .baseUrl(setting != null ? setting.getBaseUrl() : null)
                 .build();
@@ -42,13 +49,13 @@ final class CommonChatClientFactoryResolver {
         } catch (Exception e) {
             org.slf4j.LoggerFactory.getLogger(CommonChatClientFactoryResolver.class)
                     .warn("[CommonChatClientFactoryResolver] 创建 ChatClient[provider={}] 失败: {}",
-                            factoryName, e.getMessage());
+                            provider, e.getMessage());
         }
-        if (StringUtils.isBlank(factoryName)) {
+        if (StringUtils.isBlank(provider)) {
             return null;
         }
         return ChatClient.create(ChatClientSetting.builder()
-                .provider(factoryName)
+                .provider(provider)
                 .appKey(setting != null ? setting.getAppKey() : null)
                 .baseUrl(setting != null ? setting.getBaseUrl() : null)
                 .build());

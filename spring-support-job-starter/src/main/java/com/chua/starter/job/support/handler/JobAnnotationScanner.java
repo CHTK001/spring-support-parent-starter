@@ -126,6 +126,8 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
         JobDefinition definition = new JobDefinition();
         definition.setName(name);
         definition.setCron(job.cron());
+        definition.setFixedDelayMs(job.fixedDelay());
+        definition.setFixedRateMs(job.fixedRate());
         definition.setEnabled(true);
         definition.setDesc(job.desc());
         synchronized (collectedDefinitions) {

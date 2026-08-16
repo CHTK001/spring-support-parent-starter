@@ -99,8 +99,12 @@ public class DemoJobHandler {
 
 模块启动后:
 - `SCHEDULER` 角色: 每秒扫表, 发现 "demo" 任务, 通过 `SyncServer.publish("job-cmd", "demo")` 推给 Executor
+- 多 EXECUTOR 场景: 采用 sticky 单播 `SyncServer.send(clientId, "job-cmd", payload)` 轮询取一个 client 派发, 保证同一任务只在一个执行器上运行 (HA 去重)
 - `EXECUTOR` 角色: 收到 "job-cmd"="demo" 后派发到线程池, 反射执行 `run()`, 结果 `send("job-log", logEvent)`
 - `SINGLE` 角色: leaderLoop 直接 → bus → executor, 全在进程内
+
+> 注意: `SyncServer.send(...)` 的形参顺序固定为 `(clientId, topic, message)`, 与 `publish(topic, message)` 不同,
+> sticky 单播若传成 `(topic, clientId, message)` 会把 clientId 与 topic 互换导致派发全部落空。
 
 ## 模块结构
 

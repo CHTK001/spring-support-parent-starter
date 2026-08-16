@@ -1,9 +1,9 @@
 package com.chua.starter.ai.support.controller;
 
 import com.chua.common.support.ai.chat.ChatClient;
-import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.chua.deeplearning.support.capability.ModelCapabilities;
+import com.chua.starter.ai.support.configuration.client.AiCapabilityResolver;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -38,14 +38,9 @@ import java.util.Base64;
 public class VisionController {
 
     /**
-     * 识图分组标识
+     * 统一能力解析器
      */
-    private static final String GROUP_VISION = "vision";
-
-    /**
-     * 全局配置服务
-     */
-    private final SysAiGlobalSettingService settingService;
+    private final AiCapabilityResolver capabilityResolver;
 
     @Permission("admin")
     @Operation(summary = "图像描述", description = "识别图片内容并返回文字描述")
@@ -114,20 +109,14 @@ public class VisionController {
      * @throws Exception 异常
      */
     private String callVisionModel(String prompt, String imageDataUri) throws Exception {
-        String provider = settingService.getValue(GROUP_VISION, "provider").orElse("openai");
-        String apiKey = settingService.getValue(GROUP_VISION, "provider_api_key").orElse("");
-        String baseUrl = settingService.getValue(GROUP_VISION, "provider_base_url").orElse("");
-        String model = settingService.getValue(GROUP_VISION, "default_model").orElse("gpt-4-vision-preview");
-
-        if (apiKey.isBlank()) {
+        // 通过能力标签统一解析配置
+        AiCapabilityResolver.CapabilityConfig config = capabilityResolver.resolve(ModelCapabilities.VISION);
+        if (config.apiKey().isBlank()) {
             throw new IllegalStateException("识图功能未配置 API Key，请在 sys_ai_global_setting 中设置 vision.provider_api_key");
         }
+        String model = config.model().isBlank() ? "gpt-4-vision-preview" : config.model();
 
-        ChatClient client = ChatClient.create(ChatClientSetting.builder()
-                .provider(provider)
-                .appKey(apiKey)
-                .baseUrl(baseUrl)
-                .build());
+        ChatClient client = capabilityResolver.createChatClient(config);
         client.model(model);
         client.addImage(imageDataUri);
 

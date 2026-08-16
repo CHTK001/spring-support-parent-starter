@@ -1,7 +1,6 @@
 package com.chua.starter.job.support.store;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.chua.common.support.task.scheduler.CronExpression;
 import com.chua.starter.job.support.dispatch.JobDefinition;
 import com.chua.starter.job.support.dispatch.JobRepository;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +41,11 @@ public class MybatisJobRepository implements JobRepository {
     private final ConcurrentMap<String, Long> lastFireMs = new ConcurrentHashMap<>();
 
     /**
+     * 触发器缓存, key 为 executeBean/name (复用固定序列推进)
+     */
+    private final ConcurrentMap<String, com.chua.common.support.task.scheduler.Trigger> triggerCache = new ConcurrentHashMap<>();
+
+    /**
      * 任务 Mapper
      */
     private final JobMapper jobMapper;
@@ -65,13 +69,13 @@ public class MybatisJobRepository implements JobRepository {
         List<JobDefinition> due = new ArrayList<>();
         long upperBound = now + preReadMs;
         for (JobEntity entity : candidates) {
-            long nextFire = nextFireTime(entity, now);
-            if (nextFire < 0L) {
-                continue;
-            }
             String key = entity.getSysJobExecuteBean() != null
                     ? entity.getSysJobExecuteBean()
                     : entity.getSysJobName();
+            long nextFire = nextFireMs(entity, key, now);
+            if (nextFire < 0L) {
+                continue;
+            }
             if (nextFire <= upperBound) {
                 // 简单 misfire 补跳: 若内存中记录的上一轮 nextFireMs 早于本次 (说明期间错过),
                 // 仅补发最后一个被漏掉的 (而不是把所有漏的循环补发, 避免风暴)。
@@ -110,17 +114,25 @@ public class MybatisJobRepository implements JobRepository {
                 JobEntity entity = toEntity(definition);
                 jobMapper.insert(entity);
                 log.info("[job] 注解任务持久化成功 name={}", definition.getName());
-            } else if (definition.getCron() != null && !definition.getCron().equals(existing.getSysJobScheduleTime())) {
-                if (existing.getSysJobNo() == null || existing.getSysJobNo().isBlank()) {
-                    existing.setSysJobNo(definition.getName());
+            } else {
+                // 已存在: 仅当调度配置变化时更新, 避免无意义写库
+                JobEntity candidate = toEntity(definition);
+                if (!java.util.Objects.equals(candidate.getSysJobScheduleType(), existing.getSysJobScheduleType())
+                        || !java.util.Objects.equals(candidate.getSysJobScheduleTime(), existing.getSysJobScheduleTime())) {
+                    if (existing.getSysJobNo() == null || existing.getSysJobNo().isBlank()) {
+                        existing.setSysJobNo(definition.getName());
+                    }
+                    existing.setSysJobScheduleType(candidate.getSysJobScheduleType());
+                    existing.setSysJobScheduleTime(candidate.getSysJobScheduleTime());
+                    existing.setSysJobName(definition.getName());
+                    existing.setSysJobDesc(definition.getDesc());
+                    existing.setSysJobTriggerStatus(1);
+                    existing.setSysJobIsDeleted(0);
+                    jobMapper.updateById(existing);
+                    log.info("[job] 注解任务调度配置更新 name={} type={} time={}",
+                            definition.getName(), candidate.getSysJobScheduleType(),
+                            candidate.getSysJobScheduleTime());
                 }
-                existing.setSysJobScheduleTime(definition.getCron());
-                existing.setSysJobName(definition.getName());
-                existing.setSysJobDesc(definition.getDesc());
-                existing.setSysJobTriggerStatus(1);
-                existing.setSysJobIsDeleted(0);
-                jobMapper.updateById(existing);
-                log.info("[job] 注解任务调度配置更新 name={} cron={}", definition.getName(), definition.getCron());
             }
         } catch (Exception ex) {
             log.warn("[job] 注解任务持久化失败 name={} cause={}", definition.getName(), ex.getMessage());
@@ -138,8 +150,19 @@ public class MybatisJobRepository implements JobRepository {
         entity.setSysJobNo(definition.getName());
         entity.setSysJobName(definition.getName());
         entity.setSysJobExecuteBean(definition.getName());
-        entity.setSysJobScheduleTime(definition.getCron());
-        entity.setSysJobScheduleType("CRON");
+        // 根据调度配置推导 schedule_type / schedule_time (cron > fixedDelay > fixedRate)
+        if (isNotBlank(definition.getCron())) {
+            entity.setSysJobScheduleType("CRON");
+            entity.setSysJobScheduleTime(definition.getCron());
+        } else if (definition.getFixedDelayMs() > 0L) {
+            entity.setSysJobScheduleType("DELAY");
+            entity.setSysJobScheduleTime(String.valueOf(definition.getFixedDelayMs()));
+        } else if (definition.getFixedRateMs() > 0L) {
+            entity.setSysJobScheduleType("FIXED");
+            entity.setSysJobScheduleTime(String.valueOf(definition.getFixedRateMs()));
+        } else {
+            entity.setSysJobScheduleType("NONE");
+        }
         entity.setSysJobTriggerStatus(1);
         entity.setSysJobIsDeleted(0);
         entity.setSysJobDesc(definition.getDesc());
@@ -148,26 +171,26 @@ public class MybatisJobRepository implements JobRepository {
     }
 
     /**
-     * 计算下次触发时间。
+     * 计算下一次触发时间 (委托 {@link com.chua.starter.job.support.dispatch.JobTriggering})。
      *
      * @param entity 任务实体
+     * @param key    唯一 key (executeBean/name), 用于缓存触发器
      * @param now    当前时间戳
-     * @return 下次触发时间, cron 解析失败返回 -1
+     * @return 下次触发时间, 未配置或计算失败返回 -1
      */
-    private long nextFireTime(JobEntity entity, long now) {
-        String cron = entity.getSysJobScheduleTime();
-        if (cron == null || cron.isBlank()) {
-            return -1L;
+    private long nextFireMs(JobEntity entity, String key, long now) {
+        JobDefinition definition = toDefinition(entity);
+        com.chua.common.support.task.scheduler.Trigger trigger = triggerCache.get(key);
+        if (trigger == null) {
+            trigger = com.chua.starter.job.support.dispatch.JobTriggering.createTrigger(definition);
+            if (trigger == null) {
+                return -1L;
+            }
+            triggerCache.put(key, trigger);
         }
-        try {
-            CronExpression expression = new CronExpression(cron);
-            java.util.Date next = expression.getNextValidTimeAfter(new java.util.Date(now));
-            return next == null ? -1L : next.getTime();
-        } catch (Exception ex) {
-            log.warn("[job] cron 解析失败 sysJobId={} cron={} cause={}",
-                    entity.getSysJobId(), cron, ex.getMessage());
-            return -1L;
-        }
+        Long last = lastFireMs.get(key);
+        return com.chua.starter.job.support.dispatch.JobTriggering.nextFireMs(
+                definition, trigger, last == null ? 0L : last, now);
     }
 
     /**
@@ -181,10 +204,49 @@ public class MybatisJobRepository implements JobRepository {
         definition.setName(entity.getSysJobExecuteBean() != null
                 ? entity.getSysJobExecuteBean()
                 : entity.getSysJobName());
-        definition.setCron(entity.getSysJobScheduleTime());
         definition.setEnabled(entity.getSysJobTriggerStatus() != null
                 && entity.getSysJobTriggerStatus() == 1);
         definition.setDesc(entity.getSysJobDesc());
+        // 根据 schedule_type 还原调度配置
+        String type = entity.getSysJobScheduleType();
+        String time = entity.getSysJobScheduleTime();
+        if ("CRON".equals(type)) {
+            definition.setCron(time);
+        } else if ("DELAY".equals(type)) {
+            definition.setFixedDelayMs(parseMs(time));
+        } else if ("FIXED".equals(type)) {
+            definition.setFixedRateMs(parseMs(time));
+        } else if (isNotBlank(time)) {
+            // 兼容历史脏数据: 无 schedule_type 但 schedule_time 非空, 视作 cron
+            definition.setCron(time);
+        }
         return definition;
+    }
+
+    /**
+     * 将毫秒字串解析为 long, 解析失败返回 0。
+     *
+     * @param value 字串
+     * @return 毫秒数
+     */
+    private long parseMs(String value) {
+        if (!isNotBlank(value)) {
+            return 0L;
+        }
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException ex) {
+            return 0L;
+        }
+    }
+
+    /**
+     * 文本非空判定。
+     *
+     * @param value 文本
+     * @return 非空返回 true
+     */
+    private boolean isNotBlank(String value) {
+        return value != null && !value.isBlank();
     }
 }

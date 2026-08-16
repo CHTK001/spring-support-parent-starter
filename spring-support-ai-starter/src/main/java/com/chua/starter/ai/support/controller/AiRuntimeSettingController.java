@@ -107,15 +107,21 @@ public class AiRuntimeSettingController {
     /**
      * 更新对话路由配置（增量更新，触发热重建）。
      *
-     * <p>逐字段写入，避免整组替换删除未提交的其它配置项。</p>
+     * <p>逐字段写入，避免整组替换删除未提交的其它配置项。
+     * 默认写入 {@code runtime} 分组；可通过 {@code group} 请求体字段指定
+     * 其它分组（如 {@code vision} / {@code face}），便于接口验证与配置下发。</p>
      *
-     * @param body 配置请求（fields 列表）
+     * @param body 配置请求（fields 列表，可含 group 指定分组）
      * @return 更新结果
      */
     @Permission("admin")
-    @Operation(summary = "更新对话路由配置", description = "增量更新 runtime 配置并触发热重建全局 ChatClient")
+    @Operation(summary = "更新对话路由配置", description = "增量更新指定分组配置并触发热重建全局 ChatClient")
     @PutMapping
     public ReturnResult<?> update(@RequestBody Map<String, Object> body) {
+        Object groupObj = body.get("group");
+        String targetGroup = groupObj != null && !groupObj.toString().isBlank()
+                ? groupObj.toString().trim()
+                : GROUP;
         Object fieldsObj = body.getOrDefault("fields", body);
         if (!(fieldsObj instanceof List<?> fields) || fields.isEmpty()) {
             return ReturnResult.ok("配置字段列表为空");
@@ -137,15 +143,17 @@ public class AiRuntimeSettingController {
             String value = valueObj != null ? valueObj.toString() : "";
             Object descObj = field.get("description");
             String description = descObj != null ? descObj.toString() : "";
-            settingService.upsertValue(GROUP, fieldName, value, description);
+            settingService.upsertValue(targetGroup, fieldName, value, description);
         }
-        try {
-            globalChatClientManager.rebuild();
-        } catch (Exception e) {
-            log.warn("[RuntimeConfig] runtime 分组配置已更新但热重建异常: {}", e.getMessage());
+        if (GROUP.equals(targetGroup)) {
+            try {
+                globalChatClientManager.rebuild();
+            } catch (Exception e) {
+                log.warn("[RuntimeConfig] {} 分组配置已更新但热重建异常: {}", targetGroup, e.getMessage());
+            }
         }
-        log.info("[RuntimeConfig] runtime 分组配置已更新并触发热重建");
-        return ReturnResult.ok("对话路由配置已更新");
+        log.info("[RuntimeConfig] {} 分组配置已更新并触发热重建", targetGroup);
+        return ReturnResult.ok("配置已更新");
     }
 
     /**
