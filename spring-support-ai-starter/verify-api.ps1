@@ -400,9 +400,9 @@ Invoke-Check "RAG URL 抓取非法 URL 返回错误" {
 # ============================================================
 Write-Step "人脸真实检测（scrfd ONNX 模型）"
 
-# 配置 face 分组：scrfd 检测器 + r50 特征 + memory 向量库
+# 配置 face 分组：scrfd 检测器 + r50 特征 + memory 向量库 + codeformer 修复
 Invoke-Check "配置人脸检测模型" {
-    $faceBody = '{"group":"face","fields":[{"field":"detector_model","value":"scrfd-face-detector"},{"field":"feature_model","value":"r50-face-feature"},{"field":"vector_storage","value":"memory"},{"field":"liveness_enabled","value":"false"}]}'
+    $faceBody = '{"group":"face","fields":[{"field":"detector_model","value":"scrfd-face-detector"},{"field":"feature_model","value":"r50-face-feature"},{"field":"vector_storage","value":"memory"},{"field":"liveness_enabled","value":"false"},{"field":"restore_model","value":"codeformer"},{"field":"restore_enabled","value":"true"}]}'
     (Get-Body "PUT" "/v2/runtime/config" $faceBody) -match "已更新"
 }
 
@@ -491,9 +491,11 @@ Invoke-Check "人脸超分缺参数 4xx" {
     $s = (Get-Status "POST" "/v2/face/super-resolution" "" $auth)
     ($s -ge 400) -and ($s -ne "401")
 }
-Invoke-Check "人脸修复缺参数 4xx" {
-    $s = (Get-Status "POST" "/v2/face/restore" "" $auth)
-    ($s -ge 400) -and ($s -ne "401")
+Invoke-Check "人脸修复真实执行（codeformer ONNX 368MB）" {
+    $out = Join-Path $env:TEMP "ai-verify-restore.png"
+    $resp = & curl.exe -s --max-time 120 -o $out -w "%{http_code}" -X POST "$BaseUrl/v2/face/restore" `
+        -H "Authorization: Bearer sk-chat-verify" -F "file=@$faceImage" 2>&1
+    ($resp -eq "200") -and ((Get-Item $out -ErrorAction SilentlyContinue).Length -gt 1000)
 }
 Invoke-Check "人脸检索空特征返回错误" {
     (Get-Body "GET" "/v2/face/search?feature=") -match "错误|失败|格式"
