@@ -287,7 +287,7 @@ public class FaceController {
                     .contentType(MediaType.IMAGE_PNG)
                     .body(result);
         } catch (Exception e) {
-            log.error("[Face] 人脸超分失败: {}", e.getMessage());
+            log.error("[Face] 人脸超分失败: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().build();
         }
     }

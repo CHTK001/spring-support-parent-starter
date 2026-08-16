@@ -259,7 +259,12 @@ public class FaceClientManager {
         if (current == null) {
             synchronized (this) {
                 if (superResolution == null) {
-                    superResolution = ImageEnhancer.create(settingReader.getStr(GROUP, "super_resolution_model"));
+                    String model = settingReader.getStr(GROUP, "super_resolution_model");
+                    // 未配置时回退默认（与 FaceGlobalSettingProvider 默认一致）
+                    if (model == null || model.isBlank()) {
+                        model = "gfpgan-face-super-resolution";
+                    }
+                    superResolution = ImageEnhancer.create(model);
                 }
                 current = superResolution;
             }
