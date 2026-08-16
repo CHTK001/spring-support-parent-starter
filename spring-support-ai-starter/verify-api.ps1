@@ -419,7 +419,7 @@ Write-Step "人脸真实检测（scrfd ONNX 模型）"
 
 # 配置 face 分组：scrfd 检测器 + r50 特征 + memory 向量库 + codeformer 修复
 Invoke-Check "配置人脸检测模型" {
-    $faceBody = '{"group":"face","fields":[{"field":"detector_model","value":"scrfd-face-detector"},{"field":"feature_model","value":"r50-face-feature"},{"field":"vector_storage","value":"memory"},{"field":"feature_dimension","value":"10861"},{"field":"liveness_enabled","value":"false"},{"field":"restore_model","value":"codeformer"},{"field":"restore_enabled","value":"true"}]}'
+    $faceBody = '{"group":"face","fields":[{"field":"detector_model","value":"scrfd-face-detector"},{"field":"feature_model","value":"r50-face-feature"},{"field":"vector_storage","value":"memory"},{"field":"feature_dimension","value":"10861"},{"field":"liveness_enabled","value":"false"},{"field":"restore_model","value":"codeformer"},{"field":"restore_enabled","value":"true"},{"field":"super_resolution_model","value":"gfpgan-face-super-resolution"},{"field":"super_resolution_enabled","value":"true"}]}'
     (Get-Body "PUT" "/v2/runtime/config" $faceBody) -match "已更新"
 }
 

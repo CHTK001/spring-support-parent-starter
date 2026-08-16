@@ -4,12 +4,14 @@ import com.chua.common.support.ai.rag.GlobalSettingProvider;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.configuration.client.GlobalChatClientManager;
+import com.chua.starter.ai.support.configuration.face.FaceSettingsChangedEvent;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -43,6 +45,11 @@ public class AiRuntimeSettingController {
      * 对话路由配置分组
      */
     private static final String GROUP = "runtime";
+
+    /**
+     * Spring 应用事件发布器（分组配置更新后通知各能力模块热重建）
+     */
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 全局设置服务
@@ -150,6 +157,13 @@ public class AiRuntimeSettingController {
                 globalChatClientManager.rebuild();
             } catch (Exception e) {
                 log.warn("[RuntimeConfig] {} 分组配置已更新但热重建异常: {}", targetGroup, e.getMessage());
+            }
+        } else {
+            // 非 runtime 分组（face/vision 等）：发布配置变更事件，触发对应能力模块热重建
+            try {
+                eventPublisher.publishEvent(new FaceSettingsChangedEvent(targetGroup));
+            } catch (Exception e) {
+                log.warn("[RuntimeConfig] {} 分组配置已更新但发布热重建事件异常: {}", targetGroup, e.getMessage());
             }
         }
         log.info("[RuntimeConfig] {} 分组配置已更新并触发热重建", targetGroup);
