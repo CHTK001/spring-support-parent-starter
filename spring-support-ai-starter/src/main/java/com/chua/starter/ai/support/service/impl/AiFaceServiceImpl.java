@@ -155,6 +155,11 @@ public class AiFaceServiceImpl implements AiFaceService {
         return faceClientManager.currentPipeline().enrollPipeline(id, imageData, metadata);
     }
 
+    @Override
+    public boolean enrollFeature(String id, float[] feature, Map<String, Object> metadata) {
+        return faceClientManager.currentPipeline().enroll(id, feature, metadata, id);
+    }
+
     /**
      * 1:N 人脸识别（单独能力，取最大人脸）。
      *
