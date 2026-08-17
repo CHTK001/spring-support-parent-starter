@@ -2,11 +2,11 @@ package com.chua.starter.ai.support.service.impl;
 
 import com.chua.common.support.utils.StringUtils;
 import com.chua.deeplearning.support.face.FaceAlignResult;
+import com.chua.deeplearning.support.face.FaceCompareResult;
 import com.chua.deeplearning.support.face.FaceDetectionHit;
 import com.chua.deeplearning.support.face.FaceFeaturePipelineResult;
 import com.chua.deeplearning.support.face.FaceIdentifyHit;
 import com.chua.deeplearning.support.face.FaceSearchHit;
-import com.chua.deeplearning.support.feature.FeatureExtractor;
 import com.chua.deeplearning.support.model.DetectionInfo;
 import com.chua.deeplearning.support.model.FaceQualityInfo;
 import com.chua.deeplearning.support.model.PredictRectangle;
@@ -102,10 +102,18 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public double compare(byte[] imageA, byte[] imageB) {
-        FeatureExtractor extractor = faceClientManager.currentFeatureExtractor();
-        float[] featureA = extractor.extract(imageA);
-        float[] featureB = extractor.extract(imageB);
-        return cosineSimilarity(featureA, featureB);
+        // 走完整管线（detect→crop→liveness→align→feature）提取两侧特征后余弦比对
+        FaceFeaturePipelineResult a = faceClientManager.currentPipeline().extractFeatureWithMeta(imageA);
+        FaceFeaturePipelineResult b = faceClientManager.currentPipeline().extractFeatureWithMeta(imageB);
+        if (a == null || b == null || a.feature() == null || b.feature() == null) {
+            return 0d;
+        }
+        return cosineSimilarity(a.feature(), b.feature());
+    }
+
+    @Override
+    public FaceCompareResult compareWithMeta(byte[] imageA, byte[] imageB) {
+        return faceClientManager.currentPipeline().compareWithMeta(imageA, imageB);
     }
 
     /**
