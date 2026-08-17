@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.deeplearning.support.face.FaceAlignResult;
 import com.chua.deeplearning.support.face.FaceDetectionHit;
 import com.chua.deeplearning.support.face.FaceIdentifyHit;
 import com.chua.deeplearning.support.face.FaceSearchHit;
@@ -90,6 +91,37 @@ public class FaceController {
         } catch (Exception e) {
             log.error("[Face] 特征提取失败: {}", e.getMessage());
             return ReturnResult.error("特征提取失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 人脸对齐（5 点仿射旋转）。
+     *
+     * @param file 图片文件
+     * @return 对齐结果（含对齐后的人脸图 + 活体 + 耗时）
+     */
+    @Permission("admin")
+    @Operation(summary = "人脸对齐", description = "detect→crop→liveness→align，返回 5 点仿射旋转后的对齐人脸图")
+    @PostMapping(value = "/align", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ReturnResult<?> align(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return ReturnResult.error("上传文件不能为空");
+        }
+        try {
+            FaceAlignResult r = faceService.align(file.getBytes());
+            if (r == null) {
+                return ReturnResult.ok(Map.of("matched", false));
+            }
+            return ReturnResult.ok(Map.of(
+                    "matched", true,
+                    "box", r.box(),
+                    "alignedFace", r.alignedFace(),
+                    "live", r.live(),
+                    "liveScore", r.liveScore(),
+                    "elapsedMs", r.elapsedMs()));
+        } catch (Exception e) {
+            log.error("[Face] 人脸对齐失败: {}", e.getMessage());
+            return ReturnResult.error("人脸对齐失败: " + e.getMessage());
         }
     }
 

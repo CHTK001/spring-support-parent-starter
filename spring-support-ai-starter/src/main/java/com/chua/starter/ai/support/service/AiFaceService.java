@@ -59,6 +59,22 @@ public interface AiFaceService {
     float[] extractFeature(byte[] imageData);
 
     /**
+     * 特征提取完整管线（detect→crop→liveness→align→feature）。
+     *
+     * @param imageData 图片字节
+     * @return 特征管线结果（检测框/裁剪/对齐/活体/特征/耗时），无人脸返回 null
+     */
+    com.chua.deeplearning.support.face.FaceFeaturePipelineResult extractFeaturePipeline(byte[] imageData);
+
+    /**
+     * 人脸对齐管线（detect→crop→liveness→align）。
+     *
+     * @param imageData 图片字节
+     * @return 对齐结果（检测框/裁剪/对齐/活体/耗时），无人脸返回 null
+     */
+    com.chua.deeplearning.support.face.FaceAlignResult align(byte[] imageData);
+
+    /**
      * 1:1 人脸比对（单独能力）。
      *
      * @param imageA 图片 A 字节

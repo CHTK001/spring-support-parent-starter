@@ -1,7 +1,9 @@
 package com.chua.starter.ai.support.service.impl;
 
 import com.chua.common.support.utils.StringUtils;
+import com.chua.deeplearning.support.face.FaceAlignResult;
 import com.chua.deeplearning.support.face.FaceDetectionHit;
+import com.chua.deeplearning.support.face.FaceFeaturePipelineResult;
 import com.chua.deeplearning.support.face.FaceIdentifyHit;
 import com.chua.deeplearning.support.face.FaceSearchHit;
 import com.chua.deeplearning.support.feature.FeatureExtractor;
@@ -77,7 +79,18 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public float[] extractFeature(byte[] imageData) {
-        return faceClientManager.currentFeatureExtractor().extract(imageData);
+        FaceFeaturePipelineResult r = faceClientManager.currentPipeline().extractFeatureWithMeta(imageData);
+        return r == null || r.feature() == null ? new float[0] : r.feature();
+    }
+
+    @Override
+    public FaceFeaturePipelineResult extractFeaturePipeline(byte[] imageData) {
+        return faceClientManager.currentPipeline().extractFeatureWithMeta(imageData);
+    }
+
+    @Override
+    public FaceAlignResult align(byte[] imageData) {
+        return faceClientManager.currentPipeline().align(imageData);
     }
 
     /**
