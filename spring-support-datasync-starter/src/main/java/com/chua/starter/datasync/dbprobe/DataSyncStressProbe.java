@@ -32,8 +32,8 @@ public final class DataSyncStressProbe {
 
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);
-        int[] rows = {1_000_000, 10_000_000};
-        int[] batches = {1000, 10000};
+        int[] rows = {10_000_000};
+        int[] batches = {1000};
 
         System.err.println("========================================================================");
         System.err.println("数据同步完整管线压测 (全链路 + 手动单遍触发)");
@@ -80,8 +80,11 @@ public final class DataSyncStressProbe {
                 Map.of(), null));
 
         server.start();
-        long start = System.currentTimeMillis();
+        long t0 = System.currentTimeMillis();
         server.schedulerManager().trigger(id);
+        long triggerMs = System.currentTimeMillis() - t0;
+        System.err.println("[TIMING] trigger 返回耗时: " + triggerMs + "ms");
+        long start = System.currentTimeMillis();
         boolean done = sink.done.await(180, TimeUnit.SECONDS);
         long elapsedMs = System.currentTimeMillis() - start;
         server.stop();
@@ -109,6 +112,9 @@ public final class DataSyncStressProbe {
         private final long expected;
         final AtomicLong count = new AtomicLong(0);
         final AtomicLong batches = new AtomicLong(0);
+        final AtomicLong totalDispatchMs = new AtomicLong(0);
+        volatile long firstBatchMs = 0;
+        volatile long lastBatchMs = 0;
         final CountDownLatch done;
 
         CountSink(String sinkId, long expected) {
@@ -124,12 +130,20 @@ public final class DataSyncStressProbe {
 
         @Override
         public void write(Flux<Map<String, Object>> rows) {
-            batches.incrementAndGet();
+            long t0 = System.currentTimeMillis();
+            long b = batches.incrementAndGet();
+            if (b == 1) firstBatchMs = t0;
             rows.doOnNext(m -> {
                 if (count.incrementAndGet() >= expected) {
                     done.countDown();
                 }
             }).subscribe();
+            long cost = System.currentTimeMillis() - t0;
+            totalDispatchMs.addAndGet(cost);
+            lastBatchMs = System.currentTimeMillis();
+            if (cost > 100) {
+                System.err.println("[SLOW] batch=" + b + " cost=" + cost + "ms count=" + count.get());
+            }
         }
 
         @Override
