@@ -116,14 +116,27 @@ public interface AiFaceService {
     boolean enroll(String id, byte[] imageData, Map<String, Object> metadata);
 
     /**
-     * 登记管线（detect → crop → liveness → feature → 入库，取最大人脸）。
+     * 登记管线（detect → crop → liveness → align → feature → 入库，取最大人脸）。
      *
      * @param id        人脸 ID
      * @param imageData 图片字节
-     * @param metadata  附加元数据
+     * @param metadata  元数据
      * @return 是否登记成功
      */
     boolean enrollPipeline(String id, byte[] imageData, Map<String, Object> metadata);
+
+    /**
+     * 直接特征入库（不跑管线，调用方自行提取特征后入库）。
+     *
+     * <p>适用场景：前端先调 {@link #extractFeature(byte[])} 取特征，再调用本接口入库，
+     * 或从外部系统导入预计算特征向量。</p>
+     *
+     * @param id        人脸 ID
+     * @param feature   特征向量（维度需与 vectorStorage 一致）
+     * @param metadata  元数据
+     * @return 是否成功
+     */
+    boolean enrollFeature(String id, float[] feature, Map<String, Object> metadata);
 
     /**
      * 1:N 人脸识别（单独能力，取最大人脸）。

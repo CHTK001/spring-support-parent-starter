@@ -178,7 +178,7 @@ public class FaceController {
      * @return 登记结果
      */
     @Permission("admin")
-    @Operation(summary = "人脸登记", description = "登记人脸特征向量到人脸库")
+    @Operation(summary = "人脸登记（图像）", description = "登记管线：detect→crop→liveness→align→feature→入库，取最大人脸")
     @PostMapping("/enroll")
     public ReturnResult<?> enroll(@RequestParam("id") String id,
                                   @RequestParam("file") MultipartFile file,
@@ -196,6 +196,34 @@ public class FaceController {
         } catch (Exception e) {
             log.error("[Face] 人脸登记失败: {}", e.getMessage());
             return ReturnResult.error("人脸登记失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 直接特征入库（不跑管线，调用方自行提取特征后入库）。
+     *
+     * @param id        人脸 ID
+     * @param feature   特征向量 JSON 数组
+     * @param metadata  元数据 JSON
+     * @return 登记结果
+     */
+    @Permission("admin")
+    @Operation(summary = "人脸登记（特征向量）", description = "直接用特征向量入库，不跑管线；适用已提取特征或外部导入场景")
+    @PostMapping("/enroll-feature")
+    public ReturnResult<?> enrollFeature(@RequestParam("id") String id,
+                                         @RequestParam("feature") String feature,
+                                         @RequestParam(value = "metadata", required = false) String metadata) {
+        if (id == null || id.isBlank()) {
+            return ReturnResult.error("人脸 ID 不能为空");
+        }
+        try {
+            float[] vector = parseFeature(feature);
+            Map<String, Object> meta = parseMetadata(metadata);
+            boolean success = faceService.enrollFeature(id, vector, meta);
+            return success ? ReturnResult.ok("登记成功") : ReturnResult.error("登记失败");
+        } catch (Exception e) {
+            log.error("[Face] 特征入库失败: {}", e.getMessage());
+            return ReturnResult.error("特征入库失败: " + e.getMessage());
         }
     }
 
