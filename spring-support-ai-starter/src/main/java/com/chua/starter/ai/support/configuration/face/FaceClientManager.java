@@ -223,12 +223,30 @@ public class FaceClientManager {
         if (current == null) {
             synchronized (this) {
                 if (detector == null) {
-                    detector = FaceDetector.create(settingReader.getStr(GROUP, "detector_model"));
+                    detector = buildDetector(settingReader.getStr(GROUP, "detector_model"));
                 }
                 current = detector;
             }
         }
         return current;
+    }
+
+    /**
+     * 构建带阈值的 FaceDetector（置信度阈值 + NMS + 最小人脸尺寸）。
+     */
+    private FaceDetector buildDetector(String modelId) {
+        FaceDetector d = FaceDetector.create(modelId);
+        BigDecimal detTh = settingReader.getDecimalOrNull(GROUP, "detector_threshold");
+        BigDecimal nmsTh = settingReader.getDecimalOrNull(GROUP, "nms_threshold");
+        if (detTh != null) {
+            d.threshold(detTh.floatValue());
+        }
+        if (nmsTh != null) {
+            d.nms(nmsTh.floatValue());
+        }
+        int minSize = settingReader.getInt(GROUP, "min_face_size", 20);
+        d.minFaceSize(minSize);
+        return d;
     }
 
     /**
@@ -241,7 +259,7 @@ public class FaceClientManager {
         if (current == null) {
             synchronized (this) {
                 if (animeDetector == null) {
-                    animeDetector = FaceDetector.create(settingReader.getStr(GROUP, "anime_detector_model"));
+                    animeDetector = buildDetector(settingReader.getStr(GROUP, "anime_detector_model"));
                 }
                 current = animeDetector;
             }
@@ -400,8 +418,8 @@ public class FaceClientManager {
 
         // 依赖配置的组件全部重建
         this.featureExtractor = FeatureExtractor.create(settingReader.getStr(GROUP, "feature_model"));
-        this.detector = FaceDetector.create(settingReader.getStr(GROUP, "detector_model"));
-        this.animeDetector = FaceDetector.create(settingReader.getStr(GROUP, "anime_detector_model"));
+        this.detector = buildDetector(settingReader.getStr(GROUP, "detector_model"));
+        this.animeDetector = buildDetector(settingReader.getStr(GROUP, "anime_detector_model"));
         this.superResolution = ImageEnhancer.create(settingReader.getStr(GROUP, "super_resolution_model"));
         this.restorer = ImageEnhancer.create(settingReader.getStr(GROUP, "restore_model"));
         this.attributeClassifier = ImageClassifier.create(settingReader.getStr(GROUP, "attribute_model"));

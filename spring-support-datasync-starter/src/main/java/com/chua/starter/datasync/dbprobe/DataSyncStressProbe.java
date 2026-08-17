@@ -1,6 +1,5 @@
 package com.chua.starter.datasync.dbprobe;
 
-import com.chua.common.support.task.scheduler.CronTrigger;
 import com.chua.datasync.agent.support.DataSyncAgentSink;
 import com.chua.datasync.agent.support.source.DelimitedDataSyncAgentSource;
 import com.chua.starter.datasync.DefaultDataSyncServer;
@@ -15,52 +14,50 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.LongAdder;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 数据同步压测探针：生成超大 CSV 文件进行真实压测。
- *
- * <p>测试不同行数、不同 batch 大小下的吞吐、内存与耗时。</p>
+ * 数据同步完整管线压测：走 Server→Scheduler→Executor→Dispatch→Sink 全链路，手动触发单遍。
  *
  * @author CH
  * @since 4.0.0.42
  */
 public final class DataSyncStressProbe {
 
-    private static final Path WORK_DIR = Paths.get("target/stress-test");
+    private static final Path WORK_DIR = Paths.get("target/stress-full");
 
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);
-        int[] rows = {10_000, 100_000};
-        int[] batches = {100, 1000, 10000};
+        int[] rows = {1_000_000, 10_000_000};
+        int[] batches = {1000, 10000};
 
-        System.out.println("========================================================================");
-        System.out.println("数据同步管线压测");
-        System.out.println("========================================================================");
-        System.out.printf("%-12s %-10s %-12s %-12s %-12s %-12s %-20s%n",
-                "行数", "batch", "总耗时(ms)", "吞吐(行/s)", "首轮(ms)", "总行数", "执行线程");
-        System.out.println("------------------------------------------------------------------------");
+        System.err.println("========================================================================");
+        System.err.println("数据同步完整管线压测 (全链路 + 手动单遍触发)");
+        System.err.println("========================================================================");
+        System.err.printf("%-12s %-10s %-12s %-14s %-12s %-16s%n",
+                "行数", "batch", "耗时(ms)", "吞吐(行/s)", "sink批数", "数据校验");
+        System.err.println("------------------------------------------------------------------------");
 
         for (int rowCount : rows) {
+            Path csv = WORK_DIR.resolve("stress-" + rowCount + ".csv");
+            if (!Files.exists(csv)) {
+                long t0 = System.currentTimeMillis();
+                generateCsv(csv, rowCount);
+                System.err.println("[STRESS] 生成 " + rowCount + " 行 CSV: " + (System.currentTimeMillis() - t0) + "ms");
+            }
             for (int batch : batches) {
-                runTest(rowCount, batch);
+                runFullPipeline(csv, rowCount, batch);
             }
         }
-        System.out.println("========================================================================");
+        System.err.println("========================================================================");
     }
 
-    private static void runTest(int totalRows, int batchSize) throws Exception {
-        Path csv = WORK_DIR.resolve("stress-" + totalRows + ".csv");
-        if (!Files.exists(csv)) {
-            generateCsv(csv, totalRows);
-        }
-
-        String id = "stress-" + totalRows + "-" + batchSize;
-        String srcId = id + "-src";
-        String snkId = id + "-sink";
+    private static void runFullPipeline(Path csv, int totalRows, int batchSize) throws Exception {
+        String id = "full-" + totalRows + "-" + batchSize;
 
         DefaultSyncDataSchedulerManager.SchedulerConfig config =
                 DefaultSyncDataSchedulerManager.SchedulerConfig.builder()
@@ -68,30 +65,35 @@ public final class DataSyncStressProbe {
                         .maxBufferRows(Long.MAX_VALUE)
                         .retryMaxAttempts(0)
                         .build();
+
         DefaultDataSyncServer server = new DefaultDataSyncServer(
-                new DataSyncAgentServer(null, null, "stress-probe"), config);
+                new DataSyncAgentServer(null, null, "stress-full"), config);
         server.setMappingManager(new DefaultDataSyncMappingManager());
 
-        TimerSink sink = new TimerSink(snkId);
-        server.registerSource(new DelimitedDataSyncAgentSource(srcId, id + "-input", csv.toString(), ","));
+        CountSink sink = new CountSink(id + "-sink", totalRows);
+        server.registerSource(new DelimitedDataSyncAgentSource(id + "-src", id + "-input", csv.toString(), ","));
         server.registerSink(sink);
 
-        DataSyncMapping mapping = new DefaultDataSyncMapping(
-                id, id + "-input", srcId, id + "-output", snkId,
-                null, List.of(), batchSize, "fixed", "0/1 * * * * ?",
-                Map.of(), new CronTrigger("0/1 * * * * ?", LocalDateTime.now()));
-        server.addMapping(mapping);
+        // NONE 型：不参与 cron 轮询，仅手动触发单遍
+        server.addMapping(new DefaultDataSyncMapping(id, id + "-input", id + "-src", id + "-output", id + "-sink",
+                null, List.of(), batchSize, "none", "",
+                Map.of(), null));
+
         server.start();
-        Thread.sleep(Math.max(3000, totalRows / 200));
+        long start = System.currentTimeMillis();
+        server.schedulerManager().trigger(id);
+        boolean done = sink.done.await(180, TimeUnit.SECONDS);
+        long elapsedMs = System.currentTimeMillis() - start;
         server.stop();
 
-        long tp = (sink.total.sum() > 0) ? (sink.total.sum() * 1000L / Math.max(1L, sink.totalMs)) : 0L;
-        System.out.printf("%-12d %-10d %-12d %-12d %-12d %-12d %-20s%n",
-                totalRows, batchSize, sink.totalMs, tp, sink.firstMs, sink.total.sum(), sink.threadName);
+        long tp = (sink.count.get() > 0) ? (sink.count.get() * 1000L / Math.max(1L, elapsedMs)) : 0L;
+        long batches = sink.batches.get();
+        boolean ok = done && sink.count.get() == totalRows;
+        System.err.printf("%-12d %-10d %-12d %-14d %-12d %-16s%n",
+                totalRows, batchSize, elapsedMs, tp, batches, ok ? "PASS" : "FAIL(" + sink.count.get() + ")");
     }
 
     private static void generateCsv(Path path, int lines) throws Exception {
-        long t0 = System.currentTimeMillis();
         try (var writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
             writer.write("id,name,age,score,active,created_at\n");
             for (int i = 0; i < lines; i++) {
@@ -100,34 +102,38 @@ public final class DataSyncStressProbe {
                         + (i % 2 == 0) + ",2026-01-01\n");
             }
         }
-        System.out.println("[STRESS] 生成 " + lines + " 行 CSV: " + (System.currentTimeMillis() - t0) + "ms");
     }
 
-    static final class TimerSink implements DataSyncAgentSink {
-        private final String id;
-        final LongAdder total = new LongAdder();
-        volatile long totalMs = 0;
-        volatile long firstMs = 0;
-        volatile String threadName = "-";
-        private final java.util.concurrent.atomic.AtomicBoolean first = new java.util.concurrent.atomic.AtomicBoolean(true);
+    static final class CountSink implements DataSyncAgentSink {
+        private final String sinkId;
+        private final long expected;
+        final AtomicLong count = new AtomicLong(0);
+        final AtomicLong batches = new AtomicLong(0);
+        final CountDownLatch done;
 
-        TimerSink(String id) { this.id = id; }
+        CountSink(String sinkId, long expected) {
+            this.sinkId = sinkId;
+            this.expected = expected;
+            this.done = new CountDownLatch(1);
+        }
 
-        @Override public String sinkId() { return id; }
+        @Override
+        public String sinkId() {
+            return sinkId;
+        }
 
         @Override
         public void write(Flux<Map<String, Object>> rows) {
-            long t0 = System.currentTimeMillis();
-            rows.doOnNext(m -> total.increment())
-                    .collectList()
-                    .subscribe(list -> {
-                        long cost = System.currentTimeMillis() - t0;
-                        totalMs += cost;
-                        if (first.compareAndSet(true, false)) firstMs = cost;
-                        threadName = Thread.currentThread().getName();
-                    });
+            batches.incrementAndGet();
+            rows.doOnNext(m -> {
+                if (count.incrementAndGet() >= expected) {
+                    done.countDown();
+                }
+            }).subscribe();
         }
 
-        @Override public void close() {}
+        @Override
+        public void close() {
+        }
     }
 }
