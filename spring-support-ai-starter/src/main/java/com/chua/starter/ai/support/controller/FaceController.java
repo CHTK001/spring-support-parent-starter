@@ -2,6 +2,7 @@ package com.chua.starter.ai.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.deeplearning.support.face.FaceAlignResult;
+import com.chua.deeplearning.support.face.FaceCompareResult;
 import com.chua.deeplearning.support.face.FaceDetectionHit;
 import com.chua.deeplearning.support.face.FaceIdentifyHit;
 import com.chua.deeplearning.support.face.FaceSearchHit;
@@ -133,7 +134,7 @@ public class FaceController {
      * @return 相似度与判定
      */
     @Permission("admin")
-    @Operation(summary = "人脸比对", description = "1:1 人脸比对，返回相似度与是否同一人")
+    @Operation(summary = "人脸比对", description = "1:1 人脸比对（detect→crop→liveness→align→feature→cosine），返回相似度与是否同一人")
     @PostMapping("/compare")
     public ReturnResult<?> compare(@RequestParam("fileA") MultipartFile fileA,
                                    @RequestParam("fileB") MultipartFile fileB) {
@@ -141,10 +142,26 @@ public class FaceController {
             return ReturnResult.error("上传文件不能为空");
         }
         try {
-            double score = faceService.compare(fileA.getBytes(), fileB.getBytes());
+            FaceCompareResult r = faceService.compareWithMeta(fileA.getBytes(), fileB.getBytes());
+            if (r == null) {
+                return ReturnResult.error("人脸比对失败：任一侧未检测到人脸");
+            }
             return ReturnResult.ok(Map.of(
-                    "score", score,
-                    "matched", score >= 0.5
+                    "score", r.score(),
+                    "matched", r.matched(),
+                    "a", Map.of(
+                            "box", r.a().box(),
+                            "live", r.a().live(),
+                            "liveScore", r.a().liveScore(),
+                            "dim", r.a().dim()
+                    ),
+                    "b", Map.of(
+                            "box", r.b().box(),
+                            "live", r.b().live(),
+                            "liveScore", r.b().liveScore(),
+                            "dim", r.b().dim()
+                    ),
+                    "elapsedMs", r.elapsedMs()
             ));
         } catch (Exception e) {
             log.error("[Face] 人脸比对失败: {}", e.getMessage());

@@ -1,6 +1,8 @@
 package com.chua.starter.ai.support.service;
 
+import com.chua.deeplearning.support.face.FaceCompareResult;
 import com.chua.deeplearning.support.face.FaceDetectionHit;
+import com.chua.deeplearning.support.face.FaceFeaturePipelineResult;
 import com.chua.deeplearning.support.face.FaceIdentifyHit;
 import com.chua.deeplearning.support.face.FaceSearchHit;
 import com.chua.deeplearning.support.model.DetectionInfo;
@@ -82,6 +84,17 @@ public interface AiFaceService {
      * @return 相似度（0~1，越高越相似）
      */
     double compare(byte[] imageA, byte[] imageB);
+
+    /**
+     * 1:1 比对完整管线：两侧都跑 detect→crop→liveness→align→feature，再余弦比对。
+     *
+     * <p>返回两侧的特征提取元数据 + 余弦相似度，便于可观测与调试。</p>
+     *
+     * @param imageA 图片 A 字节
+     * @param imageB 图片 B 字节
+     * @return 比对结果（相似度 + A/B 特征管线结果）
+     */
+    FaceCompareResult compareWithMeta(byte[] imageA, byte[] imageB);
 
     /**
      * 1:1 特征向量比对（单独能力）。
