@@ -204,11 +204,33 @@ public class RagClientManager {
     /**
      * 解析文本提取器：配置了 RAG OCR 模型时使用 OCR 提取器识别图片文字，否则返回 null。
      *
-     * @param ocrModel OCR 模型
+     * <p>优先使用 ocr 分组的完整管线配置（detector + recognizer + 阈值 + 阅读序 + direction + restorer），
+     * 未配置 detector/recognizer 时回退到旧版单模型 recognizer 路径。</p>
+     *
+     * @param ocrModel 兜底 OCR 模型名（rag_ocr_model）
      * @return 文本提取器，未配置 OCR 时返回 null
      */
     private TextExtractor resolveTextExtractor(String ocrModel) {
+        String detectorModel = settingReader.getStr("ocr", "detector_model");
+        String recognizerModel = settingReader.getStr("ocr", "recognizer_model");
+        String sortStr = settingReader.getStr("ocr", "sort_reading_order");
+        String thresholdStr = settingReader.getStr("ocr", "detector_threshold");
+        String directionModel = settingReader.getStr("ocr", "direction_model");
+        String restorerModel = settingReader.getStr("ocr", "restorer_model");
+
+        if (StringUtils.hasText(detectorModel) && StringUtils.hasText(recognizerModel)) {
+            // 完整 OCR 管线（detect→recognize，含阈值过滤与阅读序）
+            float threshold = parseFloatSafe(thresholdStr, 0.5f);
+            boolean sort = !"false".equalsIgnoreCase(sortStr);
+            try {
+                return new OcrTextExtractor(detectorModel, recognizerModel,
+                        threshold, sort, directionModel, restorerModel);
+            } catch (Exception e) {
+                log.warn("[RagClientManager] 完整 OCR 管线创建失败: {}", e.getMessage());
+            }
+        }
         if (StringUtils.hasText(ocrModel)) {
+            // 回退到单模型 recognizer 路径（仅识别，无检测/阈值）
             try {
                 return new OcrTextExtractor(ocrModel);
             } catch (Exception e) {
@@ -217,6 +239,18 @@ public class RagClientManager {
             }
         }
         return null;
+    }
+
+    /**
+     * 安全解析 float，失败返回默认值。
+     */
+    private static float parseFloatSafe(String s, float def) {
+        if (!StringUtils.hasText(s)) return def;
+        try {
+            return Float.parseFloat(s.trim());
+        } catch (NumberFormatException e) {
+            return def;
+        }
     }
 
     /**
