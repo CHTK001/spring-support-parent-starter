@@ -6,6 +6,7 @@ import com.chua.common.support.ai.video.VideoClient;
 import com.chua.common.support.ai.video.VideoResponse;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.deeplearning.support.capability.ModelCapabilities;
+import com.chua.deeplearning.support.utils.OpenCvImageUtils;
 import com.chua.starter.ai.support.configuration.client.AiCapabilityResolver;
 import com.chua.starter.ai.support.model.GenerateResult;
 import com.chua.starter.ai.support.model.GenerateTask;
@@ -30,9 +31,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.List;
@@ -192,7 +191,7 @@ public class AiGenerateController {
         String model = config.model().isBlank() ? "dall-e-3" : config.model();
 
         try {
-            BufferedImage inputImage = ImageIO.read(file.getInputStream());
+            BufferedImage inputImage = OpenCvImageUtils.toBufferedImage(file.getBytes());
             if (inputImage == null) {
                 return ReturnResult.error("无法解析图片文件");
             }
@@ -218,11 +217,8 @@ public class AiGenerateController {
         }
     }
 
-    private String encodeImageToBase64(BufferedImage image) throws IOException {
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-            ImageIO.write(image, "png", baos);
-            return Base64.getEncoder().encodeToString(baos.toByteArray());
-        }
+    private String encodeImageToBase64(BufferedImage image) {
+        return Base64.getEncoder().encodeToString(OpenCvImageUtils.encode(OpenCvImageUtils.toMat(image), "png"));
     }
 
     @Permission("admin")
