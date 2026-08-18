@@ -1,5 +1,8 @@
 package com.chua.starter.datasync.dbprobe;
+import com.chua.common.support.concurrent.dispatcher.DispatcherConfig;
+import com.chua.common.support.concurrent.dispatcher.provider.InMemoryDispatcherProvider;
 import com.chua.datasync.agent.support.DataSyncAgentSink;
+import com.chua.datasync.agent.support.executor.ReactorDataSyncExecutor;
 import com.chua.datasync.agent.support.source.DelimitedDataSyncAgentSource;
 import com.chua.starter.datasync.DefaultDataSyncServer;
 import com.chua.starter.datasync.agent.DataSyncAgentServer;
@@ -30,15 +33,16 @@ public final class DataSyncModeCompareProbe {
             }
         }
         System.err.println("========================================================================");
-        System.err.println("?????????? (10??, batch=1000)");
+        System.err.println("三种派发模式吞吐对比 (10万行, batch=1000)");
         System.err.println("========================================================================\n");
-        test("directDispatch=true  (????)", true);
-        test("directDispatch=false (Chronicle ??, ??????)", false);
+        testDirect("1. 直连派发 (directDispatch=true)");
+        testChronicle("2. Chronicle pub/sub (directDispatch=false)");
+        testInMemory("3. InMemory pub/sub (InMemoryDispatcherProvider)");
         System.err.println("========================================================================");
     }
-    static void test(String label, boolean direct) throws Exception {
+    static void testDirect(String label) throws Exception {
         var cfg = DefaultSyncDataSchedulerManager.SchedulerConfig.builder()
-            .directDispatch(direct).retryMaxAttempts(0).memorySafeEnabled(false).build();
+            .directDispatch(true).retryMaxAttempts(0).memorySafeEnabled(false).build();
         var server = new DefaultDataSyncServer(new DataSyncAgentServer(null, null, "cmp"), cfg);
         server.setMappingManager(new DefaultDataSyncMappingManager());
         var sink = new CountSink("sink", ROWS);
@@ -51,8 +55,57 @@ public final class DataSyncModeCompareProbe {
         sink.done.await(30, TimeUnit.SECONDS);
         long ms = System.currentTimeMillis() - t0;
         server.stop();
-        long tp = sink.count.get() * 1000L / Math.max(1, ms);
-        System.err.printf("%-45s %5dms  %s ?/s  rowe=%d%n", label, ms, tp == 0 ? "?" : String.format("%,d", tp), sink.count.get());
+        report(label, ms, sink.count.get());
+    }
+    static void testChronicle(String label) throws Exception {
+        try {
+            var cfg = DefaultSyncDataSchedulerManager.SchedulerConfig.builder()
+                .directDispatch(false).retryMaxAttempts(0).memorySafeEnabled(false).build();
+            var server = new DefaultDataSyncServer(new DataSyncAgentServer(null, null, "cmp"), cfg);
+            // 触发 executor 创建，会尝试初始化 Chronicle
+            var executor = server.executorManager().getExecutor("cmp-out");
+            executor.start();
+            // 如果 Chronicle 初始化成功，则继续
+            server.setMappingManager(new DefaultDataSyncMappingManager());
+            var sink = new CountSink("sink", ROWS);
+            server.registerSource(new DelimitedDataSyncAgentSource("src", "in", CSV.toString(), ","));
+            server.registerSink(sink);
+            server.addMapping(new DefaultDataSyncMapping("cmp", "in", "src", "out", "sink", null, List.of(), BATCH, "none", "", Map.of(), null));
+            server.start();
+            long t0 = System.currentTimeMillis();
+            server.schedulerManager().trigger("cmp");
+            sink.done.await(30, TimeUnit.SECONDS);
+            long ms = System.currentTimeMillis() - t0;
+            server.stop();
+            report(label, ms, sink.count.get());
+        } catch (Exception e) {
+            System.err.printf("%-45s %s (Java 25 不兼容)%n", label, e.getClass().getSimpleName());
+        }
+    }
+    static void testInMemory(String label) throws Exception {
+        var cfg = DefaultSyncDataSchedulerManager.SchedulerConfig.builder()
+            .directDispatch(false).retryMaxAttempts(0).memorySafeEnabled(false).build();
+        var server = new DefaultDataSyncServer(new DataSyncAgentServer(null, null, "cmp"), cfg);
+        // 替换为 InMemoryDispatcherProvider
+        var executor = (ReactorDataSyncExecutor) server.executorManager().getExecutor("out");
+        executor.setDispatcherProvider(new InMemoryDispatcherProvider(DispatcherConfig.builder().build()));
+        executor.start();
+        server.setMappingManager(new DefaultDataSyncMappingManager());
+        var sink = new CountSink("sink", ROWS);
+        server.registerSource(new DelimitedDataSyncAgentSource("src", "in", CSV.toString(), ","));
+        server.registerSink(sink);
+        server.addMapping(new DefaultDataSyncMapping("cmp", "in", "src", "out", "sink", null, List.of(), BATCH, "none", "", Map.of(), null));
+        server.start();
+        long t0 = System.currentTimeMillis();
+        server.schedulerManager().trigger("cmp");
+        sink.done.await(30, TimeUnit.SECONDS);
+        long ms = System.currentTimeMillis() - t0;
+        server.stop();
+        report(label, ms, sink.count.get());
+    }
+    static void report(String label, long ms, long count) {
+        long tp = count * 1000L / Math.max(1, ms);
+        System.err.printf("%-45s %5dms  %,d 行/s  rows=%d%n", label, ms, tp, count);
     }
     static final class CountSink implements DataSyncAgentSink {
         final String id; final long exp; final AtomicLong count = new AtomicLong(); final CountDownLatch done;
