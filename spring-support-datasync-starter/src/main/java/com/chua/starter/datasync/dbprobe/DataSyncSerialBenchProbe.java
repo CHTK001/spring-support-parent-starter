@@ -3,10 +3,13 @@ package com.chua.starter.datasync.dbprobe;
 import com.chua.common.support.base.serialize.Serialization;
 import com.chua.common.support.lang.json.JacksonJsonProvider;
 import com.chua.common.support.lang.json.JsonProvider;
+import com.chua.common.support.serialize.Serializer;
 import com.chua.fory.support.serialize.ForySerialization;
 import com.chua.protobuf.support.serialize.ProtobufSerialization;
+import com.chua.serialize.support.kryo.KryoSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -53,6 +56,8 @@ public final class DataSyncSerialBenchProbe {
         try { benchBinary("fury", new ForySerialization(), data); } catch (Throwable t) { System.err.println("fury: " + t.getMessage()); }
         // 4. Protobuf (protostuff)
         try { benchBinary("protobuf", new ProtobufSerialization(), data); } catch (Throwable t) { System.err.println("protobuf: " + t.getMessage()); }
+        // 5. Kryo
+        try { benchKryo(data); } catch (Throwable t) { System.err.println("kryo: " + t.getMessage()); }
 
         System.err.println("========================================================================");
     }
@@ -96,6 +101,19 @@ public final class DataSyncSerialBenchProbe {
         Runnable ser = () -> { try { p.toJson(data); } catch (Exception e) { throw new RuntimeException(e); } };
         Runnable des = () -> { try { p.fromJson(json, List.class); } catch (Exception e) { throw new RuntimeException(e); } };
         report(label, size, ser, des, ok);
+    }
+
+    @SuppressWarnings("unchecked")
+    static void benchKryo(List<Map<String, Object>> data) throws Exception {
+        KryoSerializer<Serializable> ks = new KryoSerializer<>((Class<Serializable>)(Class<?>)List.class);
+        byte[] bytes = ks.serialize((Serializable) data);
+        long size = bytes.length;
+        Object back = ks.deserialize(bytes);
+        boolean ok = data.equals(back);
+
+        Runnable ser = () -> { try { ks.serialize((Serializable) data); } catch (Exception e) { throw new RuntimeException(e); } };
+        Runnable des = () -> { try { ks.deserialize(bytes); } catch (Exception e) { throw new RuntimeException(e); } };
+        report("kryo", size, ser, des, ok);
     }
 
     static void report(String label, long size, Runnable ser, Runnable des, boolean ok) {
