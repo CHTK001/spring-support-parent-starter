@@ -318,6 +318,39 @@ public class PooledChatClient implements ChatClient {
 
 
     @Override
+    public String chatSync(String prompt) {
+        ChatClient inner = borrowClient();
+        try {
+            return inner.chatSync(prompt);
+        } finally {
+            returnClient(inner);
+        }
+    }
+
+
+    @Override
+    public String chatSync(String prompt, long timeoutMillis) {
+        ChatClient inner = borrowClient();
+        try {
+            return inner.chatSync(prompt, timeoutMillis);
+        } finally {
+            returnClient(inner);
+        }
+    }
+
+
+    @Override
+    public com.chua.common.support.ai.chat.ChatSyncResponse chatSyncWithResponse(String prompt) {
+        ChatClient inner = borrowClient();
+        try {
+            return inner.chatSyncWithResponse(prompt);
+        } finally {
+            returnClient(inner);
+        }
+    }
+
+
+    @Override
     public void close() {
         synchronized (this) {
             closePool();
