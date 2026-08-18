@@ -6,6 +6,7 @@ import com.chua.common.support.concurrent.dispatcher.DispatcherConfig;
 import com.chua.common.support.concurrent.dispatcher.DispatcherProvider;
 import com.chua.common.support.concurrent.dispatcher.provider.InMemoryDispatcherProvider;
 import com.chua.common.support.concurrent.dispatcher.provider.WalDispatcherProvider;
+import com.chua.fory.support.serialize.ForySerialization;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -44,11 +45,20 @@ public final class DataSyncDispatcherBenchProbe {
         // InMemory
         bench("InMemory", new InMemoryDispatcherProvider(DispatcherConfig.builder().build()), data);
 
-        // WAL (可注入序列化器, 默认 Jackson)
+        // WAL (默认 Jackson)
         bench("WAL(Jackson)", new WalDispatcherProvider(
                 DispatcherConfig.builder().dataPath(tmp.resolve("wal").toString()).build()), data);
 
-        // Chronicle (需 --add-opens; 这里依赖 JVM 参数)
+        // WAL + Fury (注入外部序列化器)
+        try {
+            bench("WAL+Fury", new WalDispatcherProvider(
+                    DispatcherConfig.builder().dataPath(tmp.resolve("wal-fury").toString()).build(),
+                    new ForySerialization()), data);
+        } catch (Throwable t) {
+            System.err.printf("%-22s %s%n", "WAL+Fury", "初始化失败: " + t.getMessage());
+        }
+
+        // Chronicle (需 --add-opens)
         try {
             bench("Chronicle", new ChronicleDispatcherProvider(
                     DispatcherConfig.builder().dataPath(tmp.resolve("chr").toString()).build()), data);
