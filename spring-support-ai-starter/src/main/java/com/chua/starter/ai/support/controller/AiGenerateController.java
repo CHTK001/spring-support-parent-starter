@@ -6,7 +6,7 @@ import com.chua.common.support.ai.video.VideoClient;
 import com.chua.common.support.ai.video.VideoResponse;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.deeplearning.support.capability.ModelCapabilities;
-import com.chua.deeplearning.support.utils.OpenCvImageUtils;
+import com.chua.deeplearning.support.utils.ImageUtils;
 import com.chua.starter.ai.support.configuration.client.AiCapabilityResolver;
 import com.chua.starter.ai.support.model.GenerateResult;
 import com.chua.starter.ai.support.model.GenerateTask;
@@ -191,7 +191,7 @@ public class AiGenerateController {
         String model = config.model().isBlank() ? "dall-e-3" : config.model();
 
         try {
-            BufferedImage inputImage = OpenCvImageUtils.toBufferedImage(file.getBytes());
+            BufferedImage inputImage = ImageUtils.toBufferedImage(file.getBytes());
             if (inputImage == null) {
                 return ReturnResult.error("无法解析图片文件");
             }
@@ -218,7 +218,7 @@ public class AiGenerateController {
     }
 
     private String encodeImageToBase64(BufferedImage image) {
-        return Base64.getEncoder().encodeToString(OpenCvImageUtils.encode(OpenCvImageUtils.toMat(image), "png"));
+        return Base64.getEncoder().encodeToString(ImageUtils.encode(ImageUtils.toMat(image), "png"));
     }
 
     @Permission("admin")
