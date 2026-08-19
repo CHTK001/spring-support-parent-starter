@@ -19,8 +19,8 @@ import java.util.Arrays;
  * 实现HttpServletRequest的认证相关方法，包括isUserInRole、getAuthType、logout、login等，
  * 集成OAuth用户信息和Principal支持。
  * 
- * @author CH
  * @since 2024/12/20
+ * @author CH
  */
 @Slf4j
 public class OAuthHttpServletRequestWrapper extends ContentCachingRequestWrapper {

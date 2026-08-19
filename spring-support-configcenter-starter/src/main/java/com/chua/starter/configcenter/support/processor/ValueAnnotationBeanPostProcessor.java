@@ -36,9 +36,9 @@ import java.util.regex.Pattern;
  *     <li>配置变化时自动更新字段值</li>
  * </ul>
  *
- * @author CH
  * @since 2024-12-07
  * @version 1.0.0
+ * @author CH
  */
 @Slf4j
 public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, EnvironmentAware, BeanFactoryAware {
@@ -387,6 +387,7 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
      */
     private class ValueConfigListener implements ConfigListener {
 
+        /** 配置密钥 */
         private final String configKey;
 
         ValueConfigListener(String configKey) {

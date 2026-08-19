@@ -34,8 +34,8 @@ import java.util.function.Supplier;
  *   String answer = client.chatSync("hello");
  * }</pre>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class PooledChatClient implements ChatClient {
 

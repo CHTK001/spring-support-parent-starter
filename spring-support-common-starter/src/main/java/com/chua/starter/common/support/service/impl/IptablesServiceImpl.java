@@ -15,14 +15,16 @@ import org.slf4j.LoggerFactory;
 /**
  * IP地址服务实现类，提供IP地址转换为地理位置信息的功能
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/01/19
+ * @author CH
  */
 @Service
 public class IptablesServiceImpl implements IptablesService  {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(IptablesServiceImpl.class);
 
+    /** IP属性 */
     private final IpProperties ipProperties;
     private volatile IpPosition ipPosition;
     private volatile boolean isLoaded = false;

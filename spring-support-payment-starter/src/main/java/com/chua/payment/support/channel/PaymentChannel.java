@@ -5,8 +5,8 @@ import com.chua.payment.support.entity.MerchantChannel;
 /**
  * 支付渠道接口
  *
- * @author CH
  * @since 2026-03-18
+ * @author CH
  */
 public interface PaymentChannel {
 

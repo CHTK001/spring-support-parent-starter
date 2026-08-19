@@ -31,8 +31,8 @@ import java.util.stream.Collectors;
  * <p>面板层 AppKey 复用 {@link SysAiAppKey} 实体与 {@link SysAiAppKeyMapper}，
  * 与协议层共用同一张 {@code sys_ai_app_key} 表，消除双实体对账写的风险。</p>
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 @Slf4j
 @Service
@@ -48,7 +48,9 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
      * AppKey Mapper（与协议层共用）
      */
     private final SysAiAppKeyMapper appKeyMapper;
+    /** 提供者mapper */
     private final AiProviderMapper providerMapper;
+    /** 分组mapper */
     private final AiGroupMapper groupMapper;
 
     /**

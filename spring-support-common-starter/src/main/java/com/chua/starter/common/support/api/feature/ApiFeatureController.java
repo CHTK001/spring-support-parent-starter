@@ -19,9 +19,9 @@ import java.util.Set;
  * 此接口为内部接口，仅允许内网IP或白名单服务调用，不受 OAuth 鉴权控制。
  * </p>
  *
- * @author CH
  * @since 2024/12/08
  * @version 1.0.0
+ * @author CH
  */
 @RestController
 @RequestMapping("${plugin.api.feature.path:/api/features}")
@@ -30,6 +30,7 @@ import java.util.Set;
 @ConditionalOnProperty(name = "plugin.api.feature.enable", havingValue = "true", matchIfMissing = false)
 public class ApiFeatureController {
 
+    /** Feature管理器 */
     private final ApiFeatureManager featureManager;
 
     /**

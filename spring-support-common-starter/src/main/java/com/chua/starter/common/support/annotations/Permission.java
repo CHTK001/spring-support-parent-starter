@@ -8,7 +8,6 @@ import java.lang.annotation.*;
  * 权限注解
  * <p>用于标记方法需要特定权限才能访问</p>
  *
- * @author CH
  * @since 2022/7/29 8:23
  */
 @Target(ElementType.METHOD)

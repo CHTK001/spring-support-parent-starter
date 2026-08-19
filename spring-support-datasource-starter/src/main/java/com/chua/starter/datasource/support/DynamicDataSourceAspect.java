@@ -28,7 +28,6 @@ import java.util.Map;
 /**
  * 自定义注解 + AOP的方式实现数据源动态切换
  *
- * @author CH
  */
 import lombok.extern.slf4j.Slf4j;
 
@@ -262,6 +261,7 @@ public class DynamicDataSourceAspect {
      * HttpServletRequest 请求头包装器（使用 Map，支持 SpEL #header['key'] 和 #header.key 两种语法）
      */
     public static class HeaderWrapper extends java.util.HashMap<String, String> {
+        /** 请求 */
         private final HttpServletRequest request;
         public HeaderWrapper(HttpServletRequest request) {
             this.request = request;

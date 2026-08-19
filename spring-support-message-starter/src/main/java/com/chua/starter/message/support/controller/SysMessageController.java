@@ -40,8 +40,8 @@ import java.util.List;
  * 提供消息提供商、消息模板的管理接口，以及统一的消息发送接口。
  * </p>
  *
- * @author CH
  * @since 2026/08/03
+ * @author CH
  */
 @Tag(name = "消息推送接口")
 @RestController
@@ -49,6 +49,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SysMessageController {
 
+    /** SYS消息服务 */
     private final SysMessageService sysMessageService;
 
     /**

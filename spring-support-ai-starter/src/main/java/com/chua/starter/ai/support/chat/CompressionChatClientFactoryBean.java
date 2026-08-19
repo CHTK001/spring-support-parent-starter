@@ -11,8 +11,8 @@ import org.springframework.beans.factory.FactoryBean;
  * 读取 sys_ai_global_setting(runtime) 中的 compression_model 和压缩专用 provider 配置，
  * 如果 compression_model 为空则不创建压缩专用 ChatClient（回落到主 ChatClient）。
  *
- * @author CH
  * @since 2026/05/26
+ * @author CH
  */
 public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient> {
 

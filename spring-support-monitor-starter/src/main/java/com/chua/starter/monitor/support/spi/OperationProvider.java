@@ -13,8 +13,8 @@ import java.util.List;
  * 不参与采集调度, 仅响应外部请求。
  * </p>
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 public interface OperationProvider {
 

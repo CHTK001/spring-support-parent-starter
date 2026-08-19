@@ -12,13 +12,14 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * 胶水厂
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/03/11
+ * @author CH
  */
 public class GlueFactory {
 
 
+    /** Glue工厂 */
     private static GlueFactory glueFactory = new GlueFactory();
     public static GlueFactory getInstance(){
         return glueFactory;

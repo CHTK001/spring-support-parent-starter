@@ -6,16 +6,24 @@ import java.math.BigDecimal;
 
 /**
  * 订单创建事件
+ * @author CH
  */
 @Getter
 public class OrderCreatedEvent extends PaymentEvent {
 
+    /** 排序ID */
     private final Long orderId;
+    /** 排序NO */
     private final String orderNo;
+    /** 用户ID */
     private final Long userId;
+    /** 排序amount */
     private final BigDecimal orderAmount;
+    /** 通道类型 */
     private final String channelType;
+    /** 通道SUB类型 */
     private final String channelSubType;
+    /** Subject */
     private final String subject;
 
     public OrderCreatedEvent(Object source, Long tenantId, Long merchantId, Long orderId, String orderNo,
@@ -30,3 +38,4 @@ public class OrderCreatedEvent extends PaymentEvent {
         this.subject = subject;
     }
 }
+

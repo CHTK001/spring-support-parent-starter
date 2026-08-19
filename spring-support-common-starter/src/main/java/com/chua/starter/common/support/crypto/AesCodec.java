@@ -13,6 +13,7 @@ import java.util.Arrays;
  */
 public class AesCodec {
 
+    /** 密钥bytes */
     private final byte[] keyBytes;
 
     public AesCodec(byte[] keyBytes) {

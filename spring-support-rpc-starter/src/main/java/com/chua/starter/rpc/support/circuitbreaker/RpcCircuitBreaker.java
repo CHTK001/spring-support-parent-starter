@@ -13,8 +13,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * 实现熔断保护机制，防止故障扩散
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @Slf4j
 @Data

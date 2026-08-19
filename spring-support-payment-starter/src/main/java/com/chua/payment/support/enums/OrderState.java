@@ -3,8 +3,8 @@ package com.chua.payment.support.enums;
 /**
  * 订单状态枚举
  *
- * @author CH
  * @since 2026-03-18
+ * @author CH
  */
 public enum OrderState {
 
@@ -53,6 +53,7 @@ public enum OrderState {
      */
     REFUNDED("已退款");
 
+    /** 描述 */
     private final String description;
 
     OrderState(String description) {

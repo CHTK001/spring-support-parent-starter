@@ -35,15 +35,18 @@ import java.util.concurrent.locks.ReentrantLock;
  * }
  * </pre>
  *
- * @author CH
  * @since 2026/8/5
+ * @author CH
  */
 @Slf4j
 public class DatabaseGraphService {
 
+    /** 数据来源 */
     private final DataSource dataSource;
+    /** 属性 */
     private final DocumentProperties properties;
 
+    /** 锁 */
     private final ReentrantLock lock = new ReentrantLock();
     private volatile GraphPayload cached;
     private volatile long cachedAt;
@@ -273,11 +276,15 @@ public class DatabaseGraphService {
      * relation-graph 兼容的 payload
      */
     public static class GraphPayload {
+        /** 根级ID */
         public String rootId;
         public List<Map<String, Object>> nodes;
         public List<Map<String, Object>> lines;
+        /** Trigger数量 */
         public int triggerCount;
+        /** Procedure数量 */
         public int procedureCount;
+        /** CachedAT */
         public long cachedAt;
     }
 }

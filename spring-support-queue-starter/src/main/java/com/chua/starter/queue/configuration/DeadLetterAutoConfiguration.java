@@ -18,17 +18,19 @@ import org.springframework.context.annotation.Configuration;
  * 独立于主队列的死信队列配置，使用 plugin.dead-letter 前缀。
  * </p>
  *
- * @author CH
  * @since 2025-12-25
+ * @author CH
  */
 @Slf4j
 @Configuration
 @EnableConfigurationProperties(DeadLetterProperties.class)
 @ConditionalOnProperty(prefix = DeadLetterProperties.PREFIX, name = "enable", havingValue = "true")
 public class DeadLetterAutoConfiguration {
+    /** 日志 */
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DeadLetterAutoConfiguration.class);
 
     @Autowired
+    /** Deadletter属性 */
     private DeadLetterProperties deadLetterProperties;
 
     /**

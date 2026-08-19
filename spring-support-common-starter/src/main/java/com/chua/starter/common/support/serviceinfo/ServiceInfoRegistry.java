@@ -28,11 +28,11 @@ import java.util.Objects;
  *       测试场景可调用 {@link #reset()} 清空。</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
  */
 public final class ServiceInfoRegistry {
 
+    /** 实例 */
     private static final ServiceInfoRegistry INSTANCE = new ServiceInfoRegistry();
 
     /**
@@ -149,9 +149,13 @@ public final class ServiceInfoRegistry {
     }
 
     public static class EndpointInfo {
+        /** 分组 */
         private final String group;
+        /** 名称 */
         private final String name;
+        /** URL */
         private final String url;
+        /** 描述 */
         private final String description;
 
         public EndpointInfo(String group, String name, String url, String description) {
@@ -180,10 +184,15 @@ public final class ServiceInfoRegistry {
     }
 
     public static class FlagInfo {
+        /** 名称 */
         private final String name;
+        /** 分组 */
         private final String group;
+        /** 值 */
         private final Boolean value;
+        /** 描述 */
         private final String description;
+        /** Suffix */
         private final String suffix;
 
         public FlagInfo(String name, String group, Boolean value, String description, String suffix) {

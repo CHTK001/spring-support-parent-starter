@@ -15,9 +15,9 @@ import java.time.format.DateTimeFormatter;
  * 支持 Date、LocalDate、LocalDateTime、LocalTime 等类型。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @see Formatter
+ * @author CH
  */
 @Spi({"date", "localdate", "LocalDateTime", "LocalTime"})
 public class DateFormatter implements Formatter {

@@ -3,8 +3,8 @@ package com.chua.payment.support.exception;
 /**
  * 支付异常类
  *
- * @author CH
  * @since 2026-03-18
+ * @author CH
  */
 public class PaymentException extends RuntimeException {
 

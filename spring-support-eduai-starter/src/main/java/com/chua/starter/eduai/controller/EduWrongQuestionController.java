@@ -17,8 +17,8 @@ import java.util.List;
 /**
  * 错题库管理控制器
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -27,6 +27,7 @@ import java.util.List;
 @Tag(name = "错题库管理")
 public class EduWrongQuestionController {
 
+    /** Wrong服务 */
     private final IEduWrongQuestionService wrongService;
 
     /**

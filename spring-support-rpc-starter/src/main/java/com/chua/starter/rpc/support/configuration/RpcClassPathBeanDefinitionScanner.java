@@ -19,8 +19,8 @@ import static org.springframework.context.annotation.AnnotationConfigUtils.regis
  * RPC组件包扫描器
  * <p>用于扫描指定包路径下的RPC相关组件，并将其注册为Spring Bean</p>
  *
- * @author CH
  * @since 2023-01-01
+ * @author CH
  */
 @Getter
 @Setter

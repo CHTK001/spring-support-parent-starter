@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
 /**
  * 知识点实体
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("edu_knowledge_point")
@@ -21,6 +21,7 @@ public class EduKnowledgePoint {
      * 知识点ID
      */
     @TableId(type = IdType.AUTO)
+    /** KnowledgepointID */
     private Long knowledgePointId;
 
     /**

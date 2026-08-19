@@ -33,14 +33,17 @@ import java.util.function.Supplier;
  * cacheTemplate.evictByPattern("users", "user:*");
  * }</pre>
  *
- * @author CH
  * @since 2025/8/3
+ * @author CH
  */
 public class CacheTemplate {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(CacheTemplate.class);
 
+    /** 缓存管理器 */
     private final MultiLevelCacheManager cacheManager;
+    /** 密钥generator */
     private final TenantedKeyGenerator keyGenerator;
 
     public CacheTemplate(MultiLevelCacheManager cacheManager, TenantedKeyGenerator keyGenerator) {

@@ -26,8 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>采用内存任务表跟踪文生图/文生视频的异步生成任务。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service

@@ -19,8 +19,8 @@ import org.springframework.context.annotation.Import;
  * 通过 SyncClient 连上调度中心, 订阅 cmd, 本地执行 handler, 上行 TASK_LOG。
  * 需与 {@code JobSchedulerApplication} 配合组成完整链路。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @SpringBootApplication
 @Import({JobAutoConfiguration.class, DemoJobs.class})

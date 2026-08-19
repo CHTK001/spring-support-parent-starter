@@ -6,7 +6,6 @@ import java.lang.annotation.*;
 /**
  * 操作日志注解
  *
- * @author CH
  */
 @Inherited
 @Target({ElementType.METHOD})

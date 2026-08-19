@@ -7,10 +7,13 @@ import org.slf4j.MDC;
 
 /**
  * HttpClient TraceId拦截器（兼容 HttpClient 5.x）。
+ * @author CH
  */
 public class HttpClientTraceIdInterceptor implements HttpRequestInterceptor {
 
+    /** Trace_id */
     private static final String TRACE_ID = "traceId";
+    /** X_trace_id */
     private static final String X_TRACE_ID = "X-Trace-Id";
 
     @Override
@@ -21,3 +24,4 @@ public class HttpClientTraceIdInterceptor implements HttpRequestInterceptor {
         }
     }
 }
+

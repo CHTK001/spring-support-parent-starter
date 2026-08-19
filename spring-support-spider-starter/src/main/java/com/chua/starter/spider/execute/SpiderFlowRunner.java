@@ -42,8 +42,8 @@ import java.util.UUID;
  *   <li>回写爬虫定义最近执行时间与状态</li>
  * </ol>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Service
 public class SpiderFlowRunner {

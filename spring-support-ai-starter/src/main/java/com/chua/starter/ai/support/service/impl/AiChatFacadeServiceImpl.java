@@ -61,12 +61,19 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AiChatFacadeServiceImpl implements AiChatFacadeService {
 
+    /** Chat客户端注册表 */
     private final ChatClientRegistry chatClientRegistry;
+    /** SYSAI分组服务 */
     private final SysAiGroupService sysAiGroupService;
+    /** SYSAI令牌服务 */
     private final SysAiTokenService sysAiTokenService;
+    /** SYSAIAPP密钥服务 */
     private final SysAiAppKeyService sysAiAppKeyService;
+    /** SYSAIrole服务 */
     private final SysAiRoleService sysAiRoleService;
+    /** Usagerecorderinterceptor */
     private final UsageRecorderInterceptor usageRecorderInterceptor;
+    /** Objectmapper */
     private final ObjectMapper objectMapper;
 
     /**

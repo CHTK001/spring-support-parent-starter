@@ -13,6 +13,7 @@ import java.util.List;
 
 /**
  * 支付内置调度任务运维服务。
+ * @author CH
  */
 @Service
 @RequiredArgsConstructor
@@ -20,6 +21,7 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "engine", havingValue = "internal", matchIfMissing = true)
 public class PaymentInternalSchedulerTaskOpsService implements PaymentSchedulerTaskOpsService {
 
+    /** Payment任务调度器管理器 */
     private final PaymentTaskSchedulerManager paymentTaskSchedulerManager;
 
     @Override
@@ -37,3 +39,4 @@ public class PaymentInternalSchedulerTaskOpsService implements PaymentSchedulerT
         return paymentTaskSchedulerManager.triggerTask(taskKey);
     }
 }
+

@@ -31,8 +31,8 @@ import java.util.List;
  * <p>装配 NodeTable、TaskManager、ResultBuffer、DispatcherProvider 等核心 Bean，
  * 支持自动恢复、批量处理和 SPI 存储扩展。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Configuration

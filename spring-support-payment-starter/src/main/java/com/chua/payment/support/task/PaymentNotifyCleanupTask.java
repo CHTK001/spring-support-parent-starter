@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 
 /**
  * 回调异常清理任务
+ * @author CH
  */
 @Slf4j
 @Component
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
 @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class PaymentNotifyCleanupTask implements PaymentManagedTask {
 
+    /** Notify错误mapper */
     private final PaymentNotifyErrorMapper notifyErrorMapper;
 
     public void cleanResolvedErrors() {
@@ -69,3 +71,4 @@ public class PaymentNotifyCleanupTask implements PaymentManagedTask {
         cleanResolvedErrors();
     }
 }
+

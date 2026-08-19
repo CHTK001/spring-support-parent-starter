@@ -6,11 +6,12 @@ import java.io.IOException;
 /**
  * ToDetect IP 质量检测器实现
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class ToDetectIpQualityDetector extends AbstractHttpIpQualityDetector {
 
+    /** BaseURL */
     private final String baseUrl;
 
     public ToDetectIpQualityDetector() {

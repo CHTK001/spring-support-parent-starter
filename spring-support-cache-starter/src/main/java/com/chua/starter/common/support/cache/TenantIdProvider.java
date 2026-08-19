@@ -22,8 +22,8 @@ package com.chua.starter.common.support.cache;
  * <p>当 Spring 容器中存在 {@link TenantIdProvider} Bean 时，
  * {@link TenantedKeyGenerator} 会自动装配并使用；否则回退到默认值 {@code "0"}。</p>
  *
- * @author CH
  * @since 2024/9/5
+ * @author CH
  */
 @FunctionalInterface
 public interface TenantIdProvider {

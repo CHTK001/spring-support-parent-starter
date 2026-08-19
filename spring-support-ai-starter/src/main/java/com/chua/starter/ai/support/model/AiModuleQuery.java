@@ -5,8 +5,8 @@ import lombok.Data;
 /**
  * AI 模块查询模型。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class AiModuleQuery {

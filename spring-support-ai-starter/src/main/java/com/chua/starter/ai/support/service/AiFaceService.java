@@ -23,8 +23,8 @@ import java.util.Map;
  * 管线功能：识别管线（detect→crop→liveness→feature→检索）、登记管线、核验管线；
  * 辅助能力：活体、动漫检测、超分、修复、属性、表情、关键点、质量、换脸检测。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface AiFaceService {
 

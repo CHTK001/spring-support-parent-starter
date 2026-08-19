@@ -3,8 +3,8 @@ package com.chua.starter.device.spi.model;
 /**
  * 云台控制指令枚举
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public enum PtzCommand {
 

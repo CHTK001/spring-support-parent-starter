@@ -13,7 +13,6 @@ import com.chua.starter.spider.service.SpiderBaseService;
  *
  * @param <M> Mapper 类型
  * @param <T> 实体类型
- * @author CH
  * @since 4.0.0.42
  */
 public abstract class SpiderBaseServiceImpl<M extends BaseMapper<T>, T extends SysBase>

@@ -7,8 +7,8 @@ import org.apache.ibatis.annotations.Mapper;
 /**
  * 设备门禁 Mapper
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Mapper
 public interface DeviceDoorMapper extends BaseMapper<DeviceDoor> {

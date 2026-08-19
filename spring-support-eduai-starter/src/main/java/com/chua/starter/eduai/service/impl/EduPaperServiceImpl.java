@@ -41,17 +41,21 @@ import java.util.stream.Collectors;
  *   <li>写入 {@code edu_paper} 与 {@code edu_paper_question} 关联表</li>
  * </ol>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> implements IEduPaperService {
 
+    /** Paperquestionmapper */
     private final EduPaperQuestionMapper paperQuestionMapper;
+    /** Questionmapper */
     private final EduQuestionMapper questionMapper;
+    /** EDUAI服务 */
     private final EduAiService eduAiService;
+    /** 属性 */
     private final EduAiProperties properties;
 
     @Override

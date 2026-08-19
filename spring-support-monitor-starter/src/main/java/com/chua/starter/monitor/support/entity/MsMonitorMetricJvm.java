@@ -14,8 +14,8 @@ import java.time.LocalDateTime;
 /**
  * 监控 JVM 明细
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 @TableName("ms_monitor_metric_jvm")
 public class MsMonitorMetricJvm implements Serializable {
 
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -30,6 +31,7 @@ public class MsMonitorMetricJvm implements Serializable {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
+    /** ID */
     private Long id;
 
     /**
@@ -37,6 +39,7 @@ public class MsMonitorMetricJvm implements Serializable {
      */
     @TableField("ms_monitor_metric_jvm_monitor_id")
     @Schema(description = "监控主机 id", example = "1")
+    /** MonitorID */
     private Long monitorId;
 
     /**
@@ -44,6 +47,7 @@ public class MsMonitorMetricJvm implements Serializable {
      */
     @TableField("ms_monitor_metric_jvm_heap_used_bytes")
     @Schema(description = "堆已用(字节)", example = "536870912")
+    /** Heapusedbytes */
     private Long heapUsedBytes;
 
     /**
@@ -51,6 +55,7 @@ public class MsMonitorMetricJvm implements Serializable {
      */
     @TableField("ms_monitor_metric_jvm_heap_max_bytes")
     @Schema(description = "堆最大(字节)", example = "1073741824")
+    /** Heap最大值bytes */
     private Long heapMaxBytes;
 
     /**
@@ -58,6 +63,7 @@ public class MsMonitorMetricJvm implements Serializable {
      */
     @TableField("ms_monitor_metric_jvm_heap_usage_percent")
     @Schema(description = "堆使用率", example = "50.0")
+    /** Heapusage百分比 */
     private Double heapUsagePercent;
 
     /**
@@ -65,6 +71,7 @@ public class MsMonitorMetricJvm implements Serializable {
      */
     @TableField("ms_monitor_metric_jvm_young_gc_count")
     @Schema(description = "Young GC 次数", example = "1234")
+    /** YoungGC数量 */
     private Long youngGcCount;
 
     /**
@@ -72,6 +79,7 @@ public class MsMonitorMetricJvm implements Serializable {
      */
     @TableField("ms_monitor_metric_jvm_full_gc_count")
     @Schema(description = "Full GC 次数", example = "5")
+    /** FullGC数量 */
     private Long fullGcCount;
 
     /**
@@ -79,6 +87,7 @@ public class MsMonitorMetricJvm implements Serializable {
      */
     @TableField("ms_monitor_metric_jvm_threads")
     @Schema(description = "活跃线程", example = "120")
+    /** Threads */
     private Integer threads;
 
     /**
@@ -86,6 +95,7 @@ public class MsMonitorMetricJvm implements Serializable {
      */
     @TableField("ms_monitor_metric_jvm_daemon_threads")
     @Schema(description = "守护线程", example = "20")
+    /** Daemonthreads */
     private Integer daemonThreads;
 
     /**
@@ -93,5 +103,6 @@ public class MsMonitorMetricJvm implements Serializable {
      */
     @TableField("ms_monitor_metric_jvm_collect_time")
     @Schema(description = "采集时间", example = "2026-08-04T10:00:00")
+    /** Collect时间 */
     private LocalDateTime collectTime;
 }

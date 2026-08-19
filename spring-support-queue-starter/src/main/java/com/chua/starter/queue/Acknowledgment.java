@@ -6,8 +6,8 @@ package com.chua.starter.queue;
  * 用于手动确认或拒绝消息，支持消息队列的可靠性保证。
  * </p>
  *
- * @author CH
  * @since 2025-01-02
+ * @author CH
  */
 public interface Acknowledgment {
 

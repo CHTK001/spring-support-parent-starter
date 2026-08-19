@@ -7,6 +7,7 @@ import java.util.List;
 
 /**
  * 支付调度任务运维服务。
+ * @author CH
  */
 public interface PaymentSchedulerTaskOpsService {
 
@@ -16,3 +17,4 @@ public interface PaymentSchedulerTaskOpsService {
 
     PaymentSchedulerTaskVO triggerTask(String taskKey);
 }
+

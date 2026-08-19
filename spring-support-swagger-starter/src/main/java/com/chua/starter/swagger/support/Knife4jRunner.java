@@ -13,12 +13,18 @@ import org.springframework.core.env.Environment;
 @Slf4j
 public class Knife4jRunner implements CommandLineRunner {
 
+    /** Cyan */
     private static final String CYAN = "\u001B[36m";
+    /** 绿色 */
     private static final String GREEN = "\u001B[32m";
+    /** Yellow */
     private static final String YELLOW = "\u001B[33m";
+    /** Reset */
     private static final String RESET = "\u001B[0m";
+    /** Bold */
     private static final String BOLD = "\u001B[1m";
 
+    /** 环境 */
     private final Environment environment;
 
     /**

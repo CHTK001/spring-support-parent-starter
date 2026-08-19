@@ -5,7 +5,7 @@ import com.chua.starter.monitor.support.entity.MsMonitorMetricJvm;
 /**
  * JVM 指标 Mapper
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 public interface MsMonitorMetricJvmMapper extends BaseMapper<MsMonitorMetricJvm> {}

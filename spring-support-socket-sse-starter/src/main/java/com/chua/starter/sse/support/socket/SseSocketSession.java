@@ -13,16 +13,21 @@ import java.util.concurrent.ConcurrentHashMap;
  * SSE Socket 会话实现
  * 封装 SseEmitter 为统一的 SocketSession 接口
  *
- * @author CH
  * @version 1.0.0
  * @since 2024-12-24
+ * @author CH
  */
 public class SseSocketSession implements SocketSession {
 
+    /** Objectmapper */
     private static final ObjectMapper objectMapper = new ObjectMapper();
+    /** ID */
     private final String id;
+    /** 客户端ID */
     private String clientId;
+    /** 用户 */
     private SocketUser user;
+    /** Emitter */
     private final SseEmitter emitter;
     private final Map<String, Object> attributes = new ConcurrentHashMap<>();
     private volatile boolean connected = true;

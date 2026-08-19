@@ -11,8 +11,8 @@ import java.util.List;
  *
  * <p>封装本地软件扫描、安装、卸载、管理等业务逻辑。</p>
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 public interface LocalSoftwareService {
 

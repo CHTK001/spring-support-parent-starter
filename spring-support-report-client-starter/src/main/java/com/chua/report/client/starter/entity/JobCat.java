@@ -8,13 +8,14 @@ import java.util.Date;
 /**
  * Job日志查询请求
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/12/06
+ * @author CH
  */
 @Data
 public class JobCat implements Serializable {
 
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
 
     /**

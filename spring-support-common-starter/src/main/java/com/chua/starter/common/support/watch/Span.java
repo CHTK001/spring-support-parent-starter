@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Set;
 /**
  * @author Administrator
+ * @author CH
  */
 public class Span implements Serializable {
     /**

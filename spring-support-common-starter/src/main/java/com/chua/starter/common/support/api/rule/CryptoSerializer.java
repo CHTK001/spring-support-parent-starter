@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.util.Objects;
 
 /**
+ * @author CH
  */
 public class CryptoSerializer extends JsonSerializer<String> implements ContextualSerializer {
 
@@ -28,6 +29,7 @@ public class CryptoSerializer extends JsonSerializer<String> implements Contextu
      */
     private final String key;
 
+    /** 密钥类型 */
     private Crypto.KeyType keyType;
 
     /**
@@ -83,3 +85,4 @@ public class CryptoSerializer extends JsonSerializer<String> implements Contextu
         return serializerProvider.findNullValueSerializer(null);
     }
 }
+

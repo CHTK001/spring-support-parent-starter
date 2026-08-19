@@ -55,7 +55,6 @@ import java.lang.annotation.*;
  * public class DevToolsController { ... }
  * </pre>
  *
- * @author CH
  * @since 2020-09-23
  * @version 1.0.0
  */

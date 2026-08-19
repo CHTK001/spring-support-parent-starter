@@ -24,8 +24,8 @@ import java.util.regex.Pattern;
  * （防暴力破解）。配置前缀 <code>plugin.oauth.rate-limit</code>。
  * </p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class RateLimitFilter implements Filter {
 

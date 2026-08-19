@@ -27,19 +27,26 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
+/** @author CH */
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigService {
 
+    /** Safe_table */
     private static final Pattern SAFE_TABLE = Pattern.compile("^[a-zA-Z0-9_]+$");
+    /** Month_format */
     private static final DateTimeFormatter MONTH_FORMAT = DateTimeFormatter.ofPattern("yyyyMM");
+    /** Day_format */
     private static final DateTimeFormatter DAY_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final Map<String, OrderPartitionConfig> DEFAULTS = createDefaults();
 
+    /** 排序partition配置mapper */
     private final OrderPartitionConfigMapper orderPartitionConfigMapper;
+    /** JDBC模板 */
     private final JdbcTemplate jdbcTemplate;
+    /** 数据来源 */
     private final DataSource dataSource;
 
     @PostConstruct
@@ -308,3 +315,4 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
         return StringUtils.hasText(value) ? value : fallback;
     }
 }
+

@@ -27,8 +27,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *       enabled: true              # 关闭后回退到字符串匹配
  * }</pre>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = "plugin.eduai")

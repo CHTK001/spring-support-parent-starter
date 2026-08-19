@@ -25,9 +25,9 @@ import java.util.Set;
  * 默认使用 tenantedKeyGenerator 作为 keyGenerator。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2025/6/6
+ * @author CH
  */
 public class CacheCustomAnnotationParser implements CacheAnnotationParser, Serializable {
 
@@ -168,17 +168,22 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
         private final Class<?> target;
 
         @Nullable
+        /** 缓存names */
         private String[] cacheNames;
 
         @Nullable
+        /** 密钥generator */
         private String keyGenerator;
 
         @Nullable
+        /** 缓存管理器 */
         private String cacheManager;
 
         @Nullable
+        /** 缓存解析器 */
         private String cacheResolver;
 
+        /** Initialized */
         private boolean initialized = false;
 
         public DefaultCacheConfig(Class<?> target) {

@@ -9,6 +9,14 @@ import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+/**
+ * 调度任务日志文件追加器，负责将执行日志写入本地文件系统。
+ *
+ * <p>按日期目录组织日志文件，并支持 GLUE 脚本源码的读写。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
+ */
 @Slf4j
 public class JobFileAppender {
 
@@ -28,6 +36,7 @@ public class JobFileAppender {
      *
      */
     private static String logBasePath = "/data/applogs/job/jobhandler";
+    /** GlueSRC路径 */
     private static String glueSrcPath = logBasePath.concat("/gluesource");
     public static void initLogPath(String logPath){
         // init
@@ -207,3 +216,4 @@ public class JobFileAppender {
         return null;
     }
 }
+

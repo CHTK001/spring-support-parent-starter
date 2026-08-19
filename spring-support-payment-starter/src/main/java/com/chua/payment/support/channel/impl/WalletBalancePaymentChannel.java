@@ -15,9 +15,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * 钱包余额支付
+ * @author CH
  */
 public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel implements PaymentChannel {
 
+    /** Walletaccount服务 */
     private final WalletAccountService walletAccountService;
 
     public WalletBalancePaymentChannel(MerchantChannelService merchantChannelService,
@@ -105,3 +107,4 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
     }
 
 }
+

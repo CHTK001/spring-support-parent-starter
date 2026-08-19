@@ -35,8 +35,10 @@ import org.slf4j.LoggerFactory;
 @RequestMapping("${plugin.captcha.context-path:/v1/}")
 @ConditionalOnProperty(prefix = CaptchaProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = false)
 public class CaptchaProvider {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(CaptchaProvider.class);
         @Autowired
+    /** Captcha属性 */
     private CaptchaProperties captchaProperties;
 
     public Captcha producer() {
@@ -172,7 +174,9 @@ public class CaptchaProvider {
      * @since 2023/03/24
      */
     public static class CaptchaResult {
+        /** Verify代码密钥 */
         private String verifyCodeKey;
+        /** Verify代码base64 */
         private String verifyCodeBase64;
 
         public String getVerifyCodeKey() {

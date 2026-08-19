@@ -37,11 +37,12 @@ import java.util.regex.Pattern;
  * 处理 @ApiMock、@ApiDeprecated、@ApiFeature 注解的拦截逻辑。
  * </p>
  *
- * @author CH
  * @since 2024/12/08
  * @version 1.0.0
+ * @author CH
  */
 public class ApiControlInterceptor implements HandlerInterceptor  {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiControlInterceptor.class);
     /**
      * 构造函数
@@ -56,9 +57,13 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
         this.featureManager = featureManager;
     }
 
+        /** API属性 */
         private final ApiProperties apiProperties;
+    /** 环境 */
     private final Environment environment;
+    /** Feature管理器 */
     private final ApiFeatureManager featureManager;
+    /** Grayevaluator */
     private final ApiGrayEvaluator grayEvaluator = new ApiGrayEvaluator();
 
     /**

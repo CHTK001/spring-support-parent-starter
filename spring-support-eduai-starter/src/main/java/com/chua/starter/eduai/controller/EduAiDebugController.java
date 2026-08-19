@@ -20,8 +20,8 @@ import java.util.Map;
  *
  * <p>提供 AI 引擎健康检查、队列状态、阅卷任务统计等运维信息。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -30,7 +30,9 @@ import java.util.Map;
 @Tag(name = "教育AI-调试")
 public class EduAiDebugController {
 
+    /** EDUAI服务 */
     private final EduAiService eduAiService;
+    /** 消息模板 */
     private final MessageTemplate messageTemplate;
 
     /**

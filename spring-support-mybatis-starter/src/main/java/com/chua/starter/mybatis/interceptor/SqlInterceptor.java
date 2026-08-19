@@ -45,10 +45,12 @@ import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
 })
 public class SqlInterceptor implements Interceptor {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SqlInterceptor.class);
 
     private static final Map<String, Object> MAP = new ConcurrentHashMap<>(2);
 
+    /** Formatter */
     private static final SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     /**

@@ -13,8 +13,8 @@ import lombok.EqualsAndHashCode;
  * 对应表 sys_message_template，管理各渠道消息模板。
  * </p>
  *
- * @author CH
  * @since 2026/08/03
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -25,6 +25,7 @@ public class SysMessageTemplate extends SysBase {
      * 模板ID - 主键自增
      */
     @TableId(value = "sys_message_template_id", type = IdType.AUTO)
+    /** SYS消息模板ID */
     private Integer sysMessageTemplateId;
 
     /**

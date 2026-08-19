@@ -17,12 +17,13 @@ import java.util.Map;
  * 该类旨在处理特定的协议执行逻辑，通过静态方法提供协议处理能力。
  * 作为协议执行器，它负责解析和执行特定格式的协议数据。
  * </p>
- * @author CH
  * @since 2024/6/12
+ * @author CH
  */
 @Spi("default")
 public class DefaultProtocolExecutor implements ProtocolExecutor{
 
+    /** Auth客户端属性 */
     private final AuthClientProperties authClientProperties;
 
     public DefaultProtocolExecutor() {

@@ -2,6 +2,7 @@ package com.chua.payment.support.enums;
 
 /**
  * 开通状态
+ * @author CH
  */
 public enum OnboardingStatus {
 
@@ -9,7 +10,9 @@ public enum OnboardingStatus {
     IN_PROGRESS("IN_PROGRESS", "开通中"),
     COMPLETED("COMPLETED", "已开通");
 
+    /** 代码 */
     private final String code;
+    /** 描述 */
     private final String description;
 
     OnboardingStatus(String code, String description) {
@@ -37,3 +40,4 @@ public enum OnboardingStatus {
         return "";
     }
 }
+

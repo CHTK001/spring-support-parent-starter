@@ -26,9 +26,11 @@ import java.time.format.DateTimeFormatter;
 
 /**
  * 微信 JSAPI 支付
+ * @author CH
  */
 public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel implements PaymentChannel {
 
+    /** 提供者gateway注册表 */
     private final PaymentProviderGatewayRegistry providerGatewayRegistry;
 
     public WechatJsapiPaymentChannel(MerchantChannelService merchantChannelService,
@@ -201,3 +203,4 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
         return amountFen == null ? null : fenToYuan(amountFen);
     }
 }
+

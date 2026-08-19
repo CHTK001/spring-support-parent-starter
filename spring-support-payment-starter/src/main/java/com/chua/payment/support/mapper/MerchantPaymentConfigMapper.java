@@ -6,7 +6,9 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * 商户支付配置Mapper
+ * @author CH
  */
 @Mapper
 public interface MerchantPaymentConfigMapper extends BaseMapper<MerchantPaymentConfig> {
 }
+

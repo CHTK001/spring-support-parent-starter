@@ -20,8 +20,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * 提供商配置服务实现
  * <p>每个厂商的默认离线检测时间及检测逻辑。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service

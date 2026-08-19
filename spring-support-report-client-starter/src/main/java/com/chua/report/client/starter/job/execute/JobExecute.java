@@ -10,9 +10,9 @@ import com.chua.report.client.starter.job.TriggerParam;
  * 定义了作业执行的核心方法，用于处理定时任务的执行逻辑。
  * 实现类需要提供具体的作业执行实现。
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/03/11
+ * @author CH
  */
 public interface JobExecute {
 

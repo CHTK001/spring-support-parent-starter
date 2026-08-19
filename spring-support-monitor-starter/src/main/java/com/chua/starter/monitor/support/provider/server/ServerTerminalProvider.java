@@ -24,8 +24,8 @@ import java.util.Set;
  * 由调度器结合任务关联的解析规则生成指标点。
  * </p>
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Slf4j
 @Component

@@ -21,8 +21,8 @@ import java.util.List;
  * 新增/更新/删除时通过 {@link CacheEvict} 清理全部缓存项，保证一致性。
  * 调度器回写 {@code last_run_at} 走 {@link #markRunAtOnly}，绕开缓存清理。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @CacheConfig(cacheNames = "spider")
 @Service

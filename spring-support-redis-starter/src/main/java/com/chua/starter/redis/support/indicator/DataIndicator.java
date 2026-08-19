@@ -8,8 +8,8 @@ import lombok.Data;
  * 用于表示通用数据指标，包含时间戳、值和持久化标志。
  * </p>
  *
- * @author CH
  * @since 2024/7/4
+ * @author CH
  */
 @Data
 public class DataIndicator {

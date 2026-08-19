@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
  * @author CH
  */
 public class ResourceWebMvcConfigurer implements WebMvcConfigurer  {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ResourceWebMvcConfigurer.class);
         @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {

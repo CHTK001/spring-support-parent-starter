@@ -14,6 +14,7 @@ import java.util.Objects;
 
 /**
  * 隐私序列化器
+ * @author CH
  */
 public class PrivacySerializer extends JsonSerializer<String> implements ContextualSerializer {
 

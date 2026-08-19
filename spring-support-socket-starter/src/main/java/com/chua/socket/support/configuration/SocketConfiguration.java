@@ -26,9 +26,9 @@ import java.util.stream.Collectors;
  * Socket 自动配置类
  * 通过 SPI 机制根据配置的协议类型创建对应的 Socket 服务
  *
- * @author CH
  * @version 1.0.0
  * @since 2024-12-04
+ * @author CH
  */
 @Slf4j
 @EnableConfigurationProperties(SocketProperties.class)
@@ -153,6 +153,7 @@ public class SocketConfiguration {
     @Slf4j
     public static class SocketLifecycle implements InitializingBean, DisposableBean {
         private final Map<String, SocketSessionTemplate> templates;
+        /** 属性 */
         private final SocketProperties properties;
 
         public SocketLifecycle(Map<String, SocketSessionTemplate> templates, SocketProperties properties) {

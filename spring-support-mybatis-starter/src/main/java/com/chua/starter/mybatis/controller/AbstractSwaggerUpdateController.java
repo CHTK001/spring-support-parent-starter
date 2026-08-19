@@ -24,7 +24,6 @@ import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
  *
  * @param <S> Service类型
  * @param <T> 实体类型
- * @author CH
  */
 public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> {
 
@@ -32,6 +31,7 @@ public abstract class AbstractSwaggerUpdateController<S extends IService<T>, T> 
      * 事务模板，用于执行事务操作
      */
     @Autowired(required = false)
+    /** Transaction模板 */
     protected TransactionTemplate transactionTemplate;
 
     /**

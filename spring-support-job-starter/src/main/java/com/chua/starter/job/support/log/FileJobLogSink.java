@@ -17,15 +17,17 @@ import java.time.format.DateTimeFormatter;
  *
  * <p>文件路径: {@code {basePath}/{yyyy-MM-dd}/{jobName}/{executedAtMs}.log}</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class FileJobLogSink implements JobLogSink {
 
+    /** Date_fmt */
     private static final DateTimeFormatter DATE_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.systemDefault());
 
+    /** Base路径 */
     private final Path basePath;
 
     /**

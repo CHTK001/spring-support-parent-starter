@@ -11,11 +11,13 @@ import org.springframework.util.StringUtils;
 
 /**
  * 交易流水服务实现
+ * @author CH
  */
 @Service
 @RequiredArgsConstructor
 public class TransactionRecordServiceImpl implements TransactionRecordService {
 
+    /** Transactionrecordmapper */
     private final TransactionRecordMapper transactionRecordMapper;
 
     @Override
@@ -59,3 +61,4 @@ public class TransactionRecordServiceImpl implements TransactionRecordService {
         return transactionRecordMapper.selectPage(page, wrapper);
     }
 }
+

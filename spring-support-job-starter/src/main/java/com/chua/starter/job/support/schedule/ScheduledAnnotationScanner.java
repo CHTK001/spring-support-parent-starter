@@ -23,8 +23,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>注册到当前 Spring 上下文的 {@link TaskScheduler} 上, 由其真实执行。
  * 本模块仅做扫描, 不替换定时器实现。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartInitializingSingleton {

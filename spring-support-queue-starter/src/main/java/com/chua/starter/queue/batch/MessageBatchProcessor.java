@@ -14,8 +14,8 @@ import java.util.function.Consumer;
  * 将多个消息聚合后批量处理，提高处理效率
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @Data
 public class MessageBatchProcessor {

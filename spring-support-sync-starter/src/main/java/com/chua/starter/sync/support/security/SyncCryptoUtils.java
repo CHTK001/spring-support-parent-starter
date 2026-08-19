@@ -20,23 +20,30 @@ import java.util.Map;
  * 仅加密消息 payload（topic 不加密），使用方无感知。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 4.0.0.42
  */
 public final class SyncCryptoUtils {
 
     /** 加密标记字段 */
+    /** Encrypted */
     public static final String ENCRYPTED = "encrypted";
     /** 加密算法字段 */
+    /** 算法 */
     public static final String ALGORITHM = "encAlgorithm";
     /** 密文字段 */
+    /** 加密 */
     public static final String CIPHER = "encData";
 
+    /** Aes_gcm */
     private static final String AES_GCM = "AES/GCM/NoPadding";
+    /** Aes_algorithm */
     private static final String AES_ALGORITHM = "AES";
+    /** Sha_256 */
     private static final String SHA_256 = "SHA-256";
+    /** Gcm_iv_length */
     private static final int GCM_IV_LENGTH = 12;
+    /** Gcm_tag_length */
     private static final int GCM_TAG_LENGTH = 128;
 
     private SyncCryptoUtils() {

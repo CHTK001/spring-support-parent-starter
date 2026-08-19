@@ -19,13 +19,18 @@ import java.sql.SQLException;
  * 可通过 jasypt.encryptor.password 配置项，设置密钥
  *
  * @author 芋道源码
+ * @author CH
  */
 public class EncryptTypeHandler extends BaseTypeHandler<String> {
 
+    /** Encryptor_property_name */
     private static final String ENCRYPTOR_PROPERTY_NAME = "mybatis-plus.encryptor.password";
+    /** Encryptor_mode_property_name */
     private static final String ENCRYPTOR_MODE_PROPERTY_NAME = "mybatis-plus.encryptor.mode";
 
+    /** AEScodec */
     private static AesCipher aesCodec;
+    /** 密码 */
     private static String password;
 
     @Override

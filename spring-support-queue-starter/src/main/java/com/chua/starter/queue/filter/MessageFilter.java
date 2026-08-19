@@ -12,8 +12,8 @@ import com.chua.starter.queue.Message;
  * - 消息丢弃
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @FunctionalInterface
 public interface MessageFilter {

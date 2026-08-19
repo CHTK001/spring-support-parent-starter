@@ -5,8 +5,8 @@ import javax.sql.DataSource;
 /**
  * 能返回路由目标数据源的物理化路由器。
  *
- * @author CH
  * @since 2026/4/2
+ * @author CH
  */
 public interface MaterializedSqlDataSourceRouter extends MaterializedSqlRouter {
 

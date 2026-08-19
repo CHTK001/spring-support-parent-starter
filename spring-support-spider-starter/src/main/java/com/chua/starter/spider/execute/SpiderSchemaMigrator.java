@@ -15,8 +15,8 @@ import javax.sql.DataSource;
  * <p>对已存在的库补列增量字段，避免叶 FlywayLike 脚本在表结构已存在时被跳过
  * 导致实体字段与表列不一致。当前补 {@code spider_definition.executor_type} 列。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Component
 public class SpiderSchemaMigrator implements ApplicationRunner {

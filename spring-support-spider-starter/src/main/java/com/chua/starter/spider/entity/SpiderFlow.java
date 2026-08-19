@@ -16,8 +16,8 @@ import lombok.EqualsAndHashCode;
  * <p>对应 {@code spider_flow} 表，保存前端 ReFlow 可视化画布导出的
  * 节点 JSON（nodes_json）与连线 JSON（edges_json），一个爬虫定义对应一条流程。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -30,6 +30,7 @@ public class SpiderFlow extends SysBase {
      */
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
+    /** ID */
     private Long id;
 
     /**
@@ -37,6 +38,7 @@ public class SpiderFlow extends SysBase {
      */
     @TableField("definition_id")
     @Schema(description = "关联爬虫定义 ID")
+    /** DefinitionID */
     private Long definitionId;
 
     /**
@@ -44,6 +46,7 @@ public class SpiderFlow extends SysBase {
      */
     @TableField("code")
     @Schema(description = "流程编码（前端 flowCode）")
+    /** 代码 */
     private String code;
 
     /**
@@ -51,6 +54,7 @@ public class SpiderFlow extends SysBase {
      */
     @TableField("enabled")
     @Schema(description = "是否启用")
+    /** 是否启用 */
     private Integer enabled;
 
     /**
@@ -58,6 +62,7 @@ public class SpiderFlow extends SysBase {
      */
     @TableField("name")
     @Schema(description = "流程名称")
+    /** 名称 */
     private String name;
 
     /**
@@ -65,6 +70,7 @@ public class SpiderFlow extends SysBase {
      */
     @TableField("nodes_json")
     @Schema(description = "节点 JSON")
+    /** NodesJSON */
     private String nodesJson;
 
     /**
@@ -72,6 +78,7 @@ public class SpiderFlow extends SysBase {
      */
     @TableField("edges_json")
     @Schema(description = "连线 JSON")
+    /** EdgesJSON */
     private String edgesJson;
 
     /**
@@ -80,5 +87,6 @@ public class SpiderFlow extends SysBase {
     @TableField("sys_deleted")
     @TableLogic
     @Schema(description = "逻辑删除标记")
+    /** SYS删除标记 */
     private Integer sysDeleted;
 }

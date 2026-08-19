@@ -2,6 +2,7 @@ package com.chua.payment.support.enums;
 
 /**
  * 支付渠道类型
+ * @author CH
  */
 public enum PaymentChannelType {
 
@@ -11,7 +12,9 @@ public enum PaymentChannelType {
     COMPOSITE("COMPOSITE", "直营网关"),
     WALLET("WALLET", "钱包");
 
+    /** 代码 */
     private final String code;
+    /** 描述 */
     private final String description;
 
     PaymentChannelType(String code, String description) {
@@ -39,3 +42,4 @@ public enum PaymentChannelType {
         return "";
     }
 }
+

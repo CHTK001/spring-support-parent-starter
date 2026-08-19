@@ -9,13 +9,15 @@ import java.util.List;
 /**
  * 事务配置
  *
- * @author CH
  * @since 2021-07-19
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = MultiDataSourceProperties.PRE, ignoreInvalidFields = true)
 public class MultiDataSourceProperties {
+    /** PRE */
     public static final String PRE = "plugin.multi-datasource";
+    /** Legacy_pre */
     public static final String LEGACY_PRE = "spring.multi-datasource";
 
     /**

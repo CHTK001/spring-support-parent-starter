@@ -15,8 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * 例如：slave_1、slave_2 → 组名为 slave，包含两个成员
  * </p>
  *
- * @author CH
  * @since 2026/07/14
+ * @author CH
  */
 @Slf4j
 public class DataSourceGroupRegistry {
@@ -28,9 +28,11 @@ public class DataSourceGroupRegistry {
     private static final Map<String, String> DS_TO_GROUP = new ConcurrentHashMap<>();
 
     /** 分隔符 */
+    /** Separator */
     private static final String SEPARATOR = "_";
 
     /** 全局默认负载均衡策略（可选，为空时使用各分组自身默认值） */
+    /** 默认策略 */
     private static DataSourceGroup.LoadBalanceStrategy defaultStrategy;
 
     private DataSourceGroupRegistry() {}

@@ -8,7 +8,6 @@ import java.lang.annotation.*;
 /**
  * 请求参数映射注解
  *
- * @author CH
  * @since 2023-07-01
  * @see org.springframework.web.bind.annotation.RequestParam
  */

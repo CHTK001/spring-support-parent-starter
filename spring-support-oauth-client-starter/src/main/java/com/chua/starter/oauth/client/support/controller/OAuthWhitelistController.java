@@ -23,8 +23,8 @@ import java.util.List;
  *
  * <p>提供白名单规则的动态添加、删除与查询能力，规则变更实时生效，无需重启。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController

@@ -7,6 +7,7 @@ import com.chua.payment.support.vo.OrderPartitionPreviewVO;
 
 import java.util.List;
 
+/** @author CH */
 public interface OrderPartitionConfigService {
 
     List<OrderPartitionConfigVO> listConfigs();
@@ -21,3 +22,4 @@ public interface OrderPartitionConfigService {
 
     OrderPartitionConfig getConfigEntity(String businessType);
 }
+

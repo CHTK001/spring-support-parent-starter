@@ -14,7 +14,6 @@ import org.springframework.context.annotation.Bean;
 /**
  * 锁模板
  *
- * @author CH
  * @since 2022/08/01
  **/
 @Slf4j
@@ -22,6 +21,7 @@ import org.springframework.context.annotation.Bean;
 public class LockTemplateConfiguration {
 
     @Autowired(required = false)
+    /** Redisson客户端 */
     private RedissonClient redissonClient;
 
     /**

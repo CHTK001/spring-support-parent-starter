@@ -36,13 +36,15 @@ import java.util.*;
 
 /**
  * 发现服务
- * @author CH
  * @since 2024/9/9
+ * @author CH
  */
 @Slf4j
 @EnableConfigurationProperties(DiscoveryListProperties.class)
 public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionRegistryPostProcessor {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(DiscoveryConfiguration.class);
+    /** 环境 */
     private Environment environment;
 
     @Override
@@ -199,6 +201,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     static class ServiceDiscovertyFactoryBean implements FactoryBean<ServiceDiscovery>, AutoCloseable{
 
         final ServiceDiscovery serviceDiscovery;
+        /** Discovery列表 */
         private final List<Discovery> discoveryList;
 
         public ServiceDiscovertyFactoryBean(ServiceDiscovery serviceDiscovery, List<Discovery> discoveryList) {

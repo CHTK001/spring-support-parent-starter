@@ -8,9 +8,11 @@ import java.util.concurrent.Callable;
 
 /**
  * 追踪管控
+ * @author CH
  */
 public class NewTrackManager {
 
+    /** Track_cache */
     private static final ThreadLocal<Stack<Span>> TRACK_CACHE = new ThreadLocal<>();
 
     public static Object invoke(Callable<?> callable) throws Exception {
@@ -114,3 +116,4 @@ public class NewTrackManager {
         span.setCostTime(System.nanoTime() - span.getEnterTime());
     }
 }
+

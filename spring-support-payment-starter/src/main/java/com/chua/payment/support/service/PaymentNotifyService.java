@@ -4,6 +4,7 @@ import java.util.Map;
 
 /**
  * 第三方支付异步通知服务
+ * @author CH
  */
 public interface PaymentNotifyService {
 
@@ -27,3 +28,4 @@ public interface PaymentNotifyService {
 
     void handleAlipayPayNotify(Long channelId, String orderNo, Map<String, String> params);
 }
+

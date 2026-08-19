@@ -33,17 +33,21 @@ import org.slf4j.LoggerFactory;
  * 对携带 x-sign 等签名头的请求进行合法性校验，不修改请求体。
  * </p>
  *
- * @author CH
  * @since 2024/12/07
  * @version 1.0.0
+ * @author CH
  */
 @RestControllerAdvice
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiRequestDecodeBodyAdvice.class);
+    /** Object_mapper */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    /** Encrypted_request_field */
     private static final String ENCRYPTED_REQUEST_FIELD = "data";
 
+    /** Decoderegister */
     private final ApiRequestDecodeRegister decodeRegister;
 
     public ApiRequestDecodeBodyAdvice(ApiRequestDecodeRegister decodeRegister) {
@@ -185,7 +189,9 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
     }
 
     static class DecodedHttpInputMessage implements HttpInputMessage {
+        /** Headers */
         private final HttpHeaders headers = new HttpHeaders();
+        /** 请求体 */
         private final byte[] body;
 
         DecodedHttpInputMessage(HttpHeaders sourceHeaders, byte[] body) {
@@ -208,8 +214,11 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
     }
 
     static class EmptyHttpInputMessage implements HttpInputMessage {
+        /** Empty_message */
         private static final EmptyHttpInputMessage EMPTY_MESSAGE = new EmptyHttpInputMessage();
+        /** 是否为空 */
         private static final InputStream EMPTY = new ByteArrayInputStream(new byte[0]);
+        /** Empty_header */
         private static final org.springframework.http.HttpHeaders EMPTY_HEADER = new org.springframework.http.HttpHeaders();
 
         @Override

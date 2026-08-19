@@ -11,8 +11,8 @@ import java.util.Map;
 /**
  * AI 模块门面服务接口。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface AiModuleFacadeService {
 

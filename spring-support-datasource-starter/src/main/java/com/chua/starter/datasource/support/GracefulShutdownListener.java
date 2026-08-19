@@ -19,13 +19,14 @@ import java.util.Map;
  * </ul>
  * </p>
  *
- * @author CH
  * @since 2026/07/14
+ * @author CH
  */
 @Slf4j
 public class GracefulShutdownListener implements ApplicationListener<ContextClosedEvent> {
 
     /** 关闭超时（秒） */
+    /** Shutdown_timeout_seconds */
     private static final int SHUTDOWN_TIMEOUT_SECONDS = 30;
 
     @Override

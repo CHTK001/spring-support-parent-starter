@@ -19,8 +19,8 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p>提供输入优化对外接口，优化模型与提示词读取自 {@code input} 分组全局设置，配置变更实时生效。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController

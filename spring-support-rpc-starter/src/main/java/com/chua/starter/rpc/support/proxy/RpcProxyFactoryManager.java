@@ -12,16 +12,19 @@ import java.util.List;
  * RPC 代理工厂管理器
  * <p>按优先级尝试不同的代理工厂创建代理</p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/04/07
+ * @author CH
  */
 public class RpcProxyFactoryManager {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(RpcProxyFactoryManager.class);
 
+    /** 实例 */
     private static final RpcProxyFactoryManager INSTANCE = new RpcProxyFactoryManager();
 
+    /** Factories */
     private final List<RpcProxyFactory> factories;
 
     private RpcProxyFactoryManager() {

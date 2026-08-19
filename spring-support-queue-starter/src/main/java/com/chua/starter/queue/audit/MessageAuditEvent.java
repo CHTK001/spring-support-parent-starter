@@ -10,8 +10,8 @@ import org.springframework.context.ApplicationEvent;
  * 业务方可通过 {@code @EventListener} 监听并持久化到数据库或其他存储。
  * </p>
  *
- * @author CH
  * @since 2026-08-15
+ * @author CH
  */
 @Getter
 public class MessageAuditEvent extends ApplicationEvent {

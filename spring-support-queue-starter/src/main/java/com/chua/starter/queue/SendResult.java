@@ -8,8 +8,8 @@ import lombok.NoArgsConstructor;
 /**
  * 消息发送结果
  *
- * @author CH
  * @since 2025-12-25
+ * @author CH
  */
 @Data
 @Builder

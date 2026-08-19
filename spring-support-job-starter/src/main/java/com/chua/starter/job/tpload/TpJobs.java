@@ -14,8 +14,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * {@link #TP_WORK_MS}=500ms。当线程池核心线程数低于处理能力所需 (约 2 个任务/线程/秒)
  * 时, 观测到的吞吐受线程数约束, 借此验证扩容与吞吐的线性关系。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Component

@@ -23,15 +23,20 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 钱包提现审批控制器（管理员端）
+ * @author CH
  */
 @RestController
 @RequestMapping("/wallet/withdraw-approval")
 @RequiredArgsConstructor
 public class WalletWithdrawApprovalController {
 
+    /** Walletwithdrawapproval服务 */
     private final WalletWithdrawApprovalService walletWithdrawApprovalService;
+    /** Walletaccount服务 */
     private final WalletAccountService walletAccountService;
+    /** Wallet排序服务 */
     private final WalletOrderService walletOrderService;
+    /** Principal解析器 */
     private final PaymentAccountPrincipalResolver principalResolver;
 
     @GetMapping("/page")
@@ -165,3 +170,4 @@ public class WalletWithdrawApprovalController {
         return String.valueOf(userResume.getUserId());
     }
 }
+

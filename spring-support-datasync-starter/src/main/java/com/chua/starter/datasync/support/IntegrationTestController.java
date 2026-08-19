@@ -28,8 +28,8 @@ import java.util.jar.JarFile;
 /**
  * OSGi 与 SSH 集成验证 RESTful 接口。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -37,12 +37,15 @@ import java.util.jar.JarFile;
 public class IntegrationTestController {
 
     @Autowired(required = false)
+    /** Osgilauncher */
     private FelixOsgiLauncher osgiLauncher;
 
     @Autowired(required = false)
+    /** SSH服务器服务 */
     private SshServerService sshServerService;
 
     @Autowired
+    /** Application上下文 */
     private ApplicationContext applicationContext;
 
     /**

@@ -28,16 +28,19 @@ import java.util.Map;
  * <p>所有方法都做了"AI 不可用时回退"的兜底：未注册 ChatClient 或 ChatClient 调用失败时，
  * 业务侧仍可继续运行（标记 fallback 标志）。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EduAiService {
 
+    /** Chat客户端注册表 */
     private final ChatClientRegistry chatClientRegistry;
+    /** 属性 */
     private final EduAiProperties properties;
+    /** Objectmapper */
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**

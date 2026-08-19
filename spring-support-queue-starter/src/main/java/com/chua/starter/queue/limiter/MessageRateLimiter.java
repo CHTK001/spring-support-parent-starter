@@ -8,8 +8,8 @@ import com.chua.starter.queue.Message;
  * 控制消息处理速率，防止系统过载
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 public interface MessageRateLimiter {
 

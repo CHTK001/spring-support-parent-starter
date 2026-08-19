@@ -25,13 +25,17 @@ import java.util.List;
 
 /**
  * 退款单服务实现
+ * @author CH
  */
 @Service
 @RequiredArgsConstructor
 public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService {
 
+    /** Paymentrefund排序mapper */
     private final PaymentRefundOrderMapper paymentRefundOrderMapper;
+    /** Merchantmapper */
     private final MerchantMapper merchantMapper;
+    /** Merchant通道mapper */
     private final MerchantChannelMapper merchantChannelMapper;
 
     @Override
@@ -264,3 +268,4 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
         return vo;
     }
 }
+

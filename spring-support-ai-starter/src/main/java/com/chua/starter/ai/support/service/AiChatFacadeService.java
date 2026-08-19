@@ -12,8 +12,8 @@ import java.util.function.Consumer;
 /**
  * AI 对话门面服务接口。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface AiChatFacadeService {
 

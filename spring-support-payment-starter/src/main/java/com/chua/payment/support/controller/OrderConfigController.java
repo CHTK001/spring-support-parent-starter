@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+/** @author CH */
 
 @Tag(name = "订单配置管理", description = "订单和流水分表策略配置")
 @RestController
@@ -21,7 +22,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderConfigController {
 
+    /** 排序partition配置服务 */
     private final OrderPartitionConfigService orderPartitionConfigService;
+    /** Principal解析器 */
     private final PaymentAccountPrincipalResolver principalResolver;
 
     @Operation(summary = "查询分表配置")
@@ -76,3 +79,4 @@ public class OrderConfigController {
         return null;
     }
 }
+

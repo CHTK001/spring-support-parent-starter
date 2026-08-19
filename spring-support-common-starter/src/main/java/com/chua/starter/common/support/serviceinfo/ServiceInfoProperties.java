@@ -11,8 +11,8 @@ import java.util.Set;
  * <p>前缀 {@code plugin.service-info}。用于配置 {@code /service-info} 端点的认证、
  * 横幅渲染等行为。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @ConfigurationProperties(prefix = "plugin.service-info", ignoreInvalidFields = true)
 public class ServiceInfoProperties {

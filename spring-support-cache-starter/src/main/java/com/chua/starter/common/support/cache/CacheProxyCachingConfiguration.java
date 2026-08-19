@@ -10,9 +10,9 @@ import org.springframework.cache.annotation.EnableCaching;
  * 若在此重复定义 customCacheOperationSource 会导致与 CacheConfiguration 同名 Bean 冲突。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2025/6/6
+ * @author CH
  */
 @EnableCaching
 public class CacheProxyCachingConfiguration {

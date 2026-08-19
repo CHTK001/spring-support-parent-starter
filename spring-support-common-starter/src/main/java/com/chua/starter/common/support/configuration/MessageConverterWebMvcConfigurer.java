@@ -51,6 +51,7 @@ import org.slf4j.LoggerFactory;
 @SuppressWarnings({"removal", "deprecation"})
 @EnableConfigurationProperties({MessageConverterProperties.class})
 public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, ApplicationContextAware {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(MessageConverterWebMvcConfigurer.class);
     /**
      * 构造函数
@@ -63,6 +64,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
 
         final MessageConverterProperties messageConverterProperties;
     private List<HttpMessageConverter<?>> messageConverters;
+    /** Application上下文 */
     private ApplicationContext applicationContext;
 
     @Override

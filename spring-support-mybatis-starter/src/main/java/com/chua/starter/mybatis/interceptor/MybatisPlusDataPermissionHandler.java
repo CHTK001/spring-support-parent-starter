@@ -36,10 +36,15 @@ import static com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler.
  * @author CH
  */
 public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHandler {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(MybatisPlusDataPermissionHandler.class);
+    /** Super_admin */
     private static final String SUPER_ADMIN = "SUPER_ADMIN";
+    /** Admin */
     private static final String ADMIN = "ADMIN";
+    /** Dept_leader */
     private static final String DEPT_LEADER = "DEPT_LEADER";
+    /** Managed_dept_tree_ids */
     private static final String MANAGED_DEPT_TREE_IDS = "managedDeptTreeIds";
 
     /**
@@ -47,7 +52,9 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
      */
     private static final Map<String, DataScopeInfo> DATA_SCOPE_CACHE = new ConcurrentReferenceHashMap<>(4096);
 
+    /** Meta数据作用域属性 */
     private final MybatisPlusDataScopeProperties metaDataScopeProperties;
+    /** Auth服务供应商 */
     private final Supplier<AuthService> authServiceSupplier;
 
     public MybatisPlusDataPermissionHandler(MybatisPlusDataScopeProperties metaDataScopeProperties) {

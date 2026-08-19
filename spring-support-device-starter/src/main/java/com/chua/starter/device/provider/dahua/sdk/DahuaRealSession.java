@@ -35,8 +35,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * <p>若未安装 SDK 动态库或设备不可达，构造函数会抛出异常，</p>
  * <p>由 {@code DahuaProvider} 捕获并回退到模拟会话。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class DahuaRealSession implements DeviceSession {

@@ -17,18 +17,23 @@ import java.util.concurrent.ConcurrentHashMap;
  * RSocket 会话实现
  * 基于 Spring WebSocket
  *
- * @author CH
  * @version 1.0.0
  * @since 2024-12-04
+ * @author CH
  */
 @Slf4j
 public class RSocketSessionImpl implements SocketSession {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(RSocketSessionImpl.class);
+    /** Objectmapper */
     private static final ObjectMapper objectMapper = new ObjectMapper();
+    /** 会话 */
     private final WebSocketSession session;
     private final Map<String, Object> attributes = new ConcurrentHashMap<>();
+    /** 客户端ID */
     private String clientId;
+    /** 用户 */
     private SocketUser user;
 
     public RSocketSessionImpl(WebSocketSession session) {

@@ -16,8 +16,8 @@ import java.util.List;
  * <p>该分组配置数据完全来自数据库表，不依赖任何环境变量。修改表后可通过
  * {@code GlobalChatClientManager.rebuild()} 热重建全局客户端，实时生效。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Spi("runtime")
 public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {

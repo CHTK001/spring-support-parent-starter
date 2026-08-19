@@ -28,8 +28,8 @@ import java.util.List;
  *
  * <p>提供本地软件扫描、列表查询、安装、卸载等功能。</p>
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 @Tag(name = "本地软件管理接口")
 @RestController
@@ -37,7 +37,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class LocalSoftwareController {
 
+    /** 本地software服务 */
     private final LocalSoftwareService localSoftwareService;
+    /** Softsoftware服务 */
     private final SoftSoftwareService softSoftwareService;
 
     /**

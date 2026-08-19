@@ -10,8 +10,8 @@ import org.springframework.stereotype.Component;
  * 根据消息中的租户ID路由到不同的队列
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @Slf4j
 @Component

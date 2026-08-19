@@ -16,8 +16,8 @@ import java.util.List;
  * <p>使用方式：{@code DahuaNetSDK INSTANCE = Native.load("dhnetsdk", DahuaNetSDK.class)}，</p>
  * <p>运行环境需将 dhnetsdk.dll、dhconfigsdk.dll 等放入系统库路径或应用目录。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface DahuaNetSDK extends Library {
 
@@ -198,27 +198,35 @@ public interface DahuaNetSDK extends Library {
     class LOGIN_INFO extends Structure {
 
         /** 设备地址 */
+        /** SZ主机 */
         public byte[] szHost = new byte[129];
 
         /** 用户名 */
+        /** SZ用户 */
         public byte[] szUser = new byte[64];
 
         /** 密码 */
+        /** SZ密码 */
         public byte[] szPassword = new byte[64];
 
         /** 端口 */
+        /** N端口 */
         public int nPort;
 
         /** 连接类型 */
+        /** EM类型 */
         public int emType;
 
         /** 是否使用 SSL */
+        /** BUSESSL */
         public boolean bUseSSL;
 
         /** 登录类型 */
+        /** DWlogin类型 */
         public int dwLoginType;
 
         /** 设备 ID */
+        /** SZdeviceID */
         public byte[] szDeviceID = new byte[48];
 
         /**
@@ -258,78 +266,103 @@ public interface DahuaNetSDK extends Library {
     class DEVICEINFO extends Structure {
 
         /** 设备序列号 */
+        /** SZserial数字 */
         public byte[] szSerialNumber = new byte[DH_DEVICE_SERIALNO_LEN];
 
         /** 报警输入口个数 */
+        /** BYalarmIN端口NUM */
         public byte byAlarmInPortNum;
 
         /** 报警输出口个数 */
+        /** BYalarmOUT端口NUM */
         public byte byAlarmOutPortNum;
 
         /** 硬盘个数 */
+        /** BYdiskNUM */
         public byte byDiskNum;
 
         /** 设备类型 */
+        /** BYdvrtype */
         public byte byDVRType;
 
         /** 模拟通道个数 */
+        /** BYchanNUM */
         public byte byChanNum;
 
         /** 起始通道号 */
+        /** BY开始chan */
         public byte byStartChan;
 
         /** 语音通道数 */
+        /** BY音频chanNUM */
         public byte byAudioChanNum;
 
         /** 数字通道个数 */
+        /** BYipchanNUM */
         public byte byIPChanNum;
 
         /** 零通道编码个数 */
+        /** BYzerochanNUM */
         public byte byZeroChanNum;
 
         /** 主协议 */
+        /** BYmainproto */
         public byte byMainProto;
 
         /** 子协议 */
+        /** BYSUBproto */
         public byte bySubProto;
 
         /** 支持能力 */
+        /** BYsupport */
         public byte bySupport;
 
         /** 支持能力 1 */
+        /** BYsupport1 */
         public byte bySupport1;
 
         /** 支持能力 2 */
+        /** BYsupport2 */
         public byte bySupport2;
 
         /** 设备类型 */
+        /** WDEV类型 */
         public short wDevType;
 
         /** 支持能力 3 */
+        /** BYsupport3 */
         public byte bySupport3;
 
         /** 多码流能力 */
+        /** BYmulti流proto */
         public byte byMultiStreamProto;
 
         /** 起始数字通道 */
+        /** BY开始dchan */
         public byte byStartDChan;
 
         /** 起始数字对讲通道 */
+        /** BY开始dtalkchan */
         public byte byStartDTalkChan;
 
         /** 高清数字通道数 */
+        /** BYhighdchanNUM */
         public byte byHighDChanNum;
 
         /** 支持能力 4 */
+        /** BYsupport4 */
         public byte bySupport4;
 
         /** 支持能力 5 */
+        /** BYsupport5 */
         public byte bySupport5;
 
         /** 高清数字通道最大值 */
+        /** BYipchanINhigh最大值 */
         public byte byIPChanInHighMax;
 
         /** 保留字节 */
+        /** BYreserved1 */
         public byte[] byReserved1 = new byte[24];
 
         @Override

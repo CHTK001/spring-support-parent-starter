@@ -27,8 +27,8 @@ import java.util.stream.Collectors;
  * <p>提供 {@code ocr} 分组全局配置的读取与更新。
  * OCR 管线（detector/recognizer/direction/restorer）与检测置信度阈值均可配置。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController

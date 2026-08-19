@@ -3,7 +3,6 @@ package com.chua.starter.job.support.sync;
 /**
  * 自研同步通道使用的 topic 常量。
  *
- * @author CH
  * @since 4.0.0.42
  */
 public final class JobSyncTopics {

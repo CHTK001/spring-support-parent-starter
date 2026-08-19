@@ -14,14 +14,15 @@ import java.util.Map;
  * 接收来自服务端的功能开关控制命令，执行对应的操作。
  * </p>
  *
- * @author CH
  * @since 2024/12/08
  * @version 1.0.0
+ * @author CH
  */
 @Slf4j
 @RequiredArgsConstructor
 public class ApiFeatureHandler implements SyncMessageHandler {
 
+    /** Feature管理器 */
     private final ApiFeatureManager featureManager;
 
     @Override

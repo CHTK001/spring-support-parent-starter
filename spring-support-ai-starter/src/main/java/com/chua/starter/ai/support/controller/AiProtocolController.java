@@ -40,8 +40,8 @@ import java.util.concurrent.CompletableFuture;
  *
  * <p>继承 {@link BaseAiController} 统一使用 Bearer Token 鉴权与分组解析。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Tag(name = "AI Protocol Gateway Controller", description = "Claude / Responses / Gemini 等第三方协议兼容入口")
 @RestController

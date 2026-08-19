@@ -42,14 +42,15 @@ import org.slf4j.LoggerFactory;
  * 自动将返回值包装为统一的 Result 格式。
  * </p>
  *
- * @author CH
  * @since 2024/01/01
  * @version 1.0.0
+ * @author CH
  */
 @RestControllerAdvice
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>, EnvironmentAware {
-    private static final Logger log = LoggerFactory.getLogger(ApiUniformResponseBodyAdvice.class);
+    /** log */
+    private static final Logger log= LoggerFactory.getLogger(ApiUniformResponseBodyAdvice.class);
         /**
      * 忽略包装的URL关键字
      */
@@ -64,7 +65,8 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
      * 流式响应类型
      */
     private static final String EVENT_STREAM = "event-stream";
-    private static final String OCTET_STREAM = "octet-stream";
+    /** OCTESTREAM */
+    private static final String OCTET_STREAM= "octet-stream";
     
     /**
      * PageResult类名后缀
@@ -72,10 +74,14 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
     private static final String PAGE_RESULT_SUFFIX = "result.PageResult";
 
     @Resource(name = "uniform")
+    /** executor服务 */
     private ExecutorService executorService;
 
+    /** apiProperties */
     private ApiProperties apiProperties;
+    /** ignoreFormatPackages */
     private String[] ignoreFormatPackages;
+    /** noPackages */
     private boolean noPackages;
 
     @Override

@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 微信支付分订单控制器
+ * @author CH
  */
 @Tag(name = "微信支付分", description = "微信支付分服务订单相关接口")
 @RestController
@@ -30,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class WechatPayScoreOrderController {
 
+    /** WechatPAY分数排序服务 */
     private final WechatPayScoreOrderService wechatPayScoreOrderService;
 
     @Operation(summary = "创建微信支付分订单")
@@ -85,3 +87,4 @@ public class WechatPayScoreOrderController {
         return vo;
     }
 }
+

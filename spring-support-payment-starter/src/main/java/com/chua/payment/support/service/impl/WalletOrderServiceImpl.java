@@ -21,13 +21,17 @@ import java.util.UUID;
 
 /**
  * 钱包订单服务实现
+ * @author CH
  */
 @Service
 @RequiredArgsConstructor
 public class WalletOrderServiceImpl implements WalletOrderService {
 
+    /** Wallet排序mapper */
     private final WalletOrderMapper walletOrderMapper;
+    /** PaymentcallbackURL解析器 */
     private final PaymentCallbackUrlResolver paymentCallbackUrlResolver;
+    /** Objectmapper */
     private final ObjectMapper objectMapper;
 
     @Override
@@ -209,3 +213,4 @@ public class WalletOrderServiceImpl implements WalletOrderService {
         }
     }
 }
+

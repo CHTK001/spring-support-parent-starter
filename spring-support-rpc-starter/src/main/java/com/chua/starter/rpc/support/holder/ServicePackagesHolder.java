@@ -9,12 +9,13 @@ import java.util.Set;
  * <p>
  * 提供单例模式以供全局访问。
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/04/08
+ * @author CH
  */
 public class ServicePackagesHolder {
 
+    /** Bean_name */
     public static final String BEAN_NAME = "servicePackagesHolder";
 
     /**
@@ -27,6 +28,7 @@ public class ServicePackagesHolder {
      */
     private final Set<String> scannedClasses = new HashSet<>();
 
+    /** 默认 */
     private static final ServicePackagesHolder DEFAULT = new ServicePackagesHolder();
 
     /**

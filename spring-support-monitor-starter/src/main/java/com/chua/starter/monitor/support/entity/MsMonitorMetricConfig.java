@@ -15,8 +15,8 @@ import lombok.EqualsAndHashCode;
  * 任务的 N 条解析规则, 每条规则描述如何从采集输出中抽取一个指标。
  * </p>
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -24,6 +24,7 @@ import lombok.EqualsAndHashCode;
 @TableName("ms_monitor_metric_config")
 public class MsMonitorMetricConfig extends SysBase {
 
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -31,6 +32,7 @@ public class MsMonitorMetricConfig extends SysBase {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
+    /** ID */
     private Long id;
 
     /**
@@ -38,6 +40,7 @@ public class MsMonitorMetricConfig extends SysBase {
      */
     @TableField("ms_monitor_metric_config_task_id")
     @Schema(description = "关联任务 id", example = "1")
+    /** 任务ID */
     private Long taskId;
 
     /**
@@ -45,6 +48,7 @@ public class MsMonitorMetricConfig extends SysBase {
      */
     @TableField("ms_monitor_metric_config_metric_name")
     @Schema(description = "指标名", example = "cpu_usage")
+    /** 指标名称 */
     private String metricName;
 
     /**
@@ -52,6 +56,7 @@ public class MsMonitorMetricConfig extends SysBase {
      */
     @TableField("ms_monitor_metric_config_target_table")
     @Schema(description = "目标表", example = "ms_monitor_metric_cpu")
+    /** 目标表 */
     private String targetTable;
 
     /**
@@ -60,6 +65,7 @@ public class MsMonitorMetricConfig extends SysBase {
     @TableField("ms_monitor_metric_config_parse_rule")
     @Schema(description = "解析规则 JSON",
             example = "{\"type\":\"regex\",\"pattern\":\"Cpu\\(s\\):\\s+(\\d+\\.\\d+)\",\"group\":1}")
+    /** Parserule */
     private String parseRule;
 
     /**
@@ -67,6 +73,7 @@ public class MsMonitorMetricConfig extends SysBase {
      */
     @TableField("ms_monitor_metric_config_metric_unit")
     @Schema(description = "指标单位", example = "%")
+    /** 指标单位 */
     private String metricUnit;
 
     /**
@@ -74,5 +81,6 @@ public class MsMonitorMetricConfig extends SysBase {
      */
     @TableField("ms_monitor_metric_config_remark")
     @Schema(description = "备注", example = "top 命令输出的整体 CPU 使用率")
+    /** Remark */
     private String remark;
 }

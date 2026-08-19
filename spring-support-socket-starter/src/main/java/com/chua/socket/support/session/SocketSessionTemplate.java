@@ -11,9 +11,9 @@ import java.util.Map;
  * Socket 会话操作模板接口
  * 定义了会话管理与消息发送的方法
  *
- * @author CH
  * @version 1.0.0
  * @since 2024-12-04
+ * @author CH
  */
 public interface SocketSessionTemplate {
 

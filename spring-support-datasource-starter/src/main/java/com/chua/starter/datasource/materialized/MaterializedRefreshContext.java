@@ -5,11 +5,11 @@ import com.chua.common.support.data.materialized.MaterializedRouteDefinition;
 /**
  * 手动刷新上下文。
  *
- * @author CH
  * @since 2026/4/2
  */
 public final class MaterializedRefreshContext {
 
+    /** Holder */
     private static final ThreadLocal<MaterializedRouteDefinition> HOLDER = new ThreadLocal<>();
 
     private MaterializedRefreshContext() {

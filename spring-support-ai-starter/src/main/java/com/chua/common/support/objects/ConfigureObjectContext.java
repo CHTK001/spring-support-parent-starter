@@ -5,8 +5,8 @@ import com.chua.common.support.objects.register.impl.MappingBeanDefinitionRegist
 /**
  * 对象配置上下文。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class ConfigureObjectContext {
 

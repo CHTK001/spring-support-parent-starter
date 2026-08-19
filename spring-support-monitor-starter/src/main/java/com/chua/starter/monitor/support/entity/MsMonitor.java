@@ -16,8 +16,8 @@ import lombok.EqualsAndHashCode;
  * 对应表 {@code ms_monitor}, 存储被监控的服务器或中间件的主数据。
  * </p>
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -26,6 +26,7 @@ import lombok.EqualsAndHashCode;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MsMonitor extends SysBase {
 
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -33,6 +34,7 @@ public class MsMonitor extends SysBase {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
+    /** ID */
     private Long id;
 
     /**
@@ -40,6 +42,7 @@ public class MsMonitor extends SysBase {
      */
     @TableField("ms_monitor_name")
     @Schema(description = "名称", example = "redis-prod-01")
+    /** Monitor名称 */
     private String monitorName;
 
     /**
@@ -47,6 +50,7 @@ public class MsMonitor extends SysBase {
      */
     @TableField("ms_monitor_host")
     @Schema(description = "主机地址", example = "192.168.1.10")
+    /** Monitor主机 */
     private String monitorHost;
 
     /**
@@ -54,6 +58,7 @@ public class MsMonitor extends SysBase {
      */
     @TableField("ms_monitor_port")
     @Schema(description = "连接端口", example = "22")
+    /** Monitor端口 */
     private Integer monitorPort;
 
     /**
@@ -62,6 +67,7 @@ public class MsMonitor extends SysBase {
     @TableField("ms_monitor_service_type")
     @Schema(description = "服务类型: SERVER / REDIS / MYSQL / PG / ORACLE / MSSQL / MQ",
             example = "REDIS")
+    /** 服务类型 */
     private String serviceType;
 
     /**
@@ -70,6 +76,7 @@ public class MsMonitor extends SysBase {
     @TableField("ms_monitor_server_type")
     @Schema(description = "服务器子类型(仅 SERVER): LINUX / WINDOWS / MACOS / JVM",
             example = "LINUX")
+    /** 服务器类型 */
     private String serverType;
 
     /**
@@ -77,6 +84,7 @@ public class MsMonitor extends SysBase {
      */
     @TableField("ms_monitor_server_os_version")
     @Schema(description = "操作系统版本", example = "CentOS 7.9")
+    /** 服务器OS版本 */
     private String serverOsVersion;
 
     /**
@@ -84,6 +92,7 @@ public class MsMonitor extends SysBase {
      */
     @TableField("ms_monitor_group")
     @Schema(description = "分组", example = "default")
+    /** Monitor分组 */
     private String monitorGroup;
 
     /**
@@ -91,6 +100,7 @@ public class MsMonitor extends SysBase {
      */
     @TableField("ms_monitor_description")
     @Schema(description = "描述", example = "生产 Redis")
+    /** Monitor描述 */
     private String monitorDescription;
 
     /**
@@ -98,5 +108,6 @@ public class MsMonitor extends SysBase {
      */
     @TableField("ms_monitor_enabled")
     @Schema(description = "是否启用 1启用 0禁用", example = "1")
+    /** Monitor是否启用 */
     private Integer monitorEnabled;
 }

@@ -10,6 +10,7 @@ import java.util.Map;
 /**
  * 网关客户端 Agent
  * 连接到网关并注册为 HTTP 服务，使网关可以转发 HTTP 请求到本应用
+ * @author CH
  */
 @Slf4j
 public class GatewayClientAgent extends BaseRemoteAgent {
@@ -40,3 +41,4 @@ public class GatewayClientAgent extends BaseRemoteAgent {
         log.info("[GatewayClient] 已注册到网关, agentId={}", properties.getAgentId());
     }
 }
+

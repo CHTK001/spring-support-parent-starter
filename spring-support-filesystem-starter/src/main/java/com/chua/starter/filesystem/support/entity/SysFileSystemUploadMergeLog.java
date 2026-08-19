@@ -14,43 +14,52 @@ import java.time.LocalDateTime;
  *
  * <p>每次合并尝试无论成败都写入一条记录，用于排查与追溯。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @TableName(value = "filesystem_upload_merge_log")
 public class SysFileSystemUploadMergeLog extends SysBase implements Serializable {
 
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
 
     @TableId(value = "filesystem_upload_merge_log_id", type = IdType.AUTO)
+    /** Filesystem上传merge日志ID */
     private Long filesystemUploadMergeLogId;
 
     /** 上传任务ID */
     @TableField("filesystem_upload_merge_log_upload_id")
+    /** Filesystem上传merge日志上传ID */
     private String filesystemUploadMergeLogUploadId;
 
     /** 阶段标识: 1-合并 */
     @TableField("filesystem_upload_merge_log_stage")
+    /** Filesystem上传merge日志阶段 */
     private Integer filesystemUploadMergeLogStage;
 
     /** 结果状态: 1-成功, 0-失败 */
     @TableField("filesystem_upload_merge_log_status")
+    /** Filesystem上传merge日志状态 */
     private Integer filesystemUploadMergeLogStatus;
 
     /** 记录信息（成功/失败原因） */
     @TableField("filesystem_upload_merge_log_message")
+    /** Filesystem上传merge日志消息 */
     private String filesystemUploadMergeLogMessage;
 
     /** 第几次尝试 */
     @TableField("filesystem_upload_merge_log_retry_count")
+    /** Filesystem上传merge日志重试数量 */
     private Integer filesystemUploadMergeLogRetryCount;
 
     /** 开始时间 */
     @TableField("filesystem_upload_merge_log_start_time")
+    /** Filesystem上传merge日志开始时间 */
     private LocalDateTime filesystemUploadMergeLogStartTime;
 
     /** 结束时间 */
     @TableField("filesystem_upload_merge_log_end_time")
+    /** Filesystem上传merge日志结束时间 */
     private LocalDateTime filesystemUploadMergeLogEndTime;
 
     public SysFileSystemUploadMergeLog() {}
@@ -83,7 +92,9 @@ public class SysFileSystemUploadMergeLog extends SysBase implements Serializable
      * 合并结果状态常量。
      */
     public static class Result {
+        /** Success */
         public static final int SUCCESS = 1;
+        /** Failed */
         public static final int FAILED = 0;
     }
 
@@ -91,6 +102,7 @@ public class SysFileSystemUploadMergeLog extends SysBase implements Serializable
      * 阶段标识常量。
      */
     public static class Stage {
+        /** Merge */
         public static final int MERGE = 1;
     }
 }

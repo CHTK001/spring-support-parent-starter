@@ -8,6 +8,7 @@ import com.chua.payment.support.entity.WalletOrder;
 
 /**
  * 钱包订单服务
+ * @author CH
  */
 public interface WalletOrderService {
 
@@ -56,3 +57,4 @@ public interface WalletOrderService {
      */
     Page<WalletOrder> page(int pageNum, int pageSize, Long merchantId, Long userId, String orderType, String status);
 }
+

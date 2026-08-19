@@ -25,7 +25,6 @@ import java.util.Map;
  * 加密解密拦截器
  * 用于在执行SQL前加密参数，在执行SQL后解密结果
  *
- * @author CH
  * @since 2025/9/4 14:46
  */
 @Intercepts({
@@ -37,6 +36,7 @@ import java.util.Map;
                 args = {Statement.class})
 })
 public class CryptoInterceptor implements Interceptor {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(CryptoInterceptor.class);
 
     /**

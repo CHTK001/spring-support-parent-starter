@@ -14,8 +14,8 @@ import java.util.List;
 /**
  * 软件信息表 Service 接口
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 public interface SoftSoftwareService extends IService<SoftSoftware> {
 

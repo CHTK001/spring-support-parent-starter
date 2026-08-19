@@ -16,21 +16,36 @@ import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+/**
+ * 同步服务器，负责客户端连接管理、健康检查与消息分发。
+ *
+ * <p>通过 SPI 加载 {@link SyncMessageHandler} 处理同步消息，并监听客户端连接/断开事件。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
+ */
 public class SyncServer implements InitializingBean, DisposableBean {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SyncServer.class);
 
+    /** Topic_health */
     public static final String TOPIC_HEALTH = SyncServerInstance.TOPIC_HEALTH;
+    /** Topic_response */
     public static final String TOPIC_RESPONSE = SyncServerInstance.TOPIC_RESPONSE;
+    /** Topic_connect */
     public static final String TOPIC_CONNECT = SyncServerInstance.TOPIC_CONNECT;
+    /** Topic_disconnect */
     public static final String TOPIC_DISCONNECT = SyncServerInstance.TOPIC_DISCONNECT;
 
+    /** 同步属性 */
     private final SyncProperties syncProperties;
 
     private final Map<String, SyncServerInstance> instances = new ConcurrentHashMap<>();
 
     private final Map<String, ClientInfo> allClientsInternal = new ConcurrentHashMap<>();
 
+    /** Handlers */
     private final List<com.chua.common.support.network.sync.SyncMessageHandler> handlers = new CopyOnWriteArrayList<>();
 
     private final List<BiConsumer<String, ClientInfo>> connectListeners = new CopyOnWriteArrayList<>();
@@ -384,3 +399,4 @@ public class SyncServer implements InitializingBean, DisposableBean {
         log.info("[SyncServer] 已停止所有服务实例");
     }
 }
+

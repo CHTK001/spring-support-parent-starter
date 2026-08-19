@@ -3,7 +3,6 @@ package com.chua.starter.common.support.codec;
 /**
  * Codec 兼容包装
  *
- * @author CH
  */
 public final class Codec {
 

@@ -8,8 +8,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *
  * <p>配置前缀：{@code plugin.osgi}。控制 Felix 框架启动、Gogo shell 远程管理（SSH/Telnet）。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = "plugin.osgi")

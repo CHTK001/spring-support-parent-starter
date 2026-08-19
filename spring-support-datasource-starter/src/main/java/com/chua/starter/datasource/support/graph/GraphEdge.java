@@ -5,8 +5,8 @@ import lombok.Data;
 /**
  * relation-graph 边：单向外键关系
  *
- * @author CH
  * @since 2026/8/5
+ * @author CH
  */
 @Data
 public class GraphEdge {

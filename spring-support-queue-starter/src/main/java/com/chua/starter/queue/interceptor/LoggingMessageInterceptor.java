@@ -10,8 +10,8 @@ import org.springframework.stereotype.Component;
  * 记录消息发送和接收的日志
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @Slf4j
 @Component

@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
  * Cookie.Util
  *
  * @author xuxueli 2015-12-12 18:01:06
+ * @author CH
  */
 public class CookieUtil {
 
@@ -176,3 +177,4 @@ public class CookieUtil {
                 .collect(Collectors.toMap(Cookie::getName, Cookie::getValue)));
     }
 }
+

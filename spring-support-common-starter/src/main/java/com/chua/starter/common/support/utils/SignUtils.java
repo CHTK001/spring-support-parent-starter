@@ -12,11 +12,12 @@ import com.chua.common.support.utils.StringUtils;
  * 保留原有公共 API 不变，内部全部委托给核心工具类实现，
  * 避免重复的 MD5/SHA256 计算逻辑。</p>
  *
- * @author CH
  * @see com.chua.common.support.utils.SignUtils
+ * @author CH
  */
 public class SignUtils {
 
+    /** 日志 */
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SignUtils.class);
 
     /**
@@ -256,6 +257,46 @@ public class SignUtils {
     }
 
     // ==================== 调试 ====================
+
+    /**
+     * 计算 MD5 十六进制摘要
+     *
+     * @param input 输入字符串
+     * @return MD5 十六进制字符串
+     */
+    private static String md5Hex(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : digest) {
+                sb.append(String.format("%02x", b & 0xff));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("MD5 algorithm not available", e);
+        }
+    }
+
+    /**
+     * 计算 SHA-256 十六进制摘要
+     *
+     * @param input 输入字符串
+     * @return SHA-256 十六进制字符串
+     */
+    private static String sha256Hex(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : digest) {
+                sb.append(String.format("%02x", b & 0xff));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 algorithm not available", e);
+        }
+    }
 
     /**
      * 打印调试信息

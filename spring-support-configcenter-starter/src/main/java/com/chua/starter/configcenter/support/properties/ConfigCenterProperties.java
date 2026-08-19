@@ -10,13 +10,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * 并支持配置热更新功能。
  * </p>
  *
- * @author CH
  * @since 2024/9/9
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = ConfigCenterProperties.PRE, ignoreInvalidFields = true)
 public class ConfigCenterProperties {
 
+    /** PRE */
     public static final String PRE = "plugin.config-center";
 
     /**

@@ -5,8 +5,8 @@ import com.chua.starter.sync.support.client.SyncClient;
 /**
  * SyncClient 连接前自定义扩展点。
  *
- * @author CH
  * @since 2026/03/25
+ * @author CH
  */
 public interface SyncClientCustomizer {
 

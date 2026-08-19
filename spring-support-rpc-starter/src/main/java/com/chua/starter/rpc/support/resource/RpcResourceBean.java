@@ -24,9 +24,9 @@ import org.springframework.context.ApplicationContextAware;
  * 不耦合任何具体协议实现。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/04/07
+ * @author CH
  */
 @Getter
 @Setter
@@ -36,18 +36,26 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
         InitializingBean,
         DisposableBean {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(RpcResourceBean.class);
+    /** ID */
     private String id;
 
+    /** 密钥 */
     private String key;
 
     private Class<?> interfaceClass;
 
+    /** 接口名称 */
     private String interfaceName;
+    /** Classloader */
     private ClassLoader classLoader;
+    /** Bean名称 */
     private String beanName;
+    /** Application上下文 */
     private ApplicationContext applicationContext;
 
+    /** RPC客户端 */
     private RpcClient rpcClient;
 
     /**

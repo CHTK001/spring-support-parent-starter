@@ -11,8 +11,8 @@ import java.util.List;
 /**
  * 软件配置表 Service 接口
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 public interface SoftConfigService extends IService<SoftConfig> {
 

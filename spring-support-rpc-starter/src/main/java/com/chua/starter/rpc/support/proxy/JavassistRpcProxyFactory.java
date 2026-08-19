@@ -10,14 +10,16 @@ import java.util.List;
  * Javassist 代理工厂实现
  * <p>当 Dubbo 依赖存在时可用，性能优于 JDK 代理</p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/04/07
+ * @author CH
  */
 public class JavassistRpcProxyFactory implements RpcProxyFactory {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(JavassistRpcProxyFactory.class);
 
+    /** Javassist_available */
     private static final boolean JAVASSIST_AVAILABLE;
 
     static {

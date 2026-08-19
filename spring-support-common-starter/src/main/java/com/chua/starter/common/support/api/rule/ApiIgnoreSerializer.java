@@ -21,12 +21,13 @@ import java.io.IOException;
 /**
  * 忽略字段
  *
- * @author CH
  * @see ApiFieldIgnore
  * @see ApiGroup
  * @since 2025/1/1
+ * @author CH
  */
 public class ApiIgnoreSerializer extends JsonSerializer<Object> implements ContextualSerializer {
+    /** 请求mapping处理器mapping */
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
     private Class<?>[] group;
 

@@ -37,8 +37,8 @@ import org.springframework.stereotype.Component;
  *   <li>基于新客户端重建主 Agent 并同步到 {@link AgentRegistry}</li>
  * </ol>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Component

@@ -3,10 +3,15 @@ package com.chua.starter.spider.dto;
 import java.util.List;
 import java.util.Map;
 
+/** @author CH */
 public class FlowAggregateDTO {
+    /** Flow */
     private SpiderFlowVO flow;
+    /** Nodes */
     private List<FlowNodeEntityVO> nodes;
+    /** Edges */
     private List<FlowEdgeEntityVO> edges;
+    /** FlowgraphJSON */
     private String flowGraphJson;
 
     public SpiderFlowVO getFlow() { return flow; }

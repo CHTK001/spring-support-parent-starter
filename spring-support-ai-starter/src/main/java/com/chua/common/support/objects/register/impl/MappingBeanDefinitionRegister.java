@@ -10,8 +10,8 @@ import java.util.List;
 /**
  * 映射 Bean 定义注册器。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class MappingBeanDefinitionRegister {
 

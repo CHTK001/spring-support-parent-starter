@@ -9,8 +9,8 @@ import java.util.List;
  *
  * <p>由慢 SQL 拦截器在检测到超阈值 SQL 时发布，业务侧可通过 {@code @EventListener} 订阅处理。</p>
  *
- * @author CH
  * @since 2026/4/27
+ * @author CH
  */
 public class MybatisSlowSqlEvent extends ApplicationEvent {
 

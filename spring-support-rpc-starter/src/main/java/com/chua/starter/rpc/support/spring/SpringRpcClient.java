@@ -20,15 +20,19 @@ import java.util.concurrent.ConcurrentHashMap;
  * 并对远程代理附加拦截器、重试、熔断等 Spring 增强能力。
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @Slf4j
 public class SpringRpcClient implements RpcClient, ApplicationContextAware {
 
+    /** Application上下文 */
     private ApplicationContext applicationContext;
+    /** 注册表configs */
     private final List<RpcRegistryConfig> registryConfigs;
+    /** 消费者配置 */
     private final RpcConsumerConfig consumerConfig;
+    /** APP名称 */
     private final String appName;
     private final Map<Class<?>, Object> proxyCache = new ConcurrentHashMap<>();
 

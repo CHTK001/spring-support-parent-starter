@@ -51,7 +51,6 @@ import java.util.Map;
  * <p>运行说明：需要把 {@code utils-support-excel-starter} 与 POI 全家 jar 追加到运行 classpath
  * （datasync 默认 classpath 不含 POI），并从 H2/源库验证行数与内容一致性。</p>
  *
- * @author CH
  * @since 4.0.0.42
  */
 public final class DataSyncExcelJdbcProbe {

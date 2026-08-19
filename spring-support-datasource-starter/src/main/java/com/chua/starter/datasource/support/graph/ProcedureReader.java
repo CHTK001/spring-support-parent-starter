@@ -22,12 +22,13 @@ import java.util.Locale;
  *     <li>SQL Server: {@code sys.objects} + {@code sys.sql_modules}</li>
  * </ul>
  *
- * @author CH
  * @since 2026/8/5
+ * @author CH
  */
 @Slf4j
 public class ProcedureReader {
 
+    /** Dialect */
     private final TriggerReader.DatabaseDialect dialect;
 
     public ProcedureReader(TriggerReader.DatabaseDialect dialect) {

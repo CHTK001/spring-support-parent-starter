@@ -14,8 +14,8 @@ import java.time.LocalDateTime;
 /**
  * 任务状态服务实现（Trigger 模式）
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service

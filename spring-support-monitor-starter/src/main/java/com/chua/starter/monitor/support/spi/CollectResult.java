@@ -14,8 +14,8 @@ import java.util.List;
  * Provider 输出的统一结构, 包含原始输出与解析后的指标点列表, 调度器据此写入数据库。
  * </p>
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Data
 public class CollectResult {

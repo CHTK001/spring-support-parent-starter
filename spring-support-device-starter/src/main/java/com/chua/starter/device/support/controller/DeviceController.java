@@ -16,8 +16,8 @@ import java.util.Map;
 /**
  * 设备管理 Controller
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @RestController
 @RequestMapping("/api/device")

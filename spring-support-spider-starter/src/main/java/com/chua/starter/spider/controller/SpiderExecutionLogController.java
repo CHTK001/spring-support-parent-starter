@@ -21,8 +21,8 @@ import java.util.List;
  * <p>提供节点级执行日志查询、按 execution_no 聚合的执行历史分页与按爬虫维度的执行统计，
  * 路径前缀 {@code /spider-api/spider/executions}。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Tag(name = "执行日志")
 @RestController

@@ -5,8 +5,8 @@ import java.time.Instant;
 /**
  * 集群 Leader 状态快照。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public record ClusterLeaderState(
         String group,

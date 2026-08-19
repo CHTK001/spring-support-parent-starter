@@ -8,13 +8,15 @@ import java.util.List;
 /**
  * 事务配置
  *
- * @author CH
  * @since 2021-07-19
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = MultiHikariDataSourceProperties.PRE, ignoreInvalidFields = true)
 public class MultiHikariDataSourceProperties {
+    /** PRE */
     public static final String PRE = "plugin.multi-datasource.hikari";
+    /** Legacy_pre */
     public static final String LEGACY_PRE = "spring.multi-datasource.hikari";
 
     /**

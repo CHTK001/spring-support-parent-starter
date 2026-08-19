@@ -8,8 +8,8 @@ import org.springframework.core.KotlinDetector;
 import org.springframework.util.ClassUtils;
 
 /**
- * @author CH
  * @since 2024/8/24
+ * @author CH
  */
 public class TypeResolverBuilder  extends ObjectMapper.DefaultTypeResolverBuilder {
 

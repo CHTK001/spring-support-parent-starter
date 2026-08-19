@@ -9,8 +9,8 @@ import java.io.Serializable;
 /**
  * 应用密钥实体类
  * 
- * @author CH
  * @since 2025/10/23 21:54
+ * @author CH
  */
 @Data
 @Accessors(chain = true)

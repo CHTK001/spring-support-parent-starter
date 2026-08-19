@@ -16,8 +16,8 @@ import javax.sql.DataSource;
  * <p>用于分片上传异步合并功能的集成测试，启动嵌入式 H2 并加载 3 张表：
  * filesystem_upload_task、filesystem_upload_chunk、filesystem_upload_file。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
 public class FileSystemApplication {

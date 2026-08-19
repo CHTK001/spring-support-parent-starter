@@ -9,8 +9,8 @@ import org.apache.ibatis.annotations.Select;
 /**
  * AI 会话压缩上下文 Mapper。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Mapper
 public interface SysAiSessionCompressionMapper extends BaseMapper<SysAiSessionCompression> {

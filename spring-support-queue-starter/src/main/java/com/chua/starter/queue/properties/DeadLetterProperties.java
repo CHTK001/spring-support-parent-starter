@@ -9,13 +9,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * 与 plugin.queue 同级的独立配置。
  * </p>
  *
- * @author CH
  * @since 2025-12-25
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = DeadLetterProperties.PREFIX)
 public class DeadLetterProperties {
 
+    /** Prefix */
     public static final String PREFIX = "plugin.dead-letter";
 
     /**

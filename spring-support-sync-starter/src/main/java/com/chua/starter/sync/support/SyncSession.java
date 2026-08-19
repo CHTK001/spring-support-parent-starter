@@ -6,8 +6,8 @@ import java.util.Map;
 /**
  * 同步会话，封装单个客户端连接的会话标识与网络信息。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class SyncSession {
 

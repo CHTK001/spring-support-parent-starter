@@ -39,7 +39,6 @@ import java.util.Optional;
 /**
  * 事务
  *
- * @author CH
  * @since 2021-07-19
  */
 @EnableConfigurationProperties({
@@ -58,9 +57,12 @@ public class DataSourceTransactionConfiguration implements
      * 写事务的超时时间为10秒
      */
     private static final int TX_METHOD_TIMEOUT = 10;
+    /** Advisor */
     private static final String ADVISOR = "_advisor";
+    /** Interceptor */
     private static final String INTERCEPTOR = "_interceptor";
 
+    /** Transaction属性 */
     private TransactionProperties transactionProperties;
     /**
      * 只读事务

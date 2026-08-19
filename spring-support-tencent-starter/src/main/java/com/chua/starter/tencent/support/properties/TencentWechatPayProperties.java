@@ -6,29 +6,38 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * 微信支付属性配置
  *
- * @author CH
  * @since 2026-03-19
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = TencentWechatPayProperties.PREFIX, ignoreInvalidFields = true)
 public class TencentWechatPayProperties {
 
+    /** Prefix */
     public static final String PREFIX = "plugin.tencent.wechat-pay";
 
+    /** Enable */
     private boolean enable = false;
 
+    /** 是否启用 */
     private boolean enabled = false;
 
+    /** APPID */
     private String appId;
 
+    /** MerchantID */
     private String merchantId;
 
+    /** 私有密钥 */
     private String privateKey;
 
+    /** Merchantserial数字 */
     private String merchantSerialNumber;
 
+    /** APIv3key */
     private String apiV3Key;
 
+    /** NotifyURL */
     private String notifyUrl;
 
     /**

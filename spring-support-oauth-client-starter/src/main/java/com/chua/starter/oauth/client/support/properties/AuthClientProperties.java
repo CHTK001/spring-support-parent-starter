@@ -22,6 +22,7 @@ public class AuthClientProperties {
      */
     private boolean enable = true;
 
+    /** PRE */
     public static final String PRE = "plugin.oauth";
 
     /**

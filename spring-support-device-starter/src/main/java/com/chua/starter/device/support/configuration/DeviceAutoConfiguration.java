@@ -17,7 +17,6 @@ import java.util.List;
  * <p>设备厂商 Provider 由 {@link DeviceProvider} 子类通过 {@code @Component} 自动注册为 Spring Bean，</p>
  * <p>业务方添加新厂商只需新增 Provider 实现即可，SPI 文件不再使用。</p>
  *
- * @author CH
  * @since 4.0.0.42
  */
 @Slf4j

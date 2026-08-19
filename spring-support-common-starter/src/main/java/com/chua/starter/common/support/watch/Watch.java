@@ -9,7 +9,6 @@ import java.lang.annotation.Target;
  * 方法追踪注解
  * <p>标注在方法或类上，启用链路追踪和性能监控。</p>
  *
- * @author CH
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)

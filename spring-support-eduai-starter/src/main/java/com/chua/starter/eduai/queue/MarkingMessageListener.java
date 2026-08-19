@@ -17,14 +17,15 @@ import org.springframework.stereotype.Component;
  * <p>消费失败由 {@code queue-starter} 自身的重试/死信策略处理；阅卷任务在数据库侧有 taskId 兜底，
  * 重新提交答题卡即可重试。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class MarkingMessageListener {
 
+    /** Marking服务 */
     private final IEduMarkingService markingService;
 
     /**

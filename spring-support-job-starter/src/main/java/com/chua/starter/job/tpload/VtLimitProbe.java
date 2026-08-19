@@ -17,8 +17,8 @@ import java.util.concurrent.atomic.AtomicLong;
  *   <li>CPU 密集型任务: 虚拟线程无处让位, 真实并行上限 = 物理/逻辑核心数。</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class VtLimitProbe {

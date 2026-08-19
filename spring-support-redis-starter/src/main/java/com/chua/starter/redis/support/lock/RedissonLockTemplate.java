@@ -16,18 +16,22 @@ import java.util.function.Supplier;
  * 使用 Redis 实现分布式锁，适用于分布式环境。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2025-12-25
+ * @author CH
  */
 @Slf4j
 @RequiredArgsConstructor
 public class RedissonLockTemplate implements LockTemplate {
 
+    /** Lock_prefix */
     private static final String LOCK_PREFIX = "lock:";
+    /** Default_wait_time */
     private static final Duration DEFAULT_WAIT_TIME = Duration.ofSeconds(10);
+    /** Default_lease_time */
     private static final Duration DEFAULT_LEASE_TIME = Duration.ofSeconds(30);
 
+    /** Redisson客户端 */
     private final RedissonClient redissonClient;
 
     /**

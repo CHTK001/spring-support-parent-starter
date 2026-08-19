@@ -23,8 +23,8 @@ import java.util.Map;
  * <p>全局设置存储于 {@code sys_ai_global_setting} 键值表（分组 {@code global}），
  * 各字段以键值行保存，与旧版 runtime 配置共用同一张表。</p>
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 @Slf4j
 @Service

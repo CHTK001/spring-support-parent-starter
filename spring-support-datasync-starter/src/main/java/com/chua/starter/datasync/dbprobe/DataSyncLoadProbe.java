@@ -41,7 +41,6 @@ import java.util.stream.Collectors;
  * <p>不依赖 Spring 装配（直接构造 {@link DefaultDataSyncServer} 全链路），
  * 便于聚焦调度器并发与数据吞吐的可复现测量。</p>
  *
- * @author CH
  * @since 4.0.0.42
  */
 public final class DataSyncLoadProbe {

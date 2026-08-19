@@ -25,8 +25,8 @@ import java.util.concurrent.locks.ReentrantLock;
  * 无三方模板引擎依赖。
  * </p>
  *
- * @author CH
  * @since 2026/8/5
+ * @author CH
  */
 @Slf4j
 public class DataSourceDocumentService {

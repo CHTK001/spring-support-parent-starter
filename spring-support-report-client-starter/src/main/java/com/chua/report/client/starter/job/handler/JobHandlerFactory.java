@@ -13,9 +13,9 @@ import java.util.concurrent.ConcurrentMap;
  * 使用ConcurrentHashMap保证线程安全。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/03/11
+ * @author CH
  */
 @Slf4j
 public class JobHandlerFactory {

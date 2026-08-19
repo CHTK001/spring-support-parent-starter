@@ -14,15 +14,18 @@ import java.nio.file.Path;
 /**
  * IP2Proxy LITE 离线 IP 质量检测器（基于 IP2Proxy Java 库）
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
 
+    /** Logger */
     private static final Logger logger = LoggerFactory.getLogger(IP2ProxyLiteIpQualityDetector.class);
 
+    /** Default_bin */
     private static final String DEFAULT_BIN = "IP2PROXY-LITE-PX2.BIN";
 
+    /** Ip2proxy */
     private final IP2Proxy ip2Proxy;
 
     public IP2ProxyLiteIpQualityDetector() {

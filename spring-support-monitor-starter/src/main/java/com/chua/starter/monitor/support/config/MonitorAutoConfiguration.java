@@ -12,8 +12,8 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
  * 开启事务管理和定时调度。
  * </p>
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @AutoConfiguration
 @ComponentScan(basePackages = "com.chua.starter.monitor.support")

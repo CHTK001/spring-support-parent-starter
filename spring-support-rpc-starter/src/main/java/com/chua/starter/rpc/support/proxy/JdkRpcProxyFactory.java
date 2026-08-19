@@ -8,9 +8,9 @@ import java.util.List;
  * JDK 动态代理工厂实现
  * <p>作为默认的代理创建方式，无额外依赖</p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/04/07
+ * @author CH
  */
 public class JdkRpcProxyFactory implements RpcProxyFactory {
 

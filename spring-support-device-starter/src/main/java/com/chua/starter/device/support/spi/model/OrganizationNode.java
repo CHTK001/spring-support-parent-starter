@@ -7,8 +7,8 @@ import lombok.NoArgsConstructor;
 /**
  * 组织节点模型（厂商平台拉取的组织/部门）
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @NoArgsConstructor

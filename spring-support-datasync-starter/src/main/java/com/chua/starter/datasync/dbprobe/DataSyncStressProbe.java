@@ -23,11 +23,11 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * 数据同步完整管线压测：走 Server→Scheduler→Executor→Dispatch→Sink 全链路，手动触发单遍。
  *
- * @author CH
  * @since 4.0.0.42
  */
 public final class DataSyncStressProbe {
 
+    /** Work_dir */
     private static final Path WORK_DIR = Paths.get("target/stress-full");
 
     public static void main(String[] args) throws Exception {
@@ -108,7 +108,9 @@ public final class DataSyncStressProbe {
     }
 
     static final class CountSink implements DataSyncAgentSink {
+        /** SinkID */
         private final String sinkId;
+        /** Expected */
         private final long expected;
         final AtomicLong count = new AtomicLong(0);
         final AtomicLong batches = new AtomicLong(0);

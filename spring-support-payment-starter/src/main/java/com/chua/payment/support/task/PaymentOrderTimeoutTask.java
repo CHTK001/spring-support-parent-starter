@@ -17,6 +17,7 @@ import java.util.List;
 
 /**
  * 订单超时处理定时任务
+ * @author CH
  */
 @Slf4j
 @Component
@@ -24,8 +25,11 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class PaymentOrderTimeoutTask implements PaymentManagedTask {
 
+    /** 排序mapper */
     private final PaymentOrderMapper orderMapper;
+    /** 配置mapper */
     private final MerchantPaymentConfigMapper configMapper;
+    /** Payment排序服务 */
     private final PaymentOrderService paymentOrderService;
 
     public void cancelTimeoutOrders() {
@@ -111,3 +115,4 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
         cancelTimeoutOrders();
     }
 }
+

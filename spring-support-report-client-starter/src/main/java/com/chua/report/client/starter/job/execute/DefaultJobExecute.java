@@ -21,9 +21,9 @@ import lombok.extern.slf4j.Slf4j;
  * 支持处理器热更新和版本管理。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/03/11
+ * @author CH
  */
 @Slf4j
 public class DefaultJobExecute implements JobExecute {
@@ -146,8 +146,11 @@ public class DefaultJobExecute implements JobExecute {
 }
 
 class HandlerResult {
+    /** 作业处理器 */
     private JobHandler jobHandler;
+    /** 作业线程 */
     private JobThread jobThread;
+    /** RemoveOLDreason */
     private String removeOldReason;
 
     public HandlerResult() {

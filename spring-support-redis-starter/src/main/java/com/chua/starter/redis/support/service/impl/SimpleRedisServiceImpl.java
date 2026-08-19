@@ -18,8 +18,8 @@ import java.util.concurrent.TimeUnit;
  * <p>支持对指标进行自增/自减，并能在自增/自减时设置过期时间。
  * QPS 统计基于 Hash 结构存储的指标值汇总后除以一天的秒数得到。</p>
  *
- * @author CH
  * @since 2024/12/24
+ * @author CH
  */
 @Service
 public class SimpleRedisServiceImpl implements SimpleRedisService {
@@ -48,6 +48,7 @@ public class SimpleRedisServiceImpl implements SimpleRedisService {
      * Redis 字符串模板，用于哈希计数与过期管理
      */
     @Autowired
+    /** Redis模板 */
     private StringRedisTemplate redisTemplate;
 
     @Override

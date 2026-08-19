@@ -15,6 +15,7 @@ import com.chua.starter.tencent.support.properties.TencentWechatPayProperties;
 
 /**
  * 微信支付网关 SPI
+ * @author CH
  */
 public interface TencentWechatPayGateway {
 
@@ -66,3 +67,4 @@ public interface TencentWechatPayGateway {
 
     TencentWechatPayScoreNotifyPayload parsePayScoreNotify(TencentWechatPayProperties properties, TencentWechatNotifyRequest request);
 }
+

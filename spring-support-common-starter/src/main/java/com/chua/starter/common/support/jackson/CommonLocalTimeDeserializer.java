@@ -14,8 +14,8 @@ import java.time.LocalTime;
 
 /**
  * 通用LocalTime解析
- * @author CH
  * @since 2024/12/19
+ * @author CH
  */
 public class CommonLocalTimeDeserializer extends LocalTimeDeserializer {
     @Override

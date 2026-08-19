@@ -46,12 +46,12 @@ import static org.springframework.core.BridgeMethodResolver.findBridgedMethod;
 import static org.springframework.core.BridgeMethodResolver.isVisibilityBridgeMethodPair;
 
 /**
- * @author CH
  */
 public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanDefinitionPostProcessor,
         ApplicationContextAware,
         BeanFactoryAware, BeanClassLoaderAware, EnvironmentAware, DisposableBean, SmartInstantiationAwareBeanPostProcessor {
 
+    /** 日志 */
     protected static final Logger log = LoggerFactory.getLogger(AbstractAnnotationBeanPostProcessor.class);
 
     private final static int CACHE_SIZE = Integer.getInteger("", 32);
@@ -62,14 +62,19 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     private final ConcurrentMap<String, AnnotatedInjectionMetadata> injectionMetadataCache =
             new ConcurrentHashMap<String, AnnotatedInjectionMetadata>(CACHE_SIZE);
 
+    /** Bean工厂 */
     private ConfigurableListableBeanFactory beanFactory;
 
+    /** 环境 */
     private Environment environment;
 
     ClassLoader classLoader;
 
+    /** 排序 */
     private final int order = Ordered.LOWEST_PRECEDENCE;
+    /** Application上下文 */
     protected ApplicationContext applicationContext;
+    /** Beandefinition注册表 */
     protected BeanDefinitionRegistry beanDefinitionRegistry;
     /**
      * @param annotationTypes the multiple types of {@link Annotation annotations}
@@ -325,8 +330,10 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     protected static class AnnotatedInjectionMetadata extends InjectionMetadata {
 
         private final Class<?> targetClass;
+        /** Fieldelements */
         private final Collection<AnnotatedFieldElement> fieldElements;
 
+        /** Methodelements */
         private final Collection<AnnotatedMethodElement> methodElements;
 
         public AnnotatedInjectionMetadata(Class<?> targetClass, Collection<AnnotatedFieldElement> fieldElements,
@@ -360,6 +367,7 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
      */
     protected class AnnotatedInjectElement extends InjectionMetadata.InjectedElement {
 
+        /** Attributes */
         public final AnnotationAttributes attributes;
 
         public volatile Object injectedObject;
@@ -418,6 +426,7 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
 
     protected class AnnotatedMethodElement extends AnnotatedInjectElement {
 
+        /** Method */
         public final Method method;
 
         protected AnnotatedMethodElement(Method method, PropertyDescriptor pd, AnnotationAttributes attributes) {
@@ -428,6 +437,7 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
 
     public class AnnotatedFieldElement extends AnnotatedInjectElement {
 
+        /** Field */
         public final Field field;
 
         protected AnnotatedFieldElement(Field field, AnnotationAttributes attributes) {

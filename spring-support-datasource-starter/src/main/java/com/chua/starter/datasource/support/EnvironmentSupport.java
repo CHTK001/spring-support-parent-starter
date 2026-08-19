@@ -21,6 +21,7 @@ public class EnvironmentSupport {
      */
     public Environment environment;
 
+    /** 路径matcher */
     private final PathMatcher pathMatcher = new AntPathMatcher();
 
     public EnvironmentSupport(Environment environment) {

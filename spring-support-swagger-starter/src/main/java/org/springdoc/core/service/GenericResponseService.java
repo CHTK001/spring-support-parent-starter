@@ -97,6 +97,7 @@ import static org.springdoc.core.utils.SpringDocAnnotationsUtils.mergeSchema;
  * The type Generic response builder.
  *
  * @author bnasslahsen
+ * @author CH
  */
 @Slf4j
 public class GenericResponseService implements ApplicationContextAware {
@@ -770,3 +771,4 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
 }
+

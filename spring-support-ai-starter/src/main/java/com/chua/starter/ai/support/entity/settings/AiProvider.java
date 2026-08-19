@@ -13,8 +13,8 @@ import lombok.EqualsAndHashCode;
 /**
  * 模型供应商表，存储 AI 提供商的基础信息、接入地址、可用模型与启用状态。
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -30,6 +30,7 @@ public class AiProvider extends SysBase {
      */
     @TableId(value = "sys_ai_provider_id", type = IdType.AUTO)
     @Schema(description = "供应商主键 ID")
+    /** 提供者ID */
     private Long providerId;
 
     /**
@@ -40,6 +41,7 @@ public class AiProvider extends SysBase {
      */
     @TableField("sys_ai_provider_name")
     @Schema(description = "供应商名称")
+    /** 提供者名称 */
     private String providerName;
 
     /**
@@ -50,6 +52,7 @@ public class AiProvider extends SysBase {
      */
     @TableField("sys_ai_provider_type")
     @Schema(description = "供应商类型")
+    /** 提供者类型 */
     private String providerType;
 
     /**
@@ -60,6 +63,7 @@ public class AiProvider extends SysBase {
      */
     @TableField("sys_ai_provider_base_url")
     @Schema(description = "接入 Base URL")
+    /** 提供者baseURL */
     private String providerBaseUrl;
 
     /**
@@ -70,6 +74,7 @@ public class AiProvider extends SysBase {
      */
     @TableField("sys_ai_provider_api_key")
     @Schema(description = "API Key")
+    /** 提供者API密钥 */
     private String providerApiKey;
 
     /**
@@ -80,6 +85,7 @@ public class AiProvider extends SysBase {
      */
     @TableField("sys_ai_provider_logo")
     @Schema(description = "Logo 图片地址")
+    /** 提供者logo */
     private String providerLogo;
 
     /**
@@ -90,6 +96,7 @@ public class AiProvider extends SysBase {
      */
     @TableField("sys_ai_provider_models")
     @Schema(description = "可用模型列表(JSON)")
+    /** 提供者models */
     private String providerModels;
 
     /**
@@ -100,6 +107,7 @@ public class AiProvider extends SysBase {
      */
     @TableField("sys_ai_provider_enabled")
     @Schema(description = "是否启用")
+    /** 提供者是否启用 */
     private Boolean providerEnabled;
 
     /**
@@ -111,5 +119,6 @@ public class AiProvider extends SysBase {
     @TableField("sys_ai_provider_deleted")
     @TableLogic
     @Schema(description = "逻辑删除标记")
+    /** 提供者删除标记 */
     private Integer providerDeleted;
 }

@@ -23,12 +23,14 @@ import org.slf4j.LoggerFactory;
  * 用于评估请求是否命中灰度规则
  * </p>
  *
- * @author CH
  * @since 2024/12/18
  * @version 1.0.0
+ * @author CH
  */
 public class ApiGrayEvaluator {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiGrayEvaluator.class);
+        /** 解析器 */
         private static final ExpressionParser PARSER = new SpelExpressionParser();
     
     /**

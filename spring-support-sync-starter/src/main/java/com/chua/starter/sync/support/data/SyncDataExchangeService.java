@@ -20,15 +20,19 @@ import java.util.function.Predicate;
  * 将底层 SyncClient/SyncServer 的 topic publish/request 能力提升为面向业务的数据同步交换接口。
  * </p>
  *
- * @author CH
  * @since 2026/03/23
+ * @author CH
  */
 public class SyncDataExchangeService {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SyncDataExchangeService.class);
 
+    /** 同步客户端提供者 */
     private final ObjectProvider<SyncClient> syncClientProvider;
+    /** 同步服务器提供者 */
     private final ObjectProvider<SyncServer> syncServerProvider;
+    /** 同步属性 */
     private final SyncProperties syncProperties;
 
     public SyncDataExchangeService(ObjectProvider<SyncClient> syncClientProvider,

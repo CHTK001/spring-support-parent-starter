@@ -30,14 +30,16 @@ import org.springframework.context.annotation.Bean;
  * </pre>
  * <p>MDC 链路追踪默认永久开启，无需配置</p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/06/21
+ * @author CH
  */
 @EnableConfigurationProperties({LogProperties.class})
 public class LogConfiguration {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(LogConfiguration.class);
 
+    /** 日志属性 */
     private final LogProperties logProperties;
 
     /**

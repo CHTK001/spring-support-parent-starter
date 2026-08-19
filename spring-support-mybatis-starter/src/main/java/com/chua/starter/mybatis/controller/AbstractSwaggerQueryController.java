@@ -17,7 +17,6 @@ import java.util.List;
 /**
  * 超类
  *
- * @author CH
  */
 public abstract class AbstractSwaggerQueryController<S extends IService<T>, T> extends AbstractSwaggerUpdateController<S, T>{
 

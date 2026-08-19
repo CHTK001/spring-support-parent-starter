@@ -22,7 +22,6 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 支持在 MyBatis Mapper 上解析 @DS。
  *
- * @author CH
  * @since 2026/4/2
  */
 @Intercepts({
@@ -31,9 +30,12 @@ import java.util.concurrent.ConcurrentHashMap;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, org.apache.ibatis.session.RowBounds.class, org.apache.ibatis.session.ResultHandler.class, org.apache.ibatis.cache.CacheKey.class, org.apache.ibatis.mapping.BoundSql.class}),
 })
 public class MapperDataSourceInterceptor implements Interceptor {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(MapperDataSourceInterceptor.class);
 
+    /** Application上下文 */
     private final ApplicationContext applicationContext;
+    /** 属性 */
     private final MultiDataSourceSettingProperties properties;
     private final Map<String, String> mapperDataSourceCache = new ConcurrentHashMap<>();
 

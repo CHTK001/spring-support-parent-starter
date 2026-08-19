@@ -5,8 +5,8 @@ import lombok.Data;
 /**
  * 预置位信息
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class PresetInfo {

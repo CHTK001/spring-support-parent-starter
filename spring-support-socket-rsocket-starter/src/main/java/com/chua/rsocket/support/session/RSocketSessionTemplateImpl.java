@@ -29,16 +29,20 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * RSocket 会话模板实现
  * 基于 Spring WebSocket 实现，支持多房间配置
  *
- * @author CH
  * @version 1.0.0
  * @since 2024-12-04
+ * @author CH
  */
 @Slf4j
 public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements SocketSessionTemplate {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(RSocketSessionTemplateImpl.class);
+    /** Objectmapper */
     private static final ObjectMapper objectMapper = new ObjectMapper();
+    /** 属性 */
     private final SocketProperties properties;
+    /** Listeners */
     private final List<SocketListener> listeners;
 
     /**

@@ -6,11 +6,12 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 /**
  * JSON工具类
  *
- * @author CH
  * @since 2025-12-25
+ * @author CH
  */
 public class Json {
 
+    /** Object_mapper */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
             .registerModule(new JavaTimeModule());
 

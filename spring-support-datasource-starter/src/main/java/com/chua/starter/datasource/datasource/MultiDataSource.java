@@ -39,19 +39,26 @@ import java.util.logging.Logger;
  */
 @Slf4j
 public class MultiDataSource implements DataSource {
+    /** 数据sources */
     private final List<DataSource> dataSources;
+    /** Dynamic数据来源 */
     private final DynamicDataSource dynamicDataSource;
+    /** Application上下文 */
     private ApplicationContext applicationContext;
 
+    /** Thread_local */
     private static final ThreadLocal<GenericObjectPool<Connection>> THREAD_LOCAL = new InheritableThreadLocal<>();
     private final Multimap<String, String> tables = HashMultimap.create();
 
     private final Map<SchemaPlus, SchemaPlus> cache = new ConcurrentHashMap<>();
 
+    /** Print写入器 */
     private PrintWriter printWriter = new PrintWriter(System.out);
 
     final Properties info = new Properties();
+    /** 池 */
     private GenericObjectPool<Connection> pool;
+    /** 秒 */
     private int seconds;
 
     {

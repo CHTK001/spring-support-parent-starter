@@ -27,8 +27,8 @@ import java.util.List;
  * <p>避免"无脑死循环"——每次 tick 都基于 lastRunAt 推算，触发后立即回写
  * last_run_at，防止同一秒重复触发。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Component
 public class SpiderScheduler {

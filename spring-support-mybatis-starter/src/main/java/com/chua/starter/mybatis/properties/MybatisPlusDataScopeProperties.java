@@ -15,6 +15,7 @@ import static com.chua.starter.mybatis.properties.MybatisPlusDataScopeProperties
 public class MybatisPlusDataScopeProperties {
 
 
+    /** PRE */
     public static final String PRE = "plugin.mybatis.data.scope";
 
     /**

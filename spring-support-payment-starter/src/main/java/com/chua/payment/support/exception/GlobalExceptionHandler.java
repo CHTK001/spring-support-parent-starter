@@ -17,8 +17,8 @@ import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
  * 这样成功和失败路径都会保持同一套响应协议，避免再出现
  * `ReturnResult(code=00000, data=Result(code=500,...))` 这类双层包装。
  *
- * @author CH
  * @since 2026-03-18
+ * @author CH
  */
 @Slf4j
 @RestControllerAdvice

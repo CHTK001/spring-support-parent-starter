@@ -18,10 +18,14 @@ import java.util.function.Supplier;
  * @author CH
  */
 public class MybatisPlusDataPermissionInterceptor extends DataPermissionInterceptor {
+    /** Dept_leader */
     private static final String DEPT_LEADER = "DEPT_LEADER";
+    /** Managed_dept_tree_ids */
     private static final String MANAGED_DEPT_TREE_IDS = "managedDeptTreeIds";
 
+    /** Methodsecurityinterceptor */
     private final MybatisPlusDataScopeProperties methodSecurityInterceptor;
+    /** Auth服务供应商 */
     private final Supplier<AuthService> authServiceSupplier;
 
     public MybatisPlusDataPermissionInterceptor(DataPermissionHandler dataPermissionHandler, MybatisPlusDataScopeProperties methodSecurityInterceptor) {

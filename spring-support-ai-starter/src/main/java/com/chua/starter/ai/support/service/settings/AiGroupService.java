@@ -7,8 +7,8 @@ import java.util.List;
 /**
  * 模型分组服务接口
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 public interface AiGroupService {
 

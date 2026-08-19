@@ -19,12 +19,16 @@ import org.springframework.util.StringUtils;
 
 /**
  * 微信支付分回调服务实现
+ * @author CH
  */
 @Service
 public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChannel implements WechatPayScoreNotifyService {
 
+    /** Merchant通道mapper */
     private final MerchantChannelMapper merchantChannelMapper;
+    /** 提供者gateway注册表 */
     private final PaymentProviderGatewayRegistry providerGatewayRegistry;
+    /** WechatPAY分数排序服务 */
     private final WechatPayScoreOrderService wechatPayScoreOrderService;
 
     public WechatPayScoreNotifyServiceImpl(MerchantChannelService merchantChannelService,
@@ -99,3 +103,4 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
         return properties;
     }
 }
+

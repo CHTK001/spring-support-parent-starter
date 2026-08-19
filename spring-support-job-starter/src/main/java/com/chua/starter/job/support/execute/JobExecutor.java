@@ -26,8 +26,8 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * <p>SCHEDULER 角色不会注入本类; SINGLE 角色既消费也执行。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class JobExecutor {
@@ -246,6 +246,7 @@ public class JobExecutor {
      */
     public static ThreadFactory namedThreadFactory() {
         return new ThreadFactory() {
+            /** 计数器 */
             private final AtomicLong counter = new AtomicLong(0L);
 
             @Override

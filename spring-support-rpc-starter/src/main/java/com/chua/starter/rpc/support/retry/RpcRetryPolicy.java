@@ -10,8 +10,8 @@ import java.time.Duration;
  * 配置RPC调用失败时的重试行为
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @Data
 public class RpcRetryPolicy {

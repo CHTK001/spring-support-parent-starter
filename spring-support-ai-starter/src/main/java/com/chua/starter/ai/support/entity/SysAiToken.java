@@ -26,6 +26,7 @@ public class SysAiToken {
      * 令牌主键
      */
     @TableId(type = IdType.AUTO)
+    /** SYSAI令牌ID */
     private Integer sysAiTokenId;
 
     /**
@@ -157,36 +158,42 @@ public class SysAiToken {
      * 创建人名称
      */
     @TableField(fill = FieldFill.INSERT)
+    /** Create名称 */
     private String createName;
 
     /**
      * 创建人 ID
      */
     @TableField(fill = FieldFill.INSERT)
+    /** CreateBY */
     private Integer createBy;
 
     /**
      * 创建时间
      */
     @TableField(fill = FieldFill.INSERT)
+    /** Create时间 */
     private LocalDateTime createTime;
 
     /**
      * 更新时间
      */
     @TableField(fill = FieldFill.INSERT_UPDATE)
+    /** Update时间 */
     private LocalDateTime updateTime;
 
     /**
      * 更新人名称
      */
     @TableField(fill = FieldFill.INSERT_UPDATE)
+    /** Update名称 */
     private String updateName;
 
     /**
      * 更新人 ID
      */
     @TableField(fill = FieldFill.INSERT_UPDATE)
+    /** UpdateBY */
     private Integer updateBy;
 }
 

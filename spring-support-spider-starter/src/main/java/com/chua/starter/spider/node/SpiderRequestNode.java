@@ -40,8 +40,8 @@ import java.util.Map;
  *   <li>{@code spider.request.headers} 响应头映射</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Component
 public class SpiderRequestNode implements FlowNode {

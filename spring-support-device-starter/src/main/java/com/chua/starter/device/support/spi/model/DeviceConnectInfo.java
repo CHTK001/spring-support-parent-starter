@@ -8,8 +8,8 @@ import java.util.Map;
  * 设备连接信息模型
  * <p>支持 SDK 直连（IP+端口+用户名密码）与平台接入（AppKey+AppSecret+设备序列号）双模式。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class DeviceConnectInfo {

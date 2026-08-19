@@ -6,6 +6,7 @@ import com.chua.payment.support.vo.PaymentGlobalConfigVO;
 
 /**
  * 支付全局配置服务
+ * @author CH
  */
 public interface PaymentGlobalConfigService {
 
@@ -15,3 +16,4 @@ public interface PaymentGlobalConfigService {
 
     PaymentGlobalConfigVO saveOrUpdate(PaymentGlobalConfigDTO dto);
 }
+

@@ -25,8 +25,8 @@ import java.util.List;
  *
  * <p>所有写接口均受 {@code @Permission("admin")} 保护，统一返回 {@link ReturnResult}。</p>
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 @RestController
 @RequestMapping("/v2/app-keys")

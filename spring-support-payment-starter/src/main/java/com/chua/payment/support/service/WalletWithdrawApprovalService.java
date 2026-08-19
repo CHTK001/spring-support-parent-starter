@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 
 /**
  * 钱包提现审批服务
+ * @author CH
  */
 public interface WalletWithdrawApprovalService {
 
@@ -22,3 +23,4 @@ public interface WalletWithdrawApprovalService {
 
     void reject(Long id, String operator, String reason);
 }
+

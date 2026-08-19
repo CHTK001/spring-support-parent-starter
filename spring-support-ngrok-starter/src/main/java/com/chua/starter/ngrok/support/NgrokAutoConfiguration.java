@@ -36,8 +36,8 @@ import java.util.List;
  *
  * <p>必填项：{@code plugin.ngrok.authtoken} 或环境变量 {@code NGROK_AUTHTOKEN}。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @AutoConfiguration

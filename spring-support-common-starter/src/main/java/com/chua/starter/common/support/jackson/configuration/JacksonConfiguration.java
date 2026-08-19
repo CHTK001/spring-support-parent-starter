@@ -46,15 +46,20 @@ import org.slf4j.LoggerFactory;
 /**
  * Jackson配置
  *
- * @author CH
  * @since 2024/7/19
+ * @author CH
  */
 @EnableConfigurationProperties(JacksonProperties.class)
 public class JacksonConfiguration {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(JacksonConfiguration.class);
+    /** Date_time_formatter */
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    /** Date_formatter */
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    /** Time_formatter */
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
+    /** Simple_date_format */
     private static final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     public static ObjectMapper createObjectMapper(boolean forEverything) {
@@ -172,6 +177,7 @@ public class JacksonConfiguration {
     }
 
     static class TransientFieldIgnoringDeserializer extends StdDeserializer<Object> {
+        /** Serial版本UID */
         private static final long serialVersionUID = 1L;
 
         public TransientFieldIgnoringDeserializer() {

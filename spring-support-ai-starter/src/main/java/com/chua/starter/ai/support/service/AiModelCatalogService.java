@@ -13,8 +13,8 @@ import java.util.Map;
  * </ul>
  * 供前端按能力筛选、模型管理与统一配置使用。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface AiModelCatalogService {
 

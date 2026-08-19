@@ -16,8 +16,8 @@ import java.util.Set;
  * 实现java.security.Principal接口，集成OAuth用户信息，
  * 提供用户身份验证和权限管理功能。
  * 
- * @author CH
  * @since 2024/12/20
+ * @author CH
  */
 @Slf4j
 @Getter

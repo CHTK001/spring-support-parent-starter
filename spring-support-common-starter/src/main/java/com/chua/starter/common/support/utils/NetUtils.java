@@ -10,6 +10,9 @@ import java.util.Enumeration;
  */
 public final class NetUtils {
 
+    /**
+     * 私有构造函数，防止实例化
+     */
     private NetUtils() {
     }
 
@@ -42,3 +45,4 @@ public final class NetUtils {
         return getLocalHost();
     }
 }
+

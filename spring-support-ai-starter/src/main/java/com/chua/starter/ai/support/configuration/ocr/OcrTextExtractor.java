@@ -29,8 +29,8 @@ import java.util.stream.Collectors;
  *   <li>完整管线：detector + recognizer + 阈值 + 阅读序，应用全局 ocr 配置</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class OcrTextExtractor implements TextExtractor {
@@ -90,10 +90,15 @@ public class OcrTextExtractor implements TextExtractor {
      * 完整管线参数（懒加载时用）。
      */
     private String detectorModel;
+    /** Recognizer模型 */
     private String recognizerModel;
+    /** 最小值confidence */
     private float minConfidence = 0f;
+    /** Sortreading排序 */
     private boolean sortReadingOrder = true;
+    /** Direction模型 */
     private String directionModel;
+    /** Restorer模型 */
     private String restorerModel;
 
     /**

@@ -12,9 +12,11 @@ import java.util.List;
 public class RadarChartData implements Serializable {
 
     /** 指标名称 */
+    /** Indicators */
     private List<String> indicators = new ArrayList<>();
 
     /** 数值集合 */
+    /** Values */
     private List<Number> values = new ArrayList<>();
 
     public List<String> getIndicators() {

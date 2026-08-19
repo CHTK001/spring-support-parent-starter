@@ -17,25 +17,36 @@ import java.util.List;
  *   <li>{@code results} — 每题结果（含教师修正）</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class MarkingResultVO {
 
+    /** 任务ID */
     private String taskId;
+    /** 状态 */
     private Integer status;
+    /** 总数分数 */
     private Integer totalScore;
+    /** 总数 */
     private Integer total;
+    /** Finished */
     private Boolean finished;
+    /** Results */
     private List<QuestionResult> results;
 
     @Data
     public static class QuestionResult {
+        /** QuestionID */
         private Long questionId;
+        /** 分数 */
         private Integer score;
+        /** Comment */
         private String comment;
+        /** Teacher分数 */
         private Integer teacherScore;
+        /** Teachercomment */
         private String teacherComment;
     }
 }

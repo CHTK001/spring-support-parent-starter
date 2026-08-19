@@ -28,7 +28,6 @@ import javax.sql.DataSource;
  * 保证仅 Web 上下文生效。
  * </p>
  *
- * @author CH
  * @since 2026/8/5
  */
 @Slf4j

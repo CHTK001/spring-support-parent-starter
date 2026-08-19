@@ -26,8 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li><b>事务安全</b>：只包装 {@code getConnection()} 返回的连接，连接池内部事务不受影响</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class DataSourceSqlMonitor {

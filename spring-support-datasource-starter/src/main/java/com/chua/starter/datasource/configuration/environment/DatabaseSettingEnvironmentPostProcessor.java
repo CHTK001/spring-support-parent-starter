@@ -39,12 +39,18 @@ import java.util.Map;
  */
 @Slf4j
 public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
+    /** Enabled_key */
     private static final String ENABLED_KEY = "plugin.ops-config.database.enabled";
+    /** Setting_table */
     private static final String SETTING_TABLE = "sys_setting";
+    /** Group_table */
     private static final String GROUP_TABLE = "sys_setting_group";
+    /** Property_source_name */
     private static final String PROPERTY_SOURCE_NAME = "database-startup-config";
+    /** Ops_source_prefix */
     private static final String OPS_SOURCE_PREFIX = "ops-config-";
 
+    /** Default_groups */
     private static final List<GroupDefinition> DEFAULT_GROUPS = List.of(
             new GroupDefinition("startup-api", "API基础配置", "ri:code-box-line", "启动期 API 通用配置", 10),
             new GroupDefinition("startup-actuator", "Actuator配置", "ri:pulse-line", "启动期 Actuator 通用配置", 20),
@@ -54,6 +60,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
             new GroupDefinition("startup-swagger", "Swagger配置", "ri:book-open-line", "启动期 Swagger 通用配置", 60)
     );
 
+    /** Default_settings */
     private static final List<SettingDefinition> DEFAULT_SETTINGS = List.of(
             new SettingDefinition("plugin.api.encode.enable", "true", "BOOL", "startup-api", 10, "ops-default/application-api.yml", "开启接口请求体编码"),
             new SettingDefinition("plugin.api.decode.enable", "true", "BOOL", "startup-api", 20, "ops-default/application-api.yml", "开启接口响应体解码"),

@@ -9,76 +9,97 @@ import java.time.LocalDateTime;
 /**
  * soft_config 软件配置表
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 @Data
 @TableName("soft_config")
 public class SoftConfig implements Serializable {
 
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
 
     /** config_id - 主键ID */
     @TableId(type = IdType.ASSIGN_ID)
+    /** 配置ID */
     private String configId;
 
     /** config_software_id - 软件ID */
+    /** 配置softwareID */
     private String configSoftwareId;
 
     /** config_user_id - 用户ID */
+    /** 配置用户ID */
     private String configUserId;
 
     /** config_device_id - 设备ID */
+    /** 配置deviceID */
     private String configDeviceId;
 
     /** config_key - 配置键 */
+    /** 配置密钥 */
     private String configKey;
 
     /** config_value - 配置值 */
+    /** 配置值 */
     private String configValue;
 
     /** config_type - 配置类型: string/number/boolean/json/array */
+    /** 配置类型 */
     private String configType;
 
     /** config_label - 配置标签 */
+    /** 配置标签 */
     private String configLabel;
 
     /** config_description - 配置描述 */
+    /** 配置描述 */
     private String configDescription;
 
     /** config_group - 配置分组 */
+    /** 配置分组 */
     private String configGroup;
 
     /** config_sort - 排序 */
+    /** 配置sort */
     private Integer configSort;
 
     /** config_is_visible - 是否可见 */
+    /** 配置ISvisible */
     private Boolean configIsVisible;
 
     /** config_is_editable - 是否可编辑 */
+    /** 配置ISeditable */
     private Boolean configIsEditable;
 
     /** config_default_value - 默认值 */
+    /** 配置默认值 */
     private String configDefaultValue;
 
     /** config_range - 取值范围JSON */
+    /** 配置range */
     private String configRange;
 
     /** config_extra - 扩展信息JSON */
+    /** 配置extra */
     private String configExtra;
 
     /** config_create_time - 创建时间 */
     @TableField(fill = FieldFill.INSERT)
+    /** 配置create时间 */
     private LocalDateTime configCreateTime;
 
     /** config_update_time - 更新时间 */
     @TableField(fill = FieldFill.INSERT_UPDATE)
+    /** 配置update时间 */
     private LocalDateTime configUpdateTime;
 
     /** config_create_by - 创建人 */
+    /** 配置createBY */
     private String configCreateBy;
 
     /** config_update_by - 更新人 */
+    /** 配置updateBY */
     private String configUpdateBy;
 
     public String getConfigId() {

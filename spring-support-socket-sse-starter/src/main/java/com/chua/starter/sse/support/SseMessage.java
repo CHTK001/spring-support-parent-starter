@@ -24,6 +24,7 @@ public class SseMessage {
      * 事件
      */
     @Builder.Default
+    /** 事件 */
     private String event = "message";
     /**
      * 状态

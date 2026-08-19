@@ -12,8 +12,8 @@ import org.springframework.beans.factory.config.ConfigurableBeanFactory;
  * 配置 {@code plugin.queue.type=kafka} 激活对应实现。
  * </p>
  *
- * @author CH
  * @since 4.0.0.43
+ * @author CH
  */
 public interface MessageDispatcherProvider {
 

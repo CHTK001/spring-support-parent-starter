@@ -7,6 +7,7 @@ import java.util.List;
 
 /**
  * 订单状态流转日志服务接口
+ * @author CH
  */
 public interface OrderStateLogService {
 
@@ -14,3 +15,4 @@ public interface OrderStateLogService {
 
     List<OrderStateLog> listByOrderId(Long orderId);
 }
+

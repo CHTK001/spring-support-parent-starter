@@ -12,8 +12,8 @@ import org.springframework.context.annotation.Bean;
  * <p>独立于 {@link SpiderAutoConfiguration} 存在，避免节点链路（节点-服务-Mapper-SqlSessionFactory）
  * 与 SqlSessionFactory 依赖 MetaObjectHandler Bean 之间形成循环依赖。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @AutoConfiguration
 @AutoConfigureAfter(name = "com.chua.starter.mybatis.MybatisPlusConfiguration")

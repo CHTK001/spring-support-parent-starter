@@ -29,8 +29,8 @@ import java.util.List;
  *
  * <p>提供爬虫定义的增删改查与启用列表查询，路径前缀 {@code /spider/definitions}。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Tag(name = "爬虫定义管理")
 @RestController

@@ -33,8 +33,8 @@ import java.util.concurrent.TimeUnit;
  * <p>每个厂商离线检测阈值不同（如海康/大华 60s、萤石 120s），无法统一休眠间隔，</p>
  * <p>因此采用每秒轮询 + 逐设备按各自阈值判断的方案。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Component

@@ -34,9 +34,9 @@ import java.util.Map;
  *         enable: true   # 默认 true
  * </pre>
  *
- * @author CH
  * @since 2024/12/08
  * @version 1.0.0
+ * @author CH
  */
 @Slf4j
 @Configuration

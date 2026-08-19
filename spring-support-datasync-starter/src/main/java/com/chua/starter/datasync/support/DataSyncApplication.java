@@ -32,8 +32,8 @@ import javax.sql.DataSource;
  *
  * <p>启动嵌入式 H2 并加载表结构，验证映射加载与 DataSyncServer 启动。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class, DataSourceInspect.class})
 @Import(DataSyncAutoConfiguration.class)

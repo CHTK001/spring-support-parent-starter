@@ -15,8 +15,8 @@ import java.util.List;
  * <p>支持对象池: 通过 {@code pool(Number)} 调整池大小, 默认单例模式 (即 {@code pool(1)})。
  * pool 能力继承自 {@link com.chua.common.support.pool.PooledObjectClient}。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface ChatClient extends com.chua.common.support.ai.chat.ChatClient {
 

@@ -19,9 +19,9 @@ import java.util.Set;
  * 配置 URL QPS 拦截器
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2025/01/17
+ * @author CH
  */
 @Slf4j
 @Configuration
@@ -29,6 +29,7 @@ import java.util.Set;
 @ConditionalOnProperty(prefix = ReportProperties.PRE + ".url-qps", name = "enabled", havingValue = "true", matchIfMissing = false)
 public class UrlQpsConfiguration implements WebMvcConfigurer {
 
+    /** Report属性 */
     private final ReportProperties reportProperties;
 
     @Override

@@ -23,8 +23,8 @@ import java.util.List;
  * {@link Job} 注解扫描器, 负责注册本地任务处理器, 并在单例初始化完成后
  * 将扫描到的任务定义同步到 {@link JobRepository} (MyBatis/InMemory)。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializingSingleton, ApplicationContextAware {

@@ -10,15 +10,16 @@ import java.time.format.DateTimeFormatter;
  * <p>在 handler 执行期间通过 {@link #log(String)} 收集日志文本,
  * 执行完成后由 {@link JobExecutor} 提取并随 {@link JobLogEvent} 上行到 SCHEDULER。</p>
  *
- * @author CH
  * @since 4.0.0.42
  */
 public final class JobLogHelper {
 
+    /** Time_fmt */
     private static final DateTimeFormatter TIME_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
                     .withZone(ZoneId.systemDefault());
 
+    /** Log_buffer */
     private static final ThreadLocal<StringBuilder> LOG_BUFFER = new ThreadLocal<>();
 
     private JobLogHelper() {

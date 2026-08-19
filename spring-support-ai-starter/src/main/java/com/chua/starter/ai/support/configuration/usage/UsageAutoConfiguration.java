@@ -22,8 +22,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 /**
  * AI 用量模块自动配置
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @AutoConfiguration
 @EnableAsync

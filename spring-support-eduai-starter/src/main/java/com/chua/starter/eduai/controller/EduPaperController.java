@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 试卷管理控制器
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "试卷管理")
 public class EduPaperController {
 
+    /** Paper服务 */
     private final IEduPaperService paperService;
 
     /**

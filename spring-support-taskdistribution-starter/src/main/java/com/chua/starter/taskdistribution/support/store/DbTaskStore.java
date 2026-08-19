@@ -25,8 +25,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>基于 MyBatis-Plus 将任务持久化到数据库，支持应用重启后自动恢复。
  * 表结构：{@code sys_task_store}（taskId / taskType / taskStatus / taskJson / resultJson）。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class DbTaskStore implements TaskStore {

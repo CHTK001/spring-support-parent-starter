@@ -12,8 +12,8 @@ import java.util.Map;
  * 记录消息的完整生命周期信息，用于审计和问题排查
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @Data
 public class MessageAuditLog {

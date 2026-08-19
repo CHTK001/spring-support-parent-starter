@@ -5,7 +5,7 @@ import com.chua.starter.monitor.support.entity.MsMonitorMetricDisk;
 /**
  * 磁盘指标 Mapper
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 public interface MsMonitorMetricDiskMapper extends BaseMapper<MsMonitorMetricDisk> {}

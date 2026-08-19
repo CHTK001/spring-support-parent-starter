@@ -21,8 +21,8 @@ import java.util.List;
  * 提供消息提供商与消息模板的管理能力，以及统一的消息发送能力。
  * </p>
  *
- * @author CH
  * @since 2026/08/03
+ * @author CH
  */
 public interface SysMessageService {
 

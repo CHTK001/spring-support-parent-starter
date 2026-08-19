@@ -10,9 +10,9 @@ import java.util.concurrent.CompletableFuture;
  * 提供统一的消息队列操作API，支持MQTT、Kafka、RabbitMQ、RocketMQ等实现。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2025-12-25
+ * @author CH
  */
 public interface MessageTemplate {
 

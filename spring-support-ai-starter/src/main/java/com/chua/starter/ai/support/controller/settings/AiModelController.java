@@ -30,6 +30,7 @@ import java.util.List;
 @Tag(name = "AI 设置 - 模型定义")
 public class AiModelController {
 
+    /** 模型服务 */
     private final AiModelService modelService;
 
     @Permission("admin")

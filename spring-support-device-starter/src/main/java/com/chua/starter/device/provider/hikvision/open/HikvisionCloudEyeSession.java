@@ -19,8 +19,8 @@ import java.util.Map;
  *   <li>本类提供签名 + HTTP 调用框架，具体 endpoint 与字段以官方文档为准</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class HikvisionCloudEyeSession extends AbstractOpenApiSession {

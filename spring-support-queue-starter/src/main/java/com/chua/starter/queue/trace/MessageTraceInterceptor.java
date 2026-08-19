@@ -15,8 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * 自动记录消息的链路追踪信息
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @Slf4j
 @Component

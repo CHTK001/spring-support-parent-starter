@@ -22,6 +22,7 @@ public class SysAiGroupModel {
      * 主键
      */
     @TableId(type = IdType.AUTO)
+    /** SYSAI分组模型ID */
     private Integer sysAiGroupModelId;
 
     /**
@@ -38,6 +39,7 @@ public class SysAiGroupModel {
      * 创建时间
      */
     @TableField(fill = FieldFill.INSERT)
+    /** Create时间 */
     private LocalDateTime createTime;
 }
 

@@ -13,8 +13,8 @@ import java.math.BigDecimal;
  * <p>各配置消费者（GlobalPanel、RAG、ChatClient、用量任务）统一通过本工具读取
  * 指定分组的键值配置，避免重复手写字符串解析。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Component

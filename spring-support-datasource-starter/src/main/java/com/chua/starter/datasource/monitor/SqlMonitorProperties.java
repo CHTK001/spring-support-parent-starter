@@ -16,8 +16,8 @@ import static com.chua.starter.datasource.monitor.SqlMonitorProperties.PRE;
  *
  * <p>纯 JDBC 层 SQL 监听，数据源无关，不依赖 druid/p6spy/mybatis。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = PRE)

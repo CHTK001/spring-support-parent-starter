@@ -441,5 +441,3 @@ public class RagController {
     }
 }
 
-
-

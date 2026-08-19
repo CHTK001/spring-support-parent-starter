@@ -13,8 +13,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * 统计RPC调用的性能指标
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @Slf4j
 @Component
@@ -24,6 +24,7 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
     private final ConcurrentHashMap<String, AtomicLong> successCounters = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, AtomicLong> failureCounters = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, AtomicLong> totalDurations = new ConcurrentHashMap<>();
+    /** 开始times */
     private final ThreadLocal<Long> startTimes = new ThreadLocal<>();
 
     @Override

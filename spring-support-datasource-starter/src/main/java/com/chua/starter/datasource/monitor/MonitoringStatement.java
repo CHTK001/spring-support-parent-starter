@@ -17,8 +17,8 @@ import java.sql.Statement;
  * executeLargeUpdate/executeBatch 等执行方法计时并上报到 {@link DataSourceSqlMonitor}。
  * 其余方法全部透传，包括批量添加、参数设置等，保证 SQL 语义不变。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class MonitoringStatement implements InvocationHandler {

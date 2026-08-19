@@ -28,8 +28,8 @@ import com.chua.common.support.spi.annotations.Spi;
  * └──────────────────┘ └──────────────────┘ └──────────────────┘
  * </pre>
  *
- * @author CH
  * @since 1.0.0
+ * @author CH
  */
 @Spi("WEB")
 public interface UserInfoService {

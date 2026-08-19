@@ -10,8 +10,8 @@ import java.util.List;
  *
  * <p>定义软件源的标准操作能力，由具体源实现（如包管理器、第三方仓库、本地文件）实现该接口。</p>
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 public interface SoftwareSource {
 

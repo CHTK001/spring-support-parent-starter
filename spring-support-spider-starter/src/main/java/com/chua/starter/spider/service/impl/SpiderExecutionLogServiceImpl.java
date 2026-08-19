@@ -27,8 +27,8 @@ import java.util.Map;
  * MIN(start_at)/MAX(end_at) 与 SUM(status) 规则推导每条执行的起止时间与最终状态，
  * 分页结果不含节点级明细，仅返回概要记录。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Service
 public class SpiderExecutionLogServiceImpl

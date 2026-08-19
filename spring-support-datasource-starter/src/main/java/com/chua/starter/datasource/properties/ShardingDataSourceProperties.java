@@ -26,8 +26,8 @@ import java.util.List;
  *         - db_user
  * </pre>
  *
- * @author CH
  * @since 2024/12/21
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = "spring.datasource.sharding")

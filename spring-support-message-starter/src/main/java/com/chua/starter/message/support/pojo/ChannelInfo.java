@@ -13,8 +13,8 @@ package com.chua.starter.message.support.pojo;
  * @param type         渠道类型（如 EMAIL/SMS/STATION/DINGDING/FEISHU/DESKTOP）
  * @param desc         渠道功能描述
  * @param capabilities 渠道支持的能力/类型列表
- * @author CH
  * @since 2026/08/03
+ * @author CH
  */
 public record ChannelInfo(
         String channel,

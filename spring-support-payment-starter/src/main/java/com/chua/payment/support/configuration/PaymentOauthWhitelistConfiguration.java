@@ -13,12 +13,14 @@ import java.util.List;
 
 /**
  * 将支付异步通知接口加入 OAuth 客户端白名单
+ * @author CH
  */
 @Slf4j
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnClass(name = "com.chua.starter.oauth.client.support.properties.AuthClientProperties")
 public class PaymentOauthWhitelistConfiguration {
 
+    /** Payment_notify_whitelist_patterns */
     private static final List<String> PAYMENT_NOTIFY_WHITELIST_PATTERNS = List.of(
             "/api/notify/**"
     );
@@ -54,3 +56,4 @@ public class PaymentOauthWhitelistConfiguration {
         };
     }
 }
+

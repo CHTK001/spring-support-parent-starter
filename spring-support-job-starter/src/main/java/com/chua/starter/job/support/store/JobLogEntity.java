@@ -19,8 +19,8 @@ import java.util.Date;
  * <p>字段以表名 {@code sys_job_log} 作为前缀; 审计字段来自 {@link SysBase}。
  * 跨数据库 SQL 见 {@code V1.0__init_job.sql}。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -31,119 +31,139 @@ public class JobLogEntity extends SysBase implements Serializable {
      * 序列化版本
      */
     @Serial
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
      * 日志 ID
      */
     @TableId(value = "sys_job_log_id", type = IdType.ASSIGN_ID)
+    /** SYS作业日志ID */
     private Long sysJobLogId;
 
     /**
      * 日志编号 (业务唯一)
      */
     @TableField("sys_job_log_no")
+    /** SYS作业日志NO */
     private String sysJobLogNo;
 
     /**
      * 任务 ID
      */
     @TableField("sys_job_id")
+    /** SYS作业ID */
     private Long sysJobId;
 
     /**
      * 任务编号
      */
     @TableField("sys_job_no")
+    /** SYS作业NO */
     private String sysJobNo;
 
     /**
      * 触发应用 (local / executor / remote)
      */
     @TableField("sys_job_log_app")
+    /** SYS作业日志APP */
     private String sysJobLogApp;
 
     /**
      * handler 名称
      */
     @TableField("sys_job_log_trigger_bean")
+    /** SYS作业日志triggerbean */
     private String sysJobLogTriggerBean;
 
     /**
      * 触发类型 (CRON / MANUAL / API / RETRY / MISFIRE)
      */
     @TableField("sys_job_log_trigger_type")
+    /** SYS作业日志trigger类型 */
     private String sysJobLogTriggerType;
 
     /**
      * 触发时所属 profile
      */
     @TableField("sys_job_log_profile")
+    /** SYS作业日志配置文件 */
     private String sysJobLogProfile;
 
     /**
      * 触发时间
      */
     @TableField("sys_job_log_trigger_time")
+    /** SYS作业日志trigger时间 */
     private Date sysJobLogTriggerTime;
 
     /**
      * 触发日期
      */
     @TableField("sys_job_log_trigger_date")
+    /** SYS作业日志trigger日期 */
     private Date sysJobLogTriggerDate;
 
     /**
      * 触发状态码
      */
     @TableField("sys_job_log_trigger_code")
+    /** SYS作业日志trigger代码 */
     private String sysJobLogTriggerCode;
 
     /**
      * 执行状态码 (PADDING / SUCCESS / FAILURE / SKIPPED)
      */
     @TableField("sys_job_log_execute_code")
+    /** SYS作业日志execute代码 */
     private String sysJobLogExecuteCode;
 
     /**
      * 执行耗时 (毫秒)
      */
     @TableField("sys_job_log_cost")
+    /** SYS作业日志cost */
     private BigDecimal sysJobLogCost;
 
     /**
      * 触发消息
      */
     @TableField("sys_job_log_trigger_msg")
+    /** SYS作业日志triggerMSG */
     private String sysJobLogTriggerMsg;
 
     /**
      * 触发参数
      */
     @TableField("sys_job_log_trigger_param")
+    /** SYS作业日志trigger参数 */
     private String sysJobLogTriggerParam;
 
     /**
      * 触发地址
      */
     @TableField("sys_job_log_trigger_address")
+    /** SYS作业日志trigger地址 */
     private String sysJobLogTriggerAddress;
 
     /**
      * 来源节点 ID
      */
     @TableField("sys_job_log_node_id")
+    /** SYS作业日志节点ID */
     private String sysJobLogNodeId;
 
     /**
      * 日志文件路径
      */
     @TableField("sys_job_log_file_path")
+    /** SYS作业日志文件路径 */
     private String sysJobLogFilePath;
 
     /**
      * 逻辑删除标记
      */
     @TableField("sys_job_log_is_deleted")
+    /** SYS作业日志IS删除标记 */
     private Integer sysJobLogIsDeleted;
 }

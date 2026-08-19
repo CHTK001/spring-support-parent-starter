@@ -39,8 +39,8 @@ import java.util.stream.Collectors;
 /**
  * 软件信息表 Service 实现
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 @Service
 @RequiredArgsConstructor
@@ -66,6 +66,7 @@ public class SoftSoftwareServiceImpl extends ServiceImpl<SoftSoftwareMapper, Sof
      */
     private final List<SoftwareSource> softwareSources;
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SoftSoftwareServiceImpl.class);
 
     /**

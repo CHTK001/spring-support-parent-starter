@@ -7,8 +7,8 @@ import java.util.List;
 /**
  * AI组卷请求DTO
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class PaperGenerateDTO {
@@ -73,8 +73,11 @@ public class PaperGenerateDTO {
      */
     @Data
     public static class QuestionTypeConfig {
+        /** 类型 */
         private String type;
+        /** 数量 */
         private Integer count;
+        /** 分数PERquestion */
         private Integer scorePerQuestion;
     }
 }

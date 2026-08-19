@@ -8,8 +8,8 @@ import org.springframework.stereotype.Service;
 /**
  * 采集数据记录服务实现。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Service
 public class SpiderDataRecordServiceImpl

@@ -38,8 +38,8 @@ import java.util.stream.Collectors;
  *   <li>splitters — 文本切片策略（TextSplitterProvider SPI）</li>
  * </ul>
  *
- * @author CH
  * @since 2026-08-05
+ * @author CH
  */
 @Slf4j
 @RestController

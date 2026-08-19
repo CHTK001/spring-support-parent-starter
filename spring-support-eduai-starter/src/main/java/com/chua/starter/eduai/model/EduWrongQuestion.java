@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
 /**
  * 错题记录实体
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("edu_wrong_question")
@@ -21,6 +21,7 @@ public class EduWrongQuestion {
      * 错题记录ID
      */
     @TableId(type = IdType.AUTO)
+    /** WrongquestionID */
     private Long wrongQuestionId;
 
     /**

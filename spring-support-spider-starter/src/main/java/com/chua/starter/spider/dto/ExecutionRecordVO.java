@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
  * <p>按 execution_no 聚合一次执行的开始/结束/状态等概要信息，
  * 用于执行历史分页与状态展示。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class ExecutionRecordVO {

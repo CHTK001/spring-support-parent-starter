@@ -9,8 +9,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * <p>连接真实 MySQL（172.16.0.40）运行，可直接执行
  * {@code mvn spring-boot:run} 启动，用于真实环境联调与前端测试。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @SpringBootApplication
 public class SpiderApplication {

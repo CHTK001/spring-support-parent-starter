@@ -15,6 +15,7 @@ import java.util.List;
 
 /**
  * 回调异常处理定时任务
+ * @author CH
  */
 @Slf4j
 @Component
@@ -22,7 +23,9 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class PaymentNotifyRetryTask implements PaymentManagedTask {
 
+    /** Notify错误mapper */
     private final PaymentNotifyErrorMapper notifyErrorMapper;
+    /** Notifyprocess服务 */
     private final PaymentNotifyProcessService notifyProcessService;
 
     public void retryFailedNotifies() {
@@ -83,3 +86,4 @@ public class PaymentNotifyRetryTask implements PaymentManagedTask {
         retryFailedNotifies();
     }
 }
+

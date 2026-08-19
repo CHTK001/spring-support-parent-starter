@@ -19,8 +19,8 @@ import java.sql.Statement;
  * <p>若底层连接本身已是代理（如 Seata ConnectionProxy），内部再创建 Statement 时
  * {@link MonitoringStatement} 透传包装的 statement，监控层位于最外层，功能不受影响。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class MonitoringConnection implements InvocationHandler {

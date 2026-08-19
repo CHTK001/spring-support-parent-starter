@@ -16,8 +16,8 @@ import org.springframework.stereotype.Component;
  *
  * <p>延迟到 {@code SmartLifecycle} 启动之后, 避免 controller 中 Swagger 注解尚未扫描完成。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Component
@@ -25,7 +25,9 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(prefix = "chua.swagger.export", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class SwaggerExportRunner implements CommandLineRunner {
 
+    /** OpenAPI */
     private final OpenAPI openAPI;
+    /** 属性 */
     private final SwaggerExportProperties properties;
 
     public SwaggerExportRunner(org.springframework.beans.factory.ObjectProvider<OpenAPI> openAPIProvider,

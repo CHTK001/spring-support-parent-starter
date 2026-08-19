@@ -32,6 +32,7 @@ import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_
 /**
  * 静态协议实现类，用于处理静态认证逻辑。
  * 该类通过 TokenCipher（SM4加密）解析token或cookie中的用户信息，并构建认证信息。
+ * @author CH
  */
 @Slf4j
 @Spi({"Static"})
@@ -238,3 +239,4 @@ public class StaticProtocol extends AbstractProtocol {
         return null;
     }
 }
+

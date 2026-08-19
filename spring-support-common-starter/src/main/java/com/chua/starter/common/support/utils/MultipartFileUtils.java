@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 /**
  * 处理多部分文件（MultipartFile）工具类，提供文件上传和转换功能。
+ * @author CH
  */
 public class MultipartFileUtils {
     /**
@@ -149,3 +150,4 @@ public class MultipartFileUtils {
         }
     }
 }
+

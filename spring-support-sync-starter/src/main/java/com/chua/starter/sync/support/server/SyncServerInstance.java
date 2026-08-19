@@ -27,20 +27,28 @@ import java.util.function.BiConsumer;
  *
  * <p>封装 {@link SyncServer} 的运行实例，管理连接、消息分发和客户端信息。</p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/12/05
+ * @author CH
  */
 public class SyncServerInstance {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SyncServerInstance.class);
 
+    /** Topic_health */
     public static final String TOPIC_HEALTH = "sync/health";
+    /** Topic_response */
     public static final String TOPIC_RESPONSE = "sync/response";
+    /** Topic_connect */
     public static final String TOPIC_CONNECT = "sync/connect";
+    /** Topic_disconnect */
     public static final String TOPIC_DISCONNECT = "sync/disconnect";
+    /** Topic_client_register */
     public static final String TOPIC_CLIENT_REGISTER = "sync/client/register";
+    /** Topic_client_heartbeat */
     public static final String TOPIC_CLIENT_HEARTBEAT = "sync/client/heartbeat";
+    /** Topic_client_offline */
     public static final String TOPIC_CLIENT_OFFLINE = "sync/client/offline";
 
     /**
@@ -52,10 +60,13 @@ public class SyncServerInstance {
      */
     public static final String SYNC_MESSAGE_SOURCE_CLIENT_ID = "__syncClientId__";
 
+    /** 实例配置 */
     private final SyncProperties.ServerInstance instanceConfig;
 
+    /** 同步属性 */
     private final SyncProperties syncProperties;
 
+    /** 同步服务器 */
     private SyncServer syncServer;
 
     private final Map<String, List<SyncMessageHandler>> handlerMap = new ConcurrentHashMap<>();
@@ -68,6 +79,7 @@ public class SyncServerInstance {
 
     private volatile boolean running = false;
 
+    /** Listenersattached */
     private boolean listenersAttached = false;
 
     public SyncServerInstance(SyncProperties.ServerInstance instanceConfig, SyncProperties syncProperties) {

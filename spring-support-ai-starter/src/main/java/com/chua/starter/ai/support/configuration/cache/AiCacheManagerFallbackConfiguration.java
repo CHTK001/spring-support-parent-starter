@@ -16,8 +16,8 @@ import org.springframework.context.annotation.Bean;
  * <p>当主缓存管理器不可用时（如 Redis 未连接），自动降级为本地 Caffeine 缓存，
  * 确保 AI 模块的缓存功能始终保持可用。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @AutoConfiguration

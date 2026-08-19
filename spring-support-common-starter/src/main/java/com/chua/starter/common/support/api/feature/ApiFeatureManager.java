@@ -17,12 +17,13 @@ import org.slf4j.LoggerFactory;
  * 管理所有 @ApiFeature 注解标记的功能开关状态，支持运行时动态切换。
  * </p>
  *
- * @author CH
  * @since 2024/12/08
  * @version 1.0.0
+ * @author CH
  */
 @Component
 public class ApiFeatureManager {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiFeatureManager.class);
         /**
      * 功能开关状态缓存

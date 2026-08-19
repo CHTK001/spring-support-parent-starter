@@ -7,8 +7,8 @@ import java.util.Date;
 /**
  * 系统日志
  *
- * @author CH
  * @since 2023-04-01
+ * @author CH
  */
 public class SysLoggerInfo extends ApplicationEvent {
     /**

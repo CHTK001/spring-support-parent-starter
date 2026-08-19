@@ -8,8 +8,8 @@ import java.util.Map;
 /**
  * OpenAI 兼容对话请求模型。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class OpenAiChatRequest {

@@ -3,8 +3,8 @@ package com.chua.starter.ai.support.chat;
 /**
  * 对话消息。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class ChatMessage {
 

@@ -3,8 +3,8 @@ package com.chua.common.support.ai;
 /**
  * 本地模块定义（编码、名称、描述、类型与启用标志）。
  *
- * @author CH
  * @since 4.0.0
+ * @author CH
  */
 public class LocalModuleDefinition {
 

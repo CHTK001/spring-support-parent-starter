@@ -11,8 +11,8 @@ import com.chua.common.support.network.sync.impl.WebSocketSyncClient;
  * 启动双端通信，验证功能正确性。
  * </p>
  *
- * @author CH
  * @since 2026/07/31
+ * @author CH
  */
 public class SyncApplication {
 

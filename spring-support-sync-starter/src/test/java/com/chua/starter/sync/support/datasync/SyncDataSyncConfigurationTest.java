@@ -12,8 +12,8 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * DataSync 桥接配置单元测试
  *
- * @author CH
  * @since 2026/01/15
+ * @author CH
  */
 public class SyncDataSyncConfigurationTest {
 

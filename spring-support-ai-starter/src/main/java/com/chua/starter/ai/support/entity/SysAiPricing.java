@@ -12,8 +12,8 @@ import java.time.LocalDateTime;
 /**
  * AI 定价表（官方价格）
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("sys_ai_pricing")
@@ -23,6 +23,7 @@ public class SysAiPricing {
      * 主键ID
      */
     @TableId(type = IdType.AUTO)
+    /** ID */
     private Long id;
 
     /**
@@ -64,12 +65,14 @@ public class SysAiPricing {
      * 创建时间
      */
     @TableField(fill = FieldFill.INSERT)
+    /** Create时间 */
     private LocalDateTime createTime;
 
     /**
      * 更新时间
      */
     @TableField(fill = FieldFill.INSERT_UPDATE)
+    /** Update时间 */
     private LocalDateTime updateTime;
 }
 

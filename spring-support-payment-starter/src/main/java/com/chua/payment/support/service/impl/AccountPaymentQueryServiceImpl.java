@@ -23,15 +23,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+/** @author CH */
 
 @Service
 @RequiredArgsConstructor
 public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryService {
 
+    /** Payment排序mapper */
     private final PaymentOrderMapper paymentOrderMapper;
+    /** Transactionrecordmapper */
     private final TransactionRecordMapper transactionRecordMapper;
+    /** 排序状态日志服务 */
     private final OrderStateLogService orderStateLogService;
+    /** Merchantmapper */
     private final MerchantMapper merchantMapper;
+    /** Merchant通道mapper */
     private final MerchantChannelMapper merchantChannelMapper;
 
     @Override
@@ -113,3 +119,4 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
         return vo;
     }
 }
+

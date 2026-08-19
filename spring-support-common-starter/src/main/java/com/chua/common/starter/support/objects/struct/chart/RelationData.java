@@ -12,9 +12,11 @@ import java.util.List;
 public class RelationData implements Serializable {
 
     /** 节点集合 */
+    /** Nodes */
     private List<Node> nodes = new ArrayList<>();
 
     /** 连线集合 */
+    /** Links */
     private List<Link> links = new ArrayList<>();
 
     public List<Node> getNodes() {
@@ -36,10 +38,11 @@ public class RelationData implements Serializable {
     /**
      * 节点
      *
-     * @author CH
      */
     public static class Node implements Serializable {
+        /** ID */
         private String id;
+        /** 名称 */
         private String name;
 
         public Node(String id, String name) {
@@ -67,10 +70,11 @@ public class RelationData implements Serializable {
     /**
      * 连线
      *
-     * @author CH
      */
     public static class Link implements Serializable {
+        /** 来源 */
         private String source;
+        /** 目标 */
         private String target;
 
         public Link(String source, String target) {

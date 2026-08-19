@@ -42,8 +42,8 @@ import java.util.stream.Collectors;
  *   <li>聚合上次执行时间点至当前时间内的用量明细数据到日汇总表</li>
  * </ol>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Component

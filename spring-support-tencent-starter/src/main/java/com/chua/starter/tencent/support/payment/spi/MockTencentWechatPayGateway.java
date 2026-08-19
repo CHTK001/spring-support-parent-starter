@@ -24,10 +24,12 @@ import java.util.Map;
 
 /**
  * 微信支付 mock SPI，实现本地联调与前后端演示。
+ * @author CH
  */
 @Spi({"mock", "wechat-mock"})
 public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
 
+    /** Objectmapper */
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -324,3 +326,4 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
         return null;
     }
 }
+

@@ -6,13 +6,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * 文件系统分片上传配置
  *
- * @author CH
  * @since 1.0
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = FileStorageUploadProperties.PREFIX)
 public class FileStorageUploadProperties {
 
+    /** Prefix */
     public static final String PREFIX = "plugin.filesystem.upload";
 
     /**

@@ -12,10 +12,14 @@ import net.sf.jsqlparser.schema.Table;
  * @author CH
  */
 public class WhereDeptChecker {
+    /** Where */
     private final Expression where;
+    /** 表别名 */
     private final String tableAlias;
+    /** 列名称 */
     private final String columnName;
     @Getter
+    /** 当前表 */
     private Table currentTable;
 
     public WhereDeptChecker(Expression where, String tableAlias, String columnName) {

@@ -8,8 +8,8 @@ import com.chua.starter.spider.entity.SpiderExecutionLog;
  *
  * <p>继承 {@link BaseMapperX} 获得 MyBatis-Plus 通用 CRUD 与分页能力。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface SpiderExecutionLogMapper extends BaseMapperX<SpiderExecutionLog> {
 }

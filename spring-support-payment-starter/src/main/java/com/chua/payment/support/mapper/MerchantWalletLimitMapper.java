@@ -6,7 +6,9 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * 商户钱包限额Mapper
+ * @author CH
  */
 @Mapper
 public interface MerchantWalletLimitMapper extends BaseMapper<MerchantWalletLimit> {
 }
+

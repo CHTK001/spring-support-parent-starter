@@ -26,8 +26,8 @@ import java.util.Set;
 /**
  * 软件管理接口
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 @Tag(name = "软件管理接口")
 @RestController
@@ -35,6 +35,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class SoftSoftwareController {
 
+    /** Softsoftware服务 */
     private final SoftSoftwareService softSoftwareService;
 
     @Operation(summary = "软件列表")

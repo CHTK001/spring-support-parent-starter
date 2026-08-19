@@ -10,67 +10,89 @@ import java.time.LocalDateTime;
 
 /**
  * 回调异常记录
+ * @author CH
  */
 @Data
 @TableName("pay_notify_error")
 public class PaymentNotifyError {
     @TableId(value = "pay_notify_error_id", type = IdType.AUTO)
+    /** ID */
     private Long id;
 
     @TableField("pay_notify_error_notify_log_id")
+    /** Notify日志ID */
     private Long notifyLogId;
 
     @TableField("pay_notify_error_notify_type")
+    /** Notify类型 */
     private String notifyType;
 
     @TableField("pay_notify_error_tenant_id")
+    /** TenantID */
     private Long tenantId;
 
     @TableField("pay_notify_error_merchant_id")
+    /** MerchantID */
     private Long merchantId;
 
     @TableField("pay_notify_error_order_no")
+    /** 排序NO */
     private String orderNo;
 
     @TableField("pay_notify_error_refund_no")
+    /** RefundNO */
     private String refundNo;
 
     @TableField("pay_notify_error_error_type")
+    /** 错误类型 */
     private String errorType;
 
     @TableField("pay_notify_error_error_message")
+    /** 错误消息 */
     private String errorMessage;
 
     @TableField("pay_notify_error_error_stack")
+    /** 错误栈 */
     private String errorStack;
 
     @TableField("pay_notify_error_request_data")
+    /** 请求数据 */
     private String requestData;
 
     @TableField("pay_notify_error_retry_count")
+    /** 重试数量 */
     private Integer retryCount;
 
     @TableField("pay_notify_error_max_retry_count")
+    /** 最大值重试数量 */
     private Integer maxRetryCount;
 
     @TableField("pay_notify_error_next_retry_time")
+    /** 下一个重试时间 */
     private LocalDateTime nextRetryTime;
 
     @TableField("pay_notify_error_status")
+    /** 状态 */
     private String status;
 
     @TableField("pay_notify_error_resolved_at")
+    /** ResolvedAT */
     private LocalDateTime resolvedAt;
 
     @TableField("pay_notify_error_resolved_by")
+    /** ResolvedBY */
     private String resolvedBy;
 
     @TableField("pay_notify_error_remark")
+    /** Remark */
     private String remark;
 
     @TableField("pay_notify_error_create_time")
+    /** Create时间 */
     private LocalDateTime createTime;
 
     @TableField("pay_notify_error_update_time")
+    /** Update时间 */
     private LocalDateTime updateTime;
 }
+

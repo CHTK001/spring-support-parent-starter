@@ -33,17 +33,24 @@ import java.util.Map;
 
 /**
  * 商户渠道服务实现
+ * @author CH
  */
 @Service
 @RequiredArgsConstructor
 public class MerchantChannelServiceImpl implements MerchantChannelService {
 
+    /** 通道mapper */
     private final MerchantChannelMapper channelMapper;
+    /** Merchantmapper */
     private final MerchantMapper merchantMapper;
+    /** Payment排序mapper */
     private final PaymentOrderMapper paymentOrderMapper;
+    /** Objectmapper */
     private final ObjectMapper objectMapper;
+    /** Payment加密服务 */
     private final PaymentCipherService paymentCipherService;
     @Lazy
+    /** Payment通道注册表 */
     private final PaymentChannelRegistry paymentChannelRegistry;
 
     @Override
@@ -499,3 +506,4 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         return channel;
     }
 }
+

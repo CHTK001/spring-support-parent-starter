@@ -46,8 +46,8 @@ import java.util.concurrent.CompletableFuture;
  *   <li>{@code GET /v2/v1/cc/switch/health} — 健康检查</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Tag(name = "AI OpenAI Protocol Controller", description = "OpenAI 标准协议接口与 CC Switch 控制接口")
 @RestController
@@ -620,7 +620,6 @@ public class AiOpenaiController extends BaseAiController {
     /**
      * OpenAI Chat Completions 请求体。
      *
-     * @author CH
      * @since 4.0.0.42
      */
     @Data
@@ -700,7 +699,6 @@ public class AiOpenaiController extends BaseAiController {
     /**
      * OpenAI 消息体。
      *
-     * @author CH
      * @since 4.0.0.42
      */
     @Data
@@ -725,7 +723,6 @@ public class AiOpenaiController extends BaseAiController {
     /**
      * OpenAI Completions（旧版）请求体。
      *
-     * @author CH
      * @since 4.0.0.42
      */
     @Data
@@ -800,7 +797,6 @@ public class AiOpenaiController extends BaseAiController {
     /**
      * CC Switch 切换请求体。
      *
-     * @author CH
      * @since 4.0.0.42
      */
     @Data
@@ -825,7 +821,6 @@ public class AiOpenaiController extends BaseAiController {
     /**
      * CC Switch 批量配置请求体。
      *
-     * @author CH
      * @since 4.0.0.42
      */
     @Data
@@ -840,7 +835,6 @@ public class AiOpenaiController extends BaseAiController {
     /**
      * 模型配置项。
      *
-     * @author CH
      * @since 4.0.0.42
      */
     @Data

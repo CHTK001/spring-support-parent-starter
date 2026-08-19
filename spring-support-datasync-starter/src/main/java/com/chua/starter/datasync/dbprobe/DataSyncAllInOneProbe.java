@@ -29,13 +29,15 @@ import java.util.concurrent.atomic.LongAdder;
 /**
  * 全能力标准测试：覆盖文件格式、转换器、边界、调度、多数据源。
  *
- * @author CH
  * @since 4.0.0.42
  */
 public final class DataSyncAllInOneProbe {
 
+    /** Work_dir */
     private static final Path WORK_DIR = Paths.get("target/all-in-one");
+    /** Pass */
     private final List<String> pass = new CopyOnWriteArrayList<>();
+    /** Fail */
     private final List<String> fail = new CopyOnWriteArrayList<>();
 
     public static void main(String[] args) throws Exception {
@@ -245,6 +247,7 @@ public final class DataSyncAllInOneProbe {
     record SimpleFieldMapping(String sourceField, String targetField, String converter) implements DataSyncFieldMapping {}
 
     static final class CollectSink implements DataSyncAgentSink {
+        /** SinkID */
         private final String sinkId;
         final List<Map<String, Object>> collected = new CopyOnWriteArrayList<>();
         final LongAdder total = new LongAdder();
@@ -257,6 +260,7 @@ public final class DataSyncAllInOneProbe {
     }
 
     static final class CountSink implements DataSyncAgentSink {
+        /** SinkID */
         private final String sinkId;
         volatile int rounds = 0; volatile long total = 0;
         CountSink(String sinkId) { this.sinkId = sinkId; }

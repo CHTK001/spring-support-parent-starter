@@ -51,30 +51,42 @@ import static org.springframework.util.ClassUtils.resolveClassName;
 /**
  * rpc资源注释配置
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/04/07
+ * @author CH
  */
 @ConditionalOnProperty(prefix = "plugin.rpc", name = "enable", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(RpcProperties.class)
 public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegistryPostProcessor, EnvironmentAware,
         ResourceLoaderAware, BeanClassLoaderAware, ApplicationContextAware, InitializingBean  {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(RpcServiceAnnotationBeanPostProcessor.class);
+    /** Resourceloader */
     private ResourceLoader resourceLoader;
+    /** 环境 */
     private Environment environment;
+    /** PackagesTOscan */
     private Set<String> packagesToScan;
+    /** 注册表 */
     private BeanDefinitionRegistry registry;
+    /** ResolvedpackagesTOscan */
     private Set<String> resolvedPackagesToScan;
+    /** Scanned */
     private boolean scanned;
     private final static List<Class<? extends Annotation>> SERVICE_ANNOTATION_TYPES = Lists.newArrayList(
             RpcService.class
     );
+    /** 服务packagesholder */
     private final ServicePackagesHolder servicePackagesHolder = ServicePackagesHolder.getInstance();
+    /** Application上下文 */
     private ApplicationContext applicationContext;
+    /** Classloader */
     private ClassLoader classLoader;
 
+    /** RPC属性 */
     private RpcProperties rpcProperties;
+    /** RPC服务器 */
     private RpcServer rpcServer;
 
 

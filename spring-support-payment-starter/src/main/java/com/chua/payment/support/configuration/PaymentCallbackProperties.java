@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * 支付回调地址配置
+ * @author CH
  */
 @Data
 @Component
@@ -17,3 +18,4 @@ public class PaymentCallbackProperties {
      */
     private String baseUrl;
 }
+

@@ -30,17 +30,20 @@ import java.util.Base64;
  * spring.datasource.password: ENC(uX5z1H+z5f3k8L9mW2qR4w==)
  * }</pre>
  *
- * @author CH
  * @since 2026/07/14
+ * @author CH
  */
 @Slf4j
 public class AesPasswordDecryptor implements PasswordDecryptor {
 
     /** AES 算法 */
+    /** Aes_algorithm */
     private static final String AES_ALGORITHM = "AES";
+    /** Cipher_transformation */
     private static final String CIPHER_TRANSFORMATION = "AES/ECB/PKCS5Padding";
 
     /** 默认密钥（32字节，用于没有配置密钥时的兼容） */
+    /** Default_secret_key */
     private static final byte[] DEFAULT_SECRET_KEY;
 
     static {
@@ -52,6 +55,7 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
         }
     }
 
+    /** Secret密钥 */
     private final byte[] secretKey;
 
     /**

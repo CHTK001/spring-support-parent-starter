@@ -33,8 +33,8 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
  * 基于 Spring Boot 原生 WebSocket，与应用同端口运行
  * </p>
  *
- * @author CH
  * @since 2025-12-25
+ * @author CH
  */
 @Slf4j
 @Configuration
@@ -43,12 +43,15 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 @ConditionalOnProperty(prefix = WebSocketProperties.PREFIX, name = "enable", havingValue = "true")
 public class WebSocketAutoConfiguration implements WebSocketConfigurer {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(WebSocketAutoConfiguration.class);
 
     @Autowired
+    /** 属性 */
     private WebSocketProperties properties;
 
     @Autowired(required = false)
+    /** Handlers */
     private List<WebSocketMessageHandler> handlers = Collections.emptyList();
 
     @Bean

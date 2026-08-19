@@ -35,16 +35,22 @@ import java.util.List;
  * 支付运营能力控制器。
  * 直接返回原始业务对象，由通用响应包装层统一输出 ReturnResult，
  * 避免这里再返回支付模块自己的 Result 造成双协议并存。
+ * @author CH
  */
 @RestController
 @RequestMapping("/ops")
 @ConditionalOnProperty(prefix = "plugin.payment.ops", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class PaymentOpsController {
 
+    /** Payment调度器任务OPS服务 */
     private final PaymentSchedulerTaskOpsService paymentSchedulerTaskOpsService;
+    /** Paymentdashboard服务 */
     private final PaymentDashboardService paymentDashboardService;
+    /** Paymentnotify日志mapper */
     private final PaymentNotifyLogMapper paymentNotifyLogMapper;
+    /** Paymentnotify错误mapper */
     private final PaymentNotifyErrorMapper paymentNotifyErrorMapper;
+    /** Paymentnotifyprocess服务 */
     private final PaymentNotifyProcessService paymentNotifyProcessService;
 
     public PaymentOpsController(PaymentSchedulerTaskOpsService paymentSchedulerTaskOpsService,
@@ -250,3 +256,4 @@ public class PaymentOpsController {
         return vo;
     }
 }
+

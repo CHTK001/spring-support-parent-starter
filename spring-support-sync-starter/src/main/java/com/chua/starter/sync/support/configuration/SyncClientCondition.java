@@ -10,9 +10,9 @@ import org.springframework.core.type.AnnotatedTypeMetadata;
  * 当 type 为 client 或 both，且 client.enable = true 时，条件成立
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/12/10
+ * @author CH
  */
 public class SyncClientCondition implements Condition {
 

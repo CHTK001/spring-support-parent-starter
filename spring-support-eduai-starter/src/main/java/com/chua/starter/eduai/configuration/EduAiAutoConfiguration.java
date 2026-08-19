@@ -16,7 +16,6 @@ import org.springframework.scheduling.annotation.EnableAsync;
  * 提供题库管理、AI组卷、AI阅卷、知识库、错题库等 AI 教学能力。
  * </p>
  *
- * @author CH
  * @since 4.0.0.42
  */
 @Slf4j

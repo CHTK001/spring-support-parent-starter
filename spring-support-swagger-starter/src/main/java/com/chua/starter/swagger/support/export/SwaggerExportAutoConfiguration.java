@@ -10,8 +10,8 @@ import org.springframework.context.annotation.Configuration;
  *
  * <p>启用 {@link SwaggerExportProperties} + {@link SwaggerExportRunner}。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnWebApplication

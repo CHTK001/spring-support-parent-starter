@@ -32,8 +32,8 @@ import java.util.Map;
  *   <li>{@code saveAs} 结果写入的上下文属性名（必填）</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Component
@@ -48,6 +48,7 @@ public class SpiderDbNode implements FlowNode {
      * 数据源
      */
     @Resource
+    /** 数据来源 */
     private DataSource dataSource;
 
     /**

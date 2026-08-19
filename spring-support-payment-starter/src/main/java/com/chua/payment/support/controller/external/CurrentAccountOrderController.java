@@ -14,14 +14,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+/** @author CH */
 
 @RestController
 @RequestMapping("/account")
 @RequiredArgsConstructor
 public class CurrentAccountOrderController {
 
+    /** Accountpaymentquery服务 */
     private final AccountPaymentQueryService accountPaymentQueryService;
+    /** Principal解析器 */
     private final PaymentAccountPrincipalResolver principalResolver;
+    /** Payment排序服务 */
     private final PaymentOrderService paymentOrderService;
 
     @GetMapping("/orders")
@@ -82,3 +86,4 @@ public class CurrentAccountOrderController {
         return Result.success(paymentOrderService.cancelOrder(id, "user", reason, true));
     }
 }
+

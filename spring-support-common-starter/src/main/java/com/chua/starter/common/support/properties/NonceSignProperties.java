@@ -11,17 +11,19 @@ import org.springframework.core.env.Environment;
  * 支持多路径解析：plugin.nonce.sign.secret-key、nonce.sign.secret-key、环境变量 PLUGIN_NONCE_SIGN_SECRET_KEY
  * </p>
  *
- * @author CH
  * @since 2025/01/15
+ * @author CH
  */
 @ConfigurationProperties(prefix = NonceSignProperties.PRE, ignoreInvalidFields = true)
 @Getter
 @Setter
 public class NonceSignProperties {
 
+    /** PRE */
     public static final String PRE = "plugin.nonce.sign";
 
     /** 备用前缀（解析失败时尝试） */
+    /** Pre_alt */
     public static final String PRE_ALT = "nonce.sign";
 
     /**
@@ -31,6 +33,7 @@ public class NonceSignProperties {
     public static final String DEFAULT_SECRET = "aP9xL3sV7mQ2zT5kB8nR1cY4wH6eD0fJ";
 
     /** 签名密钥，需与前端 getConfig().secretKey 一致 */
+    /** Secret密钥 */
     private String secretKey = DEFAULT_SECRET;
 
     /**

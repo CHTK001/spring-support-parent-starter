@@ -14,14 +14,15 @@ import java.time.LocalDateTime;
  * <p>独立建表的理由：不同教育机构对"学科"的口径不一致（小学 vs 高中，编程/通用技术等细分）。
  * 把学科作为本模块维度独立管理，避免与 {@code spring-support-common-starter} 的组织/字典冲突。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("edu_subject")
 public class EduSubject {
 
     @TableId(type = IdType.AUTO)
+    /** SubjectID */
     private Long subjectId;
 
     /**
@@ -50,8 +51,10 @@ public class EduSubject {
     private Integer subjectStatus;
 
     @TableField(value = "create_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT)
+    /** Create时间 */
     private LocalDateTime createTime;
 
     @TableField(value = "update_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT_UPDATE)
+    /** Update时间 */
     private LocalDateTime updateTime;
 }

@@ -30,8 +30,8 @@ import java.util.List;
  * <p>数据库（厂商/模型）变化时，调用 {@link #reloadClients()} 对聚合客户端执行增删，支持热更新，
  * 无需重启服务。启停通过 {@code protocol_server_enabled} 配置或 {@link #start()}/{@link #stop()} 控制。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Component

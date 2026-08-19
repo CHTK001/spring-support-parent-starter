@@ -11,12 +11,13 @@ import java.lang.management.ManagementFactory;
  * 用于在日志中输出当前进程ID。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/01/01
+ * @author CH
  */
 public class PidConverter extends ClassicConverter {
 
+    /** PID */
     private static final String PID = getPid();
 
     private static String getPid() {

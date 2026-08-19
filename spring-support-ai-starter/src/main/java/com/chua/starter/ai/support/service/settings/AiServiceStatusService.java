@@ -7,8 +7,8 @@ import java.util.List;
 /**
  * 聚合服务运行状态服务接口
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 public interface AiServiceStatusService {
 

@@ -9,8 +9,8 @@ import lombok.Getter;
  * 对应任务表 {@code ms_monitor_task.provider} 字段。
  * </p>
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Getter
 public enum ProviderType {

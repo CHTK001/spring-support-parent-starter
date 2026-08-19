@@ -11,13 +11,17 @@ import java.util.Set;
 
 /**
  * 支付 provider SPI 注册中心
+ * @author CH
  */
 @Component
 public class PaymentProviderGatewayRegistry {
 
+    /** Aliyun_alipay_gateway */
     private static final String ALIYUN_ALIPAY_GATEWAY = "com.chua.starter.aliyun.support.payment.AliyunAlipayGateway";
+    /** Tencent_wechat_pay_gateway */
     private static final String TENCENT_WECHAT_PAY_GATEWAY = "com.chua.starter.tencent.support.payment.TencentWechatPayGateway";
 
+    /** 属性 */
     private final PaymentProviderProperties properties;
 
     public PaymentProviderGatewayRegistry(PaymentProviderProperties properties) {
@@ -112,3 +116,4 @@ public class PaymentProviderGatewayRegistry {
         }
     }
 }
+

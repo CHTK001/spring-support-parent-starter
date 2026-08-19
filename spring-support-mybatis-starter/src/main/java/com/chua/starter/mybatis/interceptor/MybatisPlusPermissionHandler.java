@@ -29,10 +29,14 @@ import java.util.List;
  * @author CH
  */
 public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(MybatisPlusPermissionHandler.class);
 
+    /** Create_by */
     private static final String CREATE_BY = "rule_create_by";
+    /** Dept_id */
     private static final String DEPT_ID = "rule_dept_id";
+    /** No_data */
     public static final NotEqualsTo NO_DATA = new NotEqualsTo();
     static {
         NO_DATA.setLeftExpression(new LongValue(1));

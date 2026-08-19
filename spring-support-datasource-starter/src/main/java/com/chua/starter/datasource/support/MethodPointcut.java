@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Bean;
 public class MethodPointcut implements ApplicationContextAware {
 
 
+    /** Application上下文 */
     private ApplicationContext applicationContext;
 
     /**

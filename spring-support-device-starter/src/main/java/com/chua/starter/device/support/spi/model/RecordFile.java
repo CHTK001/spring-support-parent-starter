@@ -7,8 +7,8 @@ import java.time.LocalDateTime;
 /**
  * 录像文件信息
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class RecordFile {

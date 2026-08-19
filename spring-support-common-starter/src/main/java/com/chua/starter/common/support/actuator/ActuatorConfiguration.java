@@ -36,13 +36,14 @@ import org.slf4j.LoggerFactory;
  *       - /actuator/health
  * </pre>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/06/21
+ * @author CH
  */
 @ConditionalOnProperty(prefix = "plugin.actuator", name = "enable", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(ActuatorProperties.class)
 public class ActuatorConfiguration  {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ActuatorConfiguration.class);
     /**
      * 构造函数
@@ -53,6 +54,7 @@ public class ActuatorConfiguration  {
         this.actuatorProperties = actuatorProperties;
     }
 
+        /** Actuator属性 */
         private final ActuatorProperties actuatorProperties;
 
     /**

@@ -30,8 +30,8 @@ package com.chua.starter.datasync.support.spi;
  * }
  * }</pre>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface DynamicService {
 

@@ -8,8 +8,8 @@ import lombok.Data;
  * 用于表示时间序列数据点，包含时间戳和对应的值。
  * </p>
  *
- * @author CH
  * @since 2024/7/4
+ * @author CH
  */
 @Data
 public class TimeIndicator {

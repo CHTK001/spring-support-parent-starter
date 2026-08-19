@@ -28,11 +28,12 @@ import java.util.Enumeration;
  *
  * <p>推荐使用共享 {@link SqlSessionFactory} 方案，保持事务与连接池统一。</p>
  *
- * @author CH
  * @since 2026/01/15
+ * @author CH
  */
 @Spi("default")
 public class PluginMyBatisMapperRegistryImpl implements PluginMyBatisMapperRegistry {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(PluginMyBatisMapperRegistryImpl.class);
 
     /**

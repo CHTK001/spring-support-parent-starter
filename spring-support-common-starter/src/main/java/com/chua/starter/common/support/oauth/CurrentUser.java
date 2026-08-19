@@ -24,6 +24,7 @@ public class CurrentUser {
     }
 
 
+    /** ANY */
     private static final String ANY = "*";
     /**
      * unionId

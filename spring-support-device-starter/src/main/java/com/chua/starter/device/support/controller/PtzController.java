@@ -18,8 +18,8 @@ import java.util.List;
 /**
  * 云台控制 Controller
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @RestController
 @RequestMapping("/api/device/ptz")

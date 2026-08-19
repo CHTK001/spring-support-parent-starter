@@ -9,8 +9,8 @@ import org.springframework.context.annotation.Import;
 /**
  * 吞吐量压测专用单机 (SINGLE) 应用, 仅装配 {@link TpJobs}, 排除并发压测任务干扰。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @SpringBootApplication
 @Import({JobAutoConfiguration.class, TpJobs.class})

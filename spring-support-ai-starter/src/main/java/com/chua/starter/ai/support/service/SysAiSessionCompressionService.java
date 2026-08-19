@@ -7,8 +7,8 @@ import com.chua.starter.ai.support.entity.SysAiSessionCompression;
  *
  * <p>负责读写会话的压缩上下文，供聊天链路在「有上下文用上下文，没有用历史对话记录」时使用。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface SysAiSessionCompressionService {
 

@@ -21,15 +21,17 @@ import java.util.concurrent.ConcurrentHashMap;
  * 自动监听所有标注了@EventToQueue的ApplicationEvent，并将其发送到指定队列
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class ApplicationEventToQueueListener {
 
+    /** 消息templates */
     private final List<MessageTemplate> messageTemplates;
+    /** 队列属性 */
     private final QueueProperties queueProperties;
     private final Map<String, MessageTemplate> templateCache = new ConcurrentHashMap<>();
 

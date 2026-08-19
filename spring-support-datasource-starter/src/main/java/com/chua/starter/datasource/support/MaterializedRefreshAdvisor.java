@@ -17,8 +17,8 @@ import java.lang.reflect.Proxy;
 /**
  * 手动刷新注解切面。
  *
- * @author CH
  * @since 2026/4/2
+ * @author CH
  */
 public class MaterializedRefreshAdvisor extends StaticMethodMatcherPointcutAdvisor {
 

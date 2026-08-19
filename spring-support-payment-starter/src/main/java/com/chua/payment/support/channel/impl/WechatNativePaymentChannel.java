@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * 微信 Native 扫码支付
+ * @author CH
  */
 public class WechatNativePaymentChannel extends WechatJsapiPaymentChannel implements PaymentChannel {
 
@@ -62,3 +63,4 @@ public class WechatNativePaymentChannel extends WechatJsapiPaymentChannel implem
         return gateway(providerSpi(channel, null)).closeNativeOrder(buildProperties(channel), orderNo);
     }
 }
+

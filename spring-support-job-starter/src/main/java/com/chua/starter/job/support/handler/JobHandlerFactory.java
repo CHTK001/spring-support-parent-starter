@@ -11,7 +11,6 @@ import java.util.concurrent.ConcurrentMap;
  * <p>Spring 容器启动后由 {@link JobAnnotationScanner} 注册 {@link BeanJobHandler};
  * 运行时调度事件消费侧通过 {@link #get(String)} 查找处理器。</p>
  *
- * @author CH
  * @since 4.0.0.42
  */
 public final class JobHandlerFactory {

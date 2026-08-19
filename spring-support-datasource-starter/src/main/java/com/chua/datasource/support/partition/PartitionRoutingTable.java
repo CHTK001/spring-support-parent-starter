@@ -30,9 +30,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Slf4j
 public class PartitionRoutingTable extends AbstractTable implements ScannableTable {
 
+    /** 来源表 */
     private final String sourceTable;
+    /** 表names */
     private final List<String> tableNames = new CopyOnWriteArrayList<>();
+    /** JDBC模板 */
     private final JdbcTemplate jdbcTemplate;
+    /** 表comment */
     private final String tableComment;
 
     private volatile RelDataType rowType;
@@ -107,6 +111,7 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
             @Override
             public Enumerator<Object[]> enumerator() {
                 return new Enumerator<Object[]>() {
+                    /** 索引 */
                     private int index = -1;
 
                     @Override

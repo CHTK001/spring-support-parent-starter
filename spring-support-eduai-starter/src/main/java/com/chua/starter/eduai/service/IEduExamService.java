@@ -7,8 +7,8 @@ import com.chua.starter.eduai.model.EduExam;
 /**
  * 考试服务接口
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface IEduExamService extends IService<EduExam> {
 

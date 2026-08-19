@@ -3,8 +3,8 @@ package com.chua.starter.discovery.support.properties;
 import lombok.Data;
 
 /**
- * @author CH
  * @since 2024/12/26
+ * @author CH
  */
 @Data
 public class DiscoveryNodeProperties {

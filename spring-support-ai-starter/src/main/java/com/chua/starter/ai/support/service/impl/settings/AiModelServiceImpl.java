@@ -33,10 +33,14 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AiModelServiceImpl implements AiModelService {
 
+    /** Formatter */
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+    /** 模型mapper */
     private final AiModelMapper modelMapper;
+    /** 提供者mapper */
     private final AiProviderMapper providerMapper;
+    /** Manufacturermapper */
     private final SysAiManufacturerMapper manufacturerMapper;
 
     @Override

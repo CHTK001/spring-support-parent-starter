@@ -19,7 +19,6 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 /**
  * 通用配置
  *
- * @author CH
  * @since 2023-07-01
  */
 @EnableConfigurationProperties({

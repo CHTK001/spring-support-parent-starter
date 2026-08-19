@@ -7,8 +7,8 @@ import org.apache.ibatis.annotations.Mapper;
 /**
  * 服务运行状态 Mapper
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 @Mapper
 public interface AiServiceStatusMapper extends BaseMapper<AiServiceStatus> {

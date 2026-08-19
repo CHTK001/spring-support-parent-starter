@@ -19,8 +19,8 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  * 应替换为 Redis 实现。
  * </p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class RateLimitService {

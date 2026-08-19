@@ -14,12 +14,15 @@ import java.util.Locale;
 
 /**
  * 钱包异步回调处理服务实现
+ * @author CH
  */
 @Service
 @RequiredArgsConstructor
 public class WalletNotifyServiceImpl implements WalletNotifyService {
 
+    /** Wallet排序服务 */
     private final WalletOrderService walletOrderService;
+    /** Walletaccount服务 */
     private final WalletAccountService walletAccountService;
 
     @Override
@@ -165,3 +168,4 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
         return null;
     }
 }
+

@@ -49,8 +49,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *       queue-size: 128
  * </pre>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = JobProperties.PRE)
@@ -126,8 +126,8 @@ public class JobProperties {
     /**
      * 进程角色枚举。
      *
-     * @author CH
      * @since 4.0.0.42
+     * @author CH
      */
     public enum Role {
 
@@ -150,7 +150,6 @@ public class JobProperties {
     /**
      * 集群配置。
      *
-     * @author CH
      * @since 4.0.0.42
      */
     @Data
@@ -195,7 +194,6 @@ public class JobProperties {
     /**
      * 长链同步配置, 内部拆分 scheduler 与 executor。
      *
-     * @author CH
      * @since 4.0.0.42
      */
     @Data
@@ -221,7 +219,6 @@ public class JobProperties {
     /**
      * Scheduler 长链配置。
      *
-     * @author CH
      * @since 4.0.0.42
      */
     @Data
@@ -246,7 +243,6 @@ public class JobProperties {
     /**
      * Executor 长链配置。
      *
-     * @author CH
      * @since 4.0.0.42
      */
     @Data
@@ -281,7 +277,6 @@ public class JobProperties {
     /**
      * 执行线程池配置。
      *
-     * @author CH
      * @since 4.0.0.42
      */
     @Data
@@ -330,7 +325,6 @@ public class JobProperties {
     /**
      * 日志配置。
      *
-     * @author CH
      * @since 4.0.0.42
      */
     @Data

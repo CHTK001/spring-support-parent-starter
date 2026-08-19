@@ -20,9 +20,9 @@ import java.util.Map;
  * 整合版本控制、平台标识、编解码、SPI 等 API 相关配置。
  * </p>
  *
- * @author CH
  * @since 2025/6/3
  * @version 2.0.0
+ * @author CH
  */
     @Validated
     @ConfigurationProperties(prefix = ApiProperties.PRE, ignoreInvalidFields = true)
@@ -37,6 +37,7 @@ import java.util.Map;
             return ignoreFormatPackages;
         }
 
+    /** PRE */
     public static final String PRE = "plugin.api";
 
     /**
@@ -49,6 +50,7 @@ import java.util.Map;
      */
     @Valid
     @NotNull(message = "版本配置不能为空")
+    /** 版本 */
     private Version version = new Version();
 
     /**
@@ -56,6 +58,7 @@ import java.util.Map;
      */
     @Valid
     @NotNull(message = "平台配置不能为空")
+    /** Platform */
     private Platform platform = new Platform();
 
     /**
@@ -77,6 +80,7 @@ import java.util.Map;
      */
     @Valid
     @NotNull(message = "响应编码配置不能为空")
+    /** Encode */
     private ResponseEncodeProperties encode = new ResponseEncodeProperties();
 
     public ResponseEncodeProperties getEncode() {
@@ -88,6 +92,7 @@ import java.util.Map;
      */
     @Valid
     @NotNull(message = "请求解码配置不能为空")
+    /** Decode */
     private RequestDecodeProperties decode = new RequestDecodeProperties();
 
     public RequestDecodeProperties getDecode() {
@@ -98,6 +103,7 @@ import java.util.Map;
      * SPI 配置
      */
     @Valid
+    /** SPI */
     private SpiConfig spi = new SpiConfig();
 
     /**
@@ -114,6 +120,7 @@ import java.util.Map;
      */
     @Valid
     @NotNull(message = "Mock配置不能为空")
+    /** 模拟 */
     private MockConfig mock = new MockConfig();
 
     public MockConfig getMock() {
@@ -143,6 +150,7 @@ import java.util.Map;
      */
     @Valid
     @NotNull(message = "功能开关配置不能为空")
+    /** Feature */
     private FeatureConfig feature = new FeatureConfig();
 
     public FeatureConfig getFeature() {
@@ -154,6 +162,7 @@ import java.util.Map;
      */
     @Valid
     @NotNull(message = "灰度发布配置不能为空")
+    /** Gray */
     private GrayConfig gray = new GrayConfig();
 
     /**
@@ -222,6 +231,7 @@ import java.util.Map;
          */
         OAUTH("oauth");
 
+        /** 值 */
         private final String value;
 
         PlatformType(String value) {
@@ -319,12 +329,14 @@ import java.util.Map;
          */
         @NotNull(message = "编解码器类型不能为空")
         @Pattern(regexp = "^(sm2|aes|rsa|des)$", message = "编解码器类型必须为sm2/aes/rsa/des之一")
+        /** Codec类型 */
         private String codecType = "sm2";
 
         /**
          * 白名单（不需要加密的接口路径）
          */
         @NotNull(message = "白名单不能为null，可以为空列表")
+        /** White列表 */
         private List<String> whiteList = Collections.emptyList();
 
         public boolean isEnable() {
@@ -395,6 +407,7 @@ import java.util.Map;
          */
         @NotNull(message = "解码器类型不能为空")
         @Pattern(regexp = "^(sm4|aes|des)$", message = "解码器类型必须为sm4/aes/des之一")
+        /** Codec类型 */
         private String codecType = "sm4";
 
         public String getCodecType() {
@@ -461,6 +474,7 @@ import java.util.Map;
          * </p>
          */
         @NotNull(message = "白名单不能为null，可以为空列表")
+        /** White列表 */
         private List<String> whiteList = Collections.emptyList();
     }
 
@@ -510,6 +524,7 @@ import java.util.Map;
          * Mock 生效的环境（逗号分隔）
          */
         @NotNull(message = "Mock生效环境不能为空")
+        /** Profiles */
         private String profiles = "dev,test";
 
         public boolean isEnable() {
@@ -544,6 +559,7 @@ import java.util.Map;
          */
         @NotNull(message = "功能开关管理接口路径不能为空")
         @Pattern(regexp = "^/.*", message = "接口路径必须以/开头")
+        /** 路径 */
         private String path = "/api/features";
 
         public boolean isEnable() {
@@ -657,6 +673,7 @@ import java.util.Map;
          * </p>
          */
         @NotNull(message = "灰度标识请求头名称不能为空")
+        /** 头部名称 */
         private String headerName = "X-Gray-Hit";
 
         /**
@@ -666,6 +683,7 @@ import java.util.Map;
          * </p>
          */
         @NotNull(message = "全局灰度用户白名单不能为null，可以为空列表")
+        /** 全局users */
         private List<String> globalUsers = Collections.emptyList();
 
         /**
@@ -675,6 +693,7 @@ import java.util.Map;
          * </p>
          */
         @NotNull(message = "全局灰度IP白名单不能为null，可以为空列表")
+        /** 全局IPS */
         private List<String> globalIps = Collections.emptyList();
 
         /**
@@ -684,6 +703,7 @@ import java.util.Map;
          * </p>
          */
         @NotNull(message = "全局灰度角色白名单不能为null，可以为空列表")
+        /** 全局roles */
         private List<String> globalRoles = Collections.emptyList();
 
         /**
@@ -694,6 +714,7 @@ import java.util.Map;
          */
         @Min(value = 0, message = "灰度百分比不能小于0")
         @Max(value = 100, message = "灰度百分比不能大于100")
+        /** 默认percentage */
         private int defaultPercentage = 0;
 
         public boolean isEnable() {

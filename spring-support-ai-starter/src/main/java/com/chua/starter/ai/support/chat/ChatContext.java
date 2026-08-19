@@ -7,8 +7,8 @@ import java.util.Map;
 /**
  * 对话上下文，携带用户、历史记录、变量与扩展属性。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class ChatContext {
 

@@ -44,6 +44,8 @@ public enum Information {
      */
     OTHER(-1, "其它错误");
 
+    /** 代码 */
     private final int code;
+    /** 消息 */
     private final String message;
 }

@@ -29,12 +29,14 @@ public class PageResult<T> implements Serializable {
      */
     @Schema(description = "每页显示条数，默认 10")
     @Builder.Default
+    /** 每页大小 */
     private long pageSize = 10;
     /**
      * 总数
      */
     @Schema(description = "总数")
     @Builder.Default
+    /** 总数 */
     private long total = 10;
 
     /**
@@ -42,18 +44,21 @@ public class PageResult<T> implements Serializable {
      */
     @Schema(description = "当前页")
     @Builder.Default
+    /** 页NO */
     private long pageNo = 1;
 
     /**
      * 总页数
      */
     @Schema(description = "总页数")
+    /** 总数页 */
     private long totalPage;
     /**
      * 查询数据列表
      */
     @Schema(description = "查询数据列表")
     @Builder.Default
+    /** Records */
     private List<T> records = Collections.emptyList();
 
 

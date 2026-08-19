@@ -9,8 +9,8 @@ import java.util.List;
 /**
  * AI 用量服务接口
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface SysAiUsageService {
 
@@ -60,10 +60,15 @@ public interface SysAiUsageService {
      * 用量统计摘要
      */
     class UsageStatistics {
+        /** 总数calls */
         public Integer totalCalls;
+        /** 总数prompttokens */
         public Integer totalPromptTokens;
+        /** 总数completiontokens */
         public Integer totalCompletionTokens;
+        /** 总数tokens */
         public Integer totalTokens;
+        /** 总数cost */
         public Double totalCost;
     }
 }

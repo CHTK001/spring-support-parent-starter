@@ -36,7 +36,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * <p>覆盖海康云耀、云眸、安防平台以及大华云睿、乐橙等厂商平台，</p>
  * <p>各平台接入的 endpoint、签名算法需按平台官方 OpenAPI 文档配置。</p>
  *
- * @author CH
  * @since 4.0.0.42
  */
 @Slf4j

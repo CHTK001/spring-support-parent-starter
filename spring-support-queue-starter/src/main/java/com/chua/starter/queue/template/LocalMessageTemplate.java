@@ -32,14 +32,16 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
  * 适用于单机环境或测试场景，支持同步和异步消息传递。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2025-01-02
+ * @author CH
  */
 @Slf4j
 public class LocalMessageTemplate implements MessageTemplate {
+    /** 日志 */
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LocalMessageTemplate.class);
 
+    /** 类型 */
     private static final String TYPE = "local";
 
     /**
@@ -460,9 +462,13 @@ public class LocalMessageTemplate implements MessageTemplate {
      * EventBus订阅者包装类
      */
     private class EventBusSubscriber {
+        /** 日志 */
         private final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(EventBusSubscriber.class);
+        /** 目的地 */
         private final String destination;
+        /** 处理器 */
         private final MessageHandler handler;
+        /** AutoACK */
         private final boolean autoAck;
 
         EventBusSubscriber(String destination, MessageHandler handler, boolean autoAck) {

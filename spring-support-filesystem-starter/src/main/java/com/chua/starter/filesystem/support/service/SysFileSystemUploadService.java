@@ -12,8 +12,8 @@ import java.util.List;
  * <p>继承 MyBatis-Plus {@link IService} 以复用 Base CRUD 能力，
  * 并扩展分片上传任务特有的业务方法。</p>
  *
- * @author CH
  * @since 1.0
+ * @author CH
  */
 public interface SysFileSystemUploadService extends IService<SysFileSystemUpload> {
 

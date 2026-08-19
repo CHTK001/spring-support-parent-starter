@@ -20,8 +20,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *   include-request-sample: true     # 是否生成请求/响应示例代码块
  * </pre>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = "chua.swagger.export")

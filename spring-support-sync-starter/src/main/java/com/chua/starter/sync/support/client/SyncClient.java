@@ -12,8 +12,8 @@ import java.util.Map;
  * 供 {@code spring-support-report-client-starter} 等上层模块使用。
  * </p>
  *
- * @author CH
  * @since 2026/08/01
+ * @author CH
  */
 public interface SyncClient extends com.chua.common.support.network.sync.SyncClient {
 

@@ -14,8 +14,8 @@ import java.time.LocalDateTime;
 /**
  * 监控磁盘明细
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 @TableName("ms_monitor_metric_disk")
 public class MsMonitorMetricDisk implements Serializable {
 
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -30,6 +31,7 @@ public class MsMonitorMetricDisk implements Serializable {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
+    /** ID */
     private Long id;
 
     /**
@@ -37,6 +39,7 @@ public class MsMonitorMetricDisk implements Serializable {
      */
     @TableField("ms_monitor_metric_disk_monitor_id")
     @Schema(description = "监控主机 id", example = "1")
+    /** MonitorID */
     private Long monitorId;
 
     /**
@@ -44,6 +47,7 @@ public class MsMonitorMetricDisk implements Serializable {
      */
     @TableField("ms_monitor_metric_disk_mount_point")
     @Schema(description = "挂载点", example = "/")
+    /** Mountpoint */
     private String mountPoint;
 
     /**
@@ -51,6 +55,7 @@ public class MsMonitorMetricDisk implements Serializable {
      */
     @TableField("ms_monitor_metric_disk_file_system")
     @Schema(description = "文件系统", example = "ext4")
+    /** 文件system */
     private String fileSystem;
 
     /**
@@ -58,6 +63,7 @@ public class MsMonitorMetricDisk implements Serializable {
      */
     @TableField("ms_monitor_metric_disk_total_bytes")
     @Schema(description = "总磁盘(字节)", example = "536870912000")
+    /** 总数bytes */
     private Long totalBytes;
 
     /**
@@ -65,6 +71,7 @@ public class MsMonitorMetricDisk implements Serializable {
      */
     @TableField("ms_monitor_metric_disk_used_bytes")
     @Schema(description = "已用(字节)", example = "268435456000")
+    /** Usedbytes */
     private Long usedBytes;
 
     /**
@@ -72,6 +79,7 @@ public class MsMonitorMetricDisk implements Serializable {
      */
     @TableField("ms_monitor_metric_disk_usage_percent")
     @Schema(description = "使用率", example = "50.0")
+    /** Usage百分比 */
     private Double usagePercent;
 
     /**
@@ -79,5 +87,6 @@ public class MsMonitorMetricDisk implements Serializable {
      */
     @TableField("ms_monitor_metric_disk_collect_time")
     @Schema(description = "采集时间", example = "2026-08-04T10:00:00")
+    /** Collect时间 */
     private LocalDateTime collectTime;
 }

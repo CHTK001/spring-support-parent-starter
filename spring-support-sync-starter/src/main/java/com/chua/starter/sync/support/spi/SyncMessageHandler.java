@@ -8,9 +8,9 @@ import java.util.Map;
  * 用于处理特定主题的消息，通过 SPI 机制加载实现类
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/12/04
+ * @author CH
  */
 public interface SyncMessageHandler {
 

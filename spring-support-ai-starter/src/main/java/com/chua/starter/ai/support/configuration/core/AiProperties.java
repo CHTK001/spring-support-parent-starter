@@ -6,8 +6,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * AI 生成配置属性。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = "spring.ai.generate")
@@ -31,7 +31,6 @@ public class AiProperties {
     /**
      * 图片生成配置。
      *
-     * @author CH
      * @since 4.0.0.42
      */
     @Data
@@ -71,7 +70,6 @@ public class AiProperties {
     /**
      * 视频生成配置。
      *
-     * @author CH
      * @since 4.0.0.42
      */
     @Data
@@ -106,7 +104,6 @@ public class AiProperties {
     /**
      * 图片上色配置。
      *
-     * @author CH
      * @since 4.0.0.42
      */
     @Data

@@ -14,24 +14,34 @@ import org.slf4j.LoggerFactory;
  * </ul>
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024-12-28
  */
 public final class ModuleLog {
 
     // ANSI 颜色码
+    /** Reset */
     public static final String RESET = "\u001B[0m";
+    /** 绿色 */
     public static final String GREEN = "\u001B[32m";
+    /** 红色 */
     public static final String RED = "\u001B[31m";
+    /** Cyan */
     public static final String CYAN = "\u001B[36m";
+    /** Yellow */
     public static final String YELLOW = "\u001B[33m";
+    /** 蓝色 */
     public static final String BLUE = "\u001B[34m";
+    /** Magenta */
     public static final String MAGENTA = "\u001B[35m";
+    /** White */
     public static final String WHITE = "\u001B[37m";
+    /** Bold */
     public static final String BOLD = "\u001B[1m";
 
+    /** 日志 */
     private final Logger log;
+    /** Module名称 */
     private final String moduleName;
 
     private ModuleLog(String moduleName, Class<?> clazz) {

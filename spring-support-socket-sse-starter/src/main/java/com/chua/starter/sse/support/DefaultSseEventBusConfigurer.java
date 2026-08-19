@@ -13,8 +13,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * SSE 事件总线配置
  * 管理所有 SSE 连接和事件分发
  *
- * @author CH
  * @since 2023/09/26
+ * @author CH
  */
 @Slf4j
 public class DefaultSseEventBusConfigurer {

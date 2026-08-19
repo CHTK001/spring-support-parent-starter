@@ -31,8 +31,8 @@ import java.util.Map;
  *         all: false                                  # 是否跨库导出所有 catalog
  * </pre>
  *
- * @author CH
  * @since 2026/8/5
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = DocumentProperties.PRE, ignoreInvalidFields = true)

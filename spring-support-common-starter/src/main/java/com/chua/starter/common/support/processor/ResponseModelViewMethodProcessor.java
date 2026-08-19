@@ -23,6 +23,7 @@ import java.util.List;
  */
 public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodProcessor {
 
+    /** Redirectpatterns */
     private String redirectPatterns;
 
     public ResponseModelViewMethodProcessor(List<HttpMessageConverter<?>> converters) {

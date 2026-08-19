@@ -14,14 +14,15 @@ import java.time.LocalDateTime;
 /**
  * 监控通用时序指标
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Data
 @Schema(description = "监控通用时序")
 @TableName("ms_monitor_metric")
 public class MsMonitorMetric implements Serializable {
 
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -29,6 +30,7 @@ public class MsMonitorMetric implements Serializable {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
+    /** ID */
     private Long id;
 
     /**
@@ -36,6 +38,7 @@ public class MsMonitorMetric implements Serializable {
      */
     @TableField("ms_monitor_metric_monitor_id")
     @Schema(description = "监控主机 id", example = "1")
+    /** MonitorID */
     private Long monitorId;
 
     /**
@@ -43,6 +46,7 @@ public class MsMonitorMetric implements Serializable {
      */
     @TableField("ms_monitor_metric_metric_name")
     @Schema(description = "指标名", example = "cpu_usage")
+    /** 指标名称 */
     private String metricName;
 
     /**
@@ -50,6 +54,7 @@ public class MsMonitorMetric implements Serializable {
      */
     @TableField("ms_monitor_metric_metric_value")
     @Schema(description = "指标值", example = "23.5")
+    /** 指标值 */
     private Double metricValue;
 
     /**
@@ -57,6 +62,7 @@ public class MsMonitorMetric implements Serializable {
      */
     @TableField("ms_monitor_metric_metric_tags")
     @Schema(description = "标签 JSON", example = "{\"core\":\"0\"}")
+    /** 指标tags */
     private String metricTags;
 
     /**
@@ -64,5 +70,6 @@ public class MsMonitorMetric implements Serializable {
      */
     @TableField("ms_monitor_metric_collect_time")
     @Schema(description = "采集时间", example = "2026-08-04T10:00:00")
+    /** Collect时间 */
     private LocalDateTime collectTime;
 }

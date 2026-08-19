@@ -25,14 +25,16 @@ import java.util.function.Function;
  * - DataSync 处理后的结果通过 {@link DataSyncMessagePublisher} 回传到 Spring Sync 网络层
  * </p>
  *
- * @author CH
  * @since 2026/01/15
+ * @author CH
  */
 @AutoConfiguration
 @ConditionalOnProperty(prefix = "plugin.sync.datasync", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class SyncDataSyncConfiguration {
 
+    /** Prefix */
     private static final String PREFIX = "plugin.sync.datasync";
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SyncDataSyncConfiguration.class);
 
     /**
@@ -126,7 +128,6 @@ public class SyncDataSyncConfiguration {
      * 负责将 Spring Sync 网络消息转换为 DataSync 框架可处理的数据格式
      * </p>
      *
-     * @author CH
      * @since 2026/01/15
      */
     public static class DataSyncMessageBridge implements Function<Object, Object> {
@@ -159,7 +160,6 @@ public class SyncDataSyncConfiguration {
      * 负责将 DataSync 处理后的结果通过 Spring Sync 网络层发布出去
      * </p>
      *
-     * @author CH
      * @since 2026/01/15
      */
     public static class DataSyncMessagePublisher {

@@ -5,9 +5,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * Jackson配置属性
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/12/3
+ * @author CH
  */
 @ConfigurationProperties(prefix = JacksonProperties.PRE, ignoreInvalidFields = true)
 public class JacksonProperties {
@@ -17,6 +17,7 @@ public class JacksonProperties {
     private boolean enable = false;
 
 
+    /** PRE */
     public static final String PRE = "plugin.jackson";
 
     /**

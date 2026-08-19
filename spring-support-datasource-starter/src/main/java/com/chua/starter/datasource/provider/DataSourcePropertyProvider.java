@@ -7,8 +7,8 @@ import java.util.Map;
  * 数据源属性提供者接口
  * 用于替代反射操作，直接通过类型安全的方式获取和设置数据源属性
  *
- * @author CH
  * @since 2024/12/21
+ * @author CH
  */
 public interface DataSourcePropertyProvider<T extends DataSource> {
 

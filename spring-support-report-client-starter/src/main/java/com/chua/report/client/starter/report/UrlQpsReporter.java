@@ -19,30 +19,35 @@ import java.util.concurrent.atomic.AtomicLong;
  * 收集 URL 请求统计数据并定时上报到服务端
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2025/01/17
+ * @author CH
  */
 @Slf4j
 public class UrlQpsReporter {
 
 
+    /** 实例 */
     private static final UrlQpsReporter INSTANCE = new UrlQpsReporter();
 
     @Getter
     @Setter
+    /** 同步客户端 */
     private SyncClient syncClient;
 
     @Getter
     @Setter
+    /** APP名称 */
     private String appName;
 
     @Getter
     @Setter
+    /** 主机 */
     private String host;
 
     @Getter
     @Setter
+    /** 间隔秒 */
     private long intervalSeconds = 30;
 
     /**
@@ -52,6 +57,7 @@ public class UrlQpsReporter {
      */
     private final ConcurrentHashMap<String, UrlStats> urlStatsMap = new ConcurrentHashMap<>();
 
+    /** 调度器 */
     private ScheduledExecutorService scheduler;
     private volatile boolean running = false;
 
@@ -191,20 +197,29 @@ public class UrlQpsReporter {
      * URL 统计数据
      */
     private static class UrlStats {
+        /** URL */
         private final String url;
+        /** Method */
         private final String method;
 
         // 当前周期统计
+        /** 总数数量 */
         private final AtomicLong totalCount = new AtomicLong(0);
+        /** Success数量 */
         private final AtomicLong successCount = new AtomicLong(0);
+        /** Fail数量 */
         private final AtomicLong failCount = new AtomicLong(0);
+        /** 总数持续时间 */
         private final AtomicLong totalDuration = new AtomicLong(0);
         private volatile long minDuration = Long.MAX_VALUE;
         private volatile long maxDuration = 0;
 
         // 历史累计统计
+        /** History总数数量 */
         private final AtomicLong historyTotalCount = new AtomicLong(0);
+        /** Historysuccess数量 */
         private final AtomicLong historySuccessCount = new AtomicLong(0);
+        /** Historyfail数量 */
         private final AtomicLong historyFailCount = new AtomicLong(0);
 
         // 状态码统计

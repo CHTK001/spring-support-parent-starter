@@ -9,7 +9,6 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 /**
  * 自动填充注解，用于标记需要自动填充的实体类
  *
- * @author CH
  * @since 2025/1/2
  */
 @Target({ElementType.TYPE})

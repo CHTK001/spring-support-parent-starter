@@ -20,9 +20,9 @@ import java.util.*;
  * 通过 actuator 暴露 MyBatis 配置信息
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2025/01/17
+ * @author CH
  */
 @Slf4j
 @Component
@@ -32,6 +32,7 @@ public class MyBatisEndpoint {
 
 
     @Autowired(required = false)
+    /** SQL会话工厂 */
     private SqlSessionFactory sqlSessionFactory;
 
     /**

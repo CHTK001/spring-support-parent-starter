@@ -12,8 +12,8 @@ import java.util.List;
 /**
  * 默认软件源实现 - 空实现，作为回退
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 @Slf4j
 @Component

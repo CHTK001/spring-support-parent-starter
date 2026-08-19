@@ -10,11 +10,12 @@ import java.util.Comparator;
  * 根据消息优先级进行排序
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 public class MessagePriorityComparator implements Comparator<Message> {
 
+    /** Priority_header */
     public static final String PRIORITY_HEADER = "X-Priority";
 
     /**

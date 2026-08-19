@@ -26,19 +26,23 @@ import java.lang.reflect.Method;
  *   <li>若不存在，则使用默认值 {@code "0"}（单租户场景）。</li>
  * </ul>
  *
- * @author CH
  * @since 2024/9/5
+ * @author CH
  */
 public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAware, InitializingBean {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(TenantedKeyGenerator.class);
 
+    /** Application上下文 */
     private ApplicationContext applicationContext;
 
     @Value("${spring.application.name:app}")
+    /** Application名称 */
     private String applicationName;
 
     @Value("${plugin.api.platform.platform-name:default}")
+    /** Platform名称 */
     private String platformName;
 
     /**

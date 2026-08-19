@@ -7,8 +7,8 @@ import org.apache.ibatis.annotations.Mapper;
 /**
  * 软件源表 Mapper
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 @Mapper
 public interface SoftSourceMapper extends BaseMapperX<SoftSource> {

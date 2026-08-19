@@ -28,8 +28,8 @@ import java.io.File;
  * 真实验证: H2 建表 → DatabaseMappingLoader 查 datasync_mapping → 加载到 manager →
  * 定时调度真实执行。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class, DataSourceInspect.class})
 @Import(DataSyncAutoConfiguration.class)

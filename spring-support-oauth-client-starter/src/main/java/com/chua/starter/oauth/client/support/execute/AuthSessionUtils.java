@@ -12,7 +12,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
  * 认证会话工具类
  * <p>提供 Session 相关的静态工具方法</p>
  *
- * @author CH
  * @since 2024/12/11
  */
 public final class AuthSessionUtils {

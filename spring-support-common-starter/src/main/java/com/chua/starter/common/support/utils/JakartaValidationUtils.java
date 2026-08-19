@@ -16,11 +16,12 @@ import java.util.function.Predicate;
 /**
  * Jakarta Validation 工具类
  *
- * @author CH
  * @since 2024/12/20
+ * @author CH
  */
 public class JakartaValidationUtils {
 
+    /** 校验器 */
     private static final Validator VALIDATOR;
 
     static {

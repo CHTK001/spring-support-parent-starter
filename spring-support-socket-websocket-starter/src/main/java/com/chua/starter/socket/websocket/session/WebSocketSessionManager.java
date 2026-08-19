@@ -14,12 +14,13 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * WebSocket 会话管理器
  *
- * @author CH
  * @since 2025-12-25
+ * @author CH
  */
 @Slf4j
 public class WebSocketSessionManager {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(WebSocketSessionManager.class);
 
     /**

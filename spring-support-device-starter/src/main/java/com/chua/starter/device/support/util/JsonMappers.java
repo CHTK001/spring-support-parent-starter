@@ -14,7 +14,6 @@ import java.util.List;
 /**
  * OpenAPI 响应 JSON 到设备领域模型的解析工具
  *
- * @author CH
  * @since 4.0.0.42
  */
 public final class JsonMappers {

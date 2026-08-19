@@ -18,8 +18,8 @@ import org.springframework.context.annotation.Bean;
 /**
  * 腾讯配置
  *
- * @author CH
  * @since 2024/12/2
+ * @author CH
  */
 @Slf4j
 @EnableConfigurationProperties({TencentMiniAppProperties.class, TencentWechatPayProperties.class, TencentWechatOpenPlatformProperties.class})

@@ -32,11 +32,12 @@ import java.util.TreeMap;
  * <p>作为通用 OpenApiDocumentProvider 体系的入参适配层,
  * 与具体协议栈（SpringDoc / native spec / Knife4j）解耦。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class OpenApiConverter {
 
+    /** JSON */
     private static final ObjectMapper JSON = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
     /**

@@ -19,8 +19,10 @@ import java.util.UUID;
 @Slf4j
 public class SseTemplate {
     
+    /** Object_mapper */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     
+    /** SSE事件BUSconfigurer */
     private final DefaultSseEventBusConfigurer sseEventBusConfigurer;
 
     public SseTemplate(DefaultSseEventBusConfigurer sseEventBusConfigurer) {

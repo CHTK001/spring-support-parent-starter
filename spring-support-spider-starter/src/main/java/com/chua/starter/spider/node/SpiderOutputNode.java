@@ -36,8 +36,8 @@ import java.util.Map;
  *   <li>{@code spider.output.recordId} 落库后的记录 ID</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Component
 public class SpiderOutputNode implements FlowNode {

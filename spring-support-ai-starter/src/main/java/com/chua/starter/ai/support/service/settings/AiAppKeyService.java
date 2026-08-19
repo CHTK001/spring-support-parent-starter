@@ -8,8 +8,8 @@ import java.util.List;
 /**
  * AppKey 服务接口
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 public interface AiAppKeyService {
 

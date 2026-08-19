@@ -54,6 +54,7 @@ public class UserStatisticProvider {
 
 
     @Autowired
+    /** Auth属性 */
     private AuthClientProperties authProperties;
     /**
      * 登录

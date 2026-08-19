@@ -16,8 +16,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * <p>当 SPI 未发现 SyncClient 扩展时,装配本 bean。EXECUTOR 模式不需要真实连接也能工作。
  * 消息暂存到内存,可通过 {@link #getSent} 断言;订阅关系通过 {@link #deliver} 模拟推送。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class InMemorySyncClient implements SyncClient {
 

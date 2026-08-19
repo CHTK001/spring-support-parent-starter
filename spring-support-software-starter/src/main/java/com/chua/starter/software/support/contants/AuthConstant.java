@@ -7,6 +7,8 @@ package com.chua.starter.software.support.contants;
  */
 public class AuthConstant {
 
+    /** Super_admin */
     public static final String SUPER_ADMIN = "SUPER_ADMIN";
+    /** Admin */
     public static final String ADMIN = "ADMIN";
 }

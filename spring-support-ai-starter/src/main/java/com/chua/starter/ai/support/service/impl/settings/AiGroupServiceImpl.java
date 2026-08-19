@@ -21,8 +21,8 @@ import java.util.stream.Collectors;
 /**
  * 模型分组服务实现类
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 @Slf4j
 @Service

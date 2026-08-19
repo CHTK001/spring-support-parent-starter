@@ -5,8 +5,8 @@ import lombok.Data;
 /**
  * 题目查询条件DTO
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class QuestionQueryDTO {

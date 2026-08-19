@@ -18,8 +18,8 @@ import java.util.List;
 /**
  * 通道管理 Controller
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @RestController
 @RequestMapping("/api/device/channel")

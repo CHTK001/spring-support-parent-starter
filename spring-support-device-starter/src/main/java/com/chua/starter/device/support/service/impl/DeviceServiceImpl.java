@@ -22,8 +22,8 @@ import java.util.UUID;
 /**
  * 设备服务实现
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service

@@ -7,8 +7,8 @@ import org.apache.ibatis.annotations.Mapper;
 /**
  * 任务存储 Mapper。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Mapper
 public interface TaskStoreMapper extends BaseMapper<SysTaskStore> {

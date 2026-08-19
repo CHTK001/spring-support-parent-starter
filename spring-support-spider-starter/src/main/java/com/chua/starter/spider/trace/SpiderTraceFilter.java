@@ -19,8 +19,8 @@ import java.util.UUID;
  * 缺失则生成 UUID；写入 MDC（key 与 flow 引擎 traceId 一致），并回写
  * 到响应头 {@code X-Trace-Id}，请求结束后清理 MDC，避免线程污染。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class SpiderTraceFilter implements Filter {
 

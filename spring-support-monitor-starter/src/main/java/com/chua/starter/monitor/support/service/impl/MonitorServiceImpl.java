@@ -23,8 +23,8 @@ import java.util.List;
 /**
  * 监控 Service 实现
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Slf4j
 @Service
@@ -32,10 +32,13 @@ import java.util.List;
 public class MonitorServiceImpl implements MonitorService {
 
     /** 监控 Mapper */
+    /** Monitormapper */
     private final MsMonitorMapper monitorMapper;
     /** 任务 Mapper, 用于级联删除 */
+    /** Monitor任务mapper */
     private final MsMonitorTaskMapper monitorTaskMapper;
     /** 网关 Mapper, 用于级联删除 */
+    /** Monitorgatewaymapper */
     private final MsMonitorGatewayMapper monitorGatewayMapper;
 
     @Override

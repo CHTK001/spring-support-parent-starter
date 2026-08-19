@@ -9,13 +9,15 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 /**
  * SpEL 表达式解析器适配。
  *
- * @author CH
  * @since 2024/01/01
+ * @author CH
  */
 @Spi("spring")
 public class SpringSpelExpressionParser implements com.chua.common.support.lang.ast.ExpressionParser {
 
+    /** Evaluation上下文 */
     private final EvaluationContext evaluationContext = new StandardEvaluationContext();
+    /** 表达式解析器 */
     private final org.springframework.expression.ExpressionParser expressionParser = new org.springframework.expression.spel.standard.SpelExpressionParser();
 
     @Override

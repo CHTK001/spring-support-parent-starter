@@ -20,14 +20,15 @@ import java.util.function.BiConsumer;
  * - 客户端断开时，自动从 DataSyncAgentServer 注销对应 Agent
  * </p>
  *
- * @author CH
  * @since 2026/01/15
+ * @author CH
  */
 @AutoConfiguration
 @ConditionalOnClass(name = "com.chua.starter.datasync.agent.DataSyncAgentServer")
 @ConditionalOnProperty(prefix = "plugin.sync.datasync", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DataSyncAgentLifecycleConfiguration {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(DataSyncAgentLifecycleConfiguration.class);
 
     /**
@@ -35,7 +36,9 @@ public class DataSyncAgentLifecycleConfiguration {
      */
     private static final String CAPABILITY_DATASYNC = "datasync";
 
+    /** 同步服务器提供者 */
     private final ObjectProvider<SyncServer> syncServerProvider;
+    /** 数据同步agent服务器提供者 */
     private final ObjectProvider<DataSyncAgentServer> dataSyncAgentServerProvider;
 
     public DataSyncAgentLifecycleConfiguration(ObjectProvider<SyncServer> syncServerProvider,

@@ -31,8 +31,8 @@ import java.util.Map;
  *
  * <p>提供任务清单、节点清单、任务状态查询、暂停/恢复/取消等管理能力。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController

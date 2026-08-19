@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.annotation.DbType;
  * 用于存储数据库类型等 SQL 相关常量
  *
  * @author 芋道源码
+ * @author CH
  */
 public class SqlConstants {
 
@@ -25,3 +26,4 @@ public class SqlConstants {
     }
 
 }
+

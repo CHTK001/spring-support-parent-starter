@@ -15,8 +15,8 @@ import java.util.Iterator;
  * 继承属性解析器
  * 用于解析父类属性并添加到Schema中
  *
- * @author CH
  * @since 2025/5/27 13:04
+ * @author CH
  */
 public class InheritedPropertyResolver implements ModelConverter {
 

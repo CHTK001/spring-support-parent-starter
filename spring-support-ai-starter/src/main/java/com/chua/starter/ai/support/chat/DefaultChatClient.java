@@ -18,8 +18,8 @@ import java.util.List;
  * 由于本类无需池化底层客户端 (本身就是 mock), pool() 的默认实现 (no-op + 返回 this) 已足够。
  * 如需真实池化, 请使用 {@link PooledChatClient} 包装。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class DefaultChatClient implements ChatClient {

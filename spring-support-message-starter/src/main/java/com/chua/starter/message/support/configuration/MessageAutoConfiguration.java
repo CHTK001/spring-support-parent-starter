@@ -20,8 +20,8 @@ import org.springframework.context.annotation.ComponentScan;
  * 渠道的推送执行器。
  * </p>
  *
- * @author CH
  * @since 2026/08/03
+ * @author CH
  */
 @AutoConfiguration
 @MapperScan("com.chua.starter.message.support.mapper")

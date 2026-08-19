@@ -33,10 +33,10 @@ import java.util.Map;
  * - 支持令牌内省 (RFC 7662)
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2025-12-15
  * @see <a href="https://datatracker.ietf.org/doc/html/rfc6749">RFC 6749 - OAuth 2.0</a>
+ * @author CH
  */
 @Spi({"oauth2"})
 @Slf4j

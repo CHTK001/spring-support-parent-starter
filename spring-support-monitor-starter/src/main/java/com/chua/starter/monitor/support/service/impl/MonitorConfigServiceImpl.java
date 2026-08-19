@@ -16,12 +16,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+/** @author CH */
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class MonitorConfigServiceImpl implements MonitorConfigService {
 
+    /** 配置mapper */
     private final MsMonitorConfigMapper configMapper;
 
     @Override

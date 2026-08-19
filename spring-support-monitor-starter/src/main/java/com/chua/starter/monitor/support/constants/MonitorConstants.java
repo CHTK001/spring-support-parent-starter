@@ -3,7 +3,6 @@ package com.chua.starter.monitor.support.constants;
 /**
  * 监控模块常量定义
  *
- * @author CH
  * @since 2026/8/4
  */
 public final class MonitorConstants {

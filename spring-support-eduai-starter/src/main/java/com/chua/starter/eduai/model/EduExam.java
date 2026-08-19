@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
 /**
  * 考试实体
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("edu_exam")
@@ -21,6 +21,7 @@ public class EduExam {
      * 考试ID
      */
     @TableId(type = IdType.AUTO)
+    /** ExamID */
     private Long examId;
 
     /**

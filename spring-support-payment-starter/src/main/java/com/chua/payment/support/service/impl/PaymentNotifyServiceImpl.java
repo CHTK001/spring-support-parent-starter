@@ -33,15 +33,21 @@ import java.util.Map;
 
 /**
  * 第三方支付异步通知处理
+ * @author CH
  */
 @Slf4j
 @Service
 public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel implements PaymentNotifyService {
 
+    /** Merchant通道mapper */
     private final MerchantChannelMapper merchantChannelMapper;
+    /** Payment排序mapper */
     private final PaymentOrderMapper paymentOrderMapper;
+    /** Payment排序服务 */
     private final PaymentOrderService paymentOrderService;
+    /** Paymentrefund排序服务 */
     private final PaymentRefundOrderService paymentRefundOrderService;
+    /** 提供者gateway注册表 */
     private final PaymentProviderGatewayRegistry providerGatewayRegistry;
 
     public PaymentNotifyServiceImpl(MerchantChannelService merchantChannelService,
@@ -355,3 +361,4 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
         return properties;
     }
 }
+

@@ -4,14 +4,23 @@ import lombok.Data;
 
 /**
  * 回调策略审计视图
+ * @author CH
  */
 @Data
 public class PaymentCallbackAuditVO {
+    /** Callback类型 */
     private String callbackType;
+    /** Callback名称 */
     private String callbackName;
+    /** Recommended模式 */
     private String recommendedPattern;
+    /** Scoped标识符 */
     private String scopedIdentifier;
+    /** Strictscoped */
     private Boolean strictScoped;
+    /** Effective优先级 */
     private String effectivePriority;
+    /** Notes */
     private String notes;
 }
+

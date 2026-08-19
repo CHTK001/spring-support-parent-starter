@@ -45,15 +45,16 @@ import java.util.Map;
  * </ul>
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2025-12-02
+ * @author CH
  */
 @Spi({"armeria"})
 @Slf4j
 public class ArmeriaProtocol extends AbstractProtocol {
 
     private volatile WebClient webClient;
+    /** Client_lock */
     private static final Object CLIENT_LOCK = new Object();
     
     /**

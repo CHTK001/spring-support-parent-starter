@@ -10,8 +10,8 @@ import java.io.Serializable;
 /**
  * Socket 消息传输包装体
  *
- * @author CH
  * @since 2026-04-08
+ * @author CH
  */
 @Data
 @Builder
@@ -19,6 +19,7 @@ import java.io.Serializable;
 @AllArgsConstructor
 public class SocketMessageEnvelope implements Serializable {
 
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
 
     /**

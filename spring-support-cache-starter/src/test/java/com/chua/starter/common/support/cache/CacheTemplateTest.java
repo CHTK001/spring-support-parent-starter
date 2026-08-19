@@ -16,8 +16,11 @@ import org.springframework.cache.Cache;
 @DisplayName("CacheTemplate 测试")
 class CacheTemplateTest {
 
+    /** 缓存管理器 */
     private MultiLevelCacheManager cacheManager;
+    /** 密钥generator */
     private TenantedKeyGenerator keyGenerator;
+    /** 缓存模板 */
     private CacheTemplate cacheTemplate;
 
     @BeforeEach

@@ -27,20 +27,31 @@ import java.util.Objects;
 
 /**
  * 支付首页业务统计服务实现。
+ * @author CH
  */
 @Service
 public class PaymentDashboardServiceImpl implements PaymentDashboardService {
 
+    /** Paid_order_statuses */
     private static final List<String> PAID_ORDER_STATUSES = List.of("PAID", "COMPLETED", "REFUNDING", "REFUNDED");
+    /** Active_merchant_status */
     private static final int ACTIVE_MERCHANT_STATUS = 1;
+    /** Refunded_status */
     private static final String REFUNDED_STATUS = "REFUNDED";
+    /** Success_status */
     private static final String SUCCESS_STATUS = "SUCCESS";
 
+    /** Merchantmapper */
     private final MerchantMapper merchantMapper;
+    /** Merchant通道mapper */
     private final MerchantChannelMapper merchantChannelMapper;
+    /** Payment排序mapper */
     private final PaymentOrderMapper paymentOrderMapper;
+    /** Paymentrefund排序mapper */
     private final PaymentRefundOrderMapper paymentRefundOrderMapper;
+    /** Paymentnotify日志mapper */
     private final PaymentNotifyLogMapper paymentNotifyLogMapper;
+    /** Transactionrecordmapper */
     private final TransactionRecordMapper transactionRecordMapper;
 
     public PaymentDashboardServiceImpl(MerchantMapper merchantMapper,
@@ -162,3 +173,4 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
         return second != null ? second : BigDecimal.ZERO;
     }
 }
+

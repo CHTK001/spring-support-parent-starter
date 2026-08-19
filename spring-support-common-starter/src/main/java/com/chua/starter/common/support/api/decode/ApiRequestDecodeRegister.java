@@ -27,11 +27,12 @@ import org.slf4j.LoggerFactory;
  * 处理请求解密和防重放攻击验证。
  * </p>
  *
- * @author CH
  * @since 2024/12/07
  * @version 1.0.0
+ * @author CH
  */
 public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting>  {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiRequestDecodeRegister.class);
         /**
      * 请求时间戳有效期(毫秒) - 默认10分钟
@@ -53,12 +54,18 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
      */
     private static final PathMatcher PATH_MATCHER = new AntPathMatcher();
 
+    /** 全局设置工厂 */
     private final GlobalSettingFactory globalSettingFactory = GlobalSettingFactory.getInstance();
+    /** Decode配置 */
     private final ApiProperties.RequestDecodeProperties decodeConfig;
+    /** White列表 */
     private final List<String> whiteList;
 
+    /** 请求codec */
     private Codec requestCodec;
+    /** Decode设置 */
     private ApiRequestDecodeSetting decodeSetting;
+    /** 请求codec密钥 */
     private String requestCodecKey;
 
     /**

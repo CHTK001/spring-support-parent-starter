@@ -7,8 +7,8 @@ import java.time.Duration;
 /**
  * 重试策略
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @Data
 public class RetryPolicy {

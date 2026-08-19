@@ -21,7 +21,6 @@ import java.util.function.Consumer;
 /**
  * 四种派发提供者压测对比：InMemory / WAL / Chronicle。
  *
- * @author CH
  * @since 4.0.0.42
  */
 public final class DataSyncDispatcherBenchProbe {

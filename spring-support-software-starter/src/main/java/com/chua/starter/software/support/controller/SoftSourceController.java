@@ -23,8 +23,8 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 软件源接口
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 @Tag(name = "软件源接口")
 @RestController
@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class SoftSourceController {
 
+    /** Soft来源服务 */
     private final SoftSourceService softSourceService;
 
     @Operation(summary = "软件源列表")

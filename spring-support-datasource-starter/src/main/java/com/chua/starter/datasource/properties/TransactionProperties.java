@@ -18,8 +18,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *     write-only: "save*,insert*,add*,update*,delete*,remove*" # 写事务方法前缀(逗号分隔)
  * </pre>
  *
- * @author CH
  * @since 2021-07-19
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = TransactionProperties.PREFIX, ignoreInvalidFields = true)
@@ -30,6 +30,7 @@ public class TransactionProperties {
     private boolean enable = false;
 
 
+    /** Prefix */
     public static final String PREFIX = "plugin.transaction";
     /**
      * 事务超时时间

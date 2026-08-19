@@ -8,8 +8,8 @@ import java.util.Map;
 /**
  * HikariCP数据源属性提供者
  *
- * @author CH
  * @since 2024/12/21
+ * @author CH
  */
 public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvider<HikariDataSource> {
 

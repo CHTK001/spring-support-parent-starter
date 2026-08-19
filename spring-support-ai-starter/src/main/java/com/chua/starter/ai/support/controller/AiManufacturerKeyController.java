@@ -28,8 +28,8 @@ import java.util.List;
  *
  * <p>所有接口均受 {@code @Permission("admin")} 保护，查询接口对 Key 明文进行脱敏处理。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Tag(name = "AI Manufacturer Key Controller", description = "AI 厂商 API Key 管理相关接口")
 @RestController

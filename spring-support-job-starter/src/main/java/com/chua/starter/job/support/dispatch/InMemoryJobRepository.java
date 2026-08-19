@@ -17,8 +17,8 @@ import java.util.Map;
  *
  * <p>每个任务的触发器与最近一次触发时间都在内存中维护, 以实现固定的频率/延迟序列推进。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class InMemoryJobRepository implements JobRepository {

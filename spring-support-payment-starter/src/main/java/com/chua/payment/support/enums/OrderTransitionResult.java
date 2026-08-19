@@ -2,6 +2,7 @@ package com.chua.payment.support.enums;
 
 /**
  * 订单状态转换结果
+ * @author CH
  */
 public enum OrderTransitionResult {
 
@@ -20,3 +21,4 @@ public enum OrderTransitionResult {
      */
     REJECTED
 }
+

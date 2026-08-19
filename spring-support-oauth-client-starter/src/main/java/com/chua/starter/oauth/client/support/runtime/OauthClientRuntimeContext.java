@@ -9,7 +9,6 @@ import org.springframework.core.env.Environment;
 /**
  * OAuth Client 运行时上下文。
  *
- * @author CH
  */
 public final class OauthClientRuntimeContext {
     private static volatile ApplicationContext applicationContext;

@@ -9,12 +9,13 @@ import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
  *
  * 当前版本仅从 sys_ai_global_setting(runtime) 读取 LLM 主链路配置。
  *
- * @author CH
  * @since 2026/04/03
  */
 public final class ChatClientSettingsResolver {
 
+    /** 分组 */
     private static final String GROUP = "runtime";
+    /** Default_timeout_millis */
     private static final long DEFAULT_TIMEOUT_MILLIS = 30_000L;
 
     private ChatClientSettingsResolver() {

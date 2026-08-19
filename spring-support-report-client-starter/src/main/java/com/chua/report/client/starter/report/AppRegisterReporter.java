@@ -23,47 +23,59 @@ import java.util.concurrent.TimeUnit;
  * 定时上报Spring应用基本信息，服务端覆盖更新
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/12/05
+ * @author CH
  */
 @Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class AppRegisterReporter {
 
 
+    /** 实例 */
     private static final AppRegisterReporter INSTANCE = new AppRegisterReporter();
 
     @Setter
+    /** 同步客户端 */
     private SyncClient syncClient;
 
+    /** 调度器 */
     private ScheduledExecutorService scheduler;
     private volatile boolean running = false;
 
     // Spring 应用信息
     @Setter
+    /** Application名称 */
     private String applicationName;
 
     @Setter
+    /** 是否激活profiles */
     private String[] activeProfiles;
 
     @Setter
+    /** 主机 */
     private String host;
 
     @Setter
+    /** 上下文路径 */
     private String contextPath;
 
     @Setter
+    /** 服务器端口 */
     private Integer serverPort;
 
+    /** IP地址 */
     private String ipAddress;
+    /** Hostname */
     private String hostname;
 
     // 上报间隔（秒）
     @Setter
+    /** Report间隔 */
     private long reportInterval = 30;
 
     // 启动时间
+    /** 开始时间 */
     private long startTime;
 
     public static AppRegisterReporter getInstance() {

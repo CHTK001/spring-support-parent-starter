@@ -16,12 +16,13 @@ import java.util.Map;
  * {@link PropertyValues}
  * Adapter
  *
- * @author CH
  * @version 1.0.0
  * @since 2.5.11
+ * @author CH
  */
 public class AnnotationPropertyValuesAdapter implements PropertyValues {
 
+    /** Delegate */
     private final PropertyValues delegate;
 
     /**

@@ -5,6 +5,8 @@ import com.chua.payment.support.entity.PaymentGlobalConfig;
 
 /**
  * 支付全局配置 Mapper
+ * @author CH
  */
 public interface PaymentGlobalConfigMapper extends BaseMapper<PaymentGlobalConfig> {
 }
+

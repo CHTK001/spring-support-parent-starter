@@ -20,8 +20,8 @@ import java.util.TreeMap;
  *   <li>endpoint、AppKey/AppSecret、签名算法需按乐橙开放平台 OpenAPI 文档配置</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class DahuaLeChangeSession extends AbstractOpenApiSession {

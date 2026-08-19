@@ -8,8 +8,8 @@ import java.time.LocalDateTime;
  * <p>字段命名对齐前端 {@code pages/spider} 的 {@code SpiderDefinition} 类型，
  * 由后端实体 {@code SpiderDefinition} 映射而来，避免前后端字段差异。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class SpiderDefinitionVO {
 

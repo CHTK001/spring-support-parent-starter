@@ -2,6 +2,7 @@ package com.chua.payment.support.task;
 
 /**
  * 支付模块托管任务
+ * @author CH
  */
 public interface PaymentManagedTask {
 
@@ -30,3 +31,4 @@ public interface PaymentManagedTask {
      */
     void execute();
 }
+

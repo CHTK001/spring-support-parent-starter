@@ -5,7 +5,7 @@ import com.chua.starter.monitor.support.entity.MsMonitorTask;
 /**
  * 监控任务 Mapper
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 public interface MsMonitorTaskMapper extends BaseMapper<MsMonitorTask> {}

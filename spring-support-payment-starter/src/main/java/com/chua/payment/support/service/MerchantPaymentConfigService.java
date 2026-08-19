@@ -4,6 +4,7 @@ import com.chua.payment.support.entity.MerchantPaymentConfig;
 
 /**
  * 商户支付配置服务
+ * @author CH
  */
 public interface MerchantPaymentConfigService {
 
@@ -32,3 +33,4 @@ public interface MerchantPaymentConfigService {
      */
     Integer getOrderTimeoutMinutes(Long merchantId);
 }
+

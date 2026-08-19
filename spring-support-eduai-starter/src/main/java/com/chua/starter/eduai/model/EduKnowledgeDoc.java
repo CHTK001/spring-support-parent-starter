@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
 /**
  * 知识库文档实体
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("edu_knowledge_doc")
@@ -21,6 +21,7 @@ public class EduKnowledgeDoc {
      * 文档ID
      */
     @TableId(type = IdType.AUTO)
+    /** KnowledgeDOCID */
     private Long knowledgeDocId;
 
     /**

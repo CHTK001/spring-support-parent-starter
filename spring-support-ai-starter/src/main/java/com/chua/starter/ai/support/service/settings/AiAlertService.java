@@ -7,8 +7,8 @@ import java.util.List;
 /**
  * 告警规则服务接口
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 public interface AiAlertService {
 

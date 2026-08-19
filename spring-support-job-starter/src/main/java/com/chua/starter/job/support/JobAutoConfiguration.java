@@ -55,8 +55,8 @@ import java.util.concurrent.TimeUnit;
  *   <tr><td>SINGLE</td><td>装配</td><td>装配</td><td>不装配</td></tr>
  * </table>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Configuration
@@ -486,7 +486,6 @@ public class JobAutoConfiguration {
      * 启动期把 {@link JobHandlerFactory} 已注册的处理器同步为 {@link JobDefinition},
      * 仅当仓库为 {@link InMemoryJobRepository} 时生效, 否则跳过。
      *
-     * @author CH
      * @since 4.0.0.42
      */
     public static final class JobSampleSeeder {

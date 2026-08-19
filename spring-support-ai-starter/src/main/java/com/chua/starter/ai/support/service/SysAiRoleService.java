@@ -9,8 +9,8 @@ import java.util.List;
  *
  * <p>提供角色（人设）的增删改查与启用停用能力。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface SysAiRoleService {
 

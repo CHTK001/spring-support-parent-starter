@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
+ * @author CH
  */
 public class ApiCryptoSerializer extends JsonSerializer<String> implements ContextualSerializer {
 
@@ -165,3 +166,4 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
         return serializerProvider.findNullValueSerializer(null);
     }
 }
+

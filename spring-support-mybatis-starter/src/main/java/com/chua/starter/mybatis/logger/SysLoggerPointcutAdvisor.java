@@ -33,12 +33,12 @@ import java.util.Date;
  *     <li>通过事件机制发布日志，支持模块化处理</li>
  * </ul>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/01/01
  * @see SysLog
  * @see SysLoggerInfo
  * @see LoggerIgnore
+ * @author CH
  */
 @Lazy
 @Component

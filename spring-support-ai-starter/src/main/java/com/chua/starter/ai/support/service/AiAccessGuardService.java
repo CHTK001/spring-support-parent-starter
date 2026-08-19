@@ -3,8 +3,8 @@ package com.chua.starter.ai.support.service;
 /**
  * AI 访问守卫服务接口，负责 AppKey / Bearer Token 校验。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface AiAccessGuardService {
 

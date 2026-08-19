@@ -16,8 +16,8 @@ import java.util.List;
  *
  * <p>从 /Applications 目录读取 .app 包信息，使用 mdls 提取名称和版本。</p>
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 @Slf4j
 @Component

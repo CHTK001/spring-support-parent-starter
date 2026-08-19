@@ -18,14 +18,18 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 钱包提现审批服务实现
+ * @author CH
  */
 @Service
 @RequiredArgsConstructor
 public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApprovalService {
 
+    /** Approvalmapper */
     private final WalletWithdrawApprovalMapper approvalMapper;
+    /** Idempotent模板 */
     private final IdempotentTemplate idempotentTemplate;
 
+    /** Lock_prefix */
     private static final String LOCK_PREFIX = "payment:lock:withdraw-approval:";
 
     @Override
@@ -109,3 +113,4 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
         }
     }
 }
+

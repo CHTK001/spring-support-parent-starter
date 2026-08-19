@@ -25,13 +25,16 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 钱包订单控制器
+ * @author CH
  */
 @RestController
 @RequestMapping("/wallet/order")
 @RequiredArgsConstructor
 public class WalletOrderController {
 
+    /** Wallet排序服务 */
     private final WalletOrderService walletOrderService;
+    /** PaymentcallbackURL解析器 */
     private final PaymentCallbackUrlResolver paymentCallbackUrlResolver;
 
     @PostMapping("/recharge")
@@ -81,3 +84,4 @@ public class WalletOrderController {
         return vo;
     }
 }
+

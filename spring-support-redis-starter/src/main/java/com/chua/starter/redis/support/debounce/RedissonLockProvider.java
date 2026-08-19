@@ -11,17 +11,20 @@ import java.util.concurrent.TimeUnit;
 /**
  * redis反跳密钥生成器
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/03/10
+ * @author CH
  */
 @Spi(value = "redisson", order = 100)
 public class RedissonLockProvider implements LockProvider {
 
     @AutoInject
+    /** Redisson客户端 */
     private RedissonClient redissonClient;
+    /** 锁 */
     private RLock lock;
     boolean isLocked = false;
+    /** 密钥 */
     private String key;
 
     public RedissonLockProvider(String key) {

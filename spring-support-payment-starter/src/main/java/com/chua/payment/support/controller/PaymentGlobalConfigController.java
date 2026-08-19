@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 支付全局配置控制器
+ * @author CH
  */
 @Tag(name = "支付全局配置", description = "支付回调、返回地址、默认自动刷新配置")
 @RestController
@@ -25,7 +26,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class PaymentGlobalConfigController {
 
+    /** Payment全局配置服务 */
     private final PaymentGlobalConfigService paymentGlobalConfigService;
+    /** Principal解析器 */
     private final PaymentAccountPrincipalResolver principalResolver;
 
     @Operation(summary = "查询支付全局配置")
@@ -53,3 +56,4 @@ public class PaymentGlobalConfigController {
         return null;
     }
 }
+

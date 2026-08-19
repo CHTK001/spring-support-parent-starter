@@ -7,8 +7,8 @@ import java.util.List;
 /**
  * 教师确认评分DTO
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class MarkingConfirmDTO {
@@ -25,8 +25,11 @@ public class MarkingConfirmDTO {
 
     @Data
     public static class ScoreAdjustment {
+        /** 结果ID */
         private Long resultId;
+        /** 分数 */
         private Integer score;
+        /** Comment */
         private String comment;
     }
 }

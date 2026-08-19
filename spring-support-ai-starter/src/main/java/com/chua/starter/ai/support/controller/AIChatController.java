@@ -57,9 +57,13 @@ public class AIChatController extends BaseAiController {
      */
     private static final int COMPRESSED_CONTEXT_MAX_LENGTH = 16000;
 
+    /** AIdialogrecord服务 */
     private final AIDialogRecordService aiDialogRecordService;
+    /** AIchatfacade服务 */
     private final AiChatFacadeService aiChatFacadeService;
+    /** AI会话compression服务 */
     private final SysAiSessionCompressionService aiSessionCompressionService;
+    /** SYSAI全局设置服务 */
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
 
     // ==================== 会话管理 ====================

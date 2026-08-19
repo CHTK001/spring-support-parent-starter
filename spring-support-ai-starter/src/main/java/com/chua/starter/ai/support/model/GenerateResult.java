@@ -12,5 +12,6 @@ import lombok.Data;
 @AllArgsConstructor
 public class GenerateResult {
     /** 生成的资源 URL（或 data:image/png;base64,...） */
+    /** URL */
     private String url;
 }

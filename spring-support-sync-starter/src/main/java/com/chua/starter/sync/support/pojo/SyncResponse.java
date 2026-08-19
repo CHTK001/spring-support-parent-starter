@@ -5,12 +5,13 @@ import java.io.Serializable;
 /**
  * 同步响应
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/12/05
+ * @author CH
  */
 public class SyncResponse implements Serializable {
 
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -151,13 +152,21 @@ public class SyncResponse implements Serializable {
     }
 
     public static class Builder {
+        /** 请求ID */
         private String requestId;
+        /** 客户端ID */
         private String clientId;
+        /** Topic */
         private String topic;
+        /** 代码 */
         private int code;
+        /** 消息 */
         private String message;
+        /** 数据 */
         private Object data;
+        /** 时间戳 */
         private long timestamp;
+        /** 持续时间 */
         private long duration;
 
         public Builder requestId(String requestId) {

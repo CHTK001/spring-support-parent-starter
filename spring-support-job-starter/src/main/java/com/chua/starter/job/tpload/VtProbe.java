@@ -23,8 +23,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * <p>度量两种执行器跑完全部任务的总耗时 (越小越快) 与吞吐 (件/秒)。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class VtProbe {

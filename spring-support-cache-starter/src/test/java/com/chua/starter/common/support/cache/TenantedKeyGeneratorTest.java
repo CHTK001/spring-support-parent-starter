@@ -17,7 +17,9 @@ import java.lang.reflect.Method;
 @DisplayName("TenantedKeyGenerator 测试")
 class TenantedKeyGeneratorTest {
 
+    /** Generator */
     private TenantedKeyGenerator generator;
+    /** 密钥属性 */
     private CacheProperties.KeyProperties keyProperties;
 
     @BeforeEach

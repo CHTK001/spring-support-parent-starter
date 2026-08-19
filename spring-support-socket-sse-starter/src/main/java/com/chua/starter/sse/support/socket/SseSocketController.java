@@ -13,9 +13,9 @@ import java.util.Map;
  * SSE Socket 连接控制器
  * 提供 SSE 协议的连接端点
  *
- * @author CH
  * @version 1.0.0
  * @since 2024-12-24
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -24,6 +24,7 @@ import java.util.Map;
 public class SseSocketController {
 
     @Autowired
+    /** SSESocket会话模板 */
     private SseSocketSessionTemplate sseSocketSessionTemplate;
 
     /**

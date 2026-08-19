@@ -9,14 +9,16 @@ import org.springframework.core.env.Environment;
 /**
  * SQL 物理化路由配置。
  *
- * @author CH
  * @since 2026/4/2
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = MaterializedRouteProperties.PRE)
 public class MaterializedRouteProperties {
 
+    /** PRE */
     public static final String PRE = "plugin.datasource.materialized";
+    /** Legacy_pre */
     public static final String LEGACY_PRE = "spring.datasource.materialized";
 
     /**

@@ -17,13 +17,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * 事件监听器处理器
  * 扫描 @OnEvent 注解并分发事件到对应的处理方法
  *
- * @author CH
  * @version 1.0.0
  * @since 2024-12-27
+ * @author CH
  */
 @Slf4j
 public class EventListenerProcessor {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(EventListenerProcessor.class);
 
     /**
@@ -122,7 +123,9 @@ public class EventListenerProcessor {
      * 事件处理器封装
      */
     private static class EventHandler {
+        /** 监听器 */
         private final SocketListener listener;
+        /** Method */
         private final Method method;
 
         public EventHandler(SocketListener listener, Method method) {

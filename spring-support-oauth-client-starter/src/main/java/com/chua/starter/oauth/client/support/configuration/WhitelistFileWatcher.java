@@ -34,14 +34,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 白名单文件格式：每行一个URL Pattern，支持 # 注释
  * </p>
  *
- * @author CH
  * @since 2024/12/07
+ * @author CH
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class WhitelistFileWatcher {
 
+    /** Auth客户端属性 */
     private final AuthClientProperties authClientProperties;
 
     /**
@@ -53,7 +54,9 @@ public class WhitelistFileWatcher {
      * 文件监听线程
      */
     private ExecutorService watchExecutor;
+    /** Watch服务 */
     private WatchService watchService;
+    /** Running */
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     /**

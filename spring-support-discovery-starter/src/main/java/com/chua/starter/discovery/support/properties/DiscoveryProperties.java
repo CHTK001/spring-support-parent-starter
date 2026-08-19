@@ -7,8 +7,8 @@ import java.util.List;
 
 /**
  * 发现配置
- * @author CH
  * @since 2024/9/9
+ * @author CH
  */
 @Data
 public class DiscoveryProperties {

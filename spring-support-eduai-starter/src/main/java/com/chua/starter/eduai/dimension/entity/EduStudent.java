@@ -15,14 +15,15 @@ import java.time.LocalDateTime;
  * 本表只存储教育域扩展属性（学号/班级/入学年份/年级）。
  * {@code studentUserId} 是与系统用户的关联键。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("edu_student")
 public class EduStudent {
 
     @TableId(type = IdType.AUTO)
+    /** StudentID */
     private Long studentId;
 
     /**
@@ -66,8 +67,10 @@ public class EduStudent {
     private Integer studentStatus;
 
     @TableField(value = "create_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT)
+    /** Create时间 */
     private LocalDateTime createTime;
 
     @TableField(value = "update_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT_UPDATE)
+    /** Update时间 */
     private LocalDateTime updateTime;
 }

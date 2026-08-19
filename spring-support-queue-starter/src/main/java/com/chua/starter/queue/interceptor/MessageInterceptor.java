@@ -14,8 +14,8 @@ import com.chua.starter.queue.Message;
  * - 性能监控
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 public interface MessageInterceptor {
 

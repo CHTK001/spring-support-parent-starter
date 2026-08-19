@@ -23,7 +23,6 @@ import java.lang.annotation.*;
  * }
  * </pre>
  *
- * @author CH
  * @since 2025-03-20
  */
 @Target(ElementType.METHOD)

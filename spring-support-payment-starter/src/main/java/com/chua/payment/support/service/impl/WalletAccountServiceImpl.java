@@ -32,17 +32,24 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 钱包账户服务实现
+ * @author CH
  */
 @Service
 @RequiredArgsConstructor
 public class WalletAccountServiceImpl implements WalletAccountService {
 
+    /** Status_enabled */
     private static final int STATUS_ENABLED = 1;
 
+    /** Walletaccountmapper */
     private final WalletAccountMapper walletAccountMapper;
+    /** Walletaccount日志mapper */
     private final WalletAccountLogMapper walletAccountLogMapper;
+    /** Merchantmapper */
     private final MerchantMapper merchantMapper;
+    /** Wallet限制服务 */
     private final WalletLimitService walletLimitService;
+    /** Idempotent模板 */
     private final IdempotentTemplate idempotentTemplate;
 
     @Override
@@ -583,3 +590,4 @@ public class WalletAccountServiceImpl implements WalletAccountService {
         return vo;
     }
 }
+

@@ -13,8 +13,8 @@ import lombok.EqualsAndHashCode;
  * 对应表 sys_message_provider，管理短信、邮件、微信、钉钉等消息服务商配置。
  * </p>
  *
- * @author CH
  * @since 2026/08/03
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -25,6 +25,7 @@ public class SysMessageProvider extends SysBase {
      * 提供商ID - 主键自增
      */
     @TableId(value = "sys_message_provider_id", type = IdType.AUTO)
+    /** SYS消息提供者ID */
     private Integer sysMessageProviderId;
 
     /**

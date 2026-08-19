@@ -31,18 +31,26 @@ import java.util.Map;
 
 /**
  * 支付回调处理服务实现
+ * @author CH
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessService {
 
+    /** Notify日志mapper */
     private final PaymentNotifyLogMapper notifyLogMapper;
+    /** Notify错误mapper */
     private final PaymentNotifyErrorMapper notifyErrorMapper;
+    /** Paymentnotify服务 */
     private final PaymentNotifyService paymentNotifyService;
+    /** WechatPAY分数notify服务 */
     private final WechatPayScoreNotifyService wechatPayScoreNotifyService;
+    /** Walletnotify服务 */
     private final WalletNotifyService walletNotifyService;
+    /** Objectmapper */
     private final ObjectMapper objectMapper;
+    /** 事件publisher */
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
@@ -423,3 +431,4 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
         return LocalDateTime.now().plusMinutes(delayMinutes);
     }
 }
+

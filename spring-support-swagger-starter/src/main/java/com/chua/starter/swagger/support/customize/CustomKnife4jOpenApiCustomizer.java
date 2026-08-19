@@ -50,6 +50,7 @@ import java.util.stream.Collectors;
  * @author <a href="xiaoymin@foxmail.com">xiaoymin@foxmail.com</a>
  * 2022/12/11 22:40
  * @since 4.1.0
+ * @author CH
  */
 @Slf4j
 @Primary
@@ -198,3 +199,4 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
         return classes;
     }
 }
+

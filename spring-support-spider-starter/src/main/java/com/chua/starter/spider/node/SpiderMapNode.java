@@ -26,8 +26,8 @@ import java.util.Map;
  *   <li>{@code saveAs} 结果写入的上下文属性名（可选，缺省时写入当前数据）</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Component
 public class SpiderMapNode implements FlowNode {

@@ -14,8 +14,8 @@ import java.util.Map;
  * Provider 解析一次采集输出得到的最小数据单元, 用于入库或聚合。
  * </p>
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Data
 @Builder

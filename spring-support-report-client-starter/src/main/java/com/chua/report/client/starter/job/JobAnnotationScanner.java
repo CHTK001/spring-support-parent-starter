@@ -53,17 +53,18 @@ import java.util.Map;
  * }
  * </pre>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/12/07
  * @see Job
  * @see JobHandlerFactory
+ * @author CH
  */
 @Slf4j
 @RequiredArgsConstructor
 public class JobAnnotationScanner implements BeanPostProcessor {
 
 
+    /** 作业处理器工厂 */
     private final JobHandlerFactory jobHandlerFactory = JobHandlerFactory.getInstance();
 
     @Override

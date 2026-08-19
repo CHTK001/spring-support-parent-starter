@@ -27,8 +27,8 @@ import java.util.List;
  * 连接参数从任务配置 {@code collect_config} 中获取。
  * </p>
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Slf4j
 @Component

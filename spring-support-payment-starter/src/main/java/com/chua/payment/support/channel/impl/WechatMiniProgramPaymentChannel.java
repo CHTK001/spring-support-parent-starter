@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * 微信小程序支付
+ * @author CH
  */
 public class WechatMiniProgramPaymentChannel extends WechatJsapiPaymentChannel implements PaymentChannel {
 
@@ -63,3 +64,4 @@ public class WechatMiniProgramPaymentChannel extends WechatJsapiPaymentChannel i
         return gateway(providerSpi(channel, null)).closeMiniProgramOrder(buildProperties(channel), orderNo);
     }
 }
+

@@ -18,8 +18,8 @@ import org.springframework.context.annotation.Import;
  * <p>效果: 装配 {@link JobAutoConfiguration} 并以 SINGLE 角色启动,
  * Leader 自选 + 单秒扫描 + 本地执行, 观察 {@code DemoJobs} 的成功/失败/原生定时日志。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @SpringBootApplication
 @Import({JobAutoConfiguration.class, DemoJobs.class})

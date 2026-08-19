@@ -5,6 +5,7 @@ import com.chua.payment.support.entity.TransactionRecord;
 
 /**
  * 交易流水服务接口
+ * @author CH
  */
 public interface TransactionRecordService {
 
@@ -18,3 +19,4 @@ public interface TransactionRecordService {
 
     Page<TransactionRecord> page(int pageNum, int pageSize, Long merchantId, String orderNo, String transactionType, Integer status);
 }
+

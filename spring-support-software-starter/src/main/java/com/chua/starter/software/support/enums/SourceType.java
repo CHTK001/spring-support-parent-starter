@@ -3,8 +3,8 @@ package com.chua.starter.software.support.enums;
 /**
  * 软件源类型
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 public enum SourceType {
     /** 官方仓库 */
@@ -16,6 +16,7 @@ public enum SourceType {
     /** 本地文件 */
     LOCAL(3);
 
+    /** 值 */
     private final int value;
 
     SourceType(int value) {

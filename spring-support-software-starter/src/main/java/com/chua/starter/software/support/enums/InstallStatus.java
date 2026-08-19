@@ -3,8 +3,8 @@ package com.chua.starter.software.support.enums;
 /**
  * 安装状态
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 public enum InstallStatus {
     /** 未安装 */
@@ -24,7 +24,9 @@ public enum InstallStatus {
     /** 更新失败 */
     UPDATE_FAILED(7, "更新失败");
 
+    /** 值 */
     private final int value;
+    /** 名称 */
     private final String name;
 
     InstallStatus(int value, String name) {

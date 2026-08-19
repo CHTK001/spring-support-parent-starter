@@ -16,15 +16,19 @@ import java.util.Map;
  * 根据上报客户端的配置自动设置 sync 模块的配置，实现配置串联。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/12/06
+ * @author CH
  */
 public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
+    /** 日志 */
     private static final DeferredLog log = new DeferredLog();
+    /** Report_client_prefix */
     private static final String REPORT_CLIENT_PREFIX = "plugin.report.client.";
+    /** Report_prefix */
     private static final String REPORT_PREFIX = "plugin.report.";
+    /** Sync_prefix */
     private static final String SYNC_PREFIX = "plugin.sync.";
 
     @Override

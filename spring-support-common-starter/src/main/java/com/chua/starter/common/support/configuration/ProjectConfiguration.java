@@ -8,8 +8,8 @@ import org.springframework.core.env.Environment;
 /**
  * 项目配置
  *
- * @author CH
  * @since 2024/9/6
+ * @author CH
  */
 @Configuration
 public class ProjectConfiguration implements EnvironmentAware {

@@ -37,8 +37,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * 合并完成后由 {@link com.chua.starter.filesystem.support.service.AsyncMergeService}
  * 异步调度写入对象存储。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @RestController
 @RequiredArgsConstructor

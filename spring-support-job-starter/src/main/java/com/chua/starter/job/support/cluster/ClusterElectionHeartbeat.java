@@ -22,8 +22,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *   <li>{@code @PreDestroy} 优雅关闭, 释放 Leader 权。</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RequiredArgsConstructor

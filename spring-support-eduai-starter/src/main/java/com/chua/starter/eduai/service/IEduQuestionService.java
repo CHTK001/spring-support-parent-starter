@@ -9,8 +9,8 @@ import com.chua.starter.eduai.model.dto.QuestionSaveDTO;
 /**
  * 题目服务接口
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface IEduQuestionService extends IService<EduQuestion> {
 

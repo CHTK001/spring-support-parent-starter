@@ -8,8 +8,8 @@ import com.chua.payment.support.vo.MerchantVO;
 /**
  * 商户服务接口
  *
- * @author CH
  * @since 2026-03-18
+ * @author CH
  */
 public interface MerchantService {
 

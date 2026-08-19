@@ -19,13 +19,14 @@ import java.util.stream.Collectors;
  * SSE Socket 会话模板实现
  * 实现 SocketSessionTemplate 接口，提供统一的消息发送能力
  *
- * @author CH
  * @version 1.0.0
  * @since 2024-12-24
+ * @author CH
  */
 @Slf4j
 public class SseSocketSessionTemplate implements SocketSessionTemplate {
 
+    /** Object_mapper */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     /**

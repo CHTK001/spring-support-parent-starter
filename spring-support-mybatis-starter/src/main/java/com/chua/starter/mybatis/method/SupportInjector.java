@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class SupportInjector extends DefaultSqlInjector implements DisposableBean {
 
+    /** Mybatis属性 */
     private MybatisPlusProperties mybatisProperties;
     private final Map<MybatisPlusProperties.SqlMethodProperties, SqlMethodMarker> cache = new ConcurrentHashMap<>();
     private final Map<MybatisPlusProperties.SqlMethodProperties, List<AbstractMethod>> cacheAbstractMethod = new ConcurrentHashMap<>();

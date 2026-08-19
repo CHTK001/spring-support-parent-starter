@@ -8,8 +8,8 @@ import com.chua.starter.queue.Message;
  * 根据消息内容动态路由到不同的目标队列
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @FunctionalInterface
 public interface MessageRouter {

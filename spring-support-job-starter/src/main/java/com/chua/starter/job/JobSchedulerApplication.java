@@ -19,8 +19,8 @@ import org.springframework.context.annotation.Import;
  * Leader 抢占 + 单秒扫描仓库 + 通过 SyncServer 长链广播/单播 cmd,
  * 再配合 {@code JobExecutorApplication} 组成完整的调度→执行→回传链路。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @SpringBootApplication
 @Import({JobAutoConfiguration.class, DemoJobs.class})

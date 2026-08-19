@@ -28,8 +28,8 @@ import java.util.concurrent.ConcurrentMap;
  * LeaderLoop 通知过的下次触发时间, 若当前 {@code nextFire} 早于 {@code lastFire},
  * 仍视作到期 (即漏掉的那次依然发布, 让上层补跑)。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RequiredArgsConstructor

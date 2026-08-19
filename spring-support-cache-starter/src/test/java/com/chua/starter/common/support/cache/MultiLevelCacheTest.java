@@ -19,7 +19,9 @@ import java.util.concurrent.Callable;
 public class MultiLevelCacheTest {
 
     // ---- 辅助：构造两级的内存缓存 ----
+    /** L1cache */
     private final SimpleMemoryCache l1Cache = new SimpleMemoryCache("L1");
+    /** L2cache */
     private final SimpleMemoryCache l2Cache = new SimpleMemoryCache("L2");
 
     private Cache l1() { return l1Cache; }
@@ -210,6 +212,7 @@ public class MultiLevelCacheTest {
      * 简单的内存缓存实现（用于辅助测试）
      */
     private static class SimpleMemoryCache implements Cache, MultiLevelCache.PatternEvictable {
+        /** 名称 */
         private final String name;
         private final java.util.Map<Object, ValueWrapper> store = new java.util.concurrent.ConcurrentHashMap<>();
 

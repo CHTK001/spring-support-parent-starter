@@ -14,12 +14,13 @@ import java.util.List;
  * 当响应编码开启时，返回 application/encrypted-data 类型。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2025/10/10
+ * @author CH
  */
 public class ApiContentNegotiationStrategy implements ContentNegotiationStrategy {
 
+    /** API响应encoderegister */
     private final ApiResponseEncodeRegister apiResponseEncodeRegister;
 
     public ApiContentNegotiationStrategy(ApiResponseEncodeRegister apiResponseEncodeRegister) {

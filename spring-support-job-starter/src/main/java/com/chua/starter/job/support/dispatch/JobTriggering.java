@@ -24,7 +24,6 @@ import java.util.concurrent.TimeUnit;
  *       (fixedDelay 在单机调度下近似 interval-from-last-fire 语义)</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
  */
 public final class JobTriggering {

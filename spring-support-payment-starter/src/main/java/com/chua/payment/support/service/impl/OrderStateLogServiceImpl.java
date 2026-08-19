@@ -13,12 +13,14 @@ import java.util.List;
 
 /**
  * 订单状态流转日志服务实现类
+ * @author CH
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderStateLogServiceImpl implements OrderStateLogService {
 
+    /** 排序状态日志mapper */
     private final OrderStateLogMapper orderStateLogMapper;
 
     @Override
@@ -42,3 +44,4 @@ public class OrderStateLogServiceImpl implements OrderStateLogService {
                 .orderByAsc(OrderStateLog::getCreatedAt));
     }
 }
+

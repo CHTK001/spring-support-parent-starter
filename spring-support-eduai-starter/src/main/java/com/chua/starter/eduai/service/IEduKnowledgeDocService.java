@@ -9,8 +9,8 @@ import com.chua.starter.eduai.model.vo.KnowledgeDocVO;
 /**
  * 知识库文档服务接口
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface IEduKnowledgeDocService extends IService<EduKnowledgeDoc> {
 

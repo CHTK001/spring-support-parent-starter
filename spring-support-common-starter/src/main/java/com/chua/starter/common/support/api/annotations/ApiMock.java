@@ -28,7 +28,6 @@ import java.lang.annotation.*;
  * public Result test() { ... }
  * </pre>
  *
- * @author CH
  * @since 2024/12/08
  * @version 1.0.0
  */

@@ -46,12 +46,13 @@ import org.slf4j.LoggerFactory;
  * </pre>
  * </p>
  *
- * @author CH
  * @since 2024/12/4
  * @version 2.0.0
+ * @author CH
  */
 @SuppressWarnings("removal")
 public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ProfileEnvironmentPostProcessor.class);
         /**
      * 目录前缀

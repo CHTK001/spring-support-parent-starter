@@ -11,8 +11,8 @@ import org.springframework.web.socket.WebSocketSession;
  *
  * <p>基于 ${@code spring-boot-starter-websocket} 的 {@link WebSocketSessionManager} 实现同步协议。</p>
  *
- * @author CH
  * @since 4.0.0.41
+ * @author CH
  */
 @Slf4j
 public class WebsocketSyncServer extends AbstractSyncServer {

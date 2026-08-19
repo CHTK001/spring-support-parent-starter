@@ -25,9 +25,9 @@ import java.util.Map;
  *     <li>在线状态查询</li>
  * </ul>
  *
- * @author CH
  * @since 2024/12/11
  * @version 4.0.0.34
+ * @author CH
  */
 public interface Protocol {
 
@@ -299,8 +299,8 @@ public interface Protocol {
      * 用户在线状态信息
      * <p>包含当前在线数、最大允许在线数、在线模式等信息</p>
      *
-     * @author CH
      * @since 2024/12/11
+     * @author CH
      */
     @Data
     @NoArgsConstructor

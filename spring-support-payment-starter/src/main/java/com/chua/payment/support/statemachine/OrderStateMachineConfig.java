@@ -15,8 +15,8 @@ import java.util.EnumSet;
 /**
  * 订单状态机配置类
  *
- * @author CH
  * @since 2026-03-18
+ * @author CH
  */
 @Slf4j
 @Configuration

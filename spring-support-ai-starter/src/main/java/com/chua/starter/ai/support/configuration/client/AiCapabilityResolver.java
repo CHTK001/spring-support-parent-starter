@@ -30,8 +30,8 @@ import java.util.Optional;
  * <p>能力标签与配置分组的映射集中维护在本类，分组仍使用 {@code sys_ai_global_setting}
  * 表既有分组（image / video / vision / colorize），保证前端配置面板与存量数据兼容。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Component

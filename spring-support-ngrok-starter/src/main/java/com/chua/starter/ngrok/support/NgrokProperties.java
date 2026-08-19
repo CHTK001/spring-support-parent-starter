@@ -64,8 +64,8 @@ import java.time.Duration;
  *     extraLocalPorts: 8081,8082
  * </pre>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = "plugin.ngrok")

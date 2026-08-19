@@ -7,8 +7,8 @@ import java.io.File;
  *
  * <p>用于封装软件源操作（安装、卸载、更新）的返回结果。</p>
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 public class SoftwareSourceResult {
 

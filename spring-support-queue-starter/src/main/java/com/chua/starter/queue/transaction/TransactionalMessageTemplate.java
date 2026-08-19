@@ -19,14 +19,15 @@ import java.util.Map;
  * 支持在Spring事务提交后发送消息，确保消息发送与数据库操作的一致性
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class TransactionalMessageTemplate {
 
+    /** 消息模板 */
     private final MessageTemplate messageTemplate;
 
     /**
@@ -90,7 +91,9 @@ public class TransactionalMessageTemplate {
      * 消息发送同步器
      */
     private class MessageSendSynchronization implements TransactionSynchronization {
+        /** 目的地 */
         private final String destination;
+        /** Payload */
         private final Object payload;
         private final Map<String, Object> headers;
 
@@ -120,6 +123,7 @@ public class TransactionalMessageTemplate {
      * 批量消息发送同步器
      */
     private class BatchMessageSendSynchronization implements TransactionSynchronization {
+        /** Messages */
         private final List<TransactionalMessage> messages;
 
         public BatchMessageSendSynchronization(List<TransactionalMessage> messages) {
@@ -156,7 +160,9 @@ public class TransactionalMessageTemplate {
      * 事务消息
      */
     public static class TransactionalMessage {
+        /** 目的地 */
         private final String destination;
+        /** Payload */
         private final Object payload;
         private final Map<String, Object> headers;
 

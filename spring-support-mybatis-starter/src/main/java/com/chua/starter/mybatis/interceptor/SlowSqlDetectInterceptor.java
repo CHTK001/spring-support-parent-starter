@@ -33,7 +33,6 @@ import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
  *
  * <p>注意：事件中是否携带 SQL/参数由 {@link MybatisSlowSqlProperties} 控制，避免敏感信息泄露。</p>
  *
- * @author CH
  * @since 2026/4/27
  */
 @Intercepts({
@@ -42,6 +41,7 @@ import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
 })
 public class SlowSqlDetectInterceptor implements Interceptor {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SlowSqlDetectInterceptor.class);
 
     /**
@@ -49,7 +49,9 @@ public class SlowSqlDetectInterceptor implements Interceptor {
      */
     private static final SimpleDateFormat FORMATTER = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
+    /** 事件publisher */
     private final ApplicationEventPublisher eventPublisher;
+    /** 属性 */
     private final MybatisSlowSqlProperties properties;
 
     /**
@@ -145,7 +147,9 @@ public class SlowSqlDetectInterceptor implements Interceptor {
     }
 
     private static class SqlResolveResult {
+        /** SQL */
         private final String sql;
+        /** Parameters */
         private final List<String> parameters;
 
         private SqlResolveResult(String sql, List<String> parameters) {

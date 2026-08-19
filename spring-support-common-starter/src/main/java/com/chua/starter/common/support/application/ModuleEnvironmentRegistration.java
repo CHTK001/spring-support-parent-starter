@@ -9,10 +9,11 @@ import org.slf4j.LoggerFactory;
  *
  * <p>用于将各个模块的开关和核心配置注册到全局环境中，统一管理与观测。</p>
  *
- * @author CH
  * @since 2026/01/14
+ * @author CH
  */
 public class ModuleEnvironmentRegistration {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ModuleEnvironmentRegistration.class);
 
     /**

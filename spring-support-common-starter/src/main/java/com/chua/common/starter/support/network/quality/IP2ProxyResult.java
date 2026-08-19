@@ -6,15 +6,19 @@ import java.io.Serializable;
 /**
  * IP2Proxy LITE 查询结果模型
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class IP2ProxyResult implements Serializable {
 
+    /** Not_supported */
     private static final String NOT_SUPPORTED = "NOT SUPPORTED";
+    /** 是否为空 */
     private static final String EMPTY = "-";
 
+    /** Proxy */
     private final IP2Proxy proxy;
+    /** IP */
     private final String ip;
 
     public IP2ProxyResult(IP2Proxy proxy, String ip) {

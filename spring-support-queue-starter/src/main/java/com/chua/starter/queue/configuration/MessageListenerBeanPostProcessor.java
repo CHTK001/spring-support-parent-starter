@@ -28,14 +28,17 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
  * 扫描 @QueueListener 注解并注册监听器
  * </p>
  *
- * @author CH
  * @since 2025-12-25
+ * @author CH
  */
 @Slf4j
 public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
 
+    /** 消息templates */
     private final List<MessageTemplate> messageTemplates;
+    /** 队列属性 */
     private final QueueProperties queueProperties;
+    /** 事件publisher */
     private final ApplicationEventPublisher eventPublisher;
     private final Map<String, MessageTemplate> templateMap = new ConcurrentHashMap<>();
 

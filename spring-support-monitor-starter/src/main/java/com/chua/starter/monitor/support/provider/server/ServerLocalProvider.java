@@ -34,8 +34,8 @@ import java.util.Set;
  * macOS 下 native 库不支持, 通过配置项跳过。
  * </p>
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Slf4j
 @Component

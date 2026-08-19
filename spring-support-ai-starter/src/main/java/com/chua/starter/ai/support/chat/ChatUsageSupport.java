@@ -6,7 +6,6 @@ import com.chua.common.support.ai.chat.ChatResponse;
 /**
  * AI 用量统计工具类。
  *
- * @author CH
  */
 public abstract class ChatUsageSupport {
 

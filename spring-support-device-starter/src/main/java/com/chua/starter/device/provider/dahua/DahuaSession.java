@@ -22,8 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * 大华设备会话实现（模拟）
  * <p>实际应调用大华 NetSDK / 云睿 SDK。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class DahuaSession implements DeviceSession {

@@ -12,10 +12,10 @@ import java.io.IOException;
  * 配合 {@link CustomHttpServletRequestWrapper} 使用，实现请求体的多次读取。
  * </p>
  *
- * @author CH
  * @since 2023/09/08
  * @version 1.0.0
  * @see CustomHttpServletRequestWrapper
+ * @author CH
  */
 public class CustomServletInputStream extends ServletInputStream {
 

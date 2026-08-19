@@ -35,8 +35,8 @@ import java.util.Optional;
  * 设置为 {@link Ordered#LOWEST_PRECEDENCE} - 10。
  * </p>
  *
- * @author CH
  * @since 2026/07/14
+ * @author CH
  */
 @Slf4j
 @Aspect

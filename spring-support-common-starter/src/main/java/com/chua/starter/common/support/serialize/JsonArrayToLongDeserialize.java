@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
  * @author CH
  */
 public class JsonArrayToLongDeserialize extends JsonDeserializer<Long> {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(JsonArrayToLongDeserialize.class);
         @Override
     public Long deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JacksonException {

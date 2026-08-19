@@ -10,8 +10,8 @@ import org.apache.ibatis.annotations.Param;
 /**
  * 软件信息表 Mapper
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 @Mapper
 public interface SoftSoftwareMapper extends BaseMapperX<SoftSoftware> {

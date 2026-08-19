@@ -18,9 +18,9 @@ import static com.chua.starter.common.support.constant.MdcConstant.X_TRACE_ID;
  * 在RestTemplate请求中添加traceId头。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/01/01
+ * @author CH
  */
 public class RestTemplateTraceIdInterceptor implements ClientHttpRequestInterceptor {
 

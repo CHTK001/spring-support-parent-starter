@@ -49,8 +49,8 @@ import java.util.UUID;
  *   <li>{@code POST /v2/v1/fine_tuning/jobs/{job_id}/cancel} — 取消微调任务</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Tag(name = "AI OpenAI Extended Protocol Controller", description = "OpenAI 标准协议扩展接口（Images / Audio / Files / Fine-tuning）")
 @RestController

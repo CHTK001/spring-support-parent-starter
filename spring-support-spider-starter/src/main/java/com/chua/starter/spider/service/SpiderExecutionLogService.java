@@ -13,8 +13,8 @@ import java.util.List;
  * <p>提供节点级执行日志的 CRUD，并按执行号（traceId）查询一次执行的全链路，
  * 同时支持执行历史的分页聚合与按爬虫维度的执行统计。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface SpiderExecutionLogService extends SpiderBaseService<SpiderExecutionLog> {
 

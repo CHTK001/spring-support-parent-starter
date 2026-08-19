@@ -5,8 +5,8 @@ import java.util.concurrent.TimeUnit;
 /**
  * 锁提供者接口
  *
- * @author CH
  * @since 2024/12/25
+ * @author CH
  */
 public interface LockProvider {
 

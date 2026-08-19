@@ -26,6 +26,7 @@ import java.util.Map;
 
 /**
  * 钱包异步回调控制器
+ * @author CH
  */
 @Slf4j
 @Hidden
@@ -35,9 +36,13 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class WalletNotifyController {
 
+    /** Wallet排序服务 */
     private final WalletOrderService walletOrderService;
+    /** Walletnotify服务 */
     private final WalletNotifyService walletNotifyService;
+    /** Paymentnotifyprocess服务 */
     private final PaymentNotifyProcessService paymentNotifyProcessService;
+    /** Objectmapper */
     private final ObjectMapper objectMapper;
 
     @PostMapping(value = "/{orderType}/{orderNo}", produces = MediaType.TEXT_PLAIN_VALUE)
@@ -149,3 +154,4 @@ public class WalletNotifyController {
         return sw.toString();
     }
 }
+

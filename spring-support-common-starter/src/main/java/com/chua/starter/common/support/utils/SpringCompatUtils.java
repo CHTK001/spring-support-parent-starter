@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
  * @author CH
  */
 public class SpringCompatUtils {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SpringCompatUtils.class);
         private static volatile Boolean factoryMethodMetadataEnabled = null;
 

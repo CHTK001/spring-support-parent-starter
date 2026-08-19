@@ -7,9 +7,9 @@ package com.chua.starter.common.support.constant;
  * </p>
  *
  * @author haoxr
- * @author CH
  * @since 2023/03/24
  * @version 1.0.0
+ * @author CH
  */
 public enum CaptchaTypeEnum {
 

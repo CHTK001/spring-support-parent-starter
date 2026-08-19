@@ -11,9 +11,9 @@ import java.io.Serializable;
 /**
  * 消息事件
  *
- * @author CH
  * @version 1.0.0
  * @since 2024-12-04
+ * @author CH
  */
 @Data
 @NoArgsConstructor
@@ -21,6 +21,7 @@ import java.io.Serializable;
 @Builder
 public class MsgEvent implements Serializable {
 
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
 
     /**

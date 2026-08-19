@@ -44,11 +44,17 @@ import java.util.List;
 public class WebRequest {
 
     @Getter
+    /** Auth属性 */
     private final AuthClientProperties authProperties;
+    /** 上下文路径 */
     private final String contextPath;
+    /** 请求 */
     private final HttpServletRequest request;
+    /** 请求mapping处理器mapping */
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
+    /** Path_matcher */
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
+    /** 协议 */
     private final String protocol;
 
 

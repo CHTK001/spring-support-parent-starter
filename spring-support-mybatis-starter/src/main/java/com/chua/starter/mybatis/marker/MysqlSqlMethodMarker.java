@@ -12,6 +12,7 @@ import java.util.List;
  */
 public class MysqlSqlMethodMarker implements SqlMethodMarker {
 
+    /** 超时 */
     private int timeout;
 
     public MysqlSqlMethodMarker(int timeout, boolean watchdog) {

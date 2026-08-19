@@ -6,8 +6,8 @@ import lombok.Data;
 /**
  * 消息发送请求
  *
- * @author CH
  * @since 2026/08/03
+ * @author CH
  */
 @Data
 @Schema(description = "消息发送请求")
@@ -17,18 +17,21 @@ public class MessageSendRequest {
      * 接收人
      */
     @Schema(description = "接收人")
+    /** 目标 */
     private String[] target;
 
     /**
      * 模板ID
      */
     @Schema(description = "模板ID")
+    /** SYS消息模板ID */
     private Integer sysMessageTemplateId;
 
     /**
      * 消息标题
      */
     @Schema(description = "消息标题")
+    /** Subject */
     private String subject;
 
     /**

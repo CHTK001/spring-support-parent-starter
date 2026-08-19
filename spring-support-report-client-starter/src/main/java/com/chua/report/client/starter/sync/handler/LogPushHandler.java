@@ -33,21 +33,24 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 监听应用日志并推送到 Monitor
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2025/01/17
+ * @author CH
  */
 @Slf4j
 @Spi("logPushHandler")
 public class LogPushHandler implements SyncMessageHandler, ApplicationContextAware {
 
 
+    /** Application上下文 */
     private ApplicationContext applicationContext;
 
     @Value("${spring.application.name:unknown}")
+    /** Application名称 */
     private String applicationName;
 
     @Value("${server.port:8080}")
+    /** 服务器端口 */
     private Integer serverPort;
 
     /**
@@ -70,6 +73,7 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
      */
     private SyncClient syncClient;
 
+    /** Formatter */
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
     @Override

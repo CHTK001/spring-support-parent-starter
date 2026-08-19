@@ -7,8 +7,8 @@ import org.apache.ibatis.annotations.Mapper;
 /**
  * 文件系统分片上传任务Mapper。
  *
- * @author CH
  * @since 1.0
+ * @author CH
  */
 @Mapper
 public interface SysFileSystemUploadMapper extends BaseMapper<SysFileSystemUpload> {

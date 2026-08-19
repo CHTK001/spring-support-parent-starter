@@ -6,9 +6,9 @@ import java.util.Map;
  * WebSocket 推送消息体
  * 用于在同步任务执行过程中向前端推送实时状态、日志、进度等信息
  *
- * @author CH
  * @since 2024/12/19
  * @version 1.0.0
+ * @author CH
  */
 public class ServerWebSocketMessage {
 
@@ -69,9 +69,12 @@ public class ServerWebSocketMessage {
     }
 
     public static class Builder {
+        /** 消息类型 */
         private String messageType;
+        /** 数据ID */
         private String dataId;
         private Map<String, Object> data;
+        /** 时间戳 */
         private long timestamp;
 
         public Builder messageType(String messageType) {

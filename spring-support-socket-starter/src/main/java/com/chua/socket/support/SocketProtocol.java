@@ -3,9 +3,9 @@ package com.chua.socket.support;
 /**
  * Socket 协议类型枚举
  *
- * @author CH
  * @version 1.0.0
  * @since 2024-12-04
+ * @author CH
  */
 public enum SocketProtocol {
 
@@ -24,6 +24,7 @@ public enum SocketProtocol {
      */
     SSE("sse");
 
+    /** 值 */
     private final String value;
 
     SocketProtocol(String value) {

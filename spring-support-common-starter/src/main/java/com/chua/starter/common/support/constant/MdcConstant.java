@@ -6,9 +6,9 @@ package com.chua.starter.common.support.constant;
  * 定义 MDC（Mapped Diagnostic Context）相关的常量，用于统一管理链路追踪的 Key 和 Header 名称。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2025-12-08
+ * @author CH
  */
 public class MdcConstant {
 

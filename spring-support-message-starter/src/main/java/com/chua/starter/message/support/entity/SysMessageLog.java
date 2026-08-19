@@ -15,8 +15,8 @@ import java.math.BigDecimal;
  * 对应表 sys_message_log，记录消息推送历史，包含发送内容、结果、耗时等。
  * </p>
  *
- * @author CH
  * @since 2026/08/03
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -27,6 +27,7 @@ public class SysMessageLog extends SysBase {
      * 日志ID - 主键自增
      */
     @TableId(value = "sys_message_log_id", type = IdType.AUTO)
+    /** SYS消息日志ID */
     private Integer sysMessageLogId;
 
     /**

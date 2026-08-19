@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 
 import java.util.UUID;
+/** @author CH */
 
 @Slf4j
 @AutoConfiguration
@@ -75,3 +76,4 @@ public class GatewayClientAutoConfiguration {
         };
     }
 }
+

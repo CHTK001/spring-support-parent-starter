@@ -27,18 +27,21 @@ import static com.chua.starter.common.support.logger.ModuleLog.*;
  * 每个 Provider 名称对应一个 {@link FileStorage} SPI 实例。
  * 通过 SPI 名称自动匹配: 显式 {@code type} > endpoint 推断 > 兜底 minio。</p>
  *
- * @author CH
  * @since 2024/12/28
+ * @author CH
  */
 public class FileStorageTemplate implements AutoCloseable {
 
     @Getter
     public final Map<String, FileStorage> storageMap = new ConcurrentHashMap<>();
 
+    /** 默认存储名称 */
     private String defaultStorageName;
 
+    /** 属性 */
     private final FileStorageProperties properties;
 
+    /** 日志 */
     private final ModuleLog log = ModuleLog.of("FileStorage", FileStorageTemplate.class);
 
     public FileStorageTemplate(FileStorageProperties properties) {

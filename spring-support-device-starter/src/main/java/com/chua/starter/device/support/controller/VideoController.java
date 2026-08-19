@@ -24,8 +24,8 @@ import java.util.List;
  * <p>通过 {@code /api/device/video/playback} 获取录像回放 URL，</p>
  * <p>前端 hls.js/flv.js 播放器直接播放这些 URL。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController

@@ -39,7 +39,6 @@ import java.lang.annotation.*;
  * }
  * }</pre>
  *
- * @author CH
  * @since 2026/07/14
  */
 @Target({ElementType.TYPE, ElementType.METHOD})

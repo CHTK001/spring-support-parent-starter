@@ -19,13 +19,14 @@ import org.slf4j.LoggerFactory;
  * 用于配置验证码相关的Bean。
  * </p>
  *
- * @author CH
  * @version 1.0.0
+ * @author CH
  */
 @Configuration
 @ConditionalOnProperty(prefix = "plugin.captcha", name = "enable", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties({CaptchaProperties.class})
 public class CaptchaConfiguration {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(CaptchaConfiguration.class);
 
 
