@@ -66,26 +66,32 @@ public class MybatisSlowSqlEvent extends ApplicationEvent {
         this.parameters = parameters;
     }
 
+    /** 获取StatementId */
     public String getStatementId() {
         return statementId;
     }
 
+    /** 获取CommandType */
     public String getCommandType() {
         return commandType;
     }
 
+    /** 获取ElapsedMs */
     public long getElapsedMs() {
         return elapsedMs;
     }
 
+    /** 获取TraceId */
     public String getTraceId() {
         return traceId;
     }
 
+    /** 获取Sql */
     public String getSql() {
         return sql;
     }
 
+    /** 获取Parameters */
     public List<String> getParameters() {
         return parameters;
     }

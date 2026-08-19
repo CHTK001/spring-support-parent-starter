@@ -53,6 +53,7 @@ public final class AnsiStyle {
     /** Bg_red */
     public static final String BG_RED = "\u001B[41m";
 
+    /** 创建 AnsiStyle 实例 */
     private AnsiStyle() {}
 
     /**
@@ -68,6 +69,7 @@ public final class AnsiStyle {
         return enabled;
     }
 
+    /** ComputeEnabled */
     private static boolean computeEnabled() {
         try {
             if (System.getenv("NO_COLOR") != null) return false;
@@ -89,20 +91,29 @@ public final class AnsiStyle {
         ENABLED_CACHE.remove();
     }
 
+    /** Wrap */
     private static String wrap(String code) {
         return isEnabled() ? code : "";
     }
 
+    /** Color */
     public static String color(String code, String text) {
         return isEnabled() ? code + text + RESET : text;
     }
 
+    /** Red */
     public static String red(String s) { return color(RED, s); }
+    /** Green */
     public static String green(String s) { return color(GREEN, s); }
+    /** Yellow */
     public static String yellow(String s) { return color(YELLOW, s); }
+    /** Cyan */
     public static String cyan(String s) { return color(CYAN, s); }
+    /** Blue */
     public static String blue(String s) { return color(BLUE, s); }
+    /** Gray */
     public static String gray(String s) { return color(GRAY, s); }
+    /** Bold */
     public static String bold(String s) { return color(BOLD, s); }
 
     /**

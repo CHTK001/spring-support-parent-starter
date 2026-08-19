@@ -45,10 +45,12 @@ public class ReturnPageResult<T> {
         this.data = data;
     }
 
+    /** Of */
     public static <T> ReturnPageResult<T> of(T data) {
         return new ReturnPageResult<>(data);
     }
 
+    /** Empty */
     public static <T> ReturnPageResult<T> empty() {
         return new ReturnPageResult<>(null);
     }

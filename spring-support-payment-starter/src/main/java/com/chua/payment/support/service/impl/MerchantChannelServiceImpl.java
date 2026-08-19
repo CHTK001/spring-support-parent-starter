@@ -55,6 +55,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 创建Channel */
     public MerchantChannelVO createChannel(ChannelConfigDTO dto) {
         Merchant merchant = requireMerchant(dto.getMerchantId());
         MerchantChannel channel = new MerchantChannel();
@@ -73,6 +74,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 更新Channel */
     public MerchantChannelVO updateChannel(Long id, ChannelConfigDTO dto) {
         MerchantChannel channel = requireChannel(id);
         Merchant merchant = requireMerchant(channel.getMerchantId());
@@ -98,6 +100,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     }
 
     @Override
+    /** 获取Channel */
     public MerchantChannelVO getChannel(Long id) {
         MerchantChannel channel = requireChannel(id);
         Merchant merchant = merchantMapper.selectById(channel.getMerchantId());
@@ -105,6 +108,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     }
 
     @Override
+    /** ListChannels */
     public List<MerchantChannelVO> listChannels(Long merchantId, String channelType, Integer status) {
         LambdaQueryWrapper<MerchantChannel> wrapper = new LambdaQueryWrapper<>();
         if (merchantId != null) {
@@ -127,6 +131,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 启用Channel */
     public boolean enableChannel(Long id) {
         MerchantChannel channel = requireChannel(id);
         channel.setStatus(ChannelStatus.ENABLED.getCode());
@@ -136,6 +141,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 禁用Channel */
     public boolean disableChannel(Long id) {
         MerchantChannel channel = requireChannel(id);
         channel.setStatus(ChannelStatus.DISABLED.getCode());
@@ -144,6 +150,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 删除Channel */
     public boolean deleteChannel(Long id) {
         MerchantChannel channel = requireChannel(id);
         if (Integer.valueOf(ChannelStatus.ENABLED.getCode()).equals(channel.getStatus())) {
@@ -160,6 +167,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     }
 
     @Override
+    /** ListCatalog */
     public List<PaymentMethodGuideVO> listCatalog() {
         List<PaymentMethodGuideVO> list = new ArrayList<>();
         list.add(guide("WECHAT", "MINI_PROGRAM", "微信小程序支付开通", "微信支付", "https://pay.wechatpay.cn/", "https://pay.wechatpay.cn/static/applyment_guide/applyment_detail_miniapp.shtml", null,
@@ -239,15 +247,18 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     }
 
     @Override
+    /** EncryptApiKey */
     public String encryptApiKey(String apiKey) {
         return paymentCipherService.encrypt(apiKey);
     }
 
     @Override
+    /** DecryptApiKey */
     public String decryptApiKey(String encryptedKey) {
         return paymentCipherService.decrypt(encryptedKey);
     }
 
+    /** RequireMerchant */
     private Merchant requireMerchant(Long merchantId) {
         if (merchantId == null) {
             throw new PaymentException("商户ID不能为空");
@@ -259,6 +270,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         return merchant;
     }
 
+    /** RequireChannel */
     private MerchantChannel requireChannel(Long id) {
         MerchantChannel channel = channelMapper.selectById(id);
         if (channel == null) {
@@ -267,10 +279,12 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         return channel;
     }
 
+    /** EncryptIfPresent */
     private String encryptIfPresent(String value) {
         return StringUtils.hasText(value) ? encryptApiKey(value) : null;
     }
 
+    /** 校验EnabledChannelSupport */
     private void validateEnabledChannelSupport(MerchantChannel channel) {
         if (channel == null || !Integer.valueOf(ChannelStatus.ENABLED.getCode()).equals(channel.getStatus())) {
             return;
@@ -283,6 +297,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         validateRequiredConfig(channel);
     }
 
+    /** 校验RequiredConfig */
     private void validateRequiredConfig(MerchantChannel channel) {
         String channelType = upper(channel.getChannelType());
         String channelSubType = upper(channel.getChannelSubType());
@@ -329,10 +344,12 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         }
     }
 
+    /** NormalizeExtConfig */
     private String normalizeExtConfig(String extConfigText) {
         return writeExtConfig(parseExtConfig(extConfigText));
     }
 
+    /** 构建DefaultChannelName */
     private String buildDefaultChannelName(String channelType, String channelSubType) {
         String typeDesc = PaymentChannelType.descriptionOf(channelType);
         if (!StringUtils.hasText(typeDesc)) {
@@ -341,6 +358,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         return StringUtils.hasText(channelSubType) ? typeDesc + "-" + channelSubType : typeDesc;
     }
 
+    /** DefaultGuideUrl */
     private String defaultGuideUrl(PaymentMethodGuideVO guide) {
         if (guide == null) {
             return null;
@@ -351,6 +369,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         return guide.getOfficialUrl();
     }
 
+    /** 查找Guide */
     private PaymentMethodGuideVO findGuide(String channelType, String channelSubType) {
         return listCatalog().stream()
                 .filter(item -> item.getChannelType().equalsIgnoreCase(channelType))
@@ -362,6 +381,20 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
                         .orElse(null));
     }
 
+    /**
+     * Guide
+     * @param channelType channelType
+     * @param channelSubType channelSubType
+     * @param title title
+     * @param officialName officialName
+     * @param officialUrl officialUrl
+     * @param applyUrl applyUrl
+     * @param sandboxUrl sandboxUrl
+     * @param summary summary
+     * @param requiredMaterials requiredMaterials
+     * @param steps steps
+     * @param tips tips
+     */
     private PaymentMethodGuideVO guide(String channelType,
                                        String channelSubType,
                                        String title,
@@ -388,6 +421,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         return vo;
     }
 
+    /** 转换ToVO */
     private MerchantChannelVO convertToVO(MerchantChannel channel, Merchant merchant, PaymentMethodGuideVO guide) {
         MerchantChannelVO vo = new MerchantChannelVO();
         BeanUtils.copyProperties(channel, vo);
@@ -407,6 +441,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         return vo;
     }
 
+    /** 解析ExtConfig */
     private Map<String, Object> parseExtConfig(String extConfigText) {
         if (!StringUtils.hasText(extConfigText)) {
             return new LinkedHashMap<>();
@@ -419,6 +454,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         }
     }
 
+    /** 写入ExtConfig */
     private String writeExtConfig(Map<String, Object> config) {
         if (config == null || config.isEmpty()) {
             return null;
@@ -430,6 +466,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         }
     }
 
+    /** FirstText */
     private String firstText(Object... values) {
         if (values == null) {
             return null;
@@ -445,11 +482,13 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         return null;
     }
 
+    /** 解析RouteChannelId */
     private Long resolveRouteChannelId(String extConfigText) {
         Map<String, Object> extConfig = parseExtConfig(extConfigText);
         return parseLong(extConfig.get("targetChannelId"), extConfig.get("defaultChannelId"));
     }
 
+    /** 解析Long */
     private Long parseLong(Object... values) {
         if (values == null) {
             return null;
@@ -473,15 +512,18 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
         return null;
     }
 
+    /** Upper */
     private String upper(String value) {
         return value == null ? null : value.toUpperCase(Locale.ROOT);
     }
 
+    /** ExtText */
     private String extText(Map<String, Object> extConfig, String key) {
         Object value = extConfig.get(key);
         return value == null ? null : String.valueOf(value);
     }
 
+    /** RequireText */
     private String requireText(String value, String message) {
         if (!StringUtils.hasText(value)) {
             throw new PaymentException(message);
@@ -490,6 +532,7 @@ public class MerchantChannelServiceImpl implements MerchantChannelService {
     }
 
     @Override
+    /** 获取WalletChannel */
     public MerchantChannel getWalletChannel(Long merchantId) {
         if (merchantId == null) {
             throw new PaymentException("商户ID不能为空");

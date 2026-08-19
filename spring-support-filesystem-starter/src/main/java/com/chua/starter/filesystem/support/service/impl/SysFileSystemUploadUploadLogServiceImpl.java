@@ -34,6 +34,7 @@ public class SysFileSystemUploadUploadLogServiceImpl
 
     @Override
     @Transactional
+    /** Record */
     public boolean record(String uploadId, boolean success, String message, int retryCount) {
         SysFileSystemUploadUploadLog log = new SysFileSystemUploadUploadLog();
         LocalDateTime now = LocalDateTime.now();
@@ -56,6 +57,7 @@ public class SysFileSystemUploadUploadLogServiceImpl
     }
 
     @Override
+    /** ListByUploadId */
     public List<SysFileSystemUploadUploadLog> listByUploadId(String uploadId) {
         return list(new LambdaQueryWrapper<SysFileSystemUploadUploadLog>()
                 .eq(SysFileSystemUploadUploadLog::getFilesystemUploadUploadLogUploadId, uploadId)
@@ -64,6 +66,7 @@ public class SysFileSystemUploadUploadLogServiceImpl
 
     @Override
     @Transactional
+    /** 删除ByUploadId */
     public boolean deleteByUploadId(String uploadId) {
         return remove(new LambdaQueryWrapper<SysFileSystemUploadUploadLog>()
                 .eq(SysFileSystemUploadUploadLog::getFilesystemUploadUploadLogUploadId, uploadId));

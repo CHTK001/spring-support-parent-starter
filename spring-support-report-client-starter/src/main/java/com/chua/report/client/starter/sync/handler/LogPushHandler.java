@@ -77,11 +77,13 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
     @Override
+    /** 设置ApplicationContext */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
 
     @PostConstruct
+    /** 初始化 */
     public void init() {
         try {
             syncClient = applicationContext.getBean(SyncClient.class);
@@ -91,17 +93,20 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
     }
 
     @Override
+    /** 获取Name */
     public String getName() {
         return "logPushHandler";
     }
 
     @Override
+    /** Supports */
     public boolean supports(String topic) {
         return MonitorTopics.LOG_SUBSCRIBE.equals(topic) 
                 || MonitorTopics.LOG_UNSUBSCRIBE.equals(topic);
     }
 
     @Override
+    /** 处理 */
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         log.info("[LogPush] 收到消息: topic={}, sessionId={}", topic, sessionId);
 
@@ -219,6 +224,7 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
     }
 
     @PreDestroy
+    /** 销毁 */
     public void destroy() {
         stopLogAppender();
         subscriptions.clear();
@@ -270,6 +276,7 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
     private class LogPushAppender extends AppenderBase<ILoggingEvent> {
 
         @Override
+        /** 追加 */
         protected void append(ILoggingEvent event) {
             // 过滤掉自身的日志，避免死循环
             if (event.getLoggerName().contains("LogPushHandler")) {
@@ -300,6 +307,7 @@ public class LogPushHandler implements SyncMessageHandler, ApplicationContextAwa
             pushLog(logEntry);
         }
 
+        /** 格式化Time */
         private String formatTime(long timestamp) {
             return LocalDateTime.ofInstant(
                     Instant.ofEpochMilli(timestamp),

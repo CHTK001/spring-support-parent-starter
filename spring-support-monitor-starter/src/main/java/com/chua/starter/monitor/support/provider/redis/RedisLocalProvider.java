@@ -36,16 +36,19 @@ import java.util.Set;
 public class RedisLocalProvider implements MetricProvider {
 
     @Override
+    /** ProviderType */
     public ProviderType providerType() {
         return ProviderType.LOCAL;
     }
 
     @Override
+    /** SupportServiceTypes */
     public Set<ServiceType> supportServiceTypes() {
         return Set.of(ServiceType.REDIS);
     }
 
     @Override
+    /** Collect */
     public Mono<CollectResult> collect(CollectContext context) {
         return Mono.fromCallable(() -> doCollect(context))
                 .subscribeOn(Schedulers.boundedElastic());

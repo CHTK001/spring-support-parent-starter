@@ -45,6 +45,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
     private static volatile ConfigurableEnvironment environmentRef;
 
     @Override
+    /** Post处理Environment */
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         log.info("[配置中心]开始处理配置中心");
         environmentRef = environment;
@@ -244,6 +245,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         }
 
         @Override
+        /** OnChange */
         public void onChange(String key, String oldValue, String newValue) {
             if (logOnChange) {
                 log.info("[配置中心]配置变更: configName={}, key={}, oldValue={}, newValue={}", 
@@ -252,6 +254,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         }
 
         @Override
+        /** On更新 */
         public void onUpdate(String key, String oldValue, String newValue) {
             if (environmentRef == null) {
                 return;
@@ -294,6 +297,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         }
 
         @Override
+        /** On删除 */
         public void onDelete(String key, String oldValue) {
             if (logOnChange) {
                 log.info("[配置中心]配置删除: configName={}, key={}", configName, key);
@@ -302,6 +306,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         return Ordered.LOWEST_PRECEDENCE - 100;
     }

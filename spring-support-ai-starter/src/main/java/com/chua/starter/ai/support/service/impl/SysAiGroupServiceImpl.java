@@ -35,6 +35,7 @@ public class SysAiGroupServiceImpl implements SysAiGroupService {
     private final AiModuleMapper aiModuleMapper;
 
     @Override
+    /** List */
     public List<SysAiGroup> list() {
         return sysAiGroupMapper.selectList(
                 Wrappers.lambdaQuery(SysAiGroup.class)
@@ -45,6 +46,7 @@ public class SysAiGroupServiceImpl implements SysAiGroupService {
     }
 
     @Override
+    /** 保存 */
     public SysAiGroup save(SysAiGroup group) {
         if (group.getSysAiGroupSort() == null) {
             group.setSysAiGroupSort(0);
@@ -60,11 +62,13 @@ public class SysAiGroupServiceImpl implements SysAiGroupService {
     }
 
     @Override
+    /** 更新 */
     public boolean update(SysAiGroup group) {
         return sysAiGroupMapper.updateById(group) > 0;
     }
 
     @Override
+    /** 删除ById */
     public boolean deleteById(Integer groupId) {
         if (groupId == null) {
             return false;
@@ -77,6 +81,7 @@ public class SysAiGroupServiceImpl implements SysAiGroupService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 添加Models */
     public void addModels(Integer groupId, List<Integer> moduleIds) {
         if (groupId == null || moduleIds == null || moduleIds.isEmpty()) {
             return;
@@ -102,6 +107,7 @@ public class SysAiGroupServiceImpl implements SysAiGroupService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 移除Models */
     public void removeModels(Integer groupId, List<Integer> moduleIds) {
         if (groupId == null || moduleIds == null || moduleIds.isEmpty()) {
             return;
@@ -116,6 +122,7 @@ public class SysAiGroupServiceImpl implements SysAiGroupService {
     }
 
     @Override
+    /** 获取分组Models */
     public List<SysAiModule> getGroupModels(Integer groupId) {
         List<Integer> modelIds = getGroupModelIds(groupId);
         if (modelIds.isEmpty()) {
@@ -125,6 +132,7 @@ public class SysAiGroupServiceImpl implements SysAiGroupService {
     }
 
     @Override
+    /** 获取分组ModelIds */
     public List<Integer> getGroupModelIds(Integer groupId) {
         if (groupId == null) {
             return Collections.emptyList();
@@ -139,6 +147,7 @@ public class SysAiGroupServiceImpl implements SysAiGroupService {
     }
 
     @Override
+    /** 获取ModuleGroups */
     public List<SysAiGroup> getModuleGroups(Integer moduleId) {
         if (moduleId == null) {
             return Collections.emptyList();
@@ -159,6 +168,7 @@ public class SysAiGroupServiceImpl implements SysAiGroupService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** ReplaceModels */
     public void replaceModels(Integer groupId, List<Integer> moduleIds) {
         if (groupId == null) {
             return;

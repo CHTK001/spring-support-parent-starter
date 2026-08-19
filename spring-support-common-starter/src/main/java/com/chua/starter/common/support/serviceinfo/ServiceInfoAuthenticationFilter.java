@@ -48,11 +48,16 @@ public class ServiceInfoAuthenticationFilter implements Filter {
     /** 属性 */
     private final ServiceInfoProperties properties;
 
+    /**
+     * 创建 ServiceInfoAuthenticationFilter 实例
+     * @param properties properties
+     */
     public ServiceInfoAuthenticationFilter(ServiceInfoProperties properties) {
         this.properties = properties;
     }
 
     @Override
+    /** Do过滤 */
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
@@ -79,6 +84,7 @@ public class ServiceInfoAuthenticationFilter implements Filter {
         httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
     }
 
+    /** 校验BasicAuth */
     private boolean checkBasicAuth(HttpServletRequest request) {
         String authHeader = request.getHeader(AUTHORIZATION);
         if (authHeader == null || !authHeader.startsWith(BASIC)) {
@@ -98,6 +104,7 @@ public class ServiceInfoAuthenticationFilter implements Filter {
         }
     }
 
+    /** 是否IpWhitelisted */
     private boolean isIpWhitelisted(String ip) {
         Set<String> whitelist = properties.getAuthIpWhitelist();
         if (whitelist == null || whitelist.isEmpty() || ip == null) {
@@ -106,6 +113,7 @@ public class ServiceInfoAuthenticationFilter implements Filter {
         return whitelist.stream().anyMatch(p -> IpUtils.matchIp(ip, p));
     }
 
+    /** 解析ClientIp */
     private String resolveClientIp(HttpServletRequest request) {
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {

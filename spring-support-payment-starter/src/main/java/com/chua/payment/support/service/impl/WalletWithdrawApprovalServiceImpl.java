@@ -34,6 +34,17 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 创建Approval
+     * @param merchantId merchantId
+     * @param userId userId
+     * @param amount amount
+     * @param bankAccount bankAccount
+     * @param bankName bankName
+     * @param accountName accountName
+     * @param withdrawNo withdrawNo
+     * @param remark remark
+     */
     public WalletWithdrawApproval createApproval(Long merchantId, Long userId, BigDecimal amount,
                                                   String bankAccount, String bankName, String accountName,
                                                   String withdrawNo, String remark) {
@@ -52,6 +63,7 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
     }
 
     @Override
+    /** PageApprovals */
     public Page<WalletWithdrawApproval> pageApprovals(int pageNum, int pageSize, String status) {
         LambdaQueryWrapper<WalletWithdrawApproval> wrapper = new LambdaQueryWrapper<WalletWithdrawApproval>()
                 .orderByDesc(WalletWithdrawApproval::getCreatedAt);
@@ -62,6 +74,7 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
     }
 
     @Override
+    /** 获取ById */
     public WalletWithdrawApproval getById(Long id) {
         WalletWithdrawApproval approval = approvalMapper.selectById(id);
         if (approval == null) {
@@ -72,6 +85,7 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** Approve */
     public void approve(Long id, String operator) {
         String lockKey = LOCK_PREFIX + id;
         if (!idempotentTemplate.tryAcquire(lockKey, 30, TimeUnit.SECONDS)) {
@@ -93,6 +107,7 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** Reject */
     public void reject(Long id, String operator, String reason) {
         String lockKey = LOCK_PREFIX + id;
         if (!idempotentTemplate.tryAcquire(lockKey, 30, TimeUnit.SECONDS)) {

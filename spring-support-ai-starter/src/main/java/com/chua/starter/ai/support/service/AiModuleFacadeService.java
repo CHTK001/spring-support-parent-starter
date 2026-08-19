@@ -46,6 +46,7 @@ public interface AiModuleFacadeService {
 
     List<SysAiSetting> settings(Integer moduleId);
 
+    /** 保存Settings */
     default void saveSettings(Integer moduleId, List<SysAiSetting> settings) {
     }
 

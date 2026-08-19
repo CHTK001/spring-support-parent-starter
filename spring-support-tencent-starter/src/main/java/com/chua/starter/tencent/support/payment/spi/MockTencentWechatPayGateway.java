@@ -33,6 +33,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
+    /** JsapiPay */
     public TencentWechatPayResponse jsapiPay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
         TencentWechatPayResponse result = new TencentWechatPayResponse();
         result.setSuccess(true);
@@ -43,6 +44,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
+    /** HPay */
     public TencentWechatPayResponse h5Pay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
         TencentWechatPayResponse result = new TencentWechatPayResponse();
         result.setSuccess(true);
@@ -53,26 +55,31 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
+    /** 查询JsapiOrder */
     public TencentWechatOrderResponse queryJsapiOrder(TencentWechatPayProperties properties, String orderNo) {
         return buildOrderResponse(orderNo);
     }
 
     @Override
+    /** 查询Order */
     public TencentWechatOrderResponse queryH5Order(TencentWechatPayProperties properties, String orderNo) {
         return buildOrderResponse(orderNo);
     }
 
     @Override
+    /** 关闭JsapiOrder */
     public boolean closeJsapiOrder(TencentWechatPayProperties properties, String orderNo) {
         return true;
     }
 
     @Override
+    /** 关闭Order */
     public boolean closeH5Order(TencentWechatPayProperties properties, String orderNo) {
         return true;
     }
 
     @Override
+    /** NativePay */
     public TencentWechatPayResponse nativePay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
         TencentWechatPayResponse result = new TencentWechatPayResponse();
         result.setSuccess(true);
@@ -83,16 +90,19 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
+    /** 查询NativeOrder */
     public TencentWechatOrderResponse queryNativeOrder(TencentWechatPayProperties properties, String orderNo) {
         return buildOrderResponse(orderNo);
     }
 
     @Override
+    /** 关闭NativeOrder */
     public boolean closeNativeOrder(TencentWechatPayProperties properties, String orderNo) {
         return true;
     }
 
     @Override
+    /** AppPay */
     public TencentWechatPayResponse appPay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
         TencentWechatPayResponse result = new TencentWechatPayResponse();
         result.setSuccess(true);
@@ -111,16 +121,19 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
+    /** 查询AppOrder */
     public TencentWechatOrderResponse queryAppOrder(TencentWechatPayProperties properties, String orderNo) {
         return buildOrderResponse(orderNo);
     }
 
     @Override
+    /** 关闭AppOrder */
     public boolean closeAppOrder(TencentWechatPayProperties properties, String orderNo) {
         return true;
     }
 
     @Override
+    /** MiniProgramPay */
     public TencentWechatPayResponse miniProgramPay(TencentWechatPayProperties properties, TencentWechatPayRequest request) {
         TencentWechatPayResponse result = new TencentWechatPayResponse();
         result.setSuccess(true);
@@ -131,36 +144,43 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
+    /** 查询MiniProgramOrder */
     public TencentWechatOrderResponse queryMiniProgramOrder(TencentWechatPayProperties properties, String orderNo) {
         return buildOrderResponse(orderNo);
     }
 
     @Override
+    /** 关闭MiniProgramOrder */
     public boolean closeMiniProgramOrder(TencentWechatPayProperties properties, String orderNo) {
         return true;
     }
 
     @Override
+    /** 创建PayScoreOrder */
     public TencentWechatPayScoreResponse createPayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
         return buildPayScoreResponse(request, "CREATED", "微信支付分 mock 创建成功");
     }
 
     @Override
+    /** 查询PayScoreOrder */
     public TencentWechatPayScoreResponse queryPayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
         return buildPayScoreResponse(request, "DOING", "微信支付分 mock 查询成功");
     }
 
     @Override
+    /** CompletePayScoreOrder */
     public TencentWechatPayScoreResponse completePayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
         return buildPayScoreResponse(request, "COMPLETED", "微信支付分 mock 完结成功");
     }
 
     @Override
+    /** CancelPayScoreOrder */
     public TencentWechatPayScoreResponse cancelPayScoreOrder(TencentWechatPayProperties properties, TencentWechatPayScoreRequest request) {
         return buildPayScoreResponse(request, "CANCELED", "微信支付分 mock 取消成功");
     }
 
     @Override
+    /** 解析PayScore通知 */
     public TencentWechatPayScoreNotifyPayload parsePayScoreNotify(TencentWechatPayProperties properties, TencentWechatNotifyRequest request) {
         Map<String, Object> body = parseJsonBody(request.getBody());
         TencentWechatPayScoreNotifyPayload payload = new TencentWechatPayScoreNotifyPayload();
@@ -177,16 +197,19 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
+    /** Refund */
     public TencentWechatRefundResponse refund(TencentWechatPayProperties properties, TencentWechatRefundRequest request) {
         return buildRefundResponse(request, "SUCCESS", "微信支付 mock 退款成功");
     }
 
     @Override
+    /** 查询Refund */
     public TencentWechatRefundResponse queryRefund(TencentWechatPayProperties properties, TencentWechatRefundRequest request) {
         return buildRefundResponse(request, "SUCCESS", "微信支付 mock 退款查询成功");
     }
 
     @Override
+    /** 解析Pay通知 */
     public TencentWechatPayNotifyPayload parsePayNotify(TencentWechatPayProperties properties, TencentWechatNotifyRequest request) {
         Map<String, Object> body = parseJsonBody(request.getBody());
         TencentWechatPayNotifyPayload payload = new TencentWechatPayNotifyPayload();
@@ -203,6 +226,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
     }
 
     @Override
+    /** 解析Refund通知 */
     public TencentWechatRefundNotifyPayload parseRefundNotify(TencentWechatPayProperties properties, TencentWechatNotifyRequest request) {
         Map<String, Object> body = parseJsonBody(request.getBody());
         TencentWechatRefundNotifyPayload payload = new TencentWechatRefundNotifyPayload();
@@ -217,6 +241,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
         return payload;
     }
 
+    /** 构建SdkParams */
     private Map<String, Object> buildSdkParams(String orderNo, String appId) {
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("appId", firstNonBlank(appId, "mock-app-id"));
@@ -228,6 +253,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
         return params;
     }
 
+    /** 构建OrderResponse */
     private TencentWechatOrderResponse buildOrderResponse(String orderNo) {
         TencentWechatOrderResponse result = new TencentWechatOrderResponse();
         result.setSuccess(true);
@@ -238,6 +264,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
         return result;
     }
 
+    /** 构建RefundResponse */
     private TencentWechatRefundResponse buildRefundResponse(TencentWechatRefundRequest request, String refundStatus, String message) {
         TencentWechatRefundResponse result = new TencentWechatRefundResponse();
         result.setSuccess(true);
@@ -250,6 +277,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
         return result;
     }
 
+    /** 构建PayScoreResponse */
     private TencentWechatPayScoreResponse buildPayScoreResponse(TencentWechatPayScoreRequest request, String state, String message) {
         TencentWechatPayScoreResponse result = new TencentWechatPayScoreResponse();
         result.setSuccess(true);
@@ -266,6 +294,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
         return result;
     }
 
+    /** 解析JsonBody */
     private Map<String, Object> parseJsonBody(String body) {
         if (!StringUtils.hasText(body)) {
             return Map.of();
@@ -278,10 +307,12 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
         }
     }
 
+    /** Raw */
     private String raw(String provider, String scene, String value) {
         return "{\"provider\":\"" + provider + "\",\"scene\":\"" + scene + "\",\"value\":\"" + value + "\",\"time\":\"" + LocalDateTime.now() + "\"}";
     }
 
+    /** 解析TradeState */
     private String resolveTradeState(String orderNo) {
         if (!StringUtils.hasText(orderNo)) {
             return "SUCCESS";
@@ -299,6 +330,7 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
         return "SUCCESS";
     }
 
+    /** LongValue */
     private Long longValue(Object value) {
         if (value == null) {
             return null;
@@ -313,10 +345,12 @@ public class MockTencentWechatPayGateway implements TencentWechatPayGateway {
         }
     }
 
+    /** TextOf */
     private String textOf(Object value) {
         return value == null ? null : String.valueOf(value);
     }
 
+    /** FirstNonBlank */
     private String firstNonBlank(String... values) {
         for (String value : values) {
             if (StringUtils.hasText(value)) {

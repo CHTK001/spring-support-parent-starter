@@ -36,6 +36,24 @@ public class AnnotationPropertyValuesAdapter implements PropertyValues {
         this.delegate = new MutablePropertyValues(attributes);
     }
 
+    /**
+     * 创建 AnnotationPropertyValuesAdapter 实例
+     * @param annotation annotation
+     * @param propertyResolver propertyResolver
+     * @param ignoreDefaultValue ignoreDefaultValue
+     * @param ignoreAttributeNames ignoreAttributeNames
+     * @param false false
+     * @param false false
+     * @param annotation annotation
+     * @param propertyResolver propertyResolver
+     * @param ignoreAttributeNames ignoreAttributeNames
+     * @param propertyResolver propertyResolver
+     * @param true true
+     * @param ignoreAttributeNames ignoreAttributeNames
+     * @param propertyName propertyName
+     * @param old old
+     * @param propertyName propertyName
+     */
     public AnnotationPropertyValuesAdapter(
             Annotation annotation,
             PropertyResolver propertyResolver,
@@ -45,32 +63,49 @@ public class AnnotationPropertyValuesAdapter implements PropertyValues {
                 AnnotationUtils.getAnnotationAttributes(annotation, false, false));
     }
 
+    /**
+     * 创建 AnnotationPropertyValuesAdapter 实例
+     * @param annotation annotation
+     * @param propertyResolver propertyResolver
+     * @param ignoreAttributeNames ignoreAttributeNames
+     * @param propertyResolver propertyResolver
+     * @param true true
+     * @param ignoreAttributeNames ignoreAttributeNames
+     * @param propertyName propertyName
+     * @param old old
+     * @param propertyName propertyName
+     */
     public AnnotationPropertyValuesAdapter(
             Annotation annotation, PropertyResolver propertyResolver, String... ignoreAttributeNames) {
         this(annotation, propertyResolver, true, ignoreAttributeNames);
     }
 
     @Override
+    /** 获取PropertyValues */
     public PropertyValue[] getPropertyValues() {
         return delegate.getPropertyValues();
     }
 
     @Override
+    /** 获取PropertyValue */
     public PropertyValue getPropertyValue(String propertyName) {
         return delegate.getPropertyValue(propertyName);
     }
 
     @Override
+    /** ChangesSince */
     public PropertyValues changesSince(PropertyValues old) {
         return delegate.changesSince(old);
     }
 
     @Override
+    /** Contains */
     public boolean contains(String propertyName) {
         return delegate.contains(propertyName);
     }
 
     @Override
+    /** 是否Empty */
     public boolean isEmpty() {
         return delegate.isEmpty();
     }

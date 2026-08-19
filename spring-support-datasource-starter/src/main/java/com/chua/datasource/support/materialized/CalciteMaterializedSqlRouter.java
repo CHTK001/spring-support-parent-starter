@@ -26,6 +26,12 @@ public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRo
     private final DataSource defaultDataSource;
     private final Function<String, DataSource> dataSourceResolver;
 
+    /**
+     * 创建 CalciteMaterializedSqlRouter 实例
+     * @param options options
+     * @param defaultDataSource defaultDataSource
+     * @param dataSourceResolver dataSourceResolver
+     */
     public CalciteMaterializedSqlRouter(MaterializedSqlOptions options,
                                         DataSource defaultDataSource,
                                         Function<String, DataSource> dataSourceResolver) {
@@ -35,6 +41,7 @@ public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRo
     }
 
     @Override
+    /** Route */
     public MaterializedSqlRoute route(MaterializedSqlRequest request) {
         if (request == null || request.getCommandType() != MaterializedSqlCommandType.SELECT) {
             return MaterializedSqlRoute.notRouted();
@@ -52,6 +59,7 @@ public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRo
     }
 
     @Override
+    /** 解析DataSource */
     public DataSource resolveDataSource(MaterializedSqlRoute route) {
         if (route == null || !route.isRouted()) {
             return defaultDataSource;
@@ -64,10 +72,12 @@ public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRo
     }
 
     @Override
+    /** On写入Success */
     public void onWriteSuccess(MaterializedSqlRequest request) {
         // 当前仓库缺失完整物理化实现，先保持 no-op，确保路由链可编译和可安全降级。
     }
 
+    /** 构建CacheDataSourceName */
     private String buildCacheDataSourceName(MaterializedRouteDefinition definition, String tableName) {
         String prefix = options == null || options.getCacheDataSourcePrefix() == null
                 ? "materialized#"
@@ -78,6 +88,7 @@ public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRo
         return prefix + tableName;
     }
 
+    /** 解析ByName */
     private DataSource resolveByName(String dataSourceName) {
         if (dataSourceName == null || dataSourceResolver == null) {
             return null;

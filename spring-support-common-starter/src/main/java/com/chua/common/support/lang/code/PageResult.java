@@ -125,40 +125,48 @@ public class PageResult<T> implements Serializable {
         return this;
     }
 
+    /** Builder */
     public static <T> PageResult<T> builder() {
         return of();
     }
 
+    /** Empty */
     public static <T> PageResult<T> empty() {
         PageResult<T> result = new PageResult<>();
         result.records = Collections.emptyList();
         return result;
     }
 
+    /** PageNo */
     public PageResult<T> pageNo(long pageNo) {
         this.current = pageNo;
         return this;
     }
 
+    /** 总计Pages */
     public PageResult<T> totalPages(long totalPages) {
         return this;
     }
 
+    /** Page获取大小 */
     public PageResult<T> pageSize(long pageSize) {
         this.size = pageSize;
         return this;
     }
 
+    /** 总计 */
     public PageResult<T> total(long total) {
         this.total = total;
         return this;
     }
 
+    /** Data */
     public PageResult<T> data(List<T> records) {
         this.records = records;
         return this;
     }
 
+    /** 构建 */
     public T build() {
         return (T) this;
     }

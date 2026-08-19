@@ -59,6 +59,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
     private final EduAiProperties properties;
 
     @Override
+    /** Page查询 */
     public PageResult<PaperVO> pageQuery(PaperQueryDTO query) {
         LambdaQueryWrapper<EduPaper> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(query.getSubject())) {
@@ -86,6 +87,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
     }
 
     @Override
+    /** 获取PaperDetail */
     public PaperVO getPaperDetail(Long paperId) {
         EduPaper paper = baseMapper.selectById(paperId);
         if (paper == null) {
@@ -124,6 +126,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** GeneratePaper */
     public Long generatePaper(PaperGenerateDTO dto) {
         log.info("[EduAi] AI 组卷: subject={}, knowledgePoints={}", dto.getSubject(), dto.getKnowledgePointIds());
 
@@ -219,6 +222,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** ReplaceQuestion */
     public boolean replaceQuestion(Long paperId, Long oldQuestionId, Long newQuestionId) {
         LambdaQueryWrapper<EduPaperQuestion> delWrapper = new LambdaQueryWrapper<>();
         delWrapper.eq(EduPaperQuestion::getPaperQuestionPaperId, paperId)
@@ -237,6 +241,7 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         return true;
     }
 
+    /** ToVO */
     private PaperVO toVO(EduPaper paper) {
         PaperVO vo = new PaperVO();
         vo.setId(paper.getPaperId());

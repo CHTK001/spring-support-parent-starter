@@ -73,6 +73,7 @@ public class DatasourceP2AutoConfiguration {
     }
 
     @Bean
+    /** DatasourceServiceInfoContributor */
     public ServiceInfoContributor datasourceServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("datasource", "多数据源", true, "多数据源与连接池管理模块");

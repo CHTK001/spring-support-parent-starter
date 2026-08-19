@@ -28,6 +28,7 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
     private final ThreadLocal<Long> startTimes = new ThreadLocal<>();
 
     @Override
+    /** Pre处理 */
     public boolean preHandle(Method method, Object[] args) {
         startTimes.set(System.currentTimeMillis());
         String methodKey = getMethodKey(method);
@@ -36,6 +37,7 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
     }
 
     @Override
+    /** Post处理 */
     public Object postHandle(Method method, Object[] args, Object result) {
         String methodKey = getMethodKey(method);
         successCounters.computeIfAbsent(methodKey, k -> new AtomicLong()).incrementAndGet();
@@ -44,6 +46,7 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
     }
 
     @Override
+    /** 处理Exception */
     public void handleException(Method method, Object[] args, Throwable error) throws Throwable {
         String methodKey = getMethodKey(method);
         failureCounters.computeIfAbsent(methodKey, k -> new AtomicLong()).incrementAndGet();
@@ -121,6 +124,7 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         return -100; // 高优先级
     }

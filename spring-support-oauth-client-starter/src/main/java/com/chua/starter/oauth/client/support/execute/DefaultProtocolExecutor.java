@@ -26,17 +26,20 @@ public class DefaultProtocolExecutor implements ProtocolExecutor{
     /** Auth客户端属性 */
     private final AuthClientProperties authClientProperties;
 
+    /** 创建 DefaultProtocolExecutor 实例 */
     public DefaultProtocolExecutor() {
         this.authClientProperties = OauthClientRuntimeContext.getAuthClientProperties();
     }
 
     @Override
+    /** 获取AccessToken */
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
         return WebRequest.getProtocolExtension(authClientProperties)
                 .getAccessToken(username, password, authType, ext);
     }
 
     @Override
+    /** Logout */
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult ) {
         return WebRequest.getProtocolExtension(authClientProperties)
                 .logout(uid, logoutType, userResult);

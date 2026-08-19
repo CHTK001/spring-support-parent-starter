@@ -34,10 +34,12 @@ public enum InstallStatus {
         this.name = name;
     }
 
+    /** 获取Value */
     public int getValue() {
         return value;
     }
 
+    /** 获取Name */
     public String getName() {
         return name;
     }

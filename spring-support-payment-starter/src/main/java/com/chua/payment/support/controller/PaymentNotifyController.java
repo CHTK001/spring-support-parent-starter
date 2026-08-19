@@ -44,6 +44,17 @@ public class PaymentNotifyController {
     private final ObjectMapper objectMapper;
 
     @PostMapping("/wechat/pay/{channelId}")
+    /**
+     * 处理WechatPay通知
+     * @param channelId channelId
+     * @param serialNumber serialNumber
+     * @param timestamp timestamp
+     * @param nonce nonce
+     * @param signature signature
+     * @param signType signType
+     * @param body body
+     * @param request request
+     */
     public ResponseEntity<String> handleWechatPayNotify(@PathVariable Long channelId,
                                                         @RequestHeader(value = "Wechatpay-Serial", required = false) String serialNumber,
                                                         @RequestHeader(value = "Wechatpay-Timestamp", required = false) String timestamp,
@@ -56,6 +67,18 @@ public class PaymentNotifyController {
     }
 
     @PostMapping("/wechat/pay/{channelId}/{orderNo}")
+    /**
+     * 处理WechatPay通知
+     * @param channelId channelId
+     * @param orderNo orderNo
+     * @param serialNumber serialNumber
+     * @param timestamp timestamp
+     * @param nonce nonce
+     * @param signature signature
+     * @param signType signType
+     * @param body body
+     * @param request request
+     */
     public ResponseEntity<String> handleWechatPayNotify(@PathVariable Long channelId,
                                                         @PathVariable String orderNo,
                                                         @RequestHeader(value = "Wechatpay-Serial", required = false) String serialNumber,
@@ -86,6 +109,18 @@ public class PaymentNotifyController {
     }
 
     @PostMapping("/wechat/pay/{orderNo}/{merchantId}")
+    /**
+     * 处理WechatPay通知ByMerchant
+     * @param orderNo orderNo
+     * @param merchantId merchantId
+     * @param serialNumber serialNumber
+     * @param timestamp timestamp
+     * @param nonce nonce
+     * @param signature signature
+     * @param signType signType
+     * @param body body
+     * @param request request
+     */
     public ResponseEntity<String> handleWechatPayNotifyByMerchant(@PathVariable String orderNo,
                                                                   @PathVariable Long merchantId,
                                                                   @RequestHeader(value = "Wechatpay-Serial", required = false) String serialNumber,
@@ -105,6 +140,17 @@ public class PaymentNotifyController {
     }
 
     @PostMapping("/wechat/refund/{channelId}")
+    /**
+     * 处理WechatRefund通知
+     * @param channelId channelId
+     * @param serialNumber serialNumber
+     * @param timestamp timestamp
+     * @param nonce nonce
+     * @param signature signature
+     * @param signType signType
+     * @param body body
+     * @param request request
+     */
     public ResponseEntity<String> handleWechatRefundNotify(@PathVariable Long channelId,
                                                            @RequestHeader(value = "Wechatpay-Serial", required = false) String serialNumber,
                                                            @RequestHeader(value = "Wechatpay-Timestamp", required = false) String timestamp,
@@ -117,6 +163,18 @@ public class PaymentNotifyController {
     }
 
     @PostMapping("/wechat/refund/{channelId}/{refundNo}")
+    /**
+     * 处理WechatRefund通知
+     * @param channelId channelId
+     * @param refundNo refundNo
+     * @param serialNumber serialNumber
+     * @param timestamp timestamp
+     * @param nonce nonce
+     * @param signature signature
+     * @param signType signType
+     * @param body body
+     * @param request request
+     */
     public ResponseEntity<String> handleWechatRefundNotify(@PathVariable Long channelId,
                                                            @PathVariable String refundNo,
                                                            @RequestHeader(value = "Wechatpay-Serial", required = false) String serialNumber,
@@ -147,6 +205,18 @@ public class PaymentNotifyController {
     }
 
     @PostMapping("/wechat/refund/{refundNo}/{merchantId}")
+    /**
+     * 处理WechatRefund通知ByMerchant
+     * @param refundNo refundNo
+     * @param merchantId merchantId
+     * @param serialNumber serialNumber
+     * @param timestamp timestamp
+     * @param nonce nonce
+     * @param signature signature
+     * @param signType signType
+     * @param body body
+     * @param request request
+     */
     public ResponseEntity<String> handleWechatRefundNotifyByMerchant(@PathVariable String refundNo,
                                                                      @PathVariable Long merchantId,
                                                                      @RequestHeader(value = "Wechatpay-Serial", required = false) String serialNumber,
@@ -166,6 +236,18 @@ public class PaymentNotifyController {
     }
 
     @PostMapping("/wechat/payscore/{channelId}/{outOrderNo}")
+    /**
+     * 处理WechatPayScore通知
+     * @param channelId channelId
+     * @param outOrderNo outOrderNo
+     * @param serialNumber serialNumber
+     * @param timestamp timestamp
+     * @param nonce nonce
+     * @param signature signature
+     * @param signType signType
+     * @param body body
+     * @param request request
+     */
     public ResponseEntity<String> handleWechatPayScoreNotify(@PathVariable Long channelId,
                                                              @PathVariable String outOrderNo,
                                                              @RequestHeader(value = "Wechatpay-Serial", required = false) String serialNumber,
@@ -196,6 +278,12 @@ public class PaymentNotifyController {
     }
 
     @PostMapping(value = "/alipay/pay/{channelId}", produces = MediaType.TEXT_PLAIN_VALUE)
+    /**
+     * 处理AlipayPay通知
+     * @param channelId channelId
+     * @param params params
+     * @param request request
+     */
     public String handleAlipayPayNotify(@PathVariable Long channelId,
                                         @RequestParam Map<String, String> params,
                                         HttpServletRequest request) {
@@ -203,6 +291,13 @@ public class PaymentNotifyController {
     }
 
     @PostMapping(value = "/alipay/pay/{channelId}/{orderNo}", produces = MediaType.TEXT_PLAIN_VALUE)
+    /**
+     * 处理AlipayPay通知
+     * @param channelId channelId
+     * @param orderNo orderNo
+     * @param params params
+     * @param request request
+     */
     public String handleAlipayPayNotify(@PathVariable Long channelId,
                                         @PathVariable String orderNo,
                                         @RequestParam Map<String, String> params,
@@ -228,6 +323,13 @@ public class PaymentNotifyController {
     }
 
     @PostMapping(value = "/alipay/pay/{orderNo}/{merchantId}", produces = MediaType.TEXT_PLAIN_VALUE)
+    /**
+     * 处理AlipayPay通知ByMerchant
+     * @param orderNo orderNo
+     * @param merchantId merchantId
+     * @param params params
+     * @param request request
+     */
     public String handleAlipayPayNotifyByMerchant(@PathVariable String orderNo,
                                                   @PathVariable Long merchantId,
                                                   @RequestParam Map<String, String> params,
@@ -241,6 +343,7 @@ public class PaymentNotifyController {
         }
     }
 
+    /** RequireOrder */
     private PaymentOrder requireOrder(String orderNo, Long merchantId) {
         PaymentOrder order = paymentOrderMapper.selectOne(new LambdaQueryWrapper<PaymentOrder>()
                 .eq(PaymentOrder::getOrderNo, orderNo)
@@ -252,6 +355,7 @@ public class PaymentNotifyController {
         return order;
     }
 
+    /** RequireRefundOrder */
     private PaymentRefundOrder requireRefundOrder(String refundNo, Long merchantId) {
         PaymentRefundOrder refundOrder = paymentRefundOrderMapper.selectOne(new LambdaQueryWrapper<PaymentRefundOrder>()
                 .eq(PaymentRefundOrder::getRefundNo, refundNo)
@@ -263,6 +367,7 @@ public class PaymentNotifyController {
         return refundOrder;
     }
 
+    /** WechatFailure */
     private ResponseEntity<String> wechatFailure(String message) {
         try {
             String body = objectMapper.writeValueAsString(Map.of(

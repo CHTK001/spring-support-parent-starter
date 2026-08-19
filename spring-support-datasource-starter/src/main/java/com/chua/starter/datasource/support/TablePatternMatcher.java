@@ -17,6 +17,10 @@ public final class TablePatternMatcher {
      */
     private final String regex;
 
+    /**
+     * 创建 TablePatternMatcher 实例
+     * @param regex regex
+     */
     private TablePatternMatcher(String regex) {
         this.regex = regex;
     }

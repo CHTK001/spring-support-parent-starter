@@ -48,6 +48,7 @@ public class MaterializedRouteProperties {
      */
     private String cacheDataSourcePrefix = "materialized#";
 
+    /** 绑定 */
     public static MaterializedRouteProperties bind(Environment environment) {
         MaterializedRouteProperties current = Binder.get(environment).bindOrCreate(PRE, MaterializedRouteProperties.class);
         MaterializedRouteProperties legacy = Binder.get(environment).bindOrCreate(LEGACY_PRE, MaterializedRouteProperties.class);
@@ -66,6 +67,14 @@ public class MaterializedRouteProperties {
         return result;
     }
 
+    /**
+     * 读取Boolean
+     * @param environment environment
+     * @param currentKey currentKey
+     * @param legacyKey legacyKey
+     * @param currentValue currentValue
+     * @param legacyValue legacyValue
+     */
     private static boolean readBoolean(Environment environment,
                                        String currentKey,
                                        String legacyKey,
@@ -80,6 +89,14 @@ public class MaterializedRouteProperties {
         return currentValue;
     }
 
+    /**
+     * 读取Long
+     * @param environment environment
+     * @param currentKey currentKey
+     * @param legacyKey legacyKey
+     * @param currentValue currentValue
+     * @param legacyValue legacyValue
+     */
     private static long readLong(Environment environment,
                                  String currentKey,
                                  String legacyKey,
@@ -94,6 +111,14 @@ public class MaterializedRouteProperties {
         return currentValue;
     }
 
+    /**
+     * 读取String
+     * @param environment environment
+     * @param currentKey currentKey
+     * @param legacyKey legacyKey
+     * @param currentValue currentValue
+     * @param legacyValue legacyValue
+     */
     private static String readString(Environment environment,
                                      String currentKey,
                                      String legacyKey,
@@ -108,6 +133,7 @@ public class MaterializedRouteProperties {
         return currentValue;
     }
 
+    /** ToOptions */
     public MaterializedSqlOptions toOptions() {
         MaterializedSqlOptions options = new MaterializedSqlOptions();
         options.setDefaultThreshold(defaultThreshold);

@@ -60,6 +60,7 @@ public enum OrderEvent {
         this.description = description;
     }
 
+    /** 获取Description */
     public String getDescription() {
         return description;
     }

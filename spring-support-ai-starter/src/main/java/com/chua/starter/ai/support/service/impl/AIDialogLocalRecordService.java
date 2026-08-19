@@ -33,6 +33,7 @@ public class AIDialogLocalRecordService implements AIDialogRecordService {
     private final Map<Long, List<ChatMessage>> messages = new ConcurrentHashMap<>();
 
     @Override
+    /** 创建Dialog */
     public AIDialog createDialog(String name) {
         Long id = dialogIdGenerator.getAndIncrement();
         AIDialog dialog = new AIDialog(id, name);
@@ -42,17 +43,20 @@ public class AIDialogLocalRecordService implements AIDialogRecordService {
     }
 
     @Override
+    /** 删除Dialog */
     public void deleteDialog(Long dialogId) {
         dialogs.remove(dialogId);
         messages.remove(dialogId);
     }
 
     @Override
+    /** ListDialog */
     public List<AIDialog> listDialog() {
         return new ArrayList<>(dialogs.values());
     }
 
     @Override
+    /** 获取DialogMessages */
     public List<ChatMessage> getDialogMessages(Long dialogId) {
         List<ChatMessage> list = messages.get(dialogId);
         if (list == null) {
@@ -62,6 +66,7 @@ public class AIDialogLocalRecordService implements AIDialogRecordService {
     }
 
     @Override
+    /** 添加Message */
     public void addMessage(Long dialogId, ChatMessage message) {
         List<ChatMessage> list = messages.get(dialogId);
         if (list == null) {

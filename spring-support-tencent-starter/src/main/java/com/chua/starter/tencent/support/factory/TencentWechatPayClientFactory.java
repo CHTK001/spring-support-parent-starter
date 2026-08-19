@@ -21,6 +21,7 @@ import com.wechat.pay.java.service.refund.RefundService;
  */
 public class TencentWechatPayClientFactory {
 
+    /** 创建AutoCertificateConfig */
     public Config createAutoCertificateConfig(TencentWechatPayProperties properties) {
         return createAutoCertificateConfig(
                 properties.getMerchantId(),
@@ -29,6 +30,13 @@ public class TencentWechatPayClientFactory {
                 properties.getApiV3Key());
     }
 
+    /**
+     * 创建AutoCertificateConfig
+     * @param merchantId merchantId
+     * @param privateKey privateKey
+     * @param merchantSerialNumber merchantSerialNumber
+     * @param apiV3Key apiV3Key
+     */
     public Config createAutoCertificateConfig(String merchantId,
                                               String privateKey,
                                               String merchantSerialNumber,
@@ -41,42 +49,49 @@ public class TencentWechatPayClientFactory {
                 .build();
     }
 
+    /** 创建JsapiService */
     public JsapiServiceExtension createJsapiService(Config config) {
         return new JsapiServiceExtension.Builder()
                 .config(config)
                 .build();
     }
 
+    /** 创建Service */
     public H5Service createH5Service(Config config) {
         return new H5Service.Builder()
                 .config(config)
                 .build();
     }
 
+    /** 创建RefundService */
     public RefundService createRefundService(Config config) {
         return new RefundService.Builder()
                 .config(config)
                 .build();
     }
 
+    /** 创建NativePayService */
     public NativePayService createNativePayService(Config config) {
         return new NativePayService.Builder()
                 .config(config)
                 .build();
     }
 
+    /** 创建AppService */
     public AppService createAppService(Config config) {
         return new AppService.Builder()
                 .config(config)
                 .build();
     }
 
+    /** 创建AppServiceExtension */
     public AppServiceExtension createAppServiceExtension(Config config) {
         return new AppServiceExtension.Builder()
                 .config(config)
                 .build();
     }
 
+    /** 创建NotificationParser */
     public NotificationParser createNotificationParser(Config config) {
         if (config instanceof RSAAutoCertificateConfig autoCertificateConfig) {
             return new NotificationParser(autoCertificateConfig);
@@ -84,6 +99,7 @@ public class TencentWechatPayClientFactory {
         throw new IllegalArgumentException("当前配置不支持自动证书回调解析: " + config.getClass().getName());
     }
 
+    /** 创建HttpClient */
     public HttpClient createHttpClient(Config config) {
         return new DefaultHttpClientBuilder()
                 .config(config)

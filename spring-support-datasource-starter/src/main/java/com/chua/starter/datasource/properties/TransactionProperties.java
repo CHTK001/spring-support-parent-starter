@@ -54,26 +54,32 @@ public class TransactionProperties {
     private String writeOnly = "";
 
     // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
+    /** 是否启用 */
     public boolean isEnable() {
         return enable;
     }
 
+    /** 获取Timeout */
     public Integer getTimeout() {
         return timeout;
     }
 
+    /** 获取TxMapper */
     public String getTxMapper() {
         return txMapper;
     }
 
+    /** 获取读取Only */
     public String getReadOnly() {
         return readOnly;
     }
 
+    /** 获取NoTx */
     public String getNoTx() {
         return noTx;
     }
 
+    /** 获取写入Only */
     public String getWriteOnly() {
         return writeOnly;
     }

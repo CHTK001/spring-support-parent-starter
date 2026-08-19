@@ -73,12 +73,18 @@ public class ParameterLogFilter implements Filter {
      */
     private static final String REQUEST_START_TIME = "REQUEST_START_TIME";
 
+    /**
+     * 创建 ParameterLogFilter 实例
+     * @param logProperties logProperties
+     * @param ApplicationContext ApplicationContext
+     */
     public ParameterLogFilter(LogProperties logProperties, ApplicationContext applicationContext) {
         this.logProperties = logProperties;
         this.applicationContext = applicationContext;
     }
 
     @Override
+    /** Do过滤 */
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
             throws IOException, ServletException {
         if (!(servletRequest instanceof HttpServletRequest request) 

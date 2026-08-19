@@ -36,6 +36,7 @@ public class SoftInstallController {
     @Operation(summary = "安装软件")
     @PostMapping("/do")
     @Permission(value = "sys:soft:install", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /** Install */
     public ReturnResult<InstallDetailResponse> install(@Validated(AddGroup.class) @RequestBody InstallRequest request, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
@@ -46,6 +47,24 @@ public class SoftInstallController {
     @Operation(summary = "卸载软件")
     @DeleteMapping("/uninstall")
     @Permission(value = "sys:soft:uninstall", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /**
+     * Uninstall
+     * @param softwareId softwareId
+     * @param userId userId
+     * @param deviceId deviceId
+     * @param userId userId
+     * @param deviceId deviceId
+     * @param softwareId softwareId
+     * @param userId userId
+     * @param deviceId deviceId
+     * @param targetVersion targetVersion
+     * @param userId userId
+     * @param deviceId deviceId
+     * @param targetVersion targetVersion
+     * @param recordId recordId
+     * @param softwareId softwareId
+     * @param userId userId
+     */
     public ReturnResult<InstallDetailResponse> uninstall(
             @Parameter(description = "软件ID") String softwareId,
             @Parameter(description = "用户ID") String userId,
@@ -56,6 +75,19 @@ public class SoftInstallController {
     @Operation(summary = "升级软件")
     @PutMapping("/update")
     @Permission(value = "sys:soft:update", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /**
+     * 更新Version
+     * @param softwareId softwareId
+     * @param userId userId
+     * @param deviceId deviceId
+     * @param targetVersion targetVersion
+     * @param userId userId
+     * @param deviceId deviceId
+     * @param targetVersion targetVersion
+     * @param recordId recordId
+     * @param softwareId softwareId
+     * @param userId userId
+     */
     public ReturnResult<InstallDetailResponse> updateVersion(
             @Parameter(description = "软件ID") String softwareId,
             @Parameter(description = "用户ID") String userId,
@@ -67,6 +99,7 @@ public class SoftInstallController {
     @Operation(summary = "安装记录详情")
     @GetMapping("/detail")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /** Detail */
     public ReturnResult<InstallDetailResponse> detail(String recordId) {
         return installRecordService.getInstallDetail(recordId);
     }
@@ -74,6 +107,7 @@ public class SoftInstallController {
     @Operation(summary = "软件安装记录列表")
     @GetMapping("/list")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /** ListBySoftware */
     public ReturnResult<List<SoftInstallRecord>> listBySoftware(String softwareId) {
         return ReturnResult.ok(installRecordService.listBySoftwareId(softwareId));
     }
@@ -81,6 +115,7 @@ public class SoftInstallController {
     @Operation(summary = "用户已安装软件")
     @GetMapping("/installed")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /** ListInstalled */
     public ReturnResult<List<SoftInstallRecord>> listInstalled(String userId) {
         return ReturnResult.ok(installRecordService.listInstalledByUserId(userId));
     }

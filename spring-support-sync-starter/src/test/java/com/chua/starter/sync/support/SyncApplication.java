@@ -16,6 +16,7 @@ import com.chua.common.support.network.sync.impl.WebSocketSyncClient;
  */
 public class SyncApplication {
 
+    /** Main */
     public static void main(String[] args) throws Exception {
         System.out.println("=== SyncApplication 启动测试 ===");
 

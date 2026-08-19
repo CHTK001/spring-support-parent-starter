@@ -78,6 +78,7 @@ public class AppRegisterReporter {
     /** 开始时间 */
     private long startTime;
 
+    /** 获取Instance */
     public static AppRegisterReporter getInstance() {
         return INSTANCE;
     }

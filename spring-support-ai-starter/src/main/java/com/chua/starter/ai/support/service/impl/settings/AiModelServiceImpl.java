@@ -44,6 +44,7 @@ public class AiModelServiceImpl implements AiModelService {
     private final SysAiManufacturerMapper manufacturerMapper;
 
     @Override
+    /** List */
     public List<AiModelDTO> list() {
         List<AiModel> models = modelMapper.selectList(
                 new LambdaQueryWrapper<AiModel>()
@@ -61,6 +62,7 @@ public class AiModelServiceImpl implements AiModelService {
 
     @Override
     @Transactional
+    /** 创建 */
     public AiModelDTO create(AiModelDTO model) {
         AiModel entity = toEntity(model);
         LocalDateTime now = LocalDateTime.now();
@@ -79,6 +81,7 @@ public class AiModelServiceImpl implements AiModelService {
 
     @Override
     @Transactional
+    /** 更新 */
     public AiModelDTO update(Long modelId, AiModelDTO model) {
         AiModel entity = toEntity(model);
         entity.setModelId(modelId);
@@ -90,6 +93,7 @@ public class AiModelServiceImpl implements AiModelService {
 
     @Override
     @Transactional
+    /** 删除 */
     public void delete(Long modelId) {
         modelMapper.deleteById(modelId);
         log.debug("[AiModel] 删除成功: id={}", modelId);
@@ -122,6 +126,7 @@ public class AiModelServiceImpl implements AiModelService {
         return manufacturer != null ? manufacturer.getSysAiManufacturerName() : null;
     }
 
+    /** ToDto */
     private AiModelDTO toDto(AiModel entity, String providerName) {
         if (entity == null) return null;
         AiModelDTO dto = new AiModelDTO();
@@ -141,6 +146,7 @@ public class AiModelServiceImpl implements AiModelService {
         return dto;
     }
 
+    /** ToEntity */
     private AiModel toEntity(AiModelDTO dto) {
         AiModel entity = new AiModel();
         entity.setModelName(dto.getName());
@@ -156,10 +162,12 @@ public class AiModelServiceImpl implements AiModelService {
         return entity;
     }
 
+    /** 解析List */
     private List<String> parseList(String content) {
         return Converter.convertIfListNecessary(content, String.class);
     }
 
+    /** ToJsonArray */
     private String toJsonArray(List<String> values) {
         if (values == null || values.isEmpty()) return "[]";
         return Json.toJson(values);

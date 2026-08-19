@@ -42,6 +42,13 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
     /** Interceptors */
     private List<RpcInterceptor> interceptors;
 
+    /**
+     * 创建 SpringRpcInvocationHandler 实例
+     * @param targetType targetType
+     * @param rpcClient rpcClient
+     * @param applicationContext applicationContext
+     * @param consumerConfig consumerConfig
+     */
     public SpringRpcInvocationHandler(Class<T> targetType,
                                       RpcClient rpcClient,
                                       ApplicationContext applicationContext,
@@ -71,6 +78,7 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
     }
 
     @Override
+    /** 调用 */
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         // 处理Object方法
         if (method.getDeclaringClass() == Object.class) {
@@ -207,16 +215,19 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
         return policy;
     }
 
+    /** 读取Boolean */
     private Boolean readBoolean(RpcConsumerConfig config, String methodName) {
         Object value = invokeOptionalGetter(config, methodName);
         return value instanceof Boolean bool ? bool : null;
     }
 
+    /** 读取Integer */
     private Integer readInteger(RpcConsumerConfig config, String methodName) {
         Object value = invokeOptionalGetter(config, methodName);
         return value instanceof Integer integer ? integer : null;
     }
 
+    /** 调用OptionalGetter */
     private Object invokeOptionalGetter(RpcConsumerConfig config, String methodName) {
         if (config == null) {
             return null;

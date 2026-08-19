@@ -17,26 +17,31 @@ import java.util.List;
 public class AIDialogNoneRecordService implements AIDialogRecordService {
 
     @Override
+    /** 创建Dialog */
     public AIDialog createDialog(String name) {
         return new AIDialog(0L, name);
     }
 
     @Override
+    /** 删除Dialog */
     public void deleteDialog(Long dialogId) {
         // no-op
     }
 
     @Override
+    /** ListDialog */
     public List<AIDialog> listDialog() {
         return Collections.emptyList();
     }
 
     @Override
+    /** 获取DialogMessages */
     public List<ChatMessage> getDialogMessages(Long dialogId) {
         return Collections.emptyList();
     }
 
     @Override
+    /** 添加Message */
     public void addMessage(Long dialogId, ChatMessage message) {
         // no-op
     }

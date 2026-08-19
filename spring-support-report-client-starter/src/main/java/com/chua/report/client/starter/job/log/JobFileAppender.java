@@ -38,6 +38,7 @@ public class JobFileAppender {
     private static String logBasePath = "/data/applogs/job/jobhandler";
     /** GlueSRC路径 */
     private static String glueSrcPath = logBasePath.concat("/gluesource");
+    /** 初始化记录日志Path */
     public static void initLogPath(String logPath){
         // init
         if (logPath!=null && logPath.trim().length()>0) {
@@ -57,9 +58,11 @@ public class JobFileAppender {
         }
         glueSrcPath = glueBaseDir.getPath();
     }
+    /** 获取记录日志Path */
     public static String getLogPath() {
         return logBasePath;
     }
+    /** 获取GlueSrcPath */
     public static String getGlueSrcPath() {
         return glueSrcPath;
     }

@@ -55,6 +55,7 @@ public class AuthClientExecute {
     /** Default_key */
     public static final String DEFAULT_KEY = "1234567980123456";
 
+    /** 获取Instance */
     public static AuthClientExecute getInstance() {
         return INSTANCE;
     }
@@ -64,6 +65,7 @@ public class AuthClientExecute {
             .expireAfterWrite(3, TimeUnit.MINUTES)
             .build();
 
+    /** 创建 AuthClientExecute 实例 */
     public AuthClientExecute() {
         this.authClientProperties = OauthClientRuntimeContext.getAuthClientProperties();
     }

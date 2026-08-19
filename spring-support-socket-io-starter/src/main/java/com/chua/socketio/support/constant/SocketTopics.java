@@ -11,6 +11,7 @@ package com.chua.socketio.support.constant;
  */
 public final class SocketTopics {
 
+    /** 创建 SocketTopics 实例 */
     private SocketTopics() {
         // 私有构造函数，防止实例化
     }
@@ -20,6 +21,7 @@ public final class SocketTopics {
      */
     public static final class Service {
 
+        /** 创建 Service 实例 */
         private Service() {
         }
 
@@ -36,6 +38,7 @@ public final class SocketTopics {
             /** Delete */
             public static final String DELETE = "service:message:delete";
 
+            /** 创建 Message 实例 */
             private Message() {
             }
         }
@@ -61,6 +64,7 @@ public final class SocketTopics {
             /** 错误 */
             public static final String ERROR = "service:operation:error";
 
+            /** 创建 Operation 实例 */
             private Operation() {
             }
         }
@@ -71,6 +75,7 @@ public final class SocketTopics {
      */
     public static final class System {
 
+        /** 创建 System 实例 */
         private System() {
         }
 
@@ -87,6 +92,7 @@ public final class SocketTopics {
             /** Delete */
             public static final String DELETE = "system:message:delete";
 
+            /** 创建 Message 实例 */
             private Message() {
             }
         }
@@ -104,6 +110,7 @@ public final class SocketTopics {
             /** Kick */
             public static final String KICK = "system:user:kick";
 
+            /** 创建 User 实例 */
             private User() {
             }
         }
@@ -117,6 +124,7 @@ public final class SocketTopics {
             /** 版本 */
             public static final String VERSION = "system:config:version";
 
+            /** 创建 Config 实例 */
             private Config() {
             }
         }
@@ -130,6 +138,7 @@ public final class SocketTopics {
             /** Permission_change */
             public static final String PERMISSION_CHANGE = "system:auth:permission_change";
 
+            /** 创建 Auth 实例 */
             private Auth() {
             }
         }

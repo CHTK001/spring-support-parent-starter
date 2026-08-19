@@ -57,10 +57,21 @@ public class DataSourceDocumentController {
      */
     private final DatabaseGraphService graphService;
 
+    /**
+     * 创建 DataSourceDocumentController 实例
+     * @param service service
+     * @param DocumentProperties DocumentProperties
+     */
     public DataSourceDocumentController(DataSourceDocumentService service, DocumentProperties properties) {
         this(service, properties, null);
     }
 
+    /**
+     * 创建 DataSourceDocumentController 实例
+     * @param service service
+     * @param properties properties
+     * @param graphService graphService
+     */
     public DataSourceDocumentController(DataSourceDocumentService service,
                                         DocumentProperties properties,
                                         DatabaseGraphService graphService) {
@@ -227,6 +238,7 @@ public class DataSourceDocumentController {
         writeJson(response, payload);
     }
 
+    /** EnsureGraphService */
     private void ensureGraphService() {
         if (graphService == null) {
             throw new IllegalStateException(
@@ -234,6 +246,7 @@ public class DataSourceDocumentController {
         }
     }
 
+    /** 是否ForceRefresh */
     private boolean isForceRefresh(HttpServletRequest request) {
         if (request == null) {
             return false;
@@ -320,6 +333,7 @@ public class DataSourceDocumentController {
 
     // ==================== 渲染辅助 ====================
 
+    /** RenderHtml */
     private String renderHtml(DocumentData data, TableData single) {
         try {
             DocumentTemplate template = resolveTemplate();
@@ -443,6 +457,7 @@ public class DataSourceDocumentController {
         return sb.toString();
     }
 
+    /** TypeDesc */
     private String typeDesc(com.chua.common.support.lang.document.ColumnData c) {
         String name = c.getTypeName();
         if (name == null) {
@@ -463,6 +478,7 @@ public class DataSourceDocumentController {
         return name;
     }
 
+    /** 写入Html */
     private void writeHtml(HttpServletResponse response, String html) throws IOException {
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType(MediaType.TEXT_HTML_VALUE + ";charset=UTF-8");
@@ -473,6 +489,7 @@ public class DataSourceDocumentController {
         }
     }
 
+    /** 写入Json */
     private void writeJson(HttpServletResponse response, Object body) throws IOException {
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8");
@@ -483,6 +500,7 @@ public class DataSourceDocumentController {
         }
     }
 
+    /** 写入NotFound */
     private void writeNotFound(HttpServletResponse response, String msg) throws IOException {
         response.setStatus(HttpServletResponse.SC_NOT_FOUND);
         response.setContentType(MediaType.TEXT_HTML_VALUE + ";charset=UTF-8");
@@ -492,6 +510,7 @@ public class DataSourceDocumentController {
         }
     }
 
+    /** Escape */
     private static String escape(String s) {
         if (s == null) {
             return "";
@@ -500,6 +519,7 @@ public class DataSourceDocumentController {
                 .replace("\"", "&quot;").replace("'", "&#39;");
     }
 
+    /** NullToEmpty */
     private static String nullToEmpty(String s) {
         return s == null ? "" : s;
     }

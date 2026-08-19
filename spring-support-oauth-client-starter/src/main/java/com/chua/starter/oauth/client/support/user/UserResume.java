@@ -135,10 +135,15 @@ public class UserResume {
      */
     private String dataPermissionRule;
 
+    /**
+     * 创建 UserResume 实例
+     * @param message message
+     */
     public UserResume(String message) {
         this.message = message;
     }
 
+    /** 获取Option */
     public Object getOption(String key) {
         if (ext == null) {
             return null;
@@ -146,10 +151,12 @@ public class UserResume {
         return ext.get(key);
     }
 
+    /** 是否拥有Role */
     public boolean hasRole(String role) {
         return roles != null && roles.contains(role);
     }
 
+    /** 是否拥有Role */
     public boolean hasRole(String... roles) {
         if (roles == null || this.roles == null) {
             return false;
@@ -162,10 +169,12 @@ public class UserResume {
         return false;
     }
 
+    /** 是否拥有Permission */
     public boolean hasPermission(String permission) {
         return this.permission != null && this.permission.contains(permission);
     }
 
+    /** 是否拥有Permission */
     public boolean hasPermission(String... permissions) {
         if (permissions == null || this.permission == null) {
             return false;

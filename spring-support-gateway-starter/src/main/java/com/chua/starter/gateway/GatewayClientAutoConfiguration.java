@@ -24,6 +24,7 @@ public class GatewayClientAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    /** GatewayClientAgentProperties */
     public AgentProperties gatewayClientAgentProperties(GatewayClientProperties props, Environment env) {
         AgentProperties agentProps = new AgentProperties();
         agentProps.setGatewayHost(props.getHost());
@@ -65,11 +66,13 @@ public class GatewayClientAutoConfiguration {
 
     @Bean(initMethod = "start", destroyMethod = "stop")
     @ConditionalOnMissingBean
+    /** GatewayClientAgent */
     public GatewayClientAgent gatewayClientAgent(AgentProperties gatewayClientAgentProperties) {
         return new GatewayClientAgent(gatewayClientAgentProperties);
     }
 
     @Bean
+    /** GatewayServiceInfoContributor */
     public ServiceInfoContributor gatewayServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("gateway", "网关", true, "网关客户端模块");

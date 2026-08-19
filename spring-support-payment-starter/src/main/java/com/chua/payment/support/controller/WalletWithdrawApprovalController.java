@@ -40,6 +40,13 @@ public class WalletWithdrawApprovalController {
     private final PaymentAccountPrincipalResolver principalResolver;
 
     @GetMapping("/page")
+    /**
+     * 分页
+     * @param request request
+     * @param pageNum pageNum
+     * @param pageSize pageSize
+     * @param status status
+     */
     public Result<PageResult<WalletWithdrawApproval>> page(HttpServletRequest request,
                                                             @RequestParam(defaultValue = "1") int pageNum,
                                                             @RequestParam(defaultValue = "10") int pageSize,
@@ -52,6 +59,7 @@ public class WalletWithdrawApprovalController {
     }
 
     @PostMapping("/{id}/approve")
+    /** Approve */
     public Result<String> approve(@PathVariable Long id, HttpServletRequest request) {
         Result<String> denied = denyIfNecessary(request);
         if (denied != null) return denied;
@@ -85,6 +93,12 @@ public class WalletWithdrawApprovalController {
     }
 
     @PostMapping("/{id}/reject")
+    /**
+     * Reject
+     * @param id id
+     * @param reason reason
+     * @param request request
+     */
     public Result<String> reject(@PathVariable Long id,
                                  @RequestParam(required = false) String reason,
                                  HttpServletRequest request) {
@@ -153,6 +167,7 @@ public class WalletWithdrawApprovalController {
         return Result.success("提现失败已记录");
     }
 
+    /** DenyIfNecessary */
     private <T> Result<T> denyIfNecessary(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);
         if (userResume == null) {
@@ -164,6 +179,7 @@ public class WalletWithdrawApprovalController {
         return null;
     }
 
+    /** 解析Operator */
     private String resolveOperator(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);
         if (userResume == null) return "system";

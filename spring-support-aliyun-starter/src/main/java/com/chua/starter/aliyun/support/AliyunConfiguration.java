@@ -22,12 +22,18 @@ public class AliyunConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    /** AliyunAlipayClientFactory */
     public AliyunAlipayClientFactory aliyunAlipayClientFactory() {
         return new AliyunAlipayClientFactory();
     }
 
     @Bean
     @ConditionalOnProperty(prefix = "plugin.aliyun.alipay", name = "enabled", havingValue = "true")
+    /**
+     * AlipayClient
+     * @param properties properties
+     * @param factory factory
+     */
     public AlipayClient alipayClient(AliyunAlipayProperties properties,
                                      AliyunAlipayClientFactory factory) {
         log.info("[阿里云配置][支付宝] 加载配置");
@@ -37,6 +43,7 @@ public class AliyunConfiguration {
     }
 
     @Bean
+    /** AliyunServiceInfoContributor */
     public ServiceInfoContributor aliyunServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("aliyun", "阿里云", true, "阿里云服务模块");

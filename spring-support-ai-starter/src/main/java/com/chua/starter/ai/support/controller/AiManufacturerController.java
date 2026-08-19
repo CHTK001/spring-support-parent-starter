@@ -169,6 +169,7 @@ public class AiManufacturerController {
     @Operation(summary = "获取厂商标志")
     @SneakyThrows
     @GetMapping(value = "logo/{fileName:.+}")
+    /** Logo */
     public ResponseEntity<Resource> logo(@Parameter(description = "文件名称") @PathVariable String fileName) {
         Path folder = Paths.get(userDir, ".runtime", "ai", "manufacturer", "logo").toAbsolutePath().normalize();
         Path file = folder.resolve(fileName).normalize();

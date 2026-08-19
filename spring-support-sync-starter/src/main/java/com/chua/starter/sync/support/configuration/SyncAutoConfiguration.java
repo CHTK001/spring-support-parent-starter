@@ -44,6 +44,7 @@ public class SyncAutoConfiguration {
     private Environment environment;
 
     @PostConstruct
+    /** 初始化 */
     public void init() {
         String type = environment.getProperty("plugin.sync.type");
         Boolean serverEnable = environment.getProperty("plugin.sync.server.enable", Boolean.class, false);

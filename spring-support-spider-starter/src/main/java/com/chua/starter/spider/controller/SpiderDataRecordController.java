@@ -30,12 +30,32 @@ public class SpiderDataRecordController {
     /** Record服务 */
     private final SpiderDataRecordService recordService;
 
+    /**
+     * 创建 SpiderDataRecordController 实例
+     * @param recordService recordService
+     */
     public SpiderDataRecordController(SpiderDataRecordService recordService) {
         this.recordService = recordService;
     }
 
     @GetMapping("/page")
     @Operation(summary = "分页查询采集记录")
+    /**
+     * Page
+     * @param pageNo pageNo
+     * @param pageSize pageSize
+     * @param keyword keyword
+     * @param spiderCode spiderCode
+     * @param pageSize pageSize
+     * @param spiderCode spiderCode
+     * @param keyword keyword
+     * @param keyword keyword
+     * @param wrapper wrapper
+     * @param spiderId spiderId
+     * @param spiderId spiderId
+     * @param executionNo executionNo
+     * @param executionNo executionNo
+     */
     public ReturnResult<PageResultVO<DataRecordVO>> page(
             @RequestParam(defaultValue = "1") long pageNo,
             @RequestParam(defaultValue = "20") long pageSize,
@@ -65,6 +85,7 @@ public class SpiderDataRecordController {
 
     @GetMapping("/detail")
     @Operation(summary = "查询记录详情")
+    /** Detail */
     public ReturnResult<DataRecordVO> detail(@RequestParam Long spiderId) {
         SpiderDataRecord record = recordService.getById(spiderId);
         return ReturnResult.ok(SpiderConverter.toDataRecordVO(record));
@@ -72,12 +93,14 @@ public class SpiderDataRecordController {
 
     @DeleteMapping("/{spiderId}")
     @Operation(summary = "删除记录")
+    /** 删除 */
     public ReturnResult<Boolean> delete(@PathVariable Long spiderId) {
         return ReturnResult.ok(recordService.removeById(spiderId));
     }
 
     @GetMapping("/by-execution")
     @Operation(summary = "按执行号查询记录")
+    /** ByExecution */
     public ReturnResult<List<DataRecordVO>> byExecution(@RequestParam String executionNo) {
         List<SpiderDataRecord> list = recordService.lambdaQuery()
                 .eq(SpiderDataRecord::getExecutionNo, executionNo)

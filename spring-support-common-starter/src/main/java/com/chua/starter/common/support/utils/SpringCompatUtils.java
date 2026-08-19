@@ -20,6 +20,7 @@ public class SpringCompatUtils {
     private static final Logger log = LoggerFactory.getLogger(SpringCompatUtils.class);
         private static volatile Boolean factoryMethodMetadataEnabled = null;
 
+    /** 获取FactoryMethodReturnType */
     public static String getFactoryMethodReturnType(AnnotatedBeanDefinition annotatedBeanDefinition) {
         try {
             if (isFactoryMethodMetadataEnabled()) {
@@ -42,6 +43,7 @@ public class SpringCompatUtils {
         return null;
     }
 
+    /** 获取FactoryMethodMetadata */
     public static MethodMetadata getFactoryMethodMetadata(AnnotatedBeanDefinition annotatedBeanDefinition) {
         if (isFactoryMethodMetadataEnabled()) {
             return annotatedBeanDefinition.getFactoryMethodMetadata();
@@ -82,6 +84,7 @@ public class SpringCompatUtils {
         return null;
     }
 
+    /** 是否FactoryMethodMetadataEnabled */
     public static boolean isFactoryMethodMetadataEnabled() {
         if (factoryMethodMetadataEnabled == null) {
             try {

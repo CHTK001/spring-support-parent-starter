@@ -24,6 +24,7 @@ public interface AuthService {
     class DefaultAuthService implements AuthService {
 
         @Override
+        /** 获取CurrentUser */
         public CurrentUser getCurrentUser() {
             return null;
         }

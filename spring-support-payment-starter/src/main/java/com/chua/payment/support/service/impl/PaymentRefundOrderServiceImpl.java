@@ -40,6 +40,15 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 创建RefundOrder
+     * @param order order
+     * @param refundNo refundNo
+     * @param refundAmount refundAmount
+     * @param reason reason
+     * @param operator operator
+     * @param requestPayload requestPayload
+     */
     public PaymentRefundOrder createRefundOrder(PaymentOrder order,
                                                 String refundNo,
                                                 BigDecimal refundAmount,
@@ -71,6 +80,7 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     }
 
     @Override
+    /** 获取ById */
     public PaymentRefundOrder getById(Long id) {
         PaymentRefundOrder entity = paymentRefundOrderMapper.selectById(id);
         if (entity == null) {
@@ -80,6 +90,7 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     }
 
     @Override
+    /** 获取ByRefundNo */
     public PaymentRefundOrder getByRefundNo(String refundNo) {
         if (!StringUtils.hasText(refundNo)) {
             return null;
@@ -90,6 +101,7 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     }
 
     @Override
+    /** 获取ByThirdPartyRefundNo */
     public PaymentRefundOrder getByThirdPartyRefundNo(String thirdPartyRefundNo) {
         if (!StringUtils.hasText(thirdPartyRefundNo)) {
             return null;
@@ -100,11 +112,13 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     }
 
     @Override
+    /** 获取Detail */
     public RefundOrderVO getDetail(Long id) {
         return convertToVO(getById(id));
     }
 
     @Override
+    /** Page */
     public Page<RefundOrderVO> page(int pageNum, int pageSize, Long merchantId, String orderNo, String refundNo, String status) {
         Page<PaymentRefundOrder> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<PaymentRefundOrder> wrapper = new LambdaQueryWrapper<>();
@@ -128,6 +142,7 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     }
 
     @Override
+    /** 获取LatestByOrderId */
     public PaymentRefundOrder getLatestByOrderId(Long orderId) {
         if (orderId == null) {
             return null;
@@ -139,6 +154,7 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     }
 
     @Override
+    /** 获取ProcessingByOrderId */
     public PaymentRefundOrder getProcessingByOrderId(Long orderId) {
         if (orderId == null) {
             return null;
@@ -151,6 +167,7 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     }
 
     @Override
+    /** ListByOrderId */
     public List<PaymentRefundOrder> listByOrderId(Long orderId) {
         return paymentRefundOrderMapper.selectList(new LambdaQueryWrapper<PaymentRefundOrder>()
                 .eq(PaymentRefundOrder::getOrderId, orderId)
@@ -158,16 +175,19 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     }
 
     @Override
+    /** ListVoByOrderId */
     public List<RefundOrderVO> listVoByOrderId(Long orderId) {
         return listByOrderId(orderId).stream().map(this::convertToVO).toList();
     }
 
     @Override
+    /** 是否拥有ProcessingRefund */
     public boolean hasProcessingRefund(Long orderId) {
         return getProcessingByOrderId(orderId) != null;
     }
 
     @Override
+    /** 求和RefundedAmount */
     public BigDecimal sumRefundedAmount(Long orderId) {
         return listByOrderId(orderId).stream()
                 .filter(item -> RefundOrderStatus.REFUNDED.name().equals(item.getStatus()))
@@ -178,6 +198,13 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * MarkProcessing
+     * @param refundNo refundNo
+     * @param thirdPartyRefundNo thirdPartyRefundNo
+     * @param responsePayload responsePayload
+     * @param remark remark
+     */
     public PaymentRefundOrder markProcessing(String refundNo,
                                              String thirdPartyRefundNo,
                                              String responsePayload,
@@ -199,6 +226,15 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * MarkRefunded
+     * @param refundNo refundNo
+     * @param refundAmount refundAmount
+     * @param thirdPartyRefundNo thirdPartyRefundNo
+     * @param responsePayload responsePayload
+     * @param operator operator
+     * @param remark remark
+     */
     public PaymentRefundOrder markRefunded(String refundNo,
                                            BigDecimal refundAmount,
                                            String thirdPartyRefundNo,
@@ -229,6 +265,13 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * MarkFailed
+     * @param refundNo refundNo
+     * @param responsePayload responsePayload
+     * @param operator operator
+     * @param remark remark
+     */
     public PaymentRefundOrder markFailed(String refundNo,
                                          String responsePayload,
                                          String operator,
@@ -248,6 +291,7 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
         return entity;
     }
 
+    /** RequireRefundOrder */
     private PaymentRefundOrder requireRefundOrder(String refundNo) {
         PaymentRefundOrder entity = getByRefundNo(refundNo);
         if (entity == null) {
@@ -256,6 +300,7 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
         return entity;
     }
 
+    /** 转换ToVO */
     private RefundOrderVO convertToVO(PaymentRefundOrder entity) {
         RefundOrderVO vo = new RefundOrderVO();
         BeanUtils.copyProperties(entity, vo);

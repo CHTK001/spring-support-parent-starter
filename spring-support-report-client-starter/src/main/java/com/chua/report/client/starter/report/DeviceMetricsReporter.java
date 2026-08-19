@@ -124,6 +124,7 @@ public class DeviceMetricsReporter {
      */
     private final AtomicReference<Map<String, Object>> cpuCache = new AtomicReference<>(new HashMap<>());
 
+    /** 创建 DeviceMetricsReporter 实例 */
     private DeviceMetricsReporter() {
     }
 

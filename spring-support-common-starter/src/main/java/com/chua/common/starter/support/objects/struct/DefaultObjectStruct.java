@@ -17,11 +17,16 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     /** 配置 */
     private final TreeStructConfig<T> config;
 
+    /**
+     * 创建 DefaultObjectStruct 实例
+     * @param config config
+     */
     public DefaultObjectStruct(TreeStructConfig<T> config) {
         this.config = config;
     }
 
     @Override
+    /** ToTree */
     public List<TreeNode<T>> toTree(List<T> source) {
         if (source == null || source.isEmpty()) {
             return Collections.emptyList();
@@ -53,6 +58,7 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     }
 
     @Override
+    /** ToBarChartData */
     public BarChartData toBarChartData(List<TreeNode<T>> tree) {
         BarChartData data = new BarChartData();
         if (tree == null) {
@@ -73,6 +79,7 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     }
 
     @Override
+    /** ToRadarChartData */
     public RadarChartData toRadarChartData(List<TreeNode<T>> tree) {
         RadarChartData data = new RadarChartData();
         if (tree == null) {
@@ -93,6 +100,7 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     }
 
     @Override
+    /** ToRelationData */
     public RelationData toRelationData(List<TreeNode<T>> tree) {
         RelationData data = new RelationData();
         if (tree == null) {
@@ -112,6 +120,7 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     }
 
     @Override
+    /** ToTreemapData */
     public TreemapData toTreemapData(List<TreeNode<T>> tree) {
         TreemapData data = new TreemapData();
         if (tree == null) {
@@ -134,6 +143,7 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
         return data;
     }
 
+    /** 构建Path */
     private String buildPath(TreeNode<T> node, String currentName) {
         if (node.getParentId() == null) {
             return currentName;
@@ -145,6 +155,7 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
         return currentName;
     }
 
+    /** CollectNodes */
     private void collectNodes(List<TreeNode<T>> nodes, List<TreeNode<T>> result) {
         for (TreeNode<T> node : nodes) {
             result.add(node);
@@ -154,6 +165,7 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
         }
     }
 
+    /** 添加Links */
     private void addLinks(List<TreeNode<T>> nodes, RelationData data) {
         for (TreeNode<T> node : nodes) {
             if (node.getChildren() != null) {

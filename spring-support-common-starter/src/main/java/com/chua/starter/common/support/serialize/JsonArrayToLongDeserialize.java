@@ -19,6 +19,7 @@ public class JsonArrayToLongDeserialize extends JsonDeserializer<Long> {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(JsonArrayToLongDeserialize.class);
         @Override
+    /** 反序列化 */
     public Long deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JacksonException {
         TreeNode treeNode = p.getCodec().readTree(p);
         if (log.isTraceEnabled()) {

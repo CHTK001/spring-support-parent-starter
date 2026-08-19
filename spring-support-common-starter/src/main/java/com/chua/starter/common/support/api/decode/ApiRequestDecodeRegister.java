@@ -96,6 +96,7 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
         return null != decodeSetting && decodeSetting.isEnable();
     }
 
+    /** 校验 */
     private void check() {
         ApiRequestDecodeSetting setting = getOrCreateSetting();
         if (null == setting) {
@@ -109,6 +110,7 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
         this.upgrade(setting);
     }
 
+    /** 获取Or创建Setting */
     private ApiRequestDecodeSetting getOrCreateSetting() {
         ApiRequestDecodeSetting setting = globalSettingFactory.get("config", ApiRequestDecodeSetting.class);
         if (setting == null) {
@@ -219,6 +221,7 @@ public class ApiRequestDecodeRegister implements Upgrade<ApiRequestDecodeSetting
     }
 
     @Override
+    /** Upgrade */
     public void upgrade(ApiRequestDecodeSetting setting) {
         this.decodeSetting = setting;
         String nextRequestCodecKey = null == setting ? null : setting.getCodecRequestKey();

@@ -55,6 +55,18 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * Log通知
+     * @param notifyType notifyType
+     * @param merchantId merchantId
+     * @param channelId channelId
+     * @param channelType channelType
+     * @param channelSubType channelSubType
+     * @param orderNo orderNo
+     * @param refundNo refundNo
+     * @param request request
+     * @param body body
+     */
     public PaymentNotifyLog logNotify(String notifyType,
                                       Long merchantId,
                                       Long channelId,
@@ -92,6 +104,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 处理Payment通知 */
     public void processPaymentNotify(PaymentNotifyLog log) {
         try {
             log.setProcessStatus("PROCESSING");
@@ -109,6 +122,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 处理Refund通知 */
     public void processRefundNotify(PaymentNotifyLog log) {
         try {
             log.setProcessStatus("PROCESSING");
@@ -126,6 +140,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 标记Success */
     public void markSuccess(Long logId, String result) {
         PaymentNotifyLog log = notifyLogMapper.selectById(logId);
         if (log != null) {
@@ -138,6 +153,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 标记FailedAndRecord记录错误 */
     public void markFailedAndRecordError(Long logId, String errorType, String errorMessage, String errorStack) {
         PaymentNotifyLog log = notifyLogMapper.selectById(logId);
         if (log == null) {
@@ -175,6 +191,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** RetryFailed通知 */
     public void retryFailedNotify(Long errorId) {
         PaymentNotifyError error = notifyErrorMapper.selectById(errorId);
         if (error == null || !"PENDING".equals(error.getStatus())) {
@@ -219,6 +236,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
         }
     }
 
+    /** ExtractHeaders */
     private String extractHeaders(HttpServletRequest request) {
         StringBuilder headers = new StringBuilder();
         Enumeration<String> headerNames = request.getHeaderNames();
@@ -230,6 +248,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
         return headers.toString();
     }
 
+    /** ExtractParams */
     private String extractParams(HttpServletRequest request) {
         StringBuilder params = new StringBuilder();
         request.getParameterMap().forEach((key, values) -> {
@@ -238,6 +257,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
         return params.toString();
     }
 
+    /** 分发通知 */
     private void dispatchNotify(PaymentNotifyLog notifyLog, boolean refundNotify) {
         if (notifyLog == null) {
             throw new PaymentException("回调日志不存在");
@@ -297,6 +317,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
         throw new PaymentException("不支持的回调重放类型: " + notifyLog.getNotifyType());
     }
 
+    /** 分发Wallet通知 */
     private void dispatchWalletNotify(PaymentNotifyLog notifyLog) {
         Map<String, Object> payload = mergeNotifyPayload(notifyLog);
         walletNotifyService.handleNotify(
@@ -308,6 +329,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
                 firstText(payload, "reason", "message", "msg", "error", "errorMessage", "error_message", "errMsg"));
     }
 
+    /** 解析Headers */
     private Map<String, String> parseHeaders(String headers) {
         Map<String, String> result = new LinkedHashMap<>();
         if (!StringUtils.hasText(headers)) {
@@ -326,6 +348,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
         return result;
     }
 
+    /** 解析Params */
     private Map<String, String> parseParams(String params) {
         Map<String, String> result = new LinkedHashMap<>();
         if (!StringUtils.hasText(params)) {
@@ -345,6 +368,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
         return result;
     }
 
+    /** 合并通知Payload */
     private Map<String, Object> mergeNotifyPayload(PaymentNotifyLog notifyLog) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.putAll(parseParams(notifyLog.getRequestParams()));
@@ -360,6 +384,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
         return result;
     }
 
+    /** 构建WalletPayload */
     private String buildWalletPayload(PaymentNotifyLog notifyLog) {
         if (StringUtils.hasText(notifyLog.getRequestBody())) {
             return notifyLog.getRequestBody();
@@ -367,6 +392,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
         return notifyLog.getRequestParams();
     }
 
+    /** DeriveWalletOrderType */
     private String deriveWalletOrderType(String notifyType) {
         String normalized = upper(notifyType);
         if (!StringUtils.hasText(normalized)) {
@@ -381,6 +407,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
         return "RECHARGE";
     }
 
+    /** FirstText */
     private String firstText(Map<String, Object> source, String... keys) {
         if (source == null || keys == null) {
             return null;
@@ -398,14 +425,17 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
         return null;
     }
 
+    /** 是否SignVerified */
     private Boolean isSignVerified(Integer signVerified) {
         return signVerified != null && signVerified == 1;
     }
 
+    /** Upper */
     private String upper(String value) {
         return value == null ? null : value.toUpperCase(Locale.ROOT);
     }
 
+    /** FirstNonBlank */
     private String firstNonBlank(String... values) {
         if (values == null) {
             return null;
@@ -418,6 +448,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
         return null;
     }
 
+    /** 获取StackTrace */
     private String getStackTrace(Throwable throwable) {
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
@@ -425,6 +456,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
         return sw.toString();
     }
 
+    /** CalculateNextRetryTime */
     private LocalDateTime calculateNextRetryTime(int retryCount) {
         int[] delays = {1, 5, 15, 30, 60};
         int delayMinutes = retryCount < delays.length ? delays[retryCount] : 60;

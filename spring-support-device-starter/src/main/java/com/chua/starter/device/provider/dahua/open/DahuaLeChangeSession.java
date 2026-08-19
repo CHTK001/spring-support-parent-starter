@@ -46,6 +46,10 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
      */
     private static final String PATH_PTZ_CONTROL = "/ptz";
 
+    /**
+     * 创建 DahuaLeChangeSession 实例
+     * @param info info
+     */
     public DahuaLeChangeSession(DeviceConnectInfo info) {
         super(info, DEFAULT_BASE_URL);
         login();
@@ -76,6 +80,7 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
         }
     }
 
+    /** Login */
     private void login() {
         try {
             Map<String, Object> params = new LinkedHashMap<>();
@@ -98,6 +103,7 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /** DoRequest */
     protected JsonNode doRequest(String method, String path, Map<String, Object> params) {
         if (!tokenValid() && !PATH_TOKEN.equals(path)) {
             login();
@@ -123,6 +129,7 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
         return execute(method, path, realParams, null);
     }
 
+    /** 获取LiveUrl */
     public JsonNode getLiveUrl(int channel) {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceId", info.getDeviceSerial());
@@ -132,6 +139,7 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /** 获取LiveUrl */
     public String getLiveUrl(int channel, String protocol) {
         JsonNode data = getLiveUrl(channel);
         // 乐橙返回 data.result.liveURL / hls / flv
@@ -140,6 +148,7 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /** 获取PlaybackUrl */
     public String getPlaybackUrl(int channel, com.chua.starter.device.spi.model.TimeRange range) {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceId", info.getDeviceSerial());
@@ -153,6 +162,7 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /** PtzControl */
     public void ptzControl(com.chua.starter.device.spi.model.PtzCommand cmd, double speed) {
         if (cmd == com.chua.starter.device.spi.model.PtzCommand.STOP) {
             return;
@@ -165,6 +175,7 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
         post(PATH_PTZ_CONTROL, params);
     }
 
+    /** MapOperation */
     private int mapOperation(com.chua.starter.device.spi.model.PtzCommand cmd) {
         switch (cmd) {
             case UP: return 0;

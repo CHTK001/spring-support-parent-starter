@@ -104,42 +104,52 @@ public class DocumentProperties {
 
     // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
 
+    /** 是否启用 */
     public boolean isEnable() {
         return enable;
     }
 
+    /** 获取BasePath */
     public String getBasePath() {
         return basePath;
     }
 
+    /** 获取Title */
     public String getTitle() {
         return title;
     }
 
+    /** 获取Version */
     public String getVersion() {
         return version;
     }
 
+    /** 获取Template */
     public String getTemplate() {
         return template;
     }
 
+    /** 获取IncludeTables */
     public String getIncludeTables() {
         return includeTables;
     }
 
+    /** 获取ExcludeTables */
     public String getExcludeTables() {
         return excludeTables;
     }
 
+    /** 获取IncludeSchemas */
     public String getIncludeSchemas() {
         return includeSchemas;
     }
 
+    /** 是否Cacheable */
     public boolean isCacheable() {
         return cacheable;
     }
 
+    /** 获取Options */
     public Map<String, Object> getOptions() {
         return options;
     }

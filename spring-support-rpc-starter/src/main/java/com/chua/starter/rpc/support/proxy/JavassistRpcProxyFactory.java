@@ -34,6 +34,7 @@ public class JavassistRpcProxyFactory implements RpcProxyFactory {
     }
 
     @Override
+    /** 创建Proxy */
     public Object createProxy(ClassLoader classLoader, List<Class<?>> interfaces, InvocationHandler handler) {
         if (!JAVASSIST_AVAILABLE) {
             throw new UnsupportedOperationException("Javassist proxy is not available, Dubbo dependency is missing");
@@ -50,6 +51,7 @@ public class JavassistRpcProxyFactory implements RpcProxyFactory {
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         // Javassist 性能更好，优先级较高
         return JAVASSIST_AVAILABLE ? 0 : Integer.MAX_VALUE;

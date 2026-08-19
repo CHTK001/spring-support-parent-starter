@@ -34,11 +34,13 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
     );
 
     @Override
+    /** Support */
     public boolean support() {
         return System.getProperty("os.name", "").toLowerCase().contains("windows");
     }
 
     @Override
+    /** Collect */
     public List<SoftSoftware> collect() {
         List<SoftSoftware> result = new ArrayList<>();
         result.addAll(scanUninstallKey("HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"));
@@ -47,6 +49,7 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
         return result;
     }
 
+    /** 扫描UninstallKey */
     private List<SoftSoftware> scanUninstallKey(String baseKey) {
         List<SoftSoftware> list = new ArrayList<>();
         try {
@@ -68,6 +71,7 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
         return list;
     }
 
+    /** 读取SoftwareInfo */
     private SoftSoftware readSoftwareInfo(String key) {
         try {
             Process process = Runtime.getRuntime().exec(
@@ -97,6 +101,7 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
         }
     }
 
+    /** ExtractValue */
     private String extractValue(String output, String name) {
         for (String line : output.split("\n")) {
             if (line.contains(name)) {
@@ -109,6 +114,7 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
         return null;
     }
 
+    /** ExtractIconPath */
     private String extractIconPath(String output) {
         String icon = extractValue(output, "DisplayIcon");
         if (icon != null && new File(icon).exists()) {

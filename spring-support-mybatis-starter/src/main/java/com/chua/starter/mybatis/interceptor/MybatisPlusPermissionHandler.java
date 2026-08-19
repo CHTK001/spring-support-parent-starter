@@ -124,6 +124,7 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
     }
 
     @Override
+    /** 获取SqlSegment */
     public Expression getSqlSegment(Expression where, String mappedStatementId) {
         return where;
     }

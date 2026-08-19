@@ -31,6 +31,14 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
     /** WechatPAY分数排序服务 */
     private final WechatPayScoreOrderService wechatPayScoreOrderService;
 
+    /**
+     * 创建 WechatPayScoreNotifyServiceImpl 实例
+     * @param merchantChannelService merchantChannelService
+     * @param objectMapper objectMapper
+     * @param merchantChannelMapper merchantChannelMapper
+     * @param providerGatewayRegistry providerGatewayRegistry
+     * @param wechatPayScoreOrderService wechatPayScoreOrderService
+     */
     public WechatPayScoreNotifyServiceImpl(MerchantChannelService merchantChannelService,
                                            ObjectMapper objectMapper,
                                            MerchantChannelMapper merchantChannelMapper,
@@ -44,6 +52,17 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 处理通知
+     * @param channelId channelId
+     * @param outOrderNo outOrderNo
+     * @param serialNumber serialNumber
+     * @param timestamp timestamp
+     * @param nonce nonce
+     * @param signature signature
+     * @param signType signType
+     * @param body body
+     */
     public TencentWechatPayScoreNotifyPayload handleNotify(Long channelId,
                                                            String outOrderNo,
                                                            String serialNumber,
@@ -62,6 +81,7 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
         return payload;
     }
 
+    /** RequireEnabledWechatChannel */
     private MerchantChannel requireEnabledWechatChannel(Long channelId) {
         MerchantChannel channel = merchantChannelMapper.selectById(channelId);
         if (channel == null) {
@@ -76,6 +96,15 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
         return channel;
     }
 
+    /**
+     * 构建Wechat通知Request
+     * @param serialNumber serialNumber
+     * @param timestamp timestamp
+     * @param nonce nonce
+     * @param signature signature
+     * @param signType signType
+     * @param body body
+     */
     private TencentWechatNotifyRequest buildWechatNotifyRequest(String serialNumber,
                                                                 String timestamp,
                                                                 String nonce,
@@ -92,6 +121,7 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
         return request;
     }
 
+    /** 构建WechatProperties */
     private TencentWechatPayProperties buildWechatProperties(MerchantChannel channel) {
         TencentWechatPayProperties properties = new TencentWechatPayProperties();
         properties.setAppId(requiredText(channel.getAppId(), "微信 AppId 不能为空"));

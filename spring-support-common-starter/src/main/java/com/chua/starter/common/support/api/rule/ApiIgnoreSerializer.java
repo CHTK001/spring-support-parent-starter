@@ -31,16 +31,22 @@ public class ApiIgnoreSerializer extends JsonSerializer<Object> implements Conte
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
     private Class<?>[] group;
 
+    /**
+     * 创建 ApiIgnoreSerializer 实例
+     * @param group group
+     */
     public ApiIgnoreSerializer(Class<?>[] group) {
         this();
         this.group = group;
     }
 
+    /** 创建 ApiIgnoreSerializer 实例 */
     public ApiIgnoreSerializer() {
         requestMappingHandlerMapping = SpringBeanUtils.getRequestMappingHandlerMapping();
     }
 
     @Override
+    /** 序列化 */
     public void serialize(Object value, JsonGenerator jsonGenerator, SerializerProvider serializers) throws IOException {
         jsonGenerator.writeNull();
     }
@@ -60,6 +66,7 @@ public class ApiIgnoreSerializer extends JsonSerializer<Object> implements Conte
         return serializerProvider.findNullValueSerializer(null);
     }
 
+    /** 是否Match */
     private boolean isMatch(ApiFieldIgnore apiFieldIgnore) {
         Class<?>[] value = apiFieldIgnore.value();
         if(value.length == 0) {

@@ -69,6 +69,7 @@ public final class DataSyncReconnectProbe {
         final CopyOnWriteArrayList<String> eventLog = new CopyOnWriteArrayList<>();
         syncServer.addListener(new SyncServerListener() {
             @Override
+            /** OnClientConnected */
             public void onClientConnected(java.lang.String clientId, Map<String, Object> metadata) {
                 connected.incrementAndGet();
                 eventLog.add("CONNECT:" + clientId);
@@ -76,6 +77,7 @@ public final class DataSyncReconnectProbe {
             }
 
             @Override
+            /** OnClientDisconnected */
             public void onClientDisconnected(String clientId) {
                 disconnected.incrementAndGet();
                 eventLog.add("DISCONNECT:" + clientId);
@@ -83,6 +85,7 @@ public final class DataSyncReconnectProbe {
             }
 
             @Override
+            /** OnMessage */
             public void onMessage(String clientId, String topic, Object data) {
                 received.incrementAndGet();
                 eventLog.add("MESSAGE:" + topic + "=" + data);
@@ -90,6 +93,7 @@ public final class DataSyncReconnectProbe {
             }
 
             @Override
+            /** On记录错误 */
             public void onError(String clientId, Throwable throwable) {
                 onErrorCount.incrementAndGet();
                 eventLog.add("ERROR:" + clientId + ":" + throwable.getMessage());
@@ -125,6 +129,7 @@ public final class DataSyncReconnectProbe {
         final AtomicInteger errorCallbacks = new AtomicInteger();
         client.addListener(new com.chua.common.support.network.sync.SyncFlowListener() {
             @Override
+            /** On记录错误 */
             public void onError(String protocol, Throwable cause) {
                 errorCallbacks.incrementAndGet();
                 System.out.println("[RECONNECT-PROBE] 客户端检测到掉线: " + protocol + " -> " + cause.getMessage());

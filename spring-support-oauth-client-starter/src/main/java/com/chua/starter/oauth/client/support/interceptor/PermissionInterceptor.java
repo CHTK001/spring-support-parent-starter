@@ -35,6 +35,7 @@ import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_
 @Order(1)
 public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean, Ordered {
     @Override
+    /** Matches */
     public boolean matches(Method method, Class<?> targetClass) {
         if (Proxy.isProxyClass(targetClass)) {
             return false;
@@ -44,11 +45,13 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
     }
 
     @Override
+    /** AfterProperties设置 */
     public void afterPropertiesSet() throws Exception {
         log.info("[权限拦截器]初始化权限拦截器");
         this.setAdvice(new MethodInterceptor() {
             @Nullable
             @Override
+            /** 调用 */
             public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
                 Method method = invocation.getMethod();
                 String methodName = method.getDeclaringClass().getSimpleName() + "." + method.getName();
@@ -117,6 +120,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
         });
     }
 
+    /** 是否Admin */
     private boolean isAdmin() {
         UserResume userInfo = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getUserInfo(UserResume.class);
         if(null == userInfo) {
@@ -126,6 +130,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
         return CollectionUtils.containsIgnoreCase(roles, "ADMIN");
     }
 
+    /** 是否PermissionMatch */
     private boolean isPermissionMatch(Permission permission) {
         String[] permissions = permission.value();
         if(ArrayUtils.isEmpty(permissions)) {
@@ -148,6 +153,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
 
     }
 
+    /** 是否拥有SuperAdminAndMatch */
     private boolean hasSuperAdminAndMatch(Permission permission) {
         String[] role = permission.role();
         if (ArrayUtils.isEmpty(role)) {
@@ -156,6 +162,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
 
         return role.length == 1 && SUPER_ADMIN.equalsIgnoreCase(role[0]);
     }
+    /** 是否RoleMatch */
     private boolean isRoleMatch(Permission permission, Set<String> roles) {
         String[] role = permission.role();
         if(ArrayUtils.isEmpty(role)) {
@@ -186,6 +193,7 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         return Ordered.HIGHEST_PRECEDENCE;
     }

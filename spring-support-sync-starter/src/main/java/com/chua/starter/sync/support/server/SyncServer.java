@@ -52,19 +52,26 @@ public class SyncServer implements InitializingBean, DisposableBean {
 
     private final List<BiConsumer<String, ClientInfo>> disconnectListeners = new CopyOnWriteArrayList<>();
 
+    /**
+     * 创建 SyncServer 实例
+     * @param syncProperties syncProperties
+     */
     public SyncServer(SyncProperties syncProperties) {
         this.syncProperties = SyncProperties.copyOf(syncProperties);
     }
 
+    /** 获取SyncProperties */
     public SyncProperties getSyncProperties() {
         return syncProperties;
     }
 
+    /** 获取Instances */
     public Map<String, SyncServerInstance> getInstances() {
         return instances;
     }
 
     @Override
+    /** AfterProperties设置 */
     public void afterPropertiesSet() throws Exception {
         if (!syncProperties.isServerEnabled()) {
             log.info("[Sync] 服务端 [{}]", disabled());
@@ -73,6 +80,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
         startAllInstances();
     }
 
+    /** 开始AllInstances */
     private void startAllInstances() {
         List<SyncProperties.ServerInstance> instanceConfigs = syncProperties.getServer().getEffectiveInstances();
 
@@ -101,6 +109,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
         log.info("[Sync] 启动 {} 个服务实例 [{}]", highlight(instances.size()), enabled());
     }
 
+    /** 注册HandlersToInstance */
     private void registerHandlersToInstance(SyncServerInstance instance, SyncProperties.ServerInstance config) {
         Map<String, String> topics = new HashMap<>(syncProperties.getTopics());
         if (config.getTopics() != null) {
@@ -115,6 +124,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
         }
     }
 
+    /** 注册Handler */
     public void registerHandler(String topic, com.chua.common.support.network.sync.SyncMessageHandler handler) {
         if (topic == null || topic.isBlank() || handler == null) {
             return;
@@ -159,14 +169,17 @@ public class SyncServer implements InitializingBean, DisposableBean {
         registerHandler(topic, adapter);
     }
 
+    /** 添加连接Listener */
     public void addConnectListener(BiConsumer<String, ClientInfo> listener) {
         connectListeners.add(listener);
     }
 
+    /** 添加断开Listener */
     public void addDisconnectListener(BiConsumer<String, ClientInfo> listener) {
         disconnectListeners.add(listener);
     }
 
+    /** 通知连接Listeners */
     private void notifyConnectListeners(String sessionId, ClientInfo clientInfo) {
         for (BiConsumer<String, ClientInfo> listener : connectListeners) {
             try {
@@ -177,6 +190,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
         }
     }
 
+    /** 通知断开Listeners */
     private void notifyDisconnectListeners(String sessionId, ClientInfo clientInfo) {
         for (BiConsumer<String, ClientInfo> listener : disconnectListeners) {
             try {
@@ -187,6 +201,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
         }
     }
 
+    /** 发送 */
     public void send(String sessionId, String topic, Object data) {
         for (SyncServerInstance instance : instances.values()) {
             if (instance.containsClient(sessionId)) {
@@ -197,16 +212,19 @@ public class SyncServer implements InitializingBean, DisposableBean {
         log.warn("[SyncServer] 未找到会话: {}", sessionId);
     }
 
+    /** Broadcast */
     public void broadcast(String topic, Object data) {
         for (SyncServerInstance instance : instances.values()) {
             instance.broadcast(topic, data);
         }
     }
 
+    /** 发布 */
     public void publish(String topic, Object data) {
         broadcast(topic, data);
     }
 
+    /** Broadcast */
     public void broadcast(String instanceName, String topic, Object data) {
         SyncServerInstance instance = instances.get(instanceName);
         if (instance != null) {
@@ -214,6 +232,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
         }
     }
 
+    /** 发布 */
     public boolean publish(String host, int port, String topic, Object data) {
         String clientId = findClientId(host, port, null);
         if (clientId != null) {
@@ -225,6 +244,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
         return false;
     }
 
+    /** 发布ByAppName */
     public int publishByAppName(String appName, String topic, Object data) {
         List<String> clientIds = findClientIdsByAppName(appName);
         if (clientIds.isEmpty()) {
@@ -238,6 +258,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
         return clientIds.size();
     }
 
+    /** 发布 */
     public boolean publish(String host, int port, String appName, String topic, Object data) {
         String clientId = findClientId(host, port, appName);
         if (clientId != null) {
@@ -249,18 +270,22 @@ public class SyncServer implements InitializingBean, DisposableBean {
         return false;
     }
 
+    /** 获取Instance */
     public SyncServerInstance getInstance(String name) {
         return instances.get(name);
     }
 
+    /** 获取DefaultInstance */
     public SyncServerInstance getDefaultInstance() {
         return instances.get("default");
     }
 
+    /** 获取Connection计算数量 */
     public int getConnectionCount() {
         return instances.values().stream().mapToInt(SyncServerInstance::getConnectionCount).sum();
     }
 
+    /** 查找ClientId */
     public String findClientId(String host, int port, String appName) {
         for (Map.Entry<String, ClientInfo> entry : allClientsInternal.entrySet()) {
             ClientInfo clientInfo = entry.getValue();
@@ -278,6 +303,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
         return null;
     }
 
+    /** 查找ClientIdsByAppName */
     public List<String> findClientIdsByAppName(String appName) {
         List<String> result = new ArrayList<>();
         for (Map.Entry<String, ClientInfo> entry : allClientsInternal.entrySet()) {
@@ -288,6 +314,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
         return result;
     }
 
+    /** 查找ClientIdsByHost */
     public List<String> findClientIdsByHost(String host) {
         List<String> result = new ArrayList<>();
         for (Map.Entry<String, ClientInfo> entry : allClientsInternal.entrySet()) {
@@ -298,6 +325,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
         return result;
     }
 
+    /** 查找ClientIdsByMetadata */
     public List<String> findClientIdsByMetadata(String metadataKey, Object metadataValue) {
         return findClientIds(clientInfo -> {
             Map<String, Object> metadata = clientInfo.getClientMetadata();
@@ -308,6 +336,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
         });
     }
 
+    /** 查找ClientIds */
     public List<String> findClientIds(Predicate<ClientInfo> filter) {
         if (filter == null) {
             return List.of();
@@ -323,6 +352,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
         return result;
     }
 
+    /** 发布ByMetadata */
     public int publishByMetadata(String metadataKey, Object metadataValue, String topic, Object data) {
         return publishToClients(clientInfo -> {
             Map<String, Object> metadata = clientInfo.getClientMetadata();
@@ -333,6 +363,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
         }, topic, data);
     }
 
+    /** 发布ToClients */
     public int publishToClients(Predicate<ClientInfo> filter, String topic, Object data) {
         List<String> clientIds = findClientIds(filter);
         if (clientIds.isEmpty()) {
@@ -345,6 +376,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
         return clientIds.size();
     }
 
+    /** MatchesValue */
     private boolean matchesValue(Object actual, Object expected) {
         if (Objects.equals(actual, expected)) {
             return true;
@@ -355,6 +387,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
         return Objects.equals(String.valueOf(actual), String.valueOf(expected));
     }
 
+    /** 获取ConnectedSessions */
     public Set<String> getConnectedSessions() {
         Set<String> all = new HashSet<>();
         for (SyncServerInstance instance : instances.values()) {
@@ -363,6 +396,7 @@ public class SyncServer implements InitializingBean, DisposableBean {
         return all;
     }
 
+    /** 获取AllClients */
     public Map<String, ClientInfo> getAllClients() {
         if (allClientsInternal.isEmpty()) {
             return new HashMap<>();
@@ -384,11 +418,13 @@ public class SyncServer implements InitializingBean, DisposableBean {
                 ));
     }
 
+    /** 获取AllClientsRaw */
     public Map<String, ClientInfo> getAllClientsRaw() {
         return new HashMap<>(allClientsInternal);
     }
 
     @Override
+    /** 销毁 */
     public void destroy() throws Exception {
         for (SyncServerInstance instance : instances.values()) {
             instance.stop();

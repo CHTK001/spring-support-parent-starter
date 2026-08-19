@@ -28,12 +28,14 @@ public class MaterializedRouteAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    /** MaterializedRouteProperties */
     public MaterializedRouteProperties materializedRouteProperties(Environment environment) {
         return MaterializedRouteProperties.bind(environment);
     }
 
     @Bean
     @ConditionalOnMissingBean(name = "defaultAdvisorAutoProxyCreator")
+    /** DefaultAdvisorAutoProxyCreator */
     public DefaultAdvisorAutoProxyCreator defaultAdvisorAutoProxyCreator() {
         DefaultAdvisorAutoProxyCreator creator = new DefaultAdvisorAutoProxyCreator();
         creator.setProxyTargetClass(true);
@@ -42,18 +44,21 @@ public class MaterializedRouteAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    /** MaterializedRouteAdvisor */
     public MaterializedRouteAdvisor materializedRouteAdvisor(MaterializedRouteProperties properties) {
         return new MaterializedRouteAdvisor(properties);
     }
 
     @Bean
     @ConditionalOnMissingBean
+    /** MaterializedRefreshAdvisor */
     public MaterializedRefreshAdvisor materializedRefreshAdvisor(MaterializedRouteProperties properties) {
         return new MaterializedRefreshAdvisor(properties);
     }
 
     @Bean
     @ConditionalOnMissingBean
+    /** MaterializedSqlRouter */
     public MaterializedSqlDataSourceRouter materializedSqlRouter(MaterializedRouteProperties properties, DataSource dataSource) {
         return new CalciteMaterializedSqlRouter(
                 properties.toOptions(),
@@ -66,6 +71,7 @@ public class MaterializedRouteAutoConfiguration {
 
     static final class MaterializedRouteEnabledCondition implements Condition {
         @Override
+        /** Matches */
         public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
             return MaterializedRouteProperties.bind(context.getEnvironment()).isEnabled();
         }

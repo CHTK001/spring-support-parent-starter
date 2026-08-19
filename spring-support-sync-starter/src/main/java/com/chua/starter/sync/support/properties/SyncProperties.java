@@ -56,46 +56,57 @@ public class SyncProperties {
      */
     private DataSyncConfig dataSync = new DataSyncConfig();
 
+    /** 获取Type */
     public String getType() {
         return type;
     }
 
+    /** 设置Type */
     public void setType(String type) {
         this.type = type;
     }
 
+    /** 获取Topics */
     public Map<String, String> getTopics() {
         return topics;
     }
 
+    /** 设置Topics */
     public void setTopics(Map<String, String> topics) {
         this.topics = topics;
     }
 
+    /** 获取Server */
     public ServerConfig getServer() {
         return server;
     }
 
+    /** 设置Server */
     public void setServer(ServerConfig server) {
         this.server = server;
     }
 
+    /** 获取Client */
     public ClientConfig getClient() {
         return client;
     }
 
+    /** 设置Client */
     public void setClient(ClientConfig client) {
         this.client = client;
     }
 
+    /** 获取DataSync */
     public DataSyncConfig getDataSync() {
         return dataSync;
     }
 
+    /** 设置DataSync */
     public void setDataSync(DataSyncConfig dataSync) {
         this.dataSync = dataSync;
     }
 
+    /** 复制Of */
     public static SyncProperties copyOf(SyncProperties source) {
         if (source == null) {
             return new SyncProperties();
@@ -111,10 +122,12 @@ public class SyncProperties {
         return target;
     }
 
+    /** 获取CryptoSecret */
     public String getCryptoSecret() {
         return cryptoSecret;
     }
 
+    /** 设置CryptoSecret */
     public void setCryptoSecret(String cryptoSecret) {
         this.cryptoSecret = cryptoSecret;
     }
@@ -166,66 +179,82 @@ public class SyncProperties {
          */
         private int connectTimeout = 10000;
 
+        /** 是否启用 */
         public boolean isEnable() {
             return enable;
         }
 
+        /** 设置启用 */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
 
+        /** 获取Instances */
         public List<ServerInstance> getInstances() {
             return instances;
         }
 
+        /** 设置Instances */
         public void setInstances(List<ServerInstance> instances) {
             this.instances = instances;
         }
 
+        /** 获取Host */
         public String getHost() {
             return host;
         }
 
+        /** 设置Host */
         public void setHost(String host) {
             this.host = host;
         }
 
+        /** 获取Port */
         public int getPort() {
             return port;
         }
 
+        /** 设置Port */
         public void setPort(int port) {
             this.port = port;
         }
 
+        /** 获取Protocol */
         public String getProtocol() {
             return protocol;
         }
 
+        /** 设置Protocol */
         public void setProtocol(String protocol) {
             this.protocol = protocol;
         }
 
+        /** 是否Heartbeat */
         public boolean isHeartbeat() {
             return heartbeat;
         }
 
+        /** 设置Heartbeat */
         public void setHeartbeat(boolean heartbeat) {
             this.heartbeat = heartbeat;
         }
 
+        /** 获取HeartbeatInterval */
         public int getHeartbeatInterval() {
             return heartbeatInterval;
         }
 
+        /** 设置HeartbeatInterval */
         public void setHeartbeatInterval(int heartbeatInterval) {
             this.heartbeatInterval = heartbeatInterval;
         }
 
+        /** 获取连接Timeout */
         public int getConnectTimeout() {
             return connectTimeout;
         }
 
+        /** 设置连接Timeout */
         public void setConnectTimeout(int connectTimeout) {
             this.connectTimeout = connectTimeout;
         }
@@ -246,6 +275,7 @@ public class SyncProperties {
             return instances;
         }
 
+        /** 复制Of */
         public static ServerConfig copyOf(ServerConfig source) {
             ServerConfig target = new ServerConfig();
             if (source == null) {
@@ -309,62 +339,77 @@ public class SyncProperties {
          */
         private Map<String, String> topics = new LinkedHashMap<>();
 
+        /** 获取Name */
         public String getName() {
             return name;
         }
 
+        /** 设置Name */
         public void setName(String name) {
             this.name = name;
         }
 
+        /** 获取Host */
         public String getHost() {
             return host;
         }
 
+        /** 设置Host */
         public void setHost(String host) {
             this.host = host;
         }
 
+        /** 获取Port */
         public int getPort() {
             return port;
         }
 
+        /** 设置Port */
         public void setPort(int port) {
             this.port = port;
         }
 
+        /** 获取Protocol */
         public String getProtocol() {
             return protocol;
         }
 
+        /** 设置Protocol */
         public void setProtocol(String protocol) {
             this.protocol = protocol;
         }
 
+        /** 是否启用 */
         public boolean isEnable() {
             return enable;
         }
 
+        /** 设置启用 */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
 
+        /** 获取Description */
         public String getDescription() {
             return description;
         }
 
+        /** 设置Description */
         public void setDescription(String description) {
             this.description = description;
         }
 
+        /** 获取Topics */
         public Map<String, String> getTopics() {
             return topics;
         }
 
+        /** 设置Topics */
         public void setTopics(Map<String, String> topics) {
             this.topics = topics;
         }
 
+        /** 复制Of */
         public static ServerInstance copyOf(ServerInstance source) {
             ServerInstance target = new ServerInstance();
             if (source == null) {
@@ -489,154 +534,192 @@ public class SyncProperties {
          */
         private String offlineTopic = "sync/client/offline";
 
+        /** 是否启用 */
         public boolean isEnable() {
             return enable;
         }
 
+        /** 设置启用 */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
 
+        /** 获取InstanceId */
         public String getInstanceId() {
             return instanceId;
         }
 
+        /** 设置InstanceId */
         public void setInstanceId(String instanceId) {
             this.instanceId = instanceId;
         }
 
+        /** 获取IpAddress */
         public String getIpAddress() {
             return ipAddress;
         }
 
+        /** 设置IpAddress */
         public void setIpAddress(String ipAddress) {
             this.ipAddress = ipAddress;
         }
 
+        /** 获取Protocol */
         public String getProtocol() {
             return protocol;
         }
 
+        /** 设置Protocol */
         public void setProtocol(String protocol) {
             this.protocol = protocol;
         }
 
+        /** 获取ServerHost */
         public String getServerHost() {
             return serverHost;
         }
 
+        /** 设置ServerHost */
         public void setServerHost(String serverHost) {
             this.serverHost = serverHost;
         }
 
+        /** 获取ServerPort */
         public int getServerPort() {
             return serverPort;
         }
 
+        /** 设置ServerPort */
         public void setServerPort(int serverPort) {
             this.serverPort = serverPort;
         }
 
+        /** 获取ServerAddress */
         public String getServerAddress() {
             return serverAddress;
         }
 
+        /** 设置ServerAddress */
         public void setServerAddress(String serverAddress) {
             this.serverAddress = serverAddress;
         }
 
+        /** 是否Heartbeat */
         public boolean isHeartbeat() {
             return heartbeat;
         }
 
+        /** 设置Heartbeat */
         public void setHeartbeat(boolean heartbeat) {
             this.heartbeat = heartbeat;
         }
 
+        /** 获取HeartbeatInterval */
         public int getHeartbeatInterval() {
             return heartbeatInterval;
         }
 
+        /** 设置HeartbeatInterval */
         public void setHeartbeatInterval(int heartbeatInterval) {
             this.heartbeatInterval = heartbeatInterval;
         }
 
+        /** 获取连接Timeout */
         public int getConnectTimeout() {
             return connectTimeout;
         }
 
+        /** 设置连接Timeout */
         public void setConnectTimeout(int connectTimeout) {
             this.connectTimeout = connectTimeout;
         }
 
+        /** 是否AutoReconnect */
         public boolean isAutoReconnect() {
             return autoReconnect;
         }
 
+        /** 设置AutoReconnect */
         public void setAutoReconnect(boolean autoReconnect) {
             this.autoReconnect = autoReconnect;
         }
 
+        /** 获取最大值ReconnectAttempts */
         public int getMaxReconnectAttempts() {
             return maxReconnectAttempts;
         }
 
+        /** 设置最大值ReconnectAttempts */
         public void setMaxReconnectAttempts(int maxReconnectAttempts) {
             this.maxReconnectAttempts = maxReconnectAttempts;
         }
 
+        /** 获取ReconnectInterval */
         public long getReconnectInterval() {
             return reconnectInterval;
         }
 
+        /** 设置ReconnectInterval */
         public void setReconnectInterval(long reconnectInterval) {
             this.reconnectInterval = reconnectInterval;
         }
 
+        /** 获取Capabilities */
         public String[] getCapabilities() {
             return capabilities;
         }
 
+        /** 设置Capabilities */
         public void setCapabilities(String[] capabilities) {
             this.capabilities = capabilities;
         }
 
+        /** 获取Metadata */
         public Map<String, Object> getMetadata() {
             return metadata;
         }
 
+        /** 设置Metadata */
         public void setMetadata(Map<String, Object> metadata) {
             this.metadata = metadata;
         }
 
+        /** 是否Auto注册 */
         public boolean isAutoRegister() {
             return autoRegister;
         }
 
+        /** 设置Auto注册 */
         public void setAutoRegister(boolean autoRegister) {
             this.autoRegister = autoRegister;
         }
 
+        /** 获取注册Topic */
         public String getRegisterTopic() {
             return registerTopic;
         }
 
+        /** 设置注册Topic */
         public void setRegisterTopic(String registerTopic) {
             this.registerTopic = registerTopic;
         }
 
+        /** 获取HeartbeatTopic */
         public String getHeartbeatTopic() {
             return heartbeatTopic;
         }
 
+        /** 设置HeartbeatTopic */
         public void setHeartbeatTopic(String heartbeatTopic) {
             this.heartbeatTopic = heartbeatTopic;
         }
 
+        /** 获取OfflineTopic */
         public String getOfflineTopic() {
             return offlineTopic;
         }
 
+        /** 设置OfflineTopic */
         public void setOfflineTopic(String offlineTopic) {
             this.offlineTopic = offlineTopic;
         }
@@ -651,6 +734,7 @@ public class SyncProperties {
             return serverHost + ":" + serverPort;
         }
 
+        /** 复制Of */
         public static ClientConfig copyOf(ClientConfig source) {
             ClientConfig target = new ClientConfig();
             if (source == null) {
@@ -730,38 +814,47 @@ public class SyncProperties {
          */
         private String defaultChannel = "default";
 
+        /** 是否Enabled */
         public boolean isEnabled() {
             return enabled;
         }
 
+        /** 设置Enabled */
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
         }
 
+        /** 获取TopicPrefix */
         public String getTopicPrefix() {
             return topicPrefix;
         }
 
+        /** 设置TopicPrefix */
         public void setTopicPrefix(String topicPrefix) {
             this.topicPrefix = topicPrefix;
         }
 
+        /** 获取RequestTimeout */
         public long getRequestTimeout() {
             return requestTimeout;
         }
 
+        /** 设置RequestTimeout */
         public void setRequestTimeout(long requestTimeout) {
             this.requestTimeout = requestTimeout;
         }
 
+        /** 获取DefaultChannel */
         public String getDefaultChannel() {
             return defaultChannel;
         }
 
+        /** 设置DefaultChannel */
         public void setDefaultChannel(String defaultChannel) {
             this.defaultChannel = defaultChannel;
         }
 
+        /** 复制Of */
         public static DataSyncConfig copyOf(DataSyncConfig source) {
             DataSyncConfig target = new DataSyncConfig();
             if (source == null) {

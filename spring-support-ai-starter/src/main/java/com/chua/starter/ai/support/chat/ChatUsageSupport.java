@@ -30,6 +30,7 @@ public abstract class ChatUsageSupport {
                 .build();
     }
 
+    /** 合并 */
     public static AgentUsage merge(AgentUsage a, AgentUsage b) {
         if (a == null) return b;
         if (b == null) return a;

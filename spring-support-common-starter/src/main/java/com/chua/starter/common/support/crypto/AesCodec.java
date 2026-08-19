@@ -16,10 +16,15 @@ public class AesCodec {
     /** 密钥bytes */
     private final byte[] keyBytes;
 
+    /**
+     * 创建 AesCodec 实例
+     * @param keyBytes keyBytes
+     */
     public AesCodec(byte[] keyBytes) {
         this.keyBytes = keyBytes;
     }
 
+    /** 编码Hex */
     public String encodeHex(String data) {
         if (data == null) return null;
         try {
@@ -30,6 +35,7 @@ public class AesCodec {
         }
     }
 
+    /** 解码Hex */
     public String decodeHex(String hex) {
         if (hex == null) return null;
         try {
@@ -39,6 +45,7 @@ public class AesCodec {
         }
     }
 
+    /** Encrypt */
     private byte[] encrypt(byte[] plain) throws Exception {
         SecretKeySpec keySpec = generateKey();
         IvParameterSpec iv = generateIv();
@@ -47,6 +54,7 @@ public class AesCodec {
         return cipher.doFinal(plain);
     }
 
+    /** Decrypt */
     private byte[] decrypt(byte[] encrypted) throws Exception {
         SecretKeySpec keySpec = generateKey();
         IvParameterSpec iv = generateIv();
@@ -55,12 +63,14 @@ public class AesCodec {
         return cipher.doFinal(encrypted);
     }
 
+    /** GenerateKey */
     private SecretKeySpec generateKey() throws Exception {
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         md.update(keyBytes);
         return new SecretKeySpec(md.digest(), "AES");
     }
 
+    /** GenerateIv */
     private IvParameterSpec generateIv() throws Exception {
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         md.update(keyBytes);
@@ -68,6 +78,7 @@ public class AesCodec {
         return new IvParameterSpec(Arrays.copyOf(md.digest(), 16));
     }
 
+    /** BytesToHex */
     private String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) {
@@ -76,6 +87,7 @@ public class AesCodec {
         return sb.toString();
     }
 
+    /** HexToBytes */
     private byte[] hexToBytes(String hex) {
         int len = hex.length();
         byte[] data = new byte[len / 2];

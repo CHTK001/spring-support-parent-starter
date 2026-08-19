@@ -27,16 +27,19 @@ public class FileHandler implements SyncMessageHandler {
 
 
     @Override
+    /** 获取Name */
     public String getName() {
         return "fileHandler";
     }
 
     @Override
+    /** Supports */
     public boolean supports(String topic) {
         return MonitorTopics.FILE_REQUEST.equals(topic);
     }
 
     @Override
+    /** 处理 */
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         String operation = getString(data, "operation");
         String requestId = getString(data, "requestId");
@@ -331,6 +334,7 @@ public class FileHandler implements SyncMessageHandler {
 
     // ==================== 辅助方法 ====================
 
+    /** FileToMap */
     private Map<String, Object> fileToMap(File file) {
         Map<String, Object> map = new HashMap<>();
         map.put("name", file.getName());
@@ -346,6 +350,7 @@ public class FileHandler implements SyncMessageHandler {
         return map;
     }
 
+    /** 构建FileTree */
     private Map<String, Object> buildFileTree(File file, int maxDepth, boolean includeHidden, int currentDepth) {
         Map<String, Object> node = fileToMap(file);
 
@@ -364,6 +369,7 @@ public class FileHandler implements SyncMessageHandler {
         return node;
     }
 
+    /** 删除Recursively */
     private boolean deleteRecursively(File file) {
         if (file.isDirectory()) {
             File[] children = file.listFiles();
@@ -376,6 +382,7 @@ public class FileHandler implements SyncMessageHandler {
         return file.delete();
     }
 
+    /** 复制Directory */
     private void copyDirectory(File source, File target) throws IOException {
         if (!target.exists()) {
             target.mkdirs();
@@ -393,11 +400,13 @@ public class FileHandler implements SyncMessageHandler {
         }
     }
 
+    /** 获取String */
     private String getString(Map<String, Object> data, String key) {
         Object v = data.get(key);
         return v != null ? v.toString() : null;
     }
 
+    /** 获取Int */
     private int getInt(Map<String, Object> data, String key, int defaultValue) {
         Object v = data.get(key);
         if (v instanceof Number) return ((Number) v).intValue();
@@ -410,6 +419,7 @@ public class FileHandler implements SyncMessageHandler {
         return defaultValue;
     }
 
+    /** 获取Long */
     private long getLong(Map<String, Object> data, String key, long defaultValue) {
         Object v = data.get(key);
         if (v instanceof Number) return ((Number) v).longValue();
@@ -422,6 +432,7 @@ public class FileHandler implements SyncMessageHandler {
         return defaultValue;
     }
 
+    /** 获取Boolean */
     private boolean getBoolean(Map<String, Object> data, String key, boolean defaultValue) {
         Object v = data.get(key);
         if (v instanceof Boolean) return (Boolean) v;

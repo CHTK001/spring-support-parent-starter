@@ -50,6 +50,16 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
     /** 提供者gateway注册表 */
     private final PaymentProviderGatewayRegistry providerGatewayRegistry;
 
+    /**
+     * 创建 PaymentNotifyServiceImpl 实例
+     * @param merchantChannelService merchantChannelService
+     * @param objectMapper objectMapper
+     * @param merchantChannelMapper merchantChannelMapper
+     * @param paymentOrderMapper paymentOrderMapper
+     * @param paymentOrderService paymentOrderService
+     * @param paymentRefundOrderService paymentRefundOrderService
+     * @param providerGatewayRegistry providerGatewayRegistry
+     */
     public PaymentNotifyServiceImpl(MerchantChannelService merchantChannelService,
                                     ObjectMapper objectMapper,
                                     MerchantChannelMapper merchantChannelMapper,
@@ -67,6 +77,17 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 处理WechatPay通知
+     * @param channelId channelId
+     * @param orderNo orderNo
+     * @param serialNumber serialNumber
+     * @param timestamp timestamp
+     * @param nonce nonce
+     * @param signature signature
+     * @param signType signType
+     * @param body body
+     */
     public void handleWechatPayNotify(Long channelId,
                                       String orderNo,
                                       String serialNumber,
@@ -110,6 +131,17 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 处理WechatRefund通知
+     * @param channelId channelId
+     * @param refundNo refundNo
+     * @param serialNumber serialNumber
+     * @param timestamp timestamp
+     * @param nonce nonce
+     * @param signature signature
+     * @param signType signType
+     * @param body body
+     */
     public void handleWechatRefundNotify(Long channelId,
                                          String refundNo,
                                          String serialNumber,
@@ -155,6 +187,7 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 处理AlipayPay通知 */
     public void handleAlipayPayNotify(Long channelId, String orderNo, Map<String, String> params) {
         MerchantChannel channel = requireEnabledChannel(channelId, "ALIPAY");
         AliyunAlipayPayNotifyPayload payload = providerGatewayRegistry.aliyunAlipayGateway(providerSpi(channel, null))
@@ -185,6 +218,7 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
         }
     }
 
+    /** RequireEnabledChannel */
     private MerchantChannel requireEnabledChannel(Long channelId, String channelType) {
         MerchantChannel channel = merchantChannelMapper.selectById(channelId);
         if (channel == null) {
@@ -199,6 +233,7 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
         return channel;
     }
 
+    /** RequireOrder */
     private PaymentOrder requireOrder(String orderNo) {
         if (!StringUtils.hasText(orderNo)) {
             throw new PaymentException("通知中缺少订单号");
@@ -213,30 +248,35 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
         return order;
     }
 
+    /** 校验OrderChannel */
     private void validateOrderChannel(PaymentOrder order, MerchantChannel channel) {
         if (order.getChannelId() == null || !order.getChannelId().equals(channel.getId())) {
             throw new PaymentException("订单和回调支付方式不匹配");
         }
     }
 
+    /** 校验RefundChannel */
     private void validateRefundChannel(PaymentRefundOrder refundOrder, MerchantChannel channel) {
         if (refundOrder.getChannelId() == null || !refundOrder.getChannelId().equals(channel.getId())) {
             throw new PaymentException("退款单和回调支付方式不匹配");
         }
     }
 
+    /** 校验通知OrderNo */
     private void validateNotifyOrderNo(String pathOrderNo, String payloadOrderNo) {
         if (StringUtils.hasText(pathOrderNo) && StringUtils.hasText(payloadOrderNo) && !pathOrderNo.equals(payloadOrderNo)) {
             throw new PaymentException("回调路径订单号和报文订单号不一致");
         }
     }
 
+    /** 校验通知RefundNo */
     private void validateNotifyRefundNo(String pathRefundNo, String payloadRefundNo) {
         if (StringUtils.hasText(pathRefundNo) && StringUtils.hasText(payloadRefundNo) && !pathRefundNo.equals(payloadRefundNo)) {
             throw new PaymentException("回调路径退款单号和报文退款单号不一致");
         }
     }
 
+    /** 校验RefundOrderMapping */
     private void validateRefundOrderMapping(PaymentRefundOrder refundOrder, String payloadOrderNo) {
         if (refundOrder == null || !StringUtils.hasText(payloadOrderNo)) {
             return;
@@ -246,6 +286,7 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
         }
     }
 
+    /** 解析RefundOrder */
     private PaymentRefundOrder resolveRefundOrder(String refundNo, String thirdPartyRefundNo, String orderNo) {
         PaymentRefundOrder refundOrder = paymentRefundOrderService.getByRefundNo(refundNo);
         if (refundOrder == null) {
@@ -263,6 +304,7 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
         return refundOrder;
     }
 
+    /** 校验WechatIdentity */
     private void validateWechatIdentity(MerchantChannel channel, String appId, String merchantNo) {
         if (StringUtils.hasText(channel.getAppId()) && StringUtils.hasText(appId) && !channel.getAppId().equals(appId)) {
             throw new PaymentException("微信支付通知 AppId 不匹配");
@@ -272,6 +314,7 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
         }
     }
 
+    /** 校验AlipayIdentity */
     private void validateAlipayIdentity(MerchantChannel channel, String appId, String sellerId) {
         if (StringUtils.hasText(channel.getAppId()) && StringUtils.hasText(appId) && !channel.getAppId().equals(appId)) {
             throw new PaymentException("支付宝通知 app_id 不匹配");
@@ -281,6 +324,7 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
         }
     }
 
+    /** 校验Amount */
     private void validateAmount(BigDecimal expected, BigDecimal actual, String message) {
         if (expected == null || actual == null) {
             return;
@@ -290,6 +334,7 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
         }
     }
 
+    /** 解析WechatPaidAmount */
     private BigDecimal resolveWechatPaidAmount(TencentWechatPayNotifyPayload payload) {
         if (payload == null) {
             return null;
@@ -298,11 +343,13 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
         return paidAmountFen == null ? null : fenToYuan(paidAmountFen);
     }
 
+    /** 是否可以Cancel */
     private boolean canCancel(String status) {
         return OrderState.PENDING.name().equals(status) || OrderState.PAYING.name().equals(status);
     }
 
     @SafeVarargs
+    /** FirstNonNull */
     private <T> T firstNonNull(T... values) {
         if (values == null) {
             return null;
@@ -315,6 +362,15 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
         return null;
     }
 
+    /**
+     * 构建Wechat通知Request
+     * @param serialNumber serialNumber
+     * @param timestamp timestamp
+     * @param nonce nonce
+     * @param signature signature
+     * @param signType signType
+     * @param body body
+     */
     private TencentWechatNotifyRequest buildWechatNotifyRequest(String serialNumber,
                                                                 String timestamp,
                                                                 String nonce,
@@ -331,12 +387,14 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
         return request;
     }
 
+    /** 构建Alipay通知Request */
     private AliyunAlipayNotifyRequest buildAlipayNotifyRequest(Map<String, String> params) {
         AliyunAlipayNotifyRequest request = new AliyunAlipayNotifyRequest();
         request.setParams(params);
         return request;
     }
 
+    /** 构建WechatProperties */
     private TencentWechatPayProperties buildWechatProperties(MerchantChannel channel) {
         TencentWechatPayProperties properties = new TencentWechatPayProperties();
         properties.setAppId(requiredText(channel.getAppId(), "微信 AppId 不能为空"));
@@ -348,6 +406,7 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
         return properties;
     }
 
+    /** 构建AlipayProperties */
     private AliyunAlipayProperties buildAlipayProperties(MerchantChannel channel) {
         AliyunAlipayProperties properties = new AliyunAlipayProperties();
         properties.setAppId(requiredText(channel.getAppId(), "支付宝应用ID不能为空"));

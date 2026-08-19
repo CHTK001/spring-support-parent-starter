@@ -32,6 +32,10 @@ public class SocketMessageCodec {
     /** 公开密钥HEX */
     private final String publicKeyHex;
 
+    /**
+     * 创建 SocketMessageCodec 实例
+     * @param properties properties
+     */
     public SocketMessageCodec(SocketProperties properties) {
         String codecType = properties == null || properties.getCodecType() == null
                 ? "json"
@@ -59,10 +63,12 @@ public class SocketMessageCodec {
         this.publicKeyHex = publicKey;
     }
 
+    /** 编码 */
     public Object encode(String payload) {
         return encode(payload, null);
     }
 
+    /** 编码 */
     public Object encode(String payload, Boolean encryptRequested) {
         if (!shouldEncrypt(payload, encryptRequested)) {
             return payload;
@@ -85,6 +91,7 @@ public class SocketMessageCodec {
         }
     }
 
+    /** 是否应该Encrypt */
     private boolean shouldEncrypt(String payload, Boolean encryptRequested) {
         return shouldEncryptForCurrentSession(encryptRequested)
                 && payload != null
@@ -93,6 +100,7 @@ public class SocketMessageCodec {
                 && !publicKeyHex.isBlank();
     }
 
+    /** 是否应该EncryptForCurrentSession */
     private boolean shouldEncryptForCurrentSession(Boolean encryptRequested) {
         return switch (encryptMode) {
             case ENCRYPTED -> true;
@@ -101,6 +109,7 @@ public class SocketMessageCodec {
         };
     }
 
+    /** 解析DataId */
     private String resolveDataId(String payload) {
         try {
             JsonNode root = OBJECT_MAPPER.readTree(payload);

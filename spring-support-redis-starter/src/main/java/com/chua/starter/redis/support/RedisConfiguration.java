@@ -313,6 +313,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     }
 
     @Bean
+    /** RedisServiceInfoContributor */
     public ServiceInfoContributor redisServiceInfoContributor() {
         return registry -> {
             registry.registerEndpoint("Redis", "Redis服务", "/redis/**", "Redis服务");

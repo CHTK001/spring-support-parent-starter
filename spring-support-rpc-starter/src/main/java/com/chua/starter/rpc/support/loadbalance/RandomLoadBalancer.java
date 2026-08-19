@@ -15,6 +15,7 @@ import java.util.List;
 public class RandomLoadBalancer implements RpcLoadBalancer {
 
     @Override
+    /** 选择 */
     public <T> T select(List<T> providers) {
         if (providers == null || providers.isEmpty()) {
             return null;
@@ -25,6 +26,7 @@ public class RandomLoadBalancer implements RpcLoadBalancer {
     }
 
     @Override
+    /** 获取Name */
     public String getName() {
         return "random";
     }

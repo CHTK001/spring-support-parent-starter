@@ -62,6 +62,7 @@ public class QueueAutoConfiguration {
     }
 
     @Bean
+    /** QueueServiceInfoContributor */
     public ServiceInfoContributor queueServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("queue", "消息队列", true, "消息队列模块");

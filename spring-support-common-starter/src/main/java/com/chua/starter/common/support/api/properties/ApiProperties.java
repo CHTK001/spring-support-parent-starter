@@ -29,10 +29,12 @@ import java.util.Map;
     @Getter
     @Setter
     public class ApiProperties {
+        /** 获取Version */
         public Version getVersion() {
             return version;
         }
 
+        /** 获取Ignore格式化Packages */
         public String[] getIgnoreFormatPackages() {
             return ignoreFormatPackages;
         }
@@ -83,6 +85,7 @@ import java.util.Map;
     /** Encode */
     private ResponseEncodeProperties encode = new ResponseEncodeProperties();
 
+    /** 获取编码 */
     public ResponseEncodeProperties getEncode() {
         return encode;
     }
@@ -95,6 +98,7 @@ import java.util.Map;
     /** Decode */
     private RequestDecodeProperties decode = new RequestDecodeProperties();
 
+    /** 获取解码 */
     public RequestDecodeProperties getDecode() {
         return decode;
     }
@@ -123,6 +127,7 @@ import java.util.Map;
     /** 模拟 */
     private MockConfig mock = new MockConfig();
 
+    /** 获取Mock */
     public MockConfig getMock() {
         return mock;
     }
@@ -132,6 +137,7 @@ import java.util.Map;
      */
     private DeprecatedConfig deprecated = new DeprecatedConfig();
 
+    /** 获取Deprecated */
     public DeprecatedConfig getDeprecated() {
         return deprecated;
     }
@@ -141,6 +147,7 @@ import java.util.Map;
      */
     private InternalConfig internal = new InternalConfig();
 
+    /** 获取Internal */
     public InternalConfig getInternal() {
         return internal;
     }
@@ -153,6 +160,7 @@ import java.util.Map;
     /** Feature */
     private FeatureConfig feature = new FeatureConfig();
 
+    /** 获取Feature */
     public FeatureConfig getFeature() {
         return feature;
     }
@@ -196,10 +204,12 @@ import java.util.Map;
          */
         private boolean enable = true;
 
+        /** 是否启用 */
         public boolean isEnable() {
             return enable;
         }
 
+        /** 设置启用 */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
@@ -238,6 +248,7 @@ import java.util.Map;
             this.value = value;
         }
 
+        /** 获取Value */
         public String getValue() {
             return value;
         }
@@ -264,26 +275,32 @@ import java.util.Map;
          */
         private String aliasName;
 
+        /** 是否启用 */
         public boolean isEnable() {
             return enable;
         }
 
+        /** 设置启用 */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
 
+        /** 获取Name */
         public PlatformType getName() {
             return name;
         }
 
+        /** 设置Name */
         public void setName(PlatformType name) {
             this.name = name;
         }
 
+        /** 获取AliasName */
         public String getAliasName() {
             return aliasName;
         }
 
+        /** 设置AliasName */
         public void setAliasName(String aliasName) {
             this.aliasName = aliasName;
         }
@@ -339,42 +356,52 @@ import java.util.Map;
         /** White列表 */
         private List<String> whiteList = Collections.emptyList();
 
+        /** 是否启用 */
         public boolean isEnable() {
             return enable;
         }
 
+        /** 设置启用 */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
 
+        /** 是否Response启用 */
         public boolean isResponseEnable() {
             return responseEnable;
         }
 
+        /** 设置Response启用 */
         public void setResponseEnable(boolean responseEnable) {
             this.responseEnable = responseEnable;
         }
 
+        /** 是否ExtInject */
         public boolean isExtInject() {
             return extInject;
         }
 
+        /** 设置ExtInject */
         public void setExtInject(boolean extInject) {
             this.extInject = extInject;
         }
 
+        /** 获取CodecType */
         public String getCodecType() {
             return codecType;
         }
 
+        /** 设置CodecType */
         public void setCodecType(String codecType) {
             this.codecType = codecType;
         }
 
+        /** 获取WhiteList */
         public List<String> getWhiteList() {
             return whiteList;
         }
 
+        /** 设置WhiteList */
         public void setWhiteList(List<String> whiteList) {
             this.whiteList = whiteList;
         }
@@ -410,50 +437,62 @@ import java.util.Map;
         /** Codec类型 */
         private String codecType = "sm4";
 
+        /** 获取CodecType */
         public String getCodecType() {
             return codecType;
         }
 
+        /** 设置CodecType */
         public void setCodecType(String codecType) {
             this.codecType = codecType;
         }
 
+        /** 获取WhiteList */
         public List<String> getWhiteList() {
             return whiteList;
         }
 
+        /** 设置WhiteList */
         public void setWhiteList(List<String> whiteList) {
             this.whiteList = whiteList;
         }
 
+        /** 是否启用 */
         public boolean isEnable() {
             return enable;
         }
 
+        /** 设置启用 */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
 
+        /** 获取CodecRequestKey */
         public String getCodecRequestKey() {
             return codecRequestKey;
         }
 
+        /** 设置CodecRequestKey */
         public void setCodecRequestKey(String codecRequestKey) {
             this.codecRequestKey = codecRequestKey;
         }
 
+        /** 是否ExtInject */
         public boolean isExtInject() {
             return extInject;
         }
 
+        /** 设置ExtInject */
         public void setExtInject(boolean extInject) {
             this.extInject = extInject;
         }
 
+        /** 是否RejectOn解码Failure */
         public boolean isRejectOnDecodeFailure() {
             return rejectOnDecodeFailure;
         }
 
+        /** 设置RejectOn解码Failure */
         public void setRejectOnDecodeFailure(boolean rejectOnDecodeFailure) {
             this.rejectOnDecodeFailure = rejectOnDecodeFailure;
         }
@@ -497,14 +536,17 @@ import java.util.Map;
          */
         private Map<String, String> mapping;
 
+        /** 是否启用 */
         public boolean isEnable() {
             return enable;
         }
 
+    /** 获取Mapping */
     public Map<String, String> getMapping() {
         return mapping;
     }
 
+    /** 设置Mapping */
     public void setMapping(Map<String, String> mapping) {
         this.mapping = mapping;
     }
@@ -527,18 +569,22 @@ import java.util.Map;
         /** Profiles */
         private String profiles = "dev,test";
 
+        /** 是否启用 */
         public boolean isEnable() {
             return enable;
         }
 
+        /** 设置启用 */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
 
+        /** 获取Profiles */
         public String getProfiles() {
             return profiles;
         }
 
+        /** 设置Profiles */
         public void setProfiles(String profiles) {
             this.profiles = profiles;
         }
@@ -562,18 +608,22 @@ import java.util.Map;
         /** 路径 */
         private String path = "/api/features";
 
+        /** 是否启用 */
         public boolean isEnable() {
             return enable;
         }
 
+        /** 设置启用 */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
 
+        /** 获取Path */
         public String getPath() {
             return path;
         }
 
+        /** 设置Path */
         public void setPath(String path) {
             this.path = path;
         }
@@ -599,26 +649,32 @@ import java.util.Map;
          */
         private List<String> globalAllowedServices = Collections.emptyList();
 
+        /** 是否启用 */
         public boolean isEnable() {
             return enable;
         }
 
+        /** 设置启用 */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
 
+        /** 获取GlobalAllowedIps */
         public List<String> getGlobalAllowedIps() {
             return globalAllowedIps;
         }
 
+        /** 设置GlobalAllowedIps */
         public void setGlobalAllowedIps(List<String> globalAllowedIps) {
             this.globalAllowedIps = globalAllowedIps;
         }
 
+        /** 获取GlobalAllowedServices */
         public List<String> getGlobalAllowedServices() {
             return globalAllowedServices;
         }
 
+        /** 设置GlobalAllowedServices */
         public void setGlobalAllowedServices(List<String> globalAllowedServices) {
             this.globalAllowedServices = globalAllowedServices;
         }
@@ -639,18 +695,22 @@ import java.util.Map;
          */
         private boolean addWarningHeader = true;
 
+        /** 是否启用 */
         public boolean isEnable() {
             return enable;
         }
 
+        /** 设置启用 */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
 
+        /** 是否添加WarningHeader */
         public boolean isAddWarningHeader() {
             return addWarningHeader;
         }
 
+        /** 设置添加WarningHeader */
         public void setAddWarningHeader(boolean addWarningHeader) {
             this.addWarningHeader = addWarningHeader;
         }
@@ -717,26 +777,32 @@ import java.util.Map;
         /** 默认percentage */
         private int defaultPercentage = 0;
 
+        /** 是否启用 */
         public boolean isEnable() {
             return enable;
         }
 
+        /** 获取HeaderName */
         public String getHeaderName() {
             return headerName;
         }
 
+        /** 获取GlobalUsers */
         public List<String> getGlobalUsers() {
             return globalUsers;
         }
 
+        /** 获取GlobalIps */
         public List<String> getGlobalIps() {
             return globalIps;
         }
 
+        /** 获取GlobalRoles */
         public List<String> getGlobalRoles() {
             return globalRoles;
         }
 
+        /** 获取DefaultPercentage */
         public int getDefaultPercentage() {
             return defaultPercentage;
         }

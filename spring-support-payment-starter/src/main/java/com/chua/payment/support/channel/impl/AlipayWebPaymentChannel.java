@@ -28,6 +28,12 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     /** 提供者gateway注册表 */
     private final PaymentProviderGatewayRegistry providerGatewayRegistry;
 
+    /**
+     * 创建 AlipayWebPaymentChannel 实例
+     * @param merchantChannelService merchantChannelService
+     * @param objectMapper objectMapper
+     * @param providerGatewayRegistry providerGatewayRegistry
+     */
     public AlipayWebPaymentChannel(MerchantChannelService merchantChannelService,
                                    ObjectMapper objectMapper,
                                    PaymentProviderGatewayRegistry providerGatewayRegistry) {
@@ -36,11 +42,13 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     }
 
     @Override
+    /** Supports */
     public boolean supports(String channelType, String channelSubType) {
         return "ALIPAY".equalsIgnoreCase(channelType) && "WEB".equalsIgnoreCase(channelSubType);
     }
 
     @Override
+    /** Pay */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         AliyunAlipayPayResponse response = gateway(providerSpi(channel, null)).pagePay(buildClientProperties(channel),
                 buildPayRequest(request, "FAST_INSTANT_TRADE_PAY"));
@@ -57,6 +65,7 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     }
 
     @Override
+    /** 查询 */
     public PaymentResult query(MerchantChannel channel, String orderNo) {
         AliyunAlipayTradeQueryResponse response = gateway(providerSpi(channel, null)).queryOrder(buildClientProperties(channel), orderNo);
 
@@ -71,11 +80,13 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     }
 
     @Override
+    /** 关闭 */
     public boolean close(MerchantChannel channel, String orderNo) {
         return gateway(providerSpi(channel, null)).closeOrder(buildClientProperties(channel), orderNo);
     }
 
     @Override
+    /** Refund */
     public RefundResult refund(MerchantChannel channel, RefundRequest request) {
         AliyunAlipayRefundResponse response = gateway(providerSpi(channel, null)).refund(buildClientProperties(channel), buildRefundRequest(request));
 
@@ -91,6 +102,7 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
     }
 
     @Override
+    /** 查询Refund */
     public RefundResult queryRefund(MerchantChannel channel, RefundRequest request) {
         AliyunAlipayRefundResponse response = gateway(providerSpi(channel, null)).queryRefund(buildClientProperties(channel), buildRefundRequest(request));
 
@@ -105,6 +117,7 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
         return result;
     }
 
+    /** 构建ClientProperties */
     protected AliyunAlipayProperties buildClientProperties(MerchantChannel channel) {
         AliyunAlipayProperties properties = new AliyunAlipayProperties();
         properties.setAppId(requiredText(channel.getAppId(), "支付宝应用ID不能为空"));
@@ -118,14 +131,17 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
         return properties;
     }
 
+    /** Gateway */
     protected AliyunAlipayGateway gateway() {
         return providerGatewayRegistry.aliyunAlipayGateway();
     }
 
+    /** Gateway */
     protected AliyunAlipayGateway gateway(String extension) {
         return providerGatewayRegistry.aliyunAlipayGateway(extension);
     }
 
+    /** 构建PayRequest */
     protected AliyunAlipayPayRequest buildPayRequest(PaymentRequest request, String productCode) {
         AliyunAlipayPayRequest payRequest = new AliyunAlipayPayRequest();
         payRequest.setOrderNo(request.getOrderNo());
@@ -138,6 +154,7 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
         return payRequest;
     }
 
+    /** 构建RefundRequest */
     protected AliyunAlipayRefundRequest buildRefundRequest(RefundRequest request) {
         AliyunAlipayRefundRequest refundRequest = new AliyunAlipayRefundRequest();
         refundRequest.setOrderNo(request.getOrderNo());
@@ -147,6 +164,7 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
         return refundRequest;
     }
 
+    /** NormalizeTradeStatus */
     protected String normalizeTradeStatus(String tradeStatus) {
         if (!StringUtils.hasText(tradeStatus)) {
             return "FAILED";
@@ -159,6 +177,7 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
         };
     }
 
+    /** NormalizeRefundStatus */
     protected String normalizeRefundStatus(String refundStatus) {
         if (!StringUtils.hasText(refundStatus)) {
             return "FAILED";

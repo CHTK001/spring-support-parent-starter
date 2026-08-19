@@ -67,13 +67,23 @@ public class SocketUser implements Serializable {
      */
     private Map<String, Object> extras = new ConcurrentHashMap<>();
 
+    /** 创建 SocketUser 实例 */
     public SocketUser() {
     }
 
+    /**
+     * 创建 SocketUser 实例
+     * @param userId userId
+     */
     public SocketUser(String userId) {
         this.userId = userId;
     }
 
+    /**
+     * 创建 SocketUser 实例
+     * @param userId userId
+     * @param String String
+     */
     public SocketUser(String userId, String username) {
         this.userId = userId;
         this.username = username;

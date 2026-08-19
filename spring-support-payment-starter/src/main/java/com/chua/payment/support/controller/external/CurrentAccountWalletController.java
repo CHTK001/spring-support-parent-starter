@@ -59,6 +59,11 @@ public class CurrentAccountWalletController {
     private final PaymentAccountPrincipalResolver principalResolver;
 
     @GetMapping
+    /**
+     * 获取Wallet
+     * @param request request
+     * @param merchantId merchantId
+     */
     public Result<WalletAccountVO> getWallet(HttpServletRequest request,
                                              @RequestParam Long merchantId) {
         Long userId = principalResolver.resolveUserId(request);
@@ -69,6 +74,15 @@ public class CurrentAccountWalletController {
     }
 
     @GetMapping("/log/page")
+    /**
+     * 列表Logs
+     * @param request request
+     * @param pageNum pageNum
+     * @param pageSize pageSize
+     * @param merchantId merchantId
+     * @param bizType bizType
+     * @param bizNo bizNo
+     */
     public Result<PageResult<WalletAccountLog>> listLogs(HttpServletRequest request,
                                                          @RequestParam(defaultValue = "1") int pageNum,
                                                          @RequestParam(defaultValue = "10") int pageSize,
@@ -84,6 +98,15 @@ public class CurrentAccountWalletController {
     }
 
     @GetMapping("/order/page")
+    /**
+     * 列表Orders
+     * @param request request
+     * @param pageNum pageNum
+     * @param pageSize pageSize
+     * @param merchantId merchantId
+     * @param orderType orderType
+     * @param status status
+     */
     public Result<PageResult<WalletOrder>> listOrders(HttpServletRequest request,
                                                       @RequestParam(defaultValue = "1") int pageNum,
                                                       @RequestParam(defaultValue = "10") int pageSize,
@@ -99,6 +122,11 @@ public class CurrentAccountWalletController {
     }
 
     @PostMapping("/withdraw")
+    /**
+     * Withdraw
+     * @param request request
+     * @param dto dto
+     */
     public Result<WalletWithdrawApproval> withdraw(HttpServletRequest request,
                                                     @RequestBody WalletWithdrawDTO dto) {
         Long userId = principalResolver.resolveUserId(request);
@@ -192,6 +220,11 @@ public class CurrentAccountWalletController {
     }
 
     @PostMapping("/transfer")
+    /**
+     * Transfer
+     * @param request request
+     * @param dto dto
+     */
     public Result<Void> transfer(HttpServletRequest request,
                                  @RequestBody WalletTransferDTO dto) {
         Long userId = principalResolver.resolveUserId(request);

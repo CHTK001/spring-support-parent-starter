@@ -19,6 +19,7 @@ import java.lang.reflect.Field;
 @SpiDefault
 public class NoneFormatter implements Formatter {
     @Override
+    /** 格式化 */
     public Object format(Object value, Field field) {
         return value;
     }

@@ -149,6 +149,7 @@ public class JobDefinition {
     }
 
     @Override
+    /** 判断相等 */
     public boolean equals(Object o) {
         if (this == o) {
             return true;
@@ -160,6 +161,7 @@ public class JobDefinition {
     }
 
     @Override
+    /** HashCode */
     public int hashCode() {
         return Objects.hash(name);
     }

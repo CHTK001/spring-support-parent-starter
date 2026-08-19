@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 public class TenantBasedMessageRouter implements MessageRouter {
 
     @Override
+    /** Route */
     public String route(Message message) {
         Object tenantId = message.getHeader("tenantId");
         if (tenantId == null) {
@@ -32,11 +33,13 @@ public class TenantBasedMessageRouter implements MessageRouter {
     }
 
     @Override
+    /** Supports */
     public boolean supports(Message message) {
         return message.getHeader("tenantId") != null;
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         return -100;
     }

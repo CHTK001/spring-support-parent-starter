@@ -35,6 +35,10 @@ public class DataSourceGroup {
     /** 负载均衡策略 */
     private volatile LoadBalanceStrategy strategy = LoadBalanceStrategy.ROUND_ROBIN;
 
+    /**
+     * 创建 DataSourceGroup 实例
+     * @param groupName groupName
+     */
     public DataSourceGroup(String groupName) {
         this.groupName = groupName;
     }

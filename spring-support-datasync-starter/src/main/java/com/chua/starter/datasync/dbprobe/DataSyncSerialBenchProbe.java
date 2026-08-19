@@ -26,6 +26,7 @@ public final class DataSyncSerialBenchProbe {
     static final int ROUNDS = 3;
     static final ObjectMapper MAPPER = new ObjectMapper();
 
+    /** Main */
     public static void main(String[] args) throws Exception {
         // 构造 datasync 实际数据：1000 行，每行 6 个字段
         List<Map<String, Object>> data = new ArrayList<>(ROWS);
@@ -61,6 +62,7 @@ public final class DataSyncSerialBenchProbe {
         System.err.println("========================================================================");
     }
 
+    /** BenchJackson */
     static void benchJackson(List<Map<String, Object>> data) throws Exception {
         String json = MAPPER.writeValueAsString(data);
         long size = json.getBytes("UTF-8").length;
@@ -79,6 +81,7 @@ public final class DataSyncSerialBenchProbe {
     }
 
     @SuppressWarnings("unchecked")
+    /** BenchBinary */
     static void benchBinary(String label, Serialization s, List<Map<String, Object>> data) throws Exception {
         byte[] bytes = s.serialize(data);
         long size = bytes.length;
@@ -91,6 +94,7 @@ public final class DataSyncSerialBenchProbe {
     }
 
     @SuppressWarnings("unchecked")
+    /** BenchJsonProvider */
     static void benchJsonProvider(String label, JsonProvider p, List<Map<String, Object>> data) throws Exception {
         String json = p.toJson(data);
         long size = json.getBytes("UTF-8").length;
@@ -103,6 +107,7 @@ public final class DataSyncSerialBenchProbe {
     }
 
     @SuppressWarnings("unchecked")
+    /** BenchKryo */
     static void benchKryo(List<Map<String, Object>> data) throws Exception {
         KryoSerializer<Serializable> ks = new KryoSerializer<>((Class<Serializable>)(Class<?>)List.class);
         byte[] bytes = ks.serialize((Serializable) data);
@@ -115,6 +120,7 @@ public final class DataSyncSerialBenchProbe {
         report("kryo", size, ser, des, ok);
     }
 
+    /** Report */
     static void report(String label, long size, Runnable ser, Runnable des, boolean ok) {
         warmup(ser, WARMUP_MS);
         warmup(des, WARMUP_MS);
@@ -125,11 +131,13 @@ public final class DataSyncSerialBenchProbe {
                 label, size, serOps, desOps, avg, ok ? "[OK]" : "[FAIL]");
     }
 
+    /** Warmup */
     static void warmup(Runnable task, long ms) {
         long deadline = System.nanoTime() + ms * 1_000_000L;
         while (System.nanoTime() < deadline) task.run();
     }
 
+    /** MeasureOps */
     static long measureOps(Runnable task, long ms) {
         long start = System.nanoTime();
         long deadline = start + ms * 1_000_000L;
@@ -138,6 +146,7 @@ public final class DataSyncSerialBenchProbe {
         return count * 1_000_000_000L / (System.nanoTime() - start);
     }
 
+    /** BestOf */
     static long bestOf(Runnable task, long ms, int rounds) {
         long best = 0;
         for (int i = 0; i < rounds; i++) best = Math.max(best, measureOps(task, ms));

@@ -57,10 +57,19 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
     /** Auth服务供应商 */
     private final Supplier<AuthService> authServiceSupplier;
 
+    /**
+     * 创建 MybatisPlusDataPermissionHandler 实例
+     * @param metaDataScopeProperties metaDataScopeProperties
+     */
     public MybatisPlusDataPermissionHandler(MybatisPlusDataScopeProperties metaDataScopeProperties) {
         this(metaDataScopeProperties, () -> null);
     }
 
+    /**
+     * 创建 MybatisPlusDataPermissionHandler 实例
+     * @param metaDataScopeProperties metaDataScopeProperties
+     * @param authServiceSupplier authServiceSupplier
+     */
     public MybatisPlusDataPermissionHandler(MybatisPlusDataScopeProperties metaDataScopeProperties,
                                             Supplier<AuthService> authServiceSupplier) {
         this.metaDataScopeProperties = metaDataScopeProperties;
@@ -200,6 +209,7 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
         return null;
     }
 
+    /** NormalizeMethodName */
     private String normalizeMethodName(String methodName) {
         if (null == methodName || methodName.isBlank()) {
             return methodName;
@@ -250,6 +260,7 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
         return new TableDeptRegister(table, null, currentUser, dataPermission, dataScopeProperties, deptAlias, userAlias).register();
     }
 
+    /** 是否拥有ManagedDeptLeaderScope */
     private boolean hasManagedDeptLeaderScope(CurrentUser currentUser) {
         if (!currentUser.hasRole(DEPT_LEADER) || null == currentUser.getExt()) {
             return false;
@@ -261,6 +272,7 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
         return null != managedDeptTreeIds && !managedDeptTreeIds.toString().isBlank();
     }
 
+    /** 获取CurrentUser */
     private CurrentUser getCurrentUser() {
         if (authServiceSupplier == null) {
             return null;

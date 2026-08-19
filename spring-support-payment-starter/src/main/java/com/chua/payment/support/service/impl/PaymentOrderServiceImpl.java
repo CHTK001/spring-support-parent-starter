@@ -94,6 +94,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 创建Order */
     public OrderVO createOrder(OrderCreateDTO dto) {
         if (dto.getMerchantId() == null) {
             throw new PaymentException("商户ID不能为空");
@@ -179,11 +180,13 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     }
 
     @Override
+    /** 获取Order */
     public OrderVO getOrder(Long id) {
         return convertToVO(requireOrder(id));
     }
 
     @Override
+    /** ListOrders */
     public Page<OrderVO> listOrders(int page, int size, Long merchantId, String orderNo, String status) {
         LambdaQueryWrapper<PaymentOrder> wrapper = baseOrderWrapper()
                 .orderByDesc(PaymentOrder::getCreatedAt);
@@ -203,11 +206,13 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     }
 
     @Override
+    /** ListMerchantOrders */
     public Page<OrderVO> listMerchantOrders(Long merchantId, int page, int size, String status) {
         return listOrders(page, size, merchantId, null, status);
     }
 
     @Override
+    /** ListOrderLogs */
     public List<OrderStateLogVO> listOrderLogs(Long id) {
         requireOrder(id);
         return orderStateLogService.listByOrderId(id).stream().map(this::convertLogToVO).toList();
@@ -215,6 +220,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** PayOrder */
     public PaymentResult payOrder(Long id, OrderPayDTO dto) {
         merchantPaymentConfigService.checkCanPayOrder(id);
 
@@ -288,6 +294,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** SyncOrder */
     public OrderVO syncOrder(Long id) {
         PaymentOrder order = requireOrder(id);
         MerchantChannel channel = requireEnabledChannel(order.getChannelId());
@@ -305,6 +312,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 开始Pay */
     public boolean startPay(Long id, String operator) {
         PaymentOrder order = requireOrder(id);
         if (OrderState.PAYING.name().equals(order.getStatus()) || isPaidState(order.getStatus())) {
@@ -322,6 +330,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** PaySuccess */
     public boolean paySuccess(Long id, BigDecimal paidAmount, String thirdPartyOrderNo, String operator) {
         PaymentOrder order = requireOrder(id);
         if (isPaidState(order.getStatus())) {
@@ -354,6 +363,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** PayFail */
     public boolean payFail(Long id, String reason, String operator) {
         PaymentOrder order = requireOrder(id);
         if (OrderState.FAILED.name().equals(order.getStatus())) {
@@ -380,12 +390,14 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** CancelOrder */
     public boolean cancelOrder(Long id, String operator, String reason) {
         return cancelOrder(id, operator, reason, false);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** CancelOrder */
     public boolean cancelOrder(Long id, String operator, String reason, boolean refund) {
         PaymentOrder order = requireOrder(id);
         if (OrderState.CANCELLED.name().equals(order.getStatus())) {
@@ -492,6 +504,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** CompleteOrder */
     public boolean completeOrder(Long id, String operator) {
         PaymentOrder order = requireOrder(id);
         if (OrderState.COMPLETED.name().equals(order.getStatus())) {
@@ -509,6 +522,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** RefundOrder */
     public boolean refundOrder(Long id, RefundApplyDTO dto) {
         PaymentOrder order = requireOrder(id);
         if (OrderState.REFUNDED.name().equals(order.getStatus())) {
@@ -599,6 +613,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** RefundSuccess */
     public boolean refundSuccess(Long id, BigDecimal refundAmount, String operator) {
         PaymentOrder order = requireOrder(id);
         PaymentRefundOrder refundOrder = resolveManualRefundOrder(order, refundAmount, defaultOperator(operator), "手动标记退款成功");
@@ -611,6 +626,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** RefundFail */
     public boolean refundFail(Long id, String reason, String operator) {
         PaymentOrder order = requireOrder(id);
         PaymentRefundOrder refundOrder = resolveManualRefundOrder(order, null, defaultOperator(operator), reason);
@@ -623,6 +639,15 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * RefundSuccess
+     * @param refundNo refundNo
+     * @param refundAmount refundAmount
+     * @param thirdPartyRefundNo thirdPartyRefundNo
+     * @param operator operator
+     * @param responsePayload responsePayload
+     * @param remark remark
+     */
     public boolean refundSuccess(String refundNo,
                                  BigDecimal refundAmount,
                                  String thirdPartyRefundNo,
@@ -670,6 +695,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** RefundFail */
     public boolean refundFail(String refundNo, String responsePayload, String operator, String reason) {
         PaymentRefundOrder refundOrder = requireRefundOrder(refundNo);
         boolean alreadyFailed = RefundOrderStatus.FAILED.name().equals(refundOrder.getStatus());
@@ -701,6 +727,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 删除Order */
     public boolean deleteOrder(Long id) {
         PaymentOrder order = requireOrder(id);
         if (!(OrderState.PENDING.name().equals(order.getStatus())
@@ -714,12 +741,14 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     }
 
     @Override
+    /** GenerateOrderNo */
     public String generateOrderNo() {
         return "ORD" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** TimeoutOrder */
     public void timeoutOrder(Long id) {
         PaymentOrder order = requireOrder(id);
         if (!OrderState.PENDING.name().equals(order.getStatus())) {
@@ -730,6 +759,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         backfillRemark(latest, "支付超时自动取消");
     }
 
+    /** RequireActiveMerchant */
     private Merchant requireActiveMerchant(Long merchantId) {
         Merchant merchant = merchantMapper.selectById(merchantId);
         if (merchant == null) {
@@ -741,6 +771,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return merchant;
     }
 
+    /** RequireOrder */
     private PaymentOrder requireOrder(Long id) {
         PaymentOrder order = orderMapper.selectById(id);
         if (order == null || Integer.valueOf(1).equals(order.getDeleted())) {
@@ -749,6 +780,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return order;
     }
 
+    /** RequireRefundOrder */
     private PaymentRefundOrder requireRefundOrder(String refundNo) {
         PaymentRefundOrder refundOrder = paymentRefundOrderService.getByRefundNo(refundNo);
         if (refundOrder == null) {
@@ -757,6 +789,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return refundOrder;
     }
 
+    /** RequireEnabledChannel */
     private MerchantChannel requireEnabledChannel(Long channelId) {
         if (channelId == null) {
             throw new PaymentException("订单未绑定支付方式");
@@ -771,6 +804,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return channel;
     }
 
+    /** 解析Channel */
     private MerchantChannel resolveChannel(OrderCreateDTO dto) {
         MerchantChannel channel;
         if (dto.getChannelId() != null) {
@@ -804,6 +838,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return resolveEffectiveChannel(channel, dto.getMerchantId());
     }
 
+    /** 解析EffectiveChannel */
     private MerchantChannel resolveEffectiveChannel(MerchantChannel channel, Long merchantId) {
         if (channel == null || !"COMPOSITE".equalsIgnoreCase(channel.getChannelType())
                 || !"AGGREGATE_ROUTE".equalsIgnoreCase(channel.getChannelSubType())) {
@@ -836,6 +871,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return targetChannel;
     }
 
+    /** 解析RouteChannelId */
     private Long resolveRouteChannelId(MerchantChannel channel) {
         if (!StringUtils.hasText(channel.getExtConfig())) {
             return null;
@@ -849,6 +885,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         }
     }
 
+    /** 解析Long */
     private Long parseLong(Object... values) {
         if (values == null) {
             return null;
@@ -872,6 +909,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return null;
     }
 
+    /** 查找ActiveOrderByBusinessOrderNo */
     private PaymentOrder findActiveOrderByBusinessOrderNo(Long merchantId, String businessOrderNo) {
         if (merchantId == null || !StringUtils.hasText(businessOrderNo)) {
             return null;
@@ -882,6 +920,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                 .last("limit 1"));
     }
 
+    /** AssertSameBusinessOrder */
     private void assertSameBusinessOrder(PaymentOrder existing, OrderCreateDTO dto, MerchantChannel channel) {
         if (!existing.getMerchantId().equals(dto.getMerchantId())) {
             throw new PaymentException("业务订单号已存在且商户不一致");
@@ -899,12 +938,14 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         }
     }
 
+    /** EnsurePaying */
     private void ensurePaying(PaymentOrder order, String operator) {
         if (OrderState.PENDING.name().equals(order.getStatus())) {
             startPay(order.getId(), operator);
         }
     }
 
+    /** 发送StateEvent */
     private OrderTransitionResult sendStateEvent(Long orderId, OrderEvent event, String operator) {
         OrderTransitionResult result = stateMachineService.sendEvent(orderId, event, operator);
         if (result == OrderTransitionResult.REJECTED) {
@@ -913,6 +954,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return result;
     }
 
+    /** 解析ExpireMinutes */
     private int resolveExpireMinutes(OrderCreateDTO dto, Merchant merchant) {
         if (dto.getExpireMinutes() != null && dto.getExpireMinutes() > 0) {
             return dto.getExpireMinutes();
@@ -925,6 +967,13 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return 30;
     }
 
+    /**
+     * 解析ManualRefundOrder
+     * @param order order
+     * @param refundAmount refundAmount
+     * @param operator operator
+     * @param reason reason
+     */
     private PaymentRefundOrder resolveManualRefundOrder(PaymentOrder order,
                                                         BigDecimal refundAmount,
                                                         String operator,
@@ -954,34 +1003,41 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                 null);
     }
 
+    /** AggregateRefundedAmount */
     private BigDecimal aggregateRefundedAmount(PaymentOrder order) {
         BigDecimal refundedFromOrder = nullToZero(order.getRefundAmount());
         BigDecimal refundedFromRefundOrder = paymentRefundOrderService.sumRefundedAmount(order.getId());
         return refundedFromOrder.compareTo(refundedFromRefundOrder) >= 0 ? refundedFromOrder : refundedFromRefundOrder;
     }
 
+    /** RefundableAmount */
     private BigDecimal refundableAmount(PaymentOrder order) {
         return refundableAmount(order, aggregateRefundedAmount(order));
     }
 
+    /** RefundableAmount */
     private BigDecimal refundableAmount(PaymentOrder order, BigDecimal refundedAmount) {
         BigDecimal refundable = resolvedPaidAmount(order).subtract(nullToZero(refundedAmount));
         return refundable.compareTo(BigDecimal.ZERO) > 0 ? refundable : BigDecimal.ZERO;
     }
 
+    /** ResolvedPaidAmount */
     private BigDecimal resolvedPaidAmount(PaymentOrder order) {
         BigDecimal paidAmount = nullToZero(order.getPaidAmount());
         return paidAmount.compareTo(BigDecimal.ZERO) > 0 ? paidAmount : nullToZero(order.getOrderAmount());
     }
 
+    /** NullToZero */
     private BigDecimal nullToZero(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
     }
 
+    /** 是否可以CancelByState */
     private boolean canCancelByState(String status) {
         return OrderState.PENDING.name().equals(status) || OrderState.PAYING.name().equals(status);
     }
 
+    /** 是否PaidState */
     private boolean isPaidState(String status) {
         return OrderState.PAID.name().equals(status)
                 || OrderState.COMPLETED.name().equals(status)
@@ -989,6 +1045,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                 || OrderState.REFUNDED.name().equals(status);
     }
 
+    /** BackfillPaymentSuccess */
     private void backfillPaymentSuccess(PaymentOrder order, BigDecimal paidAmount, String thirdPartyOrderNo) {
         if (order == null) {
             return;
@@ -1012,6 +1069,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         updateOrderIfChanged(order, changed);
     }
 
+    /** SyncRefundAggregate */
     private void syncRefundAggregate(PaymentOrder order, BigDecimal refundAmount) {
         if (order == null) {
             return;
@@ -1029,6 +1087,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         updateOrderIfChanged(order, changed);
     }
 
+    /** 解析OrderStatusAfterRefundSuccess */
     private String resolveOrderStatusAfterRefundSuccess(PaymentOrder order, BigDecimal refundedAmount) {
         BigDecimal paidAmount = resolvedPaidAmount(order);
         if (paidAmount.compareTo(BigDecimal.ZERO) > 0 && nullToZero(refundedAmount).compareTo(paidAmount) >= 0) {
@@ -1037,6 +1096,12 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return OrderState.REFUNDING.name();
     }
 
+    /**
+     * 解析OrderStatusAfterRefundFailure
+     * @param order order
+     * @param refundedAmount refundedAmount
+     * @param refundOrder refundOrder
+     */
     private String resolveOrderStatusAfterRefundFailure(PaymentOrder order,
                                                         BigDecimal refundedAmount,
                                                         PaymentRefundOrder refundOrder) {
@@ -1053,10 +1118,19 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return OrderState.PAID.name();
     }
 
+    /** 是否RefundBaseState */
     private boolean isRefundBaseState(String status) {
         return OrderState.PAID.name().equals(status) || OrderState.COMPLETED.name().equals(status);
     }
 
+    /**
+     * ChangeOrderStatusIfNecessary
+     * @param order order
+     * @param targetStatus targetStatus
+     * @param event event
+     * @param operator operator
+     * @param remark remark
+     */
     private void changeOrderStatusIfNecessary(PaymentOrder order,
                                               String targetStatus,
                                               OrderEvent event,
@@ -1089,6 +1163,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                         : String.format("状态转换: %s -> %s", fromState.getDescription(), toState.getDescription()));
     }
 
+    /** BackfillCompleteTime */
     private void backfillCompleteTime(PaymentOrder order) {
         if (order == null || order.getCompleteTime() != null) {
             return;
@@ -1097,6 +1172,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         updateOrderIfChanged(order, true);
     }
 
+    /** BackfillRemark */
     private void backfillRemark(PaymentOrder order, String remark) {
         if (order == null || !StringUtils.hasText(remark) || StringUtils.hasText(order.getRemark())) {
             return;
@@ -1105,6 +1181,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         updateOrderIfChanged(order, true);
     }
 
+    /** 关闭ChannelOrder */
     private void closeChannelOrder(PaymentOrder order) {
         MerchantChannel channel = order.getChannelId() != null ? merchantChannelMapper.selectById(order.getChannelId()) : null;
         if (channel != null && StringUtils.hasText(order.getChannelType())) {
@@ -1117,6 +1194,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         }
     }
 
+    /** ForceOrderStatus */
     private void forceOrderStatus(Long orderId, String targetStatus) {
         orderMapper.update(null, new LambdaUpdateWrapper<PaymentOrder>()
                 .eq(PaymentOrder::getId, orderId)
@@ -1124,25 +1202,30 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                 .set(PaymentOrder::getStatus, targetStatus));
     }
 
+    /** 更新OrderIfChanged */
     private void updateOrderIfChanged(PaymentOrder order, boolean changed) {
         if (changed) {
             orderMapper.updateById(order);
         }
     }
 
+    /** DefaultOperator */
     private String defaultOperator(String operator) {
         return StringUtils.hasText(operator) ? operator : "system";
     }
 
+    /** GenerateRefundNo */
     private String generateRefundNo() {
         return "REF" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }
 
+    /** BaseOrderWrapper */
     private LambdaQueryWrapper<PaymentOrder> baseOrderWrapper() {
         return new LambdaQueryWrapper<PaymentOrder>()
                 .and(wrapper -> wrapper.isNull(PaymentOrder::getDeleted).or().eq(PaymentOrder::getDeleted, 0));
     }
 
+    /** FirstNonBlank */
     private String firstNonBlank(String... values) {
         for (String value : values) {
             if (StringUtils.hasText(value)) {
@@ -1152,6 +1235,17 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return null;
     }
 
+    /**
+     * RecordTransaction
+     * @param order order
+     * @param transactionType transactionType
+     * @param amount amount
+     * @param status status
+     * @param thirdPartyTransactionNo thirdPartyTransactionNo
+     * @param requestPayload requestPayload
+     * @param responsePayload responsePayload
+     * @param remark remark
+     */
     private void recordTransaction(PaymentOrder order,
                                    String transactionType,
                                    BigDecimal amount,
@@ -1177,6 +1271,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         transactionRecordService.createRecord(record);
     }
 
+    /** TransactionStatusOfPaymentResult */
     private Integer transactionStatusOfPaymentResult(PaymentResult result) {
         if ("PAID".equals(result.getStatus())) {
             return 1;
@@ -1187,6 +1282,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return 2;
     }
 
+    /** TransactionStatusOfRefundResult */
     private Integer transactionStatusOfRefundResult(RefundResult result) {
         if ("REFUNDED".equals(result.getStatus())) {
             return 1;
@@ -1197,6 +1293,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return 2;
     }
 
+    /** SafeJson */
     private String safeJson(Object value) {
         try {
             return objectMapper.writeValueAsString(value);
@@ -1205,6 +1302,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         }
     }
 
+    /** 转换ToVO */
     private OrderVO convertToVO(PaymentOrder order) {
         OrderVO vo = new OrderVO();
         BeanUtils.copyProperties(order, vo);
@@ -1216,6 +1314,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return vo;
     }
 
+    /** 转换记录日志ToVO */
     private OrderStateLogVO convertLogToVO(OrderStateLog log) {
         OrderStateLogVO vo = new OrderStateLogVO();
         BeanUtils.copyProperties(log, vo);

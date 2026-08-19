@@ -28,6 +28,7 @@ public class MerchantController {
 
     @Operation(summary = "创建商户")
     @PostMapping
+    /** 创建Merchant */
     public Result<MerchantVO> createMerchant(@RequestBody MerchantDTO dto) {
         MerchantVO vo = merchantService.createMerchant(dto);
         return Result.success(vo);
@@ -35,6 +36,7 @@ public class MerchantController {
 
     @Operation(summary = "更新商户")
     @PutMapping("/{id}")
+    /** 更新Merchant */
     public Result<MerchantVO> updateMerchant(@PathVariable Long id, @RequestBody MerchantDTO dto) {
         MerchantVO vo = merchantService.updateMerchant(id, dto);
         return Result.success(vo);
@@ -42,6 +44,7 @@ public class MerchantController {
 
     @Operation(summary = "删除商户")
     @DeleteMapping("/{id}")
+    /** 删除Merchant */
     public Result<Boolean> deleteMerchant(@PathVariable Long id) {
         boolean success = merchantService.deleteMerchant(id);
         return Result.success(success);
@@ -49,6 +52,7 @@ public class MerchantController {
 
     @Operation(summary = "查询商户")
     @GetMapping("/{id}")
+    /** 获取Merchant */
     public Result<MerchantVO> getMerchant(@PathVariable Long id) {
         MerchantVO vo = merchantService.getMerchant(id);
         return Result.success(vo);
@@ -56,6 +60,18 @@ public class MerchantController {
 
     @Operation(summary = "分页查询商户列表")
     @GetMapping("/list")
+    /**
+     * ListMerchants
+     * @param page page
+     * @param size size
+     * @param merchantName merchantName
+     * @param status status
+     * @param size size
+     * @param merchantName merchantName
+     * @param status status
+     * @param id id
+     * @param id id
+     */
     public Result<PageResult<MerchantVO>> listMerchants(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -73,6 +89,7 @@ public class MerchantController {
 
     @Operation(summary = "激活商户")
     @PutMapping("/{id}/activate")
+    /** ActivateMerchant */
     public Result<Boolean> activateMerchant(@PathVariable Long id) {
         boolean success = merchantService.activateMerchant(id);
         return Result.success(success);
@@ -80,6 +97,7 @@ public class MerchantController {
 
     @Operation(summary = "停用商户")
     @PutMapping("/{id}/deactivate")
+    /** DeactivateMerchant */
     public Result<Boolean> deactivateMerchant(@PathVariable Long id) {
         boolean success = merchantService.deactivateMerchant(id);
         return Result.success(success);

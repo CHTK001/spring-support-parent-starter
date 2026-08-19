@@ -25,6 +25,7 @@ public class RandomUtils {
     /** 字母数字混合字符集 */
     private static final String LETTERS_DIGITS = DIGITS + LETTERS;
 
+    /** 创建 RandomUtils 实例 */
     private RandomUtils() {
     }
 

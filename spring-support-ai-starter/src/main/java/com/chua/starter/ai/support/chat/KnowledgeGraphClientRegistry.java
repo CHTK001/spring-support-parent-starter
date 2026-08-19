@@ -108,6 +108,7 @@ public class KnowledgeGraphClientRegistry {
      */
     private volatile KnowledgeGraphLlmClient defaultClient;
 
+    /** 获取DefaultClient */
     private KnowledgeGraphLlmClient getDefaultClient() {
         if (defaultClient == null) {
             synchronized (this) {
@@ -119,6 +120,7 @@ public class KnowledgeGraphClientRegistry {
         return defaultClient;
     }
 
+    /** 构建GlobalClient */
     private KnowledgeGraphLlmClient buildGlobalClient() {
         KnowledgeGraphSettings settings = resolveRuntimeSettings();
         ChatClient chatClient = createChatClientSafe(settings);
@@ -129,6 +131,7 @@ public class KnowledgeGraphClientRegistry {
         return new DefaultKnowledgeGraphLlmClient(settings, chatClient);
     }
 
+    /** 构建Client */
     private KnowledgeGraphLlmClient buildClient(Integer libraryId) {
         KnowledgeGraphSettings settings = resolveRuntimeSettings();
         ChatClient chatClient = createChatClientSafe(settings);
@@ -246,6 +249,7 @@ public class KnowledgeGraphClientRegistry {
                 .build();
     }
 
+    /** 构建RuntimeSetting */
     private ChatClientSetting buildRuntimeSetting() {
         return ChatClientSetting.builder()
                 .provider("")
@@ -264,14 +268,17 @@ public class KnowledgeGraphClientRegistry {
                 .build();
     }
 
+    /** 获取GlobalSetting */
     private String getGlobalSetting(String group, String field) {
         return globalSettingService.getValue(group, field).orElse(null);
     }
 
+    /** 获取GlobalBoolean */
     private boolean getGlobalBoolean(String group, String field, boolean defaultValue) {
         return globalSettingService.getBoolean(group, field, defaultValue);
     }
 
+    /** 获取GlobalInt */
     private int getGlobalInt(String group, String field, int defaultValue) {
         String value = getGlobalSetting(group, field);
         if (StringUtils.isBlank(value)) return defaultValue;
@@ -282,6 +289,7 @@ public class KnowledgeGraphClientRegistry {
         }
     }
 
+    /** 获取GlobalDouble */
     private Double getGlobalDouble(String group, String field) {
         String value = getGlobalSetting(group, field);
         if (StringUtils.isBlank(value)) return null;
@@ -292,6 +300,7 @@ public class KnowledgeGraphClientRegistry {
         }
     }
 
+    /** 解析NullableInt */
     private static Integer parseNullableInt(String value) {
         if (StringUtils.isBlank(value)) return null;
         try {
@@ -301,6 +310,7 @@ public class KnowledgeGraphClientRegistry {
         }
     }
 
+    /** FirstNonBlank */
     private static String firstNonBlank(String... values) {
         if (values == null) return null;
         for (String value : values) {
@@ -309,6 +319,7 @@ public class KnowledgeGraphClientRegistry {
         return null;
     }
 
+    /** 关闭Quietly */
     private static void closeQuietly(KnowledgeGraphLlmClient client) {
         if (client != null) {
             try {

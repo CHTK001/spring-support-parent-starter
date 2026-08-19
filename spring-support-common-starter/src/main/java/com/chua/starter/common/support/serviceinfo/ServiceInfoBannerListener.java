@@ -26,18 +26,25 @@ public class ServiceInfoBannerListener implements SmartApplicationListener {
     private final ServiceInfoProperties properties;
     private volatile boolean bannerPrinted = false;
 
+    /**
+     * 创建 ServiceInfoBannerListener 实例
+     * @param detector detector
+     * @param ServiceInfoProperties ServiceInfoProperties
+     */
     public ServiceInfoBannerListener(ServiceInfoEndpointDetector detector, ServiceInfoProperties properties) {
         this.detector = detector;
         this.properties = properties;
     }
 
     @Override
+    /** SupportsEventType */
     public boolean supportsEventType(Class<? extends ApplicationEvent> eventType) {
         return ApplicationReadyEvent.class.isAssignableFrom(eventType)
                 || ApplicationFailedEvent.class.isAssignableFrom(eventType);
     }
 
     @Override
+    /** OnApplicationEvent */
     public void onApplicationEvent(ApplicationEvent event) {
         if (event instanceof ApplicationReadyEvent) {
             onReady((ApplicationReadyEvent) event);
@@ -46,6 +53,7 @@ public class ServiceInfoBannerListener implements SmartApplicationListener {
         }
     }
 
+    /** OnReady */
     private void onReady(ApplicationReadyEvent event) {
         if (!properties.isBanner()) {
             return;
@@ -59,6 +67,7 @@ public class ServiceInfoBannerListener implements SmartApplicationListener {
         }
     }
 
+    /** OnFailed */
     private void onFailed(ApplicationFailedEvent event) {
         if (bannerPrinted) {
             return;
@@ -77,6 +86,7 @@ public class ServiceInfoBannerListener implements SmartApplicationListener {
 
     // SmartApplicationListener requires these methods
     @Override
+    /** 获取Order */
     public int getOrder() {
         return Ordered.LOWEST_PRECEDENCE;
     }

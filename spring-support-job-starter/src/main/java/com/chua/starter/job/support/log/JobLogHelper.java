@@ -22,6 +22,7 @@ public final class JobLogHelper {
     /** Log_buffer */
     private static final ThreadLocal<StringBuilder> LOG_BUFFER = new ThreadLocal<>();
 
+    /** 创建 JobLogHelper 实例 */
     private JobLogHelper() {
     }
 

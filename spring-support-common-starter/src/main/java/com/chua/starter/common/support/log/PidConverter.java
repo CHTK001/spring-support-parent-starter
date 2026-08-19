@@ -20,12 +20,14 @@ public class PidConverter extends ClassicConverter {
     /** PID */
     private static final String PID = getPid();
 
+    /** 获取Pid */
     private static String getPid() {
         String name = ManagementFactory.getRuntimeMXBean().getName();
         return name.split("@")[0];
     }
 
     @Override
+    /** 转换 */
     public String convert(ILoggingEvent event) {
         return PID;
     }

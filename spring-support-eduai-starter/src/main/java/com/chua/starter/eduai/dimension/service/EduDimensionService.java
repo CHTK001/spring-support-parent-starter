@@ -45,6 +45,7 @@ public class EduDimensionService {
 
     // ==================== 学科 ====================
 
+    /** ListSubjects */
     public List<EduSubject> listSubjects(String gradeLevel) {
         LambdaQueryWrapper<EduSubject> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(gradeLevel)) {
@@ -56,6 +57,7 @@ public class EduDimensionService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /** 保存Subject */
     public Long saveSubject(EduSubject entity) {
         if (!StringUtils.hasText(entity.getSubjectCode()) || !StringUtils.hasText(entity.getSubjectName())) {
             throw new BusinessException("学科编码与名称必填");
@@ -76,6 +78,7 @@ public class EduDimensionService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /** 删除Subject */
     public boolean deleteSubject(Long id) {
         if (id == null) return false;
         int rows = subjectMapper.deleteById(id);
@@ -85,6 +88,7 @@ public class EduDimensionService {
 
     // ==================== 年级 ====================
 
+    /** ListGrades */
     public List<EduGrade> listGrades(String gradeLevel) {
         LambdaQueryWrapper<EduGrade> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(gradeLevel)) {
@@ -96,6 +100,7 @@ public class EduDimensionService {
 
     // ==================== 班级 ====================
 
+    /** ListClasses */
     public List<EduClass> listClasses(String gradeLevel, Long teacherId) {
         LambdaQueryWrapper<EduClass> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(gradeLevel)) {
@@ -110,6 +115,7 @@ public class EduDimensionService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /** 保存Class */
     public Long saveClass(EduClass entity) {
         if (!StringUtils.hasText(entity.getClassCode()) || !StringUtils.hasText(entity.getClassName())) {
             throw new BusinessException("班级编码与名称必填");
@@ -127,6 +133,7 @@ public class EduDimensionService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /** 删除Class */
     public boolean deleteClass(Long id) {
         if (id == null) return false;
         int rows = classMapper.deleteById(id);
@@ -136,6 +143,7 @@ public class EduDimensionService {
 
     // ==================== 学生 ====================
 
+    /** ListStudents */
     public List<EduStudent> listStudents(Long classId, String gradeLevel, String grade) {
         LambdaQueryWrapper<EduStudent> wrapper = new LambdaQueryWrapper<>();
         if (classId != null) wrapper.eq(EduStudent::getStudentClassId, classId);
@@ -147,6 +155,7 @@ public class EduDimensionService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /** 保存Student */
     public Long saveStudent(EduStudent entity) {
         if (!StringUtils.hasText(entity.getStudentNo())) {
             throw new BusinessException("学号必填");
@@ -164,6 +173,7 @@ public class EduDimensionService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /** 删除Student */
     public boolean deleteStudent(Long id) {
         if (id == null) return false;
         return studentMapper.deleteById(id) > 0;
@@ -171,6 +181,7 @@ public class EduDimensionService {
 
     // ==================== 教师 ====================
 
+    /** ListTeachers */
     public List<EduTeacher> listTeachers(String subjectCode) {
         LambdaQueryWrapper<EduTeacher> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(subjectCode)) {
@@ -182,6 +193,7 @@ public class EduDimensionService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /** 保存Teacher */
     public Long saveTeacher(EduTeacher entity) {
         if (!StringUtils.hasText(entity.getTeacherNo())) {
             throw new BusinessException("工号必填");
@@ -199,6 +211,7 @@ public class EduDimensionService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    /** 删除Teacher */
     public boolean deleteTeacher(Long id) {
         if (id == null) return false;
         return teacherMapper.deleteById(id) > 0;
@@ -228,11 +241,17 @@ public class EduDimensionService {
         private List<EduSubject> subjects;
         /** Grades */
         private List<EduGrade> grades;
+        /** 获取GradeLevels */
         public List<EnumOption> getGradeLevels() { return gradeLevels; }
+        /** 设置GradeLevels */
         public void setGradeLevels(List<EnumOption> gradeLevels) { this.gradeLevels = gradeLevels; }
+        /** 获取Subjects */
         public List<EduSubject> getSubjects() { return subjects; }
+        /** 设置Subjects */
         public void setSubjects(List<EduSubject> subjects) { this.subjects = subjects; }
+        /** 获取Grades */
         public List<EduGrade> getGrades() { return grades; }
+        /** 设置Grades */
         public void setGrades(List<EduGrade> grades) { this.grades = grades; }
     }
 
@@ -241,11 +260,21 @@ public class EduDimensionService {
         private String value;
         /** 标签 */
         private String label;
+        /** 创建 EnumOption 实例 */
         public EnumOption() {}
+        /**
+         * 创建 EnumOption 实例
+         * @param value value
+         * @param String String
+         */
         public EnumOption(String value, String label) { this.value = value; this.label = label; }
+        /** 获取Value */
         public String getValue() { return value; }
+        /** 设置Value */
         public void setValue(String value) { this.value = value; }
+        /** 获取Label */
         public String getLabel() { return label; }
+        /** 设置Label */
         public void setLabel(String label) { this.label = label; }
     }
 }

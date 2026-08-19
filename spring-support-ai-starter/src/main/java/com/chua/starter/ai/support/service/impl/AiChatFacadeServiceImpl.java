@@ -165,6 +165,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     @Override
+    /** 调用 */
     public Map<String, Object> call(AiChatRequest request) {
         // 从 request.parameters 提取分组 ID 与 AppKey（由 Controller 注入）
         Integer groupId = extractGroupId(request);
@@ -221,6 +222,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     @Override
+    /** Stream */
     public SseEmitter stream(AiChatRequest request, Consumer<String> onComplete) {
         Integer groupId = extractGroupId(request);
         String appKey = extractAppKey(request);
@@ -358,6 +360,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     @Override
+    /** Models */
     public List<String> models(Integer groupId) {
         // 无分组：返回注册中心全部模型
         if (groupId == null) {
@@ -376,6 +379,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     @Override
+    /** ModelDefinitions */
     public List<ModelDefinition> modelDefinitions(Integer groupId) {
         // 有分组时获取分组白名单
         Set<String> allowedCodes = groupId != null ? getAllowedModelCodes(groupId) : null;

@@ -65,16 +65,19 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     private ApplicationContext applicationContext;
 
     @Override
+    /** 设置ApplicationContext */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
 
     @Override
+    /** 获取Name */
     public String getName() {
         return "nodeMaintenanceHandler";
     }
 
     @Override
+    /** Supports */
     public boolean supports(String topic) {
         return MonitorTopics.NODE_BACKUP.equals(topic)
                 || MonitorTopics.NODE_UPGRADE.equals(topic)
@@ -82,6 +85,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     }
 
     @Override
+    /** 处理 */
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         String action = MapUtils.getString(data, "action", topic);
         log.info("[NodeMaintenance] 收到维护命令: topic={}, action={}", topic, action);
@@ -94,6 +98,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         };
     }
 
+    /** 处理Backup */
     private Map<String, Object> handleBackup(Map<String, Object> data) {
         String action = MapUtils.getString(data, "action", "create");
 
@@ -106,6 +111,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         };
     }
 
+    /** 创建Backup */
     private Map<String, Object> createBackup(Map<String, Object> data) {
         try {
             String description = MapUtils.getString(data, "description", "手动备份");
@@ -144,6 +150,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         }
     }
 
+    /** ListBackups */
     private Map<String, Object> listBackups() {
         try {
             Path backupDir = getBackupDirectory();
@@ -182,6 +189,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         }
     }
 
+    /** 删除Backup */
     private Map<String, Object> deleteBackup(Map<String, Object> data) {
         try {
             String fileName = MapUtils.getString(data, "fileName");
@@ -204,6 +212,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         }
     }
 
+    /** 获取BackupContent */
     private Map<String, Object> getBackupContent(Map<String, Object> data) {
         try {
             String fileName = MapUtils.getString(data, "fileName");
@@ -224,6 +233,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         }
     }
 
+    /** 处理Upgrade */
     private Map<String, Object> handleUpgrade(Map<String, Object> data) {
         String action = MapUtils.getString(data, "action", "status");
 
@@ -237,6 +247,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         };
     }
 
+    /** UploadUpgradePackage */
     private Map<String, Object> uploadUpgradePackage(Map<String, Object> data) {
         try {
             String fileName = MapUtils.getString(data, "fileName");
@@ -265,6 +276,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         }
     }
 
+    /** ListUpgradePackages */
     private Map<String, Object> listUpgradePackages() {
         try {
             Path upgradeDir = getUpgradeDirectory();
@@ -296,6 +308,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         }
     }
 
+    /** 执行Upgrade */
     private Map<String, Object> executeUpgrade(Map<String, Object> data) {
         try {
             String fileName = MapUtils.getString(data, "fileName");
@@ -358,6 +371,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         }
     }
 
+    /** 回滚Upgrade */
     private Map<String, Object> rollbackUpgrade(Map<String, Object> data) {
         try {
             String rollbackId = MapUtils.getString(data, "rollbackId");
@@ -389,6 +403,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         }
     }
 
+    /** 获取UpgradeStatus */
     private Map<String, Object> getUpgradeStatus() {
         try {
             Path applicationHome = getApplicationHomeDirectory();
@@ -410,6 +425,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         }
     }
 
+    /** 处理Restore */
     private Map<String, Object> handleRestore(Map<String, Object> data) {
         String action = MapUtils.getString(data, "action", "preview");
 
@@ -420,6 +436,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         };
     }
 
+    /** PreviewRestore */
     private Map<String, Object> previewRestore(Map<String, Object> data) {
         try {
             String fileName = MapUtils.getString(data, "fileName");
@@ -472,6 +489,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         }
     }
 
+    /** 执行Restore */
     private Map<String, Object> executeRestore(Map<String, Object> data) {
         try {
             String fileName = MapUtils.getString(data, "fileName");
@@ -512,6 +530,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         }
     }
 
+    /** 执行JarUpgrade */
     private RollbackSnapshot executeJarUpgrade(Path upgradeFile, Path currentArtifact, Path applicationHome, PackageType packageType) throws IOException {
         String rollbackId = createRollbackId();
         Path rollbackDir = getRollbackDirectory().resolve(rollbackId);
@@ -524,6 +543,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         return new RollbackSnapshot(rollbackId, packageType, applicationHome, rollbackDir, entries);
     }
 
+    /** 执行ArchiveUpgrade */
     private RollbackSnapshot executeArchiveUpgrade(Path upgradeFile, Path applicationHome, Path currentArtifact, PackageType packageType) throws IOException {
         String rollbackId = createRollbackId();
         Path rollbackDir = getRollbackDirectory().resolve(rollbackId);
@@ -549,6 +569,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         return new RollbackSnapshot(rollbackId, packageType, applicationHome, rollbackDir, entries);
     }
 
+    /** Restore回滚Snapshot */
     private void restoreRollbackSnapshot(RollbackSnapshot snapshot) throws IOException {
         List<RollbackEntry> entries = new ArrayList<>(snapshot.entries());
         Collections.reverse(entries);
@@ -569,6 +590,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         }
     }
 
+    /** 创建回滚Entry */
     private RollbackEntry createRollbackEntry(Path target, Path backupPath) throws IOException {
         boolean existedBefore = Files.exists(target);
         String backupPathValue = null;
@@ -585,6 +607,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         return new RollbackEntry(target.toString(), existedBefore, backupPathValue);
     }
 
+    /** 读取ArchivePayloads */
     private Map<Path, byte[]> readArchivePayloads(Path archiveFile, Path applicationHome, PackageType packageType) throws IOException {
         Map<String, byte[]> entries = new LinkedHashMap<>();
 
@@ -620,6 +643,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         return payloads;
     }
 
+    /** 构建UpgradeResult */
     private Map<String, Object> buildUpgradeResult(RollbackSnapshot snapshot, String fileName, Path currentArtifact, boolean autoRestart) {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("rollbackId", snapshot.rollbackId());
@@ -633,18 +657,22 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         return data;
     }
 
+    /** 获取BackupDirectory */
     private Path getBackupDirectory() {
         return getApplicationHomeDirectory().resolve(BACKUP_DIR);
     }
 
+    /** 获取UpgradeDirectory */
     private Path getUpgradeDirectory() {
         return getApplicationHomeDirectory().resolve(UPGRADE_DIR);
     }
 
+    /** 获取回滚Directory */
     private Path getRollbackDirectory() {
         return getApplicationHomeDirectory().resolve(ROLLBACK_DIR);
     }
 
+    /** 获取ApplicationHomeDirectory */
     private Path getApplicationHomeDirectory() {
         String configuredHome = getEnvironmentProperty(MAINTENANCE_HOME_DIR);
         if (configuredHome != null && !configuredHome.isBlank()) {
@@ -655,6 +683,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         return homeDir.toPath().toAbsolutePath().normalize();
     }
 
+    /** 获取CurrentArtifactPath */
     private Path getCurrentArtifactPath() {
         String configuredArtifact = getEnvironmentProperty(MAINTENANCE_CURRENT_ARTIFACT);
         if (configuredArtifact != null && !configuredArtifact.isBlank()) {
@@ -665,6 +694,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         return source == null ? null : source.toPath().toAbsolutePath().normalize();
     }
 
+    /** 获取EnvironmentProperty */
     private String getEnvironmentProperty(String key) {
         if (applicationContext == null) {
             return null;
@@ -672,14 +702,17 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         return applicationContext.getEnvironment().getProperty(key);
     }
 
+    /** 是否SupportedUpgradePackage */
     private boolean isSupportedUpgradePackage(Path path) {
         return PackageType.fromFileName(path.getFileName().toString()) != null;
     }
 
+    /** NormalizeArchiveEntryName */
     private String normalizeArchiveEntryName(String entryName) {
         return entryName.replace('\\', '/');
     }
 
+    /** 解析ArchiveTarget */
     private Path resolveArchiveTarget(Path applicationHome, String entryName) {
         Path target = applicationHome.resolve(entryName).normalize();
         if (!target.startsWith(applicationHome)) {
@@ -688,6 +721,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         return target;
     }
 
+    /** 应用ExecutableBit */
     private void applyExecutableBit(Path target) {
         String fileName = target.getFileName() == null ? "" : target.getFileName().toString().toLowerCase(Locale.ROOT);
         if (fileName.endsWith(".sh")) {
@@ -695,6 +729,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         }
     }
 
+    /** CleanupEmptyDirectories */
     private void cleanupEmptyDirectories(Path start, Path stopAt) throws IOException {
         Path current = start;
         while (current != null && stopAt != null && current.startsWith(stopAt) && !current.equals(stopAt)) {
@@ -712,6 +747,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         }
     }
 
+    /** 删除DirectoryQuietly */
     private void deleteDirectoryQuietly(Path directory) {
         if (directory == null || !Files.exists(directory)) {
             return;
@@ -729,12 +765,14 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         }
     }
 
+    /** 创建回滚Id */
     private String createRollbackId() {
         return DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now())
                 + "-"
                 + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
     }
 
+    /** CollectEnvironmentProperties */
     private Map<String, Object> collectEnvironmentProperties() {
         Map<String, Object> properties = new LinkedHashMap<>();
 
@@ -760,6 +798,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         return properties;
     }
 
+    /** CollectSystemProperties */
     private Map<String, Object> collectSystemProperties() {
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put("java.version", System.getProperty("java.version"));
@@ -770,6 +809,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         return properties;
     }
 
+    /** 是否SensitiveProperty */
     private boolean isSensitiveProperty(String name) {
         String lower = name.toLowerCase(Locale.ROOT);
         return lower.contains("password")
@@ -779,6 +819,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
                 || lower.contains("token");
     }
 
+    /** 获取ApplicationName */
     private String getApplicationName() {
         if (applicationContext != null) {
             return applicationContext.getEnvironment().getProperty("spring.application.name", "unknown");
@@ -786,6 +827,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         return "unknown";
     }
 
+    /** 获取ApplicationVersion */
     private String getApplicationVersion() {
         if (applicationContext != null) {
             return applicationContext.getEnvironment().getProperty("info.app.version", "1.0.0");
@@ -806,10 +848,12 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
             this.displayName = displayName;
         }
 
+        /** DisplayName */
         private String displayName() {
             return displayName;
         }
 
+        /** FromFileName */
         private static PackageType fromFileName(String fileName) {
             if (fileName == null) {
                 return null;
@@ -831,6 +875,17 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         }
     }
 
+    /**
+     * 回滚Snapshot
+     * @param rollbackId rollbackId
+     * @param packageType packageType
+     * @param applicationHome applicationHome
+     * @param rollbackDirectory rollbackDirectory
+     * @param entries entries
+     * @param targetPath targetPath
+     * @param existedBefore existedBefore
+     * @param backupPath backupPath
+     */
     private record RollbackSnapshot(
             String rollbackId,
             PackageType packageType,
@@ -840,6 +895,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     ) {
     }
 
+    /** 回滚Entry */
     private record RollbackEntry(String targetPath, boolean existedBefore, String backupPath) {
     }
 }

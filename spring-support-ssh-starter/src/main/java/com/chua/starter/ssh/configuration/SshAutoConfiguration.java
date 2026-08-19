@@ -47,6 +47,7 @@ public class SshAutoConfiguration {
     }
 
     @Bean
+    /** SshServiceInfoContributor */
     public ServiceInfoContributor sshServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("ssh", "SSH", true, "SSH服务端模块");

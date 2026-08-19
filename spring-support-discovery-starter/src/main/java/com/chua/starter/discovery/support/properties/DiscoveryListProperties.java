@@ -29,18 +29,22 @@ public class DiscoveryListProperties {
     private List<DiscoveryProperties> properties = new LinkedList<>();
     
     // Lombok @Data 生成的 getter/setter 方法（如果 Lombok 未生效，这些方法会被使用）
+    /** 是否启用 */
     public boolean isEnable() {
         return enable;
     }
     
+    /** 设置启用 */
     public void setEnable(boolean enable) {
         this.enable = enable;
     }
     
+    /** 获取Properties */
     public List<DiscoveryProperties> getProperties() {
         return properties;
     }
     
+    /** 设置Properties */
     public void setProperties(List<DiscoveryProperties> properties) {
         this.properties = properties;
     }

@@ -42,6 +42,7 @@ import java.util.*;
  */
 public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMethodArgumentResolver {
     @Override
+    /** SupportsParameter */
     public boolean supportsParameter(MethodParameter parameter) {
         RequestParamMapping requestParam = parameter.getParameterAnnotation(RequestParamMapping.class);
         boolean has = (requestParam != null && Map.class.isAssignableFrom(parameter.getParameterType()) &&
@@ -64,6 +65,13 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
     }
 
     @Override
+    /**
+     * 解析Argument
+     * @param parameter parameter
+     * @param mavContainer mavContainer
+     * @param webRequest webRequest
+     * @param binderFactory binderFactory
+     */
     public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
                                   NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
 
@@ -114,6 +122,7 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
+    /** Do注册 */
     private void doRegister(Object instance, Field field, Object argument) {
         String name = field.getName();
         Object value = null;
@@ -147,6 +156,7 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
         set(instance, field, value);
     }
 
+    /** DoRequestParamMapping注册 */
     private void doRequestParamMappingRegister(Object instance, Field field, RequestParamMapping requestParamMapping, Map<String, Object> beanMap) {
         Map<String, Object> annotationAttributes = AnnotationUtils.getAnnotationAttributes(requestParamMapping);
         String defaultValue = requestParamMapping.defaultValue();
@@ -166,6 +176,7 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
         set(instance, field, value);
     }
 
+    /** 设置 */
     private void set(Object instance, Field field, Object o) {
         if (null == o) {
             return;
@@ -186,6 +197,14 @@ public class RequestParamsMapMethodArgumentResolver extends RequestParamMapMetho
     }
 
 
+    /**
+     * 解析ArgumentOne
+     * @param parameter parameter
+     * @param mavContainer mavContainer
+     * @param webRequest webRequest
+     * @param binderFactory binderFactory
+     * @param ServletException ServletException
+     */
     public Object resolveArgumentOne(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
                                      NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws ServletException, IOException {
         ResolvableType resolvableType = ResolvableType.forMethodParameter(parameter);

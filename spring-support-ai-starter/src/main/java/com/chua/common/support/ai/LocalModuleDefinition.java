@@ -50,15 +50,25 @@ public class LocalModuleDefinition {
         this.enabled = enabled;
     }
 
+    /** 获取Code */
     public String getCode() { return code; }
+    /** 设置Code */
     public void setCode(String code) { this.code = code; }
+    /** 获取Name */
     public String getName() { return name; }
+    /** 设置Name */
     public void setName(String name) { this.name = name; }
+    /** 获取Description */
     public String getDescription() { return description; }
+    /** 设置Description */
     public void setDescription(String description) { this.description = description; }
+    /** 获取Type */
     public String getType() { return type; }
+    /** 设置Type */
     public void setType(String type) { this.type = type; }
+    /** 是否Enabled */
     public boolean isEnabled() { return enabled; }
+    /** 设置Enabled */
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
     /**
@@ -98,10 +108,15 @@ public class LocalModuleDefinition {
          */
         private boolean enabled;
 
+        /** Code */
         public LocalModuleDefinitionBuilder code(String code) { this.code = code; return this; }
+        /** Name */
         public LocalModuleDefinitionBuilder name(String name) { this.name = name; return this; }
+        /** Description */
         public LocalModuleDefinitionBuilder description(String description) { this.description = description; return this; }
+        /** Type */
         public LocalModuleDefinitionBuilder type(String type) { this.type = type; return this; }
+        /** Enabled */
         public LocalModuleDefinitionBuilder enabled(boolean enabled) { this.enabled = enabled; return this; }
 
         /**

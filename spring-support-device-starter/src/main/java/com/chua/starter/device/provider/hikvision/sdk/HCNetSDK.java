@@ -290,6 +290,7 @@ public interface HCNetSDK extends Library {
         }
 
         @Override
+        /** 获取FieldOrder */
         protected List<String> getFieldOrder() {
             return Arrays.asList("sDeviceAddress", "byUseTransport", "wPort", "sUserName", "sPassword",
                     "dwLoginMode", "byHttps", "iProxyID", "byVerifyMode", "byReserved", "byReserved2");
@@ -382,6 +383,7 @@ public interface HCNetSDK extends Library {
         public byte[] byReserved1 = new byte[24];
 
         @Override
+        /** 获取FieldOrder */
         protected List<String> getFieldOrder() {
             return Arrays.asList("sSerialNumber", "byAlarmInPortNum", "byAlarmOutPortNum", "byDiskNum", "byDVRType",
                     "byChanNum", "byStartChan", "byAudioChanNum", "byIPChanNum", "byZeroChanNum", "byMainProto",
@@ -454,6 +456,7 @@ public interface HCNetSDK extends Library {
         }
 
         @Override
+        /** 获取FieldOrder */
         protected List<String> getFieldOrder() {
             return Arrays.asList("lChannel", "dwStreamType", "dwLinkMode", "hPlayWnd", "bBlocked", "bPassbackRecord",
                     "byPreviewMode", "byStreamID", "byProtoType", "byRes1", "byRes2", "dwDisplayBufNum", "byRes");
@@ -492,6 +495,7 @@ public interface HCNetSDK extends Library {
         public NET_DVR_TIME stopTime = new NET_DVR_TIME();
 
         @Override
+        /** 获取FieldOrder */
         protected List<String> getFieldOrder() {
             return Arrays.asList("byStreamType", "bByTime", "bNeedDecrypt", "byStreamID", "lChannel",
                     "dwPos", "startTime", "stopTime");
@@ -555,6 +559,7 @@ public interface HCNetSDK extends Library {
         }
 
         @Override
+        /** 获取FieldOrder */
         protected List<String> getFieldOrder() {
             return Arrays.asList("byYear", "byMonth", "byDay", "byHour", "byMinute", "bySecond", "byRes", "byISO8601",
                     "wMillisecond", "cTimeZoneID", "byRes1", "byRes2");
@@ -656,6 +661,7 @@ public interface HCNetSDK extends Library {
         public byte[] byRes2 = new byte[188];
 
         @Override
+        /** 获取FieldOrder */
         protected List<String> getFieldOrder() {
             return Arrays.asList("byUserIDValid", "bySerialValid", "byVersionValid", "byDeviceNameValid",
                     "byMacAddrValid", "byLinkPortValid", "byDeviceIP", "bySocketIP", "wLinkPort", "sSerialNumber",

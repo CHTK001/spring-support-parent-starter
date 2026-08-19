@@ -68,6 +68,7 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     }
 
     @Override
+    /** 获取Object */
     public T getObject() throws Exception {
         if (interfaceClass == null) {
             throw new IllegalStateException("The interface class of ReferenceBean is not initialized");
@@ -81,21 +82,25 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     }
 
     @Override
+    /** 设置BeanClassLoader */
     public void setBeanClassLoader(ClassLoader classLoader) {
         this.classLoader = classLoader;
     }
 
     @Override
+    /** 设置BeanName */
     public void setBeanName(String name) {
         this.beanName = name;
     }
 
     @Override
+    /** 销毁 */
     public void destroy() throws Exception {
 
     }
 
     @Override
+    /** AfterProperties设置 */
     public void afterPropertiesSet() throws Exception {
         ConfigurableListableBeanFactory beanFactory = getBeanFactory();
 
@@ -111,10 +116,12 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     }
 
     @Override
+    /** 设置ApplicationContext */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
 
+    /** 获取BeanFactory */
     private ConfigurableListableBeanFactory getBeanFactory() {
         return (ConfigurableListableBeanFactory) applicationContext.getAutowireCapableBeanFactory();
     }

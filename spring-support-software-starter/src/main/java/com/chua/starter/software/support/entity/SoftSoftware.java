@@ -112,178 +112,222 @@ public class SoftSoftware implements Serializable {
     /** software_update_by - 更新人 */
     private String softwareUpdateBy;
 
+    /** 获取SoftwareId */
     public String getSoftwareId() {
         return softwareId;
     }
 
+    /** 设置SoftwareId */
     public void setSoftwareId(String softwareId) {
         this.softwareId = softwareId;
     }
 
+    /** 获取SoftwareName */
     public String getSoftwareName() {
         return softwareName;
     }
 
+    /** 设置SoftwareName */
     public void setSoftwareName(String softwareName) {
         this.softwareName = softwareName;
     }
 
+    /** 获取SoftwareCode */
     public String getSoftwareCode() {
         return softwareCode;
     }
 
+    /** 设置SoftwareCode */
     public void setSoftwareCode(String softwareCode) {
         this.softwareCode = softwareCode;
     }
 
+    /** 获取SoftwareVersion */
     public String getSoftwareVersion() {
         return softwareVersion;
     }
 
+    /** 设置SoftwareVersion */
     public void setSoftwareVersion(String softwareVersion) {
         this.softwareVersion = softwareVersion;
     }
 
+    /** 获取SoftwareLatestVersion */
     public String getSoftwareLatestVersion() {
         return softwareLatestVersion;
     }
 
+    /** 设置SoftwareLatestVersion */
     public void setSoftwareLatestVersion(String softwareLatestVersion) {
         this.softwareLatestVersion = softwareLatestVersion;
     }
 
+    /** 获取SoftwareDescription */
     public String getSoftwareDescription() {
         return softwareDescription;
     }
 
+    /** 设置SoftwareDescription */
     public void setSoftwareDescription(String softwareDescription) {
         this.softwareDescription = softwareDescription;
     }
 
+    /** 获取SoftwareIcon */
     public String getSoftwareIcon() {
         return softwareIcon;
     }
 
+    /** 设置SoftwareIcon */
     public void setSoftwareIcon(String softwareIcon) {
         this.softwareIcon = softwareIcon;
     }
 
+    /** 获取SoftwareCategory */
     public String getSoftwareCategory() {
         return softwareCategory;
     }
 
+    /** 设置SoftwareCategory */
     public void setSoftwareCategory(String softwareCategory) {
         this.softwareCategory = softwareCategory;
     }
 
+    /** 获取SoftwareTags */
     public String getSoftwareTags() {
         return softwareTags;
     }
 
+    /** 设置SoftwareTags */
     public void setSoftwareTags(String softwareTags) {
         this.softwareTags = softwareTags;
     }
 
+    /** 获取SoftwareDownloadUrl */
     public String getSoftwareDownloadUrl() {
         return softwareDownloadUrl;
     }
 
+    /** 设置SoftwareDownloadUrl */
     public void setSoftwareDownloadUrl(String softwareDownloadUrl) {
         this.softwareDownloadUrl = softwareDownloadUrl;
     }
 
+    /** 获取SoftwareFile获取大小 */
     public Long getSoftwareFileSize() {
         return softwareFileSize;
     }
 
+    /** 设置SoftwareFile获取大小 */
     public void setSoftwareFileSize(Long softwareFileSize) {
         this.softwareFileSize = softwareFileSize;
     }
 
+    /** 获取SoftwareMd */
     public String getSoftwareMd5() {
         return softwareMd5;
     }
 
+    /** 设置SoftwareMd */
     public void setSoftwareMd5(String softwareMd5) {
         this.softwareMd5 = softwareMd5;
     }
 
+    /** 获取SoftwareSha */
     public String getSoftwareSha256() {
         return softwareSha256;
     }
 
+    /** 设置SoftwareSha */
     public void setSoftwareSha256(String softwareSha256) {
         this.softwareSha256 = softwareSha256;
     }
 
+    /** 获取Software最小值OsVersion */
     public String getSoftwareMinOsVersion() {
         return softwareMinOsVersion;
     }
 
+    /** 设置Software最小值OsVersion */
     public void setSoftwareMinOsVersion(String softwareMinOsVersion) {
         this.softwareMinOsVersion = softwareMinOsVersion;
     }
 
+    /** 获取SoftwareCpuArch */
     public String getSoftwareCpuArch() {
         return softwareCpuArch;
     }
 
+    /** 设置SoftwareCpuArch */
     public void setSoftwareCpuArch(String softwareCpuArch) {
         this.softwareCpuArch = softwareCpuArch;
     }
 
+    /** 获取SoftwareSourceId */
     public String getSoftwareSourceId() {
         return softwareSourceId;
     }
 
+    /** 设置SoftwareSourceId */
     public void setSoftwareSourceId(String softwareSourceId) {
         this.softwareSourceId = softwareSourceId;
     }
 
+    /** 获取SoftwareInstall计算数量 */
     public Integer getSoftwareInstallCount() {
         return softwareInstallCount;
     }
 
+    /** 设置SoftwareInstall计算数量 */
     public void setSoftwareInstallCount(Integer softwareInstallCount) {
         this.softwareInstallCount = softwareInstallCount;
     }
 
+    /** 获取SoftwareStatus */
     public Integer getSoftwareStatus() {
         return softwareStatus;
     }
 
+    /** 设置SoftwareStatus */
     public void setSoftwareStatus(Integer softwareStatus) {
         this.softwareStatus = softwareStatus;
     }
 
+    /** 获取Software创建Time */
     public LocalDateTime getSoftwareCreateTime() {
         return softwareCreateTime;
     }
 
+    /** 设置Software创建Time */
     public void setSoftwareCreateTime(LocalDateTime softwareCreateTime) {
         this.softwareCreateTime = softwareCreateTime;
     }
 
+    /** 获取Software更新Time */
     public LocalDateTime getSoftwareUpdateTime() {
         return softwareUpdateTime;
     }
 
+    /** 设置Software更新Time */
     public void setSoftwareUpdateTime(LocalDateTime softwareUpdateTime) {
         this.softwareUpdateTime = softwareUpdateTime;
     }
 
+    /** 获取Software创建By */
     public String getSoftwareCreateBy() {
         return softwareCreateBy;
     }
 
+    /** 设置Software创建By */
     public void setSoftwareCreateBy(String softwareCreateBy) {
         this.softwareCreateBy = softwareCreateBy;
     }
 
+    /** 获取Software更新By */
     public String getSoftwareUpdateBy() {
         return softwareUpdateBy;
     }
 
+    /** 设置Software更新By */
     public void setSoftwareUpdateBy(String softwareUpdateBy) {
         this.softwareUpdateBy = softwareUpdateBy;
     }

@@ -32,6 +32,13 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
     /** Payment通道注册表 */
     private final PaymentChannelRegistry paymentChannelRegistry;
 
+    /**
+     * 创建 CompositeAggregateRoutePaymentChannel 实例
+     * @param merchantChannelService merchantChannelService
+     * @param objectMapper objectMapper
+     * @param merchantChannelMapper merchantChannelMapper
+     * @param paymentChannelRegistry paymentChannelRegistry
+     */
     public CompositeAggregateRoutePaymentChannel(MerchantChannelService merchantChannelService,
                                                  ObjectMapper objectMapper,
                                                  MerchantChannelMapper merchantChannelMapper,
@@ -42,50 +49,59 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
     }
 
     @Override
+    /** Supports */
     public boolean supports(String channelType, String channelSubType) {
         return "COMPOSITE".equalsIgnoreCase(channelType) && "AGGREGATE_ROUTE".equalsIgnoreCase(channelSubType);
     }
 
     @Override
+    /** 创建Order */
     public OrderCreateResult createOrder(MerchantChannel channel, OrderCreateRequest request) {
         MerchantChannel targetChannel = resolveTargetChannel(channel);
         return delegate(targetChannel).createOrder(targetChannel, request);
     }
 
     @Override
+    /** Pay */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         MerchantChannel targetChannel = resolveTargetChannel(channel);
         return delegate(targetChannel).pay(targetChannel, request);
     }
 
     @Override
+    /** 查询 */
     public PaymentResult query(MerchantChannel channel, String orderNo) {
         MerchantChannel targetChannel = resolveTargetChannel(channel);
         return delegate(targetChannel).query(targetChannel, orderNo);
     }
 
     @Override
+    /** 关闭 */
     public boolean close(MerchantChannel channel, String orderNo) {
         MerchantChannel targetChannel = resolveTargetChannel(channel);
         return delegate(targetChannel).close(targetChannel, orderNo);
     }
 
     @Override
+    /** Refund */
     public RefundResult refund(MerchantChannel channel, RefundRequest request) {
         MerchantChannel targetChannel = resolveTargetChannel(channel);
         return delegate(targetChannel).refund(targetChannel, request);
     }
 
     @Override
+    /** 查询Refund */
     public RefundResult queryRefund(MerchantChannel channel, RefundRequest request) {
         MerchantChannel targetChannel = resolveTargetChannel(channel);
         return delegate(targetChannel).queryRefund(targetChannel, request);
     }
 
+    /** Delegate */
     private PaymentChannel delegate(MerchantChannel targetChannel) {
         return paymentChannelRegistry.getChannel(targetChannel.getChannelType(), targetChannel.getChannelSubType());
     }
 
+    /** 解析TargetChannel */
     private MerchantChannel resolveTargetChannel(MerchantChannel compositeChannel) {
         if (compositeChannel == null) {
             throw new PaymentException("直营网关渠道不存在");
@@ -119,10 +135,12 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
         return targetChannel;
     }
 
+    /** 解析RouteChannelId */
     private Long parseRouteChannelId(Map<String, Object> extConfig) {
         return parseLong(extConfig.get("targetChannelId"), extConfig.get("defaultChannelId"));
     }
 
+    /** 解析Long */
     private Long parseLong(Object... values) {
         if (values == null) {
             return null;

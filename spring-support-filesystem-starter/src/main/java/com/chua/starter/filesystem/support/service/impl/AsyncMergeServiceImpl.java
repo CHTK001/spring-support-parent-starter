@@ -92,6 +92,7 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
 
     @Override
     @Scheduled(fixedDelayString = "${plugin.filesystem.upload.merge-interval-ms:10000}")
+    /** 合并PendingTasks */
     public void mergePendingTasks() {
         List<SysFileSystemUpload> tasks = uploadService.listPendingMerge();
         for (SysFileSystemUpload task : tasks) {
@@ -106,6 +107,7 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
 
     @Override
     @Scheduled(fixedDelayString = "${plugin.filesystem.upload.upload-interval-ms:10000}")
+    /** UploadPendingTasks */
     public void uploadPendingTasks() {
         List<SysFileSystemUpload> tasks = uploadService.listPendingUpload();
         for (SysFileSystemUpload task : tasks) {
@@ -120,6 +122,7 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
 
     @Override
     @Scheduled(fixedDelayString = "${plugin.filesystem.upload.retry-interval-ms:60000}")
+    /** RetryFailedTasks */
     public void retryFailedTasks() {
         List<SysFileSystemUpload> tasks = uploadService.listFailedRetryable();
         for (SysFileSystemUpload task : tasks) {

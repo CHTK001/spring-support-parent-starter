@@ -12,6 +12,7 @@ import com.chua.common.support.utils.StringUtils;
  */
 final class CommonChatClientFactoryResolver {
 
+    /** 创建 CommonChatClientFactoryResolver 实例 */
     private CommonChatClientFactoryResolver() {
     }
 
@@ -31,6 +32,7 @@ final class CommonChatClientFactoryResolver {
         return (ChatClient) raw;
     }
 
+    /** 创建Raw */
     private static com.chua.common.support.ai.chat.ChatClient createRaw(String factoryName, ChatClientSetting setting) {
         String provider = setting != null && StringUtils.isNotBlank(setting.getProvider())
                 ? setting.getProvider()

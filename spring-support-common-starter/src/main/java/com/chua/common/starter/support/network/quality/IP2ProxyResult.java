@@ -21,11 +21,17 @@ public class IP2ProxyResult implements Serializable {
     /** IP */
     private final String ip;
 
+    /**
+     * 创建 IP2ProxyResult 实例
+     * @param proxy proxy
+     * @param String String
+     */
     public IP2ProxyResult(IP2Proxy proxy, String ip) {
         this.proxy = proxy;
         this.ip = ip;
     }
 
+    /** 是否Valid */
     public boolean isValid() {
         try {
             return proxy != null && "".equals(getProxyType()) == false && NOT_SUPPORTED.equals(getProxyType()) == false;
@@ -34,6 +40,7 @@ public class IP2ProxyResult implements Serializable {
         }
     }
 
+    /** 是否Proxy */
     public boolean isProxy() {
         try {
             return proxy != null && proxy.IsProxy(ip) == 1;
@@ -42,6 +49,7 @@ public class IP2ProxyResult implements Serializable {
         }
     }
 
+    /** 获取ProxyType */
     public String getProxyType() {
         try {
             return proxy != null ? coalesce(proxy.GetProxyType(ip)) : "";
@@ -50,6 +58,7 @@ public class IP2ProxyResult implements Serializable {
         }
     }
 
+    /** 获取CountryCode */
     public String getCountryCode() {
         try {
             return proxy != null ? coalesce(proxy.GetCountryShort(ip)) : "";
@@ -58,6 +67,7 @@ public class IP2ProxyResult implements Serializable {
         }
     }
 
+    /** 获取CountryName */
     public String getCountryName() {
         try {
             return proxy != null ? coalesce(proxy.GetCountryLong(ip)) : "";
@@ -66,6 +76,7 @@ public class IP2ProxyResult implements Serializable {
         }
     }
 
+    /** 获取RegionName */
     public String getRegionName() {
         try {
             return proxy != null ? coalesce(proxy.GetRegion(ip)) : "";
@@ -74,6 +85,7 @@ public class IP2ProxyResult implements Serializable {
         }
     }
 
+    /** 获取CityName */
     public String getCityName() {
         try {
             return proxy != null ? coalesce(proxy.GetCity(ip)) : "";
@@ -82,6 +94,7 @@ public class IP2ProxyResult implements Serializable {
         }
     }
 
+    /** 获取Isp */
     public String getIsp() {
         try {
             return proxy != null ? coalesce(proxy.GetISP(ip)) : "";
@@ -90,6 +103,7 @@ public class IP2ProxyResult implements Serializable {
         }
     }
 
+    /** 获取UsageType */
     public String getUsageType() {
         try {
             return proxy != null ? coalesce(proxy.GetUsageType(ip)) : "";
@@ -98,22 +112,27 @@ public class IP2ProxyResult implements Serializable {
         }
     }
 
+    /** 是否Vpn */
     public boolean isVpn() {
         return "VPN".equalsIgnoreCase(getProxyType());
     }
 
+    /** 是否Tor */
     public boolean isTor() {
         return "TOR".equalsIgnoreCase(getProxyType());
     }
 
+    /** 是否DataCenter */
     public boolean isDataCenter() {
         return "DCH".equalsIgnoreCase(getProxyType());
     }
 
+    /** 是否WebProxy */
     public boolean isWebProxy() {
         return "WEB".equalsIgnoreCase(getProxyType());
     }
 
+    /** Coalesce */
     private static String coalesce(String s) {
         if (s == null || NOT_SUPPORTED.equals(s) || "".equals(s) || "-".equals(s)) {
             return "";

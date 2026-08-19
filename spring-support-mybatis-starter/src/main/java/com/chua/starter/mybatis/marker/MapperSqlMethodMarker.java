@@ -15,11 +15,17 @@ public class MapperSqlMethodMarker implements SqlMethodMarker {
     /** 超时 */
     private int timeout;
 
+    /**
+     * 创建 MapperSqlMethodMarker 实例
+     * @param timeout timeout
+     * @param boolean boolean
+     */
     public MapperSqlMethodMarker(int timeout, boolean watchdog) {
         this.timeout = timeout;
     }
 
     @Override
+    /** Analysis */
     public List<AbstractMethod> analysis(String source) {
 //        File file = new File(source);
 //        if(!file.exists())  {
@@ -37,16 +43,19 @@ public class MapperSqlMethodMarker implements SqlMethodMarker {
     }
 
     @Override
+    /** Refresh */
     public void refresh(String name) {
 
     }
 
     @Override
+    /** 销毁 */
     public void destroy() throws Exception {
 
     }
 
     @Override
+    /** RefreshAll */
     public void refreshAll() {
 
     }

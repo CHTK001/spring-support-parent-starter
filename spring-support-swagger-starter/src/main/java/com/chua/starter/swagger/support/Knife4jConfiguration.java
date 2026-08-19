@@ -138,6 +138,7 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
     }
 
     @Bean
+    /** KnifejServiceInfoContributor */
     public ServiceInfoContributor knife4jServiceInfoContributor() {
         return registry -> {
             registry.registerEndpoint("文档", "接口文档", "/doc.html", "接口文档");

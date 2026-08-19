@@ -19,17 +19,23 @@ public class DelegateSocketIOServer extends SocketIOServer implements Initializi
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(DelegateSocketIOServer.class);
 
+    /**
+     * 创建 DelegateSocketIOServer 实例
+     * @param configuration configuration
+     */
     public DelegateSocketIOServer(Configuration configuration) {
         super(configuration);
     }
 
 
     @Override
+    /** 销毁 */
     public void destroy() throws Exception {
         this.stop();
     }
 
     @Override
+    /** AfterProperties设置 */
     public void afterPropertiesSet() throws Exception {
         Configuration configuration = getConfiguration();
         log.info(">>>> 正在启动 Socket.io服务器; {}:{}", configuration.getHostname(), configuration.getPort());

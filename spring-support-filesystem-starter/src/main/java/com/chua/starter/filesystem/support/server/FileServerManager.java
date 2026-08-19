@@ -63,6 +63,12 @@ public class FileServerManager implements AutoCloseable {
      */
     private final ApplicationContext applicationContext;
 
+    /**
+     * 创建 FileServerManager 实例
+     * @param properties properties
+     * @param storageTemplate storageTemplate
+     * @param applicationContext applicationContext
+     */
     public FileServerManager(FileStorageProperties properties,
                              FileStorageTemplate storageTemplate,
                              ApplicationContext applicationContext) {
@@ -394,6 +400,7 @@ public class FileServerManager implements AutoCloseable {
     }
 
     @Override
+    /** 关闭 */
     public void close() {
         stopAll();
     }

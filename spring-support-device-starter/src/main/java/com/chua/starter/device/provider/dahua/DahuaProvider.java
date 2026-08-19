@@ -63,6 +63,10 @@ public class DahuaProvider implements DeviceProvider {
      */
     private final boolean fallbackMock;
 
+    /**
+     * 创建 DahuaProvider 实例
+     * @param environment environment
+     */
     public DahuaProvider(Environment environment) {
         this.fallbackMock = environment.getProperty("plugin.device.provider.fallback-mock", boolean.class, false);
         if (fallbackMock) {
@@ -71,16 +75,19 @@ public class DahuaProvider implements DeviceProvider {
     }
 
     @Override
+    /** 获取Vendor */
     public String getVendor() {
         return VENDOR;
     }
 
     @Override
+    /** Support */
     public boolean support(DeviceConnectInfo info) {
         return VENDOR.equalsIgnoreCase(info.getVendor());
     }
 
     @Override
+    /** 连接 */
     public DeviceSession connect(DeviceConnectInfo info) {
         log.info("大华设备连接: authType={}, platformType={}, deviceSerial={}",
                 info.getAuthType(), info.getPlatformType(), info.getDeviceSerial());
@@ -121,6 +128,7 @@ public class DahuaProvider implements DeviceProvider {
     }
 
     @Override
+    /** FetchOrganizations */
     public List<OrganizationNode> fetchOrganizations() {
         // 组织同步需在已连接的 OpenAPI 会话上下文中执行，由业务层处理。
         return List.of();

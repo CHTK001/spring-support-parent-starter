@@ -36,6 +36,12 @@ public class SpringRpcServer implements RpcServer, ApplicationContextAware {
     private final Map<String, Object> serviceRegistry = new ConcurrentHashMap<>();
     private volatile boolean initialized = false;
 
+    /**
+     * 创建 SpringRpcServer 实例
+     * @param registryConfigs registryConfigs
+     * @param protocolConfig protocolConfig
+     * @param appName appName
+     */
     public SpringRpcServer(List<RpcRegistryConfig> registryConfigs,
                           RpcProtocolConfig protocolConfig,
                           String appName) {
@@ -45,11 +51,13 @@ public class SpringRpcServer implements RpcServer, ApplicationContextAware {
     }
 
     @Override
+    /** 设置ApplicationContext */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
 
     @Override
+    /** 注册 */
     public RpcServer register(String name, Object bean) {
         if (bean == null) {
             log.warn("[Spring RPC] 注册服务失败，bean为空: {}", name);
@@ -63,6 +71,7 @@ public class SpringRpcServer implements RpcServer, ApplicationContextAware {
     }
 
     @Override
+    /** AfterProperties设置 */
     public void afterPropertiesSet() {
         if (initialized) {
             return;
@@ -109,6 +118,7 @@ public class SpringRpcServer implements RpcServer, ApplicationContextAware {
     }
 
     @Override
+    /** 关闭 */
     public void close() throws Exception {
         serviceRegistry.clear();
         initialized = false;

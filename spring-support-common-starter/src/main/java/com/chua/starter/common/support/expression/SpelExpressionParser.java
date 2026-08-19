@@ -16,11 +16,13 @@ public class SpelExpressionParser implements ExpressionParser {
     private final org.springframework.expression.ExpressionParser expressionParser = new org.springframework.expression.spel.standard.SpelExpressionParser();
 
     @Override
+    /** Type */
     public String type() {
         return "spring";
     }
 
     @Override
+    /** 解析 */
     public BTreeNode parse(String expression) {
         try {
             Expression expr = expressionParser.parseExpression(expression);
@@ -31,6 +33,7 @@ public class SpelExpressionParser implements ExpressionParser {
     }
 
     @Override
+    /** Generate */
     public String generate(BTreeNode tree) {
         if (tree == null) {
             return "";

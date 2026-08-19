@@ -9,9 +9,11 @@ import java.util.Map;
  */
 public final class ImmutableBuilder {
 
+    /** 创建 ImmutableBuilder 实例 */
     private ImmutableBuilder() {
     }
 
+    /** BuilderOfStringStringMap */
     public static ImmutableStringStringMapBuilder builderOfStringStringMap() {
         return new ImmutableStringStringMapBuilder();
     }
@@ -20,11 +22,13 @@ public final class ImmutableBuilder {
 
         private final Map<String, String> map = new LinkedHashMap<>();
 
+        /** Put */
         public ImmutableStringStringMapBuilder put(String key, String value) {
             map.put(key, value);
             return this;
         }
 
+        /** AsSynchronizedMap */
         public Map<String, String> asSynchronizedMap() {
             return Collections.synchronizedMap(Collections.unmodifiableMap(new LinkedHashMap<>(map)));
         }

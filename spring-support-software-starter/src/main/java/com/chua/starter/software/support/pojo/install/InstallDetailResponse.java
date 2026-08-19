@@ -61,50 +61,62 @@ public class InstallDetailResponse extends SoftInstallRecord {
     /** 结束时间 */
     private LocalDateTime endTime;
 
+    /** 获取SoftwareName */
     public String getSoftwareName() {
         return softwareName;
     }
 
+    /** 设置SoftwareName */
     public void setSoftwareName(String softwareName) {
         this.softwareName = softwareName;
     }
 
+    /** 获取SoftwareVersion */
     public String getSoftwareVersion() {
         return softwareVersion;
     }
 
+    /** 设置SoftwareVersion */
     public void setSoftwareVersion(String softwareVersion) {
         this.softwareVersion = softwareVersion;
     }
 
+    /** 获取SoftwareIcon */
     public String getSoftwareIcon() {
         return softwareIcon;
     }
 
+    /** 设置SoftwareIcon */
     public void setSoftwareIcon(String softwareIcon) {
         this.softwareIcon = softwareIcon;
     }
 
+    /** 获取StatusText */
     public String getStatusText() {
         return statusText;
     }
 
+    /** 设置StatusText */
     public void setStatusText(String statusText) {
         this.statusText = statusText;
     }
 
+    /** 获取开始Time */
     public LocalDateTime getStartTime() {
         return startTime;
     }
 
+    /** 设置开始Time */
     public void setStartTime(LocalDateTime startTime) {
         this.startTime = startTime;
     }
 
+    /** 获取EndTime */
     public LocalDateTime getEndTime() {
         return endTime;
     }
 
+    /** 设置EndTime */
     public void setEndTime(LocalDateTime endTime) {
         this.endTime = endTime;
     }

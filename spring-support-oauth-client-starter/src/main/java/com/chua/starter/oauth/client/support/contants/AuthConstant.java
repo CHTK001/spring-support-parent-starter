@@ -28,10 +28,12 @@ public class AuthConstant {
      */
     public static final String TOKEN_REFRESH_PRE = "oauth:refresh:";
 
+    /** 是否SuperAdmin */
     public static boolean isSuperAdmin(Set<String> roles) {
         return roles != null && roles.contains(SUPER_ADMIN);
     }
 
+    /** 是否Admin */
     public static boolean isAdmin(Set<String> roles) {
         return roles != null && (roles.contains(SUPER_ADMIN) || roles.contains("ADMIN"));
     }

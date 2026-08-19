@@ -79,6 +79,12 @@ public class PrivacySerializer extends JsonSerializer<String> implements Context
     }
 
     @Override
+    /**
+     * 序列化
+     * @param origin origin
+     * @param jsonGenerator jsonGenerator
+     * @param serializerProvider serializerProvider
+     */
     public void serialize(final String origin, final JsonGenerator jsonGenerator,
                           final SerializerProvider serializerProvider) throws IOException {
         if (!Strings.isNullOrEmpty(origin) && null != privacyTypeEnum) {

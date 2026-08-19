@@ -49,6 +49,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
             keyGenerator = "customTenantedKeyGenerator",
             unless = "#result == null"
     )
+    /** 获取ByAppKey */
     public SysAiAppKey getByAppKey(String appKey) {
         if (StringUtils.isBlank(appKey)) {
             return null;
@@ -57,6 +58,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     }
 
     @Override
+    /** List */
     public List<SysAiAppKey> list() {
         return sysAiAppKeyMapper.selectList(
                 Wrappers.lambdaQuery(SysAiAppKey.class)
@@ -67,6 +69,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
 
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
+    /** 保存 */
     public SysAiAppKey save(SysAiAppKey entity) {
         // 自动生成 sk- 格式密钥
         if (StringUtils.isBlank(entity.getSysAiAppKeyAppKey())) {
@@ -84,12 +87,14 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
 
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
+    /** 更新 */
     public boolean update(SysAiAppKey entity) {
         return sysAiAppKeyMapper.updateById(entity) > 0;
     }
 
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
+    /** 删除ById */
     public boolean deleteById(Integer id) {
         if (id == null) {
             return false;
@@ -99,6 +104,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     }
 
     @Override
+    /** 验证 */
     public boolean verify(String appKey, String secret, String ip) {
         SysAiAppKey dbAppKey = queryAppKeyUncached(appKey);
         if (!isValidAppKey(dbAppKey, ip)) {
@@ -108,6 +114,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     }
 
     @Override
+    /** 验证AppKeyOnly */
     public boolean verifyAppKeyOnly(String appKey, String ip) {
         return isValidAppKey(queryAppKeyUncached(appKey), ip);
     }
@@ -176,6 +183,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
 
     @Override
     @Async("taskExecutor")
+    /** 更新UseInfoByAppKey */
     public void updateUseInfoByAppKey(String appKey) {
         if (StringUtils.isBlank(appKey)) {
             return;
@@ -199,6 +207,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
 
     @Override
     @Async("taskExecutor")
+    /** 更新TokenQuotaByAppKey */
     public void updateTokenQuotaByAppKey(String appKey, long tokens) {
         if (StringUtils.isBlank(appKey) || tokens <= 0) {
             return;
@@ -219,6 +228,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
             key = "'sys:ai:app-key-group:' + #appKey",
             unless = "#result == null"
     )
+    /** 获取分组IdByAppKey */
     public Integer getGroupIdByAppKey(String appKey) {
         if (StringUtils.isBlank(appKey)) {
             return null;
@@ -234,6 +244,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
 
     
 
+    /** 是否Expired */
     private boolean isExpired(SysAiAppKey appKey) {
         Long expireTime = resolveExpireTime(appKey);
         if (expireTime == null) {
@@ -242,6 +253,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
         return System.currentTimeMillis() / MILLIS_PER_SECOND > expireTime;
     }
 
+    /** 解析ExpireTime */
     private Long resolveExpireTime(SysAiAppKey appKey) {
         if (appKey == null) {
             return null;

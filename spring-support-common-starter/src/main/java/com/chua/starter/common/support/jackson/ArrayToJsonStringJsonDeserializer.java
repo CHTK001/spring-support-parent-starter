@@ -22,6 +22,7 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
 
 
     @Override
+    /** 反序列化 */
     public Object deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException, JacksonException {
         TreeNode treeNode = jsonParser.getCodec().readTree(jsonParser);
         Object o = treeNodeToValue(treeNode);
@@ -66,6 +67,7 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
         return null;
     }
 
+    /** TreeNodeToNewValue */
     private Object treeNodeToNewValue(TreeNode treeNode) {
         JsonToken token = treeNode.asToken();
         if(token.isBoolean()) {
@@ -104,6 +106,7 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
 
     }
 
+    /** TreeNodeToObjectValue */
     private Object treeNodeToObjectValue(TreeNode treeNode) {
         Iterator<String> stringIterator = treeNode.fieldNames();
         Map<String, Object> rs = new LinkedHashMap<>();
@@ -113,6 +116,7 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
         return rs;
     }
 
+    /** TreeNodeToArrayValue */
     private Object treeNodeToArrayValue(TreeNode treeNode) {
         int size = treeNode.size();
         List<Object> rs = new LinkedList<>();

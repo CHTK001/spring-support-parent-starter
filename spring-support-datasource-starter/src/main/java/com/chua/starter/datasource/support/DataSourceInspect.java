@@ -76,11 +76,13 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     private EnvironmentSupport environmentSupport;
 
     @Override
+    /** Post处理BeanDefinitionRegistry */
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry beanDefinitionRegistry) throws BeansException {
         registerMultiDataSourceProperties(beanDefinitionRegistry);
         registerEnvironment(beanDefinitionRegistry);
     }
 
+    /** 注册MultiDataSourceProperties */
     private void registerMultiDataSourceProperties(BeanDefinitionRegistry beanDefinitionRegistry) {
         MultiDataSourceProperties multiDataSourceProperties = bindMultiDataSourceProperties(environment);
         registerDataSource(multiDataSourceProperties.getDataSource(), beanDefinitionRegistry, null);
@@ -89,6 +91,7 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         registerDataSource(multiHikariDataSourceProperties.getDataSource(), beanDefinitionRegistry, HikariDataSource.class);
     }
 
+    /** 绑定MultiDataSourceProperties */
     static MultiDataSourceProperties bindMultiDataSourceProperties(Environment environment) {
         MultiDataSourceProperties current = Binder.get(environment)
                 .bindOrCreate(MultiDataSourceProperties.PRE, MultiDataSourceProperties.class);
@@ -101,6 +104,7 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         return result;
     }
 
+    /** 绑定MultiHikariDataSourceProperties */
     static MultiHikariDataSourceProperties bindMultiHikariDataSourceProperties(Environment environment) {
         MultiHikariDataSourceProperties current = Binder.get(environment)
                 .bindOrCreate(MultiHikariDataSourceProperties.PRE, MultiHikariDataSourceProperties.class);
@@ -113,6 +117,7 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         return result;
     }
 
+    /** 合并DataSourceProperties */
     private static <T extends DataSourceProperties> List<T> mergeDataSourceProperties(List<T> current, List<T> legacy) {
         Map<String, T> merged = new LinkedHashMap<>();
         putDataSourceProperties(merged, legacy);
@@ -120,6 +125,7 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         return merged.isEmpty() ? null : new ArrayList<>(merged.values());
     }
 
+    /** PutDataSourceProperties */
     private static <T extends DataSourceProperties> void putDataSourceProperties(Map<String, T> target, List<T> source) {
         if (source == null) {
             return;
@@ -133,6 +139,12 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         }
     }
 
+    /**
+     * 注册DataSource
+     * @param dataSource dataSource
+     * @param beanDefinitionRegistry beanDefinitionRegistry
+     * @param dataSourceType dataSourceType
+     */
     private void registerDataSource(List<? extends DataSourceProperties> dataSource,
                                     BeanDefinitionRegistry beanDefinitionRegistry,
                                     Class<? extends DataSource> dataSourceType) {
@@ -176,6 +188,7 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         }
     }
 
+    /** 注册Environment */
     private void registerEnvironment(BeanDefinitionRegistry beanDefinitionRegistry) {
         if (null == dataSourceClass) {
             return;
@@ -360,6 +373,7 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         }
     }
 
+    /** KebabToCamelCase */
     private static String kebabToCamelCase(String kebab) {
         StringBuilder sb = new StringBuilder(kebab.length());
         boolean nextUpper = false;
@@ -429,16 +443,19 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     }
 
     @Override
+    /** Post处理BeanFactory */
     public void postProcessBeanFactory(ConfigurableListableBeanFactory configurableListableBeanFactory) throws BeansException {
     }
 
     @Override
+    /** 设置ApplicationContext */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
         this.filter = applicationContext.getEnvironment().getProperty("spring.datasource.druid.filters");
     }
 
     @Override
+    /** 设置Environment */
     public void setEnvironment(Environment environment) {
         this.environment = environment;
         this.environmentSupport = new EnvironmentSupport(environment);

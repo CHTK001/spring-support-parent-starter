@@ -26,6 +26,13 @@ public class RpcServiceBean<T> extends AbstractRpcServiceSetting<T> implements I
     private final RpcProperties rpcProperties;
     /** RPC服务器 */
     private final RpcServer rpcServer;
+    /**
+     * 创建 RpcServiceBean 实例
+     * @param type type
+     * @param RpcType RpcType
+     * @param RpcProperties RpcProperties
+     * @param RpcServer RpcServer
+     */
     public RpcServiceBean(Class<T> type, RpcType rpcType, RpcProperties rpcProperties, RpcServer rpcServer) {
         this.type = type;
         this.rpcType = rpcType;
@@ -35,10 +42,12 @@ public class RpcServiceBean<T> extends AbstractRpcServiceSetting<T> implements I
 
 
     @Override
+    /** AfterProperties设置 */
     public void afterPropertiesSet() throws Exception {
         export();
     }
 
+    /** Export */
     private void export() {
         rpcServer.register(getInterfaceName(), getRef());
     }
@@ -63,10 +72,12 @@ public class RpcServiceBean<T> extends AbstractRpcServiceSetting<T> implements I
         return null;
     }
 
+    /** 获取Type */
     public RpcType getType() {
         return rpcType;
     }
 
+    /** 设置Type */
     public void setType(RpcType rpcType) {
         this.rpcType = rpcType;
     }

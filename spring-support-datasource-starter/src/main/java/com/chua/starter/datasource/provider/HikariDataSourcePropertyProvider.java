@@ -21,11 +21,13 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
     );
 
     @Override
+    /** 获取DataSourceType */
     public Class<HikariDataSource> getDataSourceType() {
         return HikariDataSource.class;
     }
 
     @Override
+    /** 获取Properties */
     public Map<String, Object> getProperties(HikariDataSource dataSource) {
         Map<String, Object> properties = new HashMap<>();
         
@@ -78,11 +80,13 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
     }
 
     @Override
+    /** 设置Properties */
     public void setProperties(HikariDataSource dataSource, Map<String, Object> properties) {
         properties.forEach((name, value) -> setProperty(dataSource, name, value));
     }
 
     @Override
+    /** 设置Property */
     public void setProperty(HikariDataSource dataSource, String name, Object value) {
         if (value == null) {
             return;
@@ -130,15 +134,18 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
     }
 
     @Override
+    /** 获取PropertyNameMapping */
     public Map<String, String> getPropertyNameMapping() {
         return PROPERTY_MAPPING;
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         return 10;
     }
 
+    /** ToInt */
     private int toInt(Object value) {
         if (value instanceof Number) {
             return ((Number) value).intValue();
@@ -146,6 +153,7 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
         return Integer.parseInt(String.valueOf(value));
     }
 
+    /** ToLong */
     private long toLong(Object value) {
         if (value instanceof Number) {
             return ((Number) value).longValue();
@@ -153,6 +161,7 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
         return Long.parseLong(String.valueOf(value));
     }
 
+    /** ToBoolean */
     private boolean toBoolean(Object value) {
         if (value instanceof Boolean) {
             return (Boolean) value;

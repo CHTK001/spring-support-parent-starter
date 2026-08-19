@@ -21,9 +21,11 @@ public class GlueFactory {
 
     /** Glue工厂 */
     private static GlueFactory glueFactory = new GlueFactory();
+    /** 获取Instance */
     public static GlueFactory getInstance(){
         return glueFactory;
     }
+    /** RefreshInstance */
     public static void refreshInstance(int type){
         if (type == 0) {
             glueFactory = new GlueFactory();

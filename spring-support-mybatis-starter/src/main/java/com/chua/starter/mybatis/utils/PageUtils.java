@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
  */
 public class PageUtils {
 
+    /** 创建 PageUtils 实例 */
     private PageUtils() {
     }
 

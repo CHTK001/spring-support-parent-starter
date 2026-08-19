@@ -21,12 +21,19 @@ public class TransactionController {
     private final TransactionRecordService transactionRecordService;
 
     @GetMapping("/{id}")
+    /** 获取ById */
     public Result<TransactionRecord> getById(@PathVariable Long id) {
         TransactionRecord record = transactionRecordService.getById(id);
         return record != null ? Result.success(record) : Result.error("流水记录不存在");
     }
 
     @GetMapping("/order/{orderNo}")
+    /**
+     * 列表ByOrderNo
+     * @param orderNo orderNo
+     * @param pageNum pageNum
+     * @param pageSize pageSize
+     */
     public Result<PageResult<TransactionRecord>> listByOrderNo(@PathVariable String orderNo,
                                                                @RequestParam(defaultValue = "1") int pageNum,
                                                                @RequestParam(defaultValue = "10") int pageSize) {
@@ -34,6 +41,12 @@ public class TransactionController {
     }
 
     @GetMapping("/merchant/{merchantId}")
+    /**
+     * 列表ByMerchantId
+     * @param merchantId merchantId
+     * @param pageNum pageNum
+     * @param pageSize pageSize
+     */
     public Result<PageResult<TransactionRecord>> listByMerchantId(@PathVariable Long merchantId,
                                                                   @RequestParam(defaultValue = "1") int pageNum,
                                                                   @RequestParam(defaultValue = "10") int pageSize) {
@@ -41,6 +54,7 @@ public class TransactionController {
     }
 
     @GetMapping("/page")
+    /** Page */
     public Result<PageResult<TransactionRecord>> page(@RequestParam(defaultValue = "1") int pageNum,
                                                       @RequestParam(defaultValue = "10") int pageSize,
                                                       @RequestParam(required = false) Long merchantId,

@@ -32,6 +32,7 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
     /** Payment排序服务 */
     private final PaymentOrderService paymentOrderService;
 
+    /** CancelTimeoutOrders */
     public void cancelTimeoutOrders() {
         log.info("开始执行订单超时处理任务");
 
@@ -59,6 +60,7 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
         }
     }
 
+    /** CancelMerchantTimeoutOrders */
     private int cancelMerchantTimeoutOrders(MerchantPaymentConfig config) {
         LocalDateTime expireTime = LocalDateTime.now().minusMinutes(config.getOrderTimeoutMinutes());
 
@@ -84,21 +86,25 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
     }
 
     @Override
+    /** TaskKey */
     public String taskKey() {
         return "payment-order-timeout-scan";
     }
 
     @Override
+    /** TaskName */
     public String taskName() {
         return "订单超时扫描";
     }
 
     @Override
+    /** DefaultCron */
     public String defaultCron() {
         return "0 */10 * * * ?";
     }
 
     @Override
+    /** Description */
     public String description() {
         return "按商户支付配置扫描超时订单并执行自动取消。";
     }
@@ -111,6 +117,7 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
             desc = "按商户支付配置扫描超时订单并执行自动取消。",
             autoStart = true
     )
+    /** 执行 */
     public void execute() {
         cancelTimeoutOrders();
     }

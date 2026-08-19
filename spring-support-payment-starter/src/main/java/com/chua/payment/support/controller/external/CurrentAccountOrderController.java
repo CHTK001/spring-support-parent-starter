@@ -29,6 +29,14 @@ public class CurrentAccountOrderController {
     private final PaymentOrderService paymentOrderService;
 
     @GetMapping("/orders")
+    /**
+     * 列表Orders
+     * @param request request
+     * @param page page
+     * @param size size
+     * @param orderNo orderNo
+     * @param status status
+     */
     public Result<PageResult<OrderVO>> listOrders(HttpServletRequest request,
                                                   @RequestParam(defaultValue = "1") int page,
                                                   @RequestParam(defaultValue = "10") int size,
@@ -42,6 +50,7 @@ public class CurrentAccountOrderController {
     }
 
     @GetMapping("/orders/{id}")
+    /** 获取Order */
     public Result<OrderVO> getOrder(HttpServletRequest request, @PathVariable Long id) {
         Long userId = principalResolver.resolveUserId(request);
         if (userId == null) {
@@ -51,6 +60,7 @@ public class CurrentAccountOrderController {
     }
 
     @GetMapping("/orders/{id}/logs")
+    /** ListOrderLogs */
     public Result<List<OrderStateLogVO>> listOrderLogs(HttpServletRequest request, @PathVariable Long id) {
         Long userId = principalResolver.resolveUserId(request);
         if (userId == null) {
@@ -60,6 +70,15 @@ public class CurrentAccountOrderController {
     }
 
     @GetMapping("/transactions")
+    /**
+     * 列表Transactions
+     * @param request request
+     * @param pageNum pageNum
+     * @param pageSize pageSize
+     * @param orderNo orderNo
+     * @param transactionType transactionType
+     * @param status status
+     */
     public Result<PageResult<TransactionRecord>> listTransactions(HttpServletRequest request,
                                                                   @RequestParam(defaultValue = "1") int pageNum,
                                                                   @RequestParam(defaultValue = "10") int pageSize,
@@ -75,6 +94,12 @@ public class CurrentAccountOrderController {
     }
 
     @PutMapping("/orders/{id}/cancel")
+    /**
+     * CancelOrder
+     * @param request request
+     * @param id id
+     * @param reason reason
+     */
     public Result<Boolean> cancelOrder(HttpServletRequest request,
                                        @PathVariable Long id,
                                        @RequestBody(required = false) String reason) {

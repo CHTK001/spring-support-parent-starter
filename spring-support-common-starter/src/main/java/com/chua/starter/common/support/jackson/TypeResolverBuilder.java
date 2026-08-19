@@ -13,15 +13,22 @@ import org.springframework.util.ClassUtils;
  */
 public class TypeResolverBuilder  extends ObjectMapper.DefaultTypeResolverBuilder {
 
+    /** ForEverything */
     public static TypeResolverBuilder forEverything(ObjectMapper mapper) {
         return new TypeResolverBuilder(ObjectMapper.DefaultTyping.EVERYTHING, mapper.getPolymorphicTypeValidator());
     }
 
+    /**
+     * 创建 TypeResolverBuilder 实例
+     * @param typing typing
+     * @param PolymorphicTypeValidator PolymorphicTypeValidator
+     */
     public TypeResolverBuilder(ObjectMapper.DefaultTyping typing, PolymorphicTypeValidator polymorphicTypeValidator) {
         super(typing, polymorphicTypeValidator);
     }
 
     @Override
+    /** WithDefaultImpl */
     public ObjectMapper.DefaultTypeResolverBuilder withDefaultImpl(Class<?> defaultImpl) {
         return this;
     }
@@ -52,6 +59,7 @@ public class TypeResolverBuilder  extends ObjectMapper.DefaultTypeResolverBuilde
         return !TreeNode.class.isAssignableFrom(javaType.getRawClass());
     }
 
+    /** 解析ArrayOrWrapper */
     private JavaType resolveArrayOrWrapper(JavaType type) {
 
         while (type.isArrayType()) {

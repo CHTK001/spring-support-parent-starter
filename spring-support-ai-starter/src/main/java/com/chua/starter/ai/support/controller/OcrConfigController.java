@@ -115,6 +115,7 @@ public class OcrConfigController {
         return ReturnResult.ok("OCR 配置已更新");
     }
 
+    /** ToInt */
     private static int toInt(Object obj) {
         if (obj instanceof Number n) {
             return n.intValue();

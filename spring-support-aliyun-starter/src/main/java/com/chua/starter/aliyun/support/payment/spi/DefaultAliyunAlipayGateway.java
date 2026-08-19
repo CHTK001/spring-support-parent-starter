@@ -51,6 +51,7 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
+    /** PagePay */
     public AliyunAlipayPayResponse pagePay(AliyunAlipayProperties properties, AliyunAlipayPayRequest request) {
         try {
             AlipayTradePagePayRequest payRequest = new AlipayTradePagePayRequest();
@@ -72,6 +73,7 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     }
 
     @Override
+    /** WapPay */
     public AliyunAlipayPayResponse wapPay(AliyunAlipayProperties properties, AliyunAlipayPayRequest request) {
         try {
             AlipayTradeWapPayRequest payRequest = new AlipayTradeWapPayRequest();
@@ -93,6 +95,7 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     }
 
     @Override
+    /** AppPay */
     public AliyunAlipayPayResponse appPay(AliyunAlipayProperties properties, AliyunAlipayPayRequest request) {
         try {
             AlipayTradeAppPayRequest payRequest = new AlipayTradeAppPayRequest();
@@ -113,6 +116,7 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     }
 
     @Override
+    /** 查询Order */
     public AliyunAlipayTradeQueryResponse queryOrder(AliyunAlipayProperties properties, String orderNo) {
         try {
             AlipayTradeQueryRequest queryRequest = new AlipayTradeQueryRequest();
@@ -133,6 +137,7 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     }
 
     @Override
+    /** 关闭Order */
     public boolean closeOrder(AliyunAlipayProperties properties, String orderNo) {
         try {
             AlipayTradeCloseRequest closeRequest = new AlipayTradeCloseRequest();
@@ -144,6 +149,7 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     }
 
     @Override
+    /** Refund */
     public AliyunAlipayRefundResponse refund(AliyunAlipayProperties properties, AliyunAlipayRefundRequest request) {
         try {
             AlipayTradeRefundRequest refundRequest = new AlipayTradeRefundRequest();
@@ -170,6 +176,7 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     }
 
     @Override
+    /** 查询Refund */
     public AliyunAlipayRefundResponse queryRefund(AliyunAlipayProperties properties, AliyunAlipayRefundRequest request) {
         try {
             AlipayTradeFastpayRefundQueryRequest queryRequest = new AlipayTradeFastpayRefundQueryRequest();
@@ -194,6 +201,11 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     }
 
     @Override
+    /**
+     * VerifyAnd解析Pay通知
+     * @param properties properties
+     * @param request request
+     */
     public AliyunAlipayPayNotifyPayload verifyAndParsePayNotify(AliyunAlipayProperties properties,
                                                                 AliyunAlipayNotifyRequest request) {
         Map<String, String> params = request.getParams();
@@ -225,6 +237,7 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
     }
 
     @Override
+    /** Transfer */
     public AliyunAlipayTransferResponse transfer(AliyunAlipayProperties properties, AliyunAlipayTransferRequest request) {
         try {
             AlipayFundTransUniTransferRequest transferRequest = new AlipayFundTransUniTransferRequest();
@@ -259,10 +272,12 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
         }
     }
 
+    /** Client */
     private AlipayClient client(AliyunAlipayProperties properties) {
         return clientFactory.createClient(properties);
     }
 
+    /** 构建PayBizContent */
     private Map<String, Object> buildPayBizContent(AliyunAlipayPayRequest request) {
         Map<String, Object> bizContent = new LinkedHashMap<>();
         bizContent.put("out_trade_no", request.getOrderNo());
@@ -276,6 +291,7 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
         return bizContent;
     }
 
+    /** FirstNonBlank */
     private String firstNonBlank(String... values) {
         for (String value : values) {
             if (StringUtils.hasText(value)) {
@@ -285,6 +301,7 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
         return null;
     }
 
+    /** ToJson */
     private String toJson(Object value) {
         try {
             return objectMapper.writeValueAsString(value);

@@ -148,16 +148,19 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
+    /** 获取DeviceId */
     public String getDeviceId() {
         return info.getIp();
     }
 
     @Override
+    /** 是否Online */
     public boolean isOnline() {
         return online && loginHandle > 0;
     }
 
     @Override
+    /** 关闭 */
     public void close() {
         if (loginHandle > 0) {
             sdk.CLIENT_Logout(loginHandle);
@@ -169,6 +172,7 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
+    /** Preview */
     public InputStream preview(int channel) {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         DahuaNetSDK.RealDataCallback callback = (playHandle, dataType, pBuffer, bufSize, user) -> {
@@ -191,34 +195,40 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
+    /** 查询Records */
     public List<RecordFile> queryRecords(int channel, TimeRange range) {
         return Collections.emptyList();
     }
 
     @Override
+    /** 获取PlaybackUrl */
     public String getPlaybackUrl(int channel, TimeRange range) {
         // JNA 直连模式不返回 URL
         return null;
     }
 
     @Override
+    /** 获取LiveUrl */
     public String getLiveUrl(int channel, String protocol) {
         // JNA 直连模式不返回 URL
         return null;
     }
 
     @Override
+    /** TestConnection */
     public boolean testConnection() {
         return isOnline();
     }
 
     @Override
+    /** Playback */
     public InputStream playback(int channel, TimeRange range) {
         // 大华回放需配合 CLIENT_FindRecord / CLIENT_PlayBackByRecord API，此处简化
         return new ByteArrayInputStream(new byte[0]);
     }
 
     @Override
+    /** PtzControl */
     public void ptzControl(PtzCommand cmd, double speed) {
         Integer command = PTZ_COMMANDS.get(cmd);
         if (command == null) {
@@ -234,6 +244,7 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
+    /** 设置Preset */
     public void setPreset(int presetId, String name) {
         boolean ok = sdk.CLIENT_SetPreset(loginHandle, 0, presetId);
         if (!ok) {
@@ -244,6 +255,7 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
+    /** 调用Preset */
     public void callPreset(int presetId) {
         boolean ok = sdk.CLIENT_GotoPreset(loginHandle, 0, presetId);
         if (!ok) {
@@ -254,6 +266,7 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
+    /** 删除Preset */
     public void deletePreset(int presetId) {
         boolean ok = sdk.CLIENT_DelPreset(loginHandle, 0, presetId);
         if (!ok) {
@@ -264,11 +277,13 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
+    /** ListPresets */
     public List<PresetInfo> listPresets() {
         return Collections.emptyList();
     }
 
     @Override
+    /** Remote解锁 */
     public void remoteUnlock(int doorId) {
         boolean ok = sdk.CLIENT_RemoteDoorOpen(loginHandle, doorId, 1);
         if (!ok) {
@@ -279,21 +294,25 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
+    /** 查询AccessRecords */
     public List<AccessRecord> queryAccessRecords(TimeRange range) {
         return Collections.emptyList();
     }
 
     @Override
+    /** 订阅Event */
     public void subscribeEvent(EventType type, EventListener listener) {
         listeners.computeIfAbsent(type, k -> new CopyOnWriteArrayList<>()).add(listener);
     }
 
     @Override
+    /** 取消订阅Event */
     public void unsubscribeEvent(EventType type) {
         listeners.remove(type);
     }
 
     @Override
+    /** 取出Events */
     public List<DeviceEvent> pollEvents(TimeRange range) {
         if (eventQueue.isEmpty()) {
             return Collections.emptyList();

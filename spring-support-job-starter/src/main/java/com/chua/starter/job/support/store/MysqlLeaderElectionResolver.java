@@ -35,6 +35,7 @@ public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
     private final ClusterMapper clusterMapper;
 
     @Override
+    /** Try获取 */
     public boolean tryAcquire(String group, String nodeId, int leaseSeconds) {
         long now = System.currentTimeMillis();
         long leaseUntil = now + leaseSeconds * 1000L;
@@ -107,6 +108,7 @@ public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
     }
 
     @Override
+    /** 释放 */
     public void release(String group, String nodeId) {
         try {
             int rows = clusterMapper.update(

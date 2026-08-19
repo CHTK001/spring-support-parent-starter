@@ -335,6 +335,7 @@ public class EduAiService {
                 || t.equals("BLANK");
     }
 
+    /** Safe */
     private String safe(String s) {
         return s == null ? "" : s;
     }

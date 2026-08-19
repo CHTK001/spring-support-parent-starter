@@ -25,6 +25,7 @@ public class PaymentAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(MybatisPlusInterceptor.class)
+    /** PaymentMybatisPlusInterceptor */
     public MybatisPlusInterceptor paymentMybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
         interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
@@ -33,6 +34,7 @@ public class PaymentAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(UserOpenIdResolver.class)
+    /** DefaultUser打开IdResolver */
     public UserOpenIdResolver defaultUserOpenIdResolver() {
         return (merchantId, userId, channelType) -> null;
     }
@@ -41,6 +43,7 @@ public class PaymentAutoConfiguration {
     @ConditionalOnMissingBean(name = "paymentThreadPoolTaskScheduler")
     @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "enabled", havingValue = "true", matchIfMissing = true)
     @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "engine", havingValue = "internal", matchIfMissing = true)
+    /** PaymentThreadPoolTaskScheduler */
     public ThreadPoolTaskScheduler paymentThreadPoolTaskScheduler() {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
         scheduler.setPoolSize(4);
@@ -51,6 +54,7 @@ public class PaymentAutoConfiguration {
     }
 
     @Bean
+    /** PaymentServiceInfoContributor */
     public ServiceInfoContributor paymentServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("payment", "支付", true, "支付模块");

@@ -22,6 +22,10 @@ public class PartitionAwareTableFactory {
     private final JdbcTemplate jdbcTemplate;
     private final ConcurrentHashMap<String, PartitionRoutingTable> cache = new ConcurrentHashMap<>();
 
+    /**
+     * 创建 PartitionAwareTableFactory 实例
+     * @param dataSource dataSource
+     */
     public PartitionAwareTableFactory(DataSource dataSource) {
         this.dataSource = dataSource;
         this.jdbcTemplate = new JdbcTemplate(dataSource);
@@ -79,6 +83,7 @@ public class PartitionAwareTableFactory {
         routingTable.refreshTableNames(discovered);
     }
 
+    /** 查询PartitionConfigs */
     private List<Map<String, Object>> queryPartitionConfigs() {
         try {
             // 优先使用 pay_partition_config 表
@@ -90,6 +95,7 @@ public class PartitionAwareTableFactory {
         }
     }
 
+    /** 查询FromSystemTables */
     private List<Map<String, Object>> queryFromSystemTables() {
         try {
             // 扫描 information_schema 中匹配分区模式的所有表
@@ -104,6 +110,7 @@ public class PartitionAwareTableFactory {
         }
     }
 
+    /** Str */
     private static String str(Object value) {
         return value instanceof String s ? s : null;
     }

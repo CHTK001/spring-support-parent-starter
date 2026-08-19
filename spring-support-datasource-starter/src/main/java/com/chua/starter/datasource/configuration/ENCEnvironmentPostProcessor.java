@@ -66,6 +66,7 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
     private PasswordDecryptor decryptor;
 
     @Override
+    /** Post处理Environment */
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         // 检查 ENC 功能是否启用（默认关闭，需显式配置 plugin.datasource.enc.enabled=true）
         if (!Boolean.parseBoolean(environment.getProperty(ENC_ENABLED_PROP, "false"))) {
@@ -221,6 +222,7 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         // 在所有 ConfigData 处理完成后执行（高优先级确保在绑定前解密）
         return ConfigDataEnvironmentPostProcessor.ORDER + 50;

@@ -41,6 +41,11 @@ public class DataSyncAgentLifecycleConfiguration {
     /** 数据同步agent服务器提供者 */
     private final ObjectProvider<DataSyncAgentServer> dataSyncAgentServerProvider;
 
+    /**
+     * 创建 DataSyncAgentLifecycleConfiguration 实例
+     * @param syncServerProvider syncServerProvider
+     * @param dataSyncAgentServerProvider dataSyncAgentServerProvider
+     */
     public DataSyncAgentLifecycleConfiguration(ObjectProvider<SyncServer> syncServerProvider,
                                                ObjectProvider<DataSyncAgentServer> dataSyncAgentServerProvider) {
         this.syncServerProvider = syncServerProvider;
@@ -67,6 +72,7 @@ public class DataSyncAgentLifecycleConfiguration {
     }
 
     @PostConstruct
+    /** 初始化 */
     public void init() {
         SyncServer syncServer = syncServerProvider.getIfAvailable();
         DataSyncAgentServer agentServer = dataSyncAgentServerProvider.getIfAvailable();
@@ -82,6 +88,7 @@ public class DataSyncAgentLifecycleConfiguration {
         // 客户端断开时，注销对应 Agent
         syncServer.addDisconnectListener(new BiConsumer<String, ClientInfo>() {
             @Override
+            /** Accept */
             public void accept(String sessionId, ClientInfo clientInfo) {
                 String clientId = clientInfo != null ? clientInfo.getClientId() : null;
                 if (clientId != null && hasDatasyncCapability(clientInfo)) {

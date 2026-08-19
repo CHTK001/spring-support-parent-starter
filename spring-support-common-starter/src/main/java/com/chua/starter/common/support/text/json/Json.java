@@ -11,6 +11,7 @@ public class Json {
     /** Mapper */
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
+    /** ToJson */
     public static String toJson(Object value) {
         try {
             return MAPPER.writeValueAsString(value);
@@ -19,6 +20,7 @@ public class Json {
         }
     }
 
+    /** 获取JsonObject */
     public static Map<String, Object> getJsonObject(String content) {
         try {
             return MAPPER.readValue(content, new TypeReference<Map<String, Object>>() {});

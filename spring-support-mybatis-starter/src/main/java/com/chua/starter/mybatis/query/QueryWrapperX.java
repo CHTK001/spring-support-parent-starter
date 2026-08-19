@@ -19,6 +19,7 @@ import java.util.Collection;
  */
 public class QueryWrapperX<T> extends QueryWrapper<T> {
 
+    /** LikeIfPresent */
     public QueryWrapperX<T> likeIfPresent(String column, String val) {
         if (StringUtils.hasText(val)) {
             return (QueryWrapperX<T>) super.like(column, val);
@@ -26,6 +27,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
         return this;
     }
 
+    /** InIfPresent */
     public QueryWrapperX<T> inIfPresent(String column, Collection<?> values) {
         if (!CollectionUtils.isEmpty(values)) {
             return (QueryWrapperX<T>) super.in(column, values);
@@ -33,6 +35,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
         return this;
     }
 
+    /** InIfPresent */
     public QueryWrapperX<T> inIfPresent(String column, Object... values) {
         if (!ArrayUtils.isEmpty(values)) {
             return (QueryWrapperX<T>) super.in(column, values);
@@ -40,6 +43,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
         return this;
     }
 
+    /** EqIfPresent */
     public QueryWrapperX<T> eqIfPresent(String column, Object val) {
         if (val != null) {
             return (QueryWrapperX<T>) super.eq(column, val);
@@ -47,6 +51,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
         return this;
     }
 
+    /** NeIfPresent */
     public QueryWrapperX<T> neIfPresent(String column, Object val) {
         if (val != null) {
             return (QueryWrapperX<T>) super.ne(column, val);
@@ -54,6 +59,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
         return this;
     }
 
+    /** GtIfPresent */
     public QueryWrapperX<T> gtIfPresent(String column, Object val) {
         if (val != null) {
             return (QueryWrapperX<T>) super.gt(column, val);
@@ -61,6 +67,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
         return this;
     }
 
+    /** GeIfPresent */
     public QueryWrapperX<T> geIfPresent(String column, Object val) {
         if (val != null) {
             return (QueryWrapperX<T>) super.ge(column, val);
@@ -68,6 +75,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
         return this;
     }
 
+    /** LtIfPresent */
     public QueryWrapperX<T> ltIfPresent(String column, Object val) {
         if (val != null) {
             return (QueryWrapperX<T>) super.lt(column, val);
@@ -75,6 +83,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
         return this;
     }
 
+    /** LeIfPresent */
     public QueryWrapperX<T> leIfPresent(String column, Object val) {
         if (val != null) {
             return (QueryWrapperX<T>) super.le(column, val);
@@ -82,6 +91,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
         return this;
     }
 
+    /** BetweenIfPresent */
     public QueryWrapperX<T> betweenIfPresent(String column, Object val1, Object val2) {
         if (val1 != null && val2 != null) {
             return (QueryWrapperX<T>) super.between(column, val1, val2);
@@ -95,6 +105,7 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
         return this;
     }
 
+    /** BetweenIfPresent */
     public QueryWrapperX<T> betweenIfPresent(String column, Object[] values) {
         if (values!= null && values.length != 0 && values[0] != null && values[1] != null) {
             return (QueryWrapperX<T>) super.between(column, values[0], values[1]);
@@ -111,30 +122,35 @@ public class QueryWrapperX<T> extends QueryWrapper<T> {
     // ========== 重写父类方法，方便链式调用 ==========
 
     @Override
+    /** Eq */
     public QueryWrapperX<T> eq(boolean condition, String column, Object val) {
         super.eq(condition, column, val);
         return this;
     }
 
     @Override
+    /** Eq */
     public QueryWrapperX<T> eq(String column, Object val) {
         super.eq(column, val);
         return this;
     }
 
     @Override
+    /** OrderByDesc */
     public QueryWrapperX<T> orderByDesc(String column) {
         super.orderByDesc(true, column);
         return this;
     }
 
     @Override
+    /** Last */
     public QueryWrapperX<T> last(String lastSql) {
         super.last(lastSql);
         return this;
     }
 
     @Override
+    /** In */
     public QueryWrapperX<T> in(String column, Collection<?> coll) {
         super.in(column, coll);
         return this;

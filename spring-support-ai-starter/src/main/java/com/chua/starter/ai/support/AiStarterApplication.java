@@ -19,6 +19,7 @@ import org.springframework.context.annotation.ComponentScan;
 @MapperScan("com.chua.starter.ai.support.mapper")
 public class AiStarterApplication {
 
+    /** Main */
     public static void main(String[] args) {
         SpringApplication.run(AiStarterApplication.class, args);
     }

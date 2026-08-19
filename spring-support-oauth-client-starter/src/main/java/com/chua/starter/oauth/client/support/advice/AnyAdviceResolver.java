@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 public class AnyAdviceResolver extends JsonAdviceResolver {
 
     @Override
+    /** Type */
     public String type() {
         return MediaType.APPLICATION_JSON_VALUE;
     }

@@ -124,6 +124,7 @@ public class ConfigValueAutoConfiguration {
     }
 
     @Bean
+    /** ConfigCenterServiceInfoContributor */
     public ServiceInfoContributor configCenterServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("configcenter", "配置中心", true, "配置中心模块");

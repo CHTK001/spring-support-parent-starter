@@ -30,6 +30,7 @@ public class MultiHikariDataSourceProperties {
     private List<HikariDataSourceProperties> dataSource;
 
     // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
+    /** 获取DataSource */
     public List<HikariDataSourceProperties> getDataSource() {
         return dataSource;
     }

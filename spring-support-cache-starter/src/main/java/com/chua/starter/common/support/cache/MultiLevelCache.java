@@ -37,6 +37,7 @@ public class MultiLevelCache implements Cache {
      */
     static final Object NULL_VALUE_PLACEHOLDER = new Object() {
         @Override
+        /** ToString */
         public String toString() {
             return "NULL_VALUE";
         }
@@ -61,10 +62,23 @@ public class MultiLevelCache implements Cache {
      */
     private final boolean cacheNullValues;
 
+    /**
+     * 创建 MultiLevelCache 实例
+     * @param name name
+     * @param List List
+     * @param caches caches
+     */
     public MultiLevelCache(String name, List<Cache> caches) {
         this(name, caches, false);
     }
 
+    /**
+     * 创建 MultiLevelCache 实例
+     * @param name name
+     * @param List List
+     * @param caches caches
+     * @param boolean boolean
+     */
     public MultiLevelCache(String name, List<Cache> caches, boolean cacheNullValues) {
         this.name = name;
         this.caches = Objects.requireNonNull(caches, "缓存层级不能为空");
@@ -72,16 +86,19 @@ public class MultiLevelCache implements Cache {
     }
 
     @Override
+    /** 获取Name */
     public String getName() {
         return name;
     }
 
     @Override
+    /** 获取NativeCache */
     public Object getNativeCache() {
         return caches;
     }
 
     @Override
+    /** 获取 */
     public ValueWrapper get(Object key) {
         if (key == null) {
             missCount.increment();
@@ -90,6 +107,7 @@ public class MultiLevelCache implements Cache {
         return getInternal(key, null);
     }
 
+    /** 获取Internal */
     private ValueWrapper getInternal(Object key, Integer typeIndexHint) {
         for (int i = 0; i < caches.size(); i++) {
             Cache cache = caches.get(i);
@@ -125,6 +143,7 @@ public class MultiLevelCache implements Cache {
         return null;
     }
 
+    /** 获取InternalTyped */
     private <T> T getInternalTyped(Object key, Class<T> type) {
         if (key == null || type == null) {
             missCount.increment();
@@ -157,12 +176,14 @@ public class MultiLevelCache implements Cache {
     }
 
     @Override
+    /** 获取 */
     public <T> T get(Object key, Class<T> type) {
         return getInternalTyped(key, type);
     }
 
     @Override
     @SuppressWarnings("unchecked")
+    /** 获取 */
     public <T> T get(Object key, Callable<T> valueLoader) {
         if (key == null) {
             missCount.increment();
@@ -229,6 +250,7 @@ public class MultiLevelCache implements Cache {
     }
 
     @Override
+    /** Put */
     public void put(Object key, Object value) {
         if (key == null) {
             return;
@@ -267,6 +289,7 @@ public class MultiLevelCache implements Cache {
     }
 
     @Override
+    /** Evict */
     public void evict(Object key) {
         if (key == null) {
             return;
@@ -281,6 +304,7 @@ public class MultiLevelCache implements Cache {
     }
 
     @Override
+    /** Clear */
     public void clear() {
         for (int i = 0; i < caches.size(); i++) {
             try {
@@ -395,6 +419,7 @@ public class MultiLevelCache implements Cache {
         INSTANCE;
 
         @Override
+        /** 获取 */
         public Object get() {
             return null;
         }

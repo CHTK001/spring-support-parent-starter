@@ -53,42 +53,52 @@ public class InstallRequest {
     /** 来源ID */
     private String sourceId;
 
+    /** 获取SoftwareId */
     public String getSoftwareId() {
         return softwareId;
     }
 
+    /** 设置SoftwareId */
     public void setSoftwareId(String softwareId) {
         this.softwareId = softwareId;
     }
 
+    /** 获取UserId */
     public String getUserId() {
         return userId;
     }
 
+    /** 设置UserId */
     public void setUserId(String userId) {
         this.userId = userId;
     }
 
+    /** 获取DeviceId */
     public String getDeviceId() {
         return deviceId;
     }
 
+    /** 设置DeviceId */
     public void setDeviceId(String deviceId) {
         this.deviceId = deviceId;
     }
 
+    /** 获取InstallPath */
     public String getInstallPath() {
         return installPath;
     }
 
+    /** 设置InstallPath */
     public void setInstallPath(String installPath) {
         this.installPath = installPath;
     }
 
+    /** 获取SourceId */
     public String getSourceId() {
         return sourceId;
     }
 
+    /** 设置SourceId */
     public void setSourceId(String sourceId) {
         this.sourceId = sourceId;
     }

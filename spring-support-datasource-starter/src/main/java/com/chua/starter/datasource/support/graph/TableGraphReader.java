@@ -25,6 +25,10 @@ public class TableGraphReader {
     /** 数据来源 */
     private final DataSource dataSource;
 
+    /**
+     * 创建 TableGraphReader 实例
+     * @param dataSource dataSource
+     */
     public TableGraphReader(DataSource dataSource) {
         this.dataSource = dataSource;
     }
@@ -82,6 +86,7 @@ public class TableGraphReader {
         }
     }
 
+    /** FillColumns */
     private void fillColumns(DatabaseMetaData meta, TableNodeInfo t) throws SQLException {
         try (ResultSet rs = meta.getColumns(t.getSchema(), null, t.getName(), "%")) {
             int ord = 0;
@@ -96,6 +101,7 @@ public class TableGraphReader {
         }
     }
 
+    /** FillPrimaryKeys */
     private void fillPrimaryKeys(DatabaseMetaData meta, TableNodeInfo t) throws SQLException {
         try (ResultSet rs = meta.getPrimaryKeys(t.getSchema(), null, t.getName())) {
             Map<Short, String> ordered = new LinkedHashMap<>();
@@ -106,6 +112,13 @@ public class TableGraphReader {
         }
     }
 
+    /**
+     * FillImportedKeys
+     * @param meta meta
+     * @param t t
+     * @param edges edges
+     * @param tableMap tableMap
+     */
     private void fillImportedKeys(DatabaseMetaData meta, TableNodeInfo t,
                                   List<GraphEdge> edges, Map<String, TableNodeInfo> tableMap) throws SQLException {
         try (ResultSet rs = meta.getImportedKeys(t.getSchema(), null, t.getName())) {
@@ -131,6 +144,7 @@ public class TableGraphReader {
         }
     }
 
+    /** 解析Rule */
     private static String resolveRule(short rule) {
         switch (rule) {
             case DatabaseMetaData.importedKeyCascade: return "CASCADE";
@@ -142,6 +156,7 @@ public class TableGraphReader {
         }
     }
 
+    /** EmptyToNull */
     private static String emptyToNull(String s) {
         return (s == null || s.isEmpty()) ? null : s;
     }
@@ -155,6 +170,12 @@ public class TableGraphReader {
         /** Edges */
         public final List<GraphEdge> edges;
 
+        /**
+         * 创建 GraphReadResult 实例
+         * @param tables tables
+         * @param List List
+         * @param edges edges
+         */
         public GraphReadResult(List<TableNodeInfo> tables, List<GraphEdge> edges) {
             this.tables = tables;
             this.edges = edges;

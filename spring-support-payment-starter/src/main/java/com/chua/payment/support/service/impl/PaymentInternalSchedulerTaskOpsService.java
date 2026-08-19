@@ -25,16 +25,19 @@ public class PaymentInternalSchedulerTaskOpsService implements PaymentSchedulerT
     private final PaymentTaskSchedulerManager paymentTaskSchedulerManager;
 
     @Override
+    /** ListTasks */
     public List<PaymentSchedulerTaskVO> listTasks() {
         return paymentTaskSchedulerManager.listTasks();
     }
 
     @Override
+    /** 更新Task */
     public PaymentSchedulerTaskVO updateTask(String taskKey, PaymentSchedulerTaskUpdateDTO dto) {
         return paymentTaskSchedulerManager.updateTask(taskKey, dto);
     }
 
     @Override
+    /** TriggerTask */
     public PaymentSchedulerTaskVO triggerTask(String taskKey) {
         return paymentTaskSchedulerManager.triggerTask(taskKey);
     }

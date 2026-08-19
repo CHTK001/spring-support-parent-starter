@@ -28,6 +28,12 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
         private final ApiResponseEncodeRegister apiResponseEncodeRegister;
     private final List<HttpMessageConverter<?>> messageConverters;
 
+    /**
+     * 创建 BinaryHttpMessageConverter 实例
+     * @param apiResponseEncodeRegister apiResponseEncodeRegister
+     * @param List List
+     * @param messageConverters messageConverters
+     */
     public BinaryHttpMessageConverter(ApiResponseEncodeRegister apiResponseEncodeRegister, List<HttpMessageConverter<?>> messageConverters) {
         super(MediaType.parseMediaType("application/encrypted-data"));
         this.apiResponseEncodeRegister = apiResponseEncodeRegister;
@@ -36,11 +42,13 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
     }
 
     @Override
+    /** 读取Internal */
     protected Object readInternal(Class<?> clazz, HttpInputMessage inputMessage) throws IOException, HttpMessageNotReadableException {
         return null;
     }
 
     @Override
+    /** 写入Internal */
     protected void writeInternal(Object o, Type type, HttpOutputMessage outputMessage) throws IOException, HttpMessageNotWritableException {
         if (log.isTraceEnabled()) {
             log.trace("[消息转换器]BinaryHttpMessageConverter 开始写入, 对象类型: {}", o != null ? o.getClass().getName() : "null");
@@ -79,6 +87,7 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
         }
     }
 
+    /** 注册Accept */
     private void registerAccept(HttpOutputMessage outputMessage, Object o) throws IOException {
         Class<?> aClass = o.getClass();
         if (log.isTraceEnabled()) {
@@ -104,6 +113,7 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
         log.warn("[消息转换器]未找到合适的转换器处理类型: {}", aClass.getName());
     }
 
+    /** 注册ResponseEntity */
     private void registerResponseEntity(ResponseEntity<?> entity, HttpOutputMessage outputMessage) throws IOException {
         Object body = entity.getBody();
         if (body == null) {
@@ -117,11 +127,13 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
     }
 
     @Override
+    /** 读取 */
     public Object read(Type type, Class<?> contextClass, HttpInputMessage inputMessage) throws IOException, HttpMessageNotReadableException {
         return null;
     }
 
     @Override
+    /** 是否可以读取 */
     public boolean canRead(Type type, Class<?> contextClass, MediaType mediaType) {
         if (apiResponseEncodeRegister.isPass()) {
             if (log.isTraceEnabled()) {
@@ -137,6 +149,7 @@ public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConver
     }
 
     @Override
+    /** 是否可以写入 */
     public boolean canWrite(Type type, Class<?> clazz, MediaType mediaType) {
         if (apiResponseEncodeRegister.isPass()) {
             if (log.isTraceEnabled()) {

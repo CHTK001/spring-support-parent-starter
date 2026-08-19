@@ -19,6 +19,7 @@ public class PaymentCallbackUrlResolver {
     /** Payment全局配置服务 */
     private final PaymentGlobalConfigService paymentGlobalConfigService;
 
+    /** 解析Pay通知Url */
     public String resolvePayNotifyUrl(String requestNotifyUrl, MerchantChannel channel, Merchant merchant, String orderNo) {
         return firstNonBlank(
                 requestNotifyUrl,
@@ -27,10 +28,12 @@ public class PaymentCallbackUrlResolver {
                 defaultPayNotifyUrl(channel, merchant, orderNo));
     }
 
+    /** 解析Refund通知Url */
     public String resolveRefundNotifyUrl(MerchantChannel channel, Long merchantId, String refundNo, String fallbackNotifyUrl) {
         return firstNonBlank(defaultRefundNotifyUrl(channel, merchantId, refundNo), fallbackNotifyUrl);
     }
 
+    /** DefaultPay通知Url */
     public String defaultPayNotifyUrl(MerchantChannel channel, Merchant merchant, String orderNo) {
         if (channel == null || merchant == null || merchant.getId() == null || !StringUtils.hasText(orderNo)) {
             return null;
@@ -49,6 +52,7 @@ public class PaymentCallbackUrlResolver {
         return null;
     }
 
+    /** DefaultRefund通知Url */
     public String defaultRefundNotifyUrl(MerchantChannel channel, Long merchantId, String refundNo) {
         if (channel == null || merchantId == null || !StringUtils.hasText(refundNo)) {
             return null;
@@ -63,6 +67,7 @@ public class PaymentCallbackUrlResolver {
         return null;
     }
 
+    /** DefaultWallet通知Url */
     public String defaultWalletNotifyUrl(String orderType, String orderNo) {
         if (!StringUtils.hasText(orderType) || !StringUtils.hasText(orderNo)) {
             return null;
@@ -78,6 +83,7 @@ public class PaymentCallbackUrlResolver {
                 + orderNo;
     }
 
+    /** DefaultWechatPayScore通知Url */
     public String defaultWechatPayScoreNotifyUrl(Long channelId, String outOrderNo) {
         if (channelId == null || !StringUtils.hasText(outOrderNo)) {
             return null;
@@ -89,6 +95,7 @@ public class PaymentCallbackUrlResolver {
         return baseUrl + "/api/notify/wechat/payscore/" + channelId + "/" + outOrderNo;
     }
 
+    /** NormalizedBaseUrl */
     private String normalizedBaseUrl() {
         String baseUrl = paymentGlobalConfigService.getConfigEntity().getPaymentNotifyBaseUrl();
         if (!StringUtils.hasText(baseUrl)) {
@@ -97,6 +104,7 @@ public class PaymentCallbackUrlResolver {
         return baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
     }
 
+    /** FirstNonBlank */
     private String firstNonBlank(String... values) {
         if (values == null) {
             return null;
@@ -109,6 +117,7 @@ public class PaymentCallbackUrlResolver {
         return null;
     }
 
+    /** Upper */
     private String upper(String value) {
         return value == null ? null : value.toUpperCase(Locale.ROOT);
     }

@@ -11,6 +11,10 @@ public class RoleJudge {
     /** Roles */
     private final Set<String> roles;
 
+    /**
+     * 创建 RoleJudge 实例
+     * @param roles roles
+     */
     public RoleJudge(Set<String> roles) {
         this.roles = roles;
     }

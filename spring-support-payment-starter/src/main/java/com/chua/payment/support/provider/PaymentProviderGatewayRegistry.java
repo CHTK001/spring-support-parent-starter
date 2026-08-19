@@ -24,50 +24,65 @@ public class PaymentProviderGatewayRegistry {
     /** 属性 */
     private final PaymentProviderProperties properties;
 
+    /**
+     * 创建 PaymentProviderGatewayRegistry 实例
+     * @param properties properties
+     */
     public PaymentProviderGatewayRegistry(PaymentProviderProperties properties) {
         this.properties = properties;
     }
 
+    /** AliyunAlipayGateway */
     public AliyunAlipayGateway aliyunAlipayGateway() {
         return aliyunAlipayGateway(null);
     }
 
+    /** TencentWechatPayGateway */
     public TencentWechatPayGateway tencentWechatPayGateway() {
         return tencentWechatPayGateway(null);
     }
 
+    /** AliyunAlipayGateway */
     public AliyunAlipayGateway aliyunAlipayGateway(String extension) {
         return required(ALIYUN_ALIPAY_GATEWAY, resolveAliyunExtension(extension), "Aliyun Alipay");
     }
 
+    /** TencentWechatPayGateway */
     public TencentWechatPayGateway tencentWechatPayGateway(String extension) {
         return required(TENCENT_WECHAT_PAY_GATEWAY, resolveWechatExtension(extension), "Tencent Wechat Pay");
     }
 
+    /** AvailableAliyunExtensions */
     public Set<String> availableAliyunExtensions() {
         return availableExtensions(ALIYUN_ALIPAY_GATEWAY);
     }
 
+    /** AvailableWechatExtensions */
     public Set<String> availableWechatExtensions() {
         return availableExtensions(TENCENT_WECHAT_PAY_GATEWAY);
     }
 
+    /** 解析AliyunExtension */
     public String resolveAliyunExtension(String extension) {
         return normalizeExtension(extension, properties.resolveForChannelType("ALIPAY"));
     }
 
+    /** 解析WechatExtension */
     public String resolveWechatExtension(String extension) {
         return normalizeExtension(extension, properties.resolveForChannelType("WECHAT"));
     }
 
+    /** DefaultAliyunExtension */
     public String defaultAliyunExtension() {
         return properties.resolveForChannelType("ALIPAY");
     }
 
+    /** DefaultWechatExtension */
     public String defaultWechatExtension() {
         return properties.resolveForChannelType("WECHAT");
     }
 
+    /** NormalizeExtension */
     private String normalizeExtension(String extensionName, String fallback) {
         if (extensionName == null || extensionName.isBlank()) {
             return fallback;
@@ -75,6 +90,7 @@ public class PaymentProviderGatewayRegistry {
         return extensionName;
     }
 
+    /** AvailableExtensions */
     private Set<String> availableExtensions(String typeName) {
         Class<Object> type = loadType(typeName, false, typeName);
         if (type == null) {
@@ -83,6 +99,7 @@ public class PaymentProviderGatewayRegistry {
         return ServiceProvider.of(type).getExtensions();
     }
 
+    /** Required */
     private <T> T required(String typeName, String extensionName, String providerName) {
         String targetExtension = normalizeExtension(extensionName, properties.getDefaultSpi());
         Class<T> type = loadType(typeName, true, providerName);
@@ -101,6 +118,7 @@ public class PaymentProviderGatewayRegistry {
     }
 
     @SuppressWarnings("unchecked")
+    /** 加载Type */
     private <T> Class<T> loadType(String typeName, boolean required, String providerName) {
         try {
             ClassLoader classLoader = Thread.currentThread().getContextClassLoader();

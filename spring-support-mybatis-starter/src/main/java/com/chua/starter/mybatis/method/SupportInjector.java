@@ -26,11 +26,16 @@ public class SupportInjector extends DefaultSqlInjector implements DisposableBea
     private final Map<MybatisPlusProperties.SqlMethodProperties, SqlMethodMarker> cache = new ConcurrentHashMap<>();
     private final Map<MybatisPlusProperties.SqlMethodProperties, List<AbstractMethod>> cacheAbstractMethod = new ConcurrentHashMap<>();
 
+    /**
+     * 创建 SupportInjector 实例
+     * @param mybatisProperties mybatisProperties
+     */
     public SupportInjector(MybatisPlusProperties mybatisProperties) {
         this.mybatisProperties = mybatisProperties;
     }
 
     @Override
+    /** 获取MethodList */
     public List<AbstractMethod> getMethodList(Class<?> mapperClass, TableInfo tableInfo) {
         List<AbstractMethod> list = new ArrayList<>();
 
@@ -61,6 +66,7 @@ public class SupportInjector extends DefaultSqlInjector implements DisposableBea
         return list;
     }
 
+    /** 获取Marker */
     private SqlMethodMarker getMarker(MybatisPlusProperties.SqlMethodProperties sqlMethodProperties) {
         MybatisPlusProperties.SqlMethodType type = sqlMethodProperties.getType();
         return type == MybatisPlusProperties.SqlMethodType.FILE ?
@@ -69,12 +75,14 @@ public class SupportInjector extends DefaultSqlInjector implements DisposableBea
     }
 
     @Override
+    /** 销毁 */
     public void destroy() throws Exception {
         for (SqlMethodMarker sqlMethodMarker : cache.values()) {
             sqlMethodMarker.destroy();
         }
     }
 
+    /** Refresh */
     public String refresh(String name) {
         for (SqlMethodMarker marker : cache.values()) {
             marker.refresh(name);
@@ -82,6 +90,7 @@ public class SupportInjector extends DefaultSqlInjector implements DisposableBea
         return "刷新成功";
     }
 
+    /** RefreshAll */
     public String refreshAll() {
         for (SqlMethodMarker marker : cache.values()) {
             if (marker instanceof MysqlSqlMethodMarker mysqlMarker) {

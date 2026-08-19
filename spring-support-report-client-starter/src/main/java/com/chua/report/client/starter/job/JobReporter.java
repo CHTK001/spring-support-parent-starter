@@ -28,6 +28,7 @@ public class JobReporter {
     /** 同步客户端 */
     private SyncClient syncClient;
 
+    /** 获取Instance */
     public static JobReporter getInstance() {
         return INSTANCE;
     }

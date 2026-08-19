@@ -38,6 +38,7 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
     /** Connectionholder */
     private DynmaicSimpleConnectionHolder connectionHolder = null;
 
+    /** 创建 DynamicDataSource 实例 */
     public DynamicDataSource() {
         this.setTargetDataSources(TARGET_DATA_SOURCES);
         this.defaultDataSource = createDefaultDataSource();
@@ -45,6 +46,7 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
     }
 
     @Override
+    /** AfterProperties设置 */
     public void afterPropertiesSet() {
         super.afterPropertiesSet();
         this.setTargetDataSources(TARGET_DATA_SOURCES);
@@ -105,6 +107,7 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
 
 
     @Override
+    /** DetermineTargetDataSource */
     protected DataSource determineTargetDataSource() {
         unbindResource();
         Object lookupKey = determineCurrentLookupKey();
@@ -137,6 +140,7 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
         return dataSource;
     }
 
+    /** 获取DataSource */
     public DataSource getDataSource(String name) {
         if (Strings.isNullOrEmpty(name)) {
             return determineTargetDataSource();
@@ -172,6 +176,7 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
     }
 
     @Override
+    /** DetermineCurrentLookupKey */
     protected Object determineCurrentLookupKey() {
         String dbType = DataSourceContextSupport.getDbType();
         if (null != dbType && log.isInfoEnabled()) {
@@ -196,11 +201,13 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
             this.connection = connection;
         }
 
+        /** 设置Connection */
         public void setConnection(Connection connection) {
             this.connection = connection;
         }
 
         @Override
+        /** 获取Connection */
         public Connection getConnection() {
             return connection;
         }
@@ -212,26 +219,34 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
         /** Connectionhandle */
         private final DynmaicConnectionHandle connectionHandle;
 
+        /**
+         * 创建 DynmaicSimpleConnectionHolder 实例
+         * @param connectionHandle connectionHandle
+         */
         public DynmaicSimpleConnectionHolder(DynmaicConnectionHandle connectionHandle) {
             super(connectionHandle);
             this.connectionHandle = connectionHandle;
         }
 
+        /** 设置Connection */
         public void setConnection(Connection connection) {
             connectionHandle.setConnection(connection);
         }
 
         @Override
+        /** 获取Connection */
         public Connection getConnection() {
             return connectionHandle.getConnection();
         }
 
         @Override
+        /** 是否拥有Connection */
         protected boolean hasConnection() {
             return null != getConnection();
         }
 
         @Override
+        /** Released */
         public void released() {
             MultiDataSource.returnObject(getConnection());
             this.setConnection(null);

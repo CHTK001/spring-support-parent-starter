@@ -14,21 +14,28 @@ public class ToDetectIpQualityDetector extends AbstractHttpIpQualityDetector {
     /** BaseURL */
     private final String baseUrl;
 
+    /** 创建 ToDetectIpQualityDetector 实例 */
     public ToDetectIpQualityDetector() {
         this("https://www.todetect.cn/ip");
     }
 
+    /**
+     * 创建 ToDetectIpQualityDetector 实例
+     * @param baseUrl baseUrl
+     */
     public ToDetectIpQualityDetector(String baseUrl) {
         super();
         this.baseUrl = baseUrl;
     }
 
     @Override
+    /** 构建Url */
     protected String buildUrl(String ip) {
         return baseUrl + "/" + ip;
     }
 
     @Override
+    /** 解析Result */
     protected IpQuality parseResult(String json) throws IOException {
         JsonNode root = objectMapper.readTree(json);
         IpQuality q = new IpQuality();
@@ -53,6 +60,7 @@ public class ToDetectIpQualityDetector extends AbstractHttpIpQualityDetector {
         return q;
     }
 
+    /** 获取Bool */
     private boolean getBool(JsonNode node, String field) {
         JsonNode v = node.get(field);
         if (v == null || v.isNull()) {
@@ -61,6 +69,7 @@ public class ToDetectIpQualityDetector extends AbstractHttpIpQualityDetector {
         return v.booleanValue();
     }
 
+    /** 获取Int */
     private int getInt(JsonNode node, String field) {
         JsonNode v = node.get(field);
         if (v == null || v.isNull()) {
@@ -69,6 +78,7 @@ public class ToDetectIpQualityDetector extends AbstractHttpIpQualityDetector {
         return v.intValue();
     }
 
+    /** 获取Double */
     private double getDouble(JsonNode node, String field) {
         JsonNode v = node.get(field);
         if (v == null || v.isNull()) {

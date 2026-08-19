@@ -54,6 +54,7 @@ public class RateLimitFilter implements Filter {
     }
 
     @Override
+    /** Do过滤 */
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain chain)
             throws IOException, ServletException {
         if (!(servletRequest instanceof HttpServletRequest) || !(servletResponse instanceof HttpServletResponse)) {

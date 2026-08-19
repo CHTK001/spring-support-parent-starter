@@ -36,6 +36,7 @@ public final class AuthSessionUtils {
      */
     public static final String SESSION_TENANT_ID = "tenantId";
 
+    /** 创建 AuthSessionUtils 实例 */
     private AuthSessionUtils() {
         // 工具类禁止实例化
     }

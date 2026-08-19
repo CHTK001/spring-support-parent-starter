@@ -5,9 +5,11 @@ package com.chua.starter.common.support.lang;
  */
 public final class NamingCase {
 
+    /** 创建 NamingCase 实例 */
     private NamingCase() {
     }
 
+    /** ToCamelCase */
     public static String toCamelCase(String name) {
         if (name == null || name.isEmpty()) {
             return name;
@@ -26,6 +28,7 @@ public final class NamingCase {
         return sb.toString();
     }
 
+    /** ToFirstUpperCase */
     public static String toFirstUpperCase(String name) {
         if (name == null || name.isEmpty()) {
             return name;

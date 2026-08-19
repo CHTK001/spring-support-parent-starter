@@ -56,6 +56,11 @@ public class DataSourceDocumentService {
      */
     private final ReentrantLock lock = new ReentrantLock();
 
+    /**
+     * 创建 DataSourceDocumentService 实例
+     * @param dataSource dataSource
+     * @param DocumentProperties DocumentProperties
+     */
     public DataSourceDocumentService(DataSource dataSource, DocumentProperties properties) {
         this.dataSource = dataSource;
         this.properties = properties;
@@ -112,6 +117,7 @@ public class DataSourceDocumentService {
 
     // ====================== 私有 ======================
 
+    /** Do解析 */
     private DocumentData doParse() {
         DocumentParser parser;
         try {
@@ -243,6 +249,7 @@ public class DataSourceDocumentService {
         return null;
     }
 
+    /** 查找Field */
     private static java.lang.reflect.Field findField(Class<?> clazz, String... names) {
         for (Class<?> c = clazz; c != null && c != Object.class; c = c.getSuperclass()) {
             for (java.lang.reflect.Field f : c.getDeclaredFields()) {

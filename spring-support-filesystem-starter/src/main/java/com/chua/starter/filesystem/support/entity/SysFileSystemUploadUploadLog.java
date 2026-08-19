@@ -62,30 +62,47 @@ public class SysFileSystemUploadUploadLog extends SysBase implements Serializabl
     /** Filesystem上传上传日志结束时间 */
     private LocalDateTime filesystemUploadUploadLogEndTime;
 
+    /** 创建 SysFileSystemUploadUploadLog 实例 */
     public SysFileSystemUploadUploadLog() {}
 
+    /** 获取FilesystemUploadUpload记录日志Id */
     public Long getFilesystemUploadUploadLogId() { return filesystemUploadUploadLogId; }
+    /** 设置FilesystemUploadUpload记录日志Id */
     public void setFilesystemUploadUploadLogId(Long v) { this.filesystemUploadUploadLogId = v; }
 
+    /** 获取FilesystemUploadUpload记录日志UploadId */
     public String getFilesystemUploadUploadLogUploadId() { return filesystemUploadUploadLogUploadId; }
+    /** 设置FilesystemUploadUpload记录日志UploadId */
     public void setFilesystemUploadUploadLogUploadId(String v) { this.filesystemUploadUploadLogUploadId = v; }
 
+    /** 获取FilesystemUploadUpload记录日志Stage */
     public Integer getFilesystemUploadUploadLogStage() { return filesystemUploadUploadLogStage; }
+    /** 设置FilesystemUploadUpload记录日志Stage */
     public void setFilesystemUploadUploadLogStage(Integer v) { this.filesystemUploadUploadLogStage = v; }
 
+    /** 获取FilesystemUploadUpload记录日志Status */
     public Integer getFilesystemUploadUploadLogStatus() { return filesystemUploadUploadLogStatus; }
+    /** 设置FilesystemUploadUpload记录日志Status */
     public void setFilesystemUploadUploadLogStatus(Integer v) { this.filesystemUploadUploadLogStatus = v; }
 
+    /** 获取FilesystemUploadUpload记录日志Message */
     public String getFilesystemUploadUploadLogMessage() { return filesystemUploadUploadLogMessage; }
+    /** 设置FilesystemUploadUpload记录日志Message */
     public void setFilesystemUploadUploadLogMessage(String v) { this.filesystemUploadUploadLogMessage = v; }
 
+    /** 获取FilesystemUploadUpload记录日志Retry计算数量 */
     public Integer getFilesystemUploadUploadLogRetryCount() { return filesystemUploadUploadLogRetryCount; }
+    /** 设置FilesystemUploadUpload记录日志Retry计算数量 */
     public void setFilesystemUploadUploadLogRetryCount(Integer v) { this.filesystemUploadUploadLogRetryCount = v; }
 
+    /** 获取FilesystemUploadUpload记录日志开始Time */
     public LocalDateTime getFilesystemUploadUploadLogStartTime() { return filesystemUploadUploadLogStartTime; }
+    /** 设置FilesystemUploadUpload记录日志开始Time */
     public void setFilesystemUploadUploadLogStartTime(LocalDateTime v) { this.filesystemUploadUploadLogStartTime = v; }
 
+    /** 获取FilesystemUploadUpload记录日志EndTime */
     public LocalDateTime getFilesystemUploadUploadLogEndTime() { return filesystemUploadUploadLogEndTime; }
+    /** 设置FilesystemUploadUpload记录日志EndTime */
     public void setFilesystemUploadUploadLogEndTime(LocalDateTime v) { this.filesystemUploadUploadLogEndTime = v; }
 
     /**

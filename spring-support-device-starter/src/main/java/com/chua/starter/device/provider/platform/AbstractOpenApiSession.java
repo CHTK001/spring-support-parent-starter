@@ -269,16 +269,19 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     }
 
     @Override
+    /** 获取DeviceId */
     public String getDeviceId() {
         return info.getDeviceSerial() != null ? info.getDeviceSerial() : info.getIp();
     }
 
     @Override
+    /** 是否Online */
     public boolean isOnline() {
         return online;
     }
 
     @Override
+    /** 关闭 */
     public void close() {
         online = false;
         log.info("OpenAPI 会话已关闭: {}", getDeviceId());
@@ -312,59 +315,70 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     }
 
     @Override
+    /** Preview */
     public InputStream preview(int channel) {
         return emptyStream();
     }
 
     @Override
+    /** 查询Records */
     public List<RecordFile> queryRecords(int channel, TimeRange range) {
         return Collections.emptyList();
     }
 
     @Override
+    /** Playback */
     public InputStream playback(int channel, TimeRange range) {
         return emptyStream();
     }
 
     @Override
+    /** 获取LiveUrl */
     public String getLiveUrl(int channel, String protocol) {
         // 子类按平台实现获取 HLS/FLV URL；默认返回空
         return "";
     }
 
     @Override
+    /** 获取PlaybackUrl */
     public String getPlaybackUrl(int channel, TimeRange range) {
         // 子类按平台实现获取回放 URL
         return null;
     }
 
     @Override
+    /** TestConnection */
     public boolean testConnection() {
         // 默认通过 token 缓存判断：有效即认为可达
         return tokenValid();
     }
 
     @Override
+    /** ListPresets */
     public List<PresetInfo> listPresets() {
         return Collections.emptyList();
     }
 
     @Override
+    /** 查询AccessRecords */
     public List<AccessRecord> queryAccessRecords(TimeRange range) {
         return Collections.emptyList();
     }
 
     @Override
+    /** 订阅Event */
     public void subscribeEvent(EventType type, EventListener listener) {
         listeners.computeIfAbsent(type, k -> new CopyOnWriteArrayList<>()).add(listener);
     }
 
     @Override
+    /** 取消订阅Event */
     public void unsubscribeEvent(EventType type) {
         listeners.remove(type);
     }
 
     @Override
+    /** 取出Events */
     public List<DeviceEvent> pollEvents(TimeRange range) {
         if (eventQueue.isEmpty()) {
             return Collections.emptyList();
@@ -375,26 +389,31 @@ public abstract class AbstractOpenApiSession implements DeviceSession {
     }
 
     @Override
+    /** Remote解锁 */
     public void remoteUnlock(int doorId) {
         // 平台 OpenAPI 远程开门由具体平台实现重写
     }
 
     @Override
+    /** 设置Preset */
     public void setPreset(int presetId, String name) {
         // 平台 OpenAPI 预置位操作由具体平台实现重写
     }
 
     @Override
+    /** 调用Preset */
     public void callPreset(int presetId) {
         // 平台 OpenAPI 预置位操作由具体平台实现重写
     }
 
     @Override
+    /** 删除Preset */
     public void deletePreset(int presetId) {
         // 平台 OpenAPI 预置位操作由具体平台实现重写
     }
 
     @Override
+    /** PtzControl */
     public void ptzControl(PtzCommand cmd, double speed) {
         // 平台 OpenAPI 云台控制由具体平台实现重写
     }

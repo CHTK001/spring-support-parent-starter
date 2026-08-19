@@ -66,6 +66,12 @@ public class NgrokAutoConfiguration {
      */
     private NgrokClient client;
 
+    /**
+     * 创建 NgrokAutoConfiguration 实例
+     * @param properties properties
+     * @param ObjectProvider ObjectProvider
+     * @param resourceLoader resourceLoader
+     */
     public NgrokAutoConfiguration(NgrokProperties properties, ObjectProvider<ResourceLoader> resourceLoader) {
         this.properties = properties;
         this.resourceLoader = resourceLoader.getIfAvailable();
@@ -185,6 +191,7 @@ public class NgrokAutoConfiguration {
         }
     }
 
+    /** 开始HttpTunnel */
     private void startHttpTunnel(int localPort, String tag, boolean forward) throws IOException {
         NgrokClient.HttpBuilderStage stage = client.http()
                 .metadata(buildMetadata("http-" + tag));
@@ -388,6 +395,7 @@ public class NgrokAutoConfiguration {
         }
     }
 
+    /** Normalize */
     private static String normalize(String value, String defaultValue) {
         if (value == null || value.isBlank()) {
             return defaultValue;
@@ -404,6 +412,7 @@ public class NgrokAutoConfiguration {
     }
 
     @Bean
+    /** NgrokServiceInfoContributor */
     public ServiceInfoContributor ngrokServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("ngrok", "内网穿透", true, "ngrok隧道模块");

@@ -26,10 +26,12 @@ public class SyncDatasyncProperties {
      */
     private boolean enabled = true;
 
+    /** 是否Enabled */
     public boolean isEnabled() {
         return enabled;
     }
 
+    /** 设置Enabled */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }

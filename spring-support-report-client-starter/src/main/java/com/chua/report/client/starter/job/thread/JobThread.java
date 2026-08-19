@@ -146,6 +146,7 @@ public class JobThread extends Thread {
     }
 
     @Override
+    /** 运行 */
     public void run() {
 
         // init
@@ -190,6 +191,7 @@ public class JobThread extends Thread {
                         try {
                             FutureTask<Boolean> futureTask = new FutureTask<Boolean>(new Callable<Boolean>() {
                                 @Override
+                                /** 调用 */
                                 public Boolean call() throws Exception {
 
                                     // init job context
@@ -277,6 +279,7 @@ public class JobThread extends Thread {
         log.info("任务线程已停止, 任务ID: {}", jobId);
     }
 
+    /** ReportJob */
     private void reportJob(TriggerParam triggerParam, String status, String message) {
         JobReporter.getInstance().report(triggerParam.getJobId(), triggerParam.getLogId(), status, message);
     }

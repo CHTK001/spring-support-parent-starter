@@ -33,6 +33,7 @@ public class WebsocketSyncServer extends AbstractSyncServer {
     }
 
     @Override
+    /** Do开始 */
     protected void doStart() {
         for (WebSocketSession session : sessionManager.getAllSessions()) {
             onWebSocketConnect(session);
@@ -40,10 +41,12 @@ public class WebsocketSyncServer extends AbstractSyncServer {
     }
 
     @Override
+    /** Do停止 */
     protected void doStop() {
     }
 
     @Override
+    /** Do发送 */
     protected void doSend(String sessionId, String topic, Object data) {
         WebSocketSession session = sessionManager.getSession(sessionId);
         if (session == null || !session.isOpen()) {

@@ -19,11 +19,13 @@ import java.io.IOException;
 public class JsonAdviceResolver implements AdviceResolver {
 
     @Override
+    /** Type */
     public String type() {
         return MediaType.APPLICATION_JSON_VALUE;
     }
 
     @Override
+    /** 解析 */
     public Object resolve(HttpServletResponse response, Integer status, String message) {
         ReturnResult<Object> rs = ReturnResult.error(ResultCode.transferForHttpCode(status).getCode(), message);
         if (null == response) {

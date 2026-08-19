@@ -31,6 +31,7 @@ public enum SocketProtocol {
         this.value = value;
     }
 
+    /** 获取Value */
     public String getValue() {
         return value;
     }

@@ -27,6 +27,7 @@ public class AiRouteRegistrar implements ApplicationContextAware {
     private ApplicationContext applicationContext;
 
     @Override
+    /** 设置ApplicationContext */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }

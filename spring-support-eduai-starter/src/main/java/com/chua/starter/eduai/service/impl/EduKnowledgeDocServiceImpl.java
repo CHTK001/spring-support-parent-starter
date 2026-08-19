@@ -44,11 +44,16 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
      */
     private final ObjectProvider<RagClientManager> ragClientManagerProvider;
 
+    /**
+     * 创建 EduKnowledgeDocServiceImpl 实例
+     * @param ragClientManagerProvider ragClientManagerProvider
+     */
     public EduKnowledgeDocServiceImpl(ObjectProvider<RagClientManager> ragClientManagerProvider) {
         this.ragClientManagerProvider = ragClientManagerProvider;
     }
 
     @Override
+    /** Page查询 */
     public PageResult<KnowledgeDocVO> pageQuery(EduKnowledgeDoc query, long page, long pageSize) {
         LambdaQueryWrapper<EduKnowledgeDoc> wrapper = new LambdaQueryWrapper<>();
         if (query != null) {
@@ -82,6 +87,7 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** UploadDoc */
     public Long uploadDoc(KnowledgeDocUploadDTO dto) {
         if (!StringUtils.hasText(dto.getFilePath())) {
             throw new BusinessException("文件路径不能为空");
@@ -163,6 +169,7 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
     }
 
     @Override
+    /** 搜索 */
     public PageResult<KnowledgeDocVO> search(String keyword, String subject, int limit) {
         LambdaQueryWrapper<EduKnowledgeDoc> wrapper = new LambdaQueryWrapper<>();
         // 按关键字匹配文档名称
@@ -190,6 +197,7 @@ public class EduKnowledgeDocServiceImpl extends ServiceImpl<EduKnowledgeDocMappe
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 删除Doc */
     public boolean deleteDoc(Long id) {
         EduKnowledgeDoc exists = baseMapper.selectById(id);
         if (exists == null) {

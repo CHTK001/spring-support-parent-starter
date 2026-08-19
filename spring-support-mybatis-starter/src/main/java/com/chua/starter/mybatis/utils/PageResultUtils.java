@@ -12,9 +12,11 @@ import com.chua.starter.common.support.lang.ReturnPageResult;
  */
 public class PageResultUtils {
 
+    /** 创建 PageResultUtils 实例 */
     private PageResultUtils() {
     }
 
+    /** Ok */
     public static <T> ReturnPageResult<T> ok(IPage<T> page) {
         if (page == null) {
             return ReturnPageResult.empty();
@@ -30,14 +32,17 @@ public class PageResultUtils {
     }
 
     @SuppressWarnings("unchecked")
+    /** Ok */
     public static <T> ReturnPageResult<T> ok() {
         return (ReturnPageResult<T>) ReturnPageResult.empty();
     }
 
+    /** 记录错误 */
     public static <T> ReturnPageResult<T> error() {
         return error("操作失败");
     }
 
+    /** 记录错误 */
     public static <T> ReturnPageResult<T> error(String message) {
         return ReturnPageResult.<T>builder()
                 .code(-1)

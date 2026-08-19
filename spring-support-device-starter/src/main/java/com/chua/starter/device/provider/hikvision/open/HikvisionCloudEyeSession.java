@@ -50,6 +50,10 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
      */
     private static final String PATH_DOOR_CONTROL = "/api/v1/door/control";
 
+    /**
+     * 创建 HikvisionCloudEyeSession 实例
+     * @param info info
+     */
     public HikvisionCloudEyeSession(DeviceConnectInfo info) {
         super(info, DEFAULT_BASE_URL);
         login();
@@ -100,6 +104,7 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /** DoRequest */
     protected JsonNode doRequest(String method, String path, Map<String, Object> params) {
         if (!tokenValid() && !PATH_LOGIN.equals(path)) {
             login();
@@ -133,12 +138,14 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /** 获取LiveUrl */
     public String getLiveUrl(int channel, String protocol) {
         JsonNode data = getVideoUrl(channel);
         return data.path("url").asText(data.path("hls").asText(data.path("flv").asText("")));
     }
 
     @Override
+    /** 获取PlaybackUrl */
     public String getPlaybackUrl(int channel, com.chua.starter.device.spi.model.TimeRange range) {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceSerial", info.getDeviceSerial());
@@ -150,6 +157,7 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /** PtzControl */
     public void ptzControl(com.chua.starter.device.spi.model.PtzCommand cmd, double speed) {
         if (cmd == com.chua.starter.device.spi.model.PtzCommand.STOP) {
             return;
@@ -162,6 +170,7 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
         post(PATH_PTZ_CONTROL, params);
     }
 
+    /** MapAction */
     private String mapAction(com.chua.starter.device.spi.model.PtzCommand cmd) {
         switch (cmd) {
             case UP: return "UP";
@@ -179,6 +188,7 @@ public class HikvisionCloudEyeSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /** Remote解锁 */
     public void remoteUnlock(int doorId) {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceSerial", info.getDeviceSerial());

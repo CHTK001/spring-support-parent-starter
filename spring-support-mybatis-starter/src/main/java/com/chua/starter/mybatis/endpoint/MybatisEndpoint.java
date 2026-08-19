@@ -30,6 +30,12 @@ public class MybatisEndpoint {
     /** Supportinjector */
     private final SupportInjector supportInjector;
 
+    /**
+     * 创建 MybatisEndpoint 实例
+     * @param reload reload
+     * @param Configuration Configuration
+     * @param SupportInjector SupportInjector
+     */
     public MybatisEndpoint(Reload reload, Configuration configuration, SupportInjector supportInjector) {
         this.reload = reload;
         this.configuration = configuration;

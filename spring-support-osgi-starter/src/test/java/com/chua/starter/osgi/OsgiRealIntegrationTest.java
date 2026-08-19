@@ -94,6 +94,7 @@ public class OsgiRealIntegrationTest {
 
     // ==================== 测试用例 ====================
 
+    /** Tfelix开始 */
     private static void t_felixStart(FelixOsgiLauncher launcher, Map<String, String> config) {
         launcher.start(config);
         assertTrue(launcher.isActive(), "Felix 框架应处于激活状态");
@@ -113,6 +114,7 @@ public class OsgiRealIntegrationTest {
         System.out.println("[Real] " + symbolicName + " 已安装");
     }
 
+    /** Tosgi注册DelegateLookup */
     private static void t_osgiRegisterDelegateLookup(FelixOsgiLauncher launcher) {
         // 通过 launcher 反射调用 BundleContext.registerService 注册一个 OSGi 服务
         Object bundleContext = invokeGetBundleContext(launcher);
@@ -136,6 +138,7 @@ public class OsgiRealIntegrationTest {
         System.out.println("[Real] OSGi 服务查询成功: " + retrieved.greet("chua"));
     }
 
+    /** TobjectContextBridgesOsgiService */
     private static void t_objectContextBridgesOsgiService(FelixOsgiLauncher launcher) {
         ObjectContext ctx = new DefaultObjectContext(ObjectContextConfig.defaults());
 
@@ -153,6 +156,7 @@ public class OsgiRealIntegrationTest {
         System.out.println("[Real] ObjectContext 桥接 OSGi 成功: " + greeting.greet("bridged"));
     }
 
+    /** TobjectContextMultipleBridgesSameType */
     private static void t_objectContextMultipleBridgesSameType(FelixOsgiLauncher launcher) {
         ObjectContext ctx = new DefaultObjectContext(ObjectContextConfig.defaults());
         OsgiBeanDefinitionRegister register = new OsgiBeanDefinitionRegister();
@@ -165,11 +169,13 @@ public class OsgiRealIntegrationTest {
         assertFalse(second, "重复注册同名 Register 应被忽略");
     }
 
+    /** TinactiveLauncherReturnsEmpty */
     private static void t_inactiveLauncherReturnsEmpty(FelixOsgiLauncher launcher) {
         // launcher 仍处于激活状态；查询 IntegrationGreeting 已有值
         assertTrue(launcher.isActive(), "Felix 仍应激活");
     }
 
+    /** TosgiPropertiesDefaultValues */
     private static void t_osgiPropertiesDefaultValues() {
         OsgiProperties props = new OsgiProperties();
         assertTrue(props.isEnabled(), "OSGi 默认应启用");
@@ -181,6 +187,7 @@ public class OsgiRealIntegrationTest {
         System.out.println("[Real] OsgiProperties 默认值正确");
     }
 
+    /** Tfelix停止 */
     private static void t_felixStop(FelixOsgiLauncher launcher) {
         if (launcher == null) {
             return;
@@ -282,24 +289,28 @@ public class OsgiRealIntegrationTest {
 
     // ==================== 断言工具 ====================
 
+    /** AssertTrue */
     private static void assertTrue(boolean cond, String msg) {
         if (!cond) {
             throw new AssertionError(msg);
         }
     }
 
+    /** AssertFalse */
     private static void assertFalse(boolean cond, String msg) {
         if (cond) {
             throw new AssertionError(msg);
         }
     }
 
+    /** Assert判断相等 */
     private static void assertEquals(Object expected, Object actual, String msg) {
         if (expected == null ? actual != null : !expected.equals(actual)) {
             throw new AssertionError(msg + " ==> expected: <" + expected + "> but was: <" + actual + ">");
         }
     }
 
+    /** AssertNotNull */
     private static void assertNotNull(Object obj, String msg) {
         if (obj == null) {
             throw new AssertionError(msg + " ==> expected non-null but was null");
@@ -311,6 +322,7 @@ public class OsgiRealIntegrationTest {
      */
     public static final class IntegrationGreetingImpl implements IntegrationGreeting {
         @Override
+        /** Greet */
         public String greet(String name) {
             return "Hello, " + name + " (via OSGi)";
         }

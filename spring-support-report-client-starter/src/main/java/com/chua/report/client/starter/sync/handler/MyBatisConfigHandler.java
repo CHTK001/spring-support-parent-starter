@@ -39,21 +39,25 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     private ApplicationContext applicationContext;
 
     @Override
+    /** 设置ApplicationContext */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
 
     @Override
+    /** 获取Name */
     public String getName() {
         return "myBatisConfigHandler";
     }
 
     @Override
+    /** Supports */
     public boolean supports(String topic) {
         return MonitorTopics.MYBATIS_CONFIG.equals(topic);
     }
 
     @Override
+    /** 处理 */
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         String action = MapUtils.getString(data, "action");
         log.debug("[MyBatisConfig] 收到请求: action={}", action);

@@ -17,6 +17,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 public class WechatMiniProgramPaymentChannel extends WechatJsapiPaymentChannel implements PaymentChannel {
 
+    /**
+     * 创建 WechatMiniProgramPaymentChannel 实例
+     * @param merchantChannelService merchantChannelService
+     * @param objectMapper objectMapper
+     * @param providerGatewayRegistry providerGatewayRegistry
+     */
     public WechatMiniProgramPaymentChannel(MerchantChannelService merchantChannelService,
                                            ObjectMapper objectMapper,
                                            PaymentProviderGatewayRegistry providerGatewayRegistry) {
@@ -24,6 +30,7 @@ public class WechatMiniProgramPaymentChannel extends WechatJsapiPaymentChannel i
     }
 
     @Override
+    /** Supports */
     public boolean supports(String channelType, String channelSubType) {
         return ("WECHAT".equalsIgnoreCase(channelType) || "EPAY".equalsIgnoreCase(channelType))
                 && ("MINI_PROGRAM".equalsIgnoreCase(channelSubType)
@@ -31,6 +38,7 @@ public class WechatMiniProgramPaymentChannel extends WechatJsapiPaymentChannel i
     }
 
     @Override
+    /** Pay */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         TencentWechatPayRequest payRequest = buildPayRequest(channel, request);
         TencentWechatPayResponse response = gateway(providerSpi(channel, null)).miniProgramPay(buildProperties(channel), payRequest);
@@ -46,6 +54,7 @@ public class WechatMiniProgramPaymentChannel extends WechatJsapiPaymentChannel i
     }
 
     @Override
+    /** 查询 */
     public PaymentResult query(MerchantChannel channel, String orderNo) {
         TencentWechatOrderResponse response = gateway(providerSpi(channel, null)).queryMiniProgramOrder(buildProperties(channel), orderNo);
 
@@ -60,6 +69,7 @@ public class WechatMiniProgramPaymentChannel extends WechatJsapiPaymentChannel i
     }
 
     @Override
+    /** 关闭 */
     public boolean close(MerchantChannel channel, String orderNo) {
         return gateway(providerSpi(channel, null)).closeMiniProgramOrder(buildProperties(channel), orderNo);
     }

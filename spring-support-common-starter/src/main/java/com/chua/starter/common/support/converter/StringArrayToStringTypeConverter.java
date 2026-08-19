@@ -10,6 +10,7 @@ import org.springframework.core.convert.converter.Converter;
  */
 public class StringArrayToStringTypeConverter implements Converter<String[], String> {
     @Override
+    /** 转换 */
     public String convert(String[] source) {
         return java.lang.String.join(",", source);
     }

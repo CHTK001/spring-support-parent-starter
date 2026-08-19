@@ -23,38 +23,47 @@ public class PaymentProviderProperties {
     /** EpaySPI */
     private String epaySpi = "epay";
 
+    /** 获取DefaultSpi */
     public String getDefaultSpi() {
         return defaultSpi;
     }
 
+    /** 设置DefaultSpi */
     public void setDefaultSpi(String defaultSpi) {
         this.defaultSpi = defaultSpi;
     }
 
+    /** 获取AlipaySpi */
     public String getAlipaySpi() {
         return alipaySpi;
     }
 
+    /** 设置AlipaySpi */
     public void setAlipaySpi(String alipaySpi) {
         this.alipaySpi = alipaySpi;
     }
 
+    /** 获取WechatSpi */
     public String getWechatSpi() {
         return wechatSpi;
     }
 
+    /** 设置WechatSpi */
     public void setWechatSpi(String wechatSpi) {
         this.wechatSpi = wechatSpi;
     }
 
+    /** 获取EpaySpi */
     public String getEpaySpi() {
         return epaySpi;
     }
 
+    /** 设置EpaySpi */
     public void setEpaySpi(String epaySpi) {
         this.epaySpi = epaySpi;
     }
 
+    /** 解析ForChannelType */
     public String resolveForChannelType(String channelType) {
         String fallback = StringUtils.hasText(defaultSpi)
                 ? defaultSpi

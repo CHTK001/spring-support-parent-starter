@@ -28,17 +28,24 @@ public class WalletAccountController {
     private final WalletAccountService walletAccountService;
 
     @GetMapping("/account")
+    /**
+     * 获取Account
+     * @param merchantId merchantId
+     * @param userId userId
+     */
     public Result<WalletAccountVO> getAccount(@RequestParam Long merchantId,
                                               @RequestParam Long userId) {
         return Result.success(walletAccountService.getAccount(merchantId, userId));
     }
 
     @PostMapping("/account/recharge")
+    /** Recharge */
     public Result<WalletAccountVO> recharge(@RequestBody WalletRechargeDTO dto) {
         return Result.success(walletAccountService.recharge(dto));
     }
 
     @GetMapping("/account/log/page")
+    /** PageLogs */
     public Result<PageResult<WalletAccountLog>> pageLogs(@RequestParam(defaultValue = "1") int pageNum,
                                                          @RequestParam(defaultValue = "10") int pageSize,
                                                          @RequestParam(required = false) Long merchantId,

@@ -21,6 +21,13 @@ public class TreeStructConfig<T> {
     /** 数值提取器 */
     private Function<T, Number> valueExtractor;
 
+    /**
+     * 创建 TreeStructConfig 实例
+     * @param idExtractor idExtractor
+     * @param parentIdExtractor parentIdExtractor
+     * @param nameExtractor nameExtractor
+     * @param valueExtractor valueExtractor
+     */
     public TreeStructConfig(Function<T, ?> idExtractor,
                             Function<T, ?> parentIdExtractor,
                             Function<T, String> nameExtractor,
@@ -35,6 +42,7 @@ public class TreeStructConfig<T> {
         return idExtractor;
     }
 
+    /** 设置IdExtractor */
     public void setIdExtractor(Function<T, ?> idExtractor) {
         this.idExtractor = idExtractor;
     }
@@ -43,22 +51,27 @@ public class TreeStructConfig<T> {
         return parentIdExtractor;
     }
 
+    /** 设置ParentIdExtractor */
     public void setParentIdExtractor(Function<T, ?> parentIdExtractor) {
         this.parentIdExtractor = parentIdExtractor;
     }
 
+    /** 获取NameExtractor */
     public Function<T, String> getNameExtractor() {
         return nameExtractor;
     }
 
+    /** 设置NameExtractor */
     public void setNameExtractor(Function<T, String> nameExtractor) {
         this.nameExtractor = nameExtractor;
     }
 
+    /** 获取ValueExtractor */
     public Function<T, Number> getValueExtractor() {
         return valueExtractor;
     }
 
+    /** 设置ValueExtractor */
     public void setValueExtractor(Function<T, Number> valueExtractor) {
         this.valueExtractor = valueExtractor;
     }

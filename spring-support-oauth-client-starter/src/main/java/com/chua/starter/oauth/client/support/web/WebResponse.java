@@ -33,6 +33,13 @@ public class WebResponse {
     /** 响应 */
     private final HttpServletResponse response;
 
+    /**
+     * 创建 WebResponse 实例
+     * @param authProperties authProperties
+     * @param FilterChain FilterChain
+     * @param HttpServletRequest HttpServletRequest
+     * @param HttpServletResponse HttpServletResponse
+     */
     public WebResponse(AuthClientProperties authProperties, FilterChain chain, HttpServletRequest request, HttpServletResponse response) {
         this.authProperties = authProperties;
         this.chain = chain;
@@ -40,6 +47,7 @@ public class WebResponse {
         this.response = response;
     }
 
+    /** DoFailureChain */
     public void doFailureChain(Information information) {
         if (null != information) {
             response.setStatus(information.getCode());
@@ -65,6 +73,7 @@ public class WebResponse {
 
     }
 
+    /** 是否Localhost */
     private boolean isLocalhost() {
         String ipAddress = RequestUtils.getIpAddress(request);
         return null == ipAddress || "localhost".equalsIgnoreCase(ipAddress) || "127.0.0.1".equalsIgnoreCase(ipAddress);

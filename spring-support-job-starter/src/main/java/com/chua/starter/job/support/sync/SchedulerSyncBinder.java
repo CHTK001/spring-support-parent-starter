@@ -135,6 +135,7 @@ public class SchedulerSyncBinder {
         };
         syncServer.addListener(new SyncServerListener() {
             @Override
+            /** OnMessage */
             public void onMessage(String clientId, String topic, Object message) {
                 if (JobSyncTopics.TASK_LOG.equals(topic)) {
                     log.info("[job] SCHEDULER 收到上行 TASK_LOG clientId={} messageType={}",

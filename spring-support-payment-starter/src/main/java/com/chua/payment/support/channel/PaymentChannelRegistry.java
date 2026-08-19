@@ -22,6 +22,7 @@ public class PaymentChannelRegistry {
     /** Application上下文 */
     private ApplicationContext applicationContext;
 
+    /** Channels */
     private List<PaymentChannel> channels() {
         if (channels == null) {
             synchronized (this) {
@@ -40,6 +41,7 @@ public class PaymentChannelRegistry {
         this.channels = channels;
     }
 
+    /** 获取Channel */
     public PaymentChannel getChannel(String channelType, String channelSubType) {
         return channels().stream()
                 .filter(channel -> channel.supports(channelType, channelSubType))
@@ -50,6 +52,7 @@ public class PaymentChannelRegistry {
                         + ", 已注册渠道数: " + channels().size()));
     }
 
+    /** Supports */
     public boolean supports(String channelType, String channelSubType) {
         return channels().stream().anyMatch(channel -> channel.supports(channelType, channelSubType));
     }

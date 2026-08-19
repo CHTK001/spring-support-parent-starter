@@ -38,6 +38,7 @@ public class SoftSourceController {
     @Operation(summary = "软件源列表")
     @GetMapping("/page")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /** Page */
     public ReturnPageResult<SoftSource> page(@ParameterObject Query<SoftSource> query, @ParameterObject SoftSource request) {
         return PageResultUtils.ok(softSourceService.pageFor(query, request));
     }
@@ -45,6 +46,7 @@ public class SoftSourceController {
     @Operation(summary = "保存软件源")
     @PostMapping("/save")
     @Permission(value = "sys:soft:source:add", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /** 保存 */
     public ReturnResult<SoftSource> save(@Validated(AddGroup.class) @RequestBody SoftSource source, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
@@ -55,6 +57,7 @@ public class SoftSourceController {
     @Operation(summary = "更新软件源")
     @PutMapping("/update")
     @Permission(value = "sys:soft:source:update", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /** 更新 */
     public ReturnResult<SoftSource> update(@Validated(UpdateGroup.class) @RequestBody SoftSource source, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
@@ -65,6 +68,7 @@ public class SoftSourceController {
     @Operation(summary = "删除软件源")
     @DeleteMapping("/delete")
     @Permission(value = "sys:soft:source:delete", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /** 删除 */
     public ReturnResult<Boolean> delete(String sourceId) {
         return softSourceService.deleteSource(sourceId);
     }
@@ -72,6 +76,7 @@ public class SoftSourceController {
     @Operation(summary = "软件源详情")
     @GetMapping("/detail")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /** Detail */
     public ReturnResult<SoftSource> detail(String sourceId) {
         return ReturnResult.ok(softSourceService.getById(sourceId));
     }
@@ -79,6 +84,7 @@ public class SoftSourceController {
     @Operation(summary = "启用软件源")
     @PutMapping("/enable")
     @Permission(value = "sys:soft:source:update", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /** 启用 */
     public ReturnResult<Boolean> enable(String sourceId) {
         return softSourceService.enableSource(sourceId);
     }
@@ -86,6 +92,7 @@ public class SoftSourceController {
     @Operation(summary = "禁用软件源")
     @PutMapping("/disable")
     @Permission(value = "sys:soft:source:update", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /** 禁用 */
     public ReturnResult<Boolean> disable(String sourceId) {
         return softSourceService.disableSource(sourceId);
     }
@@ -93,6 +100,7 @@ public class SoftSourceController {
     @Operation(summary = "同步软件源")
     @PostMapping("/sync")
     @Permission(value = "sys:soft:source:sync", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /** Sync */
     public ReturnResult<Integer> sync(String sourceId) {
         return softSourceService.syncSource(sourceId);
     }
@@ -100,6 +108,7 @@ public class SoftSourceController {
     @Operation(summary = "获取默认软件源")
     @GetMapping("/default")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /** 获取Default */
     public ReturnResult<SoftSource> getDefault() {
         return ReturnResult.ok(softSourceService.getDefaultSource());
     }

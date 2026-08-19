@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 public class LoggingMessageInterceptor implements MessageInterceptor {
 
     @Override
+    /** Before发送 */
     public Message beforeSend(Message message) {
         log.debug("[Queue] 准备发送消息: destination={}, id={}, size={}",
             message.getDestination(), message.getId(),
@@ -26,6 +27,7 @@ public class LoggingMessageInterceptor implements MessageInterceptor {
     }
 
     @Override
+    /** After发送 */
     public void afterSend(Message message, boolean success, Throwable error) {
         if (success) {
             log.debug("[Queue] 消息发送成功: destination={}, id={}",
@@ -37,6 +39,7 @@ public class LoggingMessageInterceptor implements MessageInterceptor {
     }
 
     @Override
+    /** Before接收 */
     public Message beforeReceive(Message message) {
         log.debug("[Queue] 接收到消息: destination={}, id={}, size={}",
             message.getDestination(), message.getId(),
@@ -45,6 +48,7 @@ public class LoggingMessageInterceptor implements MessageInterceptor {
     }
 
     @Override
+    /** After接收 */
     public void afterReceive(Message message, boolean success, Throwable error) {
         if (success) {
             log.debug("[Queue] 消息处理成功: destination={}, id={}",
@@ -56,6 +60,7 @@ public class LoggingMessageInterceptor implements MessageInterceptor {
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         return Integer.MAX_VALUE; // 最低优先级，最后执行
     }

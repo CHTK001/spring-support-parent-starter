@@ -27,10 +27,15 @@ public class PaymentCipherService {
     /** 环境 */
     private final Environment environment;
 
+    /**
+     * 创建 PaymentCipherService 实例
+     * @param environment environment
+     */
     public PaymentCipherService(Environment environment) {
         this.environment = environment;
     }
 
+    /** Encrypt */
     public String encrypt(String plainText) {
         if (!StringUtils.hasText(plainText)) {
             return plainText;
@@ -38,6 +43,7 @@ public class PaymentCipherService {
         return doCipher(plainText, requiredEncryptionKey(), Cipher.ENCRYPT_MODE);
     }
 
+    /** Decrypt */
     public String decrypt(String encryptedText) {
         if (!StringUtils.hasText(encryptedText)) {
             return encryptedText;
@@ -72,6 +78,7 @@ public class PaymentCipherService {
         return StringUtils.hasText(key) ? key : LEGACY_DEFAULT_KEY;
     }
 
+    /** ConfiguredEncryptionKey */
     private String configuredEncryptionKey() {
         return property(
                 "plugin.payment.security.key",
@@ -82,6 +89,7 @@ public class PaymentCipherService {
                 "payment.encryption.encryptionKey");
     }
 
+    /** Property */
     private String property(String... keys) {
         for (String key : keys) {
             String value = environment.getProperty(key);
@@ -92,6 +100,7 @@ public class PaymentCipherService {
         return null;
     }
 
+    /** 分割Keys */
     private List<String> splitKeys(String value) {
         if (!StringUtils.hasText(value)) {
             return List.of();
@@ -105,6 +114,7 @@ public class PaymentCipherService {
         return keys;
     }
 
+    /** DoCipher */
     private String doCipher(String value, String keyText, int mode) {
         try {
             SecretKeySpec key = new SecretKeySpec(normalizeKey(keyText), "AES");
@@ -121,6 +131,7 @@ public class PaymentCipherService {
         }
     }
 
+    /** NormalizeKey */
     private byte[] normalizeKey(String keyText) {
         if (!StringUtils.hasText(keyText)) {
             throw new PaymentException("支付加密密钥不能为空");

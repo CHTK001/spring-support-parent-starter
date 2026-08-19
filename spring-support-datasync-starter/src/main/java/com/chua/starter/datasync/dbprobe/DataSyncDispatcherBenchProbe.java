@@ -28,6 +28,7 @@ public final class DataSyncDispatcherBenchProbe {
     static final int ROWS = 100_000;
     static final int BATCH = 1000;
 
+    /** Main */
     public static void main(String[] args) throws Exception {
         Path tmp = Files.createTempDirectory("dispatch-bench");
         tmp.toFile().deleteOnExit();
@@ -69,6 +70,7 @@ public final class DataSyncDispatcherBenchProbe {
         System.err.println("========================================================================");
     }
 
+    /** MakeData */
     static List<Map<String, Object>> makeData(int n) {
         List<Map<String, Object>> data = new ArrayList<>(n);
         for (int i = 0; i < n; i++) {
@@ -84,6 +86,7 @@ public final class DataSyncDispatcherBenchProbe {
         return data;
     }
 
+    /** Bench */
     static void bench(String label, DispatcherProvider provider, List<Map<String, Object>> data) throws Exception {
         AtomicLong count = new AtomicLong();
         CountDownLatch done = new CountDownLatch(1);

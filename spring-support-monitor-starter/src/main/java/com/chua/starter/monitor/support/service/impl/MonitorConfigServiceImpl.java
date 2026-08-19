@@ -28,6 +28,7 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
 
     @Override
     @Cacheable(cacheNames = "monitorConfig", key = "'monitor.config:key:' + #key")
+    /** 查找ByKey */
     public ReturnResult<MsMonitorConfig> findByKey(String key) {
         try {
             LambdaQueryWrapper<MsMonitorConfig> w = new LambdaQueryWrapper<>();
@@ -39,22 +40,26 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     @Override public String getString(String key) { return getString(key, ""); }
 
     @Override
+    /** 获取String */
     public String getString(String key, String defaultValue) {
         Optional<MsMonitorConfig> opt = Optional.ofNullable(findByKey(key).getData());
         return opt.map(MsMonitorConfig::getMonitorConfigValue).orElse(defaultValue);
     }
 
     @Override
+    /** 获取Int */
     public int getInt(String key, int defaultValue) {
         try { return Integer.parseInt(getString(key)); } catch (NumberFormatException e) { return defaultValue; }
     }
 
     @Override
+    /** 获取Long */
     public long getLong(String key, long defaultValue) {
         try { return Long.parseLong(getString(key)); } catch (NumberFormatException e) { return defaultValue; }
     }
 
     @Override
+    /** 获取Boolean */
     public boolean getBoolean(String key, boolean defaultValue) {
         String val = getString(key);
         return val == null || val.isEmpty() ? defaultValue : Boolean.parseBoolean(val);
@@ -62,6 +67,7 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
 
     @Override
     @Cacheable(cacheNames = "monitorConfig", key = "'monitor.config:all'")
+    /** 获取All */
     public ReturnResult<Map<String, String>> getAll() {
         try {
             Map<String, String> map = new HashMap<>();
@@ -71,11 +77,13 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
     }
 
     @Override
+    /** ListAll */
     public List<MsMonitorConfig> listAll() { return configMapper.selectList(null); }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorConfig")
+    /** Upsert */
     public ReturnResult<MsMonitorConfig> upsert(MsMonitorConfig entity) {
         try {
             ReturnResult<MsMonitorConfig> existing = findByKey(entity.getMonitorConfigKey());

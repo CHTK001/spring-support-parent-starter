@@ -79,32 +79,39 @@ public class ShardingDataSourceProperties {
         private String strategy = "TABLE";
 
         // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
+        /** 获取LogicTable */
         public String getLogicTable() {
             return logicTable;
         }
 
+        /** 获取ShardingColumn */
         public String getShardingColumn() {
             return shardingColumn;
         }
 
+        /** 获取TimeUnit */
         public String getTimeUnit() {
             return timeUnit;
         }
 
+        /** 获取Strategy */
         public String getStrategy() {
             return strategy;
         }
     }
 
     // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
+    /** 是否ShowSql */
     public boolean isShowSql() {
         return showSql;
     }
 
+    /** 获取Databases */
     public List<String> getDatabases() {
         return databases;
     }
 
+    /** 获取Tables */
     public List<ShardingTableConfig> getTables() {
         return tables;
     }

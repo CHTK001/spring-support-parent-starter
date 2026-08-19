@@ -72,6 +72,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     private final TransactionTemplate transactionTemplate;
 
     @Override
+    /** Install */
     public ReturnResult<InstallDetailResponse> install(InstallRequest request) {
         SoftSoftware software = softwareService.getById(request.getSoftwareId());
         if (software == null) {
@@ -126,6 +127,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
+    /** Uninstall */
     public ReturnResult<InstallDetailResponse> uninstall(String softwareId, String userId, String deviceId) {
         SoftSoftware software = softwareService.getById(softwareId);
         if (software == null) {
@@ -163,6 +165,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
+    /** 更新Version */
     public ReturnResult<InstallDetailResponse> updateVersion(String softwareId, String userId, String deviceId, String targetVersion) {
         SoftSoftware software = softwareService.getById(softwareId);
         if (software == null) {
@@ -209,6 +212,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
+    /** 更新Progress */
     public ReturnResult<Boolean> updateProgress(String recordId, Integer progress, String message) {
         if (StringUtils.isBlank(recordId)) {
             return ReturnResult.illegal("记录ID不能为空");
@@ -223,6 +227,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
+    /** CompleteInstall */
     public ReturnResult<Boolean> completeInstall(String recordId) {
         if (StringUtils.isBlank(recordId)) {
             return ReturnResult.illegal("记录ID不能为空");
@@ -242,6 +247,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
+    /** FailInstall */
     public ReturnResult<Boolean> failInstall(String recordId, String errorMessage) {
         if (StringUtils.isBlank(recordId)) {
             return ReturnResult.illegal("记录ID不能为空");
@@ -258,6 +264,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
+    /** CompleteUninstall */
     public ReturnResult<Boolean> completeUninstall(String recordId) {
         if (StringUtils.isBlank(recordId)) {
             return ReturnResult.illegal("记录ID不能为空");
@@ -277,6 +284,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
+    /** FailUninstall */
     public ReturnResult<Boolean> failUninstall(String recordId, String errorMessage) {
         if (StringUtils.isBlank(recordId)) {
             return ReturnResult.illegal("记录ID不能为空");
@@ -293,6 +301,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
+    /** ListBySoftwareId */
     public List<SoftInstallRecord> listBySoftwareId(String softwareId) {
         return baseMapper.selectList(new LambdaQueryWrapper<SoftInstallRecord>()
                 .eq(SoftInstallRecord::getInstallRecordSoftwareId, softwareId)
@@ -300,6 +309,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
+    /** ListByUserId */
     public List<SoftInstallRecord> listByUserId(String userId) {
         return baseMapper.selectList(new LambdaQueryWrapper<SoftInstallRecord>()
                 .eq(SoftInstallRecord::getInstallRecordUserId, userId)
@@ -307,6 +317,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
+    /** ListInstalledByUserId */
     public List<SoftInstallRecord> listInstalledByUserId(String userId) {
         return baseMapper.selectList(new LambdaQueryWrapper<SoftInstallRecord>()
                 .eq(SoftInstallRecord::getInstallRecordUserId, userId)
@@ -314,6 +325,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
+    /** 获取InstalledRecord */
     public SoftInstallRecord getInstalledRecord(String softwareId, String userId, String deviceId) {
         LambdaQueryWrapper<SoftInstallRecord> w = new LambdaQueryWrapper<>();
         w.eq(SoftInstallRecord::getInstallRecordSoftwareId, softwareId)
@@ -324,6 +336,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
+    /** 获取InstalledSoftwareIds */
     public List<String> getInstalledSoftwareIds(String userId) {
         List<SoftInstallRecord> records = listInstalledByUserId(userId);
         if (CollectionUtils.isEmpty(records)) {
@@ -336,6 +349,7 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     @Override
+    /** 获取InstallDetail */
     public ReturnResult<InstallDetailResponse> getInstallDetail(String recordId) {
         if (StringUtils.isBlank(recordId)) {
             return ReturnResult.illegal("记录ID不能为空");

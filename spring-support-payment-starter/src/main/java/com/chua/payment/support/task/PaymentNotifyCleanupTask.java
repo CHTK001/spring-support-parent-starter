@@ -24,6 +24,7 @@ public class PaymentNotifyCleanupTask implements PaymentManagedTask {
     /** Notify错误mapper */
     private final PaymentNotifyErrorMapper notifyErrorMapper;
 
+    /** CleanResolvedErrors */
     public void cleanResolvedErrors() {
         log.info("开始清理已解决的回调异常记录");
 
@@ -40,21 +41,25 @@ public class PaymentNotifyCleanupTask implements PaymentManagedTask {
     }
 
     @Override
+    /** TaskKey */
     public String taskKey() {
         return "payment-notify-cleanup";
     }
 
     @Override
+    /** TaskName */
     public String taskName() {
         return "回调异常清理";
     }
 
     @Override
+    /** DefaultCron */
     public String defaultCron() {
         return "0 0 2 * * ?";
     }
 
     @Override
+    /** Description */
     public String description() {
         return "清理已解决且超过保留期的回调异常记录。";
     }
@@ -67,6 +72,7 @@ public class PaymentNotifyCleanupTask implements PaymentManagedTask {
             desc = "清理已解决且超过保留期的回调异常记录。",
             autoStart = true
     )
+    /** 执行 */
     public void execute() {
         cleanResolvedErrors();
     }

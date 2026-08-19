@@ -154,56 +154,67 @@ public class ApiFeatureInfo implements Serializable {
         /** Patterns */
         private Set<String> patterns;
 
+        /** FeatureId */
         public Builder featureId(String featureId) {
             this.featureId = featureId;
             return this;
         }
 
+        /** Description */
         public Builder description(String description) {
             this.description = description;
             return this;
         }
 
+        /** 分组 */
         public Builder group(String group) {
             this.group = group;
             return this;
         }
 
+        /** DefaultEnabled */
         public Builder defaultEnabled(boolean defaultEnabled) {
             this.defaultEnabled = defaultEnabled;
             return this;
         }
 
+        /** Enabled */
         public Builder enabled(boolean enabled) {
             this.enabled = enabled;
             return this;
         }
 
+        /** DisabledMessage */
         public Builder disabledMessage(String disabledMessage) {
             this.disabledMessage = disabledMessage;
             return this;
         }
 
+        /** DisabledStatus */
         public Builder disabledStatus(int disabledStatus) {
             this.disabledStatus = disabledStatus;
             return this;
         }
 
+        /** ClassName */
         public Builder className(String className) {
             this.className = className;
             return this;
         }
 
+        /** MethodName */
         public Builder methodName(String methodName) {
             this.methodName = methodName;
             return this;
         }
 
+        /** Patterns */
         public Builder patterns(Set<String> patterns) {
             this.patterns = patterns;
             return this;
         }
 
+        /** 构建 */
         public ApiFeatureInfo build() {
             return new ApiFeatureInfo(featureId, description, group, defaultEnabled, enabled,
                     disabledMessage, disabledStatus, className, methodName, patterns);

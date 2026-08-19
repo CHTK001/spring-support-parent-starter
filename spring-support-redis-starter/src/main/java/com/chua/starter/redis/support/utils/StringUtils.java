@@ -7,6 +7,7 @@ package com.chua.starter.redis.support.utils;
  */
 public final class StringUtils {
 
+    /** 创建 StringUtils 实例 */
     private StringUtils() {
     }
 

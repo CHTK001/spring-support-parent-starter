@@ -25,6 +25,15 @@ public class WhereDeptRegister extends AbstractDeptRegister {
     /** 当前表 */
     private final Table currentTable;
 
+    /**
+     * 创建 WhereDeptRegister 实例
+     * @param plainSelect plainSelect
+     * @param where where
+     * @param user user
+     * @param dataPermission dataPermission
+     * @param scopeProperties scopeProperties
+     * @param currentTable currentTable
+     */
     public WhereDeptRegister(PlainSelect plainSelect,
                              Expression where,
                              CurrentUser user,
@@ -36,6 +45,7 @@ public class WhereDeptRegister extends AbstractDeptRegister {
         deptTable = currentTable;
     }
 
+    /** 注册 */
     public Expression register() {
         return registerDataScope();
     }

@@ -38,6 +38,7 @@ public class MerchantServiceImpl implements MerchantService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 创建Merchant */
     public MerchantVO createMerchant(MerchantDTO dto) {
         Merchant merchant = new Merchant();
         BeanUtils.copyProperties(dto, merchant);
@@ -55,6 +56,7 @@ public class MerchantServiceImpl implements MerchantService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 更新Merchant */
     public MerchantVO updateMerchant(Long id, MerchantDTO dto) {
         Merchant merchant = requireMerchant(id);
         BeanUtils.copyProperties(dto, merchant);
@@ -70,6 +72,7 @@ public class MerchantServiceImpl implements MerchantService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 删除Merchant */
     public boolean deleteMerchant(Long id) {
         Merchant merchant = requireMerchant(id);
         long channelCount = merchantChannelMapper.selectCount(new LambdaQueryWrapper<MerchantChannel>()
@@ -87,11 +90,13 @@ public class MerchantServiceImpl implements MerchantService {
     }
 
     @Override
+    /** 获取Merchant */
     public MerchantVO getMerchant(Long id) {
         return convertToVO(requireMerchant(id));
     }
 
     @Override
+    /** ListMerchants */
     public Page<MerchantVO> listMerchants(int page, int size, String merchantName, Integer status) {
         LambdaQueryWrapper<Merchant> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(merchantName)) {
@@ -110,6 +115,7 @@ public class MerchantServiceImpl implements MerchantService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** ActivateMerchant */
     public boolean activateMerchant(Long id) {
         Merchant merchant = requireMerchant(id);
         merchant.setStatus(MerchantStatus.ACTIVE.getCode());
@@ -118,12 +124,14 @@ public class MerchantServiceImpl implements MerchantService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** DeactivateMerchant */
     public boolean deactivateMerchant(Long id) {
         Merchant merchant = requireMerchant(id);
         merchant.setStatus(MerchantStatus.DISABLED.getCode());
         return merchantMapper.updateById(merchant) > 0;
     }
 
+    /** RequireMerchant */
     private Merchant requireMerchant(Long id) {
         Merchant merchant = merchantMapper.selectById(id);
         if (merchant == null) {
@@ -132,10 +140,12 @@ public class MerchantServiceImpl implements MerchantService {
         return merchant;
     }
 
+    /** GenerateMerchantNo */
     private String generateMerchantNo() {
         return "M" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }
 
+    /** 转换ToVO */
     private MerchantVO convertToVO(Merchant merchant) {
         MerchantVO vo = new MerchantVO();
         BeanUtils.copyProperties(merchant, vo);

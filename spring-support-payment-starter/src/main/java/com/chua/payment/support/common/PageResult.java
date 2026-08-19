@@ -39,9 +39,17 @@ public class PageResult<T> implements Serializable {
      */
     private Long pages;
 
+    /** 创建 PageResult 实例 */
     public PageResult() {
     }
 
+    /**
+     * 创建 PageResult 实例
+     * @param records records
+     * @param Long Long
+     * @param Long Long
+     * @param Long Long
+     */
     public PageResult(List<T> records, Long total, Long current, Long size) {
         this.records = records;
         this.total = total;

@@ -58,6 +58,7 @@ public class AgentConfigController {
     @Permission("admin")
     @Operation(summary = "注册 Agent 为模型", description = "将指定 Agent 包装为 AgentModelDefinition 并注册到 ChatClientRegistry，使其作为模型对外暴露")
     @PostMapping("/register-as-model")
+    /** 注册AgentAsModel */
     public ReturnResult<Map<String, Object>> registerAgentAsModel(@RequestBody Map<String, Object> body) {
         String agentName = (String) body.get("agentName");
         String modelName = (String) body.get("modelName");
@@ -108,6 +109,7 @@ public class AgentConfigController {
     @Permission("admin")
     @Operation(summary = "注销 Agent 模型", description = "从 ChatClientRegistry 移除 Agent 模型注册")
     @DeleteMapping("/unregister-model/{modelName}")
+    /** 注销AgentModel */
     public ReturnResult<Map<String, Object>> unregisterAgentModel(@PathVariable String modelName) {
         log.info("[AgentConfig] 注销 Agent 模型: modelName={}", modelName);
         // 从持久化配置中移除
@@ -129,6 +131,7 @@ public class AgentConfigController {
 
     @Operation(summary = "获取 Agent 编排结构", description = "返回用于 RelationGraph 可视化的节点和边数据")
     @GetMapping("/orchestration/{agentName}")
+    /** 获取Orchestration */
     public ReturnResult<Map<String, Object>> getOrchestration(@PathVariable String agentName) {
         var agent = agentRegistry.getByName(agentName);
         if (agent == null) {
@@ -185,6 +188,7 @@ public class AgentConfigController {
     @Permission("admin")
     @Operation(summary = "保存 Agent 编排", description = "持久化 Agent 的编排配置（子Agent关联、模式等）")
     @PostMapping("/orchestration/save")
+    /** 保存Orchestration */
     public ReturnResult<Map<String, Object>> saveOrchestration(@RequestBody Map<String, Object> body) {
         String agentName = (String) body.get("agentName");
         if (agentName == null || agentName.isBlank()) {
@@ -249,6 +253,7 @@ public class AgentConfigController {
 
     @Operation(summary = "Agent 模型列表", description = "返回所有已注册为模型的 Agent 列表")
     @GetMapping("/agent-models")
+    /** ListAgentModels */
     public ReturnResult<List<Map<String, Object>>> listAgentModels() {
         List<Map<String, Object>> result = new ArrayList<>();
         Set<String> models = chatClientRegistry.getModels();

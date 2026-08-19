@@ -29,6 +29,7 @@ public class OrderConfigController {
 
     @Operation(summary = "查询分表配置")
     @GetMapping("/partitions")
+    /** List */
     public Result<List<OrderPartitionConfigVO>> list(HttpServletRequest request) {
         Result<List<OrderPartitionConfigVO>> denied = denyIfNecessary(request);
         return denied != null ? denied : Result.success(orderPartitionConfigService.listConfigs());
@@ -36,6 +37,12 @@ public class OrderConfigController {
 
     @Operation(summary = "更新分表配置")
     @PutMapping("/partitions/{businessType}")
+    /**
+     * 更新
+     * @param businessType businessType
+     * @param dto dto
+     * @param request request
+     */
     public Result<OrderPartitionConfigVO> update(@PathVariable String businessType,
                                                  @RequestBody OrderPartitionConfigDTO dto,
                                                  HttpServletRequest request) {
@@ -45,6 +52,7 @@ public class OrderConfigController {
 
     @Operation(summary = "预览分表策略")
     @GetMapping("/partitions/{businessType}/preview")
+    /** Preview */
     public Result<OrderPartitionPreviewVO> preview(@PathVariable String businessType, HttpServletRequest request) {
         Result<OrderPartitionPreviewVO> denied = denyIfNecessary(request);
         return denied != null ? denied : Result.success(orderPartitionConfigService.preview(businessType));
@@ -52,6 +60,7 @@ public class OrderConfigController {
 
     @Operation(summary = "手动触发建表")
     @PostMapping("/partitions/{businessType}/create")
+    /** Trigger创建 */
     public Result<Void> triggerCreate(@PathVariable String businessType, HttpServletRequest request) {
         Result<Void> denied = denyIfNecessary(request);
         if (denied != null) return denied;
@@ -61,6 +70,7 @@ public class OrderConfigController {
 
     @Operation(summary = "手动触发迁移")
     @PostMapping("/partitions/{businessType}/migrate")
+    /** TriggerMigrate */
     public Result<Void> triggerMigrate(@PathVariable String businessType, HttpServletRequest request) {
         Result<Void> denied = denyIfNecessary(request);
         if (denied != null) return denied;
@@ -68,6 +78,7 @@ public class OrderConfigController {
         return Result.success();
     }
 
+    /** DenyIfNecessary */
     private <T> Result<T> denyIfNecessary(HttpServletRequest request) {
         UserResume userResume = principalResolver.resolve(request);
         if (userResume == null) {

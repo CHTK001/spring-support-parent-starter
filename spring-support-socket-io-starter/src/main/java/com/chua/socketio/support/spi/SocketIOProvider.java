@@ -29,11 +29,20 @@ public class SocketIOProvider implements SocketProvider {
     private static final Logger log = LoggerFactory.getLogger(SocketIOProvider.class);
 
     @Override
+    /** 获取Protocol */
     public SocketProtocol getProtocol() {
         return SocketProtocol.SOCKETIO;
     }
 
     @Override
+    /**
+     * 创建SessionTemplate
+     * @param properties properties
+     * @param listeners listeners
+     * @param listeners listeners
+     * @param template template
+     * @param template template
+     */
     public SocketSessionTemplate createSessionTemplate(
             SocketProperties properties,
             List<SocketListener> listeners) {
@@ -42,12 +51,14 @@ public class SocketIOProvider implements SocketProvider {
     }
 
     @Override
+    /** 开始 */
     public void start(SocketSessionTemplate template) {
         log.info("[SocketIO] 启动 Socket.IO 服务");
         template.start();
     }
 
     @Override
+    /** 停止 */
     public void stop(SocketSessionTemplate template) {
         log.info("[SocketIO] 停止 Socket.IO 服务");
         template.stop();

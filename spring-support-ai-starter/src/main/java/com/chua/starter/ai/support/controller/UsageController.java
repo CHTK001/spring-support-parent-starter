@@ -40,6 +40,31 @@ public class UsageController {
     @Permission("admin")
     @Operation(summary = "用量列表", description = "分页查询用量明细")
     @GetMapping("/list")
+    /**
+     * List
+     * @param groupName groupName
+     * @param provider provider
+     * @param model model
+     * @param startTime startTime
+     * @param endTime endTime
+     * @param page page
+     * @param size size
+     * @param provider provider
+     * @param model model
+     * @param startTime startTime
+     * @param endTime endTime
+     * @param page page
+     * @param size size
+     * @param groupName groupName
+     * @param provider provider
+     * @param model model
+     * @param startTime startTime
+     * @param endTime endTime
+     * @param provider provider
+     * @param model model
+     * @param startTime startTime
+     * @param endTime endTime
+     */
     public ReturnResult<List<SysAiUsage>> list(
             @RequestParam(required = false) String groupName,
             @RequestParam(required = false) String provider,
@@ -55,6 +80,18 @@ public class UsageController {
     @Permission("admin")
     @Operation(summary = "用量统计", description = "汇总统计")
     @GetMapping("/statistics")
+    /**
+     * Statistics
+     * @param groupName groupName
+     * @param provider provider
+     * @param model model
+     * @param startTime startTime
+     * @param endTime endTime
+     * @param provider provider
+     * @param model model
+     * @param startTime startTime
+     * @param endTime endTime
+     */
     public ReturnResult<Map<String, Object>> statistics(
             @RequestParam(required = false) String groupName,
             @RequestParam(required = false) String provider,

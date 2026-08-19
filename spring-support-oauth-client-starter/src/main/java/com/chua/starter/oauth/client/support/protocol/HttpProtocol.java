@@ -44,12 +44,17 @@ public class HttpProtocol extends AbstractProtocol {
      */
     private final OAuthClientResilience resilience;
 
+    /**
+     * 创建 HttpProtocol 实例
+     * @param authClientProperties authClientProperties
+     */
     public HttpProtocol(AuthClientProperties authClientProperties) {
         super(authClientProperties);
         this.resilience = new OAuthClientResilience(authClientProperties);
     }
 
     @Override
+    /** Approve */
     protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
         // 如果传入的subProtocol（认证类型）为空，尝试从Header读取 x-oauth-type
         if (StringUtils.isBlank(subProtocol)) {
@@ -75,6 +80,7 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
+    /** AuthenticationUserCode */
     protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
         // 注意：指纹校验应该在Filter层进行，因为需要比对用户信息里的指纹
         // 协议层此时还没有用户信息，无法进行真正的指纹比对
@@ -111,6 +117,7 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
+    /** UpgradeInformation */
     protected AuthenticationInformation upgradeInformation(Cookie cookie, String token, UpgradeType upgradeType, String refreshToken) {
         JsonObject jsonObject = new JsonObject();
         // 构建认证数据
@@ -140,6 +147,7 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
+    /** 获取AccessToken */
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
         JsonObject jsonObject = new JsonObject();
         // 构建认证数据
@@ -174,6 +182,7 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
+    /** Logout */
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult) {
         JsonObject jsonObject = new JsonObject();
         // 构建认证数据
@@ -189,6 +198,7 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
+    /** 创建TemporaryToken */
     public LoginAuthResult createTemporaryToken(String sourceToken, Map<String, Object> ext) {
         JsonObject jsonObject = new JsonObject();
         // 构建请求数据
@@ -211,6 +221,7 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
+    /** 获取OnlineUsers */
     public OnlineUserResult getOnlineUsers(OnlineUserQuery query) {
         JsonObject jsonObject = new JsonObject();
         // 构建请求数据
@@ -243,6 +254,7 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
+    /** 验证Fingerprint */
     public FingerprintVerifyResult verifyFingerprint(String token, String fingerprint) {
         JsonObject jsonObject = new JsonObject();
         // 构建请求数据
@@ -278,6 +290,7 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
+    /** 获取OnlineStatus */
     public OnlineStatus getOnlineStatus(String uid) {
         JsonObject jsonObject = new JsonObject();
         // 构建请求数据
@@ -345,6 +358,7 @@ public class HttpProtocol extends AbstractProtocol {
         return result;
     }
 
+    /** 获取IntValue */
     private int getIntValue(Map<String, Object> map, String key, int defaultValue) {
         Object value = map.get(key);
         if (value instanceof Number) {
@@ -353,6 +367,7 @@ public class HttpProtocol extends AbstractProtocol {
         return defaultValue;
     }
 
+    /** 获取StringValue */
     private String getStringValue(Map<String, Object> map, String key, String defaultValue) {
         Object value = map.get(key);
         return value != null ? value.toString() : defaultValue;
@@ -379,6 +394,7 @@ public class HttpProtocol extends AbstractProtocol {
                 .findFirst().orElse(null);
     }
 
+    /** 创建AuthenticationInformation */
     protected AuthenticationInformation createAuthenticationInformation(JsonObject jsonObject, UpgradeType upgradeType, String path) {
         // 使用弹性处理器执行请求（含熔断和重试）
         return resilience.executeWithResilience(

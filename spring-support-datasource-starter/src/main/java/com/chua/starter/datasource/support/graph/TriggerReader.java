@@ -35,6 +35,10 @@ public class TriggerReader {
      */
     private final DatabaseDialect dialect;
 
+    /**
+     * 创建 TriggerReader 实例
+     * @param dialect dialect
+     */
     public TriggerReader(DatabaseDialect dialect) {
         this.dialect = dialect;
     }
@@ -73,6 +77,7 @@ public class TriggerReader {
 
     // ============================ 各方言 ============================
 
+    /** 读取MysqlLike */
     private List<TriggerInfo> readMysqlLike(Connection conn) throws SQLException {
         String sql = "SELECT TRIGGER_NAME, EVENT_MANIPULATION, EVENT_OBJECT_TABLE, " +
                 "ACTION_TIMING, STATUS, ACTION_ORIENTATION " +
@@ -93,6 +98,7 @@ public class TriggerReader {
         return list;
     }
 
+    /** 读取Postgresql */
     private List<TriggerInfo> readPostgresql(Connection conn) throws SQLException {
         String sql = "SELECT trigger_name, event_manipulation, event_object_table, " +
                 "action_timing, action_orientation " +
@@ -112,6 +118,7 @@ public class TriggerReader {
         return list;
     }
 
+    /** 读取Oracle */
     private List<TriggerInfo> readOracle(Connection conn) throws SQLException {
         String sql = "SELECT TRIGGER_NAME, TABLE_NAME, STATUS, TRIGGER_TYPE, TRIGGERING_EVENT " +
                 "FROM ALL_TRIGGERS WHERE OWNER = USER OR OWNER = SYS_CONTEXT('USERENV','CURRENT_SCHEMA')";
@@ -130,6 +137,7 @@ public class TriggerReader {
         return list;
     }
 
+    /** 读取SqlServer */
     private List<TriggerInfo> readSqlServer(Connection conn) throws SQLException {
         String sql = "SELECT t.name AS trigger_name, " +
                 "       OBJECT_NAME(t.parent_id) AS table_name, " +
@@ -161,6 +169,7 @@ public class TriggerReader {
         return list;
     }
 
+    /** 读取Sqlite */
     private List<TriggerInfo> readSqlite(Connection conn) throws SQLException {
         String sql = "SELECT name, tbl_name FROM sqlite_master WHERE type = 'trigger'";
         List<TriggerInfo> list = new ArrayList<>();
@@ -201,6 +210,7 @@ public class TriggerReader {
         return list;
     }
 
+    /** 获取ByName */
     private static String getByName(ResultSet rs, Map<String, Integer> cols, String name) {
         Integer idx = cols.get(name);
         if (idx == null) {

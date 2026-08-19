@@ -15,6 +15,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 public class AlipayWapPaymentChannel extends AlipayWebPaymentChannel implements PaymentChannel {
 
+    /**
+     * 创建 AlipayWapPaymentChannel 实例
+     * @param merchantChannelService merchantChannelService
+     * @param objectMapper objectMapper
+     * @param providerGatewayRegistry providerGatewayRegistry
+     */
     public AlipayWapPaymentChannel(MerchantChannelService merchantChannelService,
                                    ObjectMapper objectMapper,
                                    PaymentProviderGatewayRegistry providerGatewayRegistry) {
@@ -22,11 +28,13 @@ public class AlipayWapPaymentChannel extends AlipayWebPaymentChannel implements 
     }
 
     @Override
+    /** Supports */
     public boolean supports(String channelType, String channelSubType) {
         return "ALIPAY".equalsIgnoreCase(channelType) && "WAP".equalsIgnoreCase(channelSubType);
     }
 
     @Override
+    /** Pay */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         AliyunAlipayPayResponse response = gateway(providerSpi(channel, null)).wapPay(buildClientProperties(channel),
                 buildPayRequest(request, "QUICK_WAP_WAY"));

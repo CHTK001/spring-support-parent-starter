@@ -46,6 +46,7 @@ public class DynamicSqlMethod extends AbstractMethod {
     }
 
     @Override
+    /** InjectMappedStatement */
     public MappedStatement injectMappedStatement(Class<?> mapperClass, Class<?> modelClass, TableInfo tableInfo) {
         String sql = MapUtils.getString(param, "content");
         String type = MapUtils.getString(param, "type");
@@ -73,10 +74,12 @@ public class DynamicSqlMethod extends AbstractMethod {
         return (mappedStatement = this.addSelectMappedStatementForTable(mapperClass, methodName, sqlSource, tableInfo));
     }
 
+    /** 获取Name */
     public String getName() {
         return methodName;
     }
 
+    /** Refresh */
     public void refresh(String sql, String type) {
         log.info("动态刷新Mapper语句[{}]", mapperClass.getTypeName() + "." + methodName);
         SqlSource sqlSource = null;

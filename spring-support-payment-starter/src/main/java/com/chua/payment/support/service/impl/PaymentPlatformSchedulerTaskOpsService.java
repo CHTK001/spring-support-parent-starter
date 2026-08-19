@@ -81,6 +81,12 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
      */
     private volatile String schedulerConsoleCookie;
 
+    /**
+     * 创建 PaymentPlatformSchedulerTaskOpsService 实例
+     * @param environment environment
+     * @param objectMapper objectMapper
+     * @param restTemplateBuilderProvider restTemplateBuilderProvider
+     */
     public PaymentPlatformSchedulerTaskOpsService(Environment environment,
                                                   ObjectMapper objectMapper,
                                                   ObjectProvider<RestTemplateBuilder> restTemplateBuilderProvider) {
@@ -94,6 +100,7 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     @Override
+    /** ListTasks */
     public List<PaymentSchedulerTaskVO> listTasks() {
         AccessMode accessMode = resolveAccessMode();
         JsonNode data = request(HttpMethod.GET, taskListUrl(accessMode), null, accessMode);
@@ -105,12 +112,14 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     }
 
     @Override
+    /** 更新Task */
     public PaymentSchedulerTaskVO updateTask(String taskKey, PaymentSchedulerTaskUpdateDTO dto) {
         AccessMode accessMode = resolveAccessMode();
         return toTaskVO(request(HttpMethod.PUT, taskUrl(accessMode, taskKey), dto, accessMode));
     }
 
     @Override
+    /** TriggerTask */
     public PaymentSchedulerTaskVO triggerTask(String taskKey) {
         AccessMode accessMode = resolveAccessMode();
         return toTaskVO(request(HttpMethod.POST, taskTriggerUrl(accessMode, taskKey), null, accessMode));
@@ -143,6 +152,14 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
         }
     }
 
+    /**
+     * Exchange
+     * @param method method
+     * @param uri uri
+     * @param body body
+     * @param accessMode accessMode
+     * @param allowConsoleRelogin allowConsoleRelogin
+     */
     private ResponseEntity<String> exchange(HttpMethod method,
                                             URI uri,
                                             Object body,
@@ -171,6 +188,7 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
         }
     }
 
+    /** EnsureConsoleSession */
     private void ensureConsoleSession(boolean forceRefresh) {
         synchronized (consoleSessionMonitor) {
             if (!forceRefresh && StringUtils.hasText(schedulerConsoleCookie)) {
@@ -206,18 +224,21 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
         }
     }
 
+    /** ClearConsoleSession */
     private void clearConsoleSession() {
         synchronized (consoleSessionMonitor) {
             schedulerConsoleCookie = null;
         }
     }
 
+    /** 应用ConsoleCookie */
     private void applyConsoleCookie(HttpHeaders headers) {
         if (StringUtils.hasText(schedulerConsoleCookie)) {
             headers.set(HttpHeaders.COOKIE, schedulerConsoleCookie);
         }
     }
 
+    /** ExtractCookieHeader */
     private String extractCookieHeader(HttpHeaders headers) {
         List<String> setCookieValues = headers.get(HttpHeaders.SET_COOKIE);
         if (setCookieValues == null || setCookieValues.isEmpty()) {
@@ -230,6 +251,7 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
         return StringUtils.hasText(cookieHeader) ? cookieHeader : null;
     }
 
+    /** ToRequestCookie */
     private String toRequestCookie(String rawCookie) {
         if (!StringUtils.hasText(rawCookie)) {
             return null;
@@ -253,6 +275,7 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
         copyHeaderIfPresent(request, headers, HttpHeaders.AUTHORIZATION);
     }
 
+    /** 复制HeaderIfPresent */
     private void copyHeaderIfPresent(HttpServletRequest request, HttpHeaders headers, String headerName) {
         String headerValue = request.getHeader(headerName);
         if (StringUtils.hasText(headerValue)) {
@@ -260,6 +283,7 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
         }
     }
 
+    /** 解析AccessMode */
     private AccessMode resolveAccessMode() {
         String configuredMode = environment.getProperty("plugin.payment.scheduler.platform-access-mode", "auto");
         if ("platform".equalsIgnoreCase(configuredMode)) {
@@ -271,6 +295,7 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
         return hasForwardedAuthHeaders() ? AccessMode.PLATFORM : AccessMode.CONSOLE;
     }
 
+    /** 是否拥有ForwardedAuthHeaders */
     private boolean hasForwardedAuthHeaders() {
         ServletRequestAttributes attributes =
                 (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
@@ -281,10 +306,12 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
         return hasHeader(request, "x-oauth-token") || hasHeader(request, HttpHeaders.AUTHORIZATION);
     }
 
+    /** 是否拥有Header */
     private boolean hasHeader(HttpServletRequest request, String headerName) {
         return request != null && StringUtils.hasText(request.getHeader(headerName));
     }
 
+    /** ToTaskVO */
     private PaymentSchedulerTaskVO toTaskVO(JsonNode node) {
         if (node == null || node.isMissingNode() || node.isNull()) {
             throw new PaymentException("调度平台返回空任务数据");
@@ -304,6 +331,7 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
         return vo;
     }
 
+    /** 解析Time */
     private LocalDateTime parseTime(String value) {
         if (!StringUtils.hasText(value) || "null".equalsIgnoreCase(value)) {
             return null;
@@ -335,22 +363,27 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
         throw new PaymentException("无法解析调度平台返回的时间字段: " + value);
     }
 
+    /** TaskListUrl */
     private URI taskListUrl(AccessMode accessMode) {
         return buildUri(accessMode, namespace(), "task", "list");
     }
 
+    /** TaskUrl */
     private URI taskUrl(AccessMode accessMode, String taskKey) {
         return buildUri(accessMode, namespace(), "task", requireText(taskKey, "任务标识不能为空"));
     }
 
+    /** TaskTriggerUrl */
     private URI taskTriggerUrl(AccessMode accessMode, String taskKey) {
         return buildUri(accessMode, namespace(), "task", requireText(taskKey, "任务标识不能为空"), "trigger");
     }
 
+    /** ConsoleLoginUrl */
     private URI consoleLoginUrl() {
         return buildRawUri("job-console", "auth", "login");
     }
 
+    /** 构建Uri */
     private URI buildUri(AccessMode accessMode, String namespace, String... pathSegments) {
         if (accessMode == AccessMode.CONSOLE) {
             String[] segments = new String[pathSegments.length + 3];
@@ -368,6 +401,7 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
         return buildRawUri(segments);
     }
 
+    /** 构建RawUri */
     private URI buildRawUri(String... pathSegments) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(baseUrl());
         for (String pathSegment : pathSegments) {
@@ -376,6 +410,7 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
         return builder.build().encode().toUri();
     }
 
+    /** BaseUrl */
     private String baseUrl() {
         String value = environment.getProperty("plugin.payment.scheduler.platform-base-url",
                 "http://127.0.0.1:18083/scheduler/api");
@@ -383,21 +418,25 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
         return normalized.endsWith("/") ? normalized.substring(0, normalized.length() - 1) : normalized;
     }
 
+    /** Namespace */
     private String namespace() {
         return requireText(environment.getProperty("plugin.payment.scheduler.platform-namespace", "payment"),
                 "调度平台命名空间不能为空");
     }
 
+    /** ConsoleUsername */
     private String consoleUsername() {
         return requireText(environment.getProperty("plugin.payment.scheduler.platform-console-username",
                 DEFAULT_CONSOLE_USERNAME), "调度平台控制台账号不能为空");
     }
 
+    /** ConsolePassword */
     private String consolePassword() {
         return requireText(environment.getProperty("plugin.payment.scheduler.platform-console-password",
                 DEFAULT_CONSOLE_PASSWORD), "调度平台控制台密码不能为空");
     }
 
+    /** RequireText */
     private String requireText(String value, String message) {
         if (!StringUtils.hasText(value)) {
             throw new PaymentException(message);

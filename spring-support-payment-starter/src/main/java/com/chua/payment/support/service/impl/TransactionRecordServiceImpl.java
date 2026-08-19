@@ -21,27 +21,32 @@ public class TransactionRecordServiceImpl implements TransactionRecordService {
     private final TransactionRecordMapper transactionRecordMapper;
 
     @Override
+    /** 创建Record */
     public TransactionRecord createRecord(TransactionRecord record) {
         transactionRecordMapper.insert(record);
         return record;
     }
 
     @Override
+    /** 获取ById */
     public TransactionRecord getById(Long id) {
         return transactionRecordMapper.selectById(id);
     }
 
     @Override
+    /** ListByOrderNo */
     public Page<TransactionRecord> listByOrderNo(String orderNo, int pageNum, int pageSize) {
         return page(pageNum, pageSize, null, orderNo, null, null);
     }
 
     @Override
+    /** ListByMerchantId */
     public Page<TransactionRecord> listByMerchantId(Long merchantId, int pageNum, int pageSize) {
         return page(pageNum, pageSize, merchantId, null, null, null);
     }
 
     @Override
+    /** Page */
     public Page<TransactionRecord> page(int pageNum, int pageSize, Long merchantId, String orderNo, String transactionType, Integer status) {
         Page<TransactionRecord> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<TransactionRecord> wrapper = new LambdaQueryWrapper<>();

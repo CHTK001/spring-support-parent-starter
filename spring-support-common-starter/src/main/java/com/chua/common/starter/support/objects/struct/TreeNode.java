@@ -22,40 +22,54 @@ public class TreeNode<T> {
     /** 子节点集合 */
     private List<TreeNode<T>> children = new ArrayList<>();
 
+    /**
+     * 创建 TreeNode 实例
+     * @param data data
+     * @param Object Object
+     * @param Object Object
+     */
     public TreeNode(T data, Object id, Object parentId) {
         this.data = data;
         this.id = id;
         this.parentId = parentId;
     }
 
+    /** 获取Data */
     public T getData() {
         return data;
     }
 
+    /** 设置Data */
     public void setData(T data) {
         this.data = data;
     }
 
+    /** 获取Id */
     public Object getId() {
         return id;
     }
 
+    /** 设置Id */
     public void setId(Object id) {
         this.id = id;
     }
 
+    /** 获取ParentId */
     public Object getParentId() {
         return parentId;
     }
 
+    /** 设置ParentId */
     public void setParentId(Object parentId) {
         this.parentId = parentId;
     }
 
+    /** 获取Children */
     public List<TreeNode<T>> getChildren() {
         return children;
     }
 
+    /** 设置Children */
     public void setChildren(List<TreeNode<T>> children) {
         this.children = children;
     }

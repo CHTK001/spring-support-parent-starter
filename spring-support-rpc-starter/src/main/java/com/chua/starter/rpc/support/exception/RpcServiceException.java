@@ -10,14 +10,29 @@ package com.chua.starter.rpc.support.exception;
  */
 public class RpcServiceException extends RuntimeException {
 
+    /**
+     * 创建 RpcServiceException 实例
+     * @param message message
+     */
     public RpcServiceException(String message) {
         super(message);
     }
 
+    /**
+     * 创建 RpcServiceException 实例
+     * @param message message
+     * @param Throwable Throwable
+     */
     public RpcServiceException(String message, Throwable cause) {
         super(message, cause);
     }
 
+    /**
+     * 创建 RpcServiceException 实例
+     * @param interfaceName interfaceName
+     * @param String String
+     * @param Throwable Throwable
+     */
     public RpcServiceException(String interfaceName, String operation, Throwable cause) {
         super(String.format("RPC service operation '%s' failed for interface [%s]", operation, interfaceName), cause);
     }

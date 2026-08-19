@@ -23,6 +23,7 @@ import java.util.Map;
 @Spi({"xml"})
 public class XmlMediaTypeHandler implements MediaTypeHandler {
     @Override
+    /** AsByteArray */
     public byte[] asByteArray(Object o) {
         try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();) {
             export(byteArrayOutputStream, o);
@@ -32,6 +33,7 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
         return new byte[0];
     }
 
+    /** Export */
     public void export(OutputStream outputStream, Object data) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
@@ -45,6 +47,7 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
     }
 
 
+    /** Analysis */
     public StringBuilder analysis(Object data) {
         if (data instanceof Collection) {
             return analysis((Collection) data);
@@ -57,6 +60,7 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
         return analysisObject(data);
     }
 
+    /** AnalysisObject */
     public StringBuilder analysisObject(Object data) {
         StringBuilder buffer = new StringBuilder();
         Class<?> aClass = data.getClass();
@@ -86,6 +90,7 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
         return buffer;
     }
 
+    /** Formatter */
     private Object formatter(Object value, Class<?> aClass, Field field) {
         if (null == value) {
             return "";
@@ -94,6 +99,7 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
         return ServiceProvider.of(Formatter.class).getExtension(aClass.getSimpleName()).format(value, field);
     }
 
+    /** Analysis */
     public StringBuilder analysis(Map data) {
         StringBuilder buffer = new StringBuilder();
         data.forEach((name, value) -> {
@@ -107,6 +113,7 @@ public class XmlMediaTypeHandler implements MediaTypeHandler {
         return buffer;
     }
 
+    /** Analysis */
     public StringBuilder analysis(Collection data) {
         StringBuilder buffer = new StringBuilder();
         buffer.append("<items>");

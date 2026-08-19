@@ -31,6 +31,7 @@ public class JobConfiguration implements SchedulingConfigurer {
     }
 
     @Override
+    /** ConfigureTasks */
     public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
         this.taskRegistrar = taskRegistrar;
         ThreadPoolTaskScheduler threadPool = threadPoolTaskScheduler();

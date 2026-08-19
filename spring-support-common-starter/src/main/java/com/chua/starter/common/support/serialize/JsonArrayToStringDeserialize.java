@@ -23,6 +23,7 @@ public class JsonArrayToStringDeserialize extends JsonDeserializer<String> {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(JsonArrayToStringDeserialize.class);
         @Override
+    /** 反序列化 */
     public String deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JacksonException {
         TreeNode treeNode = p.getCodec().readTree(p);
         if (log.isTraceEnabled()) {
@@ -47,6 +48,7 @@ public class JsonArrayToStringDeserialize extends JsonDeserializer<String> {
         return Converter.convertIfNecessary(value, String.class);
     }
 
+    /** AnalysisValue */
     public static Object analysisValue(TreeNode treeNode1) {
         if (treeNode1 instanceof IntNode) {
             return ((IntNode) treeNode1).asInt();

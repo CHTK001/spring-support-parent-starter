@@ -87,11 +87,13 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
     }
 
     @Override
+    /** Supports */
     public boolean supports(String algorithm) {
         return algorithm == null || algorithm.isEmpty() || "AES".equalsIgnoreCase(algorithm);
     }
 
     @Override
+    /** Decrypt */
     public String decrypt(String encryptedValue) {
         try {
             byte[] decoded = Base64.getDecoder().decode(encryptedValue);
@@ -107,6 +109,7 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         return Integer.MAX_VALUE - 100;
     }

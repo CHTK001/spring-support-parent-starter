@@ -34,11 +34,13 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     private final ConcurrentHashMap<String, Long> startTimes = new ConcurrentHashMap<>();
 
     @Override
+    /** 设置ApplicationEventPublisher */
     public void setApplicationEventPublisher(ApplicationEventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
     }
 
     @Override
+    /** Before发送 */
     public Message beforeSend(Message message) {
         startTimes.put(message.getId(), System.currentTimeMillis());
 
@@ -52,6 +54,7 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     }
 
     @Override
+    /** After发送 */
     public void afterSend(Message message, boolean success, Throwable error) {
         MessageAuditLog auditLog = auditLogs.get(message.getId());
         if (auditLog != null) {
@@ -75,6 +78,7 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     }
 
     @Override
+    /** Before接收 */
     public Message beforeReceive(Message message) {
         startTimes.put(message.getId() + "_receive", System.currentTimeMillis());
 
@@ -88,6 +92,7 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     }
 
     @Override
+    /** After接收 */
     public void afterReceive(Message message, boolean success, Throwable error) {
         MessageAuditLog auditLog = auditLogs.get(message.getId() + "_receive");
         if (auditLog != null) {
@@ -200,6 +205,7 @@ public class MessageAuditInterceptor implements MessageInterceptor, ApplicationE
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         return -500; // 高优先级
     }

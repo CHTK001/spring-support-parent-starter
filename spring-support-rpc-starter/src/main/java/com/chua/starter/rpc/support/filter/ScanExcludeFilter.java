@@ -22,6 +22,7 @@ public class ScanExcludeFilter implements TypeFilter {
     private int excludedCount;
 
     @Override
+    /** Match */
     public boolean match(MetadataReader metadataReader, MetadataReaderFactory metadataReaderFactory) throws IOException {
         String className = metadataReader.getClassMetadata().getClassName();
         boolean excluded = ServicePackagesHolder.getInstance().isClassScanned(className);

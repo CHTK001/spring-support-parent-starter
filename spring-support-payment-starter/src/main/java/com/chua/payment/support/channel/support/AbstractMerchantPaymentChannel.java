@@ -29,6 +29,7 @@ public abstract class AbstractMerchantPaymentChannel {
     /** Objectmapper */
     protected final ObjectMapper objectMapper;
 
+    /** ExtConfig */
     protected Map<String, Object> extConfig(MerchantChannel channel) {
         if (!StringUtils.hasText(channel.getExtConfig())) {
             return Collections.emptyMap();
@@ -41,15 +42,18 @@ public abstract class AbstractMerchantPaymentChannel {
         }
     }
 
+    /** ExtText */
     protected String extText(MerchantChannel channel, String key) {
         Object value = extConfig(channel).get(key);
         return value == null ? null : String.valueOf(value);
     }
 
+    /** ProviderSpi */
     protected String providerSpi(MerchantChannel channel) {
         return providerSpi(channel, DEFAULT_PROVIDER_SPI);
     }
 
+    /** ProviderSpi */
     protected String providerSpi(MerchantChannel channel, String fallback) {
         return firstNonBlank(
                 extText(channel, EXT_PROVIDER_SPI),
@@ -59,6 +63,7 @@ public abstract class AbstractMerchantPaymentChannel {
                 fallback);
     }
 
+    /** DecryptValue */
     protected String decryptValue(String encryptedValue) {
         if (!StringUtils.hasText(encryptedValue)) {
             return null;
@@ -70,6 +75,7 @@ public abstract class AbstractMerchantPaymentChannel {
         }
     }
 
+    /** YuanToFen */
     protected long yuanToFen(BigDecimal amount) {
         if (amount == null) {
             return 0L;
@@ -79,6 +85,7 @@ public abstract class AbstractMerchantPaymentChannel {
                 .longValue();
     }
 
+    /** FenToYuan */
     protected BigDecimal fenToYuan(Number amount) {
         if (amount == null) {
             return BigDecimal.ZERO;
@@ -87,6 +94,7 @@ public abstract class AbstractMerchantPaymentChannel {
                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
     }
 
+    /** FirstNonBlank */
     protected String firstNonBlank(String... values) {
         for (String value : values) {
             if (StringUtils.hasText(value)) {
@@ -96,6 +104,7 @@ public abstract class AbstractMerchantPaymentChannel {
         return null;
     }
 
+    /** RequiredText */
     protected String requiredText(String value, String message) {
         if (!StringUtils.hasText(value)) {
             throw new PaymentException(message);
@@ -103,6 +112,7 @@ public abstract class AbstractMerchantPaymentChannel {
         return value;
     }
 
+    /** ToJson */
     protected String toJson(Object value) {
         try {
             return objectMapper.writeValueAsString(value);

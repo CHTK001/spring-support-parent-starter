@@ -215,6 +215,7 @@ public class AuthClientConfiguration
     }
 
     @Override
+    /** 设置ApplicationContext */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
         OauthClientRuntimeContext.setApplicationContext(applicationContext);
@@ -249,6 +250,7 @@ public class AuthClientConfiguration
     }
 
     @Override
+    /** 添加ArgumentResolvers */
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         // 使用 Spring Bean 确保白名单更新能被感知
         AuthClientProperties props = getSpringBean();
@@ -263,6 +265,7 @@ public class AuthClientConfiguration
     }
 
     @Override
+    /** Post处理BeanDefinitionRegistry */
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         BeanDefinitionBuilder definitionBuilder1 = BeanDefinitionBuilder.genericBeanDefinition(WebRequest.class);
         definitionBuilder1.addConstructorArgValue(authProperties);
@@ -270,6 +273,7 @@ public class AuthClientConfiguration
     }
 
     @Override
+    /** Post处理BeanFactory */
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         OauthClientRuntimeContext.setBeanFactory(beanFactory);
         // BDRPP 阶段 @ConfigurationProperties Bean 可能尚未完成绑定，优先使用 Binder 绑定成功的实例
@@ -281,11 +285,13 @@ public class AuthClientConfiguration
 
     @Bean
     @ConditionalOnMissingBean
+    /** WhitelistFileWatcher */
     public WhitelistFileWatcher whitelistFileWatcher(AuthClientProperties authClientProperties) {
         return new WhitelistFileWatcher(authClientProperties);
     }
 
     @Bean
+    /** AuthClientServiceInfoContributor */
     public ServiceInfoContributor authClientServiceInfoContributor() {
         return registry -> {
             registry.registerEndpoint("认证授权", "认证接口", "/auth/**", "认证接口");

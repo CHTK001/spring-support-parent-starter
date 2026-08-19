@@ -70,15 +70,18 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
         log.debug("[分区路由] {} 表列表刷新: {} 个表", sourceTable, refreshed.size());
     }
 
+    /** 获取SourceTable */
     public String getSourceTable() {
         return sourceTable;
     }
 
+    /** 获取TableNames */
     public List<String> getTableNames() {
         return List.copyOf(tableNames);
     }
 
     @Override
+    /** 获取RowType */
     public RelDataType getRowType(RelDataTypeFactory typeFactory) {
         if (rowType == null) {
             synchronized (this) {
@@ -91,6 +94,7 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
     }
 
     @Override
+    /** 扫描 */
     public Enumerable<Object[]> scan(DataContext dataContext) {
         String sql = buildUnionAllSql();
         log.debug("[分区路由] 执行 UNION ALL 查询: {}", sql);
@@ -104,32 +108,38 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
         });
         return new AbstractEnumerable<Object[]>() {
             @Override
+            /** Iterator */
             public Iterator<Object[]> iterator() {
                 return rows.iterator();
             }
 
             @Override
+            /** Enumerator */
             public Enumerator<Object[]> enumerator() {
                 return new Enumerator<Object[]>() {
                     /** 索引 */
                     private int index = -1;
 
                     @Override
+                    /** Current */
                     public Object[] current() {
                         return rows.get(index);
                     }
 
                     @Override
+                    /** 移动Next */
                     public boolean moveNext() {
                         return ++index < rows.size();
                     }
 
                     @Override
+                    /** 重置 */
                     public void reset() {
                         index = -1;
                     }
 
                     @Override
+                    /** 关闭 */
                     public void close() {
                     }
                 };
@@ -137,6 +147,7 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
         };
     }
 
+    /** 构建UnionAllSql */
     private String buildUnionAllSql() {
         StringBuilder sql = new StringBuilder();
         for (int i = 0; i < tableNames.size(); i++) {
@@ -148,6 +159,7 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
         return sql.toString();
     }
 
+    /** 构建RowType */
     private RelDataType buildRowType(RelDataTypeFactory typeFactory) {
         try (var conn = Objects.requireNonNull(jdbcTemplate.getDataSource()).getConnection()) {
             DatabaseMetaData metaData = conn.getMetaData();
@@ -176,6 +188,7 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
         }
     }
 
+    /** ToCalciteType */
     private static RelDataType toCalciteType(RelDataTypeFactory typeFactory, int sqlType) {
         SqlTypeName typeName = switch (sqlType) {
             case Types.VARCHAR, Types.CHAR, Types.NCHAR, Types.NVARCHAR, Types.LONGVARCHAR, Types.LONGNVARCHAR ->
@@ -197,6 +210,7 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
         return typeFactory.createSqlType(typeName);
     }
 
+    /** FallbackRowType */
     private static RelDataType fallbackRowType(RelDataTypeFactory typeFactory) {
         return typeFactory.createStructType(
                 List.of(typeFactory.createSqlType(SqlTypeName.VARCHAR)),

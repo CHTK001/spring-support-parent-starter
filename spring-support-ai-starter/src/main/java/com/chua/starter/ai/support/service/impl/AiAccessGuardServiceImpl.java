@@ -51,12 +51,14 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
     private final SysAiTokenService sysAiTokenService;
 
     @Override
+    /** 是否AppKeyEnabled */
     public boolean isAppKeyEnabled() {
         return APP_KEY_ENABLED_CACHE.get("app_key_enabled", k ->
                 sysAiGlobalSettingService.getBoolean("runtime", "app_key_enabled", true));
     }
 
     @Override
+    /** 验证AppKey */
     public boolean verifyAppKey(String appKey, String appSecret, String clientIp) {
         if (!isAppKeyEnabled()) {
             return true;
@@ -72,6 +74,7 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
     }
 
     @Override
+    /** 验证BearerToken */
     public boolean verifyBearerToken(String authorizationHeader, String clientIp) {
         // 与 verifyAppKey 保持一致：app_key_enabled 关闭时免鉴权（仅当管理员显式关闭）
         if (!isAppKeyEnabled()) {

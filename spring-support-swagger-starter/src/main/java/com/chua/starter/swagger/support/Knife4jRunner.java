@@ -37,6 +37,7 @@ public class Knife4jRunner implements CommandLineRunner {
     }
 
     @Override
+    /** 运行 */
     public void run(String... args) {
         // 判断是否为web环境
         if (!isWebApplication()) {

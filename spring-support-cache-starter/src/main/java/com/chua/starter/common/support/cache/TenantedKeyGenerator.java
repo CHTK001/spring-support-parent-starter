@@ -74,11 +74,13 @@ public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAwa
     }
 
     @Override
+    /** 设置ApplicationContext */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
 
     @Override
+    /** AfterProperties设置 */
     public void afterPropertiesSet() {
         // 尝试从上下文中自动绑定租户ID提供者
         if (tenantIdProvider == null) {
@@ -112,6 +114,7 @@ public class TenantedKeyGenerator implements KeyGenerator, ApplicationContextAwa
     }
 
     @Override
+    /** Generate */
     public Object generate(Object target, Method method, Object... params) {
         StringBuilder keyBuilder = new StringBuilder();
 

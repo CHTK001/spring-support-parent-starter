@@ -44,11 +44,22 @@ public final class ModuleLog {
     /** Module名称 */
     private final String moduleName;
 
+    /**
+     * 创建 ModuleLog 实例
+     * @param moduleName moduleName
+     * @param Class Class
+     * @param clazz clazz
+     */
     private ModuleLog(String moduleName, Class<?> clazz) {
         this.moduleName = moduleName;
         this.log = LoggerFactory.getLogger(clazz);
     }
 
+    /**
+     * 创建 ModuleLog 实例
+     * @param moduleName moduleName
+     * @param Logger Logger
+     */
     private ModuleLog(String moduleName, Logger logger) {
         this.moduleName = moduleName;
         this.log = logger;
@@ -274,6 +285,7 @@ public final class ModuleLog {
 
     // ==================== 私有方法 ====================
 
+    /** 格式化 */
     private String format(String message, Object... args) {
         if (args == null || args.length == 0) {
             return message;

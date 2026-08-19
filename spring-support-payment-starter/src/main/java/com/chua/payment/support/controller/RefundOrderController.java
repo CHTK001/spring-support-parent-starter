@@ -35,6 +35,7 @@ public class RefundOrderController {
     @Operation(summary = "查询退款单")
     @GetMapping("/{id}")
     @Permission(value = "payment:refund:view", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN, AuthConstant.OPS})
+    /** 获取ById */
     public Result<RefundOrderVO> getById(@PathVariable Long id) {
         return Result.success(paymentRefundOrderService.getDetail(id));
     }
@@ -42,6 +43,7 @@ public class RefundOrderController {
     @Operation(summary = "查询订单退款单列表")
     @GetMapping("/order/{orderId}")
     @Permission(value = "payment:refund:view", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN, AuthConstant.OPS})
+    /** ListByOrderId */
     public Result<List<RefundOrderVO>> listByOrderId(@PathVariable Long orderId) {
         return Result.success(paymentRefundOrderService.listVoByOrderId(orderId));
     }
@@ -49,6 +51,7 @@ public class RefundOrderController {
     @Operation(summary = "分页查询退款单")
     @GetMapping("/page")
     @Permission(value = "payment:refund:view", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN, AuthConstant.OPS})
+    /** Page */
     public Result<PageResult<RefundOrderVO>> page(@RequestParam(defaultValue = "1") int pageNum,
                                                   @RequestParam(defaultValue = "10") int pageSize,
                                                   @RequestParam(required = false) Long merchantId,
@@ -62,6 +65,11 @@ public class RefundOrderController {
     @Operation(summary = "标记退款成功")
     @PutMapping("/{id}/success")
     @Permission(value = "payment:refund:success", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /**
+     * MarkRefundSuccess
+     * @param id id
+     * @param dto dto
+     */
     public Result<Boolean> markRefundSuccess(@PathVariable Long id,
                                              @RequestBody(required = false) RefundOperateDTO dto) {
         PaymentRefundOrder refundOrder = paymentRefundOrderService.getById(id);
@@ -77,6 +85,11 @@ public class RefundOrderController {
     @Operation(summary = "标记退款失败")
     @PutMapping("/{id}/fail")
     @Permission(value = "payment:refund:fail", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /**
+     * MarkRefundFail
+     * @param id id
+     * @param dto dto
+     */
     public Result<Boolean> markRefundFail(@PathVariable Long id,
                                           @RequestBody(required = false) RefundOperateDTO dto) {
         PaymentRefundOrder refundOrder = paymentRefundOrderService.getById(id);

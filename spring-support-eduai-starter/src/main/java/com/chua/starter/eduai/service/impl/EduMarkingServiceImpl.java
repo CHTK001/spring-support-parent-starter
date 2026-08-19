@@ -86,6 +86,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 提交AnswerSheet */
     public String submitAnswerSheet(MarkingSubmitDTO dto) {
         // 1. 持久化答题卡
         EduAnswerSheet sheet = new EduAnswerSheet();
@@ -176,6 +177,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     }
 
     @Override
+    /** 获取Result */
     public MarkingResultVO getResult(String taskId) {
         LambdaQueryWrapper<EduMarkingResult> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(EduMarkingResult::getMarkingResultTaskId, taskId);
@@ -214,6 +216,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** ConfirmMarking */
     public boolean confirmMarking(MarkingConfirmDTO dto) {
         for (MarkingConfirmDTO.ScoreAdjustment adj : dto.getAdjustments()) {
             EduMarkingResult result = markingResultMapper.selectById(adj.getResultId());

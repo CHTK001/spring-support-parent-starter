@@ -85,12 +85,14 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
     private boolean noPackages;
 
     @Override
+    /** Supports */
     public boolean supports(MethodParameter methodParameter, Class<? extends HttpMessageConverter<?>> aClass) {
         return true;
     }
 
     @SneakyThrows
     @Override
+    /** BeforeBody写入 */
     public Object beforeBodyWrite(Object o, MethodParameter methodParameter, MediaType mediaType, Class<? extends HttpMessageConverter<?>> aClass, ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse) {
         if (o instanceof ReturnPreconditioning<?> preconditioning) {
             return bodyWithPreconditioning(preconditioning, serverHttpResponse);
@@ -132,6 +134,7 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
         return ReturnResult.ok(o);
     }
 
+    /** 创建FluxBody */
     private Object createFluxBody(Flux<?> flux, ServerHttpResponse serverHttpResponse) {
         return flux.map(it -> ReturnResult.<Object>ok(it));
     }
@@ -171,6 +174,7 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
         return createNewResult(preconditioning);
     }
 
+    /** 创建NewResult */
     private Object createNewResult(ReturnPreconditioning<?> preconditioning) {
         ReturnResult<?> result = preconditioning.asResult();
         if (!preconditioning.isSuccessful()) {
@@ -197,6 +201,7 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
     }
 
     @SneakyThrows
+    /** 是否IgnoreReturn格式化 */
     private boolean isIgnoreReturnFormat(MethodParameter methodParameter, Method method, Class<?> controllerClass, ServerHttpRequest serverHttpRequest, MediaType mediaType) {
         // 检查方法级别注解
         if (methodParameter.hasMethodAnnotation(ApiReturnFormatIgnore.class)) {
@@ -232,6 +237,7 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
     }
 
     @Override
+    /** 设置Environment */
     public void setEnvironment(Environment environment) {
         apiProperties = Binder.get(environment)
                 .bindOrCreate(ApiProperties.PRE, ApiProperties.class);

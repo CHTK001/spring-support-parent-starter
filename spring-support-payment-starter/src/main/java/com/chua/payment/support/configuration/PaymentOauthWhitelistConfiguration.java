@@ -26,6 +26,7 @@ public class PaymentOauthWhitelistConfiguration {
     );
 
     @Bean
+    /** PaymentOauthWhitelistInitializer */
     public SmartInitializingSingleton paymentOauthWhitelistInitializer(ApplicationContext applicationContext) {
         return () -> {
             try {

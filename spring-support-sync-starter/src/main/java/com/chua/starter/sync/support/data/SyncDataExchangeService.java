@@ -35,6 +35,12 @@ public class SyncDataExchangeService {
     /** 同步属性 */
     private final SyncProperties syncProperties;
 
+    /**
+     * 创建 SyncDataExchangeService 实例
+     * @param syncClientProvider syncClientProvider
+     * @param syncServerProvider syncServerProvider
+     * @param syncProperties syncProperties
+     */
     public SyncDataExchangeService(ObjectProvider<SyncClient> syncClientProvider,
                                    ObjectProvider<SyncServer> syncServerProvider,
                                    SyncProperties syncProperties) {
@@ -43,10 +49,12 @@ public class SyncDataExchangeService {
         this.syncProperties = SyncProperties.copyOf(syncProperties);
     }
 
+    /** 发布 */
     public void publish(String channel, Object payload) {
         publish(channel, "SYNC_DATA", payload, Collections.emptyMap());
     }
 
+    /** 发布 */
     public void publish(String channel, String eventType, Object payload, Map<String, Object> metadata) {
         SyncClient syncClient = requireSyncClient();
         String topic = resolveTopic(channel);
@@ -54,10 +62,12 @@ public class SyncDataExchangeService {
         log.debug("[SyncData] 客户端发送数据同步消息, topic={}, eventType={}", topic, eventType);
     }
 
+    /** Request */
     public SyncResponse request(String channel, Object payload) {
         return request(channel, "SYNC_REQUEST", payload, Collections.emptyMap());
     }
 
+    /** Request */
     public SyncResponse request(String channel, String eventType, Object payload, Map<String, Object> metadata) {
         SyncClient syncClient = requireSyncClient();
         String topic = resolveTopic(channel);
@@ -66,28 +76,41 @@ public class SyncDataExchangeService {
         return SyncResponse.success(UUID.randomUUID().toString(), syncClient.getClientId(), payload);
     }
 
+    /** Broadcast */
     public void broadcast(String channel, Object payload) {
         SyncServer syncServer = requireSyncServer();
         String topic = resolveTopic(channel);
         syncServer.broadcast(topic, payload);
     }
 
+    /** 发送ToSession */
     public void sendToSession(String sessionId, String channel, Object payload) {
         SyncServer syncServer = requireSyncServer();
         String topic = resolveTopic(channel);
         syncServer.send(sessionId, topic, payload);
     }
 
+    /** 发送ToApplication */
     public int sendToApplication(String appName, String channel, Object payload) {
         SyncServer syncServer = requireSyncServer();
         String topic = resolveTopic(channel);
         return syncServer.publishByAppName(appName, topic, payload);
     }
 
+    /** 发送ToMetadata */
     public int sendToMetadata(String metadataKey, Object metadataValue, String channel, Object payload) {
         return sendToMetadata(metadataKey, metadataValue, channel, "SYNC_METADATA", payload, Collections.emptyMap());
     }
 
+    /**
+     * 发送ToMetadata
+     * @param metadataKey metadataKey
+     * @param metadataValue metadataValue
+     * @param channel channel
+     * @param eventType eventType
+     * @param payload payload
+     * @param metadata metadata
+     */
     public int sendToMetadata(String metadataKey,
                               Object metadataValue,
                               String channel,
@@ -99,10 +122,19 @@ public class SyncDataExchangeService {
         return syncServer.publishByMetadata(metadataKey, metadataValue, topic, payload);
     }
 
+    /** 发送ToClients */
     public int sendToClients(Predicate<ClientInfo> filter, String channel, Object payload) {
         return sendToClients(filter, channel, "SYNC_FILTER", payload, Collections.emptyMap());
     }
 
+    /**
+     * 发送ToClients
+     * @param filter filter
+     * @param channel channel
+     * @param eventType eventType
+     * @param payload payload
+     * @param metadata metadata
+     */
     public int sendToClients(Predicate<ClientInfo> filter,
                              String channel,
                              String eventType,
@@ -113,18 +145,22 @@ public class SyncDataExchangeService {
         return syncServer.publishToClients(filter, topic, payload);
     }
 
+    /** 是否拥有Client */
     public boolean hasClient() {
         return syncClientProvider.getIfAvailable() != null;
     }
 
+    /** 是否拥有Server */
     public boolean hasServer() {
         return syncServerProvider.getIfAvailable() != null;
     }
 
+    /** 解析Topic */
     private String resolveTopic(String channel) {
         return syncProperties.getDataSync().getTopicPrefix() + "/" + resolveChannel(channel);
     }
 
+    /** 解析Channel */
     private String resolveChannel(String channel) {
         if (channel == null || channel.isBlank()) {
             return syncProperties.getDataSync().getDefaultChannel();
@@ -132,6 +168,7 @@ public class SyncDataExchangeService {
         return channel.trim();
     }
 
+    /** RequireSyncClient */
     private SyncClient requireSyncClient() {
         SyncClient syncClient = syncClientProvider.getIfAvailable();
         if (syncClient == null) {
@@ -140,6 +177,7 @@ public class SyncDataExchangeService {
         return syncClient;
     }
 
+    /** RequireSyncServer */
     private SyncServer requireSyncServer() {
         SyncServer syncServer = syncServerProvider.getIfAvailable();
         if (syncServer == null) {

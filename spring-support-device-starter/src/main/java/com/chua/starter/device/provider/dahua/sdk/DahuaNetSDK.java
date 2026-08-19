@@ -241,6 +241,7 @@ public interface DahuaNetSDK extends Library {
         }
 
         @Override
+        /** 获取FieldOrder */
         protected List<String> getFieldOrder() {
             return Arrays.asList("szHost", "szUser", "szPassword", "nPort", "emType", "bUseSSL",
                     "dwLoginType", "szDeviceID");
@@ -333,6 +334,7 @@ public interface DahuaNetSDK extends Library {
         public byte[] byReserved1 = new byte[24];
 
         @Override
+        /** 获取FieldOrder */
         protected List<String> getFieldOrder() {
             return Arrays.asList("szSerialNumber", "byAlarmInPortNum", "byAlarmOutPortNum", "byDiskNum",
                     "byDVRType", "byChanNum", "byStartChan", "byAudioChanNum", "byIPChanNum", "byZeroChanNum",

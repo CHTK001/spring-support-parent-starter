@@ -48,6 +48,7 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     }
 
     @Override
+    /** 获取ProtocolType */
     public ProtocolType getProtocolType() {
         if (protocol == null) {
             return ProtocolType.UNKNOWN;
@@ -61,6 +62,7 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     }
 
     @Override
+    /** 发布 */
     public void publish(String topic, Object message) {
         for (String sessionId : sessions.keySet()) {
             doSend(sessionId, topic, message);
@@ -68,22 +70,26 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     }
 
     @Override
+    /** 发送 */
     public void send(String clientId, String topic, Object message) {
         doSend(clientId, topic, message);
     }
 
     @Override
+    /** 获取ConnectedClients */
     public List<String> getConnectedClients() {
         return List.copyOf(sessions.keySet());
     }
 
     @Override
+    /** 获取ClientMetadata */
     public Map<String, Object> getClientMetadata(String clientId) {
         SyncSession session = sessions.get(clientId);
         return session == null ? Map.of() : session.toMetadata();
     }
 
     @Override
+    /** 添加Listener */
     public void addListener(SyncServerListener listener) {
         if (listener != null) {
             listeners.add(listener);
@@ -91,6 +97,7 @@ public abstract class AbstractSyncServer extends AbstractServer implements SyncS
     }
 
     @Override
+    /** 移除Listener */
     public void removeListener(SyncServerListener listener) {
         listeners.remove(listener);
     }

@@ -18,6 +18,7 @@ import java.util.regex.Pattern;
  */
 public final class IpUtils {
 
+    /** 创建 IpUtils 实例 */
     private IpUtils() {}
 
     /**
@@ -141,10 +142,12 @@ public final class IpUtils {
 
     // ---- private helpers ----
 
+    /** 是否BlankOrUnknown */
     private static boolean isBlankOrUnknown(String ip) {
         return StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip);
     }
 
+    /** MatchCidr */
     private static boolean matchCidr(String ip, String cidr) {
         try {
             String[] parts = cidr.split("/");
@@ -161,6 +164,7 @@ public final class IpUtils {
         }
     }
 
+    /** IpToLong */
     private static long ipToLong(String ip) {
         String[] parts = ip.split("\\.");
         if (parts.length != 4) {

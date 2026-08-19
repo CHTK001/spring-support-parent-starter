@@ -54,74 +54,92 @@ public class SyncResponse implements Serializable {
      */
     private long duration;
 
+    /** 获取RequestId */
     public String getRequestId() {
         return requestId;
     }
 
+    /** 设置RequestId */
     public void setRequestId(String requestId) {
         this.requestId = requestId;
     }
 
+    /** 获取ClientId */
     public String getClientId() {
         return clientId;
     }
 
+    /** 设置ClientId */
     public void setClientId(String clientId) {
         this.clientId = clientId;
     }
 
+    /** 获取Topic */
     public String getTopic() {
         return topic;
     }
 
+    /** 设置Topic */
     public void setTopic(String topic) {
         this.topic = topic;
     }
 
+    /** 获取Code */
     public int getCode() {
         return code;
     }
 
+    /** 设置Code */
     public void setCode(int code) {
         this.code = code;
     }
 
+    /** 获取Message */
     public String getMessage() {
         return message;
     }
 
+    /** 设置Message */
     public void setMessage(String message) {
         this.message = message;
     }
 
+    /** 获取Data */
     public Object getData() {
         return data;
     }
 
+    /** 设置Data */
     public void setData(Object data) {
         this.data = data;
     }
 
+    /** 获取Timestamp */
     public long getTimestamp() {
         return timestamp;
     }
 
+    /** 设置Timestamp */
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
     }
 
+    /** 获取Duration */
     public long getDuration() {
         return duration;
     }
 
+    /** 设置Duration */
     public void setDuration(long duration) {
         this.duration = duration;
     }
 
+    /** 是否Success */
     public boolean isSuccess() {
         return code == 200;
     }
 
+    /** Success */
     public static SyncResponse success(String requestId, String clientId, Object data) {
         return new Builder()
                 .requestId(requestId)
@@ -133,6 +151,7 @@ public class SyncResponse implements Serializable {
                 .build();
     }
 
+    /** Fail */
     public static SyncResponse fail(String requestId, String clientId, int code, String message) {
         return new Builder()
                 .requestId(requestId)
@@ -143,10 +162,12 @@ public class SyncResponse implements Serializable {
                 .build();
     }
 
+    /** 记录错误 */
     public static SyncResponse error(String requestId, String clientId, String message) {
         return fail(requestId, clientId, 500, message);
     }
 
+    /** Builder */
     public static Builder builder() {
         return new Builder();
     }
@@ -169,46 +190,55 @@ public class SyncResponse implements Serializable {
         /** 持续时间 */
         private long duration;
 
+        /** RequestId */
         public Builder requestId(String requestId) {
             this.requestId = requestId;
             return this;
         }
 
+        /** ClientId */
         public Builder clientId(String clientId) {
             this.clientId = clientId;
             return this;
         }
 
+        /** Topic */
         public Builder topic(String topic) {
             this.topic = topic;
             return this;
         }
 
+        /** Code */
         public Builder code(int code) {
             this.code = code;
             return this;
         }
 
+        /** Message */
         public Builder message(String message) {
             this.message = message;
             return this;
         }
 
+        /** Data */
         public Builder data(Object data) {
             this.data = data;
             return this;
         }
 
+        /** Timestamp */
         public Builder timestamp(long timestamp) {
             this.timestamp = timestamp;
             return this;
         }
 
+        /** Duration */
         public Builder duration(long duration) {
             this.duration = duration;
             return this;
         }
 
+        /** 构建 */
         public SyncResponse build() {
             SyncResponse response = new SyncResponse();
             response.setRequestId(requestId);

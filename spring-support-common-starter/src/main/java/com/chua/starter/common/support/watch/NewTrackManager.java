@@ -15,11 +15,13 @@ public class NewTrackManager {
     /** Track_cache */
     private static final ThreadLocal<Stack<Span>> TRACK_CACHE = new ThreadLocal<>();
 
+    /** 调用 */
     public static Object invoke(Callable<?> callable) throws Exception {
         return callable.call();
     }
 
 
+    /** Before */
     public static void before() {
         Span currentSpan = NewTrackManager.getCurrentSpan();
         if (null == currentSpan) {
@@ -29,6 +31,7 @@ public class NewTrackManager {
         NewTrackManager.createEntrySpan();
     }
 
+    /** 获取CurrentSpan */
     public static Span getCurrentSpan() {
         Stack<Span> stack = TRACK_CACHE.get();
         if (stack == null || stack.isEmpty()) {
@@ -47,10 +50,12 @@ public class NewTrackManager {
     }
 
 
+    /** Clear */
     public static void clear() {
         TRACK_CACHE.remove();
     }
 
+    /** 创建EntrySpan */
     public static Span createEntrySpan() {
         Span span = createSpan();
         Stack<Span> stack = TRACK_CACHE.get();
@@ -66,6 +71,7 @@ public class NewTrackManager {
     }
 
 
+    /** 获取LastSpan */
     public static Span getLastSpan() {
         Stack<Span> stack = TRACK_CACHE.get();
         if (stack == null || stack.isEmpty()) {
@@ -75,6 +81,7 @@ public class NewTrackManager {
         return stack.peek();
     }
 
+    /** 注册Span */
     public static void registerSpan(Span span) {
         Stack<Span> spans = TRACK_CACHE.get();
         if (spans == null) {
@@ -85,6 +92,7 @@ public class NewTrackManager {
         TRACK_CACHE.set(spans);
     }
 
+    /** 创建Span */
     private static Span createSpan() {
         Stack<Span> stack = TRACK_CACHE.get();
         if (stack == null) {
@@ -108,6 +116,7 @@ public class NewTrackManager {
         return new Span(linkId);
     }
 
+    /** RefreshCost */
     public static void refreshCost(Span span) {
         if(null == span) {
             return;

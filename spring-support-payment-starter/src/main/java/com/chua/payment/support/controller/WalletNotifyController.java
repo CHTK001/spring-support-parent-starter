@@ -46,6 +46,14 @@ public class WalletNotifyController {
     private final ObjectMapper objectMapper;
 
     @PostMapping(value = "/{orderType}/{orderNo}", produces = MediaType.TEXT_PLAIN_VALUE)
+    /**
+     * 处理Wallet通知
+     * @param orderType orderType
+     * @param orderNo orderNo
+     * @param params params
+     * @param body body
+     * @param request request
+     */
     public String handleWalletNotify(@PathVariable String orderType,
                                      @PathVariable String orderNo,
                                      @RequestParam Map<String, String> params,
@@ -85,6 +93,7 @@ public class WalletNotifyController {
         }
     }
 
+    /** Wallet通知Type */
     private String walletNotifyType(String orderType) {
         String normalized = normalizeOrderType(orderType);
         if ("TRANSFER".equals(normalized)) {
@@ -96,6 +105,7 @@ public class WalletNotifyController {
         return "WALLET_RECHARGE";
     }
 
+    /** NormalizeOrderType */
     private String normalizeOrderType(String orderType) {
         if (!StringUtils.hasText(orderType)) {
             return null;
@@ -103,6 +113,7 @@ public class WalletNotifyController {
         return orderType.trim().replace('-', '_').toUpperCase(Locale.ROOT);
     }
 
+    /** 构建Payload */
     private String buildPayload(Map<String, String> params, String body) {
         if (StringUtils.hasText(body)) {
             return body;
@@ -114,6 +125,7 @@ public class WalletNotifyController {
         }
     }
 
+    /** 合并Payload */
     private Map<String, Object> mergePayload(Map<String, String> params, String body) {
         Map<String, Object> result = new LinkedHashMap<>();
         if (params != null) {
@@ -131,6 +143,7 @@ public class WalletNotifyController {
         return result;
     }
 
+    /** FirstText */
     private String firstText(Map<String, Object> source, String... keys) {
         if (source == null || keys == null) {
             return null;
@@ -147,6 +160,7 @@ public class WalletNotifyController {
         return null;
     }
 
+    /** StackTrace */
     private String stackTrace(Throwable throwable) {
         java.io.StringWriter sw = new java.io.StringWriter();
         java.io.PrintWriter pw = new java.io.PrintWriter(sw);

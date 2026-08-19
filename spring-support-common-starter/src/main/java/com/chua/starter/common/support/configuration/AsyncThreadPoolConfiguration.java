@@ -65,6 +65,7 @@ public class AsyncThreadPoolConfiguration implements AsyncConfigurer {
     }
 
     @Bean(Constant.DEFAULT_EXECUTOR)
+    /** AsyncExecutor */
     public ThreadPoolTaskExecutor asyncExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         // 核心线程数：线程池创建的时候初始化的线程数
@@ -87,11 +88,13 @@ public class AsyncThreadPoolConfiguration implements AsyncConfigurer {
         return executor;
     }
     @Bean
+    /** TaskDecorator */
     public TaskDecorator taskDecorator() {
        return new MdcTaskDecorator();
     }
 
     @Override
+    /** 获取AsyncExecutor */
     public Executor getAsyncExecutor() {
         return asyncExecutor();
     }

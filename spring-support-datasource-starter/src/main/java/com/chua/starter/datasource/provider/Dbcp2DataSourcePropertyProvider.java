@@ -22,11 +22,13 @@ public class Dbcp2DataSourcePropertyProvider implements DataSourcePropertyProvid
     );
 
     @Override
+    /** 获取DataSourceType */
     public Class<BasicDataSource> getDataSourceType() {
         return BasicDataSource.class;
     }
 
     @Override
+    /** 获取Properties */
     public Map<String, Object> getProperties(BasicDataSource dataSource) {
         Map<String, Object> properties = new HashMap<>();
         
@@ -62,11 +64,13 @@ public class Dbcp2DataSourcePropertyProvider implements DataSourcePropertyProvid
     }
 
     @Override
+    /** 设置Properties */
     public void setProperties(BasicDataSource dataSource, Map<String, Object> properties) {
         properties.forEach((name, value) -> setProperty(dataSource, name, value));
     }
 
     @Override
+    /** 设置Property */
     public void setProperty(BasicDataSource dataSource, String name, Object value) {
         if (value == null) {
             return;
@@ -108,15 +112,18 @@ public class Dbcp2DataSourcePropertyProvider implements DataSourcePropertyProvid
     }
 
     @Override
+    /** 获取PropertyNameMapping */
     public Map<String, String> getPropertyNameMapping() {
         return PROPERTY_MAPPING;
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         return 20;
     }
 
+    /** ToInt */
     private int toInt(Object value) {
         if (value instanceof Number) {
             return ((Number) value).intValue();
@@ -124,6 +131,7 @@ public class Dbcp2DataSourcePropertyProvider implements DataSourcePropertyProvid
         return Integer.parseInt(String.valueOf(value));
     }
 
+    /** ToLong */
     private long toLong(Object value) {
         if (value instanceof Number) {
             return ((Number) value).longValue();
@@ -131,6 +139,7 @@ public class Dbcp2DataSourcePropertyProvider implements DataSourcePropertyProvid
         return Long.parseLong(String.valueOf(value));
     }
 
+    /** ToBoolean */
     private boolean toBoolean(Object value) {
         if (value instanceof Boolean) {
             return (Boolean) value;

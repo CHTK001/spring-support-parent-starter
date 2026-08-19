@@ -55,11 +55,16 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
      */
     private final Set<String> skippedDataSources = Collections.synchronizedSet(new HashSet<>());
 
+    /**
+     * 创建 DataSourceScriptConfiguration 实例
+     * @param dataSourceScriptProperties dataSourceScriptProperties
+     */
     public DataSourceScriptConfiguration(DataSourceScriptProperties dataSourceScriptProperties) {
         this.dataSourceScriptProperties = dataSourceScriptProperties;
     }
 
     @Override
+    /** Post处理AfterInitialization */
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         if (bean instanceof DataSource) {
             if (!dataSourceScriptProperties.isEnable()) {
@@ -668,14 +673,149 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
             );
         }
 
+        /** NeedsExecution */
         private boolean needsExecution(ScriptExecutionRecord executionRecord) {
             return executionRecord == null || !executionRecord.isSuccess();
         }
 
+        /** 是否拥有SuccessfulExecution */
         private boolean hasSuccessfulExecution(ScriptExecutionRecord executionRecord) {
             return executionRecord != null && executionRecord.isSuccess();
         }
 
+        /**
+         * 查找ScriptExecutionRecord
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param fileName fileName
+         * @param version version
+         * @param checksum checksum
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param fileName fileName
+         * @param version version
+         * @param null null
+         * @param null null
+         * @param executionRecord executionRecord
+         * @param currentChecksum currentChecksum
+         * @param fileName fileName
+         * @param version version
+         * @param storedChecksum storedChecksum
+         * @param fileName fileName
+         * @param version version
+         * @param storedChecksum storedChecksum
+         * @param currentChecksum currentChecksum
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param version version
+         * @param fileName fileName
+         * @param scriptType scriptType
+         * @param description description
+         * @param checksum checksum
+         * @param success success
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param scriptType scriptType
+         * @param description description
+         * @param checksum checksum
+         * @param success success
+         * @param fileName fileName
+         * @param version version
+         * @param 0 0
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param version version
+         * @param fileName fileName
+         * @param scriptType scriptType
+         * @param description description
+         * @param checksum checksum
+         * @param success success
+         * @param checksum checksum
+         * @param success success
+         * @param scripts scripts
+         * @param scanMode scanMode
+         * @param emptyDatabase emptyDatabase
+         * @param scripts scripts
+         * @param scanMode scanMode
+         * @param scripts scripts
+         * @param scanMode scanMode
+         * @param hasBusinessData hasBusinessData
+         * @param schema schema
+         * @param e e
+         * @param e e
+         * @param 列注释 列注释
+         * @param KEY KEY
+         * @param AUTOINCREMENT AUTOINCREMENT
+         * @param NULL NULL
+         * @param CURRENT_TIMESTAMP CURRENT_TIMESTAMP
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tableName tableName
+         * @param e e
+         * @param e e
+         * @param tableName tableName
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param e e
+         * @param e e
+         * @param resolver resolver
+         * @param paths paths
+         * @param e e
+         * @param path path
+         * @param rawPaths rawPaths
+         * @param fileName fileName
+         * @param fileName fileName
+         * @param fileName fileName
+         * @param versionStart versionStart
+         * @param 0 0
+         * @param separatorIndex separatorIndex
+         * @param fileName fileName
+         * @param 0 0
+         * @param descriptionEnd descriptionEnd
+         * @param res res
+         * @param tableName tableName
+         * @param originalPath originalPath
+         * @param databaseType databaseType
+         * @param lastDotIndex lastDotIndex
+         */
         private ScriptExecutionRecord findScriptExecutionRecord(
                 String tableName,
                 String tablePrefix,
@@ -695,6 +835,125 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
                     Objects.toString(row.get("success"), null));
         }
 
+        /**
+         * 校验ChecksumIfNecessary
+         * @param executionRecord executionRecord
+         * @param currentChecksum currentChecksum
+         * @param fileName fileName
+         * @param version version
+         * @param storedChecksum storedChecksum
+         * @param fileName fileName
+         * @param version version
+         * @param storedChecksum storedChecksum
+         * @param currentChecksum currentChecksum
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param version version
+         * @param fileName fileName
+         * @param scriptType scriptType
+         * @param description description
+         * @param checksum checksum
+         * @param success success
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param scriptType scriptType
+         * @param description description
+         * @param checksum checksum
+         * @param success success
+         * @param fileName fileName
+         * @param version version
+         * @param 0 0
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param version version
+         * @param fileName fileName
+         * @param scriptType scriptType
+         * @param description description
+         * @param checksum checksum
+         * @param success success
+         * @param checksum checksum
+         * @param success success
+         * @param scripts scripts
+         * @param scanMode scanMode
+         * @param emptyDatabase emptyDatabase
+         * @param scripts scripts
+         * @param scanMode scanMode
+         * @param scripts scripts
+         * @param scanMode scanMode
+         * @param hasBusinessData hasBusinessData
+         * @param schema schema
+         * @param e e
+         * @param e e
+         * @param 列注释 列注释
+         * @param KEY KEY
+         * @param AUTOINCREMENT AUTOINCREMENT
+         * @param NULL NULL
+         * @param CURRENT_TIMESTAMP CURRENT_TIMESTAMP
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tableName tableName
+         * @param e e
+         * @param e e
+         * @param tableName tableName
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param e e
+         * @param e e
+         * @param resolver resolver
+         * @param paths paths
+         * @param e e
+         * @param path path
+         * @param rawPaths rawPaths
+         * @param fileName fileName
+         * @param fileName fileName
+         * @param fileName fileName
+         * @param versionStart versionStart
+         * @param 0 0
+         * @param separatorIndex separatorIndex
+         * @param fileName fileName
+         * @param 0 0
+         * @param descriptionEnd descriptionEnd
+         * @param res res
+         * @param tableName tableName
+         * @param originalPath originalPath
+         * @param databaseType databaseType
+         * @param lastDotIndex lastDotIndex
+         */
         private void validateChecksumIfNecessary(
                 ScriptExecutionRecord executionRecord,
                 String currentChecksum,
@@ -717,6 +976,116 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
             }
         }
 
+        /**
+         * 保存ScriptExecutionRecord
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param version version
+         * @param fileName fileName
+         * @param scriptType scriptType
+         * @param description description
+         * @param checksum checksum
+         * @param success success
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param scriptType scriptType
+         * @param description description
+         * @param checksum checksum
+         * @param success success
+         * @param fileName fileName
+         * @param version version
+         * @param 0 0
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param version version
+         * @param fileName fileName
+         * @param scriptType scriptType
+         * @param description description
+         * @param checksum checksum
+         * @param success success
+         * @param checksum checksum
+         * @param success success
+         * @param scripts scripts
+         * @param scanMode scanMode
+         * @param emptyDatabase emptyDatabase
+         * @param scripts scripts
+         * @param scanMode scanMode
+         * @param scripts scripts
+         * @param scanMode scanMode
+         * @param hasBusinessData hasBusinessData
+         * @param schema schema
+         * @param e e
+         * @param e e
+         * @param 列注释 列注释
+         * @param KEY KEY
+         * @param AUTOINCREMENT AUTOINCREMENT
+         * @param NULL NULL
+         * @param CURRENT_TIMESTAMP CURRENT_TIMESTAMP
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tableName tableName
+         * @param e e
+         * @param e e
+         * @param tableName tableName
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param e e
+         * @param e e
+         * @param resolver resolver
+         * @param paths paths
+         * @param e e
+         * @param path path
+         * @param rawPaths rawPaths
+         * @param fileName fileName
+         * @param fileName fileName
+         * @param fileName fileName
+         * @param versionStart versionStart
+         * @param 0 0
+         * @param separatorIndex separatorIndex
+         * @param fileName fileName
+         * @param 0 0
+         * @param descriptionEnd descriptionEnd
+         * @param res res
+         * @param tableName tableName
+         * @param originalPath originalPath
+         * @param databaseType databaseType
+         * @param lastDotIndex lastDotIndex
+         */
         private void saveScriptExecutionRecord(
                 String tableName,
                 String tablePrefix,
@@ -742,12 +1111,90 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
 
         /* ---------- 工具方法 ---------- */
 
+        /**
+         * ScriptExecutionRecord
+         * @param checksum checksum
+         * @param String String
+         */
         private record ScriptExecutionRecord(String checksum, String success) {
+            /** 是否Success */
             private boolean isSuccess() {
                 return "true".equalsIgnoreCase(success);
             }
         }
 
+        /**
+         * 过滤SchemaScripts
+         * @param scripts scripts
+         * @param scanMode scanMode
+         * @param emptyDatabase emptyDatabase
+         * @param scripts scripts
+         * @param scanMode scanMode
+         * @param scripts scripts
+         * @param scanMode scanMode
+         * @param hasBusinessData hasBusinessData
+         * @param schema schema
+         * @param e e
+         * @param e e
+         * @param 列注释 列注释
+         * @param KEY KEY
+         * @param AUTOINCREMENT AUTOINCREMENT
+         * @param NULL NULL
+         * @param CURRENT_TIMESTAMP CURRENT_TIMESTAMP
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tableName tableName
+         * @param e e
+         * @param e e
+         * @param tableName tableName
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param e e
+         * @param e e
+         * @param resolver resolver
+         * @param paths paths
+         * @param e e
+         * @param path path
+         * @param rawPaths rawPaths
+         * @param fileName fileName
+         * @param fileName fileName
+         * @param fileName fileName
+         * @param versionStart versionStart
+         * @param 0 0
+         * @param separatorIndex separatorIndex
+         * @param fileName fileName
+         * @param 0 0
+         * @param descriptionEnd descriptionEnd
+         * @param res res
+         * @param tableName tableName
+         * @param originalPath originalPath
+         * @param databaseType databaseType
+         * @param lastDotIndex lastDotIndex
+         */
         private List<Resource> filterSchemaScripts(
                 Collection<Resource> scripts,
                 DataSourceScriptProperties.ScanMode scanMode,
@@ -769,6 +1216,75 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
             return new ArrayList<>(scripts);
         }
 
+        /**
+         * 过滤MigrationScripts
+         * @param scripts scripts
+         * @param scanMode scanMode
+         * @param scripts scripts
+         * @param scanMode scanMode
+         * @param hasBusinessData hasBusinessData
+         * @param schema schema
+         * @param e e
+         * @param e e
+         * @param 列注释 列注释
+         * @param KEY KEY
+         * @param AUTOINCREMENT AUTOINCREMENT
+         * @param NULL NULL
+         * @param CURRENT_TIMESTAMP CURRENT_TIMESTAMP
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tableName tableName
+         * @param e e
+         * @param e e
+         * @param tableName tableName
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param e e
+         * @param e e
+         * @param resolver resolver
+         * @param paths paths
+         * @param e e
+         * @param path path
+         * @param rawPaths rawPaths
+         * @param fileName fileName
+         * @param fileName fileName
+         * @param fileName fileName
+         * @param versionStart versionStart
+         * @param 0 0
+         * @param separatorIndex separatorIndex
+         * @param fileName fileName
+         * @param 0 0
+         * @param descriptionEnd descriptionEnd
+         * @param res res
+         * @param tableName tableName
+         * @param originalPath originalPath
+         * @param databaseType databaseType
+         * @param lastDotIndex lastDotIndex
+         */
         private List<Resource> filterMigrationScripts(
                 Collection<Resource> scripts,
                 DataSourceScriptProperties.RepeatableScanMode scanMode) {
@@ -781,6 +1297,73 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
             return new ArrayList<>(scripts);
         }
 
+        /**
+         * 过滤DataScripts
+         * @param scripts scripts
+         * @param scanMode scanMode
+         * @param hasBusinessData hasBusinessData
+         * @param schema schema
+         * @param e e
+         * @param e e
+         * @param 列注释 列注释
+         * @param KEY KEY
+         * @param AUTOINCREMENT AUTOINCREMENT
+         * @param NULL NULL
+         * @param CURRENT_TIMESTAMP CURRENT_TIMESTAMP
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tableName tableName
+         * @param e e
+         * @param e e
+         * @param tableName tableName
+         * @param tableName tableName
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param tablePrefix tablePrefix
+         * @param e e
+         * @param e e
+         * @param resolver resolver
+         * @param paths paths
+         * @param e e
+         * @param path path
+         * @param rawPaths rawPaths
+         * @param fileName fileName
+         * @param fileName fileName
+         * @param fileName fileName
+         * @param versionStart versionStart
+         * @param 0 0
+         * @param separatorIndex separatorIndex
+         * @param fileName fileName
+         * @param 0 0
+         * @param descriptionEnd descriptionEnd
+         * @param res res
+         * @param tableName tableName
+         * @param originalPath originalPath
+         * @param databaseType databaseType
+         * @param lastDotIndex lastDotIndex
+         */
         private List<Resource> filterDataScripts(
                 Collection<Resource> scripts,
                 DataSourceScriptProperties.ScanMode scanMode,
@@ -1080,6 +1663,7 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
             return allResources;
         }
 
+        /** 分割ScriptPaths */
         private List<String> splitScriptPaths(String rawPaths) {
             if (!StringUtils.hasText(rawPaths)) {
                 return List.of(DataSourceScriptProperties.DEFAULT_SCRIPT_PATH.split(","));

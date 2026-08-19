@@ -26,16 +26,19 @@ public class ApiFeatureHandler implements SyncMessageHandler {
     private final ApiFeatureManager featureManager;
 
     @Override
+    /** 获取Name */
     public String getName() {
         return "api-feature";
     }
 
     @Override
+    /** Supports */
     public boolean supports(String topic) {
         return "monitor/control/api-feature".equals(topic);
     }
 
     @Override
+    /** 处理 */
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         try {
             if (data == null) {
@@ -122,6 +125,7 @@ public class ApiFeatureHandler implements SyncMessageHandler {
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         return 100;
     }

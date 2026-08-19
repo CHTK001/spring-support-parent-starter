@@ -40,6 +40,7 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
     private ApplicationContext applicationContext;
 
     @Override
+    /** Post处理AfterInitialization */
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         Class<?> targetClass = ClassUtils.getUserClass(bean);
         java.util.Map<Method, Job> annotated = null;
@@ -61,6 +62,7 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
     }
 
     @Override
+    /** AfterSingletonsInstantiated */
     public void afterSingletonsInstantiated() {
         log.info("[job] @Job 扫描完成, 共注册 {} 个处理器", JobHandlerFactory.getInstance().size());
         // 同步到 JobRepository, 让 JobLeaderLoop 调度时能查到任务
@@ -83,6 +85,7 @@ public class JobAnnotationScanner implements BeanPostProcessor, SmartInitializin
     }
 
     @Override
+    /** 设置ApplicationContext */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }

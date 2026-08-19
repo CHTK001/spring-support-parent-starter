@@ -23,11 +23,16 @@ public class ApiContentNegotiationStrategy implements ContentNegotiationStrategy
     /** API响应encoderegister */
     private final ApiResponseEncodeRegister apiResponseEncodeRegister;
 
+    /**
+     * 创建 ApiContentNegotiationStrategy 实例
+     * @param apiResponseEncodeRegister apiResponseEncodeRegister
+     */
     public ApiContentNegotiationStrategy(ApiResponseEncodeRegister apiResponseEncodeRegister) {
         this.apiResponseEncodeRegister = apiResponseEncodeRegister;
     }
 
     @Override
+    /** 解析MediaTypes */
     public List<MediaType> resolveMediaTypes(NativeWebRequest webRequest) throws HttpMediaTypeNotAcceptableException {
         if (apiResponseEncodeRegister.isPass()) {
             return MEDIA_TYPE_ALL_LIST;

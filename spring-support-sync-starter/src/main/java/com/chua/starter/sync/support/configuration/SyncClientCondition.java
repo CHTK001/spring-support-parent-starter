@@ -17,6 +17,7 @@ import org.springframework.core.type.AnnotatedTypeMetadata;
 public class SyncClientCondition implements Condition {
 
     @Override
+    /** Matches */
     public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
         // 获取 type 配置，默认为 client
         String type = context.getEnvironment().getProperty("plugin.sync.type", "client");

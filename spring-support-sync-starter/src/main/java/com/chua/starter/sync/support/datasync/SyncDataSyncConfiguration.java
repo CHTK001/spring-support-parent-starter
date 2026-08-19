@@ -67,6 +67,15 @@ public class SyncDataSyncConfiguration {
      */
     private final ObjectProvider<com.chua.starter.datasync.agent.DataSyncAgentServer> dataSyncAgentServerProvider;
 
+    /**
+     * 创建 SyncDataSyncConfiguration 实例
+     * @param environment environment
+     * @param syncClientProvider syncClientProvider
+     * @param syncServerProvider syncServerProvider
+     * @param syncPropertiesProvider syncPropertiesProvider
+     * @param dataSyncServerProvider dataSyncServerProvider
+     * @param dataSyncAgentServerProvider dataSyncAgentServerProvider
+     */
     public SyncDataSyncConfiguration(Environment environment,
                                      ObjectProvider<SyncClient> syncClientProvider,
                                      ObjectProvider<SyncServer> syncServerProvider,
@@ -82,6 +91,7 @@ public class SyncDataSyncConfiguration {
     }
 
     @PostConstruct
+    /** 初始化 */
     public void init() {
         Boolean enable = environment.getProperty(PREFIX + ".enabled", Boolean.class, false);
         ServiceInfoRegistry.getInstance().registerFlag(

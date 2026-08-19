@@ -18,21 +18,25 @@ import org.springframework.stereotype.Service;
 public class ServerAiAnalyzeServiceImpl implements ServerAiAnalyzeService {
 
     @Override
+    /** AnalyzeHostStability */
     public ServerAiStructuredAdvice analyzeHostStability(ServerHostStabilityAnalyzeRequest request) {
         return null;
     }
 
     @Override
+    /** AnalyzeMetricHistory */
     public ServerAiStructuredAdvice analyzeMetricHistory(ServerMetricHistoryAnalyzeRequest request) {
         return null;
     }
 
     @Override
+    /** AnalyzeAlertHistory */
     public ServerAiStructuredAdvice analyzeAlertHistory(ServerAlertHistoryAnalyzeRequest request) {
         return null;
     }
 
     @Override
+    /** Analyze处理 */
     public ServerAiStructuredAdvice analyzeProcess(ServerProcessAnalyzeRequest request) {
         return null;
     }

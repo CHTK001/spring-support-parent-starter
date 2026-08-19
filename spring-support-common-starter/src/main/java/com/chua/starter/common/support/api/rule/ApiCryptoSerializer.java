@@ -54,6 +54,7 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
         this.key = key;
     }
 
+    /** 创建 ApiCryptoSerializer 实例 */
     private ApiCryptoSerializer() {
         this.publicKeyHex = null;
         this.cryptoType = null;
@@ -63,6 +64,12 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
     private static final Map<Class<?>, String> KEY_MAP = new ConcurrentReferenceHashMap<>(512);
 
     @Override
+    /**
+     * 序列化
+     * @param origin origin
+     * @param jsonGenerator jsonGenerator
+     * @param serializerProvider serializerProvider
+     */
     public void serialize(final String origin, final JsonGenerator jsonGenerator,
                           final SerializerProvider serializerProvider) throws IOException {
 
@@ -88,6 +95,7 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
         jsonGenerator.writeString(origin);
     }
 
+    /** SmEncrypt */
     private String sm2Encrypt(String data, String publicKeyHex) {
         try {
             Sm2Cipher sm2Cipher = Sm2Cipher.create("bc");
@@ -100,6 +108,7 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
         }
     }
 
+    /** HexToBytes */
     private static byte[] hexToBytes(String hex) {
         int len = hex.length();
         byte[] data = new byte[len / 2];
@@ -109,6 +118,7 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
         return data;
     }
 
+    /** BytesToHex */
     private static String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder(bytes.length * 2);
         for (byte b : bytes) {
@@ -124,6 +134,7 @@ public class ApiCryptoSerializer extends JsonSerializer<String> implements Conte
         return StringUtils.equals(key, key1);
     }
 
+    /** 获取DynamicKey */
     private String getDynamicKey(JsonGenerator jsonGenerator) {
         Object currentValue = jsonGenerator.getCurrentValue();
         if (null == currentValue) {

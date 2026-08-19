@@ -104,6 +104,11 @@ public class Project {
      */
     private String clientProtocolEndpointProtocol;
 
+    /**
+     * 创建 Project 实例
+     * @param String String
+     * @param metadata metadata
+     */
     public Project(Map<String, String> metadata) {
         this.applicationName = MapUtils.getString(metadata, "applicationName");
         this.applicationPort = NumberUtils.toInt(MapUtils.getString(metadata, "applicationPort"));
@@ -121,6 +126,7 @@ public class Project {
     }
 
 
+    /** 设置Environment */
     public void setEnvironment(Environment environment) {
         this.environment = environment;
         this.applicationName = environment.getProperty("spring.application.name");
@@ -146,6 +152,7 @@ public class Project {
 
     }
 
+    /** 获取Instance */
     public static Project getInstance() {
         return INSTANCE;
     }
@@ -159,6 +166,7 @@ public class Project {
         return DigestUtils.md5(dataSourceDriver + netAddress.getAddress() + dataSourceUsername + dataSourcePassword);
     }
 
+    /** 获取Project */
     public Map<String, String> getProject() {
         java.util.Map<String, String> project = new java.util.LinkedHashMap<>();
         project.put("applicationName", applicationName);
@@ -442,6 +450,7 @@ public class Project {
         this.clientProtocolEndpointProtocol = clientProtocolEndpointProtocol;
     }
 
+    /** AesEncrypt */
     private static String aesEncrypt(String content, String key) {
         if (content == null) {
             return null;
@@ -455,6 +464,7 @@ public class Project {
         }
     }
 
+    /** AesDecrypt */
     private static String aesDecrypt(String content, String key) {
         if (content == null) {
             return null;

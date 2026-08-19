@@ -28,6 +28,7 @@ public class PaymentNotifyRetryTask implements PaymentManagedTask {
     /** Notifyprocess服务 */
     private final PaymentNotifyProcessService notifyProcessService;
 
+    /** RetryFailedNotifies */
     public void retryFailedNotifies() {
         log.info("开始执行回调异常重试任务");
 
@@ -55,21 +56,25 @@ public class PaymentNotifyRetryTask implements PaymentManagedTask {
     }
 
     @Override
+    /** TaskKey */
     public String taskKey() {
         return "payment-notify-retry";
     }
 
     @Override
+    /** TaskName */
     public String taskName() {
         return "回调异常重试";
     }
 
     @Override
+    /** DefaultCron */
     public String defaultCron() {
         return "0 */5 * * * ?";
     }
 
     @Override
+    /** Description */
     public String description() {
         return "扫描待重试的支付回调异常并自动回放。";
     }
@@ -82,6 +87,7 @@ public class PaymentNotifyRetryTask implements PaymentManagedTask {
             desc = "扫描待重试的支付回调异常并自动回放。",
             autoStart = true
     )
+    /** 执行 */
     public void execute() {
         retryFailedNotifies();
     }

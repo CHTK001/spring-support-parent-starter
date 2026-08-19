@@ -84,10 +84,12 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     private static final ParserContext TEMPLATE_PARSER_CONTEXT = new TemplateParserContext();
 
     @Override
+    /** AfterProperties设置 */
     public void afterPropertiesSet() throws Exception {
         this.setAdvice(new MethodInterceptor() {
             @Nullable
             @Override
+            /** 调用 */
             public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
                 return invokeValue(invocation);
             }

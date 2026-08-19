@@ -89,6 +89,10 @@ public class LocalMessageTemplate implements MessageTemplate {
      */
     private final ExecutorService virtualExecutor;
 
+    /**
+     * 创建 LocalMessageTemplate 实例
+     * @param config config
+     */
     public LocalMessageTemplate(QueueProperties.LocalConfig config) {
         this.config = config;
         // 延迟消息调度器使用平台线程（虚拟线程不适合精确的定时调度）
@@ -106,11 +110,13 @@ public class LocalMessageTemplate implements MessageTemplate {
     }
 
     @Override
+    /** 发送 */
     public SendResult send(String destination, Object payload) {
         return send(destination, payload, null);
     }
 
     @Override
+    /** 发送Async */
     public CompletableFuture<SendResult> sendAsync(String destination, Object payload) {
         return sendAsync(destination, payload, null);
     }
@@ -156,6 +162,7 @@ public class LocalMessageTemplate implements MessageTemplate {
     }
 
     @Override
+    /** 发送 */
     public SendResult send(String destination, Object payload, Map<String, Object> headers) {
         // 检查是否已关闭
         if (!running) {
@@ -186,6 +193,7 @@ public class LocalMessageTemplate implements MessageTemplate {
     }
 
     @Override
+    /** 发送Delayed */
     public SendResult sendDelayed(String destination, Object payload, Duration delay) {
         // 检查是否已关闭
         if (!running) {
@@ -224,6 +232,7 @@ public class LocalMessageTemplate implements MessageTemplate {
     }
 
     @Override
+    /** 订阅 */
     public void subscribe(String destination, MessageHandler handler, boolean autoAck) {
         CopyOnWriteArrayList<MessageHandler> handlers = subscribers.computeIfAbsent(
                 destination, k -> new CopyOnWriteArrayList<>());
@@ -245,12 +254,14 @@ public class LocalMessageTemplate implements MessageTemplate {
     }
 
     @Override
+    /** 订阅 */
     public void subscribe(String destination, String group, MessageHandler handler, boolean autoAck) {
         // 本地队列不支持消费组，直接订阅
         subscribe(destination, handler, autoAck);
     }
 
     @Override
+    /** 订阅 */
     public void subscribe(String destination, MessageHandler handler, boolean autoAck, int concurrency) {
         if (concurrency <= 1) {
             subscribe(destination, handler, autoAck);
@@ -310,12 +321,14 @@ public class LocalMessageTemplate implements MessageTemplate {
     }
 
     @Override
+    /** 订阅 */
     public void subscribe(String destination, String group, MessageHandler handler, boolean autoAck, int concurrency) {
         // 本地队列不支持消费组，直接订阅
         subscribe(destination, handler, autoAck, concurrency);
     }
 
     @Override
+    /** 取消订阅 */
     public void unsubscribe(String destination) {
         // 先检查是否还有订阅者，再决定是否清理资源
         CopyOnWriteArrayList<MessageHandler> remainingHandlers = this.subscribers.get(destination);
@@ -369,16 +382,19 @@ public class LocalMessageTemplate implements MessageTemplate {
     }
 
     @Override
+    /** 获取Type */
     public String getType() {
         return TYPE;
     }
 
     @Override
+    /** 是否Connected */
     public boolean isConnected() {
         return running;
     }
 
     @Override
+    /** 关闭 */
     public void close() {
         running = false;
 
@@ -478,6 +494,7 @@ public class LocalMessageTemplate implements MessageTemplate {
         }
 
         @Subscribe
+        /** 处理Message */
         public void handleMessage(Message message) {
             try {
                 // 创建Acknowledgment对象
@@ -510,17 +527,20 @@ public class LocalMessageTemplate implements MessageTemplate {
         private volatile boolean acknowledged = false;
 
         @Override
+        /** Acknowledge */
         public void acknowledge() {
             acknowledged = true;
         }
 
         @Override
+        /** Nack */
         public void nack(boolean requeue) {
             // 本地队列不支持requeue，nack等同于丢弃
             acknowledged = false;
         }
 
         @Override
+        /** 是否Acknowledged */
         public boolean isAcknowledged() {
             return acknowledged;
         }

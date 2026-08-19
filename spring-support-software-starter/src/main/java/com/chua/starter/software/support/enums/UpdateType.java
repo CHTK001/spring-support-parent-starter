@@ -23,6 +23,7 @@ public enum UpdateType {
         this.value = value;
     }
 
+    /** 获取Value */
     public int getValue() {
         return value;
     }

@@ -32,38 +32,47 @@ public class ServerWebSocketMessage {
      */
     private long timestamp;
 
+    /** 获取MessageType */
     public String getMessageType() {
         return messageType;
     }
 
+    /** 设置MessageType */
     public void setMessageType(String messageType) {
         this.messageType = messageType;
     }
 
+    /** 获取DataId */
     public String getDataId() {
         return dataId;
     }
 
+    /** 设置DataId */
     public void setDataId(String dataId) {
         this.dataId = dataId;
     }
 
+    /** 获取Data */
     public Map<String, Object> getData() {
         return data;
     }
 
+    /** 设置Data */
     public void setData(Map<String, Object> data) {
         this.data = data;
     }
 
+    /** 获取Timestamp */
     public long getTimestamp() {
         return timestamp;
     }
 
+    /** 设置Timestamp */
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
     }
 
+    /** Builder */
     public static Builder builder() {
         return new Builder();
     }
@@ -77,26 +86,31 @@ public class ServerWebSocketMessage {
         /** 时间戳 */
         private long timestamp;
 
+        /** MessageType */
         public Builder messageType(String messageType) {
             this.messageType = messageType;
             return this;
         }
 
+        /** DataId */
         public Builder dataId(String dataId) {
             this.dataId = dataId;
             return this;
         }
 
+        /** Data */
         public Builder data(Map<String, Object> data) {
             this.data = data;
             return this;
         }
 
+        /** Timestamp */
         public Builder timestamp(long timestamp) {
             this.timestamp = timestamp;
             return this;
         }
 
+        /** 构建 */
         public ServerWebSocketMessage build() {
             ServerWebSocketMessage message = new ServerWebSocketMessage();
             message.setMessageType(messageType);

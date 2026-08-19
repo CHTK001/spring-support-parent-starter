@@ -45,6 +45,7 @@ public class VisionController {
     @Permission("admin")
     @Operation(summary = "图像描述", description = "识别图片内容并返回文字描述")
     @PostMapping("/describe")
+    /** Describe */
     public ReturnResult<String> describe(@RequestParam("file") MultipartFile file,
                                          @RequestParam(value = "prompt", required = false) String prompt) {
         if (file.isEmpty()) {
@@ -64,6 +65,7 @@ public class VisionController {
     @Permission("admin")
     @Operation(summary = "OCR识别", description = "识别图片中的文字")
     @PostMapping("/ocr")
+    /** Ocr */
     public ReturnResult<String> ocr(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
             return ReturnResult.error("上传文件不能为空");
@@ -82,6 +84,7 @@ public class VisionController {
     @Permission("admin")
     @Operation(summary = "视觉问答", description = "针对图片内容提问")
     @PostMapping("/ask")
+    /** Ask */
     public ReturnResult<String> ask(@RequestParam("file") MultipartFile file,
                                     @RequestParam("question") String question) {
         if (file.isEmpty()) {

@@ -49,98 +49,122 @@ public class TriggerParam {
     private int broadcastTotal;
 
     // 手动添加 getter 方法，确保 Lombok 未生效时也能编译通过
+    /** 获取ExecutorHandler */
     public String getExecutorHandler() {
         return executorHandler;
     }
 
+    /** 获取GlueUpdatetime */
     public long getGlueUpdatetime() {
         return glueUpdatetime;
     }
 
+    /** 获取GlueSource */
     public String getGlueSource() {
         return glueSource;
     }
 
+    /** 获取JobId */
     public int getJobId() {
         return jobId;
     }
 
+    /** 获取GlueType */
     public String getGlueType() {
         return glueType;
     }
 
+    /** 获取记录日志Id */
     public long getLogId() {
         return logId;
     }
 
+    /** 获取记录日志DateTime */
     public long getLogDateTime() {
         return logDateTime;
     }
 
+    /** 获取ExecutorParams */
     public String getExecutorParams() {
         return executorParams;
     }
 
+    /** 获取BroadcastIndex */
     public int getBroadcastIndex() {
         return broadcastIndex;
     }
 
+    /** 获取Broadcast总计 */
     public int getBroadcastTotal() {
         return broadcastTotal;
     }
 
+    /** 获取ExecutorTimeout */
     public int getExecutorTimeout() {
         return executorTimeout;
     }
 
+    /** 设置JobId */
     public void setJobId(int jobId) {
         this.jobId = jobId;
     }
 
+    /** 设置Profile */
     public void setProfile(String profile) {
         this.profile = profile;
     }
 
+    /** 设置ExecutorHandler */
     public void setExecutorHandler(String executorHandler) {
         this.executorHandler = executorHandler;
     }
 
+    /** 设置ExecutorParams */
     public void setExecutorParams(String executorParams) {
         this.executorParams = executorParams;
     }
 
+    /** 设置ExecutorBlockStrategy */
     public void setExecutorBlockStrategy(String executorBlockStrategy) {
         this.executorBlockStrategy = executorBlockStrategy;
     }
 
+    /** 设置ExecutorTimeout */
     public void setExecutorTimeout(int executorTimeout) {
         this.executorTimeout = executorTimeout;
     }
 
+    /** 设置记录日志Id */
     public void setLogId(long logId) {
         this.logId = logId;
     }
 
+    /** 设置记录日志DateTime */
     public void setLogDateTime(long logDateTime) {
         this.logDateTime = logDateTime;
     }
 
+    /** 设置GlueType */
     public void setGlueType(String glueType) {
         this.glueType = glueType;
     }
 
+    /** 设置GlueSource */
     public void setGlueSource(String glueSource) {
         this.glueSource = glueSource;
     }
 
+    /** 设置GlueUpdatetime */
     public void setGlueUpdatetime(long glueUpdatetime) {
         this.glueUpdatetime = glueUpdatetime;
     }
 
+    /** 设置BroadcastIndex */
     public void setBroadcastIndex(int broadcastIndex) {
         this.broadcastIndex = broadcastIndex;
     }
 
+    /** 设置Broadcast总计 */
     public void setBroadcastTotal(int broadcastTotal) {
         this.broadcastTotal = broadcastTotal;
     }

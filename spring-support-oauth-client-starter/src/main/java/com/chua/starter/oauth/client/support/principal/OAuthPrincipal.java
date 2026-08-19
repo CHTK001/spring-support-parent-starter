@@ -163,6 +163,7 @@ public class OAuthPrincipal implements Principal {
     }
 
     @Override
+    /** 获取Name */
     public String getName() {
         String name = userResume != null ? userResume.getUsername() : "anonymous";
         log.debug("[Principal获取]获取用户名: {}", name);
@@ -422,6 +423,7 @@ public class OAuthPrincipal implements Principal {
     }
 
     @Override
+    /** ToString */
     public String toString() {
         return "OAuthPrincipal{" +
                 "name='" + getName() + '\'' +
@@ -434,6 +436,7 @@ public class OAuthPrincipal implements Principal {
     }
 
     @Override
+    /** 判断相等 */
     public boolean equals(Object obj) {
         if (this == obj) return true;
         if (obj == null || getClass() != obj.getClass()) return false;
@@ -446,6 +449,7 @@ public class OAuthPrincipal implements Principal {
     }
 
     @Override
+    /** HashCode */
     public int hashCode() {
         int result = userResume != null ? userResume.hashCode() : 0;
         result = 31 * result + (authType != null ? authType.hashCode() : 0);

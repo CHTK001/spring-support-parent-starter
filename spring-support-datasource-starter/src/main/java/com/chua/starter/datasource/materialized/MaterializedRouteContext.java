@@ -12,17 +12,21 @@ public final class MaterializedRouteContext {
     /** Holder */
     private static final ThreadLocal<MaterializedRouteDefinition> HOLDER = new ThreadLocal<>();
 
+    /** 创建 MaterializedRouteContext 实例 */
     private MaterializedRouteContext() {
     }
 
+    /** 设置 */
     public static void set(MaterializedRouteDefinition definition) {
         HOLDER.set(definition);
     }
 
+    /** 获取 */
     public static MaterializedRouteDefinition get() {
         return HOLDER.get();
     }
 
+    /** Clear */
     public static void clear() {
         HOLDER.remove();
     }

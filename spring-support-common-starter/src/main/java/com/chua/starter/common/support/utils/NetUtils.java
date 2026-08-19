@@ -16,6 +16,7 @@ public final class NetUtils {
     private NetUtils() {
     }
 
+    /** 获取LocalHost */
     public static String getLocalHost() {
         try {
             return InetAddress.getLocalHost().getHostAddress();
@@ -24,6 +25,7 @@ public final class NetUtils {
         }
     }
 
+    /** 获取LocalIpv */
     public static String getLocalIpv4() {
         try {
             Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();

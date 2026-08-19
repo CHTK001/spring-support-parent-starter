@@ -68,41 +68,49 @@ public class RedisKvEngine implements KvEngine {
     }
 
     @Override
+    /** 获取 */
     public String get(String key) {
         return redisTemplate.opsForValue().get(key);
     }
 
     @Override
+    /** Put */
     public void put(String key, String value) {
         redisTemplate.opsForValue().set(key, value);
     }
 
     @Override
+    /** Put */
     public void put(String key, String value, Duration ttl) {
         redisTemplate.opsForValue().set(key, value, ttl);
     }
 
     @Override
+    /** ContainsKey */
     public boolean containsKey(String key) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(key));
     }
 
     @Override
+    /** 删除 */
     public boolean delete(String key) {
         return Boolean.TRUE.equals(redisTemplate.delete(key));
     }
 
     @Override
+    /** Incr */
     public long incr(String key) {
         return redisTemplate.opsForValue().increment(key);
     }
 
     @Override
+    /** Expire */
     public void expire(String key, long seconds) {
         redisTemplate.expire(key, seconds, TimeUnit.SECONDS);
     }
 
     @Override
+    /** Ttl */
     public long ttl(String key) {
         return redisTemplate.getExpire(key, TimeUnit.SECONDS);
     }

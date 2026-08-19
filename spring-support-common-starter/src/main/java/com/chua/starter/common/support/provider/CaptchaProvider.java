@@ -41,18 +41,22 @@ public class CaptchaProvider {
     /** Captcha属性 */
     private CaptchaProperties captchaProperties;
 
+    /** Producer */
     public Captcha producer() {
         return createCaptcha(captchaProperties.getType(), captchaProperties.getLength());
     }
 
+    /** Producer */
     public Captcha producer(CaptchaTypeEnum typeEnum) {
         return createCaptcha(typeEnum, captchaProperties.getLength());
     }
 
+    /** Producer */
     public Captcha producer(CaptchaTypeEnum typeEnum, int length) {
         return createCaptcha(typeEnum, length);
     }
 
+    /** 创建Captcha */
     private Captcha createCaptcha(CaptchaTypeEnum type, int length) {
         Captcha captcha;
         int width = captchaProperties.getWidth();
@@ -94,6 +98,7 @@ public class CaptchaProvider {
     }
 
 
+    /** 创建Captcha */
     public Captcha createCaptcha() {
         int randomInt = RandomUtils.randomInt(2, 3);
         CaptchaTypeEnum typeEnum = captchaProperties.getType();
@@ -179,18 +184,22 @@ public class CaptchaProvider {
         /** Verify代码base64 */
         private String verifyCodeBase64;
 
+        /** 获取验证CodeKey */
         public String getVerifyCodeKey() {
             return verifyCodeKey;
         }
 
+        /** 设置验证CodeKey */
         public void setVerifyCodeKey(String verifyCodeKey) {
             this.verifyCodeKey = verifyCodeKey;
         }
 
+        /** 获取验证CodeBase */
         public String getVerifyCodeBase64() {
             return verifyCodeBase64;
         }
 
+        /** 设置验证CodeBase */
         public void setVerifyCodeBase64(String verifyCodeBase64) {
             this.verifyCodeBase64 = verifyCodeBase64;
         }

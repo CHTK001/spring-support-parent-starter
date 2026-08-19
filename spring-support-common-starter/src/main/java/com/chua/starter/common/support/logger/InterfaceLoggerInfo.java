@@ -44,6 +44,10 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
      */
     private byte[] body = new byte[0];
 
+    /**
+     * 创建 InterfaceLoggerInfo 实例
+     * @param request request
+     */
     public InterfaceLoggerInfo(HttpServletRequest request) {
         super(request);
         this.request = request;

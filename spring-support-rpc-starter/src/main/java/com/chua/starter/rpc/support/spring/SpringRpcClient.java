@@ -41,6 +41,12 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
      */
     private volatile RpcClient delegate;
 
+    /**
+     * 创建 SpringRpcClient 实例
+     * @param registryConfigs registryConfigs
+     * @param consumerConfig consumerConfig
+     * @param appName appName
+     */
     public SpringRpcClient(List<RpcRegistryConfig> registryConfigs,
                           RpcConsumerConfig consumerConfig,
                           String appName) {
@@ -50,12 +56,14 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
     }
 
     @Override
+    /** 设置ApplicationContext */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
 
     @Override
     @SuppressWarnings("unchecked")
+    /** 获取 */
     public <T> T get(Class<T> targetType) {
         return (T) proxyCache.computeIfAbsent(targetType, this::createProxy);
     }
@@ -113,6 +121,7 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
     }
 
     @Override
+    /** 关闭 */
     public void close() throws Exception {
         proxyCache.clear();
         RpcClient current = delegate;

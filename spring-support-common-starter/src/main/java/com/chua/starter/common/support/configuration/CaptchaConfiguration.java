@@ -33,6 +33,7 @@ public class CaptchaConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = CaptchaProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
+    /** CaptchaProvider */
     public CaptchaProvider captchaProvider() {
         ServiceInfoRegistry.getInstance().registerFlag(
                 "captcha", "校验码", true, "图形验证码接口", null);

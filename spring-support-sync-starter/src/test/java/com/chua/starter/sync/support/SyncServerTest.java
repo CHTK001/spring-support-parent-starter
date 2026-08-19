@@ -108,21 +108,25 @@ class SyncServerTest {
         server.start();
         server.addListener(new com.chua.common.support.network.server.SyncServerListener() {
             @Override
+            /** OnClientConnected */
             public void onClientConnected(String clientId, java.util.Map<String, Object> metadata) {
                 System.out.println("connected: " + clientId);
             }
 
             @Override
+            /** OnClientDisconnected */
             public void onClientDisconnected(String clientId) {
                 System.out.println("disconnected: " + clientId);
             }
 
             @Override
+            /** OnMessage */
             public void onMessage(String clientId, String topic, Object message) {
                 System.out.println("message: " + topic + " -> " + message);
             }
 
             @Override
+            /** On记录错误 */
             public void onError(String clientId, Throwable cause) {
                 System.err.println("error: " + clientId);
             }

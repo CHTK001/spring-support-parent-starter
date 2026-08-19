@@ -69,6 +69,10 @@ public class RpcCircuitBreaker {
      */
     private String serviceName;
 
+    /**
+     * 创建 RpcCircuitBreaker 实例
+     * @param serviceName serviceName
+     */
     public RpcCircuitBreaker(String serviceName) {
         this.serviceName = serviceName;
     }

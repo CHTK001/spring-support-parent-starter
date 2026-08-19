@@ -43,18 +43,21 @@ public class EduDimensionController {
 
     @Operation(summary = "学科列表")
     @GetMapping("/subjects")
+    /** ListSubjects */
     public ReturnResult<List<EduSubject>> listSubjects(@RequestParam(required = false) String gradeLevel) {
         return ReturnResult.ok(dimensionService.listSubjects(gradeLevel));
     }
 
     @Operation(summary = "保存学科")
     @PostMapping("/subjects/save")
+    /** 保存Subject */
     public ReturnResult<Long> saveSubject(@RequestBody EduSubject entity) {
         return ReturnResult.ok(dimensionService.saveSubject(entity));
     }
 
     @Operation(summary = "删除学科")
     @DeleteMapping("/subjects/{id}")
+    /** 删除Subject */
     public ReturnResult<Boolean> deleteSubject(@PathVariable Long id) {
         return ReturnResult.ok(dimensionService.deleteSubject(id));
     }
@@ -63,6 +66,7 @@ public class EduDimensionController {
 
     @Operation(summary = "年级列表")
     @GetMapping("/grades")
+    /** ListGrades */
     public ReturnResult<List<EduGrade>> listGrades(@RequestParam(required = false) String gradeLevel) {
         return ReturnResult.ok(dimensionService.listGrades(gradeLevel));
     }
@@ -71,6 +75,24 @@ public class EduDimensionController {
 
     @Operation(summary = "班级列表")
     @GetMapping("/classes")
+    /**
+     * ListClasses
+     * @param gradeLevel gradeLevel
+     * @param teacherId teacherId
+     * @param teacherId teacherId
+     * @param entity entity
+     * @param id id
+     * @param classId classId
+     * @param gradeLevel gradeLevel
+     * @param grade grade
+     * @param gradeLevel gradeLevel
+     * @param grade grade
+     * @param entity entity
+     * @param id id
+     * @param subjectCode subjectCode
+     * @param entity entity
+     * @param id id
+     */
     public ReturnResult<List<EduClass>> listClasses(
             @RequestParam(required = false) String gradeLevel,
             @RequestParam(required = false) Long teacherId) {
@@ -79,12 +101,14 @@ public class EduDimensionController {
 
     @Operation(summary = "保存班级")
     @PostMapping("/classes/save")
+    /** 保存Class */
     public ReturnResult<Long> saveClass(@RequestBody EduClass entity) {
         return ReturnResult.ok(dimensionService.saveClass(entity));
     }
 
     @Operation(summary = "删除班级")
     @DeleteMapping("/classes/{id}")
+    /** 删除Class */
     public ReturnResult<Boolean> deleteClass(@PathVariable Long id) {
         return ReturnResult.ok(dimensionService.deleteClass(id));
     }
@@ -93,6 +117,19 @@ public class EduDimensionController {
 
     @Operation(summary = "学生列表")
     @GetMapping("/students")
+    /**
+     * ListStudents
+     * @param classId classId
+     * @param gradeLevel gradeLevel
+     * @param grade grade
+     * @param gradeLevel gradeLevel
+     * @param grade grade
+     * @param entity entity
+     * @param id id
+     * @param subjectCode subjectCode
+     * @param entity entity
+     * @param id id
+     */
     public ReturnResult<List<EduStudent>> listStudents(
             @RequestParam(required = false) Long classId,
             @RequestParam(required = false) String gradeLevel,
@@ -102,12 +139,14 @@ public class EduDimensionController {
 
     @Operation(summary = "保存学生")
     @PostMapping("/students/save")
+    /** 保存Student */
     public ReturnResult<Long> saveStudent(@RequestBody EduStudent entity) {
         return ReturnResult.ok(dimensionService.saveStudent(entity));
     }
 
     @Operation(summary = "删除学生")
     @DeleteMapping("/students/{id}")
+    /** 删除Student */
     public ReturnResult<Boolean> deleteStudent(@PathVariable Long id) {
         return ReturnResult.ok(dimensionService.deleteStudent(id));
     }
@@ -116,18 +155,21 @@ public class EduDimensionController {
 
     @Operation(summary = "教师列表")
     @GetMapping("/teachers")
+    /** ListTeachers */
     public ReturnResult<List<EduTeacher>> listTeachers(@RequestParam(required = false) String subjectCode) {
         return ReturnResult.ok(dimensionService.listTeachers(subjectCode));
     }
 
     @Operation(summary = "保存教师")
     @PostMapping("/teachers/save")
+    /** 保存Teacher */
     public ReturnResult<Long> saveTeacher(@RequestBody EduTeacher entity) {
         return ReturnResult.ok(dimensionService.saveTeacher(entity));
     }
 
     @Operation(summary = "删除教师")
     @DeleteMapping("/teachers/{id}")
+    /** 删除Teacher */
     public ReturnResult<Boolean> deleteTeacher(@PathVariable Long id) {
         return ReturnResult.ok(dimensionService.deleteTeacher(id));
     }

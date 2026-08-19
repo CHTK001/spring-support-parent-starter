@@ -52,6 +52,10 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
      */
     private static final String PATH_DOOR_CONTROL = "/openapi/access/control";
 
+    /**
+     * 创建 DahuaCloudSession 实例
+     * @param info info
+     */
     public DahuaCloudSession(DeviceConnectInfo info) {
         super(info, DEFAULT_BASE_URL);
         login();
@@ -75,6 +79,7 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
         }
     }
 
+    /** Login */
     private void login() {
         try {
             Map<String, Object> params = new LinkedHashMap<>();
@@ -95,6 +100,7 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /** DoRequest */
     protected JsonNode doRequest(String method, String path, Map<String, Object> params) {
         if (!tokenValid() && !PATH_LOGIN.equals(path)) {
             login();
@@ -120,6 +126,7 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
         return execute(method, path, realParams, null);
     }
 
+    /** 获取LiveUrl */
     public JsonNode getLiveUrl(int channel) {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceSerial", info.getDeviceSerial());
@@ -129,12 +136,14 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /** 获取LiveUrl */
     public String getLiveUrl(int channel, String protocol) {
         JsonNode data = getLiveUrl(channel);
         return data.path("url").asText(data.path("hls").asText(data.path("flv").asText("")));
     }
 
     @Override
+    /** 获取PlaybackUrl */
     public String getPlaybackUrl(int channel, com.chua.starter.device.spi.model.TimeRange range) {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceSerial", info.getDeviceSerial());
@@ -146,6 +155,19 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /**
+     * 查询AccessRecords
+     * @param range range
+     * @param params params
+     * @param cmd cmd
+     * @param speed speed
+     * @param 1 1
+     * @param params params
+     * @param cmd cmd
+     * @param doorId doorId
+     * @param doorId doorId
+     * @param params params
+     */
     public java.util.List<com.chua.starter.device.spi.model.AccessRecord> queryAccessRecords(
             com.chua.starter.device.spi.model.TimeRange range) {
         Map<String, Object> params = new HashMap<>();
@@ -157,6 +179,7 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /** PtzControl */
     public void ptzControl(com.chua.starter.device.spi.model.PtzCommand cmd, double speed) {
         if (cmd == com.chua.starter.device.spi.model.PtzCommand.STOP) {
             return;
@@ -169,6 +192,7 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
         post(PATH_PTZ_CONTROL, params);
     }
 
+    /** MapAction */
     private String mapAction(com.chua.starter.device.spi.model.PtzCommand cmd) {
         switch (cmd) {
             case UP: return "up";
@@ -186,6 +210,7 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /** Remote解锁 */
     public void remoteUnlock(int doorId) {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceSerial", info.getDeviceSerial());

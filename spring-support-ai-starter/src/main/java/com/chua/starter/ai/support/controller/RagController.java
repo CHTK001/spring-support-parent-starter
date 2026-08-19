@@ -62,6 +62,11 @@ public class RagController {
      */
     private final RagProperties ragProperties;
 
+    /**
+     * 创建 RagController 实例
+     * @param ragClientManager ragClientManager
+     * @param RagProperties RagProperties
+     */
     public RagController(RagClientManager ragClientManager, RagProperties ragProperties) {
         this.ragClientManager = ragClientManager;
         this.ragProperties = ragProperties;
@@ -79,6 +84,66 @@ public class RagController {
     @Permission("admin")
     @Operation(summary = "上传文档", description = "上传文件并自动索引到知识库")
     @PostMapping(value = "/document/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    /**
+     * UploadDocument
+     * @param file file
+     * @param libraryId libraryId
+     * @param e e
+     * @param page page
+     * @param pageSize pageSize
+     * @param libraryId libraryId
+     * @param 1 1
+     * @param 1 1
+     * @param 100 100
+     * @param pageSize pageSize
+     * @param docs docs
+     * @param page page
+     * @param pageSize pageSize
+     * @param id id
+     * @param id id
+     * @param body body
+     * @param topK topK
+     * @param threshold threshold
+     * @param e e
+     * @param 配置 配置
+     * @param e e
+     * @param name name
+     * @param name name
+     * @param page page
+     * @param pageSize pageSize
+     * @param 1 1
+     * @param 1 1
+     * @param 100 100
+     * @param 0 0
+     * @param page page
+     * @param pageSize pageSize
+     * @param e e
+     * @param query query
+     * @param topK topK
+     * @param topK topK
+     * @param threshold threshold
+     * @param e e
+     * @param request request
+     * @param e e
+     * @param URL_CONTENT_MAX_LENGTH URL_CONTENT_MAX_LENGTH
+     * @param URL_CONTENT_MAX_LENGTH URL_CONTENT_MAX_LENGTH
+     * @param e e
+     * @param url url
+     * @param address address
+     * @param Inet4Address Inet4Address
+     * @param Inet6Address Inet6Address
+     * @param value value
+     * @param defVal defVal
+     * @param num num
+     * @param e e
+     * @param value value
+     * @param value value
+     * @param defVal defVal
+     * @param num num
+     * @param 1 1
+     * @param e e
+     * @param value value
+     */
     public ReturnResult<RagDocument> uploadDocument(
             @RequestParam("file") MultipartFile file,
             @RequestParam(required = false) String libraryId) {
@@ -109,6 +174,63 @@ public class RagController {
     @Permission("admin")
     @Operation(summary = "文档列表", description = "分页查询已上传文档")
     @GetMapping("/document/list")
+    /**
+     * ListDocuments
+     * @param page page
+     * @param pageSize pageSize
+     * @param libraryId libraryId
+     * @param 1 1
+     * @param 1 1
+     * @param 100 100
+     * @param pageSize pageSize
+     * @param docs docs
+     * @param page page
+     * @param pageSize pageSize
+     * @param id id
+     * @param id id
+     * @param body body
+     * @param topK topK
+     * @param threshold threshold
+     * @param e e
+     * @param 配置 配置
+     * @param e e
+     * @param name name
+     * @param name name
+     * @param page page
+     * @param pageSize pageSize
+     * @param 1 1
+     * @param 1 1
+     * @param 100 100
+     * @param 0 0
+     * @param page page
+     * @param pageSize pageSize
+     * @param e e
+     * @param query query
+     * @param topK topK
+     * @param topK topK
+     * @param threshold threshold
+     * @param e e
+     * @param request request
+     * @param e e
+     * @param URL_CONTENT_MAX_LENGTH URL_CONTENT_MAX_LENGTH
+     * @param URL_CONTENT_MAX_LENGTH URL_CONTENT_MAX_LENGTH
+     * @param e e
+     * @param url url
+     * @param address address
+     * @param Inet4Address Inet4Address
+     * @param Inet6Address Inet6Address
+     * @param value value
+     * @param defVal defVal
+     * @param num num
+     * @param e e
+     * @param value value
+     * @param value value
+     * @param defVal defVal
+     * @param num num
+     * @param 1 1
+     * @param e e
+     * @param value value
+     */
     public ReturnResult<Map<String, Object>> listDocuments(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int pageSize,
@@ -130,6 +252,7 @@ public class RagController {
     @Permission("admin")
     @Operation(summary = "删除文档", description = "删除文档及其向量索引")
     @DeleteMapping("/document/{id}")
+    /** 删除Document */
     public ReturnResult<Boolean> deleteDocument(@PathVariable String id) {
         boolean deleted = ragClient().deleteDocument(id);
         return deleted ? ReturnResult.ok(true) : ReturnResult.error("文档不存在");
@@ -138,6 +261,7 @@ public class RagController {
     @Permission("admin")
     @Operation(summary = "文档内容预览", description = "读取文档原始文本内容（仅限文本文件）")
     @GetMapping("/document/{id}/content")
+    /** 获取DocumentContent */
     public ReturnResult<String> getDocumentContent(@PathVariable String id) {
         String content = ragClient().readDocumentContent(id);
         if (content == null) {
@@ -151,6 +275,51 @@ public class RagController {
     @Permission("admin")
     @Operation(summary = "RAG 问答", description = "基于已索引文档进行问答，返回答案和引用来源")
     @PostMapping("/query")
+    /**
+     * 查询
+     * @param body body
+     * @param topK topK
+     * @param threshold threshold
+     * @param e e
+     * @param 配置 配置
+     * @param e e
+     * @param name name
+     * @param name name
+     * @param page page
+     * @param pageSize pageSize
+     * @param 1 1
+     * @param 1 1
+     * @param 100 100
+     * @param 0 0
+     * @param page page
+     * @param pageSize pageSize
+     * @param e e
+     * @param query query
+     * @param topK topK
+     * @param topK topK
+     * @param threshold threshold
+     * @param e e
+     * @param request request
+     * @param e e
+     * @param URL_CONTENT_MAX_LENGTH URL_CONTENT_MAX_LENGTH
+     * @param URL_CONTENT_MAX_LENGTH URL_CONTENT_MAX_LENGTH
+     * @param e e
+     * @param url url
+     * @param address address
+     * @param Inet4Address Inet4Address
+     * @param Inet6Address Inet6Address
+     * @param value value
+     * @param defVal defVal
+     * @param num num
+     * @param e e
+     * @param value value
+     * @param value value
+     * @param defVal defVal
+     * @param num num
+     * @param 1 1
+     * @param e e
+     * @param value value
+     */
     public ReturnResult<Map<String, Object>> query(
             @RequestBody Map<String, Object> body) {
         String query = body.getOrDefault("query", "").toString();
@@ -183,6 +352,7 @@ public class RagController {
 
     @Operation(summary = "服务状态", description = "获取 RAG 服务运行状态")
     @GetMapping("/status")
+    /** Status */
     public ReturnResult<Map<String, Object>> status() {
         Map<String, Object> status = new LinkedHashMap<>();
         status.put("engine", ragProperties.getEmbeddingEngine());
@@ -198,6 +368,7 @@ public class RagController {
     @Permission("admin")
     @Operation(summary = "重置索引", description = "清空向量存储并重新索引所有文档")
     @PostMapping("/reset")
+    /** 重置 */
     public ReturnResult<Integer> reset() {
         try {
             int count = ragClient().reindex();
@@ -211,6 +382,7 @@ public class RagController {
 
     @Operation(summary = "Embedding 引擎列表", description = "获取所有可用的 Embedding 引擎（VectorService SPI 实现）")
     @GetMapping("/embedding-engines")
+    /** ListEmbeddingEngines */
     public ReturnResult<List<Map<String, String>>> listEmbeddingEngines() {
         Set<String> engines = ServiceProvider.of(VectorService.class).getExtensions();
         List<Map<String, String>> result = engines.stream().map(name -> {
@@ -226,6 +398,43 @@ public class RagController {
 
     @Operation(summary = "向量列表", description = "分页查看已存储的向量数据（不含原始向量值）")
     @GetMapping("/vector/list")
+    /**
+     * ListVectors
+     * @param page page
+     * @param pageSize pageSize
+     * @param 1 1
+     * @param 1 1
+     * @param 100 100
+     * @param 0 0
+     * @param page page
+     * @param pageSize pageSize
+     * @param e e
+     * @param query query
+     * @param topK topK
+     * @param topK topK
+     * @param threshold threshold
+     * @param e e
+     * @param request request
+     * @param e e
+     * @param URL_CONTENT_MAX_LENGTH URL_CONTENT_MAX_LENGTH
+     * @param URL_CONTENT_MAX_LENGTH URL_CONTENT_MAX_LENGTH
+     * @param e e
+     * @param url url
+     * @param address address
+     * @param Inet4Address Inet4Address
+     * @param Inet6Address Inet6Address
+     * @param value value
+     * @param defVal defVal
+     * @param num num
+     * @param e e
+     * @param value value
+     * @param value value
+     * @param defVal defVal
+     * @param num num
+     * @param 1 1
+     * @param e e
+     * @param value value
+     */
     public ReturnResult<Map<String, Object>> listVectors(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int pageSize) {
@@ -247,6 +456,34 @@ public class RagController {
 
     @Operation(summary = "向量搜索", description = "按文本检索相似向量（仅搜索，不走 LLM）")
     @GetMapping("/vector/search")
+    /**
+     * 搜索Vectors
+     * @param query query
+     * @param topK topK
+     * @param topK topK
+     * @param threshold threshold
+     * @param e e
+     * @param request request
+     * @param e e
+     * @param URL_CONTENT_MAX_LENGTH URL_CONTENT_MAX_LENGTH
+     * @param URL_CONTENT_MAX_LENGTH URL_CONTENT_MAX_LENGTH
+     * @param e e
+     * @param url url
+     * @param address address
+     * @param Inet4Address Inet4Address
+     * @param Inet6Address Inet6Address
+     * @param value value
+     * @param defVal defVal
+     * @param num num
+     * @param e e
+     * @param value value
+     * @param value value
+     * @param defVal defVal
+     * @param num num
+     * @param 1 1
+     * @param e e
+     * @param value value
+     */
     public ReturnResult<List<Map<String, Object>>> searchVectors(
             @RequestParam String query,
             @RequestParam(defaultValue = "10") int topK) {
@@ -273,6 +510,7 @@ public class RagController {
     @Permission("admin")
     @Operation(summary = "URL 抓取文档", description = "从指定 URL 抓取网页内容并添加为 RAG 文档")
     @PostMapping("/document/url")
+    /** 添加DocumentByUrl */
     public ReturnResult<RagDocument> addDocumentByUrl(@RequestBody com.chua.starter.ai.support.model.UrlDocumentRequest request) {
         String url = request.getUrl();
         if (StringUtils.isBlank(url)) {

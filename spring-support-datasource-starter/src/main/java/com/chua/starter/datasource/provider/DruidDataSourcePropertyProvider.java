@@ -24,11 +24,13 @@ public class DruidDataSourcePropertyProvider implements DataSourcePropertyProvid
     );
 
     @Override
+    /** 获取DataSourceType */
     public Class<DruidDataSource> getDataSourceType() {
         return DruidDataSource.class;
     }
 
     @Override
+    /** 获取Properties */
     public Map<String, Object> getProperties(DruidDataSource dataSource) {
         Map<String, Object> properties = new HashMap<>();
         
@@ -63,11 +65,13 @@ public class DruidDataSourcePropertyProvider implements DataSourcePropertyProvid
     }
 
     @Override
+    /** 设置Properties */
     public void setProperties(DruidDataSource dataSource, Map<String, Object> properties) {
         properties.forEach((name, value) -> setProperty(dataSource, name, value));
     }
 
     @Override
+    /** 设置Property */
     public void setProperty(DruidDataSource dataSource, String name, Object value) {
         if (value == null) {
             return;
@@ -116,6 +120,7 @@ public class DruidDataSourcePropertyProvider implements DataSourcePropertyProvid
     }
 
     @Override
+    /** 设置Filters */
     public void setFilters(DruidDataSource dataSource, String filters) {
         if (filters != null && !filters.isEmpty()) {
             try {
@@ -126,15 +131,18 @@ public class DruidDataSourcePropertyProvider implements DataSourcePropertyProvid
     }
 
     @Override
+    /** 获取PropertyNameMapping */
     public Map<String, String> getPropertyNameMapping() {
         return PROPERTY_MAPPING;
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         return 0; // Druid优先级更高
     }
 
+    /** ToInt */
     private int toInt(Object value) {
         if (value instanceof Number) {
             return ((Number) value).intValue();
@@ -142,6 +150,7 @@ public class DruidDataSourcePropertyProvider implements DataSourcePropertyProvid
         return Integer.parseInt(String.valueOf(value));
     }
 
+    /** ToLong */
     private long toLong(Object value) {
         if (value instanceof Number) {
             return ((Number) value).longValue();
@@ -149,6 +158,7 @@ public class DruidDataSourcePropertyProvider implements DataSourcePropertyProvid
         return Long.parseLong(String.valueOf(value));
     }
 
+    /** ToBoolean */
     private boolean toBoolean(Object value) {
         if (value instanceof Boolean) {
             return (Boolean) value;

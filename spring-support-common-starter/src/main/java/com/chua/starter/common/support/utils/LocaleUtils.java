@@ -35,6 +35,7 @@ public class LocaleUtils {
         }
     }
 
+    /** 获取Locate */
     public static Locale getLocate() {
         HttpServletRequest request = RequestUtils.getRequest();
         if(null == request) {

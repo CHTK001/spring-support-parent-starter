@@ -78,10 +78,12 @@ public class OptionalProvider {
             /** DEF */
             private final ServiceDefinition def = ServiceDefinitionUtils.buildDefinitionAlias(aClass, null, value, value.getClass(), null, key, 0);
             @Override
+            /** Name */
             public String name() {
                 return def.getName();
             }
             @Override
+            /** SupportedTypes */
             public String[] supportedTypes() {
                 return new String[0];
             }

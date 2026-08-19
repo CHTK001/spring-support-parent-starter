@@ -202,16 +202,19 @@ public class HikvisionRealSession implements DeviceSession {
     }
 
     @Override
+    /** 获取DeviceId */
     public String getDeviceId() {
         return info.getIp();
     }
 
     @Override
+    /** 是否Online */
     public boolean isOnline() {
         return online && userId >= 0;
     }
 
     @Override
+    /** 关闭 */
     public void close() {
         previewBuffers.clear();
         if (userId >= 0) {
@@ -224,6 +227,7 @@ public class HikvisionRealSession implements DeviceSession {
     }
 
     @Override
+    /** Preview */
     public InputStream preview(int channel) {
         NET_DVR_PREVIEWINFO previewInfo = new NET_DVR_PREVIEWINFO();
         previewInfo.setPreviewChannel(channel, HCNetSDK.NET_DVR_MAIN_STREAM,
@@ -249,29 +253,34 @@ public class HikvisionRealSession implements DeviceSession {
     }
 
     @Override
+    /** 查询Records */
     public List<RecordFile> queryRecords(int channel, TimeRange range) {
         // 海康按时间检索录像，此处返回空列表，真实场景需结合 NET_DVR_FindRecord API
         return Collections.emptyList();
     }
 
     @Override
+    /** 获取PlaybackUrl */
     public String getPlaybackUrl(int channel, TimeRange range) {
         // JNA 直连模式不返回 URL，由前端调用 /video/playback 拿到 SDK 拉流字节流
         return null;
     }
 
     @Override
+    /** 获取LiveUrl */
     public String getLiveUrl(int channel, String protocol) {
         // JNA 直连模式不返回 URL，由前端调用 /video/stream 拿到 SDK 拉流字节流
         return null;
     }
 
     @Override
+    /** TestConnection */
     public boolean testConnection() {
         return isOnline();
     }
 
     @Override
+    /** Playback */
     public InputStream playback(int channel, TimeRange range) {
         NET_DVR_PLAYBACK_COND cond = new NET_DVR_PLAYBACK_COND();
         cond.lChannel = channel;
@@ -312,6 +321,7 @@ public class HikvisionRealSession implements DeviceSession {
     }
 
     @Override
+    /** PtzControl */
     public void ptzControl(PtzCommand cmd, double speed) {
         Integer command = PTZ_COMMANDS.get(cmd);
         if (command == null) {
@@ -327,6 +337,7 @@ public class HikvisionRealSession implements DeviceSession {
     }
 
     @Override
+    /** 设置Preset */
     public void setPreset(int presetId, String name) {
         boolean ok = sdk.NET_DVR_PTZPreset_Other(userId, 1, HCNetSDK.NET_DVR_SET_PRESET, presetId, 0);
         if (!ok) {
@@ -337,6 +348,7 @@ public class HikvisionRealSession implements DeviceSession {
     }
 
     @Override
+    /** 调用Preset */
     public void callPreset(int presetId) {
         boolean ok = sdk.NET_DVR_PTZPreset_Other(userId, 1, HCNetSDK.NET_DVR_GOTO_PRESET, presetId, 0);
         if (!ok) {
@@ -347,6 +359,7 @@ public class HikvisionRealSession implements DeviceSession {
     }
 
     @Override
+    /** 删除Preset */
     public void deletePreset(int presetId) {
         boolean ok = sdk.NET_DVR_PTZPreset_Other(userId, 1, HCNetSDK.NET_DVR_DEL_PRESET, presetId, 0);
         if (!ok) {
@@ -357,12 +370,14 @@ public class HikvisionRealSession implements DeviceSession {
     }
 
     @Override
+    /** ListPresets */
     public List<PresetInfo> listPresets() {
         // 海康按通道枚举预置位，此处简化返回空列表
         return Collections.emptyList();
     }
 
     @Override
+    /** Remote解锁 */
     public void remoteUnlock(int doorId) {
         boolean ok = sdk.NET_DVR_RemoteControl(userId, NET_DVR_CMD_OPEN_DOOR, Pointer.NULL, 0, Pointer.NULL, 0);
         if (!ok) {
@@ -373,22 +388,26 @@ public class HikvisionRealSession implements DeviceSession {
     }
 
     @Override
+    /** 查询AccessRecords */
     public List<AccessRecord> queryAccessRecords(TimeRange range) {
         // 海康门禁记录需通过 GET_DOOR_STATE 等命令查询，此处简化返回空列表
         return Collections.emptyList();
     }
 
     @Override
+    /** 订阅Event */
     public void subscribeEvent(EventType type, EventListener listener) {
         listeners.computeIfAbsent(type, k -> new CopyOnWriteArrayList<>()).add(listener);
     }
 
     @Override
+    /** 取消订阅Event */
     public void unsubscribeEvent(EventType type) {
         listeners.remove(type);
     }
 
     @Override
+    /** 取出Events */
     public List<DeviceEvent> pollEvents(TimeRange range) {
         if (eventQueue.isEmpty()) {
             return Collections.emptyList();

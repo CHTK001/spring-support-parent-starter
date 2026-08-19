@@ -28,6 +28,7 @@ import java.util.List;
  */
 public interface BaseMapperX<T> extends MPJBaseMapper<T> {
 
+    /** 选择Page */
     default PageResult<T> selectPage(Query<T> pageParam, @Param("ew") Wrapper<T> queryWrapper) {
         // 特殊：不分页，直接查询全部
         if (Query.PAGE_SIZE_NONE.equals(pageParam.getPageSize())) {
@@ -45,6 +46,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
         return PageResult.copy(mpPage);
     }
 
+    /** 选择合并Page */
     default <DTO> PageResult<DTO> selectJoinPage(Query<T> pageParam, Class<DTO> resultTypeClass, MPJBaseJoin<T> joinQueryWrapper) {
         IPage<DTO> mpPage = MybatisUtils.buildPage(pageParam);
         selectJoinPage(mpPage, resultTypeClass, joinQueryWrapper);
@@ -52,52 +54,72 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
         return PageResult.copy(mpPage);
     }
 
+    /** 选择One */
     default T selectOne(String field, Object value) {
         return selectOne(new QueryWrapper<T>().eq(field, value));
     }
 
+    /** 选择One */
     default T selectOne(SFunction<T, ?> field, Object value) {
         return selectOne(new LambdaQueryWrapper<T>().eq(field, value));
     }
 
+    /** 选择One */
     default T selectOne(String field1, Object value1, String field2, Object value2) {
         return selectOne(new QueryWrapper<T>().eq(field1, value1).eq(field2, value2));
     }
 
+    /** 选择One */
     default T selectOne(SFunction<T, ?> field1, Object value1, SFunction<T, ?> field2, Object value2) {
         return selectOne(new LambdaQueryWrapper<T>().eq(field1, value1).eq(field2, value2));
     }
 
+    /**
+     * 选择One
+     * @param field1 field1
+     * @param value1 value1
+     * @param field2 field2
+     * @param value2 value2
+     * @param field3 field3
+     * @param value3 value3
+     */
     default T selectOne(SFunction<T, ?> field1, Object value1, SFunction<T, ?> field2, Object value2,
                         SFunction<T, ?> field3, Object value3) {
         return selectOne(new LambdaQueryWrapper<T>().eq(field1, value1).eq(field2, value2)
                 .eq(field3, value3));
     }
 
+    /** 选择计算数量 */
     default Long selectCount() {
         return selectCount(new QueryWrapper<>());
     }
 
+    /** 选择计算数量 */
     default Long selectCount(String field, Object value) {
         return selectCount(new QueryWrapper<T>().eq(field, value));
     }
 
+    /** 选择计算数量 */
     default Long selectCount(SFunction<T, ?> field, Object value) {
         return selectCount(new LambdaQueryWrapper<T>().eq(field, value));
     }
 
+    /** 选择List */
     default List<T> selectList() {
         return selectList(new QueryWrapper<>());
     }
 
+    /** 选择List */
     default List<T> selectList(String field, Object value) {
         return selectList(new QueryWrapper<T>().eq(field, value));
     }
 
+    /** 选择List */
     default List<T> selectList(SFunction<T, ?> field, Object value) {
         return selectList(new LambdaQueryWrapper<T>().eq(field, value));
     }
 
+    /** 选择List */
     default List<T> selectList(String field, Collection<?> values) {
         if (CollectionUtils.isEmpty(values)) {
             return Collections.emptyList();
@@ -105,6 +127,7 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
         return selectList(new QueryWrapper<T>().in(field, values));
     }
 
+    /** 选择List */
     default List<T> selectList(SFunction<T, ?> field, Collection<?> values) {
         if (CollectionUtils.isEmpty(values)) {
             return Collections.emptyList();
@@ -113,10 +136,12 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
     }
 
     @Deprecated
+    /** 选择List */
     default List<T> selectList(SFunction<T, ?> leField, SFunction<T, ?> geField, Object value) {
         return selectList(new LambdaQueryWrapper<T>().le(leField, value).ge(geField, value));
     }
 
+    /** 选择List */
     default List<T> selectList(SFunction<T, ?> field1, Object value1, SFunction<T, ?> field2, Object value2) {
         return selectList(new LambdaQueryWrapper<T>().eq(field1, value1).eq(field2, value2));
     }
@@ -140,30 +165,37 @@ public interface BaseMapperX<T> extends MPJBaseMapper<T> {
         return Db.saveBatch(entities, size);
     }
 
+    /** 更新Batch */
     default int updateBatch(T update) {
         return update(update, new QueryWrapper<>());
     }
 
+    /** 更新Batch */
     default Boolean updateBatch(Collection<T> entities) {
         return Db.updateBatchById(entities);
     }
 
+    /** 更新Batch */
     default Boolean updateBatch(Collection<T> entities, int size) {
         return Db.updateBatchById(entities, size);
     }
 
+    /** 插入Or更新 */
     default boolean insertOrUpdate(T entity) {
         return  Db.saveOrUpdate(entity);
     }
 
+    /** 插入Or更新Batch */
     default Boolean insertOrUpdateBatch(Collection<T> collection) {
         return Db.saveOrUpdateBatch(collection);
     }
 
+    /** 删除 */
     default int delete(String field, String value) {
         return delete(new QueryWrapper<T>().eq(field, value));
     }
 
+    /** 删除 */
     default int delete(SFunction<T, ?> field, Object value) {
         return delete(new LambdaQueryWrapper<T>().eq(field, value));
     }

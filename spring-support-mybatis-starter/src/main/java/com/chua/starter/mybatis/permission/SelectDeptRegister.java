@@ -29,11 +29,20 @@ import static com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler.
  */
 public class SelectDeptRegister extends AbstractDeptRegister {
 
+    /**
+     * 创建 SelectDeptRegister 实例
+     * @param plainSelect plainSelect
+     * @param Expression Expression
+     * @param CurrentUser CurrentUser
+     * @param DataFilterTypeEnum DataFilterTypeEnum
+     * @param MybatisPlusDataScopeProperties MybatisPlusDataScopeProperties
+     */
     public SelectDeptRegister(PlainSelect plainSelect, Expression where, CurrentUser user, DataFilterTypeEnum dataPermission, MybatisPlusDataScopeProperties scopeProperties) {
         super(plainSelect, where, user, dataPermission, scopeProperties);
     }
 
     @Override
+    /** 注册 */
     public Expression register() {
         findTableHasDeptId();
         if (null == hasDeptIdTableAlias) {
@@ -115,6 +124,7 @@ public class SelectDeptRegister extends AbstractDeptRegister {
         findFromJoin();
     }
 
+    /** 查找From合并 */
     private void findFromJoin() {
         List<Join> joins = plainSelect.getJoins();
         if (null == joins) {

@@ -60,30 +60,37 @@ public class DeadLetterProperties {
     private double backoffMultiplier = 2.0;
 
     // Lombok 注解处理器未运行时的手动 getter 方法
+    /** 获取最大值Retries */
     public int getMaxRetries() {
         return maxRetries;
     }
 
+    /** 获取RetryDelaySeconds */
     public long getRetryDelaySeconds() {
         return retryDelaySeconds;
     }
 
+    /** 获取最大值RetryDelaySeconds */
     public long getMaxRetryDelaySeconds() {
         return maxRetryDelaySeconds;
     }
 
+    /** 是否ExponentialBackoff */
     public boolean isExponentialBackoff() {
         return exponentialBackoff;
     }
 
+    /** 获取BackoffMultiplier */
     public double getBackoffMultiplier() {
         return backoffMultiplier;
     }
 
+    /** 获取Type */
     public String getType() {
         return type;
     }
 
+    /** 获取DelayThreads */
     public int getDelayThreads() {
         return delayThreads;
     }

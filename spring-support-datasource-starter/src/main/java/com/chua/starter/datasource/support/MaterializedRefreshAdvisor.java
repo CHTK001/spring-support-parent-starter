@@ -22,10 +22,15 @@ import java.lang.reflect.Proxy;
  */
 public class MaterializedRefreshAdvisor extends StaticMethodMatcherPointcutAdvisor {
 
+    /**
+     * 创建 MaterializedRefreshAdvisor 实例
+     * @param properties properties
+     */
     public MaterializedRefreshAdvisor(MaterializedRouteProperties properties) {
         this.setAdvice(new MethodInterceptor() {
             @Nullable
             @Override
+            /** 调用 */
             public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
                 MaterializedRefresh refresh = resolveRefresh(invocation.getMethod(), invocation.getThis().getClass());
                 if (refresh == null) {
@@ -44,6 +49,7 @@ public class MaterializedRefreshAdvisor extends StaticMethodMatcherPointcutAdvis
     }
 
     @Override
+    /** Matches */
     public boolean matches(Method method, Class<?> targetClass) {
         if (Proxy.isProxyClass(targetClass)) {
             return false;
@@ -51,6 +57,7 @@ public class MaterializedRefreshAdvisor extends StaticMethodMatcherPointcutAdvis
         return resolveRefresh(method, targetClass) != null;
     }
 
+    /** 解析Refresh */
     private MaterializedRefresh resolveRefresh(Method method, Class<?> targetClass) {
         MaterializedRefresh refresh = AnnotatedElementUtils.findMergedAnnotation(method, MaterializedRefresh.class);
         if (refresh != null) {

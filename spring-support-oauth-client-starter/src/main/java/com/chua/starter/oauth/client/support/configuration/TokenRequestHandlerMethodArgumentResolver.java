@@ -18,16 +18,22 @@ import java.lang.reflect.Parameter;
  */
 public class TokenRequestHandlerMethodArgumentResolver extends UserRequestHandlerMethodArgumentResolver {
 
+    /**
+     * 创建 TokenRequestHandlerMethodArgumentResolver 实例
+     * @param webRequest webRequest
+     */
     public TokenRequestHandlerMethodArgumentResolver(WebRequest webRequest) {
         super(webRequest);
     }
 
     @Override
+    /** SupportsParameter */
     public boolean supportsParameter(MethodParameter parameter) {
         return super.supportsParameter(parameter, TokenValue.class);
     }
 
     @Override
+    /** 解析Argument */
     public Object resolveArgument(MethodParameter methodParameter, ModelAndViewContainer mavContainer, NativeWebRequest webRequest, WebDataBinderFactory binderFactory) throws Exception {
         TokenValue requestValue = methodParameter.getParameterAnnotation(TokenValue.class);
         Parameter parameter = methodParameter.getParameter();

@@ -37,11 +37,16 @@ public class ActuatorAuthenticationFilter implements Filter  {
     /** Actuator属性 */
     private final ActuatorProperties actuatorProperties;
 
+    /**
+     * 创建 ActuatorAuthenticationFilter 实例
+     * @param actuatorProperties actuatorProperties
+     */
     public ActuatorAuthenticationFilter(ActuatorProperties actuatorProperties) {
         this.actuatorProperties = actuatorProperties;
     }
 
     @Override
+    /** Do过滤 */
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         HttpServletRequest httpRequest = (HttpServletRequest) request;

@@ -86,6 +86,7 @@ public class PtzController {
         return session.listPresets();
     }
 
+    /** RequireOnline */
     private DeviceSession requireOnline(String deviceId) {
         DeviceSession session = sessionManager.getSession(deviceId);
         if (session == null || !session.isOnline()) {

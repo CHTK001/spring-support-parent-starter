@@ -18,11 +18,16 @@ import java.lang.reflect.Proxy;
  * @author CH
  */
 public class MethodPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor {
+    /**
+     * 创建 MethodPointcutAdvisor 实例
+     * @param applicationContext applicationContext
+     */
     public MethodPointcutAdvisor(ApplicationContext applicationContext) {
         MultiDataSourceSettingProperties multiDataSourceSettingProperties = Binder.get(applicationContext.getEnvironment()).bindOrCreate(MultiDataSourceSettingProperties.PRE, MultiDataSourceSettingProperties.class);
         this.setAdvice(new MethodInterceptor() {
             @Nullable
             @Override
+            /** 调用 */
             public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
                 Method method = invocation.getMethod();
                 if (AnnotatedElementUtils.hasAnnotation(method, DS.class) || AnnotatedElementUtils.hasAnnotation(invocation.getThis().getClass(), DS.class)) {
@@ -41,6 +46,7 @@ public class MethodPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor {
     }
 
     @Override
+    /** Matches */
     public boolean matches(Method method, Class<?> targetClass) {
         if (Proxy.isProxyClass(targetClass)) {
             return false;

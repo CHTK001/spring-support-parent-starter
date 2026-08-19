@@ -46,6 +46,11 @@ public class CacheTemplate {
     /** 密钥generator */
     private final TenantedKeyGenerator keyGenerator;
 
+    /**
+     * 创建 CacheTemplate 实例
+     * @param cacheManager cacheManager
+     * @param TenantedKeyGenerator TenantedKeyGenerator
+     */
     public CacheTemplate(MultiLevelCacheManager cacheManager, TenantedKeyGenerator keyGenerator) {
         this.cacheManager = cacheManager;
         this.keyGenerator = keyGenerator;

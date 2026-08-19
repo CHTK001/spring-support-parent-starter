@@ -121,6 +121,10 @@ public class MultiDSTransactionContext {
     /** 开始时间 */
     private final long startTime;
 
+    /**
+     * 创建 MultiDSTransactionContext 实例
+     * @param transactionName transactionName
+     */
     public MultiDSTransactionContext(String transactionName) {
         this.transactionName = transactionName;
         this.startTime = System.currentTimeMillis();
@@ -323,6 +327,7 @@ public class MultiDSTransactionContext {
     }
 
     @Override
+    /** ToString */
     public String toString() {
         return "MultiDSTransactionContext{" +
                 "name='" + transactionName + '\'' +

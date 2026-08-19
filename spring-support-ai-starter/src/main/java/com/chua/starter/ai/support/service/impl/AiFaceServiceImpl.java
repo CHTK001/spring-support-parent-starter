@@ -84,11 +84,13 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     @Override
+    /** ExtractFeaturePipeline */
     public FaceFeaturePipelineResult extractFeaturePipeline(byte[] imageData) {
         return faceClientManager.currentPipeline().extractFeatureWithMeta(imageData);
     }
 
     @Override
+    /** Align */
     public FaceAlignResult align(byte[] imageData) {
         return faceClientManager.currentPipeline().align(imageData);
     }
@@ -112,6 +114,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     @Override
+    /** 比较WithMeta */
     public FaceCompareResult compareWithMeta(byte[] imageA, byte[] imageB) {
         return faceClientManager.currentPipeline().compareWithMeta(imageA, imageB);
     }
@@ -156,6 +159,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     @Override
+    /** EnrollFeature */
     public boolean enrollFeature(String id, float[] feature, Map<String, Object> metadata) {
         return faceClientManager.currentPipeline().enroll(id, feature, metadata, id);
     }

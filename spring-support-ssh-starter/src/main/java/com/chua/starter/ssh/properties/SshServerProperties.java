@@ -92,34 +92,42 @@ public class SshServerProperties {
         private String privateKeyFile;
         
         // Lombok @Data 生成的 getter/setter 方法（如果 Lombok 未生效，这些方法会被使用）
+        /** 是否Password */
         public boolean isPassword() {
             return password;
         }
         
+        /** 设置Password */
         public void setPassword(boolean password) {
             this.password = password;
         }
         
+        /** 获取Username */
         public String getUsername() {
             return username;
         }
         
+        /** 设置Username */
         public void setUsername(String username) {
             this.username = username;
         }
         
+        /** 获取UserPassword */
         public String getUserPassword() {
             return userPassword;
         }
         
+        /** 设置UserPassword */
         public void setUserPassword(String userPassword) {
             this.userPassword = userPassword;
         }
         
+        /** 是否PublicKey */
         public boolean isPublicKey() {
             return publicKey;
         }
         
+        /** 设置PublicKey */
         public void setPublicKey(boolean publicKey) {
             this.publicKey = publicKey;
         }
@@ -146,18 +154,22 @@ public class SshServerProperties {
         private long idleTimeout = 1800;
         
         // Lombok @Data 生成的 getter/setter 方法（如果 Lombok 未生效，这些方法会被使用）
+        /** 获取Timeout */
         public long getTimeout() {
             return timeout;
         }
         
+        /** 设置Timeout */
         public void setTimeout(long timeout) {
             this.timeout = timeout;
         }
         
+        /** 获取最大值Sessions */
         public int getMaxSessions() {
             return maxSessions;
         }
         
+        /** 设置最大值Sessions */
         public void setMaxSessions(int maxSessions) {
             this.maxSessions = maxSessions;
         }
@@ -189,18 +201,22 @@ public class SshServerProperties {
         private long maxFileSize = 100 * 1024 * 1024; // 100MB
         
         // Lombok @Data 生成的 getter/setter 方法（如果 Lombok 未生效，这些方法会被使用）
+        /** 是否SftpEnabled */
         public boolean isSftpEnabled() {
             return sftpEnabled;
         }
         
+        /** 设置SftpEnabled */
         public void setSftpEnabled(boolean sftpEnabled) {
             this.sftpEnabled = sftpEnabled;
         }
         
+        /** 获取RootDirectory */
         public String getRootDirectory() {
             return rootDirectory;
         }
         
+        /** 设置RootDirectory */
         public void setRootDirectory(String rootDirectory) {
             this.rootDirectory = rootDirectory;
         }
@@ -238,58 +254,72 @@ public class SshServerProperties {
     }
     
     // Lombok @Data 生成的 getter/setter 方法（如果 Lombok 未生效，这些方法会被使用）
+    /** 是否Enabled */
     public boolean isEnabled() {
         return enabled;
     }
     
+    /** 设置Enabled */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
     
+    /** 获取Host */
     public String getHost() {
         return host;
     }
     
+    /** 设置Host */
     public void setHost(String host) {
         this.host = host;
     }
     
+    /** 获取Port */
     public int getPort() {
         return port;
     }
     
+    /** 设置Port */
     public void setPort(int port) {
         this.port = port;
     }
     
+    /** 获取Authentication */
     public Authentication getAuthentication() {
         return authentication;
     }
     
+    /** 设置Authentication */
     public void setAuthentication(Authentication authentication) {
         this.authentication = authentication;
     }
     
+    /** 获取Session */
     public Session getSession() {
         return session;
     }
     
+    /** 设置Session */
     public void setSession(Session session) {
         this.session = session;
     }
     
+    /** 获取FileTransfer */
     public FileTransfer getFileTransfer() {
         return fileTransfer;
     }
     
+    /** 设置FileTransfer */
     public void setFileTransfer(FileTransfer fileTransfer) {
         this.fileTransfer = fileTransfer;
     }
     
+    /** 获取Security */
     public Security getSecurity() {
         return security;
     }
     
+    /** 设置Security */
     public void setSecurity(Security security) {
         this.security = security;
     }

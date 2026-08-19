@@ -36,6 +36,7 @@ public class WalletOrderServiceImpl implements WalletOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 创建RechargeOrder */
     public WalletOrder createRechargeOrder(RechargeRequest request) {
         String orderNo = StringUtils.hasText(request.getRechargeNo()) ? request.getRechargeNo() : generateOrderNo("RCH");
         request.setRechargeNo(orderNo);
@@ -64,6 +65,7 @@ public class WalletOrderServiceImpl implements WalletOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 创建TransferOrder */
     public WalletOrder createTransferOrder(TransferRequest request) {
         String orderNo = StringUtils.hasText(request.getTransferNo()) ? request.getTransferNo() : generateOrderNo("TRF");
         request.setTransferNo(orderNo);
@@ -93,6 +95,7 @@ public class WalletOrderServiceImpl implements WalletOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 创建WithdrawOrder */
     public WalletOrder createWithdrawOrder(WithdrawRequest request) {
         String orderNo = StringUtils.hasText(request.getWithdrawNo()) ? request.getWithdrawNo() : generateOrderNo("WDW");
         request.setWithdrawNo(orderNo);
@@ -124,6 +127,7 @@ public class WalletOrderServiceImpl implements WalletOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 标记Processing */
     public void markProcessing(String orderNo, String thirdPartyOrderNo, String responsePayload) {
         WalletOrder order = requireOrder(orderNo);
         order.setStatus("PROCESSING");
@@ -134,6 +138,7 @@ public class WalletOrderServiceImpl implements WalletOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 标记Success */
     public void markSuccess(String orderNo, String thirdPartyOrderNo, String responsePayload) {
         WalletOrder order = requireOrder(orderNo);
         order.setStatus("SUCCESS");
@@ -147,6 +152,7 @@ public class WalletOrderServiceImpl implements WalletOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 标记Failed */
     public void markFailed(String orderNo, String responsePayload, String reason) {
         WalletOrder order = requireOrder(orderNo);
         order.setStatus("FAILED");
@@ -157,6 +163,7 @@ public class WalletOrderServiceImpl implements WalletOrderService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 标记Cancelled */
     public void markCancelled(String orderNo, String remark) {
         WalletOrder order = requireOrder(orderNo);
         order.setStatus("CANCELLED");
@@ -165,6 +172,7 @@ public class WalletOrderServiceImpl implements WalletOrderService {
     }
 
     @Override
+    /** 获取ByOrderNo */
     public WalletOrder getByOrderNo(String orderNo) {
         if (!StringUtils.hasText(orderNo)) {
             return null;
@@ -175,6 +183,7 @@ public class WalletOrderServiceImpl implements WalletOrderService {
     }
 
     @Override
+    /** Page */
     public Page<WalletOrder> page(int pageNum, int pageSize, Long merchantId, Long userId, String orderType, String status) {
         LambdaQueryWrapper<WalletOrder> wrapper = new LambdaQueryWrapper<WalletOrder>()
                 .orderByDesc(WalletOrder::getCreateTime);
@@ -193,6 +202,7 @@ public class WalletOrderServiceImpl implements WalletOrderService {
         return walletOrderMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
     }
 
+    /** RequireOrder */
     private WalletOrder requireOrder(String orderNo) {
         WalletOrder order = getByOrderNo(orderNo);
         if (order == null) {
@@ -201,10 +211,12 @@ public class WalletOrderServiceImpl implements WalletOrderService {
         return order;
     }
 
+    /** GenerateOrderNo */
     private String generateOrderNo(String prefix) {
         return prefix + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }
 
+    /** SafeJson */
     private String safeJson(Object value) {
         try {
             return objectMapper.writeValueAsString(value);

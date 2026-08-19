@@ -69,17 +69,20 @@ public class PrometheusProvider implements MetricProvider {
     }
 
     @Override
+    /** ProviderType */
     public ProviderType providerType() {
         return ProviderType.PROMETHEUS;
     }
 
     @Override
+    /** SupportServiceTypes */
     public Set<ServiceType> supportServiceTypes() {
         return Set.of(ServiceType.SERVER, ServiceType.REDIS, ServiceType.MYSQL,
                 ServiceType.PG, ServiceType.ORACLE, ServiceType.MSSQL, ServiceType.MQ);
     }
 
     @Override
+    /** Collect */
     public Mono<CollectResult> collect(CollectContext context) {
         return Mono.fromCallable(() -> doCollect(context))
                 .subscribeOn(Schedulers.boundedElastic());

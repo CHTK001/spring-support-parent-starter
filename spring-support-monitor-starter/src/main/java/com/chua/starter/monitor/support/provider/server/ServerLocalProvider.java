@@ -70,16 +70,19 @@ public class ServerLocalProvider implements MetricProvider {
     }
 
     @Override
+    /** ProviderType */
     public ProviderType providerType() {
         return ProviderType.LOCAL;
     }
 
     @Override
+    /** SupportServiceTypes */
     public Set<ServiceType> supportServiceTypes() {
         return Set.of(ServiceType.SERVER);
     }
 
     @Override
+    /** Collect */
     public Mono<CollectResult> collect(CollectContext context) {
         return Mono.fromCallable(() -> doCollect(context))
                 .subscribeOn(Schedulers.boundedElastic());

@@ -31,6 +31,10 @@ public class ProcedureReader {
     /** Dialect */
     private final TriggerReader.DatabaseDialect dialect;
 
+    /**
+     * 创建 ProcedureReader 实例
+     * @param dialect dialect
+     */
     public ProcedureReader(TriggerReader.DatabaseDialect dialect) {
         this.dialect = dialect;
     }
@@ -65,6 +69,7 @@ public class ProcedureReader {
         }
     }
 
+    /** 读取ViaJdbc */
     private List<ProcedureInfo> readViaJdbc(Connection conn) {
         try {
             DatabaseMetaData meta = conn.getMetaData();
@@ -100,6 +105,7 @@ public class ProcedureReader {
         }
     }
 
+    /** 读取MysqlLike */
     private List<ProcedureInfo> readMysqlLike(Connection conn) throws SQLException {
         String sql = "SELECT ROUTINE_NAME, ROUTINE_TYPE, ROUTINE_SCHEMA, ROUTINE_COMMENT " +
                 "FROM information_schema.ROUTINES";
@@ -117,6 +123,7 @@ public class ProcedureReader {
         return list;
     }
 
+    /** 读取Postgresql */
     private List<ProcedureInfo> readPostgresql(Connection conn) throws SQLException {
         String sql = "SELECT routine_name, routine_type, specific_schema " +
                 "FROM information_schema.routines";
@@ -133,6 +140,7 @@ public class ProcedureReader {
         return list;
     }
 
+    /** 读取Oracle */
     private List<ProcedureInfo> readOracle(Connection conn) throws SQLException {
         String sql = "SELECT OBJECT_NAME, OBJECT_TYPE FROM ALL_OBJECTS " +
                 "WHERE OBJECT_TYPE IN ('PROCEDURE','FUNCTION') AND OWNER = USER";
@@ -149,6 +157,7 @@ public class ProcedureReader {
         return list;
     }
 
+    /** 读取SqlServer */
     private List<ProcedureInfo> readSqlServer(Connection conn) throws SQLException {
         String sql = "SELECT o.name, o.type_desc FROM sys.objects o " +
                 "WHERE o.type IN ('P','FN','IF','TF')";

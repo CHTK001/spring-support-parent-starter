@@ -62,10 +62,12 @@ public class JacksonConfiguration {
     /** Simple_date_format */
     private static final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
+    /** 创建ObjectMapper */
     public static ObjectMapper createObjectMapper(boolean forEverything) {
         return createObjectMapper(forEverything, false);
     }
 
+    /** 创建ObjectMapper */
     public static ObjectMapper createObjectMapper(boolean forEverything, boolean includeNull) {
         log.trace("[Jackson配置]开始创建 ObjectMapper, forEverything={}, includeNull={}", forEverything, includeNull);
         ObjectMapper objectMapper = JsonMapper.builder()
@@ -159,6 +161,7 @@ public class JacksonConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    /** DefaultObjectMapper */
     public ObjectMapper defaultObjectMapper(JacksonProperties jacksonProperties) {
         log.debug("[Jackson配置]创建默认 ObjectMapper Bean, includeNull={}", jacksonProperties.isIncludeNull());
         ObjectMapper objectMapper = createObjectMapper(false, jacksonProperties.isIncludeNull());
@@ -168,6 +171,7 @@ public class JacksonConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    /** ObjectMapperBuilder */
     public Jackson2ObjectMapperBuilder objectMapperBuilder(ObjectMapper objectMapper) {
         log.debug("[Jackson配置]创建 Jackson2ObjectMapperBuilder, 使用 ObjectMapper: {}", objectMapper.getClass().getName());
         Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder();
@@ -180,11 +184,13 @@ public class JacksonConfiguration {
         /** Serial版本UID */
         private static final long serialVersionUID = 1L;
 
+        /** 创建 TransientFieldIgnoringDeserializer 实例 */
         public TransientFieldIgnoringDeserializer() {
             super(Object.class);
         }
 
         @Override
+        /** 反序列化 */
         public Object deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
             return p.readValuesAs(Object.class);
         }
@@ -200,6 +206,7 @@ public class JacksonConfiguration {
         }
 
         @Override
+        /** 处理UnexpectedToken */
         public Object handleUnexpectedToken(DeserializationContext ctxt, JavaType targetType, JsonToken t, JsonParser p, String failureMsg) throws IOException {
             Class<?> targetRawClass = targetType.getRawClass();
             String name = t.name();

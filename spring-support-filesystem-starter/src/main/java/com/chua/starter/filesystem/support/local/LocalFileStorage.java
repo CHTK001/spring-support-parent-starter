@@ -52,6 +52,10 @@ public class LocalFileStorage extends AbstractFileStorage {
      */
     private final Map<String, Map<Integer, Path>> multipartMap = new ConcurrentHashMap<>();
 
+    /**
+     * 创建 LocalFileStorage 实例
+     * @param setting setting
+     */
     public LocalFileStorage(BucketSetting setting) {
         super(setting);
         String baseDir = Optional.ofNullable(System.getProperty("filesystem.temp.path"))
@@ -67,11 +71,13 @@ public class LocalFileStorage extends AbstractFileStorage {
     }
 
     @Override
+    /** 创建MultipartStorage */
     public MultipartStorage createMultipartStorage() {
         return new LocalMultipartStorage();
     }
 
     @Override
+    /** PutObject */
     public PutObjectResult putObject(PutObjectRequest request) {
         try {
             String key = resolveKey(request.getFilePath(), request.getFileName());
@@ -101,6 +107,7 @@ public class LocalFileStorage extends AbstractFileStorage {
     }
 
     @Override
+    /** 获取Object */
     public GetObjectResult getObject(String key) {
         Path target = rootPath.resolve(key);
         if (!Files.exists(target)) {
@@ -123,11 +130,13 @@ public class LocalFileStorage extends AbstractFileStorage {
     }
 
     @Override
+    /** 获取Object */
     public GetObjectResult getObject(GetObjectRequest request) {
         return getObject(request.getKey());
     }
 
     @Override
+    /** 删除Object */
     public DeleteObjectResult deleteObject(String key) {
         try {
             Files.deleteIfExists(rootPath.resolve(key));
@@ -143,6 +152,7 @@ public class LocalFileStorage extends AbstractFileStorage {
     }
 
     @Override
+    /** ExistObject */
     public ExistObjectResult existObject(ExistObjectRequest request) {
         String key = request.getKey();
         boolean exists = key != null && Files.exists(rootPath.resolve(key));
@@ -153,6 +163,7 @@ public class LocalFileStorage extends AbstractFileStorage {
     }
 
     @Override
+    /** ListObject */
     public ListObjectResult listObject(ListObjectRequest request) {
         return ListObjectResult.builder()
                 .resultCode(ObjectResult.ResultCode.SUCCESS)
@@ -160,6 +171,7 @@ public class LocalFileStorage extends AbstractFileStorage {
                 .build();
     }
 
+    /** 解析Key */
     private String resolveKey(String filePath, String fileName) {
         if (filePath == null || filePath.isEmpty()) {
             return fileName;
@@ -173,6 +185,7 @@ public class LocalFileStorage extends AbstractFileStorage {
     private class LocalMultipartStorage implements MultipartStorage {
 
         @Override
+        /** Initiate */
         public MultipartPartResult initiate(PutObjectRequest request) {
             String uploadId = UUID.randomUUID().toString().replace("-", "");
             multipartMap.put(uploadId, new ConcurrentHashMap<>());
@@ -183,6 +196,7 @@ public class LocalFileStorage extends AbstractFileStorage {
         }
 
         @Override
+        /** UploadPart */
         public MultipartPartResult uploadPart(MultipartUploadPartRequest request) {
             String uploadId = request.getUploadId();
             Map<Integer, Path> parts = multipartMap.get(uploadId);
@@ -210,6 +224,7 @@ public class LocalFileStorage extends AbstractFileStorage {
         }
 
         @Override
+        /** Complete */
         public PutObjectResult complete(String uploadId, List<PartETag> parts) {
             Map<Integer, Path> partMap = multipartMap.remove(uploadId);
             if (partMap == null) {
@@ -244,6 +259,7 @@ public class LocalFileStorage extends AbstractFileStorage {
         }
 
         @Override
+        /** Abort */
         public DeleteObjectResult abort(String uploadId) {
             Map<Integer, Path> parts = multipartMap.remove(uploadId);
             if (parts != null) {

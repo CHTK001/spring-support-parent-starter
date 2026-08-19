@@ -82,6 +82,7 @@ public class OpenApiConverter {
         return data;
     }
 
+    /** EachHttpMethod */
     private static void eachHttpMethod(String path, Operation op, String method, OpenApiDocumentData data) {
         if (op == null) return;
         OpenApiEndpoint ep = new OpenApiEndpoint();
@@ -165,10 +166,12 @@ public class OpenApiConverter {
         data.getEndpoints().add(ep);
     }
 
+    /** Prefix */
     private static String prefix(String s) {
         return s == null ? "" : s;
     }
 
+    /** SchemaType */
     private static String schemaType(Schema<?> schema) {
         if (schema == null) return "";
         String t = schema.getType();
@@ -178,6 +181,7 @@ public class OpenApiConverter {
         return t == null ? "" : t;
     }
 
+    /** ExampleForSchema */
     private static Map<String, Object> exampleForSchema(Schema<?> schema, Map<String, Object> out) {
         if (schema == null) return out;
         if (schema.getExample() != null) {
@@ -193,6 +197,7 @@ public class OpenApiConverter {
         return out;
     }
 
+    /** ExampleFor */
     private static Object exampleFor(Schema<?> schema) {
         if (schema == null) return null;
         if (schema.getExample() != null) return schema.getExample();
@@ -208,6 +213,7 @@ public class OpenApiConverter {
         };
     }
 
+    /** 扁平化Schema */
     private static Map<String, Object> flattenSchema(String prefix, Schema<?> schema, Map<String, Object> out) {
         if (schema == null) return out;
         if (schema.getProperties() != null) {

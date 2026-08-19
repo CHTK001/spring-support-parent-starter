@@ -65,6 +65,7 @@ public class AliyunAlipayProperties {
     /** Keepalive持续时间 */
     private Long keepAliveDuration = 300000L;
 
+    /** 解析ServerUrl */
     public String resolveServerUrl() {
         if (StringUtils.hasText(serverUrl)) {
             return serverUrl;

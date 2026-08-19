@@ -43,6 +43,7 @@ public final class SyncCryptoUtils {
     /** Gcm_tag_length */
     private static final int GCM_TAG_LENGTH = 128;
 
+    /** 创建 SyncCryptoUtils 实例 */
     private SyncCryptoUtils() {
     }
 
@@ -120,10 +121,12 @@ public final class SyncCryptoUtils {
         }
     }
 
+    /** DeriveKey */
     private static byte[] deriveKey(String secret) throws Exception {
         return MessageDigest.getInstance(SHA_256).digest(secret.getBytes(StandardCharsets.UTF_8));
     }
 
+    /** 是否拥有Text */
     private static boolean hasText(String value) {
         return value != null && !value.isBlank();
     }

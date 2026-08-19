@@ -40,6 +40,7 @@ public class MerchantSettingController {
 
     @Operation(summary = "查询商户支付规则")
     @GetMapping("/{merchantId}/payment-config")
+    /** 获取PaymentConfig */
     public Result<MerchantPaymentConfigVO> getPaymentConfig(@PathVariable Long merchantId) {
         merchantService.getMerchant(merchantId);
         return Result.success(toPaymentConfigVO(merchantId, merchantPaymentConfigService.getConfig(merchantId)));
@@ -47,6 +48,11 @@ public class MerchantSettingController {
 
     @Operation(summary = "保存商户支付规则")
     @PutMapping("/{merchantId}/payment-config")
+    /**
+     * 保存PaymentConfig
+     * @param merchantId merchantId
+     * @param dto dto
+     */
     public Result<MerchantPaymentConfigVO> savePaymentConfig(@PathVariable Long merchantId,
                                                              @RequestBody MerchantPaymentConfigDTO dto) {
         merchantService.getMerchant(merchantId);
@@ -59,6 +65,7 @@ public class MerchantSettingController {
 
     @Operation(summary = "查询商户钱包限额")
     @GetMapping("/{merchantId}/wallet-limit")
+    /** 获取WalletLimit */
     public Result<MerchantWalletLimitVO> getWalletLimit(@PathVariable Long merchantId) {
         merchantService.getMerchant(merchantId);
         return Result.success(toWalletLimitVO(merchantId, walletLimitService.getLimit(merchantId)));
@@ -66,6 +73,11 @@ public class MerchantSettingController {
 
     @Operation(summary = "保存商户钱包限额")
     @PutMapping("/{merchantId}/wallet-limit")
+    /**
+     * 保存WalletLimit
+     * @param merchantId merchantId
+     * @param dto dto
+     */
     public Result<MerchantWalletLimitVO> saveWalletLimit(@PathVariable Long merchantId,
                                                          @RequestBody MerchantWalletLimitDTO dto) {
         merchantService.getMerchant(merchantId);
@@ -76,6 +88,7 @@ public class MerchantSettingController {
         return Result.success(toWalletLimitVO(merchantId, walletLimitService.getLimit(merchantId)));
     }
 
+    /** ToPaymentConfigVO */
     private MerchantPaymentConfigVO toPaymentConfigVO(Long merchantId, MerchantPaymentConfig config) {
         MerchantPaymentConfigVO vo = new MerchantPaymentConfigVO();
         if (config != null) {
@@ -85,6 +98,7 @@ public class MerchantSettingController {
         return vo;
     }
 
+    /** ToWalletLimitVO */
     private MerchantWalletLimitVO toWalletLimitVO(Long merchantId, MerchantWalletLimit limit) {
         MerchantWalletLimitVO vo = new MerchantWalletLimitVO();
         if (limit != null) {

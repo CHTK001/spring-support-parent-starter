@@ -47,6 +47,11 @@ public class AuthFilter implements Filter {
     private final ConcurrentReferenceHashMap<HandlerMethod, Boolean> fingerprintVerificationCache = 
             new ConcurrentReferenceHashMap<>(16, ConcurrentReferenceHashMap.ReferenceType.WEAK);
 
+    /**
+     * 创建 AuthFilter 实例
+     * @param webRequest webRequest
+     * @param RequestMappingHandlerMapping RequestMappingHandlerMapping
+     */
     public AuthFilter(WebRequest webRequest, RequestMappingHandlerMapping requestMappingHandlerMapping) {
         this.webRequest = webRequest;
         this.requestMappingHandlerMapping = requestMappingHandlerMapping;
@@ -87,11 +92,13 @@ public class AuthFilter implements Filter {
     }
 
     @Override
+    /** 初始化 */
     public void init(FilterConfig filterConfig) throws ServletException {
 
     }
 
     @Override
+    /** Do过滤 */
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         String requestURI = httpRequest.getRequestURI();
@@ -203,6 +210,7 @@ public class AuthFilter implements Filter {
         return "OAUTH";
     }
 
+    /** Render */
     private void render(AuthenticationInformation authentication, HttpServletRequest request) {
         if(authentication.getInformation() != Information.OK) {
             log.debug("[AuthFilter渲染]认证信息状态非OK，跳过渲染 - 状态: {}", authentication.getInformation());

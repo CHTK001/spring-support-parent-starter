@@ -88,6 +88,7 @@ public class Joiner {
         return sb.toString();
     }
 
+    /** WithType */
     public <T> Joiner withType(Class<T> type) {
         return this;
     }

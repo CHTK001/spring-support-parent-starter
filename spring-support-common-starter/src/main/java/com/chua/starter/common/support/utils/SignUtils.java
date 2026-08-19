@@ -35,6 +35,7 @@ public class SignUtils {
      */
     private static final Set<String> DEFAULT_EXCLUDE_KEYS = Set.of("sign", "signature");
 
+    /** 创建 SignUtils 实例 */
     private SignUtils() {
     }
 

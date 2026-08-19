@@ -24,8 +24,11 @@ public class MultiLevelCacheTest {
     /** L2cache */
     private final SimpleMemoryCache l2Cache = new SimpleMemoryCache("L2");
 
+    /** L */
     private Cache l1() { return l1Cache; }
+    /** L */
     private Cache l2() { return l2Cache; }
+    /** TwoLevelCache */
     private MultiLevelCache twoLevelCache() {
         return new MultiLevelCache("test", List.of(l1Cache, l2Cache), true);
     }
@@ -222,17 +225,20 @@ public class MultiLevelCacheTest {
         @Override public Object getNativeCache() { return store; }
 
         @Override
+        /** 获取 */
         public ValueWrapper get(Object key) {
             return store.get(key);
         }
 
         @Override
+        /** 获取 */
         public <T> T get(Object key, Class<T> type) {
             ValueWrapper w = store.get(key);
             return w == null ? null : type.cast(w.get());
         }
 
         @Override
+        /** 获取 */
         public <T> T get(Object key, Callable<T> valueLoader) {
             ValueWrapper w = store.get(key);
             if (w != null) return (T) w.get();
@@ -243,17 +249,21 @@ public class MultiLevelCacheTest {
         }
 
         @Override
+        /** Put */
         public void put(Object key, Object value) {
             store.put(key, () -> value);
         }
 
         @Override
+        /** Evict */
         public void evict(Object key) { store.remove(key); }
 
         @Override
+        /** Clear */
         public void clear() { store.clear(); }
 
         @Override
+        /** EvictByPattern */
         public void evictByPattern(String pattern) {
             String lowerPattern = pattern.toLowerCase();
             store.keySet().removeIf(key -> key.toString().toLowerCase().contains(lowerPattern));

@@ -53,11 +53,13 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
     private static final String ANONYMOUS_USER = "匿名用户";
 
     @Override
+    /** Matches */
     public boolean matches(Method method, Class<?> targetClass) {
         return method.isAnnotationPresent(UserLog.class) && !method.isAnnotationPresent(LoggerIgnore.class);
     }
 
     @Override
+    /** 创建OperateLogger */
     protected void createOperateLogger(Object proceed, Throwable throwable, MethodInvocation invocation, long startTime) {
         Method method = invocation.getMethod();
         UserLog userLog = method.getDeclaredAnnotation(UserLog.class);
@@ -173,6 +175,7 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
     }
 
     @Override
+    /** 获取Content */
     protected String getContent(String content, MethodInvocation invocation, Object proceed) {
         if (StringUtils.isEmpty(content)) {
             return "";
@@ -202,6 +205,7 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
     }
 
     @Override
+    /** 获取Module */
     protected String getModule(Method method) {
         String name = method.getName().toUpperCase();
         if (name.contains("SAVE") || name.contains("INSERT") || name.contains("ADD") || name.contains("CREATE")) {
@@ -241,6 +245,7 @@ public class UserLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
     }
 
     @Override
+    /** 获取Name */
     protected String getName(String annotationName, Method method) {
         String name = super.getName(annotationName, method);
         if (null != name) {

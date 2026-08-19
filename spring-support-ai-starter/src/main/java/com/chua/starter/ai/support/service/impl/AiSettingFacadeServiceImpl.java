@@ -76,6 +76,7 @@ public class AiSettingFacadeServiceImpl implements AiSettingFacadeService {
     }
 
     @Override
+    /** ListModuleSettings */
     public List<SysAiModule> listModuleSettings(Map<String, Object> params) {
         List<SysAiModule> modules = moduleFacadeHelper.listModules(params);
         for (SysAiModule module : modules) {
@@ -86,6 +87,7 @@ public class AiSettingFacadeServiceImpl implements AiSettingFacadeService {
     }
 
     @Override
+    /** List */
     public List<SysAiModule> list(AiModuleQuery query) {
         List<SysAiModule> modules = moduleFacadeHelper.listModules(query);
         for (SysAiModule module : modules) {
@@ -97,6 +99,7 @@ public class AiSettingFacadeServiceImpl implements AiSettingFacadeService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 保存ModuleSettings */
     public void saveModuleSettings(Integer moduleId, List<Map<String, Object>> settings) {
         if (moduleId == null) {
             log.warn("[AiSettingFacade] saveModuleSettings moduleId 为空");
@@ -134,6 +137,7 @@ public class AiSettingFacadeServiceImpl implements AiSettingFacadeService {
     }
 
     @Override
+    /** 删除ByModuleId */
     public void deleteByModuleId(Integer moduleId) {
         if (moduleId == null) {
             return;

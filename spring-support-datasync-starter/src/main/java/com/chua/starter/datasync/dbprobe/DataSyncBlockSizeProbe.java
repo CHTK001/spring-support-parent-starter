@@ -27,6 +27,7 @@ public final class DataSyncBlockSizeProbe {
     static final int ROWS = 100_000;
     static final int BATCH = 1000;
 
+    /** Main */
     public static void main(String[] args) throws Exception {
         Path tmp = Files.createTempDirectory("chronicle-blocksize");
         tmp.toFile().deleteOnExit();
@@ -58,6 +59,7 @@ public final class DataSyncBlockSizeProbe {
         System.err.println("=========================================================================");
     }
 
+    /** Bench */
     static void bench(Path tmp, long blockSize, List<Map<String, Object>> data) throws Exception {
         Path dataPath = tmp.resolve("queue-" + blockSize);
         ChronicleDispatcherProvider provider = null;
