@@ -137,11 +137,19 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
     }
 
     @Override
+    /**
+     * 设置Environment
+     * @param environment environment
+     */
     public void setEnvironment(Environment environment) {
         this.environment = environment;
     }
 
     @Override
+    /**
+     * 设置BeanFactory
+     * @param beanFactory beanFactory
+     */
     public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
         if (beanFactory instanceof ConfigurableListableBeanFactory) {
             this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
@@ -149,6 +157,11 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
     }
 
     @Override
+    /**
+     * Post处理AfterInitialization
+     * @param bean bean
+     * @param beanName beanName
+     */
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         if (beanFactory != null && !beanFactory.isSingleton(beanName)) {
             return bean;
@@ -395,11 +408,22 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
         }
 
         @Override
+        /**
+         * OnChange
+         * @param key key
+         * @param oldValue oldValue
+         * @param newValue newValue
+         */
         public void onChange(String key, String oldValue, String newValue) {
             // 由 onUpdate 处理
         }
 
         @Override
+        /**
+         * On删除
+         * @param key key
+         * @param oldValue oldValue
+         */
         public void onDelete(String key, String oldValue) {
             List<ValueBindingInfo> bindings = bindingsByKey.get(configKey);
             if (bindings == null) {
@@ -416,6 +440,12 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
         }
 
         @Override
+        /**
+         * On更新
+         * @param key key
+         * @param oldValue oldValue
+         * @param newValue newValue
+         */
         public void onUpdate(String key, String oldValue, String newValue) {
             List<ValueBindingInfo> bindings = bindingsByKey.get(configKey);
             if (bindings == null) {

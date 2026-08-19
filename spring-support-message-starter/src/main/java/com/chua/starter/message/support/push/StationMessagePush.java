@@ -109,11 +109,16 @@ public class StationMessagePush implements MessagePush {
     }
 
     @Override
+    /** 获取Provider */
     public String getProvider() {
         return PROVIDER;
     }
 
     @Override
+    /**
+     * 发送
+     * @param request request
+     */
     public MessageResponse send(MessageRequest request) {
         String userId = request.getTo();
         if (StringUtils.isBlank(userId)) {
@@ -145,11 +150,16 @@ public class StationMessagePush implements MessagePush {
     }
 
     @Override
+    /** ListTemplates */
     public List<TemplateInfo> listTemplates() {
         return Collections.emptyList();
     }
 
     @Override
+    /**
+     * 获取Template
+     * @param templateId templateId
+     */
     public TemplateInfo getTemplate(String templateId) {
         return null;
     }

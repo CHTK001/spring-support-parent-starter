@@ -54,6 +54,10 @@ public class MapperDataSourceInterceptor implements Interceptor {
     }
 
     @Override
+    /**
+     * Intercept
+     * @param invocation invocation
+     */
     public Object intercept(Invocation invocation) throws Throwable {
         Object[] args = invocation.getArgs();
         if (args.length == 0 || !(args[0] instanceof MappedStatement mappedStatement)) {
@@ -79,6 +83,10 @@ public class MapperDataSourceInterceptor implements Interceptor {
         }
     }
 
+    /**
+     * RestoreDataSource
+     * @param originalDataSource originalDataSource
+     */
     private void restoreDataSource(String originalDataSource) {
         if (StringUtils.hasText(originalDataSource)) {
             DataSourceContextSupport.setDbType(originalDataSource);
@@ -88,6 +96,10 @@ public class MapperDataSourceInterceptor implements Interceptor {
         DataSourceContextSupport.setDbType(DataSourceContextSupport.DEFAULT_DATASOURCE);
     }
 
+    /**
+     * 解析MapperDataSource
+     * @param statementId statementId
+     */
     private String resolveMapperDataSource(String statementId) {
         int lastDot = statementId.lastIndexOf('.');
         if (lastDot < 0) {
@@ -119,11 +131,19 @@ public class MapperDataSourceInterceptor implements Interceptor {
     }
 
     @Override
+    /**
+     * Plugin
+     * @param target target
+     */
     public Object plugin(Object target) {
         return Plugin.wrap(target, this);
     }
 
     @Override
+    /**
+     * 设置Properties
+     * @param properties properties
+     */
     public void setProperties(Properties properties) {
     }
 }
