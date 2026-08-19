@@ -16,81 +16,63 @@ public class ClientInfo implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /** 客户端 ID（sessionId） */
-    /** 客户端ID */
     private String clientId;
 
     /** 客户端应用名称 */
-    /** 客户端application名称 */
     private String clientApplicationName;
 
     /** 客户端应用环境（如 dev、test、prod） */
-    /** 客户端application是否激活 */
     private String clientApplicationActive;
 
     /** 客户端实例 ID */
-    /** 客户端实例ID */
     private String clientInstanceId;
 
     /** 客户端上下文路径 */
     private String clientContextPath;
 
     /** 客户端服务地址（http://ip:port/contextPath） */
-    /** 客户端URL */
     private String clientUrl;
 
     /** 客户端 Actuator 地址（/actuator） */
-    /** 客户端actuator路径 */
     private String clientActuatorPath;
 
     /** 客户端 IP 地址 */
-    /** 客户端IP地址 */
     private String clientIpAddress;
 
     /** 客户端端口号 */
-    /** 客户端端口 */
     private int clientPort;
 
     /** 客户端主机名 */
-    /** 客户端hostname */
     private String clientHostname;
 
     /** 客户端操作系统名称 */
-    /** 客户端OS名称 */
     private String clientOsName;
 
     /** 客户端 Java 版本 */
-    /** 客户端java版本 */
     private String clientJavaVersion;
 
     /** 客户端进程 ID */
-    /** 客户端PID */
     private long clientPid;
 
     /** 客户端启动时间（毫秒时间戳） */
-    /** 客户端开始时间 */
     private long clientStartTime;
 
     /** 客户端运行时长（毫秒） */
-    /** 客户端uptime */
     private long clientUptime;
 
     /** 客户端注册时间（毫秒时间戳） */
-    /** 客户端register时间 */
     private long clientRegisterTime;
 
     /** 客户端最后心跳时间（毫秒时间戳） */
-    /** 客户端最后heartbeat时间 */
     private long clientLastHeartbeatTime;
 
     /** 客户端是否在线 */
-    /** 客户端online */
     private boolean clientOnline;
 
     /** 客户端扩展元数据（系统信息、自定义属性等） */
     private Map<String, Object> clientMetadata;
 
     /** 客户端支持的功能列表 */
-    /** 客户端capabilities */
     private String[] clientCapabilities;
 
     public String getClientId() {

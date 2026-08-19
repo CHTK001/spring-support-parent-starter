@@ -52,7 +52,6 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
     }
 
     /** 严格模式标志 */
-    /** Strict */
     private boolean strict = false;
 
     /**

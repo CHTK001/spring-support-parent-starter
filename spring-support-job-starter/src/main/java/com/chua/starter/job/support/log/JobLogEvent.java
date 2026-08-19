@@ -38,7 +38,7 @@ public record JobLogEvent(
      * 状态枚举。
      *
      * @since 4.0.0.42
-     * @author CH
+ * @author CH
      */
     public enum Status {
         SUCCESS, FAILURE, SKIPPED

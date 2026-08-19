@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 支持在 MyBatis Mapper 上解析 @DS。
  *
+ * @author CH
  * @since 2026/4/2
  */
 @Intercepts({

@@ -41,6 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * MyBatis SQL 物理化拦截器。
  *
+ * @author CH
  * @since 2026/4/2
  */
 @Intercepts({

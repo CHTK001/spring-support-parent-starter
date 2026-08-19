@@ -35,6 +35,7 @@ import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
  * SQLInterceptor
  *
  * @author chh
+ * @author CH
  * @since 2022/10/25 9:26
  **/
 @Intercepts({

@@ -33,6 +33,7 @@ import java.util.Map;
  *   前端通过 socket.subscribe("message", "push", handler) 接收
  * </pre>
  *
+ * @author CH
  * @since 2026/08/03
  */
 @Spi("station")

@@ -32,13 +32,10 @@ import java.util.List;
 public class MonitorServiceImpl implements MonitorService {
 
     /** 监控 Mapper */
-    /** Monitormapper */
     private final MsMonitorMapper monitorMapper;
     /** 任务 Mapper, 用于级联删除 */
-    /** Monitor任务mapper */
     private final MsMonitorTaskMapper monitorTaskMapper;
     /** 网关 Mapper, 用于级联删除 */
-    /** Monitorgatewaymapper */
     private final MsMonitorGatewayMapper monitorGatewayMapper;
 
     @Override

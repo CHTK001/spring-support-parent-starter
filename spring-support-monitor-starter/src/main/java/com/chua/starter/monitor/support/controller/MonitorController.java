@@ -57,25 +57,18 @@ import java.util.Optional;
 public class MonitorController {
 
     /** 资产 Service */
-    /** Monitor服务 */
     private final MonitorService monitorService;
     /** 任务 Service */
-    /** 任务服务 */
     private final MonitorTaskService taskService;
     /** 指标配置 Service */
-    /** 指标配置服务 */
     private final MonitorMetricConfigService metricConfigService;
     /** 全局配置 Service */
-    /** 配置服务 */
     private final MonitorConfigService configService;
     /** 网关 Service */
-    /** Gateway服务 */
     private final MonitorGatewayService gatewayService;
     /** 指标 Service */
-    /** 指标服务 */
     private final MetricService metricService;
     /** Provider 注册中心 */
-    /** 提供者注册表 */
     private final ProviderRegistry providerRegistry;
 
     // ==================== 资产 CRUD ====================

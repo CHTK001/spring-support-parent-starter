@@ -30,7 +30,6 @@ public class DataSourceContextSupport {
     private static final ThreadLocal<String> CONTEXT_HOLDER = new ThreadLocal<>();
 
     /** 数据源上下文栈（用于 @DSTransactional 嵌套切换） */
-    /** Ds_stack */
     private static final ThreadLocal<Deque<String>> DS_STACK = ThreadLocal.withInitial(ArrayDeque::new);
 
     /**

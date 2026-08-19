@@ -421,7 +421,7 @@ public class DataSourceScriptProperties {
      * 用于控制允许执行的脚本版本类型
      *
      * @since 2025/12/4
-     * @author CH
+ * @author CH
      */
     @Getter
     public enum ReleaseType {
