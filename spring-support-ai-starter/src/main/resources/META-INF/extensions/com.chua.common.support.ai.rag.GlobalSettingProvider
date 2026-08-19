@@ -1,0 +1,4 @@
+com.chua.starter.ai.support.configuration.face.FaceGlobalSettingProvider
+com.chua.starter.ai.support.configuration.rag.RagGlobalSettingProvider
+com.chua.starter.ai.support.configuration.input.InputOptimizeGlobalSettingProvider
+com.chua.starter.ai.support.configuration.runtime.RuntimeGlobalSettingProvider

@@ -1,3 +1,4 @@
+[
 {
   "name": "com.chua.starter.filesystem.support.local.LocalFileStorage",
   "allDeclaredConstructors": true,
@@ -7,3 +8,5 @@
   "allDeclaredFields": true,
   "allPublicFields": true
 }
+
+]
