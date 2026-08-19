@@ -16,6 +16,12 @@
         "com.chua.starter.device.support.util",
         "com.chua.starter.device.provider"
 })
+/**
+ * public class DeviceAutoConfiguration
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 @MapperScan("com.chua.starter.device.support.mapper")
 @EnableScheduling
 public class DeviceAutoConfiguration

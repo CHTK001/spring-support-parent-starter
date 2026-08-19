@@ -9,5 +9,11 @@
         IpProperties.class,
         NonceSignProperties.class,
 })
+/**
+ * public class CommonConfiguration
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 @ComponentScan("com.chua.starter.common.support.service")
 public class CommonConfiguration

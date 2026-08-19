@@ -41,6 +41,12 @@ import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class}),
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
 })
+/**
+ * public class SlowSqlDetectInterceptor implements Interceptor {
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 public class SlowSqlDetectInterceptor implements Interceptor {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SlowSqlDetectInterceptor.class);

@@ -49,6 +49,12 @@ import java.util.concurrent.ConcurrentHashMap;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class}),
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
 })
+/**
+ * public class MaterializedSqlInterceptor implements Interceptor {
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 public class MaterializedSqlInterceptor implements Interceptor {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(MaterializedSqlInterceptor.class);
@@ -60,6 +66,7 @@ public class MaterializedSqlInterceptor implements Interceptor {
     private final MaterializedSqlDataSourceRouter materializedSqlRouter;
     /** 属性 */
     private final MaterializedRouteProperties properties;
+    /** definitionCache */
     private final Map<String, MaterializedRouteDefinition> definitionCache = new ConcurrentHashMap<>();
     private final Map<String, MaterializedRouteDefinition> refreshDefinitionCache = new ConcurrentHashMap<>();
 

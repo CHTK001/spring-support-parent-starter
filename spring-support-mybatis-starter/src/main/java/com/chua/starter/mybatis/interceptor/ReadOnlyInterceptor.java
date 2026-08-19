@@ -23,6 +23,12 @@ import org.apache.ibatis.plugin.Signature;
         @Signature(type = Executor.class, method = "update",
                 args = {MappedStatement.class, Object.class})
 )
+/**
+ * public class ReadOnlyInterceptor implements Interceptor {
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 public class ReadOnlyInterceptor implements Interceptor {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ReadOnlyInterceptor.class);

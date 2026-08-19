@@ -14,4 +14,10 @@
         EduAiAutoConfiguration.class,
         com.chua.starter.queue.configuration.QueueAutoConfiguration.class
 })
+/**
+ * public class EduAiTestApplication
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 public class EduAiTestApplication

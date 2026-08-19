@@ -8,4 +8,10 @@
         DataRedisAutoConfiguration.class,
         DataRedisRepositoriesAutoConfiguration.class
 })
+/**
+ * public class TestCacheApplication
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 public class TestCacheApplication

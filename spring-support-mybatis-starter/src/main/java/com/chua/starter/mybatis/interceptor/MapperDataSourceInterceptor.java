@@ -30,6 +30,12 @@ import java.util.concurrent.ConcurrentHashMap;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, org.apache.ibatis.session.RowBounds.class, org.apache.ibatis.session.ResultHandler.class}),
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, org.apache.ibatis.session.RowBounds.class, org.apache.ibatis.session.ResultHandler.class, org.apache.ibatis.cache.CacheKey.class, org.apache.ibatis.mapping.BoundSql.class}),
 })
+/**
+ * public class MapperDataSourceInterceptor implements Interceptor {
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 public class MapperDataSourceInterceptor implements Interceptor {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(MapperDataSourceInterceptor.class);
@@ -38,6 +44,7 @@ public class MapperDataSourceInterceptor implements Interceptor {
     private final ApplicationContext applicationContext;
     /** 属性 */
     private final MultiDataSourceSettingProperties properties;
+    /** mapper数据SourceCache */
     private final Map<String, String> mapperDataSourceCache = new ConcurrentHashMap<>();
 
     public MapperDataSourceInterceptor(ApplicationContext applicationContext,

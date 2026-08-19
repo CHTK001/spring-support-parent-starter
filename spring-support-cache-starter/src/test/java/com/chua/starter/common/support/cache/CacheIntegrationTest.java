@@ -12,4 +12,10 @@
         "spring.datasource.username=sa",
         "spring.datasource.password="
 })
+/**
+ * public class CacheIntegrationTest
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 public class CacheIntegrationTest
