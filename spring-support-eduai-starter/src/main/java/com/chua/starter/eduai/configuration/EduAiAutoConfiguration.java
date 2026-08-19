@@ -21,6 +21,12 @@
         "com.chua.starter.eduai.dimension.service",
         "com.chua.starter.eduai.ai"
 })
+/**
+ * public class EduAiAutoConfiguration
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 @EnableConfigurationProperties(EduAiProperties.class)
 @EnableAsync
 public class EduAiAutoConfiguration

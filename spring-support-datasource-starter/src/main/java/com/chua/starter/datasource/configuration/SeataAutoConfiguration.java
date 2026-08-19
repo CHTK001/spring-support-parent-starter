@@ -39,5 +39,11 @@
         "io.seata.core.context.RootContext",
         "io.seata.rm.datasource.DataSourceProxy"
 })
+/**
+ * public class SeataAutoConfiguration
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 @ConditionalOnProperty(prefix = "seata", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class SeataAutoConfiguration

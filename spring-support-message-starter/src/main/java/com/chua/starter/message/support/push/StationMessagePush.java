@@ -45,6 +45,12 @@ import java.util.Map;
                 @SpiParam(value = "socket.room", desc = "Socket 房间配置（需引入 socket-io-starter）", type = "String")
         }
 )
+/**
+ * public class StationMessagePush implements MessagePush {
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 @Slf4j
 public class StationMessagePush implements MessagePush {
 

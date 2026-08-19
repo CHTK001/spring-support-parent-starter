@@ -10,4 +10,10 @@
         DeviceController.class,
         DeviceAutoConfiguration.class
 })
+/**
+ * public class DeviceTestApplication
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 public class DeviceTestApplication

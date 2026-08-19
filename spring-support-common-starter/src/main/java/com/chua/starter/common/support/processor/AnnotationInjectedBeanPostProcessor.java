@@ -50,6 +50,7 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     private final Log logger = LogFactory.getLog(this.getClass());
     /** Annotation类型 */
     private final Class<A> annotationType;
+    /** injectionMetadataCache */
     private final ConcurrentMap<String, AnnotatedInjectionMetadata> injectionMetadataCache;
     private final ConcurrentMap<String, Object> injectedObjectsCache;
     /** Bean工厂 */
@@ -334,6 +335,12 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
 
         return Collections.unmodifiableMap(injectedElementBeanMap);
     }
+    /**
+     * public class AnnotatedFieldElement extends InjectionMetadata.InjectedElement {
+     *
+     * @author CH
+     * @since 4.0.0.42
+     */
 
     public class AnnotatedFieldElement extends InjectionMetadata.InjectedElement {
         /** Field */

@@ -16,6 +16,12 @@
         "org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping",
         "com.chua.common.support.lang.document.DocumentParser"
 })
+/**
+ * public class DocumentAutoConfiguration
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
 @ConditionalOnWebApplication
 @ConditionalOnProperty(prefix = DocumentProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(DocumentProperties.class)

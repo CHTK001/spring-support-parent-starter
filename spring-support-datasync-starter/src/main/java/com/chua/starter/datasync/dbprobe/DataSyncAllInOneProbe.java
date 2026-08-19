@@ -244,6 +244,12 @@ public final class DataSyncAllInOneProbe {
     private static DataSyncMapping map(String id, String cron) {
         return map(id, cron, id + "-src", id + "-sink");
     }
+    /**
+     * record SimpleFieldMapping(String sourceField, String targetField, String converter) implements DataSyncFieldMapping {}
+     *
+     * @author CH
+     * @since 4.0.0.42
+     */
 
     record SimpleFieldMapping(String sourceField, String targetField, String converter) implements DataSyncFieldMapping {}
 
