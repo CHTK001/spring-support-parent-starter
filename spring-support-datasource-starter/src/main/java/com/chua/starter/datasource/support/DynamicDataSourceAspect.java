@@ -66,6 +66,11 @@ public class DynamicDataSourceAspect {
         switchTo(dataSource, multiDataSourceSettingProperties);
     }
 
+    /**
+     * SwitchTo
+     * @param dataSource dataSource
+     * @param multiDataSourceSettingProperties multiDataSourceSettingProperties
+     */
     public void switchTo(String dataSource, MultiDataSourceSettingProperties multiDataSourceSettingProperties) {
         dataSource = createDataSource(dataSource, multiDataSourceSettingProperties);
         //分析处理多数据源

@@ -34,6 +34,10 @@ import java.sql.Statement;
 public class MapperTracingInterceptor implements Interceptor {
 
     @Override
+    /**
+     * Intercept
+     * @param invocation invocation
+     */
     public Object intercept(Invocation invocation) throws Throwable {
         Object arg = invocation.getArgs()[0];
         if (arg instanceof MappedStatement ms) {

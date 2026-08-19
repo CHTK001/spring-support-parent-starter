@@ -245,11 +245,19 @@ public class SqlInterceptor implements Interceptor {
     }
 
     @Override
+    /**
+     * Plugin
+     * @param arg0 arg0
+     */
     public Object plugin(Object arg0) {
         return Plugin.wrap(arg0, this);
     }
 
     @Override
+    /**
+     * 设置Properties
+     * @param properties properties
+     */
     public void setProperties(Properties properties) {
     }
 }

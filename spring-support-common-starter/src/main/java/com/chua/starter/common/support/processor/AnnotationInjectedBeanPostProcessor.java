@@ -87,12 +87,22 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     @Override
+    /**
+     * 设置BeanFactory
+     * @param beanFactory beanFactory
+     */
     public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
         Assert.isInstanceOf(ConfigurableListableBeanFactory.class, beanFactory, "AnnotationInjectedBeanPostProcessor requires a ConfigurableListableBeanFactory");
         this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
     }
 
     @Override
+    /**
+     * Post处理Properties
+     * @param pvs pvs
+     * @param bean bean
+     * @param beanName beanName
+     */
     public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) throws BeansException {
         InjectionMetadata metadata = this.findInjectionMetadata(beanName, bean.getClass(), pvs);
 
@@ -107,10 +117,19 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
 
+    /**
+     * 查找FieldAnnotationMetadata
+     * @param beanClass beanClass
+     */
     private List<AnnotatedFieldElement> findFieldAnnotationMetadata(Class<?> beanClass) {
         final List<AnnotatedFieldElement> elements = new LinkedList();
         ReflectionUtils.doWithFields(beanClass, new ReflectionUtils.FieldCallback() {
             @Override
+            /**
+             * Do设置
+             * @param field field
+             * @param IllegalArgumentException IllegalArgumentException
+             */
             public void doWith(Field field) throws IllegalArgumentException, IllegalAccessException {
                 A annotation = AnnotationUtils.getAnnotation(field, AnnotationInjectedBeanPostProcessor.this.getAnnotationType());
                 if (annotation != null) {
@@ -131,10 +150,19 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     @SuppressWarnings("removal")
+    /**
+     * 查找AnnotatedMethodMetadata
+     * @param beanClass beanClass
+     */
     private List<AnnotatedMethodElement> findAnnotatedMethodMetadata(final Class<?> beanClass) {
         final List<AnnotatedMethodElement> elements = new LinkedList();
         ReflectionUtils.doWithMethods(beanClass, new ReflectionUtils.MethodCallback() {
             @Override
+            /**
+             * Do设置
+             * @param method method
+             * @param IllegalArgumentException IllegalArgumentException
+             */
             public void doWith(Method method) throws IllegalArgumentException, IllegalAccessException {
                 Method bridgedMethod = BridgeMethodResolver.findBridgedMethod(method);
                 if (BridgeMethodResolver.isVisibilityBridgeMethodPair(method, bridgedMethod)) {
@@ -162,12 +190,22 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
         return elements;
     }
 
+    /**
+     * 构建AnnotatedMetadata
+     * @param beanClass beanClass
+     */
     private AnnotatedInjectionMetadata buildAnnotatedMetadata(Class<?> beanClass) {
         Collection<AnnotatedFieldElement> fieldElements = this.findFieldAnnotationMetadata(beanClass);
         Collection<AnnotatedMethodElement> methodElements = this.findAnnotatedMethodMetadata(beanClass);
         return new AnnotatedInjectionMetadata(beanClass, fieldElements, methodElements);
     }
 
+    /**
+     * 查找InjectionMetadata
+     * @param beanName beanName
+     * @param clazz clazz
+     * @param pvs pvs
+     */
     private InjectionMetadata findInjectionMetadata(String beanName, Class<?> clazz, PropertyValues pvs) {
         String cacheKey = StringUtils.hasLength(beanName) ? beanName : clazz.getName();
         AnnotatedInjectionMetadata metadata = (AnnotatedInjectionMetadata) this.injectionMetadataCache.get(cacheKey);
@@ -193,6 +231,12 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     @Override
+    /**
+     * Post处理MergedBeanDefinition
+     * @param beanDefinition beanDefinition
+     * @param beanType beanType
+     * @param beanName beanName
+     */
     public void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
         if (beanType != null) {
             InjectionMetadata metadata = this.findInjectionMetadata(beanName, beanType, (PropertyValues) null);
@@ -202,15 +246,21 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         return this.order;
     }
 
+    /**
+     * 设置Order
+     * @param order order
+     */
     public void setOrder(int order) {
         this.order = order;
     }
 
     @Override
+    /** 销毁 */
     public void destroy() throws Exception {
         Iterator var1 = this.injectedObjectsCache.values().iterator();
 
@@ -234,31 +284,51 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     @Override
+    /**
+     * 设置BeanClassLoader
+     * @param classLoader classLoader
+     */
     public void setBeanClassLoader(ClassLoader classLoader) {
         this.classLoader = classLoader;
     }
 
     @Override
+    /**
+     * 设置Environment
+     * @param environment environment
+     */
     public void setEnvironment(Environment environment) {
         this.environment = environment;
     }
 
+    /** 获取Environment */
     protected Environment getEnvironment() {
         return this.environment;
     }
 
+    /** 获取ClassLoader */
     protected ClassLoader getClassLoader() {
         return this.classLoader;
     }
 
+    /** 获取BeanFactory */
     protected ConfigurableListableBeanFactory getBeanFactory() {
         return this.beanFactory;
     }
 
+    /** 获取InjectedObjects */
     protected Collection<Object> getInjectedObjects() {
         return this.injectedObjectsCache.values();
     }
 
+    /**
+     * 获取InjectedObject
+     * @param annotation annotation
+     * @param bean bean
+     * @param beanName beanName
+     * @param injectedType injectedType
+     * @param injectedElement injectedElement
+     */
     protected Object getInjectedObject(A annotation, Object bean, String beanName, Class<?> injectedType, InjectionMetadata.InjectedElement injectedElement) throws Exception {
         String cacheKey = this.buildInjectedObjectCacheKey(annotation, bean, beanName, injectedType, injectedElement);
         Object injectedObject = this.injectedObjectsCache.get(cacheKey);
@@ -356,6 +426,12 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
         }
 
         @Override
+        /**
+         * Inject
+         * @param bean bean
+         * @param beanName beanName
+         * @param pvs pvs
+         */
         protected void inject(Object bean, String beanName, PropertyValues pvs) throws Throwable {
             Class<?> injectedType = this.field.getType();
             Object injectedObject = AnnotationInjectedBeanPostProcessor.this.getInjectedObject(this.annotation, bean, beanName, injectedType, this);
@@ -378,6 +454,12 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
         }
 
         @Override
+        /**
+         * Inject
+         * @param bean bean
+         * @param beanName beanName
+         * @param pvs pvs
+         */
         protected void inject(Object bean, String beanName, PropertyValues pvs) throws Throwable {
             Class<?> injectedType = this.pd.getPropertyType();
             Object injectedObject = AnnotationInjectedBeanPostProcessor.this.getInjectedObject(this.annotation, bean, beanName, injectedType, this);
@@ -398,10 +480,12 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
             this.methodElements = methodElements;
         }
 
+        /** 获取FieldElements */
         public Collection<AnnotatedFieldElement> getFieldElements() {
             return this.fieldElements;
         }
 
+        /** 获取MethodElements */
         public Collection<AnnotatedMethodElement> getMethodElements() {
             return this.methodElements;
         }

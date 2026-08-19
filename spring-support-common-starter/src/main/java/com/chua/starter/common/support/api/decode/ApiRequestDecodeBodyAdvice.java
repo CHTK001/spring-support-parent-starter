@@ -55,11 +55,24 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
     }
 
     @Override
+    /**
+     * 判断是否支持
+     * @param methodParameter methodParameter
+     * @param targetType targetType
+     * @param converterType converterType
+     */
     public boolean supports(MethodParameter methodParameter, Type targetType, Class<? extends HttpMessageConverter<?>> converterType) {
         return true;
     }
 
     @Override
+    /**
+     * BeforeBody读取
+     * @param inputMessage inputMessage
+     * @param parameter parameter
+     * @param targetType targetType
+     * @param converterType converterType
+     */
     public HttpInputMessage beforeBodyRead(HttpInputMessage inputMessage, MethodParameter parameter, Type targetType, Class<? extends HttpMessageConverter<?>> converterType) throws IOException {
         if (!decodeRegister.requestDecodeOpen()) {
             log.debug("[RequestSign] 签名校验未启用，跳过处理");
@@ -106,15 +119,32 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
     }
 
     @Override
+    /**
+     * AfterBody读取
+     * @param body body
+     * @param inputMessage inputMessage
+     * @param parameter parameter
+     * @param targetType targetType
+     * @param converterType converterType
+     */
     public Object afterBodyRead(Object body, HttpInputMessage inputMessage, MethodParameter parameter, Type targetType, Class<? extends HttpMessageConverter<?>> converterType) {
         return body;
     }
 
     @Override
+    /**
+     * 处理EmptyBody
+     * @param body body
+     * @param inputMessage inputMessage
+     * @param parameter parameter
+     * @param targetType targetType
+     * @param converterType converterType
+     */
     public Object handleEmptyBody(Object body, HttpInputMessage inputMessage, MethodParameter parameter, Type targetType, Class<? extends HttpMessageConverter<?>> converterType) {
         return body;
     }
 
+    /** 获取RequestPath */
     private String getRequestPath() {
         var attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes != null) {
@@ -124,11 +154,17 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
         return null;
     }
 
+    /** 获取Request */
     private HttpServletRequest getRequest() {
         var attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         return attributes != null ? attributes.getRequest() : null;
     }
 
+    /**
+     * 解码RequestBody
+     * @param inputMessage inputMessage
+     * @param request request
+     */
     private HttpInputMessage decodeRequestBody(HttpInputMessage inputMessage, HttpServletRequest request) throws IOException {
         byte[] bodyBytes = StreamUtils.copyToByteArray(inputMessage.getBody());
         if (bodyBytes.length == 0) {
@@ -156,6 +192,10 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
         }
     }
 
+    /**
+     * ExtractEncryptedPayload
+     * @param bodyBytes bodyBytes
+     */
     private String extractEncryptedPayload(byte[] bodyBytes) throws IOException {
         String rawBody = new String(bodyBytes, StandardCharsets.UTF_8).trim();
         if (!StringUtils.hasText(rawBody)) {
@@ -203,11 +243,13 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
         }
 
         @Override
+        /** 获取Body */
         public InputStream getBody() {
             return new ByteArrayInputStream(body);
         }
 
         @Override
+        /** 获取Headers */
         public HttpHeaders getHeaders() {
             return headers;
         }
@@ -222,11 +264,13 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
         private static final org.springframework.http.HttpHeaders EMPTY_HEADER = new org.springframework.http.HttpHeaders();
 
         @Override
+        /** 获取Body */
         public InputStream getBody() throws IOException {
             return EMPTY;
         }
 
         @Override
+        /** 获取Headers */
         public org.springframework.http.HttpHeaders getHeaders() {
             return EMPTY_HEADER;
         }
