@@ -54,6 +54,11 @@
             <artifactId>spring-support-datasource-starter</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-fory-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
