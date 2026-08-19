@@ -16,7 +16,6 @@ import java.util.concurrent.TimeUnit;
 /**
  * 序列化实现基准测试 — 使用 datasync 实际数据格式 {@code List<Map<String, Object>>}。
  *
- * @author CH
  * @since 4.0.0.42
  */
 public final class DataSyncSerialBenchProbe {

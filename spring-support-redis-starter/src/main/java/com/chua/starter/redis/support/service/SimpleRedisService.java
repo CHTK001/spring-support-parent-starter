@@ -9,8 +9,8 @@ import java.time.LocalDateTime;
 
 /**
  * 简单服务
- * @author CH
  * @since 2024/12/24
+ * @author CH
  */
 public interface SimpleRedisService {
 

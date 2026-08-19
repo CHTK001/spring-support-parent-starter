@@ -33,7 +33,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * 抽象日志切入点顾问
  * <p>提供日志切面的通用功能，包括参数提取、SpEL表达式解析、Swagger注解识别等</p>
  *
- * @author CH
  * @since 2024-01-01
  */
 @Lazy
@@ -45,12 +44,15 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     public static final String X_REQ_FINGERPRINT = "x-req-fingerprint";
 
     @Autowired
+    /** 请求 */
     protected HttpServletRequest request;
 
     @Autowired
+    /** 响应 */
     protected HttpServletResponse response;
 
     @Autowired
+    /** Application上下文 */
     protected ApplicationContext applicationContext;
 
     @SuppressWarnings("unchecked")
@@ -76,7 +78,9 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
      * SpEL 表达式缓存，避免每次调用都重新解析
      */
     private static final ConcurrentHashMap<String, Expression> EXPRESSION_CACHE = new ConcurrentHashMap<>();
+    /** Expression_parser */
     private static final ExpressionParser EXPRESSION_PARSER = new SpelExpressionParser();
+    /** Template_parser_context */
     private static final ParserContext TEMPLATE_PARSER_CONTEXT = new TemplateParserContext();
 
     @Override

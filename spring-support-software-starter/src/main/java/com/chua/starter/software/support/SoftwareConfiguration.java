@@ -11,8 +11,8 @@ import org.springframework.context.annotation.ComponentScan;
 /**
  * 软件管理配置
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 @Slf4j
 @AutoConfiguration

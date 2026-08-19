@@ -4,6 +4,7 @@ import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreNotifyP
 
 /**
  * 微信支付分回调服务
+ * @author CH
  */
 public interface WechatPayScoreNotifyService {
 
@@ -16,3 +17,4 @@ public interface WechatPayScoreNotifyService {
                                                     String signType,
                                                     String body);
 }
+

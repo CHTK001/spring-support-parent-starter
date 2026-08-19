@@ -5,8 +5,8 @@ import com.chua.starter.ai.support.model.AiGlobalSettingDTO;
 /**
  * 全局设置服务接口（单条记录 id=1）
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 public interface AiGlobalSettingService {
 

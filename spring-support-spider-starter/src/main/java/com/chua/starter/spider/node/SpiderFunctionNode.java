@@ -28,8 +28,8 @@ import java.util.List;
  *   <li>{@code saveAs} 返回值写入的上下文属性名（必填）</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Component
@@ -39,6 +39,7 @@ public class SpiderFunctionNode implements FlowNode {
      * Spring 容器
      */
     @Resource
+    /** Application上下文 */
     private ApplicationContext applicationContext;
 
     /**

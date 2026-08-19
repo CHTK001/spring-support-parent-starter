@@ -6,7 +6,9 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * 钱包账户流水 Mapper
+ * @author CH
  */
 @Mapper
 public interface WalletAccountLogMapper extends BaseMapper<WalletAccountLog> {
 }
+

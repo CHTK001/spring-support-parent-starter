@@ -10,11 +10,13 @@ import java.util.Locale;
 
 /**
  * 统一生成支付回调地址
+ * @author CH
  */
 @Component
 @RequiredArgsConstructor
 public class PaymentCallbackUrlResolver {
 
+    /** Payment全局配置服务 */
     private final PaymentGlobalConfigService paymentGlobalConfigService;
 
     public String resolvePayNotifyUrl(String requestNotifyUrl, MerchantChannel channel, Merchant merchant, String orderNo) {
@@ -111,3 +113,4 @@ public class PaymentCallbackUrlResolver {
         return value == null ? null : value.toUpperCase(Locale.ROOT);
     }
 }
+

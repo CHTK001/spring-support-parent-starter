@@ -18,8 +18,8 @@ import java.util.List;
 /**
  * 监控网关 Service 实现
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Slf4j
 @Service
@@ -27,6 +27,7 @@ import java.util.List;
 public class MonitorGatewayServiceImpl implements MonitorGatewayService {
 
     /** 网关 Mapper */
+    /** Gatewaymapper */
     private final MsMonitorGatewayMapper gatewayMapper;
 
     @Override

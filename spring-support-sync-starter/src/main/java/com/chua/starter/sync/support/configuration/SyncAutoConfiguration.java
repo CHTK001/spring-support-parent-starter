@@ -28,17 +28,19 @@ import org.springframework.core.env.Environment;
  * 支持 server、client、both 三种模式，同时判断对应的 enable 属性
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/12/04
+ * @author CH
  */
 @AutoConfiguration
 @EnableConfigurationProperties(SyncProperties.class)
 public class SyncAutoConfiguration {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SyncAutoConfiguration.class);
 
     @Autowired
+    /** 环境 */
     private Environment environment;
 
     @PostConstruct
@@ -58,7 +60,6 @@ public class SyncAutoConfiguration {
      *
      * @param syncProperties 同步配置属性
      * @return 同步服务端实例，如果未启用则返回 null
-     * @author CH
      * @since 1.0.0
      */
     @Bean
@@ -77,7 +78,6 @@ public class SyncAutoConfiguration {
      *
      * @param syncProperties 同步配置属性
      * @return 同步客户端实例，如果未启用则返回 null
-     * @author CH
      * @since 1.0.0
      */
     @Bean

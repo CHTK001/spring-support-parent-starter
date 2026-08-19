@@ -22,8 +22,8 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 /**
  * 消息队列自动配置
  *
- * @author CH
  * @since 2025-12-25
+ * @author CH
  */
 @Slf4j
 @Configuration
@@ -33,6 +33,7 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 public class QueueAutoConfiguration {
 
     @Autowired
+    /** 队列属性 */
     private QueueProperties queueProperties;
 
     /**

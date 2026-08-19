@@ -9,7 +9,6 @@ import java.util.Base64;
  * <p>生成 48 字符的 URL 安全 Base64 密钥，前缀为 {@code sk-}，
  * 适用于 AppKey、Token 等场景。</p>
  *
- * @author CH
  * @since 4.0.0.42
  */
 public final class KeyGenerator {

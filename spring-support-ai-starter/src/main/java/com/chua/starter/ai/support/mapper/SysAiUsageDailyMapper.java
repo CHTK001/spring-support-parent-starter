@@ -7,8 +7,8 @@ import org.apache.ibatis.annotations.Mapper;
 /**
  * AI 用量日汇总 Mapper
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Mapper
 public interface SysAiUsageDailyMapper extends BaseMapper<SysAiUsageDaily> {

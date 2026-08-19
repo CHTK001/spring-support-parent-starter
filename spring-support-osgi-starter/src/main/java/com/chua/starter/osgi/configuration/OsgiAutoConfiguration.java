@@ -30,8 +30,8 @@ import java.util.Map;
  * {@code org.apache.felix:org.apache.felix.shell.remote} 依赖并配置
  * {@code osgi.shell.ssh.*} 属性。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @AutoConfiguration

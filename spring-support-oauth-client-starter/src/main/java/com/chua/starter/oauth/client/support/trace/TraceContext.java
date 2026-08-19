@@ -14,12 +14,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 管理整个请求的追踪信息，包括 traceId、spanId 和各节点耗时
  * </p>
  *
- * @author CH
  * @since 2024/12/28
+ * @author CH
  */
 public class TraceContext {
 
+    /** Mdc_trace_id */
     private static final String MDC_TRACE_ID = "traceId";
+    /** Mdc_span_id */
     private static final String MDC_SPAN_ID = "spanId";
 
     /**
@@ -31,6 +33,7 @@ public class TraceContext {
      * 追踪ID（全局唯一）
      */
     @Getter
+    /** 跟踪ID */
     private final String traceId;
 
     /**
@@ -42,12 +45,14 @@ public class TraceContext {
      * 请求开始时间戳
      */
     @Getter
+    /** 开始时间戳 */
     private final long startTimestamp;
 
     /**
      * 追踪的 Span 列表
      */
     @Getter
+    /** Spans */
     private final List<TraceSpan> spans = new ArrayList<>();
 
     /**
@@ -59,12 +64,14 @@ public class TraceContext {
      * 客户端应用名称
      */
     @Getter
+    /** 客户端APP名称 */
     private String clientAppName;
 
     /**
      * 客户端IP
      */
     @Getter
+    /** 客户端IP */
     private String clientIp;
 
     /**

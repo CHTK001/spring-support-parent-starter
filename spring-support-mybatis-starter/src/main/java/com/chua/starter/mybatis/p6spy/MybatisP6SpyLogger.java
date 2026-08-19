@@ -7,8 +7,8 @@ import org.slf4j.MDC;
 /**
  * mybatis p6spy日志
  *
- * @author CH
  * @since 2025/6/27 15:51
+ * @author CH
  */
 public class MybatisP6SpyLogger implements MessageFormattingStrategy {
 

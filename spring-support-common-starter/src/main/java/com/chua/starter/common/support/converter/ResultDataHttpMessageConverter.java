@@ -20,6 +20,7 @@ import java.lang.reflect.Type;
  * @see AbstractHttpMessageConverter
  * @see GenericHttpMessageConverter
  * @since 2.0.2
+ * @author CH
  */
 
 public class ResultDataHttpMessageConverter

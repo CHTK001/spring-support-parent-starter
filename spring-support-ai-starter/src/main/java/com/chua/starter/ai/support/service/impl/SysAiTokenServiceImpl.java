@@ -38,8 +38,10 @@ import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE
 @RequiredArgsConstructor
 public class SysAiTokenServiceImpl implements SysAiTokenService {
 
+    /** Status_enabled */
     private static final int STATUS_ENABLED = 1;
 
+    /** SYSAI令牌mapper */
     private final SysAiTokenMapper sysAiTokenMapper;
 
     @Override

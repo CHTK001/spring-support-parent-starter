@@ -13,16 +13,19 @@ import java.util.Date;
 /**
  * MyBatis-Plus 版 {@link JobLogSink}, 写入 {@code sys_job_log} 表。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class MybatisJobLogSink implements JobLogSink {
 
+    /** Date_fmt */
     private static final DateTimeFormatter DATE_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.systemDefault());
 
+    /** 作业日志mapper */
     private final JobLogMapper jobLogMapper;
+    /** 文件logging是否启用 */
     private final boolean fileLoggingEnabled;
 
     public MybatisJobLogSink(JobLogMapper jobLogMapper) {

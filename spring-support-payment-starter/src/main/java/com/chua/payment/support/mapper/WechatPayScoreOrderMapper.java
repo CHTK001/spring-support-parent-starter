@@ -6,7 +6,9 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * 微信支付分订单 Mapper
+ * @author CH
  */
 @Mapper
 public interface WechatPayScoreOrderMapper extends BaseMapper<WechatPayScoreOrder> {
 }
+

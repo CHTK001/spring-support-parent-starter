@@ -7,8 +7,8 @@ import lombok.Data;
 /**
  * 知识图谱 LLM 设置。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @Builder
@@ -81,7 +81,6 @@ public class KnowledgeGraphSettings {
     /**
      * KnowledgeGraphSettings Builder。
      *
-     * @author CH
      * @since 4.0.0.42
      */
     public static class KnowledgeGraphSettingsBuilder {

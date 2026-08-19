@@ -6,8 +6,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * 事务配置
  *
- * @author CH
  * @since 2021-07-19
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = MultiDataSourceSettingProperties.PRE, ignoreInvalidFields = true)
@@ -18,6 +18,7 @@ public class MultiDataSourceSettingProperties {
     private boolean enable = false;
 
 
+    /** PRE */
     public static final String PRE = "plugin.multi-datasource";
 
     /**

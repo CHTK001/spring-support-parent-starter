@@ -11,8 +11,8 @@ import java.util.List;
 
 /**
  * 数组转字符串
- * @author CH
  * @since 2024/7/19
+ * @author CH
  */
 public class JsonArray2StringJacksonProblemHandler implements JacksonProblemHandler{
 

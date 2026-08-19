@@ -17,8 +17,8 @@ import java.util.List;
  * Excel 导出工具
  * <p>支持将设备列表导出为 .xlsx 文件，供前端下载。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class ExcelExportUtil {

@@ -24,8 +24,8 @@ import org.springframework.stereotype.Service;
  * 通过 {@link ChatClientRegistry} 获取 ChatClient 后，以系统提示词 + 用户输入的方式执行一次同步对话，
  * 返回改写后的文本。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service

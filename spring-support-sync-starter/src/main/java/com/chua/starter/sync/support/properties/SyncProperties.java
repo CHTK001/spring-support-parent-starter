@@ -12,13 +12,14 @@ import static com.chua.starter.sync.support.properties.SyncProperties.PRE;
  * 支持服务端多端口配置，客户端和服务端配置分离
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/12/04
+ * @author CH
  */
 @ConfigurationProperties(prefix = PRE, ignoreInvalidFields = true)
 public class SyncProperties {
 
+    /** PRE */
     public static final String PRE = "plugin.sync";
 
     /**
@@ -686,7 +687,6 @@ public class SyncProperties {
      * 是否启用服务端
      *
      * @return 是否启用
-     * @author CH
      * @since 1.0.0
      */
     public boolean isServerEnabled() {
@@ -698,7 +698,6 @@ public class SyncProperties {
      * 是否启用客户端
      *
      * @return 是否启用
-     * @author CH
      * @since 1.0.0
      */
     public boolean isClientEnabled() {

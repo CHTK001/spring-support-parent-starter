@@ -27,8 +27,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SysAiGroupServiceImpl implements SysAiGroupService {
 
+    /** SYSAI分组mapper */
     private final SysAiGroupMapper sysAiGroupMapper;
+    /** SYSAI分组模型mapper */
     private final SysAiGroupModelMapper sysAiGroupModelMapper;
+    /** AImodulemapper */
     private final AiModuleMapper aiModuleMapper;
 
     @Override

@@ -22,14 +22,16 @@ import java.util.List;
 /**
  * 基于 HTTP API 的 IP 质量检测器抽象基类
  *
- * @author CH
  * @since 4.0.0.42
  */
 public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector {
 
+    /** Logger */
     private static final Logger logger = LoggerFactory.getLogger(AbstractHttpIpQualityDetector.class);
 
+    /** Objectmapper */
     protected final ObjectMapper objectMapper;
+    /** HTTP客户端 */
     protected final OkHttpClient httpClient;
 
     protected AbstractHttpIpQualityDetector() {

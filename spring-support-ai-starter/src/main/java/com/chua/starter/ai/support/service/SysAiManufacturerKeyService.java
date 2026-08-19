@@ -9,8 +9,8 @@ import java.util.List;
  *
  * <p>管理 {@code sys_ai_manufacturer_key} 表的 API Key，支持按厂商编码查询、增删改与状态启停。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface SysAiManufacturerKeyService {
 

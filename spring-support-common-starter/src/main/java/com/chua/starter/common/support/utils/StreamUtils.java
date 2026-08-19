@@ -11,9 +11,9 @@ import java.util.stream.Collectors;
 /**
  * utils工具类
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/01/22
+ * @author CH
  */
 public class StreamUtils {
     /**

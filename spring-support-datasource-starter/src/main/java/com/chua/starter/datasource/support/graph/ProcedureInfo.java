@@ -5,8 +5,8 @@ import lombok.Data;
 /**
  * 数据库存储过程 / 函数元数据
  *
- * @author CH
  * @since 2026/8/5
+ * @author CH
  */
 @Data
 public class ProcedureInfo {

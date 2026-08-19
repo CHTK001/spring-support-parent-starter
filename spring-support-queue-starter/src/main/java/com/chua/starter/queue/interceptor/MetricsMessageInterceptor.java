@@ -13,8 +13,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * 统计消息发送和接收的性能指标
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @Slf4j
 @Component

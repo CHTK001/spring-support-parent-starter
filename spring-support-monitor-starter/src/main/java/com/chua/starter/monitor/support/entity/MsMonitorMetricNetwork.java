@@ -14,8 +14,8 @@ import java.time.LocalDateTime;
 /**
  * 监控网络明细
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 @TableName("ms_monitor_metric_network")
 public class MsMonitorMetricNetwork implements Serializable {
 
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -30,6 +31,7 @@ public class MsMonitorMetricNetwork implements Serializable {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
+    /** ID */
     private Long id;
 
     /**
@@ -37,6 +39,7 @@ public class MsMonitorMetricNetwork implements Serializable {
      */
     @TableField("ms_monitor_metric_network_monitor_id")
     @Schema(description = "监控主机 id", example = "1")
+    /** MonitorID */
     private Long monitorId;
 
     /**
@@ -44,6 +47,7 @@ public class MsMonitorMetricNetwork implements Serializable {
      */
     @TableField("ms_monitor_metric_network_interface_name")
     @Schema(description = "网卡名", example = "eth0")
+    /** 接口名称 */
     private String interfaceName;
 
     /**
@@ -51,6 +55,7 @@ public class MsMonitorMetricNetwork implements Serializable {
      */
     @TableField("ms_monitor_metric_network_rx_bytes")
     @Schema(description = "接收字节数", example = "1073741824")
+    /** RXbytes */
     private Long rxBytes;
 
     /**
@@ -58,6 +63,7 @@ public class MsMonitorMetricNetwork implements Serializable {
      */
     @TableField("ms_monitor_metric_network_tx_bytes")
     @Schema(description = "发送字节数", example = "536870912")
+    /** TXbytes */
     private Long txBytes;
 
     /**
@@ -65,6 +71,7 @@ public class MsMonitorMetricNetwork implements Serializable {
      */
     @TableField("ms_monitor_metric_network_speed_bps")
     @Schema(description = "网卡速率(bps)", example = "1000000000")
+    /** SpeedBPS */
     private Long speedBps;
 
     /**
@@ -72,5 +79,6 @@ public class MsMonitorMetricNetwork implements Serializable {
      */
     @TableField("ms_monitor_metric_network_collect_time")
     @Schema(description = "采集时间", example = "2026-08-04T10:00:00")
+    /** Collect时间 */
     private LocalDateTime collectTime;
 }

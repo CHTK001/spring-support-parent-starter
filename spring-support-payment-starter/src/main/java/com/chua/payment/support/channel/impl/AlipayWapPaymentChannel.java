@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * 支付宝手机网站支付
+ * @author CH
  */
 public class AlipayWapPaymentChannel extends AlipayWebPaymentChannel implements PaymentChannel {
 
@@ -41,3 +42,4 @@ public class AlipayWapPaymentChannel extends AlipayWebPaymentChannel implements 
         return result;
     }
 }
+

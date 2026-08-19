@@ -40,18 +40,30 @@ import static com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler.
  * @author CH
  */
 public class TableDeptRegister implements DeptRegister {
+    /** Dept_leader */
     private static final String DEPT_LEADER = "DEPT_LEADER";
+    /** Managed_dept_tree_ids */
     private static final String MANAGED_DEPT_TREE_IDS = "managedDeptTreeIds";
 
+    /** 表 */
     private final Table table;
+    /** Where */
     private final Expression where;
+    /** 当前用户 */
     private final CurrentUser currentUser;
+    /** 数据permission */
     private final DataFilterTypeEnum dataPermission;
+    /** 数据作用域属性 */
     private final MybatisPlusDataScopeProperties dataScopeProperties;
+    /** DeptID列 */
     private final String deptIdColumn;
+    /** CreateBY列 */
     private final String createByColumn;
+    /** DepttreeID列 */
     private final String deptTreeIdColumn;
+    /** Dept别名 */
     private final String deptAlias;
+    /** 用户别名 */
     private final String userAlias;
 
     /**

@@ -7,8 +7,8 @@ import org.apache.ibatis.annotations.Mapper;
 /**
  * 消息模板 Mapper
  *
- * @author CH
  * @since 2026/08/03
+ * @author CH
  */
 @Mapper
 public interface SysMessageTemplateMapper extends BaseMapper<SysMessageTemplate> {

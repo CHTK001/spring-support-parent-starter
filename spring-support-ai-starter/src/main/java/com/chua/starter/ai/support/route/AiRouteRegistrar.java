@@ -23,6 +23,7 @@ import java.util.Map;
 @Component
 public class AiRouteRegistrar implements ApplicationContextAware {
 
+    /** Application上下文 */
     private ApplicationContext applicationContext;
 
     @Override

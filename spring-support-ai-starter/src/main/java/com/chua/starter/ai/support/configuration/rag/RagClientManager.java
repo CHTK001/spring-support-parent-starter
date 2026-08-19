@@ -32,8 +32,8 @@ import java.util.Set;
  * 切片大小、切片重叠、OCR 模型）。
  * 配置通过全局配置面板修改后调用 {@link #rebuild()} 热更新，无需重启。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Component

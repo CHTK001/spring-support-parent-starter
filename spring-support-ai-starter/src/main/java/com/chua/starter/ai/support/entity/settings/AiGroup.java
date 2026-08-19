@@ -15,8 +15,8 @@ import java.time.LocalDateTime;
 /**
  * 模型分组表，将模型与 AppKey 按业务/团队维度聚合。
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 @Data
 @TableName("sys_ai_group")
@@ -31,6 +31,7 @@ public class AiGroup implements Serializable {
      */
     @TableId(value = "sys_ai_group_id", type = IdType.AUTO)
     @Schema(description = "分组主键 ID")
+    /** 分组ID */
     private Long groupId;
 
     /**
@@ -41,6 +42,7 @@ public class AiGroup implements Serializable {
      */
     @TableField("sys_ai_group_name")
     @Schema(description = "分组名称")
+    /** 分组名称 */
     private String groupName;
 
     /**
@@ -51,6 +53,7 @@ public class AiGroup implements Serializable {
      */
     @TableField("sys_ai_group_desc")
     @Schema(description = "分组描述")
+    /** 分组描述 */
     private String groupDescription;
 
     /**
@@ -61,6 +64,7 @@ public class AiGroup implements Serializable {
      */
     @TableField("sys_ai_group_models")
     @Schema(description = "关联模型列表(JSON)")
+    /** 分组models */
     private String groupModels;
 
     /**
@@ -71,6 +75,7 @@ public class AiGroup implements Serializable {
      */
     @TableField("sys_ai_group_app_key_ids")
     @Schema(description = "绑定 AppKey ID 列表(JSON)")
+    /** 分组APP密钥IDS */
     private String groupAppKeyIds;
 
     /**
@@ -81,6 +86,7 @@ public class AiGroup implements Serializable {
      */
     @TableField("sys_ai_group_enabled")
     @Schema(description = "是否启用")
+    /** 分组是否启用 */
     private Boolean groupEnabled;
 
     /**
@@ -91,6 +97,7 @@ public class AiGroup implements Serializable {
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
+    /** 分组create时间 */
     private LocalDateTime groupCreateTime;
 
     /**
@@ -101,6 +108,7 @@ public class AiGroup implements Serializable {
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
+    /** 分组update时间 */
     private LocalDateTime groupUpdateTime;
 
     /**
@@ -112,5 +120,6 @@ public class AiGroup implements Serializable {
     @TableField("sys_ai_group_delete")
     @TableLogic
     @Schema(description = "逻辑删除标记")
+    /** 分组删除标记 */
     private Integer groupDeleted;
 }

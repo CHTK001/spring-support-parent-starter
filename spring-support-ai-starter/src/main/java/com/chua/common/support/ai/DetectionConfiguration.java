@@ -5,8 +5,8 @@ import java.util.Map;
 /**
  * 目标检测引擎配置（engine + 通用 options 键值映射）。
  *
- * @author CH
  * @since 4.0.0
+ * @author CH
  */
 public class DetectionConfiguration {
 

@@ -8,14 +8,19 @@ import org.springframework.util.StringUtils;
 
 /**
  * 支付 provider SPI 默认配置
+ * @author CH
  */
 @Component
 @ConfigurationProperties(prefix = "plugin.payment.provider")
 public class PaymentProviderProperties {
 
+    /** 默认SPI */
     private String defaultSpi = AbstractMerchantPaymentChannel.DEFAULT_PROVIDER_SPI;
+    /** AlipaySPI */
     private String alipaySpi = AbstractMerchantPaymentChannel.DEFAULT_PROVIDER_SPI;
+    /** WechatSPI */
     private String wechatSpi = AbstractMerchantPaymentChannel.DEFAULT_PROVIDER_SPI;
+    /** EpaySPI */
     private String epaySpi = "epay";
 
     public String getDefaultSpi() {
@@ -69,3 +74,4 @@ public class PaymentProviderProperties {
         return fallback;
     }
 }
+

@@ -28,8 +28,8 @@ import java.util.List;
  *   public class LongListTypeHandler extends BaseTypeHandler&lt;List&lt;Long&gt;&gt; { ... }
  * </pre>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @MappedTypes(List.class)
 @MappedJdbcTypes(JdbcType.VARCHAR)

@@ -8,6 +8,7 @@ import java.util.function.Supplier;
 
 /**
  * 无 Redis 环境下的本地锁模板兜底实现。
+ * @author CH
  */
 @Slf4j
 public class NoopLockTemplate implements LockTemplate {
@@ -89,3 +90,4 @@ public class NoopLockTemplate implements LockTemplate {
         return false;
     }
 }
+

@@ -49,8 +49,8 @@ import java.util.Map;
  *       with-application: true
  * </pre>
  *
- * @author CH
  * @since 2024/7/22
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = CacheProperties.PRE, ignoreInvalidFields = true)

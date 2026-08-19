@@ -18,13 +18,14 @@ import java.util.concurrent.CompletableFuture;
 /**
  * 基于 Spring WebClient 的 HTTP 客户端执行器。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Spi("webclient")
 @ConditionalOnClass("org.springframework.web.reactive.function.client.WebClient")
 public class WebClientHttpClientExecutor implements HttpClientExecutor {
 
+    /** Web客户端 */
     private final WebClient webClient;
 
     public WebClientHttpClientExecutor() {

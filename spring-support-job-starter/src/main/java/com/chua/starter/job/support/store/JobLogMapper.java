@@ -9,8 +9,8 @@ import java.util.Date;
 /**
  * sys_job_log Mapper。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface JobLogMapper extends BaseMapper<JobLogEntity> {
 

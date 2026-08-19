@@ -5,9 +5,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * 日志配置属性
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/01/01
+ * @author CH
  */
 @ConfigurationProperties(prefix = "plugin.log", ignoreInvalidFields = true)
 public class LogProperties {

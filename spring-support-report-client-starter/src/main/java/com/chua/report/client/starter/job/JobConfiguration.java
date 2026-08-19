@@ -9,11 +9,12 @@ import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 /**
  * JOB配置
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/03/05
+ * @author CH
  */
 public class JobConfiguration implements SchedulingConfigurer {
+    /** 任务registrar */
     private ScheduledTaskRegistrar taskRegistrar;
 
     /**

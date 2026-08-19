@@ -14,14 +14,15 @@ import java.time.LocalDateTime;
  * <p>班级信息独立存储，{@code classTeacherId} 等关联字段引用
  * {@code spring-support-common-starter} 的用户体系 (userId)，不重复存储用户表。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("edu_class")
 public class EduClass {
 
     @TableId(type = IdType.AUTO)
+    /** ClassID */
     private Long classId;
 
     /**
@@ -55,8 +56,10 @@ public class EduClass {
     private Integer classStatus;
 
     @TableField(value = "create_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT)
+    /** Create时间 */
     private LocalDateTime createTime;
 
     @TableField(value = "update_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT_UPDATE)
+    /** Update时间 */
     private LocalDateTime updateTime;
 }

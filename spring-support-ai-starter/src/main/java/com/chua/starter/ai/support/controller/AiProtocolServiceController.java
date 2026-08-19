@@ -21,8 +21,8 @@ import java.util.Map;
  * <p>管理聚合 ChatClient 协议服务的启停与热更新。协议服务通过独立端口暴露
  * OpenAI / Claude / Gemini 三协议端点，端口与开关由 {@code runtime} 分组全局配置控制。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController

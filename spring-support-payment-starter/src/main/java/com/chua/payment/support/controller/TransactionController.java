@@ -10,12 +10,14 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 交易流水控制器
+ * @author CH
  */
 @RestController
 @RequestMapping("/transaction")
 @RequiredArgsConstructor
 public class TransactionController {
 
+    /** Transactionrecord服务 */
     private final TransactionRecordService transactionRecordService;
 
     @GetMapping("/{id}")
@@ -49,3 +51,4 @@ public class TransactionController {
         return Result.success(PageResult.of(page));
     }
 }
+

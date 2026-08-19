@@ -12,6 +12,7 @@ import java.util.List;
  */
 public class MapperSqlMethodMarker implements SqlMethodMarker {
 
+    /** 超时 */
     private int timeout;
 
     public MapperSqlMethodMarker(int timeout, boolean watchdog) {

@@ -7,8 +7,8 @@ import org.apache.ibatis.annotations.Mapper;
 /**
  * 消息推送日志 Mapper
  *
- * @author CH
  * @since 2026/08/03
+ * @author CH
  */
 @Mapper
 public interface SysMessageLogMapper extends BaseMapper<SysMessageLog> {

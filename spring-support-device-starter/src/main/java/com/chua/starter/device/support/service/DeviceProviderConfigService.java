@@ -10,8 +10,8 @@ import java.util.Map;
  * 提供商配置接口
  * <p>每个提供商可自定义离线检测时间（秒），并提供检测逻辑。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface DeviceProviderConfigService {
 

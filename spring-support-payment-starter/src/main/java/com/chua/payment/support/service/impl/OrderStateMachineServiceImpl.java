@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 订单状态机服务实现类
+ * @author CH
  */
 @Slf4j
 @Service
@@ -26,7 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrderStateMachineServiceImpl implements OrderStateMachineService {
 
     private final StateMachineFactory<OrderState, OrderEvent> stateMachineFactory;
+    /** Payment排序mapper */
     private final PaymentOrderMapper paymentOrderMapper;
+    /** 排序状态日志服务 */
     private final OrderStateLogService orderStateLogService;
 
     @Override
@@ -123,3 +126,4 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
         };
     }
 }
+

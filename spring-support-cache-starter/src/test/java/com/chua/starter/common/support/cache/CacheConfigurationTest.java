@@ -19,6 +19,7 @@ import org.springframework.cache.interceptor.SimpleKeyGenerator;
 @DisplayName("CacheConfiguration 测试")
 class CacheConfigurationTest {
 
+    /** Configuration */
     private final CacheConfiguration configuration = new CacheConfiguration();
 
     @Test

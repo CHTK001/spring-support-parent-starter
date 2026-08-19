@@ -13,8 +13,8 @@ import java.util.List;
  * {@link com.chua.starter.ai.support.configuration.client.AiCapabilityResolver} 按能力标签
  * {@code asr} 统一解析该分组配置并创建 {@code AudioClient}（本地 whisper / 云端 ASR）。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Spi("asr")
 public class AsrGlobalSettingProvider implements GlobalSettingProvider {

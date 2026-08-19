@@ -5,7 +5,7 @@ import com.chua.starter.monitor.support.entity.MsMonitorRedisMetricStatistics;
 /**
  * Redis 指标统计 Mapper
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 public interface MsMonitorRedisMetricStatisticsMapper extends BaseMapper<MsMonitorRedisMetricStatistics> {}

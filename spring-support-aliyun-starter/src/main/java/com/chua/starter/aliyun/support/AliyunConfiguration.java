@@ -13,8 +13,8 @@ import org.springframework.context.annotation.Bean;
 /**
  * 阿里云配置
  *
- * @author CH
  * @since 2026-03-19
+ * @author CH
  */
 @Slf4j
 @EnableConfigurationProperties(AliyunAlipayProperties.class)

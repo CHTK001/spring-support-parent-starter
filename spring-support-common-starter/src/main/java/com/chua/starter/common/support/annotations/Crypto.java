@@ -12,7 +12,6 @@ import java.lang.annotation.Target;
 /**
  * 加密
  *
- * @author CH
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)

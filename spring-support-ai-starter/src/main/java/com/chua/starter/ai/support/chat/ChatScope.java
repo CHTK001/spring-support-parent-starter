@@ -9,8 +9,8 @@ import java.util.Map;
 /**
  * 对话作用域，封装单次对话的模型参数、上下文与附加信息。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Getter
 @Setter
@@ -166,7 +166,6 @@ public class ChatScope {
     /**
      * ChatScope Builder。
      *
-     * @author CH
      * @since 4.0.0.42
      */
     public static class ChatScopeBuilder {

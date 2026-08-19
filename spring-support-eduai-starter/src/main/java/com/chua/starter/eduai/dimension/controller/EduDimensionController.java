@@ -16,8 +16,8 @@ import java.util.List;
  * <p>对外暴露：学科 / 年级 / 班级 / 学生 / 教师 5 个维度的 CRUD；
  * 路径前缀 {@code /v2/edu/dimension/**}。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @RestController
 @RequestMapping("/v2/edu/dimension")
@@ -25,6 +25,7 @@ import java.util.List;
 @Tag(name = "教育AI-维度管理")
 public class EduDimensionController {
 
+    /** Dimension服务 */
     private final EduDimensionService dimensionService;
 
     // ===== 字典下拉 =====

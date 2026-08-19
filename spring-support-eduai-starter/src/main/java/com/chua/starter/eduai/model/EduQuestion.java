@@ -11,8 +11,8 @@ import java.time.LocalDateTime;
 /**
  * 题目实体
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("edu_question")
@@ -22,6 +22,7 @@ public class EduQuestion {
      * 题目ID
      */
     @TableId(type = IdType.AUTO)
+    /** QuestionID */
     private Long questionId;
 
     /**

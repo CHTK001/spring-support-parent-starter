@@ -56,7 +56,6 @@ import java.lang.annotation.*;
  * public Result newFeature() { ... }
  * </pre>
  *
- * @author CH
  * @since 2024/12/18
  * @version 1.0.0
  */

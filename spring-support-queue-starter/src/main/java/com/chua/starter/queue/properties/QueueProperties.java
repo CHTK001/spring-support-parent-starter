@@ -6,13 +6,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * 消息队列配置属性
  *
- * @author CH
  * @since 2025-12-25
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = QueueProperties.PREFIX)
 public class QueueProperties {
 
+    /** Prefix */
     public static final String PREFIX = "plugin.queue";
 
     /**

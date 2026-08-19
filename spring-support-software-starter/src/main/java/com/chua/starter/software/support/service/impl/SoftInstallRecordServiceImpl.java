@@ -33,8 +33,8 @@ import java.util.stream.Collectors;
 /**
  * 安装记录表 Service 实现
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 @Slf4j
 @Service

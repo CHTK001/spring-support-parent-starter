@@ -6,8 +6,8 @@ import com.chua.starter.filesystem.support.entity.SysFileSystemUploadFile;
 /**
  * 文件系统上传完成主体服务接口。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface SysFileSystemUploadFileService extends IService<SysFileSystemUploadFile> {
 

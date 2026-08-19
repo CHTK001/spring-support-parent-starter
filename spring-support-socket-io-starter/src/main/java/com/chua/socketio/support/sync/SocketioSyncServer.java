@@ -8,8 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Socket.IO 同步服务端实现。
  *
- * @author CH
  * @since 4.0.0.41
+ * @author CH
  */
 @Slf4j
 public class SocketioSyncServer extends AbstractSyncServer {

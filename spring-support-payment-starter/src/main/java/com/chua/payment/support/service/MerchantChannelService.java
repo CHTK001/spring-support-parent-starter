@@ -9,6 +9,7 @@ import java.util.List;
 
 /**
  * 商户渠道服务接口
+ * @author CH
  */
 public interface MerchantChannelService {
 
@@ -37,3 +38,4 @@ public interface MerchantChannelService {
      */
     MerchantChannel getWalletChannel(Long merchantId);
 }
+

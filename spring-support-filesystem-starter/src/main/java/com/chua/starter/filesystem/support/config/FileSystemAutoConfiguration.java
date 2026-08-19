@@ -30,8 +30,8 @@ import java.util.List;
 /**
  * 文件系统自动配置类。
  *
- * @author CH
  * @since 1.0
+ * @author CH
  */
 @Configuration
 @EnableConfigurationProperties({FileStorageProperties.class, FileStorageUploadProperties.class})

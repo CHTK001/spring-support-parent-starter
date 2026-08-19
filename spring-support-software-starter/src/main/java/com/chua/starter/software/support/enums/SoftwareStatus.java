@@ -3,8 +3,8 @@ package com.chua.starter.software.support.enums;
 /**
  * 软件状态
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 public enum SoftwareStatus {
     /** 正常 */
@@ -14,6 +14,7 @@ public enum SoftwareStatus {
     /** 已禁用 */
     DISABLED(2);
 
+    /** 值 */
     private final int value;
 
     SoftwareStatus(int value) {

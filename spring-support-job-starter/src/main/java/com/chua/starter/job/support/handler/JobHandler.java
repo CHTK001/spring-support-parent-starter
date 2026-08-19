@@ -6,8 +6,8 @@ package com.chua.starter.job.support.handler;
  * <p>由 {@link JobHandlerFactory} 单例注册表统一维护;
  * 调度事件消费侧通过 {@link #execute()} 触发实际逻辑。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface JobHandler {
 

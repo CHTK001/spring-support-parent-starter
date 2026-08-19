@@ -14,14 +14,15 @@ import java.time.LocalDateTime;
  * <p>与 {@link EduStudent} 类似：基础用户信息来自 spring-support 用户体系，
  * 本表只保存教学域扩展属性（工号/学科/班级）。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("edu_teacher")
 public class EduTeacher {
 
     @TableId(type = IdType.AUTO)
+    /** TeacherID */
     private Long teacherId;
 
     /**
@@ -50,8 +51,10 @@ public class EduTeacher {
     private Integer teacherStatus;
 
     @TableField(value = "create_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT)
+    /** Create时间 */
     private LocalDateTime createTime;
 
     @TableField(value = "update_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT_UPDATE)
+    /** Update时间 */
     private LocalDateTime updateTime;
 }

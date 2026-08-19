@@ -13,6 +13,7 @@ import com.chua.starter.aliyun.support.properties.AliyunAlipayProperties;
 
 /**
  * 支付宝网关 SPI
+ * @author CH
  */
 public interface AliyunAlipayGateway {
 
@@ -42,3 +43,4 @@ public interface AliyunAlipayGateway {
      */
     AliyunAlipayTransferResponse transfer(AliyunAlipayProperties properties, AliyunAlipayTransferRequest request);
 }
+

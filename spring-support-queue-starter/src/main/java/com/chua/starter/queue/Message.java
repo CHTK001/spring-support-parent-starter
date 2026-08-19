@@ -13,8 +13,8 @@ import java.util.Map;
 /**
  * 统一消息模型
  *
- * @author CH
  * @since 2025-12-25
+ * @author CH
  */
 @Data
 @Builder
@@ -232,14 +232,22 @@ public class Message {
      * Message Builder 类
      */
     public static class MessageBuilder {
+        /** ID */
         private String id;
+        /** 目的地 */
         private String destination;
+        /** Payload */
         private byte[] payload;
         private Map<String, Object> headers = new HashMap<>();
+        /** 时间戳 */
         private long timestamp;
+        /** 类型 */
         private String type;
+        /** 分组 */
         private String group;
+        /** Acknowledgment */
         private Acknowledgment acknowledgment;
+        /** Original消息 */
         private Object originalMessage;
 
         public MessageBuilder id(String id) {

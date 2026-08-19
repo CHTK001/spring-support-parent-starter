@@ -25,8 +25,8 @@ import java.util.function.BiConsumer;
  *   <li>subscribe {@link JobSyncTopics#REGISTER} → 仅打日志</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RequiredArgsConstructor

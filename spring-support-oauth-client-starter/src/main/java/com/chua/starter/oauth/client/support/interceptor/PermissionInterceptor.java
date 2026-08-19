@@ -27,9 +27,9 @@ import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_
 
 /**
  * 权限拦截器
- * @author CH
  * @version 1.0.0
  * @since 2024/01/18
+ * @author CH
  */
 @Slf4j
 @Order(1)

@@ -20,8 +20,8 @@ import javax.sql.DataSource;
 /**
  * SQL 物理化自动配置。
  *
- * @author CH
  * @since 2026/4/2
+ * @author CH
  */
 @Conditional(MaterializedRouteAutoConfiguration.MaterializedRouteEnabledCondition.class)
 public class MaterializedRouteAutoConfiguration {

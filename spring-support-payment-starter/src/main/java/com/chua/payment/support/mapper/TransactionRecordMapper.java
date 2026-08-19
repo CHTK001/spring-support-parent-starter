@@ -7,8 +7,8 @@ import org.apache.ibatis.annotations.Mapper;
 /**
  * 交易流水Mapper接口
  *
- * @author CH
  * @since 2026-03-18
+ * @author CH
  */
 @Mapper
 public interface TransactionRecordMapper extends BaseMapper<TransactionRecord> {

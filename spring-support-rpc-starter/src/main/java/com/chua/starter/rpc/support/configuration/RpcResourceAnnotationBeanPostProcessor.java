@@ -32,9 +32,9 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * rpc资源注释配置
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/04/07
+ * @author CH
  */
 public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBeanPostProcessor implements BeanFactoryPostProcessor {
 
@@ -54,7 +54,9 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
     private final ConcurrentMap<InjectionMetadata.InjectedElement, String> injectedMethodReferenceBeanCache =
             new ConcurrentHashMap<>(CACHE_SIZE);
 
+    /** RPC属性 */
     private RpcProperties rpcProperties;
+    /** RPC客户端 */
     private RpcClient rpcClient;
 
     public RpcResourceAnnotationBeanPostProcessor() {

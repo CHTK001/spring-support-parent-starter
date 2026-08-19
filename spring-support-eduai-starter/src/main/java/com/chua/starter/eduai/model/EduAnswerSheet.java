@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
 /**
  * 答题卡实体
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("edu_answer_sheet")
@@ -21,6 +21,7 @@ public class EduAnswerSheet {
      * 答题卡ID
      */
     @TableId(type = IdType.AUTO)
+    /** AnswersheetID */
     private Long answerSheetId;
 
     /**

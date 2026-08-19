@@ -8,8 +8,8 @@ import java.time.LocalDate;
 /**
  * str -> LocalDate
  *
- * @author CH
  * @since 2022/8/11 9:14
+ * @author CH
  */
 public class StringToLocalDateTypeConverter implements Converter<String, LocalDate> {
     @Override

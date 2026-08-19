@@ -13,8 +13,8 @@ import java.time.LocalDateTime;
 /**
  * 用量统计实体——读取 {@code sys_ai_usage} 明细表，按模型维度查询调用次数与 token 消耗。
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 @Data
 @TableName("sys_ai_usage")
@@ -29,6 +29,7 @@ public class AiUsage implements Serializable {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "用量主键 ID")
+    /** UsageID */
     private Long usageId;
 
     /**
@@ -39,6 +40,7 @@ public class AiUsage implements Serializable {
      */
     @TableField("model")
     @Schema(description = "模型名称")
+    /** Usage模型 */
     private String usageModel;
 
     /**
@@ -49,6 +51,7 @@ public class AiUsage implements Serializable {
      */
     @TableField(exist = false)
     @Schema(description = "请求次数")
+    /** Usage请求数量 */
     private Long usageRequestCount;
 
     /**
@@ -59,6 +62,7 @@ public class AiUsage implements Serializable {
      */
     @TableField("prompt_tokens")
     @Schema(description = "提示 tokens")
+    /** Usageprompttokens */
     private Long usagePromptTokens;
 
     /**
@@ -69,6 +73,7 @@ public class AiUsage implements Serializable {
      */
     @TableField("completion_tokens")
     @Schema(description = "生成 tokens")
+    /** Usagecompletiontokens */
     private Long usageCompletionTokens;
 
     /**
@@ -79,6 +84,7 @@ public class AiUsage implements Serializable {
      */
     @TableField("total_tokens")
     @Schema(description = "总 tokens")
+    /** Usage总数tokens */
     private Long usageTotalTokens;
 
     /**
@@ -89,5 +95,6 @@ public class AiUsage implements Serializable {
      */
     @TableField("call_time")
     @Schema(description = "统计时间戳")
+    /** Usage时间戳 */
     private LocalDateTime usageTimestamp;
 }

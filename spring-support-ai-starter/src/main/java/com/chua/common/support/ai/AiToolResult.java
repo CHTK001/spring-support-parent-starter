@@ -5,8 +5,8 @@ import lombok.Data;
 /**
  * AI 工具调用结果，含调用 ID、工具名、结果对象、成功标志与失败时的错误信息。
  *
- * @author CH
  * @since 4.0.0
+ * @author CH
  */
 @Data
 public class AiToolResult {

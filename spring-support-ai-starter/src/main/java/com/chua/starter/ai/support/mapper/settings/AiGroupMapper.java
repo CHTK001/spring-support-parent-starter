@@ -7,8 +7,8 @@ import org.apache.ibatis.annotations.Mapper;
 /**
  * 模型分组 Mapper
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 @Mapper
 public interface AiGroupMapper extends BaseMapper<AiGroup> {

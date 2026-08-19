@@ -31,7 +31,9 @@ import org.slf4j.LoggerFactory;
 @RestControllerAdvice
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<Object>  {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiResponseEncodeResponseBodyAdvice.class);
+        /** API响应encoderegister */
         private final ApiResponseEncodeRegister apiResponseEncodeRegister;
 
 

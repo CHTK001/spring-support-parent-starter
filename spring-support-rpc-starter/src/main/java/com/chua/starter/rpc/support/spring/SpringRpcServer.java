@@ -19,15 +19,19 @@ import java.util.concurrent.ConcurrentHashMap;
  * 使用Spring的ApplicationContext来注册和管理服务
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @Slf4j
 public class SpringRpcServer implements RpcServer, ApplicationContextAware {
 
+    /** Application上下文 */
     private ApplicationContext applicationContext;
+    /** 注册表configs */
     private final List<RpcRegistryConfig> registryConfigs;
+    /** 协议配置 */
     private final RpcProtocolConfig protocolConfig;
+    /** APP名称 */
     private final String appName;
     private final Map<String, Object> serviceRegistry = new ConcurrentHashMap<>();
     private volatile boolean initialized = false;

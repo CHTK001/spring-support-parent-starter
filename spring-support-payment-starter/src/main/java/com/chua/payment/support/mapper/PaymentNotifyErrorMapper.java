@@ -6,7 +6,9 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * 回调异常记录Mapper
+ * @author CH
  */
 @Mapper
 public interface PaymentNotifyErrorMapper extends BaseMapper<PaymentNotifyError> {
 }
+

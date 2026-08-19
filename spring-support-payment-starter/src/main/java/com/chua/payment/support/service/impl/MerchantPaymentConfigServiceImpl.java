@@ -15,12 +15,15 @@ import java.time.LocalDateTime;
 
 /**
  * 商户支付配置服务实现
+ * @author CH
  */
 @Service
 @RequiredArgsConstructor
 public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigService {
 
+    /** 配置mapper */
     private final MerchantPaymentConfigMapper configMapper;
+    /** 排序mapper */
     private final PaymentOrderMapper orderMapper;
 
     @Override
@@ -109,3 +112,4 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
         return config;
     }
 }
+

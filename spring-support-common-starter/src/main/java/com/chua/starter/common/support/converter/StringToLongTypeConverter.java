@@ -8,8 +8,8 @@ import java.util.Date;
 
 /**
  * str -> Long
- * @author CH
  * @since 2024/9/24
+ * @author CH
  */
 public class StringToLongTypeConverter implements Converter<String, Long> {
     @Override

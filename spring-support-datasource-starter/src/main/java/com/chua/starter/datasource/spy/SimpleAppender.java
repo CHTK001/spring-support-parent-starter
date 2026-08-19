@@ -10,9 +10,9 @@ import org.slf4j.MDC;
  * 注意：此类在数据源初始化时被 P6Spy 加载，不能依赖任何可能延迟加载的类
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/12/10
+ * @author CH
  */
 @Slf4j
 public class SimpleAppender implements MessageFormattingStrategy {
@@ -28,7 +28,6 @@ public class SimpleAppender implements MessageFormattingStrategy {
      * @param sql          最终执行的SQL
      * @param url          数据库连接地址
      * @return 格式化日志结果
-     * @author CH
      * @since 1.0.0
      */
     @Override

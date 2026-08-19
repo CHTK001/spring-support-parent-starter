@@ -18,13 +18,15 @@ import java.util.function.Supplier;
  * 基于滑动窗口实现简单的熔断器。
  * </p>
  *
- * @author CH
  * @since 2024/12/07
+ * @author CH
  */
 @Slf4j
 public class OAuthClientResilience {
 
+    /** 重试配置 */
     private final AuthClientProperties.RetryConfig retryConfig;
+    /** Circuitbreaker配置 */
     private final AuthClientProperties.CircuitBreakerConfig circuitBreakerConfig;
 
     /**
@@ -37,10 +39,15 @@ public class OAuthClientResilience {
     }
 
     private volatile CircuitState state = CircuitState.CLOSED;
+    /** Failure数量 */
     private final AtomicInteger failureCount = new AtomicInteger(0);
+    /** Success数量 */
     private final AtomicInteger successCount = new AtomicInteger(0);
+    /** 请求数量 */
     private final AtomicInteger requestCount = new AtomicInteger(0);
+    /** 最后failure时间 */
     private final AtomicLong lastFailureTime = new AtomicLong(0);
+    /** Halfopen请求数量 */
     private final AtomicInteger halfOpenRequestCount = new AtomicInteger(0);
 
     public OAuthClientResilience(AuthClientProperties authClientProperties) {

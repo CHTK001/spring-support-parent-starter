@@ -38,8 +38,8 @@ import java.util.Map;
  *       比业务 {@code CommandLineRunner} 更晚 (即使它们没有显式 {@code @Order})。</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @AutoConfiguration
 @ConditionalOnWebApplication

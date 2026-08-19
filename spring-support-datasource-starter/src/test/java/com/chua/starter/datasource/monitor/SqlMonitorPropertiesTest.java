@@ -13,8 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * SQL 监听配置与端点单元测试
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 class SqlMonitorPropertiesTest {
 

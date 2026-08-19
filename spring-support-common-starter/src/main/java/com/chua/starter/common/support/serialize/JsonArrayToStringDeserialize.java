@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
  * @author CH
  */
 public class JsonArrayToStringDeserialize extends JsonDeserializer<String> {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(JsonArrayToStringDeserialize.class);
         @Override
     public String deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JacksonException {

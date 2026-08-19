@@ -39,17 +39,20 @@ import java.util.concurrent.Executors;
  * 整合版本控制、平台标识、编解码等 API 相关配置。
  * </p>
  *
- * @author CH
  * @since 2024/12/07
  * @version 1.0.0
+ * @author CH
  */
 @EnableConfigurationProperties(ApiProperties.class)
 @Priority(0)
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class ApiConfiguration implements EnvironmentAware  {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiConfiguration.class);
 
+    /** API属性 */
     private ApiProperties apiProperties;
+    /** 环境 */
     private Environment environment;
 
     // ==================== 版本控制配置 ====================

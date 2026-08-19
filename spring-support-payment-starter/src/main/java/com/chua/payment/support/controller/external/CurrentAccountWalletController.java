@@ -38,17 +38,24 @@ import java.util.UUID;
 /**
  * 当前用户钱包自助 API
  * <p>所有接口强检验当前用户身份，userId 从认证上下文获取，不允许客户端传入</p>
+ * @author CH
  */
 @RestController
 @RequestMapping("/account/wallet")
 @RequiredArgsConstructor
 public class CurrentAccountWalletController {
 
+    /** Walletaccount服务 */
     private final WalletAccountService walletAccountService;
+    /** Wallet排序服务 */
     private final WalletOrderService walletOrderService;
+    /** Walletwithdrawapproval服务 */
     private final WalletWithdrawApprovalService walletWithdrawApprovalService;
+    /** Payment全局配置mapper */
     private final PaymentGlobalConfigMapper paymentGlobalConfigMapper;
+    /** Payment排序mapper */
     private final PaymentOrderMapper paymentOrderMapper;
+    /** Principal解析器 */
     private final PaymentAccountPrincipalResolver principalResolver;
 
     @GetMapping
@@ -212,3 +219,4 @@ public class CurrentAccountWalletController {
         return Result.success();
     }
 }
+

@@ -28,8 +28,8 @@ import java.util.function.BiConsumer;
  *   <li>连接失败时由内部 daemon 周期重试, 避免 server 尚不可用时 EXECUTOR 永远失联</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RequiredArgsConstructor

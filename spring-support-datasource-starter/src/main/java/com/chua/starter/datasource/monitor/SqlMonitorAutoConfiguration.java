@@ -28,8 +28,8 @@ import java.util.List;
  * 自动切换——匹配 {@code autoEnableEnvironments}（默认 dev/test/uat/local）任一激活
  * profile 则启用，否则关闭。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Configuration(proxyBeanMethods = false)

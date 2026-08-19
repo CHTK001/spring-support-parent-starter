@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
  * <p>对应通义万相的异步任务模式：提交请求后返回任务 ID，
  * 前端轮询任务状态直至完成，后续可复查历史记录。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class GenerateTask {

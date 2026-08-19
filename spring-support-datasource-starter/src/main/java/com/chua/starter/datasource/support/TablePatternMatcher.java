@@ -8,7 +8,6 @@ import java.util.List;
  * <p>支持 {@code *} 通配，{@code *} 可匹配任意字符（含 {@code _}），
  * 不支持 {@code ?} 与 {@code [...]}。空字符串视为通配全部。</p>
  *
- * @author CH
  * @since 2026/8/5
  */
 public final class TablePatternMatcher {

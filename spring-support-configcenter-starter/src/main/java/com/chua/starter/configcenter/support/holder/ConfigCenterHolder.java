@@ -10,8 +10,8 @@ import lombok.extern.slf4j.Slf4j;
  * 解决 EnvironmentPostProcessor 和 AutoConfiguration 创建不同实例的问题。
  * </p>
  *
- * @author CH
  * @since 2024/12/07
+ * @author CH
  */
 @Slf4j
 public class ConfigCenterHolder {

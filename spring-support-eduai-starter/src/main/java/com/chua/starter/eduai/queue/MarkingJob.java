@@ -13,8 +13,8 @@ import java.util.List;
  * <p>由 {@code EduMarkingServiceImpl} 投递到 {@code edu.marking} 队列，
  * 由 {@link MarkingMessageListener} 异步消费。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @NoArgsConstructor

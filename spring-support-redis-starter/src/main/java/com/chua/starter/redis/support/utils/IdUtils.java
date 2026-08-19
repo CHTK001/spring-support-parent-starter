@@ -5,7 +5,6 @@ import java.util.UUID;
 /**
  * ID工具类
  *
- * @author CH
  * @since 2024/12/25
  */
 public final class IdUtils {

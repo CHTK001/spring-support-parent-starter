@@ -3,8 +3,8 @@ package com.chua.common.support.data.materialized;
 /**
  * SQL 物理化路由器。
  *
- * @author CH
  * @since 2026/4/2
+ * @author CH
  */
 public interface MaterializedSqlRouter {
 

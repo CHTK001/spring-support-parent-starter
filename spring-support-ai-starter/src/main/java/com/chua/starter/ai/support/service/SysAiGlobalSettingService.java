@@ -10,8 +10,8 @@ import java.util.Optional;
  * <p>以「分组 + 字段」键值行方式读写 {@code sys_ai_global_setting} 表，
  * 提供类型安全的值读取与整组替换能力。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface SysAiGlobalSettingService {
 

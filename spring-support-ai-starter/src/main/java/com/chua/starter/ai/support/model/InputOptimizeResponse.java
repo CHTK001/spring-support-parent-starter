@@ -5,8 +5,8 @@ import lombok.Data;
 /**
  * 输入优化响应模型。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class InputOptimizeResponse {

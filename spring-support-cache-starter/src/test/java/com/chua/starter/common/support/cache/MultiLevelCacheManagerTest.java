@@ -18,6 +18,7 @@ import java.util.Collections;
 @DisplayName("MultiLevelCacheManager 测试")
 class MultiLevelCacheManagerTest {
 
+    /** 管理器 */
     private MultiLevelCacheManager manager;
 
     @BeforeEach

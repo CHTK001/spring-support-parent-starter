@@ -14,6 +14,7 @@ import java.util.*;
  */
 public class DefaultObjectStruct<T> implements ObjectStruct<T> {
 
+    /** 配置 */
     private final TreeStructConfig<T> config;
 
     public DefaultObjectStruct(TreeStructConfig<T> config) {

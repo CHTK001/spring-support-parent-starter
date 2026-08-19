@@ -18,14 +18,18 @@ import java.util.List;
  * 提供响应数据加密功能。
  * </p>
  *
- * @author CH
  * @version 2.0.0
  * @since 2024/01/22
+ * @author CH
  */
 public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfiguration>, ApplicationListener<ApiResponseEncodeConfiguration>  {
+    /** 日志 */
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ApiResponseEncodeRegister.class);
+    /** White列表 */
     private final List<String> whiteList;
+    /** Codec类型 */
     private final String codecType;
+    /** API响应encodeconfiguration */
     private ApiResponseEncodeConfiguration apiResponseEncodeConfiguration;
 
     /**

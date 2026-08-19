@@ -18,8 +18,8 @@ import java.util.function.BiConsumer;
  *   <li>SINGLE 角色: LeaderLoop 直接 publish, Executor 直接消费, 不走网络</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class JobSyncBus {

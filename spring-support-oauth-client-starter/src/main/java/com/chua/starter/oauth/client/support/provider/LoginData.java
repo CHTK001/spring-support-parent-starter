@@ -17,28 +17,33 @@ public class LoginData {
      * 账号
      */
     @Schema(description = "账号/微信code/微信openId")
+    /** Username */
     private String username;
 
     /**
      * 密码
      */
     @Schema(description = "密码(md5加密)/微信getphonenumber(code)")
+    /** 密码 */
     private String password;
     /**
      * 校验码
      */
     @Schema(description = "校验码; 由服务器决定是否必填")
     @RequestParamMapping(name = {"verifyCode", "verifyCodeKey"})
+    /** Verify代码密钥 */
     private String verifyCodeKey;
     /**
      * 校验码
      */
     @Schema(description = "校验码标识, 非必填")
+    /** Verify代码ulid */
     private String verifyCodeUlid;
     /**
      * 登录类型
      */
     @Schema(description = "登录类型, 网页：WEB, 微信:WX, 后管: SYSTEM, 小程序: WX_MINI_APP, WX_MINI_APP_VISITOR等")
+    /** Login类型 */
     private String loginType;
 
 
@@ -46,6 +51,7 @@ public class LoginData {
      * 账号类型
      */
     @Schema(description = "账号类型, 用于区分同一种登录方式")
+    /** Account类型 */
     private String accountType;
 
 
@@ -53,12 +59,14 @@ public class LoginData {
      * 租户ID
      */
     @Schema(description = "租户ID")
+    /** TenantID */
     private String tenantId;
 
     /**
      * 租户编码
      */
     @Schema(description = "租户编码")
+    /** Tenant代码 */
     private String tenantCode;
     /**
      * 谷歌验证码
@@ -70,12 +78,14 @@ public class LoginData {
      * 登录凭证
      */
     @Schema(description = "登录凭证(加密数据)")
+    /** WXencrypted数据 */
     private String wxEncryptedData;
 
     /**
      * 登录凭证
      */
     @Schema(description = "登录凭证(Iv)")
+    /** WXIV */
     private String wxIv;
 
 
@@ -83,5 +93,6 @@ public class LoginData {
      * 登录凭证
      */
     @Schema(description = "登录凭证(会话Key)")
+    /** WX会话密钥 */
     private String wxSessionKey;
 }

@@ -7,8 +7,8 @@ import java.util.List;
 /**
  * 提交答题卡DTO
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class MarkingSubmitDTO {
@@ -35,7 +35,9 @@ public class MarkingSubmitDTO {
 
     @Data
     public static class AnswerItem {
+        /** QuestionID */
         private Long questionId;
+        /** Answer */
         private String answer;
     }
 }

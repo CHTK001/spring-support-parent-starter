@@ -14,8 +14,8 @@ import java.time.LocalDateTime;
  *
  * <p>持久化会话下的每一条聊天消息，重启后历史不丢失。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("sys_ai_message")
@@ -25,47 +25,55 @@ public class SysAiMessage {
      * 消息主键 ID
      */
     @TableId(type = IdType.AUTO)
+    /** SYSAI消息ID */
     private Long sysAiMessageId;
 
     /**
      * 会话 ID
      */
     @TableField("sys_ai_session_id")
+    /** SYSAI会话ID */
     private Long sysAiSessionId;
 
     /**
      * 消息角色（system / user / assistant / tool）
      */
     @TableField("sys_ai_message_role")
+    /** SYSAI消息role */
     private String sysAiMessageRole;
 
     /**
      * 消息类型（TEXT 等）
      */
     @TableField("sys_ai_message_type")
+    /** SYSAI消息类型 */
     private String sysAiMessageType;
 
     /**
      * 消息内容
      */
     @TableField("sys_ai_message_content")
+    /** SYSAI消息内容 */
     private String sysAiMessageContent;
 
     /**
      * 附件地址
      */
     @TableField("sys_ai_message_attachment")
+    /** SYSAI消息attachment */
     private String sysAiMessageAttachment;
 
     /**
      * 创建时间
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)
+    /** Create时间 */
     private LocalDateTime createTime;
 
     /**
      * 更新时间
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
+    /** Update时间 */
     private LocalDateTime updateTime;
 }

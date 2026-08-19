@@ -11,9 +11,13 @@ import java.time.LocalDateTime;
 @Getter
 public abstract class PaymentEvent extends ApplicationEvent {
 
+    /** 事件类型 */
     private final String eventType;
+    /** TenantID */
     private final Long tenantId;
+    /** MerchantID */
     private final Long merchantId;
+    /** OccurredAT */
     private final LocalDateTime occurredAt;
 
     public PaymentEvent(Object source, String eventType, Long tenantId, Long merchantId) {
@@ -24,3 +28,4 @@ public abstract class PaymentEvent extends ApplicationEvent {
         this.occurredAt = LocalDateTime.now();
     }
 }
+

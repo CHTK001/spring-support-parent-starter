@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * 支付回调处理服务
+ * @author CH
  */
 public interface PaymentNotifyProcessService {
 
@@ -46,3 +47,4 @@ public interface PaymentNotifyProcessService {
      */
     void retryFailedNotify(Long errorId);
 }
+

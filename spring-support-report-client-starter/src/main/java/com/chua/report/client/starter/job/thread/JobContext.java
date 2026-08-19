@@ -10,9 +10,9 @@ import lombok.Getter;
  * 在任务执行过程中，可通过此类获取任务ID、参数、分片信息等。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/03/11
+ * @author CH
  */
 @Data
 public class JobContext {
@@ -41,6 +41,7 @@ public class JobContext {
      * 任务ID
      */
     @Getter
+    /** 作业ID */
     private final long jobId;
 
     /**
@@ -61,18 +62,21 @@ public class JobContext {
      * 日志文件名
      */
     @Getter
+    /** 作业日志文件名称 */
     private final String jobLogFileName;
 
     /**
      * 分片索引（从0开始）
      */
     @Getter
+    /** Shard索引 */
     private final int shardIndex;
 
     /**
      * 分片总数
      */
     @Getter
+    /** Shard总数 */
     private final int shardTotal;
 
     /**

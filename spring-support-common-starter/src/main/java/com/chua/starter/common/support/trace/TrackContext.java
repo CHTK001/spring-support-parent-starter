@@ -5,6 +5,7 @@ package com.chua.starter.common.support.trace;
  */
 public final class TrackContext {
 
+    /** Link_id */
     private static final ThreadLocal<String> LINK_ID = new ThreadLocal<>();
 
     private TrackContext() {
@@ -22,3 +23,4 @@ public final class TrackContext {
         LINK_ID.remove();
     }
 }
+

@@ -41,15 +41,18 @@ import static com.chua.starter.common.support.utils.RequestUtils.*;
 /**
  * 鉴权客户端操作
  *
- * @author CH
  * @since 2023/10/09
+ * @author CH
  */
 public class AuthClientExecute {
 
+    /** Auth客户端属性 */
     private final AuthClientProperties authClientProperties;
 
+    /** 实例 */
     public static final AuthClientExecute INSTANCE = new AuthClientExecute();
 
+    /** Default_key */
     public static final String DEFAULT_KEY = "1234567980123456";
 
     public static AuthClientExecute getInstance() {

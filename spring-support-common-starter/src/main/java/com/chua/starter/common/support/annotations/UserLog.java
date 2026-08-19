@@ -12,7 +12,6 @@ import java.lang.annotation.*;
  * SysLog 侧重系统操作审计（接口调用、性能分析）。
  * </p>
  *
- * @author CH
  * @see SysLog
  */
 @Inherited

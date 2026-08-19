@@ -6,6 +6,7 @@ import com.chua.starter.monitor.support.entity.MsMonitorConfig;
 import java.util.List;
 import java.util.Map;
 
+/** @author CH */
 public interface MonitorConfigService {
     ReturnResult<MsMonitorConfig> findByKey(String key);
     String getString(String key);

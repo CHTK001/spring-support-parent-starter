@@ -36,3 +36,4 @@ public final class BeanMap {
         return map;
     }
 }
+

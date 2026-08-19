@@ -11,8 +11,8 @@ import java.util.Set;
  * 由业务侧（如系统管理）根据 userId 补充用户的角色编码。
  * </p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Spi("default")
 public interface UserRoleResolver {

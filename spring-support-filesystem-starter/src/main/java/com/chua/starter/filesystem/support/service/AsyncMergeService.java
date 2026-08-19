@@ -5,8 +5,8 @@ package com.chua.starter.filesystem.support.service;
  *
  * <p>包含两个阶段调度：合并调度（分片→合并文件）与上传 OSS 调度（合并文件→对象存储）。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface AsyncMergeService {
 

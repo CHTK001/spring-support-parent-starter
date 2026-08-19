@@ -32,8 +32,8 @@ import java.util.regex.Pattern;
  *
  * <p>执行后写入上下文属性 {@code saveAs} 指定的提取结果。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Component
 public class SpiderExtractNode implements FlowNode {

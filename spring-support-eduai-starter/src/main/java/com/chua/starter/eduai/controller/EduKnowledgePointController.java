@@ -15,8 +15,8 @@ import java.util.List;
 /**
  * 知识点管理控制器
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -25,6 +25,7 @@ import java.util.List;
 @Tag(name = "知识点管理")
 public class EduKnowledgePointController {
 
+    /** Knowledgepoint服务 */
     private final IEduKnowledgePointService knowledgePointService;
 
     /**

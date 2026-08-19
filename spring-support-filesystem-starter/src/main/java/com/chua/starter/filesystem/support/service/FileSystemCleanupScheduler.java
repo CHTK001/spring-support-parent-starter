@@ -24,8 +24,8 @@ import java.util.Optional;
  * <p>定期清理超过保留天数的终态任务（完成/失败/取消），级联删除
  * 分片表、文件主体表、合并记录表、上传记录表及磁盘临时文件。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service

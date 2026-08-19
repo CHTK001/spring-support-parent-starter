@@ -17,15 +17,19 @@ import java.util.Map;
 /**
  * 同步客户端包装器。
  *
- * @author CH
  * @since 2026/07/31
+ * @author CH
  */
 public class SyncClientWrapper implements com.chua.starter.sync.support.client.SyncClient {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SyncClientWrapper.class);
 
+    /** 同步属性 */
     private final SyncProperties syncProperties;
+    /** 环境 */
     private final Environment environment;
+    /** Delegate */
     private com.chua.common.support.network.sync.SyncClient delegate;
 
     /**

@@ -6,8 +6,8 @@ import java.util.Map;
 /**
  * AI 工具调用记录，描述 LLM 一次工具调用的标识、工具名与参数。
  *
- * @author CH
  * @since 4.0.0
+ * @author CH
  */
 public class AiToolCall implements Serializable {
 

@@ -6,11 +6,11 @@ import java.time.LocalDateTime;
 /**
  * 可比较的日期时间类
  *
- * @author CH
  * @since 2024/12/25
  */
 public final class ComparableDateTime {
 
+    /** 本地日期时间 */
     private final LocalDateTime localDateTime;
 
     ComparableDateTime(LocalDateTime localDateTime) {

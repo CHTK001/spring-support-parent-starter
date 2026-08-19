@@ -15,12 +15,14 @@ import org.springframework.core.Ordered;
  *
  * <p>实现 {@link SmartApplicationListener} 以支持多事件类型监听。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class ServiceInfoBannerListener implements SmartApplicationListener {
 
+    /** Detector */
     private final ServiceInfoEndpointDetector detector;
+    /** 属性 */
     private final ServiceInfoProperties properties;
     private volatile boolean bannerPrinted = false;
 

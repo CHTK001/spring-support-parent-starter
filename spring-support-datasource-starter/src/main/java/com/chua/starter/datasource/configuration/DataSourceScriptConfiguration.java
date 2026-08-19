@@ -37,12 +37,13 @@ import java.util.stream.Collectors;
  * 确保脚本在其他依赖数据库的 Bean（如 EntityManagerFactory、SqlSessionFactory）之前执行。
  * </p>
  *
- * @author CH
  * @since 2025/9/3 9:07
+ * @author CH
  */
 @Slf4j
 public class DataSourceScriptConfiguration implements BeanPostProcessor {
 
+    /** 数据来源script属性 */
     private final DataSourceScriptProperties dataSourceScriptProperties;
 
     /**
@@ -122,15 +123,17 @@ public class DataSourceScriptConfiguration implements BeanPostProcessor {
      *   <li>异步执行 INITDATA 脚本（初始化数据，使用虚拟线程）</li>
      * </ol>
      *
-     * @author CH
      * @version 1.2.0
      * @since 2025/9/3 9:07
      */
     @Slf4j
     static class FlywayLikePopulator {
 
+        /** DS */
         private final DataSource ds;
+        /** JDBC */
         private final JdbcTemplate jdbc;
+        /** 数据来源script属性 */
         private final DataSourceScriptProperties dataSourceScriptProperties;
 
         /**

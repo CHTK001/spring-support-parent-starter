@@ -42,8 +42,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   <li>TaskManager cancel/pause/resume 状态机</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @DisplayName("TaskDistributionAutoConfiguration 集成测试")
 class TaskDistributionAutoConfigurationTest {

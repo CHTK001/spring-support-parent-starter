@@ -6,7 +6,9 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * 支付调度任务配置 Mapper
+ * @author CH
  */
 @Mapper
 public interface PaymentSchedulerConfigMapper extends BaseMapper<PaymentSchedulerConfig> {
 }
+

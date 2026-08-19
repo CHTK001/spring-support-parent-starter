@@ -11,8 +11,8 @@ import java.time.Instant;
  * <p>每条被监控的 SQL 执行完成后发布一次，携带执行耗时、数据源名、结果信息。
  * 可通过 Spring 事件监听或 {@link SqlExecutionListener} 消费。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Getter
 public class SqlExecutionEvent extends ApplicationEvent {

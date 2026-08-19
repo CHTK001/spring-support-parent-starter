@@ -44,8 +44,8 @@ import java.util.UUID;
  * <p>
  * 提供 AI 模型厂商的增删改查、工厂列表查询以及 Logo 上传下载接口。
  *
- * @author CH
  * @since 2026/04/03
+ * @author CH
  */
 @Tag(name = "AI Manufacturer Controller", description = "AI 厂商管理相关接口")
 @RestController
@@ -67,6 +67,7 @@ public class AiManufacturerController {
      * 运行目录（用于 Logo 文件存储）
      */
     @Value("${user.dir:.}")
+    /** 用户目录 */
     private String userDir;
 
     @Permission("admin")

@@ -5,8 +5,8 @@ import java.util.Objects;
 /**
  * 调度任务 (内存模型)。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class JobDefinition {
 

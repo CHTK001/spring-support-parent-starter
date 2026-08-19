@@ -4,11 +4,12 @@ package com.chua.starter.mybatis.interceptor;
  * 只读模式异常
  * 当数据库处于只读模式时，执行更新、插入、删除操作会抛出此异常
  *
- * @author CH
  * @since 2024/12/04
+ * @author CH
  */
 public class ReadOnlyException extends RuntimeException {
 
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
 
     /**

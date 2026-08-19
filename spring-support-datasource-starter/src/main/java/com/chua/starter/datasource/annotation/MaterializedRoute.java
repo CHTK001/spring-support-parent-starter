@@ -9,7 +9,6 @@ import java.lang.annotation.*;
  * 未命中或内存执行失败时自动回落到原始数据源。
  * </p>
  *
- * @author CH
  * @since 2026/4/2
  */
 @Target({ElementType.TYPE, ElementType.METHOD})

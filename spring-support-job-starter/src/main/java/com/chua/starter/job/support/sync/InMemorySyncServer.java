@@ -23,8 +23,8 @@ import java.util.Map;
  *
  * <p>所有 publish / send 都进入内存列表,可通过 {@link #getPublished} 断言。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class InMemorySyncServer implements SyncServer {
 

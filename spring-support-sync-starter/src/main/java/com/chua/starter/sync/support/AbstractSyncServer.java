@@ -21,7 +21,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * 触发同步事件。
  * </p>
  *
- * @author CH
  * @since 4.0.0.42
  */
 public abstract class AbstractSyncServer extends AbstractServer implements SyncServer {

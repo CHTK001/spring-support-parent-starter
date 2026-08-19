@@ -7,8 +7,8 @@ import lombok.Data;
 /**
  * 模板预览响应
  *
- * @author CH
  * @since 2026/08/03
+ * @author CH
  */
 @Data
 @Builder
@@ -19,17 +19,20 @@ public class TemplatePreviewResponse {
      * 渲染后的模板内容
      */
     @Schema(description = "渲染后的模板内容")
+    /** 内容 */
     private String content;
 
     /**
      * 模板中未被填充的占位符列表
      */
     @Schema(description = "模板中未被填充的占位符列表")
+    /** Unresolved参数 */
     private java.util.List<String> unresolvedParams;
 
     /**
      * 模板内容是否完整（所有占位符均被填充）
      */
     @Schema(description = "模板内容是否完整（所有占位符均被填充）")
+    /** Complete */
     private boolean complete;
 }

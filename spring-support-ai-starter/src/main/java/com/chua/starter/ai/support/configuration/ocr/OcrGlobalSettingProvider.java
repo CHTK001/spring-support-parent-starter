@@ -15,8 +15,8 @@ import java.util.List;
  * <p>OCR 核心链路：detect → crop → recognize；可选 directionModel 方向矫正、restorerModel
  * 文字超分修复。检测置信度阈值过滤低分检测框，避免误识别背景噪声。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Spi("ocr")
 public class OcrGlobalSettingProvider implements GlobalSettingProvider {

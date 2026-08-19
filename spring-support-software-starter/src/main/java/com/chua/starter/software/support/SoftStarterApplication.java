@@ -10,8 +10,8 @@ import org.springframework.context.annotation.ComponentScan;
  *
  * <p>内置 H2 内存数据库，可直接运行 mvn spring-boot:run 启动测试。</p>
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 @SpringBootApplication
 @ComponentScan(basePackages = "com.chua.starter.software.support")

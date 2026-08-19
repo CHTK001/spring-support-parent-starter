@@ -10,8 +10,8 @@ import java.lang.reflect.Method;
  * <p>{@link com.chua.starter.job.support.annotation.Job} 标注的方法
  * 由 {@link JobAnnotationScanner} 包装为本处理器并注册。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class BeanJobHandler implements JobHandler {

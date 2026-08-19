@@ -15,14 +15,16 @@ import java.util.zip.GZIPOutputStream;
  * 对消息内容进行GZIP压缩和解压
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @Slf4j
 @Component
 public class GzipMessageConverter implements MessageConverter {
 
-    private static final int MIN_COMPRESS_SIZE = 1024; // 1KB
+    /** 1KB */
+    private static final int MIN_COMPRESS_SIZE = 1024;
+    /** Compressed_header */
     private static final String COMPRESSED_HEADER = "X-Compressed";
 
     @Override

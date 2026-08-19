@@ -8,8 +8,8 @@ import java.util.List;
  * <p>Leader 单秒循环通过 {@link #findDue(long, int)} 查询当前到期任务,
  * 非 Leader 节点不会调用。生产建议基于 MyBatis-Plus / JDBC 替换默认实现。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface JobRepository {
 

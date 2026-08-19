@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 全局设置控制器（单条记录），提供查询与更新。
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 @RestController
 @RequestMapping("/v2/global-settings")

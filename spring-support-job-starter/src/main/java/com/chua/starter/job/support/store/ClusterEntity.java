@@ -17,8 +17,8 @@ import java.io.Serializable;
  * <p>字段以表名 {@code sys_job_cluster} 作为前缀;
  * 审计字段来自 {@link SysBase}。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -29,29 +29,34 @@ public class ClusterEntity extends SysBase implements Serializable {
      * 序列化版本
      */
     @Serial
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
      * 集群命名空间 (主键, 字符串)
      */
     @TableId(value = "sys_job_cluster_id", type = IdType.INPUT)
+    /** SYS作业clusterID */
     private String sysJobClusterId;
 
     /**
      * 当前 Leader 节点 ID
      */
     @TableField("sys_job_cluster_leader_node")
+    /** SYS作业clusterleader节点 */
     private String sysJobClusterLeaderNode;
 
     /**
      * 租约到期时间戳 (毫秒)
      */
     @TableField("sys_job_cluster_lease_until_ms")
+    /** SYS作业clusterleaseuntilMS */
     private Long sysJobClusterLeaseUntilMs;
 
     /**
      * 乐观锁版本 (续约 +1)
      */
     @TableField("sys_job_cluster_version")
+    /** SYS作业cluster版本 */
     private Long sysJobClusterVersion;
 }

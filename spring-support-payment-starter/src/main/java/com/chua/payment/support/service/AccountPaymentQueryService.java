@@ -7,6 +7,7 @@ import com.chua.payment.support.vo.OrderVO;
 
 import java.util.List;
 
+/** @author CH */
 public interface AccountPaymentQueryService {
 
     Page<OrderVO> listOrdersByUser(Long userId, int page, int size, String orderNo, String status);
@@ -17,3 +18,4 @@ public interface AccountPaymentQueryService {
 
     Page<TransactionRecord> listTransactionsByUser(Long userId, int pageNum, int pageSize, String orderNo, String transactionType, Integer status);
 }
+

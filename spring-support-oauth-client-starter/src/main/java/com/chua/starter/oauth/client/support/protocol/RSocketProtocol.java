@@ -36,9 +36,9 @@ import java.util.Map;
  * RSocket 协议实现
  * 使用 RSocket 进行 OAuth 认证，支持响应式通信
  *
- * @author CH
  * @version 1.0.0
  * @since 2025-12-02
+ * @author CH
  */
 @Spi({"rsocket"})
 @Slf4j

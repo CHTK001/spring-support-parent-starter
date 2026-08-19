@@ -45,8 +45,8 @@ import java.util.UUID;
  * <p>队列消费由 {@link MessageTemplate} Bean 驱动（默认实现来自 queue-starter 的 LocalMessageTemplate），
  * 失败时记录错误到 {@code ai_comment} 列，前端轮询可观察到。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service
@@ -71,11 +71,17 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
      */
     private static final int STATUS_TEACHER_DONE = 2;
 
+    /** Answersheetmapper */
     private final EduAnswerSheetMapper answerSheetMapper;
+    /** Marking结果mapper */
     private final EduMarkingResultMapper markingResultMapper;
+    /** Questionmapper */
     private final EduQuestionMapper questionMapper;
+    /** EDUAI服务 */
     private final EduAiService eduAiService;
+    /** 属性 */
     private final EduAiProperties properties;
+    /** 消息模板 */
     private final MessageTemplate messageTemplate;
 
     @Override

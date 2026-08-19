@@ -9,7 +9,6 @@ import java.lang.annotation.*;
  * 只有标记了此注解的接口才会进行指纹验证。
  * </p>
  *
- * @author CH
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)

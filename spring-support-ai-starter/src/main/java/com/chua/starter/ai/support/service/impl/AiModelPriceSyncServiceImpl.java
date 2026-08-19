@@ -23,7 +23,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AiModelPriceSyncServiceImpl implements AiModelPriceSyncService {
 
+    /** SYSAI模型设置mapper */
     private final SysAiModelSettingMapper sysAiModelSettingMapper;
+    /** Chat客户端注册表 */
     private final ChatClientRegistry chatClientRegistry;
 
     @Override

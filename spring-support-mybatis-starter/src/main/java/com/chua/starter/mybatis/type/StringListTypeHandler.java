@@ -18,11 +18,13 @@ import java.util.List;
  *
  * @author 永不言败
  * @since 2022 3/23 12:50:15
+ * @author CH
  */
 @MappedJdbcTypes(JdbcType.VARCHAR)
 @MappedTypes(List.class)
 public class StringListTypeHandler implements TypeHandler<List<String>> {
 
+    /** Comma */
     private static final String COMMA = ",";
 
     @Override
@@ -56,3 +58,4 @@ public class StringListTypeHandler implements TypeHandler<List<String>> {
         return Splitter.on(COMMA).trimResults().splitToList(value);
     }
 }
+

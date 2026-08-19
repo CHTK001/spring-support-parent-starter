@@ -8,8 +8,8 @@ import java.util.List;
 /**
  * AI 全局设置保存请求模型。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class SysAiGlobalSettingSaveRequest {

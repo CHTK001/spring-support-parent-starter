@@ -22,9 +22,9 @@ import java.util.Set;
  *         - /v2/**
  * </pre>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/12/07
+ * @author CH
  */
 @ConfigurationProperties(prefix = "plugin.api.cors", ignoreInvalidFields = true)
 public class ApiCorsProperties {

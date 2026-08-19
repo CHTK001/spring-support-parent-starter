@@ -22,8 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * 海康设备会话实现（模拟）
  * <p>实际应调用海康 HCNetSDK / ISUP / 萤石云 SDK。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class HikvisionSession implements DeviceSession {

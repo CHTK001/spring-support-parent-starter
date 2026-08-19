@@ -6,7 +6,6 @@ import java.lang.annotation.*;
  * 删除操作仅限本表自身注解
  * 用于标记删除操作时只删除当前实体对应的数据，不进行关联删除
  *
- * @author CH
  * @since 2025/9/4 14:17
  */
 @Target(ElementType.TYPE)

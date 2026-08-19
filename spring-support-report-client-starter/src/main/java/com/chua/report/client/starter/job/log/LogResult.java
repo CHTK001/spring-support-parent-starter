@@ -10,14 +10,15 @@ import java.io.Serializable;
 /**
  * 日志结果
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/03/11
+ * @author CH
  */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class LogResult implements Serializable {
+    /** Serial版本UID */
     private static final long serialVersionUID = 42L;
 
     /**

@@ -31,8 +31,8 @@ import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE
  * 基于 MyBatis Plus 操作 sys_ai_manufacturer 表，
  * 提供厂商的增删改查，并缓存列表以降低频繁读取。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service

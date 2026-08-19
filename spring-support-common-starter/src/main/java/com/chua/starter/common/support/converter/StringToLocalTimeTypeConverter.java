@@ -8,8 +8,8 @@ import java.time.LocalTime;
 /**
  * str -> LocalTime
  *
- * @author CH
  * @since 2022/8/11 9:14
+ * @author CH
  */
 public class StringToLocalTimeTypeConverter implements Converter<String, LocalTime> {
     @Override

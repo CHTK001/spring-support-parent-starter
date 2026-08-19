@@ -15,7 +15,6 @@ import org.slf4j.MDC;
 import java.sql.Statement;
 
 /**
- * @author CH
  * @since 2025/6/27 15:54
  */
 @Intercepts({

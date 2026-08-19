@@ -16,8 +16,8 @@ import java.util.List;
 /**
  * 事件查询 Controller
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @RestController
 @RequestMapping("/api/device/events")

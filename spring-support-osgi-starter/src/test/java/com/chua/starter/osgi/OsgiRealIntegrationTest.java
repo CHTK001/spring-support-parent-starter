@@ -36,8 +36,8 @@ import java.util.Map;
  * java -cp target/test-classes;... com.chua.starter.osgi.OsgiRealIntegrationTest
  * </pre>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class OsgiRealIntegrationTest {
 

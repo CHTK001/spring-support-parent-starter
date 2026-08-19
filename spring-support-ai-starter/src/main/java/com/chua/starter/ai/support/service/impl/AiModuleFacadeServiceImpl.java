@@ -40,18 +40,27 @@ import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE
 @Slf4j
 public class AiModuleFacadeServiceImpl implements AiModuleFacadeService {
 
+    /** Local_onnx_colorization_module_code */
     public static final String LOCAL_ONNX_COLORIZATION_MODULE_CODE = "local-onnx-colorization";
+    /** Local_onnx_resolution_module_code */
     public static final String LOCAL_ONNX_RESOLUTION_MODULE_CODE = "local-onnx-resolution";
+    /** Local_onnx_face_enhance_module_code */
     public static final String LOCAL_ONNX_FACE_ENHANCE_MODULE_CODE = "local-onnx-face-enhance";
+    /** Local_onnx_face_detect_module_code */
     public static final String LOCAL_ONNX_FACE_DETECT_MODULE_CODE = "local-onnx-face-detect";
+    /** Local_onnx_matting_u2net_module_code */
     public static final String LOCAL_ONNX_MATTING_U2NET_MODULE_CODE = "local-onnx-matting-u2net";
 
+    /** AImodulemapper */
     private final AiModuleMapper aiModuleMapper;
+    /** AI设置facade服务 */
     private final AiSettingFacadeService aiSettingFacadeService;
+    /** SYSAI设置mapper */
     private final SysAiSettingMapper sysAiSettingMapper;
 
     @Lazy
     @Autowired
+    /** Self */
     private AiModuleFacadeServiceImpl self;
 
     @Override

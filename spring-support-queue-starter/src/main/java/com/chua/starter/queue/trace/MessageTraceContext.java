@@ -12,8 +12,8 @@ import java.util.Map;
  * 记录消息在系统中的流转路径和处理信息
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @Data
 public class MessageTraceContext {

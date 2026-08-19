@@ -12,8 +12,8 @@ import static com.chua.starter.mybatis.properties.MybatisPlusProperties.PRE;
  *
  * <p>配置前缀：{@code plugin.mybatis.slow-sql}</p>
  *
- * @author CH
  * @since 2026/4/27
+ * @author CH
  */
 @ConfigurationProperties(prefix = PRE + ".slow-sql")
 public class MybatisSlowSqlProperties {

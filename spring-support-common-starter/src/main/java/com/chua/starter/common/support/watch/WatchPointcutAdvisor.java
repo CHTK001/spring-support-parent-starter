@@ -24,6 +24,7 @@ import java.util.*;
  */
 @Lazy
 public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(WatchPointcutAdvisor.class);
     @Override
     public boolean matches(Method method, Class<?> targetClass) {

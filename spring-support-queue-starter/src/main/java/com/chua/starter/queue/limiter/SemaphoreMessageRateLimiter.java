@@ -14,14 +14,15 @@ import java.util.concurrent.TimeUnit;
  * 使用信号量控制并发消息处理数量
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @Slf4j
 @Component
 public class SemaphoreMessageRateLimiter implements MessageRateLimiter {
 
     private final ConcurrentHashMap<String, Semaphore> semaphores = new ConcurrentHashMap<>();
+    /** Default_permits */
     private static final int DEFAULT_PERMITS = 100;
 
     @Override

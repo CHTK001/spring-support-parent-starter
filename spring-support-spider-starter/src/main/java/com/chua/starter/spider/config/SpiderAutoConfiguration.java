@@ -33,8 +33,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * 以及将 10 个爬虫节点（request/extract/transform/subLoop/map/output/condition/script/db/function）
  * 注册到 {@link FlowNodeRegistry}，供流程编排与节点清单使用。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @AutoConfiguration
 @AutoConfigureAfter(name = "com.chua.starter.mybatis.MybatisPlusConfiguration")

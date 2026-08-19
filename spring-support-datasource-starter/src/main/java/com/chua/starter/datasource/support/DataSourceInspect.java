@@ -34,16 +34,20 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 
 /**
  * 数据库注入
+ * @author CH
  */
 @Slf4j
 public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         EnvironmentAware,
         ApplicationContextAware {
 
+    /** 数据来源class */
     protected Class<DataSource> dataSourceClass;
+    /** Application上下文 */
     private ApplicationContext applicationContext;
 
     @Value("${spring.datasource.druid.filters:}")
+    /** 过滤器 */
     private String filter;
 
     {
@@ -56,15 +60,19 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         }
     }
 
+    /** Transaction */
     private static final String TRANSACTION = "_transaction";
+    /** Prefix */
     private final String[] PREFIX = new String[]{
             "spring.datasource.hikari.*",
             "spring.datasource.druid.*",
             "spring.datasource.*",
     };
 
+    /** 环境 */
     private Environment environment;
 
+    /** 环境support */
     private EnvironmentSupport environmentSupport;
 
     @Override
@@ -436,3 +444,4 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         this.environmentSupport = new EnvironmentSupport(environment);
     }
 }
+

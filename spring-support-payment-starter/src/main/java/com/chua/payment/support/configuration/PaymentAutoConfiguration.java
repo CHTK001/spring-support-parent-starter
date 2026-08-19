@@ -16,6 +16,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 /**
  * 支付模块自动配置
+ * @author CH
  */
 @AutoConfiguration
 @MapperScan("com.chua.payment.support.mapper")
@@ -56,3 +57,4 @@ public class PaymentAutoConfiguration {
         };
     }
 }
+

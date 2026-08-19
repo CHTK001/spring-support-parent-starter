@@ -5,8 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Map;
 
+/** @author CH */
 public class Json {
 
+    /** Mapper */
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     public static String toJson(Object value) {
@@ -25,3 +27,4 @@ public class Json {
         }
     }
 }
+

@@ -36,7 +36,6 @@ import java.util.concurrent.atomic.AtomicReference;
  * <p>使用 {@link TcpSyncServer}（真实 TCP 长连接）+ {@link TcpSyncClient}，
  * 覆盖 {@link DataSyncAgentServer} 网络模式所依赖的 SyncServer 链路。</p>
  *
- * @author CH
  * @since 4.0.0.42
  */
 public final class DataSyncReconnectProbe {

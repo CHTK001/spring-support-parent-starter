@@ -12,8 +12,8 @@ import java.util.Map;
  * ProtocolExecutor接口定义了协议执行器的行为。
  * 它旨在提供一种标准化的方式，来执行特定的协议操作。
  *
- * @author CH
  * @since 2024/6/12
+ * @author CH
  */
 public interface ProtocolExecutor {
 

@@ -7,7 +7,6 @@ import java.lang.annotation.*;
 /**
  * 解析参数 (Header: application/json)
  *
- * @author CH
  * @since 2023-08-01
  * @see org.springframework.web.bind.annotation.RequestParam
  */

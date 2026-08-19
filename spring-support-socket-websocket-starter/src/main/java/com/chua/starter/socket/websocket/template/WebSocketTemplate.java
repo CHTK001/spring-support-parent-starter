@@ -17,12 +17,13 @@ import java.util.Collection;
  * 提供便捷的消息发送方法
  * </p>
  *
- * @author CH
  * @since 2025-12-25
+ * @author CH
  */
 @Slf4j
 public class WebSocketTemplate {
 
+    /** 会话管理器 */
     private final WebSocketSessionManager sessionManager;
 
     /**

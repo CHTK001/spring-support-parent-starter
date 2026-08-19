@@ -6,8 +6,8 @@ package com.chua.starter.job.support.log;
  * <p>默认实现见 {@link StdoutJobLogSink}, 仅打印到 stdout;
  * 生产环境可基于 MyBatis-Plus / JDBC 实现覆盖。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface JobLogSink {
 

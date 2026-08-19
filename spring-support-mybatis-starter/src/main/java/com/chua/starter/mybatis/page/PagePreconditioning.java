@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
  * @author CH
  */
 public class PagePreconditioning<T> {
+    /** 页 */
     private final IPage<T> page;
 
     public PagePreconditioning(IPage<T> page) {

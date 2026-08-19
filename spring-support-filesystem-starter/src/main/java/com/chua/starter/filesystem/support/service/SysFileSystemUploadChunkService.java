@@ -8,8 +8,8 @@ import java.util.List;
 /**
  * 文件系统分片上传详情服务接口。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface SysFileSystemUploadChunkService extends IService<SysFileSystemUploadChunk> {
 

@@ -12,8 +12,8 @@ import java.time.LocalDateTime;
 /**
  * AI 用量记录表
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("sys_ai_usage")
@@ -23,6 +23,7 @@ public class SysAiUsage {
      * 主键ID
      */
     @TableId(type = IdType.AUTO)
+    /** ID */
     private Long id;
 
     /**
@@ -94,12 +95,14 @@ public class SysAiUsage {
      * 创建时间
      */
     @TableField(fill = FieldFill.INSERT)
+    /** Create时间 */
     private LocalDateTime createTime;
 
     /**
      * 更新时间
      */
     @TableField(fill = FieldFill.INSERT_UPDATE)
+    /** Update时间 */
     private LocalDateTime updateTime;
 }
 

@@ -32,9 +32,9 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * <p>采集能力通过 {@link OshiSystemMonitor} 统一封装，本类只负责调度与上报。</p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/12/05
+ * @author CH
  */
 @Slf4j
 public class DeviceMetricsReporter {
@@ -68,18 +68,21 @@ public class DeviceMetricsReporter {
      * SyncClient 实例
      */
     @Setter
+    /** 同步客户端 */
     private SyncClient syncClient;
 
     /**
      * 应用名称
      */
     @Setter
+    /** APP名称 */
     private String appName;
 
     /**
      * 主机地址
      */
     @Setter
+    /** 主机 */
     private String host;
 
     /**
@@ -101,12 +104,14 @@ public class DeviceMetricsReporter {
      * 上报间隔（秒）
      */
     @Setter
+    /** 间隔秒 */
     private long intervalSeconds = 30;
 
     /**
      * 要上报的指标类型（默认全部）
      */
     @Setter
+    /** 是否启用metrics */
     private Set<MetricType> enabledMetrics = Set.of(MetricType.values());
 
     /**

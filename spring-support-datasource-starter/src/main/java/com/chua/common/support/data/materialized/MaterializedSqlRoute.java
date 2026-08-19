@@ -6,15 +6,18 @@ import lombok.Data;
 /**
  * SQL 路由结果。
  *
- * @author CH
  * @since 2026/4/2
+ * @author CH
  */
 @Data
 @Builder
 public class MaterializedSqlRoute {
 
+    /** Routed */
     private boolean routed;
+    /** 数据来源 */
     private String dataSource;
+    /** 缓存密钥 */
     private String cacheKey;
 
     public static MaterializedSqlRoute notRouted() {

@@ -61,7 +61,6 @@ import java.lang.annotation.*;
  *   <li>OAUTH - OAuth认证平台</li>
  * </ul>
  *
- * @author CH
  * @since 2020-09-23
  * @version 1.0.0
  * @see com.chua.starter.common.support.api.properties.ApiProperties.PlatformType

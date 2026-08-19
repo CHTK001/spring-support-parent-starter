@@ -21,9 +21,11 @@ import org.springframework.util.StringUtils;
 
 /**
  * 支付宝电脑网站支付
+ * @author CH
  */
 public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel implements PaymentChannel {
 
+    /** 提供者gateway注册表 */
     private final PaymentProviderGatewayRegistry providerGatewayRegistry;
 
     public AlipayWebPaymentChannel(MerchantChannelService merchantChannelService,
@@ -170,3 +172,4 @@ public class AlipayWebPaymentChannel extends AbstractMerchantPaymentChannel impl
         return "FAILED";
     }
 }
+

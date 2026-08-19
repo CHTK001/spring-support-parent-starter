@@ -7,8 +7,8 @@ import java.util.List;
 /**
  * 模型供应商服务接口
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 public interface AiProviderService {
 

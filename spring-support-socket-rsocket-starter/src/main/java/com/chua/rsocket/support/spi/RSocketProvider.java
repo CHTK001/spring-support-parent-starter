@@ -15,9 +15,9 @@ import java.util.List;
  * RSocket 协议提供者
  * 实现基础 Socket 模块的 SPI 接口
  *
- * @author CH
  * @version 1.0.0
  * @since 2024-12-04
+ * @author CH
  */
 @Slf4j
 @Spi("rsocket")

@@ -40,8 +40,8 @@ import java.util.Set;
  *       allowed-release-types: STABLE,RC           # 允许执行的版本类型集合(可选,覆盖release-type)
  * </pre>
  *
- * @author CH
  * @since 2025/9/3 9:05
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = DataSourceScriptProperties.PRE)
@@ -420,8 +420,8 @@ public class DataSourceScriptProperties {
      * 版本发布类型枚举
      * 用于控制允许执行的脚本版本类型
      *
-     * @author CH
      * @since 2025/12/4
+     * @author CH
      */
     @Getter
     public enum ReleaseType {

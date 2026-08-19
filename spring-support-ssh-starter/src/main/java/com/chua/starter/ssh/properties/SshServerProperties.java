@@ -9,8 +9,8 @@ import java.util.List;
 /**
  * SSH服务端配置属性
  * 
- * @author CH
  * @version 4.0.0.32
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = "plugin.ssh.server")

@@ -23,8 +23,8 @@ import java.time.LocalDateTime;
 /**
  * 软件源表 Service 实现
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 @Service
 @RequiredArgsConstructor

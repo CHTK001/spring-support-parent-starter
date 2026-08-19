@@ -15,8 +15,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * 基于 common-starter WebSocketSyncServer 验证服务端核心行为。
  * </p>
  *
- * @author CH
  * @since 2026/07/31
+ * @author CH
  */
 class SyncServerTest {
 

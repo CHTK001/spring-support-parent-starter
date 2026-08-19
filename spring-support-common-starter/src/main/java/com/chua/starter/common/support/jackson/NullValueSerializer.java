@@ -12,14 +12,16 @@ import java.io.IOException;
 import java.io.Serial;
 
 /**
- * @author CH
  * @since 2024/8/24
+ * @author CH
  */
 public class NullValueSerializer extends StdSerializer<NullValue> {
 
     @Serial
+    /** Serial版本UID */
     private static final long serialVersionUID = 1999052150548658808L;
 
+    /** Class标识符 */
     private final String classIdentifier;
 
     /**

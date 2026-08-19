@@ -3,8 +3,8 @@ package com.chua.common.support.ai.agent;
 /**
  * Agent 调用用量统计（token / cost / model）。
  *
- * @author CH
  * @since 4.0.0
+ * @author CH
  */
 public class AgentUsage {
 

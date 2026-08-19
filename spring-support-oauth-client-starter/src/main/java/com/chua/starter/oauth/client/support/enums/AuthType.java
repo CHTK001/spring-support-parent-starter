@@ -5,9 +5,9 @@ package com.chua.starter.oauth.client.support.enums;
  * 认证类型枚举
  * <p>定义系统支持的认证方式</p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2022/7/26 8:20
+ * @author CH
  */
 public enum AuthType {
 

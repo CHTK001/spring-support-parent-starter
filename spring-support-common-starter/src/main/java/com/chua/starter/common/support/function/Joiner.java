@@ -5,8 +5,11 @@ package com.chua.starter.common.support.function;
  */
 public final class Joiner {
 
+    /** Separator */
     private final String separator;
+    /** Omit是否为空 */
     private final boolean omitEmpty;
+    /** Trimresults */
     private final boolean trimResults;
 
     private Joiner(String separator, boolean omitEmpty, boolean trimResults) {
@@ -61,3 +64,4 @@ public final class Joiner {
         return join(java.util.Arrays.asList(parts));
     }
 }
+

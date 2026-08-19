@@ -23,7 +23,6 @@ import java.lang.annotation.*;
  * List<SysUser> selectAllUserList();
  * }</pre>
  *
- * @author CH
  * @since 2022/7/29 8:23
  */
 @Target({ElementType.METHOD, ElementType.TYPE})

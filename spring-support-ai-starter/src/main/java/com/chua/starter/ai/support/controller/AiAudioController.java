@@ -26,8 +26,8 @@ import java.nio.file.Path;
  * asr 分组配置（服务商 / 模型 / 语言），创建 {@link AudioClient} 并转写上传的音频文件。
  * 支持本地 whisper（离线）与云端 ASR（openai / alibaba-asr 等）。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController

@@ -3,7 +3,6 @@ package com.chua.starter.common.support.network;
 /**
  * User-Agent 工具。
  *
- * @author CH
  * @since 4.0.0.42
  */
 public final class UserAgent {
@@ -64,7 +63,9 @@ public final class UserAgent {
      * User-Agent 信息。
      */
     public static final class UserAgentInfo {
+        /** Browser */
         private final Browser browser;
+        /** Operatingsystem */
         private final OperatingSystem operatingSystem;
 
         public UserAgentInfo(Browser browser, OperatingSystem operatingSystem) {

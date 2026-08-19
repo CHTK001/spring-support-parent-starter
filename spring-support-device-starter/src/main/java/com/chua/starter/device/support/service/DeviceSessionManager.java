@@ -11,8 +11,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * 设备会话管理器
  * <p>维护设备 ID 与会话的映射关系，统一生命周期管理。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Component
 public class DeviceSessionManager {

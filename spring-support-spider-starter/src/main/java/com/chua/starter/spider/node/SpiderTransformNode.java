@@ -29,8 +29,8 @@ import java.util.List;
  *   <li>{@code saveAs} 结果写入的上下文属性名（必填）</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Component
 public class SpiderTransformNode implements FlowNode {

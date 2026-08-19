@@ -46,7 +46,6 @@ import java.util.Map;
  * }</pre>
  * </p>
  *
- * @author CH
  * @since 2026/07/14
  */
 @Slf4j

@@ -17,12 +17,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 钱包账户控制器
+ * @author CH
  */
 @RestController
 @RequestMapping("/wallet")
 @RequiredArgsConstructor
 public class WalletAccountController {
 
+    /** Walletaccount服务 */
     private final WalletAccountService walletAccountService;
 
     @GetMapping("/account")
@@ -47,3 +49,4 @@ public class WalletAccountController {
         return Result.success(PageResult.of(page));
     }
 }
+

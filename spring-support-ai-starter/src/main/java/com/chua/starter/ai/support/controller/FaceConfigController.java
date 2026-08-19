@@ -29,8 +29,8 @@ import java.util.stream.Collectors;
  * <p>提供 {@code face} 分组全局配置的读取与更新，以及可用模型清单。
  * 配置更新后 {@link FaceClientManager} 监听事件热重建，实时生效。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController

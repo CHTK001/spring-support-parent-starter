@@ -20,6 +20,7 @@ public class MessageConverterProperties {
     private boolean enable = false;
 
 
+    /** PRE */
     public static final String PRE = "plugin.message";
 
     /**

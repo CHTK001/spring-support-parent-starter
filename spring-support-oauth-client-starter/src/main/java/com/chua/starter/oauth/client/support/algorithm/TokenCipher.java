@@ -14,7 +14,6 @@ import java.nio.charset.StandardCharsets;
  * 保证登录侧（SysLoginServiceImpl）、静态鉴权侧（StaticProtocol）与登录执行器（StaticProtocolExecutor）
  * 生成和解析 token 的算法完全一致，避免各实现各自维护导致的不兼容问题。</p>
  *
- * @author CH
  * @since 4.0.0.42
  */
 public final class TokenCipher {

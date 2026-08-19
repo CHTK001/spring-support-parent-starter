@@ -21,16 +21,20 @@ import org.slf4j.LoggerFactory;
  * 用于对Actuator端点进行认证，防止未授权访问。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/6/21
+ * @author CH
  */
 @WebFilter(filterName = "ActuatorAuthenticationFilter", urlPatterns = {"/actuator/**"})
 public class ActuatorAuthenticationFilter implements Filter  {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ActuatorAuthenticationFilter.class);
+        /** Authorization */
         private static final String AUTHORIZATION = "Authorization";
+    /** Basic */
     private static final String BASIC = "Basic ";
 
+    /** Actuator属性 */
     private final ActuatorProperties actuatorProperties;
 
     public ActuatorAuthenticationFilter(ActuatorProperties actuatorProperties) {

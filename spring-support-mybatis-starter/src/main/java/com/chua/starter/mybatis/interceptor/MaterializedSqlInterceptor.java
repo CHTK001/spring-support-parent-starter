@@ -41,7 +41,6 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * MyBatis SQL 物理化拦截器。
  *
- * @author CH
  * @since 2026/4/2
  */
 @Intercepts({
@@ -50,11 +49,15 @@ import java.util.concurrent.ConcurrentHashMap;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
 })
 public class MaterializedSqlInterceptor implements Interceptor {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(MaterializedSqlInterceptor.class);
 
+    /** None */
     private static final MaterializedRouteDefinition NONE = new MaterializedRouteDefinition(-1L, null);
 
+    /** MaterializedSQLrouter */
     private final MaterializedSqlDataSourceRouter materializedSqlRouter;
+    /** 属性 */
     private final MaterializedRouteProperties properties;
     private final Map<String, MaterializedRouteDefinition> definitionCache = new ConcurrentHashMap<>();
     private final Map<String, MaterializedRouteDefinition> refreshDefinitionCache = new ConcurrentHashMap<>();

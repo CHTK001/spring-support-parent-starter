@@ -36,8 +36,8 @@ import static com.chua.starter.common.support.logger.ModuleLog.*;
  * <p>根据 {@link FileStorageProperties#getServers()} 启动 HTTP 文件服务器，
  * 提供按 bucket 读取存储对象的文件访问能力。</p>
  *
- * @author CH
  * @since 4.0.0
+ * @author CH
  */
 @Slf4j
 public class FileServerManager implements AutoCloseable {

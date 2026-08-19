@@ -19,15 +19,18 @@ import java.util.regex.Pattern;
  *
  * <p>通过 dpkg / rpm / pacman 命令读取已安装包信息，结合 .desktop 文件提取图标和应用名称。</p>
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 @Slf4j
 @Component
 public class LinuxLocalSoftwareCollector implements LocalSoftwareCollector {
 
+    /** Desktop_name */
     private static final Pattern DESKTOP_NAME = Pattern.compile("^Name=(.+)$", Pattern.CASE_INSENSITIVE);
+    /** Desktop_icon */
     private static final Pattern DESKTOP_ICON = Pattern.compile("^Icon=(.+)$", Pattern.CASE_INSENSITIVE);
+    /** Desktop_exec */
     private static final Pattern DESKTOP_EXEC = Pattern.compile("^Exec=(.+)$", Pattern.CASE_INSENSITIVE);
 
     @Override

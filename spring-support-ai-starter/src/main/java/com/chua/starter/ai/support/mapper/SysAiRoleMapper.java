@@ -7,8 +7,8 @@ import org.apache.ibatis.annotations.Mapper;
 /**
  * AI 角色（人设）Mapper。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Mapper
 public interface SysAiRoleMapper extends BaseMapper<SysAiRole> {

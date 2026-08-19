@@ -17,8 +17,8 @@ import java.util.List;
 /**
  * 用量统计控制器，按模型维度查询用量数据。
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 @RestController
 @RequestMapping("/v2/usage")

@@ -7,8 +7,8 @@ import org.springframework.context.ApplicationEvent;
 /**
  * 请求解码设置
  *
- * @author CH
  * @since 2024/12/07
+ * @author CH
  */
 @EqualsAndHashCode(callSuper = true)
 public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade<ApiRequestDecodeSetting> {

@@ -27,6 +27,7 @@ public class AiModel implements Serializable {
      */
     @TableId(value = "sys_ai_model_id", type = IdType.AUTO)
     @Schema(description = "模型主键")
+    /** 模型ID */
     private Long modelId;
 
     /**
@@ -34,6 +35,7 @@ public class AiModel implements Serializable {
      */
     @TableField("sys_ai_model_name")
     @Schema(description = "模型显示名称")
+    /** 模型名称 */
     private String modelName;
 
     /**
@@ -41,6 +43,7 @@ public class AiModel implements Serializable {
      */
     @TableField("sys_ai_model_code")
     @Schema(description = "模型标识（gpt-4o, deepseek-chat）")
+    /** 模型代码 */
     private String modelCode;
 
     /**
@@ -48,6 +51,7 @@ public class AiModel implements Serializable {
      */
     @TableField("sys_ai_model_provider_id")
     @Schema(description = "关联供应商 ID")
+    /** 模型提供者ID */
     private Long modelProviderId;
 
     /**
@@ -55,6 +59,7 @@ public class AiModel implements Serializable {
      */
     @TableField("sys_ai_model_capabilities")
     @Schema(description = "能力标签（逗号分隔: chat,vision,think,search）")
+    /** 模型capabilities */
     private String modelCapabilities;
 
     /**
@@ -62,6 +67,7 @@ public class AiModel implements Serializable {
      */
     @TableField("sys_ai_model_description")
     @Schema(description = "模型描述")
+    /** 模型描述 */
     private String modelDescription;
 
     /**
@@ -69,6 +75,7 @@ public class AiModel implements Serializable {
      */
     @TableField("sys_ai_model_enabled")
     @Schema(description = "是否启用")
+    /** 模型是否启用 */
     private Boolean modelEnabled;
 
     /**
@@ -76,6 +83,7 @@ public class AiModel implements Serializable {
      */
     @TableField("sys_ai_model_sort")
     @Schema(description = "排序值")
+    /** 模型sort */
     private Integer modelSort;
 
     /**
@@ -83,6 +91,7 @@ public class AiModel implements Serializable {
      */
     @TableField(value = "sys_ai_model_create_time", fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
+    /** 模型create时间 */
     private LocalDateTime modelCreateTime;
 
     /**
@@ -90,6 +99,7 @@ public class AiModel implements Serializable {
      */
     @TableField(value = "sys_ai_model_update_time", fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
+    /** 模型update时间 */
     private LocalDateTime modelUpdateTime;
 
     /**
@@ -98,6 +108,7 @@ public class AiModel implements Serializable {
     @TableField("sys_ai_model_deleted")
     @TableLogic
     @Schema(description = "逻辑删除标记")
+    /** 模型删除标记 */
     private Integer modelDeleted;
 
     /**
@@ -105,6 +116,7 @@ public class AiModel implements Serializable {
      */
     @TableField("sys_ai_model_input_price")
     @Schema(description = "输入单价（每 1k tokens）")
+    /** 模型输入price */
     private java.math.BigDecimal modelInputPrice;
 
     /**
@@ -112,6 +124,7 @@ public class AiModel implements Serializable {
      */
     @TableField("sys_ai_model_output_price")
     @Schema(description = "输出单价（每 1k tokens）")
+    /** 模型输出price */
     private java.math.BigDecimal modelOutputPrice;
 
     /**
@@ -119,7 +132,7 @@ public class AiModel implements Serializable {
      */
     @TableField("sys_ai_model_cache_price")
     @Schema(description = "缓存命中单价（每 1k tokens）")
+    /** 模型缓存price */
     private java.math.BigDecimal modelCachePrice;
 }
-
 

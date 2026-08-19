@@ -47,7 +47,6 @@ import java.lang.annotation.Target;
  * }
  * </pre>
  *
- * @author CH
  * @since 2023-01-01
  * @version 1.0.0
  * @see PrivacyTypeEnum

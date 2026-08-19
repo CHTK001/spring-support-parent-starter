@@ -10,17 +10,21 @@ import org.springframework.beans.factory.InitializingBean;
 /**
  * rpc服务bean
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/04/08
+ * @author CH
  */
 @Setter
 @Getter
 public class RpcServiceBean<T> extends AbstractRpcServiceSetting<T> implements InitializingBean {
 
+    /** 类型 */
     private final Class<T> type;
+    /** RPC类型 */
     private RpcType rpcType;
+    /** RPC属性 */
     private final RpcProperties rpcProperties;
+    /** RPC服务器 */
     private final RpcServer rpcServer;
     public RpcServiceBean(Class<T> type, RpcType rpcType, RpcProperties rpcProperties, RpcServer rpcServer) {
         this.type = type;

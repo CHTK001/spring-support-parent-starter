@@ -16,8 +16,8 @@ import java.util.List;
  * <p>输入优化：在对话/接口调用前，使用大语言模型将用户原始输入改写为更清晰、更适合模型理解的版本。
  * 优化模型可在本分组全局配置，未配置时回退到 {@code runtime} 分组默认对话模型。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Spi("input")
 public class InputOptimizeGlobalSettingProvider implements GlobalSettingProvider {

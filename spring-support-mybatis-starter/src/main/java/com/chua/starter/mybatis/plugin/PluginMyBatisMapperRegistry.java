@@ -10,8 +10,8 @@ import java.net.URL;
  * 用于将插件中的 Mapper 接口和 XML 注册到主应用的 MyBatis 配置中
  * </p>
  *
- * @author CH
  * @since 2025/01/15
+ * @author CH
  */
 public interface PluginMyBatisMapperRegistry {
 

@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
 /**
  * 试卷题目关联实体
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("edu_paper_question")
@@ -21,6 +21,7 @@ public class EduPaperQuestion {
      * 关联ID
      */
     @TableId(type = IdType.AUTO)
+    /** PaperquestionID */
     private Long paperQuestionId;
 
     /**

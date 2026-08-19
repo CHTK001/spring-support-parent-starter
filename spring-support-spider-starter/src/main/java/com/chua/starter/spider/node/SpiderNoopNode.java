@@ -16,8 +16,8 @@ import java.util.List;
  * <p>用于尚未实现业务逻辑的节点类型（script/db/function 等），
  * 执行时仅透传当前数据，保证流程可完整跑通，不因缺实现而中断。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Component
 public class SpiderNoopNode implements FlowNode {

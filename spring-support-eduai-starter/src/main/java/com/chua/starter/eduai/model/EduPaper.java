@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
 /**
  * 试卷实体
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("edu_paper")
@@ -21,6 +21,7 @@ public class EduPaper {
      * 试卷ID
      */
     @TableId(type = IdType.AUTO)
+    /** PaperID */
     private Long paperId;
 
     /**

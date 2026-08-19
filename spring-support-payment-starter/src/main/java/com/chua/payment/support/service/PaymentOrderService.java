@@ -13,6 +13,7 @@ import java.util.List;
 
 /**
  * 支付订单服务接口
+ * @author CH
  */
 public interface PaymentOrderService {
 
@@ -71,3 +72,4 @@ public interface PaymentOrderService {
      */
     void timeoutOrder(Long id);
 }
+

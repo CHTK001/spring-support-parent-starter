@@ -11,13 +11,14 @@ import java.util.Set;
 /**
  * 上报客户端配置
  *
- * @author CH
  * @since 2024/12/05
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = ReportProperties.PRE)
 public class ReportProperties {
 
+    /** PRE */
     public static final String PRE = "plugin.report.client";
 
     /**
@@ -94,7 +95,6 @@ public class ReportProperties {
          * 获取要上报的指标类型
          *
          * @return 指标类型集合，为空返回全部
-         * @author CH
          * @since 1.0.0
          */
         public Set<MetricType> getEffectiveTypes() {

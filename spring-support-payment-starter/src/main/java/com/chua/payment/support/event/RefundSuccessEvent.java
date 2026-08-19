@@ -6,18 +6,28 @@ import java.math.BigDecimal;
 
 /**
  * 退款成功事件
+ * @author CH
  */
 @Getter
 public class RefundSuccessEvent extends PaymentEvent {
 
+    /** 排序ID */
     private final Long orderId;
+    /** 排序NO */
     private final String orderNo;
+    /** RefundID */
     private final Long refundId;
+    /** RefundNO */
     private final String refundNo;
+    /** 用户ID */
     private final Long userId;
+    /** Refundamount */
     private final BigDecimal refundAmount;
+    /** ThirdpartyrefundNO */
     private final String thirdPartyRefundNo;
+    /** 通道类型 */
     private final String channelType;
+    /** 通道SUB类型 */
     private final String channelSubType;
 
     public RefundSuccessEvent(Object source, Long tenantId, Long merchantId, Long orderId, String orderNo,
@@ -35,3 +45,4 @@ public class RefundSuccessEvent extends PaymentEvent {
         this.channelSubType = channelSubType;
     }
 }
+

@@ -9,9 +9,9 @@ import org.springframework.context.annotation.Configuration;
  *
  * <p>负责注册 SSE 模块的服务信息。</p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2025/5/8
+ * @author CH
  */
 @Configuration
 public class SseServiceInfoConfiguration {

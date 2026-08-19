@@ -3,7 +3,6 @@ package com.chua.starter.rpc.support.service;
 /**
  * RPC 服务设置基类
  *
- * @author CH
  * @since 2024/04/08
  */
 public abstract class AbstractRpcServiceSetting<T> {

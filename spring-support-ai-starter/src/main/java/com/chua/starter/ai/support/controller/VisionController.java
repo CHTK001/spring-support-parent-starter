@@ -27,8 +27,8 @@ import java.util.Base64;
  * 多模态/识图控制器
  * 提供图像描述、OCR、视觉问答等能力
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController

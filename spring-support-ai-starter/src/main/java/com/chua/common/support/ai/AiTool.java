@@ -6,8 +6,8 @@ import java.util.Map;
 /**
  * AI 工具定义接口，描述一个可被 LLM 调用的工具（含名称、参数、调用方法）。
  *
- * @author CH
  * @since 4.0.0
+ * @author CH
  */
 public interface AiTool {
 

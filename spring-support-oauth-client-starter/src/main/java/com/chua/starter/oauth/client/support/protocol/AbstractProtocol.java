@@ -41,7 +41,6 @@ import static com.chua.starter.oauth.client.support.infomation.Information.*;
 /**
  * 协议
  *
- * @author CH
  */
 @Slf4j
 public abstract class AbstractProtocol implements Protocol {
@@ -50,10 +49,14 @@ public abstract class AbstractProtocol implements Protocol {
      * 认证信息缓存（线程安全的单例初始化）
      */
     protected static volatile CacheProvider CACHEABLE;
+    /** Cache_lock */
     private static final Object CACHE_LOCK = new Object();
     
+    /** Enable加密 */
     private final boolean enableEncryption;
+    /** Auth客户端属性 */
     protected AuthClientProperties authClientProperties;
+    /** 加密 */
     private final String encryption;
 
     public AbstractProtocol(AuthClientProperties authClientProperties) {
@@ -116,7 +119,6 @@ public abstract class AbstractProtocol implements Protocol {
      * @return AuthenticationInformation 认证信息对象，包含用户的认证状态和用户信息
      *         示例: AuthenticationInformation{information=OK, returnResult=UserResume{userId='1', username='admin'}}
      *
-     * @author CH
      * @since 2023-01-01
      */
     protected abstract AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret);

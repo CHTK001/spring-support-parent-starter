@@ -7,8 +7,8 @@ import org.apache.ibatis.annotations.Mapper;
 /**
  * 模型供应商 Mapper
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 @Mapper
 public interface AiProviderMapper extends BaseMapper<AiProvider> {

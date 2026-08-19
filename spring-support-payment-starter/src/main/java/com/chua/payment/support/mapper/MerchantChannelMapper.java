@@ -7,8 +7,8 @@ import org.apache.ibatis.annotations.Mapper;
 /**
  * 商户渠道Mapper接口
  *
- * @author CH
  * @since 2026-03-18
+ * @author CH
  */
 @Mapper
 public interface MerchantChannelMapper extends BaseMapper<MerchantChannel> {

@@ -5,8 +5,8 @@ import lombok.Data;
 /**
  * 数据库触发器元数据
  *
- * @author CH
  * @since 2026/8/5
+ * @author CH
  */
 @Data
 public class TriggerInfo {

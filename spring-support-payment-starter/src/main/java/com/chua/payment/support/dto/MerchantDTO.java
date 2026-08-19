@@ -7,38 +7,53 @@ import java.io.Serializable;
 /**
  * 商户数据传输对象
  *
- * @author CH
  * @since 2026-03-18
+ * @author CH
  */
 @Data
 public class MerchantDTO implements Serializable {
+    /** Merchant名称 */
     private String merchantName;
 
+    /** Contact名称 */
     private String contactName;
 
+    /** Contactphone */
     private String contactPhone;
 
+    /** Contactemail */
     private String contactEmail;
 
+    /** Businesslicense */
     private String businessLicense;
 
+    /** Legalperson */
     private String legalPerson;
 
+    /** 默认notifyURL */
     private String defaultNotifyUrl;
 
+    /** 默认返回值URL */
     private String defaultReturnUrl;
 
+    /** Paymentwallet是否启用 */
     private Boolean paymentWalletEnabled;
 
+    /** Paymentautoclose是否启用 */
     private Boolean paymentAutoCloseEnabled;
 
+    /** Paymentautocloseminutes */
     private Integer paymentAutoCloseMinutes;
 
+    /** Paymentsplit表是否启用 */
     private Boolean paymentSplitTableEnabled;
 
+    /** Paymentprofitsharing是否启用 */
     private Boolean paymentProfitSharingEnabled;
 
+    /** Paymentcoupon是否启用 */
     private Boolean paymentCouponEnabled;
 
+    /** Remark */
     private String remark;
 }

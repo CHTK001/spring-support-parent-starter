@@ -12,8 +12,8 @@ import java.time.LocalDateTime;
  * 字段约定在新增/更新时自动填充创建人与时间信息，
  * 避免各业务模块重复赋值。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class SpiderMetaObjectHandler implements MetaObjectHandler {
 

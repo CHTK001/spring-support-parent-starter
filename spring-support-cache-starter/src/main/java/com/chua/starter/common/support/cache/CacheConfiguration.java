@@ -37,8 +37,8 @@ import static com.chua.starter.common.support.constant.CacheConstant.*;
  * 支持自定义缓存管理器 Bean 名称，便于 MultiLevelCacheManager 按名称查找。
  * </p>
  *
- * @author CH
  * @since 2024/7/22
+ * @author CH
  */
 @Configuration
 @EnableConfigurationProperties(CacheProperties.class)

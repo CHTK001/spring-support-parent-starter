@@ -27,14 +27,18 @@ import java.util.UUID;
 /**
  * 小程序钱包 API
  * <p>小程序使用 OAuth2 登录流程获取 Bearer Token，认证机制与 Web 一致</p>
+ * @author CH
  */
 @RestController
 @RequestMapping("/mp/wallet")
 @RequiredArgsConstructor
 public class MpWalletController {
 
+    /** Walletaccount服务 */
     private final WalletAccountService walletAccountService;
+    /** Wallet排序服务 */
     private final WalletOrderService walletOrderService;
+    /** Principal解析器 */
     private final PaymentAccountPrincipalResolver principalResolver;
 
     @GetMapping
@@ -144,3 +148,4 @@ public class MpWalletController {
         return Result.success();
     }
 }
+

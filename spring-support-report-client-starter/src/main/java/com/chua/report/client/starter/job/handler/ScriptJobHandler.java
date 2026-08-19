@@ -16,9 +16,9 @@ import java.io.File;
  * 脚本内容存储在数据库中，执行时会生成临时脚本文件并调用系统命令执行。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/03/11
+ * @author CH
  */
 @Slf4j
 public class ScriptJobHandler implements JobHandler {
@@ -33,6 +33,7 @@ public class ScriptJobHandler implements JobHandler {
      * GLUE更新时间戳
      */
     @Getter
+    /** Glueupdatetime */
     private final long glueUpdatetime;
 
     /**

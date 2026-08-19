@@ -11,8 +11,8 @@ import org.springframework.stereotype.Component;
  * 用量记录拦截器
  * 用于异步记录 ChatClient 调用用量
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Component

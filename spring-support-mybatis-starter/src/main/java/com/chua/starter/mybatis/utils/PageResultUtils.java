@@ -8,6 +8,7 @@ import com.chua.starter.common.support.lang.ReturnPageResult;
 
 /**
  * 分页结果工具类
+ * @author CH
  */
 public class PageResultUtils {
 
@@ -45,3 +46,4 @@ public class PageResultUtils {
                 .build();
     }
 }
+

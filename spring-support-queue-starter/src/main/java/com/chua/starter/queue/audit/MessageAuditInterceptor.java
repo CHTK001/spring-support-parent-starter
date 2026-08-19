@@ -19,14 +19,15 @@ import java.util.concurrent.ConcurrentHashMap;
  * 自动记录消息的审计日志
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @Slf4j
 @Component
 @ConditionalOnProperty(prefix = "plugin.queue.audit", name = "enabled", havingValue = "true")
 public class MessageAuditInterceptor implements MessageInterceptor, ApplicationEventPublisherAware {
 
+    /** 事件publisher */
     private ApplicationEventPublisher eventPublisher;
 
     private final ConcurrentHashMap<String, MessageAuditLog> auditLogs = new ConcurrentHashMap<>();

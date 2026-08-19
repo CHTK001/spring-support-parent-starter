@@ -40,11 +40,14 @@ import java.util.Map;
 
 /**
  * 默认支付宝网关实现
+ * @author CH
  */
 @Spi({"default", "alipay"})
 public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
 
+    /** 客户端工厂 */
     private final AliyunAlipayClientFactory clientFactory = new AliyunAlipayClientFactory();
+    /** Objectmapper */
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -290,3 +293,4 @@ public class DefaultAliyunAlipayGateway implements AliyunAlipayGateway {
         }
     }
 }
+

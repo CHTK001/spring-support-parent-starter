@@ -8,9 +8,9 @@ import java.util.Set;
 /**
  * Actuator配置属性
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/6/21
+ * @author CH
  */
 @ConfigurationProperties(prefix = "plugin.actuator", ignoreInvalidFields = true)
 public class ActuatorProperties {

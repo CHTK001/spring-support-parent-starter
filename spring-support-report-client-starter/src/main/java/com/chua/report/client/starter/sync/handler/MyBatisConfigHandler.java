@@ -26,15 +26,16 @@ import java.util.*;
  * Mapper 信息查询通过 actuator 端点 /actuator/mybatis 获取
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2025/01/17
+ * @author CH
  */
 @Slf4j
 @Spi("myBatisConfigHandler")
 public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationContextAware {
 
 
+    /** Application上下文 */
     private ApplicationContext applicationContext;
 
     @Override

@@ -29,12 +29,14 @@ import org.slf4j.LoggerFactory;
  * </ul>
  * </p>
  *
- * @author CH
  * @since 2024/06/21
+ * @author CH
  */
 public class ApiFilterConfiguration  {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiFilterConfiguration.class);
 
+    /** Sc_nonce_reject */
     private static final int SC_NONCE_REJECT = 400;
         /**
      * 响应头中的版本字段名
@@ -90,6 +92,7 @@ public class ApiFilterConfiguration  {
      */
     public static class ApiVersionFilter implements Filter {
 
+        /** 版本argument解析器 */
         private final VersionArgumentResolver versionArgumentResolver;
 
         public ApiVersionFilter(VersionArgumentResolver versionArgumentResolver) {
@@ -114,8 +117,10 @@ public class ApiFilterConfiguration  {
      * 对携带完整签名头的请求做 x-nonce 重放校验及签名校验
      */
     public static class NonceXhrFilter implements Filter {
+        /** 日志 */
         private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(NonceXhrFilter.class);
 
+        /** Reject_msg */
         private static final String REJECT_MSG = "{\"code\":400,\"msg\":\"请求校验失败，请勿重放请求\"}";
 
         @Override

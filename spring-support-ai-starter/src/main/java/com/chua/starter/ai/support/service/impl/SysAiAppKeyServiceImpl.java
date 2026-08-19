@@ -31,10 +31,14 @@ import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE
 @RequiredArgsConstructor
 public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
 
+    /** Status_enabled */
     private static final int STATUS_ENABLED = 1;
+    /** Millis_per_second */
     private static final long MILLIS_PER_SECOND = 1000L;
+    /** Seconds_per_day */
     private static final long SECONDS_PER_DAY = 24L * 60L * 60L;
 
+    /** SYSAIAPP密钥mapper */
     private final SysAiAppKeyMapper sysAiAppKeyMapper;
 
     @Override

@@ -11,8 +11,8 @@ import org.springframework.context.annotation.ComponentScan;
  * <p>内置 H2 内存数据库，可直接运行 {@code mvn spring-boot:run} 启动测试。
  * 默认关闭 API 鉴权（app_key_enabled=false），便于本地联调。</p>
  *
- * @author CH
  * @since 2026/7/29
+ * @author CH
  */
 @SpringBootApplication
 @ComponentScan(basePackages = "com.chua.starter.ai.support")

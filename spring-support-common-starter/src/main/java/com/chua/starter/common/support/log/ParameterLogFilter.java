@@ -51,17 +51,22 @@ import org.slf4j.LoggerFactory;
  *     open-interface-log: true  # 是否开启接口日志事件
  * </pre>
  *
- * @author CH
  * @version 1.0.0
  * @since 2023/09/08
+ * @author CH
  */
 @SuppressWarnings("removal")
 public class ParameterLogFilter implements Filter {
-    private static final Logger log = LoggerFactory.getLogger(ParameterLogFilter.class);
-        public static final DateTimeFormatter DATE_TIME_FORMATTER = ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+    /** log */
+    private static final Logger log= LoggerFactory.getLogger(ParameterLogFilter.class);
+        /** DATTIMFORMATTER */
+        public static final DateTimeFormatter DATE_TIME_FORMATTER= ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+    /** logProperties */
     private final LogProperties logProperties;
+    /** applicationContext */
     private final ApplicationContext applicationContext;
-    private final ExecutorService interfaceServiceLog = Executors.newVirtualThreadPerTaskExecutor();
+    /** interface服务Log */
+    private final ExecutorService interfaceServiceLog= Executors.newVirtualThreadPerTaskExecutor();
     
     /**
      * 请求开始时间的属性名

@@ -5,7 +5,7 @@ import com.chua.starter.monitor.support.entity.MsMonitorMetricConfig;
 /**
  * 指标解析规则 Mapper
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 public interface MsMonitorMetricConfigMapper extends BaseMapper<MsMonitorMetricConfig> {}

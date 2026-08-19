@@ -8,8 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 默认知识图谱 LLM 客户端。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class DefaultKnowledgeGraphLlmClient implements KnowledgeGraphLlmClient {

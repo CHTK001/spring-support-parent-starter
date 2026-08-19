@@ -7,12 +7,13 @@ import java.util.Set;
 /**
  * API 功能开关信息
  *
- * @author CH
  * @since 2024/12/08
  * @version 1.0.0
+ * @author CH
  */
 public class ApiFeatureInfo implements Serializable {
 
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -132,15 +133,25 @@ public class ApiFeatureInfo implements Serializable {
      * Builder 类
      */
     public static class Builder {
+        /** FeatureID */
         private String featureId;
+        /** 描述 */
         private String description;
+        /** 分组 */
         private String group;
+        /** 默认是否启用 */
         private boolean defaultEnabled;
+        /** 是否启用 */
         private boolean enabled;
+        /** Disabled消息 */
         private String disabledMessage;
+        /** Disabled状态 */
         private int disabledStatus;
+        /** Class名称 */
         private String className;
+        /** Method名称 */
         private String methodName;
+        /** Patterns */
         private Set<String> patterns;
 
         public Builder featureId(String featureId) {

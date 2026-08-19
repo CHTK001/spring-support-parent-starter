@@ -20,7 +20,9 @@ import java.util.Set;
 @ConfigurationProperties(prefix = RpcProperties.PRE, ignoreInvalidFields = true, ignoreUnknownFields = true)
 public class RpcProperties {
 
+    /** PRE */
     public static final String PRE = "plugin.rpc";
+    /** Default_serialization */
     public static final String DEFAULT_SERIALIZATION = "hessian";
 
     /**

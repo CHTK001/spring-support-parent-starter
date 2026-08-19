@@ -22,6 +22,7 @@ import java.util.Collection;
 @DisplayName("CacheCustomAnnotationParser 测试")
 class CacheCustomAnnotationParserTest {
 
+    /** 解析器 */
     private CacheCustomAnnotationParser parser;
 
     @BeforeEach

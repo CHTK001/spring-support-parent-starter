@@ -12,11 +12,11 @@ import org.slf4j.LoggerFactory;
  * <p>ANSI 渲染唯一实现位置: 本类 + 唯一调用点 {@link ServiceInfoAutoConfiguration},
  * 业务 starter 只通过 {@link ServiceInfoRegistry} 注册数据。</p>
  *
- * @author CH
  * @since 4.0.0.42
  */
 public final class AnsiStyle {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(AnsiStyle.class);
 
     /**
@@ -32,15 +32,25 @@ public final class AnsiStyle {
      */
     private static final ThreadLocal<Boolean> ENABLED_CACHE = new ThreadLocal<>();
 
+    /** Reset */
     public static final String RESET = "\u001B[0m";
+    /** Bold */
     public static final String BOLD = "\u001B[1m";
+    /** DIM */
     public static final String DIM = "\u001B[2m";
+    /** 红色 */
     public static final String RED = "\u001B[31m";
+    /** 绿色 */
     public static final String GREEN = "\u001B[32m";
+    /** Yellow */
     public static final String YELLOW = "\u001B[33m";
+    /** 蓝色 */
     public static final String BLUE = "\u001B[34m";
+    /** Cyan */
     public static final String CYAN = "\u001B[36m";
+    /** Gray */
     public static final String GRAY = "\u001B[90m";
+    /** Bg_red */
     public static final String BG_RED = "\u001B[41m";
 
     private AnsiStyle() {}

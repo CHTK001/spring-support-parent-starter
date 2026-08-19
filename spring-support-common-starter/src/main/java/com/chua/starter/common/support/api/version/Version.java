@@ -33,9 +33,9 @@ import java.util.regex.Pattern;
  *   <li>构建元数据不参与比较</li>
  * </ol>
  *
- * @author CH
  * @since 2024/12/18
  * @version 1.0.0
+ * @author CH
  */
 public class Version implements Comparable<Version> {
 

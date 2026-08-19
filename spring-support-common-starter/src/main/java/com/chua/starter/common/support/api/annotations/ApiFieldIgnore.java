@@ -48,7 +48,6 @@ import java.lang.annotation.*;
  * public UserVO detail() { ... }
  * </pre>
  *
- * @author CH
  * @since 2025/1/1
  * @version 1.0.0
  * @see ApiGroup

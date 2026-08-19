@@ -6,7 +6,9 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * 钱包订单Mapper
+ * @author CH
  */
 @Mapper
 public interface WalletOrderMapper extends BaseMapper<WalletOrder> {
 }
+

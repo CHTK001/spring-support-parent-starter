@@ -21,15 +21,20 @@ import java.lang.reflect.Method;
  * 支持 @ApiVersion、@ApiProfile、@ApiPlatform 注解的版本和平台控制。
  * </p>
  *
- * @author CH
  * @since 2020-11-15
+ * @author CH
  */
 public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandlerMapping {
 
+    /** API属性 */
     private final ApiProperties apiProperties;
+    /** Platformopen */
     private final boolean platformOpen;
+    /** 版本open */
     private final boolean versionOpen;
+    /** Platform */
     private final String platform;
+    /** 是否激活profiles */
     private final String[] activeProfiles;
 
     public ApiVersionRequestMappingHandlerMapping(ApiProperties apiProperties, Environment environment) {

@@ -11,8 +11,8 @@ import java.util.Optional;
 /**
  * AI 全局设置 Mapper。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Mapper
 public interface SysAiGlobalSettingMapper extends BaseMapper<SysAiGlobalSetting> {

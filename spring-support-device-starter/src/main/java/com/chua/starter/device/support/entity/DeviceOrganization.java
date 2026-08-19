@@ -10,8 +10,8 @@ import lombok.Data;
  * 设备组织实体（树形结构）
  * <p>对应数据库表 device_organization。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("device_organization")
@@ -21,29 +21,34 @@ public class DeviceOrganization {
      * 主键 ID
      */
     @TableId(value = "device_organization_id", type = IdType.ASSIGN_UUID)
+    /** DeviceorganizationID */
     private String deviceOrganizationId;
 
     /**
      * 父级组织 ID
      */
     @TableField("device_organization_parent_id")
+    /** Deviceorganization父级ID */
     private String deviceOrganizationParentId;
 
     /**
      * 组织名称
      */
     @TableField("device_organization_name")
+    /** Deviceorganization名称 */
     private String deviceOrganizationName;
 
     /**
      * 路径，例 1/2/3
      */
     @TableField("device_organization_path")
+    /** Deviceorganization路径 */
     private String deviceOrganizationPath;
 
     /**
      * 所属厂商，例如 hikvision、dahua
      */
     @TableField("device_organization_vendor")
+    /** Deviceorganizationvendor */
     private String deviceOrganizationVendor;
 }

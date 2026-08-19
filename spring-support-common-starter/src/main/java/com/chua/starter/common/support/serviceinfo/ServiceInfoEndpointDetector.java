@@ -8,11 +8,12 @@ import org.springframework.core.env.Environment;
  * <p>在应用就绪时由 {@link ServiceInfoBannerListener} 调用,
  * 把探测结果注册到 {@link ServiceInfoRegistry}。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class ServiceInfoEndpointDetector {
 
+    /** 环境 */
     private final Environment environment;
 
     public ServiceInfoEndpointDetector(Environment environment) {

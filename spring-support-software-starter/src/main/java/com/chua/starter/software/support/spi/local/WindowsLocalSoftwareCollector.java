@@ -20,13 +20,14 @@ import java.util.regex.Pattern;
  *
  * <p>从注册表 Uninstall 节点读取已安装软件，提取 DisplayName / DisplayVersion / InstallLocation / DisplayIcon。</p>
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 @Slf4j
 @Component
 public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
 
+    /** Uninstall_key */
     private static final Pattern UNINSTALL_KEY = Pattern.compile(
             "SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Uninstall\\\\([^\\\\]+)",
             Pattern.CASE_INSENSITIVE

@@ -18,8 +18,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *       base-url: "http://localhost:8080"   # 追踪地址基础路径（缺省回退当前服务地址）
  * </pre>
  *
- * @author CH
  * @since 2026/08/03
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = MessageTrackProperties.PRE)

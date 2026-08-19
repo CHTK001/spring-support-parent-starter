@@ -27,17 +27,21 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Socket.IO 会话模板实现
  * 基于 netty-socketio 实现，支持多房间配置
  *
- * @author CH
  * @version 1.0.0
  * @since 2024-12-04
+ * @author CH
  */
 @Slf4j
 public class SocketIOSessionTemplate implements SocketSessionTemplate {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SocketIOSessionTemplate.class);
+    /** 属性 */
     private final SocketProperties properties;
+    /** Listeners */
     private final List<SocketListener> listeners;
     private final Map<String, List<SocketIOSession>> sessionCache = new ConcurrentHashMap<>();
+    /** 事件监听器处理器 */
     private final EventListenerProcessor eventListenerProcessor;
     
     /**

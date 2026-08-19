@@ -12,11 +12,17 @@ import java.util.Map;
  */
 public class ManualCacheVerifier {
 
+    /** Reset */
     private static final String RESET = "\033[0m";
+    /** 绿色 */
     private static final String GREEN = "\033[32m";
+    /** 红色 */
     private static final String RED = "\033[31m";
+    /** Cyan */
     private static final String CYAN = "\033[36m";
+    /** Passed */
     private static int passed = 0;
+    /** Failed */
     private static int failed = 0;
 
     public static void main(String[] args) throws Exception {
@@ -243,6 +249,7 @@ public class ManualCacheVerifier {
 
     // ── 内部辅助缓存（与 MultiLevelCacheTest 中的相同） ──
     private static class SimpleMemoryCache implements org.springframework.cache.Cache, MultiLevelCache.PatternEvictable {
+        /** 名称 */
         private final String name;
         private final java.util.Map<Object, ValueWrapper> store = new java.util.concurrent.ConcurrentHashMap<>();
 

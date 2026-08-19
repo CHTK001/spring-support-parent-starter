@@ -33,8 +33,8 @@ import java.util.Set;
  * {@code monitor.prometheus.url}。
  * </p>
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Slf4j
 @Component

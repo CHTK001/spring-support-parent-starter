@@ -26,8 +26,8 @@ import java.util.List;
  *   <li>{@code as} 元素写入的上下文属性名，默认 item</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Component
 public class SpiderSubLoopNode implements FlowNode {

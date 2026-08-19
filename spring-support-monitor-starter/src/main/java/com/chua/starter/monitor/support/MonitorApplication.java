@@ -8,8 +8,8 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 /**
  * 监控模块独立测试启动类
  *
- * @author CH
  * @since 2026/8/5
+ * @author CH
  */
 @SpringBootApplication
 @EnableTransactionManagement

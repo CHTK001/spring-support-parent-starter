@@ -43,8 +43,8 @@ import java.util.concurrent.TimeUnit;
  * }
  * }</pre>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class RedisKvEngine implements KvEngine {
 

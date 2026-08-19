@@ -5,8 +5,8 @@ import lombok.Data;
 /**
  * 知识库文档上传DTO
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class KnowledgeDocUploadDTO {

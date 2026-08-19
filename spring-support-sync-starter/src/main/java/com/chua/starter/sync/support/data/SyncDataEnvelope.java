@@ -7,8 +7,8 @@ import java.util.Map;
 /**
  * 数据同步消息信封。
  *
- * @author CH
  * @since 2026/03/23
+ * @author CH
  */
 public class SyncDataEnvelope implements Serializable {
 
@@ -121,13 +121,20 @@ public class SyncDataEnvelope implements Serializable {
     }
 
     public static class Builder {
+        /** 请求ID */
         private String requestId;
+        /** 通道 */
         private String channel;
+        /** 事件类型 */
         private String eventType;
+        /** 来源客户端ID */
         private String sourceClientId;
+        /** 目标APP名称 */
         private String targetAppName;
+        /** Payload */
         private Object payload;
         private Map<String, Object> metadata = new HashMap<>();
+        /** 时间戳 */
         private long timestamp;
 
         public Builder requestId(String requestId) {

@@ -5,15 +5,20 @@ import lombok.Data;
 /**
  * 试卷查询DTO
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class PaperQueryDTO {
 
+    /** 页NUM */
     private Integer pageNum = 1;
+    /** 每页大小 */
     private Integer pageSize = 10;
+    /** Subject */
     private String subject;
+    /** Grade级别 */
     private String gradeLevel;
+    /** 状态 */
     private Integer status;
 }

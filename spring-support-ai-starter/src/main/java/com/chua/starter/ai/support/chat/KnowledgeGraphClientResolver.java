@@ -10,12 +10,14 @@ import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
  * 优先从 knowledge_graph 组读取专有配置，LLM 连接信息（host/apiKey 等）
  * 回退到 runtime 组。
  *
- * @author CH
  */
 public final class KnowledgeGraphClientResolver {
 
+    /** 分组 */
     private static final String GROUP = "knowledge_graph";
+    /** Runtime_group */
     private static final String RUNTIME_GROUP = "runtime";
+    /** Default_timeout_millis */
     private static final long DEFAULT_TIMEOUT_MILLIS = 60_000L;
 
     private KnowledgeGraphClientResolver() {}

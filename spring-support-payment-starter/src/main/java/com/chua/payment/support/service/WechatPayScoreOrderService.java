@@ -9,6 +9,7 @@ import com.chua.starter.tencent.support.payment.dto.TencentWechatPayScoreNotifyP
 
 /**
  * 微信支付分订单服务
+ * @author CH
  */
 public interface WechatPayScoreOrderService {
 
@@ -26,3 +27,4 @@ public interface WechatPayScoreOrderService {
 
     void handleNotify(Long channelId, String outOrderNo, TencentWechatPayScoreNotifyPayload payload, String responsePayload);
 }
+

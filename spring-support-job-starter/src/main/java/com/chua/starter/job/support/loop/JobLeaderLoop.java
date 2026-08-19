@@ -26,8 +26,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * <p>非 Leader 节点不会创建本循环, 数据库查询压力归零。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RequiredArgsConstructor

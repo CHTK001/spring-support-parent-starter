@@ -7,8 +7,8 @@ import com.chua.payment.support.enums.OrderTransitionResult;
 /**
  * 订单状态机服务接口
  *
- * @author CH
  * @since 2026-03-18
+ * @author CH
  */
 public interface OrderStateMachineService {
 

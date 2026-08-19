@@ -7,8 +7,8 @@ import com.chua.starter.ai.support.model.GenerateTask;
  *
  * <p>提供异步生成任务的创建与状态查询，供前端轮询使用。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface GenerateTaskService {
 

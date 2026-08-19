@@ -15,8 +15,8 @@ import javax.xml.transform.stream.StreamSource;
 /**
  * XML 工具本地适配器。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class Xml {
 

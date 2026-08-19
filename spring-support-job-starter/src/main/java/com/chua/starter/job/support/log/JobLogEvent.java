@@ -20,8 +20,8 @@ import java.util.regex.Pattern;
  * <p>EXECUTOR → SCHEDULER 上行采用紧凑 JSON 序列化, logContent 字段使用 Base64 编码
  * 确保多行/特殊字符不会破坏解析。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public record JobLogEvent(
         String jobName,
@@ -37,8 +37,8 @@ public record JobLogEvent(
     /**
      * 状态枚举。
      *
-     * @author CH
      * @since 4.0.0.42
+     * @author CH
      */
     public enum Status {
         SUCCESS, FAILURE, SKIPPED
@@ -141,6 +141,7 @@ public record JobLogEvent(
         }
     }
 
+    /** Field_pattern */
     private static final Pattern FIELD_PATTERN = Pattern.compile("\\b([a-zA-Z]+)=([^,\\]]*)");
 
     private static String readField(String text, String name) {

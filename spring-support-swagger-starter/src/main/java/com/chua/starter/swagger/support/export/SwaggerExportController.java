@@ -30,8 +30,8 @@ import java.nio.charset.StandardCharsets;
  *     <li>{@code GET /chua/swagger/export/preview} — 浏览器内嵌预览 HTML</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -39,7 +39,9 @@ import java.nio.charset.StandardCharsets;
 @ConditionalOnProperty(prefix = "chua.swagger.export", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class SwaggerExportController {
 
+    /** Openapiprovider */
     private final ObjectProvider<OpenAPI> openAPIProvider;
+    /** 属性 */
     private final SwaggerExportProperties properties;
 
     public SwaggerExportController(ObjectProvider<OpenAPI> openAPIProvider,

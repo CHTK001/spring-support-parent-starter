@@ -23,13 +23,17 @@ import java.util.UUID;
 
 /**
  * 商户服务实现类
+ * @author CH
  */
 @Service
 @RequiredArgsConstructor
 public class MerchantServiceImpl implements MerchantService {
 
+    /** Merchantmapper */
     private final MerchantMapper merchantMapper;
+    /** Merchant通道mapper */
     private final MerchantChannelMapper merchantChannelMapper;
+    /** Payment排序mapper */
     private final PaymentOrderMapper paymentOrderMapper;
 
     @Override
@@ -142,3 +146,4 @@ public class MerchantServiceImpl implements MerchantService {
         return vo;
     }
 }
+

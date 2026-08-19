@@ -29,8 +29,8 @@ import java.util.Map;
  * <p>聚合本地模型（ModelRegistry 按能力接口归类）与云端模型
  * （各 AI 能力客户端门面 {@code listModels()}），统一按能力标签分组输出。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service

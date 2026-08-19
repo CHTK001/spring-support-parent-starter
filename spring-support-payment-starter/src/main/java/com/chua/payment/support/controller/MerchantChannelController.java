@@ -14,6 +14,7 @@ import java.util.List;
 
 /**
  * 商户渠道管理控制器
+ * @author CH
  */
 @Tag(name = "渠道管理", description = "支付渠道配置相关接口")
 @RestController
@@ -21,6 +22,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MerchantChannelController {
 
+    /** 通道服务 */
     private final MerchantChannelService channelService;
 
     @Operation(summary = "创建渠道配置")
@@ -81,3 +83,4 @@ public class MerchantChannelController {
         return Result.success(channelService.deleteChannel(id));
     }
 }
+

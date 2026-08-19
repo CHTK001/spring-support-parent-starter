@@ -29,8 +29,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * 3. RSocket / Socket.IO（SPI 注册验证，可选依赖）
  * </p>
  *
- * @author CH
  * @since 2026/07/31
+ * @author CH
  */
 class SyncEndToEndTest {
 

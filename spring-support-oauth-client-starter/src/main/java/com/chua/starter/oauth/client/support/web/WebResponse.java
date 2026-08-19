@@ -24,9 +24,13 @@ import java.io.IOException;
 @Slf4j
 public class WebResponse {
 
+    /** Auth属性 */
     private final AuthClientProperties authProperties;
+    /** Chain */
     private final FilterChain chain;
+    /** 请求 */
     private final HttpServletRequest request;
+    /** 响应 */
     private final HttpServletResponse response;
 
     public WebResponse(AuthClientProperties authProperties, FilterChain chain, HttpServletRequest request, HttpServletResponse response) {

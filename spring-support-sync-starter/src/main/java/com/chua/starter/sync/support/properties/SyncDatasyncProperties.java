@@ -10,8 +10,8 @@ import java.util.Map;
  * 对应配置前缀：{@code plugin.sync.datasync}
  * </p>
  *
- * @author CH
  * @since 2026/01/15
+ * @author CH
  */
 @ConfigurationProperties(prefix = SyncDatasyncProperties.PRE, ignoreInvalidFields = true)
 public class SyncDatasyncProperties {

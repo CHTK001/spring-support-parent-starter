@@ -146,7 +146,9 @@ public interface CacheProvider {
      * Redis 缓存提供者（抽象）
      */
     abstract class RedisCacheProvider implements CacheProvider {
+        /** 密钥prefix */
         protected final String keyPrefix;
+        /** 默认TTL */
         protected final long defaultTtl;
 
         protected RedisCacheProvider(String keyPrefix, long defaultTtl) {

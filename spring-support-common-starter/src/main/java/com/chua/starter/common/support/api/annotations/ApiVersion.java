@@ -65,7 +65,6 @@ import java.lang.annotation.*;
  * // 或使用请求头 X-Api-Version: 2
  * </pre>
  *
- * @author CH
  * @since 2020-09-23
  * @version 1.1.0
  * @see com.chua.starter.common.support.api.control.ApiVersionCondition

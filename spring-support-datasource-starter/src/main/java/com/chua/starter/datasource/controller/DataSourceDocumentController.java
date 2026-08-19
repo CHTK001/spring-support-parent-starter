@@ -41,13 +41,15 @@ import java.util.Map;
  *     <li>{@code POST /graph/apply} 强制重建图谱缓存并返回 graph.json</li>
  * </ul>
  *
- * @author CH
  * @since 2026/8/5
+ * @author CH
  */
 @Slf4j
 public class DataSourceDocumentController {
 
+    /** 服务 */
     private final DataSourceDocumentService service;
+    /** 属性 */
     private final DocumentProperties properties;
 
     /**

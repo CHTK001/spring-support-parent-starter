@@ -10,8 +10,8 @@ import com.chua.starter.eduai.model.vo.PaperVO;
 /**
  * 试卷服务接口
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface IEduPaperService extends IService<EduPaper> {
 

@@ -20,13 +20,17 @@ import java.util.List;
 
 /**
  * 钱包限额服务实现
+ * @author CH
  */
 @Service
 @RequiredArgsConstructor
 public class WalletLimitServiceImpl implements WalletLimitService {
 
+    /** 限制mapper */
     private final MerchantWalletLimitMapper limitMapper;
+    /** Accountmapper */
     private final WalletAccountMapper accountMapper;
+    /** 日志mapper */
     private final WalletAccountLogMapper logMapper;
 
     @Override
@@ -144,3 +148,4 @@ public class WalletLimitServiceImpl implements WalletLimitService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }
+

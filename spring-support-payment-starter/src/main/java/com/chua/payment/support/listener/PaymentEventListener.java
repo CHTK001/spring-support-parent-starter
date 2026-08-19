@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
  *
  * 注意：事件已通过@EventToQueue自动发送到队列
  * 如需从队列接收事件，请使用@QueueEventListener注解
+ * @author CH
  */
 @Slf4j
 @Component
@@ -65,3 +66,4 @@ public class PaymentEventListener {
             event.getErrorType(), event.getErrorMessage());
     }
 }
+

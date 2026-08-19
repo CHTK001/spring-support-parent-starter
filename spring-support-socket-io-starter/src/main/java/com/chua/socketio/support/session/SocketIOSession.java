@@ -15,19 +15,26 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Socket.IO 会话实现
  *
- * @author CH
  * @version 1.0.0
  * @since 2024-12-04
+ * @author CH
  */
 public class SocketIOSession implements SocketSession {
 
+    /** Object_mapper */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    /** Attribute_encrypt_requested */
     public static final String ATTRIBUTE_ENCRYPT_REQUESTED = "socketEncryptRequested";
+    /** 客户端 */
     private final SocketIOClient client;
+    /** 属性 */
     private final SocketProperties properties;
+    /** 消息codec */
     private final SocketMessageCodec messageCodec;
     private final Map<String, Object> attributes = new ConcurrentHashMap<>();
+    /** 客户端ID */
     private String clientId;
+    /** 用户 */
     private SocketUser user;
 
     public SocketIOSession(SocketIOClient client, SocketProperties properties) {

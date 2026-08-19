@@ -12,8 +12,8 @@ import lombok.EqualsAndHashCode;
 /**
  * 监控网关实体(Guacamole)
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -21,6 +21,7 @@ import lombok.EqualsAndHashCode;
 @TableName("ms_monitor_gateway")
 public class MsMonitorGateway extends SysBase {
 
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -28,6 +29,7 @@ public class MsMonitorGateway extends SysBase {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
+    /** ID */
     private Long id;
 
     /**
@@ -35,6 +37,7 @@ public class MsMonitorGateway extends SysBase {
      */
     @TableField("ms_monitor_gateway_monitor_id")
     @Schema(description = "关联监控资产 id", example = "1")
+    /** MonitorID */
     private Long monitorId;
 
     /**
@@ -42,6 +45,7 @@ public class MsMonitorGateway extends SysBase {
      */
     @TableField("ms_monitor_gateway_name")
     @Schema(description = "网关名称", example = "guacamole-default")
+    /** Gateway名称 */
     private String gatewayName;
 
     /**
@@ -49,6 +53,7 @@ public class MsMonitorGateway extends SysBase {
      */
     @TableField("ms_monitor_gateway_type")
     @Schema(description = "网关类型: GUACAMOLE / SSH / WEB", example = "GUACAMOLE")
+    /** Gateway类型 */
     private String gatewayType;
 
     /**
@@ -56,6 +61,7 @@ public class MsMonitorGateway extends SysBase {
      */
     @TableField("ms_monitor_gateway_host")
     @Schema(description = "网关主机", example = "192.168.1.20")
+    /** Gateway主机 */
     private String gatewayHost;
 
     /**
@@ -63,6 +69,7 @@ public class MsMonitorGateway extends SysBase {
      */
     @TableField("ms_monitor_gateway_port")
     @Schema(description = "网关端口", example = "4822")
+    /** Gateway端口 */
     private Integer gatewayPort;
 
     /**
@@ -71,6 +78,7 @@ public class MsMonitorGateway extends SysBase {
     @TableField("ms_monitor_gateway_config_url")
     @Schema(description = "连接配置 URL",
             example = "guacamole://192.168.1.20/connect?host=192.168.1.10&port=22")
+    /** Gateway配置URL */
     private String gatewayConfigUrl;
 
     /**
@@ -78,6 +86,7 @@ public class MsMonitorGateway extends SysBase {
      */
     @TableField("ms_monitor_gateway_username")
     @Schema(description = "用户名", example = "guacadmin")
+    /** Gatewayusername */
     private String gatewayUsername;
 
     /**
@@ -85,6 +94,7 @@ public class MsMonitorGateway extends SysBase {
      */
     @TableField("ms_monitor_gateway_password")
     @Schema(description = "密码密文", example = "***")
+    /** Gateway密码 */
     private String gatewayPassword;
 
     /**
@@ -92,6 +102,7 @@ public class MsMonitorGateway extends SysBase {
      */
     @TableField("ms_monitor_gateway_enabled")
     @Schema(description = "是否启用 1启用 0禁用", example = "1")
+    /** Gateway是否启用 */
     private Integer gatewayEnabled;
 
     /**
@@ -99,5 +110,6 @@ public class MsMonitorGateway extends SysBase {
      */
     @TableField("ms_monitor_gateway_remark")
     @Schema(description = "备注", example = "主机默认 Guacamole 网关")
+    /** Remark */
     private String remark;
 }

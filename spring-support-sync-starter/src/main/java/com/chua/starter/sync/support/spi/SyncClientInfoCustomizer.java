@@ -8,8 +8,8 @@ import com.chua.starter.sync.support.pojo.ClientInfo;
  * 用于在客户端注册前补充业务元数据，便于服务端按租户、节点角色等维度定向投递。
  * </p>
  *
- * @author CH
  * @since 2026/03/24
+ * @author CH
  */
 public interface SyncClientInfoCustomizer {
 

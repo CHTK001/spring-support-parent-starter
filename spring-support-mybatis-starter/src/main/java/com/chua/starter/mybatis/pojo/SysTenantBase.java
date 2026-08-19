@@ -19,5 +19,6 @@ public class SysTenantBase extends SysBase{
      */
     @ColumnDefinition(defaultValue = "0", comment = "租户ID", refresh = true)
     @Schema(description = "租户ID")
+    /** SYStenantID */
     private Integer sysTenantId;
 }

@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 商户支付设置控制器
+ * @author CH
  */
 @Tag(name = "商户支付设置", description = "商户支付规则、钱包限额等设置接口")
 @RestController
@@ -30,8 +31,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class MerchantSettingController {
 
+    /** Merchant服务 */
     private final MerchantService merchantService;
+    /** Merchantpayment配置服务 */
     private final MerchantPaymentConfigService merchantPaymentConfigService;
+    /** Wallet限制服务 */
     private final WalletLimitService walletLimitService;
 
     @Operation(summary = "查询商户支付规则")
@@ -90,3 +94,4 @@ public class MerchantSettingController {
         return vo;
     }
 }
+

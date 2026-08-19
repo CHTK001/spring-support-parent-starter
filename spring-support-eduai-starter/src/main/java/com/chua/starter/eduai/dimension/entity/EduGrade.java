@@ -14,14 +14,15 @@ import java.time.LocalDateTime;
  * <p>学段 (PRIMARY/JUNIOR/SENIOR/UNIVERSITY) + 年级名 (1-12 / 大一-大四)。
  * 与 {@link EduSubject} 组合形成题目/试卷的完整维度过滤条件。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("edu_grade")
 public class EduGrade {
 
     @TableId(type = IdType.AUTO)
+    /** GradeID */
     private Long gradeId;
 
     /**
@@ -40,5 +41,6 @@ public class EduGrade {
     private Integer gradeOrder;
 
     @TableField(value = "create_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT)
+    /** Create时间 */
     private LocalDateTime createTime;
 }

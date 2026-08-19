@@ -8,8 +8,8 @@ import java.util.Optional;
 /**
  * AI AppKey 服务接口。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface SysAiAppKeyService {
 

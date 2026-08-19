@@ -20,8 +20,8 @@ import java.util.Map;
  *         slave: db_slave
  * </pre>
  *
- * @author CH
  * @since 2024/12/21
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = "spring.datasource.calcite")

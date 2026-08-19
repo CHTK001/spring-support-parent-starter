@@ -2,6 +2,7 @@ package com.chua.payment.support.enums;
 
 /**
  * 退款单状态
+ * @author CH
  */
 public enum RefundOrderStatus {
 
@@ -9,6 +10,7 @@ public enum RefundOrderStatus {
     REFUNDED("已退款"),
     FAILED("退款失败");
 
+    /** 描述 */
     private final String description;
 
     RefundOrderStatus(String description) {
@@ -31,3 +33,4 @@ public enum RefundOrderStatus {
         return "";
     }
 }
+

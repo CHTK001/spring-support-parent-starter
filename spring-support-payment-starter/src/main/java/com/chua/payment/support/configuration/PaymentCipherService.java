@@ -17,12 +17,14 @@ import java.util.Set;
 /**
  * 支付敏感字段加解密服务。
  * 支持新配置密钥，同时兼容历史固定密钥，避免旧数据无法解密。
+ * @author CH
  */
 @Component
 public class PaymentCipherService {
 
     static final String LEGACY_DEFAULT_KEY = "PaymentSystem16";
 
+    /** 环境 */
     private final Environment environment;
 
     public PaymentCipherService(Environment environment) {
@@ -130,3 +132,4 @@ public class PaymentCipherService {
         return normalized;
     }
 }
+

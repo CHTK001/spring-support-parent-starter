@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 
 /**
  * 钱包账户服务
+ * @author CH
  */
 public interface WalletAccountService {
 
@@ -66,3 +67,4 @@ public interface WalletAccountService {
 
     Page<WalletAccountLog> pageLogs(int pageNum, int pageSize, Long merchantId, Long userId, String bizType, String bizNo, LocalDateTime startTime, LocalDateTime endTime);
 }
+

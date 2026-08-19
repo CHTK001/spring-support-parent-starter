@@ -34,8 +34,8 @@ import java.util.Objects;
  * <p>模型采用懒加载：仅在首次调用对应能力时才创建 deeplearning 模型实例，
  * 避免应用启动即加载 ONNX 模型导致启动阻塞或崩溃（与 OCR 提取器一致）。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Component

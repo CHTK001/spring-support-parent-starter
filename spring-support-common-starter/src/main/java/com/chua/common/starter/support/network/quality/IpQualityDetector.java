@@ -3,8 +3,8 @@ package com.chua.common.starter.support.network.quality;
 /**
  * IP 质量检测器
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface IpQualityDetector {
 

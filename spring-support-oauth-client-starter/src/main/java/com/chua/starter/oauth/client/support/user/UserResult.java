@@ -30,10 +30,10 @@ import java.io.Serializable;
  *   <li><b>refreshToken</b> - 刷新令牌(RT)，用于获取新的访问令牌，有效期较长（默认4天）</li>
  * </ul>
  *
- * @author CH
  * @version 1.0.0
  * @since 2022/7/23 8:48
  * @see UserResume
+ * @author CH
  */
 @EqualsAndHashCode(callSuper = true)
 @Accessors(chain = true)
@@ -43,7 +43,9 @@ import java.io.Serializable;
 @JsonIgnoreProperties({"beanType", "accessSecret", "expire", "password", "salt", "userEnable", "lastArea", "lastLatitude", "lastLongitude"})
 public class UserResult extends UserResume implements Serializable {
 
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
+    /** _empty */
     private static final UserResult _EMPTY = new UserResult();
 
     /**
@@ -63,6 +65,7 @@ public class UserResult extends UserResume implements Serializable {
      * <p>格式：AT{uid}{randomHex}，前缀AT表示Access Token</p>
      */
     @Schema(description = "访问令牌")
+    /** 令牌 */
     private String token;
 
     /**
@@ -71,6 +74,7 @@ public class UserResult extends UserResume implements Serializable {
      * <p>格式：RT{uid}{randomHex}，前缀RT表示Refresh Token</p>
      */
     @Schema(description = "刷新令牌")
+    /** Refresh令牌 */
     private String refreshToken;
 
     /**
@@ -78,6 +82,7 @@ public class UserResult extends UserResume implements Serializable {
      * <p>刷新令牌失效的时间戳</p>
      */
     @Schema(description = "刷新令牌过期时间（秒）")
+    /** Refreshexpire时间 */
     private Long refreshExpireTime;
 
     /**

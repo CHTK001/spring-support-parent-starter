@@ -14,12 +14,15 @@ import java.time.LocalDateTime;
 
 /**
  * 支付回调日志服务实现
+ * @author CH
  */
 @Service
 @RequiredArgsConstructor
 public class PaymentNotifyLogServiceImpl implements PaymentNotifyLogService {
 
+    /** Paymentnotify日志mapper */
     private final PaymentNotifyLogMapper paymentNotifyLogMapper;
+    /** Merchant通道mapper */
     private final MerchantChannelMapper merchantChannelMapper;
 
     @Override
@@ -78,3 +81,4 @@ public class PaymentNotifyLogServiceImpl implements PaymentNotifyLogService {
         paymentNotifyLogMapper.updateById(entity);
     }
 }
+

@@ -8,8 +8,8 @@ import java.util.List;
 /**
  * 文件系统上传 OSS 记录服务接口。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface SysFileSystemUploadUploadLogService extends IService<SysFileSystemUploadUploadLog> {
 

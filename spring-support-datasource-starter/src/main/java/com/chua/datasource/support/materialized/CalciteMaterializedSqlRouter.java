@@ -15,12 +15,14 @@ import java.util.function.Function;
  * 基于 Calcite 物理化能力的最小路由实现。
  * 当前仓库仍以安全降级为第一原则，缺失完整依赖时自动旁路源库。
  *
- * @author CH
  * @since 2026/4/2
+ * @author CH
  */
 public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRouter {
 
+    /** Options */
     private final MaterializedSqlOptions options;
+    /** 默认数据来源 */
     private final DataSource defaultDataSource;
     private final Function<String, DataSource> dataSourceResolver;
 

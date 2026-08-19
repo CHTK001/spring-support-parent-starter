@@ -13,18 +13,21 @@ public class DelegatePage<T>{
      * 每页显示条数，默认 10
      */
     @ColumnIgnore
+    /** 每页大小 */
     protected long pageSize = 10;
 
     /**
      * 当前页
      */
     @ColumnIgnore
+    /** 页NO */
     protected long pageNo = 0;
 
     /**
      * 当前页
      */
     @ColumnIgnore
+    /** 页 */
     protected long page = 0;
 
     public com.baomidou.mybatisplus.extension.plugins.pagination.Page<T> createPage() {

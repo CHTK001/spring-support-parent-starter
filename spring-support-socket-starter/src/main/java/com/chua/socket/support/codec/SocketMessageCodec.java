@@ -10,19 +10,26 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Socket 消息编解码包装
  *
- * @author CH
  * @since 2026-04-08
+ * @author CH
  */
 @Slf4j
 public class SocketMessageCodec {
 
+    /** Object_mapper */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    /** Encrypted_prefix */
     private static final String ENCRYPTED_PREFIX = "02";
+    /** Status_segment */
     private static final String STATUS_SEGMENT = "200";
+    /** Suffix */
     private static final String SUFFIX = "ffff";
 
+    /** Encrypt模式 */
     private final SocketEncryptMode encryptMode;
+    /** Codec密钥pair */
     private final CodecKeyPair codecKeyPair;
+    /** 公开密钥HEX */
     private final String publicKeyHex;
 
     public SocketMessageCodec(SocketProperties properties) {

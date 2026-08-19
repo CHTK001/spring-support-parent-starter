@@ -26,20 +26,31 @@ import static com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler.
 /**
  * 注入机构ID
  *
- * @author CH
  */
 public abstract class AbstractDeptRegister implements DeptRegister {
+    /** Plainselect */
     protected final PlainSelect plainSelect;
+    /** Where */
     protected final Expression where;
+    /** 用户 */
     protected final CurrentUser user;
+    /** 数据permission */
     protected final DataFilterTypeEnum dataPermission;
+    /** 表名称 */
     protected final String tableName;
+    /** DeptID列 */
     protected final String deptIdColumn;
+    /** DepttreeID列 */
     protected final String deptTreeIdColumn;
+    /** CreateBY列 */
     protected final String createByColumn;
+    /** 表别名 */
     protected final String tableAlias;
+    /** HASdeptID表别名 */
     protected String hasDeptIdTableAlias;
+    /** HASdeptID表表 */
     protected Table hasDeptIdTableTable;
+    /** Dept表 */
     protected Table deptTable;
 
     public AbstractDeptRegister(PlainSelect plainSelect,

@@ -8,8 +8,8 @@ import java.util.List;
  * 用于在多个服务提供者中选择一个进行调用
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 public interface RpcLoadBalancer {
 

@@ -19,10 +19,14 @@ import java.util.Map;
 @RequiredArgsConstructor
 public abstract class AbstractMerchantPaymentChannel {
 
+    /** Ext_provider_spi */
     public static final String EXT_PROVIDER_SPI = "providerSpi";
+    /** Default_provider_spi */
     public static final String DEFAULT_PROVIDER_SPI = "default";
 
+    /** Merchant通道服务 */
     protected final MerchantChannelService merchantChannelService;
+    /** Objectmapper */
     protected final ObjectMapper objectMapper;
 
     protected Map<String, Object> extConfig(MerchantChannel channel) {
@@ -107,3 +111,4 @@ public abstract class AbstractMerchantPaymentChannel {
         }
     }
 }
+

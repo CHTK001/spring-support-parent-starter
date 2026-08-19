@@ -23,9 +23,9 @@ import org.springframework.context.annotation.Configuration;
  * 避免重复创建和资源浪费。
  * </p>
  *
- * @author CH
  * @since 2024-12-05
  * @version 1.0.0
+ * @author CH
  */
 @Slf4j
 @Configuration

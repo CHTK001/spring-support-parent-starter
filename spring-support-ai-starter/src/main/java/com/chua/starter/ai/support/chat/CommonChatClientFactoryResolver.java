@@ -7,8 +7,8 @@ import com.chua.common.support.utils.StringUtils;
 /**
  * common ChatClient SPI 解析器。
  *
- * @author CH
  * @since 2026/04/03
+ * @author CH
  */
 final class CommonChatClientFactoryResolver {
 

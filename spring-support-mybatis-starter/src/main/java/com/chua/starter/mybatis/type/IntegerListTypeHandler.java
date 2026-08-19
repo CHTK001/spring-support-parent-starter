@@ -17,11 +17,13 @@ import java.util.List;
  * List<Integer> 的类型转换器实现类，对应数据库的 varchar 类型
  *
  * @author jason
+ * @author CH
  */
 @MappedJdbcTypes(JdbcType.VARCHAR)
 @MappedTypes(List.class)
 public class IntegerListTypeHandler implements TypeHandler<List<Integer>> {
 
+    /** Comma */
     private static final String COMMA = ",";
 
     @Override
@@ -55,3 +57,4 @@ public class IntegerListTypeHandler implements TypeHandler<List<Integer>> {
                 .map(Integer::valueOf).toList();
     }
 }
+

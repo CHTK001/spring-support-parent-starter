@@ -6,13 +6,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * 腾讯小程序配置
  *
- * @author CH
  * @since 2024/12/2
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = TencentMiniAppProperties.PREFIX, ignoreInvalidFields = true)
 public class TencentMiniAppProperties {
 
+    /** Prefix */
     public static final String PREFIX = "plugin.tencent.mini-app";
 
     /**

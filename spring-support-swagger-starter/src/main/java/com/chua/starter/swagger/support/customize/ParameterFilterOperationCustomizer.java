@@ -24,8 +24,8 @@ import java.util.Optional;
  * 参数过滤操作定制器
  * 用于过滤隐藏参数、UserValue参数等
  *
- * @author CH
  * @since 2025/5/27 13:37
+ * @author CH
  */
 public class ParameterFilterOperationCustomizer implements GlobalOperationCustomizer {
 
@@ -48,6 +48,7 @@ public class ParameterFilterOperationCustomizer implements GlobalOperationCustom
         }
     }
 
+    /** Knife4j属性 */
     private final Knife4jProperties knife4jProperties;
     private final Map<String, String> defaultHeaders;
 

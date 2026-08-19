@@ -14,8 +14,8 @@ import java.util.concurrent.ThreadPoolExecutor;
  * <p>{@code @Async("taskExecutor")}（用量统计、AppKey 使用次数更新）依赖该 Bean，
  * 当未引入系统 starter 时由本模块兜底提供。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Configuration

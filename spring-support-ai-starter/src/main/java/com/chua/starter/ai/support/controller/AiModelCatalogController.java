@@ -19,8 +19,8 @@ import java.util.Map;
  * <p>聚合系统全部能力门面的模型清单，按能力标签分组（detect/feature/classify/enhance/ocr/
  * chat/text-to-image/text-to-video/embedding 等），供前端按能力筛选与统一配置使用。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @RestController
 @RequestMapping("/v2/ai/models")

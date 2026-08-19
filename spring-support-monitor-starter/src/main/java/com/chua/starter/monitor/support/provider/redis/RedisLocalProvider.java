@@ -28,8 +28,8 @@ import java.util.Set;
  * 无需部署 exporter。
  * </p>
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Slf4j
 @Component

@@ -14,8 +14,8 @@ import java.time.LocalDateTime;
 /**
  * 聚合服务运行状态表，记录服务名称、运行标志、PID、启动时间与运行时长。
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 @Data
 @TableName("sys_ai_service_status")
@@ -30,6 +30,7 @@ public class AiServiceStatus implements Serializable {
      */
     @TableId(value = "sys_ai_service_status_id", type = IdType.AUTO)
     @Schema(description = "状态记录 ID")
+    /** 状态ID */
     private Long statusId;
 
     /**
@@ -40,6 +41,7 @@ public class AiServiceStatus implements Serializable {
      */
     @TableField("sys_ai_service_status_service_name")
     @Schema(description = "服务名称")
+    /** 状态服务名称 */
     private String statusServiceName;
 
     /**
@@ -50,6 +52,7 @@ public class AiServiceStatus implements Serializable {
      */
     @TableField("sys_ai_service_status_running")
     @Schema(description = "是否运行中")
+    /** 状态running */
     private Boolean statusRunning;
 
     /**
@@ -60,6 +63,7 @@ public class AiServiceStatus implements Serializable {
      */
     @TableField("sys_ai_service_status_pid")
     @Schema(description = "进程 PID")
+    /** 状态PID */
     private Long statusPid;
 
     /**
@@ -70,6 +74,7 @@ public class AiServiceStatus implements Serializable {
      */
     @TableField("sys_ai_service_status_start_time")
     @Schema(description = "启动时间")
+    /** 状态开始时间 */
     private LocalDateTime statusStartTime;
 
     /**
@@ -80,6 +85,7 @@ public class AiServiceStatus implements Serializable {
      */
     @TableField("sys_ai_service_status_uptime_sec")
     @Schema(description = "运行时长(秒)")
+    /** 状态uptimeSEC */
     private Long statusUptimeSec;
 
     /**
@@ -90,5 +96,6 @@ public class AiServiceStatus implements Serializable {
      */
     @TableField(value = "sys_ai_service_status_update_time", fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
+    /** 状态update时间 */
     private LocalDateTime statusUpdateTime;
 }

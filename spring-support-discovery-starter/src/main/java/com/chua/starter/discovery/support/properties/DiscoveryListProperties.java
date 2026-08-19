@@ -8,8 +8,8 @@ import java.util.List;
 
 /**
  * 发现配置
- * @author CH
  * @since 2024/9/9
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = DiscoveryListProperties.PRE, ignoreInvalidFields = true)
@@ -20,6 +20,7 @@ public class DiscoveryListProperties {
     private boolean enable = false;
 
 
+    /** PRE */
     public static final String PRE = "plugin.discovery";
 
     /**

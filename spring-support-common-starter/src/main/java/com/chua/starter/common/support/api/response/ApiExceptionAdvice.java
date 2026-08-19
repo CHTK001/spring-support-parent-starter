@@ -69,20 +69,24 @@ import org.slf4j.LoggerFactory;
  * 提供详细的中文错误提示，帮助快速定位问题。
  * </p>
  *
- * @author CH
  * @since 2023-08-01
  * @version 1.0.0
+ * @author CH
  */
 @RestControllerAdvice
 public class ApiExceptionAdvice implements org.springframework.context.EnvironmentAware {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionAdvice.class);
     /** 是否为生产环境（生产环境隐藏技术细节） */
+    /** ISproduction */
     private boolean isProduction = false;
 
     /** 是否在响应中返回详细错误信息（字段级别错误） */
+    /** 返回值detailederrors */
     private boolean returnDetailedErrors = true;
 
     /** 请求追踪ID的Header名称 */
+    /** Trace_id_header */
     private static final String TRACE_ID_HEADER = "X-Trace-Id";
 
     @Override
@@ -91,11 +95,17 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
         this.returnDetailedErrors = environment.getProperty("plugin.api.exception.detailed-errors", Boolean.class, true);
     }
 
+    /** Data_too_long_pattern */
     private static final Pattern DATA_TOO_LONG_PATTERN = Pattern.compile("Data too long for column '([^']*)' at row");
+    /** Duplicate_entry_pattern */
     private static final Pattern DUPLICATE_ENTRY_PATTERN = Pattern.compile("Duplicate entry '([^']*)' for key '([^']*)'");
+    /** Foreign_key_pattern */
     private static final Pattern FOREIGN_KEY_PATTERN = Pattern.compile("FOREIGN KEY \\(`([^`]*)`\\)");
+    /** Column_pattern */
     private static final Pattern COLUMN_PATTERN = Pattern.compile("Column '([^']*)'");
+    /** Converter_pattern */
     private static final Pattern CONVERTER_PATTERN = Pattern.compile("\\[\"(.*?)\"]+");
+    /** Decimal_format */
     private static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("0.##");
 
     // ==================== 参数校验异常 ====================

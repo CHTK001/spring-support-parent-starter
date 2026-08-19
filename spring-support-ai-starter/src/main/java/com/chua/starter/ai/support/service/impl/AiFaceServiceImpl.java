@@ -25,8 +25,8 @@ import java.util.Map;
  * <p>基于 {@link FaceClientManager} 获取懒加载的人脸模型实例，全部配置实时生效。
  * 1:1 比对使用余弦相似度（与向量库 COSINE 算法一致）。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service

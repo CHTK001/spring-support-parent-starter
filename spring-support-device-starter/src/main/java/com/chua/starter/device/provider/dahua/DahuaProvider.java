@@ -26,8 +26,8 @@ import java.util.List;
  * <p>仅当 {@code device.provider.fallback-mock=true} 时回退到 {@link DahuaSession} 模拟会话，</p>
  * <p>供本地无厂商账号时调试 UI 流程使用，<strong>生产环境严禁启用</strong>。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Component

@@ -11,14 +11,17 @@ import java.util.concurrent.TimeUnit;
  *
  * <p>使用后台线程异步消费队列，避免阻塞 Netty 事件循环。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class AsyncLogWriter implements JobLogSink {
 
+    /** 队列 */
     private final LinkedBlockingQueue<JobLogEvent> queue;
+    /** Sinks */
     private final List<JobLogSink> sinks;
+    /** Worker */
     private final Thread worker;
     private volatile boolean running = true;
 

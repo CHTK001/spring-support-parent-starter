@@ -5,8 +5,8 @@ import lombok.Data;
 /**
  * AI 会话实体，对应一次对话会话。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class AIDialog {

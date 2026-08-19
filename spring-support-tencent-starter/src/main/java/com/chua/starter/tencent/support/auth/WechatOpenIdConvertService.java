@@ -5,8 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 微信openid转换服务
  *
- * @author CH
  * @since 2024/04/08
+ * @author CH
  */
 @Slf4j
 public class WechatOpenIdConvertService implements OpenIdConvertService {

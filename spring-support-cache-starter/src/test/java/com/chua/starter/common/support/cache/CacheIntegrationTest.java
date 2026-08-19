@@ -13,7 +13,6 @@ import org.springframework.test.context.TestPropertySource;
 /**
  * 真实 Spring 容器集成测试 —— 验证缓存与业务集成行为。
  *
- * @author CH
  */
 @SpringBootTest(classes = TestCacheApplication.class)
 @Import(CacheIntegrationTest.CacheTestService.class)
@@ -27,15 +26,19 @@ import org.springframework.test.context.TestPropertySource;
 public class CacheIntegrationTest {
 
     @Autowired
+    /** 缓存管理器 */
     private CacheManager cacheManager;
 
     @Autowired
+    /** 缓存configuration */
     private CacheConfiguration cacheConfiguration;
 
     @Autowired(required = false)
+    /** 缓存模板 */
     private CacheTemplate cacheTemplate;
 
     @Autowired(required = false)
+    /** 缓存测试服务 */
     private CacheTestService cacheTestService;
 
     @Test

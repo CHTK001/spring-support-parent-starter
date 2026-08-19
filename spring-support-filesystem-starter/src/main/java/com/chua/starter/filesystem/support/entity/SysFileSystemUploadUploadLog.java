@@ -14,43 +14,52 @@ import java.time.LocalDateTime;
  *
  * <p>每次上传尝试无论成败都写入一条记录，用于排查与追溯。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @TableName(value = "filesystem_upload_upload_log")
 public class SysFileSystemUploadUploadLog extends SysBase implements Serializable {
 
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
 
     @TableId(value = "filesystem_upload_upload_log_id", type = IdType.AUTO)
+    /** Filesystem上传上传日志ID */
     private Long filesystemUploadUploadLogId;
 
     /** 上传任务ID */
     @TableField("filesystem_upload_upload_log_upload_id")
+    /** Filesystem上传上传日志上传ID */
     private String filesystemUploadUploadLogUploadId;
 
     /** 阶段标识: 2-上传OSS */
     @TableField("filesystem_upload_upload_log_stage")
+    /** Filesystem上传上传日志阶段 */
     private Integer filesystemUploadUploadLogStage;
 
     /** 结果状态: 1-成功, 0-失败 */
     @TableField("filesystem_upload_upload_log_status")
+    /** Filesystem上传上传日志状态 */
     private Integer filesystemUploadUploadLogStatus;
 
     /** 记录信息（成功/失败原因） */
     @TableField("filesystem_upload_upload_log_message")
+    /** Filesystem上传上传日志消息 */
     private String filesystemUploadUploadLogMessage;
 
     /** 第几次尝试 */
     @TableField("filesystem_upload_upload_log_retry_count")
+    /** Filesystem上传上传日志重试数量 */
     private Integer filesystemUploadUploadLogRetryCount;
 
     /** 开始时间 */
     @TableField("filesystem_upload_upload_log_start_time")
+    /** Filesystem上传上传日志开始时间 */
     private LocalDateTime filesystemUploadUploadLogStartTime;
 
     /** 结束时间 */
     @TableField("filesystem_upload_upload_log_end_time")
+    /** Filesystem上传上传日志结束时间 */
     private LocalDateTime filesystemUploadUploadLogEndTime;
 
     public SysFileSystemUploadUploadLog() {}
@@ -83,7 +92,9 @@ public class SysFileSystemUploadUploadLog extends SysBase implements Serializabl
      * 上传结果状态常量。
      */
     public static class Result {
+        /** Success */
         public static final int SUCCESS = 1;
+        /** Failed */
         public static final int FAILED = 0;
     }
 
@@ -91,6 +102,7 @@ public class SysFileSystemUploadUploadLog extends SysBase implements Serializabl
      * 阶段标识常量。
      */
     public static class Stage {
+        /** 上传 */
         public static final int UPLOAD = 2;
     }
 }

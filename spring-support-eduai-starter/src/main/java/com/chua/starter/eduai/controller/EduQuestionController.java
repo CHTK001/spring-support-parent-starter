@@ -17,8 +17,8 @@ import java.util.List;
 /**
  * 题目管理控制器
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -27,6 +27,7 @@ import java.util.List;
 @Tag(name = "题目管理")
 public class EduQuestionController {
 
+    /** Question服务 */
     private final IEduQuestionService questionService;
 
     /**

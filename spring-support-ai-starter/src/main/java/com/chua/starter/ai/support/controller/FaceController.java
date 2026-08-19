@@ -33,8 +33,8 @@ import java.util.Map;
  * <p>提供人脸识别单独能力、链式管线能力与辅助能力的对外接口，
  * 全部配置读取自 {@code face} 分组全局设置，配置变更实时生效。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController

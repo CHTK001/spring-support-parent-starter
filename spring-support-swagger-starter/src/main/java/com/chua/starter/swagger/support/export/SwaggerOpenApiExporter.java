@@ -16,8 +16,8 @@ import java.io.IOException;
  *
  * <p>整个流程不耦合具体 SPI 实现, 升级或替换实现 (例如自定义主题) 只需替换 SPI。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class SwaggerOpenApiExporter {

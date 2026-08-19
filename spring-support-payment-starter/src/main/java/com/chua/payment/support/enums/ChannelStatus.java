@@ -2,13 +2,16 @@ package com.chua.payment.support.enums;
 
 /**
  * 支付方式状态
+ * @author CH
  */
 public enum ChannelStatus {
 
     DISABLED(0, "已禁用"),
     ENABLED(1, "已启用");
 
+    /** 代码 */
     private final int code;
+    /** 描述 */
     private final String description;
 
     ChannelStatus(int code, String description) {
@@ -36,3 +39,4 @@ public enum ChannelStatus {
         return "";
     }
 }
+

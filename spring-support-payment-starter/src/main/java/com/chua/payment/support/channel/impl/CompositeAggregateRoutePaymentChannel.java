@@ -23,10 +23,13 @@ import java.util.Map;
 
 /**
  * 直营网关托管路由
+ * @author CH
  */
 public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPaymentChannel implements PaymentChannel {
 
+    /** Merchant通道mapper */
     private final MerchantChannelMapper merchantChannelMapper;
+    /** Payment通道注册表 */
     private final PaymentChannelRegistry paymentChannelRegistry;
 
     public CompositeAggregateRoutePaymentChannel(MerchantChannelService merchantChannelService,
@@ -144,3 +147,4 @@ public class CompositeAggregateRoutePaymentChannel extends AbstractMerchantPayme
         return null;
     }
 }
+

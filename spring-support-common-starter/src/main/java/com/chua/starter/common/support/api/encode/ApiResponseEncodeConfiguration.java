@@ -7,8 +7,8 @@ import org.springframework.context.ApplicationEvent;
 /**
  * 响应编码配置
  *
- * @author CH
  * @since 2024/8/14
+ * @author CH
  */
 @EqualsAndHashCode(callSuper = true)
 public class ApiResponseEncodeConfiguration extends ApplicationEvent implements Upgrade<ApiResponseEncodeConfiguration> {

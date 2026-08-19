@@ -8,9 +8,9 @@ import java.util.Collection;
 /**
  * redis侦听器
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/02/05
+ * @author CH
  */
 public interface RedisListener {
     /**

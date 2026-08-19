@@ -13,14 +13,15 @@ import java.util.concurrent.TimeUnit;
  * 基于消息ID进行去重，防止重复消息处理
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @Slf4j
 @Component
 public class DuplicateMessageFilter implements MessageFilter {
 
     private final ConcurrentHashMap<String, Long> processedMessages = new ConcurrentHashMap<>();
+    /** Default_ttl */
     private static final long DEFAULT_TTL = TimeUnit.MINUTES.toMillis(5);
 
     @Override

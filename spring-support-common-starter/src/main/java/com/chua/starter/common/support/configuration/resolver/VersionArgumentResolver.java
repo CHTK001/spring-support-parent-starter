@@ -6,9 +6,9 @@ package com.chua.starter.common.support.configuration.resolver;
  * 用于解析和提供API版本信息。
  * </p>
  *
- * @author CH
  * @since 2024/8/26
  * @version 1.0.0
+ * @author CH
  */
 public interface VersionArgumentResolver {
 

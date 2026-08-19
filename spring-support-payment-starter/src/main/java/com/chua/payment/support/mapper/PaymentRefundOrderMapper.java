@@ -6,7 +6,9 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * 退款单 Mapper
+ * @author CH
  */
 @Mapper
 public interface PaymentRefundOrderMapper extends BaseMapper<PaymentRefundOrder> {
 }
+

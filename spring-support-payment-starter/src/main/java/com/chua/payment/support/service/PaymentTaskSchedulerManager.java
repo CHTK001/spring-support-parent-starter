@@ -31,6 +31,7 @@ import java.util.concurrent.ScheduledFuture;
  * 该实现仅在 {@code engine=internal} 时生效，负责 payment 模块内部的本地调度。
  * 切换到 {@code engine=job} 后，统一由 job-starter 轮询任务表并触发业务 Job。
  * </p>
+ * @author CH
  */
 @Slf4j
 @Service
@@ -38,7 +39,9 @@ import java.util.concurrent.ScheduledFuture;
 @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "engine", havingValue = "internal", matchIfMissing = true)
 public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
 
+    /** Payment调度器配置mapper */
     private final PaymentSchedulerConfigMapper paymentSchedulerConfigMapper;
+    /** 任务调度器 */
     private final ThreadPoolTaskScheduler taskScheduler;
     private final Map<String, PaymentManagedTask> taskRegistry = new LinkedHashMap<>();
     private final Map<String, ScheduledFuture<?>> scheduledFutures = new ConcurrentHashMap<>();
@@ -269,3 +272,4 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         return new PaymentException("支付调度任务执行失败: " + taskKey, throwable);
     }
 }
+

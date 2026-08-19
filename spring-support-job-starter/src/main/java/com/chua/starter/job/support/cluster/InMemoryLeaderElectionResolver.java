@@ -10,8 +10,8 @@ import java.util.concurrent.ConcurrentMap;
  * 多 Scheduler 节点请实现 {@link LeaderElectionResolver} SPI 接入真实选主
  * (例如 {@code MysqlLeaderElectionResolver})。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class InMemoryLeaderElectionResolver implements LeaderElectionResolver {
 

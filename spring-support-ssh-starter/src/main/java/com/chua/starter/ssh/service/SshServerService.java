@@ -24,13 +24,15 @@ import java.util.Collections;
 /**
  * SSH服务端服务
  * 
- * @author CH
  * @version 4.0.0.32
+ * @author CH
  */
 @Slf4j
 public class SshServerService implements InitializingBean, DisposableBean {
 
+    /** 属性 */
     private final SshServerProperties properties;
+    /** SSH服务器 */
     private SshServer sshServer;
 
     public SshServerService(SshServerProperties properties) {

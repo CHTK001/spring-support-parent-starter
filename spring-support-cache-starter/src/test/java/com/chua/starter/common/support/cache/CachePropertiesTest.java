@@ -21,6 +21,7 @@ import java.util.Map;
 @DisplayName("CacheProperties 测试")
 class CachePropertiesTest {
 
+    /** 属性 */
     private CacheProperties properties;
 
     @BeforeEach

@@ -17,7 +17,6 @@ import org.springframework.context.annotation.Primary;
  * 第三方 starter 的 Configuration（部分需要显式启用），并直接定义
  * {@link com.chua.starter.queue.MessageTemplate} bean 确保调试控制器可注入。</p>
  *
- * @author CH
  * @since 4.0.0.42
  */
 @Slf4j

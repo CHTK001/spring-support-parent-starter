@@ -9,8 +9,8 @@ import com.chua.starter.ai.support.model.ServerProcessAnalyzeRequest;
 /**
  * 服务器 AI 分析服务
  *
- * @author CH
  * @since 2026/7/30
+ * @author CH
  */
 public interface ServerAiAnalyzeService {
 

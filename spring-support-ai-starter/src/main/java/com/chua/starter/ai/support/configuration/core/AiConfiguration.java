@@ -49,8 +49,8 @@ import java.util.Map;
  *   4. 业务代码通过 registry.getDefault() 使用
  * </pre>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @AutoConfiguration

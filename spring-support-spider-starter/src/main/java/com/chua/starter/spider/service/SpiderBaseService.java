@@ -10,8 +10,8 @@ import com.chua.starter.mybatis.pojo.SysBase;
  * Service 层无需手动维护时间戳，仅继承 MyBatis-Plus 标准 CRUD 能力。</p>
  *
  * @param <T> 实体类型
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface SpiderBaseService<T extends SysBase> extends IService<T> {
 }

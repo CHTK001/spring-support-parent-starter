@@ -2,9 +2,11 @@ package com.chua.starter.common.support.http;
 
 /**
  * HTTP Content-Type 描述。
+ * @author CH
  */
 public class ContentType {
 
+    /** Mime类型 */
     private final String mimeType;
 
     public ContentType(String mimeType) {
@@ -15,3 +17,4 @@ public class ContentType {
         return mimeType;
     }
 }
+

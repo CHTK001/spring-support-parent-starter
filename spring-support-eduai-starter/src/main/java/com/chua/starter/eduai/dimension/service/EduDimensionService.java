@@ -24,18 +24,23 @@ import java.util.List;
  *   <li>学段 / 年级 — 由内置枚举 + edu_grade 表组合（仅做查询）</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EduDimensionService {
 
+    /** Subjectmapper */
     private final EduSubjectMapper subjectMapper;
+    /** Grademapper */
     private final EduGradeMapper gradeMapper;
+    /** Classmapper */
     private final EduClassMapper classMapper;
+    /** Studentmapper */
     private final EduStudentMapper studentMapper;
+    /** Teachermapper */
     private final EduTeacherMapper teacherMapper;
 
     // ==================== 学科 ====================
@@ -217,8 +222,11 @@ public class EduDimensionService {
     }
 
     public static class DimensionDropdown {
+        /** Gradelevels */
         private List<EnumOption> gradeLevels;
+        /** Subjects */
         private List<EduSubject> subjects;
+        /** Grades */
         private List<EduGrade> grades;
         public List<EnumOption> getGradeLevels() { return gradeLevels; }
         public void setGradeLevels(List<EnumOption> gradeLevels) { this.gradeLevels = gradeLevels; }
@@ -229,7 +237,9 @@ public class EduDimensionService {
     }
 
     public static class EnumOption {
+        /** 值 */
         private String value;
+        /** 标签 */
         private String label;
         public EnumOption() {}
         public EnumOption(String value, String label) { this.value = value; this.label = label; }

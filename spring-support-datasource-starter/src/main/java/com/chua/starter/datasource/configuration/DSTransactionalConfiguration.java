@@ -13,8 +13,8 @@ import org.springframework.context.annotation.Bean;
  * 自动注册 {@code @DSTransactional} 注解的处理切面。
  * </p>
  *
- * @author CH
  * @since 2026/07/14
+ * @author CH
  */
 @AutoConfiguration
 @ConditionalOnClass(name = "org.aspectj.lang.annotation.Aspect")

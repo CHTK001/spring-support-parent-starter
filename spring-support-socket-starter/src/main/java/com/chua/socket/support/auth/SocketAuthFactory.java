@@ -8,9 +8,9 @@ import java.util.Map;
  * Socket 认证工厂接口
  * 用于验证客户端连接的合法性
  *
- * @author CH
  * @version 1.0.0
  * @since 2024-12-04
+ * @author CH
  */
 public interface SocketAuthFactory {
 

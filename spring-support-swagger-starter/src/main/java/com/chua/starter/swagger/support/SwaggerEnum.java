@@ -3,8 +3,8 @@ package com.chua.starter.swagger.support;
 /**
  * Swagger枚举接口定义
  *
- * @author CH
  * @since 2025/10/14 13:29
+ * @author CH
  */
 public interface SwaggerEnum {
 

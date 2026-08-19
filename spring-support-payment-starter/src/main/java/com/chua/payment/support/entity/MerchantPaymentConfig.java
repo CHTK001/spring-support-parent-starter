@@ -10,46 +10,61 @@ import java.time.LocalDateTime;
 
 /**
  * 商户支付配置
+ * @author CH
  */
 @Data
 @TableName("pay_merchant_payment_config")
 public class MerchantPaymentConfig {
     @TableId(value = "pay_merchant_payment_config_id", type = IdType.AUTO)
+    /** ID */
     private Long id;
 
     @TableField("pay_merchant_payment_config_tenant_id")
+    /** TenantID */
     private Long tenantId;
 
     @TableField("pay_merchant_payment_config_merchant_id")
+    /** MerchantID */
     private Long merchantId;
 
     @TableField("pay_merchant_payment_config_order_reusable")
+    /** 排序reusable */
     private Boolean orderReusable;
 
     @TableField("pay_merchant_payment_config_order_timeout_minutes")
+    /** 排序超时minutes */
     private Integer orderTimeoutMinutes;
 
     @TableField("pay_merchant_payment_config_pending_order_limit")
+    /** Pending排序限制 */
     private Integer pendingOrderLimit;
 
     @TableField("pay_merchant_payment_config_auto_cancel_timeout_order")
+    /** Autocancel超时排序 */
     private Boolean autoCancelTimeoutOrder;
 
     @TableField("pay_merchant_payment_config_create_time")
+    /** Create时间 */
     private LocalDateTime createTime;
 
     @TableField("pay_merchant_payment_config_update_time")
+    /** Update时间 */
     private LocalDateTime updateTime;
 
     @TableField("pay_merchant_payment_config_create_by")
+    /** CreateBY */
     private String createBy;
 
     @TableField("pay_merchant_payment_config_update_by")
+    /** UpdateBY */
     private String updateBy;
 
     @TableField("pay_merchant_payment_config_create_name")
+    /** Create名称 */
     private String createName;
 
     @TableField("pay_merchant_payment_config_update_name")
+    /** Update名称 */
     private String updateName;
 }
+

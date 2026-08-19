@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 
 /**
  * 钱包限额服务
+ * @author CH
  */
 public interface WalletLimitService {
 
@@ -39,3 +40,4 @@ public interface WalletLimitService {
      */
     void validateBalanceLimit(Long merchantId, Long userId, BigDecimal currentBalance, BigDecimal addAmount);
 }
+

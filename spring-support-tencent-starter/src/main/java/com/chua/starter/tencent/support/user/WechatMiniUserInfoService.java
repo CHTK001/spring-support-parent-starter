@@ -10,8 +10,8 @@ import org.springframework.util.StringUtils;
 /**
  * 微信小程序用户信息服务
  *
- * @author CH
  * @since 2026/07/20
+ * @author CH
  */
 @Spi("WECHAT_MINI")
 public class WechatMiniUserInfoService implements UserInfoService {

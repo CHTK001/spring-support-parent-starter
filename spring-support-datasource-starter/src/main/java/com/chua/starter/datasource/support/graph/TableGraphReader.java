@@ -16,12 +16,13 @@ import java.util.Map;
  * 读取数据库全部表 → 表节点信息
  * <p>基于 JDBC 标准 {@link DatabaseMetaData}，跨数据库通用（MySQL/PG/Oracle/SQLServer/H2/SQLite/DM/Kingbase）。</p>
  *
- * @author CH
  * @since 2026/8/5
+ * @author CH
  */
 @Slf4j
 public class TableGraphReader {
 
+    /** 数据来源 */
     private final DataSource dataSource;
 
     public TableGraphReader(DataSource dataSource) {
@@ -149,7 +150,9 @@ public class TableGraphReader {
      * 读取结果封装
      */
     public static class GraphReadResult {
+        /** Tables */
         public final List<TableNodeInfo> tables;
+        /** Edges */
         public final List<GraphEdge> edges;
 
         public GraphReadResult(List<TableNodeInfo> tables, List<GraphEdge> edges) {

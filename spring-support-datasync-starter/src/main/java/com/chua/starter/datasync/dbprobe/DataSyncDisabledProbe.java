@@ -13,8 +13,8 @@ import org.springframework.context.ApplicationContext;
  * 本探针只按类型枚举 Bean Name，enabled=false 时预期 Datasync/DataSync 类型数量为 0，
  * 且上下文仍正常启动（无 DataSync 相关装配）。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
 public class DataSyncDisabledProbe {

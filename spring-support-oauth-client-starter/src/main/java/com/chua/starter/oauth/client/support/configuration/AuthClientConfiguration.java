@@ -49,8 +49,8 @@ import java.util.List;
  * 4. HttpServletRequest增强
  * 5. 权限拦截器配置
  *
- * @author CH
  * @since 2022/7/23 8:51
+ * @author CH
  */
 @Slf4j
 @ConditionalOnProperty(prefix = "plugin.oauth", name = "enable", havingValue = "true", matchIfMissing = true)
@@ -65,6 +65,7 @@ public class AuthClientConfiguration
      */
     private AuthClientProperties authProperties;
     
+    /** Application上下文 */
     private ApplicationContext applicationContext;
 
     /**

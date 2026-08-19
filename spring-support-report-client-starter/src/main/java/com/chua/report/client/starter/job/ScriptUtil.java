@@ -19,6 +19,7 @@ import java.util.List;
  *  4、python 异常输出优先级高于标准输出，体现在Log文件中，因此推荐通过logging方式打日志保持和异常信息一致；否则用prinf日志顺序会错乱
  *
  * Created by xuxueli on 17/2/25.
+ * @author CH
  */
 public class ScriptUtil {
 

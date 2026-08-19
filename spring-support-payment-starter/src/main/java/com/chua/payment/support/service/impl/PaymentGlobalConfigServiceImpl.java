@@ -14,14 +14,18 @@ import org.springframework.util.StringUtils;
 
 /**
  * 支付全局配置服务实现
+ * @author CH
  */
 @Service
 @RequiredArgsConstructor
 public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigService {
 
+    /** Default_key */
     private static final String DEFAULT_KEY = "DEFAULT";
 
+    /** Payment全局配置mapper */
     private final PaymentGlobalConfigMapper paymentGlobalConfigMapper;
+    /** Paymentcallback属性 */
     private final PaymentCallbackProperties paymentCallbackProperties;
 
     @Override
@@ -87,3 +91,4 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
         return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
     }
 }
+

@@ -24,11 +24,12 @@ import java.util.concurrent.atomic.LongAdder;
  *   <li>异常隔离：单层失败不影响其他层级。</li>
  * </ul>
  *
- * @author CH
  * @since 2024/7/22
+ * @author CH
  */
 public class MultiLevelCache implements Cache {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(MultiLevelCache.class);
 
     /**
@@ -41,14 +42,18 @@ public class MultiLevelCache implements Cache {
         }
     };
 
+    /** 名称 */
     private final String name;
+    /** Caches */
     private final List<Cache> caches;
 
     /**
      * 缓存统计
      */
     private final LongAdder hitCount = new LongAdder();
+    /** Miss数量 */
     private final LongAdder missCount = new LongAdder();
+    /** Backfill数量 */
     private final LongAdder backfillCount = new LongAdder();
 
     /**

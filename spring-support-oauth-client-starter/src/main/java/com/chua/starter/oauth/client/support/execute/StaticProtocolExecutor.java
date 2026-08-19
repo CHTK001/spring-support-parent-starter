@@ -31,12 +31,13 @@ import java.util.Set;
  * 作为协议执行器，它负责解析和执行特定格式的协议数据。
  * </p>
  *
- * @author CH
  * @since 2024/6/12
+ * @author CH
  */
 @Spi("static")
 public class StaticProtocolExecutor implements ProtocolExecutor {
 
+    /** Auth客户端属性 */
     private final AuthClientProperties authClientProperties;
 
     public StaticProtocolExecutor() {

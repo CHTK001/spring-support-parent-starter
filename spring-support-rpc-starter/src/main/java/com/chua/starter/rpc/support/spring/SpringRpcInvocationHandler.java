@@ -21,18 +21,25 @@ import java.util.List;
  * 底层委托真实的 {@link RpcClient} 发起网络调用，避免旧实现的「本地 Bean + 反射直调」伪远程问题。
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 @Slf4j
 public class SpringRpcInvocationHandler<T> implements InvocationHandler {
 
+    /** 目标类型 */
     private final Class<T> targetType;
+    /** RPC客户端 */
     private final RpcClient rpcClient;
+    /** Application上下文 */
     private final ApplicationContext applicationContext;
+    /** 消费者配置 */
     private final RpcConsumerConfig consumerConfig;
+    /** 重试policy */
     private final RpcRetryPolicy retryPolicy;
+    /** Circuitbreaker管理器 */
     private RpcCircuitBreakerManager circuitBreakerManager;
+    /** Interceptors */
     private List<RpcInterceptor> interceptors;
 
     public SpringRpcInvocationHandler(Class<T> targetType,

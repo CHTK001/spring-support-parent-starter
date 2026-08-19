@@ -5,9 +5,9 @@ import lombok.Data;
 /**
  * rpc属性
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/04/07
+ * @author CH
  */
 @Data
 public class RpcAttribute {

@@ -10,8 +10,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * Knife4j Web MVC配置器
  * 配置静态资源处理器、视图控制器和枚举属性插件
  *
- * @author CH
  * @since 2024/8/7
+ * @author CH
  */
 @org.springframework.context.annotation.Configuration
 public class Knife4jWebMvcConfigurer implements WebMvcConfigurer {

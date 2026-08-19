@@ -18,8 +18,8 @@ import java.util.List;
 /**
  * 聚合服务运行状态控制器，提供状态查询与服务启停。
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 @RestController
 @RequestMapping("/v2/services")

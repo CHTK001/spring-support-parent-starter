@@ -2,6 +2,7 @@ package com.chua.payment.support.service;
 
 /**
  * 钱包异步回调处理服务
+ * @author CH
  */
 public interface WalletNotifyService {
 
@@ -12,3 +13,4 @@ public interface WalletNotifyService {
                       String payload,
                       String reason);
 }
+

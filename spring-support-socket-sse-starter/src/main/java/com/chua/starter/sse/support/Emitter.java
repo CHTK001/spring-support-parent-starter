@@ -11,6 +11,7 @@ import java.util.Set;
 /**
  * 定义了一种发布者对象，用于SSE (Server-Sent Events) 功能
  * 该类使用了 Lombok 注解来简化代码
+ * @author CH
  */
 @Data
 @Builder
@@ -25,6 +26,7 @@ public class Emitter {
      * 事件类型集合，一个发布者可以支持多种事件类型
      */
     @Singular("event")
+    /** 事件 */
     private Set<String> event;
 
     /**
@@ -41,6 +43,7 @@ public class Emitter {
      * 创建时间，初始化为当前的纳秒数
      */
     @Builder.Default
+    /** Create时间 */
     private long createTime = System.nanoTime();
 
     /**
@@ -156,3 +159,4 @@ public class Emitter {
         this.sseEmitter = sseEmitter;
     }
 }
+

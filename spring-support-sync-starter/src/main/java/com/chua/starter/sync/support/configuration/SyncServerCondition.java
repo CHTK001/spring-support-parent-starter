@@ -10,9 +10,9 @@ import org.springframework.core.type.AnnotatedTypeMetadata;
  * 当 type 为 server 或 both，且 server.enable = true 时，条件成立
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/12/10
+ * @author CH
  */
 public class SyncServerCondition implements Condition {
 

@@ -22,6 +22,7 @@ import java.util.Map;
 
 /**
  * 第三方支付异步通知控制器
+ * @author CH
  */
 @Slf4j
 @Hidden
@@ -31,10 +32,15 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PaymentNotifyController {
 
+    /** Merchant通道服务 */
     private final MerchantChannelService merchantChannelService;
+    /** Paymentnotifyprocess服务 */
     private final PaymentNotifyProcessService paymentNotifyProcessService;
+    /** Payment排序mapper */
     private final PaymentOrderMapper paymentOrderMapper;
+    /** Paymentrefund排序mapper */
     private final PaymentRefundOrderMapper paymentRefundOrderMapper;
+    /** Objectmapper */
     private final ObjectMapper objectMapper;
 
     @PostMapping("/wechat/pay/{channelId}")
@@ -272,3 +278,4 @@ public class PaymentNotifyController {
         }
     }
 }
+

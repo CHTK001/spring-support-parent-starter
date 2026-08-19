@@ -22,8 +22,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  *   <li>Spring 原生 {@code @Scheduled} 每秒触发一次。</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Component

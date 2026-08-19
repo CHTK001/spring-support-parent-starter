@@ -18,11 +18,13 @@ import org.slf4j.LoggerFactory;
 /**
  * 二进制消息转换器
  *
- * @author CH
  * @since 2025/10/10 14:22
+ * @author CH
  */
 public class BinaryHttpMessageConverter extends AbstractGenericHttpMessageConverter<Object> {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(BinaryHttpMessageConverter.class);
+        /** API响应encoderegister */
         private final ApiResponseEncodeRegister apiResponseEncodeRegister;
     private final List<HttpMessageConverter<?>> messageConverters;
 

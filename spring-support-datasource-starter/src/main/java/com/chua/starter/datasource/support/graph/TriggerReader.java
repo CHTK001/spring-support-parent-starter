@@ -24,8 +24,8 @@ import java.util.Map;
  *     <li>SQLite / DM / Kingbase: 走通用 {@code information_schema.TRIGGERS}，列名容错</li>
  * </ul>
  *
- * @author CH
  * @since 2026/8/5
+ * @author CH
  */
 @Slf4j
 public class TriggerReader {

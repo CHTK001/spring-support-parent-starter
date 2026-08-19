@@ -23,8 +23,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * }
  * }</pre>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RequiredArgsConstructor

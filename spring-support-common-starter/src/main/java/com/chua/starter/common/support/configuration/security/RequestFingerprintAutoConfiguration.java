@@ -28,13 +28,14 @@ import java.util.concurrent.TimeUnit;
  * <p>支持计算请求指纹并按有效期去重，基于 {@code com.google.common.hash.Hashing}。</p>
  * <p>可通过 {@code plugin.security.fingerprint.*} 精确控制项启用/禁用。</p>
  *
- * @author CH
  * @since 2025-08-15
+ * @author CH
  */
 @Configuration
 @EnableConfigurationProperties(RequestFingerprintAutoConfiguration.FingerprintProps.class)
 public class RequestFingerprintAutoConfiguration {
 
+    /** Fingerprintcleaner */
     private ScheduledExecutorService fingerprintCleaner;
 
     /**
@@ -180,18 +181,31 @@ public class RequestFingerprintAutoConfiguration {
      */
     @ConfigurationProperties(prefix = "plugin.security.fingerprint")
     public static class FingerprintProps {
+        /** 是否启用 */
         private boolean enabled = false;
+        /** 头部名称 */
         private String headerName = "X-Request-Fingerprint";
+        /** 算法 */
         private String algorithm = "SHA-256";
+        /** Salt */
         private String salt;
+        /** Includemethod */
         private boolean includeMethod = true;
+        /** Include路径 */
         private boolean includePath = true;
+        /** Include参数 */
         private boolean includeParams = true;
+        /** Includeheaders */
         private Set<String> includeHeaders = new LinkedHashSet<>();
+        /** Include请求体 */
         private boolean includeBody = false;
-        private long includeBodyMaxBytes = 1024 * 1024; // 1MB 默认上限
+        /** 1MB 默认上限 */
+        private long includeBodyMaxBytes = 1024 * 1024;
+        /** 请求体methods */
         private Set<String> bodyMethods = new LinkedHashSet<>(Arrays.asList("POST", "PUT", "PATCH"));
+        /** ValidityMS */
         private long validityMs = 60_000;
+        /** Rejectduplicate */
         private boolean rejectDuplicate = false;
 
         public boolean isEnabled() {
@@ -313,6 +327,7 @@ public class RequestFingerprintAutoConfiguration {
      * 带缓存请求体的 Request 包装器
      */
     static class CachedBodyHttpServletRequest extends HttpServletRequestWrapper {
+        /** Cached请求体 */
         private final byte[] cachedBody;
         /**
          * 构造
@@ -351,5 +366,4 @@ public class RequestFingerprintAutoConfiguration {
         }
     }
 }
-
 

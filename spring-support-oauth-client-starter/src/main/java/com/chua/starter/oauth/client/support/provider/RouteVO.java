@@ -12,6 +12,7 @@ import java.util.List;
  *
  * @author haoxr
  * @since 2020/11/28
+ * @author CH
  */
 @Data
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
@@ -126,3 +127,4 @@ public class RouteVO {
      */
     private List<RouteVO> children;
 }
+

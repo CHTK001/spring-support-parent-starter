@@ -49,8 +49,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *   aggregate.withTokenGroup("vip").chatSync("复杂问题");
  * }</pre>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class ChatClientRegistry {

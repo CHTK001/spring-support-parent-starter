@@ -9,10 +9,13 @@ import java.util.Set;
  */
 public class AuthConstant {
 
+    /** Super_admin */
     public static final String SUPER_ADMIN = "SUPER_ADMIN";
 
+    /** Admin */
     public static final String ADMIN = "ADMIN";
 
+    /** Captcha_session_key */
     public static final String CAPTCHA_SESSION_KEY = "captcha_session_key";
 
     /**

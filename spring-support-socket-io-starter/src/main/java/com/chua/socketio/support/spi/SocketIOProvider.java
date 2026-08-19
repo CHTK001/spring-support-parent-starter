@@ -17,14 +17,15 @@ import java.util.List;
  * Socket.IO 协议提供者
  * 实现基础 Socket 模块的 SPI 接口
  *
- * @author CH
  * @version 1.0.0
  * @since 2024-12-04
+ * @author CH
  */
 @Slf4j
 @Spi("socketio")
 public class SocketIOProvider implements SocketProvider {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SocketIOProvider.class);
 
     @Override

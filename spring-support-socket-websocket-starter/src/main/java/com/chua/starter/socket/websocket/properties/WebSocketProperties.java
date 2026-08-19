@@ -9,13 +9,14 @@ import java.util.List;
 /**
  * WebSocket 配置属性
  *
- * @author CH
  * @since 2025-12-25
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = WebSocketProperties.PREFIX)
 public class WebSocketProperties {
 
+    /** Prefix */
     public static final String PREFIX = "plugin.websocket";
 
     /**

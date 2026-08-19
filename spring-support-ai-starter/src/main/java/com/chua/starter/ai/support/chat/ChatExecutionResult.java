@@ -10,8 +10,8 @@ import java.util.Map;
  * @param text     回复文本
  * @param usage    用量统计
  * @param metadata 扩展元数据
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public record ChatExecutionResult(String text, AgentUsage usage, Map<String, Object> metadata) {
 }

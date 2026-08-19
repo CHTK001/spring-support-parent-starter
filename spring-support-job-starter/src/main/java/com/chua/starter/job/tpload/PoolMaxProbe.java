@@ -22,8 +22,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  *   <li>超过 max 后不再新建线程, AbortPolicy 抛 {@link java.util.concurrent.RejectedExecutionException}。</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class PoolMaxProbe {

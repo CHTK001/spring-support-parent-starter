@@ -9,8 +9,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *
  * <p>对应 application.yml 中的 {@code taskdistribution.*} 配置项。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @ConfigurationProperties(prefix = "taskdistribution")
@@ -64,7 +64,6 @@ public class TaskDistributionProperties {
     /**
      * 服务端配置。
      *
-     * @author CH
      * @since 4.0.0.42
      */
     @Data
@@ -94,7 +93,6 @@ public class TaskDistributionProperties {
     /**
      * 任务默认配置。
      *
-     * @author CH
      * @since 4.0.0.42
      */
     @Data

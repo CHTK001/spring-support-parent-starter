@@ -11,8 +11,8 @@ import reactor.core.publisher.Mono;
  * 调度器调用 {@link #collect} 获得 {@link CollectResult}。
  * </p>
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 public interface MetricProvider {
 

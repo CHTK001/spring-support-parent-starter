@@ -24,8 +24,8 @@ import java.util.regex.Pattern;
  *   <li>{@code value} 期望值（必填）</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Component
 public class SpiderConditionNode implements ConditionNode {

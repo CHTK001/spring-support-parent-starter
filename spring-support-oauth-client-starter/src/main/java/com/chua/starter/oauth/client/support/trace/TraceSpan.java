@@ -8,8 +8,8 @@ import lombok.Getter;
  * 表示追踪链路中的一个节点，记录该节点的耗时信息
  * </p>
  *
- * @author CH
  * @since 2024/12/28
+ * @author CH
  */
 @Getter
 public class TraceSpan {

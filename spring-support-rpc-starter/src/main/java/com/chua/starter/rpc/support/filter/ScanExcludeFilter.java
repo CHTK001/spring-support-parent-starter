@@ -11,13 +11,14 @@ import java.io.IOException;
 /**
  * 扫描排除筛选器
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/04/08
+ * @author CH
  */
 @Getter
 public class ScanExcludeFilter implements TypeFilter {
 
+    /** Excluded数量 */
     private int excludedCount;
 
     @Override

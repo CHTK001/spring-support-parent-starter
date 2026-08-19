@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 商户管理控制器
  *
- * @author CH
  * @since 2026-03-18
+ * @author CH
  */
 @Tag(name = "商户管理", description = "商户管理相关接口")
 @RestController
@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class MerchantController {
 
+    /** Merchant服务 */
     private final MerchantService merchantService;
 
     @Operation(summary = "创建商户")

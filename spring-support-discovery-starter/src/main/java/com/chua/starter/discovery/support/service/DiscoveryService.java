@@ -20,8 +20,8 @@ import java.util.Set;
  *
  * <p>当未找到指定协议的实现时，将自动回退到默认实现。</p>
  *
- * @author CH
  * @since 2024/9/12
+ * @author CH
  */
 public class DiscoveryService {
 

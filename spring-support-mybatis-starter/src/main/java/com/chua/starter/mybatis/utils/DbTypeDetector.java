@@ -22,7 +22,6 @@ import java.util.Map;
  *   <li>回退到 {@link DatabaseMetaData#getDatabaseProductName()} 的产品名匹配</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
  */
 @Slf4j

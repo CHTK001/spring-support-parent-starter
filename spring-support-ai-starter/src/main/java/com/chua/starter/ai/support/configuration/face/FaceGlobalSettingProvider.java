@@ -13,8 +13,8 @@ import java.util.List;
  * {@link com.chua.starter.ai.support.service.SysAiGlobalSettingService#replace} 写入后，
  * {@code FaceClientManager.rebuild()} 热重建运行实例，实时生效。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Spi("face")
 public class FaceGlobalSettingProvider implements GlobalSettingProvider {

@@ -31,8 +31,8 @@ import java.util.stream.Collectors;
  * 配置数据完全来自 {@code sys_ai_global_setting} 表。更新后通过
  * {@link GlobalChatClientManager#rebuild()} 热重建全局 ChatClient，实时生效。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController

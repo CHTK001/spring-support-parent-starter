@@ -17,8 +17,8 @@ import java.time.LocalDateTime;
  * <p>基于 MyBatis Plus 操作 {@code sys_ai_session_compression} 表，
  * 按会话维度保存压缩后的摘要上下文。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service

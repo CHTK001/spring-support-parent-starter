@@ -22,8 +22,8 @@ import java.util.stream.Collectors;
  * <p>会话写入 {@code sys_ai_session}，消息写入 {@code sys_ai_message}，
  * 重启后历史记录不丢失。取代 {@link AIDialogLocalRecordService} 的内存实现。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service

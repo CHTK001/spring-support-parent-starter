@@ -40,13 +40,18 @@ import java.util.Map;
 
 /**
  * 默认微信支付网关实现
+ * @author CH
  */
 @Spi({"default", "wechat-pay"})
 public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
 
+    /** Default_sign_type */
     private static final String DEFAULT_SIGN_TYPE = "WECHATPAY2-SHA256-RSA2048";
+    /** Wechat_pay_base_url */
     private static final String WECHAT_PAY_BASE_URL = "https://api.mch.weixin.qq.com";
+    /** 客户端工厂 */
     private final TencentWechatPayClientFactory clientFactory = new TencentWechatPayClientFactory();
+    /** Objectmapper */
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -597,3 +602,4 @@ public class DefaultTencentWechatPayGateway implements TencentWechatPayGateway {
         return value;
     }
 }
+

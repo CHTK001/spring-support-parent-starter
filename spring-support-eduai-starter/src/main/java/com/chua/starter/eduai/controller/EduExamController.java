@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 考试管理控制器
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "考试管理")
 public class EduExamController {
 
+    /** Exam服务 */
     private final IEduExamService examService;
 
     /**

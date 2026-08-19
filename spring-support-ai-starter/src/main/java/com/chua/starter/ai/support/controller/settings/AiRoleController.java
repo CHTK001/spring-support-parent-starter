@@ -24,8 +24,8 @@ import java.util.List;
  * <p>角色是一段预设的系统提示词人物设定，让 AI 以特定身份（如 Java 开发、
  * UI 设计师）应答。写接口受 {@code @Permission("admin")} 保护。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Tag(name = "AI 设置 - 角色")
 @RestController

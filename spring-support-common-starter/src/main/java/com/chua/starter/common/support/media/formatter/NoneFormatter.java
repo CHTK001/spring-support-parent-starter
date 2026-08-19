@@ -12,9 +12,9 @@ import java.lang.reflect.Field;
  * 作为 {@link Formatter} 的默认实现。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @see Formatter
+ * @author CH
  */
 @SpiDefault
 public class NoneFormatter implements Formatter {

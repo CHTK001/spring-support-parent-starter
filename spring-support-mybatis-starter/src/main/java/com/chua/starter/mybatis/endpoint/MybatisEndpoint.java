@@ -23,8 +23,11 @@ import java.util.Map;
 @WebEndpoint(id = "mybatis-extension")
 public class MybatisEndpoint {
 
+    /** Reload */
     private final Reload reload;
+    /** Configuration */
     private final Configuration configuration;
+    /** Supportinjector */
     private final SupportInjector supportInjector;
 
     public MybatisEndpoint(Reload reload, Configuration configuration, SupportInjector supportInjector) {

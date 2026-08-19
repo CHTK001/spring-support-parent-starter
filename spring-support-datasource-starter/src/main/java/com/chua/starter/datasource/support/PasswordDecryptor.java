@@ -27,8 +27,8 @@ package com.chua.starter.datasource.support;
  * }
  * }</pre>
  *
- * @author CH
  * @since 2026/07/14
+ * @author CH
  */
 @FunctionalInterface
 public interface PasswordDecryptor {

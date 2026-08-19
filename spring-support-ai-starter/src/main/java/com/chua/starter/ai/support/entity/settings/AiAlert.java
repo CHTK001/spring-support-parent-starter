@@ -15,8 +15,8 @@ import java.time.LocalDateTime;
 /**
  * 告警规则表，针对 AppKey 用量/费用/异常的阈值告警。
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 @Data
 @TableName("sys_ai_alert")
@@ -31,6 +31,7 @@ public class AiAlert implements Serializable {
      */
     @TableId(value = "sys_ai_alert_id", type = IdType.AUTO)
     @Schema(description = "告警规则 ID")
+    /** AlertID */
     private Long alertId;
 
     /**
@@ -41,6 +42,7 @@ public class AiAlert implements Serializable {
      */
     @TableField("sys_ai_alert_name")
     @Schema(description = "告警规则名称")
+    /** Alert名称 */
     private String alertName;
 
     /**
@@ -51,6 +53,7 @@ public class AiAlert implements Serializable {
      */
     @TableField("sys_ai_alert_app_key_id")
     @Schema(description = "关联 AppKey ID")
+    /** AlertAPP密钥ID */
     private Long alertAppKeyId;
 
     /**
@@ -61,6 +64,7 @@ public class AiAlert implements Serializable {
      */
     @TableField("sys_ai_alert_condition")
     @Schema(description = "告警条件（表达式）")
+    /** Alert条件 */
     private String alertCondition;
 
     /**
@@ -71,6 +75,7 @@ public class AiAlert implements Serializable {
      */
     @TableField("sys_ai_alert_threshold")
     @Schema(description = "告警阈值")
+    /** Alert阈值 */
     private Long alertThreshold;
 
     /**
@@ -81,6 +86,7 @@ public class AiAlert implements Serializable {
      */
     @TableField("sys_ai_alert_channels")
     @Schema(description = "通知渠道(JSON)")
+    /** Alertchannels */
     private String alertChannels;
 
     /**
@@ -91,6 +97,7 @@ public class AiAlert implements Serializable {
      */
     @TableField("sys_ai_alert_enabled")
     @Schema(description = "是否启用")
+    /** Alert是否启用 */
     private Boolean alertEnabled;
 
     /**
@@ -101,6 +108,7 @@ public class AiAlert implements Serializable {
      */
     @TableField(value = "sys_ai_alert_create_time", fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
+    /** Alertcreate时间 */
     private LocalDateTime alertCreateTime;
 
     /**
@@ -111,6 +119,7 @@ public class AiAlert implements Serializable {
      */
     @TableField(value = "sys_ai_alert_update_time", fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
+    /** Alertupdate时间 */
     private LocalDateTime alertUpdateTime;
 
     /**
@@ -122,5 +131,6 @@ public class AiAlert implements Serializable {
     @TableField("sys_ai_alert_deleted")
     @TableLogic
     @Schema(description = "逻辑删除标记")
+    /** Alert删除标记 */
     private Integer alertDeleted;
 }

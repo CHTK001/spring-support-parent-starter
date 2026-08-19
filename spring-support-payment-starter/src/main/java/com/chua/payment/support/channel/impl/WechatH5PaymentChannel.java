@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * 微信 H5 支付
+ * @author CH
  */
 public class WechatH5PaymentChannel extends WechatJsapiPaymentChannel implements PaymentChannel {
 
@@ -63,3 +64,4 @@ public class WechatH5PaymentChannel extends WechatJsapiPaymentChannel implements
         return gateway(providerSpi(channel, null)).closeH5Order(buildProperties(channel), orderNo);
     }
 }
+

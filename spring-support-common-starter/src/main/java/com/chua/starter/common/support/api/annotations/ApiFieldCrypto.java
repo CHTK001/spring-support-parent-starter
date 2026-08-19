@@ -47,7 +47,6 @@ import java.lang.annotation.Target;
  *   <li><b>SM2</b>: 国密非对称加密，需要公私钥对，安全性高</li>
  * </ul>
  *
- * @author CH
  * @since 2023-01-01
  * @version 1.0.0
  * @see ApiFieldCryptoKey

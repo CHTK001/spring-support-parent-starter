@@ -36,9 +36,9 @@ import java.util.regex.Pattern;
  *     <li>支持配置推送到配置中心（强制推送或仅当不存在时推送）</li>
  * </ul>
  *
- * @author CH
  * @since 2024-12-05
  * @version 1.1.0
+ * @author CH
  */
 @Slf4j
 public class ConfigValueBeanPostProcessor implements BeanPostProcessor, EnvironmentAware, BeanFactoryAware {
@@ -490,6 +490,7 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
      */
     private class ConfigValueListener implements ConfigListener {
 
+        /** 配置密钥 */
         private final String configKey;
 
         ConfigValueListener(String configKey) {

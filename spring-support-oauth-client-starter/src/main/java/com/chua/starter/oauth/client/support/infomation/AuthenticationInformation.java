@@ -11,8 +11,8 @@ import static com.chua.starter.oauth.client.support.infomation.Information.*;
 /**
  * 鉴权信息
  *
- * @author CH
  * @since 2022/7/23 13:05
+ * @author CH
  */
 @Data
 @RequiredArgsConstructor

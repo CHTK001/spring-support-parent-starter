@@ -19,11 +19,12 @@ import java.util.Optional;
  * 操作定制器
  * 用于处理Knife4j的ApiOperationSupport和ApiSupport注解，支持作者和排序
  *
- * @author CH
  * @since 2025/5/27 13:37
+ * @author CH
  */
 public class CustomOperationCustomizer implements GlobalOperationCustomizer {
 
+    /** Knife4j属性 */
     private final Knife4jProperties knife4jProperties;
     private final Map<String, String> defaultHeaders;
 

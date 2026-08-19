@@ -31,7 +31,9 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class AiSettingFacadeServiceImpl implements AiSettingFacadeService {
 
+    /** SYSAI设置mapper */
     private final SysAiSettingMapper sysAiSettingMapper;
+    /** Modulefacadehelper */
     private final SysAiModuleFacadeHelper moduleFacadeHelper;
 
     /**
@@ -43,6 +45,7 @@ public class AiSettingFacadeServiceImpl implements AiSettingFacadeService {
 
         @org.springframework.context.annotation.Lazy
         @org.springframework.beans.factory.annotation.Autowired
+        /** Modulefacade */
         private AiModuleFacadeServiceImpl moduleFacade;
 
         List<SysAiModule> listModules(Map<String, Object> params) {

@@ -40,8 +40,8 @@ import org.springframework.core.env.Environment;
  * 依赖 spring-support-sync-starter 提供的 SyncClient
  * </p>
  *
- * @author CH
  * @since 2024/12/05
+ * @author CH
  */
 @Slf4j
 @AutoConfiguration
@@ -52,10 +52,15 @@ import org.springframework.core.env.Environment;
 public class ReportClientConfiguration implements ApplicationContextAware {
 
 
+    /** 同步客户端 */
     private final SyncClient syncClient;
+    /** 环境 */
     private final Environment environment;
+    /** Report属性 */
     private final ReportProperties reportProperties;
+    /** Feature管理器提供者 */
     private final ObjectProvider<ApiFeatureManager> featureManagerProvider;
+    /** Application上下文 */
     private ApplicationContext applicationContext;
 
     public ReportClientConfiguration(SyncClient syncClient, Environment environment,
@@ -73,12 +78,15 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     }
 
     @Value("${spring.application.name:unknown}")
+    /** APP名称 */
     private String appName;
 
     @Value("${server.port:8080}")
+    /** 服务器端口 */
     private Integer serverPort;
 
     @Value("${server.servlet.context-path:}")
+    /** 上下文路径 */
     private String contextPath;
 
     @PostConstruct

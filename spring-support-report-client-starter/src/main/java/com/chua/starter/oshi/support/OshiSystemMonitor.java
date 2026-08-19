@@ -18,8 +18,8 @@ import java.util.Map;
  * 将 {@link Oshi} 静态工具类的采集结果转换为 Map 结构，供上报模块统一使用。
  * </p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class OshiSystemMonitor {
 

@@ -32,13 +32,18 @@ import java.util.UUID;
 
 /**
  * 微信支付分订单服务实现
+ * @author CH
  */
 @Service
 public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChannel implements WechatPayScoreOrderService {
 
+    /** WechatPAY分数排序mapper */
     private final WechatPayScoreOrderMapper wechatPayScoreOrderMapper;
+    /** Merchant通道mapper */
     private final MerchantChannelMapper merchantChannelMapper;
+    /** 提供者gateway注册表 */
     private final PaymentProviderGatewayRegistry providerGatewayRegistry;
+    /** PaymentcallbackURL解析器 */
     private final PaymentCallbackUrlResolver paymentCallbackUrlResolver;
 
     public WechatPayScoreOrderServiceImpl(MerchantChannelService merchantChannelService,
@@ -342,3 +347,4 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
         return value == null ? null : value.toUpperCase(Locale.ROOT);
     }
 }
+

@@ -21,8 +21,8 @@ import java.util.Map;
  *   <li>常见签名：x-ca-key + x-ca-signature-headers + HMAC-SHA256（artemis 网关）</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {

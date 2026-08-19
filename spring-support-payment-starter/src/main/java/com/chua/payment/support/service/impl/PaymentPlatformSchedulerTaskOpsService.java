@@ -45,21 +45,31 @@ import java.util.stream.Collectors;
  * payment 在 {@code engine=job} 模式下不再直接管理本地调度器，而是将运营端的
  * 查询、修改和手工触发请求转发到 scheduler 平台对应 namespace 的任务接口。
  * </p>
+ * @author CH
  */
 @Service
 @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "engine", havingValue = "job")
 public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerTaskOpsService {
 
+    /** Default_connect_timeout */
     private static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(5);
+    /** Default_read_timeout */
     private static final Duration DEFAULT_READ_TIMEOUT = Duration.ofSeconds(10);
+    /** Default_console_username */
     private static final String DEFAULT_CONSOLE_USERNAME = "admin";
+    /** Default_console_password */
     private static final String DEFAULT_CONSOLE_PASSWORD = "admin123456";
+    /** Standard_date_time */
     private static final DateTimeFormatter STANDARD_DATE_TIME =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+    /** 环境 */
     private final Environment environment;
+    /** Objectmapper */
     private final ObjectMapper objectMapper;
+    /** Rest模板 */
     private final RestTemplate restTemplate;
+    /** Console会话monitor */
     private final Object consoleSessionMonitor = new Object();
 
     /**
@@ -400,3 +410,4 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
         CONSOLE
     }
 }
+

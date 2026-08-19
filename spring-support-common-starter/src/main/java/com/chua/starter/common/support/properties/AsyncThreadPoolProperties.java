@@ -16,6 +16,7 @@ public class AsyncThreadPoolProperties {
     private boolean enable = false;
 
 
+    /** PRE */
     public static final String PRE = "plugin.thread";
     /**
      * 核心线程数：线程池创建的时候初始化的线程数

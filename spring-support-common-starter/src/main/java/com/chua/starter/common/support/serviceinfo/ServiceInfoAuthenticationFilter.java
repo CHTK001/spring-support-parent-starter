@@ -32,16 +32,20 @@ import java.util.Set;
  * </ul>
  * </p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @WebFilter(filterName = "ServiceInfoAuthenticationFilter", urlPatterns = {"/service-info", "/service-info/**"})
 public class ServiceInfoAuthenticationFilter implements Filter {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ServiceInfoAuthenticationFilter.class);
+    /** Authorization */
     private static final String AUTHORIZATION = "Authorization";
+    /** Basic */
     private static final String BASIC = "Basic ";
 
+    /** 属性 */
     private final ServiceInfoProperties properties;
 
     public ServiceInfoAuthenticationFilter(ServiceInfoProperties properties) {

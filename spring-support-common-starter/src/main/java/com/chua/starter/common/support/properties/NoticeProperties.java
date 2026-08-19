@@ -6,8 +6,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * 通知配置
- * @author CH
  * @since 2024/8/7
+ * @author CH
  */
 @ConfigurationProperties(prefix = NoticeProperties.PRE, ignoreInvalidFields = true)
 public class NoticeProperties {
@@ -17,8 +17,10 @@ public class NoticeProperties {
     private boolean enable = false;
 
 
+    /** PRE */
     public static final String PRE = "plugin.notice";
 
+    /** Email */
     private Email email;
 
     @Data

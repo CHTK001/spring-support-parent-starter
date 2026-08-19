@@ -24,10 +24,11 @@ import org.slf4j.LoggerFactory;
  * </ul>
  * </p>
  *
- * @author CH
  * @since 2020-11-16
+ * @author CH
  */
 public class ApiVersionCondition implements RequestCondition<ApiVersionCondition> {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiVersionCondition.class);
         /**
      * 版本参数名

@@ -33,14 +33,18 @@ import java.util.function.Function;
 /**
  * 用户信息
  *
- * @author CH
  * @since 2022/7/25 16:48
+ * @author CH
  */
 public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodArgumentResolver {
 
+    /** Web请求 */
     private final WebRequest webRequest;
+    /** Configurablebean工厂 */
     private ConfigurableBeanFactory configurableBeanFactory;
+    /** 表达式上下文 */
     private BeanExpressionContext expressionContext;
+    /** Conversion服务 */
     private ConversionService conversionService;
 
     public UserRequestHandlerMethodArgumentResolver(WebRequest webRequest) {

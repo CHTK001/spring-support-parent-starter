@@ -34,3 +34,4 @@ public final class NamingCase {
         return Character.toUpperCase(camel.charAt(0)) + camel.substring(1);
     }
 }
+

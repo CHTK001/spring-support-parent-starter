@@ -9,8 +9,8 @@ import java.util.List;
  * 设备厂商 Provider SPI
  * <p>各厂商实现由 {@code META-INF/services/com.chua.starter.device.spi.DeviceProvider} 注册。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface DeviceProvider {
 

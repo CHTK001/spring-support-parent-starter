@@ -30,8 +30,8 @@ import java.util.Set;
  * 支持 JSON 响应按指标名取值, 原始文本返回可给终端/解析规则二次解析。
  * </p>
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Slf4j
 @Component

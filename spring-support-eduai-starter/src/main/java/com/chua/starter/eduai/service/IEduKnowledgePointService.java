@@ -10,8 +10,8 @@ import java.util.List;
 /**
  * 知识点服务接口
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface IEduKnowledgePointService extends IService<EduKnowledgePoint> {
 

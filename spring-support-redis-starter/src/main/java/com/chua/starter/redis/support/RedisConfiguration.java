@@ -56,8 +56,8 @@ import java.util.List;
  *
  * <p>创建 Redisson 客户端与时间序列、搜索等服务实例。</p>
  *
- * @author CH
  * @since 1.0.0
+ * @author CH
  */
 @Slf4j
 @EnableConfigurationProperties(RedisServerProperties.class)
@@ -265,7 +265,6 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
      * 禁用日期时间戳写法，并使用安全的类型处理。</p>
      *
      * @return 配置完成的 ObjectMapper 实例
-     * @author CH
      * @since 1.0.0
      */
     private static ObjectMapper createRedisObjectMapper() {

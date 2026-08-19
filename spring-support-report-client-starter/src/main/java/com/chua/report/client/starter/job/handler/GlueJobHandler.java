@@ -11,9 +11,9 @@ import lombok.extern.slf4j.Slf4j;
  * 每次代码更新会生成新的版本号，确保执行的是最新代码。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/03/11
+ * @author CH
  */
 @Slf4j
 public class GlueJobHandler implements JobHandler {
@@ -23,6 +23,7 @@ public class GlueJobHandler implements JobHandler {
      * GLUE代码更新时间戳
      */
     @Getter
+    /** Glueupdatetime */
     private final long glueUpdatetime;
 
     /**

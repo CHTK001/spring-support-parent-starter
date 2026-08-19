@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
 /**
  * 阅卷结果实体
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @TableName("edu_marking_result")
@@ -21,6 +21,7 @@ public class EduMarkingResult {
      * 阅卷结果ID
      */
     @TableId(type = IdType.AUTO)
+    /** Marking结果ID */
     private Long markingResultId;
 
     /**

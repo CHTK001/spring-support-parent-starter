@@ -16,13 +16,15 @@ import java.util.List;
  * 管理会话并将事件委托给用户实现的 {@link WebSocketMessageHandler}
  * </p>
  *
- * @author CH
  * @since 2025-12-25
+ * @author CH
  */
 @Slf4j
 public class DelegatingWebSocketHandler extends TextWebSocketHandler {
 
+    /** 会话管理器 */
     private final WebSocketSessionManager sessionManager;
+    /** Handlers */
     private final List<WebSocketMessageHandler> handlers;
 
     /**

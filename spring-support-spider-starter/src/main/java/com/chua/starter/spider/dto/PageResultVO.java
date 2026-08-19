@@ -10,8 +10,8 @@ import java.util.List;
  * <p>字段命名对齐前端 {@code PageResult} 类型：records/total/totalPages 等。</p>
  *
  * @param <T> 数据项类型
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class PageResultVO<T> {

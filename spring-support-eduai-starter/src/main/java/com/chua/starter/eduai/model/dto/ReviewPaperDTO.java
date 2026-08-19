@@ -5,13 +5,16 @@ import lombok.Data;
 /**
  * 复习卷生成DTO
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class ReviewPaperDTO {
 
+    /** StudentID */
     private String studentId;
+    /** 数量 */
     private Integer count;
+    /** Subject */
     private String subject;
 }

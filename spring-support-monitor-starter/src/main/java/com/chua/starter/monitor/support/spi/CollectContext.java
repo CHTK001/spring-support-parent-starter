@@ -13,8 +13,8 @@ import lombok.NoArgsConstructor;
  * 封装一次采集所需的所有入参(任务/资产), 由调度器构造并传入 Provider。
  * </p>
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Data
 @Builder

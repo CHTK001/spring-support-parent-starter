@@ -4,16 +4,24 @@ import lombok.Getter;
 
 /**
  * 支付回调接收事件
+ * @author CH
  */
 @Getter
 public class PaymentNotifyReceivedEvent extends PaymentEvent {
 
+    /** Notify日志ID */
     private final Long notifyLogId;
+    /** Notify类型 */
     private final String notifyType;
+    /** 通道类型 */
     private final String channelType;
+    /** 通道SUB类型 */
     private final String channelSubType;
+    /** 排序NO */
     private final String orderNo;
+    /** RefundNO */
     private final String refundNo;
+    /** Signverified */
     private final Boolean signVerified;
 
     public PaymentNotifyReceivedEvent(Object source, Long tenantId, Long merchantId, Long notifyLogId,
@@ -29,3 +37,4 @@ public class PaymentNotifyReceivedEvent extends PaymentEvent {
         this.signVerified = signVerified;
     }
 }
+

@@ -10,8 +10,8 @@ import java.util.List;
  * <p>提供爬虫定义的 CRUD 与启用列表查询，启用列表经缓存加速，
  * 供定时调度每秒轮询命中；写操作统一清理全部缓存项。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface SpiderDefinitionService extends SpiderBaseService<SpiderDefinition> {
 

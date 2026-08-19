@@ -5,8 +5,8 @@ import com.chua.starter.ai.support.entity.SysAiPricing;
 /**
  * AI 定价服务接口
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface SysAiPricingService {
 

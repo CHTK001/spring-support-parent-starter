@@ -20,6 +20,7 @@ import java.util.List;
 
 /**
  * 订单管理控制器
+ * @author CH
  */
 @Tag(name = "订单管理", description = "支付订单相关接口")
 @RestController
@@ -27,6 +28,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OrderController {
 
+    /** 排序服务 */
     private final PaymentOrderService orderService;
 
     @Operation(summary = "创建订单")
@@ -150,3 +152,4 @@ public class OrderController {
         return Result.success(orderService.deleteOrder(id));
     }
 }
+

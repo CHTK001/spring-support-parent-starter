@@ -3,8 +3,8 @@ package com.chua.socket.support.codec;
 /**
  * Socket 消息加密模式
  *
- * @author CH
  * @since 2026-04-08
+ * @author CH
  */
 public enum SocketEncryptMode {
 

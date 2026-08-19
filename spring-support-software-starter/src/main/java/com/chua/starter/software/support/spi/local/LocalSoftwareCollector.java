@@ -9,8 +9,8 @@ import java.util.List;
  *
  * <p>每个平台提供自己的实现，由 {@link LocalSoftwareSource} 按当前 OS 选择使用。</p>
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 public interface LocalSoftwareCollector {
 

@@ -13,41 +13,47 @@ import java.time.LocalDateTime;
  * 避免将推送日志内部字段（提供商/模板/成本等）暴露给普通用户。
  * </p>
  *
- * @author CH
  * @since 2026/08/03
+ * @author CH
  */
 @Data
 public class SysMessageStationItem implements Serializable {
 
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
      * 消息ID（推送日志ID，作为已读游标使用）
      */
     @Schema(description = "消息ID（已读游标）")
+    /** ID */
     private Integer id;
 
     /**
      * 消息主题
      */
     @Schema(description = "消息主题")
+    /** Subject */
     private String subject;
 
     /**
      * 消息内容
      */
     @Schema(description = "消息内容")
+    /** 内容 */
     private String content;
 
     /**
      * 发送时间
      */
     @Schema(description = "发送时间")
+    /** Send时间 */
     private LocalDateTime sendTime;
 
     /**
      * 已读状态：0-未读 / 1-已读
      */
     @Schema(description = "已读状态：0-未读 / 1-已读")
+    /** Read状态 */
     private Integer readStatus;
 }

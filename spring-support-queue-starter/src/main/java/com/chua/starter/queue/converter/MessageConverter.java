@@ -12,8 +12,8 @@ import com.chua.starter.queue.Message;
  * - 自定义序列化
  * </p>
  *
- * @author CH
  * @since 2025-03-20
+ * @author CH
  */
 public interface MessageConverter {
 

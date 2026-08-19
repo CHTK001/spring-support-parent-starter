@@ -21,9 +21,9 @@ import java.util.stream.Collectors;
  * 支持 Logback 日志框架
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/12/08
+ * @author CH
  */
 @Slf4j
 @Spi("loggingConfigHandler")

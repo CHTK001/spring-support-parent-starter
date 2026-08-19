@@ -10,8 +10,8 @@ import java.util.List;
 /**
  * AI 厂商 API Key Mapper。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Mapper
 public interface SysAiManufacturerKeyMapper extends BaseMapper<SysAiManufacturerKey> {

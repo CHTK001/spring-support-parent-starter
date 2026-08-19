@@ -22,8 +22,8 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <p>采用行级 {@code UPDATE} 自带写锁, MySQL 串行化事务保证首个执行成功的节点获得 Leader 身份。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RequiredArgsConstructor

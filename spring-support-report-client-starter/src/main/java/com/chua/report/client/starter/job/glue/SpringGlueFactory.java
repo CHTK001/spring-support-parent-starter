@@ -12,7 +12,9 @@ import org.springframework.core.annotation.AnnotationUtils;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
+/** @author CH */
 public class SpringGlueFactory extends GlueFactory{
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SpringGlueFactory.class);
 
     public SpringGlueFactory() {
@@ -71,3 +73,4 @@ public class SpringGlueFactory extends GlueFactory{
         }
     }
 }
+

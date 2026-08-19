@@ -8,8 +8,8 @@ import lombok.NoArgsConstructor;
 /**
  * AI 分析结构化建议
  *
- * @author CH
  * @since 2026/7/30
+ * @author CH
  */
 @Data
 @Builder

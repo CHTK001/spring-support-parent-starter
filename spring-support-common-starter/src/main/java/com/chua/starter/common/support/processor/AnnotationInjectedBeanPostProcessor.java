@@ -38,21 +38,27 @@ import java.util.concurrent.ConcurrentMap;
  * </p>
  *
  * @param <A> 注解类型
- * @author CH
  * @since 2022/7/30 11:36
  * @version 1.0.0
  */
 @SuppressWarnings("ALL")
 public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> implements MergedBeanDefinitionPostProcessor, PriorityOrdered, BeanFactoryAware, BeanClassLoaderAware, EnvironmentAware, DisposableBean, SmartInstantiationAwareBeanPostProcessor {
 
+    /** Cache_size */
     private static final int CACHE_SIZE = Integer.getInteger("", 32);
+    /** Logger */
     private final Log logger = LogFactory.getLog(this.getClass());
+    /** Annotation类型 */
     private final Class<A> annotationType;
     private final ConcurrentMap<String, AnnotatedInjectionMetadata> injectionMetadataCache;
     private final ConcurrentMap<String, Object> injectedObjectsCache;
+    /** Bean工厂 */
     private ConfigurableListableBeanFactory beanFactory;
+    /** 环境 */
     private Environment environment;
+    /** Classloader */
     private ClassLoader classLoader;
+    /** 排序 */
     private int order;
 
     public AnnotationInjectedBeanPostProcessor() {
@@ -329,7 +335,9 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     public class AnnotatedFieldElement extends InjectionMetadata.InjectedElement {
+        /** Field */
         private final Field field;
+        /** Annotation */
         private final A annotation;
         private volatile Object bean;
 
@@ -349,7 +357,9 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     private class AnnotatedMethodElement extends InjectionMetadata.InjectedElement {
+        /** Method */
         private final Method method;
+        /** Annotation */
         private final A annotation;
         private volatile Object object;
 
@@ -369,7 +379,9 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     }
 
     private class AnnotatedInjectionMetadata extends InjectionMetadata {
+        /** Fieldelements */
         private final Collection<AnnotatedFieldElement> fieldElements;
+        /** Methodelements */
         private final Collection<AnnotatedMethodElement> methodElements;
 
         public AnnotatedInjectionMetadata(Class<?> targetClass, Collection<AnnotatedFieldElement> fieldElements, Collection<AnnotatedMethodElement> methodElements) {

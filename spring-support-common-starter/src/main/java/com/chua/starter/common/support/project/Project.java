@@ -20,8 +20,8 @@ import java.util.Map;
 
 /**
  * 项目
- * @author CH
  * @since 2024/9/6
+ * @author CH
  */
 public class Project {
     /**
@@ -30,8 +30,10 @@ public class Project {
     public Project() {
     }
 
+    /** 密钥 */
     public static final String KEY = "oo00OOOO00ooll11";
 
+    /** 实例 */
     private static final Project INSTANCE = new Project();
     /**
      * 应用名称

@@ -28,8 +28,8 @@ import java.util.Map;
 /**
  * DataSync 自动配置。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @AutoConfiguration
 @ConditionalOnClass(name = "com.chua.starter.datasync.DataSyncServer")
@@ -84,6 +84,7 @@ public class DataSyncAutoConfiguration {
     }
 
     private static class SimpleDirectoryConfigDefinition implements DirectoryConfigDefinition {
+        /** Directory路径 */
         private final String directoryPath;
 
         SimpleDirectoryConfigDefinition(String directoryPath) {

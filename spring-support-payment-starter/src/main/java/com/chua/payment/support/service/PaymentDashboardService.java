@@ -6,8 +6,10 @@ import java.time.LocalDate;
 
 /**
  * 支付首页业务统计服务。
+ * @author CH
  */
 public interface PaymentDashboardService {
 
     PaymentDashboardSummaryVO summary(LocalDate startDate, LocalDate endDate);
 }
+

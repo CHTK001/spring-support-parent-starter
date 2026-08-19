@@ -19,14 +19,17 @@ import java.util.concurrent.atomic.AtomicInteger;
  * {@code db/init/V1.0.0__init_datasync_mapping.sql} 初始化，此类仅负责查询映射数据。
  * </p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class DatabaseMappingLoader implements InitializingBean {
 
+    /** 数据来源 */
     private final DataSource dataSource;
+    /** 属性 */
     private final DatasyncProperties properties;
+    /** Mapping管理器 */
     private final DataSyncMappingManager mappingManager;
 
     public DatabaseMappingLoader(DataSource dataSource,
@@ -115,8 +118,11 @@ public class DatabaseMappingLoader implements InitializingBean {
     }
 
     private static class DatabaseDataSyncFieldMapping implements DataSyncFieldMapping {
+        /** 来源field */
         private final String sourceField;
+        /** 目标field */
         private final String targetField;
+        /** 转换器 */
         private final String converter;
 
         DatabaseDataSyncFieldMapping(String sourceField, String targetField, String converter) {

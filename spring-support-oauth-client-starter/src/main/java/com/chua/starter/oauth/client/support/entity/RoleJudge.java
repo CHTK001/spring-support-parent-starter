@@ -4,10 +4,11 @@ import java.util.Set;
 
 /**
  * 角色判断器
- * @author CH
  * @since 2024/12/31
+ * @author CH
  */
 public class RoleJudge {
+    /** Roles */
     private final Set<String> roles;
 
     public RoleJudge(Set<String> roles) {

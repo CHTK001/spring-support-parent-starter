@@ -17,8 +17,8 @@ package com.chua.starter.common.support.serviceinfo;
  * }
  * }</pre>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @FunctionalInterface
 public interface ServiceInfoContributor {

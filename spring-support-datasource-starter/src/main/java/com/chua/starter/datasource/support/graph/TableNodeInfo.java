@@ -9,8 +9,8 @@ import java.util.List;
  * 表节点：聚合表结构、列、触发器、关联存储过程、外键关系
  * <p>作为 relation-graph 节点 {@code data} 字段的载体。</p>
  *
- * @author CH
  * @since 2026/8/5
+ * @author CH
  */
 @Data
 public class TableNodeInfo {

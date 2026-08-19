@@ -30,6 +30,7 @@ public class AccessSecret {
      */
     private String uKey;
 
+    /** 密码 */
     private String password;
 
     private Map<String, Object> ext;

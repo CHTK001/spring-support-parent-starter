@@ -16,11 +16,12 @@ import org.slf4j.LoggerFactory;
  *
  * <p>在应用启动完成后，统一输出最终生效的消息转换器列表和顺序，方便排查三方覆盖问题。</p>
  *
- * @author CH
  * @since 2026/01/14
+ * @author CH
  */
 @Configuration
 public class MessageConverterReportConfiguration implements ApplicationListener<ApplicationReadyEvent> {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(MessageConverterReportConfiguration.class);
     /**
      * 构造函数
@@ -31,6 +32,7 @@ public class MessageConverterReportConfiguration implements ApplicationListener<
         this.requestMappingHandlerAdapter = requestMappingHandlerAdapter;
     }
 
+        /** 请求mapping处理器适配器 */
         private final RequestMappingHandlerAdapter requestMappingHandlerAdapter;
 
     /**
@@ -54,5 +56,4 @@ public class MessageConverterReportConfiguration implements ApplicationListener<
         }
     }
 }
-
 

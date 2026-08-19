@@ -21,8 +21,8 @@ import java.util.List;
 /**
  * 软件安装接口
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 @Tag(name = "软件安装接口")
 @RestController
@@ -30,6 +30,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SoftInstallController {
 
+    /** Installrecord服务 */
     private final SoftInstallRecordService installRecordService;
 
     @Operation(summary = "安装软件")

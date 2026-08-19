@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
  * @author CH
  */
 public class JsonArrayToStringSerialize extends JsonSerializer<Object[]> {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(JsonArrayToStringSerialize.class);
         @Override
     public void serialize(Object[] value, JsonGenerator gen, SerializerProvider serializers) throws IOException {

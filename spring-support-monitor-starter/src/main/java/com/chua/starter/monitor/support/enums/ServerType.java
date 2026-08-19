@@ -5,8 +5,8 @@ import lombok.Getter;
 /**
  * 服务器子类型枚举
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Getter
 public enum ServerType {

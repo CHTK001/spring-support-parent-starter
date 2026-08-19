@@ -2,6 +2,14 @@ package com.chua.report.client.starter.job;
 
 import lombok.Getter;
 
+/**
+ * 调度任务脚本类型枚举。
+ *
+ * <p>描述任务执行方式（Bean 或 GLUE 脚本），脚本类型记录执行命令与文件后缀。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
+ */
 @Getter
 public enum GlueTypeEnum {
 
@@ -13,9 +21,13 @@ public enum GlueTypeEnum {
     GLUE_NODEJS("GLUE(Nodejs)", true, "node", ".js"),
     GLUE_POWERSHELL("GLUE(PowerShell)", true, "powershell", ".ps1");
 
+    /** Desc */
     private final String desc;
+    /** ISscript */
     private final boolean isScript;
+    /** CMD */
     private final String cmd;
+    /** Suffix */
     private final String suffix;
 
     GlueTypeEnum(String desc, boolean isScript, String cmd, String suffix) {
@@ -71,3 +83,4 @@ public enum GlueTypeEnum {
     }
 
 }
+

@@ -8,8 +8,8 @@ import lombok.NoArgsConstructor;
 /**
  * 主机稳定性分析请求
  *
- * @author CH
  * @since 2026/7/30
+ * @author CH
  */
 @Data
 @Builder

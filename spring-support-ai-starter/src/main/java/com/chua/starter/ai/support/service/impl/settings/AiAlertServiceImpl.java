@@ -19,8 +19,8 @@ import java.util.stream.Collectors;
 /**
  * 告警规则服务实现类
  *
- * @author CH
  * @since 2026-08-03
+ * @author CH
  */
 @Slf4j
 @Service

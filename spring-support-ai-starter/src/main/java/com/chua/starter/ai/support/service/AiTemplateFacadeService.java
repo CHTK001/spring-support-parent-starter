@@ -7,8 +7,8 @@ import java.util.List;
 /**
  * AI 模板门面服务接口。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface AiTemplateFacadeService {
 

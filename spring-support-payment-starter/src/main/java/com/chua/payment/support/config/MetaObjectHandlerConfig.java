@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
 /**
  * MyBatis Plus 字段自动填充配置
  *
- * @author CH
  * @since 2026-03-18
+ * @author CH
  */
 @Component
 @ConditionalOnMissingBean(MetaObjectHandler.class)

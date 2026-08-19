@@ -14,8 +14,8 @@ import org.springframework.context.annotation.Configuration;
  * 此处仅按 {@code plugin.filesystem.dir-list} 开关注册目录浏览控制器，
  * 供前端「上传目录」选择器对接服务器目录。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Configuration
 @EnableConfigurationProperties(FileStorageProperties.class)

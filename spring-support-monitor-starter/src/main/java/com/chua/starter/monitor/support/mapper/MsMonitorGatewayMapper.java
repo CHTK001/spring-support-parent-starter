@@ -5,7 +5,7 @@ import com.chua.starter.monitor.support.entity.MsMonitorGateway;
 /**
  * 监控网关 Mapper
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 public interface MsMonitorGatewayMapper extends BaseMapper<MsMonitorGateway> {}

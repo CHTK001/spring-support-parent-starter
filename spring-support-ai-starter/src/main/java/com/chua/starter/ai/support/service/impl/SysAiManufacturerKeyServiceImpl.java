@@ -18,8 +18,8 @@ import java.util.List;
  * <p>基于 MyBatis Plus 操作 {@code sys_ai_manufacturer_key} 表，
  * 提供按厂商编码的多 Key 管理与启停切换。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service

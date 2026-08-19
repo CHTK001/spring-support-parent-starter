@@ -17,7 +17,6 @@ import java.util.List;
  * <p>将后端实体转换为前端约定字段命名（spider* / flow*）的视图对象，
  * 反向转换用于保存请求回填实体。</p>
  *
- * @author CH
  * @since 4.0.0.42
  */
 public final class SpiderConverter {

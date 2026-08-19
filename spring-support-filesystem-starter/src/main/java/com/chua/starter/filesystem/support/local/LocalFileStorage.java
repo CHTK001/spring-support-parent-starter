@@ -37,8 +37,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>将对象写入本地磁盘目录，提供最小化的 {@link com.chua.common.support.storage.FileStorage} 接口，
  * 用于在没有真实云存储的情况下验证分片上传链路。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class LocalFileStorage extends AbstractFileStorage {
 

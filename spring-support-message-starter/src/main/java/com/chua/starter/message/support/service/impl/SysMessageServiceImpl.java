@@ -57,17 +57,21 @@ import java.util.regex.Pattern;
  * 收件人打开邮件后由追踪接口回写已读状态。
  * </p>
  *
- * @author CH
  * @since 2026/08/03
+ * @author CH
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class SysMessageServiceImpl implements SysMessageService {
 
+    /** SYS消息提供者mapper */
     private final SysMessageProviderMapper sysMessageProviderMapper;
+    /** SYS消息模板mapper */
     private final SysMessageTemplateMapper sysMessageTemplateMapper;
+    /** SYS消息日志mapper */
     private final SysMessageLogMapper sysMessageLogMapper;
+    /** 消息track属性 */
     private final MessageTrackProperties messageTrackProperties;
 
     /**

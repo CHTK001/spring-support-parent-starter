@@ -22,8 +22,8 @@ import org.springframework.core.Ordered;
  * </ul>
  * </p>
  *
- * @author CH
  * @since 2026/07/14
+ * @author CH
  */
 @AutoConfiguration
 @AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE)

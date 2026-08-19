@@ -11,6 +11,7 @@ import java.util.List;
 
 /**
  * 支付渠道注册表
+ * @author CH
  */
 @Component
 public class PaymentChannelRegistry {
@@ -18,6 +19,7 @@ public class PaymentChannelRegistry {
     private volatile List<PaymentChannel> channels;
 
     @Autowired
+    /** Application上下文 */
     private ApplicationContext applicationContext;
 
     private List<PaymentChannel> channels() {
@@ -52,3 +54,4 @@ public class PaymentChannelRegistry {
         return channels().stream().anyMatch(channel -> channel.supports(channelType, channelSubType));
     }
 }
+

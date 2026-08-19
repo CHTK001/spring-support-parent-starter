@@ -32,8 +32,8 @@ import java.util.List;
  *
  * <p>失败任务由重试调度（最多 {@value #MAX_RETRY} 次）继续执行。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @Service

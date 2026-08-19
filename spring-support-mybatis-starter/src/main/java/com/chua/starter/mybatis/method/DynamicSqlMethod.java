@@ -22,9 +22,12 @@ import java.util.Map;
  * @author CH
  */
 public class DynamicSqlMethod extends AbstractMethod {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(DynamicSqlMethod.class);
+    /** SQL来源 */
     private final Field sqlSource;
     private Map<String, Object> param;
+    /** Mappedstatement */
     private MappedStatement mappedStatement;
 
     private Class<?> type = MappedStatement.class;

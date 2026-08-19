@@ -7,8 +7,8 @@ package com.chua.starter.ai.support.configuration.face;
  * 在写入键值表后发布，携带变更分组；{@link FaceClientManager} 监听并热重建人脸实例，
  * 实现"全局配置实时生效"。事件在配置变更事务提交后仍可安全监听（重建为内存操作）。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public class FaceSettingsChangedEvent {
 

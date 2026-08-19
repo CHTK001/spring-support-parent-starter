@@ -21,7 +21,9 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class AIDialogLocalRecordService implements AIDialogRecordService {
 
+    /** DialogIDgenerator */
     private final AtomicLong dialogIdGenerator = new AtomicLong(1);
+    /** 消息IDgenerator */
     private final AtomicLong messageIdGenerator = new AtomicLong(1);
 
     /** dialogId → AIDialog */

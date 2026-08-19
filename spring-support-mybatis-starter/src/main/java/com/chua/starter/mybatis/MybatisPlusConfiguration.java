@@ -53,14 +53,17 @@ import java.util.function.Supplier;
 /**
  * 处理注解
  *
- * @author CH
  * @version 1.0.0
  * @since 2021/4/12
+ * @author CH
  */
 @EnableConfigurationProperties({MybatisPlusProperties.class, MybatisPlusDataScopeProperties.class, MybatisSlowSqlProperties.class})
 public class MybatisPlusConfiguration {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(MybatisPlusConfiguration.class);
+    /** Encryptor_password_property */
     private static final String ENCRYPTOR_PASSWORD_PROPERTY = "mybatis-plus.encryptor.password";
+    /** Encryptor_mode_property */
     private static final String ENCRYPTOR_MODE_PROPERTY = "mybatis-plus.encryptor.mode";
 
     /**
@@ -78,8 +81,11 @@ public class MybatisPlusConfiguration {
      */
     private static final String LOGIC_NOT_DELETE_VALUE = "0";
 
+    /** Mybatis属性 */
     private final MybatisPlusProperties mybatisProperties;
+    /** Methodsecurityinterceptor */
     private final MybatisPlusDataScopeProperties methodSecurityInterceptor;
+    /** 环境 */
     private final Environment environment;
 
     /**
@@ -272,7 +278,6 @@ public class MybatisPlusConfiguration {
      * @param eventPublisher Spring 事件发布器
      * @param properties     慢 SQL 配置
      * @return 慢 SQL 检测拦截器
-     * @author CH
      */
     @Bean
     @ConditionalOnProperty(prefix = MybatisPlusProperties.PRE + ".slow-sql", name = "enabled", havingValue = "true", matchIfMissing = true)

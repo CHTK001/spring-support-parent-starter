@@ -12,8 +12,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * 数据源属性提供者工厂
  * 使用Java SPI机制加载和管理数据源属性提供者
  *
- * @author CH
  * @since 2024/12/21
+ * @author CH
  */
 @Slf4j
 public class DataSourcePropertyProviderFactory {

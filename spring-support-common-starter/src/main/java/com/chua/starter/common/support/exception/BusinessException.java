@@ -8,9 +8,9 @@ import com.chua.common.support.lang.code.ResultCode;
  * 可被全局异常处理器捕获并返回统一的错误响应。
  * </p>
  *
- * @author CH
  * @since 2022/7/31
  * @version 1.0.0
+ * @author CH
  */
 public class BusinessException extends RuntimeException {
 

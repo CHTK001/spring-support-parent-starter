@@ -20,15 +20,17 @@ import java.util.Map;
  * <p>使用 {@link ContextRefreshedEvent} 事件而非 Bean 构造时机收集,
  * 保证所有 starter 的 {@code @Bean ServiceInfoContributor} 都已经注册到容器。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @AutoConfiguration
 @Order(Integer.MIN_VALUE + 1)
 public class ServiceInfoContributorAutoConfiguration implements ApplicationListener<ContextRefreshedEvent> {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ServiceInfoContributorAutoConfiguration.class);
 
+    /** Application上下文 */
     private final ApplicationContext applicationContext;
 
     public ServiceInfoContributorAutoConfiguration(ApplicationContext applicationContext) {

@@ -13,8 +13,8 @@ import org.springframework.context.annotation.Configuration;
  * + {@code ServiceInfoBannerListener} 统一承担, 详见
  * {@link com.chua.starter.common.support.serviceinfo.ServiceInfoAutoConfiguration}。</p>
  *
- * @author CH
  * @since 2026/01/14
+ * @author CH
  */
 @Configuration
 public class GlobalEnvironmentConfiguration {

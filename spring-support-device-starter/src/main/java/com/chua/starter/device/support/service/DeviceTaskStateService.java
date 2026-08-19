@@ -7,8 +7,8 @@ import com.chua.starter.device.support.entity.DeviceTaskState;
  * <p>后台每秒执行的任务通过判断 Trigger 标志决定是否真正执行业务逻辑，</p>
  * <p>实现单线程单实例运行，避免并发问题。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface DeviceTaskStateService {
 

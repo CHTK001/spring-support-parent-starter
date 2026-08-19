@@ -6,9 +6,9 @@ package com.chua.starter.common.support.constant;
  * 定义数据查询时支持的各种运算符类型，用于构建动态查询条件。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/01/22
+ * @author CH
  */
 public enum OperatorType {
 

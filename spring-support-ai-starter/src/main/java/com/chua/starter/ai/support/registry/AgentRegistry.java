@@ -51,8 +51,8 @@ import java.util.function.Consumer;
  *       chatClient, AgentDefinition.builder().build());
  * }</pre>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class AgentRegistry {

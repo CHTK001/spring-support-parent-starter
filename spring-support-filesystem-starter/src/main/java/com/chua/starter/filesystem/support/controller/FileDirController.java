@@ -27,8 +27,8 @@ import java.util.Map;
  * 提供服务器本地目录树浏览能力，供前端「上传目录」选择器使用。
  * 通过 {@code plugin.filesystem.dir-list} 开关控制是否暴露，默认关闭。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController

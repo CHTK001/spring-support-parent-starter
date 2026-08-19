@@ -21,9 +21,9 @@ import java.lang.reflect.Proxy;
 
 /**
  * 令牌类型拦截器
- * @author CH
  * @version 1.0.0
  * @since 2024/01/18
+ * @author CH
  */
 @Order(1)
 public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean, Ordered {

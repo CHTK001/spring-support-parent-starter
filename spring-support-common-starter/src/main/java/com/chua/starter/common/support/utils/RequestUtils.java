@@ -8,8 +8,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
  * 请求工具类
  * <p>提供从 HttpServletRequest 中提取常用信息的方法</p>
  *
- * @author CH
  * @since 2024-01-01
+ * @author CH
  */
 public class RequestUtils {
 

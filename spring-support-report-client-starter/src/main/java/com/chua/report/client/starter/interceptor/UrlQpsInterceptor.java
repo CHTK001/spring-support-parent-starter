@@ -12,14 +12,15 @@ import org.springframework.web.servlet.HandlerInterceptor;
  * 拦截所有请求并记录统计数据
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2025/01/17
+ * @author CH
  */
 @Slf4j
 public class UrlQpsInterceptor implements HandlerInterceptor {
 
 
+    /** Attr_start_time */
     private static final String ATTR_START_TIME = "urlQps_startTime";
 
     @Override

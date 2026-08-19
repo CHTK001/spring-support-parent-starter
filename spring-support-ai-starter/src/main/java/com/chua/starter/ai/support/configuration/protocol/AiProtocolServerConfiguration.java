@@ -18,8 +18,8 @@ import java.util.List;
  * <p>如果 {@code spring-support-ai-protocol-starter} 在 classpath 中，
  * 则由该模块接管 AI ProtocolServer 生命周期（本配置不生效）。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @AutoConfiguration

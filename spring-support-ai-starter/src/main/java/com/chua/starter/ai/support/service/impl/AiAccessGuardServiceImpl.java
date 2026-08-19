@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class AiAccessGuardServiceImpl implements AiAccessGuardService {
 
+    /** Bearer_prefix */
     private static final String BEARER_PREFIX = "Bearer ";
 
     /**
@@ -42,8 +43,11 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
             .maximumSize(1000)
             .build();
 
+    /** SYSAI全局设置服务 */
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
+    /** SYSAIAPP密钥服务 */
     private final SysAiAppKeyService sysAiAppKeyService;
+    /** SYSAI令牌服务 */
     private final SysAiTokenService sysAiTokenService;
 
     @Override

@@ -16,8 +16,8 @@ import java.util.List;
 /**
  * MyBatis Plus 配置类
  *
- * @author CH
  * @since 2026-03-18
+ * @author CH
  */
 @Slf4j
 @Configuration

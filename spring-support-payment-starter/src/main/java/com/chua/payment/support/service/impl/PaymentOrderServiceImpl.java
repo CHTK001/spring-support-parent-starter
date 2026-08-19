@@ -58,24 +58,38 @@ import java.util.UUID;
 
 /**
  * 支付订单服务实现
+ * @author CH
  */
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class PaymentOrderServiceImpl implements PaymentOrderService {
 
+    /** 排序mapper */
     private final PaymentOrderMapper orderMapper;
+    /** Merchantmapper */
     private final MerchantMapper merchantMapper;
+    /** Merchant通道mapper */
     private final MerchantChannelMapper merchantChannelMapper;
+    /** 状态machine服务 */
     private final OrderStateMachineService stateMachineService;
+    /** 排序状态日志服务 */
     private final OrderStateLogService orderStateLogService;
+    /** Transactionrecord服务 */
     private final TransactionRecordService transactionRecordService;
+    /** Payment通道注册表 */
     private final PaymentChannelRegistry paymentChannelRegistry;
+    /** Paymentrefund排序服务 */
     private final PaymentRefundOrderService paymentRefundOrderService;
+    /** PaymentcallbackURL解析器 */
     private final PaymentCallbackUrlResolver paymentCallbackUrlResolver;
+    /** Merchantpayment配置服务 */
     private final MerchantPaymentConfigService merchantPaymentConfigService;
+    /** 事件publisher */
     private final ApplicationEventPublisher eventPublisher;
+    /** Objectmapper */
     private final ObjectMapper objectMapper;
+    /** 用户openID解析器 */
     private final UserOpenIdResolver userOpenIdResolver;
 
     @Override
@@ -1208,3 +1222,4 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         return vo;
     }
 }
+

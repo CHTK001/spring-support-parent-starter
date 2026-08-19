@@ -31,11 +31,11 @@ import java.util.Optional;
  * <p>日志格式：[时间] 用户名 执行了 模块-操作名称 (耗时: xxxms, 状态: 成功/失败)</p>
  * <p>通过事件机制发布日志信息，各模块可以监听并处理日志事件</p>
  *
- * @author CH
  * @version 1.0
  * @since 2024-01-01
  * @see UserLog
  * @see UserLoggerInfo
+ * @author CH
  */
 @Lazy
 @Slf4j

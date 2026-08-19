@@ -13,8 +13,8 @@ import java.util.Map;
 /**
  * 支付宝用户信息服务
  *
- * @author CH
  * @since 2026/07/20
+ * @author CH
  */
 @Spi("ALIPAY")
 public class AlipayUserInfoService implements UserInfoService {

@@ -21,8 +21,8 @@ import java.util.UUID;
  *   <li>endpoint、AppKey/AppSecret、签名算法需按大华云睿 OpenAPI 文档配置</li>
  * </ul>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public class DahuaCloudSession extends AbstractOpenApiSession {

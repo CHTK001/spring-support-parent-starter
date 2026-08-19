@@ -5,8 +5,8 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 /**
  * sys_job_cluster Mapper。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface ClusterMapper extends BaseMapper<ClusterEntity> {
 }

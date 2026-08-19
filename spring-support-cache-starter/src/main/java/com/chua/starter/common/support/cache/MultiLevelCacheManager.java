@@ -34,11 +34,12 @@ import java.util.stream.Collectors;
  *   <li>支持缓存统计、预热、按模式清除。</li>
  * </ul>
  *
- * @author CH
  * @since 2024/7/22
+ * @author CH
  */
 public class MultiLevelCacheManager implements CacheManager, InitializingBean, ApplicationContextAware {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(MultiLevelCacheManager.class);
 
     /**
@@ -48,11 +49,15 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
 
     private final Map<String, Cache> cacheMap = new ConcurrentHashMap<>();
 
+    /** 缓存managers */
     private final List<CacheManager> cacheManagers = new ArrayList<>();
     private final Map<String, CacheManager> cacheManagerMap = new ConcurrentHashMap<>();
 
+    /** Application上下文 */
     private ApplicationContext applicationContext;
+    /** 环境 */
     private Environment environment;
+    /** 缓存属性 */
     private CacheProperties cacheProperties;
 
     @Override

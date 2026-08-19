@@ -27,8 +27,8 @@ import java.util.function.Consumer;
  * <p>
  * 该实现将 session 从接口层移除，每次调用都基于 scope 创建新的底层 common ChatClient。
  *
- * @author CH
  * @since 2026/04/03
+ * @author CH
  */
 @Slf4j
 public class DefaultScopeChatClient implements ChatClient {

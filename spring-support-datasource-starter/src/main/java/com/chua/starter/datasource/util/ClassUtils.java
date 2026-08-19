@@ -16,13 +16,14 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 类加载器
  *
- * @author CH
  * @since 2022-02-18
+ * @author CH
  */
 @Slf4j
 public class ClassUtils {
 
     protected static final Map<Class<?>, Type[]> ACTUAL = new ConcurrentHashMap<>();
+    /** Empty_string_array */
     private static final String[] EMPTY_STRING_ARRAY = new String[0];
 
     /**

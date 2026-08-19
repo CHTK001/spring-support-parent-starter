@@ -7,8 +7,8 @@ import lombok.Data;
  *
  * <p>按爬虫编码汇总：总执行次数、成功次数、失败次数、运行中次数及最近执行号。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 public class DefinitionStatsVO {

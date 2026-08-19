@@ -5,7 +5,6 @@ import java.lang.annotation.*;
 /**
  * 手动触发物理化副本刷新。
  *
- * @author CH
  * @since 2026/4/2
  */
 @Target({ElementType.TYPE, ElementType.METHOD})

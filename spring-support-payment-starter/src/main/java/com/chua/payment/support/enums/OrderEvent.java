@@ -3,8 +3,8 @@ package com.chua.payment.support.enums;
 /**
  * 订单事件枚举
  *
- * @author CH
  * @since 2026-03-18
+ * @author CH
  */
 public enum OrderEvent {
 
@@ -53,6 +53,7 @@ public enum OrderEvent {
      */
     REFUND_FAIL("退款失败");
 
+    /** 描述 */
     private final String description;
 
     OrderEvent(String description) {

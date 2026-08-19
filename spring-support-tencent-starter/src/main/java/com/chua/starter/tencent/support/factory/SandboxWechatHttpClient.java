@@ -13,14 +13,17 @@ import java.io.InputStream;
  * <p>将生产环境 URL {@code api.mch.weixin.qq.com/...} 重写为沙箱环境 URL
  * {@code api.mch.weixin.qq.com/sandboxnew/...}，使 SDK 服务类可在沙箱环境下工作。</p>
  *
- * @author CH
  * @since 4.0.0.41
+ * @author CH
  */
 public class SandboxWechatHttpClient implements HttpClient {
 
+    /** Production_host */
     private static final String PRODUCTION_HOST = "api.mch.weixin.qq.com";
+    /** Sandbox_path */
     private static final String SANDBOX_PATH = "/sandboxnew";
 
+    /** Delegate */
     private final HttpClient delegate;
 
     public SandboxWechatHttpClient(HttpClient delegate) {

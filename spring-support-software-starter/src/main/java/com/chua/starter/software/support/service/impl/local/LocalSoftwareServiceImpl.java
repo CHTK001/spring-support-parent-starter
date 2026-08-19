@@ -29,18 +29,24 @@ import static com.chua.starter.software.support.enums.SourceType.LOCAL;
 /**
  * 本地软件服务实现
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 @Slf4j
 @Service
 public class LocalSoftwareServiceImpl implements LocalSoftwareService {
 
+    /** Transaction模板 */
     private final TransactionTemplate transactionTemplate;
+    /** Soft来源服务 */
     private final SoftSourceService softSourceService;
+    /** Softsoftware服务 */
     private final SoftSoftwareService softSoftwareService;
+    /** Softsoftwaremapper */
     private final SoftSoftwareMapper softSoftwareMapper;
+    /** 本地software来源 */
     private final LocalSoftwareSource localSoftwareSource;
+    /** Softwaresources */
     private final List<SoftwareSource> softwareSources;
 
     @Autowired

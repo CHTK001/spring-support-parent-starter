@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 知识库文档管理控制器
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "知识库文档管理")
 public class EduKnowledgeDocController {
 
+    /** KnowledgeDOC服务 */
     private final IEduKnowledgeDocService knowledgeDocService;
 
     /**

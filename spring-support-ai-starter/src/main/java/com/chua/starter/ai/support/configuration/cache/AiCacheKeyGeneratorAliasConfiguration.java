@@ -11,8 +11,8 @@ import org.springframework.context.annotation.Bean;
  * <p>为 AI 模块提供专用的缓存 Key 生成器，支持按模型、provider、用户等维度
  * 生成缓存 Key，避免不同调用场景的缓存冲突。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @AutoConfiguration

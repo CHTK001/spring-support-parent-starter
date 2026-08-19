@@ -9,9 +9,9 @@ import java.util.Date;
 /**
  * 作业日志
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/03/11
+ * @author CH
  */
 @Slf4j
 public class DefaultJobLog implements JobLog{

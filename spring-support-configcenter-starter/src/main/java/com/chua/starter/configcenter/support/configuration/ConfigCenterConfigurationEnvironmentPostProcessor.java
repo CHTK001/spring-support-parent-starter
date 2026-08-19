@@ -27,8 +27,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * 在 Spring 环境准备阶段从配置中心加载配置，并注册配置变更监听器。
  * </p>
  *
- * @author CH
  * @since 2024/9/9
+ * @author CH
  */
 @Slf4j
 @EnableConfigurationProperties(ConfigCenterProperties.class)
@@ -229,8 +229,11 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
      */
     private static class EnvironmentConfigListener implements ConfigListener {
         
+        /** 配置名称 */
         private final String configName;
+        /** RefreshdelayMS */
         private final long refreshDelayMs;
+        /** 日志ONchange */
         private final boolean logOnChange;
         private volatile long lastRefreshTime = 0;
 

@@ -35,7 +35,9 @@ import java.util.Objects;
 @Slf4j
 public class AuthFilter implements Filter {
 
+    /** Web请求 */
     private final WebRequest webRequest;
+    /** 请求mapping处理器mapping */
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
     
     /**

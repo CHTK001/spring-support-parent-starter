@@ -40,17 +40,20 @@ import org.slf4j.LoggerFactory;
  *         - /api/**
  * </pre>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/12/07
+ * @author CH
  */
 @Configuration
 @EnableConfigurationProperties(ApiCorsProperties.class)
 @ConditionalOnProperty(name = "plugin.api.cors.enable", matchIfMissing = true, havingValue = "true")
 public class ApiCorsConfiguration  {
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiCorsConfiguration.class);
+        /** X_header_version */
         private static final String X_HEADER_VERSION = "x-response-version";
 
+    /** Cors属性 */
     private final ApiCorsProperties corsProperties;
 
     public ApiCorsConfiguration(ApiCorsProperties corsProperties) {

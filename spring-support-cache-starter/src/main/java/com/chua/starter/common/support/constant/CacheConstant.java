@@ -6,8 +6,8 @@ package com.chua.starter.common.support.constant;
  * 集中存放缓存管理器名称、缓存名称、TTL 等基础常量，避免在代码中出现魔法值。
  * </p>
  *
- * @author CH
  * @since 2024/03/08
+ * @author CH
  */
 public interface CacheConstant {
 

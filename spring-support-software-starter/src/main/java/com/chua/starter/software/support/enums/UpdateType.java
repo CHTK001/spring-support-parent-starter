@@ -3,8 +3,8 @@ package com.chua.starter.software.support.enums;
 /**
  * 更新类型
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 public enum UpdateType {
     /** 常规更新 */
@@ -16,6 +16,7 @@ public enum UpdateType {
     /** 紧急修复 */
     HOTFIX(3);
 
+    /** 值 */
     private final int value;
 
     UpdateType(int value) {

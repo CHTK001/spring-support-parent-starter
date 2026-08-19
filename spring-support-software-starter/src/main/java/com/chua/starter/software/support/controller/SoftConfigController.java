@@ -23,8 +23,8 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 软件配置接口
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 @Tag(name = "软件配置接口")
 @RestController
@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class SoftConfigController {
 
+    /** Soft配置服务 */
     private final SoftConfigService softConfigService;
 
     @Operation(summary = "配置列表")

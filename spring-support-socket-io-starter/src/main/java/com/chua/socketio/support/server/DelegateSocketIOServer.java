@@ -16,6 +16,7 @@ import org.springframework.beans.factory.InitializingBean;
 @Slf4j
 public class DelegateSocketIOServer extends SocketIOServer implements InitializingBean, DisposableBean {
 
+    /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(DelegateSocketIOServer.class);
 
     public DelegateSocketIOServer(Configuration configuration) {

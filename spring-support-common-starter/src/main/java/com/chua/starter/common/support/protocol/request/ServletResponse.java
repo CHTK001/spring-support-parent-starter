@@ -1,8 +1,11 @@
 package com.chua.starter.common.support.protocol.request;
 
+/** @author CH */
 public class ServletResponse {
 
+    /** Success */
     private final boolean success;
+    /** 消息 */
     private final String message;
 
     private ServletResponse(boolean success, String message) {
@@ -26,3 +29,4 @@ public class ServletResponse {
         return new ServletResponse(false, msg);
     }
 }
+

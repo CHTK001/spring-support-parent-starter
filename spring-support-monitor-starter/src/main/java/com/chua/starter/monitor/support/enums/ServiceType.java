@@ -9,8 +9,8 @@ import lombok.Getter;
  * 。Redis/数据库等中间件由相应的 Provider 实现采集与操作逻辑。
  * </p>
  *
- * @author CH
  * @since 2026/8/4
+ * @author CH
  */
 @Getter
 public enum ServiceType {

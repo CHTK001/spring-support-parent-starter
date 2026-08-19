@@ -40,20 +40,28 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+/** @author CH */
 
 @Slf4j
 @Spi("nodeMaintenanceHandler")
 public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationContextAware {
 
+    /** Backup_dir */
     private static final String BACKUP_DIR = "backups";
+    /** Upgrade_dir */
     private static final String UPGRADE_DIR = "upgrades";
+    /** Rollback_dir */
     private static final String ROLLBACK_DIR = "rollbacks";
+    /** Maintenance_home_dir */
     private static final String MAINTENANCE_HOME_DIR = "plugin.report.maintenance.home-dir";
+    /** Maintenance_current_artifact */
     private static final String MAINTENANCE_CURRENT_ARTIFACT = "plugin.report.maintenance.current-artifact";
+    /** Supported_packages */
     private static final List<String> SUPPORTED_PACKAGES = List.of("jar", "zip", "tar.gz", "tgz");
 
     private final Map<String, RollbackSnapshot> rollbackSnapshots = new ConcurrentHashMap<>();
 
+    /** Application上下文 */
     private ApplicationContext applicationContext;
 
     @Override
@@ -791,6 +799,7 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
         TAR_GZ("TAR_GZ"),
         TGZ("TGZ");
 
+        /** Display名称 */
         private final String displayName;
 
         PackageType(String displayName) {
@@ -834,3 +843,4 @@ public class NodeMaintenanceHandler implements SyncMessageHandler, ApplicationCo
     private record RollbackEntry(String targetPath, boolean existedBefore, String backupPath) {
     }
 }
+

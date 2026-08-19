@@ -7,8 +7,8 @@ import org.apache.ibatis.annotations.Mapper;
 /**
  * 文件系统分片上传详情Mapper。
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Mapper
 public interface SysFileSystemUploadChunkMapper extends BaseMapper<SysFileSystemUploadChunk> {

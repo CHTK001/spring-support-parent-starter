@@ -8,8 +8,8 @@ import java.time.LocalDateTime;
 /**
  * 时间范围对象
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Data
 @AllArgsConstructor

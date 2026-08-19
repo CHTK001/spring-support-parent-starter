@@ -10,6 +10,7 @@ import org.springframework.util.StringUtils;
 import java.security.Principal;
 import java.util.Locale;
 import java.util.Set;
+/** @author CH */
 
 @Component
 public class PaymentAccountPrincipalResolver {
@@ -53,3 +54,4 @@ public class PaymentAccountPrincipalResolver {
                 .anyMatch(it -> "ADMIN".equals(it) || "SUPER_ADMIN".equals(it) || "SUPERADMIN".equals(it));
     }
 }
+

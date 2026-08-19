@@ -4,6 +4,7 @@ import com.chua.payment.support.entity.PaymentNotifyLog;
 
 /**
  * 支付回调日志服务
+ * @author CH
  */
 public interface PaymentNotifyLogService {
 
@@ -21,3 +22,4 @@ public interface PaymentNotifyLogService {
                 Long relatedOrderId,
                 Long relatedRefundId);
 }
+

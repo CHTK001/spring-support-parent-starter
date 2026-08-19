@@ -8,8 +8,8 @@ import org.springframework.web.socket.WebSocketSession;
  * 实现此接口以处理 WebSocket 消息和事件
  * </p>
  *
- * @author CH
  * @since 2025-12-25
+ * @author CH
  */
 public interface WebSocketMessageHandler {
 

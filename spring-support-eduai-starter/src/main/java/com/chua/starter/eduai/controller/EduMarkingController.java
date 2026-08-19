@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 阅卷管理控制器
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 @RestController
@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "阅卷管理")
 public class EduMarkingController {
 
+    /** Marking服务 */
     private final IEduMarkingService markingService;
 
     /**

@@ -14,6 +14,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = TencentWechatOpenPlatformProperties.PREFIX, ignoreInvalidFields = true)
 public class TencentWechatOpenPlatformProperties {
 
+    /** Prefix */
     public static final String PREFIX = "plugin.tencent.open-platform";
 
     /**

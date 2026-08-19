@@ -17,8 +17,8 @@ import java.util.List;
  * <p>继承 MyBatis-Plus {@link ServiceImpl} 获取 Base CRUD，
  * 实现 {@link SysFileSystemUploadService} 中定义的分片上传特有业务逻辑。</p>
  *
- * @author CH
  * @since 1.0
+ * @author CH
  */
 @Service
 public class SysFileSystemUploadServiceImpl

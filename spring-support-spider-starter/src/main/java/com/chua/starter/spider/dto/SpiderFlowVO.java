@@ -2,12 +2,19 @@ package com.chua.starter.spider.dto;
 
 import java.time.LocalDateTime;
 
+/** @author CH */
 public class SpiderFlowVO {
+    /** Flow代码 */
     private String flowCode;
+    /** Flow名称 */
     private String flowName;
+    /** Flow版本 */
     private Integer flowVersion;
+    /** Flow节点数量 */
     private Integer flowNodeCount;
+    /** Flow状态 */
     private Integer flowStatus;
+    /** Update时间 */
     private LocalDateTime updateTime;
 
     public String getFlowCode() { return flowCode; }

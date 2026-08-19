@@ -10,8 +10,8 @@ import com.chua.starter.spider.entity.SpiderDefinition;
  * service 层另暴露 {@code markRunAtOnly} 走基类 {@code update} 直接回写执行时间，
  * 不触发 {@code @CacheEvict} 缓存清理，避免调度器每秒清空启用列表缓存。</p>
  *
- * @author CH
  * @since 4.0.0.42
+ * @author CH
  */
 public interface SpiderDefinitionMapper extends BaseMapperX<SpiderDefinition> {
 }

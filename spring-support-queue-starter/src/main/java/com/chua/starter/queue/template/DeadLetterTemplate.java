@@ -29,12 +29,13 @@ import java.util.function.BiConsumer;
  * 支持自动重试、延迟重试、死信回调等功能。
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2025-12-25
+ * @author CH
  */
 @Slf4j
 public class DeadLetterTemplate implements MessageTemplate {
+    /** 日志 */
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DeadLetterTemplate.class);
 
     /**

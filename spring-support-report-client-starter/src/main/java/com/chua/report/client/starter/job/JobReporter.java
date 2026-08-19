@@ -13,17 +13,19 @@ import java.util.Map;
  * 通过 SyncProtocol 上报任务执行结果
  * </p>
  *
- * @author CH
  * @version 1.0.0
  * @since 2024/12/05
+ * @author CH
  */
 @Slf4j
 public class JobReporter {
 
 
+    /** 实例 */
     private static final JobReporter INSTANCE = new JobReporter();
 
     @Setter
+    /** 同步客户端 */
     private SyncClient syncClient;
 
     public static JobReporter getInstance() {

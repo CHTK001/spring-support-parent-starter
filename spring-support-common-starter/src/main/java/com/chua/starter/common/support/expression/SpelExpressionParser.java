@@ -7,10 +7,12 @@ import org.springframework.expression.Expression;
 
 /**
  * Spring EL 表达式解析器
+ * @author CH
  */
 @Spi("spring")
 public class SpelExpressionParser implements ExpressionParser {
 
+    /** 表达式解析器 */
     private final org.springframework.expression.ExpressionParser expressionParser = new org.springframework.expression.spel.standard.SpelExpressionParser();
 
     @Override
@@ -37,3 +39,4 @@ public class SpelExpressionParser implements ExpressionParser {
         return value != null ? value.toString() : "";
     }
 }
+

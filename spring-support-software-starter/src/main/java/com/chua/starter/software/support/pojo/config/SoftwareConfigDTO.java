@@ -7,12 +7,13 @@ import lombok.Data;
 /**
  * 软件配置响应
  *
- * @author CH
  * @since 2026/7/25
+ * @author CH
  */
 @Data
 @Schema(description = "软件配置响应")
 public class SoftwareConfigDTO extends SoftConfig {
 
+    /** Serial版本UID */
     private static final long serialVersionUID = 1L;
 }

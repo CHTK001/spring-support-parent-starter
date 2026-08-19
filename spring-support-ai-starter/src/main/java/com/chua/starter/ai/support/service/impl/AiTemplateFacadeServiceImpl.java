@@ -20,6 +20,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AiTemplateFacadeServiceImpl implements AiTemplateFacadeService {
 
+    /** SYSAI模板mapper */
     private final SysAiTemplateMapper sysAiTemplateMapper;
 
     @Override
