@@ -48,11 +48,13 @@ public final class DataSyncDispatcherBenchProbe {
         bench("WAL(Jackson)", new WalDispatcherProvider(
                 DispatcherConfig.builder().dataPath(tmp.resolve("wal").toString()).build()), data);
 
-        // WAL + Fury (按 SPI 名称加载序列化器)
+        // WAL + Fury (config.serializer 统一 SPI 初始化)
         try {
             bench("WAL+Fury", new WalDispatcherProvider(
-                    DispatcherConfig.builder().dataPath(tmp.resolve("wal-fury").toString()).build(),
-                    "fury"), data);
+                    DispatcherConfig.builder()
+                            .dataPath(tmp.resolve("wal-fury").toString())
+                            .serializer("fury")
+                            .build()), data);
         } catch (Throwable t) {
             System.err.printf("%-22s %s%n", "WAL+Fury", "初始化失败: " + t.getMessage());
         }
