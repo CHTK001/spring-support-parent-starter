@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.LongAdder;
 /**
  * 全能力标准测试：覆盖文件格式、转换器、边界、调度、多数据源。
  *
+ * @author CH
  * @since 4.0.0.42
  */
 public final class DataSyncAllInOneProbe {

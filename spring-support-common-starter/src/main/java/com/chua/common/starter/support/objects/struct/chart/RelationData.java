@@ -12,11 +12,9 @@ import java.util.List;
 public class RelationData implements Serializable {
 
     /** 节点集合 */
-    /** Nodes */
     private List<Node> nodes = new ArrayList<>();
 
     /** 连线集合 */
-    /** Links */
     private List<Link> links = new ArrayList<>();
 
     public List<Node> getNodes() {

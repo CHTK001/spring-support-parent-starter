@@ -26,13 +26,10 @@ import java.util.Map;
 public final class SyncCryptoUtils {
 
     /** 加密标记字段 */
-    /** Encrypted */
     public static final String ENCRYPTED = "encrypted";
     /** 加密算法字段 */
-    /** 算法 */
     public static final String ALGORITHM = "encAlgorithm";
     /** 密文字段 */
-    /** 加密 */
     public static final String CIPHER = "encData";
 
     /** Aes_gcm */

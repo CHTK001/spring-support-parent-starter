@@ -25,99 +25,75 @@ public class SoftSoftware implements Serializable {
     private String softwareId;
 
     /** software_name - 软件名称 */
-    /** Software名称 */
     private String softwareName;
 
     /** software_code - 软件编码 */
-    /** Software代码 */
     private String softwareCode;
 
     /** software_version - 当前版本 */
-    /** Software版本 */
     private String softwareVersion;
 
     /** software_latest_version - 最新版本 */
-    /** Softwarelatest版本 */
     private String softwareLatestVersion;
 
     /** software_description - 软件描述 */
-    /** Software描述 */
     private String softwareDescription;
 
     /** software_icon - 软件图标URL */
-    /** Softwareicon */
     private String softwareIcon;
 
     /** software_category - 软件分类 */
-    /** Software分类 */
     private String softwareCategory;
 
     /** software_tags - 标签，多个用逗号分隔 */
-    /** Softwaretags */
     private String softwareTags;
 
     /** software_download_url - 下载URL */
-    /** Software下载URL */
     private String softwareDownloadUrl;
 
     /** software_file_size - 文件大小(字节) */
-    /** Software文件尺寸 */
     private Long softwareFileSize;
 
     /** software_md5 - 文件MD5 */
-    /** SoftwareMD5 */
     private String softwareMd5;
 
     /** software_sha256 - 文件SHA256 */
-    /** Softwaresha256 */
     private String softwareSha256;
 
     /** software_min_os_version - 最低支持系统版本 */
-    /** Software最小值OS版本 */
     private String softwareMinOsVersion;
 
     /** software_cpu_arch - 支持的CPU架构 */
-    /** SoftwareCPUarch */
     private String softwareCpuArch;
 
     /** software_source_id - 所属源ID */
-    /** Software来源ID */
     private String softwareSourceId;
 
     /** software_install_count - 安装次数 */
-    /** Softwareinstall数量 */
     private Integer softwareInstallCount;
 
     /** software_rating - 评分 */
-    /** Softwarerating */
     private Double softwareRating;
 
     /** software_is_official - 是否官方软件 */
-    /** SoftwareISofficial */
     private Boolean softwareIsOfficial;
 
     /** software_is_recommended - 是否推荐软件 */
-    /** SoftwareISrecommended */
     private Boolean softwareIsRecommended;
 
     /** software_is_free - 是否免费 */
-    /** SoftwareISfree */
     private Boolean softwareIsFree;
 
     /** software_price - 价格(分) */
-    /** Softwareprice */
     private Integer softwarePrice;
 
     /** software_status - 状态: 0正常 1已删除 2已禁用 */
-    /** Software状态 */
     private Integer softwareStatus;
 
     /** software_sort - 排序 */
-    /** Softwaresort */
     private Integer softwareSort;
 
     /** software_extra - 扩展信息JSON */
-    /** Softwareextra */
     private String softwareExtra;
 
     /** software_create_time - 创建时间 */
@@ -131,11 +107,9 @@ public class SoftSoftware implements Serializable {
     private LocalDateTime softwareUpdateTime;
 
     /** software_create_by - 创建人 */
-    /** SoftwarecreateBY */
     private String softwareCreateBy;
 
     /** software_update_by - 更新人 */
-    /** SoftwareupdateBY */
     private String softwareUpdateBy;
 
     public String getSoftwareId() {

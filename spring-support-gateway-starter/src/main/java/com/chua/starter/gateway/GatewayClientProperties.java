@@ -21,35 +21,27 @@ import java.util.List;
 public class GatewayClientProperties {
 
     /** 是否启用网关客户端自动注册 */
-    /** 是否启用 */
     private boolean enabled = true;
 
     /** 网关地址 */
-    /** 主机 */
     private String host = "127.0.0.1";
 
     /** 网关 Agent 注册端口（TCP） */
-    /** 端口 */
     private int port = 9001;
 
     /** 注册密钥，需与网关 agentRegisterKey 一致 */
-    /** Secret */
     private String secret = "gateway-agent-secret";
 
     /** Agent ID，默认自动生成 UUID */
-    /** AgentID */
     private String agentId;
 
     /** 注册协议列表 */
-    /** Protocols */
     private List<String> protocols = new ArrayList<>(List.of("HTTP"));
 
     /** 本应用 HTTP 端口，0 表示自动检测 server.port */
-    /** HTTP端口 */
     private int httpPort;
 
     /** 本应用 WebSocket 端口，0 表示不注册 WS */
-    /** WS端口 */
     private int wsPort;
 }
 

@@ -47,23 +47,19 @@ import java.util.regex.Pattern;
 public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
 
     /** ENC 正则：ENC(algorithm:value) 或 ENC(value) */
-    /** Enc_pattern */
     private static final Pattern ENC_PATTERN = Pattern.compile(
             "^ENC\\((?:([A-Za-z0-9]+):)?(.+)\\)$");
 
     /** 需要解密的配置键后缀 */
-    /** Sensitive_keys */
     private static final String[] SENSITIVE_KEYS = {
             "password", "pwd", "secret", "token", "apikey", "api-key", "api_key",
             "private-key", "private_key"
     };
 
     /** ENC 功能启用配置键 */
-    /** Enc_enabled_prop */
     private static final String ENC_ENABLED_PROP = "plugin.datasource.enc.enabled";
 
     /** 密钥配置前缀 */
-    /** Secret_key_prop */
     private static final String SECRET_KEY_PROP = "plugin.datasource.enc.secret-key";
 
     /** Decryptor */

@@ -292,6 +292,7 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
      * @param beanName        名称
      * @param injectedType    类型
      * @param injectedElement 元素
+ * @author CH
      * @return 对象索引
      */
     protected abstract String buildInjectedObjectCacheKey(A annotation, Object bean, String beanName,

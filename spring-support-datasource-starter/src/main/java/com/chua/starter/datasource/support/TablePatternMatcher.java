@@ -75,6 +75,7 @@ public final class TablePatternMatcher {
 
     /**
      * 简单函数式匹配器
+ * @author CH
      */
     @FunctionalInterface
     public interface Matcher {

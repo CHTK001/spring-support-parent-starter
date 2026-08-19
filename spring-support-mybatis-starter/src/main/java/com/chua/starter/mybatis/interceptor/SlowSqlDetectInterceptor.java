@@ -33,6 +33,7 @@ import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
  *
  * <p>注意：事件中是否携带 SQL/参数由 {@link MybatisSlowSqlProperties} 控制，避免敏感信息泄露。</p>
  *
+ * @author CH
  * @since 2026/4/27
  */
 @Intercepts({

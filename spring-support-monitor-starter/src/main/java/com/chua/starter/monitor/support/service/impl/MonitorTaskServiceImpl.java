@@ -27,7 +27,6 @@ import java.util.List;
 public class MonitorTaskServiceImpl implements MonitorTaskService {
 
     /** 任务 Mapper */
-    /** 任务mapper */
     private final MsMonitorTaskMapper taskMapper;
 
     @Override

@@ -27,7 +27,6 @@ import java.util.List;
 public class MonitorGatewayServiceImpl implements MonitorGatewayService {
 
     /** 网关 Mapper */
-    /** Gatewaymapper */
     private final MsMonitorGatewayMapper gatewayMapper;
 
     @Override

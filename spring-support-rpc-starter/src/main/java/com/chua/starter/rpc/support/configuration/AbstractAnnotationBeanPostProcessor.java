@@ -364,6 +364,7 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
 
     /**
      * {@link Annotation Annotated} {@link Method} {@link InjectionMetadata.InjectedElement}
+ * @author CH
      */
     protected class AnnotatedInjectElement extends InjectionMetadata.InjectedElement {
 

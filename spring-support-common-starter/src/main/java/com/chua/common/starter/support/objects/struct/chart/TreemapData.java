@@ -12,7 +12,6 @@ import java.util.List;
 public class TreemapData implements Serializable {
 
     /** 矩形块集合 */
-    /** Blocks */
     private List<Block> blocks = new ArrayList<>();
 
     public List<Block> getBlocks() {
@@ -31,7 +30,6 @@ public class TreemapData implements Serializable {
         /** 名称 */
         private String name;
         /** 数值 */
-        /** 值 */
         private Number value;
         /** 路径 */
         private String path;
