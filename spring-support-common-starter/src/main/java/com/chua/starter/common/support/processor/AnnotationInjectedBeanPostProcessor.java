@@ -62,6 +62,7 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
     /** 排序 */
     private int order;
 
+    /** 创建 AnnotationInjectedBeanPostProcessor 实例 */
     public AnnotationInjectedBeanPostProcessor() {
         this.injectionMetadataCache = new ConcurrentHashMap(CACHE_SIZE);
         this.injectedObjectsCache = new ConcurrentHashMap(CACHE_SIZE);
@@ -419,6 +420,11 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
         private final A annotation;
         private volatile Object bean;
 
+        /**
+         * 创建 AnnotatedFieldElement 实例
+         * @param field field
+         * @param annotation annotation
+         */
         protected AnnotatedFieldElement(Field field, A annotation) {
             super(field, (PropertyDescriptor) null);
             this.field = field;
@@ -447,6 +453,12 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
         private final A annotation;
         private volatile Object object;
 
+        /**
+         * 创建 AnnotatedMethodElement 实例
+         * @param method method
+         * @param pd pd
+         * @param annotation annotation
+         */
         protected AnnotatedMethodElement(Method method, PropertyDescriptor pd, A annotation) {
             super(method, pd);
             this.method = method;
@@ -474,6 +486,12 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
         /** Methodelements */
         private final Collection<AnnotatedMethodElement> methodElements;
 
+        /**
+         * 创建 AnnotatedInjectionMetadata 实例
+         * @param targetClass targetClass
+         * @param fieldElements fieldElements
+         * @param methodElements methodElements
+         */
         public AnnotatedInjectionMetadata(Class<?> targetClass, Collection<AnnotatedFieldElement> fieldElements, Collection<AnnotatedMethodElement> methodElements) {
             super(targetClass, AnnotationInjectedBeanPostProcessor.combine(fieldElements, methodElements));
             this.fieldElements = fieldElements;

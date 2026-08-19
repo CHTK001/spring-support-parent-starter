@@ -70,6 +70,11 @@ public class MaterializedSqlInterceptor implements Interceptor {
     private final Map<String, MaterializedRouteDefinition> definitionCache = new ConcurrentHashMap<>();
     private final Map<String, MaterializedRouteDefinition> refreshDefinitionCache = new ConcurrentHashMap<>();
 
+    /**
+     * 创建 MaterializedSqlInterceptor 实例
+     * @param materializedSqlRouter materializedSqlRouter
+     * @param properties properties
+     */
     public MaterializedSqlInterceptor(MaterializedSqlDataSourceRouter materializedSqlRouter,
                                       MaterializedRouteProperties properties) {
         this.materializedSqlRouter = materializedSqlRouter;

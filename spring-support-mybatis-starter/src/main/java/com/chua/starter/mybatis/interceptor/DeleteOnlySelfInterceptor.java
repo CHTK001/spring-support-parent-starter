@@ -46,6 +46,10 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
     /** Auth服务 */
     private final AuthService authService;
 
+    /**
+     * 创建 DeleteOnlySelfInterceptor 实例
+     * @param authService authService
+     */
     public DeleteOnlySelfInterceptor(AuthService authService) {
         this.authService = authService;
     }
