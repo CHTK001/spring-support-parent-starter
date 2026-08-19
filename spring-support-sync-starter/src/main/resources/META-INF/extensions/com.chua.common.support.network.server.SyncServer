@@ -1,0 +1,3 @@
+# ==================== SyncServer 服务端扩展注册 ====================
+http=com.chua.common.support.network.sync.impl.HttpSyncServer
+websocket=com.chua.common.support.network.sync.impl.WebSocketSyncServer

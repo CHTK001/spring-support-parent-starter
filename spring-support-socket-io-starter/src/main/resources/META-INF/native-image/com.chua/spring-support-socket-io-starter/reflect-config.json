@@ -1,3 +1,4 @@
+[
 {
   "name": "com.chua.socketio.support.spi.SocketIOProvider",
   "allDeclaredConstructors": true,
@@ -7,3 +8,5 @@
   "allDeclaredFields": true,
   "allPublicFields": true
 }
+
+]
