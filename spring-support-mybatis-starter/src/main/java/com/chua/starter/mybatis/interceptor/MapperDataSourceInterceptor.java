@@ -47,6 +47,11 @@ public class MapperDataSourceInterceptor implements Interceptor {
     /** mapper数据SourceCache */
     private final Map<String, String> mapperDataSourceCache = new ConcurrentHashMap<>();
 
+    /**
+     * 创建 MapperDataSourceInterceptor 实例
+     * @param applicationContext applicationContext
+     * @param properties properties
+     */
     public MapperDataSourceInterceptor(ApplicationContext applicationContext,
                                        MultiDataSourceSettingProperties properties) {
         this.applicationContext = applicationContext;

@@ -50,6 +50,10 @@ public class ApiRequestDecodeBodyAdvice implements RequestBodyAdvice  {
     /** Decoderegister */
     private final ApiRequestDecodeRegister decodeRegister;
 
+    /**
+     * 创建 ApiRequestDecodeBodyAdvice 实例
+     * @param decodeRegister decodeRegister
+     */
     public ApiRequestDecodeBodyAdvice(ApiRequestDecodeRegister decodeRegister) {
         this.decodeRegister = decodeRegister;
     }

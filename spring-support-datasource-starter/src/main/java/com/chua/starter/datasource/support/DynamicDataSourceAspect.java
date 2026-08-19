@@ -275,6 +275,10 @@ public class DynamicDataSourceAspect {
     public static class HeaderWrapper extends java.util.HashMap<String, String> {
         /** 请求 */
         private final HttpServletRequest request;
+        /**
+         * 创建 HeaderWrapper 实例
+         * @param request request
+         */
         public HeaderWrapper(HttpServletRequest request) {
             this.request = request;
             var names = request.getHeaderNames();
@@ -289,6 +293,10 @@ public class DynamicDataSourceAspect {
      * HttpSession 属性包装器（使用 Map，支持 SpEL #session['key'] 和 #session.key 两种语法）
      */
     public static class SessionWrapper extends java.util.HashMap<String, Object> {
+        /**
+         * 创建 SessionWrapper 实例
+         * @param request request
+         */
         public SessionWrapper(HttpServletRequest request) {
             var session = request.getSession(false);
             if (session != null) {
