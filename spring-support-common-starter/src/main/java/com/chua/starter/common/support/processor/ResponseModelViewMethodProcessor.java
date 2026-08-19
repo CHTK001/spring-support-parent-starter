@@ -26,23 +26,30 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
     /** Redirectpatterns */
     private String redirectPatterns;
 
+    /**
+     * 创建 ResponseModelViewMethodProcessor 实例
+     * @param converters converters
+     */
     public ResponseModelViewMethodProcessor(List<HttpMessageConverter<?>> converters) {
         super(converters);
     }
 
     @Override
+    /** SupportsParameter */
     public boolean supportsParameter(MethodParameter returnType) {
         Class<?> paramType = returnType.getParameterType();
         return ModelView.class.isAssignableFrom(paramType);
     }
 
     @Override
+    /** SupportsReturnType */
     public boolean supportsReturnType(MethodParameter returnType) {
         Class<?> paramType = returnType.getParameterType();
         return ModelView.class.isAssignableFrom(paramType);
     }
 
     @Override
+    /** 处理ReturnValue */
     public void handleReturnValue(Object returnValue, MethodParameter returnType, ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws IOException, HttpMediaTypeNotAcceptableException, HttpMessageNotWritableException {
         ModelView modelView = (ModelView) returnValue;
         Object data = modelView.getData();
@@ -71,6 +78,7 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
         }
     }
 
+    /** 获取Accept */
     private String getAccept(ModelView modelView, NativeWebRequest webRequest) {
         MediaType mediaType = modelView.getMediaType();
         if (null != mediaType) {

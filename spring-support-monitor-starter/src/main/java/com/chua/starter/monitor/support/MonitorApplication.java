@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @MapperScan("com.chua.starter.monitor.support.mapper")
 public class MonitorApplication {
 
+    /** Main */
     public static void main(String[] args) {
         SpringApplication.run(MonitorApplication.class, args);
     }

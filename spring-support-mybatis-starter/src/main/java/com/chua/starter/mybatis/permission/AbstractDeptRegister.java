@@ -53,6 +53,14 @@ public abstract class AbstractDeptRegister implements DeptRegister {
     /** Dept表 */
     protected Table deptTable;
 
+    /**
+     * 创建 AbstractDeptRegister 实例
+     * @param plainSelect plainSelect
+     * @param where where
+     * @param user user
+     * @param dataPermission dataPermission
+     * @param scopeProperties scopeProperties
+     */
     public AbstractDeptRegister(PlainSelect plainSelect,
                                 Expression where,
                                 CurrentUser user,
@@ -69,6 +77,7 @@ public abstract class AbstractDeptRegister implements DeptRegister {
         this.createByColumn = scopeProperties.getCurrentUserIdColumn();
     }
 
+    /** 注册DataScope */
     protected Expression registerDataScope() {
         if (DataFilterTypeEnum.DEPT_SETS == dataPermission) {
             if (StringUtils.isEmpty(user.getDataPermissionRule())) {

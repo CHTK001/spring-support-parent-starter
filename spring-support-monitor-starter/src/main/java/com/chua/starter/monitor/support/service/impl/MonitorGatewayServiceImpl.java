@@ -32,6 +32,7 @@ public class MonitorGatewayServiceImpl implements MonitorGatewayService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorGateway")
+    /** 创建 */
     public ReturnResult<MsMonitorGateway> create(MsMonitorGateway entity) {
         try {
             if (entity.getId() == null) {
@@ -54,6 +55,7 @@ public class MonitorGatewayServiceImpl implements MonitorGatewayService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorGateway")
+    /** 更新 */
     public ReturnResult<MsMonitorGateway> update(MsMonitorGateway entity) {
         try {
             gatewayMapper.updateById(entity);
@@ -67,6 +69,7 @@ public class MonitorGatewayServiceImpl implements MonitorGatewayService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorGateway")
+    /** 删除 */
     public ReturnResult<Void> delete(Long id) {
         try {
             gatewayMapper.deleteById(id);
@@ -79,6 +82,7 @@ public class MonitorGatewayServiceImpl implements MonitorGatewayService {
 
     @Override
     @Cacheable(cacheNames = "monitorGateway", key = "'monitor.gateway:monitor:' + #monitorId")
+    /** ListByMonitor */
     public ReturnResult<List<MsMonitorGateway>> listByMonitor(Long monitorId) {
         try {
             LambdaQueryWrapper<MsMonitorGateway> wrapper = new LambdaQueryWrapper<>();

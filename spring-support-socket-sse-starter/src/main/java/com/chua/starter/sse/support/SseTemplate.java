@@ -25,6 +25,10 @@ public class SseTemplate {
     /** SSE事件BUSconfigurer */
     private final DefaultSseEventBusConfigurer sseEventBusConfigurer;
 
+    /**
+     * 创建 SseTemplate 实例
+     * @param sseEventBusConfigurer sseEventBusConfigurer
+     */
     public SseTemplate(DefaultSseEventBusConfigurer sseEventBusConfigurer) {
         this.sseEventBusConfigurer = sseEventBusConfigurer;
     }

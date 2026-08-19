@@ -28,6 +28,7 @@ public class GzipMessageConverter implements MessageConverter {
     private static final String COMPRESSED_HEADER = "X-Compressed";
 
     @Override
+    /** 转换Before发送 */
     public Message convertBeforeSend(Message message) {
         byte[] payload = message.getPayload();
         if (payload == null || payload.length < MIN_COMPRESS_SIZE) {
@@ -56,6 +57,7 @@ public class GzipMessageConverter implements MessageConverter {
     }
 
     @Override
+    /** 转换After接收 */
     public Message convertAfterReceive(Message message) {
         Object compressed = message.getHeaders().get(COMPRESSED_HEADER);
         if (!"gzip".equals(compressed)) {
@@ -89,12 +91,14 @@ public class GzipMessageConverter implements MessageConverter {
     }
 
     @Override
+    /** Supports */
     public boolean supports(Message message) {
         byte[] payload = message.getPayload();
         return payload != null && payload.length >= MIN_COMPRESS_SIZE;
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         return 100; // 较低优先级，在加密等操作之后
     }

@@ -15,11 +15,22 @@ import java.util.Map;
 @Slf4j
 public class GatewayClientAgent extends BaseRemoteAgent {
 
+    /**
+     * 创建 GatewayClientAgent 实例
+     * @param properties properties
+     */
     public GatewayClientAgent(AgentProperties properties) {
         super(properties);
     }
 
     @Override
+    /**
+     * 处理连接
+     * @param sessionId sessionId
+     * @param protocol protocol
+     * @param target target
+     * @param auth auth
+     */
     protected void handleConnect(String sessionId, String protocol,
                                   Map<String, Object> target, Map<String, Object> auth) {
         // HTTP 协议的请求由网关直接转发到本应用的 HTTP 端口，不需要 Agent 处理
@@ -27,16 +38,19 @@ public class GatewayClientAgent extends BaseRemoteAgent {
     }
 
     @Override
+    /** 处理断开 */
     protected void handleDisconnect(String sessionId) {
         log.debug("[GatewayClient] 收到断开请求: sessionId={}", sessionId);
     }
 
     @Override
+    /** 处理Input */
     protected void handleInput(String sessionId, String type, Map<String, Object> payload) {
         // HTTP 协议无输入处理
     }
 
     @Override
+    /** OnRegistered */
     protected void onRegistered() {
         log.info("[GatewayClient] 已注册到网关, agentId={}", properties.getAgentId());
     }

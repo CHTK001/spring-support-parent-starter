@@ -53,6 +53,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     private final IdempotentTemplate idempotentTemplate;
 
     @Override
+    /** 获取Account */
     public WalletAccountVO getAccount(Long merchantId, Long userId) {
         WalletAccount account = findAccount(merchantId, userId);
         if (account == null) {
@@ -63,6 +64,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** Recharge */
     public WalletAccountVO recharge(WalletRechargeDTO dto) {
         if (dto == null) {
             throw new PaymentException("充值参数不能为空");
@@ -81,6 +83,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** Pay */
     public WalletAccountVO pay(Long merchantId, Long userId, BigDecimal amount, String orderNo, String operator, String remark) {
         WalletAccount account = applyChange("PAY", orderNo, merchantId, userId, amount, false, false, operator, remark);
         return toVO(account);
@@ -88,6 +91,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** Refund */
     public WalletAccountVO refund(Long merchantId, Long userId, BigDecimal amount, String refundNo, String operator, String remark) {
         WalletAccount current = findAccount(merchantId, userId);
         walletLimitService.validateBalanceLimit(
@@ -101,6 +105,16 @@ public class WalletAccountServiceImpl implements WalletAccountService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * Transfer
+     * @param merchantId merchantId
+     * @param fromUserId fromUserId
+     * @param toUserId toUserId
+     * @param amount amount
+     * @param transferNo transferNo
+     * @param operator operator
+     * @param remark remark
+     */
     public void transfer(Long merchantId,
                          Long fromUserId,
                          Long toUserId,
@@ -129,6 +143,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** Withdraw */
     public void withdraw(Long merchantId, Long userId, BigDecimal amount, String withdrawNo, String operator, String remark) {
         walletLimitService.validateWithdrawLimit(merchantId, userId, amount);
         applyChange("WITHDRAW", withdrawNo, merchantId, userId, amount, false, false, operator, remark);
@@ -136,6 +151,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** FreezeForWithdraw */
     public WalletAccountVO freezeForWithdraw(WalletWithdrawDTO dto) {
         if (dto == null) {
             throw new PaymentException("提现参数不能为空");
@@ -208,6 +224,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** ConfirmWithdraw */
     public void confirmWithdraw(Long merchantId, Long userId, String bizNo, BigDecimal amount) {
         if (merchantId == null || userId == null || !StringUtils.hasText(bizNo) || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new PaymentException("参数不完整");
@@ -262,6 +279,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** CancelWithdraw */
     public void cancelWithdraw(Long merchantId, Long userId, String bizNo, BigDecimal amount, String remark) {
         if (merchantId == null || userId == null || !StringUtils.hasText(bizNo) || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new PaymentException("参数不完整");
@@ -320,12 +338,14 @@ public class WalletAccountServiceImpl implements WalletAccountService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** EnsureAccount */
     public void ensureAccount(Long merchantId, Long userId) {
         requireAccount(merchantId, userId, true);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** Transfer */
     public WalletAccountVO transfer(WalletTransferDTO dto) {
         if (dto == null) {
             throw new PaymentException("转账参数不能为空");
@@ -343,6 +363,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** Withdraw */
     public WalletAccountVO withdraw(WalletWithdrawDTO dto) {
         if (dto == null) {
             throw new PaymentException("提现参数不能为空");
@@ -361,6 +382,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     }
 
     @Override
+    /** PageAccounts */
     public Page<WalletAccount> pageAccounts(int pageNum, int pageSize, Long merchantId) {
         LambdaQueryWrapper<WalletAccount> wrapper = new LambdaQueryWrapper<WalletAccount>()
                 .orderByDesc(WalletAccount::getCreatedAt);
@@ -372,6 +394,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** Freeze */
     public void freeze(Long id) {
         WalletAccount account = walletAccountMapper.selectById(id);
         if (account == null) {
@@ -386,6 +409,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** Unfreeze */
     public void unfreeze(Long id) {
         WalletAccount account = walletAccountMapper.selectById(id);
         if (account == null) {
@@ -399,6 +423,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     }
 
     @Override
+    /** 获取记录日志 */
     public WalletAccountLog getLog(String bizType, Long merchantId, Long userId, String bizNo) {
         LambdaQueryWrapper<WalletAccountLog> wrapper = new LambdaQueryWrapper<WalletAccountLog>()
                 .eq(WalletAccountLog::getBizType, bizType)
@@ -412,6 +437,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     }
 
     @Override
+    /** PageLogs */
     public Page<WalletAccountLog> pageLogs(int pageNum, int pageSize, Long merchantId, Long userId, String bizType, String bizNo, LocalDateTime startTime, LocalDateTime endTime) {
         LambdaQueryWrapper<WalletAccountLog> wrapper = new LambdaQueryWrapper<WalletAccountLog>()
                 .orderByDesc(WalletAccountLog::getCreatedAt);
@@ -436,6 +462,18 @@ public class WalletAccountServiceImpl implements WalletAccountService {
         return walletAccountLogMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
     }
 
+    /**
+     * 应用Change
+     * @param bizType bizType
+     * @param bizNo bizNo
+     * @param merchantId merchantId
+     * @param userId userId
+     * @param amount amount
+     * @param increase increase
+     * @param createIfAbsent createIfAbsent
+     * @param operator operator
+     * @param remark remark
+     */
     private WalletAccount applyChange(String bizType,
                                       String bizNo,
                                       Long merchantId,
@@ -508,6 +546,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
         }
     }
 
+    /** RequireAccount */
     private WalletAccount requireAccount(Long merchantId, Long userId, boolean createIfAbsent) {
         WalletAccount account = findAccount(merchantId, userId);
         if (account != null) {
@@ -528,6 +567,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
         return walletAccountMapper.selectById(created.getId());
     }
 
+    /** 查找Account */
     private WalletAccount findAccount(Long merchantId, Long userId) {
         if (merchantId == null || userId == null) {
             return null;
@@ -538,6 +578,7 @@ public class WalletAccountServiceImpl implements WalletAccountService {
                 .last("limit 1"));
     }
 
+    /** 校验Args */
     private void validateArgs(Long merchantId, Long userId, String bizType, String bizNo, BigDecimal amount) {
         if (merchantId == null) {
             throw new PaymentException("商户ID不能为空");
@@ -553,12 +594,14 @@ public class WalletAccountServiceImpl implements WalletAccountService {
         }
     }
 
+    /** EnsureAccountEnabled */
     private void ensureAccountEnabled(WalletAccount account) {
         if (account == null || !Integer.valueOf(STATUS_ENABLED).equals(account.getStatus())) {
             throw new PaymentException("钱包账户未启用");
         }
     }
 
+    /** RequireWalletEnabledMerchant */
     private void requireWalletEnabledMerchant(Long merchantId) {
         Merchant merchant = merchantMapper.selectById(merchantId);
         if (merchant == null) {
@@ -572,18 +615,22 @@ public class WalletAccountServiceImpl implements WalletAccountService {
         }
     }
 
+    /** Scale */
     private BigDecimal scale(BigDecimal value) {
         return value == null ? zeroAmount() : value.setScale(2, RoundingMode.HALF_UP);
     }
 
+    /** ZeroAmount */
     private BigDecimal zeroAmount() {
         return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
     }
 
+    /** GenerateBizNo */
     private String generateBizNo(String prefix) {
         return prefix + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }
 
+    /** ToVO */
     private WalletAccountVO toVO(WalletAccount account) {
         WalletAccountVO vo = new WalletAccountVO();
         BeanUtils.copyProperties(account, vo);

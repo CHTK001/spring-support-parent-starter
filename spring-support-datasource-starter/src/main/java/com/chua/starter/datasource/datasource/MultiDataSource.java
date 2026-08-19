@@ -66,6 +66,11 @@ public class MultiDataSource implements DataSource {
         info.put("druidFetch", "1000");
     }
 
+    /**
+     * 创建 MultiDataSource 实例
+     * @param dataSources dataSources
+     * @param ApplicationContext ApplicationContext
+     */
     public MultiDataSource(List<DataSource> dataSources, ApplicationContext applicationContext) {
         this.dataSources = dataSources;
         this.applicationContext = applicationContext;
@@ -74,6 +79,7 @@ public class MultiDataSource implements DataSource {
     }
 
 
+    /** ReturnObject */
     public static void returnObject(Connection connection) {
         if (null == connection) {
             return;
@@ -139,6 +145,7 @@ public class MultiDataSource implements DataSource {
         }
     }
 
+    /** 获取Catalogs */
     private List<String> getCatalogs() {
         List<String> catalogs = new ArrayList<>(dataSources.size());
         for (DataSource ds : dataSources) {
@@ -192,6 +199,7 @@ public class MultiDataSource implements DataSource {
     private void initialDataSource() {
         PooledObjectFactory<Connection> factory = new BasePooledObjectFactory<Connection>() {
             @Override
+            /** 创建 */
             public Connection create() throws Exception {
                 try {
                     Connection connection = DriverManager.getConnection("jdbc:calcite:", info).unwrap(CalciteConnection.class);
@@ -204,6 +212,7 @@ public class MultiDataSource implements DataSource {
             }
 
             @Override
+            /** Wrap */
             public PooledObject<Connection> wrap(Connection obj) {
                 return new DefaultPooledObject<>(obj);
             }
@@ -212,6 +221,7 @@ public class MultiDataSource implements DataSource {
     }
 
     @Override
+    /** 获取Connection */
     public Connection getConnection() throws SQLException {
         try {
             Connection connection = pool.borrowObject();
@@ -225,41 +235,49 @@ public class MultiDataSource implements DataSource {
     }
 
     @Override
+    /** 获取Connection */
     public Connection getConnection(String username, String password) throws SQLException {
         return getConnection();
     }
 
     @Override
+    /** Unwrap */
     public <T> T unwrap(Class<T> iface) throws SQLException {
         return null;
     }
 
     @Override
+    /** 是否WrapperFor */
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
         return false;
     }
 
     @Override
+    /** 获取记录日志Writer */
     public PrintWriter getLogWriter() throws SQLException {
         return printWriter;
     }
 
     @Override
+    /** 设置记录日志Writer */
     public void setLogWriter(PrintWriter out) throws SQLException {
         this.printWriter = out;
     }
 
     @Override
+    /** 设置LoginTimeout */
     public void setLoginTimeout(int seconds) throws SQLException {
         this.seconds = seconds;
     }
 
     @Override
+    /** 获取LoginTimeout */
     public int getLoginTimeout() throws SQLException {
         return seconds;
     }
 
     @Override
+    /** 获取ParentLogger */
     public Logger getParentLogger() throws SQLFeatureNotSupportedException {
         // DataSource接口要求返回java.util.logging.Logger，但实际使用SLF4J
         // 返回null表示不支持，由SLF4J桥接处理

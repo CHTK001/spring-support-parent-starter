@@ -35,6 +35,11 @@ public class UsageAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(SysAiUsageService.class)
+    /**
+     * SysAiUsageService
+     * @param usageMapper usageMapper
+     * @param pricingService pricingService
+     */
     public SysAiUsageService sysAiUsageService(SysAiUsageMapper usageMapper,
                                                SysAiPricingService pricingService) {
         return new SysAiUsageServiceImpl(usageMapper, pricingService);
@@ -42,18 +47,26 @@ public class UsageAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(SysAiPricingService.class)
+    /** SysAiPricingService */
     public SysAiPricingService sysAiPricingService(SysAiPricingMapper pricingMapper) {
         return new SysAiPricingServiceImpl(pricingMapper);
     }
 
     @Bean
     @ConditionalOnMissingBean(UsageRecorderInterceptor.class)
+    /** UsageRecorderInterceptor */
     public UsageRecorderInterceptor usageRecorderInterceptor(SysAiUsageService usageService) {
         return new UsageRecorderInterceptor(usageService);
     }
 
     @Bean
     @ConditionalOnMissingBean(UsageAggregationTask.class)
+    /**
+     * UsageAggregationTask
+     * @param usageMapper usageMapper
+     * @param dailyMapper dailyMapper
+     * @param settingReader settingReader
+     */
     public UsageAggregationTask usageAggregationTask(SysAiUsageMapper usageMapper,
                                                      SysAiUsageDailyMapper dailyMapper,
                                                      GlobalSettingReader settingReader) {

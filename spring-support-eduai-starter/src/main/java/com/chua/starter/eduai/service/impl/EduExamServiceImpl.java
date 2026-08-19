@@ -27,6 +27,7 @@ import java.time.LocalDateTime;
 public class EduExamServiceImpl extends ServiceImpl<EduExamMapper, EduExam> implements IEduExamService {
 
     @Override
+    /** Page查询 */
     public PageResult<EduExam> pageQuery(EduExam exam, long page, long pageSize) {
         LambdaQueryWrapper<EduExam> wrapper = new LambdaQueryWrapper<>();
         if (exam != null) {
@@ -63,6 +64,7 @@ public class EduExamServiceImpl extends ServiceImpl<EduExamMapper, EduExam> impl
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 创建Exam */
     public Long createExam(EduExam exam) {
         if (exam.getExamPaperId() == null) {
             throw new BusinessException("试卷ID不能为空");
@@ -78,6 +80,7 @@ public class EduExamServiceImpl extends ServiceImpl<EduExamMapper, EduExam> impl
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 更新Exam */
     public boolean updateExam(EduExam exam) {
         if (exam.getExamId() == null) {
             throw new BusinessException("考试ID不能为空");
@@ -94,6 +97,7 @@ public class EduExamServiceImpl extends ServiceImpl<EduExamMapper, EduExam> impl
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 删除Exam */
     public boolean deleteExam(Long id) {
         EduExam exists = baseMapper.selectById(id);
         if (exists == null) {

@@ -54,6 +54,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     @Override
     @Cacheable(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             key = "'sys:ai:global:setting:' + #group + ':' + #field", unless = "#result == null || #result.isEmpty()")
+    /** 获取Value */
     public Optional<String> getValue(String group, String field) {
         LambdaQueryWrapper<SysAiGlobalSetting> wrapper = Wrappers.<SysAiGlobalSetting>lambdaQuery()
                 .eq(SysAiGlobalSetting::getSysAiGlobalSettingGroup, group)
@@ -114,6 +115,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             allEntries = true)
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    /** Replace */
     public void replace(Object request) {
         if (!(request instanceof Map)) {
             log.warn("[SysAiGlobalSetting] replace 参数类型不支持: {}", request.getClass());
@@ -172,6 +174,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             allEntries = true)
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    /** UpsertValue */
     public void upsertValue(String group, String field, String value, String description) {
         if (group == null || group.isBlank() || field == null || field.isBlank()) {
             log.warn("[SysAiGlobalSetting] upsertValue 缺少 group/field 参数");
@@ -212,6 +215,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             allEntries = true)
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    /** UpsertField */
     public void upsertField(String group, String field, String value, String valueType, String description, int sort) {
         if (group == null || group.isBlank() || field == null || field.isBlank()) {
             log.warn("[SysAiGlobalSetting] upsertField 缺少 group/field 参数");

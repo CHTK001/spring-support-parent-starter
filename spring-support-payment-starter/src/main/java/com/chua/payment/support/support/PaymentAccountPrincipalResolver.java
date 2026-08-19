@@ -15,6 +15,7 @@ import java.util.Set;
 @Component
 public class PaymentAccountPrincipalResolver {
 
+    /** 解析 */
     public UserResume resolve(HttpServletRequest request) {
         if (request instanceof OAuthHttpServletRequestWrapper wrapper && wrapper.isAuthenticated()) {
             OAuthPrincipal principal = wrapper.getOAuthPrincipal();
@@ -27,10 +28,12 @@ public class PaymentAccountPrincipalResolver {
         return null;
     }
 
+    /** 解析UserId */
     public Long resolveUserId(HttpServletRequest request) {
         return parseUserId(resolve(request));
     }
 
+    /** 解析UserId */
     public Long parseUserId(UserResume userResume) {
         if (userResume == null || !StringUtils.hasText(userResume.getUserId())) {
             return null;
@@ -42,6 +45,7 @@ public class PaymentAccountPrincipalResolver {
         }
     }
 
+    /** 是否Admin */
     public boolean isAdmin(UserResume userResume) {
         if (userResume == null) {
             return false;

@@ -47,18 +47,24 @@ public class Oauth2Protocol extends AbstractProtocol {
      */
     private final OAuthClientResilience resilience;
 
+    /**
+     * 创建 Oauth2Protocol 实例
+     * @param authClientProperties authClientProperties
+     */
     public Oauth2Protocol(AuthClientProperties authClientProperties) {
         super(authClientProperties);
         this.resilience = new OAuthClientResilience(authClientProperties);
     }
 
     @Override
+    /** Approve */
     protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
         // 使用令牌内省端点验证Token
         return introspectToken(token);
     }
 
     @Override
+    /** AuthenticationUserCode */
     protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
         // OAuth 2.0 使用 client_credentials 模式，凭据来自客户端配置
         return clientCredentialsGrant(authClientProperties.getKey().getAccessKey(),
@@ -66,6 +72,13 @@ public class Oauth2Protocol extends AbstractProtocol {
     }
 
     @Override
+    /**
+     * UpgradeInformation
+     * @param cookie cookie
+     * @param token token
+     * @param upgradeType upgradeType
+     * @param refreshToken refreshToken
+     */
     protected AuthenticationInformation upgradeInformation(Cookie cookie, String token,
                                                            UpgradeType upgradeType, String refreshToken) {
         if (upgradeType == UpgradeType.REFRESH && StringUtils.isNotBlank(refreshToken)) {
@@ -76,6 +89,7 @@ public class Oauth2Protocol extends AbstractProtocol {
     }
 
     @Override
+    /** 获取AccessToken */
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
         log.debug("OAuth2 获取访问令牌 - username: {}, authType: {}", username, authType);
         var selectedUrl = selectUrl();
@@ -99,6 +113,7 @@ public class Oauth2Protocol extends AbstractProtocol {
     }
 
     @Override
+    /** Logout */
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult) {
         log.debug("OAuth2 登出 - uid: {}, logoutType: {}", uid, logoutType);
         var selectedUrl = selectUrl();
@@ -127,17 +142,20 @@ public class Oauth2Protocol extends AbstractProtocol {
     }
 
     @Override
+    /** 创建TemporaryToken */
     public LoginAuthResult createTemporaryToken(String sourceToken, Map<String, Object> ext) {
         // OAuth 2.0 标准不直接支持临时令牌，返回不支持
         return new LoginAuthResult(501, "OAuth 2.0协议不支持临时令牌功能");
     }
 
     @Override
+    /** 获取OnlineStatus */
     public OnlineStatus getOnlineStatus(String uid) {
         return OnlineStatus.defaultStatus();
     }
 
     @Override
+    /** 获取OnlineUsers */
     public OnlineUserResult getOnlineUsers(OnlineUserQuery query) {
         return OnlineUserResult.empty();
     }
@@ -342,6 +360,7 @@ public class Oauth2Protocol extends AbstractProtocol {
         return authInfo;
     }
 
+    /** 获取StringValue */
     private String getStringValue(Map<String, Object> map, String key) {
         if (map == null) {
             return null;

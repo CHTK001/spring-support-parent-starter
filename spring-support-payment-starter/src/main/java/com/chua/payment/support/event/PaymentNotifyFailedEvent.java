@@ -24,6 +24,19 @@ public class PaymentNotifyFailedEvent extends PaymentEvent {
     /** 错误消息 */
     private final String errorMessage;
 
+    /**
+     * 创建 PaymentNotifyFailedEvent 实例
+     * @param source source
+     * @param tenantId tenantId
+     * @param merchantId merchantId
+     * @param notifyLogId notifyLogId
+     * @param notifyErrorId notifyErrorId
+     * @param notifyType notifyType
+     * @param orderNo orderNo
+     * @param refundNo refundNo
+     * @param errorType errorType
+     * @param errorMessage errorMessage
+     */
     public PaymentNotifyFailedEvent(Object source, Long tenantId, Long merchantId, Long notifyLogId,
                                     Long notifyErrorId, String notifyType, String orderNo, String refundNo,
                                     String errorType, String errorMessage) {

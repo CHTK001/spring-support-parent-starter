@@ -77,41 +77,66 @@ public class SysFileSystemUploadFile extends SysBase implements Serializable {
     /** Filesystem上传文件complete时间 */
     private LocalDateTime filesystemUploadFileCompleteTime;
 
+    /** 创建 SysFileSystemUploadFile 实例 */
     public SysFileSystemUploadFile() {}
 
+    /** 获取FilesystemUploadFileId */
     public Long getFilesystemUploadFileId() { return filesystemUploadFileId; }
+    /** 设置FilesystemUploadFileId */
     public void setFilesystemUploadFileId(Long v) { this.filesystemUploadFileId = v; }
 
+    /** 获取FilesystemUploadFileUploadId */
     public String getFilesystemUploadFileUploadId() { return filesystemUploadFileUploadId; }
+    /** 设置FilesystemUploadFileUploadId */
     public void setFilesystemUploadFileUploadId(String v) { this.filesystemUploadFileUploadId = v; }
 
+    /** 获取FilesystemUploadFileName */
     public String getFilesystemUploadFileName() { return filesystemUploadFileName; }
+    /** 设置FilesystemUploadFileName */
     public void setFilesystemUploadFileName(String v) { this.filesystemUploadFileName = v; }
 
+    /** 获取FilesystemUploadFileOriginalName */
     public String getFilesystemUploadFileOriginalName() { return filesystemUploadFileOriginalName; }
+    /** 设置FilesystemUploadFileOriginalName */
     public void setFilesystemUploadFileOriginalName(String v) { this.filesystemUploadFileOriginalName = v; }
 
+    /** 获取FilesystemUploadFile获取大小 */
     public Long getFilesystemUploadFileSize() { return filesystemUploadFileSize; }
+    /** 设置FilesystemUploadFile获取大小 */
     public void setFilesystemUploadFileSize(Long v) { this.filesystemUploadFileSize = v; }
 
+    /** 获取FilesystemUploadFileStorageType */
     public String getFilesystemUploadFileStorageType() { return filesystemUploadFileStorageType; }
+    /** 设置FilesystemUploadFileStorageType */
     public void setFilesystemUploadFileStorageType(String v) { this.filesystemUploadFileStorageType = v; }
 
+    /** 获取FilesystemUploadFileBucket */
     public String getFilesystemUploadFileBucket() { return filesystemUploadFileBucket; }
+    /** 设置FilesystemUploadFileBucket */
     public void setFilesystemUploadFileBucket(String v) { this.filesystemUploadFileBucket = v; }
 
+    /** 获取FilesystemUploadFileKey */
     public String getFilesystemUploadFileKey() { return filesystemUploadFileKey; }
+    /** 设置FilesystemUploadFileKey */
     public void setFilesystemUploadFileKey(String v) { this.filesystemUploadFileKey = v; }
 
+    /** 获取FilesystemUploadFileUrl */
     public String getFilesystemUploadFileUrl() { return filesystemUploadFileUrl; }
+    /** 设置FilesystemUploadFileUrl */
     public void setFilesystemUploadFileUrl(String v) { this.filesystemUploadFileUrl = v; }
 
+    /** 获取FilesystemUploadFileContentType */
     public String getFilesystemUploadFileContentType() { return filesystemUploadFileContentType; }
+    /** 设置FilesystemUploadFileContentType */
     public void setFilesystemUploadFileContentType(String v) { this.filesystemUploadFileContentType = v; }
 
+    /** 获取FilesystemUploadFileEtag */
     public String getFilesystemUploadFileEtag() { return filesystemUploadFileEtag; }
+    /** 设置FilesystemUploadFileEtag */
     public void setFilesystemUploadFileEtag(String v) { this.filesystemUploadFileEtag = v; }
 
+    /** 获取FilesystemUploadFileCompleteTime */
     public LocalDateTime getFilesystemUploadFileCompleteTime() { return filesystemUploadFileCompleteTime; }
+    /** 设置FilesystemUploadFileCompleteTime */
     public void setFilesystemUploadFileCompleteTime(LocalDateTime v) { this.filesystemUploadFileCompleteTime = v; }
 }

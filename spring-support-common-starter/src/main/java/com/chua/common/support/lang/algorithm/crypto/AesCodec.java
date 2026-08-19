@@ -11,21 +11,25 @@ package com.chua.common.support.lang.algorithm.crypto;
 public class AesCodec implements Codec {
 
     @Override
+    /** 编码Hex */
     public String encodeHex(String origin) {
         return origin;
     }
 
     @Override
+    /** 解码Hex */
     public String decodeHex(String origin) {
         return origin;
     }
 
     @Override
+    /** 解码 */
     public byte[] decode(byte[] data) throws Exception {
         return data;
     }
 
     @Override
+    /** 关闭 */
     public void close() throws Exception {
     }
 }

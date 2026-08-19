@@ -34,6 +34,7 @@ public class SysFileSystemUploadMergeLogServiceImpl
 
     @Override
     @Transactional
+    /** Record */
     public boolean record(String uploadId, boolean success, String message, int retryCount) {
         SysFileSystemUploadMergeLog log = new SysFileSystemUploadMergeLog();
         LocalDateTime now = LocalDateTime.now();
@@ -56,6 +57,7 @@ public class SysFileSystemUploadMergeLogServiceImpl
     }
 
     @Override
+    /** ListByUploadId */
     public List<SysFileSystemUploadMergeLog> listByUploadId(String uploadId) {
         return list(new LambdaQueryWrapper<SysFileSystemUploadMergeLog>()
                 .eq(SysFileSystemUploadMergeLog::getFilesystemUploadMergeLogUploadId, uploadId)
@@ -64,6 +66,7 @@ public class SysFileSystemUploadMergeLogServiceImpl
 
     @Override
     @Transactional
+    /** 删除ByUploadId */
     public boolean deleteByUploadId(String uploadId) {
         return remove(new LambdaQueryWrapper<SysFileSystemUploadMergeLog>()
                 .eq(SysFileSystemUploadMergeLog::getFilesystemUploadMergeLogUploadId, uploadId));

@@ -20,6 +20,7 @@ public class MdcTaskDecorator implements TaskDecorator {
 
     @Override
     @NonNull
+    /** Decorate */
     public Runnable decorate(@NonNull Runnable runnable) {
         Map<String, String> contextMap = MDC.getCopyOfContextMap();
         return () -> {

@@ -45,22 +45,27 @@ public class HikariDataSourceProperties extends DataSourceProperties {
     private volatile int minIdle = 10;
 
     // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
+    /** 获取最小值Idle */
     public int getMinIdle() {
         return minIdle;
     }
 
+    /** 获取IdleTimeout */
     public long getIdleTimeout() {
         return idleTimeout;
     }
 
+    /** 获取LeakDetectionThreshold */
     public long getLeakDetectionThreshold() {
         return leakDetectionThreshold;
     }
 
+    /** 获取最大值Lifetime */
     public long getMaxLifetime() {
         return maxLifetime;
     }
 
+    /** 获取最大值Pool获取大小 */
     public int getMaxPoolSize() {
         return maxPoolSize;
     }

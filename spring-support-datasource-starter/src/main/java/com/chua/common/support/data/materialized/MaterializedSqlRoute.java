@@ -20,10 +20,12 @@ public class MaterializedSqlRoute {
     /** 缓存密钥 */
     private String cacheKey;
 
+    /** NotRouted */
     public static MaterializedSqlRoute notRouted() {
         return MaterializedSqlRoute.builder().routed(false).build();
     }
 
+    /** Routed */
     public static MaterializedSqlRoute routed(String dataSource) {
         return MaterializedSqlRoute.builder()
                 .routed(true)
@@ -31,6 +33,7 @@ public class MaterializedSqlRoute {
                 .build();
     }
 
+    /** Routed */
     public static MaterializedSqlRoute routed(String dataSource, String cacheKey) {
         return MaterializedSqlRoute.builder()
                 .routed(true)

@@ -100,6 +100,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     );
 
     @Override
+    /** Post处理Environment */
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         if (!Boolean.parseBoolean(environment.getProperty(ENABLED_KEY, "true"))) {
             log.debug("[数据库配置]已禁用: {}=false", ENABLED_KEY);
@@ -123,6 +124,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
         }
     }
 
+    /** 解析ConnectionInfo */
     private ConnectionInfo resolveConnectionInfo(ConfigurableEnvironment environment) {
         String url = environment.getProperty("spring.datasource.url");
         if (!StringUtils.hasText(url)) {
@@ -135,6 +137,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
                 environment.getProperty("spring.datasource.driver-class-name"));
     }
 
+    /** 打开Connection */
     private Connection openConnection(ConnectionInfo connectionInfo) throws Exception {
         if (StringUtils.hasText(connectionInfo.driverClassName())) {
             Class.forName(connectionInfo.driverClassName());
@@ -148,6 +151,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
                 connectionInfo.password() == null ? "" : connectionInfo.password());
     }
 
+    /** Ensure分组Table */
     private void ensureGroupTable(Connection connection) throws SQLException {
         if (tableExists(connection, GROUP_TABLE)) {
             return;
@@ -158,6 +162,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
         log.info("[数据库配置]已创建配置分组表 {}", GROUP_TABLE);
     }
 
+    /** EnsureSettingTable */
     private void ensureSettingTable(Connection connection) throws SQLException {
         if (tableExists(connection, SETTING_TABLE)) {
             return;
@@ -168,6 +173,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
         log.info("[数据库配置]已创建配置表 {}", SETTING_TABLE);
     }
 
+    /** Table是否存在 */
     private boolean tableExists(Connection connection, String tableName) throws SQLException {
         DatabaseMetaData metaData = connection.getMetaData();
         String catalog = connection.getCatalog();
@@ -185,6 +191,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
         return false;
     }
 
+    /** SeedDefaultGroups */
     private void seedDefaultGroups(Connection connection) throws SQLException {
         String sql = """
                 INSERT INTO sys_setting_group (
@@ -236,6 +243,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
         }
     }
 
+    /** SeedDefaultSettings */
     private void seedDefaultSettings(Connection connection) throws SQLException {
         String sql = """
                 INSERT INTO sys_setting (
@@ -300,6 +308,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
         }
     }
 
+    /** 加载StartupSettings */
     private Map<String, Object> loadStartupSettings(Connection connection) throws SQLException {
         String sql = """
                 SELECT sys_setting_name, sys_setting_value
@@ -319,6 +328,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
         return settings;
     }
 
+    /** 注册PropertySource */
     private void registerPropertySource(MutablePropertySources propertySources, Map<String, Object> settings) {
         if (settings.isEmpty() || propertySources.contains(PROPERTY_SOURCE_NAME)) {
             return;
@@ -333,6 +343,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
         propertySources.addLast(propertySource);
     }
 
+    /** 查找FirstOpsSource */
     private String findFirstOpsSource(MutablePropertySources propertySources) {
         for (PropertySource<?> propertySource : propertySources) {
             if (propertySource.getName().startsWith(OPS_SOURCE_PREFIX)) {
@@ -342,6 +353,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
         return null;
     }
 
+    /** 创建分组TableSql */
     private String createGroupTableSql(Connection connection) throws SQLException {
         String idColumn = autoIncrementColumn(connection, "sys_setting_group_id");
         return """
@@ -365,6 +377,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
                 """.formatted(idColumn);
     }
 
+    /** 创建SettingTableSql */
     private String createSettingTableSql(Connection connection) throws SQLException {
         String idColumn = autoIncrementColumn(connection, "sys_setting_id");
         return """
@@ -394,6 +407,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
                 """.formatted(idColumn);
     }
 
+    /** AutoIncrementColumn */
     private String autoIncrementColumn(Connection connection, String columnName) throws SQLException {
         String database = connection.getMetaData().getDatabaseProductName().toLowerCase(Locale.ROOT);
         if (database.contains("sqlite")) {
@@ -406,16 +420,29 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         return ConfigDataEnvironmentPostProcessor.ORDER + 110;
     }
 
+    /** ConnectionInfo */
     private record ConnectionInfo(String url, String username, String password, String driverClassName) {
     }
 
+    /** 分组Definition */
     private record GroupDefinition(String code, String name, String icon, String remark, int sort) {
     }
 
+    /**
+     * SettingDefinition
+     * @param name name
+     * @param defaultValue defaultValue
+     * @param valueType valueType
+     * @param groupCode groupCode
+     * @param sort sort
+     * @param config config
+     * @param remark remark
+     */
     private record SettingDefinition(
             String name,
             String defaultValue,

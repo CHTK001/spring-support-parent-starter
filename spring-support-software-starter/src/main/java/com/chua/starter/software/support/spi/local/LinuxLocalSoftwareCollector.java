@@ -34,12 +34,14 @@ public class LinuxLocalSoftwareCollector implements LocalSoftwareCollector {
     private static final Pattern DESKTOP_EXEC = Pattern.compile("^Exec=(.+)$", Pattern.CASE_INSENSITIVE);
 
     @Override
+    /** Support */
     public boolean support() {
         String os = System.getProperty("os.name", "").toLowerCase();
         return os.contains("linux") && !os.contains("darwin");
     }
 
     @Override
+    /** Collect */
     public List<SoftSoftware> collect() {
         List<SoftSoftware> result = new ArrayList<>();
         result.addAll(scanDpkg());
@@ -48,6 +50,7 @@ public class LinuxLocalSoftwareCollector implements LocalSoftwareCollector {
         return result;
     }
 
+    /** 扫描Dpkg */
     private List<SoftSoftware> scanDpkg() {
         List<SoftSoftware> list = new ArrayList<>();
         try {
@@ -76,6 +79,7 @@ public class LinuxLocalSoftwareCollector implements LocalSoftwareCollector {
         return list;
     }
 
+    /** 扫描Rpm */
     private List<SoftSoftware> scanRpm() {
         List<SoftSoftware> list = new ArrayList<>();
         try {
@@ -104,6 +108,7 @@ public class LinuxLocalSoftwareCollector implements LocalSoftwareCollector {
         return list;
     }
 
+    /** 扫描DesktopFiles */
     private List<SoftSoftware> scanDesktopFiles() {
         List<SoftSoftware> list = new ArrayList<>();
         String[] dirs = {
@@ -126,6 +131,7 @@ public class LinuxLocalSoftwareCollector implements LocalSoftwareCollector {
         return list;
     }
 
+    /** 解析DesktopFile */
     private SoftSoftware parseDesktopFile(File file) {
         SoftSoftware software = null;
         String iconPath = null;
@@ -163,6 +169,7 @@ public class LinuxLocalSoftwareCollector implements LocalSoftwareCollector {
         return software;
     }
 
+    /** ContainsName */
     private boolean containsName(List<SoftSoftware> list, String name) {
         return list.stream().anyMatch(s -> name.equals(s.getSoftwareName()));
     }

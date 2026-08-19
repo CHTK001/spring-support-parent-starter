@@ -17,18 +17,22 @@ public class RadarChartData implements Serializable {
     /** 数值集合 */
     private List<Number> values = new ArrayList<>();
 
+    /** 获取Indicators */
     public List<String> getIndicators() {
         return indicators;
     }
 
+    /** 设置Indicators */
     public void setIndicators(List<String> indicators) {
         this.indicators = indicators;
     }
 
+    /** 获取Values */
     public List<Number> getValues() {
         return values;
     }
 
+    /** 设置Values */
     public void setValues(List<Number> values) {
         this.values = values;
     }

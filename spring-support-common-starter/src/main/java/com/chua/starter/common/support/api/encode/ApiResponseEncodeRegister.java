@@ -57,11 +57,13 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
         this.apiResponseEncodeConfiguration = configuration;
     }
 
+    /** 是否Pass */
     public boolean isPass() {
         check();
         return !apiResponseEncodeConfiguration.isCodecResponseOpen();
     }
 
+    /** 校验 */
     private void check() {
         if (null != apiResponseEncodeConfiguration) {
             return;
@@ -88,6 +90,7 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
         }
     }
 
+    /** Sm编码 */
     private CodecResult sm2Encode(String data) {
         try {
             Sm2Cipher sm2Cipher = Sm2Cipher.create("bc");
@@ -102,6 +105,7 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
         }
     }
 
+    /** BytesToHex */
     private static String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder(bytes.length * 2);
         for (byte b : bytes) {
@@ -139,15 +143,18 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
     }
 
     @Override
+    /** Upgrade */
     public void upgrade(ApiResponseEncodeConfiguration apiResponseEncodeConfiguration) {
         this.apiResponseEncodeConfiguration = apiResponseEncodeConfiguration;
     }
 
     @Override
+    /** OnApplicationEvent */
     public void onApplicationEvent(ApiResponseEncodeConfiguration event) {
         upgrade(event);
     }
 
+    /** 获取Or创建Configuration */
     private ApiResponseEncodeConfiguration getOrCreateConfiguration() {
         ApiResponseEncodeConfiguration configuration = GlobalSettingFactory.getInstance().get("config", ApiResponseEncodeConfiguration.class);
         if (configuration == null) {
@@ -187,14 +194,17 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
             this.timestamp = timestamp;
         }
 
+        /** 获取Key */
         public String getKey() {
             return key;
         }
 
+        /** 获取Data */
         public String getData() {
             return data;
         }
 
+        /** 获取Timestamp */
         public String getTimestamp() {
             return timestamp;
         }

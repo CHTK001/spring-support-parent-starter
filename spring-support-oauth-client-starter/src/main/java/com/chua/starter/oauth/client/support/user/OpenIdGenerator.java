@@ -96,6 +96,7 @@ public final class OpenIdGenerator {
      */
     private static final String DEFAULT_SALT = "oauth_salt_2025";
 
+    /** 创建 OpenIdGenerator 实例 */
     private OpenIdGenerator() {
         // 工具类禁止实例化
     }
@@ -237,6 +238,7 @@ public final class OpenIdGenerator {
         /** 系统内部 */
         public static final String SYSTEM = "system";
 
+        /** 创建 Platform 实例 */
         private Platform() {
         }
     }

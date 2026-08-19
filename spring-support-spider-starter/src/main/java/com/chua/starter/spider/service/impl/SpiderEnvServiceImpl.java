@@ -22,6 +22,7 @@ public class SpiderEnvServiceImpl
         implements SpiderEnvService {
 
     @Override
+    /** MapEnabled */
     public Map<String, String> mapEnabled() {
         List<SpiderEnv> list = list(Wrappers.<SpiderEnv>lambdaQuery()
                 .eq(SpiderEnv::getEnabled, Integer.valueOf(1)));

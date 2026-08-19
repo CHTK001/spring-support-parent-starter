@@ -27,6 +27,7 @@ public class TencentConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    /** TencentWechatPayClientFactory */
     public TencentWechatPayClientFactory tencentWechatPayClientFactory() {
         return new TencentWechatPayClientFactory();
     }
@@ -34,6 +35,7 @@ public class TencentConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = TencentWechatOpenPlatformProperties.PREFIX, name = "enable", havingValue = "true")
+    /** Wechat打开PlatformService */
     public WechatOpenPlatformService wechatOpenPlatformService(TencentWechatOpenPlatformProperties properties) {
         log.info("初始化微信开放平台服务, componentAppId={}, storagePath={}", properties.getComponentAppId(), properties.getStoragePath());
         return new DefaultWechatOpenPlatformService(
@@ -46,6 +48,7 @@ public class TencentConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = TencentWechatOpenPlatformProperties.PREFIX, name = "enable", havingValue = "true")
+    /** 打开Id转换Service */
     public OpenIdConvertService openIdConvertService(TencentWechatOpenPlatformProperties properties) {
         log.info("初始化微信openid转换服务, componentAppId={}", properties.getComponentAppId());
         return new WechatOpenIdConvertService(
@@ -56,6 +59,7 @@ public class TencentConfiguration {
     }
 
     @Bean
+    /** TencentServiceInfoContributor */
     public ServiceInfoContributor tencentServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("tencent", "腾讯", true, "腾讯服务模块");

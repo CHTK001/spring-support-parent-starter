@@ -29,6 +29,7 @@ public class GracefulShutdownListener implements ApplicationListener<ContextClos
     private static final int SHUTDOWN_TIMEOUT_SECONDS = 30;
 
     @Override
+    /** OnApplicationEvent */
     public void onApplicationEvent(ContextClosedEvent event) {
         log.info("[数据源] 开始优雅关闭数据源连接池...");
         long start = System.currentTimeMillis();

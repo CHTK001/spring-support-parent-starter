@@ -22,6 +22,7 @@ import java.util.UUID;
 public class MdcHandlerFilter implements Filter {
 
     @Override
+    /** Do过滤 */
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         try {

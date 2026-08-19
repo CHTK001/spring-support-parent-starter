@@ -21,23 +21,27 @@ import java.util.List;
 @MappedJdbcTypes(JdbcType.VARCHAR)
 public class StringListTypeHandler extends BaseTypeHandler<List<String>> {
     @Override
+    /** 设置NonNullParameter */
     public void setNonNullParameter(PreparedStatement ps, int i, List<String> parameter, JdbcType jdbcType) throws SQLException {
         ps.setString(i, Joiner.on(",").omitEmptyStrings().trimResults().join(parameter));
     }
 
     @Override
+    /** 获取NullableResult */
     public List<String> getNullableResult(ResultSet rs, String columnName) throws SQLException {
         String string = rs.getString(columnName);
         return Splitter.on(",").trimResults().omitEmptyStrings().splitToList(string);
     }
 
     @Override
+    /** 获取NullableResult */
     public List<String> getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
         String string = rs.getString(columnIndex);
         return Splitter.on(",").trimResults().omitEmptyStrings().splitToList(string);
     }
 
     @Override
+    /** 获取NullableResult */
     public List<String> getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
         String string = cs.getString(columnIndex);
         return Splitter.on(",").trimResults().omitEmptyStrings().splitToList(string);

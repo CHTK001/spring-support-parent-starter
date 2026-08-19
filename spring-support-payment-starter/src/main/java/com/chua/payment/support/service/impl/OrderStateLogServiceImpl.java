@@ -24,6 +24,7 @@ public class OrderStateLogServiceImpl implements OrderStateLogService {
     private final OrderStateLogMapper orderStateLogMapper;
 
     @Override
+    /** 记录日志 */
     public void log(Long orderId, OrderState fromState, OrderState toState, String event, String operator, String remark) {
         OrderStateLog stateLog = new OrderStateLog();
         stateLog.setOrderId(orderId);
@@ -38,6 +39,7 @@ public class OrderStateLogServiceImpl implements OrderStateLogService {
     }
 
     @Override
+    /** ListByOrderId */
     public List<OrderStateLog> listByOrderId(Long orderId) {
         return orderStateLogMapper.selectList(new LambdaQueryWrapper<OrderStateLog>()
                 .eq(OrderStateLog::getOrderId, orderId)

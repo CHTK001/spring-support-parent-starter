@@ -40,6 +40,7 @@ import java.util.List;
 public class FileSystemAutoConfiguration {
 
     @Bean
+    /** FileStorageTemplate */
     public FileStorageTemplate fileStorageTemplate(FileStorageProperties properties) {
         FileStorageTemplate template = new FileStorageTemplate(properties);
         template.initialize();
@@ -48,12 +49,34 @@ public class FileSystemAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    /** SysFileSystemUploadService */
     public SysFileSystemUploadService sysFileSystemUploadService(SysFileSystemUploadMapper uploadMapper) {
         return new com.chua.starter.filesystem.support.service.impl.SysFileSystemUploadServiceImpl();
     }
 
     @Bean
     @ConditionalOnMissingBean
+    /**
+     * FileChunkUploadController
+     * @param uploadService uploadService
+     * @param chunkService chunkService
+     * @param fileStorageTemplate fileStorageTemplate
+     * @param fileStorageProperties fileStorageProperties
+     * @param uploadProperties uploadProperties
+     * @param fileServerManager fileServerManager
+     * @param chunkService chunkService
+     * @param fileStorageTemplate fileStorageTemplate
+     * @param fileStorageProperties fileStorageProperties
+     * @param uploadProperties uploadProperties
+     * @param fileServerManager fileServerManager
+     * @param properties properties
+     * @param true true
+     * @param properties properties
+     * @param template template
+     * @param applicationContext applicationContext
+     * @param template template
+     * @param applicationContext applicationContext
+     */
     public FileChunkUploadController fileChunkUploadController(
             SysFileSystemUploadService uploadService,
             SysFileSystemUploadChunkService chunkService,
@@ -67,11 +90,13 @@ public class FileSystemAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    /** FileDirController */
     public FileDirController fileDirController(FileStorageProperties properties) {
         return new FileDirController(properties);
     }
 
     @Bean
+    /** FileSystemServiceInfoContributor */
     public ServiceInfoContributor fileSystemServiceInfoContributor() {
         return registry -> {
             registry.registerEndpoint("文件系统", "分片上传", "/chunk/create,upload,complete", "分片上传");
@@ -82,6 +107,7 @@ public class FileSystemAutoConfiguration {
     }
 
     @Bean
+    /** FileServerManager */
     public FileServerManager fileServerManager(FileStorageProperties properties, FileStorageTemplate template, ApplicationContext applicationContext) {
         FileServerManager manager = new FileServerManager(properties, template, applicationContext);
         manager.startAll();

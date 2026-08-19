@@ -20,11 +20,13 @@ public class XmlAdviceResolver implements AdviceResolver {
 
 
     @Override
+    /** Type */
     public String type() {
         return MediaType.TEXT_XML_VALUE;
     }
 
     @Override
+    /** 解析 */
     public Object resolve(HttpServletResponse response, Integer status, String message) {
         try (OutputStream writer = response.getOutputStream()) {
             writer.write(Xml.toXmlByte(JsonObject.create().fluent("code", ResultCode.transferForHttpCodeStatus(status))));

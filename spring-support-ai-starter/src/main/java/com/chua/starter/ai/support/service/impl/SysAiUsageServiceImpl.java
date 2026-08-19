@@ -39,6 +39,16 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
 
     @Override
     @Transactional
+    /**
+     * Record
+     * @param groupName groupName
+     * @param provider provider
+     * @param model model
+     * @param callType callType
+     * @param usage usage
+     * @param requestId requestId
+     * @param userId userId
+     */
     public void record(String groupName, String provider, String model, String callType,
                        AiUsage usage, String requestId, String userId) {
         if (usage == null) {
@@ -77,6 +87,16 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
     }
 
     @Override
+    /**
+     * 列表
+     * @param groupName groupName
+     * @param provider provider
+     * @param model model
+     * @param startTime startTime
+     * @param endTime endTime
+     * @param page page
+     * @param size size
+     */
     public List<SysAiUsage> list(String groupName, String provider, String model,
                                  LocalDateTime startTime, LocalDateTime endTime, int page, int size) {
         LambdaQueryWrapper<SysAiUsage> wrapper = new LambdaQueryWrapper<>();
@@ -101,6 +121,14 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
     }
 
     @Override
+    /**
+     * 获取Statistics
+     * @param groupName groupName
+     * @param provider provider
+     * @param model model
+     * @param startTime startTime
+     * @param endTime endTime
+     */
     public UsageStatistics getStatistics(String groupName, String provider, String model,
                                          LocalDateTime startTime, LocalDateTime endTime) {
         LambdaQueryWrapper<SysAiUsage> wrapper = new LambdaQueryWrapper<>();

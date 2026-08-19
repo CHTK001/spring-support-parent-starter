@@ -20,6 +20,13 @@ public abstract class PaymentEvent extends ApplicationEvent {
     /** OccurredAT */
     private final LocalDateTime occurredAt;
 
+    /**
+     * 创建 PaymentEvent 实例
+     * @param source source
+     * @param String String
+     * @param Long Long
+     * @param Long Long
+     */
     public PaymentEvent(Object source, String eventType, Long tenantId, Long merchantId) {
         super(source);
         this.eventType = eventType;

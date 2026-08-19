@@ -29,6 +29,12 @@ public class SpiderExecutionController {
     /** Flowrunner */
     private final SpiderFlowRunner flowRunner;
 
+    /**
+     * 创建 SpiderExecutionController 实例
+     * @param definitionService definitionService
+     * @param executionLogService executionLogService
+     * @param flowRunner flowRunner
+     */
     public SpiderExecutionController(SpiderDefinitionService definitionService,
                                      SpiderExecutionLogService executionLogService,
                                      SpiderFlowRunner flowRunner) {
@@ -39,6 +45,7 @@ public class SpiderExecutionController {
 
     @PostMapping("/start")
     @Operation(summary = "手动触发一次执行")
+    /** 开始 */
     public ReturnResult<String> start(@RequestParam String spiderCode) {
         SpiderDefinition definition = definitionService.lambdaQuery()
                 .eq(SpiderDefinition::getCode, spiderCode).one();
@@ -50,12 +57,14 @@ public class SpiderExecutionController {
 
     @PostMapping("/stop")
     @Operation(summary = "停止执行")
+    /** 停止 */
     public ReturnResult<Boolean> stop(@RequestParam String executionNo) {
         return ReturnResult.ok(Boolean.TRUE);
     }
 
     @GetMapping("/status")
     @Operation(summary = "查询执行状态")
+    /** Status */
     public ReturnResult<ExecutionStatusVO> status(@RequestParam String executionNo) {
         ExecutionStatusVO vo = new ExecutionStatusVO();
         vo.setStatus("COMPLETED");
@@ -68,6 +77,7 @@ public class SpiderExecutionController {
 
     @GetMapping("/running")
     @Operation(summary = "列出正在执行")
+    /** Running */
     public ReturnResult<List<ExecutionStatusVO>> running() {
         return ReturnResult.ok(List.of());
     }

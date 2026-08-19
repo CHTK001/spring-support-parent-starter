@@ -19,14 +19,17 @@ public enum ChannelStatus {
         this.description = description;
     }
 
+    /** 获取Code */
     public int getCode() {
         return code;
     }
 
+    /** 获取Description */
     public String getDescription() {
         return description;
     }
 
+    /** DescriptionOf */
     public static String descriptionOf(Integer code) {
         if (code == null) {
             return "";

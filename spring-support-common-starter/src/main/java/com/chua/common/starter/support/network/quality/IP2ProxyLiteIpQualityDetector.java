@@ -28,10 +28,15 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
     /** Ip2proxy */
     private final IP2Proxy ip2Proxy;
 
+    /** 创建 IP2ProxyLiteIpQualityDetector 实例 */
     public IP2ProxyLiteIpQualityDetector() {
         this(findDefaultResource());
     }
 
+    /**
+     * 创建 IP2ProxyLiteIpQualityDetector 实例
+     * @param binPath binPath
+     */
     public IP2ProxyLiteIpQualityDetector(Path binPath) {
         try {
             this.ip2Proxy = new IP2Proxy();
@@ -44,6 +49,10 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
         }
     }
 
+    /**
+     * 创建 IP2ProxyLiteIpQualityDetector 实例
+     * @param binStream binStream
+     */
     public IP2ProxyLiteIpQualityDetector(InputStream binStream) throws IOException {
         try {
             this.ip2Proxy = new IP2Proxy();
@@ -58,6 +67,7 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
     }
 
     @Override
+    /** Detect */
     public IpQuality detect(String ip) {
         if (ip == null || ip.isEmpty()) {
             return null;
@@ -75,6 +85,7 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
     }
 
     @Override
+    /** Detect */
     public IpQuality[] detect(String[] ips) {
         if (ips == null || ips.length == 0) {
             return new IpQuality[0];
@@ -86,6 +97,7 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
         return result;
     }
 
+    /** 查找DefaultResource */
     private static Path findDefaultResource() {
         URL resource = IP2ProxyLiteIpQualityDetector.class.getClassLoader()
                 .getResource(DEFAULT_BIN);
@@ -100,12 +112,14 @@ public class IP2ProxyLiteIpQualityDetector implements IpQualityDetector {
         }
     }
 
+    /** EmptyQuality */
     private static IpQuality emptyQuality(String ip) {
         IpQuality q = new IpQuality();
         q.setIp(ip);
         return q;
     }
 
+    /** MapResult */
     private static IpQuality mapResult(String ip, IP2ProxyResult r) {
         IpQuality q = new IpQuality();
         q.setIp(ip);

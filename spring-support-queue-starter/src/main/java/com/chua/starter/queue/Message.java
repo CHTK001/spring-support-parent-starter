@@ -151,70 +151,87 @@ public class Message {
     }
 
     // Lombok 注解处理器未运行时的手动 getter/setter 方法
+    /** 获取Id */
     public String getId() {
         return id;
     }
 
+    /** 设置Id */
     public void setId(String id) {
         this.id = id;
     }
 
+    /** 获取Headers */
     public Map<String, Object> getHeaders() {
         return headers;
     }
 
+    /** 设置Headers */
     public void setHeaders(Map<String, Object> headers) {
         this.headers = headers;
     }
 
+    /** 获取Destination */
     public String getDestination() {
         return destination;
     }
 
+    /** 设置Destination */
     public void setDestination(String destination) {
         this.destination = destination;
     }
 
+    /** 设置Payload */
     public void setPayload(byte[] payload) {
         this.payload = payload;
     }
 
+    /** 设置Timestamp */
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
     }
 
+    /** 设置Type */
     public void setType(String type) {
         this.type = type;
     }
 
+    /** 获取Acknowledgment */
     public Acknowledgment getAcknowledgment() {
         return acknowledgment;
     }
 
+    /** 设置Acknowledgment */
     public void setAcknowledgment(Acknowledgment acknowledgment) {
         this.acknowledgment = acknowledgment;
     }
 
+    /** 获取OriginalMessage */
     public Object getOriginalMessage() {
         return originalMessage;
     }
 
+    /** 设置OriginalMessage */
     public void setOriginalMessage(Object originalMessage) {
         this.originalMessage = originalMessage;
     }
 
+    /** 获取Type */
     public String getType() {
         return type;
     }
 
+    /** 获取Timestamp */
     public long getTimestamp() {
         return timestamp;
     }
 
+    /** 获取分组 */
     public String getGroup() {
         return group;
     }
 
+    /** 设置分组 */
     public void setGroup(String group) {
         this.group = group;
     }
@@ -250,51 +267,61 @@ public class Message {
         /** Original消息 */
         private Object originalMessage;
 
+        /** Id */
         public MessageBuilder id(String id) {
             this.id = id;
             return this;
         }
 
+        /** Destination */
         public MessageBuilder destination(String destination) {
             this.destination = destination;
             return this;
         }
 
+        /** Payload */
         public MessageBuilder payload(byte[] payload) {
             this.payload = payload;
             return this;
         }
 
+        /** Headers */
         public MessageBuilder headers(Map<String, Object> headers) {
             this.headers = headers;
             return this;
         }
 
+        /** Timestamp */
         public MessageBuilder timestamp(long timestamp) {
             this.timestamp = timestamp;
             return this;
         }
 
+        /** Type */
         public MessageBuilder type(String type) {
             this.type = type;
             return this;
         }
 
+        /** 分组 */
         public MessageBuilder group(String group) {
             this.group = group;
             return this;
         }
 
+        /** Acknowledgment */
         public MessageBuilder acknowledgment(Acknowledgment acknowledgment) {
             this.acknowledgment = acknowledgment;
             return this;
         }
 
+        /** OriginalMessage */
         public MessageBuilder originalMessage(Object originalMessage) {
             this.originalMessage = originalMessage;
             return this;
         }
 
+        /** 构建 */
         public Message build() {
             var message = new Message();
             message.id = this.id;

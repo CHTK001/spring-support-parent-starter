@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointMapper, EduKnowledgePoint> implements IEduKnowledgePointService {
 
     @Override
+    /** ListTree */
     public List<KnowledgePointVO> listTree(String subject, String gradeLevel, String grade) {
         LambdaQueryWrapper<EduKnowledgePoint> wrapper = new LambdaQueryWrapper<>();
         // 按学科筛选
@@ -84,6 +85,7 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 保存KnowledgePoint */
     public Long saveKnowledgePoint(KnowledgePointSaveDTO dto) {
         EduKnowledgePoint entity = new EduKnowledgePoint();
         entity.setKnowledgePointName(dto.getName());
@@ -116,6 +118,7 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 删除KnowledgePoint */
     public boolean deleteKnowledgePoint(Long id) {
         EduKnowledgePoint exists = baseMapper.selectById(id);
         if (exists == null) {

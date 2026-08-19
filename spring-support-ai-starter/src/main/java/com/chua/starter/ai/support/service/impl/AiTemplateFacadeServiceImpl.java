@@ -24,6 +24,7 @@ public class AiTemplateFacadeServiceImpl implements AiTemplateFacadeService {
     private final SysAiTemplateMapper sysAiTemplateMapper;
 
     @Override
+    /** List */
     public List<SysAiTemplate> list(Integer moduleId, String templateType, String category, String name, String remark) {
         return sysAiTemplateMapper.selectList(
                 Wrappers.lambdaQuery(SysAiTemplate.class)
@@ -39,6 +40,7 @@ public class AiTemplateFacadeServiceImpl implements AiTemplateFacadeService {
     }
 
     @Override
+    /** 保存 */
     public SysAiTemplate save(SysAiTemplate template) {
         template.setSysAiTemplateId(null);
         template.setSysAiTemplateSort(template.getSysAiTemplateSort() == null ? 0 : template.getSysAiTemplateSort());
@@ -50,12 +52,14 @@ public class AiTemplateFacadeServiceImpl implements AiTemplateFacadeService {
     }
 
     @Override
+    /** 更新 */
     public boolean update(SysAiTemplate template) {
         template.setUpdateTime(LocalDateTime.now());
         return sysAiTemplateMapper.updateById(template) > 0;
     }
 
     @Override
+    /** 删除ById */
     public boolean deleteById(Integer templateId) {
         return templateId != null && sysAiTemplateMapper.deleteById(templateId) > 0;
     }

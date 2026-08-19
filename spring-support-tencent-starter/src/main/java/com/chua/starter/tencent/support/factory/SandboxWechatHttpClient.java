@@ -26,45 +26,57 @@ public class SandboxWechatHttpClient implements HttpClient {
     /** Delegate */
     private final HttpClient delegate;
 
+    /**
+     * 创建 SandboxWechatHttpClient 实例
+     * @param delegate delegate
+     */
     public SandboxWechatHttpClient(HttpClient delegate) {
         this.delegate = delegate;
     }
 
     @Override
+    /** 执行 */
     public <T> HttpResponse<T> execute(HttpRequest request, Class<T> responseClass) {
         return delegate.execute(rewriteRequest(request), responseClass);
     }
 
     @Override
+    /** 获取 */
     public <T> HttpResponse<T> get(HttpHeaders headers, String url, Class<T> responseClass) {
         return delegate.get(headers, rewriteUrl(url), responseClass);
     }
 
     @Override
+    /** Post */
     public <T> HttpResponse<T> post(HttpHeaders headers, String url, RequestBody body, Class<T> responseClass) {
         return delegate.post(headers, rewriteUrl(url), body, responseClass);
     }
 
     @Override
+    /** Patch */
     public <T> HttpResponse<T> patch(HttpHeaders headers, String url, RequestBody body, Class<T> responseClass) {
         return delegate.patch(headers, rewriteUrl(url), body, responseClass);
     }
 
     @Override
+    /** Put */
     public <T> HttpResponse<T> put(HttpHeaders headers, String url, RequestBody body, Class<T> responseClass) {
         return delegate.put(headers, rewriteUrl(url), body, responseClass);
     }
 
     @Override
+    /** 删除 */
     public <T> HttpResponse<T> delete(HttpHeaders headers, String url, Class<T> responseClass) {
         return delegate.delete(headers, rewriteUrl(url), responseClass);
     }
 
     @Override
+    /** Download */
     public InputStream download(String url) {
         return delegate.download(rewriteUrl(url));
     }
 
+    /** RewriteRequest */
     private HttpRequest rewriteRequest(HttpRequest request) {
         String originalUrl = request.getUrl().toString();
         String newUrl = rewriteUrl(originalUrl);
@@ -79,6 +91,7 @@ public class SandboxWechatHttpClient implements HttpClient {
                 .build();
     }
 
+    /** RewriteUrl */
     private String rewriteUrl(String url) {
         if (url == null || url.contains(SANDBOX_PATH)) {
             return url;

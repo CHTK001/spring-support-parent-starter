@@ -38,6 +38,7 @@ public class WalletOrderController {
     private final PaymentCallbackUrlResolver paymentCallbackUrlResolver;
 
     @PostMapping("/recharge")
+    /** 创建Recharge */
     public Result<WalletOrderVO> createRecharge(@RequestBody WalletRechargeDTO dto) {
         RechargeRequest request = new RechargeRequest();
         BeanUtils.copyProperties(dto, request);
@@ -45,6 +46,7 @@ public class WalletOrderController {
     }
 
     @PostMapping("/transfer")
+    /** 创建Transfer */
     public Result<WalletOrderVO> createTransfer(@RequestBody WalletTransferDTO dto) {
         TransferRequest request = new TransferRequest();
         BeanUtils.copyProperties(dto, request);
@@ -52,6 +54,7 @@ public class WalletOrderController {
     }
 
     @PostMapping("/withdraw")
+    /** 创建Withdraw */
     public Result<WalletOrderVO> createWithdraw(@RequestBody WalletWithdrawDTO dto) {
         WithdrawRequest request = new WithdrawRequest();
         BeanUtils.copyProperties(dto, request);
@@ -59,12 +62,14 @@ public class WalletOrderController {
     }
 
     @GetMapping("/{orderNo}")
+    /** 获取ByOrderNo */
     public Result<WalletOrderVO> getByOrderNo(@PathVariable String orderNo) {
         WalletOrder order = walletOrderService.getByOrderNo(orderNo);
         return order == null ? Result.error("钱包订单不存在") : Result.success(convert(order));
     }
 
     @GetMapping("/page")
+    /** Page */
     public Result<PageResult<WalletOrderVO>> page(@RequestParam(defaultValue = "1") int pageNum,
                                                   @RequestParam(defaultValue = "10") int pageSize,
                                                   @RequestParam(required = false) Long merchantId,
@@ -77,6 +82,7 @@ public class WalletOrderController {
         return Result.success(PageResult.of(voPage));
     }
 
+    /** 转换 */
     private WalletOrderVO convert(WalletOrder order) {
         WalletOrderVO vo = new WalletOrderVO();
         BeanUtils.copyProperties(order, vo);

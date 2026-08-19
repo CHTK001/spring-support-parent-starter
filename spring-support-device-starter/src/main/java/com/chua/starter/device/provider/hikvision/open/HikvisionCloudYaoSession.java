@@ -110,6 +110,7 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /** DoRequest */
     protected JsonNode doRequest(String method, String path, Map<String, Object> params) {
         if (!tokenValid() && !PATH_TOKEN.equals(path)) {
             login();
@@ -147,6 +148,7 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /** 获取LiveUrl */
     public String getLiveUrl(int channel, String protocol) {
         String p = protocol == null || protocol.isEmpty() ? "hls" : protocol;
         JsonNode data = getLiveAddress(channel, p);
@@ -174,6 +176,7 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /** PtzControl */
     public void ptzControl(com.chua.starter.device.spi.model.PtzCommand cmd, double speed) {
         if (cmd == com.chua.starter.device.spi.model.PtzCommand.STOP) {
             return;
@@ -206,6 +209,7 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /** Remote解锁 */
     public void remoteUnlock(int doorId) {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceSerial", info.getDeviceSerial());

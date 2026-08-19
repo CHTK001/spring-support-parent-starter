@@ -13,6 +13,7 @@ import java.util.Set;
 public class ActuatorConfiguration {
 
     @Bean
+    /** CustomSanitizer */
     public SanitizingFunction customSanitizer() {
         return data -> {
             // 自定义哪些属性需要脱敏

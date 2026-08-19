@@ -39,6 +39,7 @@ public class DelegatingWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
+    /** AfterConnectionEstablished */
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         sessionManager.addSession(session);
         log.info("[WebSocket] 连接建立: sessionId={}, uri={}", session.getId(), session.getUri());
@@ -53,6 +54,7 @@ public class DelegatingWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
+    /** 处理TextMessage */
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
         log.debug("[WebSocket] 收到消息: sessionId={}, payload={}", session.getId(), payload);
@@ -67,6 +69,7 @@ public class DelegatingWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
+    /** AfterConnectionClosed */
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         sessionManager.removeSession(session);
         log.info("[WebSocket] 连接关闭: sessionId={}, code={}, reason={}", 
@@ -82,6 +85,7 @@ public class DelegatingWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
+    /** 处理Transport记录错误 */
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
         log.error("[WebSocket] 传输错误: sessionId={}", session.getId(), exception);
         
@@ -95,6 +99,7 @@ public class DelegatingWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
+    /** SupportsPartialMessages */
     public boolean supportsPartialMessages() {
         return false;
     }

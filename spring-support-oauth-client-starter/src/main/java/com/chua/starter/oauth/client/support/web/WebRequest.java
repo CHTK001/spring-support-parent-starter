@@ -58,6 +58,12 @@ public class WebRequest {
     private final String protocol;
 
 
+    /**
+     * 创建 WebRequest 实例
+     * @param authProperties authProperties
+     * @param HttpServletRequest HttpServletRequest
+     * @param RequestMappingHandlerMapping RequestMappingHandlerMapping
+     */
     public WebRequest(AuthClientProperties authProperties, HttpServletRequest request, RequestMappingHandlerMapping requestMappingHandlerMapping) {
         this.authProperties = authProperties;
         this.protocol = authProperties.getProtocol();
@@ -72,6 +78,10 @@ public class WebRequest {
         }
     }
 
+    /**
+     * 创建 WebRequest 实例
+     * @param authProperties authProperties
+     */
     public WebRequest(AuthClientProperties authProperties) {
         this(authProperties, null, null);
     }
@@ -181,6 +191,7 @@ public class WebRequest {
         return false;
     }
 
+    /** 是否Resource */
     private boolean isResource(String uri) {
         return uri.endsWith(".js") ||
                 uri.endsWith(".css") ||

@@ -61,12 +61,14 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
     private CacheProperties cacheProperties;
 
     @Override
+    /** 设置ApplicationContext */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
         this.environment = applicationContext.getEnvironment();
     }
 
     @Override
+    /** AfterProperties设置 */
     public void afterPropertiesSet() {
         // 加载配置
         cacheProperties = Binder.get(environment)
@@ -123,6 +125,7 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
     }
 
     @Override
+    /** 获取Cache */
     public Cache getCache(String name) {
         if (name == null || name.isEmpty()) {
             return null;
@@ -130,6 +133,7 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
         return cacheMap.computeIfAbsent(name, this::buildCache);
     }
 
+    /** 构建Cache */
     private Cache buildCache(String name) {
         if (cacheManagers.isEmpty()) {
             log.warn("无法创建多级缓存: name={}, 没有可用的缓存管理器", name);
@@ -163,6 +167,7 @@ public class MultiLevelCacheManager implements CacheManager, InitializingBean, A
     }
 
     @Override
+    /** 获取CacheNames */
     public Collection<String> getCacheNames() {
         if (cacheManagers.isEmpty()) {
             return List.of();

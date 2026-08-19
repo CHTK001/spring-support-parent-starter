@@ -17,6 +17,7 @@ public class HttpClientTraceIdInterceptor implements HttpRequestInterceptor {
     private static final String X_TRACE_ID = "X-Trace-Id";
 
     @Override
+    /** 处理 */
     public void process(HttpRequest request, org.apache.hc.core5.http.EntityDetails entity, HttpContext context) {
         String traceId = MDC.get(TRACE_ID);
         if (traceId != null && !traceId.isEmpty()) {

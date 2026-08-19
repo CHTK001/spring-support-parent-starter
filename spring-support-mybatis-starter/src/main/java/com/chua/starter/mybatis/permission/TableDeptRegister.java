@@ -225,10 +225,12 @@ public class TableDeptRegister implements DeptRegister {
         return NO_DATA;
     }
 
+    /** 是否拥有ManagedDeptLeaderScope */
     private boolean hasManagedDeptLeaderScope() {
         return currentUser.hasRole(DEPT_LEADER) && !resolveManagedDeptTreeIds().isEmpty();
     }
 
+    /** 创建ManagedDeptLeaderExpression */
     private Expression createManagedDeptLeaderExpression() {
         EqualsTo selfCondition = new EqualsTo();
         selfCondition.setLeftExpression(createUserColumn());
@@ -282,6 +284,7 @@ public class TableDeptRegister implements DeptRegister {
         return new AndExpression(where, normalizedPermissionCondition);
     }
 
+    /** WrapOrExpression */
     private Expression wrapOrExpression(Expression expression) {
         if (!(expression instanceof OrExpression)) {
             return expression;
@@ -293,6 +296,7 @@ public class TableDeptRegister implements DeptRegister {
         }
     }
 
+    /** MatchesScopedAlias */
     private boolean matchesScopedAlias() {
         if (!hasScopedAlias()) {
             return true;
@@ -301,10 +305,12 @@ public class TableDeptRegister implements DeptRegister {
         return matchesAlias(currentAlias, deptAlias) || matchesAlias(currentAlias, userAlias);
     }
 
+    /** 是否拥有ScopedAlias */
     private boolean hasScopedAlias() {
         return StringUtils.isNotEmpty(deptAlias) || StringUtils.isNotEmpty(userAlias);
     }
 
+    /** CurrentTableAlias */
     private String currentTableAlias() {
         if (table.getAlias() != null && StringUtils.isNotEmpty(table.getAlias().getName())) {
             return table.getAlias().getName();
@@ -312,6 +318,7 @@ public class TableDeptRegister implements DeptRegister {
         return table.getName();
     }
 
+    /** MatchesAlias */
     private boolean matchesAlias(String currentAlias, String expectedAlias) {
         return StringUtils.isNotEmpty(currentAlias)
                 && StringUtils.isNotEmpty(expectedAlias)
@@ -377,6 +384,7 @@ public class TableDeptRegister implements DeptRegister {
         );
     }
 
+    /** 解析ManagedDeptTreeIds */
     private List<String> resolveManagedDeptTreeIds() {
         Map<String, Object> ext = currentUser.getExt();
         if (null == ext) {
@@ -413,6 +421,7 @@ public class TableDeptRegister implements DeptRegister {
         return Collections.emptyList();
     }
 
+    /** NormalizeManagedDeptTreeId */
     private String normalizeManagedDeptTreeId(Object value) {
         if (null == value) {
             return null;

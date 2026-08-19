@@ -32,16 +32,19 @@ class CacheCustomAnnotationParserTest {
 
     static class ServiceWithCacheable {
         @Cacheable(cacheNames = "users", key = "#id")
+        /** 获取UserById */
         public String getUserById(Long id) {
             return "user:" + id;
         }
 
         @Cacheable(cacheNames = "roles", key = "#roleName", unless = "#result == null")
+        /** 获取Role */
         public String getRole(String roleName) {
             return roleName;
         }
 
         @Cacheable(cacheNames = "configs")
+        /** 获取Config */
         public String getConfig(String key) {
             return key;
         }
@@ -49,20 +52,24 @@ class CacheCustomAnnotationParserTest {
 
     static class ServiceWithCacheEvict {
         @CacheEvict(cacheNames = "users", key = "#id")
+        /** EvictUser */
         public void evictUser(Long id) {
         }
 
         @CacheEvict(cacheNames = "users", allEntries = true)
+        /** EvictAllUsers */
         public void evictAllUsers() {
         }
 
         @CacheEvict(cacheNames = "roles", beforeInvocation = true)
+        /** EvictBefore */
         public void evictBefore() {
         }
     }
 
     static class ServiceWithCachePut {
         @CachePut(cacheNames = "users", key = "#user.id")
+        /** 更新User */
         public String updateUser(Object user) {
             return "updated";
         }
@@ -74,6 +81,7 @@ class CacheCustomAnnotationParserTest {
                 put = {@CachePut(cacheNames = "users_audit", key = "#id")},
                 evict = {@CacheEvict(cacheNames = "users_list", allEntries = true)}
         )
+        /** 获取AndAudit */
         public String getAndAudit(Long id) {
             return "result";
         }

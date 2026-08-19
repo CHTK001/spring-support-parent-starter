@@ -26,6 +26,7 @@ public class SemaphoreMessageRateLimiter implements MessageRateLimiter {
     private static final int DEFAULT_PERMITS = 100;
 
     @Override
+    /** Try获取 */
     public boolean tryAcquire(Message message) {
         Semaphore semaphore = getSemaphore(message.getDestination());
         boolean acquired = semaphore.tryAcquire();
@@ -39,6 +40,7 @@ public class SemaphoreMessageRateLimiter implements MessageRateLimiter {
     }
 
     @Override
+    /** 获取 */
     public void acquire(Message message) {
         Semaphore semaphore = getSemaphore(message.getDestination());
         try {
@@ -50,12 +52,14 @@ public class SemaphoreMessageRateLimiter implements MessageRateLimiter {
     }
 
     @Override
+    /** 释放 */
     public void release(Message message) {
         Semaphore semaphore = getSemaphore(message.getDestination());
         semaphore.release();
     }
 
     @Override
+    /** AvailablePermits */
     public int availablePermits() {
         return semaphores.values().stream()
             .mapToInt(Semaphore::availablePermits)
@@ -63,6 +67,7 @@ public class SemaphoreMessageRateLimiter implements MessageRateLimiter {
     }
 
     @Override
+    /** 重置 */
     public void reset() {
         semaphores.clear();
     }

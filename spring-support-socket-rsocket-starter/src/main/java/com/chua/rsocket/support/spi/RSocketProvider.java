@@ -24,11 +24,20 @@ import java.util.List;
 public class RSocketProvider implements SocketProvider {
 
     @Override
+    /** 获取Protocol */
     public SocketProtocol getProtocol() {
         return SocketProtocol.RSOCKET;
     }
 
     @Override
+    /**
+     * 创建SessionTemplate
+     * @param properties properties
+     * @param listeners listeners
+     * @param listeners listeners
+     * @param template template
+     * @param template template
+     */
     public SocketSessionTemplate createSessionTemplate(
             SocketProperties properties,
             List<SocketListener> listeners) {
@@ -37,12 +46,14 @@ public class RSocketProvider implements SocketProvider {
     }
 
     @Override
+    /** 开始 */
     public void start(SocketSessionTemplate template) {
         log.info("[RSocket] 启动 RSocket 服务");
         template.start();
     }
 
     @Override
+    /** 停止 */
     public void stop(SocketSessionTemplate template) {
         log.info("[RSocket] 停止 RSocket 服务");
         template.stop();

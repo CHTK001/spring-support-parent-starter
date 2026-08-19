@@ -27,6 +27,7 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
     private final PaymentOrderMapper orderMapper;
 
     @Override
+    /** 获取Config */
     public MerchantPaymentConfig getConfig(Long merchantId) {
         if (merchantId == null) {
             return getDefaultConfig();
@@ -39,6 +40,7 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 保存Or更新 */
     public void saveOrUpdate(MerchantPaymentConfig config) {
         if (config == null || config.getMerchantId() == null) {
             throw new PaymentException("配置不能为空");
@@ -58,6 +60,7 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
     }
 
     @Override
+    /** 校验是否可以创建Order */
     public void checkCanCreateOrder(Long merchantId, Long userId) {
         MerchantPaymentConfig config = getConfig(merchantId);
 
@@ -74,6 +77,7 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
     }
 
     @Override
+    /** 校验是否可以PayOrder */
     public void checkCanPayOrder(Long orderId) {
         PaymentOrder order = orderMapper.selectById(orderId);
         if (order == null) {
@@ -98,11 +102,13 @@ public class MerchantPaymentConfigServiceImpl implements MerchantPaymentConfigSe
     }
 
     @Override
+    /** 获取OrderTimeoutMinutes */
     public Integer getOrderTimeoutMinutes(Long merchantId) {
         MerchantPaymentConfig config = getConfig(merchantId);
         return config.getOrderTimeoutMinutes();
     }
 
+    /** 获取DefaultConfig */
     private MerchantPaymentConfig getDefaultConfig() {
         MerchantPaymentConfig config = new MerchantPaymentConfig();
         config.setOrderReusable(true);

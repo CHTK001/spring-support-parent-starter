@@ -17,9 +17,11 @@ public class SpringGlueFactory extends GlueFactory{
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SpringGlueFactory.class);
 
+    /** 创建 SpringGlueFactory 实例 */
     public SpringGlueFactory() {
     }
 
+    /** InjectService */
     public void injectService(Object instance) {
         if (instance != null) {
             ApplicationContext applicationContext = SpringBeanUtils.getApplicationContext();

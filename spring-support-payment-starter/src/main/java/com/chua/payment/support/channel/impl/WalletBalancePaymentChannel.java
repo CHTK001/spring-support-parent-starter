@@ -22,6 +22,12 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
     /** Walletaccount服务 */
     private final WalletAccountService walletAccountService;
 
+    /**
+     * 创建 WalletBalancePaymentChannel 实例
+     * @param merchantChannelService merchantChannelService
+     * @param objectMapper objectMapper
+     * @param walletAccountService walletAccountService
+     */
     public WalletBalancePaymentChannel(MerchantChannelService merchantChannelService,
                                        ObjectMapper objectMapper,
                                        WalletAccountService walletAccountService) {
@@ -30,11 +36,13 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
     }
 
     @Override
+    /** Supports */
     public boolean supports(String channelType, String channelSubType) {
         return "WALLET".equalsIgnoreCase(channelType) && "BALANCE".equalsIgnoreCase(channelSubType);
     }
 
     @Override
+    /** Pay */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         if (request.getUserId() == null) {
             throw new PaymentException("钱包支付必须提供 userId");
@@ -57,6 +65,7 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
     }
 
     @Override
+    /** 查询 */
     public PaymentResult query(MerchantChannel channel, String orderNo) {
         WalletAccountLog log = walletAccountService.getLog("PAY", channel.getMerchantId(), null, orderNo);
         PaymentResult result = new PaymentResult();
@@ -70,6 +79,7 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
     }
 
     @Override
+    /** Refund */
     public RefundResult refund(MerchantChannel channel, RefundRequest request) {
         if (request.getUserId() == null) {
             throw new PaymentException("钱包退款缺少用户上下文");
@@ -93,6 +103,7 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
     }
 
     @Override
+    /** 查询Refund */
     public RefundResult queryRefund(MerchantChannel channel, RefundRequest request) {
         WalletAccountLog log = walletAccountService.getLog("REFUND", channel.getMerchantId(), null, request.getRefundNo());
         RefundResult result = new RefundResult();

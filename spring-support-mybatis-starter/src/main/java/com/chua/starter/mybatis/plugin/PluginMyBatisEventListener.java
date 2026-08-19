@@ -39,6 +39,7 @@ public class PluginMyBatisEventListener {
      */
     private final PluginMyBatisMapperRegistry mapperRegistry;
 
+    /** 创建 PluginMyBatisEventListener 实例 */
     public PluginMyBatisEventListener() {
         this.mapperRegistry = ServiceProvider.of(PluginMyBatisMapperRegistry.class).getExtension();
     }

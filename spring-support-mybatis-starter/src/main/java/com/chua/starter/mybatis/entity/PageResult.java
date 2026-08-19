@@ -62,6 +62,7 @@ public class PageResult<T> implements Serializable {
     private List<T> records = Collections.emptyList();
 
 
+    /** 复制List */
     public static <T,O> PageResult<O> copyList(IPage<T> tiPage, Class<O> oClass){
         var result = new PageResult<O>();
         result.totalPage = tiPage.getPages();
@@ -75,6 +76,7 @@ public class PageResult<T> implements Serializable {
     }
 
 
+    /** 复制 */
     public static <T> PageResult<T> copy(IPage<T> tiPage){
         var result = new PageResult<T>();
         result.totalPage = tiPage.getPages();
@@ -85,6 +87,7 @@ public class PageResult<T> implements Serializable {
         }
         return result;
     }
+    /** Empty */
     public static <T> PageDTO<T> empty(){
         PageDTO<T> tPageDTO = new PageDTO<>();
         tPageDTO.setPages(0);

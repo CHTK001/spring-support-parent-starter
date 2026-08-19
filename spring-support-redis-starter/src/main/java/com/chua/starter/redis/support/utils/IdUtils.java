@@ -9,6 +9,7 @@ import java.util.UUID;
  */
 public final class IdUtils {
 
+    /** 创建 IdUtils 实例 */
     private IdUtils() {
     }
 

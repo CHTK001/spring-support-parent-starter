@@ -15,6 +15,7 @@ import org.springframework.core.env.Environment;
 public class ProjectConfiguration implements EnvironmentAware {
 
     @Override
+    /** 设置Environment */
     public void setEnvironment(Environment environment) {
         Project.getInstance().setEnvironment(environment);
     }

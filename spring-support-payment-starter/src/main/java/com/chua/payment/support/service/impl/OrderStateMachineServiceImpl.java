@@ -33,12 +33,14 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
     private final OrderStateLogService orderStateLogService;
 
     @Override
+    /** 创建StateMachine */
     public void createStateMachine(Long orderId) {
         log.debug("订单状态机初始化完成: orderId={}", orderId);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 发送Event */
     public OrderTransitionResult sendEvent(Long orderId, OrderEvent event, String operator) {
         PaymentOrder order = paymentOrderMapper.selectById(orderId);
         if (order == null) {
@@ -96,11 +98,13 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
     }
 
     @Override
+    /** 获取CurrentState */
     public OrderState getCurrentState(Long orderId) {
         PaymentOrder order = paymentOrderMapper.selectById(orderId);
         return order != null ? OrderState.valueOf(order.getStatus()) : null;
     }
 
+    /** 是否DuplicateTargetState */
     private boolean isDuplicateTargetState(OrderEvent event, PaymentOrder order) {
         if (order == null) {
             return false;

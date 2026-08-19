@@ -41,6 +41,7 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     private final SysAiMessageMapper messageMapper;
 
     @Override
+    /** 创建Dialog */
     public AIDialog createDialog(String name) {
         SysAiSession session = new SysAiSession();
         session.setSysAiSessionTitle(name == null || name.isBlank() ? "新对话" : name);
@@ -56,6 +57,7 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     }
 
     @Override
+    /** 删除Dialog */
     public void deleteDialog(Long dialogId) {
         if (dialogId == null) {
             return;
@@ -67,6 +69,7 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     }
 
     @Override
+    /** ListDialog */
     public List<AIDialog> listDialog() {
         return sessionMapper.selectList(new LambdaQueryWrapper<SysAiSession>()
                         .eq(SysAiSession::getSysAiSessionStatus, 1)
@@ -77,6 +80,7 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     }
 
     @Override
+    /** 获取DialogMessages */
     public List<ChatMessage> getDialogMessages(Long dialogId) {
         return messageMapper.selectList(new LambdaQueryWrapper<SysAiMessage>()
                         .eq(SysAiMessage::getSysAiSessionId, dialogId)
@@ -87,6 +91,7 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     }
 
     @Override
+    /** 添加Message */
     public void addMessage(Long dialogId, ChatMessage message) {
         if (dialogId == null || message == null) {
             return;

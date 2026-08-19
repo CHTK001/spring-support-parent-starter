@@ -32,9 +32,17 @@ public class SoftwareSourceResult {
      */
     private File downloadedFile;
 
+    /** 创建 SoftwareSourceResult 实例 */
     public SoftwareSourceResult() {
     }
 
+    /**
+     * 创建 SoftwareSourceResult 实例
+     * @param success success
+     * @param String String
+     * @param String String
+     * @param File File
+     */
     public SoftwareSourceResult(boolean success, String message, String installPath, File downloadedFile) {
         this.success = success;
         this.message = message;
@@ -42,34 +50,42 @@ public class SoftwareSourceResult {
         this.downloadedFile = downloadedFile;
     }
 
+    /** 是否Success */
     public boolean isSuccess() {
         return success;
     }
 
+    /** 设置Success */
     public void setSuccess(boolean success) {
         this.success = success;
     }
 
+    /** 获取Message */
     public String getMessage() {
         return message;
     }
 
+    /** 设置Message */
     public void setMessage(String message) {
         this.message = message;
     }
 
+    /** 获取InstallPath */
     public String getInstallPath() {
         return installPath;
     }
 
+    /** 设置InstallPath */
     public void setInstallPath(String installPath) {
         this.installPath = installPath;
     }
 
+    /** 获取DownloadedFile */
     public File getDownloadedFile() {
         return downloadedFile;
     }
 
+    /** 设置DownloadedFile */
     public void setDownloadedFile(File downloadedFile) {
         this.downloadedFile = downloadedFile;
     }

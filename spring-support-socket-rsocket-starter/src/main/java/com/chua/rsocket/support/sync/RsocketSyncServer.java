@@ -30,14 +30,17 @@ public class RsocketSyncServer extends AbstractSyncServer {
     }
 
     @Override
+    /** Do开始 */
     protected void doStart() {
     }
 
     @Override
+    /** Do停止 */
     protected void doStop() {
     }
 
     @Override
+    /** Do发送 */
     protected void doSend(String sessionId, String topic, Object data) {
         String payload = data instanceof String ? (String) data : String.valueOf(data);
         sessionTemplate.send(sessionId, topic, payload);

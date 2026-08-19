@@ -39,12 +39,18 @@ public class DataSyncAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    /** DataSyncMappingManager */
     public DataSyncMappingManager dataSyncMappingManager() {
         return new DefaultDataSyncMappingManager();
     }
 
     @Bean
     @ConditionalOnMissingBean
+    /**
+     * DataSyncServer
+     * @param agentServerManager agentServerManager
+     * @param mappingManager mappingManager
+     */
     public com.chua.starter.datasync.DataSyncServer dataSyncServer(AgentServerManager agentServerManager,
                                                                    DataSyncMappingManager mappingManager) {
         com.chua.starter.datasync.DefaultDataSyncServer server = new com.chua.starter.datasync.DefaultDataSyncServer(agentServerManager);
@@ -54,6 +60,7 @@ public class DataSyncAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    /** AgentServerManager */
     public AgentServerManager agentServerManager() {
         return new DataSyncAgentServer(null, null, "default-server");
     }
@@ -61,6 +68,11 @@ public class DataSyncAutoConfiguration {
     @Bean
     @ConditionalOnProperty(prefix = "plugin.datasync", name = "mapping-source", havingValue = "file")
     @ConditionalOnMissingBean
+    /**
+     * DirectoryDataSyncMappingScanner
+     * @param properties properties
+     * @param mappingManager mappingManager
+     */
     public DirectoryDataSyncMappingScanner directoryDataSyncMappingScanner(DatasyncProperties properties,
                                                                           DataSyncMappingManager mappingManager) {
         return new DirectoryDataSyncMappingScanner(
@@ -77,6 +89,12 @@ public class DataSyncAutoConfiguration {
     @Bean
     @ConditionalOnProperty(prefix = "plugin.datasync.database-mapping", name = "enabled", havingValue = "true")
     @ConditionalOnMissingBean
+    /**
+     * DatabaseMappingLoader
+     * @param dataSource dataSource
+     * @param properties properties
+     * @param mappingManager mappingManager
+     */
     public DatabaseMappingLoader databaseMappingLoader(javax.sql.DataSource dataSource,
                                                        DatasyncProperties properties,
                                                        DataSyncMappingManager mappingManager) {
@@ -92,57 +110,68 @@ public class DataSyncAutoConfiguration {
         }
 
         @Override
+        /** DirectoryPath */
         public String directoryPath() {
             return directoryPath;
         }
 
         @Override
+        /** InputId */
         public String inputId() {
             return null;
         }
 
         @Override
+        /** SourceId */
         public String sourceId() {
             return null;
         }
 
         @Override
+        /** OutputId */
         public String outputId() {
             return null;
         }
 
         @Override
+        /** SinkId */
         public String sinkId() {
             return null;
         }
 
         @Override
+        /** Mappings */
         public List<DataSyncFieldMapping> mappings() {
             return List.of();
         }
 
         @Override
+        /** Batch */
         public int batch() {
             return 100;
         }
 
         @Override
+        /** CronType */
         public String cronType() {
             return null;
         }
 
         @Override
+        /** Cron */
         public String cron() {
             return null;
         }
 
         @Override
+        /** Params */
         public Map<String, Object> params() {
             return Map.of();
         }
     }
 
     @Bean
+    /** DataSyncServiceInfoContributor */
     public ServiceInfoContributor dataSyncServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("datasync", "数据同步", true, "数据同步模块");

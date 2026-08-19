@@ -32,6 +32,12 @@ public class DatabaseMappingLoader implements InitializingBean {
     /** Mapping管理器 */
     private final DataSyncMappingManager mappingManager;
 
+    /**
+     * 创建 DatabaseMappingLoader 实例
+     * @param dataSource dataSource
+     * @param properties properties
+     * @param mappingManager mappingManager
+     */
     public DatabaseMappingLoader(DataSource dataSource,
                                  DatasyncProperties properties,
                                  DataSyncMappingManager mappingManager) {
@@ -41,6 +47,7 @@ public class DatabaseMappingLoader implements InitializingBean {
     }
 
     @Override
+    /** AfterProperties设置 */
     public void afterPropertiesSet() {
         DatasyncProperties.DatabaseMapping config = properties.getDatabaseMapping();
         if (config == null || !config.isEnabled()) {
@@ -52,6 +59,7 @@ public class DatabaseMappingLoader implements InitializingBean {
         loadMappings(jdbcTemplate, config.getTablePrefix());
     }
 
+    /** 加载Mappings */
     private void loadMappings(org.springframework.jdbc.core.JdbcTemplate jdbcTemplate, String prefix) {
         String mappingTable = prefix + "mapping";
         String sql = String.format("SELECT * FROM %s WHERE datasync_mapping_enabled = TRUE", mappingTable);
@@ -83,6 +91,24 @@ public class DatabaseMappingLoader implements InitializingBean {
         }
     }
 
+    /**
+     * 加载FieldMappings
+     * @param jdbcTemplate jdbcTemplate
+     * @param prefix prefix
+     * @param mappingId mappingId
+     * @param fieldTable fieldTable
+     * @param mappingId mappingId
+     * @param e e
+     * @param mappingId mappingId
+     * @param e e
+     * @param paramsJson paramsJson
+     * @param e e
+     * @param paramsJson paramsJson
+     * @param e e
+     * @param sourceField sourceField
+     * @param targetField targetField
+     * @param converter converter
+     */
     private List<DataSyncFieldMapping> loadFieldMappings(
             org.springframework.jdbc.core.JdbcTemplate jdbcTemplate,
             String prefix, String mappingId) {
@@ -105,6 +131,7 @@ public class DatabaseMappingLoader implements InitializingBean {
     }
 
     @SuppressWarnings("unchecked")
+    /** 解析Params */
     private Map<String, Object> parseParams(String paramsJson) {
         if (paramsJson == null || paramsJson.isEmpty()) {
             return Map.of();
@@ -132,16 +159,19 @@ public class DatabaseMappingLoader implements InitializingBean {
         }
 
         @Override
+        /** SourceField */
         public String sourceField() {
             return sourceField;
         }
 
         @Override
+        /** TargetField */
         public String targetField() {
             return targetField;
         }
 
         @Override
+        /** Converter */
         public String converter() {
             return converter;
         }

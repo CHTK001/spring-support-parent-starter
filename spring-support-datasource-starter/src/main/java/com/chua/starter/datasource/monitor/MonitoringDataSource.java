@@ -61,6 +61,7 @@ public class MonitoringDataSource implements DataSource {
     }
 
     @Override
+    /** 获取Connection */
     public Connection getConnection() throws SQLException {
         Connection connection = delegate.getConnection();
         activeConnections.incrementAndGet();
@@ -68,6 +69,7 @@ public class MonitoringDataSource implements DataSource {
     }
 
     @Override
+    /** 获取Connection */
     public Connection getConnection(String username, String password) throws SQLException {
         Connection connection = delegate.getConnection(username, password);
         activeConnections.incrementAndGet();
@@ -75,6 +77,7 @@ public class MonitoringDataSource implements DataSource {
     }
 
     @Override
+    /** Unwrap */
     public <T> T unwrap(Class<T> iface) throws SQLException {
         if (iface.isInstance(this)) {
             return iface.cast(this);
@@ -83,31 +86,37 @@ public class MonitoringDataSource implements DataSource {
     }
 
     @Override
+    /** 是否WrapperFor */
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
         return iface.isInstance(this) || delegate.isWrapperFor(iface);
     }
 
     @Override
+    /** 获取记录日志Writer */
     public PrintWriter getLogWriter() throws SQLException {
         return delegate.getLogWriter();
     }
 
     @Override
+    /** 设置记录日志Writer */
     public void setLogWriter(PrintWriter out) throws SQLException {
         delegate.setLogWriter(out);
     }
 
     @Override
+    /** 设置LoginTimeout */
     public void setLoginTimeout(int seconds) throws SQLException {
         delegate.setLoginTimeout(seconds);
     }
 
     @Override
+    /** 获取LoginTimeout */
     public int getLoginTimeout() throws SQLException {
         return delegate.getLoginTimeout();
     }
 
     @Override
+    /** 获取ParentLogger */
     public Logger getParentLogger() throws SQLFeatureNotSupportedException {
         return delegate.getParentLogger();
     }
@@ -154,6 +163,7 @@ public class MonitoringDataSource implements DataSource {
     }
 
     @Override
+    /** ToString */
     public String toString() {
         return "MonitoringDataSource{" +
                 "name='" + dataSourceName + '\'' +

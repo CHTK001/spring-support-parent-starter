@@ -24,6 +24,10 @@ public class EnvironmentSupport {
     /** 路径matcher */
     private final PathMatcher pathMatcher = new AntPathMatcher();
 
+    /**
+     * 创建 EnvironmentSupport 实例
+     * @param environment environment
+     */
     public EnvironmentSupport(Environment environment) {
         this.environment = environment;
     }

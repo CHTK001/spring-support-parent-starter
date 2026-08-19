@@ -56,23 +56,27 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
 
     @Bean
     @ConditionalOnMissingBean
+    /** WebSocketSessionManager */
     public WebSocketSessionManager webSocketSessionManager() {
         return new WebSocketSessionManager();
     }
 
     @Bean
     @ConditionalOnMissingBean
+    /** WebSocketTemplate */
     public WebSocketTemplate webSocketTemplate(WebSocketSessionManager sessionManager) {
         return new WebSocketTemplate(sessionManager);
     }
 
     @Bean
     @ConditionalOnMissingBean
+    /** DelegatingWebSocketHandler */
     public DelegatingWebSocketHandler delegatingWebSocketHandler(WebSocketSessionManager sessionManager) {
         return new DelegatingWebSocketHandler(sessionManager, handlers);
     }
 
     @Bean
+    /** 创建WebSocketContainer */
     public ServletServerContainerFactoryBean createWebSocketContainer() {
         ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();
         container.setMaxTextMessageBufferSize(properties.getMaxMessageSize());
@@ -82,6 +86,7 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
     }
 
     @Override
+    /** 注册WebSocketHandlers */
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         WebSocketSessionManager sessionManager = webSocketSessionManager();
         DelegatingWebSocketHandler handler = delegatingWebSocketHandler(sessionManager);
@@ -105,6 +110,7 @@ public class WebSocketAutoConfiguration implements WebSocketConfigurer {
     }
 
     @Bean
+    /** WebSocketServiceInfoContributor */
     public ServiceInfoContributor webSocketServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("websocket", "WebSocket", true, "WebSocket模块");

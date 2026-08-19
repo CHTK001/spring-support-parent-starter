@@ -38,6 +38,7 @@ public class SoftConfigController {
     @Operation(summary = "配置列表")
     @GetMapping("/page")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /** Page */
     public ReturnPageResult<SoftConfig> page(@ParameterObject Query<SoftConfig> query, @ParameterObject SoftwareConfigPageRequest request) {
         return PageResultUtils.ok(softConfigService.pageFor(query, request));
     }
@@ -45,6 +46,7 @@ public class SoftConfigController {
     @Operation(summary = "保存配置")
     @PostMapping("/save")
     @Permission(value = "sys:soft:config:add", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /** 保存 */
     public ReturnResult<SoftConfig> save(@Validated(AddGroup.class) @RequestBody SoftConfig config, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
@@ -55,6 +57,7 @@ public class SoftConfigController {
     @Operation(summary = "更新配置")
     @PutMapping("/update")
     @Permission(value = "sys:soft:config:update", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /** 更新 */
     public ReturnResult<SoftConfig> update(@Validated(UpdateGroup.class) @RequestBody SoftConfig config, BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ReturnResult.illegal(bindingResult.getAllErrors().getFirst().getDefaultMessage());
@@ -65,6 +68,7 @@ public class SoftConfigController {
     @Operation(summary = "删除配置")
     @DeleteMapping("/delete")
     @Permission(value = "sys:soft:config:delete", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /** 删除 */
     public ReturnResult<Boolean> delete(String configId) {
         return softConfigService.deleteConfig(configId);
     }
@@ -72,6 +76,7 @@ public class SoftConfigController {
     @Operation(summary = "软件配置列表")
     @GetMapping("/list")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /** List */
     public ReturnResult<java.util.List<SoftConfig>> list(String softwareId) {
         return ReturnResult.ok(softConfigService.listBySoftwareId(softwareId));
     }
@@ -79,6 +84,7 @@ public class SoftConfigController {
     @Operation(summary = "批量保存配置")
     @PostMapping("/batch")
     @Permission(value = "sys:soft:config:add", role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
+    /** Batch保存 */
     public ReturnResult<Boolean> batchSave(@RequestBody java.util.List<SoftConfig> configs) {
         return softConfigService.batchSaveOrUpdate(configs);
     }

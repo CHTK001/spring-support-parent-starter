@@ -71,6 +71,7 @@ public class AccessController {
         return session.queryAccessRecords(parseRange(start, end));
     }
 
+    /** 解析Range */
     private TimeRange parseRange(String start, String end) {
         LocalDateTime s;
         LocalDateTime e;

@@ -47,10 +47,15 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     /** Conversion服务 */
     private ConversionService conversionService;
 
+    /**
+     * 创建 UserRequestHandlerMethodArgumentResolver 实例
+     * @param webRequest webRequest
+     */
     public UserRequestHandlerMethodArgumentResolver(WebRequest webRequest) {
         this.webRequest = webRequest;
     }
 
+    /** 设置ConfigurableBeanFactory */
     public void setConfigurableBeanFactory(ConfigurableBeanFactory configurableBeanFactory) {
         this.configurableBeanFactory = configurableBeanFactory;
         if (configurableBeanFactory == null) {
@@ -61,12 +66,20 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     }
 
     @Override
+    /** SupportsParameter */
     public boolean supportsParameter(MethodParameter parameter) {
         return this.supportsParameter(parameter, UserValue.class);
     }
 
     @Override
     @SuppressWarnings("ALL")
+    /**
+     * 解析Argument
+     * @param methodParameter methodParameter
+     * @param mavContainer mavContainer
+     * @param webRequest webRequest
+     * @param binderFactory binderFactory
+     */
     public Object resolveArgument(MethodParameter methodParameter,
                                   ModelAndViewContainer mavContainer,
                                   NativeWebRequest webRequest,
@@ -204,6 +217,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         return rs;
     }
 
+    /** 解析EmbeddedValuesAndExpressions */
     protected Object resolveEmbeddedValuesAndExpressions(String value) {
         if (this.configurableBeanFactory == null || this.expressionContext == null) {
             return value;

@@ -9,6 +9,7 @@ import com.chua.common.support.spi.annotations.Extension;
 @Extension("json")
 public class JsonMediaTypeHandler implements MediaTypeHandler {
     @Override
+    /** AsByteArray */
     public byte[] asByteArray(Object o) {
         return Json.toJSONBytes(o);
     }

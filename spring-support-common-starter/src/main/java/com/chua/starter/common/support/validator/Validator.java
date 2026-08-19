@@ -5,9 +5,11 @@ package com.chua.starter.common.support.validator;
  */
 public final class Validator {
 
+    /** 创建 Validator 实例 */
     private Validator() {
     }
 
+    /** 是否拥有Chinese */
     public static boolean hasChinese(String value) {
         if (value == null || value.isEmpty()) {
             return false;

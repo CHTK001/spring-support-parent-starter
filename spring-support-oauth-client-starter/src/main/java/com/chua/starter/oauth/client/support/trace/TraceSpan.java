@@ -120,6 +120,7 @@ public class TraceSpan {
     }
 
     @Override
+    /** ToString */
     public String toString() {
         return String.format("[%s] %s: %dms", spanId, spanName, getCostMs());
     }

@@ -102,11 +102,13 @@ public interface CacheProvider {
         private final Map<String, CacheEntry> store = new ConcurrentHashMap<>();
 
         @Override
+        /** Put */
         public void put(String key, Object value) {
             put(key, value, 0);
         }
 
         @Override
+        /** Put */
         public void put(String key, Object value, long ttlSeconds) {
             if (key != null && value != null) {
                 store.put(key, new CacheEntry(value, ttlSeconds));
@@ -114,6 +116,7 @@ public interface CacheProvider {
         }
 
         @Override
+        /** 获取 */
         public Object get(String key, Class<?> type) {
             if (key == null) {
                 return null;
@@ -130,6 +133,7 @@ public interface CacheProvider {
         }
 
         @Override
+        /** 移除 */
         public void remove(String key) {
             if (key != null) {
                 store.remove(key);
@@ -137,6 +141,7 @@ public interface CacheProvider {
         }
 
         @Override
+        /** Clear */
         public void clear() {
             store.clear();
         }
@@ -151,30 +156,41 @@ public interface CacheProvider {
         /** 默认TTL */
         protected final long defaultTtl;
 
+        /**
+         * 创建 RedisCacheProvider 实例
+         * @param keyPrefix keyPrefix
+         * @param long long
+         */
         protected RedisCacheProvider(String keyPrefix, long defaultTtl) {
             this.keyPrefix = keyPrefix == null ? "" : keyPrefix;
             this.defaultTtl = defaultTtl;
         }
 
+        /** 解析Key */
         protected String resolveKey(String key) {
             return keyPrefix + key;
         }
 
         @Override
+        /** Put */
         public void put(String key, Object value) {
             put(key, value, defaultTtl);
         }
 
         @Override
+        /** Put */
         public abstract void put(String key, Object value, long ttlSeconds);
 
         @Override
+        /** 获取 */
         public abstract Object get(String key, Class<?> type);
 
         @Override
+        /** 移除 */
         public abstract void remove(String key);
 
         @Override
+        /** Clear */
         public abstract void clear();
     }
 }

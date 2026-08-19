@@ -56,6 +56,12 @@ public class CryptoSerializer extends JsonSerializer<String> implements Contextu
 
 
     @Override
+    /**
+     * 序列化
+     * @param origin origin
+     * @param jsonGenerator jsonGenerator
+     * @param serializerProvider serializerProvider
+     */
     public void serialize(final String origin, final JsonGenerator jsonGenerator,
                           final SerializerProvider serializerProvider) throws IOException {
 

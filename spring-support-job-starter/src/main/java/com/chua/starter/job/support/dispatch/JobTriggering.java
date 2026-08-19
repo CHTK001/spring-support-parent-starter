@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
  */
 public final class JobTriggering {
 
+    /** 创建 JobTriggering 实例 */
     private JobTriggering() {
     }
 

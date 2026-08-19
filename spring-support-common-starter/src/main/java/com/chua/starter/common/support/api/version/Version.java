@@ -391,6 +391,7 @@ public class Version implements Comparable<Version> {
     }
 
     @Override
+    /** 判断相等 */
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
@@ -399,11 +400,13 @@ public class Version implements Comparable<Version> {
     }
 
     @Override
+    /** HashCode */
     public int hashCode() {
         return Objects.hash(major, minor, patch, prerelease);
     }
 
     @Override
+    /** ToString */
     public String toString() {
         return original;
     }

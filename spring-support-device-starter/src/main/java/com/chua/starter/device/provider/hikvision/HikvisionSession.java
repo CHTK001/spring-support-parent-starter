@@ -43,28 +43,36 @@ public class HikvisionSession implements DeviceSession {
      */
     private final Map<EventType, List<EventListener>> listeners = new ConcurrentHashMap<>();
 
+    /**
+     * 创建 HikvisionSession 实例
+     * @param info info
+     */
     public HikvisionSession(DeviceConnectInfo info) {
         this.info = info;
         log.info("海康设备连接成功: {}", info.getIp());
     }
 
     @Override
+    /** 获取DeviceId */
     public String getDeviceId() {
         return info.getIp();
     }
 
     @Override
+    /** 是否Online */
     public boolean isOnline() {
         return online;
     }
 
     @Override
+    /** 关闭 */
     public void close() {
         online = false;
         log.info("海康设备断开: {}", info.getIp());
     }
 
     @Override
+    /** Preview */
     public InputStream preview(int channel) {
         // 实际调用 SDK 获取预览流
         log.debug("海康预览: channel={}", channel);
@@ -72,78 +80,93 @@ public class HikvisionSession implements DeviceSession {
     }
 
     @Override
+    /** 查询Records */
     public List<RecordFile> queryRecords(int channel, TimeRange range) {
         // 实际查询录像
         return new ArrayList<>();
     }
 
     @Override
+    /** Playback */
     public InputStream playback(int channel, TimeRange range) {
         log.debug("海康回放: channel={}, range={}", channel, range);
         return null;
     }
 
     @Override
+    /** PtzControl */
     public void ptzControl(PtzCommand cmd, double speed) {
         log.info("海康云台控制: cmd={}, speed={}", cmd, speed);
     }
 
     @Override
+    /** 设置Preset */
     public void setPreset(int presetId, String name) {
         log.info("海康设置预置位: presetId={}, name={}", presetId, name);
     }
 
     @Override
+    /** 调用Preset */
     public void callPreset(int presetId) {
         log.info("海康调用预置位: presetId={}", presetId);
     }
 
     @Override
+    /** 删除Preset */
     public void deletePreset(int presetId) {
         log.info("海康删除预置位: presetId={}", presetId);
     }
 
     @Override
+    /** ListPresets */
     public List<PresetInfo> listPresets() {
         return new ArrayList<>();
     }
 
     @Override
+    /** Remote解锁 */
     public void remoteUnlock(int doorId) {
         log.info("海康远程开门: doorId={}", doorId);
     }
 
     @Override
+    /** 获取LiveUrl */
     public String getLiveUrl(int channel, String protocol) {
         return "";
     }
 
     @Override
+    /** 获取PlaybackUrl */
     public String getPlaybackUrl(int channel, TimeRange range) {
         return null;
     }
 
     @Override
+    /** 查询AccessRecords */
     public List<AccessRecord> queryAccessRecords(TimeRange range) {
         return new ArrayList<>();
     }
 
     @Override
+    /** TestConnection */
     public boolean testConnection() {
         return online;
     }
 
     @Override
+    /** 订阅Event */
     public void subscribeEvent(EventType type, EventListener listener) {
         listeners.computeIfAbsent(type, k -> new ArrayList<>()).add(listener);
     }
 
     @Override
+    /** 取消订阅Event */
     public void unsubscribeEvent(EventType type) {
         listeners.remove(type);
     }
 
     @Override
+    /** 取出Events */
     public List<DeviceEvent> pollEvents(TimeRange range) {
         return new ArrayList<>();
     }

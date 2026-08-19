@@ -47,6 +47,10 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
      */
     private static final String PATH_DOOR_CONTROL = "/api/access/v1/door/control";
 
+    /**
+     * 创建 HikvisionSecurePlatformSession 实例
+     * @param info info
+     */
     public HikvisionSecurePlatformSession(DeviceConnectInfo info) {
         super(info, DEFAULT_BASE_URL);
         // 安防平台通常无独立登录，AppKey/AppSecret 通过签名头传递
@@ -74,6 +78,7 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /** DoRequest */
     protected JsonNode doRequest(String method, String path, Map<String, Object> params) {
         String timestamp = String.valueOf(System.currentTimeMillis());
         String nonce = java.util.UUID.randomUUID().toString();
@@ -119,12 +124,14 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /** 获取LiveUrl */
     public String getLiveUrl(int channel, String protocol) {
         JsonNode data = getPreviewUrl(channel);
         return data.path("url").asText(data.path("hls").asText(data.path("rtsp").asText("")));
     }
 
     @Override
+    /** 获取PlaybackUrl */
     public String getPlaybackUrl(int channel, com.chua.starter.device.spi.model.TimeRange range) {
         Map<String, Object> params = new HashMap<>();
         params.put("cameraIndexCode", info.getDeviceSerial());
@@ -136,6 +143,7 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /** PtzControl */
     public void ptzControl(com.chua.starter.device.spi.model.PtzCommand cmd, double speed) {
         if (cmd == com.chua.starter.device.spi.model.PtzCommand.STOP) {
             return;
@@ -147,6 +155,7 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
         post(PATH_PTZ_CONTROL, params);
     }
 
+    /** MapArtemisDirection */
     private int mapArtemisDirection(com.chua.starter.device.spi.model.PtzCommand cmd) {
         switch (cmd) {
             case UP: return 0;
@@ -164,6 +173,7 @@ public class HikvisionSecurePlatformSession extends AbstractOpenApiSession {
     }
 
     @Override
+    /** Remote解锁 */
     public void remoteUnlock(int doorId) {
         Map<String, Object> params = new HashMap<>();
         params.put("doorIndexCode", info.getDeviceSerial() + ":" + doorId);

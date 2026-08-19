@@ -30,6 +30,7 @@ public final class DataSyncStressProbe {
     /** Work_dir */
     private static final Path WORK_DIR = Paths.get("target/stress-full");
 
+    /** Main */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);
         int[] rows = {10_000_000};
@@ -56,6 +57,7 @@ public final class DataSyncStressProbe {
         System.err.println("========================================================================");
     }
 
+    /** 运行FullPipeline */
     private static void runFullPipeline(Path csv, int totalRows, int batchSize) throws Exception {
         String id = "full-" + totalRows + "-" + batchSize;
 
@@ -96,6 +98,7 @@ public final class DataSyncStressProbe {
                 totalRows, batchSize, elapsedMs, tp, batches, ok ? "PASS" : "FAIL(" + sink.count.get() + ")");
     }
 
+    /** GenerateCsv */
     private static void generateCsv(Path path, int lines) throws Exception {
         try (var writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
             writer.write("id,name,age,score,active,created_at\n");
@@ -126,11 +129,13 @@ public final class DataSyncStressProbe {
         }
 
         @Override
+        /** SinkId */
         public String sinkId() {
             return sinkId;
         }
 
         @Override
+        /** 写入 */
         public void write(Flux<Map<String, Object>> rows) {
             long t0 = System.currentTimeMillis();
             long b = batches.incrementAndGet();
@@ -149,6 +154,7 @@ public final class DataSyncStressProbe {
         }
 
         @Override
+        /** 关闭 */
         public void close() {
         }
     }

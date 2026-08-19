@@ -33,6 +33,7 @@ public class UrlQpsConfiguration implements WebMvcConfigurer {
     private final ReportProperties reportProperties;
 
     @Override
+    /** 添加Interceptors */
     public void addInterceptors(InterceptorRegistry registry) {
         ReportProperties.UrlQps urlQpsConfig = reportProperties.getUrlQps();
         Set<String> excludePatterns = urlQpsConfig.getExcludePatterns();

@@ -248,6 +248,15 @@ public class MybatisPlusConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    /**
+     * MybatisConfigurationCustomizer
+     * @param mybatisProperties mybatisProperties
+     * @param materializedSqlRouter materializedSqlRouter
+     * @param materializedRouteProperties materializedRouteProperties
+     * @param multiDataSourceSettingProperties multiDataSourceSettingProperties
+     * @param applicationContext applicationContext
+     * @param slowSqlDetectInterceptorProvider slowSqlDetectInterceptorProvider
+     */
     public ConfigurationCustomizer mybatisConfigurationCustomizer(MybatisPlusProperties mybatisProperties,
                                                                  @Autowired(required = false) MaterializedSqlDataSourceRouter materializedSqlRouter,
                                                                  @Autowired(required = false) MaterializedRouteProperties materializedRouteProperties,
@@ -341,11 +350,13 @@ public class MybatisPlusConfiguration {
         return new SqlSessionTemplate(sqlSessionFactory);
     }
 
+    /** SyncEncryptorProperties */
     private void syncEncryptorProperties() {
         syncSystemProperty(ENCRYPTOR_PASSWORD_PROPERTY);
         syncSystemProperty(ENCRYPTOR_MODE_PROPERTY);
     }
 
+    /** SyncSystemProperty */
     private void syncSystemProperty(String propertyName) {
         String value = environment.getProperty(propertyName);
         if (value == null || value.isBlank()) {
@@ -355,6 +366,7 @@ public class MybatisPlusConfiguration {
     }
 
     @Bean
+    /** MybatisPlusServiceInfoContributor */
     public ServiceInfoContributor mybatisPlusServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("mybatis", "MyBatis", true, "MyBatis Plus模块", null);

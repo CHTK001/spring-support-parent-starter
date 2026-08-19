@@ -11,6 +11,7 @@ import java.io.ByteArrayOutputStream;
 @Extension("csv")
 public class CsvMediaTypeHandler implements MediaTypeHandler {
     @Override
+    /** AsByteArray */
     public byte[] asByteArray(Object o) {
         try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();) {
             return byteArrayOutputStream.toByteArray();

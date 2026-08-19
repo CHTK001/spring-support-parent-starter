@@ -91,6 +91,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
 
     @Override
+    /** AfterProperties设置 */
     public void afterPropertiesSet() throws Exception {
         rpcProperties = Binder.get(this.environment).bindOrCreate(RpcProperties.PRE, RpcProperties.class);
         if(!rpcProperties.isEnable()) {
@@ -105,6 +106,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     }
 
     @Override
+    /** Post处理BeanFactory */
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         if(!rpcProperties.isEnable()) {
             return;
@@ -133,6 +135,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     }
 
     @Override
+    /** Post处理BeanDefinitionRegistry */
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         if(!rpcProperties.isEnable()) {
             return;
@@ -143,10 +146,12 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
 
     @Override
+    /** 设置ResourceLoader */
     public void setResourceLoader(ResourceLoader resourceLoader) {
         this.resourceLoader = resourceLoader;
     }
     @Override
+    /** 设置Environment */
     public void setEnvironment(Environment environment) {
         this.environment = environment;
         this.rpcProperties = Binder.get(environment).bindOrCreate(RpcProperties.PRE, RpcProperties.class);
@@ -195,10 +200,12 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
 
     @Override
+    /** 设置BeanClassLoader */
     public void setBeanClassLoader(ClassLoader classLoader) {
         this.classLoader = classLoader;
     }
 
+    /** 处理AnnotatedBeanDefinition */
     private void processAnnotatedBeanDefinition(String refServiceBeanName, AnnotatedBeanDefinition refServiceBeanDefinition, Map<String, Object> attributes) {
 
         Map<String, Object> serviceAnnotationAttributes = new LinkedHashMap<>(attributes);
@@ -219,6 +226,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
         registerServiceBeanDefinition(serviceBeanName, serviceBeanDefinition, serviceInterface);
     }
+    /** 获取ServiceAnnotationAttributes */
     private Map<String, Object> getServiceAnnotationAttributes(BeanDefinition beanDefinition) {
         if (beanDefinition instanceof AnnotatedBeanDefinition annotatedBeanDefinition) {
             MethodMetadata factoryMethodMetadata = SpringCompatUtils.getFactoryMethodMetadata(annotatedBeanDefinition);
@@ -236,6 +244,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
         }
         return null;
     }
+    /** 解析PackagesTo扫描 */
     private Set<String> resolvePackagesToScan(Set<String> packagesToScan) {
         Set<String> resolvedPackagesToScan = new LinkedHashSet<>(packagesToScan.size());
         for (String packageToScan : packagesToScan) {
@@ -247,6 +256,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
         return resolvedPackagesToScan;
     }
 
+    /** 扫描ServiceBeans */
     private void scanServiceBeans(Set<String> packagesToScan, BeanDefinitionRegistry registry) {
 
         scanned = true;
@@ -355,6 +365,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
     }
 
+    /** 处理ScannedBeanDefinition */
     private void processScannedBeanDefinition(BeanDefinitionHolder beanDefinitionHolder) {
 
         Class<?> beanClass = resolveClass(beanDefinitionHolder);
@@ -377,6 +388,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
         registerServiceBeanDefinition(beanName, serviceBeanDefinition, serviceInterface);
 
     }
+    /** 注册ServiceBeanDefinition */
     private void registerServiceBeanDefinition(String serviceBeanName, AbstractBeanDefinition serviceBeanDefinition, String serviceInterface) {
         // check service bean
         if (registry.containsBeanDefinition(serviceBeanName)) {
@@ -413,6 +425,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     }
 
 
+    /** GenerateServiceBeanName */
     private String generateServiceBeanName(Map<String, Object> serviceAnnotationAttributes, String serviceInterface) {
         String sb = "RpcServiceBean" + serviceInterface +
                 serviceAnnotationAttributes.get("version") +
@@ -475,6 +488,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
     }
 
+    /** 解析StringArray */
     private String[] resolveStringArray(String[] strs) {
         if (strs == null) {
             return null;
@@ -485,17 +499,20 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
         return strs;
     }
 
+    /** 添加PropertyReference */
     private void addPropertyReference(BeanDefinitionBuilder builder, String propertyName, String beanName) {
         String resolvedBeanName = environment.resolvePlaceholders(beanName);
         builder.addPropertyReference(propertyName, resolvedBeanName);
     }
 
+    /** 添加PropertyValue */
     private void addPropertyValue(BeanDefinitionBuilder builder, String propertyName, String value) {
         String resolvedBeanName = environment.resolvePlaceholders(value);
         builder.addPropertyValue(propertyName, resolvedBeanName);
     }
 
     @Override
+    /** 设置ApplicationContext */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }

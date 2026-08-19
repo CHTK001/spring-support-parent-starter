@@ -36,6 +36,7 @@ public class DefaultKnowledgeGraphLlmClient implements KnowledgeGraphLlmClient {
     }
 
     @Override
+    /** Chat */
     public String chat(String input) {
         if (chatClient == null) {
             return null;
@@ -50,6 +51,7 @@ public class DefaultKnowledgeGraphLlmClient implements KnowledgeGraphLlmClient {
     }
 
     @Override
+    /** 关闭 */
     public void close() {
         if (chatClient != null) {
             try {

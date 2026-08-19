@@ -49,17 +49,34 @@ public class ServiceInfoAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    /** ServiceInfoController */
     public ServiceInfoController serviceInfoController() {
         return new ServiceInfoController();
     }
 
     @Bean
     @Order(Ordered.LOWEST_PRECEDENCE)
+    /** ServiceInfoEndpointDetector */
     public ServiceInfoEndpointDetector serviceInfoEndpointDetector(Environment environment) {
         return new ServiceInfoEndpointDetector(environment);
     }
 
     @Bean
+    /**
+     * ServiceInfoBannerListener
+     * @param detector detector
+     * @param properties properties
+     * @param properties properties
+     * @param properties properties
+     * @param 静态方法 静态方法
+     * @param registry registry
+     * @param 32 32
+     * @param 28 28
+     * @param s s
+     * @param s s
+     * @param len len
+     * @param len len
+     */
     public ServiceInfoBannerListener serviceInfoBannerListener(
             ServiceInfoEndpointDetector detector, ServiceInfoProperties properties) {
         return new ServiceInfoBannerListener(detector, properties);
@@ -95,6 +112,7 @@ public class ServiceInfoAutoConfiguration {
     @RequestMapping("/service-info")
     public static class ServiceInfoController {
         @GetMapping
+        /** Info */
         public Map<String, Object> info() {
             return ServiceInfoRegistry.getInstance().getInfo();
         }
@@ -155,10 +173,12 @@ public class ServiceInfoAutoConfiguration {
         System.out.println(sb);
     }
 
+    /** NullToEmpty */
     private static String nullToEmpty(String s) {
         return s == null ? "" : s;
     }
 
+    /** Pad */
     private static String pad(String s, int len) {
         if (s == null) s = "";
         if (s.length() >= len) return s;

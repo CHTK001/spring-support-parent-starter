@@ -27,6 +27,7 @@ public class RpcProxyFactoryManager {
     /** Factories */
     private final List<RpcProxyFactory> factories;
 
+    /** 创建 RpcProxyFactoryManager 实例 */
     private RpcProxyFactoryManager() {
         this.factories = new ArrayList<>();
         // 注册默认工厂
@@ -38,6 +39,7 @@ public class RpcProxyFactoryManager {
         factories.sort(Comparator.comparingInt(RpcProxyFactory::getOrder));
     }
 
+    /** 获取Instance */
     public static RpcProxyFactoryManager getInstance() {
         return INSTANCE;
     }

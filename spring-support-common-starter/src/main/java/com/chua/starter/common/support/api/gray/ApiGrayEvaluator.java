@@ -307,18 +307,22 @@ public class ApiGrayEvaluator {
     public record GrayContext(HttpServletRequest request, Object userId, String username, String ip,
                               java.util.Collection<String> roles) {
 
+        /** Header */
         public String header(String name) {
             return request.getHeader(name);
         }
 
+        /** Param */
         public String param(String name) {
             return request.getParameter(name);
         }
 
+        /** Cookie */
         public String cookie(String name) {
             return getCookie(request, name);
         }
 
+        /** 是否拥有Role */
         public boolean hasRole(String role) {
             return roles != null && roles.stream().anyMatch(r -> r.equalsIgnoreCase(role));
         }

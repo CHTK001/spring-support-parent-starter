@@ -70,6 +70,7 @@ public class RpcProperties {
      */
     private List<RpcRegistryConfig> registry;
 
+    /** 获取Registry */
     public List<RpcRegistryConfig> getRegistry() {
         if(null == registry) {
             return Collections.emptyList();
@@ -77,6 +78,7 @@ public class RpcProperties {
         return registry;
     }
 
+    /** 获取Protocols */
     public List<RpcProtocolConfig> getProtocols() {
         if(null == protocols) {
             return Collections.emptyList();

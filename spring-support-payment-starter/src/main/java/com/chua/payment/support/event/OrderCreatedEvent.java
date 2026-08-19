@@ -26,6 +26,19 @@ public class OrderCreatedEvent extends PaymentEvent {
     /** Subject */
     private final String subject;
 
+    /**
+     * 创建 OrderCreatedEvent 实例
+     * @param source source
+     * @param tenantId tenantId
+     * @param merchantId merchantId
+     * @param orderId orderId
+     * @param orderNo orderNo
+     * @param userId userId
+     * @param orderAmount orderAmount
+     * @param channelType channelType
+     * @param channelSubType channelSubType
+     * @param subject subject
+     */
     public OrderCreatedEvent(Object source, Long tenantId, Long merchantId, Long orderId, String orderNo,
                              Long userId, BigDecimal orderAmount, String channelType, String channelSubType, String subject) {
         super(source, "ORDER_CREATED", tenantId, merchantId);

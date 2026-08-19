@@ -37,18 +37,24 @@ public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<O
         private final ApiResponseEncodeRegister apiResponseEncodeRegister;
 
 
+    /**
+     * 创建 ApiResponseEncodeResponseBodyAdvice 实例
+     * @param apiResponseEncodeRegister apiResponseEncodeRegister
+     */
     public ApiResponseEncodeResponseBodyAdvice(ApiResponseEncodeRegister apiResponseEncodeRegister) {
         this.apiResponseEncodeRegister = apiResponseEncodeRegister;
     }
 
 
     @Override
+    /** Supports */
     public boolean supports(MethodParameter methodParameter, Class<? extends HttpMessageConverter<?>> aClass) {
         return true;
     }
 
     @SneakyThrows
     @Override
+    /** BeforeBody写入 */
     public Object beforeBodyWrite(Object o, MethodParameter methodParameter, MediaType mediaType, Class<? extends HttpMessageConverter<?>> aClass, ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse) {
         if (o instanceof StreamingResponseBody || o instanceof ResponseBodyEmitter) {
             return o;

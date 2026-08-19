@@ -23,6 +23,7 @@ public final class JsonMappers {
      */
     private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+    /** 创建 JsonMappers 实例 */
     private JsonMappers() {
     }
 
@@ -104,6 +105,7 @@ public final class JsonMappers {
         return list;
     }
 
+    /** 解析Date */
     private static LocalDateTime parseDate(String s) {
         if (s == null || s.isEmpty()) {
             return null;

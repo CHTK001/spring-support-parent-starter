@@ -18,10 +18,12 @@ public class DefaultJobLog implements JobLog{
 
 
 
+    /** 记录日志 */
     public static boolean log(String appendLogPattern) {
         StackTraceElement callInfo = new Throwable().getStackTrace()[1];
         return logDetail(callInfo, appendLogPattern);
     }
+    /** 记录日志Detail */
     private static boolean logDetail(StackTraceElement callInfo, String appendLog) {
         JobContext xxlJobContext = JobContext.getXxlJobContext();
         if (xxlJobContext == null) {

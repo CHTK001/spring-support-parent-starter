@@ -32,6 +32,7 @@ import java.util.List;
 public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQuestion> implements IEduQuestionService {
 
     @Override
+    /** Page查询 */
     public PageResult<EduQuestion> pageQuery(QuestionQueryDTO query) {
         LambdaQueryWrapper<EduQuestion> wrapper = new LambdaQueryWrapper<>();
 
@@ -84,6 +85,7 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 保存Question */
     public Long saveQuestion(QuestionSaveDTO dto) {
         EduQuestion entity = new EduQuestion();
         entity.setQuestionType(dto.getType());
@@ -123,6 +125,7 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** ImportQuestions */
     public int importQuestions(List<QuestionSaveDTO> list) {
         int count = 0;
         for (QuestionSaveDTO dto : list) {
@@ -139,6 +142,7 @@ public class EduQuestionServiceImpl extends ServiceImpl<EduQuestionMapper, EduQu
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 删除Question */
     public boolean deleteQuestion(Long id) {
         EduQuestion entity = baseMapper.selectById(id);
         if (entity == null) {

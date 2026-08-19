@@ -32,6 +32,11 @@ public class SseSocketSession implements SocketSession {
     private final Map<String, Object> attributes = new ConcurrentHashMap<>();
     private volatile boolean connected = true;
 
+    /**
+     * 创建 SseSocketSession 实例
+     * @param id id
+     * @param SseEmitter SseEmitter
+     */
     public SseSocketSession(String id, SseEmitter emitter) {
         this.id = id;
         this.clientId = id;
@@ -44,57 +49,68 @@ public class SseSocketSession implements SocketSession {
     }
 
     @Override
+    /** 获取Id */
     public String getId() {
         return id;
     }
 
     @Override
+    /** 获取ClientId */
     public String getClientId() {
         return clientId;
     }
 
     @Override
+    /** 设置ClientId */
     public void setClientId(String clientId) {
         this.clientId = clientId;
     }
 
     @Override
+    /** 获取User */
     public SocketUser getUser() {
         return user;
     }
 
     @Override
+    /** 设置User */
     public void setUser(SocketUser user) {
         this.user = user;
     }
 
     @Override
+    /** 设置Attribute */
     public void setAttribute(String key, Object value) {
         attributes.put(key, value);
     }
 
     @Override
     @SuppressWarnings("unchecked")
+    /** 获取Attribute */
     public <T> T getAttribute(String key) {
         return (T) attributes.get(key);
     }
 
     @Override
+    /** 移除Attribute */
     public void removeAttribute(String key) {
         attributes.remove(key);
     }
 
     @Override
+    /** 获取Attributes */
     public Map<String, Object> getAttributes() {
         return attributes;
     }
 
     @Override
+    /** 是否Connected */
     public boolean isConnected() {
         return connected;
     }
 
     @Override
+    /** 断开 */
     public void disconnect() {
         if (connected) {
             connected = false;
@@ -103,6 +119,7 @@ public class SseSocketSession implements SocketSession {
     }
 
     @Override
+    /** 发送 */
     public void send(String event, Object data) {
         if (!connected) {
             return;
@@ -119,6 +136,7 @@ public class SseSocketSession implements SocketSession {
 
     @Override
     @SuppressWarnings("unchecked")
+    /** 获取Connection */
     public <T> T getConnection() {
         return (T) emitter;
     }

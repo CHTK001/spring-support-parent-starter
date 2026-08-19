@@ -28,10 +28,21 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
     /** Auth服务供应商 */
     private final Supplier<AuthService> authServiceSupplier;
 
+    /**
+     * 创建 MybatisPlusDataPermissionInterceptor 实例
+     * @param dataPermissionHandler dataPermissionHandler
+     * @param MybatisPlusDataScopeProperties MybatisPlusDataScopeProperties
+     */
     public MybatisPlusDataPermissionInterceptor(DataPermissionHandler dataPermissionHandler, MybatisPlusDataScopeProperties methodSecurityInterceptor) {
         this(dataPermissionHandler, methodSecurityInterceptor, () -> null);
     }
 
+    /**
+     * 创建 MybatisPlusDataPermissionInterceptor 实例
+     * @param dataPermissionHandler dataPermissionHandler
+     * @param methodSecurityInterceptor methodSecurityInterceptor
+     * @param authServiceSupplier authServiceSupplier
+     */
     public MybatisPlusDataPermissionInterceptor(DataPermissionHandler dataPermissionHandler,
                                                 MybatisPlusDataScopeProperties methodSecurityInterceptor,
                                                 Supplier<AuthService> authServiceSupplier) {
@@ -41,6 +52,7 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
     }
 
     @Override
+    /** 处理删除 */
     protected void processDelete(Delete delete, int index, String sql, Object obj) {
         if (!shouldApplyDataPermission()) {
             return;
@@ -49,6 +61,7 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
     }
 
     @Override
+    /** 处理更新 */
     protected void processUpdate(Update update, int index, String sql, Object obj) {
         if (!shouldApplyDataPermission()) {
             return;
@@ -57,6 +70,7 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
     }
 
     @Override
+    /** 处理选择 */
     protected void processSelect(Select select, int index, String sql, Object obj) {
         if (!shouldApplyDataPermission()) {
             return;
@@ -83,12 +97,14 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
         return true;
     }
 
+    /** 是否拥有ManagedDeptLeaderScope */
     private boolean hasManagedDeptLeaderScope(CurrentUser currentUser) {
         return currentUser.hasRole(DEPT_LEADER)
                 && null != currentUser.getExt()
                 && null != currentUser.getExt().get(MANAGED_DEPT_TREE_IDS);
     }
 
+    /** 获取CurrentUser */
     private CurrentUser getCurrentUser() {
         if (authServiceSupplier == null) {
             return null;

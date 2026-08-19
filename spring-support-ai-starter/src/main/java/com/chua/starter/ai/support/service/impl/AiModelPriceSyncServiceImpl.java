@@ -29,6 +29,7 @@ public class AiModelPriceSyncServiceImpl implements AiModelPriceSyncService {
     private final ChatClientRegistry chatClientRegistry;
 
     @Override
+    /** SyncPrices */
     public void syncPrices() {
         log.info("[AiModelPriceSync] 开始同步模型价格");
         try {
@@ -64,6 +65,7 @@ public class AiModelPriceSyncServiceImpl implements AiModelPriceSyncService {
     }
 
     @Override
+    /** SyncModelList */
     public void syncModelList() {
         log.info("[AiModelPriceSync] 开始同步模型列表");
         try {
@@ -98,6 +100,7 @@ public class AiModelPriceSyncServiceImpl implements AiModelPriceSyncService {
     }
 
     @Override
+    /** SyncPrices */
     public void syncPrices(String code) {
         if (code == null || code.isBlank()) {
             syncPrices();

@@ -34,28 +34,33 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
     private static String password;
 
     @Override
+    /** 设置NonNullParameter */
     public void setNonNullParameter(PreparedStatement ps, int i, String parameter, JdbcType jdbcType) throws SQLException {
         ps.setString(i, encrypt(parameter));
     }
 
     @Override
+    /** 获取NullableResult */
     public String getNullableResult(ResultSet rs, String columnName) throws SQLException {
         String value = rs.getString(columnName);
         return decrypt(value);
     }
 
     @Override
+    /** 获取NullableResult */
     public String getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
         String value = rs.getString(columnIndex);
         return decrypt(value);
     }
 
     @Override
+    /** 获取NullableResult */
     public String getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
         String value = cs.getString(columnIndex);
         return decrypt(value);
     }
 
+    /** Decrypt */
     private static String decrypt(String value) {
         if (value == null) {
             return null;
@@ -75,6 +80,7 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
         }
     }
 
+    /** Encrypt */
     public static String encrypt(String rawValue) {
         if (rawValue == null) {
             return null;
@@ -91,6 +97,7 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
         }
     }
 
+    /** 获取Encryptor */
     private static AesCipher getEncryptor() {
         if (aesCodec != null) {
             return aesCodec;
@@ -102,6 +109,7 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
         return aesCodec;
     }
 
+    /** 解析EncryptMode */
     private static EncryptMode resolveEncryptMode() {
         String mode = System.getProperty(ENCRYPTOR_MODE_PROPERTY_NAME);
         if (!StringUtils.hasText(mode)) {

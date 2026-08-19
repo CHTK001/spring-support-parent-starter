@@ -49,11 +49,13 @@ public class DataSourceHealthIndicator extends AbstractHealthIndicator {
             "CommunicationsException", "SocketException", "InterruptedException"
     };
 
+    /** 创建 DataSourceHealthIndicator 实例 */
     public DataSourceHealthIndicator() {
         super("数据源健康检查失败");
     }
 
     @Override
+    /** DoHealth校验 */
     protected void doHealthCheck(Health.Builder builder) throws Exception {
         Map<String, DataSource> allDataSources = DataSourceContextSupport.getAllDataSources();
 

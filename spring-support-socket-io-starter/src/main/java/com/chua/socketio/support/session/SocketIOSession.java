@@ -37,6 +37,11 @@ public class SocketIOSession implements SocketSession {
     /** 用户 */
     private SocketUser user;
 
+    /**
+     * 创建 SocketIOSession 实例
+     * @param client client
+     * @param SocketProperties SocketProperties
+     */
     public SocketIOSession(SocketIOClient client, SocketProperties properties) {
         this.client = client;
         this.properties = properties;
@@ -48,62 +53,74 @@ public class SocketIOSession implements SocketSession {
     }
 
     @Override
+    /** 获取Id */
     public String getId() {
         return client.getSessionId().toString();
     }
 
     @Override
+    /** 获取ClientId */
     public String getClientId() {
         return clientId;
     }
 
     @Override
+    /** 设置ClientId */
     public void setClientId(String clientId) {
         this.clientId = clientId;
     }
 
     @Override
+    /** 获取User */
     public SocketUser getUser() {
         return user;
     }
 
     @Override
+    /** 设置User */
     public void setUser(SocketUser user) {
         this.user = user;
     }
 
     @Override
+    /** 设置Attribute */
     public void setAttribute(String key, Object value) {
         attributes.put(key, value);
     }
 
     @Override
     @SuppressWarnings("unchecked")
+    /** 获取Attribute */
     public <T> T getAttribute(String key) {
         return (T) attributes.get(key);
     }
 
     @Override
+    /** 移除Attribute */
     public void removeAttribute(String key) {
         attributes.remove(key);
     }
 
     @Override
+    /** 获取Attributes */
     public Map<String, Object> getAttributes() {
         return attributes;
     }
 
     @Override
+    /** 是否Connected */
     public boolean isConnected() {
         return client.isChannelOpen();
     }
 
     @Override
+    /** 断开 */
     public void disconnect() {
         client.disconnect();
     }
 
     @Override
+    /** 发送 */
     public void send(String event, Object data) {
         if (client.isChannelOpen()) {
             String msg;
@@ -121,6 +138,7 @@ public class SocketIOSession implements SocketSession {
     }
 
     @Override
+    /** 发送Binary */
     public void sendBinary(String event, byte[] data) {
         if (client.isChannelOpen()) {
             // Socket.IO 原生支持二进制数据传输
@@ -130,6 +148,7 @@ public class SocketIOSession implements SocketSession {
 
     @Override
     @SuppressWarnings("unchecked")
+    /** 获取Connection */
     public <T> T getConnection() {
         return (T) client;
     }
@@ -143,6 +162,7 @@ public class SocketIOSession implements SocketSession {
         return client;
     }
 
+    /** 解析EncryptRequested */
     private Boolean resolveEncryptRequested(SocketIOClient client) {
         if (client == null) {
             return null;
@@ -157,6 +177,7 @@ public class SocketIOSession implements SocketSession {
         return parseEncryptRequested(encryptValue);
     }
 
+    /** FirstNonBlank */
     private String firstNonBlank(String first, String second) {
         if (first != null && !first.isBlank()) {
             return first;
@@ -167,6 +188,7 @@ public class SocketIOSession implements SocketSession {
         return null;
     }
 
+    /** 解析EncryptRequested */
     private Boolean parseEncryptRequested(String value) {
         if (value == null || value.isBlank()) {
             return null;

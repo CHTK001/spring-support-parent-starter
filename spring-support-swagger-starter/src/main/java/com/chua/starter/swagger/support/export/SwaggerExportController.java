@@ -44,6 +44,11 @@ public class SwaggerExportController {
     /** 属性 */
     private final SwaggerExportProperties properties;
 
+    /**
+     * 创建 SwaggerExportController 实例
+     * @param openAPIProvider openAPIProvider
+     * @param properties properties
+     */
     public SwaggerExportController(ObjectProvider<OpenAPI> openAPIProvider,
                                    SwaggerExportProperties properties) {
         this.openAPIProvider = openAPIProvider;
@@ -105,6 +110,7 @@ public class SwaggerExportController {
         }
     }
 
+    /** Render */
     private byte[] render(OpenApiDocumentProvider provider, OpenApiDocumentData data) throws Exception {
         if (provider instanceof com.chua.common.support.lang.document.OpenApiHtmlProvider html) {
             return html.render(data).getBytes(StandardCharsets.UTF_8);
@@ -120,6 +126,7 @@ public class SwaggerExportController {
         }
     }
 
+    /** 解析Type */
     private String resolveType(SwaggerExportProperties props) {
         String output = props.getOutput();
         if (output == null) return "html";
@@ -129,6 +136,7 @@ public class SwaggerExportController {
         return "html";
     }
 
+    /** MediaTypeFor */
     private MediaType mediaTypeFor(String type) {
         return switch (type) {
             case "markdown" -> MediaType.parseMediaType("text/markdown;charset=UTF-8");

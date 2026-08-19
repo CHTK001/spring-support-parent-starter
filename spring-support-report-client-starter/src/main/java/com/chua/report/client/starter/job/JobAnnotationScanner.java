@@ -68,6 +68,7 @@ public class JobAnnotationScanner implements BeanPostProcessor {
     private final JobHandlerFactory jobHandlerFactory = JobHandlerFactory.getInstance();
 
     @Override
+    /** Post处理AfterInitialization */
     public Object postProcessAfterInitialization(@NonNull Object bean, @NonNull String beanName) throws BeansException {
         // 扫描带有 @Job 注解的方法
         Map<Method, Job> annotatedMethods = null;

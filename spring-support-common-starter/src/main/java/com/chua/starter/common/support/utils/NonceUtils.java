@@ -407,6 +407,13 @@ public class NonceUtils {
         /** Nonce */
         private String nonce;
 
+        /**
+         * 创建 NonceValidationResult 实例
+         * @param valid valid
+         * @param long long
+         * @param String String
+         * @param String String
+         */
         public NonceValidationResult(boolean valid, long timestamp, String sign, String nonce) {
             this.valid = valid;
             this.timestamp = timestamp;
@@ -415,18 +422,22 @@ public class NonceUtils {
         }
 
         // Getters
+        /** 是否Valid */
         public boolean isValid() {
             return valid;
         }
 
+        /** 获取Timestamp */
         public long getTimestamp() {
             return timestamp;
         }
 
+        /** 获取Sign */
         public String getSign() {
             return sign;
         }
 
+        /** 获取Nonce */
         public String getNonce() {
             return nonce;
         }

@@ -82,31 +82,42 @@ public class SyncServerInstance {
     /** Listenersattached */
     private boolean listenersAttached = false;
 
+    /**
+     * 创建 SyncServerInstance 实例
+     * @param instanceConfig instanceConfig
+     * @param SyncProperties SyncProperties
+     */
     public SyncServerInstance(SyncProperties.ServerInstance instanceConfig, SyncProperties syncProperties) {
         this.instanceConfig = SyncProperties.ServerInstance.copyOf(instanceConfig);
         this.syncProperties = SyncProperties.copyOf(syncProperties);
     }
 
+    /** 获取InstanceConfig */
     public SyncProperties.ServerInstance getInstanceConfig() {
         return instanceConfig;
     }
 
+    /** 获取SyncProperties */
     public SyncProperties getSyncProperties() {
         return syncProperties;
     }
 
+    /** 获取SyncServer */
     public SyncServer getSyncServer() {
         return syncServer;
     }
 
+    /** 获取ClientInfoMap */
     public Map<String, ClientInfo> getClientInfoMap() {
         return clientInfoMap;
     }
 
+    /** 是否Running */
     public boolean isRunning() {
         return running;
     }
 
+    /** 注册Handler */
     public void registerHandler(String topic, com.chua.common.support.network.sync.SyncMessageHandler handler) {
         if (topic == null || topic.isBlank() || handler == null) {
             return;
@@ -117,19 +128,23 @@ public class SyncServerInstance {
         }
     }
 
+    /** 添加连接Listener */
     public void addConnectListener(BiConsumer<String, ClientInfo> listener) {
         connectListeners.add(listener);
     }
 
+    /** 添加断开Listener */
     public void addDisconnectListener(BiConsumer<String, ClientInfo> listener) {
         disconnectListeners.add(listener);
     }
 
+    /** 设置SyncServer */
     public void setSyncServer(SyncServer syncServer) {
         this.syncServer = syncServer;
         attachListeners();
     }
 
+    /** AttachListeners */
     private void attachListeners() {
         if (listenersAttached || syncServer == null) {
             return;
@@ -138,6 +153,7 @@ public class SyncServerInstance {
         listenersAttached = true;
     }
 
+    /** 开始 */
     public void start() {
         if (running) {
             log.warn("[SyncServer:{}] 已在运行中", instanceConfig.getName());
@@ -158,6 +174,7 @@ public class SyncServerInstance {
         }
     }
 
+    /** 创建UnderlyingServer */
     private SyncServer createUnderlyingServer() {
         String protocol = instanceConfig.getProtocol();
         String host = instanceConfig.getHost() != null ? instanceConfig.getHost() : "0.0.0.0";
@@ -173,6 +190,7 @@ public class SyncServerInstance {
         return provider.getNewExtension(protocol, setting);
     }
 
+    /** 停止 */
     public void stop() {
         if (!running) {
             return;
@@ -189,6 +207,7 @@ public class SyncServerInstance {
         }
     }
 
+    /** 发送 */
     public void send(String sessionId, String topic, Object data) {
         if (syncServer == null || !running) {
             return;
@@ -196,6 +215,7 @@ public class SyncServerInstance {
         syncServer.send(sessionId, topic, SyncCryptoUtils.encrypt(data, syncProperties));
     }
 
+    /** Broadcast */
     public void broadcast(String topic, Object data) {
         if (syncServer == null || !running) {
             return;
@@ -203,6 +223,7 @@ public class SyncServerInstance {
         syncServer.publish(topic, SyncCryptoUtils.encrypt(data, syncProperties));
     }
 
+    /** BroadcastToOthers */
     public void broadcastToOthers(String excludeClientId, String topic, Object data) {
         if (syncServer == null || !running) {
             return;
@@ -216,20 +237,24 @@ public class SyncServerInstance {
         }
     }
 
+    /** 获取Connection计算数量 */
     public int getConnectionCount() {
         return syncServer != null ? syncServer.getConnectedClients().size() : 0;
     }
 
+    /** 获取SessionIds */
     public Set<String> getSessionIds() {
         return syncServer != null ? new HashSet<>(syncServer.getConnectedClients()) : new HashSet<>();
     }
 
+    /** ContainsClient */
     public boolean containsClient(String clientId) {
         return syncServer != null && clientId != null && syncServer.getConnectedClients().contains(clientId);
     }
 
     private class InternalServerListener implements SyncServerListener {
         @Override
+        /** OnClientConnected */
         public void onClientConnected(String clientId, java.util.Map<String, Object> metadata) {
             log.info("[SyncServer:{}] 客户端连接: clientId={}", instanceConfig.getName(), clientId);
             broadcastToOthers(clientId, TOPIC_CONNECT, Map.of(
@@ -238,6 +263,7 @@ public class SyncServerInstance {
         }
 
         @Override
+        /** OnClientDisconnected */
         public void onClientDisconnected(String clientId) {
             ClientInfo clientInfo = clientInfoMap.remove(clientId);
             log.info("[SyncServer:{}] 客户端断开: clientId={}", instanceConfig.getName(), clientId);
@@ -254,17 +280,20 @@ public class SyncServerInstance {
         }
 
         @Override
+        /** OnMessage */
         public void onMessage(String clientId, String topic, Object message) {
             handleServerMessage(clientId, topic, message);
         }
 
         @Override
+        /** On记录错误 */
         public void onError(String clientId, Throwable cause) {
             log.error("[SyncServer:{}] 客户端错误: clientId={}", instanceConfig.getName(), clientId, cause);
         }
     }
 
     @SuppressWarnings("unchecked")
+    /** 处理ServerMessage */
     private void handleServerMessage(String clientId, String topic, Object data) {
         data = SyncCryptoUtils.decrypt(parseIfNeeded(data), syncProperties);
         log.info("[SyncServer:{}] 收到消息: clientId={}, topic={}, data={}",
@@ -301,6 +330,7 @@ public class SyncServerInstance {
     }
 
     @SuppressWarnings("unchecked")
+    /** 处理SystemTopic */
     private boolean handleSystemTopic(String clientId, String topic, Object data) {
         if (TOPIC_HEALTH.equals(topic)) {
             send(clientId, TOPIC_HEALTH, Map.of("status", "UP", "instance", instanceConfig.getName(),
@@ -323,6 +353,7 @@ public class SyncServerInstance {
     }
 
     @SuppressWarnings("unchecked")
+    /** 处理Client注册 */
     private void handleClientRegister(String clientId, Object data) {
         try {
             ClientInfo clientInfo = new ClientInfo();
@@ -345,6 +376,7 @@ public class SyncServerInstance {
         }
     }
 
+    /** 复制MapToClientInfo */
     private void copyMapToClientInfo(Map<String, Object> map, ClientInfo clientInfo) {
         if (map.containsKey("clientApplicationName")) {
             clientInfo.setClientApplicationName(String.valueOf(map.get("clientApplicationName")));
@@ -368,6 +400,7 @@ public class SyncServerInstance {
         }
     }
 
+    /** 处理ClientHeartbeat */
     private void handleClientHeartbeat(String clientId) {
         ClientInfo clientInfo = clientInfoMap.get(clientId);
         if (clientInfo != null) {
@@ -376,6 +409,7 @@ public class SyncServerInstance {
         }
     }
 
+    /** 处理ClientOffline */
     private void handleClientOffline(String clientId) {
         ClientInfo clientInfo = clientInfoMap.get(clientId);
         if (clientInfo != null) {
@@ -383,18 +417,22 @@ public class SyncServerInstance {
         }
     }
 
+    /** 是否Client注册Topic */
     private boolean isClientRegisterTopic(String topic) {
         return matchesClientTopic(topic, syncProperties.getClient().getRegisterTopic(), TOPIC_CLIENT_REGISTER);
     }
 
+    /** 是否ClientHeartbeatTopic */
     private boolean isClientHeartbeatTopic(String topic) {
         return matchesClientTopic(topic, syncProperties.getClient().getHeartbeatTopic(), TOPIC_CLIENT_HEARTBEAT);
     }
 
+    /** 是否ClientOfflineTopic */
     private boolean isClientOfflineTopic(String topic) {
         return matchesClientTopic(topic, syncProperties.getClient().getOfflineTopic(), TOPIC_CLIENT_OFFLINE);
     }
 
+    /** MatchesClientTopic */
     private boolean matchesClientTopic(String actualTopic, String configuredTopic, String defaultTopic) {
         if (actualTopic == null || actualTopic.isBlank()) {
             return false;

@@ -33,6 +33,7 @@ public class DataSourceGroupRegistry {
     /** 全局默认负载均衡策略（可选，为空时使用各分组自身默认值） */
     private static DataSourceGroup.LoadBalanceStrategy defaultStrategy;
 
+    /** 创建 DataSourceGroupRegistry 实例 */
     private DataSourceGroupRegistry() {}
 
     /**

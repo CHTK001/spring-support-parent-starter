@@ -16,6 +16,10 @@ public class ServiceInfoEndpointDetector {
     /** 环境 */
     private final Environment environment;
 
+    /**
+     * 创建 ServiceInfoEndpointDetector 实例
+     * @param environment environment
+     */
     public ServiceInfoEndpointDetector(Environment environment) {
         this.environment = environment;
     }
@@ -53,6 +57,7 @@ public class ServiceInfoEndpointDetector {
         registry.registerFlag("actuator", "监控", hasActuator, "Spring Boot Actuator");
     }
 
+    /** 是否拥有Property */
     private boolean hasProperty(String key) {
         return environment.getProperty(key) != null;
     }

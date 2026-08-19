@@ -33,18 +33,21 @@ public class OrderController {
 
     @Operation(summary = "创建订单")
     @PostMapping
+    /** 创建Order */
     public Result<OrderVO> createOrder(@RequestBody OrderCreateDTO dto) {
         return Result.success(orderService.createOrder(dto));
     }
 
     @Operation(summary = "查询订单")
     @GetMapping("/{id}")
+    /** 获取Order */
     public Result<OrderVO> getOrder(@PathVariable Long id) {
         return Result.success(orderService.getOrder(id));
     }
 
     @Operation(summary = "分页查询订单")
     @GetMapping("/list")
+    /** ListOrders */
     public Result<PageResult<OrderVO>> listOrders(@RequestParam(defaultValue = "1") int page,
                                                   @RequestParam(defaultValue = "10") int size,
                                                   @RequestParam(required = false) Long merchantId,
@@ -56,6 +59,13 @@ public class OrderController {
 
     @Operation(summary = "查询商户订单")
     @GetMapping("/merchant/{merchantId}")
+    /**
+     * 列表MerchantOrders
+     * @param merchantId merchantId
+     * @param page page
+     * @param size size
+     * @param status status
+     */
     public Result<PageResult<OrderVO>> listMerchantOrders(@PathVariable Long merchantId,
                                                           @RequestParam(defaultValue = "1") int page,
                                                           @RequestParam(defaultValue = "10") int size,
@@ -65,12 +75,18 @@ public class OrderController {
 
     @Operation(summary = "查询订单状态流转日志")
     @GetMapping("/{id}/logs")
+    /** ListOrderLogs */
     public Result<List<OrderStateLogVO>> listOrderLogs(@PathVariable Long id) {
         return Result.success(orderService.listOrderLogs(id));
     }
 
     @Operation(summary = "真实发起支付")
     @PostMapping("/{id}/pay")
+    /**
+     * PayOrder
+     * @param id id
+     * @param dto dto
+     */
     public Result<PaymentResult> payOrder(@PathVariable Long id,
                                           @RequestBody(required = false) OrderPayDTO dto) {
         return Result.success(orderService.payOrder(id, dto));
@@ -78,12 +94,18 @@ public class OrderController {
 
     @Operation(summary = "同步第三方支付状态")
     @PostMapping("/{id}/sync")
+    /** SyncOrder */
     public Result<OrderVO> syncOrder(@PathVariable Long id) {
         return Result.success(orderService.syncOrder(id));
     }
 
     @Operation(summary = "发起支付")
     @PutMapping("/{id}/pay-start")
+    /**
+     * 开始Pay
+     * @param id id
+     * @param dto dto
+     */
     public Result<Boolean> startPay(@PathVariable Long id,
                                     @RequestBody(required = false) OrderOperateDTO dto) {
         return Result.success(orderService.startPay(id, dto != null ? dto.getOperator() : null));
@@ -91,6 +113,11 @@ public class OrderController {
 
     @Operation(summary = "标记支付成功")
     @PutMapping("/{id}/pay-success")
+    /**
+     * PaySuccess
+     * @param id id
+     * @param dto dto
+     */
     public Result<Boolean> paySuccess(@PathVariable Long id,
                                       @RequestBody(required = false) OrderOperateDTO dto) {
         return Result.success(orderService.paySuccess(
@@ -102,6 +129,11 @@ public class OrderController {
 
     @Operation(summary = "标记支付失败")
     @PutMapping("/{id}/pay-fail")
+    /**
+     * PayFail
+     * @param id id
+     * @param dto dto
+     */
     public Result<Boolean> payFail(@PathVariable Long id,
                                    @RequestBody(required = false) OrderOperateDTO dto) {
         return Result.success(orderService.payFail(id, dto != null ? dto.getRemark() : null, dto != null ? dto.getOperator() : null));
@@ -109,6 +141,12 @@ public class OrderController {
 
     @Operation(summary = "取消订单", description = "refund=true: 已支付订单退款+取消; refund=false: 不退款仅取消(PENDING/PAYING)")
     @PutMapping("/{id}/cancel")
+    /**
+     * CancelOrder
+     * @param id id
+     * @param refund refund
+     * @param dto dto
+     */
     public Result<Boolean> cancelOrder(@PathVariable Long id,
                                        @RequestParam(defaultValue = "false") boolean refund,
                                        @RequestBody(required = false) OrderOperateDTO dto) {
@@ -120,6 +158,11 @@ public class OrderController {
 
     @Operation(summary = "完成订单")
     @PutMapping("/{id}/complete")
+    /**
+     * 完成Order
+     * @param id id
+     * @param dto dto
+     */
     public Result<Boolean> completeOrder(@PathVariable Long id,
                                          @RequestBody(required = false) OrderOperateDTO dto) {
         return Result.success(orderService.completeOrder(id, dto != null ? dto.getOperator() : null));
@@ -127,6 +170,11 @@ public class OrderController {
 
     @Operation(summary = "申请退款")
     @PostMapping("/{id}/refund")
+    /**
+     * RefundOrder
+     * @param id id
+     * @param dto dto
+     */
     public Result<Boolean> refundOrder(@PathVariable Long id,
                                        @RequestBody RefundApplyDTO dto) {
         return Result.success(orderService.refundOrder(id, dto));
@@ -134,6 +182,11 @@ public class OrderController {
 
     @Operation(summary = "标记退款成功")
     @PutMapping("/{id}/refund-success")
+    /**
+     * RefundSuccess
+     * @param id id
+     * @param dto dto
+     */
     public Result<Boolean> refundSuccess(@PathVariable Long id,
                                          @RequestBody(required = false) OrderOperateDTO dto) {
         return Result.success(orderService.refundSuccess(id, dto != null ? dto.getRefundAmount() : null, dto != null ? dto.getOperator() : null));
@@ -141,6 +194,11 @@ public class OrderController {
 
     @Operation(summary = "标记退款失败")
     @PutMapping("/{id}/refund-fail")
+    /**
+     * RefundFail
+     * @param id id
+     * @param dto dto
+     */
     public Result<Boolean> refundFail(@PathVariable Long id,
                                       @RequestBody(required = false) OrderOperateDTO dto) {
         return Result.success(orderService.refundFail(id, dto != null ? dto.getRemark() : null, dto != null ? dto.getOperator() : null));
@@ -148,6 +206,7 @@ public class OrderController {
 
     @Operation(summary = "删除订单")
     @DeleteMapping("/{id}")
+    /** 删除Order */
     public Result<Boolean> deleteOrder(@PathVariable Long id) {
         return Result.success(orderService.deleteOrder(id));
     }

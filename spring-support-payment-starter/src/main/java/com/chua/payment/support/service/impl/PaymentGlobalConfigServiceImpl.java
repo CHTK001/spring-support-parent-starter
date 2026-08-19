@@ -29,11 +29,13 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
     private final PaymentCallbackProperties paymentCallbackProperties;
 
     @Override
+    /** 获取Config */
     public PaymentGlobalConfigVO getConfig() {
         return toVO(getConfigEntity());
     }
 
     @Override
+    /** 获取ConfigEntity */
     public PaymentGlobalConfig getConfigEntity() {
         PaymentGlobalConfig entity = paymentGlobalConfigMapper.selectOne(new LambdaQueryWrapper<PaymentGlobalConfig>()
                 .eq(PaymentGlobalConfig::getConfigKey, DEFAULT_KEY)
@@ -51,6 +53,7 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
     }
 
     @Override
+    /** 保存Or更新 */
     public PaymentGlobalConfigVO saveOrUpdate(PaymentGlobalConfigDTO dto) {
         PaymentGlobalConfig entity = paymentGlobalConfigMapper.selectOne(new LambdaQueryWrapper<PaymentGlobalConfig>()
                 .eq(PaymentGlobalConfig::getConfigKey, DEFAULT_KEY)
@@ -75,6 +78,7 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
         return toVO(entity);
     }
 
+    /** ToVO */
     private PaymentGlobalConfigVO toVO(PaymentGlobalConfig entity) {
         PaymentGlobalConfigVO vo = new PaymentGlobalConfigVO();
         BeanUtils.copyProperties(entity, vo);
@@ -84,6 +88,7 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
         return vo;
     }
 
+    /** Normalize */
     private String normalize(String value) {
         if (!StringUtils.hasText(value)) {
             return null;

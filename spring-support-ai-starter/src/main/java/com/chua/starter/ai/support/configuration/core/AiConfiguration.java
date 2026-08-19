@@ -166,6 +166,7 @@ public class AiConfiguration {
     }
 
     @Bean
+    /** AiServiceInfoContributor */
     public ServiceInfoContributor aiServiceInfoContributor() {
         return registry -> {
             registry.registerEndpoint("AI", "AI接口", "/ai/**", "AI接口");

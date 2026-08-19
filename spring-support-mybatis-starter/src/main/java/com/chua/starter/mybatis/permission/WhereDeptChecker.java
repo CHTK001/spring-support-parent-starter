@@ -22,6 +22,12 @@ public class WhereDeptChecker {
     /** 当前表 */
     private Table currentTable;
 
+    /**
+     * 创建 WhereDeptChecker 实例
+     * @param where where
+     * @param String String
+     * @param String String
+     */
     public WhereDeptChecker(Expression where, String tableAlias, String columnName) {
         this.where = where;
         this.tableAlias = tableAlias;

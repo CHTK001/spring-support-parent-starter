@@ -30,6 +30,21 @@ public class RefundSuccessEvent extends PaymentEvent {
     /** 通道SUB类型 */
     private final String channelSubType;
 
+    /**
+     * 创建 RefundSuccessEvent 实例
+     * @param source source
+     * @param tenantId tenantId
+     * @param merchantId merchantId
+     * @param orderId orderId
+     * @param orderNo orderNo
+     * @param refundId refundId
+     * @param refundNo refundNo
+     * @param userId userId
+     * @param refundAmount refundAmount
+     * @param thirdPartyRefundNo thirdPartyRefundNo
+     * @param channelType channelType
+     * @param channelSubType channelSubType
+     */
     public RefundSuccessEvent(Object source, Long tenantId, Long merchantId, Long orderId, String orderNo,
                               Long refundId, String refundNo, Long userId, BigDecimal refundAmount,
                               String thirdPartyRefundNo, String channelType, String channelSubType) {

@@ -34,10 +34,15 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
     /** HTTP客户端 */
     protected final OkHttpClient httpClient;
 
+    /** 创建 AbstractHttpIpQualityDetector 实例 */
     protected AbstractHttpIpQualityDetector() {
         this(Duration.ofSeconds(10));
     }
 
+    /**
+     * 创建 AbstractHttpIpQualityDetector 实例
+     * @param timeout timeout
+     */
     protected AbstractHttpIpQualityDetector(Duration timeout) {
         this.objectMapper = new ObjectMapper();
         this.httpClient = new OkHttpClient.Builder()
@@ -48,6 +53,7 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
     }
 
     @Override
+    /** Detect */
     public IpQuality detect(String ip) {
         if (ip == null || ip.isEmpty()) {
             return null;
@@ -78,6 +84,7 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
     }
 
     @Override
+    /** Detect */
     public IpQuality[] detect(String[] ips) {
         if (ips == null || ips.length == 0) {
             return new IpQuality[0];

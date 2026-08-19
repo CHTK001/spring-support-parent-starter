@@ -46,6 +46,12 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
     private final Map<String, PaymentManagedTask> taskRegistry = new LinkedHashMap<>();
     private final Map<String, ScheduledFuture<?>> scheduledFutures = new ConcurrentHashMap<>();
 
+    /**
+     * 创建 PaymentTaskSchedulerManager 实例
+     * @param paymentSchedulerConfigMapper paymentSchedulerConfigMapper
+     * @param taskScheduler taskScheduler
+     * @param managedTasks managedTasks
+     */
     public PaymentTaskSchedulerManager(PaymentSchedulerConfigMapper paymentSchedulerConfigMapper,
                                        @Qualifier("paymentThreadPoolTaskScheduler") ThreadPoolTaskScheduler taskScheduler,
                                        List<PaymentManagedTask> managedTasks) {
@@ -57,11 +63,13 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
     }
 
     @Override
+    /** AfterSingletonsInstantiated */
     public void afterSingletonsInstantiated() {
         syncDefaults();
         refreshAll();
     }
 
+    /** ListTasks */
     public synchronized List<PaymentSchedulerTaskVO> listTasks() {
         syncDefaults();
         Map<String, PaymentSchedulerConfig> configMap = loadConfigMap();
@@ -70,6 +78,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
                 .toList();
     }
 
+    /** 更新Task */
     public synchronized PaymentSchedulerTaskVO updateTask(String taskKey, PaymentSchedulerTaskUpdateDTO dto) {
         PaymentManagedTask task = requireTask(taskKey);
         PaymentSchedulerConfig config = requireConfig(taskKey);
@@ -89,16 +98,19 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         return toTaskVO(task, requireConfig(taskKey));
     }
 
+    /** TriggerTask */
     public synchronized PaymentSchedulerTaskVO triggerTask(String taskKey) {
         PaymentManagedTask task = requireTask(taskKey);
         executeTask(task, requireConfig(taskKey));
         return toTaskVO(task, requireConfig(taskKey));
     }
 
+    /** RefreshAll */
     public synchronized void refreshAll() {
         taskRegistry.keySet().forEach(this::refreshTask);
     }
 
+    /** RefreshTask */
     public synchronized void refreshTask(String taskKey) {
         PaymentManagedTask task = requireTask(taskKey);
         PaymentSchedulerConfig config = requireConfig(taskKey);
@@ -115,6 +127,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         }
     }
 
+    /** 执行Task */
     private void executeTask(PaymentManagedTask task, PaymentSchedulerConfig config) {
         LocalDateTime startedAt = LocalDateTime.now();
         config.setLastStartedAt(startedAt);
@@ -137,6 +150,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         }
     }
 
+    /** SyncDefaults */
     private synchronized void syncDefaults() {
         Map<String, PaymentSchedulerConfig> configMap = loadConfigMap();
         for (PaymentManagedTask task : taskRegistry.values()) {
@@ -177,6 +191,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         }
     }
 
+    /** 加载ConfigMap */
     private Map<String, PaymentSchedulerConfig> loadConfigMap() {
         return paymentSchedulerConfigMapper.selectList(new LambdaQueryWrapper<PaymentSchedulerConfig>()
                         .orderByAsc(PaymentSchedulerConfig::getId))
@@ -184,6 +199,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
                 .collect(LinkedHashMap::new, (map, item) -> map.put(item.getTaskKey(), item), LinkedHashMap::putAll);
     }
 
+    /** ToTaskVO */
     private PaymentSchedulerTaskVO toTaskVO(PaymentManagedTask task, PaymentSchedulerConfig config) {
         PaymentSchedulerTaskVO vo = new PaymentSchedulerTaskVO();
         vo.setTaskKey(task.taskKey());
@@ -202,6 +218,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         return vo;
     }
 
+    /** 解析NextExecutionTime */
     private LocalDateTime resolveNextExecutionTime(String cronExpression, Boolean enabled) {
         if (!Boolean.TRUE.equals(enabled) || !StringUtils.hasText(cronExpression) || !CronExpression.isValidExpression(cronExpression)) {
             return null;
@@ -209,11 +226,13 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         return CronExpression.parse(cronExpression).next(LocalDateTime.now());
     }
 
+    /** 是否Scheduled */
     private boolean isScheduled(String taskKey) {
         ScheduledFuture<?> future = scheduledFutures.get(taskKey);
         return future != null && !future.isCancelled();
     }
 
+    /** CancelTask */
     private void cancelTask(String taskKey) {
         ScheduledFuture<?> future = scheduledFutures.remove(taskKey);
         if (future != null) {
@@ -221,6 +240,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         }
     }
 
+    /** RequireTask */
     private PaymentManagedTask requireTask(String taskKey) {
         PaymentManagedTask task = taskRegistry.get(taskKey);
         if (task == null) {
@@ -229,6 +249,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         return task;
     }
 
+    /** RequireConfig */
     private PaymentSchedulerConfig requireConfig(String taskKey) {
         PaymentSchedulerConfig config = paymentSchedulerConfigMapper.selectOne(new LambdaQueryWrapper<PaymentSchedulerConfig>()
                 .eq(PaymentSchedulerConfig::getTaskKey, taskKey)
@@ -239,12 +260,14 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         return config;
     }
 
+    /** 校验Cron */
     private void validateCron(String cronExpression) {
         if (!StringUtils.hasText(cronExpression) || !CronExpression.isValidExpression(cronExpression.trim())) {
             throw new PaymentException("无效的 Cron 表达式: " + cronExpression);
         }
     }
 
+    /** Abbreviate */
     private String abbreviate(String text, int maxLength) {
         if (text == null || text.length() <= maxLength) {
             return text;
@@ -252,6 +275,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         return text.substring(0, maxLength);
     }
 
+    /** 解析记录错误Message */
     private String resolveErrorMessage(Throwable throwable) {
         if (throwable == null) {
             return null;
@@ -262,6 +286,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         return throwable.getClass().getSimpleName();
     }
 
+    /** Rethrow */
     private RuntimeException rethrow(Throwable throwable, String taskKey) {
         if (throwable instanceof RuntimeException runtimeException) {
             return runtimeException;

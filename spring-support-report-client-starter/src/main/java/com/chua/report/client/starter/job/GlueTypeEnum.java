@@ -37,6 +37,7 @@ public enum GlueTypeEnum {
         this.suffix = suffix;
     }
 
+    /** Match */
     public static GlueTypeEnum match(String name){
         for (GlueTypeEnum item: GlueTypeEnum.values()) {
             if (item.name().equals(name)) {

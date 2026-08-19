@@ -46,17 +46,20 @@ public class RedisOperationProvider implements OperationProvider {
     private final MonitorConfigService configService;
 
     @Override
+    /** ServiceType */
     public ServiceType serviceType() {
         return ServiceType.REDIS;
     }
 
     @Override
+    /** 扫描Keys */
     public Mono<ScanResult> scanKeys(CollectContext ctx, String pattern, String cursor, int count) {
         return Mono.fromCallable(() -> doScanKeys(ctx, pattern, cursor, count))
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
     @Override
+    /** 获取Value */
     public Mono<String> getValue(CollectContext ctx, String key) {
         return Mono.fromCallable(() -> {
             try (RedisClient client = buildClient(ctx)) {
@@ -66,6 +69,7 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     @Override
+    /** 设置Value */
     public Mono<Boolean> setValue(CollectContext ctx, String key, String value, Duration ttl) {
         return Mono.fromCallable(() -> {
             try (RedisClient client = buildClient(ctx)) {
@@ -80,6 +84,7 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     @Override
+    /** 删除Keys */
     public Mono<Long> deleteKeys(CollectContext ctx, List<String> keys) {
         return Mono.fromCallable(() -> {
             if (!configService.getBoolean(CONFIG_KEY_ALLOW_DELETE, false)) {
@@ -92,6 +97,7 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     @Override
+    /** Expire */
     public Mono<Boolean> expire(CollectContext ctx, String key, Duration ttl) {
         return Mono.fromCallable(() -> {
             try (RedisClient client = buildClient(ctx)) {
@@ -102,6 +108,7 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     @Override
+    /** Ttl */
     public Mono<Long> ttl(CollectContext ctx, String key) {
         return Mono.fromCallable(() -> {
             try (RedisClient client = buildClient(ctx)) {
@@ -111,6 +118,7 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     @Override
+    /** Type */
     public Mono<String> type(CollectContext ctx, String key) {
         return Mono.fromCallable(() -> {
             try (RedisClient client = buildClient(ctx)) {

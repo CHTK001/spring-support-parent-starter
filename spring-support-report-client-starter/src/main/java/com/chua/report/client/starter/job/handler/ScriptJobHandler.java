@@ -86,6 +86,7 @@ public class ScriptJobHandler implements JobHandler {
     }
 
     @Override
+    /** 执行 */
     public void execute() throws Exception {
         // 验证脚本类型
         if (!glueType.isScript()) {

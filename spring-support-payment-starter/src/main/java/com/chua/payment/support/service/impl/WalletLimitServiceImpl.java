@@ -34,6 +34,7 @@ public class WalletLimitServiceImpl implements WalletLimitService {
     private final WalletAccountLogMapper logMapper;
 
     @Override
+    /** 获取Limit */
     public MerchantWalletLimit getLimit(Long merchantId) {
         if (merchantId == null) {
             return null;
@@ -44,6 +45,7 @@ public class WalletLimitServiceImpl implements WalletLimitService {
     }
 
     @Override
+    /** 保存Or更新 */
     public void saveOrUpdate(MerchantWalletLimit limit) {
         if (limit == null || limit.getMerchantId() == null) {
             throw new PaymentException("限额配置不能为空");
@@ -64,6 +66,7 @@ public class WalletLimitServiceImpl implements WalletLimitService {
     }
 
     @Override
+    /** 校验RechargeLimit */
     public void validateRechargeLimit(Long merchantId, Long userId, BigDecimal amount) {
         MerchantWalletLimit limit = getLimit(merchantId);
         if (limit == null) {
@@ -83,6 +86,7 @@ public class WalletLimitServiceImpl implements WalletLimitService {
     }
 
     @Override
+    /** 校验WithdrawLimit */
     public void validateWithdrawLimit(Long merchantId, Long userId, BigDecimal amount) {
         MerchantWalletLimit limit = getLimit(merchantId);
         if (limit == null) {
@@ -102,6 +106,7 @@ public class WalletLimitServiceImpl implements WalletLimitService {
     }
 
     @Override
+    /** 校验TransferLimit */
     public void validateTransferLimit(Long merchantId, Long userId, BigDecimal amount) {
         MerchantWalletLimit limit = getLimit(merchantId);
         if (limit == null) {
@@ -121,6 +126,7 @@ public class WalletLimitServiceImpl implements WalletLimitService {
     }
 
     @Override
+    /** 校验BalanceLimit */
     public void validateBalanceLimit(Long merchantId, Long userId, BigDecimal currentBalance, BigDecimal addAmount) {
         MerchantWalletLimit limit = getLimit(merchantId);
         if (limit == null || limit.getBalanceLimit() == null) {
@@ -133,6 +139,7 @@ public class WalletLimitServiceImpl implements WalletLimitService {
         }
     }
 
+    /** 获取TodayAmount */
     private BigDecimal getTodayAmount(Long merchantId, Long userId, String bizType) {
         LocalDateTime startOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
         LocalDateTime endOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);

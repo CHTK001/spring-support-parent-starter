@@ -53,6 +53,14 @@ public class PaymentOpsController {
     /** Paymentnotifyprocess服务 */
     private final PaymentNotifyProcessService paymentNotifyProcessService;
 
+    /**
+     * 创建 PaymentOpsController 实例
+     * @param paymentSchedulerTaskOpsService paymentSchedulerTaskOpsService
+     * @param paymentDashboardService paymentDashboardService
+     * @param paymentNotifyLogMapper paymentNotifyLogMapper
+     * @param paymentNotifyErrorMapper paymentNotifyErrorMapper
+     * @param paymentNotifyProcessService paymentNotifyProcessService
+     */
     public PaymentOpsController(PaymentSchedulerTaskOpsService paymentSchedulerTaskOpsService,
                                 PaymentDashboardService paymentDashboardService,
                                 PaymentNotifyLogMapper paymentNotifyLogMapper,
@@ -66,12 +74,14 @@ public class PaymentOpsController {
     }
 
     @GetMapping("/dashboard/summary")
+    /** DashboardSummary */
     public PaymentDashboardSummaryVO dashboardSummary(@RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
                                                       @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         return paymentDashboardService.summary(startDate, endDate);
     }
 
     @GetMapping("/overview")
+    /** Overview */
     public PaymentOpsOverviewVO overview() {
         PaymentOpsOverviewVO overview = new PaymentOpsOverviewVO();
         overview.setCallbackAudits(callbackAudits());
@@ -80,22 +90,30 @@ public class PaymentOpsController {
     }
 
     @GetMapping("/scheduler/tasks")
+    /** ListTasks */
     public List<PaymentSchedulerTaskVO> listTasks() {
         return paymentSchedulerTaskOpsService.listTasks();
     }
 
     @PutMapping("/scheduler/tasks/{taskKey}")
+    /**
+     * 更新Task
+     * @param taskKey taskKey
+     * @param dto dto
+     */
     public PaymentSchedulerTaskVO updateTask(@PathVariable String taskKey,
                                              @RequestBody PaymentSchedulerTaskUpdateDTO dto) {
         return paymentSchedulerTaskOpsService.updateTask(taskKey, dto);
     }
 
     @PostMapping("/scheduler/tasks/{taskKey}/trigger")
+    /** TriggerTask */
     public PaymentSchedulerTaskVO triggerTask(@PathVariable String taskKey) {
         return paymentSchedulerTaskOpsService.triggerTask(taskKey);
     }
 
     @GetMapping("/notify/log/page")
+    /** Page通知Logs */
     public PageResult<PaymentNotifyLog> pageNotifyLogs(@RequestParam(defaultValue = "1") int pageNum,
                                                        @RequestParam(defaultValue = "10") int pageSize,
                                                        @RequestParam(required = false) String notifyType,
@@ -122,6 +140,7 @@ public class PaymentOpsController {
     }
 
     @GetMapping("/notify/error/page")
+    /** Page通知Errors */
     public PageResult<PaymentNotifyError> pageNotifyErrors(@RequestParam(defaultValue = "1") int pageNum,
                                                            @RequestParam(defaultValue = "10") int pageSize,
                                                            @RequestParam(required = false) String notifyType,
@@ -148,11 +167,13 @@ public class PaymentOpsController {
     }
 
     @PostMapping("/notify/error/{id}/retry")
+    /** Retry通知记录错误 */
     public Boolean retryNotifyError(@PathVariable Long id) {
         paymentNotifyProcessService.retryFailedNotify(id);
         return true;
     }
 
+    /** CallbackAudits */
     private List<PaymentCallbackAuditVO> callbackAudits() {
         return List.of(
                 callbackAudit(
@@ -197,6 +218,7 @@ public class PaymentOpsController {
                         "支付分默认支持 scoped 路由，但请求或渠道 extConfig 中的支付分回调地址会覆盖。"));
     }
 
+    /** OrderNumberStrategies */
     private List<PaymentOrderNumberStrategyVO> orderNumberStrategies() {
         return List.of(
                 orderNumberStrategy(
@@ -222,6 +244,16 @@ public class PaymentOpsController {
                         "支付分订单与普通支付订单分表存储，不与标准支付 orderNo 混用。"));
     }
 
+    /**
+     * CallbackAudit
+     * @param callbackType callbackType
+     * @param callbackName callbackName
+     * @param recommendedPattern recommendedPattern
+     * @param scopedIdentifier scopedIdentifier
+     * @param strictScoped strictScoped
+     * @param effectivePriority effectivePriority
+     * @param notes notes
+     */
     private PaymentCallbackAuditVO callbackAudit(String callbackType,
                                                 String callbackName,
                                                 String recommendedPattern,
@@ -240,6 +272,15 @@ public class PaymentOpsController {
         return vo;
     }
 
+    /**
+     * OrderNumberStrategy
+     * @param businessType businessType
+     * @param fieldName fieldName
+     * @param generationRule generationRule
+     * @param callerOverrideField callerOverrideField
+     * @param idempotentRule idempotentRule
+     * @param notes notes
+     */
     private PaymentOrderNumberStrategyVO orderNumberStrategy(String businessType,
                                                              String fieldName,
                                                              String generationRule,

@@ -40,12 +40,14 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     private static final String DEFAULT_KEY_GENERATOR = "tenantedKeyGenerator";
 
     @Override
+    /** 是否CandidateClass */
     public boolean isCandidateClass(Class<?> targetClass) {
         return AnnotationUtils.isCandidateClass(targetClass, CACHE_OPERATION_ANNOTATIONS);
     }
 
     @Override
     @Nullable
+    /** 解析CacheAnnotations */
     public Collection<CacheOperation> parseCacheAnnotations(Class<?> type) {
         DefaultCacheConfig defaultConfig = new DefaultCacheConfig(type);
         return parseCacheAnnotations(defaultConfig, type);
@@ -53,12 +55,14 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
 
     @Override
     @Nullable
+    /** 解析CacheAnnotations */
     public Collection<CacheOperation> parseCacheAnnotations(Method method) {
         DefaultCacheConfig defaultConfig = new DefaultCacheConfig(method.getDeclaringClass());
         return parseCacheAnnotations(defaultConfig, method);
     }
 
     @Nullable
+    /** 解析CacheAnnotations */
     private Collection<CacheOperation> parseCacheAnnotations(DefaultCacheConfig cachingConfig, AnnotatedElement ae) {
         Collection<CacheOperation> ops = parseCacheAnnotations(cachingConfig, ae, false);
         if (ops != null && ops.size() > 1) {
@@ -71,6 +75,44 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     }
 
     @Nullable
+    /**
+     * 解析CacheAnnotations
+     * @param cachingConfig cachingConfig
+     * @param ae ae
+     * @param localOnly localOnly
+     * @param CACHE_OPERATION_ANNOTATIONS CACHE_OPERATION_ANNOTATIONS
+     * @param CACHE_OPERATION_ANNOTATIONS CACHE_OPERATION_ANNOTATIONS
+     * @param cachingConfig cachingConfig
+     * @param cacheable cacheable
+     * @param cachingConfig cachingConfig
+     * @param cacheEvict cacheEvict
+     * @param cachingConfig cachingConfig
+     * @param cachePut cachePut
+     * @param cachingConfig cachingConfig
+     * @param caching caching
+     * @param ops ops
+     * @param ae ae
+     * @param defaultConfig defaultConfig
+     * @param cacheable cacheable
+     * @param ae ae
+     * @param defaultConfig defaultConfig
+     * @param cacheEvict cacheEvict
+     * @param ae ae
+     * @param defaultConfig defaultConfig
+     * @param cachePut cachePut
+     * @param ae ae
+     * @param defaultConfig defaultConfig
+     * @param caching caching
+     * @param ops ops
+     * @param defaultConfig defaultConfig
+     * @param cacheable cacheable
+     * @param defaultConfig defaultConfig
+     * @param cacheEvict cacheEvict
+     * @param defaultConfig defaultConfig
+     * @param cachePut cachePut
+     * @param target target
+     * @param builder builder
+     */
     private Collection<CacheOperation> parseCacheAnnotations(
             DefaultCacheConfig cachingConfig, AnnotatedElement ae, boolean localOnly) {
 
@@ -93,6 +135,30 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
         return ops;
     }
 
+    /**
+     * 解析CacheableAnnotation
+     * @param ae ae
+     * @param defaultConfig defaultConfig
+     * @param cacheable cacheable
+     * @param ae ae
+     * @param defaultConfig defaultConfig
+     * @param cacheEvict cacheEvict
+     * @param ae ae
+     * @param defaultConfig defaultConfig
+     * @param cachePut cachePut
+     * @param ae ae
+     * @param defaultConfig defaultConfig
+     * @param caching caching
+     * @param ops ops
+     * @param defaultConfig defaultConfig
+     * @param cacheable cacheable
+     * @param defaultConfig defaultConfig
+     * @param cacheEvict cacheEvict
+     * @param defaultConfig defaultConfig
+     * @param cachePut cachePut
+     * @param target target
+     * @param builder builder
+     */
     private CacheableOperation parseCacheableAnnotation(
             AnnotatedElement ae, DefaultCacheConfig defaultConfig, Cacheable cacheable) {
 
@@ -111,6 +177,27 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
         return builder.build();
     }
 
+    /**
+     * 解析EvictAnnotation
+     * @param ae ae
+     * @param defaultConfig defaultConfig
+     * @param cacheEvict cacheEvict
+     * @param ae ae
+     * @param defaultConfig defaultConfig
+     * @param cachePut cachePut
+     * @param ae ae
+     * @param defaultConfig defaultConfig
+     * @param caching caching
+     * @param ops ops
+     * @param defaultConfig defaultConfig
+     * @param cacheable cacheable
+     * @param defaultConfig defaultConfig
+     * @param cacheEvict cacheEvict
+     * @param defaultConfig defaultConfig
+     * @param cachePut cachePut
+     * @param target target
+     * @param builder builder
+     */
     private CacheEvictOperation parseEvictAnnotation(
             AnnotatedElement ae, DefaultCacheConfig defaultConfig, CacheEvict cacheEvict) {
 
@@ -129,6 +216,24 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
         return builder.build();
     }
 
+    /**
+     * 解析PutAnnotation
+     * @param ae ae
+     * @param defaultConfig defaultConfig
+     * @param cachePut cachePut
+     * @param ae ae
+     * @param defaultConfig defaultConfig
+     * @param caching caching
+     * @param ops ops
+     * @param defaultConfig defaultConfig
+     * @param cacheable cacheable
+     * @param defaultConfig defaultConfig
+     * @param cacheEvict cacheEvict
+     * @param defaultConfig defaultConfig
+     * @param cachePut cachePut
+     * @param target target
+     * @param builder builder
+     */
     private CacheOperation parsePutAnnotation(
             AnnotatedElement ae, DefaultCacheConfig defaultConfig, CachePut cachePut) {
 
@@ -146,6 +251,21 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
         return builder.build();
     }
 
+    /**
+     * 解析CachingAnnotation
+     * @param ae ae
+     * @param defaultConfig defaultConfig
+     * @param caching caching
+     * @param ops ops
+     * @param defaultConfig defaultConfig
+     * @param cacheable cacheable
+     * @param defaultConfig defaultConfig
+     * @param cacheEvict cacheEvict
+     * @param defaultConfig defaultConfig
+     * @param cachePut cachePut
+     * @param target target
+     * @param builder builder
+     */
     private void parseCachingAnnotation(
             AnnotatedElement ae, DefaultCacheConfig defaultConfig, Caching caching, Collection<CacheOperation> ops) {
 
@@ -186,10 +306,15 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
         /** Initialized */
         private boolean initialized = false;
 
+        /**
+         * 创建 DefaultCacheConfig 实例
+         * @param target target
+         */
         public DefaultCacheConfig(Class<?> target) {
             this.target = target;
         }
 
+        /** 应用Default */
         public void applyDefault(CacheOperation.Builder builder) {
             if (!this.initialized) {
                 CacheConfig annotation = AnnotatedElementUtils.findMergedAnnotation(this.target, CacheConfig.class);

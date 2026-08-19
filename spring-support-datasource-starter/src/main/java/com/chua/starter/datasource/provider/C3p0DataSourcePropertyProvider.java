@@ -23,11 +23,13 @@ public class C3p0DataSourcePropertyProvider implements DataSourcePropertyProvide
     );
 
     @Override
+    /** 获取DataSourceType */
     public Class<ComboPooledDataSource> getDataSourceType() {
         return ComboPooledDataSource.class;
     }
 
     @Override
+    /** 获取Properties */
     public Map<String, Object> getProperties(ComboPooledDataSource dataSource) {
         Map<String, Object> properties = new HashMap<>();
         
@@ -61,11 +63,13 @@ public class C3p0DataSourcePropertyProvider implements DataSourcePropertyProvide
     }
 
     @Override
+    /** 设置Properties */
     public void setProperties(ComboPooledDataSource dataSource, Map<String, Object> properties) {
         properties.forEach((name, value) -> setProperty(dataSource, name, value));
     }
 
     @Override
+    /** 设置Property */
     public void setProperty(ComboPooledDataSource dataSource, String name, Object value) {
         if (value == null) {
             return;
@@ -109,15 +113,18 @@ public class C3p0DataSourcePropertyProvider implements DataSourcePropertyProvide
     }
 
     @Override
+    /** 获取PropertyNameMapping */
     public Map<String, String> getPropertyNameMapping() {
         return PROPERTY_MAPPING;
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         return 40;
     }
 
+    /** ToInt */
     private int toInt(Object value) {
         if (value instanceof Number) {
             return ((Number) value).intValue();
@@ -125,6 +132,7 @@ public class C3p0DataSourcePropertyProvider implements DataSourcePropertyProvide
         return Integer.parseInt(String.valueOf(value));
     }
 
+    /** ToBoolean */
     private boolean toBoolean(Object value) {
         if (value instanceof Boolean) {
             return (Boolean) value;

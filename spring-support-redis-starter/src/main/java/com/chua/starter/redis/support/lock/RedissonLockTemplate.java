@@ -55,11 +55,13 @@ public class RedissonLockTemplate implements LockTemplate {
     }
 
     @Override
+    /** 锁 */
     public <T> T lock(String lockKey, Supplier<T> supplier) {
         return lock(lockKey, DEFAULT_LEASE_TIME, supplier);
     }
 
     @Override
+    /** 锁 */
     public <T> T lock(String lockKey, Duration leaseTime, Supplier<T> supplier) {
         RLock lock = getLock(lockKey);
         try {
@@ -75,11 +77,13 @@ public class RedissonLockTemplate implements LockTemplate {
     }
 
     @Override
+    /** Try锁 */
     public <T> T tryLock(String lockKey, Duration waitTime, Supplier<T> supplier) {
         return tryLock(lockKey, waitTime, DEFAULT_LEASE_TIME, supplier);
     }
 
     @Override
+    /** Try锁 */
     public <T> T tryLock(String lockKey, Duration waitTime, Duration leaseTime, Supplier<T> supplier) {
         RLock lock = getLock(lockKey);
         boolean acquired = false;
@@ -105,11 +109,13 @@ public class RedissonLockTemplate implements LockTemplate {
     }
 
     @Override
+    /** Try锁 */
     public <T> T tryLock(String lockKey, Duration waitTime, Supplier<T> supplier, Supplier<T> fallback) {
         return tryLock(lockKey, waitTime, DEFAULT_LEASE_TIME, supplier, fallback);
     }
 
     @Override
+    /** Try锁 */
     public <T> T tryLock(String lockKey, Duration waitTime, Duration leaseTime, Supplier<T> supplier, Supplier<T> fallback) {
         RLock lock = getLock(lockKey);
         boolean acquired = false;
@@ -135,11 +141,13 @@ public class RedissonLockTemplate implements LockTemplate {
     }
 
     @Override
+    /** 锁 */
     public void lock(String lockKey, Runnable action) {
         lock(lockKey, DEFAULT_LEASE_TIME, action);
     }
 
     @Override
+    /** 锁 */
     public void lock(String lockKey, Duration leaseTime, Runnable action) {
         RLock lock = getLock(lockKey);
         try {
@@ -155,11 +163,13 @@ public class RedissonLockTemplate implements LockTemplate {
     }
 
     @Override
+    /** Try锁 */
     public boolean tryLock(String lockKey, Duration waitTime, Runnable action) {
         return tryLock(lockKey, waitTime, DEFAULT_LEASE_TIME, action);
     }
 
     @Override
+    /** Try锁 */
     public boolean tryLock(String lockKey, Duration waitTime, Duration leaseTime, Runnable action) {
         RLock lock = getLock(lockKey);
         boolean acquired = false;
@@ -186,11 +196,13 @@ public class RedissonLockTemplate implements LockTemplate {
     }
 
     @Override
+    /** 获取 */
     public boolean acquire(String lockKey) {
         return acquire(lockKey, DEFAULT_WAIT_TIME, DEFAULT_LEASE_TIME);
     }
 
     @Override
+    /** 获取 */
     public boolean acquire(String lockKey, Duration waitTime, Duration leaseTime) {
         RLock lock = getLock(lockKey);
         try {
@@ -209,6 +221,7 @@ public class RedissonLockTemplate implements LockTemplate {
     }
 
     @Override
+    /** 释放 */
     public void release(String lockKey) {
         RLock lock = getLock(lockKey);
         if (lock.isHeldByCurrentThread()) {
@@ -218,12 +231,14 @@ public class RedissonLockTemplate implements LockTemplate {
     }
 
     @Override
+    /** 是否Locked */
     public boolean isLocked(String lockKey) {
         RLock lock = getLock(lockKey);
         return lock.isLocked();
     }
 
     @Override
+    /** 是否HeldByCurrentThread */
     public boolean isHeldByCurrentThread(String lockKey) {
         RLock lock = getLock(lockKey);
         return lock.isHeldByCurrentThread();

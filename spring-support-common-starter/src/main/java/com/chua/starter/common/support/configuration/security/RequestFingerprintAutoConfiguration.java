@@ -129,6 +129,7 @@ public class RequestFingerprintAutoConfiguration {
         }
     }
 
+    /** MatchBodyMethod */
     private boolean matchBodyMethod(String method, FingerprintProps props) {
         if (method == null) {
             return false;
@@ -139,6 +140,7 @@ public class RequestFingerprintAutoConfiguration {
         return props.getBodyMethods().contains(method.toUpperCase(Locale.ROOT));
     }
 
+    /** Within获取大小Limit */
     private boolean withinSizeLimit(HttpServletRequest req, long maxBytes) {
         if (maxBytes <= 0) {
             return true;
@@ -208,106 +210,132 @@ public class RequestFingerprintAutoConfiguration {
         /** Rejectduplicate */
         private boolean rejectDuplicate = false;
 
+        /** 是否Enabled */
         public boolean isEnabled() {
             return enabled;
         }
 
+        /** 设置Enabled */
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
         }
 
+        /** 获取HeaderName */
         public String getHeaderName() {
             return headerName;
         }
 
+        /** 设置HeaderName */
         public void setHeaderName(String headerName) {
             this.headerName = headerName;
         }
 
+        /** 获取Algorithm */
         public String getAlgorithm() {
             return algorithm;
         }
 
+        /** 设置Algorithm */
         public void setAlgorithm(String algorithm) {
             this.algorithm = algorithm;
         }
 
+        /** 获取Salt */
         public String getSalt() {
             return salt;
         }
 
+        /** 设置Salt */
         public void setSalt(String salt) {
             this.salt = salt;
         }
 
+        /** 是否IncludeMethod */
         public boolean isIncludeMethod() {
             return includeMethod;
         }
 
+        /** 设置IncludeMethod */
         public void setIncludeMethod(boolean includeMethod) {
             this.includeMethod = includeMethod;
         }
 
+        /** 是否IncludePath */
         public boolean isIncludePath() {
             return includePath;
         }
 
+        /** 设置IncludePath */
         public void setIncludePath(boolean includePath) {
             this.includePath = includePath;
         }
 
+        /** 是否IncludeParams */
         public boolean isIncludeParams() {
             return includeParams;
         }
 
+        /** 设置IncludeParams */
         public void setIncludeParams(boolean includeParams) {
             this.includeParams = includeParams;
         }
 
+        /** 获取IncludeHeaders */
         public Set<String> getIncludeHeaders() {
             return includeHeaders;
         }
 
+        /** 设置IncludeHeaders */
         public void setIncludeHeaders(Set<String> includeHeaders) {
             this.includeHeaders = includeHeaders;
         }
 
+        /** 是否IncludeBody */
         public boolean isIncludeBody() {
             return includeBody;
         }
 
+        /** 设置IncludeBody */
         public void setIncludeBody(boolean includeBody) {
             this.includeBody = includeBody;
         }
 
+        /** 获取IncludeBody最大值Bytes */
         public long getIncludeBodyMaxBytes() {
             return includeBodyMaxBytes;
         }
 
+        /** 设置IncludeBody最大值Bytes */
         public void setIncludeBodyMaxBytes(long includeBodyMaxBytes) {
             this.includeBodyMaxBytes = includeBodyMaxBytes;
         }
 
+        /** 获取BodyMethods */
         public Set<String> getBodyMethods() {
             return bodyMethods;
         }
 
+        /** 设置BodyMethods */
         public void setBodyMethods(Set<String> bodyMethods) {
             this.bodyMethods = bodyMethods;
         }
 
+        /** 获取ValidityMs */
         public long getValidityMs() {
             return validityMs;
         }
 
+        /** 设置ValidityMs */
         public void setValidityMs(long validityMs) {
             this.validityMs = validityMs;
         }
 
+        /** 是否RejectDuplicate */
         public boolean isRejectDuplicate() {
             return rejectDuplicate;
         }
 
+        /** 设置RejectDuplicate */
         public void setRejectDuplicate(boolean rejectDuplicate) {
             this.rejectDuplicate = rejectDuplicate;
         }
@@ -351,6 +379,7 @@ public class RequestFingerprintAutoConfiguration {
         }
         byte[] getCachedBody() { return cachedBody; }
         @Override
+        /** 获取InputStream */
         public ServletInputStream getInputStream() {
             final java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(cachedBody);
             return new ServletInputStream() {
@@ -361,6 +390,7 @@ public class RequestFingerprintAutoConfiguration {
             };
         }
         @Override
+        /** 获取Reader */
         public java.io.BufferedReader getReader() {
             return new java.io.BufferedReader(new java.io.InputStreamReader(getInputStream(), StandardCharsets.UTF_8));
         }

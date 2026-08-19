@@ -33,16 +33,19 @@ public class JobDispatchHandler implements SyncMessageHandler {
     private final JobExecute jobExecute = new DefaultJobExecute();
 
     @Override
+    /** 获取Name */
     public String getName() {
         return "jobDispatchHandler";
     }
 
     @Override
+    /** Supports */
     public boolean supports(String topic) {
         return MonitorTopics.JOB_DISPATCH.equals(topic) || MonitorTopics.JOB_CANCEL.equals(topic);
     }
 
     @Override
+    /** 处理 */
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         if (MonitorTopics.JOB_DISPATCH.equals(topic)) {
             return handleDispatch(data);
@@ -112,11 +115,13 @@ public class JobDispatchHandler implements SyncMessageHandler {
         return param;
     }
 
+    /** 获取String */
     private String getString(Map<String, Object> data, String key) {
         Object v = data.get(key);
         return v != null ? v.toString() : null;
     }
 
+    /** 获取Int */
     private int getInt(Map<String, Object> data, String key) {
         Object v = data.get(key);
         if (v instanceof Number) return ((Number) v).intValue();
@@ -124,6 +129,7 @@ public class JobDispatchHandler implements SyncMessageHandler {
         return 0;
     }
 
+    /** 获取Long */
     private long getLong(Map<String, Object> data, String key) {
         Object v = data.get(key);
         if (v instanceof Number) return ((Number) v).longValue();

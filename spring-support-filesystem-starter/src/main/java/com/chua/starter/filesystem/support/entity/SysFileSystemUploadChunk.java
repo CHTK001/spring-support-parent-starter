@@ -57,30 +57,47 @@ public class SysFileSystemUploadChunk extends SysBase implements Serializable {
     /** Filesystem上传chunk上传时间 */
     private LocalDateTime filesystemUploadChunkUploadTime;
 
+    /** 创建 SysFileSystemUploadChunk 实例 */
     public SysFileSystemUploadChunk() {}
 
+    /** 获取FilesystemUploadChunkId */
     public Long getFilesystemUploadChunkId() { return filesystemUploadChunkId; }
+    /** 设置FilesystemUploadChunkId */
     public void setFilesystemUploadChunkId(Long v) { this.filesystemUploadChunkId = v; }
 
+    /** 获取FilesystemUploadChunkUploadId */
     public String getFilesystemUploadChunkUploadId() { return filesystemUploadChunkUploadId; }
+    /** 设置FilesystemUploadChunkUploadId */
     public void setFilesystemUploadChunkUploadId(String v) { this.filesystemUploadChunkUploadId = v; }
 
+    /** 获取FilesystemUploadChunkPartNumber */
     public Integer getFilesystemUploadChunkPartNumber() { return filesystemUploadChunkPartNumber; }
+    /** 设置FilesystemUploadChunkPartNumber */
     public void setFilesystemUploadChunkPartNumber(Integer v) { this.filesystemUploadChunkPartNumber = v; }
 
+    /** 获取FilesystemUploadChunk获取大小 */
     public Long getFilesystemUploadChunkSize() { return filesystemUploadChunkSize; }
+    /** 设置FilesystemUploadChunk获取大小 */
     public void setFilesystemUploadChunkSize(Long v) { this.filesystemUploadChunkSize = v; }
 
+    /** 获取FilesystemUploadChunkEtag */
     public String getFilesystemUploadChunkEtag() { return filesystemUploadChunkEtag; }
+    /** 设置FilesystemUploadChunkEtag */
     public void setFilesystemUploadChunkEtag(String v) { this.filesystemUploadChunkEtag = v; }
 
+    /** 获取FilesystemUploadChunkStoragePath */
     public String getFilesystemUploadChunkStoragePath() { return filesystemUploadChunkStoragePath; }
+    /** 设置FilesystemUploadChunkStoragePath */
     public void setFilesystemUploadChunkStoragePath(String v) { this.filesystemUploadChunkStoragePath = v; }
 
+    /** 获取FilesystemUploadChunkStatus */
     public Integer getFilesystemUploadChunkStatus() { return filesystemUploadChunkStatus; }
+    /** 设置FilesystemUploadChunkStatus */
     public void setFilesystemUploadChunkStatus(Integer v) { this.filesystemUploadChunkStatus = v; }
 
+    /** 获取FilesystemUploadChunkUploadTime */
     public LocalDateTime getFilesystemUploadChunkUploadTime() { return filesystemUploadChunkUploadTime; }
+    /** 设置FilesystemUploadChunkUploadTime */
     public void setFilesystemUploadChunkUploadTime(LocalDateTime v) { this.filesystemUploadChunkUploadTime = v; }
 
     public static class Status {

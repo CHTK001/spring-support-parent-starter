@@ -24,6 +24,7 @@ public class UrlQpsInterceptor implements HandlerInterceptor {
     private static final String ATTR_START_TIME = "urlQps_startTime";
 
     @Override
+    /** Pre处理 */
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         // 记录请求开始时间
         request.setAttribute(ATTR_START_TIME, System.currentTimeMillis());
@@ -31,6 +32,13 @@ public class UrlQpsInterceptor implements HandlerInterceptor {
     }
 
     @Override
+    /**
+     * AfterCompletion
+     * @param request request
+     * @param response response
+     * @param handler handler
+     * @param ex ex
+     */
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, 
                                  Object handler, Exception ex) {
         try {

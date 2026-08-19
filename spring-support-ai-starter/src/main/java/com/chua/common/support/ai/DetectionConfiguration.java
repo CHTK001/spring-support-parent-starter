@@ -37,9 +37,13 @@ public class DetectionConfiguration {
         this.options = options;
     }
 
+    /** 获取Engine */
     public String getEngine() { return engine; }
+    /** 设置Engine */
     public void setEngine(String engine) { this.engine = engine; }
+    /** 获取Options */
     public Map<String, Object> getOptions() { return options; }
+    /** 设置Options */
     public void setOptions(Map<String, Object> options) { this.options = options; }
 
     /**
@@ -82,7 +86,9 @@ public class DetectionConfiguration {
          */
         private Map<String, Object> options;
 
+        /** Engine */
         public DetectionConfigurationBuilder engine(String engine) { this.engine = engine; return this; }
+        /** Options */
         public DetectionConfigurationBuilder options(Map<String, Object> options) { this.options = options; return this; }
 
         /**

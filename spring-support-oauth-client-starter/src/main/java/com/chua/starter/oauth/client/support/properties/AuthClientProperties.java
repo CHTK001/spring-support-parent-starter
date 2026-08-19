@@ -54,6 +54,7 @@ public class AuthClientProperties {
             "/**/node/receive_push"
     );
 
+    /** 创建 AuthClientProperties 实例 */
     public AuthClientProperties() {
     }
 

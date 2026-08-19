@@ -77,6 +77,7 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
     public static final String ATTR_SKIP_AUTH = "API_INTERNAL_SKIP_AUTH";
 
     @Override
+    /** Pre处理 */
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws Exception {
         if (!(handler instanceof HandlerMethod handlerMethod)) {

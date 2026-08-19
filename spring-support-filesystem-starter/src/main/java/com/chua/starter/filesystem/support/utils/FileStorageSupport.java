@@ -11,6 +11,7 @@ import com.chua.common.support.storage.FileStorage;
  */
 public final class FileStorageSupport {
 
+    /** 创建 FileStorageSupport 实例 */
     private FileStorageSupport() {
     }
 

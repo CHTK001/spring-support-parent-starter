@@ -14,6 +14,7 @@ public class PrivacyUtils {
     /** 默认脱敏字符 */
     private static final String MASK = "****";
 
+    /** 创建 PrivacyUtils 实例 */
     private PrivacyUtils() {
     }
 

@@ -22,14 +22,17 @@ public enum PaymentChannelType {
         this.description = description;
     }
 
+    /** 获取Code */
     public String getCode() {
         return code;
     }
 
+    /** 获取Description */
     public String getDescription() {
         return description;
     }
 
+    /** DescriptionOf */
     public static String descriptionOf(String code) {
         if (code == null) {
             return "";

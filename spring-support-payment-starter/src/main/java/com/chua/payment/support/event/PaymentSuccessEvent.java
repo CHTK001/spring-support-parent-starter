@@ -26,6 +26,19 @@ public class PaymentSuccessEvent extends PaymentEvent {
     /** 通道SUB类型 */
     private final String channelSubType;
 
+    /**
+     * 创建 PaymentSuccessEvent 实例
+     * @param source source
+     * @param tenantId tenantId
+     * @param merchantId merchantId
+     * @param orderId orderId
+     * @param orderNo orderNo
+     * @param userId userId
+     * @param paidAmount paidAmount
+     * @param thirdPartyOrderNo thirdPartyOrderNo
+     * @param channelType channelType
+     * @param channelSubType channelSubType
+     */
     public PaymentSuccessEvent(Object source, Long tenantId, Long merchantId, Long orderId, String orderNo,
                                Long userId, BigDecimal paidAmount, String thirdPartyOrderNo,
                                String channelType, String channelSubType) {

@@ -21,17 +21,20 @@ public class SpringSpelExpressionParser implements com.chua.common.support.lang.
     private final org.springframework.expression.ExpressionParser expressionParser = new org.springframework.expression.spel.standard.SpelExpressionParser();
 
     @Override
+    /** Type */
     public String type() {
         return "spring";
     }
 
     @Override
+    /** 解析 */
     public BTreeNode parse(String express) {
         Object value = expressionParser.parseExpression(express, new TemplateParserContext()).getValue(evaluationContext);
         return BTreeNode.value(value);
     }
 
     @Override
+    /** Generate */
     public String generate(BTreeNode node) {
         if (node == null) {
             return "";

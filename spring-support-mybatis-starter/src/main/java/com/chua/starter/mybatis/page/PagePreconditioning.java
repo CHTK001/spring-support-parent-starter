@@ -20,6 +20,10 @@ public class PagePreconditioning<T> {
     /** 页 */
     private final IPage<T> page;
 
+    /**
+     * 创建 PagePreconditioning 实例
+     * @param page page
+     */
     public PagePreconditioning(IPage<T> page) {
         this.page = page;
     }

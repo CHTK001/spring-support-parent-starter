@@ -123,26 +123,31 @@ public class DefaultScopeChatClient implements ChatClient {
     }
 
     @Override
+    /** 获取ModelName */
     public String getModelName() {
         return settings.getDefaultModel();
     }
 
     @Override
+    /** 获取Factory */
     public String getFactory() {
         return settings.getFactory();
     }
 
     @Override
+    /** 获取Provider */
     public String getProvider() {
         return settings.getProvider();
     }
 
     @Override
+    /** 获取DefaultModel */
     public String getDefaultModel() {
         return settings.getDefaultModel();
     }
 
     @Override
+    /** 获取Endpoint */
     public String getEndpoint() {
         ChatClientSetting setting = settings.getBaseSetting();
         if (setting == null) {
@@ -152,6 +157,7 @@ public class DefaultScopeChatClient implements ChatClient {
     }
 
     @Override
+    /** ListModels */
     public List<ModelDefinition> listModels() {
         List<ModelDefinition> local = cachedModels;
         if (!local.isEmpty()) {
@@ -169,6 +175,7 @@ public class DefaultScopeChatClient implements ChatClient {
     }
 
     @Override
+    /** Chat */
     public ChatResponse chat(ChatScope scope) {
         ChatScope normalized = normalize(scope);
         ChatContext context = resolveContext(normalized);
@@ -195,6 +202,7 @@ public class DefaultScopeChatClient implements ChatClient {
     }
 
     @Override
+    /** Chat */
     public void chat(ChatScope scope, Consumer<String> consumer, Runnable onComplete, Consumer<Throwable> onError) {
         ChatScope normalized = normalize(scope);
         ChatContext context = resolveContext(normalized);
@@ -227,6 +235,7 @@ public class DefaultScopeChatClient implements ChatClient {
     }
 
     @Override
+    /** ListTools */
     public List<AiTool> listTools(ChatScope scope) {
         if (toolRegistry.isEmpty()) {
             return List.of();
@@ -235,6 +244,7 @@ public class DefaultScopeChatClient implements ChatClient {
     }
 
     @Override
+    /** 调用Tool */
     public AiToolResult callTool(ChatScope scope, AiToolCall toolCall) {
         if (toolCall == null || toolCall.getName() == null) {
             return AiToolResult.builder()
@@ -297,10 +307,18 @@ public class DefaultScopeChatClient implements ChatClient {
     }
 
     @Override
+    /** 关闭 */
     public void close() {
     }
 
     @Override
+    /**
+     * 对话
+     * @param input input
+     * @param consumer consumer
+     * @param onComplete onComplete
+     * @param onError onError
+     */
     public void chat(String input, java.util.function.Consumer<ChatResponse> consumer,
                     Runnable onComplete, java.util.function.Consumer<Throwable> onError) {
         try {
@@ -320,11 +338,13 @@ public class DefaultScopeChatClient implements ChatClient {
     }
 
     @Override
+    /** ChatSync */
     public String chatSync(String input) {
         return chatSync(input, 0L);
     }
 
     @Override
+    /** ChatSyncWithResponse */
     public ChatSyncResponse chatSyncWithResponse(String input) {
         ChatResponse response = chat(ChatScope.builder().input(input).build());
         if (response == null) {
@@ -337,6 +357,7 @@ public class DefaultScopeChatClient implements ChatClient {
     }
 
     @Override
+    /** ChatSync */
     public String chatSync(String input, long timeoutMillis) {
         ChatScope scope = ChatScope.builder()
                 .input(input)
@@ -346,11 +367,13 @@ public class DefaultScopeChatClient implements ChatClient {
         return response != null ? response.getContent() : null;
     }
 
+    /** 发送 */
     public ChatResponse send(String message) {
         ChatScope scope = ChatScope.builder().input(message).build();
         return chat(scope);
     }
 
+    /** 发送 */
     public ChatResponse send(String systemPrompt, String message) {
         ChatScope scope = ChatScope.builder()
                 .systemPrompt(systemPrompt)
@@ -361,6 +384,7 @@ public class DefaultScopeChatClient implements ChatClient {
 
     // ==================== 内部实现 ====================
 
+    /** Normalize */
     private ChatScope normalize(ChatScope scope) {
         ChatScope effective = scope == null ? ChatScope.builder().build() : scope;
         return effective.toBuilder()
@@ -380,6 +404,7 @@ public class DefaultScopeChatClient implements ChatClient {
                 .build();
     }
 
+    /** 解析Context */
     private ChatContext resolveContext(ChatScope scope) {
         ChatContext source = copyContext(scope.getContext());
         if (!scope.isContextCompressionEnabled() || source.getHistory() == null
@@ -409,6 +434,7 @@ public class DefaultScopeChatClient implements ChatClient {
         return source;
     }
 
+    /** 解析Input */
     private String resolveInput(ChatScope scope, ChatContext context) {
         String input = StringUtils.defaultString(scope.getInput(), "");
         if (!scope.isInputOptimizationEnabled() || StringUtils.isBlank(input)) {
@@ -422,6 +448,7 @@ public class DefaultScopeChatClient implements ChatClient {
         return input;
     }
 
+    /** 运行HelperPrompt */
     private String runHelperPrompt(String helperPrompt, ChatScope scope) {
         ChatScope helperScope = scope.toBuilder()
                 .input(helperPrompt)
@@ -446,6 +473,12 @@ public class DefaultScopeChatClient implements ChatClient {
         }
     }
 
+    /**
+     * 执行Sync
+     * @param delegate delegate
+     * @param scope scope
+     * @param input input
+     */
     private ChatExecutionResult executeSync(com.chua.common.support.ai.chat.ChatClient delegate,
                                             ChatScope scope,
                                             String input) {
@@ -492,6 +525,7 @@ public class DefaultScopeChatClient implements ChatClient {
                 .build();
     }
 
+    /** 创建Delegate */
     private com.chua.common.support.ai.chat.ChatClient createDelegate(ChatScope scope, ChatContext context) {
         ChatClientSetting setting = createDelegateSetting(scope.isMcpEnabled());
         com.chua.common.support.ai.chat.ChatClient delegate = delegateFactory.apply(settings.getFactory(), setting);
@@ -554,6 +588,7 @@ public class DefaultScopeChatClient implements ChatClient {
         return delegate;
     }
 
+    /** 创建DelegateSetting */
     private ChatClientSetting createDelegateSetting(boolean mcpEnabled) {
         ChatClientSetting base = settings.getBaseSetting();
         if (base == null) {
@@ -567,6 +602,7 @@ public class DefaultScopeChatClient implements ChatClient {
                 .build();
     }
 
+    /** 复制Context */
     private ChatContext copyContext(ChatContext context) {
         ChatContext target = new ChatContext();
         if (context == null) {
@@ -579,14 +615,17 @@ public class DefaultScopeChatClient implements ChatClient {
         return target;
     }
 
+    /** 解析Timeout */
     private long resolveTimeout(ChatScope scope) {
         return scope.getTimeoutMillis() == null ? settings.getTimeoutMillis() : scope.getTimeoutMillis();
     }
 
+    /** 解析Model */
     private String resolveModel(ChatScope scope) {
         return StringUtils.defaultString(scope.getModel(), settings.getDefaultModel());
     }
 
+    /** 格式化Messages */
     private String formatMessages(List<ChatMessage> messages) {
         if (messages == null || messages.isEmpty()) {
             return "";
@@ -601,6 +640,7 @@ public class DefaultScopeChatClient implements ChatClient {
         return builder.toString();
     }
 
+    /** 关闭Quietly */
     private void closeQuietly(com.chua.common.support.ai.chat.ChatClient delegate) {
         if (delegate == null) {
             return;

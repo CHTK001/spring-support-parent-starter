@@ -97,6 +97,14 @@ public class TransactionalMessageTemplate {
         private final Object payload;
         private final Map<String, Object> headers;
 
+        /**
+         * 创建 MessageSendSynchronization 实例
+         * @param destination destination
+         * @param Object Object
+         * @param Map Map
+         * @param Object Object
+         * @param headers headers
+         */
         public MessageSendSynchronization(String destination, Object payload, Map<String, Object> headers) {
             this.destination = destination;
             this.payload = payload;
@@ -104,6 +112,7 @@ public class TransactionalMessageTemplate {
         }
 
         @Override
+        /** After提交 */
         public void afterCommit() {
             try {
                 SendResult result = messageTemplate.send(destination, payload, headers);
@@ -126,11 +135,16 @@ public class TransactionalMessageTemplate {
         /** Messages */
         private final List<TransactionalMessage> messages;
 
+        /**
+         * 创建 BatchMessageSendSynchronization 实例
+         * @param messages messages
+         */
         public BatchMessageSendSynchronization(List<TransactionalMessage> messages) {
             this.messages = new ArrayList<>(messages);
         }
 
         @Override
+        /** After提交 */
         public void afterCommit() {
             int successCount = 0;
             int failureCount = 0;
@@ -166,24 +180,40 @@ public class TransactionalMessageTemplate {
         private final Object payload;
         private final Map<String, Object> headers;
 
+        /**
+         * 创建 TransactionalMessage 实例
+         * @param destination destination
+         * @param Object Object
+         */
         public TransactionalMessage(String destination, Object payload) {
             this(destination, payload, null);
         }
 
+        /**
+         * 创建 TransactionalMessage 实例
+         * @param destination destination
+         * @param Object Object
+         * @param Map Map
+         * @param Object Object
+         * @param headers headers
+         */
         public TransactionalMessage(String destination, Object payload, Map<String, Object> headers) {
             this.destination = destination;
             this.payload = payload;
             this.headers = headers;
         }
 
+        /** 获取Destination */
         public String getDestination() {
             return destination;
         }
 
+        /** 获取Payload */
         public Object getPayload() {
             return payload;
         }
 
+        /** 获取Headers */
         public Map<String, Object> getHeaders() {
             return headers;
         }

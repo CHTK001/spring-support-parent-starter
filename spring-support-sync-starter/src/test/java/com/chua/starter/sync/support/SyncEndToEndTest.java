@@ -169,14 +169,17 @@ class SyncEndToEndTest {
 
         server.addListener(new com.chua.common.support.network.server.SyncServerListener() {
             @Override
+            /** OnClientConnected */
             public void onClientConnected(String clientId, java.util.Map<String, Object> metadata) {
             }
 
             @Override
+            /** OnClientDisconnected */
             public void onClientDisconnected(String clientId) {
             }
 
             @Override
+            /** OnMessage */
             public void onMessage(String clientId, String topic, Object message) {
                 receivedTopic.set(topic);
                 receivedData.set(String.valueOf(message));
@@ -184,6 +187,7 @@ class SyncEndToEndTest {
             }
 
             @Override
+            /** On记录错误 */
             public void onError(String clientId, Throwable cause) {
                 cause.printStackTrace();
             }
@@ -312,6 +316,7 @@ class SyncEndToEndTest {
 
     // ==================== 辅助方法 ====================
 
+    /** 创建WsServer */
     private static WebSocketSyncServer createWsServer(int port) {
         ServerSetting setting = ServerSetting.defaults();
         setting.setHost("127.0.0.1");
@@ -319,10 +324,12 @@ class SyncEndToEndTest {
         return new WebSocketSyncServer(setting);
     }
 
+    /** 创建WsClient */
     private static WebSocketSyncClient createWsClient(int port) {
         return new WebSocketSyncClient("ws://127.0.0.1:" + port);
     }
 
+    /** 创建HttpServer */
     private static HttpSyncServer createHttpServer(int port) {
         ServerSetting setting = ServerSetting.defaults();
         setting.setHost("127.0.0.1");
@@ -330,10 +337,12 @@ class SyncEndToEndTest {
         return new HttpSyncServer(setting);
     }
 
+    /** 创建HttpClient */
     private static HttpSyncClient createHttpClient(int port) {
         return new HttpSyncClient("http://127.0.0.1:" + port);
     }
 
+    /** WaitForHttp注册 */
     private static void waitForHttpRegister(int port, String clientId) throws Exception {
         if (clientId == null) {
             return;
@@ -359,6 +368,7 @@ class SyncEndToEndTest {
         fail("HTTP 客户端注册超时: " + clientId);
     }
 
+    /** AssertProtocolRegistered */
     private static void assertProtocolRegistered(String protocolName) {
         com.chua.common.support.spi.ServiceProvider<com.chua.common.support.network.sync.SyncClient> clientProvider =
                 com.chua.common.support.spi.ServiceProvider.of(com.chua.common.support.network.sync.SyncClient.class);

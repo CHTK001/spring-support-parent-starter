@@ -42,6 +42,12 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
     private final ApplicationEventPublisher eventPublisher;
     private final Map<String, MessageTemplate> templateMap = new ConcurrentHashMap<>();
 
+    /**
+     * 创建 MessageListenerBeanPostProcessor 实例
+     * @param messageTemplates messageTemplates
+     * @param queueProperties queueProperties
+     * @param eventPublisher eventPublisher
+     */
     public MessageListenerBeanPostProcessor(List<MessageTemplate> messageTemplates,
                                            QueueProperties queueProperties,
                                            ApplicationEventPublisher eventPublisher) {
@@ -51,6 +57,7 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
     }
 
     @Override
+    /** Post处理AfterInitialization */
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         if (messageTemplates == null || messageTemplates.isEmpty()) {
             return bean;

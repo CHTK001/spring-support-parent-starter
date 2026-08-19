@@ -30,6 +30,11 @@ public class SwaggerExportRunner implements CommandLineRunner {
     /** 属性 */
     private final SwaggerExportProperties properties;
 
+    /**
+     * 创建 SwaggerExportRunner 实例
+     * @param openAPIProvider openAPIProvider
+     * @param properties properties
+     */
     public SwaggerExportRunner(org.springframework.beans.factory.ObjectProvider<OpenAPI> openAPIProvider,
                                SwaggerExportProperties properties) {
         this.openAPI = openAPIProvider.getIfAvailable();
@@ -37,6 +42,7 @@ public class SwaggerExportRunner implements CommandLineRunner {
     }
 
     @Override
+    /** 运行 */
     public void run(String... args) {
         if (openAPI == null) {
             log.warn("[SwaggerExport] 未发现 OpenAPI Bean (SpringDoc 未加载?), 跳过导出");

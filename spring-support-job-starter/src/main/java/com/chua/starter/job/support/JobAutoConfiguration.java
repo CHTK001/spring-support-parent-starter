@@ -520,6 +520,7 @@ public class JobAutoConfiguration {
             seed();
         }
 
+        /** Seed */
         private void seed() {
             if (!(repository instanceof InMemoryJobRepository inMemory)) {
                 return;

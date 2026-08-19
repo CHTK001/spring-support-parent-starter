@@ -20,8 +20,10 @@ public final class KnowledgeGraphClientResolver {
     /** Default_timeout_millis */
     private static final long DEFAULT_TIMEOUT_MILLIS = 60_000L;
 
+    /** 创建 KnowledgeGraphClientResolver 实例 */
     private KnowledgeGraphClientResolver() {}
 
+    /** 解析 */
     public static KnowledgeGraphSettings resolve(SysAiGlobalSettingService service) {
         String provider = firstNonBlank(
                 getValue(service, GROUP, "llm_provider"),
@@ -47,6 +49,7 @@ public final class KnowledgeGraphClientResolver {
                 .build();
     }
 
+    /** 构建RuntimeSetting */
     private static ChatClientSetting buildRuntimeSetting(SysAiGlobalSettingService service, String provider) {
         ChatClientSetting setting = ChatClientSetting.builder()
                 .provider(provider)
@@ -66,18 +69,22 @@ public final class KnowledgeGraphClientResolver {
         return setting;
     }
 
+    /** 获取Value */
     private static String getValue(SysAiGlobalSettingService service, String group, String field) {
         return service.getValue(group, field).orElse(null);
     }
 
+    /** 获取Boolean */
     private static boolean getBoolean(SysAiGlobalSettingService service, String group, String field, boolean defaultValue) {
         return service.getBoolean(group, field, defaultValue);
     }
 
+    /** 获取Integer */
     private static Integer getInteger(SysAiGlobalSettingService service, String group, String field) {
         return getInteger(service, group, field, null);
     }
 
+    /** 获取Integer */
     private static Integer getInteger(SysAiGlobalSettingService service, String group, String field, Integer defaultValue) {
         String value = getValue(service, group, field);
         if (StringUtils.isBlank(value)) return defaultValue;
@@ -88,6 +95,7 @@ public final class KnowledgeGraphClientResolver {
         }
     }
 
+    /** 获取Double */
     private static Double getDouble(SysAiGlobalSettingService service, String group, String field) {
         String value = getValue(service, group, field);
         if (StringUtils.isBlank(value)) return null;
@@ -98,6 +106,7 @@ public final class KnowledgeGraphClientResolver {
         }
     }
 
+    /** FirstNonBlank */
     private static String firstNonBlank(String... values) {
         if (values == null) return null;
         for (String value : values) {

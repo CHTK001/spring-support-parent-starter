@@ -27,12 +27,14 @@ public class MetricsMessageInterceptor implements MessageInterceptor {
     private final ConcurrentHashMap<String, Long> sendTimestamps = new ConcurrentHashMap<>();
 
     @Override
+    /** Before发送 */
     public Message beforeSend(Message message) {
         sendTimestamps.put(message.getId(), System.currentTimeMillis());
         return message;
     }
 
     @Override
+    /** After发送 */
     public void afterSend(Message message, boolean success, Throwable error) {
         String destination = message.getDestination();
         if (success) {
@@ -52,12 +54,14 @@ public class MetricsMessageInterceptor implements MessageInterceptor {
     }
 
     @Override
+    /** Before接收 */
     public Message beforeReceive(Message message) {
         message.getHeaders().put("receiveStartTime", System.currentTimeMillis());
         return message;
     }
 
     @Override
+    /** After接收 */
     public void afterReceive(Message message, boolean success, Throwable error) {
         String destination = message.getDestination();
         if (success) {
@@ -120,6 +124,7 @@ public class MetricsMessageInterceptor implements MessageInterceptor {
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         return -100; // 高优先级
     }

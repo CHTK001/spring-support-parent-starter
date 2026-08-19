@@ -41,6 +41,7 @@ public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient>
         this.chatClient = buildClientSafe();
     }
 
+    /** Rebuild */
     public synchronized void rebuild() {
         ChatClient old = this.chatClient;
         ChatClient newClient = buildClientSafe();
@@ -50,6 +51,7 @@ public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient>
         }
     }
 
+    /** 构建ClientSafe */
     private ChatClient buildClientSafe() {
         try {
             return buildClient();
@@ -60,6 +62,7 @@ public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient>
         }
     }
 
+    /** 构建Client */
     private ChatClient buildClient() {
         String compressionModel = getValue("compression_model");
         if (StringUtils.isBlank(compressionModel)) {
@@ -90,6 +93,7 @@ public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient>
     }
 
     @Override
+    /** 获取Object */
     public ChatClient getObject() {
         return chatClient;
     }
@@ -100,14 +104,17 @@ public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient>
     }
 
     @Override
+    /** 是否Singleton */
     public boolean isSingleton() {
         return true;
     }
 
+    /** 获取Value */
     private String getValue(String field) {
         return sysAiGlobalSettingService.getValue(GROUP, field).orElse(null);
     }
 
+    /** 获取Long */
     private long getLong(String field, long defaultValue) {
         String value = getValue(field);
         if (StringUtils.isBlank(value)) return defaultValue;
@@ -118,6 +125,7 @@ public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient>
         }
     }
 
+    /** FirstNonBlank */
     private static String firstNonBlank(String... values) {
         if (values == null) return null;
         for (String v : values) {
@@ -126,6 +134,7 @@ public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient>
         return null;
     }
 
+    /** 关闭Quietly */
     private static void closeQuietly(ChatClient client) {
         if (client != null) {
             try {

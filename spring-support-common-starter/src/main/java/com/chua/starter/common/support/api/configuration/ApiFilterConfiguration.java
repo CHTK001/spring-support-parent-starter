@@ -95,11 +95,16 @@ public class ApiFilterConfiguration  {
         /** 版本argument解析器 */
         private final VersionArgumentResolver versionArgumentResolver;
 
+        /**
+         * 创建 ApiVersionFilter 实例
+         * @param versionArgumentResolver versionArgumentResolver
+         */
         public ApiVersionFilter(VersionArgumentResolver versionArgumentResolver) {
             this.versionArgumentResolver = versionArgumentResolver;
         }
 
         @Override
+        /** Do过滤 */
         public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
                 throws IOException, ServletException {
             if (versionArgumentResolver != null && response instanceof HttpServletResponse httpServletResponse) {
@@ -124,6 +129,7 @@ public class ApiFilterConfiguration  {
         private static final String REJECT_MSG = "{\"code\":400,\"msg\":\"请求校验失败，请勿重放请求\"}";
 
         @Override
+        /** Do过滤 */
         public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
                 throws IOException, ServletException {
             if (!(request instanceof HttpServletRequest req) || !(response instanceof HttpServletResponse resp)) {

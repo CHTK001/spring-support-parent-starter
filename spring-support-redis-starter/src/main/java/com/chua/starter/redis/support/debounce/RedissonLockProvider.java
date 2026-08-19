@@ -27,11 +27,16 @@ public class RedissonLockProvider implements LockProvider {
     /** 密钥 */
     private String key;
 
+    /**
+     * 创建 RedissonLockProvider 实例
+     * @param key key
+     */
     public RedissonLockProvider(String key) {
         this.key = key;
     }
 
     @Override
+    /** Try锁 */
     public boolean tryLock(int timeout, TimeUnit timeUnit)  {
         this.lock = redissonClient.getLock(key);
         //尝试抢占锁
@@ -50,6 +55,7 @@ public class RedissonLockProvider implements LockProvider {
     }
 
     @Override
+    /** 解锁 */
     public void unlock() {
         if (isLocked && lock.isHeldByCurrentThread()) {
             lock.unlock();
@@ -57,11 +63,13 @@ public class RedissonLockProvider implements LockProvider {
     }
 
     @Override
+    /** 获取Name */
     public String getName() {
         return "redisson";
     }
 
     @Override
+    /** 获取Type */
     public String getType() {
         return "redisson";
     }

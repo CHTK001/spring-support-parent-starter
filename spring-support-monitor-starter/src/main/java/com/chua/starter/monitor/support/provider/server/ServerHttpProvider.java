@@ -43,16 +43,19 @@ public class ServerHttpProvider implements MetricProvider {
     private static final int DEFAULT_TIMEOUT_MS = 5_000;
 
     @Override
+    /** ProviderType */
     public ProviderType providerType() {
         return ProviderType.HTTP;
     }
 
     @Override
+    /** SupportServiceTypes */
     public Set<ServiceType> supportServiceTypes() {
         return Set.of(ServiceType.SERVER);
     }
 
     @Override
+    /** Collect */
     public Mono<CollectResult> collect(CollectContext context) {
         return Mono.fromCallable(() -> doCollect(context))
                 .subscribeOn(Schedulers.boundedElastic());

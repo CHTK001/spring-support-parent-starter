@@ -50,6 +50,10 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
      */
     private final ApiVersion apiVersion;
 
+    /**
+     * 创建 ApiVersionCondition 实例
+     * @param apiVersion apiVersion
+     */
     public ApiVersionCondition(ApiVersion apiVersion) {
         this.apiVersion = apiVersion;
     }

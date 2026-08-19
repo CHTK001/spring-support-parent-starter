@@ -45,6 +45,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     private final SysAiTokenMapper sysAiTokenMapper;
 
     @Override
+    /** List */
     public List<SysAiToken> list() {
         return sysAiTokenMapper.selectList(
                 Wrappers.lambdaQuery(SysAiToken.class)
@@ -54,6 +55,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     }
 
     @Override
+    /** ListBy分组Id */
     public List<SysAiToken> listByGroupId(Integer groupId) {
         if (groupId == null) {
             return list();
@@ -67,6 +69,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     }
 
     @Override
+    /** 保存 */
     public SysAiToken save(SysAiToken token) {
         if (StringUtils.isBlank(token.getSysAiTokenKey())) {
             String rawKey = KeyGenerator.generateKey();
@@ -92,12 +95,14 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
 
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
+    /** 更新 */
     public boolean update(SysAiToken token) {
         return sysAiTokenMapper.updateById(token) > 0;
     }
 
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
+    /** 删除ById */
     public boolean deleteById(Integer tokenId) {
         if (tokenId == null) {
             return false;
@@ -109,6 +114,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     }
 
     @Override
+    /** 查找ByTokenKey */
     public SysAiToken findByTokenKey(String tokenKey) {
         if (StringUtils.isBlank(tokenKey)) {
             return null;
@@ -123,6 +129,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     }
 
     @Override
+    /** 验证 */
     public SysAiToken verify(String tokenKey, Integer groupId) {
         SysAiToken token = findByTokenKey(tokenKey);
         if (token == null) {
@@ -145,6 +152,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     }
 
     @Override
+    /** 获取分组IdByTokenKey */
     public Integer getGroupIdByTokenKey(String tokenKey) {
         SysAiToken token = findByTokenKey(tokenKey);
         return token != null ? token.getSysAiTokenGroupId() : null;
@@ -152,6 +160,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
 
     @Override
     @Async("taskExecutor")
+    /** RecordUsage */
     public void recordUsage(String tokenKey, int promptTokens, int completionTokens, BigDecimal cost) {
         SysAiToken token = findByTokenKey(tokenKey);
         if (token == null) {
@@ -194,6 +203,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     }
 
     @Override
+    /** 校验RateLimit */
     public boolean checkRateLimit(String tokenKey) {
         SysAiToken token = findByTokenKey(tokenKey);
         if (token == null) {
@@ -230,6 +240,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     }
 
     @Override
+    /** 校验RateLimitBy分组 */
     public boolean checkRateLimitByGroup(Integer groupId) {
         if (groupId == null) {
             return true;

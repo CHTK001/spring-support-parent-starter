@@ -110,6 +110,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     @Override
+    /** Approve */
     protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
         // 如果传入的subProtocol（认证类型）为空，尝试从Header读取 x-oauth-type
         if (StringUtils.isBlank(subProtocol)) {
@@ -134,6 +135,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     @Override
+    /** AuthenticationUserCode */
     protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
         // 注意：指纹校验应该在Filter层进行，因为需要比对用户信息里的指纹
         // 协议层此时还没有用户信息，无法进行真正的指纹比对
@@ -169,6 +171,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     @Override
+    /** UpgradeInformation */
     protected AuthenticationInformation upgradeInformation(Cookie cookie, String token, UpgradeType upgradeType, String refreshToken) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("x-oauth-cookie", null == cookie ? null : cookie.getValue());
@@ -199,6 +202,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     @Override
+    /** 获取AccessToken */
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
@@ -231,6 +235,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     @Override
+    /** Logout */
     public LoginAuthResult logout(String uid, LogoutType logoutType, UserResult userResult) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
@@ -252,6 +257,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     @Override
+    /** 创建TemporaryToken */
     public LoginAuthResult createTemporaryToken(String sourceToken, Map<String, Object> ext) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
@@ -275,6 +281,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     @Override
+    /** 获取OnlineUsers */
     public OnlineUserResult getOnlineUsers(OnlineUserQuery query) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
@@ -303,6 +310,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     @Override
+    /** 获取OnlineStatus */
     public OnlineStatus getOnlineStatus(String uid) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
@@ -329,6 +337,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
         return OnlineStatus.defaultStatus();
     }
 
+    /** 解析OnlineUserResult */
     private OnlineUserResult parseOnlineUserResult(java.util.Map<String, Object> resultMap) {
         OnlineUserResult result = new OnlineUserResult();
         result.setTotal(getIntValue(resultMap, "total", 0));
@@ -364,6 +373,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
         return result;
     }
 
+    /** 获取IntValue */
     private int getIntValue(java.util.Map<String, Object> map, String key, int defaultValue) {
         Object value = map.get(key);
         if (value instanceof Number) {
@@ -372,6 +382,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
         return defaultValue;
     }
 
+    /** 获取StringValue */
     private String getStringValue(java.util.Map<String, Object> map, String key, String defaultValue) {
         Object value = map.get(key);
         return value != null ? value.toString() : defaultValue;

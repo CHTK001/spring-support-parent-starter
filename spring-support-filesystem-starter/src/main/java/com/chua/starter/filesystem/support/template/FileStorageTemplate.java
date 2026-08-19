@@ -44,6 +44,10 @@ public class FileStorageTemplate implements AutoCloseable {
     /** 日志 */
     private final ModuleLog log = ModuleLog.of("FileStorage", FileStorageTemplate.class);
 
+    /**
+     * 创建 FileStorageTemplate 实例
+     * @param properties properties
+     */
     public FileStorageTemplate(FileStorageProperties properties) {
         this.properties = properties;
     }
@@ -78,6 +82,7 @@ public class FileStorageTemplate implements AutoCloseable {
         }
     }
 
+    /** 创建FileStorage */
     private FileStorage createFileStorage(ProviderConfig config) {
         BucketSetting setting = BucketSetting.builder()
                 .bucket(config.getBucket())
@@ -110,23 +115,28 @@ public class FileStorageTemplate implements AutoCloseable {
 
     // ==================== 存储管理 ====================
 
+    /** 获取Storage */
     public FileStorage getStorage(String name) {
         return storageMap.get(name);
     }
 
+    /** 获取DefaultStorage */
     public FileStorage getDefaultStorage() {
         return defaultStorageName != null ? storageMap.get(defaultStorageName) : null;
     }
 
+    /** 获取DefaultStorageName */
     public String getDefaultStorageName() {
         return defaultStorageName;
     }
 
+    /** 添加Storage */
     public void addStorage(String name, FileStorage storage) {
         storageMap.put(name, storage);
         log.info("动态添加存储: {}", highlight(name));
     }
 
+    /** 移除Storage */
     public void removeStorage(String name) {
         FileStorage storage = storageMap.remove(name);
         if (storage != null) {
@@ -135,16 +145,19 @@ public class FileStorageTemplate implements AutoCloseable {
         }
     }
 
+    /** 获取StorageNames */
     public List<String> getStorageNames() {
         return List.copyOf(storageMap.keySet());
     }
 
+    /** 获取Storages */
     public List<FileStorage> getStorages() {
         return List.copyOf(storageMap.values());
     }
 
     // ==================== 文件操作（默认存储） ====================
 
+    /** PutObject */
     public PutObjectResult putObject(PutObjectRequest request) {
         FileStorage storage = getDefaultStorage();
         if (storage == null) {
@@ -156,6 +169,7 @@ public class FileStorageTemplate implements AutoCloseable {
         return storage.putObject(request);
     }
 
+    /** PutObject */
     public PutObjectResult putObject(File file) {
         FileStorage storage = getDefaultStorage();
         if (storage == null) {
@@ -167,6 +181,7 @@ public class FileStorageTemplate implements AutoCloseable {
         return storage.putObject(PutObjectRequest.of(file));
     }
 
+    /** 获取Object */
     public GetObjectResult getObject(String key) {
         FileStorage storage = getDefaultStorage();
         if (storage == null) {
@@ -178,6 +193,7 @@ public class FileStorageTemplate implements AutoCloseable {
         return storage.getObject(key);
     }
 
+    /** 获取Object */
     public GetObjectResult getObject(GetObjectRequest request) {
         FileStorage storage = getDefaultStorage();
         if (storage == null) {
@@ -189,6 +205,7 @@ public class FileStorageTemplate implements AutoCloseable {
         return storage.getObject(request);
     }
 
+    /** 删除Object */
     public DeleteObjectResult deleteObject(String key) {
         FileStorage storage = getDefaultStorage();
         if (storage == null) {
@@ -200,6 +217,7 @@ public class FileStorageTemplate implements AutoCloseable {
         return storage.deleteObject(key);
     }
 
+    /** ListObject */
     public ListObjectResult listObject(ListObjectRequest request) {
         FileStorage storage = getDefaultStorage();
         if (storage == null) {
@@ -213,6 +231,7 @@ public class FileStorageTemplate implements AutoCloseable {
 
     // ==================== 文件操作（指定 Provider） ====================
 
+    /** PutObject */
     public PutObjectResult putObject(String providerName, PutObjectRequest request) {
         FileStorage storage = getStorage(providerName);
         if (storage == null) {
@@ -224,6 +243,7 @@ public class FileStorageTemplate implements AutoCloseable {
         return storage.putObject(request);
     }
 
+    /** 获取Object */
     public GetObjectResult getObject(String providerName, String key) {
         FileStorage storage = getStorage(providerName);
         if (storage == null) {
@@ -235,6 +255,7 @@ public class FileStorageTemplate implements AutoCloseable {
         return storage.getObject(key);
     }
 
+    /** 删除Object */
     public DeleteObjectResult deleteObject(String providerName, String key) {
         FileStorage storage = getStorage(providerName);
         if (storage == null) {
@@ -247,6 +268,7 @@ public class FileStorageTemplate implements AutoCloseable {
     }
 
     @Override
+    /** 关闭 */
     public void close() {
         for (Map.Entry<String, FileStorage> entry : storageMap.entrySet()) {
             try {

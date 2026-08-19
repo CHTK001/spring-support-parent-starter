@@ -50,50 +50,62 @@ public class ServiceInfoProperties {
      */
     private Set<String> authIpWhitelist = new LinkedHashSet<>();
 
+    /** 是否启用 */
     public boolean isEnable() {
         return enable;
     }
 
+    /** 设置启用 */
     public void setEnable(boolean enable) {
         this.enable = enable;
     }
 
+    /** 是否Banner */
     public boolean isBanner() {
         return banner;
     }
 
+    /** 设置Banner */
     public void setBanner(boolean banner) {
         this.banner = banner;
     }
 
+    /** 是否Auth启用 */
     public boolean isAuthEnable() {
         return authEnable;
     }
 
+    /** 设置Auth启用 */
     public void setAuthEnable(boolean authEnable) {
         this.authEnable = authEnable;
     }
 
+    /** 获取AuthUsername */
     public String getAuthUsername() {
         return authUsername;
     }
 
+    /** 设置AuthUsername */
     public void setAuthUsername(String authUsername) {
         this.authUsername = authUsername;
     }
 
+    /** 获取AuthPassword */
     public String getAuthPassword() {
         return authPassword;
     }
 
+    /** 设置AuthPassword */
     public void setAuthPassword(String authPassword) {
         this.authPassword = authPassword;
     }
 
+    /** 获取AuthIpWhitelist */
     public Set<String> getAuthIpWhitelist() {
         return authIpWhitelist;
     }
 
+    /** 设置AuthIpWhitelist */
     public void setAuthIpWhitelist(Set<String> authIpWhitelist) {
         this.authIpWhitelist = authIpWhitelist;
     }

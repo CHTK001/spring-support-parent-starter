@@ -50,15 +50,25 @@ public class AgentUsage {
         this.model = model;
     }
 
+    /** 获取PromptTokens */
     public Integer getPromptTokens() { return promptTokens; }
+    /** 设置PromptTokens */
     public void setPromptTokens(Integer promptTokens) { this.promptTokens = promptTokens; }
+    /** 获取CompletionTokens */
     public Integer getCompletionTokens() { return completionTokens; }
+    /** 设置CompletionTokens */
     public void setCompletionTokens(Integer completionTokens) { this.completionTokens = completionTokens; }
+    /** 获取总计Tokens */
     public Integer getTotalTokens() { return totalTokens; }
+    /** 设置总计Tokens */
     public void setTotalTokens(Integer totalTokens) { this.totalTokens = totalTokens; }
+    /** 获取Cost */
     public Double getCost() { return cost; }
+    /** 设置Cost */
     public void setCost(Double cost) { this.cost = cost; }
+    /** 获取Model */
     public String getModel() { return model; }
+    /** 设置Model */
     public void setModel(String model) { this.model = model; }
 
     /**
@@ -98,10 +108,15 @@ public class AgentUsage {
          */
         private String model;
 
+        /** PromptTokens */
         public AgentUsageBuilder promptTokens(Integer promptTokens) { this.promptTokens = promptTokens; return this; }
+        /** CompletionTokens */
         public AgentUsageBuilder completionTokens(Integer completionTokens) { this.completionTokens = completionTokens; return this; }
+        /** 总计Tokens */
         public AgentUsageBuilder totalTokens(Integer totalTokens) { this.totalTokens = totalTokens; return this; }
+        /** Cost */
         public AgentUsageBuilder cost(Double cost) { this.cost = cost; return this; }
+        /** Model */
         public AgentUsageBuilder model(String model) { this.model = model; return this; }
 
         /**

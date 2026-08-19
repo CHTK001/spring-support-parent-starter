@@ -7,6 +7,7 @@ package com.chua.starter.redis.support.utils;
  */
 public final class NumberUtils {
 
+    /** 创建 NumberUtils 实例 */
     private NumberUtils() {
     }
 

@@ -52,28 +52,33 @@ public class SimpleRedisServiceImpl implements SimpleRedisService {
     private StringRedisTemplate redisTemplate;
 
     @Override
+    /** Increment */
     public void increment(String indicator, String key, long expire) {
         redisTemplate.opsForHash().increment(indicator, key, INCREMENT_STEP);
         redisTemplate.expire(indicator, expire, TimeUnit.SECONDS);
     }
 
     @Override
+    /** Increment */
     public void increment(String indicator, String key) {
         redisTemplate.opsForHash().increment(indicator, key, INCREMENT_STEP);
     }
 
     @Override
+    /** Decrement */
     public void decrement(String indicator, String key, long expire) {
         redisTemplate.opsForHash().increment(indicator, key, DECREMENT_STEP);
         redisTemplate.expire(indicator, expire, TimeUnit.SECONDS);
     }
 
     @Override
+    /** Decrement */
     public void decrement(String indicator, String key) {
         redisTemplate.opsForHash().increment(indicator, key, DECREMENT_STEP);
     }
 
     @Override
+    /** Qps */
     public ReturnResult<BigDecimal> qps(String key) {
         Map<Object, Object> entries = redisTemplate.opsForHash().entries(key);
         BigDecimal sum = BigDecimal.ZERO;

@@ -241,6 +241,7 @@ public interface Protocol {
          */
         private int size;
 
+        /** Empty */
         public static OnlineUserResult empty() {
             return new OnlineUserResult(java.util.Collections.emptyList(), 0, 1, 20);
         }

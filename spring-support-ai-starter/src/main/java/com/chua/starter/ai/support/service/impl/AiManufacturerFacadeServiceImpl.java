@@ -64,6 +64,7 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     @Override
     @Cacheable(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             key = "'sys:ai:manufacturer:list'", unless = "#result == null || #result.isEmpty()")
+    /** List */
     public List<SysAiManufacturer> list() {
         return sysAiManufacturerMapper.selectList(null);
     }
@@ -71,6 +72,7 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             key = "'sys:ai:manufacturer:list'")
+    /** 保存 */
     public SysAiManufacturer save(SysAiManufacturer manufacturer) {
         manufacturer.setSysAiManufacturerStatus(
                 manufacturer.getSysAiManufacturerStatus() == null ? 1 : manufacturer.getSysAiManufacturerStatus());
@@ -85,6 +87,7 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             key = "'sys:ai:manufacturer:list'")
+    /** 更新 */
     public boolean update(SysAiManufacturer manufacturer) {
         if (manufacturer == null || manufacturer.getSysAiManufacturerId() == null) {
             log.warn("[AiManufacturerFacade] update 失败: ID 为空");
@@ -108,6 +111,7 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             key = "'sys:ai:manufacturer:list'")
+    /** 删除 */
     public boolean delete(Integer id) {
         return deleteById(id);
     }
@@ -115,6 +119,7 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             key = "'sys:ai:manufacturer:list'")
+    /** 删除ById */
     public boolean deleteById(Integer id) {
         if (id == null) {
             return false;

@@ -43,6 +43,7 @@ public class AsyncLogWriter implements JobLogSink {
     }
 
     @Override
+    /** 写入 */
     public void write(JobLogEvent event) {
         if (event == null || !running) {
             return;
@@ -67,6 +68,7 @@ public class AsyncLogWriter implements JobLogSink {
         drain();
     }
 
+    /** DrainLoop */
     private void drainLoop() {
         while (running) {
             try {
@@ -83,6 +85,7 @@ public class AsyncLogWriter implements JobLogSink {
         drain();
     }
 
+    /** Drain */
     private void drain() {
         JobLogEvent event;
         while ((event = queue.poll()) != null) {
@@ -90,6 +93,7 @@ public class AsyncLogWriter implements JobLogSink {
         }
     }
 
+    /** 写入ToSinks */
     private void writeToSinks(JobLogEvent event) {
         for (JobLogSink sink : sinks) {
             try {

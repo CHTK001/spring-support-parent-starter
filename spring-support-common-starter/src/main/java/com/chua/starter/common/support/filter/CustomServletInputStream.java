@@ -24,26 +24,34 @@ public class CustomServletInputStream extends ServletInputStream {
      */
     private final ByteArrayInputStream inputStream;
 
+    /**
+     * 创建 CustomServletInputStream 实例
+     * @param body body
+     */
     public CustomServletInputStream(byte[] body) {
         this.inputStream = new ByteArrayInputStream(body);
     }
 
     @Override
+    /** 是否Finished */
     public boolean isFinished() {
         return inputStream.available() == 0;
     }
 
     @Override
+    /** 是否Ready */
     public boolean isReady() {
         return true;
     }
 
     @Override
+    /** 设置读取Listener */
     public void setReadListener(ReadListener readListener) {
 
     }
 
     @Override
+    /** 读取 */
     public int read() throws IOException {
         return inputStream.read();
     }

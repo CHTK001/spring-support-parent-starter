@@ -46,6 +46,7 @@ public class FileJobLogSink implements JobLogSink {
     }
 
     @Override
+    /** 写入 */
     public void write(JobLogEvent event) {
         if (event == null) {
             return;
@@ -79,6 +80,7 @@ public class FileJobLogSink implements JobLogSink {
         return dateDir + "/" + jobName + "/" + event.executedAtMs() + ".log";
     }
 
+    /** 格式化记录日志 */
     private String formatLog(JobLogEvent event) {
         StringBuilder sb = new StringBuilder(512);
         sb.append("=== JOB EXECUTION LOG ===\n");
@@ -100,6 +102,7 @@ public class FileJobLogSink implements JobLogSink {
         return sb.toString();
     }
 
+    /** Sanitize */
     private static String sanitize(String name) {
         return name.replaceAll("[/\\\\:*?\"<>|]", "_");
     }

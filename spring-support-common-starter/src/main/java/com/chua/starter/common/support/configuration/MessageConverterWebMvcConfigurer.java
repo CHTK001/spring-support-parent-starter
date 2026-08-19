@@ -68,15 +68,18 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     private ApplicationContext applicationContext;
 
     @Override
+    /** 添加ReturnValueHandlers */
     public void addReturnValueHandlers(List<HandlerMethodReturnValueHandler> handlers) {
         handlers.add(new ResponseModelViewMethodProcessor(messageConverters));
     }
 
     @Override
+    /** 添加ArgumentResolvers */
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         resolvers.add(new RequestParamsMapMethodArgumentResolver());
     }
     @Override
+    /** ConfigureMessageConverters */
     public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
         ApiResponseEncodeRegister encodeRegister = getApiResponseEncodeRegister();
         if (encodeRegister != null) {
@@ -88,10 +91,12 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
         }
     }
     @Override
+    /** 添加Interceptors */
     public void addInterceptors(InterceptorRegistry registry) {
     }
 
     @Override
+    /** ConfigureContentNegotiation */
     public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
         ApiResponseEncodeRegister encodeRegister = getApiResponseEncodeRegister();
         if (encodeRegister != null) {
@@ -101,6 +106,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
 
 
     @Bean
+    /** MdcHandler过滤 */
     public FilterRegistrationBean<MdcHandlerFilter> mdcHandlerFilter() {
         FilterRegistrationBean<MdcHandlerFilter> filterRegistrationBean = new FilterRegistrationBean<>();
         filterRegistrationBean.setFilter(new MdcHandlerFilter());
@@ -110,6 +116,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     }
 
     @Override
+    /** ExtendMessageConverters */
     public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
         log.info("[消息转换器]开始扩展消息转换器列表, 当前转换器数量: {}", converters.size());
         for (int i = 0; i < converters.size(); i++) {
@@ -209,12 +216,14 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
 
 
     @Override
+    /** 添加Formatters */
     public void addFormatters(FormatterRegistry registry) {
         ApplicationConversionService.configure(registry);
     }
 
 
     @Override
+    /** 设置ApplicationContext */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         log.info("[消息转换器]初始化消息转换器配置");
         this.applicationContext = applicationContext;

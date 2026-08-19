@@ -57,6 +57,7 @@ public class ApiConfiguration implements EnvironmentAware  {
 
     // ==================== 版本控制配置 ====================
 
+    /** 记录日志ControlStatus */
     private void logControlStatus() {
         ServiceInfoRegistry registry = ServiceInfoRegistry.getInstance();
 
@@ -208,6 +209,7 @@ public class ApiConfiguration implements EnvironmentAware  {
     }
 
     @Override
+    /** 设置Environment */
     public void setEnvironment(Environment environment) {
         this.environment = environment;
         this.apiProperties = Binder.get(environment).bindOrCreate(ApiProperties.PRE, ApiProperties.class);

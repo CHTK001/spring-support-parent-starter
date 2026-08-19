@@ -295,10 +295,12 @@ public class IntegrationTestController {
 
     // ============================ 私有辅助 ============================
 
+    /** Ready */
     private boolean ready() {
         return osgiLauncher != null && osgiLauncher.isActive();
     }
 
+    /** 查找Bundle */
     private OsgiBundle findBundle(String symbolicName) {
         for (OsgiBundle bundle : osgiLauncher.getBundles()) {
             if (symbolicName.equals(bundle.getSymbolicName())) {
@@ -308,6 +310,7 @@ public class IntegrationTestController {
         return null;
     }
 
+    /** ChangeBundleState */
     private Object changeBundleState(String symbolicName, boolean start, String action) {
         if (!ready()) {
             return error("OSGi 框架未启动");
@@ -333,6 +336,7 @@ public class IntegrationTestController {
         }
     }
 
+    /** ToMap */
     private Map<String, Object> toMap(OsgiBundle bundle) {
         Map<String, Object> info = new HashMap<>();
         info.put("symbolicName", bundle.getSymbolicName());
@@ -341,6 +345,7 @@ public class IntegrationTestController {
         return info;
     }
 
+    /** NormalizeUrl */
     private String normalizeUrl(String url) {
         if (url == null || url.isEmpty()) {
             throw new IllegalArgumentException("url 不能为空");
@@ -376,6 +381,7 @@ public class IntegrationTestController {
         return null;
     }
 
+    /** 扫描ExportedPackages */
     private List<String> scanExportedPackages(OsgiBundle bundle) {
         List<String> packages = new ArrayList<>();
         try {
@@ -410,6 +416,7 @@ public class IntegrationTestController {
         return packages;
     }
 
+    /** 记录错误 */
     private Map<String, Object> error(String message) {
         Map<String, Object> resp = new HashMap<>();
         resp.put("success", false);

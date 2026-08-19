@@ -85,6 +85,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     private final PropertiesPropertySourceLoader propertiesLoader = new PropertiesPropertySourceLoader();
 
     @Override
+    /** Post处理Environment */
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         // 检查是否启用
         var enabledValue = environment.getProperty(ENABLED_KEY, "true");
@@ -363,6 +364,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         // 在 ConfigDataEnvironmentPostProcessor 之后执行
         // 优先级低于业务配置和配置中心

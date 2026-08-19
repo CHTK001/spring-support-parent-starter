@@ -37,6 +37,13 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
      */
     private ClientInfo clientInfo;
 
+    /**
+     * 创建 SyncClientWrapper 实例
+     * @param syncProperties syncProperties
+     * @param environment environment
+     * @param infoCustomizers infoCustomizers
+     * @param customizers customizers
+     */
     public SyncClientWrapper(SyncProperties syncProperties,
                              Environment environment,
                              List<com.chua.starter.sync.support.spi.SyncClientInfoCustomizer> infoCustomizers,
@@ -66,6 +73,7 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
         }
     }
 
+    /** 构建ClientInfo */
     private ClientInfo buildClientInfo() {
         ClientInfo info = new ClientInfo();
         info.setClientId(delegate.getClientId());
@@ -87,6 +95,7 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
     }
 
     @Override
+    /** 连接 */
     public void connect() {
         delegate.connect();
         if (syncProperties.getClient().isAutoRegister() && clientInfo != null) {
@@ -117,31 +126,37 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
     }
 
     @Override
+    /** 断开 */
     public void disconnect() {
         delegate.disconnect();
     }
 
     @Override
+    /** 是否Connected */
     public boolean isConnected() {
         return delegate.isConnected();
     }
 
     @Override
+    /** 获取ClientId */
     public String getClientId() {
         return delegate.getClientId();
     }
 
     @Override
+    /** 发送 */
     public void send(String topic, Object message) {
         delegate.send(topic, SyncCryptoUtils.encrypt(message, syncProperties));
     }
 
     @Override
+    /** 订阅 */
     public void subscribe(String topic, SyncMessageHandler handler) {
         delegate.subscribe(topic, handler);
     }
 
     @Override
+    /** 订阅 */
     public void subscribe(String... topics) {
         for (String topic : topics) {
             delegate.subscribe(topic, null);
@@ -149,6 +164,7 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
     }
 
     @Override
+    /** 注册Handler */
     public void registerHandler(String topic, com.chua.starter.sync.support.spi.SyncMessageHandler handler) {
         delegate.subscribe(topic, (sessionId, message) -> {
             Object decrypted = SyncCryptoUtils.decrypt(parseIfNeeded(message), syncProperties);
@@ -176,31 +192,37 @@ public class SyncClientWrapper implements com.chua.starter.sync.support.client.S
     }
 
     @Override
+    /** 发布 */
     public void publish(String topic, Map<String, Object> data) {
         delegate.send(topic, SyncCryptoUtils.encrypt(data, syncProperties));
     }
 
     @Override
+    /** 取消订阅 */
     public void unsubscribe(String topic) {
         delegate.unsubscribe(topic);
     }
 
     @Override
+    /** 添加Listener */
     public void addListener(SyncFlowListener listener) {
         delegate.addListener(listener);
     }
 
     @Override
+    /** 移除Listener */
     public void removeListener(SyncFlowListener listener) {
         delegate.removeListener(listener);
     }
 
     @Override
+    /** 获取Metadata */
     public java.util.Map<String, Object> getMetadata() {
         return delegate.getMetadata();
     }
 
     @Override
+    /** 关闭 */
     public void close() {
         delegate.close();
     }

@@ -38,6 +38,10 @@ public class EventListenerProcessor {
      */
     private final List<SocketListener> listeners;
 
+    /**
+     * 创建 EventListenerProcessor 实例
+     * @param listeners listeners
+     */
     public EventListenerProcessor(List<SocketListener> listeners) {
         this.listeners = listeners != null ? listeners : List.of();
         scanListeners();
@@ -128,11 +132,17 @@ public class EventListenerProcessor {
         /** Method */
         private final Method method;
 
+        /**
+         * 创建 EventHandler 实例
+         * @param listener listener
+         * @param Method Method
+         */
         public EventHandler(SocketListener listener, Method method) {
             this.listener = listener;
             this.method = method;
         }
 
+        /** 调用 */
         public void invoke(SocketSession session, Object data) throws Exception {
             Class<?>[] paramTypes = method.getParameterTypes();
             
@@ -156,6 +166,7 @@ public class EventListenerProcessor {
             }
         }
 
+        /** 获取MethodName */
         public String getMethodName() {
             return listener.getClass().getSimpleName() + "." + method.getName();
         }

@@ -21,6 +21,7 @@ public enum SoftwareStatus {
         this.value = value;
     }
 
+    /** 获取Value */
     public int getValue() {
         return value;
     }

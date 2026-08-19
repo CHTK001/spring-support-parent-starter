@@ -98,138 +98,172 @@ public class SpiderDefinitionVO {
      */
     private LocalDateTime updateTime;
 
+    /** 获取SpiderId */
     public Long getSpiderId() {
         return spiderId;
     }
 
+    /** 设置SpiderId */
     public void setSpiderId(Long spiderId) {
         this.spiderId = spiderId;
     }
 
+    /** 获取SpiderCode */
     public String getSpiderCode() {
         return spiderCode;
     }
 
+    /** 设置SpiderCode */
     public void setSpiderCode(String spiderCode) {
         this.spiderCode = spiderCode;
     }
 
+    /** 获取SpiderName */
     public String getSpiderName() {
         return spiderName;
     }
 
+    /** 设置SpiderName */
     public void setSpiderName(String spiderName) {
         this.spiderName = spiderName;
     }
 
+    /** 获取SpiderEntryUrl */
     public String getSpiderEntryUrl() {
         return spiderEntryUrl;
     }
 
+    /** 设置SpiderEntryUrl */
     public void setSpiderEntryUrl(String spiderEntryUrl) {
         this.spiderEntryUrl = spiderEntryUrl;
     }
 
+    /** 获取SpiderSiteHost */
     public String getSpiderSiteHost() {
         return spiderSiteHost;
     }
 
+    /** 设置SpiderSiteHost */
     public void setSpiderSiteHost(String spiderSiteHost) {
         this.spiderSiteHost = spiderSiteHost;
     }
 
+    /** 获取SpiderExecutorType */
     public String getSpiderExecutorType() {
         return spiderExecutorType;
     }
 
+    /** 设置SpiderExecutorType */
     public void setSpiderExecutorType(String spiderExecutorType) {
         this.spiderExecutorType = spiderExecutorType;
     }
 
+    /** 获取SpiderExecutorRounds */
     public Integer getSpiderExecutorRounds() {
         return spiderExecutorRounds;
     }
 
+    /** 设置SpiderExecutorRounds */
     public void setSpiderExecutorRounds(Integer spiderExecutorRounds) {
         this.spiderExecutorRounds = spiderExecutorRounds;
     }
 
+    /** 获取SpiderCron */
     public String getSpiderCron() {
         return spiderCron;
     }
 
+    /** 设置SpiderCron */
     public void setSpiderCron(String spiderCron) {
         this.spiderCron = spiderCron;
     }
 
+    /** 获取SpiderCollectDeepUrl */
     public Integer getSpiderCollectDeepUrl() {
         return spiderCollectDeepUrl;
     }
 
+    /** 设置SpiderCollectDeepUrl */
     public void setSpiderCollectDeepUrl(Integer spiderCollectDeepUrl) {
         this.spiderCollectDeepUrl = spiderCollectDeepUrl;
     }
 
+    /** 获取Spider最大值Depth */
     public Integer getSpiderMaxDepth() {
         return spiderMaxDepth;
     }
 
+    /** 设置Spider最大值Depth */
     public void setSpiderMaxDepth(Integer spiderMaxDepth) {
         this.spiderMaxDepth = spiderMaxDepth;
     }
 
+    /** 获取Spider最大值Pages */
     public Integer getSpiderMaxPages() {
         return spiderMaxPages;
     }
 
+    /** 设置Spider最大值Pages */
     public void setSpiderMaxPages(Integer spiderMaxPages) {
         this.spiderMaxPages = spiderMaxPages;
     }
 
+    /** 获取SpiderDedupStrategy */
     public String getSpiderDedupStrategy() {
         return spiderDedupStrategy;
     }
 
+    /** 设置SpiderDedupStrategy */
     public void setSpiderDedupStrategy(String spiderDedupStrategy) {
         this.spiderDedupStrategy = spiderDedupStrategy;
     }
 
+    /** 获取SpiderUrlStorageType */
     public String getSpiderUrlStorageType() {
         return spiderUrlStorageType;
     }
 
+    /** 设置SpiderUrlStorageType */
     public void setSpiderUrlStorageType(String spiderUrlStorageType) {
         this.spiderUrlStorageType = spiderUrlStorageType;
     }
 
+    /** 获取SpiderStatus */
     public Integer getSpiderStatus() {
         return spiderStatus;
     }
 
+    /** 设置SpiderStatus */
     public void setSpiderStatus(Integer spiderStatus) {
         this.spiderStatus = spiderStatus;
     }
 
+    /** 获取SpiderRemark */
     public String getSpiderRemark() {
         return spiderRemark;
     }
 
+    /** 设置SpiderRemark */
     public void setSpiderRemark(String spiderRemark) {
         this.spiderRemark = spiderRemark;
     }
 
+    /** 获取创建Time */
     public LocalDateTime getCreateTime() {
         return createTime;
     }
 
+    /** 设置创建Time */
     public void setCreateTime(LocalDateTime createTime) {
         this.createTime = createTime;
     }
 
+    /** 获取更新Time */
     public LocalDateTime getUpdateTime() {
         return updateTime;
     }
 
+    /** 设置更新Time */
     public void setUpdateTime(LocalDateTime updateTime) {
         this.updateTime = updateTime;
     }

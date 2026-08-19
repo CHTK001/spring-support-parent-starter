@@ -13,6 +13,7 @@ import java.util.Date;
  */
 public class StringToLongTypeConverter implements Converter<String, Long> {
     @Override
+    /** 转换 */
     public Long convert(String source) {
         if(NumberUtils.isNumber(source)) {
             return NumberUtils.toLong(source);

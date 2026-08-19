@@ -766,6 +766,7 @@ public class GenericResponseService implements ApplicationContextAware {
     }
 
     @Override
+    /** 设置ApplicationContext */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         controllerAdviceBeans = ControllerAdviceBean.findAnnotatedBeans(applicationContext);
     }

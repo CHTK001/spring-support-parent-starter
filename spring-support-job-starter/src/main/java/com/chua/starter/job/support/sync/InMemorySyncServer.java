@@ -44,6 +44,7 @@ public class InMemorySyncServer implements SyncServer {
     private final List<String> clients = new ArrayList<>();
 
     @Override
+    /** 发布 */
     public void publish(String topic, Object message) {
         published.computeIfAbsent(topic, k -> new ArrayList<>()).add(message);
         for (SyncServerListener listener : listeners) {
@@ -55,98 +56,118 @@ public class InMemorySyncServer implements SyncServer {
     }
 
     @Override
+    /** 发送 */
     public void send(String clientId, String topic, Object message) {
         published.computeIfAbsent(topic, k -> new ArrayList<>()).add(message);
     }
 
     @Override
+    /** 获取ConnectedClients */
     public List<String> getConnectedClients() {
         return Collections.unmodifiableList(clients);
     }
 
     @Override
+    /** 获取ClientMetadata */
     public Map<String, Object> getClientMetadata(String clientId) {
         return Map.of();
     }
 
     @Override
+    /** 添加Listener */
     public void addListener(SyncServerListener listener) {
         listeners.add(listener);
     }
 
     @Override
+    /** 移除Listener */
     public void removeListener(SyncServerListener listener) {
         listeners.remove(listener);
     }
 
     @Override
+    /** 开始 */
     public void start() {
     }
 
     @Override
+    /** 停止 */
     public void stop() {
     }
 
     @Override
+    /** 是否Running */
     public boolean isRunning() {
         return true;
     }
 
     @Override
+    /** 获取ProtocolType */
     public ProtocolType getProtocolType() {
         return ProtocolType.WS;
     }
 
     @Override
+    /** 获取Port */
     public int getPort() {
         return 18081;
     }
 
     @Override
+    /** 获取Setting */
     public ServerSetting getSetting() {
         return null;
     }
 
     @Override
+    /** 获取ObjectContext */
     public ObjectContext getObjectContext() {
         return null;
     }
 
     @Override
+    /** 设置ObjectContext */
     public void setObjectContext(ObjectContext objectContext) {
     }
 
     @Override
+    /** 获取Filters */
     public List<ServerFilter> getFilters() {
         return List.of();
     }
 
     @Override
+    /** 添加过滤 */
     public Server addFilter(ServerFilter filter) {
         return this;
     }
 
     @Override
+    /** 移除过滤 */
     public Server removeFilter(ServerFilter filter) {
         return this;
     }
 
     @Override
+    /** RefreshFilters */
     public Server refreshFilters() {
         return this;
     }
 
     @Override
+    /** 注册Bean */
     public Server registerBean(Object bean) {
         return this;
     }
 
     @Override
+    /** 注销Bean */
     public Server unregisterBean(Object bean) {
         return this;
     }
 
     @Override
+    /** 关闭 */
     public void close() {
     }
 

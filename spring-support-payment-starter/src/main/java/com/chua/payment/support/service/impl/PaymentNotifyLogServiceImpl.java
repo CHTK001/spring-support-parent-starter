@@ -27,6 +27,13 @@ public class PaymentNotifyLogServiceImpl implements PaymentNotifyLogService {
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    /**
+     * 开始
+     * @param notifyType notifyType
+     * @param channelId channelId
+     * @param requestHeaders requestHeaders
+     * @param requestBody requestBody
+     */
     public PaymentNotifyLog start(String notifyType,
                                   Long channelId,
                                   String requestHeaders,
@@ -51,6 +58,17 @@ public class PaymentNotifyLogServiceImpl implements PaymentNotifyLogService {
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    /**
+     * Finish
+     * @param logId logId
+     * @param signVerified signVerified
+     * @param channelType channelType
+     * @param channelSubType channelSubType
+     * @param processStatus processStatus
+     * @param processResult processResult
+     * @param relatedOrderId relatedOrderId
+     * @param relatedRefundId relatedRefundId
+     */
     public void finish(Long logId,
                        Integer signVerified,
                        String channelType,

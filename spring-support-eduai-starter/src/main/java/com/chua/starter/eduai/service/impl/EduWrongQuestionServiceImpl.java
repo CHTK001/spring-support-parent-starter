@@ -35,6 +35,7 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** RecordWrongQuestion */
     public void recordWrongQuestion(String studentId, Long questionId, Long examId) {
         LambdaQueryWrapper<EduWrongQuestion> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(EduWrongQuestion::getWrongQuestionStudentId, studentId)
@@ -64,6 +65,7 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
     }
 
     @Override
+    /** Page查询 */
     public PageResult<WrongQuestionVO> pageQuery(WrongQueryDTO query) {
         LambdaQueryWrapper<EduWrongQuestion> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(EduWrongQuestion::getWrongQuestionStudentId, query.getStudentId());
@@ -89,6 +91,7 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
     }
 
     @Override
+    /** GenerateReviewPaper */
     public List<Long> generateReviewPaper(ReviewPaperDTO dto) {
         LambdaQueryWrapper<EduWrongQuestion> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(EduWrongQuestion::getWrongQuestionStudentId, dto.getStudentId())
@@ -104,6 +107,7 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 更新Mastery */
     public boolean updateMastery(Long wrongId, Integer masteryLevel) {
         EduWrongQuestion entity = baseMapper.selectById(wrongId);
         if (entity == null) {
@@ -118,6 +122,7 @@ public class EduWrongQuestionServiceImpl extends ServiceImpl<EduWrongQuestionMap
         return true;
     }
 
+    /** ToVO */
     private WrongQuestionVO toVO(EduWrongQuestion entity) {
         WrongQuestionVO vo = new WrongQuestionVO();
         vo.setId(entity.getWrongQuestionId());

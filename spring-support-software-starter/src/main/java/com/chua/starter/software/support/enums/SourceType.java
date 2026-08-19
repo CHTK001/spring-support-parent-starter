@@ -23,6 +23,7 @@ public enum SourceType {
         this.value = value;
     }
 
+    /** 获取Value */
     public int getValue() {
         return value;
     }

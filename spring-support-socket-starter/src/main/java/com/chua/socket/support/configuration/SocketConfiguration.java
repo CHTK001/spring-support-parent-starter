@@ -156,12 +156,19 @@ public class SocketConfiguration {
         /** 属性 */
         private final SocketProperties properties;
 
+        /**
+         * 创建 SocketLifecycle 实例
+         * @param SocketSessionTemplate SocketSessionTemplate
+         * @param templates templates
+         * @param SocketProperties SocketProperties
+         */
         public SocketLifecycle(Map<String, SocketSessionTemplate> templates, SocketProperties properties) {
             this.templates = templates;
             this.properties = properties;
         }
 
         @Override
+        /** AfterProperties设置 */
         public void afterPropertiesSet() throws Exception {
             if (!properties.isAutoStart()) {
                 log.info("[Socket] auto-start=false，已跳过 Socket 服务自动启动");
@@ -183,6 +190,7 @@ public class SocketConfiguration {
         }
 
         @Override
+        /** 销毁 */
         public void destroy() throws Exception {
             for (Map.Entry<String, SocketSessionTemplate> entry : templates.entrySet()) {
                 log.info("[Socket] 停止 {} 服务", entry.getKey());
@@ -192,6 +200,7 @@ public class SocketConfiguration {
     }
 
     @Bean
+    /** SocketServiceInfoContributor */
     public ServiceInfoContributor socketServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("socket", "Socket通信", true, "Socket通信模块");

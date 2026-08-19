@@ -51,11 +51,17 @@ public class DatabaseGraphService {
     private volatile GraphPayload cached;
     private volatile long cachedAt;
 
+    /**
+     * 创建 DatabaseGraphService 实例
+     * @param dataSource dataSource
+     * @param DocumentProperties DocumentProperties
+     */
     public DatabaseGraphService(DataSource dataSource, DocumentProperties properties) {
         this.dataSource = dataSource;
         this.properties = properties;
     }
 
+    /** 应用 */
     public GraphPayload apply() {
         lock.lock();
         try {
@@ -70,6 +76,7 @@ public class DatabaseGraphService {
         }
     }
 
+    /** Preview */
     public GraphPayload preview() {
         if (properties.isCacheable() && cached != null) {
             return cached;
@@ -77,12 +84,14 @@ public class DatabaseGraphService {
         return apply();
     }
 
+    /** 获取CachedAt */
     public long getCachedAt() {
         return cachedAt;
     }
 
     // ============================ 内部构建 ============================
 
+    /** Do构建 */
     private GraphPayload doBuild() {
         // 1) 读取表 + FK 边
         TableGraphReader tableReader = new TableGraphReader(dataSource);

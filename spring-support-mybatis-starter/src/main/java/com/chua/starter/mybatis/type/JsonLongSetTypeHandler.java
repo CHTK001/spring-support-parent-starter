@@ -21,20 +21,31 @@ public class JsonLongSetTypeHandler extends AbstractJsonTypeHandler<Object> {
     /** Type_reference */
     private static final TypeReference<Set<Long>> TYPE_REFERENCE = new TypeReference<Set<Long>>(){};
 
+    /**
+     * 创建 JsonLongSetTypeHandler 实例
+     * @param type type
+     */
     public JsonLongSetTypeHandler(Class<?> type) {
         super(type);
     }
 
+    /**
+     * 创建 JsonLongSetTypeHandler 实例
+     * @param type type
+     * @param Field Field
+     */
     public JsonLongSetTypeHandler(Class<?> type, Field field) {
         super(type, field);
     }
 
     @Override
+    /** 解析 */
     public Object parse(String json) {
         return Json.fromJson(json, TYPE_REFERENCE);
     }
 
     @Override
+    /** ToJson */
     public String toJson(Object obj) {
         return Json.toJson(obj);
     }

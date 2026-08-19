@@ -46,6 +46,19 @@ public class SysFileSystemUploadServiceImpl
     private static final int INITIAL_UPLOADED_CHUNKS = 0;
 
     @Override
+    /**
+     * 创建Task
+     * @param uploadId uploadId
+     * @param fileName fileName
+     * @param originalName originalName
+     * @param fileSize fileSize
+     * @param chunkSize chunkSize
+     * @param totalChunks totalChunks
+     * @param storageType storageType
+     * @param bucket bucket
+     * @param key key
+     * @param contentType contentType
+     */
     public SysFileSystemUpload createTask(String uploadId, String fileName, String originalName,
                                           Long fileSize, Long chunkSize, Integer totalChunks,
                                           String storageType, String bucket, String key, String contentType) {
@@ -77,6 +90,7 @@ public class SysFileSystemUploadServiceImpl
     }
 
     @Override
+    /** 更新UploadedChunks */
     public boolean updateUploadedChunks(String uploadId, Integer uploadedChunks) {
         SysFileSystemUpload task = getByUploadId(uploadId);
         if (task == null) {
@@ -92,6 +106,7 @@ public class SysFileSystemUploadServiceImpl
     }
 
     @Override
+    /** 更新Status */
     public boolean updateStatus(String uploadId, Integer status) {
         SysFileSystemUpload task = getByUploadId(uploadId);
         if (task == null) {
@@ -102,6 +117,7 @@ public class SysFileSystemUploadServiceImpl
     }
 
     @Override
+    /** 更新Stage */
     public boolean updateStage(String uploadId, Integer stage) {
         SysFileSystemUpload task = getByUploadId(uploadId);
         if (task == null) {
@@ -112,6 +128,7 @@ public class SysFileSystemUploadServiceImpl
     }
 
     @Override
+    /** 重置Retry计算数量 */
     public boolean resetRetryCount(String uploadId) {
         return update(new LambdaUpdateWrapper<SysFileSystemUpload>()
                 .eq(SysFileSystemUpload::getFilesystemUploadTaskUploadId, uploadId)
@@ -119,6 +136,7 @@ public class SysFileSystemUploadServiceImpl
     }
 
     @Override
+    /** 更新Retry计算数量 */
     public boolean updateRetryCount(String uploadId, int retry) {
         return update(new LambdaUpdateWrapper<SysFileSystemUpload>()
                 .eq(SysFileSystemUpload::getFilesystemUploadTaskUploadId, uploadId)
@@ -126,6 +144,7 @@ public class SysFileSystemUploadServiceImpl
     }
 
     @Override
+    /** 标记Completed */
     public boolean markCompleted(String uploadId, String fileUrl) {
         SysFileSystemUpload task = getByUploadId(uploadId);
         if (task == null) {
@@ -138,6 +157,7 @@ public class SysFileSystemUploadServiceImpl
     }
 
     @Override
+    /** 标记Failed */
     public boolean markFailed(String uploadId, String errorMessage) {
         SysFileSystemUpload task = getByUploadId(uploadId);
         if (task == null) {
@@ -150,12 +170,14 @@ public class SysFileSystemUploadServiceImpl
     }
 
     @Override
+    /** 获取ByUploadId */
     public SysFileSystemUpload getByUploadId(String uploadId) {
         return getOne(new LambdaQueryWrapper<SysFileSystemUpload>()
                 .eq(SysFileSystemUpload::getFilesystemUploadTaskUploadId, uploadId));
     }
 
     @Override
+    /** CleanTimeoutTasks */
     public int cleanTimeoutTasks(LocalDateTime beforeTime) {
         LambdaQueryWrapper<SysFileSystemUpload> wrapper = new LambdaQueryWrapper<>();
         wrapper.lt(SysFileSystemUpload::getCreateTime, beforeTime);
@@ -167,18 +189,21 @@ public class SysFileSystemUploadServiceImpl
     }
 
     @Override
+    /** ListPending合并 */
     public List<SysFileSystemUpload> listPendingMerge() {
         return list(new LambdaQueryWrapper<SysFileSystemUpload>()
                 .eq(SysFileSystemUpload::getFilesystemUploadTaskStatus, SysFileSystemUpload.Status.PENDING_MERGE));
     }
 
     @Override
+    /** ListPendingUpload */
     public List<SysFileSystemUpload> listPendingUpload() {
         return list(new LambdaQueryWrapper<SysFileSystemUpload>()
                 .eq(SysFileSystemUpload::getFilesystemUploadTaskStatus, SysFileSystemUpload.Status.PENDING_UPLOAD));
     }
 
     @Override
+    /** ListFailedRetryable */
     public List<SysFileSystemUpload> listFailedRetryable() {
         return list(new LambdaQueryWrapper<SysFileSystemUpload>()
                 .eq(SysFileSystemUpload::getFilesystemUploadTaskStatus, SysFileSystemUpload.Status.FAILED)

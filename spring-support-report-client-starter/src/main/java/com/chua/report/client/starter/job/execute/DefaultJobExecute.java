@@ -30,6 +30,7 @@ public class DefaultJobExecute implements JobExecute {
 
 
     @Override
+    /** 运行 */
     public ServletResponse run(ServletRequest request, TriggerParam triggerParam) {
         log.debug("开始执行任务, 任务ID: {}, 处理器: {}", triggerParam.getJobId(), triggerParam.getExecutorHandler());
 
@@ -153,35 +154,48 @@ class HandlerResult {
     /** RemoveOLDreason */
     private String removeOldReason;
 
+    /** 创建 HandlerResult 实例 */
     public HandlerResult() {
     }
 
+    /**
+     * 创建 HandlerResult 实例
+     * @param jobHandler jobHandler
+     * @param JobThread JobThread
+     * @param String String
+     */
     public HandlerResult(JobHandler jobHandler, JobThread jobThread, String removeOldReason) {
         this.jobHandler = jobHandler;
         this.jobThread = jobThread;
         this.removeOldReason = removeOldReason;
     }
 
+    /** 获取JobHandler */
     public JobHandler getJobHandler() {
         return jobHandler;
     }
 
+    /** 设置JobHandler */
     public void setJobHandler(JobHandler jobHandler) {
         this.jobHandler = jobHandler;
     }
 
+    /** 获取JobThread */
     public JobThread getJobThread() {
         return jobThread;
     }
 
+    /** 设置JobThread */
     public void setJobThread(JobThread jobThread) {
         this.jobThread = jobThread;
     }
 
+    /** 获取移除OldReason */
     public String getRemoveOldReason() {
         return removeOldReason;
     }
 
+    /** 设置移除OldReason */
     public void setRemoveOldReason(String removeOldReason) {
         this.removeOldReason = removeOldReason;
     }

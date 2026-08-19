@@ -32,6 +32,7 @@ public class ReportEnvironmentPostProcessor implements EnvironmentPostProcessor 
     private static final String SYNC_PREFIX = "plugin.sync.";
 
     @Override
+    /** Post处理Environment */
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         log.info("[ReportEnvPostProcessor] 开始处理环境配置");
 

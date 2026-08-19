@@ -17,6 +17,12 @@ import java.util.Map;
  */
 public class AlipayAppPaymentChannel extends AlipayWebPaymentChannel implements PaymentChannel {
 
+    /**
+     * 创建 AlipayAppPaymentChannel 实例
+     * @param merchantChannelService merchantChannelService
+     * @param objectMapper objectMapper
+     * @param providerGatewayRegistry providerGatewayRegistry
+     */
     public AlipayAppPaymentChannel(MerchantChannelService merchantChannelService,
                                    ObjectMapper objectMapper,
                                    PaymentProviderGatewayRegistry providerGatewayRegistry) {
@@ -24,11 +30,13 @@ public class AlipayAppPaymentChannel extends AlipayWebPaymentChannel implements 
     }
 
     @Override
+    /** Supports */
     public boolean supports(String channelType, String channelSubType) {
         return "ALIPAY".equalsIgnoreCase(channelType) && "APP".equalsIgnoreCase(channelSubType);
     }
 
     @Override
+    /** Pay */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         AliyunAlipayPayResponse response = gateway(providerSpi(channel, null)).appPay(
                 buildClientProperties(channel),

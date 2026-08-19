@@ -63,22 +63,26 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     });
 
     @Override
+    /** 设置ApplicationContext */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
 
     @Override
+    /** 获取Name */
     public String getName() {
         return "nodeControlHandler";
     }
 
     @Override
+    /** Supports */
     public boolean supports(String topic) {
         return MonitorTopics.NODE_RESTART.equals(topic) 
                 || MonitorTopics.NODE_SHUTDOWN.equals(topic);
     }
 
     @Override
+    /** 处理 */
     public Object handle(String topic, String sessionId, Map<String, Object> data) {
         String action = MapUtils.getString(data, "action", topic);
         log.info("[NodeControl] 收到控制命令: topic={}, action={}", topic, action);

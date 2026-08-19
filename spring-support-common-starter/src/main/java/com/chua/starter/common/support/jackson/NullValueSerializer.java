@@ -34,6 +34,7 @@ public class NullValueSerializer extends StdSerializer<NullValue> {
     }
 
     @Override
+    /** 序列化 */
     public void serialize(NullValue value, JsonGenerator jsonGenerator, SerializerProvider provider)
             throws IOException {
 
@@ -43,6 +44,13 @@ public class NullValueSerializer extends StdSerializer<NullValue> {
     }
 
     @Override
+    /**
+     * 序列化设置Type
+     * @param value value
+     * @param jsonGenerator jsonGenerator
+     * @param serializers serializers
+     * @param typeSerializer typeSerializer
+     */
     public void serializeWithType(NullValue value, JsonGenerator jsonGenerator, SerializerProvider serializers,
                                   TypeSerializer typeSerializer) throws IOException {
 

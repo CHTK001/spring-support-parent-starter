@@ -22,6 +22,7 @@ public class Validator {
     /** Ip_pattern */
     private static final Pattern IP_PATTERN = Pattern.compile("^(25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.(25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.(25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.(25[0-5]|2[0-4]\\d|[01]?\\d\\d?)$");
 
+    /** 创建 Validator 实例 */
     private Validator() {
     }
 

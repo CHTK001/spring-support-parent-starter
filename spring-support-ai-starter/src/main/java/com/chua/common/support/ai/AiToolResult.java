@@ -90,10 +90,15 @@ public class AiToolResult {
          */
         private String errorMessage;
 
+        /** 调用Id */
         public AiToolResultBuilder callId(String callId) { this.callId = callId; return this; }
+        /** Name */
         public AiToolResultBuilder name(String name) { this.name = name; return this; }
+        /** Result */
         public AiToolResultBuilder result(Object result) { this.result = result; return this; }
+        /** Success */
         public AiToolResultBuilder success(boolean success) { this.success = success; return this; }
+        /** 记录错误Message */
         public AiToolResultBuilder errorMessage(String errorMessage) { this.errorMessage = errorMessage; return this; }
 
         /**

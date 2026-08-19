@@ -25,6 +25,7 @@ public class DuplicateMessageFilter implements MessageFilter {
     private static final long DEFAULT_TTL = TimeUnit.MINUTES.toMillis(5);
 
     @Override
+    /** 过滤 */
     public boolean filter(Message message) {
         String messageId = message.getId();
         if (messageId == null || messageId.isEmpty()) {
@@ -71,6 +72,7 @@ public class DuplicateMessageFilter implements MessageFilter {
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         return -1000; // 最高优先级，最先执行
     }

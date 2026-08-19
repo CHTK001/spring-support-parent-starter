@@ -21,6 +21,7 @@ public class IpQualityExample {
      */
     private static final String DEFAULT_TEST_IPS = "1.2.3.4,5.6.7.8,8.8.8.8,1.1.1.1";
 
+    /** Main */
     public static void main(String[] args) throws Exception {
         CommandLine cli = CommandLine.parse(args)
                 .program("IpQualityExample")
@@ -43,10 +44,12 @@ public class IpQualityExample {
         }
     }
 
+    /** 运行WithDefaults */
     private void runWithDefaults() throws Exception {
         runWithIps(DEFAULT_BIN_PATH, DEFAULT_TEST_IPS.split(","));
     }
 
+    /** 运行WithIps */
     private void runWithIps(String binPath, String[] testIps) throws Exception {
         IP2ProxyLiteIpQualityDetector detector = new IP2ProxyLiteIpQualityDetector(Path.of(binPath));
         for (String ip : testIps) {

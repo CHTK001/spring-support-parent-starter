@@ -11,10 +11,12 @@ import java.util.Map;
  */
 public final class BeanMap {
 
+    /** 创建 BeanMap 实例 */
     private BeanMap() {
     }
 
     @SuppressWarnings("unchecked")
+    /** Of */
     public static Map<String, Object> of(Object bean, boolean ignoreNull) {
         if (bean == null) {
             return Collections.emptyMap();

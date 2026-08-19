@@ -167,16 +167,19 @@ public class DeadLetterTemplate implements MessageTemplate {
     // ==================== MessageTemplate 接口实现 ====================
 
     @Override
+    /** 发送 */
     public SendResult send(String destination, Object payload) {
         return dlqMessageTemplate.send(getDlqDestination(destination), payload);
     }
 
     @Override
+    /** 发送Async */
     public CompletableFuture<SendResult> sendAsync(String destination, Object payload) {
         return dlqMessageTemplate.sendAsync(getDlqDestination(destination), payload);
     }
 
     @Override
+    /** 发送 */
     public SendResult send(String destination, Object payload, Map<String, Object> headers) {
         Map<String, Object> dlqHeaders = new ConcurrentHashMap<>(headers != null ? headers : Map.of());
         dlqHeaders.put(HEADER_ORIGINAL_DESTINATION, destination);
@@ -185,56 +188,67 @@ public class DeadLetterTemplate implements MessageTemplate {
     }
 
     @Override
+    /** 发送Delayed */
     public SendResult sendDelayed(String destination, Object payload, Duration delay) {
         return dlqMessageTemplate.sendDelayed(getDlqDestination(destination), payload, delay);
     }
 
     @Override
+    /** 订阅 */
     public void subscribe(String destination, MessageHandler handler) {
         dlqMessageTemplate.subscribe(getDlqDestination(destination), handler);
     }
 
     @Override
+    /** 订阅 */
     public void subscribe(String destination, MessageHandler handler, boolean autoAck) {
         dlqMessageTemplate.subscribe(getDlqDestination(destination), handler, autoAck);
     }
 
     @Override
+    /** 订阅 */
     public void subscribe(String destination, String group, MessageHandler handler) {
         dlqMessageTemplate.subscribe(getDlqDestination(destination), group, handler);
     }
 
     @Override
+    /** 订阅 */
     public void subscribe(String destination, String group, MessageHandler handler, boolean autoAck) {
         dlqMessageTemplate.subscribe(getDlqDestination(destination), group, handler, autoAck);
     }
 
     @Override
+    /** 取消订阅 */
     public void unsubscribe(String destination) {
         dlqMessageTemplate.unsubscribe(getDlqDestination(destination));
     }
 
     @Override
+    /** 订阅 */
     public void subscribe(String destination, MessageHandler handler, boolean autoAck, int concurrency) {
         dlqMessageTemplate.subscribe(getDlqDestination(destination), handler, autoAck, concurrency);
     }
 
     @Override
+    /** 订阅 */
     public void subscribe(String destination, String group, MessageHandler handler, boolean autoAck, int concurrency) {
         dlqMessageTemplate.subscribe(getDlqDestination(destination), group, handler, autoAck, concurrency);
     }
 
     @Override
+    /** 获取Type */
     public String getType() {
         return "dead-letter";
     }
 
     @Override
+    /** 是否Connected */
     public boolean isConnected() {
         return dlqMessageTemplate.isConnected();
     }
 
     @Override
+    /** 关闭 */
     public void close() {
         // 先停止接受新任务
         scheduler.shutdown();

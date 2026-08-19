@@ -21,6 +21,7 @@ import java.util.function.Consumer;
  */
 public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
 
+    /** LikeIfPresent */
     public MPJLambdaWrapperX<T> likeIfPresent(SFunction<T, ?> column, String val) {
         MPJWrappers.lambdaJoin().like(column, val);
         if (StringUtils.hasText(val)) {
@@ -29,6 +30,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
         return this;
     }
 
+    /** InIfPresent */
     public MPJLambdaWrapperX<T> inIfPresent(SFunction<T, ?> column, Collection<?> values) {
         if (ObjectUtils.isAllNotEmpty(values) && !CollectionUtils.isEmpty(values)) {
             return (MPJLambdaWrapperX<T>) super.in(column, values);
@@ -36,6 +38,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
         return this;
     }
 
+    /** InIfPresent */
     public MPJLambdaWrapperX<T> inIfPresent(SFunction<T, ?> column, Object... values) {
         if (ObjectUtils.isAllNotEmpty(values) && !ArrayUtils.isEmpty(values)) {
             return (MPJLambdaWrapperX<T>) super.in(column, values);
@@ -43,6 +46,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
         return this;
     }
 
+    /** EqIfPresent */
     public MPJLambdaWrapperX<T> eqIfPresent(SFunction<T, ?> column, Object val) {
         if (ObjectUtils.isNotEmpty(val)) {
             return (MPJLambdaWrapperX<T>) super.eq(column, val);
@@ -50,6 +54,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
         return this;
     }
 
+    /** NeIfPresent */
     public MPJLambdaWrapperX<T> neIfPresent(SFunction<T, ?> column, Object val) {
         if (ObjectUtils.isNotEmpty(val)) {
             return (MPJLambdaWrapperX<T>) super.ne(column, val);
@@ -57,6 +62,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
         return this;
     }
 
+    /** GtIfPresent */
     public MPJLambdaWrapperX<T> gtIfPresent(SFunction<T, ?> column, Object val) {
         if (val != null) {
             return (MPJLambdaWrapperX<T>) super.gt(column, val);
@@ -64,6 +70,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
         return this;
     }
 
+    /** GeIfPresent */
     public MPJLambdaWrapperX<T> geIfPresent(SFunction<T, ?> column, Object val) {
         if (val != null) {
             return (MPJLambdaWrapperX<T>) super.ge(column, val);
@@ -71,6 +78,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
         return this;
     }
 
+    /** LtIfPresent */
     public MPJLambdaWrapperX<T> ltIfPresent(SFunction<T, ?> column, Object val) {
         if (val != null) {
             return (MPJLambdaWrapperX<T>) super.lt(column, val);
@@ -78,6 +86,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
         return this;
     }
 
+    /** LeIfPresent */
     public MPJLambdaWrapperX<T> leIfPresent(SFunction<T, ?> column, Object val) {
         if (val != null) {
             return (MPJLambdaWrapperX<T>) super.le(column, val);
@@ -85,6 +94,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
         return this;
     }
 
+    /** BetweenIfPresent */
     public MPJLambdaWrapperX<T> betweenIfPresent(SFunction<T, ?> column, Object val1, Object val2) {
         if (val1 != null && val2 != null) {
             return (MPJLambdaWrapperX<T>) super.between(column, val1, val2);
@@ -98,6 +108,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
         return this;
     }
 
+    /** BetweenIfPresent */
     public MPJLambdaWrapperX<T> betweenIfPresent(SFunction<T, ?> column, Object[] values) {
         Object val1 = ArrayUtils.getIndex(values, 0);
         Object val2 = ArrayUtils.getIndex(values, 1);
@@ -107,18 +118,21 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     // ========== 重写父类方法，方便链式调用 ==========
 
     @Override
+    /** Eq */
     public <X> MPJLambdaWrapperX<T> eq(boolean condition, SFunction<X, ?> column, Object val) {
         super.eq(condition, column, val);
         return this;
     }
 
     @Override
+    /** Eq */
     public <X> MPJLambdaWrapperX<T> eq(SFunction<X, ?> column, Object val) {
         super.eq(column, val);
         return this;
     }
 
     @Override
+    /** OrderByDesc */
     public <X> MPJLambdaWrapperX<T> orderByDesc(SFunction<X, ?> column) {
         //noinspection unchecked
         super.orderByDesc(true, column);
@@ -126,84 +140,98 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     }
 
     @Override
+    /** Last */
     public MPJLambdaWrapperX<T> last(String lastSql) {
         super.last(lastSql);
         return this;
     }
 
     @Override
+    /** In */
     public <X> MPJLambdaWrapperX<T> in(SFunction<X, ?> column, Collection<?> coll) {
         super.in(column, coll);
         return this;
     }
 
     @Override
+    /** 选择All */
     public MPJLambdaWrapperX<T> selectAll(Class<?> clazz) {
         super.selectAll(clazz);
         return this;
     }
 
     @Override
+    /** 选择All */
     public MPJLambdaWrapperX<T> selectAll(Class<?> clazz, String prefix) {
         super.selectAll(clazz, prefix);
         return this;
     }
 
     @Override
+    /** 选择As */
     public <S> MPJLambdaWrapperX<T> selectAs(SFunction<S, ?> column, String alias) {
         super.selectAs(column, alias);
         return this;
     }
 
     @Override
+    /** 选择As */
     public <E> MPJLambdaWrapperX<T> selectAs(String column, SFunction<E, ?> alias) {
         super.selectAs(column, alias);
         return this;
     }
 
     @Override
+    /** 选择As */
     public <S, X> MPJLambdaWrapperX<T> selectAs(SFunction<S, ?> column, SFunction<X, ?> alias) {
         super.selectAs(column, alias);
         return this;
     }
 
     @Override
+    /** 选择As */
     public <E, X> MPJLambdaWrapperX<T> selectAs(String index, SFunction<E, ?> column, SFunction<X, ?> alias) {
         super.selectAs(index, column, alias);
         return this;
     }
 
     @Override
+    /** 选择AsClass */
     public <E> MPJLambdaWrapperX<T> selectAsClass(Class<E> source, Class<?> tag) {
         super.selectAsClass(source, tag);
         return this;
     }
 
     @Override
+    /** 选择Sub */
     public <E, F> MPJLambdaWrapperX<T> selectSub(Class<E> clazz, Consumer<MPJLambdaWrapper<E>> consumer, SFunction<F, ?> alias) {
         super.selectSub(clazz, consumer, alias);
         return this;
     }
 
     @Override
+    /** 选择Sub */
     public <E, F> MPJLambdaWrapperX<T> selectSub(Class<E> clazz, String st, Consumer<MPJLambdaWrapper<E>> consumer, SFunction<F, ?> alias) {
         super.selectSub(clazz, st, consumer, alias);
         return this;
     }
 
     @Override
+    /** 选择计算数量 */
     public <S> MPJLambdaWrapperX<T> selectCount(SFunction<S, ?> column) {
         super.selectCount(column);
         return this;
     }
 
     @Override
+    /** 选择计算数量 */
     public MPJLambdaWrapperX<T> selectCount(Object column, String alias) {
         super.selectCount(column, alias);
         return this;
     }
 
     @Override
+    /** 选择计算数量 */
     public <X> MPJLambdaWrapperX<T> selectCount(Object column, SFunction<X, ?> alias) {
         super.selectCount(column, alias);
         return this;
@@ -211,12 +239,14 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
 
 
     @Override
+    /** 选择计算数量 */
     public <S, X> MPJLambdaWrapperX<T> selectCount(SFunction<S, ?> column, SFunction<X, ?> alias) {
         super.selectCount(column, alias);
         return this;
     }
 
     @Override
+    /** 选择求和 */
     public <S> MPJLambdaWrapperX<T> selectSum(SFunction<S, ?> column) {
         super.selectSum(column);
         return this;
@@ -224,12 +254,14 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
 
 
     @Override
+    /** 选择求和 */
     public <S, X> MPJLambdaWrapperX<T> selectSum(SFunction<S, ?> column, SFunction<X, ?> alias) {
         super.selectSum(column, alias);
         return this;
     }
 
     @Override
+    /** 选择最大值 */
     public <S> MPJLambdaWrapperX<T> selectMax(SFunction<S, ?> column) {
         super.selectMax(column);
         return this;
@@ -237,12 +269,14 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
 
 
     @Override
+    /** 选择最大值 */
     public <S, X> MPJLambdaWrapperX<T> selectMax(SFunction<S, ?> column, SFunction<X, ?> alias) {
         super.selectMax(column, alias);
         return this;
     }
 
     @Override
+    /** 选择最小值 */
     public <S> MPJLambdaWrapperX<T> selectMin(SFunction<S, ?> column) {
         super.selectMin(column);
         return this;
@@ -250,12 +284,14 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
 
 
     @Override
+    /** 选择最小值 */
     public <S, X> MPJLambdaWrapperX<T> selectMin(SFunction<S, ?> column, SFunction<X, ?> alias) {
         super.selectMin(column, alias);
         return this;
     }
 
     @Override
+    /** 选择平均值 */
     public <S> MPJLambdaWrapperX<T> selectAvg(SFunction<S, ?> column) {
         super.selectAvg(column);
         return this;
@@ -263,12 +299,14 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
 
 
     @Override
+    /** 选择平均值 */
     public <S, X> MPJLambdaWrapperX<T> selectAvg(SFunction<S, ?> column, SFunction<X, ?> alias) {
         super.selectAvg(column, alias);
         return this;
     }
 
     @Override
+    /** 选择Len */
     public <S> MPJLambdaWrapperX<T> selectLen(SFunction<S, ?> column) {
         super.selectLen(column);
         return this;
@@ -276,6 +314,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
 
 
     @Override
+    /** 选择Len */
     public <S, X> MPJLambdaWrapperX<T> selectLen(SFunction<S, ?> column, SFunction<X, ?> alias) {
         super.selectLen(column, alias);
         return this;

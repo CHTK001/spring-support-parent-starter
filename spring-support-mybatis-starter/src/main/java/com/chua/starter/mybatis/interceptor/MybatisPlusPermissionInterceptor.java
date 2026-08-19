@@ -54,10 +54,21 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     private Supplier<AuthService> authServiceSupplier;
     static final Map<String, Expression> MAPPED_STATEMENT_ID = new ConcurrentReferenceHashMap<>(4096);
 
+    /**
+     * 创建 MybatisPlusPermissionInterceptor 实例
+     * @param mybatisPlusPermissionHandler mybatisPlusPermissionHandler
+     * @param MybatisPlusDataScopeProperties MybatisPlusDataScopeProperties
+     */
     public MybatisPlusPermissionInterceptor(DataPermissionHandler mybatisPlusPermissionHandler, MybatisPlusDataScopeProperties methodSecurityInterceptor) {
         this(mybatisPlusPermissionHandler, methodSecurityInterceptor, () -> null);
     }
 
+    /**
+     * 创建 MybatisPlusPermissionInterceptor 实例
+     * @param mybatisPlusPermissionHandler mybatisPlusPermissionHandler
+     * @param methodSecurityInterceptor methodSecurityInterceptor
+     * @param authServiceSupplier authServiceSupplier
+     */
     public MybatisPlusPermissionInterceptor(DataPermissionHandler mybatisPlusPermissionHandler,
                                             MybatisPlusDataScopeProperties methodSecurityInterceptor,
                                             Supplier<AuthService> authServiceSupplier) {
@@ -163,6 +174,7 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
         }
     }
 
+    /** 获取CurrentUser */
     private CurrentUser getCurrentUser() {
         if (authServiceSupplier == null) {
             return null;

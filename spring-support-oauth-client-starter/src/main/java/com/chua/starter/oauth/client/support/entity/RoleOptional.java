@@ -16,6 +16,10 @@ public class RoleOptional<T> {
     private final Set<String> roles;
     private final Map<String, Supplier<T>> condition = new LinkedHashMap<>();
 
+    /**
+     * 创建 RoleOptional 实例
+     * @param roles roles
+     */
     public RoleOptional(Set<String> roles) {
         this.roles = roles;
     }
@@ -43,6 +47,7 @@ public class RoleOptional<T> {
     }
 
 
+    /** 获取 */
     public T get() {
         for (String role : condition.keySet()) {
             if (roles.contains(role)) {

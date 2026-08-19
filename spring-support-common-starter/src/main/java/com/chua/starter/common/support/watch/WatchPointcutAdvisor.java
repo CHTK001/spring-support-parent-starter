@@ -27,6 +27,7 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(WatchPointcutAdvisor.class);
     @Override
+    /** Matches */
     public boolean matches(Method method, Class<?> targetClass) {
         if (Proxy.isProxyClass(targetClass)) {
             return false;
@@ -37,10 +38,12 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
     }
 
     @Override
+    /** AfterProperties设置 */
     public void afterPropertiesSet() throws Exception {
         this.setAdvice(new MethodInterceptor() {
             @Nullable
             @Override
+            /** 调用 */
             public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
                 Span currentSpan = NewTrackManager.getCurrentSpan();
                 if (null == currentSpan) {
@@ -92,6 +95,7 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
 
 
 
+    /** EndSpan */
     private static void endSpan(Span currentSpan, Span lastSpan, Method method, Object obj, Object[] objects) {
         NewTrackManager.refreshCost(lastSpan);
         NewTrackManager.refreshCost(currentSpan);
@@ -101,6 +105,7 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
     }
 
 
+    /** 构建 */
     public static List<Span> build(Stack<Span> spans) {
         if(null == spans) {
             return Collections.emptyList();
@@ -134,6 +139,7 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
 
         return spans1;
     }
+    /** 发送Span */
     private static List<Span> sendSpan(List<Span> result) {
         Span span1 = result.get(0);
         if(StringUtils.isNullOrEmpty(span1.getEx())) {
@@ -166,6 +172,7 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
     }
 
 
+    /** Repackage */
     private static List<Span> repackage(List<Span> spans2) {
         List<Span> rs = new LinkedList<>();
         for (Span span : spans2) {
@@ -191,6 +198,7 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
 
         return rs;
     }
+    /** 获取NewPid */
     private static String getNewPid(List<Span> source, Span span) {
         Set<String> parents = span.getParents();
         for (String parent : parents) {
@@ -210,6 +218,7 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
         return null;
     }
 
+    /** 获取Parent */
     private static String getParent(List<Span> source, String parent) {
         String pid  = null;
         for (int i = 0; i < source.size(); i++) {
@@ -222,6 +231,7 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
         return pid;
     }
 
+    /** Refix */
     private static void refix(List<Span> spans1) {
         List<Span> del = new LinkedList<>();
         List<String> sign = new LinkedList<>();
@@ -249,6 +259,7 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
         spans1.removeAll(del);
 
     }
+    /** 创建Key */
     private static String createKey(Span span) {
         return span.getMessage() + span.getEnterTime() + span.getPid();
     }

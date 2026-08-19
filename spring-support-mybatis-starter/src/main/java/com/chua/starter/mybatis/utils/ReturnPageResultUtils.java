@@ -20,6 +20,7 @@ public class ReturnPageResultUtils {
      */
     private static final IPage<?> EMPTY = new Page<>();
 
+    /** 创建 ReturnPageResultUtils 实例 */
     private ReturnPageResultUtils() {
     }
 

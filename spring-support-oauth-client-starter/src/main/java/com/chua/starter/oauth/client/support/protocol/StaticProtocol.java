@@ -66,6 +66,7 @@ public class StaticProtocol extends AbstractProtocol {
     }
 
     @Override
+    /** AuthenticationUserCode */
     protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
         log.warn("[StaticProtocol]静态协议不支持AppKey认证 - appId: {}",
                 appKeySecret != null ? appKeySecret.getAppId() : null);

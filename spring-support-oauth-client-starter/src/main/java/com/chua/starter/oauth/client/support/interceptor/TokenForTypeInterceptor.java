@@ -28,6 +28,7 @@ import java.lang.reflect.Proxy;
 @Order(1)
 public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean, Ordered {
     @Override
+    /** Matches */
     public boolean matches(Method method, Class<?> targetClass) {
         if (Proxy.isProxyClass(targetClass)) {
             return false;
@@ -37,10 +38,12 @@ public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor 
     }
 
     @Override
+    /** AfterProperties设置 */
     public void afterPropertiesSet() throws Exception {
         this.setAdvice(new MethodInterceptor() {
             @Nullable
             @Override
+            /** 调用 */
             public Object invoke(@Nonnull MethodInvocation invocation) throws Throwable {
                 TokenForType tokenForType = getAnnotation(invocation);
                 UserResume userResume = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getUserInfo(UserResume.class);
@@ -64,6 +67,7 @@ public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor 
         });
     }
 
+    /** 是否判断相等 */
     private boolean isEquals(AuthType[] authTypes, String loginType) {
         if(null == authTypes) {
             return true;
@@ -103,6 +107,7 @@ public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor 
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         return Ordered.HIGHEST_PRECEDENCE;
     }

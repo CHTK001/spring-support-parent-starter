@@ -21,6 +21,7 @@ import java.time.Year;
  */
 public class CommonYearDeserializer extends YearDeserializer {
     @Override
+    /** 反序列化 */
     public Year deserialize(JsonParser parser, DeserializationContext context) throws IOException {
         JsonToken t = parser.currentToken();
         if (t == JsonToken.VALUE_STRING) {

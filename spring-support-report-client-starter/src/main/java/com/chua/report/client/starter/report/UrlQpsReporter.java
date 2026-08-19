@@ -61,9 +61,11 @@ public class UrlQpsReporter {
     private ScheduledExecutorService scheduler;
     private volatile boolean running = false;
 
+    /** 创建 UrlQpsReporter 实例 */
     private UrlQpsReporter() {
     }
 
+    /** 获取Instance */
     public static UrlQpsReporter getInstance() {
         return INSTANCE;
     }

@@ -61,6 +61,7 @@ public class AiGenerateController {
     @Permission("admin")
     @Operation(summary = "文生图", description = "根据提示词生成图片，返回图片URL")
     @PostMapping("/image")
+    /** GenerateImage */
     public ReturnResult<GenerateResult> generateImage(@RequestBody ImageGenRequest request) {
         // 通过能力标签统一解析配置
         AiCapabilityResolver.CapabilityConfig config = capabilityResolver.resolve(ModelCapabilities.TEXT_TO_IMAGE);
@@ -123,6 +124,7 @@ public class AiGenerateController {
     @Permission("admin")
     @Operation(summary = "文生视频", description = "根据提示词生成视频（异步任务，返回视频URL）")
     @PostMapping("/video")
+    /** GenerateVideo */
     public ReturnResult<GenerateResult> generateVideo(@RequestBody VideoGenRequest request) {
         // 通过能力标签统一解析配置
         AiCapabilityResolver.CapabilityConfig config = capabilityResolver.resolve(ModelCapabilities.TEXT_TO_VIDEO);
@@ -178,6 +180,7 @@ public class AiGenerateController {
     @Permission("admin")
     @Operation(summary = "上色", description = "对上传的黑白或灰度图片进行上色（基于图生图，返回URL或Base64）")
     @PostMapping(value = "/colorize", consumes = "multipart/form-data")
+    /** Colorize */
     public ReturnResult<GenerateResult> colorize(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
             return ReturnResult.error("上传文件不能为空");
@@ -217,6 +220,7 @@ public class AiGenerateController {
         }
     }
 
+    /** 编码ImageToBase */
     private String encodeImageToBase64(BufferedImage image) {
         return Base64.getEncoder().encodeToString(ImageUtils.encode(ImageUtils.toMat(image), "png"));
     }
@@ -224,6 +228,7 @@ public class AiGenerateController {
     @Permission("admin")
     @Operation(summary = "创建文生图任务", description = "提交文生图任务，返回任务ID（异步，前端轮询查询状态）")
     @PostMapping("/task/image")
+    /** 创建ImageTask */
     public ReturnResult<GenerateTask> createImageTask(@RequestBody ImageGenRequest request) {
         if (request.getPrompt() == null || request.getPrompt().isBlank()) {
             return ReturnResult.error("提示词不能为空");
@@ -239,6 +244,7 @@ public class AiGenerateController {
     @Permission("admin")
     @Operation(summary = "创建文生视频任务", description = "提交文生视频任务，返回任务ID（异步，前端轮询查询状态）")
     @PostMapping("/task/video")
+    /** 创建VideoTask */
     public ReturnResult<GenerateTask> createVideoTask(@RequestBody VideoGenRequest request) {
         if (request.getPrompt() == null || request.getPrompt().isBlank()) {
             return ReturnResult.error("提示词不能为空");
@@ -254,6 +260,7 @@ public class AiGenerateController {
     @Permission("admin")
     @Operation(summary = "查询生成任务状态", description = "根据任务ID查询生成进度，前端轮询使用")
     @GetMapping("/task/{taskId}")
+    /** 查询Task */
     public ReturnResult<GenerateTask> queryTask(@PathVariable String taskId) {
         GenerateTask task = generateTaskService.getTask(taskId);
         if (task == null) {
@@ -265,6 +272,7 @@ public class AiGenerateController {
     @Permission("admin")
     @Operation(summary = "生成历史记录", description = "查询最近的文生图/文生视频任务历史")
     @GetMapping("/task/list")
+    /** ListTasks */
     public ReturnResult<List<GenerateTask>> listTasks(@RequestParam(required = false) String type) {
         return ReturnResult.ok(generateTaskService.listRecent(type, 50));
     }

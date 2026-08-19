@@ -63,6 +63,13 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     /** Application上下文 */
     private ApplicationContext applicationContext;
 
+    /**
+     * 创建 ReportClientConfiguration 实例
+     * @param syncClient syncClient
+     * @param environment environment
+     * @param reportProperties reportProperties
+     * @param featureManagerProvider featureManagerProvider
+     */
     public ReportClientConfiguration(SyncClient syncClient, Environment environment,
                                       ReportProperties reportProperties,
                                       ObjectProvider<ApiFeatureManager> featureManagerProvider) {
@@ -73,6 +80,7 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     }
 
     @Override
+    /** 设置ApplicationContext */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
@@ -90,6 +98,7 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     private String contextPath;
 
     @PostConstruct
+    /** 初始化 */
     public void init() {
         log.info("[ReportClient] 初始化");
 
@@ -187,6 +196,7 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     }
 
     @PreDestroy
+    /** 销毁 */
     public void destroy() {
         // 先发送下线通知
         AppRegisterReporter.getInstance().stop();
@@ -208,6 +218,7 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     }
 
     @Bean
+    /** ReportClientServiceInfoContributor */
     public ServiceInfoContributor reportClientServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("report-client", "上报客户端",

@@ -29,6 +29,10 @@ public class FileStorageServerFilter implements ServerFilter {
      */
     private final FileStorageSetting setting;
 
+    /**
+     * 创建 FileStorageServerFilter 实例
+     * @param setting setting
+     */
     public FileStorageServerFilter(FileStorageSetting setting) {
         this.setting = setting;
     }
@@ -44,6 +48,7 @@ public class FileStorageServerFilter implements ServerFilter {
     }
 
     @Override
+    /** Do过滤 */
     public void doFilter(ServerRequest request, ServerResponse response, ServerFilterChain chain) throws Exception {
         // 简单透传
         chain.doFilter(request, response);

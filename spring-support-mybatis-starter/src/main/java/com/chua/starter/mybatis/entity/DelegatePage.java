@@ -30,6 +30,7 @@ public class DelegatePage<T>{
     /** 页 */
     protected long page = 0;
 
+    /** 创建Page */
     public com.baomidou.mybatisplus.extension.plugins.pagination.Page<T> createPage() {
         return new com.baomidou.mybatisplus.extension.plugins.pagination.Page<T>(page < 0 ? Math.max(pageNo, 1) : page, pageSize);
     }

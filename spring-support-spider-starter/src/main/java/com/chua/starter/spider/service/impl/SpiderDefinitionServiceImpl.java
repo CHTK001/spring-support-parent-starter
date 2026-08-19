@@ -37,12 +37,14 @@ public class SpiderDefinitionServiceImpl
 
     @Cacheable(key = ENABLED_LIST_KEY)
     @Override
+    /** ListEnabled */
     public List<SpiderDefinition> listEnabled() {
         return list(Wrappers.<SpiderDefinition>lambdaQuery()
                 .eq(SpiderDefinition::getEnabled, Integer.valueOf(1)));
     }
 
     @Override
+    /** 标记运行AtOnly */
     public boolean markRunAtOnly(Long id, LocalDateTime lastRunAt) {
         if (id == null || lastRunAt == null) {
             return false;
@@ -55,18 +57,21 @@ public class SpiderDefinitionServiceImpl
 
     @CacheEvict(allEntries = true)
     @Override
+    /** 保存 */
     public boolean save(SpiderDefinition entity) {
         return super.save(entity);
     }
 
     @CacheEvict(allEntries = true)
     @Override
+    /** 更新ById */
     public boolean updateById(SpiderDefinition entity) {
         return super.updateById(entity);
     }
 
     @CacheEvict(allEntries = true)
     @Override
+    /** 移除ById */
     public boolean removeById(Serializable id) {
         return super.removeById(id);
     }

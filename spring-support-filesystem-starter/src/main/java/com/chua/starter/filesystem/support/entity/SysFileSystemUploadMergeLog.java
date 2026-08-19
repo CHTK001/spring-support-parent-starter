@@ -62,30 +62,47 @@ public class SysFileSystemUploadMergeLog extends SysBase implements Serializable
     /** Filesystem上传merge日志结束时间 */
     private LocalDateTime filesystemUploadMergeLogEndTime;
 
+    /** 创建 SysFileSystemUploadMergeLog 实例 */
     public SysFileSystemUploadMergeLog() {}
 
+    /** 获取FilesystemUpload合并记录日志Id */
     public Long getFilesystemUploadMergeLogId() { return filesystemUploadMergeLogId; }
+    /** 设置FilesystemUpload合并记录日志Id */
     public void setFilesystemUploadMergeLogId(Long v) { this.filesystemUploadMergeLogId = v; }
 
+    /** 获取FilesystemUpload合并记录日志UploadId */
     public String getFilesystemUploadMergeLogUploadId() { return filesystemUploadMergeLogUploadId; }
+    /** 设置FilesystemUpload合并记录日志UploadId */
     public void setFilesystemUploadMergeLogUploadId(String v) { this.filesystemUploadMergeLogUploadId = v; }
 
+    /** 获取FilesystemUpload合并记录日志Stage */
     public Integer getFilesystemUploadMergeLogStage() { return filesystemUploadMergeLogStage; }
+    /** 设置FilesystemUpload合并记录日志Stage */
     public void setFilesystemUploadMergeLogStage(Integer v) { this.filesystemUploadMergeLogStage = v; }
 
+    /** 获取FilesystemUpload合并记录日志Status */
     public Integer getFilesystemUploadMergeLogStatus() { return filesystemUploadMergeLogStatus; }
+    /** 设置FilesystemUpload合并记录日志Status */
     public void setFilesystemUploadMergeLogStatus(Integer v) { this.filesystemUploadMergeLogStatus = v; }
 
+    /** 获取FilesystemUpload合并记录日志Message */
     public String getFilesystemUploadMergeLogMessage() { return filesystemUploadMergeLogMessage; }
+    /** 设置FilesystemUpload合并记录日志Message */
     public void setFilesystemUploadMergeLogMessage(String v) { this.filesystemUploadMergeLogMessage = v; }
 
+    /** 获取FilesystemUpload合并记录日志Retry计算数量 */
     public Integer getFilesystemUploadMergeLogRetryCount() { return filesystemUploadMergeLogRetryCount; }
+    /** 设置FilesystemUpload合并记录日志Retry计算数量 */
     public void setFilesystemUploadMergeLogRetryCount(Integer v) { this.filesystemUploadMergeLogRetryCount = v; }
 
+    /** 获取FilesystemUpload合并记录日志开始Time */
     public LocalDateTime getFilesystemUploadMergeLogStartTime() { return filesystemUploadMergeLogStartTime; }
+    /** 设置FilesystemUpload合并记录日志开始Time */
     public void setFilesystemUploadMergeLogStartTime(LocalDateTime v) { this.filesystemUploadMergeLogStartTime = v; }
 
+    /** 获取FilesystemUpload合并记录日志EndTime */
     public LocalDateTime getFilesystemUploadMergeLogEndTime() { return filesystemUploadMergeLogEndTime; }
+    /** 设置FilesystemUpload合并记录日志EndTime */
     public void setFilesystemUploadMergeLogEndTime(LocalDateTime v) { this.filesystemUploadMergeLogEndTime = v; }
 
     /**

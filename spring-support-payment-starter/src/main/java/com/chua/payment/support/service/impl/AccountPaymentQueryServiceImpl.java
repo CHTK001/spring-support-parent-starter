@@ -41,6 +41,7 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
     private final MerchantChannelMapper merchantChannelMapper;
 
     @Override
+    /** ListOrdersByUser */
     public Page<OrderVO> listOrdersByUser(Long userId, int page, int size, String orderNo, String status) {
         Page<PaymentOrder> source = paymentOrderMapper.selectPage(new Page<>(page, size), baseOrderWrapper(userId, orderNo, status));
         Page<OrderVO> result = new Page<>(page, size, source.getTotal());
@@ -49,17 +50,20 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
     }
 
     @Override
+    /** 获取OrderByUser */
     public OrderVO getOrderByUser(Long userId, Long id) {
         return toOrderVO(requireUserOrder(userId, id));
     }
 
     @Override
+    /** ListOrderLogsByUser */
     public List<OrderStateLogVO> listOrderLogsByUser(Long userId, Long id) {
         requireUserOrder(userId, id);
         return orderStateLogService.listByOrderId(id).stream().map(this::toLogVO).toList();
     }
 
     @Override
+    /** ListTransactionsByUser */
     public Page<TransactionRecord> listTransactionsByUser(Long userId, int pageNum, int pageSize, String orderNo, String transactionType, Integer status) {
         LambdaQueryWrapper<TransactionRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.inSql(TransactionRecord::getOrderId, "select pay_order_id from pay_order where pay_order_user_id = " + userId + " and (pay_order_deleted is null or pay_order_deleted = 0)");
@@ -76,6 +80,7 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
         return transactionRecordMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
     }
 
+    /** BaseOrderWrapper */
     private LambdaQueryWrapper<PaymentOrder> baseOrderWrapper(Long userId, String orderNo, String status) {
         LambdaQueryWrapper<PaymentOrder> wrapper = new LambdaQueryWrapper<PaymentOrder>()
                 .eq(PaymentOrder::getUserId, userId)
@@ -90,6 +95,7 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
         return wrapper;
     }
 
+    /** RequireUserOrder */
     private PaymentOrder requireUserOrder(Long userId, Long id) {
         PaymentOrder order = paymentOrderMapper.selectOne(new LambdaQueryWrapper<PaymentOrder>()
                 .eq(PaymentOrder::getId, id)
@@ -102,6 +108,7 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
         return order;
     }
 
+    /** ToOrderVO */
     private OrderVO toOrderVO(PaymentOrder order) {
         OrderVO vo = new OrderVO();
         BeanUtils.copyProperties(order, vo);
@@ -113,6 +120,7 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
         return vo;
     }
 
+    /** To记录日志VO */
     private OrderStateLogVO toLogVO(OrderStateLog log) {
         OrderStateLogVO vo = new OrderStateLogVO();
         BeanUtils.copyProperties(log, vo);

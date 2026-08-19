@@ -80,10 +80,12 @@ public class SendResult {
     }
 
     // Lombok 注解处理器未运行时的手动 getter 方法
+    /** 是否Success */
     public boolean isSuccess() {
         return success;
     }
 
+    /** 获取记录错误 */
     public Throwable getError() {
         return error;
     }

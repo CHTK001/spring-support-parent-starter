@@ -36,6 +36,7 @@ public class AiModelController {
     @Permission("admin")
     @Operation(summary = "查询所有模型")
     @GetMapping
+    /** List */
     public List<AiModelDTO> list() {
         return modelService.list();
     }
@@ -43,6 +44,7 @@ public class AiModelController {
     @Permission("admin")
     @Operation(summary = "新建模型")
     @PostMapping
+    /** 创建 */
     public AiModelDTO create(@RequestBody AiModelDTO model) {
         return modelService.create(model);
     }
@@ -50,6 +52,7 @@ public class AiModelController {
     @Permission("admin")
     @Operation(summary = "更新模型")
     @PutMapping("/{modelId}")
+    /** 更新 */
     public AiModelDTO update(@Parameter(description = "模型主键") @PathVariable Long modelId,
                              @RequestBody AiModelDTO model) {
         return modelService.update(modelId, model);
@@ -58,6 +61,7 @@ public class AiModelController {
     @Permission("admin")
     @Operation(summary = "删除模型")
     @DeleteMapping("/{modelId}")
+    /** 删除 */
     public void delete(@Parameter(description = "模型主键") @PathVariable Long modelId) {
         modelService.delete(modelId);
     }

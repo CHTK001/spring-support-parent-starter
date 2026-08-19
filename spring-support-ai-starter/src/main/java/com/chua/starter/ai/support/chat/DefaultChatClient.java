@@ -142,6 +142,7 @@ public class DefaultChatClient implements ChatClient {
     }
 
     @Override
+    /** Chat */
     public void chat(String input, java.util.function.Consumer<ChatResponse> consumer, Runnable onComplete, java.util.function.Consumer<Throwable> onError) {
         try {
             ChatResponse response = ChatResponse.builder()
@@ -162,19 +163,23 @@ public class DefaultChatClient implements ChatClient {
     }
 
     @Override
+    /** ChatSync */
     public String chatSync(String input) {
         return "AI 响应（模拟）: " + input;
     }
 
+    /** ChatSync */
     public String chatSync(String input, long timeoutMillis) {
         return chatSync(input);
     }
 
     @Override
+    /** 关闭 */
     public void close() {
     }
 
     @Override
+    /** Chat */
     public ChatResponse chat(ChatScope scope) {
         String input = scope != null ? scope.getInput() : "";
         return ChatResponse.builder()
@@ -184,6 +189,7 @@ public class DefaultChatClient implements ChatClient {
     }
 
     @Override
+    /** Chat */
     public void chat(ChatScope scope, java.util.function.Consumer<String> consumer, Runnable onComplete, java.util.function.Consumer<Throwable> onError) {
         ChatResponse response = chat(scope);
         if (consumer != null && response != null) {
@@ -195,11 +201,13 @@ public class DefaultChatClient implements ChatClient {
     }
 
     @Override
+    /** ListTools */
     public java.util.List<AiTool> listTools(ChatScope scope) {
         return List.of();
     }
 
     @Override
+    /** 调用Tool */
     public AiToolResult callTool(ChatScope scope, AiToolCall toolCall) {
         return new AiToolResult();
     }

@@ -25,6 +25,7 @@ public class ManualCacheVerifier {
     /** Failed */
     private static int failed = 0;
 
+    /** Main */
     public static void main(String[] args) throws Exception {
         System.out.println(CYAN + "═══════════════════════════════════════════");
         System.out.println("  缓存核心功能手动验证");
@@ -54,6 +55,7 @@ public class ManualCacheVerifier {
     }
 
     // ── CacheProvider 验证 ──
+    /** TestCacheProvider */
     static void testCacheProvider() {
         System.out.println(CYAN + "[1] CacheProvider (MemoryCacheProvider)" + RESET);
         var provider = new com.chua.common.support.cache.CacheProvider.MemoryCacheProvider();
@@ -87,6 +89,7 @@ public class ManualCacheVerifier {
     }
 
     // ── MultiLevelCache 验证 ──
+    /** TestMultiLevelCache */
     static void testMultiLevelCache() {
         System.out.println(CYAN + "[2] MultiLevelCache" + RESET);
 
@@ -136,6 +139,7 @@ public class ManualCacheVerifier {
     }
 
     // ── TenantedKeyGenerator 验证 ──
+    /** TestTenantedKeyGenerator */
     static void testTenantedKeyGenerator() throws Exception {
         System.out.println(CYAN + "[3] TenantedKeyGenerator" + RESET);
 
@@ -175,6 +179,7 @@ public class ManualCacheVerifier {
     }
 
     // ── CacheTemplate 验证 ──
+    /** TestCacheTemplate */
     static void testCacheTemplate() throws Exception {
         System.out.println(CYAN + "[4] CacheTemplate" + RESET);
 
@@ -193,6 +198,7 @@ public class ManualCacheVerifier {
     }
 
     // ── MultiLevelCacheManager 验证 ──
+    /** TestMultiLevelCacheManager */
     static void testMultiLevelCacheManager() throws Exception {
         System.out.println(CYAN + "[5] MultiLevelCacheManager" + RESET);
 
@@ -227,10 +233,12 @@ public class ManualCacheVerifier {
     }
 
     // ── 辅助方法 ──
+    /** 校验 */
     static void check(String desc, boolean condition) {
         check(desc, condition, "");
     }
 
+    /** 校验 */
     static void check(String desc, boolean condition, String detail) {
         if (condition) {
             System.out.println("  " + GREEN + "✔ " + RESET + desc);
@@ -241,6 +249,7 @@ public class ManualCacheVerifier {
         }
     }
 
+    /** 设置Field */
     static void setField(Object target, String fieldName, Object value) throws Exception {
         var field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
@@ -262,6 +271,7 @@ public class ManualCacheVerifier {
             return w == null ? null : type.cast(w.get());
         }
         @Override @SuppressWarnings("unchecked")
+        /** 获取 */
         public <T> T get(Object key, java.util.concurrent.Callable<T> valueLoader) {
             ValueWrapper w = store.get(key);
             if (w != null) return (T) w.get();
@@ -275,6 +285,7 @@ public class ManualCacheVerifier {
         @Override public void evict(Object key) { store.remove(key); }
         @Override public void clear() { store.clear(); }
         @Override
+        /** EvictByPattern */
         public void evictByPattern(String pattern) {
             store.keySet().removeIf(key -> key.toString().toLowerCase().contains(pattern));
         }

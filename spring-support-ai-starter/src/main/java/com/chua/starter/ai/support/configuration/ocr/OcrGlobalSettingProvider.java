@@ -32,16 +32,19 @@ public class OcrGlobalSettingProvider implements GlobalSettingProvider {
     private static final String GROUP_NAME = "OCR 文字识别";
 
     @Override
+    /** 分组 */
     public String group() {
         return GROUP;
     }
 
     @Override
+    /** 分组Name */
     public String groupName() {
         return GROUP_NAME;
     }
 
     @Override
+    /** 获取Items */
     public List<GlobalSettingProvider.SettingItem> getItems() {
         return List.of(
                 new GlobalSettingProvider.SettingItem("detector_model", "paddleocrv6-det", "STRING", "文字检测模型（paddleocrv6-det / paddleocrv6-medium-det）", 1),

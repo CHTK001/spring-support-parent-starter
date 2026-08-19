@@ -15,6 +15,7 @@ import java.util.List;
 public class JdkRpcProxyFactory implements RpcProxyFactory {
 
     @Override
+    /** 创建Proxy */
     public Object createProxy(ClassLoader classLoader, List<Class<?>> interfaces, InvocationHandler handler) {
         return Proxy.newProxyInstance(
                 classLoader,
@@ -24,6 +25,7 @@ public class JdkRpcProxyFactory implements RpcProxyFactory {
     }
 
     @Override
+    /** 获取Order */
     public int getOrder() {
         // JDK 代理作为兜底，优先级最低
         return Integer.MAX_VALUE;

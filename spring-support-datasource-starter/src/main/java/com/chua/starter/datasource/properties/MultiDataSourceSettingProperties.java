@@ -38,22 +38,27 @@ public class MultiDataSourceSettingProperties {
     private String loadBalance = "round_robin";
 
     // Getter 方法
+    /** 是否ForceAnnotation */
     public boolean isForceAnnotation() {
         return forceAnnotation;
     }
 
+    /** 是否Strict */
     public boolean isStrict() {
         return strict;
     }
 
+    /** 设置Strict */
     public void setStrict(boolean strict) {
         this.strict = strict;
     }
 
+    /** 获取加载Balance */
     public String getLoadBalance() {
         return loadBalance;
     }
 
+    /** 设置加载Balance */
     public void setLoadBalance(String loadBalance) {
         this.loadBalance = loadBalance;
     }

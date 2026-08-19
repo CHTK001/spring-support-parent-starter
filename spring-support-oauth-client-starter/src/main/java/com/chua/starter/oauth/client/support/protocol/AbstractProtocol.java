@@ -59,6 +59,10 @@ public abstract class AbstractProtocol implements Protocol {
     /** 加密 */
     private final String encryption;
 
+    /**
+     * 创建 AbstractProtocol 实例
+     * @param authClientProperties authClientProperties
+     */
     public AbstractProtocol(AuthClientProperties authClientProperties) {
         this.authClientProperties = authClientProperties;
         this.encryption = authClientProperties.getEncryption();
@@ -284,6 +288,7 @@ public abstract class AbstractProtocol implements Protocol {
 
 
     @Override
+    /** Approve */
     public AuthenticationInformation approve(Cookie[] cookies, String token, String subProtocol) {
         Cookie cookie = CookieUtil.get(cookies, "x-oauth-cookie");
         String cacheKey = getCacheKey(cookies, token);
@@ -337,6 +342,7 @@ public abstract class AbstractProtocol implements Protocol {
     }
 
     @Override
+    /** Upgrade */
     public LoginResult upgrade(Cookie[] cookies, String token, UpgradeType upgradeType, String refreshToken) {
         Cookie cookie = CookieUtil.get(cookies, "x-oauth-cookie");
         // REFRESH 类型只需要 refreshToken，不需要现有的 cookie/accessToken

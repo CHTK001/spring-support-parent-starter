@@ -48,26 +48,32 @@ public class MybatisSlowSqlProperties {
      */
     private int maxSqlLength = 2000;
 
+    /** 是否Enabled */
     public boolean isEnabled() {
         return enabled;
     }
 
+    /** 获取ThresholdMs */
     public long getThresholdMs() {
         return thresholdMs;
     }
 
+    /** 是否Print */
     public boolean isPrint() {
         return print;
     }
 
+    /** 是否IncludeSql */
     public boolean isIncludeSql() {
         return includeSql;
     }
 
+    /** 是否IncludeParameters */
     public boolean isIncludeParameters() {
         return includeParameters;
     }
 
+    /** 获取最大值Sql获取长度 */
     public int getMaxSqlLength() {
         return maxSqlLength;
     }

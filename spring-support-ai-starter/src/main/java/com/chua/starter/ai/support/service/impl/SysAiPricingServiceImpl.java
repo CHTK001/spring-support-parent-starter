@@ -25,6 +25,7 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
     private final SysAiPricingMapper pricingMapper;
 
     @Override
+    /** 获取LatestPricing */
     public SysAiPricing getLatestPricing(String provider, String model) {
         LambdaQueryWrapper<SysAiPricing> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysAiPricing::getProvider, provider)
@@ -35,6 +36,7 @@ public class SysAiPricingServiceImpl implements SysAiPricingService {
     }
 
     @Override
+    /** SyncOfficialPricing */
     public void syncOfficialPricing() {
         // 集成 datasearch-starter 同步官方定价（暂无实现）
         log.info("[Pricing] 同步官方定价（暂无实现）");

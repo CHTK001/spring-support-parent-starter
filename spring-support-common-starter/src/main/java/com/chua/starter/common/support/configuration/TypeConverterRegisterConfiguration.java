@@ -27,6 +27,7 @@ public class TypeConverterRegisterConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnBean(ConfigurableConversionService.class)
+    /** TypeConverterRegistry */
     public TypeConverterRegistry typeConverterRegistry(ConfigurableConversionService conversionService) {
         return new TypeConverterRegistry(conversionService);
     }
@@ -34,6 +35,10 @@ public class TypeConverterRegisterConfiguration {
     public static class TypeConverterRegistry {
 
         @SuppressWarnings({"unchecked", "rawtypes"})
+        /**
+         * 创建 TypeConverterRegistry 实例
+         * @param conversionService conversionService
+         */
         public TypeConverterRegistry(ConfigurableConversionService conversionService) {
             conversionService.addConverter(new StringToLongTypeConverter());
             conversionService.addConverter(new StringToDateTypeConverter());
@@ -55,16 +60,19 @@ public class TypeConverterRegisterConfiguration {
                         conversionService.removeConvertible(String.class, Enum.class);
                         conversionService.addConverter(new ConditionalGenericConverter() {
                             @Override
+                            /** Matches */
                             public boolean matches(TypeDescriptor sourceType, TypeDescriptor targetType) {
                                 return true;
                             }
 
                             @Override
+                            /** 获取ConvertibleTypes */
                             public Set<GenericConverter.ConvertiblePair> getConvertibleTypes() {
                                 return Collections.singleton(new GenericConverter.ConvertiblePair(String.class, Enum.class));
                             }
 
                             @Override
+                            /** 转换 */
                             public Object convert(Object source, TypeDescriptor sourceType, TypeDescriptor targetType) {
                                 return converter.convert(source);
                             }

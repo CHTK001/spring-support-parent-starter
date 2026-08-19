@@ -43,6 +43,7 @@ public class Preconditions {
         }
     }
 
+    /** NotEmpty */
     public static <T> T notEmpty(T reference, String message, String errorCode) {
         if (reference == null || (reference instanceof String && ((String) reference).isEmpty())) {
             throw new IllegalArgumentException("[" + errorCode + "] " + message);

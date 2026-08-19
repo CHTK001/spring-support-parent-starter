@@ -18,9 +18,11 @@ public final class ChatClientSettingsResolver {
     /** Default_timeout_millis */
     private static final long DEFAULT_TIMEOUT_MILLIS = 30_000L;
 
+    /** 创建 ChatClientSettingsResolver 实例 */
     private ChatClientSettingsResolver() {
     }
 
+    /** 解析 */
     public static ChatClientSettings resolve(SysAiGlobalSettingService sysAiGlobalSettingService) {
         boolean enabled = getBoolean(sysAiGlobalSettingService, "enabled", true);
         if (!enabled) {
@@ -69,18 +71,22 @@ public final class ChatClientSettingsResolver {
                 .build();
     }
 
+    /** 获取Value */
     private static String getValue(SysAiGlobalSettingService service, String field) {
         return service.getValue(GROUP, field).orElse(null);
     }
 
+    /** 获取Boolean */
     private static boolean getBoolean(SysAiGlobalSettingService service, String field, boolean defaultValue) {
         return service.getBoolean(GROUP, field, defaultValue);
     }
 
+    /** 获取Integer */
     private static Integer getInteger(SysAiGlobalSettingService service, String field) {
         return getInteger(service, field, null);
     }
 
+    /** 获取Integer */
     private static Integer getInteger(SysAiGlobalSettingService service, String field, Integer defaultValue) {
         String value = getValue(service, field);
         if (StringUtils.isBlank(value)) {
@@ -93,6 +99,7 @@ public final class ChatClientSettingsResolver {
         }
     }
 
+    /** 获取Double */
     private static Double getDouble(SysAiGlobalSettingService service, String field) {
         String value = getValue(service, field);
         if (StringUtils.isBlank(value)) {
@@ -105,6 +112,7 @@ public final class ChatClientSettingsResolver {
         }
     }
 
+    /** 获取Long */
     private static Long getLong(SysAiGlobalSettingService service, String field, long defaultValue) {
         String value = getValue(service, field);
         if (StringUtils.isBlank(value)) {
@@ -117,6 +125,7 @@ public final class ChatClientSettingsResolver {
         }
     }
 
+    /** FirstNonBlank */
     private static String firstNonBlank(String... values) {
         if (values == null) {
             return null;

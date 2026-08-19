@@ -56,6 +56,10 @@ public class ApiCorsConfiguration  {
     /** Cors属性 */
     private final ApiCorsProperties corsProperties;
 
+    /**
+     * 创建 ApiCorsConfiguration 实例
+     * @param corsProperties corsProperties
+     */
     public ApiCorsConfiguration(ApiCorsProperties corsProperties) {
         this.corsProperties = corsProperties;
     }

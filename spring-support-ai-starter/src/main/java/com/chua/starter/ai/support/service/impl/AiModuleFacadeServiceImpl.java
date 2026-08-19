@@ -64,6 +64,7 @@ public class AiModuleFacadeServiceImpl implements AiModuleFacadeService {
     private AiModuleFacadeServiceImpl self;
 
     @Override
+    /** List */
     public List<SysAiModule> list(String moduleType, String moduleVendor) {
         List<SysAiModule> modules;
         try {
@@ -103,6 +104,7 @@ public class AiModuleFacadeServiceImpl implements AiModuleFacadeService {
     }
 
     @Override
+    /** Page */
     public Map<String, Object> page(AiModuleQuery query) {
         List<SysAiModule> records;
         long total = 0;
@@ -140,6 +142,7 @@ public class AiModuleFacadeServiceImpl implements AiModuleFacadeService {
 
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, key = "'sys:ai:modules:all'")
+    /** 保存 */
     public SysAiModule save(SysAiModule entity) {
         entity.setSysAiModuleStatus(entity.getSysAiModuleStatus() == null ? 1 : entity.getSysAiModuleStatus());
         entity.setSysAiModuleSort(entity.getSysAiModuleSort() == null ? 0 : entity.getSysAiModuleSort());
@@ -153,6 +156,7 @@ public class AiModuleFacadeServiceImpl implements AiModuleFacadeService {
 
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, key = "'sys:ai:modules:all'")
+    /** 更新 */
     public boolean update(SysAiModule entity) {
         entity.setSysAiModuleManufacturers(entity.getSysAiModuleVendor());
         entity.setUpdateTime(LocalDateTime.now());
@@ -160,17 +164,20 @@ public class AiModuleFacadeServiceImpl implements AiModuleFacadeService {
     }
 
     @Override
+    /** 删除ById */
     public boolean deleteById(Integer id) {
         aiSettingFacadeService.deleteByModuleId(id);
         return aiModuleMapper.deleteById(id) > 0;
     }
 
     @Override
+    /** 获取ById */
     public SysAiModule getById(Integer id) {
         return aiModuleMapper.selectById(id);
     }
 
     @Override
+    /** Settings */
     public List<SysAiSetting> settings(Integer moduleId) {
         return sysAiSettingMapper.selectList(
                 Wrappers.<SysAiSetting>lambdaQuery()
@@ -178,6 +185,7 @@ public class AiModuleFacadeServiceImpl implements AiModuleFacadeService {
         );
     }
 
+    /** AttachCompatFields */
     private void attachCompatFields(List<SysAiModule> modules) {
     }
 
@@ -221,10 +229,12 @@ public class AiModuleFacadeServiceImpl implements AiModuleFacadeService {
         }
     }
 
+    /** CodeNot是否存在 */
     private boolean codeNotExists(List<SysAiModule> modules, String code) {
         return modules.stream().noneMatch(m -> code.equalsIgnoreCase(m.getSysAiModuleCode()));
     }
 
+    /** ToSysAiModule */
     private SysAiModule toSysAiModule(LocalModuleDefinition def) {
         SysAiModule module = new SysAiModule();
         module.setSysAiModuleName(def.getName());
@@ -232,10 +242,12 @@ public class AiModuleFacadeServiceImpl implements AiModuleFacadeService {
         return module;
     }
 
+    /** 构建VincentSetting */
     private Map<String, Object> buildVincentSetting(Integer moduleId) {
         return Map.of();
     }
 
+    /** 解析Int */
     private Integer parseInt(String value) {
         try {
             return value == null || value.isBlank() ? null : Integer.parseInt(value.trim());
@@ -244,6 +256,7 @@ public class AiModuleFacadeServiceImpl implements AiModuleFacadeService {
         }
     }
 
+    /** DefaultInt */
     private Integer defaultInt(Integer value, Integer defaultValue) {
         return value == null ? defaultValue : value;
     }

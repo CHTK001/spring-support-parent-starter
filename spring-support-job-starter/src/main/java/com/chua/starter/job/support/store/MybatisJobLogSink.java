@@ -28,16 +28,26 @@ public class MybatisJobLogSink implements JobLogSink {
     /** 文件logging是否启用 */
     private final boolean fileLoggingEnabled;
 
+    /**
+     * 创建 MybatisJobLogSink 实例
+     * @param jobLogMapper jobLogMapper
+     */
     public MybatisJobLogSink(JobLogMapper jobLogMapper) {
         this(jobLogMapper, true);
     }
 
+    /**
+     * 创建 MybatisJobLogSink 实例
+     * @param jobLogMapper jobLogMapper
+     * @param boolean boolean
+     */
     public MybatisJobLogSink(JobLogMapper jobLogMapper, boolean fileLoggingEnabled) {
         this.jobLogMapper = jobLogMapper;
         this.fileLoggingEnabled = fileLoggingEnabled;
     }
 
     @Override
+    /** 写入 */
     public void write(JobLogEvent event) {
         if (event == null) {
             return;
@@ -77,12 +87,14 @@ public class MybatisJobLogSink implements JobLogSink {
         return entity;
     }
 
+    /** 解析记录日志FilePath */
     private String resolveLogFilePath(JobLogEvent event) {
         String dateDir = DATE_FMT.format(Instant.now());
         String jobName = sanitize(event.jobName() != null ? event.jobName() : "unknown");
         return dateDir + "/" + jobName + "/" + event.executedAtMs() + ".log";
     }
 
+    /** Sanitize */
     private static String sanitize(String name) {
         return name.replaceAll("[/\\\\:*?\"<>|]", "_");
     }

@@ -24,12 +24,14 @@ import java.util.List;
 public class MacLocalSoftwareCollector implements LocalSoftwareCollector {
 
     @Override
+    /** Support */
     public boolean support() {
         return System.getProperty("os.name", "").toLowerCase().contains("mac") ||
                 System.getProperty("os.name", "").toLowerCase().contains("darwin");
     }
 
     @Override
+    /** Collect */
     public List<SoftSoftware> collect() {
         List<SoftSoftware> list = new ArrayList<>();
         File appDir = new File("/Applications");
@@ -49,6 +51,7 @@ public class MacLocalSoftwareCollector implements LocalSoftwareCollector {
         return list;
     }
 
+    /** 读取AppInfo */
     private SoftSoftware readAppInfo(File app) {
         try {
             SoftSoftware software = new SoftSoftware();
@@ -72,6 +75,7 @@ public class MacLocalSoftwareCollector implements LocalSoftwareCollector {
         }
     }
 
+    /** 获取Mdls */
     private String getMdls(File app, String attribute) {
         try {
             Process process = Runtime.getRuntime().exec(

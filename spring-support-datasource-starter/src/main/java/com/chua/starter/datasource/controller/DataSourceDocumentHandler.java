@@ -46,6 +46,11 @@ public class DataSourceDocumentHandler {
      */
     private final String basePath;
 
+    /**
+     * 创建 DataSourceDocumentHandler 实例
+     * @param controller controller
+     * @param String String
+     */
     public DataSourceDocumentHandler(DataSourceDocumentController controller, String basePath) {
         this.controller = controller;
         this.basePath = trimTrailingSlash(basePath);
@@ -67,6 +72,14 @@ public class DataSourceDocumentHandler {
         log.info("[spring-support-datasource] 数据库文档预览与图谱已注册: basePath={}", basePath);
     }
 
+    /**
+     * 注册Path
+     * @param mapping mapping
+     * @param method method
+     * @param path path
+     * @param handlerMethod handlerMethod
+     * @param paramTypes paramTypes
+     */
     private void registerPath(RequestMappingHandlerMapping mapping,
                               String method, String path, String handlerMethod,
                               Class<?>... paramTypes) {
@@ -81,6 +94,7 @@ public class DataSourceDocumentHandler {
         }
     }
 
+    /** 去空格TrailingSlash */
     private static String trimTrailingSlash(String s) {
         if (s == null || s.isEmpty()) {
             return "";

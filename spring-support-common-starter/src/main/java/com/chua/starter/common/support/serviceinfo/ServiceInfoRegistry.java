@@ -44,8 +44,10 @@ public final class ServiceInfoRegistry {
     private final Map<String, EndpointInfo> endpoints = new LinkedHashMap<>();
     private final Map<String, FlagInfo> flags = new LinkedHashMap<>();
 
+    /** 创建 ServiceInfoRegistry 实例 */
     private ServiceInfoRegistry() {}
 
+    /** 获取Instance */
     public static ServiceInfoRegistry getInstance() {
         return INSTANCE;
     }
@@ -92,6 +94,7 @@ public final class ServiceInfoRegistry {
         flags.put(key, new FlagInfo(name, group, value, description, suffix));
     }
 
+    /** KeyOf */
     private static String keyOf(String group, String name) {
         return (group == null ? "" : group) + KEY_SEP + (name == null ? "" : name);
     }
@@ -120,10 +123,12 @@ public final class ServiceInfoRegistry {
         return endpoints.get(keyOf(group, name));
     }
 
+    /** 获取Endpoints */
     public Map<String, EndpointInfo> getEndpoints() {
         return endpoints;
     }
 
+    /** 获取Flags */
     public Map<String, FlagInfo> getFlags() {
         return flags;
     }
@@ -158,6 +163,13 @@ public final class ServiceInfoRegistry {
         /** 描述 */
         private final String description;
 
+        /**
+         * 创建 EndpointInfo 实例
+         * @param group group
+         * @param String String
+         * @param String String
+         * @param String String
+         */
         public EndpointInfo(String group, String name, String url, String description) {
             this.group = group;
             this.name = name;
@@ -165,12 +177,17 @@ public final class ServiceInfoRegistry {
             this.description = description;
         }
 
+        /** 获取分组 */
         public String getGroup() { return group; }
+        /** 获取Name */
         public String getName() { return name; }
+        /** 获取Url */
         public String getUrl() { return url; }
+        /** 获取Description */
         public String getDescription() { return description; }
 
         @Override
+        /** 判断相等 */
         public boolean equals(Object o) {
             if (!(o instanceof EndpointInfo)) return false;
             EndpointInfo that = (EndpointInfo) o;
@@ -178,6 +195,7 @@ public final class ServiceInfoRegistry {
         }
 
         @Override
+        /** HashCode */
         public int hashCode() {
             return Objects.hash(group, name);
         }
@@ -195,6 +213,14 @@ public final class ServiceInfoRegistry {
         /** Suffix */
         private final String suffix;
 
+        /**
+         * 创建 FlagInfo 实例
+         * @param name name
+         * @param String String
+         * @param Boolean Boolean
+         * @param String String
+         * @param String String
+         */
         public FlagInfo(String name, String group, Boolean value, String description, String suffix) {
             this.name = name;
             this.group = group;
@@ -203,13 +229,19 @@ public final class ServiceInfoRegistry {
             this.suffix = suffix;
         }
 
+        /** 获取Name */
         public String getName() { return name; }
+        /** 获取分组 */
         public String getGroup() { return group; }
+        /** 获取Value */
         public Boolean getValue() { return value; }
+        /** 获取Description */
         public String getDescription() { return description; }
+        /** 获取Suffix */
         public String getSuffix() { return suffix; }
 
         @Override
+        /** 判断相等 */
         public boolean equals(Object o) {
             if (!(o instanceof FlagInfo)) return false;
             FlagInfo that = (FlagInfo) o;
@@ -217,6 +249,7 @@ public final class ServiceInfoRegistry {
         }
 
         @Override
+        /** HashCode */
         public int hashCode() {
             return Objects.hash(group, name);
         }

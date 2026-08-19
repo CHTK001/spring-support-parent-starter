@@ -250,6 +250,7 @@ public class JobExecutor {
             private final AtomicLong counter = new AtomicLong(0L);
 
             @Override
+            /** NewThread */
             public Thread newThread(Runnable r) {
                 Thread t = new Thread(r, DEFAULT_THREAD_NAME_PREFIX + counter.incrementAndGet());
                 t.setDaemon(true);

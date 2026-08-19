@@ -54,6 +54,15 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
     /** Transactionrecordmapper */
     private final TransactionRecordMapper transactionRecordMapper;
 
+    /**
+     * 创建 PaymentDashboardServiceImpl 实例
+     * @param merchantMapper merchantMapper
+     * @param merchantChannelMapper merchantChannelMapper
+     * @param paymentOrderMapper paymentOrderMapper
+     * @param paymentRefundOrderMapper paymentRefundOrderMapper
+     * @param paymentNotifyLogMapper paymentNotifyLogMapper
+     * @param transactionRecordMapper transactionRecordMapper
+     */
     public PaymentDashboardServiceImpl(MerchantMapper merchantMapper,
                                        MerchantChannelMapper merchantChannelMapper,
                                        PaymentOrderMapper paymentOrderMapper,
@@ -69,6 +78,7 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
     }
 
     @Override
+    /** Summary */
     public PaymentDashboardSummaryVO summary(LocalDate startDate, LocalDate endDate) {
         LocalDate normalizedEndDate = endDate != null ? endDate : LocalDate.now();
         LocalDate normalizedStartDate = startDate != null ? startDate : normalizedEndDate;
@@ -93,6 +103,7 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
         return summary;
     }
 
+    /** FillMerchantMetrics */
     private void fillMerchantMetrics(PaymentDashboardSummaryVO summary) {
         summary.setMerchantTotal(merchantMapper.selectCount(new LambdaQueryWrapper<>()));
         summary.setActiveMerchantCount(merchantMapper.selectCount(new LambdaQueryWrapper<Merchant>()
@@ -104,6 +115,7 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
         summary.setConfiguredMerchantCount((long) configuredMerchantIds.size());
     }
 
+    /** FillOrderMetrics */
     private void fillOrderMetrics(PaymentDashboardSummaryVO summary, LocalDateTime startTime, LocalDateTime endTime) {
         List<PaymentOrder> orders = paymentOrderMapper.selectList(new LambdaQueryWrapper<PaymentOrder>()
                 .in(PaymentOrder::getStatus, PAID_ORDER_STATUSES)
@@ -117,6 +129,7 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
     }
 
+    /** FillRefundMetrics */
     private void fillRefundMetrics(PaymentDashboardSummaryVO summary, LocalDateTime startTime, LocalDateTime endTime) {
         List<PaymentRefundOrder> refunds = paymentRefundOrderMapper.selectList(new LambdaQueryWrapper<PaymentRefundOrder>()
                 .eq(PaymentRefundOrder::getStatus, REFUNDED_STATUS)
@@ -130,6 +143,7 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
     }
 
+    /** FillTransactionMetrics */
     private void fillTransactionMetrics(PaymentDashboardSummaryVO summary, LocalDateTime startTime, LocalDateTime endTime) {
         Long transactionCount = transactionRecordMapper.selectCount(new LambdaQueryWrapper<TransactionRecord>()
                 .ge(TransactionRecord::getCreatedAt, startTime)
@@ -137,6 +151,7 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
         summary.setTransactionCount(transactionCount);
     }
 
+    /** Fill通知Metrics */
     private void fillNotifyMetrics(PaymentDashboardSummaryVO summary, LocalDateTime startTime, LocalDateTime endTime) {
         List<PaymentNotifyLog> logs = paymentNotifyLogMapper.selectList(new LambdaQueryWrapper<PaymentNotifyLog>()
                 .ge(PaymentNotifyLog::getReceivedTime, startTime)
@@ -159,6 +174,7 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
         summary.setAverageProcessDurationMs(averageDurationMs);
     }
 
+    /** 处理DurationMs */
     private Long processDurationMs(PaymentNotifyLog item) {
         if (item.getReceivedTime() == null || item.getProcessedTime() == null) {
             return null;
@@ -166,6 +182,7 @@ public class PaymentDashboardServiceImpl implements PaymentDashboardService {
         return java.time.Duration.between(item.getReceivedTime(), item.getProcessedTime()).toMillis();
     }
 
+    /** FirstNonNull */
     private BigDecimal firstNonNull(BigDecimal first, BigDecimal second) {
         if (first != null) {
             return first;

@@ -48,11 +48,13 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     private Environment environment;
 
     @Override
+    /** 设置Environment */
     public void setEnvironment(Environment environment) {
       this.environment = environment;
     }
 
     @Override
+    /** Post处理BeanDefinitionRegistry */
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         DiscoveryListProperties properties = Binder.get(environment).bindOrCreate(DiscoveryListProperties.PRE, DiscoveryListProperties.class);
         if (!properties.isEnable()) {
@@ -138,6 +140,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         return true;
     }
 
+    /** RegistryNode */
     private Discovery registryNode(DiscoveryNodeProperties discoveryNodeProperties) {
         Project project = Project.getInstance();
         String serverId = discoveryNodeProperties.getServerId();
@@ -204,12 +207,19 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         /** Discovery列表 */
         private final List<Discovery> discoveryList;
 
+        /**
+         * 创建 ServiceDiscovertyFactoryBean 实例
+         * @param serviceDiscovery serviceDiscovery
+         * @param List List
+         * @param discoveryList discoveryList
+         */
         public ServiceDiscovertyFactoryBean(ServiceDiscovery serviceDiscovery, List<Discovery> discoveryList) {
             this.serviceDiscovery = serviceDiscovery;
             this.discoveryList = discoveryList;
         }
 
         @Override
+        /** 获取Object */
         public ServiceDiscovery getObject() throws Exception {
             return serviceDiscovery;
         }
@@ -220,6 +230,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         }
 
 
+        /** 开始 */
         public void start() throws Exception {
             serviceDiscovery.start();
             for (Discovery discovery : discoveryList) {
@@ -227,6 +238,7 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
                 if(serviceDiscovery.isSupportSubscribe()) {
                     serviceDiscovery.subscribe(discovery.getUriSpec(), new ServiceDiscoveryListener() {
                         @Override
+                        /** 监听 */
                         public void listen(String s, Discovery discovery, Event event) {
                             DiscoveryConfiguration.log.info("[Discovery] 服务变更: {} -> {}", highlight(discovery.getUriSpec()), event);
                         }
@@ -236,12 +248,14 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         }
 
         @Override
+        /** 关闭 */
         public void close() throws Exception {
             serviceDiscovery.close();
         }
     }
 
     @Bean
+    /** DiscoveryServiceInfoContributor */
     public ServiceInfoContributor discoveryServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("discovery", "服务发现", true, "服务发现模块");

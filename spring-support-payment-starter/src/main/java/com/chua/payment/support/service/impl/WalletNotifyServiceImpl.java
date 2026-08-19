@@ -27,6 +27,15 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 处理通知
+     * @param orderType orderType
+     * @param orderNo orderNo
+     * @param thirdPartyOrderNo thirdPartyOrderNo
+     * @param status status
+     * @param payload payload
+     * @param reason reason
+     */
     public void handleNotify(String orderType,
                              String orderNo,
                              String thirdPartyOrderNo,
@@ -51,6 +60,13 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
         }
     }
 
+    /**
+     * 处理Success
+     * @param walletOrder walletOrder
+     * @param thirdPartyOrderNo thirdPartyOrderNo
+     * @param payload payload
+     * @param reason reason
+     */
     private void handleSuccess(WalletOrder walletOrder,
                                String thirdPartyOrderNo,
                                String payload,
@@ -61,6 +77,7 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
         walletOrderService.markSuccess(walletOrder.getOrderNo(), thirdPartyOrderNo, payload);
     }
 
+    /** 应用AccountChange */
     private void applyAccountChange(WalletOrder walletOrder, String reason) {
         String operator = firstNonBlank(walletOrder.getOperator(), "wallet-notify");
         String remark = firstNonBlank(reason, walletOrder.getRemark(), walletOrder.getOrderNo());
@@ -100,6 +117,7 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
         throw new PaymentException("不支持的钱包订单类型: " + walletOrder.getOrderType());
     }
 
+    /** 校验OrderType */
     private void validateOrderType(String orderType, WalletOrder walletOrder) {
         String normalizedOrderType = normalizeOrderType(orderType);
         if (!StringUtils.hasText(normalizedOrderType)) {
@@ -110,6 +128,7 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
         }
     }
 
+    /** NormalizeOrderType */
     private String normalizeOrderType(String orderType) {
         if (!StringUtils.hasText(orderType)) {
             return null;
@@ -127,6 +146,7 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
         return normalized;
     }
 
+    /** NormalizeStatus */
     private String normalizeStatus(String status) {
         if (!StringUtils.hasText(status)) {
             throw new PaymentException("钱包回调缺少状态");
@@ -144,6 +164,7 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
         return normalized;
     }
 
+    /** Matches */
     private boolean matches(String value, String... candidates) {
         if (candidates == null) {
             return false;
@@ -156,6 +177,7 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
         return false;
     }
 
+    /** FirstNonBlank */
     private String firstNonBlank(String... values) {
         if (values == null) {
             return null;

@@ -181,6 +181,7 @@ public class CurrentUser {
         return false;
     }
 
+    /** 是否拥有Permission */
     public boolean hasPermission(String[] value) {
         if (value.length == 0) {
             return true;

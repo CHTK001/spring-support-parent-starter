@@ -35,11 +35,16 @@ public class SshServerService implements InitializingBean, DisposableBean {
     /** SSH服务器 */
     private SshServer sshServer;
 
+    /**
+     * 创建 SshServerService 实例
+     * @param properties properties
+     */
     public SshServerService(SshServerProperties properties) {
         this.properties = properties;
     }
 
     @Override
+    /** AfterProperties设置 */
     public void afterPropertiesSet() throws Exception {
         if (properties.isEnabled()) {
             startSshServer();
@@ -49,6 +54,7 @@ public class SshServerService implements InitializingBean, DisposableBean {
     }
 
     @Override
+    /** 销毁 */
     public void destroy() throws Exception {
         stopSshServer();
     }
@@ -107,6 +113,7 @@ public class SshServerService implements InitializingBean, DisposableBean {
             // 配置密码认证
             sshServer.setPasswordAuthenticator(new PasswordAuthenticator() {
                 @Override
+                /** Authenticate */
                 public boolean authenticate(String username, String password, ServerSession session) {
                     // 简单的用户名密码验证
                     boolean authenticated = auth.getUsername().equals(username) && 

@@ -14,10 +14,12 @@ import com.chua.starter.aliyun.support.properties.AliyunAlipayProperties;
  */
 public class AliyunAlipayClientFactory {
 
+    /** 创建Client */
     public AlipayClient createClient(AliyunAlipayProperties properties) {
         return createClient(createConfig(properties));
     }
 
+    /** 创建Client */
     public AlipayClient createClient(AlipayConfig config) {
         try {
             return new DefaultAlipayClient(config);
@@ -26,6 +28,7 @@ public class AliyunAlipayClientFactory {
         }
     }
 
+    /** 创建Config */
     public AlipayConfig createConfig(AliyunAlipayProperties properties) {
         AlipayConfig config = new AlipayConfig();
         config.setServerUrl(properties.resolveServerUrl());

@@ -33,11 +33,16 @@ public class ServiceInfoContributorAutoConfiguration implements ApplicationListe
     /** Application上下文 */
     private final ApplicationContext applicationContext;
 
+    /**
+     * 创建 ServiceInfoContributorAutoConfiguration 实例
+     * @param applicationContext applicationContext
+     */
     public ServiceInfoContributorAutoConfiguration(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
     }
 
     @Override
+    /** OnApplicationEvent */
     public void onApplicationEvent(ContextRefreshedEvent event) {
         if (event.getApplicationContext() != this.applicationContext) {
             return;

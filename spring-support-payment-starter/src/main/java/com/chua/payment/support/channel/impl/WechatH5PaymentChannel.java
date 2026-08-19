@@ -17,6 +17,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 public class WechatH5PaymentChannel extends WechatJsapiPaymentChannel implements PaymentChannel {
 
+    /**
+     * 创建 WechatH5PaymentChannel 实例
+     * @param merchantChannelService merchantChannelService
+     * @param objectMapper objectMapper
+     * @param providerGatewayRegistry providerGatewayRegistry
+     */
     public WechatH5PaymentChannel(MerchantChannelService merchantChannelService,
                                   ObjectMapper objectMapper,
                                   PaymentProviderGatewayRegistry providerGatewayRegistry) {
@@ -24,12 +30,14 @@ public class WechatH5PaymentChannel extends WechatJsapiPaymentChannel implements
     }
 
     @Override
+    /** Supports */
     public boolean supports(String channelType, String channelSubType) {
         return ("WECHAT".equalsIgnoreCase(channelType) || "EPAY".equalsIgnoreCase(channelType))
                 && "H5".equalsIgnoreCase(channelSubType);
     }
 
     @Override
+    /** Pay */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         TencentWechatPayRequest payRequest = buildPayRequest(channel, request);
         payRequest.setAppUrl(firstNonBlank(request.getReturnUrl(), extText(channel, "appUrl")));
@@ -46,6 +54,7 @@ public class WechatH5PaymentChannel extends WechatJsapiPaymentChannel implements
     }
 
     @Override
+    /** 查询 */
     public PaymentResult query(MerchantChannel channel, String orderNo) {
         TencentWechatOrderResponse response = gateway(providerSpi(channel, null)).queryH5Order(buildProperties(channel), orderNo);
 
@@ -60,6 +69,7 @@ public class WechatH5PaymentChannel extends WechatJsapiPaymentChannel implements
     }
 
     @Override
+    /** 关闭 */
     public boolean close(MerchantChannel channel, String orderNo) {
         return gateway(providerSpi(channel, null)).closeH5Order(buildProperties(channel), orderNo);
     }

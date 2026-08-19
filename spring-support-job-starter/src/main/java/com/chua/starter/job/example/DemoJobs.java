@@ -111,6 +111,7 @@ public class DemoJobs {
      */
     @Job(value = "example.lifecycle", desc = "示例生命周期任务",
             cron = "0/3 * * * * ?", init = "lifecycleInit", destroy = "lifecycleDestroy")
+    /** LifecycleTick */
     public void lifecycleTick() {
         log.info("[example] lifecycle 执行");
     }

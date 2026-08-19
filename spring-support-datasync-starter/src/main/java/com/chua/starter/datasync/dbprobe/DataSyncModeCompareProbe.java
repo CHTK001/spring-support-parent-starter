@@ -24,6 +24,7 @@ public final class DataSyncModeCompareProbe {
     static final Path CSV = Paths.get("target/stress-compare/source.csv");
     static final int ROWS = 100_000;
     static final int BATCH = 1000;
+    /** Main */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(CSV.getParent());
         if (!Files.exists(CSV)) {
@@ -40,6 +41,7 @@ public final class DataSyncModeCompareProbe {
         testInMemory("3. InMemory pub/sub (InMemoryDispatcherProvider)");
         System.err.println("========================================================================");
     }
+    /** TestDirect */
     static void testDirect(String label) throws Exception {
         var cfg = DefaultSyncDataSchedulerManager.SchedulerConfig.builder()
             .directDispatch(true).retryMaxAttempts(0).memorySafeEnabled(false).build();
@@ -57,6 +59,7 @@ public final class DataSyncModeCompareProbe {
         server.stop();
         report(label, ms, sink.count.get());
     }
+    /** TestChronicle */
     static void testChronicle(String label) throws Exception {
         try {
             var cfg = DefaultSyncDataSchedulerManager.SchedulerConfig.builder()
@@ -82,6 +85,7 @@ public final class DataSyncModeCompareProbe {
             System.err.printf("%-45s %s (Java 25 不兼容)%n", label, e.getClass().getSimpleName());
         }
     }
+    /** TestInMemory */
     static void testInMemory(String label) throws Exception {
         var cfg = DefaultSyncDataSchedulerManager.SchedulerConfig.builder()
             .directDispatch(false).retryMaxAttempts(0).memorySafeEnabled(false).build();
@@ -103,6 +107,7 @@ public final class DataSyncModeCompareProbe {
         server.stop();
         report(label, ms, sink.count.get());
     }
+    /** Report */
     static void report(String label, long ms, long count) {
         long tp = count * 1000L / Math.max(1, ms);
         System.err.printf("%-45s %5dms  %,d 行/s  rows=%d%n", label, ms, tp, count);

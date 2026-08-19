@@ -33,10 +33,17 @@ public class Result<T> implements Serializable {
      */
     private Long timestamp;
 
+    /** 创建 Result 实例 */
     public Result() {
         this.timestamp = System.currentTimeMillis();
     }
 
+    /**
+     * 创建 Result 实例
+     * @param code code
+     * @param String String
+     * @param T T
+     */
     public Result(Integer code, String message, T data) {
         this.code = code;
         this.message = message;

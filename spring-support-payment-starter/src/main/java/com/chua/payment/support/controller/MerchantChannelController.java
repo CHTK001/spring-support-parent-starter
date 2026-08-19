@@ -27,24 +27,33 @@ public class MerchantChannelController {
 
     @Operation(summary = "创建渠道配置")
     @PostMapping
+    /** 创建Channel */
     public Result<MerchantChannelVO> createChannel(@RequestBody ChannelConfigDTO dto) {
         return Result.success(channelService.createChannel(dto));
     }
 
     @Operation(summary = "更新渠道配置")
     @PutMapping("/{id}")
+    /** 更新Channel */
     public Result<MerchantChannelVO> updateChannel(@PathVariable Long id, @RequestBody ChannelConfigDTO dto) {
         return Result.success(channelService.updateChannel(id, dto));
     }
 
     @Operation(summary = "查询渠道配置")
     @GetMapping("/{id}")
+    /** 获取Channel */
     public Result<MerchantChannelVO> getChannel(@PathVariable Long id) {
         return Result.success(channelService.getChannel(id));
     }
 
     @Operation(summary = "查询商户的所有渠道")
     @GetMapping("/merchant/{merchantId}")
+    /**
+     * 列表Channels
+     * @param merchantId merchantId
+     * @param channelType channelType
+     * @param status status
+     */
     public Result<List<MerchantChannelVO>> listChannels(@PathVariable Long merchantId,
                                                         @RequestParam(required = false) String channelType,
                                                         @RequestParam(required = false) Integer status) {
@@ -53,6 +62,7 @@ public class MerchantChannelController {
 
     @Operation(summary = "查询渠道配置列表")
     @GetMapping("/list")
+    /** ListAllChannels */
     public Result<List<MerchantChannelVO>> listAllChannels(@RequestParam(required = false) Long merchantId,
                                                            @RequestParam(required = false) String channelType,
                                                            @RequestParam(required = false) Integer status) {
@@ -61,24 +71,28 @@ public class MerchantChannelController {
 
     @Operation(summary = "支付方式目录与开通指引")
     @GetMapping("/catalog")
+    /** ListCatalog */
     public Result<List<PaymentMethodGuideVO>> listCatalog() {
         return Result.success(channelService.listCatalog());
     }
 
     @Operation(summary = "启用渠道")
     @PutMapping("/{id}/enable")
+    /** 启用Channel */
     public Result<Boolean> enableChannel(@PathVariable Long id) {
         return Result.success(channelService.enableChannel(id));
     }
 
     @Operation(summary = "禁用渠道")
     @PutMapping("/{id}/disable")
+    /** 禁用Channel */
     public Result<Boolean> disableChannel(@PathVariable Long id) {
         return Result.success(channelService.disableChannel(id));
     }
 
     @Operation(summary = "删除渠道")
     @DeleteMapping("/{id}")
+    /** 删除Channel */
     public Result<Boolean> deleteChannel(@PathVariable Long id) {
         return Result.success(channelService.deleteChannel(id));
     }

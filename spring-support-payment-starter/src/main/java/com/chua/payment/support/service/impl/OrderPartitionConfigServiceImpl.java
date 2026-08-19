@@ -50,11 +50,13 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     private final DataSource dataSource;
 
     @PostConstruct
+    /** 初始化Defaults */
     public void initDefaults() {
         syncDefaults();
     }
 
     @Override
+    /** ListConfigs */
     public List<OrderPartitionConfigVO> listConfigs() {
         syncDefaults();
         return orderPartitionConfigMapper.selectList(new LambdaQueryWrapper<OrderPartitionConfig>().orderByAsc(OrderPartitionConfig::getId))
@@ -63,6 +65,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 更新Config */
     public OrderPartitionConfigVO updateConfig(String businessType, OrderPartitionConfigDTO dto) {
         OrderPartitionConfig config = requireConfig(businessType);
         if (dto != null) {
@@ -90,6 +93,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     }
 
     @Override
+    /** Preview */
     public OrderPartitionPreviewVO preview(String businessType) {
         OrderPartitionConfig config = requireConfig(businessType);
         LocalDateTime migrateBeforeTime = LocalDateTime.now().minusDays(config.getMigrateBeforeDays());
@@ -106,6 +110,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 执行Auto创建 */
     public void executeAutoCreate(String businessType) {
         OrderPartitionConfig config = requireConfig(businessType);
         String tableName = resolvePartitionTable(config, LocalDate.now().plusDays(config.getCreateAheadDays()));
@@ -117,6 +122,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /** 执行AutoMigrate */
     public void executeAutoMigrate(String businessType) {
         OrderPartitionConfig config = requireConfig(businessType);
         String timeCol = config.getTableTimeColumn();
@@ -154,6 +160,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
         orderPartitionConfigMapper.updateById(config);
     }
 
+    /** 验证Partition查询 */
     private int verifyPartitionQuery(String businessType, LocalDateTime cutoff) {
         try {
             OrderPartitionConfig config = requireConfig(businessType);
@@ -173,10 +180,12 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
     }
 
     @Override
+    /** 获取ConfigEntity */
     public OrderPartitionConfig getConfigEntity(String businessType) {
         return requireConfig(businessType);
     }
 
+    /** SyncDefaults */
     private void syncDefaults() {
         for (OrderPartitionConfig item : DEFAULTS.values()) {
             OrderPartitionConfig existing = orderPartitionConfigMapper.selectOne(new LambdaQueryWrapper<OrderPartitionConfig>()
@@ -207,6 +216,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
         }
     }
 
+    /** RequireConfig */
     private OrderPartitionConfig requireConfig(String businessType) {
         if (!DEFAULTS.containsKey(normalizeBusinessType(businessType))) {
             throw new PaymentException("不支持的业务类型: " + businessType);
@@ -220,17 +230,20 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
         return config;
     }
 
+    /** 解析PartitionTable */
     private String resolvePartitionTable(OrderPartitionConfig config, LocalDate date) {
         String suffix = "DAY".equalsIgnoreCase(config.getPartitionGranularity()) ? DAY_FORMAT.format(date) : MONTH_FORMAT.format(date.withDayOfMonth(1));
         return validateTableName(config.getPartitionPrefix(), "分表前缀") + "_" + suffix;
     }
 
+    /** EnsurePartitionTable是否存在 */
     private void ensurePartitionTableExists(String sourceTable, String targetTable) {
         validateTableName(sourceTable, "源表");
         validateTableName(targetTable, "目标表");
         jdbcTemplate.execute(resolveCloneSql(sourceTable, targetTable));
     }
 
+    /** 解析CloneSql */
     private String resolveCloneSql(String sourceTable, String targetTable) {
         try (Connection connection = dataSource.getConnection()) {
             String database = connection.getMetaData().getDatabaseProductName().toLowerCase(Locale.ROOT);
@@ -242,12 +255,14 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
         return "create table if not exists " + targetTable + " like " + sourceTable;
     }
 
+    /** ToVO */
     private OrderPartitionConfigVO toVO(OrderPartitionConfig config) {
         OrderPartitionConfigVO vo = new OrderPartitionConfigVO();
         BeanUtils.copyProperties(config, vo);
         return vo;
     }
 
+    /** 创建Defaults */
     private static Map<String, OrderPartitionConfig> createDefaults() {
         Map<String, OrderPartitionConfig> result = new LinkedHashMap<>();
         result.put("ORDER", buildDefault("ORDER", "pay_order", "pay_order_part", "payment.order.partition.create", "payment.order.partition.migrate"));
@@ -255,6 +270,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
         return result;
     }
 
+    /** 构建Default */
     private static OrderPartitionConfig buildDefault(String businessType, String sourceTable, String prefix, String createTaskKey, String migrateTaskKey) {
         OrderPartitionConfig config = new OrderPartitionConfig();
         config.setBusinessType(businessType);
@@ -276,10 +292,12 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
         return config;
     }
 
+    /** NormalizeBusinessType */
     private String normalizeBusinessType(String businessType) {
         return fallback(businessType, "").trim().toUpperCase(Locale.ROOT);
     }
 
+    /** 解析Granularity */
     private String resolveGranularity(String value) {
         String result = fallback(value, "MONTH").trim().toUpperCase(Locale.ROOT);
         if (!"MONTH".equals(result) && !"DAY".equals(result)) {
@@ -288,6 +306,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
         return result;
     }
 
+    /** 解析Positive */
     private Integer resolvePositive(Integer value, Integer fallback, String label) {
         int result = value != null ? value : fallback;
         if (result <= 0) {
@@ -296,6 +315,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
         return result;
     }
 
+    /** 解析NonNegative */
     private Integer resolveNonNegative(Integer value, Integer fallback, String label) {
         int result = value != null ? value : fallback;
         if (result < 0) {
@@ -304,6 +324,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
         return result;
     }
 
+    /** 校验TableName */
     private String validateTableName(String value, String label) {
         if (!StringUtils.hasText(value) || !SAFE_TABLE.matcher(value.trim()).matches()) {
             throw new PaymentException(label + "不合法: " + value);
@@ -311,6 +332,7 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
         return value.trim();
     }
 
+    /** Fallback */
     private String fallback(String value, String fallback) {
         return StringUtils.hasText(value) ? value : fallback;
     }

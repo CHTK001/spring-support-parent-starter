@@ -27,6 +27,7 @@ public class MonitorMetricConfigServiceImpl implements MonitorMetricConfigServic
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorMetricConfig")
+    /** 创建 */
     public ReturnResult<MsMonitorMetricConfig> create(MsMonitorMetricConfig entity) {
         try {
             if (entity.getId() == null) {
@@ -43,6 +44,7 @@ public class MonitorMetricConfigServiceImpl implements MonitorMetricConfigServic
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorMetricConfig")
+    /** 更新 */
     public ReturnResult<MsMonitorMetricConfig> update(MsMonitorMetricConfig entity) {
         try {
             mapper.updateById(entity);
@@ -56,6 +58,7 @@ public class MonitorMetricConfigServiceImpl implements MonitorMetricConfigServic
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorMetricConfig")
+    /** 删除 */
     public ReturnResult<Void> delete(Long id) {
         try {
             mapper.deleteById(id);
@@ -68,6 +71,7 @@ public class MonitorMetricConfigServiceImpl implements MonitorMetricConfigServic
 
     @Override
     @Cacheable(cacheNames = "monitorMetricConfig", key = "'monitor.metricConfig:task:' + #taskId")
+    /** ListByTask */
     public ReturnResult<List<MsMonitorMetricConfig>> listByTask(Long taskId) {
         try {
             return ReturnResult.ok(mapper.selectList(
