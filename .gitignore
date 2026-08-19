@@ -25,6 +25,9 @@ tmp/
 tep/
 logs/
 META-INF/
+!**/src/main/resources/META-INF/
+!**/src/main/resources/META-INF/native-image/
+!**/src/main/resources/META-INF/native-image/**
 *~
 *.log
 *bak
