@@ -1185,3 +1185,37 @@ plugin:
 ---
 
 ⭐ 如果这个项目对你有帮助，请给我们一个星标！
+
+---
+
+## GraalVM Native Image 支持
+
+本项目（Spring Boot 4.1.0）已为 GraalVM Native Image 提供基础支持。模块级 `META-INF/native-image` 反射与资源元数据已覆盖以下模块：
+
+- `spring-support-common-starter`、`spring-support-ai-starter`、`spring-support-filesystem-starter`
+- `spring-support-rpc-starter`、`spring-support-socket-io-starter`、`spring-support-sync-starter`
+
+### 构建原生镜像
+
+在你的 **应用模块**（包含 `@SpringBootApplication` 入口类）中执行：
+
+```bash
+# 构建原生可执行文件（Linux/macOS/WSL）
+mvn -Pnative native:compile
+
+# Windows Native Image 需 GraalVM for JDK 25，并使用 Visual Studio 构建工具链
+# 请确保 `native-image` 命令可用，并设置 GRAALVM_HOME 环境变量
+```
+
+### 额外构建参数
+
+如应用使用了 FFM（`java.lang.foreign`）或 JNI 加载动态库，需追加原生访问权限：
+
+```bash
+mvn -Pnative native:compile \
+  -Dnative.buildtools.build-args="--enable-native-access=ALL-UNNAMED,--enable-url-protocols=http,https"
+```
+
+### JVM 运行兼容性
+
+在 GraalVM JDK（如 Corretto 25 / GraalVM for JDK 25）上运行时，本项目可直接使用，无需修改。`graalvm` JDK 是完全兼容的 `openjdk` 实现。
