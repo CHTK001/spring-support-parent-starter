@@ -15,7 +15,6 @@ import org.slf4j.MDC;
 import java.sql.Statement;
 
 /**
- * @author CH
  * @since 2025/6/27 15:54
  */
 @Intercepts({
@@ -25,19 +24,9 @@ import java.sql.Statement;
         @Signature(type = StatementHandler.class, method = "parameterize", args = {Statement.class}),
         @Signature(type = ResultSetHandler.class, method = "handleResultSets", args = {Statement.class})
 })
-/**
- * public class MapperTracingInterceptor implements Interceptor {
- *
- * @author CH
- * @since 4.0.0.42
- */
 public class MapperTracingInterceptor implements Interceptor {
 
     @Override
-    /**
-     * Intercept
-     * @param invocation invocation
-     */
     public Object intercept(Invocation invocation) throws Throwable {
         Object arg = invocation.getArgs()[0];
         if (arg instanceof MappedStatement ms) {

@@ -84,7 +84,6 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
         this.annotationTypes = annotationTypes;
     }
 
-    /** Combine */
     private static <T> Collection<T> combine(Collection<? extends T>... elements) {
         List<T> allElements = new ArrayList<T>();
         for (Collection<? extends T> e : elements) {
@@ -93,7 +92,6 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
         return allElements;
     }
     @Override
-    /** 设置ApplicationContext */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
         this.beanDefinitionRegistry = (BeanDefinitionRegistry) applicationContext.getAutowireCapableBeanFactory();
@@ -114,7 +112,6 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     }
 
     @Override
-    /** 设置BeanFactory */
     public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
         Assert.isInstanceOf(ConfigurableListableBeanFactory.class, beanFactory,
                 "AnnotationInjectedBeanPostProcessor requires a ConfigurableListableBeanFactory");
@@ -212,14 +209,12 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
         return elements;
     }
 
-    /** 构建AnnotatedMetadata */
     private AnnotatedInjectionMetadata buildAnnotatedMetadata(final Class<?> beanClass) {
         Collection<AnnotatedFieldElement> fieldElements = findFieldAnnotationMetadata(beanClass);
         Collection<AnnotatedMethodElement> methodElements = findAnnotatedMethodMetadata(beanClass);
         return new AnnotatedInjectionMetadata(beanClass, fieldElements, methodElements);
     }
 
-    /** 查找InjectionMetadata */
     protected AnnotatedInjectionMetadata findInjectionMetadata(String beanName, Class<?> clazz, PropertyValues pvs) {
         // Fall back to class name as cache key, for backwards compatibility with custom callers.
         String cacheKey = (StringUtils.hasLength(beanName) ? beanName : clazz.getName());
@@ -247,13 +242,11 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     }
 
     // Use custom check method to compatible with Spring 4.x
-    /** NeedsRefreshInjectionMetadata */
     private boolean needsRefreshInjectionMetadata(AnnotatedInjectionMetadata metadata, Class<?> clazz) {
         return (metadata == null || metadata.needsRefresh(clazz));
     }
 
     @Override
-    /** 销毁 */
     public void destroy() throws Exception {
 
         injectionMetadataCache.clear();
@@ -265,28 +258,23 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     }
 
     @Override
-    /** 设置BeanClassLoader */
     public void setBeanClassLoader(ClassLoader classLoader) {
         this.classLoader = classLoader;
     }
 
     @Override
-    /** 设置Environment */
     public void setEnvironment(Environment environment) {
         this.environment = environment;
     }
 
-    /** 获取Environment */
     protected Environment getEnvironment() {
         return environment;
     }
 
-    /** 获取ClassLoader */
     protected ClassLoader getClassLoader() {
         return classLoader;
     }
 
-    /** 获取BeanFactory */
     protected ConfigurableListableBeanFactory getBeanFactory() {
         return beanFactory;
     }
@@ -348,12 +336,6 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
         /** Methodelements */
         private final Collection<AnnotatedMethodElement> methodElements;
 
-        /**
-         * 创建 AnnotatedInjectionMetadata 实例
-         * @param targetClass targetClass
-         * @param fieldElements fieldElements
-         * @param methodElements methodElements
-         */
         public AnnotatedInjectionMetadata(Class<?> targetClass, Collection<AnnotatedFieldElement> fieldElements,
                                           Collection<AnnotatedMethodElement> methodElements) {
             super(targetClass, combine(fieldElements, methodElements));
@@ -362,18 +344,15 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
             this.methodElements = methodElements;
         }
 
-        /** 获取FieldElements */
         public Collection<AnnotatedFieldElement> getFieldElements() {
             return fieldElements;
         }
 
-        /** 获取MethodElements */
         public Collection<AnnotatedMethodElement> getMethodElements() {
             return methodElements;
         }
 
         //@Override // since Spring 5.2.4
-        /** NeedsRefresh */
         protected boolean needsRefresh(Class<?> clazz) {
             if (this.targetClass == clazz) {
                 return false;
@@ -385,7 +364,6 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
 
     /**
      * {@link Annotation Annotated} {@link Method} {@link InjectionMetadata.InjectedElement}
- * @author CH
      */
     protected class AnnotatedInjectElement extends InjectionMetadata.InjectedElement {
 
@@ -396,19 +374,12 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
 
         private Class<?> injectedType;
 
-        /**
-         * 创建 AnnotatedInjectElement 实例
-         * @param member member
-         * @param PropertyDescriptor PropertyDescriptor
-         * @param AnnotationAttributes AnnotationAttributes
-         */
         protected AnnotatedInjectElement(Member member, PropertyDescriptor pd, AnnotationAttributes attributes) {
             super(member, pd);
             this.attributes = attributes;
         }
 
         @Override
-        /** Inject */
         protected void inject(Object bean, String beanName, PropertyValues pvs) throws Throwable {
 
             Object injectedObject = getInjectedObject(attributes, bean, beanName, getInjectedType(), this);
@@ -440,7 +411,6 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
             return injectedType;
         }
 
-        /** 获取PropertyName */
         public String getPropertyName() {
             if (member instanceof Field field) {
                 return field.getName();
@@ -459,12 +429,6 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
         /** Method */
         public final Method method;
 
-        /**
-         * 创建 AnnotatedMethodElement 实例
-         * @param method method
-         * @param PropertyDescriptor PropertyDescriptor
-         * @param AnnotationAttributes AnnotationAttributes
-         */
         protected AnnotatedMethodElement(Method method, PropertyDescriptor pd, AnnotationAttributes attributes) {
             super(method, pd, attributes);
             this.method = method;
@@ -476,11 +440,6 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
         /** Field */
         public final Field field;
 
-        /**
-         * 创建 AnnotatedFieldElement 实例
-         * @param field field
-         * @param AnnotationAttributes AnnotationAttributes
-         */
         protected AnnotatedFieldElement(Field field, AnnotationAttributes attributes) {
             super(field, null, attributes);
             this.field = field;

@@ -28,12 +28,13 @@ public class DataSourceGroupRegistry {
     private static final Map<String, String> DS_TO_GROUP = new ConcurrentHashMap<>();
 
     /** 分隔符 */
+    /** Separator */
     private static final String SEPARATOR = "_";
 
     /** 全局默认负载均衡策略（可选，为空时使用各分组自身默认值） */
+    /** 默认策略 */
     private static DataSourceGroup.LoadBalanceStrategy defaultStrategy;
 
-    /** 创建 DataSourceGroupRegistry 实例 */
     private DataSourceGroupRegistry() {}
 
     /**

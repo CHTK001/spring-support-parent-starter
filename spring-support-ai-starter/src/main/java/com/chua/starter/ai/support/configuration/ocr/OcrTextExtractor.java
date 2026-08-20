@@ -172,10 +172,10 @@ public class OcrTextExtractor implements TextExtractor {
                             .minConfidence(minConfidence)
                             .sortReadingOrder(sortReadingOrder);
                     if (StringUtils.isNotBlank(directionModel)) {
-                        builder.directionModel(directionModel);
+                        builder.direction(directionModel);
                     }
                     if (StringUtils.isNotBlank(restorerModel)) {
-                        builder.restorerModel(restorerModel);
+                        builder.enhancer(restorerModel);
                     }
                     pipeline = builder.build();
                 }

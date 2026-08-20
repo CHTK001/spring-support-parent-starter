@@ -241,7 +241,6 @@ public interface Protocol {
          */
         private int size;
 
-        /** Empty */
         public static OnlineUserResult empty() {
             return new OnlineUserResult(java.util.Collections.emptyList(), 0, 1, 20);
         }
@@ -301,7 +300,7 @@ public interface Protocol {
      * <p>包含当前在线数、最大允许在线数、在线模式等信息</p>
      *
      * @since 2024/12/11
- * @author CH
+     * @author CH
      */
     @Data
     @NoArgsConstructor

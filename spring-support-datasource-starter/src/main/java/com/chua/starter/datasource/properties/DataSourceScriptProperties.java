@@ -288,162 +288,130 @@ public class DataSourceScriptProperties {
     private String[] excludeTablePrefixes = {"sys_"};
 
     // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
-    /** 是否启用 */
     public boolean isEnable() {
         return enable;
     }
 
-    /** 是否ContinueOn记录错误 */
     public boolean isContinueOnError() {
         return continueOnError;
     }
 
-    /** 获取扫描Mode */
     public ScanMode getScanMode() {
         return scanMode;
     }
 
-    /** 获取Effective扫描Mode */
     public ScanMode getEffectiveScanMode() {
         return enable ? scanMode : ScanMode.NONE;
     }
 
-    /** 获取Schema扫描Mode */
     public ScanMode getSchemaScanMode() {
         return scanMode;
     }
 
-    /** 获取EffectiveSchema扫描Mode */
     public ScanMode getEffectiveSchemaScanMode() {
         return enable ? scanMode : ScanMode.NONE;
     }
 
-    /** 获取Migration扫描Mode */
     public RepeatableScanMode getMigrationScanMode() {
         return migrationScanMode;
     }
 
-    /** 获取EffectiveMigration扫描Mode */
     public RepeatableScanMode getEffectiveMigrationScanMode() {
         return enable ? migrationScanMode : RepeatableScanMode.NONE;
     }
 
-    /** 获取Data扫描Mode */
     public ScanMode getDataScanMode() {
         return dataScanMode;
     }
 
-    /** 获取EffectiveData扫描Mode */
     public ScanMode getEffectiveDataScanMode() {
         return enable ? dataScanMode : ScanMode.NONE;
     }
 
-    /** 获取Separator */
     public String getSeparator() {
         return separator;
     }
 
-    /** 获取SqlScriptEncoding */
     public String getSqlScriptEncoding() {
         return sqlScriptEncoding;
     }
 
-    /** 获取ScriptPath */
     public String getScriptPath() {
         return scriptPath;
     }
 
-    /** 获取DatabaseType */
     public String getDatabaseType() {
         return databaseType;
     }
 
-    /** 是否BaselineOnMigrate */
     public boolean isBaselineOnMigrate() {
         return baselineOnMigrate;
     }
 
-    /** 是否CleanDisabled */
     public boolean isCleanDisabled() {
         return cleanDisabled;
     }
 
-    /** 获取VersionTable */
     public String getVersionTable() {
         return versionTable;
     }
 
-    /** 获取BaselineVersion */
     public String getBaselineVersion() {
         return baselineVersion;
     }
 
-    /** 获取BaselineDescription */
     public String getBaselineDescription() {
         return baselineDescription;
     }
 
-    /** 获取ScriptPrefix */
     public String getScriptPrefix() {
         return scriptPrefix;
     }
 
-    /** 获取ScriptSuffix */
     public String getScriptSuffix() {
         return scriptSuffix;
     }
 
-    /** 获取VersionSeparator */
     public String getVersionSeparator() {
         return versionSeparator;
     }
 
-    /** 是否校验Checksum */
     public boolean isValidateChecksum() {
         return validateChecksum;
     }
 
-    /** 是否Mixed */
     public boolean isMixed() {
         return mixed;
     }
 
-    /** 获取Timeout */
     public int getTimeout() {
         return timeout;
     }
 
-    /** 是否Verbose */
     public boolean isVerbose() {
         return verbose;
     }
 
-    /** 获取释放Type */
     public ReleaseType getReleaseType() {
         return releaseType;
     }
 
-    /** 获取Allowed释放Types */
     public Set<ReleaseType> getAllowedReleaseTypes() {
         return allowedReleaseTypes;
     }
 
-    /** 获取InitdataParallelism */
     public int getInitdataParallelism() {
         return initdataParallelism;
     }
 
-    /** 获取InitdataTimeoutMinutes */
     public int getInitdataTimeoutMinutes() {
         return initdataTimeoutMinutes;
     }
 
-    /** 获取Scope */
     public String getScope() {
         return scope;
     }
 
-    /** 获取ExcludeTablePrefixes */
     public String[] getExcludeTablePrefixes() {
         return excludeTablePrefixes;
     }
@@ -453,7 +421,7 @@ public class DataSourceScriptProperties {
      * 用于控制允许执行的脚本版本类型
      *
      * @since 2025/12/4
- * @author CH
+     * @author CH
      */
     @Getter
     public enum ReleaseType {

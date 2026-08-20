@@ -12,27 +12,25 @@ import java.util.List;
 public class BarChartData implements Serializable {
 
     /** 分类名称 */
+    /** Categories */
     private List<String> categories = new ArrayList<>();
 
     /** 数值集合 */
+    /** Values */
     private List<Number> values = new ArrayList<>();
 
-    /** 获取Categories */
     public List<String> getCategories() {
         return categories;
     }
 
-    /** 设置Categories */
     public void setCategories(List<String> categories) {
         this.categories = categories;
     }
 
-    /** 获取Values */
     public List<Number> getValues() {
         return values;
     }
 
-    /** 设置Values */
     public void setValues(List<Number> values) {
         this.values = values;
     }

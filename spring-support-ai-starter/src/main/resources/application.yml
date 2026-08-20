@@ -1,7 +1,8 @@
 server:
-  port: 8091
+  # 8787 固定为 nomifun 前端桌面壳模式的本地网关端口（pages/ai index.html 注入 __backendPort）
+  port: 8787
   servlet:
-    context-path: /api/ai
+    context-path: /
 
 spring:
   application:
@@ -52,6 +53,8 @@ plugin:
     oauth-url: /verify
     # AI 协议端点（Bearer 为业务 AppKey，非 oauth token）与登录/健康检查放行
     whitelist:
+      - /api/**
+      - /ws
       - /v2/v1/**
       - /provider/**
       - /v2/manufacturer/factories

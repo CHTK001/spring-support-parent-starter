@@ -17,10 +17,6 @@ public final class TablePatternMatcher {
      */
     private final String regex;
 
-    /**
-     * 创建 TablePatternMatcher 实例
-     * @param regex regex
-     */
     private TablePatternMatcher(String regex) {
         this.regex = regex;
     }
@@ -79,7 +75,6 @@ public final class TablePatternMatcher {
 
     /**
      * 简单函数式匹配器
- * @author CH
      */
     @FunctionalInterface
     public interface Matcher {

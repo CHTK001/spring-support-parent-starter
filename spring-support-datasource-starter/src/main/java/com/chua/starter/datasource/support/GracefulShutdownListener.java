@@ -26,10 +26,10 @@ import java.util.Map;
 public class GracefulShutdownListener implements ApplicationListener<ContextClosedEvent> {
 
     /** 关闭超时（秒） */
+    /** Shutdown_timeout_seconds */
     private static final int SHUTDOWN_TIMEOUT_SECONDS = 30;
 
     @Override
-    /** OnApplicationEvent */
     public void onApplicationEvent(ContextClosedEvent event) {
         log.info("[数据源] 开始优雅关闭数据源连接池...");
         long start = System.currentTimeMillis();

@@ -72,7 +72,7 @@ public class AiRouteRegistrar implements ApplicationContextAware {
             register.registerMapping(new ServletHandlerMappingDefinition(
                     "/v1/models", HttpMethod.GET,
                     req -> invokeControllerMethod(openaiController, "models",
-                            new Class<?>[]{Object.class}, null)));
+                            new Class<?>[]{Object.class}, (Object[]) null)));
             count++;
         }
 

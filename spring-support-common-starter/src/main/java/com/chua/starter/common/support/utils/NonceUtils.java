@@ -32,6 +32,7 @@ public class NonceUtils {
     private static final Logger log = LoggerFactory.getLogger(NonceUtils.class);
 
     /** 请求签名已在前置过滤器通过校验的标记 */
+    /** Request_sign_validated_attribute */
     public static final String REQUEST_SIGN_VALIDATED_ATTRIBUTE =
             NonceUtils.class.getName() + ".requestSignValidated";
 
@@ -39,12 +40,14 @@ public class NonceUtils {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     /** 排除的参数字段（与前端 collectParams 中 /^file$/i 正则一致，仅排除 file） */
+    /** Excluded_param_keys */
     private static final Set<String> EXCLUDED_PARAM_KEYS = Set.of("file");
 
     /** 签名密钥，可通过 setSecretKey 或配置注入，默认与 NonceSignProperties.DEFAULT_SECRET 保持一致 */
     private static volatile String secretKey = NonceSignProperties.DEFAULT_SECRET;
 
     /** 默认有效期 5 分钟 */
+    /** Default_max_age_ms */
     private static final long DEFAULT_MAX_AGE_MS = 5 * 60 * 1000L;
 
     /** 已使用的 nonce 缓存，用于防 XHR 重放（TTL 与 timestamp 有效期一致） */
@@ -407,13 +410,6 @@ public class NonceUtils {
         /** Nonce */
         private String nonce;
 
-        /**
-         * 创建 NonceValidationResult 实例
-         * @param valid valid
-         * @param long long
-         * @param String String
-         * @param String String
-         */
         public NonceValidationResult(boolean valid, long timestamp, String sign, String nonce) {
             this.valid = valid;
             this.timestamp = timestamp;
@@ -422,22 +418,18 @@ public class NonceUtils {
         }
 
         // Getters
-        /** 是否Valid */
         public boolean isValid() {
             return valid;
         }
 
-        /** 获取Timestamp */
         public long getTimestamp() {
             return timestamp;
         }
 
-        /** 获取Sign */
         public String getSign() {
             return sign;
         }
 
-        /** 获取Nonce */
         public String getNonce() {
             return nonce;
         }

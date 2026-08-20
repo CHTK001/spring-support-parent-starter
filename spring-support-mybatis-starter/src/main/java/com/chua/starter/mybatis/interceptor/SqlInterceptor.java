@@ -35,7 +35,6 @@ import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
  * SQLInterceptor
  *
  * @author chh
- * @author CH
  * @since 2022/10/25 9:26
  **/
 @Intercepts({
@@ -45,17 +44,10 @@ import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class}),
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
 })
-/**
- * public class SqlInterceptor implements Interceptor {
- *
- * @author CH
- * @since 4.0.0.42
- */
 public class SqlInterceptor implements Interceptor {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SqlInterceptor.class);
 
-    /** MAP */
     private static final Map<String, Object> MAP = new ConcurrentHashMap<>(2);
 
     /** Formatter */
@@ -245,19 +237,11 @@ public class SqlInterceptor implements Interceptor {
     }
 
     @Override
-    /**
-     * Plugin
-     * @param arg0 arg0
-     */
     public Object plugin(Object arg0) {
         return Plugin.wrap(arg0, this);
     }
 
     @Override
-    /**
-     * 设置Properties
-     * @param properties properties
-     */
     public void setProperties(Properties properties) {
     }
 }

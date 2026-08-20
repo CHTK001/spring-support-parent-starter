@@ -37,11 +37,13 @@ import java.util.Base64;
 public class AesPasswordDecryptor implements PasswordDecryptor {
 
     /** AES 算法 */
+    /** Aes_algorithm */
     private static final String AES_ALGORITHM = "AES";
     /** Cipher_transformation */
     private static final String CIPHER_TRANSFORMATION = "AES/ECB/PKCS5Padding";
 
     /** 默认密钥（32字节，用于没有配置密钥时的兼容） */
+    /** Default_secret_key */
     private static final byte[] DEFAULT_SECRET_KEY;
 
     static {
@@ -87,13 +89,11 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
     }
 
     @Override
-    /** Supports */
     public boolean supports(String algorithm) {
         return algorithm == null || algorithm.isEmpty() || "AES".equalsIgnoreCase(algorithm);
     }
 
     @Override
-    /** Decrypt */
     public String decrypt(String encryptedValue) {
         try {
             byte[] decoded = Base64.getDecoder().decode(encryptedValue);
@@ -109,7 +109,6 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
     }
 
     @Override
-    /** 获取Order */
     public int getOrder() {
         return Integer.MAX_VALUE - 100;
     }

@@ -16,19 +16,12 @@ import org.apache.ibatis.plugin.Signature;
  * 只读模式拦截器
  * 当开启只读模式时，拦截所有更新、插入、删除操作并抛出只读异常
  *
- * @author CH
  * @since 2024/12/04
  */
 @Intercepts(
         @Signature(type = Executor.class, method = "update",
                 args = {MappedStatement.class, Object.class})
 )
-/**
- * public class ReadOnlyInterceptor implements Interceptor {
- *
- * @author CH
- * @since 4.0.0.42
- */
 public class ReadOnlyInterceptor implements Interceptor {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ReadOnlyInterceptor.class);

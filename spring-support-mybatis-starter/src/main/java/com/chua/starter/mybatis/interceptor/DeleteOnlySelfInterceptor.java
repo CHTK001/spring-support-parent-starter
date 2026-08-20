@@ -26,19 +26,12 @@ import java.util.Map;
  * 删除只能删除自己拦截器
  * 用于在执行删除操作时，自动添加创建人条件，确保用户只能删除自己创建的数据
  *
- * @author CH
  * @since 2025/9/4 14:22
  */
 @Intercepts(
         @Signature(type = Executor.class, method = "update",
                 args = {MappedStatement.class, Object.class})
 )
-/**
- * public class DeleteOnlySelfInterceptor implements Interceptor {
- *
- * @author CH
- * @since 4.0.0.42
- */
 public class DeleteOnlySelfInterceptor implements Interceptor {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(DeleteOnlySelfInterceptor.class);
@@ -46,10 +39,6 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
     /** Auth服务 */
     private final AuthService authService;
 
-    /**
-     * 创建 DeleteOnlySelfInterceptor 实例
-     * @param authService authService
-     */
     public DeleteOnlySelfInterceptor(AuthService authService) {
         this.authService = authService;
     }

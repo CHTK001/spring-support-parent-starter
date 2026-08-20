@@ -57,32 +57,37 @@ import java.util.Optional;
 public class MonitorController {
 
     /** 资产 Service */
+    /** Monitor服务 */
     private final MonitorService monitorService;
     /** 任务 Service */
+    /** 任务服务 */
     private final MonitorTaskService taskService;
     /** 指标配置 Service */
+    /** 指标配置服务 */
     private final MonitorMetricConfigService metricConfigService;
     /** 全局配置 Service */
+    /** 配置服务 */
     private final MonitorConfigService configService;
     /** 网关 Service */
+    /** Gateway服务 */
     private final MonitorGatewayService gatewayService;
     /** 指标 Service */
+    /** 指标服务 */
     private final MetricService metricService;
     /** Provider 注册中心 */
+    /** 提供者注册表 */
     private final ProviderRegistry providerRegistry;
 
     // ==================== 资产 CRUD ====================
 
     @Operation(summary = "新增资产")
     @PostMapping
-    /** 创建Monitor */
     public ReturnResult<MsMonitor> createMonitor(@RequestBody MsMonitor monitor) {
         return monitorService.create(monitor);
     }
 
     @Operation(summary = "更新资产")
     @PutMapping("/{id}")
-    /** 更新Monitor */
     public ReturnResult<MsMonitor> updateMonitor(@PathVariable Long id, @RequestBody MsMonitor monitor) {
         monitor.setId(id);
         return monitorService.update(monitor);
@@ -90,21 +95,18 @@ public class MonitorController {
 
     @Operation(summary = "删除资产")
     @DeleteMapping("/{id}")
-    /** 删除Monitor */
     public ReturnResult<Void> deleteMonitor(@PathVariable Long id) {
         return monitorService.delete(id);
     }
 
     @Operation(summary = "查询单个资产")
     @GetMapping("/{id}")
-    /** 获取Monitor */
     public ReturnResult<MsMonitor> getMonitor(@PathVariable Long id) {
         return monitorService.findById(id);
     }
 
     @Operation(summary = "资产列表")
     @GetMapping
-    /** ListMonitor */
     public ReturnResult<List<MsMonitor>> listMonitor() {
         return monitorService.listAll();
     }
@@ -113,14 +115,12 @@ public class MonitorController {
 
     @Operation(summary = "新增任务")
     @PostMapping("/task")
-    /** 创建Task */
     public ReturnResult<MsMonitorTask> createTask(@RequestBody MsMonitorTask task) {
         return taskService.create(task);
     }
 
     @Operation(summary = "更新任务")
     @PutMapping("/task/{id}")
-    /** 更新Task */
     public ReturnResult<MsMonitorTask> updateTask(@PathVariable Long id, @RequestBody MsMonitorTask task) {
         task.setId(id);
         return taskService.update(task);
@@ -128,28 +128,24 @@ public class MonitorController {
 
     @Operation(summary = "删除任务")
     @DeleteMapping("/task/{id}")
-    /** 删除Task */
     public ReturnResult<Void> deleteTask(@PathVariable Long id) {
         return taskService.delete(id);
     }
 
     @Operation(summary = "查询单个任务")
     @GetMapping("/task/{id}")
-    /** 获取Task */
     public ReturnResult<MsMonitorTask> getTask(@PathVariable Long id) {
         return taskService.findById(id);
     }
 
     @Operation(summary = "设置任务启用/禁用")
     @PutMapping("/task/{id}/enabled")
-    /** 设置TaskEnabled */
     public ReturnResult<Void> setTaskEnabled(@PathVariable Long id, @RequestParam Integer enabled) {
         return taskService.setEnabled(id, enabled);
     }
 
     @Operation(summary = "按主机查询任务")
     @GetMapping("/task")
-    /** ListTask */
     public ReturnResult<List<MsMonitorTask>> listTask(@RequestParam(required = false) Long monitorId) {
         if (monitorId != null) {
             return taskService.listByMonitor(monitorId);
@@ -161,14 +157,12 @@ public class MonitorController {
 
     @Operation(summary = "新增解析规则")
     @PostMapping("/metric-config")
-    /** 创建MetricConfig */
     public ReturnResult<MsMonitorMetricConfig> createMetricConfig(@RequestBody MsMonitorMetricConfig config) {
         return metricConfigService.create(config);
     }
 
     @Operation(summary = "更新解析规则")
     @PutMapping("/metric-config/{id}")
-    /** 更新MetricConfig */
     public ReturnResult<MsMonitorMetricConfig> updateMetricConfig(@PathVariable Long id, @RequestBody MsMonitorMetricConfig config) {
         config.setId(id);
         return metricConfigService.update(config);
@@ -176,14 +170,12 @@ public class MonitorController {
 
     @Operation(summary = "删除解析规则")
     @DeleteMapping("/metric-config/{id}")
-    /** 删除MetricConfig */
     public ReturnResult<Void> deleteMetricConfig(@PathVariable Long id) {
         return metricConfigService.delete(id);
     }
 
     @Operation(summary = "按任务查询解析规则")
     @GetMapping("/metric-config")
-    /** ListMetricConfig */
     public ReturnResult<List<MsMonitorMetricConfig>> listMetricConfig(@RequestParam Long taskId) {
         return metricConfigService.listByTask(taskId);
     }
@@ -192,21 +184,18 @@ public class MonitorController {
 
     @Operation(summary = "获取所有配置")
     @GetMapping("/config")
-    /** 获取AllConfig */
     public ReturnResult<Map<String, String>> getAllConfig() {
         return configService.getAll();
     }
 
     @Operation(summary = "获取单个配置")
     @GetMapping("/config/{key}")
-    /** 获取Config */
     public ReturnResult<String> getConfig(@PathVariable String key) {
         return ReturnResult.ok(configService.getString(key));
     }
 
     @Operation(summary = "写入配置")
     @PostMapping("/config")
-    /** UpsertConfig */
     public ReturnResult<MsMonitorConfig> upsertConfig(@RequestBody MsMonitorConfig config) {
         return configService.upsert(config);
     }
@@ -215,21 +204,18 @@ public class MonitorController {
 
     @Operation(summary = "新增网关")
     @PostMapping("/gateway")
-    /** 创建Gateway */
     public ReturnResult<MsMonitorGateway> createGateway(@RequestBody MsMonitorGateway gateway) {
         return gatewayService.create(gateway);
     }
 
     @Operation(summary = "删除网关")
     @DeleteMapping("/gateway/{id}")
-    /** 删除Gateway */
     public ReturnResult<Void> deleteGateway(@PathVariable Long id) {
         return gatewayService.delete(id);
     }
 
     @Operation(summary = "更新网关")
     @PutMapping("/gateway/{id}")
-    /** 更新Gateway */
     public ReturnResult<MsMonitorGateway> updateGateway(@PathVariable Long id, @RequestBody MsMonitorGateway gateway) {
         gateway.setId(id);
         return gatewayService.update(gateway);
@@ -237,7 +223,6 @@ public class MonitorController {
 
     @Operation(summary = "按主机查询网关")
     @GetMapping("/gateway")
-    /** ListGateway */
     public ReturnResult<List<MsMonitorGateway>> listGateway(@RequestParam Long monitorId) {
         return gatewayService.listByMonitor(monitorId);
     }
@@ -246,127 +231,36 @@ public class MonitorController {
 
     @Operation(summary = "获取最新 CPU 指标")
     @GetMapping("/metric/cpu/{monitorId}")
-    /** 获取LatestCpu */
     public ReturnResult<MsMonitorMetricCpu> getLatestCpu(@PathVariable Long monitorId) {
         return metricService.getLatestCpu(monitorId);
     }
 
     @Operation(summary = "获取最新内存指标")
     @GetMapping("/metric/memory/{monitorId}")
-    /** 获取LatestMemory */
     public ReturnResult<MsMonitorMetricMemory> getLatestMemory(@PathVariable Long monitorId) {
         return metricService.getLatestMemory(monitorId);
     }
 
     @Operation(summary = "获取最新磁盘指标")
     @GetMapping("/metric/disk/{monitorId}")
-    /** 获取LatestDisk */
     public ReturnResult<List<MsMonitorMetricDisk>> getLatestDisk(@PathVariable Long monitorId) {
         return metricService.getLatestDisk(monitorId);
     }
 
     @Operation(summary = "获取最新网络指标")
     @GetMapping("/metric/network/{monitorId}")
-    /** 获取LatestNetwork */
     public ReturnResult<MsMonitorMetricNetwork> getLatestNetwork(@PathVariable Long monitorId) {
         return metricService.getLatestNetwork(monitorId);
     }
 
     @Operation(summary = "获取最新 JVM 指标")
     @GetMapping("/metric/jvm/{monitorId}")
-    /** 获取LatestJvm */
     public ReturnResult<MsMonitorMetricJvm> getLatestJvm(@PathVariable Long monitorId) {
         return metricService.getLatestJvm(monitorId);
     }
 
     @Operation(summary = "获取 CPU 历史指标")
     @GetMapping("/metric/cpu/history/{monitorId}")
-    /**
-     * 获取CpuHistory
-     * @param monitorId monitorId
-     * @param hours hours
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param hours hours
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param hours hours
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param hours hours
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param hours hours
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param monitorId monitorId
-     * @param hours hours
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param metricName metricName
-     * @param hours hours
-     * @param metricName metricName
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param metricName metricName
-     * @param hours hours
-     * @param metricName metricName
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param metricName metricName
-     * @param hours hours
-     * @param metricName metricName
-     * @param start start
-     * @param null null
-     * @param taskId taskId
-     * @param pattern pattern
-     * @param pattern pattern
-     * @param null null
-     * @param 100 100
-     * @param taskId taskId
-     * @param key key
-     * @param key key
-     * @param taskId taskId
-     * @param key key
-     * @param value value
-     * @param ttl ttl
-     * @param key key
-     * @param value value
-     * @param duration duration
-     * @param taskId taskId
-     * @param keys keys
-     * @param keys keys
-     * @param taskId taskId
-     * @param key key
-     * @param ttlSeconds ttlSeconds
-     * @param key key
-     * @param taskId taskId
-     * @param prefix prefix
-     * @param prefix prefix
-     * @param null null
-     * @param 10000 10000
-     * @param maxIterations maxIterations
-     * @param prefix prefix
-     * @param c c
-     * @param 1000 1000
-     * @param b b
-     * @param taskId taskId
-     * @param key key
-     * @param key key
-     * @param key key
-     * @param key key
-     * @param key key
-     * @param taskId taskId
-     * @param taskId taskId
-     */
     public ReturnResult<List<MsMonitorMetricCpu>> getCpuHistory(
             @PathVariable Long monitorId,
             @RequestParam(required = false) Long hours) {
@@ -376,88 +270,6 @@ public class MonitorController {
 
     @Operation(summary = "获取内存历史指标")
     @GetMapping("/metric/memory/history/{monitorId}")
-    /**
-     * 获取MemoryHistory
-     * @param monitorId monitorId
-     * @param hours hours
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param hours hours
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param hours hours
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param hours hours
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param monitorId monitorId
-     * @param hours hours
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param metricName metricName
-     * @param hours hours
-     * @param metricName metricName
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param metricName metricName
-     * @param hours hours
-     * @param metricName metricName
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param metricName metricName
-     * @param hours hours
-     * @param metricName metricName
-     * @param start start
-     * @param null null
-     * @param taskId taskId
-     * @param pattern pattern
-     * @param pattern pattern
-     * @param null null
-     * @param 100 100
-     * @param taskId taskId
-     * @param key key
-     * @param key key
-     * @param taskId taskId
-     * @param key key
-     * @param value value
-     * @param ttl ttl
-     * @param key key
-     * @param value value
-     * @param duration duration
-     * @param taskId taskId
-     * @param keys keys
-     * @param keys keys
-     * @param taskId taskId
-     * @param key key
-     * @param ttlSeconds ttlSeconds
-     * @param key key
-     * @param taskId taskId
-     * @param prefix prefix
-     * @param prefix prefix
-     * @param null null
-     * @param 10000 10000
-     * @param maxIterations maxIterations
-     * @param prefix prefix
-     * @param c c
-     * @param 1000 1000
-     * @param b b
-     * @param taskId taskId
-     * @param key key
-     * @param key key
-     * @param key key
-     * @param key key
-     * @param key key
-     * @param taskId taskId
-     * @param taskId taskId
-     */
     public ReturnResult<List<MsMonitorMetricMemory>> getMemoryHistory(
             @PathVariable Long monitorId,
             @RequestParam(required = false) Long hours) {
@@ -467,84 +279,6 @@ public class MonitorController {
 
     @Operation(summary = "获取 JVM 历史指标")
     @GetMapping("/metric/jvm/history/{monitorId}")
-    /**
-     * 获取JvmHistory
-     * @param monitorId monitorId
-     * @param hours hours
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param hours hours
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param hours hours
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param monitorId monitorId
-     * @param hours hours
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param metricName metricName
-     * @param hours hours
-     * @param metricName metricName
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param metricName metricName
-     * @param hours hours
-     * @param metricName metricName
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param metricName metricName
-     * @param hours hours
-     * @param metricName metricName
-     * @param start start
-     * @param null null
-     * @param taskId taskId
-     * @param pattern pattern
-     * @param pattern pattern
-     * @param null null
-     * @param 100 100
-     * @param taskId taskId
-     * @param key key
-     * @param key key
-     * @param taskId taskId
-     * @param key key
-     * @param value value
-     * @param ttl ttl
-     * @param key key
-     * @param value value
-     * @param duration duration
-     * @param taskId taskId
-     * @param keys keys
-     * @param keys keys
-     * @param taskId taskId
-     * @param key key
-     * @param ttlSeconds ttlSeconds
-     * @param key key
-     * @param taskId taskId
-     * @param prefix prefix
-     * @param prefix prefix
-     * @param null null
-     * @param 10000 10000
-     * @param maxIterations maxIterations
-     * @param prefix prefix
-     * @param c c
-     * @param 1000 1000
-     * @param b b
-     * @param taskId taskId
-     * @param key key
-     * @param key key
-     * @param key key
-     * @param key key
-     * @param key key
-     * @param taskId taskId
-     * @param taskId taskId
-     */
     public ReturnResult<List<MsMonitorMetricJvm>> getJvmHistory(
             @PathVariable Long monitorId,
             @RequestParam(required = false) Long hours) {
@@ -554,80 +288,6 @@ public class MonitorController {
 
     @Operation(summary = "获取网络历史指标")
     @GetMapping("/metric/network/history/{monitorId}")
-    /**
-     * 获取NetworkHistory
-     * @param monitorId monitorId
-     * @param hours hours
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param hours hours
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param monitorId monitorId
-     * @param hours hours
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param metricName metricName
-     * @param hours hours
-     * @param metricName metricName
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param metricName metricName
-     * @param hours hours
-     * @param metricName metricName
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param metricName metricName
-     * @param hours hours
-     * @param metricName metricName
-     * @param start start
-     * @param null null
-     * @param taskId taskId
-     * @param pattern pattern
-     * @param pattern pattern
-     * @param null null
-     * @param 100 100
-     * @param taskId taskId
-     * @param key key
-     * @param key key
-     * @param taskId taskId
-     * @param key key
-     * @param value value
-     * @param ttl ttl
-     * @param key key
-     * @param value value
-     * @param duration duration
-     * @param taskId taskId
-     * @param keys keys
-     * @param keys keys
-     * @param taskId taskId
-     * @param key key
-     * @param ttlSeconds ttlSeconds
-     * @param key key
-     * @param taskId taskId
-     * @param prefix prefix
-     * @param prefix prefix
-     * @param null null
-     * @param 10000 10000
-     * @param maxIterations maxIterations
-     * @param prefix prefix
-     * @param c c
-     * @param 1000 1000
-     * @param b b
-     * @param taskId taskId
-     * @param key key
-     * @param key key
-     * @param key key
-     * @param key key
-     * @param key key
-     * @param taskId taskId
-     * @param taskId taskId
-     */
     public ReturnResult<List<MsMonitorMetricNetwork>> getNetworkHistory(
             @PathVariable Long monitorId,
             @RequestParam(required = false) Long hours) {
@@ -653,78 +313,12 @@ public class MonitorController {
 
     @Operation(summary = "获取 Redis 最新指标")
     @GetMapping("/metric/redis/{monitorId}")
-    /** 获取LatestRedisMetric */
     public ReturnResult<MsMonitorRedisMetric> getLatestRedisMetric(@PathVariable Long monitorId) {
         return metricService.getLatestRedisMetric(monitorId);
     }
 
     @Operation(summary = "获取 Redis 历史指标")
     @GetMapping("/metric/redis/history/{monitorId}")
-    /**
-     * 获取RedisMetricHistory
-     * @param monitorId monitorId
-     * @param hours hours
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param metricName metricName
-     * @param hours hours
-     * @param metricName metricName
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param metricName metricName
-     * @param hours hours
-     * @param metricName metricName
-     * @param start start
-     * @param null null
-     * @param monitorId monitorId
-     * @param metricName metricName
-     * @param hours hours
-     * @param metricName metricName
-     * @param start start
-     * @param null null
-     * @param taskId taskId
-     * @param pattern pattern
-     * @param pattern pattern
-     * @param null null
-     * @param 100 100
-     * @param taskId taskId
-     * @param key key
-     * @param key key
-     * @param taskId taskId
-     * @param key key
-     * @param value value
-     * @param ttl ttl
-     * @param key key
-     * @param value value
-     * @param duration duration
-     * @param taskId taskId
-     * @param keys keys
-     * @param keys keys
-     * @param taskId taskId
-     * @param key key
-     * @param ttlSeconds ttlSeconds
-     * @param key key
-     * @param taskId taskId
-     * @param prefix prefix
-     * @param prefix prefix
-     * @param null null
-     * @param 10000 10000
-     * @param maxIterations maxIterations
-     * @param prefix prefix
-     * @param c c
-     * @param 1000 1000
-     * @param b b
-     * @param taskId taskId
-     * @param key key
-     * @param key key
-     * @param key key
-     * @param key key
-     * @param key key
-     * @param taskId taskId
-     * @param taskId taskId
-     */
     public ReturnResult<List<MsMonitorRedisMetric>> getRedisMetricHistory(
             @PathVariable Long monitorId,
             @RequestParam(required = false) Long hours) {
@@ -790,49 +384,6 @@ public class MonitorController {
 
     @Operation(summary = "扫描 Redis Keys")
     @GetMapping("/operation/redis/{taskId}/keys")
-    /**
-     * 扫描Keys
-     * @param taskId taskId
-     * @param pattern pattern
-     * @param pattern pattern
-     * @param null null
-     * @param 100 100
-     * @param taskId taskId
-     * @param key key
-     * @param key key
-     * @param taskId taskId
-     * @param key key
-     * @param value value
-     * @param ttl ttl
-     * @param key key
-     * @param value value
-     * @param duration duration
-     * @param taskId taskId
-     * @param keys keys
-     * @param keys keys
-     * @param taskId taskId
-     * @param key key
-     * @param ttlSeconds ttlSeconds
-     * @param key key
-     * @param taskId taskId
-     * @param prefix prefix
-     * @param prefix prefix
-     * @param null null
-     * @param 10000 10000
-     * @param maxIterations maxIterations
-     * @param prefix prefix
-     * @param c c
-     * @param 1000 1000
-     * @param b b
-     * @param taskId taskId
-     * @param key key
-     * @param key key
-     * @param key key
-     * @param key key
-     * @param key key
-     * @param taskId taskId
-     * @param taskId taskId
-     */
     public Mono<OperationProvider.ScanResult> scanKeys(
             @PathVariable Long taskId,
             @RequestParam(defaultValue = "*") String pattern) {
@@ -851,7 +402,6 @@ public class MonitorController {
 
     @Operation(summary = "读取 Redis Key")
     @GetMapping("/operation/redis/{taskId}/kv/{key}")
-    /** 获取Value */
     public Mono<String> getValue(@PathVariable Long taskId, @PathVariable String key) {
         return resolveOperation(taskId).flatMap(op -> {
             CollectContext ctx = buildContext(taskId);
@@ -861,13 +411,6 @@ public class MonitorController {
 
     @Operation(summary = "写入 Redis Key")
     @PutMapping("/operation/redis/{taskId}/kv/{key}")
-    /**
-     * 设置Value
-     * @param taskId taskId
-     * @param key key
-     * @param value value
-     * @param ttl ttl
-     */
     public Mono<Boolean> setValue(@PathVariable Long taskId, @PathVariable String key,
                                    @RequestBody String value,
                                    @RequestParam(required = false) Integer ttl) {
@@ -880,7 +423,6 @@ public class MonitorController {
 
     @Operation(summary = "删除 Redis Keys")
     @DeleteMapping("/operation/redis/{taskId}/keys")
-    /** 删除Keys */
     public Mono<Long> deleteKeys(@PathVariable Long taskId, @RequestBody List<String> keys) {
         return resolveOperation(taskId).flatMap(op -> {
             CollectContext ctx = buildContext(taskId);
@@ -890,12 +432,6 @@ public class MonitorController {
 
     @Operation(summary = "设置过期时间")
     @PostMapping("/operation/redis/{taskId}/expire/{key}")
-    /**
-     * Expire
-     * @param taskId taskId
-     * @param key key
-     * @param ttlSeconds ttlSeconds
-     */
     public Mono<Boolean> expire(@PathVariable Long taskId, @PathVariable String key,
                                  @RequestParam long ttlSeconds) {
         return resolveOperation(taskId).flatMap(op -> {

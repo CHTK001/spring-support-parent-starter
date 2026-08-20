@@ -96,7 +96,6 @@ public final class OpenIdGenerator {
      */
     private static final String DEFAULT_SALT = "oauth_salt_2025";
 
-    /** 创建 OpenIdGenerator 实例 */
     private OpenIdGenerator() {
         // 工具类禁止实例化
     }
@@ -220,25 +219,32 @@ public final class OpenIdGenerator {
      */
     public static class Platform {
         /** 微信 */
+        /** Wechat */
         public static final String WECHAT = "wechat";
         /** 微信小程序 */
+        /** Wechat_mini */
         public static final String WECHAT_MINI = "wechat_mini";
         /** 微信公众号 */
+        /** Wechat_mp */
         public static final String WECHAT_MP = "wechat_mp";
         /** 支付宝 */
+        /** Alipay */
         public static final String ALIPAY = "alipay";
         /** 钉钉 */
+        /** Dingtalk */
         public static final String DINGTALK = "dingtalk";
         /** 企业微信 */
+        /** Wework */
         public static final String WEWORK = "wework";
         /** GitHub */
+        /** Github */
         public static final String GITHUB = "github";
         /** Gitee */
         public static final String GITEE = "gitee";
         /** 系统内部 */
+        /** System */
         public static final String SYSTEM = "system";
 
-        /** 创建 Platform 实例 */
         private Platform() {
         }
     }

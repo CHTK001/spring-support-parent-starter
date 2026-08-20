@@ -33,7 +33,6 @@ import java.util.Map;
  *   前端通过 socket.subscribe("message", "push", handler) 接收
  * </pre>
  *
- * @author CH
  * @since 2026/08/03
  */
 @Spi("station")
@@ -45,12 +44,6 @@ import java.util.Map;
                 @SpiParam(value = "socket.room", desc = "Socket 房间配置（需引入 socket-io-starter）", type = "String")
         }
 )
-/**
- * public class StationMessagePush implements MessagePush {
- *
- * @author CH
- * @since 4.0.0.42
- */
 @Slf4j
 public class StationMessagePush implements MessagePush {
 
@@ -109,16 +102,11 @@ public class StationMessagePush implements MessagePush {
     }
 
     @Override
-    /** 获取Provider */
     public String getProvider() {
         return PROVIDER;
     }
 
     @Override
-    /**
-     * 发送
-     * @param request request
-     */
     public MessageResponse send(MessageRequest request) {
         String userId = request.getTo();
         if (StringUtils.isBlank(userId)) {
@@ -150,16 +138,11 @@ public class StationMessagePush implements MessagePush {
     }
 
     @Override
-    /** ListTemplates */
     public List<TemplateInfo> listTemplates() {
         return Collections.emptyList();
     }
 
     @Override
-    /**
-     * 获取Template
-     * @param templateId templateId
-     */
     public TemplateInfo getTemplate(String templateId) {
         return null;
     }

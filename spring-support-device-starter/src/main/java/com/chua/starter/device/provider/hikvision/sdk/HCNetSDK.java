@@ -237,36 +237,47 @@ public interface HCNetSDK extends Library {
     class NET_DVR_USER_LOGIN_INFO extends Structure {
 
         /** 设备 IP 地址 */
+        /** Sdevice地址 */
         public byte[] sDeviceAddress = new byte[NET_DVR_DEV_ADDRESS_MAX_LEN];
 
         /** 是否使用传输协议 */
+        /** BYUSEtransport */
         public byte byUseTransport;
 
         /** 设备端口 */
+        /** W端口 */
         public short wPort;
 
         /** 登录用户名 */
+        /** S用户名称 */
         public byte[] sUserName = new byte[NET_DVR_LOGIN_USERNAME_MAX_LEN];
 
         /** 登录密码 */
+        /** S密码 */
         public byte[] sPassword = new byte[NET_DVR_LOGIN_PASSWD_MAX_LEN];
 
         /** 登录模式 */
+        /** DWlogin模式 */
         public int dwLoginMode;
 
         /** 是否使用 HTTPS */
+        /** BYHTTPS */
         public byte byHttps;
 
         /** 代理 ID */
+        /** IproxyID */
         public int iProxyID;
 
         /** 校验模式 */
+        /** BYverify模式 */
         public byte byVerifyMode;
 
         /** 保留字节 */
+        /** BYreserved */
         public byte[] byReserved = new byte[127];
 
         /** 保留字节 2 */
+        /** BYreserved2 */
         public byte[] byReserved2 = new byte[64];
 
         /**
@@ -290,7 +301,6 @@ public interface HCNetSDK extends Library {
         }
 
         @Override
-        /** 获取FieldOrder */
         protected List<String> getFieldOrder() {
             return Arrays.asList("sDeviceAddress", "byUseTransport", "wPort", "sUserName", "sPassword",
                     "dwLoginMode", "byHttps", "iProxyID", "byVerifyMode", "byReserved", "byReserved2");
@@ -308,82 +318,106 @@ public interface HCNetSDK extends Library {
     class NET_DVR_DEVICEINFO_V40 extends Structure {
 
         /** 设备序列号 */
+        /** Sserial数字 */
         public byte[] sSerialNumber = new byte[48];
 
         /** 报警输入口个数 */
+        /** BYalarmIN端口NUM */
         public byte byAlarmInPortNum;
 
         /** 报警输出口个数 */
+        /** BYalarmOUT端口NUM */
         public byte byAlarmOutPortNum;
 
         /** 硬盘个数 */
+        /** BYdiskNUM */
         public byte byDiskNum;
 
         /** 设备类型 */
+        /** BYdvrtype */
         public byte byDVRType;
 
         /** 模拟通道个数 */
+        /** BYchanNUM */
         public byte byChanNum;
 
         /** 起始通道号 */
+        /** BY开始chan */
         public byte byStartChan;
 
         /** 语音通道数 */
+        /** BY音频chanNUM */
         public byte byAudioChanNum;
 
         /** 数字通道个数 */
+        /** BYipchanNUM */
         public byte byIPChanNum;
 
         /** 零通道编码个数 */
+        /** BYzerochanNUM */
         public byte byZeroChanNum;
 
         /** 主协议 */
+        /** BYmainproto */
         public byte byMainProto;
 
         /** 子协议 */
+        /** BYSUBproto */
         public byte bySubProto;
 
         /** 支持能力 */
+        /** BYsupport */
         public byte bySupport;
 
         /** 支持能力 1 */
+        /** BYsupport1 */
         public byte bySupport1;
 
         /** 支持能力 2 */
+        /** BYsupport2 */
         public byte bySupport2;
 
         /** 设备类型 */
+        /** WDEV类型 */
         public short wDevType;
 
         /** 支持能力 3 */
+        /** BYsupport3 */
         public byte bySupport3;
 
         /** 多码流能力 */
+        /** BYmulti流proto */
         public byte byMultiStreamProto;
 
         /** 起始数字通道 */
+        /** BY开始dchan */
         public byte byStartDChan;
 
         /** 起始数字对讲通道 */
+        /** BY开始dtalkchan */
         public byte byStartDTalkChan;
 
         /** 高清数字通道数 */
+        /** BYhighdchanNUM */
         public byte byHighDChanNum;
 
         /** 支持能力 4 */
+        /** BYsupport4 */
         public byte bySupport4;
 
         /** 支持能力 5 */
+        /** BYsupport5 */
         public byte bySupport5;
 
         /** 高清数字通道最大值 */
+        /** BYipchanINhigh最大值 */
         public byte byIPChanInHighMax;
 
         /** 保留字节 */
+        /** BYreserved1 */
         public byte[] byReserved1 = new byte[24];
 
         @Override
-        /** 获取FieldOrder */
         protected List<String> getFieldOrder() {
             return Arrays.asList("sSerialNumber", "byAlarmInPortNum", "byAlarmOutPortNum", "byDiskNum", "byDVRType",
                     "byChanNum", "byStartChan", "byAudioChanNum", "byIPChanNum", "byZeroChanNum", "byMainProto",
@@ -401,42 +435,55 @@ public interface HCNetSDK extends Library {
     class NET_DVR_PREVIEWINFO extends Structure {
 
         /** 通道号 */
+        /** L通道 */
         public int lChannel;
 
         /** 码流类型 */
+        /** DW流类型 */
         public int dwStreamType;
 
         /** 连接方式 */
+        /** DWlink模式 */
         public int dwLinkMode;
 
         /** 播放窗口句柄 */
+        /** HplayWND */
         public Pointer hPlayWnd;
 
         /** 阻塞播放 */
+        /** Bblocked */
         public byte bBlocked;
 
         /** 是否回放录像 */
+        /** Bpassbackrecord */
         public byte bPassbackRecord;
 
         /** 预览模式 */
+        /** BYpreview模式 */
         public byte byPreviewMode;
 
         /** 流 ID */
+        /** BY流ID */
         public byte[] byStreamID = new byte[32];
 
         /** 协议类型 */
+        /** BYproto类型 */
         public byte byProtoType;
 
         /** 保留 1 */
+        /** BYres1 */
         public byte byRes1;
 
         /** 保留 2 */
+        /** BYres2 */
         public byte byRes2;
 
         /** 播放缓冲帧数 */
+        /** DWdisplayBUFNUM */
         public int dwDisplayBufNum;
 
         /** 保留 */
+        /** BYRES */
         public byte[] byRes = new byte[216];
 
         /**
@@ -456,7 +503,6 @@ public interface HCNetSDK extends Library {
         }
 
         @Override
-        /** 获取FieldOrder */
         protected List<String> getFieldOrder() {
             return Arrays.asList("lChannel", "dwStreamType", "dwLinkMode", "hPlayWnd", "bBlocked", "bPassbackRecord",
                     "byPreviewMode", "byStreamID", "byProtoType", "byRes1", "byRes2", "dwDisplayBufNum", "byRes");
@@ -471,31 +517,37 @@ public interface HCNetSDK extends Library {
     class NET_DVR_PLAYBACK_COND extends Structure {
 
         /** 码流类型 */
+        /** BY流类型 */
         public byte byStreamType;
 
         /** 是否按时间 */
+        /** BBY时间 */
         public byte bByTime;
 
         /** 是否解密 */
+        /** Bneeddecrypt */
         public byte bNeedDecrypt;
 
         /** 流 ID */
+        /** BY流ID */
         public byte[] byStreamID = new byte[32];
 
         /** 通道号 */
+        /** L通道 */
         public int lChannel;
 
         /** 位置 */
+        /** DWPOS */
         public int dwPos;
 
         /** 开始时间 */
         public NET_DVR_TIME startTime = new NET_DVR_TIME();
 
         /** 结束时间 */
+        /** Stop时间 */
         public NET_DVR_TIME stopTime = new NET_DVR_TIME();
 
         @Override
-        /** 获取FieldOrder */
         protected List<String> getFieldOrder() {
             return Arrays.asList("byStreamType", "bByTime", "bNeedDecrypt", "byStreamID", "lChannel",
                     "dwPos", "startTime", "stopTime");
@@ -510,39 +562,51 @@ public interface HCNetSDK extends Library {
     class NET_DVR_TIME extends Structure {
 
         /** 年 */
+        /** BYyear */
         public byte byYear;
 
         /** 月 */
+        /** BYmonth */
         public byte byMonth;
 
         /** 日 */
+        /** BYDAY */
         public byte byDay;
 
         /** 时 */
+        /** BYhour */
         public byte byHour;
 
         /** 分 */
+        /** BYminute */
         public byte byMinute;
 
         /** 秒 */
+        /** BYsecond */
         public byte bySecond;
 
         /** 保留 */
+        /** BYRES */
         public byte byRes;
 
         /** ISO8601 */
+        /** BYiso8601 */
         public byte byISO8601;
 
         /** 毫秒 */
+        /** Wmillisecond */
         public short wMillisecond;
 
         /** 时区 */
+        /** C时间zoneID */
         public byte cTimeZoneID;
 
         /** 保留 1 */
+        /** BYres1 */
         public byte byRes1;
 
         /** 保留 2 */
+        /** BYres2 */
         public byte byRes2;
 
         /**
@@ -559,7 +623,6 @@ public interface HCNetSDK extends Library {
         }
 
         @Override
-        /** 获取FieldOrder */
         protected List<String> getFieldOrder() {
             return Arrays.asList("byYear", "byMonth", "byDay", "byHour", "byMinute", "bySecond", "byRes", "byISO8601",
                     "wMillisecond", "cTimeZoneID", "byRes1", "byRes2");
@@ -577,91 +640,118 @@ public interface HCNetSDK extends Library {
     class NET_DVR_ALARMER extends Structure {
 
         /** 用户 ID 有效 */
+        /** BY用户idvalid */
         public byte byUserIDValid;
 
         /** 序列号有效 */
+        /** BYserial是否有效 */
         public byte bySerialValid;
 
         /** 版本有效 */
+        /** BY版本是否有效 */
         public byte byVersionValid;
 
         /** 设备名有效 */
+        /** BYdevice名称是否有效 */
         public byte byDeviceNameValid;
 
         /** MAC 有效 */
+        /** BYMACaddr是否有效 */
         public byte byMacAddrValid;
 
         /** 连接端口有效 */
+        /** BYlink端口是否有效 */
         public byte byLinkPortValid;
 
         /** 设备 IP */
+        /** BYdeviceIP */
         public byte[] byDeviceIP = new byte[4];
 
         /** Socket IP */
+        /** BYSocketIP */
         public byte[] bySocketIP = new byte[4];
 
         /** 连接端口 */
+        /** Wlink端口 */
         public short wLinkPort;
 
         /** 序列号 */
+        /** Sserial数字 */
         public byte[] sSerialNumber = new byte[48];
 
         /** 报警输入数 */
+        /** BYalarmIN端口NUM */
         public byte byAlarmInPortNum;
 
         /** 报警输出数 */
+        /** BYalarmOUT端口NUM */
         public byte byAlarmOutPortNum;
 
         /** 硬盘数 */
+        /** BYdiskNUM */
         public byte byDiskNum;
 
         /** 设备类型 */
+        /** BYdvrtype */
         public byte byDVRType;
 
         /** 通道数 */
+        /** BYchanNUM */
         public byte byChanNum;
 
         /** 起始通道 */
+        /** BY开始chan */
         public byte byStartChan;
 
         /** 语音通道数 */
+        /** BY音频chanNUM */
         public byte byAudioChanNum;
 
         /** 数字通道数 */
+        /** BYipchanNUM */
         public byte byIPChanNum;
 
         /** 零通道数 */
+        /** BYzerochanNUM */
         public byte byZeroChanNum;
 
         /** 主协议 */
+        /** BYmainproto */
         public byte byMainProto;
 
         /** 子协议 */
+        /** BYSUBproto */
         public byte bySubProto;
 
         /** 支持能力 */
+        /** BYsupport */
         public byte bySupport;
 
         /** 设备类型 */
+        /** WDEV类型 */
         public short wDevType;
 
         /** 设备名称 */
+        /** Sdevice名称 */
         public byte[] sDeviceName = new byte[32];
 
         /** MAC 地址 */
+        /** BYMACaddr */
         public byte[] byMacAddr = new byte[6];
 
         /** 保留 1 */
+        /** BYres1 */
         public byte[] byRes1 = new byte[2];
 
         /** 版本 */
+        /** S版本 */
         public byte[] sVersion = new byte[16];
 
         /** 保留 2 */
+        /** BYres2 */
         public byte[] byRes2 = new byte[188];
 
         @Override
-        /** 获取FieldOrder */
         protected List<String> getFieldOrder() {
             return Arrays.asList("byUserIDValid", "bySerialValid", "byVersionValid", "byDeviceNameValid",
                     "byMacAddrValid", "byLinkPortValid", "byDeviceIP", "bySocketIP", "wLinkPort", "sSerialNumber",
