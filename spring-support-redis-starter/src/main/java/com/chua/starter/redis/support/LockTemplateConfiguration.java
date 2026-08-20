@@ -14,15 +14,8 @@ import org.springframework.context.annotation.Bean;
 /**
  * 锁模板
  *
- * @author CH
  * @since 2022/08/01
  **/
-/**
- * public class LockTemplateConfiguration {
- *
- * @author CH
- * @since 4.0.0.42
- */
 @Slf4j
 @ConditionalOnClass(name = "com.chua.starter.redis.support.template.LockTemplate")
 public class LockTemplateConfiguration {

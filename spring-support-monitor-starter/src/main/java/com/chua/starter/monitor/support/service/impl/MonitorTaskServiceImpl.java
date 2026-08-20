@@ -27,12 +27,12 @@ import java.util.List;
 public class MonitorTaskServiceImpl implements MonitorTaskService {
 
     /** 任务 Mapper */
+    /** 任务mapper */
     private final MsMonitorTaskMapper taskMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorTask")
-    /** 创建 */
     public ReturnResult<MsMonitorTask> create(MsMonitorTask task) {
         try {
             if (task.getMonitorTaskEnabled() == null) {
@@ -51,7 +51,6 @@ public class MonitorTaskServiceImpl implements MonitorTaskService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorTask")
-    /** 更新 */
     public ReturnResult<MsMonitorTask> update(MsMonitorTask task) {
         try {
             taskMapper.updateById(task);
@@ -64,7 +63,6 @@ public class MonitorTaskServiceImpl implements MonitorTaskService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorTask")
-    /** 删除 */
     public ReturnResult<Void> delete(Long id) {
         try {
             taskMapper.deleteById(id);
@@ -76,7 +74,6 @@ public class MonitorTaskServiceImpl implements MonitorTaskService {
 
     @Override
     @Cacheable(cacheNames = "monitorTask", key = "'monitor.task:id:' + #id")
-    /** 查找ById */
     public ReturnResult<MsMonitorTask> findById(Long id) {
         try {
             return ReturnResult.ok(taskMapper.selectById(id));
@@ -87,7 +84,6 @@ public class MonitorTaskServiceImpl implements MonitorTaskService {
 
     @Override
     @Cacheable(cacheNames = "monitorTask", key = "'monitor.task:enabled'")
-    /** ListEnabled */
     public ReturnResult<List<MsMonitorTask>> listEnabled() {
         try {
             LambdaQueryWrapper<MsMonitorTask> w = new LambdaQueryWrapper<>();
@@ -100,7 +96,6 @@ public class MonitorTaskServiceImpl implements MonitorTaskService {
 
     @Override
     @Cacheable(cacheNames = "monitorTask", key = "'monitor.task:monitor:' + #monitorId")
-    /** ListByMonitor */
     public ReturnResult<List<MsMonitorTask>> listByMonitor(Long monitorId) {
         try {
             LambdaQueryWrapper<MsMonitorTask> w = new LambdaQueryWrapper<>();
@@ -114,7 +109,6 @@ public class MonitorTaskServiceImpl implements MonitorTaskService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorTask")
-    /** 设置Enabled */
     public ReturnResult<Void> setEnabled(Long id, Integer enabled) {
         try {
             MsMonitorTask t = new MsMonitorTask();
@@ -129,7 +123,6 @@ public class MonitorTaskServiceImpl implements MonitorTaskService {
 
     @Override
     @CacheEvict(allEntries = true, cacheNames = "monitorTask")
-    /** 标记Last运行Time */
     public ReturnResult<Void> markLastRunTime(Long id) {
         try {
             MsMonitorTask t = new MsMonitorTask();

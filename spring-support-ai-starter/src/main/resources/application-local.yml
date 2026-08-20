@@ -2,9 +2,9 @@
 # 启动方式：mvn -pl spring-support-ai-starter spring-boot:run -Dspring-boot.run.profiles=local
 # 或打包后：java -jar spring-support-ai-starter-4.0.0.42.jar --spring.profiles.active=local
 server:
-  port: 8091
+  port: 8787
   servlet:
-    context-path: /api/ai
+    context-path: /
 
 spring:
   application:

@@ -42,20 +42,20 @@ import java.util.Map;
 public class DataSourceHealthIndicator extends AbstractHealthIndicator {
 
     /** 连接验证超时（秒） */
+    /** Validation_timeout_seconds */
     private static final int VALIDATION_TIMEOUT_SECONDS = 5;
 
     /** 运行时异常白名单（不标记为 DOWN，避免循环） */
+    /** Transient_error_prefixes */
     private static final String[] TRANSIENT_ERROR_PREFIXES = {
             "CommunicationsException", "SocketException", "InterruptedException"
     };
 
-    /** 创建 DataSourceHealthIndicator 实例 */
     public DataSourceHealthIndicator() {
         super("数据源健康检查失败");
     }
 
     @Override
-    /** DoHealth校验 */
     protected void doHealthCheck(Health.Builder builder) throws Exception {
         Map<String, DataSource> allDataSources = DataSourceContextSupport.getAllDataSources();
 

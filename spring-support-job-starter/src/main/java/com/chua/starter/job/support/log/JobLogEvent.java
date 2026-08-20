@@ -38,7 +38,7 @@ public record JobLogEvent(
      * 状态枚举。
      *
      * @since 4.0.0.42
- * @author CH
+     * @author CH
      */
     public enum Status {
         SUCCESS, FAILURE, SKIPPED
@@ -78,7 +78,6 @@ public record JobLogEvent(
                 executedAtMs, nodeId, Instant.now(), logContent);
     }
 
-    /** ExtractMessage */
     private static String extractMessage(Throwable throwable) {
         if (throwable == null) return null;
         Throwable cur = throwable;
@@ -145,7 +144,6 @@ public record JobLogEvent(
     /** Field_pattern */
     private static final Pattern FIELD_PATTERN = Pattern.compile("\\b([a-zA-Z]+)=([^,\\]]*)");
 
-    /** 读取Field */
     private static String readField(String text, String name) {
         Matcher m = FIELD_PATTERN.matcher(text);
         while (m.find()) {
@@ -154,7 +152,6 @@ public record JobLogEvent(
         return null;
     }
 
-    /** 读取LongField */
     private static long readLongField(String text, String name) {
         String v = readField(text, name);
         if (v == null || v.isEmpty() || "null".equals(v)) return 0L;
@@ -165,18 +162,15 @@ public record JobLogEvent(
         }
     }
 
-    /** Nvl */
     private static String nvl(String s) {
         return s == null ? "null" : s;
     }
 
-    /** 编码记录日志Content */
     private static String encodeLogContent(String content) {
         if (content == null) return "null";
         return Base64.getEncoder().encodeToString(content.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
-    /** 解码记录日志Content */
     private static String decodeLogContent(String encoded) {
         if (encoded == null || encoded.isEmpty()) return null;
         try {

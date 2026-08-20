@@ -21,24 +21,24 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class DataSourceGroup {
 
     /** 组名（如 slave） */
+    /** 分组名称 */
     private final String groupName;
 
     /** 组内数据源列表 */
+    /** 数据sources */
     private final List<DataSource> dataSources = new ArrayList<>();
 
     /** 数据源名称列表（用于日志） */
+    /** 数据来源names */
     private final List<String> dataSourceNames = new ArrayList<>();
 
     /** 轮询计数器 */
+    /** 计数器 */
     private final AtomicInteger counter = new AtomicInteger(0);
 
     /** 负载均衡策略 */
     private volatile LoadBalanceStrategy strategy = LoadBalanceStrategy.ROUND_ROBIN;
 
-    /**
-     * 创建 DataSourceGroup 实例
-     * @param groupName groupName
-     */
     public DataSourceGroup(String groupName) {
         this.groupName = groupName;
     }

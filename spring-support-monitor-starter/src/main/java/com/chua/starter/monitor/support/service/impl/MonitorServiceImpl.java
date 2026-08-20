@@ -32,16 +32,18 @@ import java.util.List;
 public class MonitorServiceImpl implements MonitorService {
 
     /** 监控 Mapper */
+    /** Monitormapper */
     private final MsMonitorMapper monitorMapper;
     /** 任务 Mapper, 用于级联删除 */
+    /** Monitor任务mapper */
     private final MsMonitorTaskMapper monitorTaskMapper;
     /** 网关 Mapper, 用于级联删除 */
+    /** Monitorgatewaymapper */
     private final MsMonitorGatewayMapper monitorGatewayMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitor")
-    /** 创建 */
     public ReturnResult<MsMonitor> create(MsMonitor monitor) {
         try {
             if (monitor.getMonitorEnabled() == null) {
@@ -58,7 +60,6 @@ public class MonitorServiceImpl implements MonitorService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitor")
-    /** 更新 */
     public ReturnResult<MsMonitor> update(MsMonitor monitor) {
         try {
             monitorMapper.updateById(monitor);
@@ -72,7 +73,6 @@ public class MonitorServiceImpl implements MonitorService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitor")
-    /** 删除 */
     public ReturnResult<Void> delete(Long id) {
         try {
             // 级联删除关联的任务和网关
@@ -90,7 +90,6 @@ public class MonitorServiceImpl implements MonitorService {
 
     @Override
     @Cacheable(cacheNames = "monitor", key = "'monitor:id:' + #id")
-    /** 查找ById */
     public ReturnResult<MsMonitor> findById(Long id) {
         try {
             MsMonitor monitor = monitorMapper.selectById(id);
@@ -102,7 +101,6 @@ public class MonitorServiceImpl implements MonitorService {
 
     @Override
     @Cacheable(cacheNames = "monitor", key = "'monitor:list:all'")
-    /** ListAll */
     public ReturnResult<List<MsMonitor>> listAll() {
         try {
             return ReturnResult.ok(monitorMapper.selectList(null));
@@ -112,7 +110,6 @@ public class MonitorServiceImpl implements MonitorService {
     }
 
     @Override
-    /** ListByServiceType */
     public ReturnResult<List<MsMonitor>> listByServiceType(String serviceType) {
         try {
             LambdaQueryWrapper<MsMonitor> wrapper = new LambdaQueryWrapper<>();
@@ -124,7 +121,6 @@ public class MonitorServiceImpl implements MonitorService {
     }
 
     @Override
-    /** Page */
     public ReturnResult<Page<MsMonitor>> page(long pageNum, long pageSize, String keyword) {
         try {
             Page<MsMonitor> page = new Page<>(pageNum, pageSize);

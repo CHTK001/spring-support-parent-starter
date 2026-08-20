@@ -28,15 +28,8 @@ import java.util.Map;
 /**
  * 自定义注解 + AOP的方式实现数据源动态切换
  *
- * @author CH
  */
 import lombok.extern.slf4j.Slf4j;
-/**
- * public class DynamicDataSourceAspect {
- *
- * @author CH
- * @since 4.0.0.42
- */
 
 @Slf4j
 public class DynamicDataSourceAspect {
@@ -66,11 +59,6 @@ public class DynamicDataSourceAspect {
         switchTo(dataSource, multiDataSourceSettingProperties);
     }
 
-    /**
-     * SwitchTo
-     * @param dataSource dataSource
-     * @param multiDataSourceSettingProperties multiDataSourceSettingProperties
-     */
     public void switchTo(String dataSource, MultiDataSourceSettingProperties multiDataSourceSettingProperties) {
         dataSource = createDataSource(dataSource, multiDataSourceSettingProperties);
         //分析处理多数据源
@@ -275,10 +263,6 @@ public class DynamicDataSourceAspect {
     public static class HeaderWrapper extends java.util.HashMap<String, String> {
         /** 请求 */
         private final HttpServletRequest request;
-        /**
-         * 创建 HeaderWrapper 实例
-         * @param request request
-         */
         public HeaderWrapper(HttpServletRequest request) {
             this.request = request;
             var names = request.getHeaderNames();
@@ -293,10 +277,6 @@ public class DynamicDataSourceAspect {
      * HttpSession 属性包装器（使用 Map，支持 SpEL #session['key'] 和 #session.key 两种语法）
      */
     public static class SessionWrapper extends java.util.HashMap<String, Object> {
-        /**
-         * 创建 SessionWrapper 实例
-         * @param request request
-         */
         public SessionWrapper(HttpServletRequest request) {
             var session = request.getSession(false);
             if (session != null) {

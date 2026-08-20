@@ -22,7 +22,6 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 支持在 MyBatis Mapper 上解析 @DS。
  *
- * @author CH
  * @since 2026/4/2
  */
 @Intercepts({
@@ -30,12 +29,6 @@ import java.util.concurrent.ConcurrentHashMap;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, org.apache.ibatis.session.RowBounds.class, org.apache.ibatis.session.ResultHandler.class}),
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, org.apache.ibatis.session.RowBounds.class, org.apache.ibatis.session.ResultHandler.class, org.apache.ibatis.cache.CacheKey.class, org.apache.ibatis.mapping.BoundSql.class}),
 })
-/**
- * public class MapperDataSourceInterceptor implements Interceptor {
- *
- * @author CH
- * @since 4.0.0.42
- */
 public class MapperDataSourceInterceptor implements Interceptor {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(MapperDataSourceInterceptor.class);
@@ -44,14 +37,8 @@ public class MapperDataSourceInterceptor implements Interceptor {
     private final ApplicationContext applicationContext;
     /** 属性 */
     private final MultiDataSourceSettingProperties properties;
-    /** mapper数据SourceCache */
     private final Map<String, String> mapperDataSourceCache = new ConcurrentHashMap<>();
 
-    /**
-     * 创建 MapperDataSourceInterceptor 实例
-     * @param applicationContext applicationContext
-     * @param properties properties
-     */
     public MapperDataSourceInterceptor(ApplicationContext applicationContext,
                                        MultiDataSourceSettingProperties properties) {
         this.applicationContext = applicationContext;
@@ -59,10 +46,6 @@ public class MapperDataSourceInterceptor implements Interceptor {
     }
 
     @Override
-    /**
-     * Intercept
-     * @param invocation invocation
-     */
     public Object intercept(Invocation invocation) throws Throwable {
         Object[] args = invocation.getArgs();
         if (args.length == 0 || !(args[0] instanceof MappedStatement mappedStatement)) {
@@ -88,10 +71,6 @@ public class MapperDataSourceInterceptor implements Interceptor {
         }
     }
 
-    /**
-     * RestoreDataSource
-     * @param originalDataSource originalDataSource
-     */
     private void restoreDataSource(String originalDataSource) {
         if (StringUtils.hasText(originalDataSource)) {
             DataSourceContextSupport.setDbType(originalDataSource);
@@ -101,10 +80,6 @@ public class MapperDataSourceInterceptor implements Interceptor {
         DataSourceContextSupport.setDbType(DataSourceContextSupport.DEFAULT_DATASOURCE);
     }
 
-    /**
-     * 解析MapperDataSource
-     * @param statementId statementId
-     */
     private String resolveMapperDataSource(String statementId) {
         int lastDot = statementId.lastIndexOf('.');
         if (lastDot < 0) {
@@ -136,19 +111,11 @@ public class MapperDataSourceInterceptor implements Interceptor {
     }
 
     @Override
-    /**
-     * Plugin
-     * @param target target
-     */
     public Object plugin(Object target) {
         return Plugin.wrap(target, this);
     }
 
     @Override
-    /**
-     * 设置Properties
-     * @param properties properties
-     */
     public void setProperties(Properties properties) {
     }
 }

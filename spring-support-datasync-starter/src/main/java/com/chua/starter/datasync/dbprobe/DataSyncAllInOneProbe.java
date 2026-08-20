@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.LongAdder;
 /**
  * 全能力标准测试：覆盖文件格式、转换器、边界、调度、多数据源。
  *
- * @author CH
  * @since 4.0.0.42
  */
 public final class DataSyncAllInOneProbe {
@@ -41,13 +40,11 @@ public final class DataSyncAllInOneProbe {
     /** Fail */
     private final List<String> fail = new CopyOnWriteArrayList<>();
 
-    /** Main */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);
         new DataSyncAllInOneProbe().run();
     }
 
-    /** 运行 */
     private void run() throws Exception {
         // 1. 文件格式解析
         testFileParsing();
@@ -69,7 +66,6 @@ public final class DataSyncAllInOneProbe {
     }
 
     // ========== 1. 文件格式解析 ==========
-    /** TestFileParsing */
     private void testFileParsing() throws Exception {
         Path mappingDir = Paths.get("src/main/resources/datasync/mappings");
         var yaml = new YamlConfigFileParser();
@@ -99,7 +95,6 @@ public final class DataSyncAllInOneProbe {
     }
 
     // ========== 2. 字段转换器 ==========
-    /** TestConverters */
     private void testConverters() throws Exception {
         Path csv = WORK_DIR.resolve("convert.csv");
         Files.writeString(csv, "name,age,score,active\n张三,30,85.5,true\n李四,25,92.3,false\n", StandardCharsets.UTF_8);
@@ -128,7 +123,6 @@ public final class DataSyncAllInOneProbe {
     }
 
     // ========== 3. 边界场景 ==========
-    /** TestEdgeCases */
     private void testEdgeCases() throws Exception {
         // 3a. 空 CSV
         Path empty = WORK_DIR.resolve("empty.csv");
@@ -180,7 +174,6 @@ public final class DataSyncAllInOneProbe {
     }
 
     // ========== 4. 调度策略 ==========
-    /** TestSchedules */
     private void testSchedules() throws Exception {
         Path csv = WORK_DIR.resolve("schedule.csv");
         Files.writeString(csv, "id,val\n1,a\n2,b\n3,c\n4,d\n5,e\n", StandardCharsets.UTF_8);
@@ -220,7 +213,6 @@ public final class DataSyncAllInOneProbe {
     }
 
     // ========== 5. 多映射并发 ==========
-    /** TestConcurrency */
     private void testConcurrency() throws Exception {
         Path csv = WORK_DIR.resolve("concurrent.csv");
         Files.writeString(csv, "id,val\n" + "1,a\n".repeat(1000), StandardCharsets.UTF_8);
@@ -243,22 +235,14 @@ public final class DataSyncAllInOneProbe {
         else fail.add("并发: 5 映射 0 行");
     }
 
-    /** Map */
     private static DataSyncMapping map(String id, String cron, String srcId, String sinkId) {
         return new DefaultDataSyncMapping(id, id + "-input", srcId, id + "-output", sinkId,
                 null, List.of(), 100, "fixed", cron, Map.of(), new CronTrigger(cron, LocalDateTime.now()));
     }
 
-    /** Map */
     private static DataSyncMapping map(String id, String cron) {
         return map(id, cron, id + "-src", id + "-sink");
     }
-    /**
-     * record SimpleFieldMapping(String sourceField, String targetField, String converter) implements DataSyncFieldMapping {}
-     *
-     * @author CH
-     * @since 4.0.0.42
-     */
 
     record SimpleFieldMapping(String sourceField, String targetField, String converter) implements DataSyncFieldMapping {}
 

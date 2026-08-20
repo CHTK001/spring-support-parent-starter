@@ -33,7 +33,6 @@ import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
  *
  * <p>注意：事件中是否携带 SQL/参数由 {@link MybatisSlowSqlProperties} 控制，避免敏感信息泄露。</p>
  *
- * @author CH
  * @since 2026/4/27
  */
 @Intercepts({
@@ -41,12 +40,6 @@ import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class}),
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
 })
-/**
- * public class SlowSqlDetectInterceptor implements Interceptor {
- *
- * @author CH
- * @since 4.0.0.42
- */
 public class SlowSqlDetectInterceptor implements Interceptor {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SlowSqlDetectInterceptor.class);
@@ -74,10 +67,6 @@ public class SlowSqlDetectInterceptor implements Interceptor {
     }
 
     @Override
-    /**
-     * Intercept
-     * @param invocation invocation
-     */
     public Object intercept(Invocation invocation) throws Throwable {
         long start = System.currentTimeMillis();
         Throwable error = null;
@@ -99,12 +88,6 @@ public class SlowSqlDetectInterceptor implements Interceptor {
         }
     }
 
-    /**
-     * 发布SlowSqlEvent
-     * @param invocation invocation
-     * @param elapsedMs elapsedMs
-     * @param error error
-     */
     private void publishSlowSqlEvent(Invocation invocation, long elapsedMs, Throwable error) {
         Object[] args = invocation.getArgs();
         if (args == null || args.length == 0 || !(args[0] instanceof MappedStatement ms)) {
@@ -155,12 +138,6 @@ public class SlowSqlDetectInterceptor implements Interceptor {
         }
     }
 
-    /**
-     * 解析BoundSql
-     * @param ms ms
-     * @param args args
-     * @param parameter parameter
-     */
     private BoundSql resolveBoundSql(MappedStatement ms, Object[] args, Object parameter) {
         // MyBatis 的 query 重载中，BoundSql 可能已在参数中传入
         if (args.length >= 6 && args[5] instanceof BoundSql bs) {
@@ -175,22 +152,12 @@ public class SlowSqlDetectInterceptor implements Interceptor {
         /** Parameters */
         private final List<String> parameters;
 
-        /**
-         * 创建 SqlResolveResult 实例
-         * @param sql sql
-         * @param parameters parameters
-         */
         private SqlResolveResult(String sql, List<String> parameters) {
             this.sql = sql;
             this.parameters = parameters;
         }
     }
 
-    /**
-     * 解析Sql
-     * @param configuration configuration
-     * @param boundSql boundSql
-     */
     private SqlResolveResult resolveSql(Configuration configuration, BoundSql boundSql) {
         Object parameterObject = boundSql.getParameterObject();
         List<ParameterMapping> mappings = boundSql.getParameterMappings();
@@ -225,11 +192,6 @@ public class SlowSqlDetectInterceptor implements Interceptor {
         return new SqlResolveResult(sql, list);
     }
 
-    /**
-     * Truncate
-     * @param value value
-     * @param maxLen maxLen
-     */
     private String truncate(String value, int maxLen) {
         if (value == null) return null;
         int safeMax = Math.max(0, maxLen);
@@ -238,10 +200,6 @@ public class SlowSqlDetectInterceptor implements Interceptor {
         return value.substring(0, safeMax) + "...(truncated)";
     }
 
-    /**
-     * 获取ParameterValue
-     * @param obj obj
-     */
     private String getParameterValue(Object obj) {
         if (obj == null) return "null";
         if (obj instanceof String) {
@@ -254,19 +212,11 @@ public class SlowSqlDetectInterceptor implements Interceptor {
     }
 
     @Override
-    /**
-     * Plugin
-     * @param target target
-     */
     public Object plugin(Object target) {
         return Plugin.wrap(target, this);
     }
 
     @Override
-    /**
-     * 设置Properties
-     * @param properties properties
-     */
     public void setProperties(Properties properties) {
         // ignore
     }

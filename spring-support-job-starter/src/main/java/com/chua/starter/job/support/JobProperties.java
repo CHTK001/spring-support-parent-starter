@@ -127,7 +127,7 @@ public class JobProperties {
      * 进程角色枚举。
      *
      * @since 4.0.0.42
- * @author CH
+     * @author CH
      */
     public enum Role {
 

@@ -7,9 +7,6 @@ import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.ToString;
 
-import com.chua.common.support.network.http.ContentDisposition;
-import com.chua.common.support.network.http.ContentType;
-
 /**
  * 返回前置条件
  *
@@ -287,7 +284,7 @@ public class ReturnPreconditioning<T> {
      *
      * @return 内容类型，始终为 null
      */
-    public ContentType getContentType() {
+    public Object getContentType() {
         return null;
     }
 
@@ -296,7 +293,7 @@ public class ReturnPreconditioning<T> {
      *
      * @return 内容分发描述，始终为 null
      */
-    public ContentDisposition getContentDisposition() {
+    public Object getContentDisposition() {
         return null;
     }
 

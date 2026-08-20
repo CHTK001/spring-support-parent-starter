@@ -41,7 +41,6 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * MyBatis SQL 物理化拦截器。
  *
- * @author CH
  * @since 2026/4/2
  */
 @Intercepts({
@@ -49,12 +48,6 @@ import java.util.concurrent.ConcurrentHashMap;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class}),
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
 })
-/**
- * public class MaterializedSqlInterceptor implements Interceptor {
- *
- * @author CH
- * @since 4.0.0.42
- */
 public class MaterializedSqlInterceptor implements Interceptor {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(MaterializedSqlInterceptor.class);
@@ -66,15 +59,9 @@ public class MaterializedSqlInterceptor implements Interceptor {
     private final MaterializedSqlDataSourceRouter materializedSqlRouter;
     /** 属性 */
     private final MaterializedRouteProperties properties;
-    /** definitionCache */
     private final Map<String, MaterializedRouteDefinition> definitionCache = new ConcurrentHashMap<>();
     private final Map<String, MaterializedRouteDefinition> refreshDefinitionCache = new ConcurrentHashMap<>();
 
-    /**
-     * 创建 MaterializedSqlInterceptor 实例
-     * @param materializedSqlRouter materializedSqlRouter
-     * @param properties properties
-     */
     public MaterializedSqlInterceptor(MaterializedSqlDataSourceRouter materializedSqlRouter,
                                       MaterializedRouteProperties properties) {
         this.materializedSqlRouter = materializedSqlRouter;
@@ -82,10 +69,6 @@ public class MaterializedSqlInterceptor implements Interceptor {
     }
 
     @Override
-    /**
-     * Intercept
-     * @param invocation invocation
-     */
     public Object intercept(Invocation invocation) throws Throwable {
         if (!(invocation.getTarget() instanceof Executor)) {
             return invocation.proceed();
@@ -123,11 +106,6 @@ public class MaterializedSqlInterceptor implements Interceptor {
         return result;
     }
 
-    /**
-     * Intercept查询
-     * @param invocation invocation
-     * @param request request
-     */
     private Object interceptQuery(Invocation invocation, MaterializedSqlRequest request) throws Throwable {
         MaterializedSqlRoute route = materializedSqlRouter.route(request);
         if (!route.isRouted()) {
@@ -152,10 +130,6 @@ public class MaterializedSqlInterceptor implements Interceptor {
         }
     }
 
-    /**
-     * RestoreDataSource
-     * @param originalDataSource originalDataSource
-     */
     private void restoreDataSource(String originalDataSource) {
         if (StringUtils.hasText(originalDataSource)) {
             DataSourceContextSupport.setDbType(originalDataSource);
@@ -164,13 +138,6 @@ public class MaterializedSqlInterceptor implements Interceptor {
         DataSourceContextSupport.clearDbType();
     }
 
-    /**
-     * 构建Request
-     * @param mappedStatement mappedStatement
-     * @param boundSql boundSql
-     * @param parameter parameter
-     * @param definition definition
-     */
     private MaterializedSqlRequest buildRequest(MappedStatement mappedStatement,
                                                 BoundSql boundSql,
                                                 Object parameter,
@@ -209,12 +176,6 @@ public class MaterializedSqlInterceptor implements Interceptor {
         return builder.build();
     }
 
-    /**
-     * 解析BoundSql
-     * @param mappedStatement mappedStatement
-     * @param args args
-     * @param parameter parameter
-     */
     private BoundSql resolveBoundSql(MappedStatement mappedStatement, Object[] args, Object parameter) {
         if (args.length == 6 && args[5] instanceof BoundSql boundSql) {
             return boundSql;
@@ -222,12 +183,6 @@ public class MaterializedSqlInterceptor implements Interceptor {
         return mappedStatement.getBoundSql(parameter);
     }
 
-    /**
-     * RebuildRequest
-     * @param request request
-     * @param definition definition
-     * @param commandType commandType
-     */
     private MaterializedSqlRequest rebuildRequest(MaterializedSqlRequest request,
                                                   MaterializedRouteDefinition definition,
                                                   MaterializedSqlCommandType commandType) {
@@ -246,12 +201,6 @@ public class MaterializedSqlInterceptor implements Interceptor {
         return builder.build();
     }
 
-    /**
-     * 解析Parameters
-     * @param configuration configuration
-     * @param boundSql boundSql
-     * @param parameterObject parameterObject
-     */
     private List<Object> resolveParameters(Configuration configuration, BoundSql boundSql, Object parameterObject) {
         List<Object> values = new ArrayList<>();
         List<ParameterMapping> parameterMappings = boundSql.getParameterMappings();
@@ -281,10 +230,6 @@ public class MaterializedSqlInterceptor implements Interceptor {
         return values;
     }
 
-    /**
-     * 解析Tables
-     * @param sql sql
-     */
     private List<String> parseTables(String sql) {
         try {
             Statement statement = CCJSqlParserUtil.parse(sql);
@@ -296,10 +241,6 @@ public class MaterializedSqlInterceptor implements Interceptor {
         }
     }
 
-    /**
-     * 解析Definition
-     * @param mappedStatement mappedStatement
-     */
     private MaterializedRouteDefinition resolveDefinition(MappedStatement mappedStatement) {
         MaterializedRouteDefinition current = MaterializedRouteContext.get();
         if (current != null) {
@@ -310,10 +251,6 @@ public class MaterializedSqlInterceptor implements Interceptor {
         return cached == NONE ? null : cached;
     }
 
-    /**
-     * 解析RefreshDefinition
-     * @param mappedStatement mappedStatement
-     */
     private MaterializedRouteDefinition resolveRefreshDefinition(MappedStatement mappedStatement) {
         MaterializedRouteDefinition current = MaterializedRefreshContext.get();
         if (current != null) {
@@ -324,10 +261,6 @@ public class MaterializedSqlInterceptor implements Interceptor {
         return cached == NONE ? null : cached;
     }
 
-    /**
-     * 解析Definition从创建Mapper
-     * @param statementId statementId
-     */
     private MaterializedRouteDefinition resolveDefinitionFromMapper(String statementId) {
         int lastDot = statementId.lastIndexOf('.');
         if (lastDot < 0) {
@@ -362,10 +295,6 @@ public class MaterializedSqlInterceptor implements Interceptor {
         return NONE;
     }
 
-    /**
-     * 解析RefreshDefinition从创建Mapper
-     * @param statementId statementId
-     */
     private MaterializedRouteDefinition resolveRefreshDefinitionFromMapper(String statementId) {
         int lastDot = statementId.lastIndexOf('.');
         if (lastDot < 0) {
@@ -401,19 +330,11 @@ public class MaterializedSqlInterceptor implements Interceptor {
     }
 
     @Override
-    /**
-     * Plugin
-     * @param target target
-     */
     public Object plugin(Object target) {
         return Plugin.wrap(target, this);
     }
 
     @Override
-    /**
-     * 设置Properties
-     * @param properties properties
-     */
     public void setProperties(Properties properties) {
     }
 }

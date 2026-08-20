@@ -158,7 +158,19 @@ public class DefaultScopeChatClient implements ChatClient {
 
     @Override
     /** ListModels */
-    public List<ModelDefinition> listModels() {
+    public List<String> listModels() {
+        return models().stream()
+                .map(ModelDefinition::getId)
+                .filter(StringUtils::isNotBlank)
+                .toList();
+    }
+
+    /**
+     * 获取模型定义列表（含能力信息）。
+     *
+     * @return 模型定义列表
+     */
+    public List<ModelDefinition> models() {
         List<ModelDefinition> local = cachedModels;
         if (!local.isEmpty()) {
             return local;
