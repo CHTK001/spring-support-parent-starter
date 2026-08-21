@@ -222,8 +222,14 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     @Override
-    /** Stream */
+    /** Stream 兼容旧调用（无逐 chunk 回调） */
     public SseEmitter stream(AiChatRequest request, Consumer<String> onComplete) {
+        return stream(request, null, onComplete);
+    }
+
+    @Override
+    /** Stream 逐增量文本回调版本，供 WS 流式推送使用 */
+    public SseEmitter stream(AiChatRequest request, Consumer<String> onChunk, Consumer<String> onComplete) {
         Integer groupId = extractGroupId(request);
         String appKey = extractAppKey(request);
         // 深度思考 / 智能搜索开关并入 parameters，供底层 ChatClient 消费
@@ -255,6 +261,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                         String content = response.getContent();
                         if (content != null && !content.isEmpty()) {
                             fullReply.append(content);
+                            if (onChunk != null) {
+                                onChunk.accept(content);
+                            }
                             String sseData = String.format(
                                     "{\"id\":\"%s\",\"object\":\"chat.completion.chunk\",\"created\":%d," +
                                     "\"model\":\"%s\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"%s\"},\"finish_reason\":null}]}",
