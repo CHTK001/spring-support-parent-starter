@@ -383,9 +383,9 @@ public abstract class AbstractProtocol implements Protocol {
      * @return 缓存信息
      */
     protected LoginResult createUpgradeResponse(ReturnResult returnResult, String key) {
-        String code = returnResult.getCode();
+        var code = returnResult.getCode();
         if (RESOURCE_OAUTH_ERROR.getCode().equals(code)) {
-            HttpServletRequest servletRequest = RequestUtils.getRequest();
+            var servletRequest = RequestUtils.getRequest();
             if (null != servletRequest) {
                 CookieUtil.remove(servletRequest, ResponseUtils.getResponse(), "x-oauth-cookie");
             }
