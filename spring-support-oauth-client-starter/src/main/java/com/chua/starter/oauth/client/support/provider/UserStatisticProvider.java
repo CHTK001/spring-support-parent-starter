@@ -72,16 +72,15 @@ public class UserStatisticProvider {
             return ReturnResult.error(REQUEST_PARAM_ERROR.getCode(), bindingResult.getAllErrors().getFirst().getDefaultMessage());
         }
 
-        String code = loginData.getVerifyCodeKey();
-        String sessionKey = Optional.ofNullable(request.getSession().getAttribute(CAPTCHA_SESSION_KEY)).orElse("").toString();
+        var code = loginData.getVerifyCodeKey();
+        var sessionKey = Optional.ofNullable(request.getSession().getAttribute(CAPTCHA_SESSION_KEY)).orElse("").toString();
         if (Strings.isNullOrEmpty(code) || !code.equalsIgnoreCase(sessionKey)) {
             return ReturnResult.error(REQUEST_PARAM_ERROR.getCode(), "校验码错误");
         }
 
-        String address = getIpAddress(request);
-        AuthClientExecute clientExecute = AuthClientExecute.getInstance();
-        // 构建扩展参数，包含地址、租户ID和租户编码
-        Map<String, Object> extBuilder = new java.util.LinkedHashMap<>();
+        var address = getIpAddress(request);
+        var clientExecute = AuthClientExecute.getInstance();
+        var extBuilder = new java.util.LinkedHashMap<String, Object>();
         extBuilder.put("address", address);
         if (StringUtils.isNotBlank(loginData.getTenantId())) {
             extBuilder.put("tenantId", loginData.getTenantId());
@@ -92,7 +91,7 @@ public class UserStatisticProvider {
         if (StringUtils.isNotBlank(loginData.getAccountType())) {
             extBuilder.put("accountType", loginData.getAccountType());
         }
-        LoginAuthResult accessToken = clientExecute.getAccessToken(
+        var accessToken = clientExecute.getAccessToken(
                 loginData.getUsername(),
                 loginData.getPassword(),
                 AuthType.WEB,
