@@ -55,4 +55,18 @@ public class NomifunConversationController {
     public void delete(@PathVariable("id") String id) {
         conversationService.deleteConversation(id);
     }
+
+    /** 列出消息 */
+    @GetMapping("/{id}/messages")
+    public List<Map<String, Object>> messages(@PathVariable("id") String id) {
+        return conversationService.getMessages(id);
+    }
+
+    /** 发送消息（同步完成）。 */
+    @PostMapping("/{id}/messages")
+    public NomifunConversationService.NomifunSendMessageResult sendMessage(@PathVariable("id") String id,
+            @RequestBody(required = false) Map<String, Object> body) {
+        String content = (body != null && body.get("content") != null) ? String.valueOf(body.get("content")) : "";
+        return conversationService.sendMessage(id, content);
+    }
 }

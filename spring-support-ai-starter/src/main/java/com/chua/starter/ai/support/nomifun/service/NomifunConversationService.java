@@ -115,4 +115,48 @@ public class NomifunConversationService {
             dialogRecordService.deleteDialog(dialogId);
         }
     }
+
+    /**
+     * nomifun 消息视图（record）。
+     */
+    public record NomifunSendMessageResult(String msg_id, boolean replayed, boolean completed,
+            Boolean result_ok, String result_text, String result_error) {}
+
+    /**
+     * 发送消息（nomifun POST /api/conversations/{id}/messages）。
+     *
+     * <p>当前为同步完成：持久化 user 角色消息后，直接回 completed=true。后续接入
+     * 自有 Agent 流式编排后，该方法将转为投递任务并经 WS 广播 message.stream / turn。</p>
+     *
+     * @param conversationId 会话 id（UUIDv7）
+     * @param content        输入内容
+     * @return send 结果
+     */
+    public NomifunSendMessageResult sendMessage(String conversationId, String content) {
+        Long dialogId = uuidToDialog.get(conversationId);
+        if (dialogId == null) throw new IllegalArgumentException("conversation not found: " + conversationId);
+        var msg = new com.chua.starter.ai.support.chat.ChatMessage("user", content == null ? "" : content);
+        dialogRecordService.addMessage(dialogId, msg);
+        String msgId = uuidV7();
+        return new NomifunSendMessageResult(msgId, false, true, true, "已接收", null);
+    }
+
+    /**
+     * 获取会话消息列表（nomifun GET /api/conversations/{id}/messages）。
+     */
+    public List<Map<String, Object>> getMessages(String conversationId) {
+        Long dialogId = uuidToDialog.get(conversationId);
+        if (dialogId == null) return List.of();
+        var msgs = dialogRecordService.getDialogMessages(dialogId);
+        if (msgs == null) return List.of();
+        var result = new ArrayList<Map<String, Object>>();
+        for (var m : msgs) {
+            result.add(Map.of(
+                    "msg_id", uuidV7(),
+                    "role", m.getRole() == null ? "user" : m.getRole(),
+                    "content", m.getContent() == null ? "" : m.getContent(),
+                    "created_at", m.getTimestamp() == null ? System.currentTimeMillis() : m.getTimestamp()));
+        }
+        return result;
+    }
 }
