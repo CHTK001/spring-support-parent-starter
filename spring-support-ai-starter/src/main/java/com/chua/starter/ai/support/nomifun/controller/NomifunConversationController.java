@@ -69,4 +69,11 @@ public class NomifunConversationController {
         String content = (body != null && body.get("content") != null) ? String.valueOf(body.get("content")) : "";
         return conversationService.sendMessage(id, content);
     }
+
+    /** 活跃会话计数 */
+    @GetMapping("/active-count")
+    public Map<String, Object> activeCount() {
+        int count = conversationService.listConversations().size();
+        return Map.of("count", count);
+    }
 }
