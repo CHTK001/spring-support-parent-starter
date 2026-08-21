@@ -29,10 +29,14 @@ public class NomifunConversationController {
     /** 会话业务服务 */
     private final NomifunConversationService conversationService;
 
-    /** 列出会话 */
+    /** 列出会话（返回 PaginatedResult 格式） */
     @GetMapping
-    public List<NomifunConversation> list() {
-        return conversationService.listConversations();
+    public Map<String, Object> list(@RequestParam(required = false) Integer limit) {
+        List<NomifunConversation> items = conversationService.listConversations();
+        return Map.of(
+                "items", items,
+                "total", items.size(),
+                "has_more", false);
     }
 
     /** 创建会话 */
@@ -42,7 +46,7 @@ public class NomifunConversationController {
         return conversationService.createConversation(name);
     }
 
-    /** 获取单个会话。前端对 404 静默处理，故未找到抛 404 */
+    /** 获取单个会话 */
     @GetMapping("/{id}")
     public NomifunConversation get(@PathVariable("id") String id) {
         var conv = conversationService.getConversation(id);
@@ -58,11 +62,12 @@ public class NomifunConversationController {
 
     /** 列出消息 */
     @GetMapping("/{id}/messages")
-    public List<Map<String, Object>> messages(@PathVariable("id") String id) {
-        return conversationService.getMessages(id);
+    public Map<String, Object> messages(@PathVariable("id") String id) {
+        List<Map<String, Object>> items = conversationService.getMessages(id);
+        return Map.of("items", items, "total", items.size(), "has_more", false);
     }
 
-    /** 发送消息（同步完成）。 */
+    /** 发送消息（同步完成） */
     @PostMapping("/{id}/messages")
     public NomifunConversationService.NomifunSendMessageResult sendMessage(@PathVariable("id") String id,
             @RequestBody(required = false) Map<String, Object> body) {
@@ -77,3 +82,4 @@ public class NomifunConversationController {
         return Map.of("count", count);
     }
 }
+
