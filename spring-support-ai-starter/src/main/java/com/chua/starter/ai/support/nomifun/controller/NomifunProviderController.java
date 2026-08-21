@@ -26,10 +26,11 @@ public class NomifunProviderController {
 
     private final NomifunProviderService providerService;
 
-    /** 列出所有提供商 */
+    /** 列出所有提供商（返回 PaginatedResult 格式） */
     @GetMapping
-    public List<Map<String, Object>> list() {
-        return providerService.listProviders();
+    public Map<String, Object> list() {
+        var items = providerService.listProviders();
+        return Map.of("items", items, "total", items.size(), "has_more", false);
     }
 
     /** 创建提供商 */
