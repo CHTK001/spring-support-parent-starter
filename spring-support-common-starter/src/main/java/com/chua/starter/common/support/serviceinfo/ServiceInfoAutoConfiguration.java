@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * 服务信息自动配置 (统一入口)。
  *
@@ -41,6 +43,7 @@ import java.util.Map;
  * @since 4.0.0.42
  * @author CH
  */
+@Slf4j
 @AutoConfiguration
 @ConditionalOnWebApplication
 @ConditionalOnProperty(name = "plugin.service-info.enable", havingValue = "true", matchIfMissing = true)

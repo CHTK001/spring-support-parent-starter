@@ -13,12 +13,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 @Component
 @Order(1)
-public class TestDataLoader implements CommandLineRunner {
+public class NomifunDataLoader implements CommandLineRunner {
 
     private final ApiProviderController providerController;
     private final ApiChatController chatController;
 
-    public TestDataLoader(ApiProviderController providerController, ApiChatController chatController) {
+    public NomifunDataLoader(ApiProviderController providerController, ApiChatController chatController) {
         this.providerController = providerController;
         this.chatController = chatController;
     }
