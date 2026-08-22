@@ -63,7 +63,13 @@ public class ApiSystemController {
             "cronNotificationEnabled",
             "keepAwake",
             "saveUploadToWorkspace",
-            "autoPreviewOfficeFiles"
+            "autoPreviewOfficeFiles",
+            "customTheme",
+            "customAccent",
+            "custFontSize",
+            "custSidebarCollapsed",
+            "custTerminalTheme",
+            "custChatWidth"
     );
 
     // -----------------------------------------------------------------------
@@ -129,9 +135,6 @@ public class ApiSystemController {
         if (key == null || key.isBlank()) {
             return ApiResult.ok(new LinkedHashMap<>(clientSettings));
         }
-        if (!CLIENT_SETTING_KEYS.contains(key)) {
-            throw new ApiException(ApiErrorCode.INVALID_PARAM, "不支持的客户端设置键：" + key);
-        }
         return ApiResult.ok(clientSettings.getOrDefault(key, false));
     }
 
@@ -145,9 +148,6 @@ public class ApiSystemController {
     public ApiResult<Void> putClientSetting(@RequestBody Map<String, Object> body) {
         for (Map.Entry<String, Object> entry : body.entrySet()) {
             String key = entry.getKey();
-            if (!CLIENT_SETTING_KEYS.contains(key)) {
-                throw new ApiException(ApiErrorCode.INVALID_PARAM, "不支持的客户端设置键：" + key);
-            }
             clientSettings.put(key, Boolean.TRUE.equals(entry.getValue()));
         }
         return ApiResult.ok();
