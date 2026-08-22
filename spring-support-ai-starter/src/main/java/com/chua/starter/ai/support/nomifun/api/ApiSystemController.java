@@ -125,7 +125,10 @@ public class ApiSystemController {
      * @return 布尔值
      */
     @GetMapping("/settings/client")
-    public ApiResult<Boolean> getClientSetting(@RequestParam("key") String key) {
+    public ApiResult<Object> getClientSetting(@RequestParam(required = false) String key) {
+        if (key == null || key.isBlank()) {
+            return ApiResult.ok(new LinkedHashMap<>(clientSettings));
+        }
         if (!CLIENT_SETTING_KEYS.contains(key)) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "不支持的客户端设置键：" + key);
         }
@@ -349,7 +352,30 @@ public class ApiSystemController {
     // 内部工具方法
     // -----------------------------------------------------------------------
 
-    /**
+        private String resolveStorageGeneration() {
+        String env = System.getenv("STORAGE_GENERATION");
+        if (env != null && !env.isBlank()) return env;
+        long millis = System.currentTimeMillis();
+        byte[] bytes = new byte[16];
+        bytes[0] = (byte)(millis >>> 40);
+        bytes[1] = (byte)(millis >>> 32);
+        bytes[2] = (byte)(millis >>> 24);
+        bytes[3] = (byte)(millis >>> 16);
+        bytes[4] = (byte)(millis >>> 8);
+        bytes[5] = (byte)millis;
+        java.util.concurrent.ThreadLocalRandom.current().nextBytes(bytes);
+        bytes[6] = (byte)((bytes[6] & 0x0F) | 0x70);
+        bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);
+        char[] hex = "0123456789abcdef".toCharArray();
+        StringBuilder sb = new StringBuilder(36);
+        for (int i = 0; i < 16; i++) {
+            if (i == 4 || i == 6 || i == 8 || i == 10) sb.append('-');
+            sb.append(hex[(bytes[i] >> 4) & 0xF]).append(hex[bytes[i] & 0xF]);
+        }
+        return sb.toString();
+    }
+
+/**
      * 构造计算机权限状态对象。
      *
      * @return 权限状态（accessibility / screen_recording / platform / app_label）
@@ -413,10 +439,7 @@ public class ApiSystemController {
      *
      * @return 存储代际字符串
      */
-    private String resolveStorageGeneration() {
-        String env = System.getenv("STORAGE_GENERATION");
-        return env != null && !env.isBlank() ? env : "1";
-    }
+    
 
     /**
      * 解析应用显示名（优先环境变量，回退默认值）。
@@ -428,3 +451,4 @@ public class ApiSystemController {
         return env != null && !env.isBlank() ? env : "Nomifun";
     }
 }
+
