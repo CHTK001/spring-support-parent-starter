@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -45,6 +46,7 @@ import java.util.Map;
 @ConditionalOnWebApplication
 @ConditionalOnProperty(name = "plugin.service-info.enable", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(ServiceInfoProperties.class)
+@Slf4j
 public class ServiceInfoAutoConfiguration {
 
     @Bean

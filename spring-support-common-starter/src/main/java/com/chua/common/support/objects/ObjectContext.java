@@ -134,4 +134,14 @@ public interface ObjectContext {
      * @return 事件处理后的结果
      */
     Object publish(Object event);
+
+    /**
+     * 注册一个 BeanDefinitionRegister（编程式挂接，绕过 SPI）。
+     *
+     * @param register 待注册的 BeanDefinitionRegister
+     * @return true 表示新增成功
+     */
+    default boolean registerBean(com.chua.common.support.objects.register.BeanDefinitionRegister register) {
+        return false;
+    }
 }
