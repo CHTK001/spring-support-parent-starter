@@ -9,12 +9,12 @@ import java.nio.file.Path;
  *
  * @author CH
  */
-public class IpQualityExample {
+public class IpQualityProbe {
 
     /**
      * 默认 IP2Proxy BIN 数据库路径
      */
-    private static final String DEFAULT_BIN_PATH = "G:\\work\\utils-support-resource-parent\\utils-support-resource-ip2proxy-starter\\src\\main\\resources\\IP2PROXY-LITE-PX2.BIN";
+    private static final String DEFAULT_BIN_PATH = System.getProperty("ip2proxy.bin.path", "IP2PROXY-LITE-PX2.BIN");
 
     /**
      * 默认测试 IP 列表
@@ -24,7 +24,7 @@ public class IpQualityExample {
     /** Main */
     public static void main(String[] args) throws Exception {
         CommandLine cli = CommandLine.parse(args)
-                .program("IpQualityExample")
+                .program("IpQualityProbe")
                 .register("bin", "b", "IP2Proxy BIN 数据库文件路径", DEFAULT_BIN_PATH)
                 .register("ips", "i", "待检测的 IP 列表（逗号分隔）", DEFAULT_TEST_IPS)
                 .register("help", "h", "显示帮助信息");
@@ -35,7 +35,7 @@ public class IpQualityExample {
 
         String binPath = cli.get("bin", DEFAULT_BIN_PATH);
         String ips = cli.get("ips", DEFAULT_TEST_IPS);
-        IpQualityExample example = new IpQualityExample();
+        IpQualityProbe example = new IpQualityProbe();
 
         if (cli.has("ips")) {
             example.runWithIps(binPath, ips.split(","));

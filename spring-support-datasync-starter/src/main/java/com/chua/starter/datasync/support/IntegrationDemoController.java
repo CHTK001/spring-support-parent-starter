@@ -34,7 +34,7 @@ import java.util.jar.JarFile;
 @Slf4j
 @RestController
 @RequestMapping("/test/integration")
-public class IntegrationTestController {
+public class IntegrationDemoController {
 
     @Autowired(required = false)
     /** Osgilauncher */

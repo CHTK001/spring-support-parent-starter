@@ -42,7 +42,7 @@ public class ApiTerminalController {
 
     @DeleteMapping("/{terminalId}")
     public ApiResult<Void> delete(@PathVariable String terminalId) {
-        terminals.remove terminalId);
+        terminals.remove(terminalId);
         return ApiResult.ok();
     }
 
