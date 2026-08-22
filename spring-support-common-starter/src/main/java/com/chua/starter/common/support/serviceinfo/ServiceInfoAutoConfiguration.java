@@ -170,7 +170,7 @@ public class ServiceInfoAutoConfiguration {
         }
 
         sb.append(sep);
-        System.out.println(sb);
+        log.info("{}", sb);
     }
 
     /** NullToEmpty */
