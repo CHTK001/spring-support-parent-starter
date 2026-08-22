@@ -89,6 +89,15 @@ public class ServiceProvider<T> {
     }
 
     /**
+     * 获取默认 SPI 扩展实例（无名称）
+     *
+     * @return 扩展实例，未找到时返回 null
+     */
+    public T getExtension() {
+        return null;
+    }
+
+    /**
      * 根据名称获取新的 SPI 扩展实例（每次调用创建新实例）
      *
      * @param name 扩展名称

@@ -167,7 +167,7 @@ public class PageResult<T> implements Serializable {
     }
 
     /** 构建 */
-    public T build() {
-        return (T) this;
+    public PageResult<T> build() {
+        return this;
     }
 }
