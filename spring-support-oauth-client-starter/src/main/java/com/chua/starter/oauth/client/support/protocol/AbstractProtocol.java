@@ -587,7 +587,7 @@ public abstract class AbstractProtocol implements Protocol {
         }
         if (context == null) {
             try {
-                context = com.chua.spring.support.configuration.SpringBeanUtils.getApplicationContextOrNull();
+                context = com.chua.spring.support.configuration.SpringBeanUtils.getApplicationContext();
             } catch (Exception ignore) {
                 // ThreadLocal 上下文未初始化，忽略
             }

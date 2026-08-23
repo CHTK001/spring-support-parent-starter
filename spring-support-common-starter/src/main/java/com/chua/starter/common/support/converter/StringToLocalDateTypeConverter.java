@@ -15,7 +15,11 @@ public class StringToLocalDateTypeConverter implements Converter<String, LocalDa
     @Override
     /** 转换 */
     public LocalDate convert(String source) {
+        try {
         return DateUtils.toLocalDate(source);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
 
