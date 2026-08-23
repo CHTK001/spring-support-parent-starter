@@ -2,7 +2,7 @@ package com.chua.starter.common.support.provider;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.spi.SpiOption;
+import com.chua.common.support.spi.definition.SpiOption;
 import com.chua.common.support.spi.definition.ServiceDefinition;
 import com.chua.common.support.spi.definition.ServiceDefinitionUtils;
 import com.chua.common.support.utils.ArrayUtils;
@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 获取选项
@@ -71,30 +72,20 @@ public class OptionalProvider {
         if (beanFactory instanceof ListableBeanFactory listableBeanFactory) {
             beanOfTypes = listableBeanFactory.getBeansOfType(aClass);
         }
-        List<SpiOption> options = MapUtils.mapToList(beanOfTypes, (key, value) -> new SpiOption() {
-            /** DEF */
-            private final ServiceDefinition def = ServiceDefinitionUtils.buildDefinitionAlias(aClass, null, value, value.getClass(), null, key, 0);
-            @Override
-            /** Name */
-            public String name() {
-                return def.getName();
-            }
-            @Override
-            /** SupportedTypes */
-            public String[] supportedTypes() {
-                return new String[0];
-            }
+        List<SpiOption> options = MapUtils.mapToList(beanOfTypes, (key, value) -> {
+            ServiceDefinition def = ServiceDefinitionUtils.buildDefinitionAlias(aClass, null, value, value.getClass(), null, key, 0);
+            return SpiOption.of(def.getName(), "", new String[0]);
         });
         if(!StringUtils.isBlank(name)) {
              for (SpiOption option : options) {
                 String optionName = option.name();
                 if(StringUtils.equalsIgnoreCase(optionName, name)) {
-                    return ReturnResult.success(Collections.singletonList(option));
+                    return ReturnResult.ok(Collections.singletonList(option));
                 }
             }
         }
 
-        return ReturnResult.success(options);
+        return ReturnResult.ok(options);
     }
 
     /**
@@ -143,17 +134,17 @@ public class OptionalProvider {
         }
 
         type = StringUtils.utf8Str(type);
-        List<SpiOption> options = ServiceProvider.of(getType(type)).options();
+        List<?> rawOptions = ServiceProvider.of(getType(type)).options();
+        List<SpiOption> options = rawOptions.stream().map(o -> (SpiOption) o).collect(Collectors.toList());
         if(!StringUtils.isBlank(name)) {
             List<SpiOption> collect = options.stream().filter(spiOption -> {
-                String[] supportedTypes = spiOption.supportedTypes();
                 String optionName = spiOption.name();
-                return ArrayUtils.containsIgnoreCase(supportedTypes, name) || StringUtils.containsIgnoreCase(optionName, name);
+                return StringUtils.containsIgnoreCase(optionName, name);
             }).toList();
-             return ReturnResult.success(collect);
+             return ReturnResult.ok(collect);
         }
 
-        return ReturnResult.success(options);
+        return ReturnResult.ok(options);
     }
     /**
      * 获取选项
@@ -173,7 +164,8 @@ public class OptionalProvider {
         for (String s : split) {
             String[] types = getTypes(s);
             for (String item : types) {
-                List<SpiOption> options = ServiceProvider.of(item).options();
+                List<?> rawOptions = ServiceProvider.of(item).options();
+                List<SpiOption> options = rawOptions.stream().map(o -> (SpiOption) o).collect(Collectors.toList());
                 if(!StringUtils.isBlank(name)) {
                     for (SpiOption option : options) {
                         String optionName = option.name();
@@ -188,7 +180,6 @@ public class OptionalProvider {
             }
         }
 
-        return ReturnResult.success(map);
+        return ReturnResult.ok(map);
     }
 }
-
