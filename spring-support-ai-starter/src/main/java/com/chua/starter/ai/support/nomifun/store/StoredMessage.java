@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -16,7 +15,8 @@ import java.io.Serializable;
  * 与 {@code messageId} 保持一致。持久化到 {@code nomifun_message} 表。</p>
  *
  * <p>JSON 字段说明：{@code content} 支持文本或结构化对象，通过
- * {@link JacksonTypeHandler} 序列化为 TEXT 存储。</p>
+ * {@link JsonOrPlainTypeHandler} 落库 —— 纯文本按原样存储，结构化对象按 JSON 存储，
+ * 从而保证普通消息前端展示不带多余引号。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -52,9 +52,9 @@ public class StoredMessage implements Serializable {
     private String role;
 
     /**
-     * 消息内容（文本或结构化对象），JSON 序列化存储
+     * 消息内容（文本或结构化对象），采用「纯文本或 JSON」双模式存储
      */
-    @TableField(typeHandler = JacksonTypeHandler.class)
+    @TableField(typeHandler = JsonOrPlainTypeHandler.class)
     private Object content;
 
     /**

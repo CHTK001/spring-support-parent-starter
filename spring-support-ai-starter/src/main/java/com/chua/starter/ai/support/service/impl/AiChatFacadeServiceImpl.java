@@ -234,7 +234,15 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         String appKey = extractAppKey(request);
         // 深度思考 / 智能搜索开关并入 parameters，供底层 ChatClient 消费
         injectFeatureFlags(request);
-        ChatClient client = resolveChatClient(groupId, request.getModel());
+        ChatClient client;
+        try {
+            client = resolveChatClient(groupId, request.getModel());
+        } catch (IllegalStateException e) {
+            // 未配置任何可用的 AI 供应商：返回降级提示消息而非抛出 500，
+            // 保证前端对话流程（用户消息保存、WebSocket 事件推送）完整走通。
+            log.warn("[AiChatFacade] 无可用 ChatClient，返回降级提示: {}", e.getMessage());
+            return fallbackEmitter(request, onChunk, onComplete, e.getMessage());
+        }
         String prompt = buildPrompt(request);
 
         // 5 分钟超时
@@ -684,6 +692,63 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         } catch (Exception e) {
             return "";
         }
+    }
+
+    /**
+     * 无可用 ChatClient 时的降级流式响应。
+     *
+     * <p>当系统未配置任何 AI 供应商（或指定分组/模型不可用）时，
+     * 不再抛出 500 中断对话，而是异步推送一条中文提示文本，并正常触发
+     * {@code onComplete} 回调，使后端保存助手的提示消息并推送
+     * {@code turn.completed} 事件，保证前端对话链路完整收尾。</p>
+     *
+     * @param request    原始 AI 请求（仅用于提取模型名等展示信息）
+     * @param onChunk    流式分片回调（推送提示文本）
+     * @param onComplete 流结束回调（保存助手消息）
+     * @param reason     不可用原因（来自 resolveChatClient 的异常信息）
+     * @return 已异步发送完成提示的 SseEmitter
+     */
+    private SseEmitter fallbackEmitter(AiChatRequest request, Consumer<String> onChunk,
+                                       Consumer<String> onComplete, String reason) {
+        String modelName = request.getModel() != null ? request.getModel() : "default";
+        String tip = "当前未配置可用的 AI 模型，无法生成回复。系统已为您保存消息，"
+                + "请在管理端完成模型供应商配置后再试。（原因：" + reason + "）";
+        SseEmitter emitter = new SseEmitter(300_000L);
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                String chatId = "chatcmpl-fallback-" + UUID.randomUUID().toString().substring(0, 8);
+                long created = System.currentTimeMillis() / 1000;
+                emitter.send(SseEmitter.event().comment(""));
+                String data = String.format(
+                        "{\"id\":\"%s\",\"object\":\"chat.completion.chunk\",\"created\":%d," +
+                        "\"model\":\"%s\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"%s\"},\"finish_reason\":null}]}",
+                        chatId, created, modelName, escapeJson(tip));
+                emitter.send(SseEmitter.event().data(data, MediaType.TEXT_PLAIN));
+                String finalChunk = String.format(
+                        "{\"id\":\"%s\",\"object\":\"chat.completion.chunk\",\"created\":%d," +
+                        "\"model\":\"%s\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}",
+                        chatId, created, modelName);
+                emitter.send(SseEmitter.event().data(finalChunk, MediaType.TEXT_PLAIN));
+                emitter.send(SseEmitter.event().data("[DONE]", MediaType.TEXT_PLAIN));
+                emitter.complete();
+            } catch (Exception ex) {
+                log.warn("[AiChatFacade] 降级流式发送失败: {}", ex.getMessage());
+                try {
+                    emitter.completeWithError(ex);
+                } catch (Exception ignored) {
+                    // 忽略二次异常
+                }
+            }
+            // 推送提示文本分片回调
+            if (onChunk != null) {
+                onChunk.accept(tip);
+            }
+            // 流结束回调（保存助手消息、推送 turn.completed 等）
+            if (onComplete != null) {
+                onComplete.accept(tip);
+            }
+        });
+        return emitter;
     }
 }
 
