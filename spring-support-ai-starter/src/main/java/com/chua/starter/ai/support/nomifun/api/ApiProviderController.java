@@ -1,9 +1,17 @@
 package com.chua.starter.ai.support.nomifun.api;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.ai.support.nomifun.common.ApiErrorCode;
 import com.chua.starter.ai.support.nomifun.common.ApiException;
 import com.chua.starter.ai.support.nomifun.common.ApiResult;
+import com.chua.starter.ai.support.nomifun.mapper.NomifunProviderConnectionMapper;
+import com.chua.starter.ai.support.nomifun.mapper.NomifunProviderMapper;
+import com.chua.starter.ai.support.nomifun.mapper.NomifunProviderModelMapper;
+import com.chua.starter.ai.support.nomifun.store.NomifunProvider;
+import com.chua.starter.ai.support.nomifun.store.NomifunProviderConnection;
+import com.chua.starter.ai.support.nomifun.store.NomifunProviderModel;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -20,16 +28,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
  * 前端 Provider / 模型 / 协议管理控制器（对接 nomicore 契约）。
  *
  * <p>替代原 Rust 后端的厂商管理能力，提供 providers、provider-models、provider 连接、
- * 托管免费模型服务以及模型协议清单四类纯 Spring 接口。所有存储采用内存
- * {@link ConcurrentHashMap} 维护（现有 {@code AiManufacturer*} 数据模型与 nomicore 契约
- * 不兼容，按任务约定以内存 Map 实现），响应始终为 {@link ApiResult} 信封且字段为 snake_case。</p>
+ * 托管免费模型服务以及模型协议清单五类纯 Spring 接口。数据通过 MyBatis-Plus 持久化到
+ * {@code sys_nomifun_provider} / {@code sys_nomifun_provider_model} /
+ * {@code sys_nomifun_provider_connection} 三张表。</p>
  *
  * <p>凭证字段（credentials）写入后不回显，响应仅以 {@code has_credentials} 布尔标识是否存在。</p>
  *
@@ -42,12 +49,22 @@ import java.util.stream.Collectors;
 public class ApiProviderController {
 
     /**
-     * Provider 实体存储（key = provider_id）。
+     * 提供商 Mapper
      */
-    private final ConcurrentHashMap<String, ProviderEntity> providers = new ConcurrentHashMap<>();
+    private final NomifunProviderMapper providerMapper;
 
     /**
-     * 托管免费模型服务运行时状态。
+     * 提供商模型 Mapper
+     */
+    private final NomifunProviderModelMapper modelMapper;
+
+    /**
+     * 提供商连接 Mapper
+     */
+    private final NomifunProviderConnectionMapper connectionMapper;
+
+    /**
+     * 托管免费模型服务运行时状态
      */
     private final FreeModelService freeModelService = new FreeModelService();
 
@@ -60,13 +77,21 @@ public class ApiProviderController {
      */
     @GetMapping("/providers")
     public ApiResult<List<Map<String, Object>>> listProviders() {
-        List<Map<String, Object>> items = providers.values().stream()
-                .sorted((a, b) -> {
-                    int c = Integer.compare(a.sortOrder, b.sortOrder);
-                    return c != 0 ? c : Long.compare(a.createdAt, b.createdAt);
-                })
-                .map(this::toProviderResponse)
-                .collect(Collectors.toList());
+        List<NomifunProvider> providers = providerMapper.selectList(
+                new LambdaQueryWrapper<NomifunProvider>()
+                        .orderByAsc(NomifunProvider::getSortOrder)
+                        .orderByAsc(NomifunProvider::getCreatedAt));
+
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (NomifunProvider p : providers) {
+            List<NomifunProviderModel> models = modelMapper.selectList(
+                    new LambdaQueryWrapper<NomifunProviderModel>()
+                            .eq(NomifunProviderModel::getProviderId, p.getProviderId()));
+            List<NomifunProviderConnection> connections = connectionMapper.selectList(
+                    new LambdaQueryWrapper<NomifunProviderConnection>()
+                            .eq(NomifunProviderConnection::getProviderId, p.getProviderId()));
+            items.add(toProviderResponse(p, models, connections));
+        }
         return ApiResult.ok(items);
     }
 
@@ -77,44 +102,55 @@ public class ApiProviderController {
      * @return 创建后的 ProviderResponse
      */
     @PostMapping("/providers")
+    @Transactional
     public ApiResult<Map<String, Object>> createProvider(@RequestBody Map<String, Object> body) {
         String providerId = str(body, "provider_id");
         if (providerId == null || providerId.isBlank()) {
             providerId = UUID.randomUUID().toString().replace("-", "");
         }
-        if (providers.containsKey(providerId)) {
+        if (providerMapper.selectById(providerId) != null) {
             throw new ApiException(ApiErrorCode.CONFLICT, "provider_id 已存在: " + providerId);
         }
         long now = System.currentTimeMillis();
-        ProviderEntity entity = new ProviderEntity();
-        entity.providerId = providerId;
-        entity.platform = requireStr(body, "platform");
-        entity.name = requireStr(body, "name");
-        entity.baseUrl = requireStr(body, "base_url");
-        entity.authScheme = requireStr(body, "auth_scheme");
-        entity.credentials = uncheckedCast(body.get("credentials"));
-        entity.enabled = bool(body, "enabled", true);
-        entity.bedrockConfig = uncheckedCast(body.get("bedrock_config"));
-        entity.sortOrder = intv(body, "sort_order", providers.size());
-        entity.createdAt = now;
-        entity.updatedAt = now;
+
+        // 创建 Provider 实体
+        NomifunProvider entity = new NomifunProvider();
+        entity.setProviderId(providerId);
+        entity.setPlatform(requireStr(body, "platform"));
+        entity.setName(requireStr(body, "name"));
+        entity.setBaseUrl(requireStr(body, "base_url"));
+        entity.setAuthScheme(requireStr(body, "auth_scheme"));
+        entity.setCredentials(uncheckedCast(body.get("credentials")));
+        entity.setEnabled(bool(body, "enabled", true));
+        entity.setBedrockConfig(uncheckedCast(body.get("bedrock_config")));
+        entity.setSortOrder(intv(body, "sort_order", providerMapper.selectCount(null).intValue()));
+        entity.setCreatedAt(now);
+        entity.setUpdatedAt(now);
+        providerMapper.insert(entity);
 
         // 初始模型（原子创建必须包含至少一条可用模型）
         Map<String, Object> initialModel = uncheckedCast(body.get("initial_model"));
         if (initialModel == null) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "initial_model 不能为空");
         }
-        entity.models.put(requireStr(initialModel, "model"), toModelEntity(initialModel, now));
+        NomifunProviderModel modelEntity = toModelEntity(providerId, initialModel, now);
+        modelMapper.insert(modelEntity);
 
         // 初始连接（按 role 建表）
         List<Map<String, Object>> connections = listOfMap(body, "connections");
         for (Map<String, Object> conn : connections) {
-            String role = requireStr(conn, "role");
-            entity.connections.put(role, toConnectionEntity(entity.providerId, conn, now));
+            NomifunProviderConnection connEntity = toConnectionEntity(providerId, conn, now);
+            connectionMapper.insert(connEntity);
         }
 
-        providers.put(providerId, entity);
-        return ApiResult.ok(toProviderResponse(entity));
+        // 查询完整数据返回
+        List<NomifunProviderModel> models = modelMapper.selectList(
+                new LambdaQueryWrapper<NomifunProviderModel>()
+                        .eq(NomifunProviderModel::getProviderId, providerId));
+        List<NomifunProviderConnection> conns = connectionMapper.selectList(
+                new LambdaQueryWrapper<NomifunProviderConnection>()
+                        .eq(NomifunProviderConnection::getProviderId, providerId));
+        return ApiResult.ok(toProviderResponse(entity, models, conns));
     }
 
     /**
@@ -125,46 +161,59 @@ public class ApiProviderController {
      * @return 更新后的 ProviderResponse
      */
     @PutMapping("/providers/{provider_id}")
+    @Transactional
     public ApiResult<Map<String, Object>> updateProvider(@PathVariable("provider_id") String providerId,
                                                          @RequestBody Map<String, Object> body) {
-        ProviderEntity entity = requireProvider(providerId);
+        NomifunProvider entity = requireProvider(providerId);
         if (body.containsKey("name")) {
-            entity.name = str(body, "name");
+            entity.setName(str(body, "name"));
         }
         if (body.containsKey("base_url")) {
-            entity.baseUrl = str(body, "base_url");
+            entity.setBaseUrl(str(body, "base_url"));
         }
         if (body.containsKey("auth_scheme")) {
-            entity.authScheme = str(body, "auth_scheme");
+            entity.setAuthScheme(str(body, "auth_scheme"));
         }
         if (body.containsKey("enabled")) {
-            entity.enabled = bool(body, "enabled", entity.enabled);
+            entity.setEnabled(bool(body, "enabled", entity.getEnabled()));
         }
         if (body.containsKey("sort_order")) {
-            entity.sortOrder = intv(body, "sort_order", entity.sortOrder);
+            entity.setSortOrder(intv(body, "sort_order", entity.getSortOrder()));
         }
         if (body.containsKey("bedrock_config")) {
-            entity.bedrockConfig = uncheckedCast(body.get("bedrock_config"));
+            entity.setBedrockConfig(uncheckedCast(body.get("bedrock_config")));
         }
         // credentials 缺省 → 保留已有凭证；显式传 null 视为清空
         if (body.containsKey("credentials")) {
-            entity.credentials = uncheckedCast(body.get("credentials"));
+            entity.setCredentials(uncheckedCast(body.get("credentials")));
         }
-        entity.updatedAt = System.currentTimeMillis();
-        return ApiResult.ok(toProviderResponse(entity));
+        entity.setUpdatedAt(System.currentTimeMillis());
+        providerMapper.updateById(entity);
+
+        List<NomifunProviderModel> models = modelMapper.selectList(
+                new LambdaQueryWrapper<NomifunProviderModel>()
+                        .eq(NomifunProviderModel::getProviderId, providerId));
+        List<NomifunProviderConnection> conns = connectionMapper.selectList(
+                new LambdaQueryWrapper<NomifunProviderConnection>()
+                        .eq(NomifunProviderConnection::getProviderId, providerId));
+        return ApiResult.ok(toProviderResponse(entity, models, conns));
     }
 
     /**
-     * 删除 Provider。
+     * 删除 Provider（级联删除模型和连接）。
      *
      * @param providerId Provider 标识
      * @return 成功
      */
     @DeleteMapping("/providers/{provider_id}")
+    @Transactional
     public ApiResult<Void> deleteProvider(@PathVariable("provider_id") String providerId) {
-        if (providers.remove(providerId) == null) {
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "provider 不存在: " + providerId);
-        }
+        requireProvider(providerId);
+        providerMapper.deleteById(providerId);
+        modelMapper.delete(new LambdaQueryWrapper<NomifunProviderModel>()
+                .eq(NomifunProviderModel::getProviderId, providerId));
+        connectionMapper.delete(new LambdaQueryWrapper<NomifunProviderConnection>()
+                .eq(NomifunProviderConnection::getProviderId, providerId));
         return ApiResult.ok();
     }
 
@@ -176,31 +225,76 @@ public class ApiProviderController {
      * @return 克隆后的 ProviderResponse
      */
     @PostMapping("/providers/{provider_id}/clone")
+    @Transactional
     public ApiResult<Map<String, Object>> cloneProvider(@PathVariable("provider_id") String providerId,
                                                         @RequestBody(required = false) Map<String, Object> body) {
-        ProviderEntity source = requireProvider(providerId);
+        NomifunProvider source = requireProvider(providerId);
         long now = System.currentTimeMillis();
         String newId = UUID.randomUUID().toString().replace("-", "");
-        ProviderEntity clone = new ProviderEntity();
-        clone.providerId = newId;
-        clone.platform = source.platform;
-        clone.name = body != null && body.get("name") != null
-                ? str(body, "name") : source.name + " 副本";
-        clone.baseUrl = source.baseUrl;
-        clone.authScheme = source.authScheme;
-        clone.credentials = source.credentials != null ? new LinkedHashMap<>(source.credentials) : null;
-        clone.enabled = source.enabled;
-        clone.bedrockConfig = source.bedrockConfig != null ? new LinkedHashMap<>(source.bedrockConfig) : null;
-        clone.sortOrder = providers.size();
-        clone.createdAt = now;
-        clone.updatedAt = now;
-        // 深拷贝模型能力
-        source.models.forEach((k, v) -> clone.models.put(k, copyModel(v, now)));
-        // 深拷贝连接
-        source.connections.forEach((k, v) -> clone.connections.put(k, copyConnection(v, newId, now)));
 
-        providers.put(newId, clone);
-        return ApiResult.ok(toProviderResponse(clone));
+        // 克隆 Provider
+        NomifunProvider clone = new NomifunProvider();
+        clone.setProviderId(newId);
+        clone.setPlatform(source.getPlatform());
+        clone.setName(body != null && body.get("name") != null
+                ? str(body, "name") : source.getName() + " 副本");
+        clone.setBaseUrl(source.getBaseUrl());
+        clone.setAuthScheme(source.getAuthScheme());
+        clone.setCredentials(source.getCredentials() != null
+                ? new LinkedHashMap<>(source.getCredentials()) : null);
+        clone.setEnabled(source.getEnabled());
+        clone.setBedrockConfig(source.getBedrockConfig() != null
+                ? new LinkedHashMap<>(source.getBedrockConfig()) : null);
+        clone.setSortOrder(providerMapper.selectCount(null).intValue());
+        clone.setCreatedAt(now);
+        clone.setUpdatedAt(now);
+        providerMapper.insert(clone);
+
+        // 深拷贝模型能力
+        List<NomifunProviderModel> sourceModels = modelMapper.selectList(
+                new LambdaQueryWrapper<NomifunProviderModel>()
+                        .eq(NomifunProviderModel::getProviderId, providerId));
+        for (NomifunProviderModel srcModel : sourceModels) {
+            NomifunProviderModel m = new NomifunProviderModel();
+            m.setProviderId(newId);
+            m.setModel(srcModel.getModel());
+            m.setEnabled(srcModel.getEnabled());
+            m.setSortOrder(srcModel.getSortOrder());
+            m.setDescription(srcModel.getDescription());
+            m.setCapabilities(srcModel.getCapabilities() != null
+                    ? new ArrayList<>(srcModel.getCapabilities()) : null);
+            m.setCreatedAt(now);
+            m.setUpdatedAt(now);
+            modelMapper.insert(m);
+        }
+
+        // 深拷贝连接
+        List<NomifunProviderConnection> sourceConns = connectionMapper.selectList(
+                new LambdaQueryWrapper<NomifunProviderConnection>()
+                        .eq(NomifunProviderConnection::getProviderId, providerId));
+        for (NomifunProviderConnection srcConn : sourceConns) {
+            NomifunProviderConnection c = new NomifunProviderConnection();
+            c.setConnectionId(UUID.randomUUID().toString().replace("-", ""));
+            c.setProviderId(newId);
+            c.setRole(srcConn.getRole());
+            c.setLabel(srcConn.getLabel());
+            c.setBaseUrl(srcConn.getBaseUrl());
+            c.setAuthScheme(srcConn.getAuthScheme());
+            c.setCredentials(srcConn.getCredentials() != null
+                    ? new LinkedHashMap<>(srcConn.getCredentials()) : null);
+            c.setExtra(srcConn.getExtra());
+            c.setCreatedAt(now);
+            c.setUpdatedAt(now);
+            connectionMapper.insert(c);
+        }
+
+        List<NomifunProviderModel> models = modelMapper.selectList(
+                new LambdaQueryWrapper<NomifunProviderModel>()
+                        .eq(NomifunProviderModel::getProviderId, newId));
+        List<NomifunProviderConnection> conns = connectionMapper.selectList(
+                new LambdaQueryWrapper<NomifunProviderConnection>()
+                        .eq(NomifunProviderConnection::getProviderId, newId));
+        return ApiResult.ok(toProviderResponse(clone, models, conns));
     }
 
     /**
@@ -213,8 +307,8 @@ public class ApiProviderController {
     @PostMapping("/providers/{provider_id}/models")
     public ApiResult<Map<String, Object>> fetchProviderModels(@PathVariable("provider_id") String providerId,
                                                               @RequestBody(required = false) Map<String, Object> body) {
-        ProviderEntity entity = requireProvider(providerId);
-        return ApiResult.ok(buildFetchModels(entity.platform, entity.baseUrl));
+        NomifunProvider entity = requireProvider(providerId);
+        return ApiResult.ok(buildFetchModels(entity.getPlatform(), entity.getBaseUrl()));
     }
 
     /**
@@ -240,9 +334,12 @@ public class ApiProviderController {
      */
     @GetMapping("/providers/{provider_id}/connections")
     public ApiResult<List<Map<String, Object>>> listConnections(@PathVariable("provider_id") String providerId) {
-        ProviderEntity entity = requireProvider(providerId);
-        List<Map<String, Object>> items = entity.connections.values().stream()
-                .sorted((a, b) -> Long.compare(a.createdAt, b.createdAt))
+        requireProvider(providerId);
+        List<NomifunProviderConnection> conns = connectionMapper.selectList(
+                new LambdaQueryWrapper<NomifunProviderConnection>()
+                        .eq(NomifunProviderConnection::getProviderId, providerId)
+                        .orderByAsc(NomifunProviderConnection::getCreatedAt));
+        List<Map<String, Object>> items = conns.stream()
                 .map(this::toConnectionResponse)
                 .collect(Collectors.toList());
         return ApiResult.ok(items);
@@ -258,8 +355,11 @@ public class ApiProviderController {
     @GetMapping("/providers/{provider_id}/connections/{role}")
     public ApiResult<Map<String, Object>> getConnection(@PathVariable("provider_id") String providerId,
                                                         @PathVariable("role") String role) {
-        ProviderEntity entity = requireProvider(providerId);
-        ProviderConnectionEntity conn = entity.connections.get(role);
+        requireProvider(providerId);
+        NomifunProviderConnection conn = connectionMapper.selectOne(
+                new LambdaQueryWrapper<NomifunProviderConnection>()
+                        .eq(NomifunProviderConnection::getProviderId, providerId)
+                        .eq(NomifunProviderConnection::getRole, role));
         if (conn == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "connection 不存在: " + role);
         }
@@ -274,37 +374,46 @@ public class ApiProviderController {
      * @return ProviderConnectionResponse
      */
     @PutMapping("/providers/{provider_id}/connections")
+    @Transactional
     public ApiResult<Map<String, Object>> saveConnection(@PathVariable("provider_id") String providerId,
                                                          @RequestBody Map<String, Object> body) {
-        ProviderEntity entity = requireProvider(providerId);
+        NomifunProvider entity = requireProvider(providerId);
         String role = requireStr(body, "role");
-        ProviderConnectionEntity existing = entity.connections.get(role);
+
+        NomifunProviderConnection existing = connectionMapper.selectOne(
+                new LambdaQueryWrapper<NomifunProviderConnection>()
+                        .eq(NomifunProviderConnection::getProviderId, providerId)
+                        .eq(NomifunProviderConnection::getRole, role));
+
         if (existing == null) {
             // 新建：凭证为必填
             if (body.get("credentials") == null) {
                 throw new ApiException(ApiErrorCode.INVALID_PARAM, "新建连接时 credentials 必填");
             }
-            entity.connections.put(role, toConnectionEntity(entity.providerId, body, System.currentTimeMillis()));
+            NomifunProviderConnection conn = toConnectionEntity(providerId, body, System.currentTimeMillis());
+            connectionMapper.insert(conn);
+            return ApiResult.ok(toConnectionResponse(conn));
         } else {
             // 更新：仅覆盖显式出现的字段，缺省 credentials 保留既有
             if (body.containsKey("label")) {
-                existing.label = str(body, "label");
+                existing.setLabel(str(body, "label"));
             }
             if (body.containsKey("base_url")) {
-                existing.baseUrl = str(body, "base_url");
+                existing.setBaseUrl(str(body, "base_url"));
             }
             if (body.containsKey("auth_scheme")) {
-                existing.authScheme = str(body, "auth_scheme");
+                existing.setAuthScheme(str(body, "auth_scheme"));
             }
             if (body.containsKey("extra")) {
-                existing.extra = uncheckedCast(body.get("extra"));
+                existing.setExtra(body.get("extra"));
             }
             if (body.containsKey("credentials")) {
-                existing.credentials = uncheckedCast(body.get("credentials"));
+                existing.setCredentials(uncheckedCast(body.get("credentials")));
             }
-            existing.updatedAt = System.currentTimeMillis();
+            existing.setUpdatedAt(System.currentTimeMillis());
+            connectionMapper.updateById(existing);
+            return ApiResult.ok(toConnectionResponse(existing));
         }
-        return ApiResult.ok(toConnectionResponse(entity.connections.get(role)));
     }
 
     /**
@@ -315,10 +424,15 @@ public class ApiProviderController {
      * @return 成功
      */
     @DeleteMapping("/providers/{provider_id}/connections/{role}")
+    @Transactional
     public ApiResult<Void> deleteConnection(@PathVariable("provider_id") String providerId,
                                             @PathVariable("role") String role) {
-        ProviderEntity entity = requireProvider(providerId);
-        if (entity.connections.remove(role) == null) {
+        requireProvider(providerId);
+        int deleted = connectionMapper.delete(
+                new LambdaQueryWrapper<NomifunProviderConnection>()
+                        .eq(NomifunProviderConnection::getProviderId, providerId)
+                        .eq(NomifunProviderConnection::getRole, role));
+        if (deleted == 0) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "connection 不存在: " + role);
         }
         return ApiResult.ok();
@@ -335,16 +449,20 @@ public class ApiProviderController {
     @GetMapping("/provider-models")
     public ApiResult<List<Map<String, Object>>> listProviderModels(
             @RequestParam(required = false) String provider_id) {
+        LambdaQueryWrapper<NomifunProviderModel> qw = new LambdaQueryWrapper<>();
+        if (provider_id != null) {
+            qw.eq(NomifunProviderModel::getProviderId, provider_id);
+        }
+        qw.orderByAsc(NomifunProviderModel::getCreatedAt);
+
+        List<NomifunProviderModel> models = modelMapper.selectList(qw);
         List<Map<String, Object>> items = new ArrayList<>();
-        for (ProviderEntity entity : providers.values()) {
-            if (provider_id != null && !provider_id.equals(entity.providerId)) {
-                continue;
-            }
-            for (ProviderModelEntity model : entity.models.values()) {
-                items.add(toProviderModelResponse(entity, model));
+        for (NomifunProviderModel model : models) {
+            NomifunProvider provider = providerMapper.selectById(model.getProviderId());
+            if (provider != null) {
+                items.add(toProviderModelResponse(provider, model));
             }
         }
-        items.sort((a, b) -> Long.compare((Long) a.get("created_at"), (Long) b.get("created_at")));
         return ApiResult.ok(items);
     }
 
@@ -355,22 +473,31 @@ public class ApiProviderController {
      * @return ProviderModelResponse
      */
     @PutMapping("/provider-models")
+    @Transactional
     public ApiResult<Map<String, Object>> saveProviderModel(@RequestBody Map<String, Object> body) {
         String providerId = requireStr(body, "provider_id");
-        ProviderEntity entity = requireProvider(providerId);
+        NomifunProvider provider = requireProvider(providerId);
         Map<String, Object> modelInput = uncheckedCast(body.get("model"));
         if (modelInput == null) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "model 不能为空");
         }
         String modelName = requireStr(modelInput, "model");
-        ProviderModelEntity existing = entity.models.get(modelName);
+
+        NomifunProviderModel existing = modelMapper.selectOne(
+                new LambdaQueryWrapper<NomifunProviderModel>()
+                        .eq(NomifunProviderModel::getProviderId, providerId)
+                        .eq(NomifunProviderModel::getModel, modelName));
+
         if (existing == null) {
-            entity.models.put(modelName, toModelEntity(modelInput, System.currentTimeMillis()));
+            NomifunProviderModel newModel = toModelEntity(providerId, modelInput, System.currentTimeMillis());
+            modelMapper.insert(newModel);
+            return ApiResult.ok(toProviderModelResponse(provider, newModel));
         } else {
             applyModelInput(existing, modelInput);
-            existing.updatedAt = System.currentTimeMillis();
+            existing.setUpdatedAt(System.currentTimeMillis());
+            modelMapper.updateById(existing);
+            return ApiResult.ok(toProviderModelResponse(provider, existing));
         }
-        return ApiResult.ok(toProviderModelResponse(entity, entity.models.get(modelName)));
     }
 
     /**
@@ -381,10 +508,15 @@ public class ApiProviderController {
      * @return 成功
      */
     @DeleteMapping("/provider-models")
+    @Transactional
     public ApiResult<Void> deleteProviderModel(@RequestParam("provider_id") String providerId,
                                                @RequestParam("model") String model) {
-        ProviderEntity entity = requireProvider(providerId);
-        if (entity.models.remove(model) == null) {
+        requireProvider(providerId);
+        int deleted = modelMapper.delete(
+                new LambdaQueryWrapper<NomifunProviderModel>()
+                        .eq(NomifunProviderModel::getProviderId, providerId)
+                        .eq(NomifunProviderModel::getModel, model));
+        if (deleted == 0) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "provider model 不存在: " + model);
         }
         return ApiResult.ok();
@@ -500,74 +632,6 @@ public class ApiProviderController {
     }
 
     // ==================== 内部实体 ====================
-
-    /**
-     * Provider 内存实体。
-     */
-    static class ProviderEntity {
-        String providerId;
-        String platform;
-        String name;
-        String baseUrl;
-        String authScheme;
-        Map<String, Object> credentials;
-        boolean enabled;
-        int sortOrder;
-        long createdAt;
-        long updatedAt;
-        Map<String, Object> bedrockConfig;
-        final LinkedHashMap<String, ProviderModelEntity> models = new LinkedHashMap<>();
-        final LinkedHashMap<String, ProviderConnectionEntity> connections = new LinkedHashMap<>();
-    }
-
-    /**
-     * Provider 模型能力实体。
-     */
-    static class ProviderModelEntity {
-        String model;
-        boolean enabled;
-        int sortOrder;
-        String description;
-        final List<ProviderModelCapabilityEntity> capabilities = new ArrayList<>();
-        long createdAt;
-        long updatedAt;
-    }
-
-    /**
-     * 单任务能力实体。
-     */
-    static class ProviderModelCapabilityEntity {
-        String task;
-        final List<String> traits = new ArrayList<>();
-        String protocol;
-        String connectionRole;
-        String baseUrlOverride;
-        String endpoint;
-        String pollEndpoint;
-        String contentEndpoint;
-        String realtimeEndpoint;
-        boolean allowCrossOriginCredentials;
-        Object providerParams;
-        Integer contextLimit;
-        long createdAt;
-        long updatedAt;
-    }
-
-    /**
-     * Provider 附加连接实体（凭证不回显）。
-     */
-    static class ProviderConnectionEntity {
-        String connectionId;
-        String providerId;
-        String role;
-        String label;
-        String baseUrl;
-        String authScheme;
-        Map<String, Object> credentials;
-        Object extra;
-        long createdAt;
-        long updatedAt;
-    }
 
     /**
      * 托管免费模型。
@@ -702,114 +766,104 @@ public class ApiProviderController {
 
     /**
      * 构造 ProviderResponse（不回显 credentials）。
-     *
-     * @param entity Provider 实体
-     * @return 响应 Map
      */
-    private Map<String, Object> toProviderResponse(ProviderEntity entity) {
+    private Map<String, Object> toProviderResponse(NomifunProvider provider,
+                                                    List<NomifunProviderModel> models,
+                                                    List<NomifunProviderConnection> connections) {
         Map<String, Object> map = new LinkedHashMap<>();
-        map.put("provider_id", entity.providerId);
-        map.put("platform", entity.platform);
-        map.put("name", entity.name);
-        map.put("base_url", entity.baseUrl);
-        map.put("auth_scheme", entity.authScheme);
-        map.put("has_credentials", entity.credentials != null && !entity.credentials.isEmpty());
-        List<Map<String, Object>> models = entity.models.values().stream()
-                .map(m -> toProviderModelResponse(entity, m))
+        map.put("provider_id", provider.getProviderId());
+        map.put("platform", provider.getPlatform());
+        map.put("name", provider.getName());
+        map.put("base_url", provider.getBaseUrl());
+        map.put("auth_scheme", provider.getAuthScheme());
+        map.put("has_credentials", provider.getCredentials() != null && !provider.getCredentials().isEmpty());
+        List<Map<String, Object>> modelList = models.stream()
+                .map(m -> toProviderModelResponse(provider, m))
                 .collect(Collectors.toList());
-        map.put("models", models);
-        map.put("enabled", entity.enabled);
-        if (entity.bedrockConfig != null) {
-            map.put("bedrock_config", entity.bedrockConfig);
+        map.put("models", modelList);
+        map.put("enabled", provider.getEnabled());
+        if (provider.getBedrockConfig() != null) {
+            map.put("bedrock_config", provider.getBedrockConfig());
         }
-        map.put("sort_order", entity.sortOrder);
-        map.put("created_at", entity.createdAt);
-        map.put("updated_at", entity.updatedAt);
+        map.put("sort_order", provider.getSortOrder());
+        map.put("created_at", provider.getCreatedAt());
+        map.put("updated_at", provider.getUpdatedAt());
         return map;
     }
 
     /**
      * 构造 ProviderModelResponse。
-     *
-     * @param entity Provider 实体
-     * @param model  模型实体
-     * @return 响应 Map
      */
-    private Map<String, Object> toProviderModelResponse(ProviderEntity entity, ProviderModelEntity model) {
+    private Map<String, Object> toProviderModelResponse(NomifunProvider provider, NomifunProviderModel model) {
         Map<String, Object> map = new LinkedHashMap<>();
-        map.put("provider_id", entity.providerId);
-        map.put("model", model.model);
-        map.put("enabled", model.enabled);
-        map.put("sort_order", model.sortOrder);
-        if (model.description != null) {
-            map.put("description", model.description);
+        map.put("provider_id", provider.getProviderId());
+        map.put("model", model.getModel());
+        map.put("enabled", model.getEnabled());
+        map.put("sort_order", model.getSortOrder());
+        if (model.getDescription() != null) {
+            map.put("description", model.getDescription());
         }
-        List<Map<String, Object>> caps = model.capabilities.stream()
-                .map(this::toCapabilityResponse)
-                .collect(Collectors.toList());
+        List<Map<String, Object>> caps = model.getCapabilities() != null
+                ? model.getCapabilities().stream().map(this::toCapabilityResponse).collect(Collectors.toList())
+                : new ArrayList<>();
         map.put("capabilities", caps);
-        map.put("created_at", model.createdAt);
-        map.put("updated_at", model.updatedAt);
+        map.put("created_at", model.getCreatedAt());
+        map.put("updated_at", model.getUpdatedAt());
         return map;
     }
 
     /**
      * 构造单任务能力响应。
-     *
-     * @param cap 能力实体
-     * @return 响应 Map
      */
-    private Map<String, Object> toCapabilityResponse(ProviderModelCapabilityEntity cap) {
+    private Map<String, Object> toCapabilityResponse(Map<String, Object> cap) {
         Map<String, Object> map = new LinkedHashMap<>();
-        map.put("task", cap.task);
-        map.put("traits", new ArrayList<>(cap.traits));
-        map.put("protocol", cap.protocol);
-        map.put("connection_role", cap.connectionRole);
-        if (cap.baseUrlOverride != null) {
-            map.put("base_url_override", cap.baseUrlOverride);
+        map.put("task", cap.get("task"));
+        map.put("traits", cap.get("traits") != null ? cap.get("traits") : List.of());
+        map.put("protocol", cap.get("protocol"));
+        map.put("connection_role", cap.get("connection_role"));
+        if (cap.get("base_url_override") != null) {
+            map.put("base_url_override", cap.get("base_url_override"));
         }
-        if (cap.endpoint != null) {
-            map.put("endpoint", cap.endpoint);
+        if (cap.get("endpoint") != null) {
+            map.put("endpoint", cap.get("endpoint"));
         }
-        if (cap.pollEndpoint != null) {
-            map.put("poll_endpoint", cap.pollEndpoint);
+        if (cap.get("poll_endpoint") != null) {
+            map.put("poll_endpoint", cap.get("poll_endpoint"));
         }
-        if (cap.contentEndpoint != null) {
-            map.put("content_endpoint", cap.contentEndpoint);
+        if (cap.get("content_endpoint") != null) {
+            map.put("content_endpoint", cap.get("content_endpoint"));
         }
-        if (cap.realtimeEndpoint != null) {
-            map.put("realtime_endpoint", cap.realtimeEndpoint);
+        if (cap.get("realtime_endpoint") != null) {
+            map.put("realtime_endpoint", cap.get("realtime_endpoint"));
         }
-        map.put("allow_cross_origin_credentials", cap.allowCrossOriginCredentials);
-        map.put("provider_params", cap.providerParams);
-        if (cap.contextLimit != null) {
-            map.put("context_limit", cap.contextLimit);
+        map.put("allow_cross_origin_credentials", cap.get("allow_cross_origin_credentials") != null
+                && (boolean) cap.get("allow_cross_origin_credentials"));
+        map.put("provider_params", cap.get("provider_params"));
+        if (cap.get("context_limit") != null) {
+            map.put("context_limit", cap.get("context_limit"));
         }
-        map.put("created_at", cap.createdAt);
-        map.put("updated_at", cap.updatedAt);
+        map.put("created_at", cap.get("created_at"));
+        map.put("updated_at", cap.get("updated_at"));
         return map;
     }
 
     /**
      * 构造 ProviderConnectionResponse（不回显 credentials）。
-     *
-     * @param conn 连接实体
-     * @return 响应 Map
      */
-    private Map<String, Object> toConnectionResponse(ProviderConnectionEntity conn) {
+    private Map<String, Object> toConnectionResponse(NomifunProviderConnection conn) {
         Map<String, Object> map = new LinkedHashMap<>();
-        map.put("connection_id", conn.connectionId);
-        map.put("provider_id", conn.providerId);
-        map.put("role", conn.role);
-        if (conn.label != null) {
-            map.put("label", conn.label);
+        map.put("connection_id", conn.getConnectionId());
+        map.put("provider_id", conn.getProviderId());
+        map.put("role", conn.getRole());
+        if (conn.getLabel() != null) {
+            map.put("label", conn.getLabel());
         }
-        map.put("base_url", conn.baseUrl);
-        map.put("auth_scheme", conn.authScheme);
-        map.put("has_credentials", conn.credentials != null && !conn.credentials.isEmpty());
-        map.put("extra", conn.extra);
-        map.put("created_at", conn.createdAt);
-        map.put("updated_at", conn.updatedAt);
+        map.put("base_url", conn.getBaseUrl());
+        map.put("auth_scheme", conn.getAuthScheme());
+        map.put("has_credentials", conn.getCredentials() != null && !conn.getCredentials().isEmpty());
+        map.put("extra", conn.getExtra());
+        map.put("created_at", conn.getCreatedAt());
+        map.put("updated_at", conn.getUpdatedAt());
         return map;
     }
 
@@ -817,166 +871,81 @@ public class ApiProviderController {
 
     /**
      * 由模型输入构造模型实体（新建）。
-     *
-     * @param input 模型输入
-     * @param now   时间戳
-     * @return 模型实体
      */
-    private ProviderModelEntity toModelEntity(Map<String, Object> input, long now) {
-        ProviderModelEntity e = new ProviderModelEntity();
-        e.model = requireStr(input, "model");
-        e.enabled = bool(input, "enabled", true);
-        e.sortOrder = intv(input, "sort_order", 0);
-        e.description = str(input, "description");
-        applyCapabilities(e, input, now);
-        e.createdAt = now;
-        e.updatedAt = now;
+    @SuppressWarnings("unchecked")
+    private NomifunProviderModel toModelEntity(String providerId, Map<String, Object> input, long now) {
+        NomifunProviderModel e = new NomifunProviderModel();
+        e.setProviderId(providerId);
+        e.setModel(requireStr(input, "model"));
+        e.setEnabled(bool(input, "enabled", true));
+        e.setSortOrder(intv(input, "sort_order", 0));
+        e.setDescription(str(input, "description"));
+        // capabilities → 直接存原始 List<Map>
+        Object capsObj = input.get("capabilities");
+        if (capsObj instanceof List<?> capsList) {
+            List<Map<String, Object>> caps = new ArrayList<>();
+            for (Object c : capsList) {
+                if (c instanceof Map<?, ?> m) {
+                    caps.add((Map<String, Object>) m);
+                }
+            }
+            e.setCapabilities(caps);
+        } else {
+            e.setCapabilities(new ArrayList<>());
+        }
+        e.setCreatedAt(now);
+        e.setUpdatedAt(now);
         return e;
     }
 
     /**
      * 把模型输入应用到已有实体（更新，替换完整能力集）。
-     *
-     * @param e     模型实体
-     * @param input 模型输入
      */
-    private void applyModelInput(ProviderModelEntity e, Map<String, Object> input) {
+    @SuppressWarnings("unchecked")
+    private void applyModelInput(NomifunProviderModel e, Map<String, Object> input) {
         if (input.containsKey("enabled")) {
-            e.enabled = bool(input, "enabled", e.enabled);
+            e.setEnabled(bool(input, "enabled", e.getEnabled()));
         }
         if (input.containsKey("sort_order")) {
-            e.sortOrder = intv(input, "sort_order", e.sortOrder);
+            e.setSortOrder(intv(input, "sort_order", e.getSortOrder()));
         }
         if (input.containsKey("description")) {
-            e.description = str(input, "description");
+            e.setDescription(str(input, "description"));
         }
-        applyCapabilities(e, input, System.currentTimeMillis());
-    }
-
-    /**
-     * 重建模型能力集。
-     *
-     * @param e     模型实体
-     * @param input 模型输入
-     * @param now   时间戳
-     */
-    private void applyCapabilities(ProviderModelEntity e, Map<String, Object> input, long now) {
-        e.capabilities.clear();
-        List<Map<String, Object>> caps = listOfMap(input, "capabilities");
-        for (Map<String, Object> c : caps) {
-            ProviderModelCapabilityEntity cap = new ProviderModelCapabilityEntity();
-            cap.task = requireStr(c, "task");
-            cap.traits.addAll(listOfStr(c, "traits"));
-            cap.protocol = requireStr(c, "protocol");
-            cap.connectionRole = requireStr(c, "connection_role");
-            cap.baseUrlOverride = str(c, "base_url_override");
-            cap.endpoint = str(c, "endpoint");
-            cap.pollEndpoint = str(c, "poll_endpoint");
-            cap.contentEndpoint = str(c, "content_endpoint");
-            cap.realtimeEndpoint = str(c, "realtime_endpoint");
-            cap.allowCrossOriginCredentials = bool(c, "allow_cross_origin_credentials", false);
-            cap.providerParams = c.get("provider_params");
-            if (c.containsKey("context_limit")) {
-                cap.contextLimit = intv(c, "context_limit", 0);
+        if (input.containsKey("capabilities")) {
+            Object capsObj = input.get("capabilities");
+            if (capsObj instanceof List<?> capsList) {
+                List<Map<String, Object>> caps = new ArrayList<>();
+                for (Object c : capsList) {
+                    if (c instanceof Map<?, ?> m) {
+                        caps.add((Map<String, Object>) m);
+                    }
+                }
+                e.setCapabilities(caps);
             }
-            cap.createdAt = now;
-            cap.updatedAt = now;
-            e.capabilities.add(cap);
         }
     }
 
     /**
      * 由连接输入构造连接实体（新建）。
-     *
-     * @param providerId Provider 标识
-     * @param input      连接输入
-     * @param now        时间戳
-     * @return 连接实体
      */
-    private ProviderConnectionEntity toConnectionEntity(String providerId, Map<String, Object> input, long now) {
-        ProviderConnectionEntity e = new ProviderConnectionEntity();
-        e.connectionId = UUID.randomUUID().toString().replace("-", "");
-        e.providerId = providerId;
-        e.role = requireStr(input, "role");
-        e.label = str(input, "label");
-        e.baseUrl = requireStr(input, "base_url");
-        e.authScheme = requireStr(input, "auth_scheme");
-        e.credentials = uncheckedCast(input.get("credentials"));
-        e.extra = input.get("extra");
-        e.createdAt = now;
-        e.updatedAt = now;
-        return e;
-    }
-
-    /**
-     * 深拷贝模型实体。
-     *
-     * @param src 源实体
-     * @param now 时间戳
-     * @return 副本
-     */
-    private ProviderModelEntity copyModel(ProviderModelEntity src, long now) {
-        ProviderModelEntity e = new ProviderModelEntity();
-        e.model = src.model;
-        e.enabled = src.enabled;
-        e.sortOrder = src.sortOrder;
-        e.description = src.description;
-        for (ProviderModelCapabilityEntity c : src.capabilities) {
-            ProviderModelCapabilityEntity nc = new ProviderModelCapabilityEntity();
-            nc.task = c.task;
-            nc.traits.addAll(c.traits);
-            nc.protocol = c.protocol;
-            nc.connectionRole = c.connectionRole;
-            nc.baseUrlOverride = c.baseUrlOverride;
-            nc.endpoint = c.endpoint;
-            nc.pollEndpoint = c.pollEndpoint;
-            nc.contentEndpoint = c.contentEndpoint;
-            nc.realtimeEndpoint = c.realtimeEndpoint;
-            nc.allowCrossOriginCredentials = c.allowCrossOriginCredentials;
-            nc.providerParams = c.providerParams;
-            nc.contextLimit = c.contextLimit;
-            nc.createdAt = now;
-            nc.updatedAt = now;
-            e.capabilities.add(nc);
-        }
-        e.createdAt = now;
-        e.updatedAt = now;
-        return e;
-    }
-
-    /**
-     * 深拷贝连接实体。
-     *
-     * @param src        源实体
-     * @param providerId 新 Provider 标识
-     * @param now        时间戳
-     * @return 副本
-     */
-    private ProviderConnectionEntity copyConnection(ProviderConnectionEntity src, String providerId, long now) {
-        ProviderConnectionEntity e = new ProviderConnectionEntity();
-        e.connectionId = UUID.randomUUID().toString().replace("-", "");
-        e.providerId = providerId;
-        e.role = src.role;
-        e.label = src.label;
-        e.baseUrl = src.baseUrl;
-        e.authScheme = src.authScheme;
-        e.credentials = src.credentials != null ? new LinkedHashMap<>(src.credentials) : null;
-        e.extra = src.extra;
-        e.createdAt = now;
-        e.updatedAt = now;
+    private NomifunProviderConnection toConnectionEntity(String providerId, Map<String, Object> input, long now) {
+        NomifunProviderConnection e = new NomifunProviderConnection();
+        e.setConnectionId(UUID.randomUUID().toString().replace("-", ""));
+        e.setProviderId(providerId);
+        e.setRole(requireStr(input, "role"));
+        e.setLabel(str(input, "label"));
+        e.setBaseUrl(requireStr(input, "base_url"));
+        e.setAuthScheme(requireStr(input, "auth_scheme"));
+        e.setCredentials(uncheckedCast(input.get("credentials")));
+        e.setExtra(input.get("extra"));
+        e.setCreatedAt(now);
+        e.setUpdatedAt(now);
         return e;
     }
 
     // ==================== 模型协议清单 ====================
 
-    /**
-     * 构造模型协议清单响应。
-     *
-     * @param preset  平台预设
-     * @param task    请求任务
-     * @param baseUrl 已存在 provider URL 提示
-     * @return 清单 Map
-     */
     private Map<String, Object> buildManifest(String preset, String task, String baseUrl) {
         ProtocolPreset pp = PROTOCOL_PRESETS.getOrDefault(preset,
                 new ProtocolPreset(preset, "https://api.openai.com/v1"));
@@ -1002,13 +971,6 @@ public class ApiProviderController {
         return manifest;
     }
 
-    /**
-     * 构造单协议描述符。
-     *
-     * @param pp  协议预设
-     * @param task 请求任务
-     * @return 协议 Map
-     */
     private Map<String, Object> buildProtocol(ProtocolPreset pp, String task) {
         Map<String, Object> protocol = new LinkedHashMap<>();
         protocol.put("protocol_id", pp.platform + "-openai-compat");
@@ -1032,11 +994,6 @@ public class ApiProviderController {
         return protocol;
     }
 
-    /**
-     * 构造鉴权方案清单。
-     *
-     * @return 鉴权方案列表
-     */
     private List<Map<String, Object>> authSchemes() {
         return List.of(
                 authScheme("api_key", true),
@@ -1046,13 +1003,6 @@ public class ApiProviderController {
         );
     }
 
-    /**
-     * 构造单鉴权方案。
-     *
-     * @param scheme        方案名
-     * @param parameterized 是否参数化
-     * @return 方案 Map
-     */
     private Map<String, Object> authScheme(String scheme, boolean parameterized) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("scheme", scheme);
@@ -1060,27 +1010,15 @@ public class ApiProviderController {
         return m;
     }
 
-    /**
-     * 平台预设记录。
-     *
-     * @param platform      平台名
-     * @param defaultBaseUrl 默认 base_url
-     */
     private record ProtocolPreset(String platform, String defaultBaseUrl) {
     }
 
-    /**
-     * 全部任务枚举。
-     */
     private static final List<String> ALL_TASKS = List.of(
             "chat", "realtime_conversation", "image_generation", "image_edit",
             "video_generation", "speech_synthesis", "speech_recognition",
             "embedding", "rerank"
     );
 
-    /**
-     * 平台 → 协议预设映射。
-     */
     private static final Map<String, ProtocolPreset> PROTOCOL_PRESETS;
 
     static {
@@ -1101,13 +1039,6 @@ public class ApiProviderController {
 
     // ==================== 模型拉取 ====================
 
-    /**
-     * 构造 FetchModelsResponse（按平台提供默认模型清单）。
-     *
-     * @param platform 平台
-     * @param baseUrl  base_url
-     * @return 响应 Map
-     */
     private Map<String, Object> buildFetchModels(String platform, String baseUrl) {
         Map<String, Object> out = new LinkedHashMap<>();
         List<Map<String, Object>> models = new ArrayList<>();
@@ -1126,9 +1057,6 @@ public class ApiProviderController {
         return out;
     }
 
-    /**
-     * 平台 → 默认模型列表。
-     */
     private static final Map<String, List<String>> DEFAULT_PLATFORM_MODELS = Map.of(
             "openai", List.of("gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"),
             "anthropic", List.of("claude-opus-4", "claude-sonnet-4", "claude-haiku-4"),
@@ -1144,25 +1072,15 @@ public class ApiProviderController {
 
     /**
      * 获取 Provider 实体，不存在则抛 NOT_FOUND。
-     *
-     * @param providerId Provider 标识
-     * @return Provider 实体
      */
-    private ProviderEntity requireProvider(String providerId) {
-        ProviderEntity e = providers.get(providerId);
+    private NomifunProvider requireProvider(String providerId) {
+        NomifunProvider e = providerMapper.selectById(providerId);
         if (e == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "provider 不存在: " + providerId);
         }
         return e;
     }
 
-    /**
-     * 读取字符串字段（可为空）。
-     *
-     * @param map 源 Map
-     * @param key 键
-     * @return 字符串值（空串返回 null）
-     */
     private String str(Map<String, Object> map, String key) {
         Object v = map.get(key);
         if (v == null) {
@@ -1172,13 +1090,6 @@ public class ApiProviderController {
         return s.isBlank() ? null : s;
     }
 
-    /**
-     * 读取必填字符串字段。
-     *
-     * @param map 源 Map
-     * @param key 键
-     * @return 字符串值
-     */
     private String requireStr(Map<String, Object> map, String key) {
         String s = str(map, key);
         if (s == null) {
@@ -1187,14 +1098,6 @@ public class ApiProviderController {
         return s;
     }
 
-    /**
-     * 读取布尔字段（带默认值）。
-     *
-     * @param map   源 Map
-     * @param key   键
-     * @param def 默认值
-     * @return 布尔值
-     */
     private boolean bool(Map<String, Object> map, String key, boolean def) {
         Object v = map.get(key);
         if (v == null) {
@@ -1206,14 +1109,6 @@ public class ApiProviderController {
         return Boolean.parseBoolean(String.valueOf(v));
     }
 
-    /**
-     * 读取整数字段（带默认值）。
-     *
-     * @param map 源 Map
-     * @param key 键
-     * @param def 默认值
-     * @return 整数值
-     */
     private int intv(Map<String, Object> map, String key, int def) {
         Object v = map.get(key);
         if (v == null) {
@@ -1229,13 +1124,6 @@ public class ApiProviderController {
         }
     }
 
-    /**
-     * 读取字符串列表字段。
-     *
-     * @param map 源 Map
-     * @param key 键
-     * @return 字符串列表（不可为 null）
-     */
     @SuppressWarnings("unchecked")
     private List<String> listOfStr(Map<String, Object> map, String key) {
         Object v = map.get(key);
@@ -1251,13 +1139,6 @@ public class ApiProviderController {
         return out;
     }
 
-    /**
-     * 读取 Map 列表字段。
-     *
-     * @param map 源 Map
-     * @param key 键
-     * @return Map 列表（不可为 null）
-     */
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> listOfMap(Map<String, Object> map, String key) {
         Object v = map.get(key);
@@ -1273,17 +1154,8 @@ public class ApiProviderController {
         return out;
     }
 
-    /**
-     * 强制转型为 Map。
-     *
-     * @param obj 对象
-     * @return Map（null 或类型不符时返回 null）
-     */
     @SuppressWarnings("unchecked")
-    private Map<String, Object> uncheckedCast(Object obj) {
-        if (obj instanceof Map<?, ?> m) {
-            return (Map<String, Object>) m;
-        }
-        return null;
+    private <T> T uncheckedCast(Object obj) {
+        return (T) obj;
     }
 }
