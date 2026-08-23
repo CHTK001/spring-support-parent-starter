@@ -96,6 +96,24 @@ public class ApiProviderController {
     }
 
     /**
+     * 获取单个 Provider 详情。
+     *
+     * @param providerId Provider 标识
+     * @return ProviderResponse
+     */
+    @GetMapping("/providers/{provider_id}")
+    public ApiResult<Map<String, Object>> getProvider(@PathVariable("provider_id") String providerId) {
+        NomifunProvider entity = requireProvider(providerId);
+        List<NomifunProviderModel> models = modelMapper.selectList(
+                new LambdaQueryWrapper<NomifunProviderModel>()
+                        .eq(NomifunProviderModel::getProviderId, providerId));
+        List<NomifunProviderConnection> connections = connectionMapper.selectList(
+                new LambdaQueryWrapper<NomifunProviderConnection>()
+                        .eq(NomifunProviderConnection::getProviderId, providerId));
+        return ApiResult.ok(toProviderResponse(entity, models, connections));
+    }
+
+    /**
      * 创建 Provider（原子包含 initial_model 与可选 connections）。
      *
      * @param body 创建请求
