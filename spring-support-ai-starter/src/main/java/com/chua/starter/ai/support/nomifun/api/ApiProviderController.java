@@ -23,6 +23,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Duration;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -67,6 +72,19 @@ public class ApiProviderController {
      * 托管免费模型服务运行时状态
      */
     private final FreeModelService freeModelService = new FreeModelService();
+
+    /**
+     * 上游模型列表拉取 HTTP 客户端（跟随重定向，连接池复用）
+     */
+    private final HttpClient upstreamHttpClient = HttpClient.newBuilder()
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
+
+    /**
+     * 上游模型列表接口超时时间（秒）
+     */
+    private static final Duration UPSTREAM_TIMEOUT = Duration.ofSeconds(15);
 
     /**
      * UUIDv7 格式正则：xxxxxxxx-xxxx-7xxx-xxxx-xxxxxxxxxxxx
@@ -364,6 +382,9 @@ public class ApiProviderController {
     /**
      * 拉取 Provider 远端模型清单（需 provider 已存在）。
      *
+     * <p>使用 Provider 持久化的 base_url 与凭证真实调用上游 {@code GET {base_url}/models}
+     * 接口，返回实时模型目录；不使用任何写死的兜底数据。</p>
+     *
      * @param providerId Provider 标识
      * @param body       可选 { try_fix }
      * @return FetchModelsResponse
@@ -372,11 +393,16 @@ public class ApiProviderController {
     public ApiResult<Map<String, Object>> fetchProviderModels(@PathVariable("provider_id") String providerId,
                                                               @RequestBody(required = false) Map<String, Object> body) {
         NomifunProvider entity = requireProvider(providerId);
-        return ApiResult.ok(buildFetchModels(entity.getPlatform(), entity.getBaseUrl()));
+        boolean tryFix = body != null && Boolean.TRUE.equals(body.get("try_fix"));
+        return ApiResult.ok(fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
+                entity.getCredentials(), entity.getAuthScheme(), tryFix));
     }
 
     /**
      * 匿名预拉取模型清单（创建前预览，不需要 provider 行）。
+     *
+     * <p>直接使用请求体中的 base_url 与凭证真实调用上游 {@code GET {base_url}/models}
+     * 接口，用于「添加模型」弹窗在下拉框中实时预览供应商可用模型。</p>
      *
      * @param body FetchModelsAnonymousRequest
      * @return FetchModelsResponse
@@ -385,7 +411,11 @@ public class ApiProviderController {
     public ApiResult<Map<String, Object>> fetchModelsAnonymous(@RequestBody Map<String, Object> body) {
         String platform = requireStr(body, "platform");
         String baseUrl = requireStr(body, "base_url");
-        return ApiResult.ok(buildFetchModels(platform, baseUrl));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> credentials = body.get("credentials") instanceof Map
+                ? (Map<String, Object>) body.get("credentials") : null;
+        String authScheme = requireStr(body, "auth_scheme");
+        return ApiResult.ok(fetchModelsFromUpstream(platform, baseUrl, credentials, authScheme, false));
     }
 
     // ==================== Provider Connections ====================
@@ -1090,47 +1120,288 @@ public class ApiProviderController {
         m.put("openai", new ProtocolPreset("openai", "https://api.openai.com/v1"));
         m.put("anthropic", new ProtocolPreset("anthropic", "https://api.anthropic.com/v1"));
         m.put("google", new ProtocolPreset("google", "https://generativelanguage.googleapis.com/v1beta"));
+        m.put("gemini", new ProtocolPreset("gemini", "https://generativelanguage.googleapis.com/v1beta"));
+        m.put("gemini-vertex-ai", new ProtocolPreset("gemini-vertex-ai", "https://aiplatform.googleapis.com/v1"));
         m.put("azure", new ProtocolPreset("azure", "https://api.openai.azure.com"));
+        m.put("bedrock", new ProtocolPreset("bedrock", "https://bedrock-runtime.us-east-1.amazonaws.com"));
         m.put("siliconflow", new ProtocolPreset("siliconflow", "https://api.siliconflow.cn/v1"));
         m.put("deepseek", new ProtocolPreset("deepseek", "https://api.deepseek.com/v1"));
         m.put("qwen", new ProtocolPreset("qwen", "https://dashscope.aliyuncs.com/compatible-mode/v1"));
+        m.put("dashscope", new ProtocolPreset("dashscope", "https://dashscope.aliyuncs.com/compatible-mode/v1"));
+        m.put("dashscope-coding", new ProtocolPreset("dashscope-coding", "https://dashscope.aliyuncs.com/compatible-mode/v1"));
         m.put("moonshot", new ProtocolPreset("moonshot", "https://api.moonshot.cn/v1"));
+        m.put("moonshot-cn", new ProtocolPreset("moonshot-cn", "https://api.moonshot.cn/v1"));
+        m.put("moonshot-global", new ProtocolPreset("moonshot-global", "https://api.moonshot.ai/v1"));
         m.put("grok", new ProtocolPreset("grok", "https://api.x.ai/v1"));
+        m.put("xai", new ProtocolPreset("xai", "https://api.x.ai/v1"));
         m.put("ollama", new ProtocolPreset("ollama", "http://localhost:11434/v1"));
         m.put("nomifun-free-model", new ProtocolPreset("nomifun-free-model", "https://free.nomifun.com/v1"));
+        // 中国平台官方 OpenAI 兼容地址
+        m.put("zhipu", new ProtocolPreset("zhipu", "https://open.bigmodel.cn/api/paas/v4"));
+        m.put("glm-coding-plan", new ProtocolPreset("glm-coding-plan", "https://open.bigmodel.cn/api/coding/paas/v4"));
+        m.put("ark", new ProtocolPreset("ark", "https://ark.cn-beijing.volces.com/api/v3"));
+        m.put("ark-coding-plan", new ProtocolPreset("ark-coding-plan", "https://ark.cn-beijing.volces.com/api/v3"));
+        m.put("ark-agent-plan", new ProtocolPreset("ark-agent-plan", "https://ark.cn-beijing.volces.com/api/v3"));
+        m.put("qianfan", new ProtocolPreset("qianfan", "https://qianfan.baidubce.com/v2"));
+        m.put("qianfan-coding-plan", new ProtocolPreset("qianfan-coding-plan", "https://qianfan.baidubce.com/v2"));
+        m.put("hunyuan", new ProtocolPreset("hunyuan", "https://api.hunyuan.cloud.tencent.com/v1"));
+        m.put("hunyuan-global", new ProtocolPreset("hunyuan-global", "https://api.hunyuan.cloud.tencent.com/v1"));
+        m.put("lingyi", new ProtocolPreset("lingyi", "https://api.lingyiwanwu.com/v1"));
+        m.put("stepfun", new ProtocolPreset("stepfun", "https://api.stepfun.com/v1"));
+        m.put("stepfun-plan", new ProtocolPreset("stepfun-plan", "https://api.stepfun.com/v1"));
+        m.put("minimax", new ProtocolPreset("minimax", "https://api.minimaxi.com/v1"));
+        m.put("minimax-code", new ProtocolPreset("minimax-code", "https://api.minimaxi.com/v1"));
+        m.put("minimax-coding-plan", new ProtocolPreset("minimax-coding-plan", "https://api.minimaxi.com/v1"));
+        m.put("mimo", new ProtocolPreset("mimo", "https://api.mimo.xiaomi.com/v1"));
+        m.put("mimo-token-plan-cn", new ProtocolPreset("mimo-token-plan-cn", "https://api.mimo.xiaomi.com/v1"));
+        m.put("mimo-token-plan-sgp", new ProtocolPreset("mimo-token-plan-sgp", "https://api.mimo.xiaomi.com/v1"));
+        m.put("mimo-token-plan-ams", new ProtocolPreset("mimo-token-plan-ams", "https://api.mimo.xiaomi.com/v1"));
+        m.put("deepgram", new ProtocolPreset("deepgram", "https://api.deepgram.com/v1"));
+        m.put("novita", new ProtocolPreset("novita", "https://api.novita.ai/openai/v1"));
+        m.put("openrouter", new ProtocolPreset("openrouter", "https://openrouter.ai/api/v1"));
+        m.put("poe", new ProtocolPreset("poe", "https://api.poe.com/v1"));
+        m.put("ppio", new ProtocolPreset("ppio", "https://api.ppinfra.com/v3/openai"));
+        m.put("modelscope", new ProtocolPreset("modelscope", "https://api-inference.modelscope.cn/v1"));
+        m.put("infiniai", new ProtocolPreset("infiniai", "https://cloud.infini-ai.com/maas/v1"));
+        m.put("ctyun", new ProtocolPreset("ctyun", "https://modelverse.cn/v1"));
+        m.put("new-api", new ProtocolPreset("new-api", "http://localhost:3000/v1"));
+        m.put("custom", new ProtocolPreset("custom", "https://api.openai.com/v1"));
         PROTOCOL_PRESETS = Map.copyOf(m);
     }
 
     // ==================== 模型拉取 ====================
 
-    private Map<String, Object> buildFetchModels(String platform, String baseUrl) {
-        Map<String, Object> out = new LinkedHashMap<>();
-        List<Map<String, Object>> models = new ArrayList<>();
-        for (String id : DEFAULT_PLATFORM_MODELS.getOrDefault(platform, List.of())) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", id);
-            m.put("name", id);
-            m.put("tasks", List.of("chat"));
-            m.put("traits", List.of("streaming"));
-            models.add(m);
+    /**
+     * 真实调用上游 {@code GET {base_url}/models} 拉取模型目录。
+     *
+     * <p>OpenAI 兼容协议：{@code Authorization: Bearer <key>}，响应 {@code data[].id}；
+     * Google Gemini 协议：{@code ?key=<key>} 查询参数，响应 {@code models[].name}（形如 models/gemini-xx）。
+     * 拉取失败时抛出与前端契约对应的错误码（UNAUTHORIZED / FORBIDDEN / RATE_LIMITED / TIMEOUT / BAD_GATEWAY）。</p>
+     *
+     * @param platform    平台标识（zhipu/openai/google/...）
+     * @param baseUrl     供应商 API 基础地址
+     * @param credentials 凭证（兼容 api_key 字符串与 api_keys 数组两种形态）
+     * @param authScheme  鉴权方式（api_key 等）
+     * @param tryFix      是否在 404 时尝试补全 /v1 后重试
+     * @return FetchModelsResponse（models + 可选 fixed_base_url）
+     */
+    private Map<String, Object> fetchModelsFromUpstream(String platform, String baseUrl,
+                                                        Map<String, Object> credentials,
+                                                        String authScheme, boolean tryFix) {
+        // 基础地址缺失直接判参数错误
+        if (baseUrl == null || baseUrl.isBlank()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "base_url 未配置，无法拉取模型列表");
         }
+        String apiKey = extractApiKey(credentials);
+        boolean googleProtocol = platform != null && (platform.contains("gemini") || platform.contains("google"));
+
+        // 首次按原始地址拉取
+        List<Map<String, Object>> models = requestUpstreamModels(baseUrl, apiKey, googleProtocol);
+        String fixedBaseUrl = null;
+        // 404 且允许修正时，尝试补全 /v1 再拉一次（用户常见漏填 /v1 的场景）
+        if (models == null && tryFix && !googleProtocol) {
+            String fixed = baseUrl.endsWith("/") ? baseUrl + "v1" : baseUrl + "/v1";
+            models = requestUpstreamModels(fixed, apiKey, false);
+            if (models != null) {
+                fixedBaseUrl = fixed;
+            }
+        }
+        // 仍然失败则按无法连接处理
+        if (models == null) {
+            throw new ApiException(ApiErrorCode.BAD_GATEWAY, "无法从供应商拉取模型列表，请检查 API 地址和 Key");
+        }
+        Map<String, Object> out = new LinkedHashMap<>();
         out.put("models", models);
-        if (!models.isEmpty()) {
-            out.put("fixed_base_url", baseUrl);
+        if (fixedBaseUrl != null) {
+            out.put("fixed_base_url", fixedBaseUrl);
         }
         return out;
     }
 
-    private static final Map<String, List<String>> DEFAULT_PLATFORM_MODELS = Map.of(
-            "openai", List.of("gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"),
-            "anthropic", List.of("claude-opus-4", "claude-sonnet-4", "claude-haiku-4"),
-            "google", List.of("gemini-1.5-pro", "gemini-1.5-flash"),
-            "deepseek", List.of("deepseek-chat", "deepseek-reasoner"),
-            "qwen", List.of("qwen-max", "qwen-plus", "qwen-turbo"),
-            "moonshot", List.of("moonshot-v1-8k", "moonshot-v1-32k"),
-            "siliconflow", List.of("deepseek-ai/DeepSeek-V3", "Qwen/Qwen2.5-72B-Instruct"),
-            "ollama", List.of("llama3", "qwen2.5", "mistral")
-    );
+    /**
+     * 请求上游模型列表接口。
+     *
+     * @param baseUrl        基础地址
+     * @param apiKey         API Key（可能为 null，如 Ollama 本地实例）
+     * @param googleProtocol 是否使用 Gemini 协议
+     * @return 模型条目列表；请求失败返回 null（由调用方决定是否重试/报错）
+     */
+    private List<Map<String, Object>> requestUpstreamModels(String baseUrl, String apiKey, boolean googleProtocol) {
+        // 拼接模型列表 URL：OpenAI 兼容为 {base}/models，Gemini 为 {base}/models?key=xxx
+        StringBuilder url = new StringBuilder(baseUrl.endsWith("/") ? baseUrl + "models" : baseUrl + "/models");
+        if (googleProtocol && apiKey != null && !apiKey.isBlank()) {
+            url.append(url.indexOf("?") >= 0 ? "&" : "?").append("key=").append(apiKey);
+        }
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(URI.create(url.toString()))
+                .timeout(UPSTREAM_TIMEOUT)
+                .GET();
+        // OpenAI 兼容协议使用 Bearer 头鉴权
+        if (!googleProtocol && apiKey != null && !apiKey.isBlank()) {
+            builder.header("Authorization", "Bearer " + apiKey);
+        }
+        try {
+            HttpResponse<String> response = upstreamHttpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+            int status = response.statusCode();
+            // 按前端契约映射错误码
+            if (status == 401) {
+                throw new ApiException(ApiErrorCode.UNAUTHORIZED, "API Key 无效或已过期");
+            }
+            if (status == 403) {
+                throw new ApiException(ApiErrorCode.FORBIDDEN, "该 API Key 没有读取模型列表的权限");
+            }
+            if (status == 429) {
+                throw new ApiException(ApiErrorCode.RATE_LIMITED, "供应商请求过于频繁，请稍后重试");
+            }
+            if (status == 404) {
+                // 返回 null 交给调用方决定是否 try_fix 重试
+                return null;
+            }
+            if (status < 200 || status >= 300) {
+                throw new ApiException(ApiErrorCode.BAD_GATEWAY, "供应商模型接口返回 " + status);
+            }
+            return googleProtocol ? parseGoogleModels(response.body()) : parseOpenAiModels(response.body());
+        } catch (ApiException e) {
+            // 业务异常直接向上抛出
+            throw e;
+        } catch (java.net.http.HttpTimeoutException e) {
+            throw new ApiException(ApiErrorCode.TIMEOUT, "供应商模型接口请求超时");
+        } catch (Exception e) {
+            // 网络层异常统一按网关错误处理
+            throw new ApiException(ApiErrorCode.BAD_GATEWAY, "无法连接供应商模型接口: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 解析 OpenAI 兼容的模型列表响应（data[].id）。
+     *
+     * @param body 响应体 JSON
+     * @return 模型条目列表
+     */
+    private List<Map<String, Object>> parseOpenAiModels(String body) {
+        List<Map<String, Object>> models = new ArrayList<>();
+        com.fasterxml.jackson.databind.JsonNode root = readJson(body);
+        // 响应格式：{"data": [{"id": "glm-4-flash", ...}, ...]}
+        com.fasterxml.jackson.databind.JsonNode data = root == null ? null : root.get("data");
+        if (data != null && data.isArray()) {
+            for (com.fasterxml.jackson.databind.JsonNode item : data) {
+                String id = item.path("id").asText(null);
+                // 跳过无 id 的条目
+                if (id == null || id.isBlank()) {
+                    continue;
+                }
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("id", id);
+                m.put("name", item.path("name").asText(id));
+                m.put("tasks", inferTasks(id));
+                m.put("traits", List.of("streaming"));
+                models.add(m);
+            }
+        }
+        return models;
+    }
+
+    /**
+     * 解析 Google Gemini 的模型列表响应（models[].name，形如 models/gemini-xx）。
+     *
+     * @param body 响应体 JSON
+     * @return 模型条目列表
+     */
+    private List<Map<String, Object>> parseGoogleModels(String body) {
+        List<Map<String, Object>> models = new ArrayList<>();
+        com.fasterxml.jackson.databind.JsonNode root = readJson(body);
+        com.fasterxml.jackson.databind.JsonNode data = root == null ? null : root.get("models");
+        if (data != null && data.isArray()) {
+            for (com.fasterxml.jackson.databind.JsonNode item : data) {
+                String name = item.path("name").asText(null);
+                // 去掉 "models/" 前缀作为模型 ID
+                String id = name != null && name.startsWith("models/") ? name.substring("models/".length()) : name;
+                if (id == null || id.isBlank()) {
+                    continue;
+                }
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("id", id);
+                m.put("name", item.path("displayName").asText(id));
+                m.put("tasks", inferTasks(id));
+                m.put("traits", List.of("streaming"));
+                models.add(m);
+            }
+        }
+        return models;
+    }
+
+    /**
+     * 解析 JSON 字符串，失败返回 null。
+     *
+     * @param body JSON 字符串
+     * @return JsonNode 或 null
+     */
+    private com.fasterxml.jackson.databind.JsonNode readJson(String body) {
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().readTree(body);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 依据模型 ID 关键字推断任务类型。
+     *
+     * @param modelId 模型 ID
+     * @return 任务类型列表（默认 chat）
+     */
+    private List<String> inferTasks(String modelId) {
+        String lower = modelId.toLowerCase();
+        // 按关键字匹配任务类型
+        if (lower.contains("embedding") || lower.contains("embed") || lower.contains("-bge-")) {
+            return List.of("embedding");
+        }
+        if (lower.contains("rerank")) {
+            return List.of("rerank");
+        }
+        if (lower.contains("tts") || lower.contains("speech-synthesis") || lower.contains("speech_synthesis")) {
+            return List.of("speech_synthesis");
+        }
+        if (lower.contains("whisper") || lower.contains("asr") || lower.contains("speech-recognition")) {
+            return List.of("speech_recognition");
+        }
+        if (lower.contains("dall-e") || lower.contains("image-gen") || lower.contains("cogview") || lower.contains("flux")) {
+            return List.of("image_generation");
+        }
+        if (lower.contains("cogvideo") || lower.contains("video-gen")) {
+            return List.of("video_generation");
+        }
+        if (lower.contains("realtime")) {
+            return List.of("realtime_conversation");
+        }
+        return List.of("chat");
+    }
+
+    /**
+     * 从凭证 Map 中提取 API Key，兼容 api_key（字符串）与 api_keys（数组）两种形态。
+     *
+     * @param credentials 凭证 Map（可能为 null）
+     * @return API Key 或 null
+     */
+    private String extractApiKey(Map<String, Object> credentials) {
+        // 无凭证直接返回 null
+        if (credentials == null || credentials.isEmpty()) {
+            return null;
+        }
+        Object single = credentials.get("api_key");
+        if (single instanceof String && !((String) single).isBlank()) {
+            return (String) single;
+        }
+        Object multi = credentials.get("api_keys");
+        // 多 Key 数组取第一个作为拉取凭证
+        if (multi instanceof List && !((List<?>) multi).isEmpty()) {
+            Object first = ((List<?>) multi).get(0);
+            if (first instanceof String && !((String) first).isBlank()) {
+                return (String) first;
+            }
+        }
+        return null;
+    }
 
     // ==================== 工具方法 ====================
 

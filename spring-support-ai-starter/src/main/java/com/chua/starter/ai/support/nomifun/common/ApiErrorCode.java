@@ -20,6 +20,21 @@ public enum ApiErrorCode {
     FORBIDDEN("FORBIDDEN", 403),
 
     /**
+     * 未授权（如供应商 API Key 无效，前端提示检查 Key）
+     */
+    UNAUTHORIZED("UNAUTHORIZED", 401),
+
+    /**
+     * 上游请求超时（前端提示检查网络/代理）
+     */
+    TIMEOUT("TIMEOUT", 504),
+
+    /**
+     * 网关错误（前端提示无法连接供应商接口）
+     */
+    BAD_GATEWAY("BAD_GATEWAY", 502),
+
+    /**
      * 资源不存在（前端 silentStatuses:[404] 场景静默处理）
      */
     NOT_FOUND("NOT_FOUND", 404),
