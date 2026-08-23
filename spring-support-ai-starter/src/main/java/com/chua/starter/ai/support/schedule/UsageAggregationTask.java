@@ -2,7 +2,7 @@ package com.chua.starter.ai.support.schedule;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.ai.AiUsage;
-import com.chua.common.support.datasearch.usage.spi.UsageProvider;
+import com.chua.common.support.datasearch.usage.spi.UsageParser;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.entity.SysAiUsage;
@@ -38,7 +38,7 @@ import java.util.stream.Collectors;
  * <p>
  * 每次执行：
  * <ol>
- *   <li>通过 datasearch 的 {@link UsageProvider} SPI 拉取所有外部工具用量，写入本地用量表</li>
+ *   <li>通过 datasearch 的 {@link UsageParser} SPI 拉取所有外部工具用量，写入本地用量表</li>
  *   <li>聚合上次执行时间点至当前时间内的用量明细数据到日汇总表</li>
  * </ol>
  *
@@ -136,20 +136,20 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     }
 
     /**
-     * 通过 datasearch UsageProvider SPI 拉取所有外部工具用量，写入本地用量表。
+     * 通过 datasearch UsageParser SPI 解析所有外部工具本地用量，写入本地用量表。
      */
     @Transactional
     public void syncExternalUsage() {
         try {
-            Map<String, UsageProvider> providers = ServiceProvider.of(UsageProvider.class).list();
-            if (providers == null || providers.isEmpty()) {
-                log.debug("[UsageAggregation] 未发现 UsageProvider 实现");
+            Map<String, UsageParser> parsers = ServiceProvider.of(UsageParser.class).list();
+            if (parsers == null || parsers.isEmpty()) {
+                log.debug("[UsageAggregation] 未发现 UsageParser 实现");
                 return;
             }
             int total = 0;
-            for (Map.Entry<String, UsageProvider> entry : providers.entrySet()) {
+            for (Map.Entry<String, UsageParser> entry : parsers.entrySet()) {
                 try {
-                    List<AiUsage> usages = entry.getValue().getUsage();
+                    List<AiUsage> usages = entry.getValue().parseAll();
                     if (usages == null || usages.isEmpty()) {
                         continue;
                     }
@@ -161,11 +161,11 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                         }
                     }
                 } catch (Exception e) {
-                    log.warn("[UsageAggregation] UsageProvider[{}] 同步失败: {}", entry.getKey(), e.getMessage());
+                    log.warn("[UsageAggregation] UsageParser[{}] 同步失败: {}", entry.getKey(), e.getMessage());
                 }
             }
             if (total > 0) {
-                log.info("[UsageAggregation] 已同步 {} 条外部用量（共 {} 个 Provider）", total, providers.size());
+                log.info("[UsageAggregation] 已同步 {} 条外部用量（共 {} 个 Parser）", total, parsers.size());
             }
         } catch (Exception e) {
             log.warn("[UsageAggregation] 外部用量同步失败: {}", e.getMessage());
