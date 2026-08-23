@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.ai.support.nomifun.mapper.AgentBrowserTabMapper">
+
+    <resultMap id="BaseResultMap" type="com.chua.starter.ai.support.nomifun.store.AgentBrowserTab">
+        <id column="tab_id" jdbcType="VARCHAR" property="tabId"/>
+        <result column="lane_id" jdbcType="VARCHAR" property="laneId"/>
+        <result column="title" jdbcType="VARCHAR" property="title"/>
+        <result column="url" jdbcType="VARCHAR" property="url"/>
+        <result column="active" jdbcType="BOOLEAN" property="active"/>
+        <result column="crashed" jdbcType="BOOLEAN" property="crashed"/>
+        <result column="created_at" jdbcType="BIGINT" property="createdAt"/>
+        <result column="updated_at" jdbcType="BIGINT" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        tab_id, lane_id, title, url, active, crashed, created_at, updated_at
+    </sql>
+
+    <!-- 根据 Lane ID 查询关联的 Tab 列表 -->
+    <select id="selectByLaneId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM sys_agent_browser_tab
+        WHERE lane_id = #{laneId}
+        ORDER BY active DESC, created_at ASC
+    </select>
+
+    <!-- 将指定 Lane 的所有 Tab 设置为非活跃状态 -->
+    <update id="deactivateAllByLaneId">
+        UPDATE sys_agent_browser_tab
+        SET active = FALSE
+        WHERE lane_id = #{laneId} AND active = TRUE
+    </update>
+
+    <!-- 删除指定 Lane 下的所有 Tab -->
+    <delete id="deleteByLaneId">
+        DELETE FROM sys_agent_browser_tab
+        WHERE lane_id = #{laneId}
+    </delete>
+
+</mapper>
