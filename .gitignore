@@ -67,3 +67,6 @@ sys
 # IDE/工具缓存
 .workbuddy/
 
+
+# H2 文件库本地数据目录
+/data/
