@@ -57,6 +57,15 @@ public class SpringBeanUtils {
     }
 
     /**
+     * 获取 ApplicationContext（允许返回 null）
+     *
+     * @return ApplicationContext 实例
+     */
+    public static ApplicationContext getApplicationContextOrNull() {
+        return applicationContext;
+    }
+
+    /**
      * 获取 ApplicationContext
      *
      * @return ApplicationContext 实例
