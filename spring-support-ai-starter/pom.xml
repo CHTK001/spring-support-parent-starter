@@ -27,7 +27,7 @@
         <groupId>com.chua</groupId>
         <artifactId>spring-support-parent-starter</artifactId>
         <version>4.0.0.42</version>
-        
+
     </parent>
 
     <!-- 项目基本信息 -->
@@ -109,10 +109,13 @@
         </dependency>
 
         <!-- OAuth 客户端鉴权（@Permission 管理端接口鉴权，对接外部 oauth 服务端） -->
+        <!-- 临时注释：oauth-client-starter 存在预编译错误，ai-starter 不直接依赖其类 -->
+        <!--
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-oauth-client-starter</artifactId>
         </dependency>
+        -->
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -225,7 +228,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                
+
                 <configuration>
                     <encoding>UTF-8</encoding>
                     <proc>full</proc>
@@ -240,7 +243,7 @@
                             <groupId>org.projectlombok</groupId>
 <artifactId>lombok</artifactId>
                             <version>${lombok.version}</version>
-                            
+
                         </path>
 
                             <path>
