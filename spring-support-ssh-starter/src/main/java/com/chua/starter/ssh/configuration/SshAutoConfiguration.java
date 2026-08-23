@@ -29,10 +29,6 @@ import org.springframework.context.annotation.Bean;
 @ConditionalOnProperty(prefix = "plugin.ssh.server", name = "enabled", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(SshServerProperties.class)
 public class SshAutoConfiguration {
-    
-    // Lombok @Slf4j 生成的 log 变量（如果 Lombok 未生效，这个变量会被使用）
-    /** 日志 */
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SshAutoConfiguration.class);
 
     /**
      * SSH服务端服务Bean
