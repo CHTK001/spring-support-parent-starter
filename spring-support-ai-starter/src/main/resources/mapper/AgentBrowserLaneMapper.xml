@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.ai.support.nomifun.mapper.AgentBrowserLaneMapper">
+
+    <resultMap id="BaseResultMap" type="com.chua.starter.ai.support.nomifun.store.AgentBrowserLane">
+        <id column="lane_id" jdbcType="VARCHAR" property="laneId"/>
+        <result column="lane_name" jdbcType="VARCHAR" property="laneName"/>
+        <result column="lifecycle_state" jdbcType="VARCHAR" property="lifecycleState"/>
+        <result column="browser_epoch" jdbcType="BIGINT" property="browserEpoch"/>
+        <result column="user_id" jdbcType="VARCHAR" property="userId"/>
+        <result column="conversation_id" jdbcType="VARCHAR" property="conversationId"/>
+        <result column="runtime_instance_id" jdbcType="VARCHAR" property="runtimeInstanceId"/>
+        <result column="execution_id" jdbcType="VARCHAR" property="executionId"/>
+        <result column="attempt_id" jdbcType="VARCHAR" property="attemptId"/>
+        <result column="agent_id" jdbcType="VARCHAR" property="agentId"/>
+        <result column="agent_name" jdbcType="VARCHAR" property="agentName"/>
+        <result column="surface" jdbcType="VARCHAR" property="surface"/>
+        <result column="identity_mode" jdbcType="VARCHAR" property="identityMode"/>
+        <result column="identity_label" jdbcType="VARCHAR" property="identityLabel"/>
+        <result column="queue_position" jdbcType="INTEGER" property="queuePosition"/>
+        <result column="queue_reason_code" jdbcType="VARCHAR" property="queueReasonCode"/>
+        <result column="active_tab_id" jdbcType="VARCHAR" property="activeTabId"/>
+        <result column="title" jdbcType="VARCHAR" property="title"/>
+        <result column="url" jdbcType="VARCHAR" property="url"/>
+        <result column="resource_estimate_bytes" jdbcType="BIGINT" property="resourceEstimateBytes"/>
+        <result column="active_operation_count" jdbcType="INTEGER" property="activeOperationCount"/>
+        <result column="error_code" jdbcType="VARCHAR" property="errorCode"/>
+        <result column="error_message" jdbcType="VARCHAR" property="errorMessage"/>
+        <result column="recoverable" jdbcType="BOOLEAN" property="recoverable"/>
+        <result column="last_active_at" jdbcType="BIGINT" property="lastActiveAt"/>
+        <result column="created_at" jdbcType="BIGINT" property="createdAt"/>
+        <result column="updated_at" jdbcType="BIGINT" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        lane_id, lane_name, lifecycle_state, browser_epoch,
+        user_id, conversation_id, runtime_instance_id, execution_id, attempt_id,
+        agent_id, agent_name, surface,
+        identity_mode, identity_label,
+        queue_position, queue_reason_code,
+        active_tab_id, title, url,
+        resource_estimate_bytes, active_operation_count,
+        error_code, error_message, recoverable,
+        last_active_at, created_at, updated_at
+    </sql>
+
+    <!-- 根据对话 ID 查询关联的 Lane 列表 -->
+    <select id="selectByConversationId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM sys_agent_browser_lane
+        WHERE conversation_id = #{conversationId}
+    </select>
+
+    <!-- 统计指定生命周期状态的 Lane 数量 -->
+    <select id="countByState" resultType="int">
+        SELECT COUNT(*)
+        FROM sys_agent_browser_lane
+        WHERE lifecycle_state = #{state}
+    </select>
+
+    <!-- 查询所有非 failed 状态的 Lane -->
+    <select id="selectAllActive" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM sys_agent_browser_lane
+        WHERE lifecycle_state != 'failed'
+    </select>
+
+</mapper>
