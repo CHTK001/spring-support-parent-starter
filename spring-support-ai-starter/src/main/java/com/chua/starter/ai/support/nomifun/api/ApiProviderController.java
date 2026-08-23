@@ -1041,8 +1041,10 @@ public class ApiProviderController {
     // ==================== 模型协议清单 ====================
 
     private Map<String, Object> buildManifest(String preset, String task, String baseUrl) {
-        ProtocolPreset pp = PROTOCOL_PRESETS.getOrDefault(preset,
-                new ProtocolPreset(preset, "https://api.openai.com/v1"));
+        // 前端 preset 可能传大写形式（如 Zhipu），统一转小写后匹配
+        String presetKey = preset == null ? null : preset.toLowerCase();
+        ProtocolPreset pp = PROTOCOL_PRESETS.getOrDefault(presetKey,
+                new ProtocolPreset(presetKey != null ? presetKey : "custom", "https://api.openai.com/v1"));
         Map<String, Object> manifest = new LinkedHashMap<>();
         manifest.put("tasks", ALL_TASKS);
         manifest.put("preset", preset);
@@ -1193,7 +1195,9 @@ public class ApiProviderController {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "base_url 未配置，无法拉取模型列表");
         }
         String apiKey = extractApiKey(credentials);
-        boolean googleProtocol = platform != null && (platform.contains("gemini") || platform.contains("google"));
+        // 平台标识统一小写后再判断协议族（前端可能传大写形式）
+        String platformLower = platform == null ? "" : platform.toLowerCase();
+        boolean googleProtocol = platformLower.contains("gemini") || platformLower.contains("google");
 
         // 首次按原始地址拉取
         List<Map<String, Object>> models = requestUpstreamModels(baseUrl, apiKey, googleProtocol);
