@@ -76,24 +76,36 @@ public class ApiProviderController {
 
     /**
      * 生成 UUIDv7（基于时间戳，单调递增）
+     *
+     * <p>UUIDv7 格式：xxxxxxxx-xxxx-7xxx-xxxx-xxxxxxxxxxxx</p>
+     * <ul>
+     *   <li>前48位：毫秒级时间戳（确保单调递增）</li>
+     *   <li>第13位：版本号（固定为7）</li>
+     *   <li>第17位：变体（固定为10xx，即8/9/a/b）</li>
+     * </ul>
      */
     private String generateUuidV7() {
         long timestamp = System.currentTimeMillis();
         byte[] bytes = new byte[16];
-        // 前8位：时间戳
+        
+        // 1. 先生成随机数填充剩余部分
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        random.nextBytes(bytes);
+        
+        // 2. 前6字节：时间戳（大端序）
         bytes[0] = (byte) (timestamp >> 40);
         bytes[1] = (byte) (timestamp >> 32);
         bytes[2] = (byte) (timestamp >> 24);
         bytes[3] = (byte) (timestamp >> 16);
         bytes[4] = (byte) (timestamp >> 8);
         bytes[5] = (byte) timestamp;
-        // 随机数填充剩余部分
-        java.security.SecureRandom random = new java.security.SecureRandom();
-        random.nextBytes(bytes);
-        // 设置版本号为7
+        
+        // 3. 设置版本号为7（第6字节高4位）
         bytes[6] = (byte) ((bytes[6] & 0x0F) | 0x70);
-        // 设置变体为10xx
+        
+        // 4. 设置变体为10xx（第8字节高2位）
         bytes[8] = (byte) ((bytes[8] & 0x3F) | 0x80);
+        
         return String.format("%08x-%04x-%04x-%04x-%012x",
             ((long) bytes[0] & 0xFF) << 24 | ((long) bytes[1] & 0xFF) << 16 | ((long) bytes[2] & 0xFF) << 8 | ((long) bytes[3] & 0xFF),
             ((long) bytes[4] & 0xFF) << 8 | ((long) bytes[5] & 0xFF),

@@ -78,21 +78,26 @@ public class NomifunContractService {
      * @return UUIDv7 字符串
      */
     private String uuidV7() {
-        byte[] bytes = new byte[16];
         long millis = System.currentTimeMillis();
-        // 48-bit unix_ts_ms
+        byte[] bytes = new byte[16];
+
+        // 先生成随机数填充
+        java.util.concurrent.ThreadLocalRandom.current().nextBytes(bytes);
+
+        // 前6字节：时间戳（大端序）
         bytes[0] = (byte) (millis >>> 40);
         bytes[1] = (byte) (millis >>> 32);
         bytes[2] = (byte) (millis >>> 24);
         bytes[3] = (byte) (millis >>> 16);
         bytes[4] = (byte) (millis >>> 8);
         bytes[5] = (byte) millis;
-        // version 7 in high nibble of byte 6
-        bytes[6] = (byte) 0x70;
-        // random 12 bits for ver + rand_a (low 4 bits of byte6 + byte7)
-        java.util.concurrent.ThreadLocalRandom.current().nextBytes(bytes);
-        bytes[6] = (byte) ((bytes[6] & 0x0F) | 0x70); // version 7
-        bytes[8] = (byte) ((bytes[8] & 0x3F) | 0x80); // RFC 9562 variant
+
+        // 设置版本号为7（第6字节高4位）
+        bytes[6] = (byte) ((bytes[6] & 0x0F) | 0x70);
+
+        // 设置变体为10xx（第8字节高2位）
+        bytes[8] = (byte) ((bytes[8] & 0x3F) | 0x80);
+
         return formatUuid(bytes);
     }
 
