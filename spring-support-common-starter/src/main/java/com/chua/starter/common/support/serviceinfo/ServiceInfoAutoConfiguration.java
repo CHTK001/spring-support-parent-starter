@@ -17,8 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
-import lombok.extern.slf4j.Slf4j;
-
 /**
  * 服务信息自动配置 (统一入口)。
  *
@@ -49,7 +47,6 @@ import lombok.extern.slf4j.Slf4j;
 @ConditionalOnWebApplication
 @ConditionalOnProperty(name = "plugin.service-info.enable", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(ServiceInfoProperties.class)
-@Slf4j
 public class ServiceInfoAutoConfiguration {
 
     @Bean
@@ -71,16 +68,6 @@ public class ServiceInfoAutoConfiguration {
      * ServiceInfoBannerListener
      * @param detector detector
      * @param properties properties
-     * @param properties properties
-     * @param properties properties
-     * @param 静态方法 静态方法
-     * @param registry registry
-     * @param 32 32
-     * @param 28 28
-     * @param s s
-     * @param s s
-     * @param len len
-     * @param len len
      */
     public ServiceInfoBannerListener serviceInfoBannerListener(
             ServiceInfoEndpointDetector detector, ServiceInfoProperties properties) {
