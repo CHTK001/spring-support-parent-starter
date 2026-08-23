@@ -1,22 +1,26 @@
 package com.chua.starter.ai.support.nomifun.store;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.ai.support.nomifun.common.ApiErrorCode;
 import com.chua.starter.ai.support.nomifun.common.ApiException;
+import com.chua.starter.ai.support.nomifun.mapper.NomifunConversationMapper;
+import com.chua.starter.ai.support.nomifun.mapper.NomifunMessageMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * 会话与消息内存存储服务。
+ * 会话与消息持久化存储服务。
  *
  * <p>作为前端契约的会话状态层，提供会话 CRUD、消息追加与分页查询。
- * 当前为进程内内存实现（重启丢失），满足前端对接与联调；后续可替换为持久化存储。</p>
+ * 基于 MyBatis-Plus 持久化到 H2（或 MySQL）数据库：会话存 {@code nomifun_conversation} 表，
+ * 消息存 {@code nomifun_message} 表。JSON 字段（model/extra/content）通过
+ * {@link com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler} 序列化存储。</p>
+ *
+ * <p>时间戳与主键由后端生成：主键为 UUIDv7 字符串，时间戳为 epoch 毫秒。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -25,24 +29,51 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class ConversationStore {
 
     /**
-     * 会话表：conversationId → 会话
+     * 会话表 Mapper：提供会话增删改查
      */
-    private final Map<String, Conversation> conversations = new ConcurrentHashMap<>();
+    private final NomifunConversationMapper conversationMapper;
 
     /**
-     * 消息表：conversationId → 消息列表
+     * 消息表 Mapper：提供消息增删改查
      */
-    private final Map<String, List<StoredMessage>> messages = new ConcurrentHashMap<>();
+    private final NomifunMessageMapper messageMapper;
 
     /**
-     * 生成 UUID 字符串（前端要求 UUID 格式主键）。
+     * 分页单页最大条数，防止前端传入超大 page_size 拖垮查询
+     */
+    private static final int MAX_PAGE_SIZE = 200;
+
+    /**
+     * 列表返回最大条数，防止会话无限增长
+     */
+    private static final int MAX_LIST_LIMIT = 500;
+
+    /**
+     * 构造注入 MyBatis-Plus Mapper。
      *
-     * @return UUID 字符串
+     * @param conversationMapper 会话 Mapper
+     * @param messageMapper      消息 Mapper
+     */
+    public ConversationStore(NomifunConversationMapper conversationMapper, NomifunMessageMapper messageMapper) {
+        this.conversationMapper = conversationMapper;
+        this.messageMapper = messageMapper;
+    }
+
+    /**
+     * 生成 UUID 字符串（前端要求 UUID 格式主键，UUIDv7 含时间前缀）。
+     *
+     * @return 36 位 UUIDv7 字符串
      */
     public String newId() {
         return generateUuidV7();
     }
 
+    /**
+     * 生成 UUIDv7：前 48 位为毫秒时间戳，随后填充版本/变体位与随机位。
+     * <p>时间有序性保证同秒内的会话/消息按创建时间排序稳定。</p>
+     *
+     * @return 36 位 UUIDv7 字符串
+     */
     private String generateUuidV7() {
         long millis = System.currentTimeMillis();
         byte[] bytes = new byte[16];
@@ -52,7 +83,7 @@ public class ConversationStore {
         bytes[3] = (byte)(millis >>> 16);
         bytes[4] = (byte)(millis >>> 8);
         bytes[5] = (byte)millis;
-        java.util.concurrent.ThreadLocalRandom.current().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         bytes[6] = (byte)((bytes[6] & 0x0F) | 0x70);
         bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);
         char[] hex = "0123456789abcdef".toCharArray();
@@ -65,14 +96,13 @@ public class ConversationStore {
     }
 
     /**
-     * 创建会话。
+     * 创建会话并落库。
      *
-     * @param conversation 会话（已填充主键与时间戳）
+     * @param conversation 会话（须已填充主键与时间戳）
      * @return 创建的会话
      */
     public Conversation create(Conversation conversation) {
-        conversations.put(conversation.getConversationId(), conversation);
-        messages.putIfAbsent(conversation.getConversationId(), new CopyOnWriteArrayList<>());
+        conversationMapper.insert(conversation);
         return conversation;
     }
 
@@ -83,7 +113,7 @@ public class ConversationStore {
      * @return 会话
      */
     public Conversation get(String conversationId) {
-        Conversation conversation = conversations.get(conversationId);
+        Conversation conversation = conversationMapper.selectById(conversationId);
         if (conversation == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "会话不存在: " + conversationId);
         }
@@ -97,17 +127,19 @@ public class ConversationStore {
      * @return 存在返回 true
      */
     public boolean exists(String conversationId) {
-        return conversations.containsKey(conversationId);
+        return conversationMapper.selectById(conversationId) != null;
     }
 
     /**
-     * 删除会话及其消息。
+     * 删除会话及其全部消息。
      *
      * @param conversationId 会话 ID
      */
     public void delete(String conversationId) {
-        conversations.remove(conversationId);
-        messages.remove(conversationId);
+        conversationMapper.deleteById(conversationId);
+        LambdaQueryWrapper<StoredMessage> wrapper = new LambdaQueryWrapper<StoredMessage>()
+                .eq(StoredMessage::getConversationId, conversationId);
+        messageMapper.delete(wrapper);
     }
 
     /**
@@ -138,38 +170,39 @@ public class ConversationStore {
         if (patch.getExtra() != null) {
             Map<String, Object> extra = current.getExtra();
             if (extra == null) {
-                extra = new ConcurrentHashMap<>();
+                extra = new java.util.HashMap<>();
                 current.setExtra(extra);
             }
             extra.putAll(patch.getExtra());
         }
         current.setModifiedAt(System.currentTimeMillis());
+        conversationMapper.updateById(current);
         return current;
     }
 
     /**
      * 分页列出会话（按创建时间倒序，最近在前）。
      *
-     * @param limit 返回条数（默认 50）
+     * @param limit 返回条数（默认 50，上限 500）
      * @return 会话列表
      */
     public List<Conversation> list(int limit) {
-        int size = limit <= 0 ? 50 : limit;
-        List<Conversation> all = new ArrayList<>(conversations.values());
-        all.sort(Comparator.comparing(Conversation::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())));
-        return all.stream().limit(size).toList();
+        int size = limit <= 0 ? 50 : Math.min(limit, MAX_LIST_LIMIT);
+        LambdaQueryWrapper<Conversation> wrapper = new LambdaQueryWrapper<Conversation>()
+                .orderByDesc(Conversation::getCreatedAt)
+                .last("LIMIT " + size);
+        return conversationMapper.selectList(wrapper);
     }
 
     /**
-     * 追加消息到会话。
+     * 追加消息并落库。
      *
      * @param conversationId 会话 ID
      * @param message        消息（已填充主键与时间戳）
      * @return 追加后的消息
      */
     public StoredMessage addMessage(String conversationId, StoredMessage message) {
-        List<StoredMessage> list = messages.computeIfAbsent(conversationId, k -> new CopyOnWriteArrayList<>());
-        list.add(message);
+        messageMapper.insert(message);
         return message;
     }
 
@@ -178,19 +211,18 @@ public class ConversationStore {
      *
      * @param conversationId 会话 ID
      * @param page          页号（从 1 开始）
-     * @param pageSize      每页条数
+     * @param pageSize      每页条数（默认 50，上限 200）
      * @return 消息列表
      */
     public List<StoredMessage> listMessages(String conversationId, int page, int pageSize) {
-        List<StoredMessage> all = messages.getOrDefault(conversationId, new CopyOnWriteArrayList<>());
-        all.sort(Comparator.comparing(StoredMessage::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder())));
-        int size = pageSize <= 0 ? 50 : pageSize;
-        int from = (page - 1) * size;
-        if (from >= all.size()) {
-            return new ArrayList<>();
-        }
-        int to = Math.min(from + size, all.size());
-        return new ArrayList<>(all.subList(from, to));
+        int size = pageSize <= 0 ? 50 : Math.min(pageSize, MAX_PAGE_SIZE);
+        int from = Math.max(page, 0);
+        int offset = (from <= 0 ? 1 : from - 1) * size;
+        LambdaQueryWrapper<StoredMessage> wrapper = new LambdaQueryWrapper<StoredMessage>()
+                .eq(StoredMessage::getConversationId, conversationId)
+                .orderByAsc(StoredMessage::getCreatedAt)
+                .last("LIMIT " + offset + "," + size);
+        return messageMapper.selectList(wrapper);
     }
 
     /**
@@ -201,11 +233,15 @@ public class ConversationStore {
      * @return 消息
      */
     public StoredMessage getMessage(String conversationId, String messageId) {
-        List<StoredMessage> list = messages.getOrDefault(conversationId, new CopyOnWriteArrayList<>());
-        return list.stream()
-                .filter(m -> messageId.equals(m.getMessageId()))
-                .findFirst()
-                .orElseThrow(() -> new ApiException(ApiErrorCode.NOT_FOUND, "消息不存在: " + messageId));
+        LambdaQueryWrapper<StoredMessage> wrapper = new LambdaQueryWrapper<StoredMessage>()
+                .eq(StoredMessage::getConversationId, conversationId)
+                .eq(StoredMessage::getMessageId, messageId)
+                .last("LIMIT 1");
+        StoredMessage message = messageMapper.selectOne(wrapper);
+        if (message == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "消息不存在: " + messageId);
+        }
+        return message;
     }
 
     /**
@@ -215,7 +251,10 @@ public class ConversationStore {
      * @return 消息列表（升序）
      */
     public List<StoredMessage> allMessages(String conversationId) {
-        return listMessages(conversationId, 1, Integer.MAX_VALUE);
+        LambdaQueryWrapper<StoredMessage> wrapper = new LambdaQueryWrapper<StoredMessage>()
+                .eq(StoredMessage::getConversationId, conversationId)
+                .orderByAsc(StoredMessage::getCreatedAt);
+        return messageMapper.selectList(wrapper);
     }
 
     /**
@@ -224,7 +263,9 @@ public class ConversationStore {
      * @param conversationId 会话 ID
      */
     public void clearMessages(String conversationId) {
-        messages.remove(conversationId);
+        LambdaQueryWrapper<StoredMessage> wrapper = new LambdaQueryWrapper<StoredMessage>()
+                .eq(StoredMessage::getConversationId, conversationId);
+        messageMapper.delete(wrapper);
     }
 
     /**
@@ -234,10 +275,10 @@ public class ConversationStore {
      * @param messageId      消息 ID
      */
     public void removeMessage(String conversationId, String messageId) {
-        List<StoredMessage> list = messages.get(conversationId);
-        if (list != null) {
-            list.removeIf(m -> messageId.equals(m.getMessageId()));
-        }
+        LambdaQueryWrapper<StoredMessage> wrapper = new LambdaQueryWrapper<StoredMessage>()
+                .eq(StoredMessage::getConversationId, conversationId)
+                .eq(StoredMessage::getMessageId, messageId);
+        messageMapper.delete(wrapper);
     }
 
     /**
@@ -247,19 +288,27 @@ public class ConversationStore {
      * @param messageId      锚点消息 ID
      */
     public void truncateAfter(String conversationId, String messageId) {
-        List<StoredMessage> list = messages.get(conversationId);
-        if (list == null || list.isEmpty()) {
+        List<StoredMessage> all = allMessages(conversationId);
+        if (all.isEmpty()) {
             return;
         }
+        // 找到锚点索引；锚点（含）之后的所有消息一并删除
         int idx = -1;
-        for (int i = 0; i < list.size(); i++) {
-            if (messageId.equals(list.get(i).getMessageId())) {
+        for (int i = 0; i < all.size(); i++) {
+            if (messageId.equals(all.get(i).getMessageId())) {
                 idx = i;
                 break;
             }
         }
         if (idx >= 0) {
-            list.subList(idx, list.size()).clear();
+            List<String> idsToDelete = new ArrayList<>();
+            for (int i = idx; i < all.size(); i++) {
+                idsToDelete.add(all.get(i).getMessageId());
+            }
+            LambdaQueryWrapper<StoredMessage> wrapper = new LambdaQueryWrapper<StoredMessage>()
+                    .eq(StoredMessage::getConversationId, conversationId)
+                    .in(StoredMessage::getMessageId, idsToDelete);
+            messageMapper.delete(wrapper);
         }
     }
 }

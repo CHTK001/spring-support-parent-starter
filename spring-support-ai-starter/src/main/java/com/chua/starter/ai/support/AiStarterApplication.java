@@ -11,12 +11,15 @@ import org.springframework.context.annotation.ComponentScan;
  * <p>内置 H2 内存数据库，可直接运行 {@code mvn spring-boot:run} 启动测试。
  * 默认关闭 API 鉴权（app_key_enabled=false），便于本地联调。</p>
  *
+ * <p>{@code @MapperScan} 同时覆盖业务 Mapper（{@code ai.support.mapper}）与
+ * nomifun 前端持久化 Mapper（{@code ai.support.nomifun.mapper}）。</p>
+ *
  * @since 2026/7/29
  * @author CH
  */
 @SpringBootApplication
 @ComponentScan(basePackages = "com.chua.starter.ai.support")
-@MapperScan("com.chua.starter.ai.support.mapper")
+@MapperScan({"com.chua.starter.ai.support.mapper", "com.chua.starter.ai.support.nomifun.mapper"})
 public class AiStarterApplication {
 
     /** Main */
