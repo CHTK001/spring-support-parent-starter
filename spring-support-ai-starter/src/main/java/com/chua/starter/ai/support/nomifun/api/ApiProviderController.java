@@ -68,6 +68,40 @@ public class ApiProviderController {
      */
     private final FreeModelService freeModelService = new FreeModelService();
 
+    /**
+     * UUIDv7 格式正则：xxxxxxxx-xxxx-7xxx-xxxx-xxxxxxxxxxxx
+     */
+    private static final java.util.regex.Pattern UUID_V7_PATTERN = 
+        java.util.regex.Pattern.compile("^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$");
+
+    /**
+     * 生成 UUIDv7（基于时间戳，单调递增）
+     */
+    private String generateUuidV7() {
+        long timestamp = System.currentTimeMillis();
+        byte[] bytes = new byte[16];
+        // 前8位：时间戳
+        bytes[0] = (byte) (timestamp >> 40);
+        bytes[1] = (byte) (timestamp >> 32);
+        bytes[2] = (byte) (timestamp >> 24);
+        bytes[3] = (byte) (timestamp >> 16);
+        bytes[4] = (byte) (timestamp >> 8);
+        bytes[5] = (byte) timestamp;
+        // 随机数填充剩余部分
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        random.nextBytes(bytes);
+        // 设置版本号为7
+        bytes[6] = (byte) ((bytes[6] & 0x0F) | 0x70);
+        // 设置变体为10xx
+        bytes[8] = (byte) ((bytes[8] & 0x3F) | 0x80);
+        return String.format("%08x-%04x-%04x-%04x-%012x",
+            ((long) bytes[0] & 0xFF) << 24 | ((long) bytes[1] & 0xFF) << 16 | ((long) bytes[2] & 0xFF) << 8 | ((long) bytes[3] & 0xFF),
+            ((long) bytes[4] & 0xFF) << 8 | ((long) bytes[5] & 0xFF),
+            ((long) bytes[6] & 0xFF) << 8 | ((long) bytes[7] & 0xFF),
+            ((long) bytes[8] & 0xFF) << 8 | ((long) bytes[9] & 0xFF),
+            ((long) bytes[10] & 0xFF) << 40 | ((long) bytes[11] & 0xFF) << 32 | ((long) bytes[12] & 0xFF) << 24 | ((long) bytes[13] & 0xFF) << 16 | ((long) bytes[14] & 0xFF) << 8 | ((long) bytes[15] & 0xFF));
+    }
+
     // ==================== Providers ====================
 
     /**
@@ -124,7 +158,7 @@ public class ApiProviderController {
     public ApiResult<Map<String, Object>> createProvider(@RequestBody Map<String, Object> body) {
         String providerId = str(body, "provider_id");
         if (providerId == null || providerId.isBlank()) {
-            providerId = UUID.randomUUID().toString().replace("-", "");
+            providerId = generateUuidV7();
         }
         if (providerMapper.selectById(providerId) != null) {
             throw new ApiException(ApiErrorCode.CONFLICT, "provider_id 已存在: " + providerId);
