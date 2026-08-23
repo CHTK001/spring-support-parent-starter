@@ -70,22 +70,38 @@ public class ConversationStore {
 
     /**
      * 生成 UUIDv7：前 48 位为毫秒时间戳，随后填充版本/变体位与随机位。
-     * <p>时间有序性保证同秒内的会话/消息按创建时间排序稳定。</p>
+     *
+     * <p>UUIDv7 格式：{@code xxxxxxxx-xxxx-7xxx-xxxx-xxxxxxxxxxxx}</p>
+     * <ul>
+     *   <li>前48位：毫秒级时间戳（确保时间有序）</li>
+     *   <li>第13位：版本号（固定为7）</li>
+     *   <li>第17位：变体（固定为10xx，即8/9/a/b）</li>
+     * </ul>
      *
      * @return 36 位 UUIDv7 字符串
      */
     private String generateUuidV7() {
         long millis = System.currentTimeMillis();
         byte[] bytes = new byte[16];
-        bytes[0] = (byte)(millis >>> 40);
-        bytes[1] = (byte)(millis >>> 32);
-        bytes[2] = (byte)(millis >>> 24);
-        bytes[3] = (byte)(millis >>> 16);
-        bytes[4] = (byte)(millis >>> 8);
-        bytes[5] = (byte)millis;
+
+        // 先生成随机数填充
         ThreadLocalRandom.current().nextBytes(bytes);
-        bytes[6] = (byte)((bytes[6] & 0x0F) | 0x70);
-        bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);
+
+        // 前6字节：时间戳（大端序）
+        bytes[0] = (byte) (millis >>> 40);
+        bytes[1] = (byte) (millis >>> 32);
+        bytes[2] = (byte) (millis >>> 24);
+        bytes[3] = (byte) (millis >>> 16);
+        bytes[4] = (byte) (millis >>> 8);
+        bytes[5] = (byte) millis;
+
+        // 设置版本号为7（第6字节高4位）
+        bytes[6] = (byte) ((bytes[6] & 0x0F) | 0x70);
+
+        // 设置变体为10xx（第8字节高2位）
+        bytes[8] = (byte) ((bytes[8] & 0x3F) | 0x80);
+
+        // 格式化为字符串
         char[] hex = "0123456789abcdef".toCharArray();
         StringBuilder sb = new StringBuilder(36);
         for (int i = 0; i < 16; i++) {
