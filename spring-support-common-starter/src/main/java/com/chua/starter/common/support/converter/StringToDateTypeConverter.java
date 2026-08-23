@@ -15,7 +15,11 @@ public class StringToDateTypeConverter implements Converter<String, Date> {
     @Override
     /** 转换 */
     public Date convert(String source) {
+        try {
         return DateUtils.parseDate(source);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
 }
