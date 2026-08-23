@@ -15,7 +15,11 @@ public class StringToLocalTimeTypeConverter implements Converter<String, LocalTi
     @Override
     /** 转换 */
     public LocalTime convert(String source) {
+        try {
         return DateUtils.toLocalTime(source);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
 
