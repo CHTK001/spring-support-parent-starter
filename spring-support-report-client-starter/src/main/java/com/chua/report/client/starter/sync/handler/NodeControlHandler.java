@@ -1,5 +1,6 @@
 package com.chua.report.client.starter.sync.handler;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.report.client.starter.sync.MonitorTopics;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.common.support.utils.MapUtils;
@@ -188,10 +189,10 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
             // 或者使用 Spring Boot DevTools 的重启机制
             try {
                 // 尝试使用 Spring Boot Actuator 的重启功能
-                Class<?> restartEndpointClass = Class.forName(
+                Class<?> restartEndpointClass = ReflectUtils.forName(
                         "org.springframework.cloud.context.restart.RestartEndpoint");
                 Object restartEndpoint = applicationContext.getBean(restartEndpointClass);
-                restartEndpointClass.getMethod("restart").invoke(restartEndpoint);
+                ReflectUtils.invoke(restartEndpoint, "restart", void.class);
                 log.info("[NodeControl] 通过 RestartEndpoint 重启成功");
             } catch (Exception e) {
                 log.warn("[NodeControl] RestartEndpoint 不可用，使用退出方式重启: {}", e.getMessage());

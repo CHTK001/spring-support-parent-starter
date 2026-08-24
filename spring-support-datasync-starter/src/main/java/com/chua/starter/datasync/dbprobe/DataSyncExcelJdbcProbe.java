@@ -574,7 +574,7 @@ public final class DataSyncExcelJdbcProbe {
     private static int runExcelCellTypes() throws Exception {
         String name = "Excel单元格类型(字符串/数值/布尔/日期/公式)";
         Path excel = WORK_DIR.resolve("types.xlsx");
-        Class<?> wbClass = Class.forName("org.apache.poi.xssf.usermodel.XSSFWorkbook");
+        Class<?> wbClass = ReflectUtils.forName("org.apache.poi.xssf.usermodel.XSSFWorkbook");
         try (java.io.Closeable wb = (java.io.Closeable) wbClass.getConstructor().newInstance()) {
             Object sheet = wbClass.getMethod("createSheet").invoke(wb);
             Object row0 = sheet.getClass().getMethod("createRow", int.class).invoke(sheet, 0);
@@ -841,7 +841,7 @@ public final class DataSyncExcelJdbcProbe {
      * @param path 目标文件
      */
     private static void writeMultiSheetExcel(Path path) throws Exception {
-        Class<?> wbClass = Class.forName("org.apache.poi.xssf.usermodel.XSSFWorkbook");
+        Class<?> wbClass = ReflectUtils.forName("org.apache.poi.xssf.usermodel.XSSFWorkbook");
         try (java.io.Closeable wb = (java.io.Closeable) wbClass.getConstructor().newInstance()) {
             Object sheet0 = wbClass.getMethod("createSheet", String.class).invoke(wb, "sheet0");
             fillSheetReflect(sheet0, 100, "user");
