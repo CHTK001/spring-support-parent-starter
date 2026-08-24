@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.nomifun.api;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.common.support.utils.IdUtils;
 import com.chua.starter.ai.support.nomifun.common.ApiErrorCode;
 import com.chua.starter.ai.support.nomifun.common.ApiException;
 import com.chua.starter.ai.support.nomifun.common.ApiResult;
@@ -32,7 +33,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -92,46 +92,6 @@ public class ApiProviderController {
     private static final java.util.regex.Pattern UUID_V7_PATTERN = 
         java.util.regex.Pattern.compile("^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$");
 
-    /**
-     * 生成 UUIDv7（基于时间戳，单调递增）
-     *
-     * <p>UUIDv7 格式：xxxxxxxx-xxxx-7xxx-xxxx-xxxxxxxxxxxx</p>
-     * <ul>
-     *   <li>前48位：毫秒级时间戳（确保单调递增）</li>
-     *   <li>第13位：版本号（固定为7）</li>
-     *   <li>第17位：变体（固定为10xx，即8/9/a/b）</li>
-     * </ul>
-     */
-    private String generateUuidV7() {
-        long timestamp = System.currentTimeMillis();
-        byte[] bytes = new byte[16];
-        
-        // 1. 先生成随机数填充剩余部分
-        java.security.SecureRandom random = new java.security.SecureRandom();
-        random.nextBytes(bytes);
-        
-        // 2. 前6字节：时间戳（大端序）
-        bytes[0] = (byte) (timestamp >> 40);
-        bytes[1] = (byte) (timestamp >> 32);
-        bytes[2] = (byte) (timestamp >> 24);
-        bytes[3] = (byte) (timestamp >> 16);
-        bytes[4] = (byte) (timestamp >> 8);
-        bytes[5] = (byte) timestamp;
-        
-        // 3. 设置版本号为7（第6字节高4位）
-        bytes[6] = (byte) ((bytes[6] & 0x0F) | 0x70);
-        
-        // 4. 设置变体为10xx（第8字节高2位）
-        bytes[8] = (byte) ((bytes[8] & 0x3F) | 0x80);
-        
-        return String.format("%08x-%04x-%04x-%04x-%012x",
-            ((long) bytes[0] & 0xFF) << 24 | ((long) bytes[1] & 0xFF) << 16 | ((long) bytes[2] & 0xFF) << 8 | ((long) bytes[3] & 0xFF),
-            ((long) bytes[4] & 0xFF) << 8 | ((long) bytes[5] & 0xFF),
-            ((long) bytes[6] & 0xFF) << 8 | ((long) bytes[7] & 0xFF),
-            ((long) bytes[8] & 0xFF) << 8 | ((long) bytes[9] & 0xFF),
-            ((long) bytes[10] & 0xFF) << 40 | ((long) bytes[11] & 0xFF) << 32 | ((long) bytes[12] & 0xFF) << 24 | ((long) bytes[13] & 0xFF) << 16 | ((long) bytes[14] & 0xFF) << 8 | ((long) bytes[15] & 0xFF));
-    }
-
     // ==================== Providers ====================
 
     /**
@@ -188,7 +148,7 @@ public class ApiProviderController {
     public ApiResult<Map<String, Object>> createProvider(@RequestBody Map<String, Object> body) {
         String providerId = str(body, "provider_id");
         if (providerId == null || providerId.isBlank()) {
-            providerId = generateUuidV7();
+            providerId = IdUtils.uuidv7();
         }
         if (providerMapper.selectById(providerId) != null) {
             throw new ApiException(ApiErrorCode.CONFLICT, "provider_id 已存在: " + providerId);
@@ -312,7 +272,7 @@ public class ApiProviderController {
                                                         @RequestBody(required = false) Map<String, Object> body) {
         NomifunProvider source = requireProvider(providerId);
         long now = System.currentTimeMillis();
-        String newId = UUID.randomUUID().toString().replace("-", "");
+        String newId = IdUtils.uuidv7();
 
         // 克隆 Provider
         NomifunProvider clone = new NomifunProvider();
@@ -356,7 +316,7 @@ public class ApiProviderController {
                         .eq(NomifunProviderConnection::getProviderId, providerId));
         for (NomifunProviderConnection srcConn : sourceConns) {
             NomifunProviderConnection c = new NomifunProviderConnection();
-            c.setConnectionId(UUID.randomUUID().toString().replace("-", ""));
+            c.setConnectionId(IdUtils.uuidv7());
             c.setProviderId(newId);
             c.setRole(srcConn.getRole());
             c.setLabel(srcConn.getLabel());
@@ -1025,7 +985,7 @@ public class ApiProviderController {
      */
     private NomifunProviderConnection toConnectionEntity(String providerId, Map<String, Object> input, long now) {
         NomifunProviderConnection e = new NomifunProviderConnection();
-        e.setConnectionId(UUID.randomUUID().toString().replace("-", ""));
+        e.setConnectionId(IdUtils.uuidv7());
         e.setProviderId(providerId);
         e.setRole(requireStr(input, "role"));
         e.setLabel(str(input, "label"));
