@@ -31,6 +31,8 @@ import java.util.Set;
  */
 public class CacheCustomAnnotationParser implements CacheAnnotationParser, Serializable {
 
+    private static final long serialVersionUID = 1L;
+
     private static final Set<Class<? extends Annotation>> CACHE_OPERATION_ANNOTATIONS =
             Set.of(Cacheable.class, CacheEvict.class, CachePut.class, Caching.class);
 

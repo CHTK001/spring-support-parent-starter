@@ -236,7 +236,7 @@
         <seata.version>2.6.0</seata.version>                        <!-- Seata 分布式事务版本 -->
         
         <!-- Maven插件版本管理 -->
-        <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
+        <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
         <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
         <surefire.jvm.args></surefire.jvm.args>
@@ -1232,11 +1232,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <source>${maven.compiler.source}</source>            <!-- 源代码兼容性：Java 25 -->
-                    <target>${maven.compiler.target}</target>            <!-- 目标字节码版本：Java 25 -->
                     <release>${java.version}</release>                   <!-- 发布版本：Java 25 -->
-                    <encoding>UTF-8</encoding>                          <!-- 编码格式 -->
-                    <proc>${maven.compiler.proc}</proc>
+                    <encoding>UTF-8</encoding>
                     <useIncrementalCompilation>false</useIncrementalCompilation>
                     <fork>true</fork>
                     <meminitial>512m</meminitial>
@@ -1256,19 +1253,10 @@
                         <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
                         <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.jvm=ALL-UNNAMED</arg>
                         <arg>-J--add-exports=jdk.unsupported/sun.misc=ALL-UNNAMED</arg>
-                        <arg>-parameters</arg>                          <!-- 保留参数名信息 -->
+                        <arg>-parameters</arg>
                         <arg>-proc:full</arg>
-                        <!-- Spring Boot 4 / Spring 7 升级: 关闭 removal 检查,
-                             仍允许 deprecation 警告 -->
                         <arg>-Xlint:-removal</arg>
                     </compilerArgs>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version>
-                        </path>
-                    </annotationProcessorPaths>
 
                 </configuration>
             </plugin>

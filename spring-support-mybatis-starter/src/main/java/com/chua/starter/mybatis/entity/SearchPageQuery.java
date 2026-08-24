@@ -35,5 +35,6 @@ import java.util.stream.Collectors;
 @Schema(description ="分页信息")
 @Data
 public class SearchPageQuery<T> extends Query<T> {
+    private static final long serialVersionUID = 1L;
 
 }

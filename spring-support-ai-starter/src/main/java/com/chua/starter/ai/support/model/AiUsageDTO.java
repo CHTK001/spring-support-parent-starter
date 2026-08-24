@@ -14,6 +14,7 @@ import java.io.Serializable;
 @Data
 @Schema(name = "用量统计 DTO")
 public class AiUsageDTO implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * 模型名称

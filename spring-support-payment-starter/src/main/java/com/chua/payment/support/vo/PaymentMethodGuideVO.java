@@ -11,6 +11,7 @@ import java.util.List;
  */
 @Data
 public class PaymentMethodGuideVO implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /** 通道类型 */
     private String channelType;
@@ -45,4 +46,3 @@ public class PaymentMethodGuideVO implements Serializable {
     /** Tips */
     private List<String> tips;
 }
-

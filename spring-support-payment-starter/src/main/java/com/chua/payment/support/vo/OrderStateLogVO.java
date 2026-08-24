@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
  */
 @Data
 public class OrderStateLogVO implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /** ID */
     private Long id;
@@ -36,4 +37,3 @@ public class OrderStateLogVO implements Serializable {
     /** 创建时间AT */
     private LocalDateTime createdAt;
 }
-

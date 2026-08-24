@@ -13,6 +13,7 @@ import java.math.BigDecimal;
  */
 @Data
 public class OrderCreateDTO implements Serializable {
+    private static final long serialVersionUID = 1L;
     /** MerchantID */
     private Long merchantId;
 

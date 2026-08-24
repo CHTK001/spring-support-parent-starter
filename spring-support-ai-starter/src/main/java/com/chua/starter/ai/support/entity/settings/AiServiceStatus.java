@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 @TableName("sys_ai_service_status")
 @Schema(name = "服务运行状态")
 public class AiServiceStatus implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * 状态记录 ID

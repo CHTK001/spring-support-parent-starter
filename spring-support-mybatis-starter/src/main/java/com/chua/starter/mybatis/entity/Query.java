@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
 @Data
 @Accessors(chain = true)
 public class Query<T> implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * 默认页码

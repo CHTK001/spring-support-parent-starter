@@ -30,6 +30,7 @@ import java.util.Map;
 @Data
 @TableName("nomifun_conversation")
 public class Conversation implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * 会话主键（UUIDv7 字符串），由后端 {@code newId()} 生成并填充

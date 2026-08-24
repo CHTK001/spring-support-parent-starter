@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 @TableName("sys_ai_group")
 @Schema(name = "模型分组")
 public class AiGroup implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * 分组主键 ID

@@ -10,6 +10,7 @@ import java.util.List;
  * @author CH
  */
 public class RadarChartData implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /** 指标名称 */
     /** Indicators */

@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
  * @author CH
  */
 public class PagePreconditioning<T> {
+    private static final long serialVersionUID = 1L;
     /** 页 */
     private final IPage<T> page;
 

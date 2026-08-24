@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
  */
 @Data
 public class PaymentDashboardSummaryVO implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /** 开始时间 */
     private LocalDateTime startTime;
@@ -55,4 +56,3 @@ public class PaymentDashboardSummaryVO implements Serializable {
     /** 总数refundamount */
     private BigDecimal totalRefundAmount;
 }
-

@@ -10,6 +10,7 @@ import java.util.Map;
  * @author CH
  */
 public class UpdateRowsEventData implements EventData {
+    private static final long serialVersionUID = 1L;
 
     private final List<Map.Entry<Serializable[], Serializable[]>> rows;
 

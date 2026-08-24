@@ -182,6 +182,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
 //                    JSONReader.Feature.IgnoreNullPropertyValue,
 //                    JSONReader.Feature.IgnoreSetNullValue,
 //                    JSONReader.Feature.IgnoreNoneSerializable
+    private static final long serialVersionUID = 1L;
 //            );
 //        } else {
 //            fastJsonConfig.setReaderFeatures(readerFeatures);

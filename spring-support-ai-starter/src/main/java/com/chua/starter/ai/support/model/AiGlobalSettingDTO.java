@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 @Data
 @Schema(name = "全局设置 DTO")
 public class AiGlobalSettingDTO implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * 是否启用 ChatClient 聚合

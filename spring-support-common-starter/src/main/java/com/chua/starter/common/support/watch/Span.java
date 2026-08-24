@@ -5,11 +5,13 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+
 /**
  * @author Administrator
  * @author CH
  */
 public class Span implements Serializable {
+    private static final long serialVersionUID = 1L;
     /**
      * 分布式追踪中的链路ID
      */

@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
  */
 @Data
 public class OrderVO implements Serializable {
+    private static final long serialVersionUID = 1L;
     /** ID */
     private Long id;
 

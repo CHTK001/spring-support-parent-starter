@@ -10,6 +10,7 @@ import java.io.Serializable;
  */
 @Data
 public class MerchantPaymentConfigVO implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /** MerchantID */
     private Long merchantId;
@@ -26,4 +27,3 @@ public class MerchantPaymentConfigVO implements Serializable {
     /** Autocancel超时排序 */
     private Boolean autoCancelTimeoutOrder;
 }
-

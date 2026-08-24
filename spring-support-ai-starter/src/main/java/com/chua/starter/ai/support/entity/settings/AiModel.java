@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 @TableName("sys_ai_model")
 @Schema(name = "AI 模型定义")
 public class AiModel implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * 模型主键
@@ -135,4 +136,3 @@ public class AiModel implements Serializable {
     /** 模型缓存price */
     private java.math.BigDecimal modelCachePrice;
 }
-
