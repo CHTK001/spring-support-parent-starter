@@ -83,6 +83,7 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
     public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
         ApiResponseEncodeRegister encodeRegister = getApiResponseEncodeRegister();
         if (encodeRegister != null) {
+            // 配置类中 new 合法，Spring 会管理这些消息转换器 Bean
             BinaryHttpMessageConverter binaryConverter = new BinaryHttpMessageConverter(encodeRegister, messageConverters);
             converters.addFirst(binaryConverter);
             log.info("[消息转换器]注册二进制转换器到首位: {}", BinaryHttpMessageConverter.class.getName());
@@ -136,16 +137,18 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
             log.info("[消息转换器]创建 MappingJackson2HttpMessageConverter, includeNull={}", jacksonProperties.isIncludeNull());
             ObjectMapper objectMapper = JacksonConfiguration.createObjectMapper(false, jacksonProperties.isIncludeNull());
             log.info("[消息转换器]使用的 ObjectMapper 类型: {}", objectMapper.getClass().getName());
+            // 配置类中 new 合法，Spring 会管理这些消息转换器 Bean
             MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter = new MappingJackson2HttpMessageConverter(objectMapper);
             mappingJackson2HttpMessageConverter.setDefaultCharset(StandardCharsets.UTF_8);
             mappingJackson2HttpMessageConverter.setPrettyPrint(true);
             converters.add(index - 1, mappingJackson2HttpMessageConverter);
-            log.info("[消息转换器]已注册 MappingJackson2HttpMessageConverter 到位置: {}, 转换器类型: {}", 
+            log.info("[消息转换器]已注册 MappingJackson2HttpMessageConverter 到位置: {}, 转换器类型: {}",
                     index - 1, mappingJackson2HttpMessageConverter.getClass().getName());
         } else {
             log.warn("[消息转换器]未找到 AllEncompassingFormHttpMessageConverter, 追加注册 MappingJackson2HttpMessageConverter");
             JacksonProperties jacksonProperties = applicationContext.getBean(JacksonProperties.class);
             ObjectMapper objectMapper = JacksonConfiguration.createObjectMapper(false, jacksonProperties.isIncludeNull());
+            // 配置类中 new 合法，Spring 会管理这些消息转换器 Bean
             MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter = new MappingJackson2HttpMessageConverter(objectMapper);
             mappingJackson2HttpMessageConverter.setDefaultCharset(StandardCharsets.UTF_8);
             mappingJackson2HttpMessageConverter.setPrettyPrint(true);

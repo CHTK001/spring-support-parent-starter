@@ -2,6 +2,7 @@ package com.chua.starter.filesystem.support.server;
 
 import com.chua.common.support.network.server.Server;
 import com.chua.common.support.network.server.impl.JdkHttpServer;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.network.server.ServerSetting;
 import com.chua.common.support.storage.FileStorage;
 import com.chua.starter.filesystem.support.properties.FileStorageProperties;
@@ -186,7 +187,7 @@ public class FileServerManager implements AutoCloseable {
             }
         }
         try {
-            Class<?> clazz = Class.forName(type);
+            Class<?> clazz = ReflectUtils.forName(type);
             return (Server) clazz.getDeclaredConstructor(ServerSetting.class).newInstance(setting);
         } catch (ClassNotFoundException e) {
             throw new IllegalArgumentException("Unknown server type: " + type + ", fallback to JDK", e);
@@ -249,7 +250,7 @@ public class FileServerManager implements AutoCloseable {
             } catch (Exception ignored) {}
         }
         try {
-            Class<?> clazz = Class.forName(filterName);
+            Class<?> clazz = ReflectUtils.forName(filterName);
             return (ServerFilter) clazz.getDeclaredConstructor().newInstance();
         } catch (Exception e) {
             log.warn("Failed to instantiate filter: {}", filterName, e);

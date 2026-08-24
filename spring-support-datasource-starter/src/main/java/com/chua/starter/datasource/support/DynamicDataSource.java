@@ -1,5 +1,6 @@
 package com.chua.starter.datasource.support;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.starter.datasource.datasource.MultiDataSource;
 import com.chua.starter.datasource.properties.MultiDataSourceSettingProperties;
 import com.google.common.base.Strings;
@@ -73,9 +74,7 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
         if (ClassUtils.isPresent(MYBATIS, Thread.currentThread().getContextClassLoader())) {
             connectionHolder.setConnection(value);
             try {
-                Method method = ClassUtils.getMethod(Class.forName(MYBATIS), "bindResource", Object.class, Object.class);
-                method.setAccessible(true);
-                method.invoke(null, this, connectionHolder);
+                ReflectUtils.invoke(null, "bindResource", void.class, this, connectionHolder);
                 this.binder = true;
             } catch (Exception e) {
                 log.warn("绑定事务资源失败", e);

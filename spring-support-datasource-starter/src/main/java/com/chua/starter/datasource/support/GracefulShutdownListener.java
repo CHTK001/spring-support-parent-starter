@@ -1,5 +1,6 @@
 package com.chua.starter.datasource.support;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.starter.datasource.datasource.MultiDataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationListener;
@@ -109,32 +110,28 @@ public class GracefulShutdownListener implements ApplicationListener<ContextClos
 
         // HikariCP
         if (clazz.getName().contains("HikariDataSource")) {
-            java.lang.reflect.Method closeMethod = clazz.getMethod("close");
-            closeMethod.invoke(dataSource);
+            ReflectUtils.invoke(dataSource, "close", void.class);
             log.debug("[数据源] 关闭 '{}' (HikariCP 反射)", name);
             return;
         }
 
         // Druid
         if (clazz.getName().contains("DruidDataSource")) {
-            java.lang.reflect.Method closeMethod = clazz.getMethod("close");
-            closeMethod.invoke(dataSource);
+            ReflectUtils.invoke(dataSource, "close", void.class);
             log.debug("[数据源] 关闭 '{}' (Druid 反射)", name);
             return;
         }
 
         // DBCP2
         if (clazz.getName().contains("BasicDataSource")) {
-            java.lang.reflect.Method closeMethod = clazz.getMethod("close");
-            closeMethod.invoke(dataSource);
+            ReflectUtils.invoke(dataSource, "close", void.class);
             log.debug("[数据源] 关闭 '{}' (DBCP2 反射)", name);
             return;
         }
 
         // Tomcat JDBC
         if (clazz.getName().contains("DataSource") && clazz.getName().contains("tomcat")) {
-            java.lang.reflect.Method closeMethod = clazz.getMethod("close");
-            closeMethod.invoke(dataSource);
+            ReflectUtils.invoke(dataSource, "close", void.class);
             log.debug("[数据源] 关闭 '{}' (Tomcat JDBC 反射)", name);
         }
     }

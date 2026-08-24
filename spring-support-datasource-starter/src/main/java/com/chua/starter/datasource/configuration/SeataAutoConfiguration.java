@@ -1,5 +1,6 @@
 package com.chua.starter.datasource.configuration;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.starter.datasource.support.DataSourceContextSupport;
 import com.chua.starter.datasource.support.DynamicDataSource;
 import jakarta.annotation.PostConstruct;
@@ -132,8 +133,8 @@ public class SeataAutoConfiguration {
          */
         @SuppressWarnings("unchecked")
         private DataSource createDataSourceProxy(DataSource dataSource) throws Exception {
-            Class<?> proxyClass = Class.forName("io.seata.rm.datasource.DataSourceProxy");
-            return (DataSource) proxyClass.getConstructor(DataSource.class).newInstance(dataSource);
+            Class<?> proxyClass = ReflectUtils.forName("io.seata.rm.datasource.DataSourceProxy");
+            return (DataSource) ReflectUtils.instantiate(proxyClass, dataSource);
         }
 
         /**
@@ -141,7 +142,7 @@ public class SeataAutoConfiguration {
          */
         private boolean isAlreadyProxied(DataSource dataSource) {
             try {
-                Class<?> proxyClass = Class.forName("io.seata.rm.datasource.DataSourceProxy");
+                Class<?> proxyClass = ReflectUtils.forName("io.seata.rm.datasource.DataSourceProxy");
                 return proxyClass.isInstance(dataSource);
             } catch (ClassNotFoundException e) {
                 return false;

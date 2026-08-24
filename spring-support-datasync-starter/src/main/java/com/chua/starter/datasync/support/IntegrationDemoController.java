@@ -1,5 +1,6 @@
 package com.chua.starter.datasync.support;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.osgi.OsgiBundle;
 import com.chua.osgi.support.FelixOsgiLauncher;
 import com.chua.starter.datasync.support.spi.DynamicService;
@@ -254,7 +255,7 @@ public class IntegrationDemoController {
                     return error("无法解析类: " + type + "（请提供完整类名或简单类名）");
                 }
             } else {
-                clazz = Class.forName(type);
+                clazz = ReflectUtils.forName(type);
             }
             List<?> list = osgiLauncher.getServices(clazz);
             List<Map<String, Object>> details = new ArrayList<>();
@@ -362,7 +363,7 @@ public class IntegrationDemoController {
 
     private Class<?> resolveClass(String name) {
         try {
-            return Class.forName(name);
+            return ReflectUtils.forName(name);
         } catch (ClassNotFoundException ignore) {
         }
         String[] prefixes = {
@@ -374,7 +375,7 @@ public class IntegrationDemoController {
         };
         for (String prefix : prefixes) {
             try {
-                return Class.forName(prefix + name);
+                return ReflectUtils.forName(prefix + name);
             } catch (ClassNotFoundException ignore) {
             }
         }

@@ -1,6 +1,7 @@
 package com.chua.starter.osgi.configuration;
 
 import com.chua.common.support.objects.ObjectContext;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.osgi.OsgiLauncher;
 import com.chua.osgi.support.FelixOsgiLauncher;
 import com.chua.osgi.support.register.impl.OsgiBeanDefinitionRegister;
@@ -164,7 +165,7 @@ public class OsgiAutoConfiguration {
      */
     private String findJarUrl(String className) {
         try {
-            Class<?> clazz = Class.forName(className);
+            Class<?> clazz = ReflectUtils.forName(className);
             URL location = clazz.getProtectionDomain().getCodeSource().getLocation();
             if (location != null && "file".equals(location.getProtocol())) {
                 return location.toExternalForm();

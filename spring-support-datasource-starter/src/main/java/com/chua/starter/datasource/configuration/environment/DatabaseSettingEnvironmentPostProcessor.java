@@ -1,5 +1,6 @@
 package com.chua.starter.datasource.configuration.environment;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
@@ -140,7 +141,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     /** 打开Connection */
     private Connection openConnection(ConnectionInfo connectionInfo) throws Exception {
         if (StringUtils.hasText(connectionInfo.driverClassName())) {
-            Class.forName(connectionInfo.driverClassName());
+            ReflectUtils.forName(connectionInfo.driverClassName());
         }
         if (connectionInfo.username() == null) {
             return DriverManager.getConnection(connectionInfo.url());

@@ -3,6 +3,7 @@ package com.chua.starter.datasource.support;
 import com.chua.common.support.lang.document.DocumentData;
 import com.chua.common.support.lang.document.DocumentParser;
 import com.chua.common.support.lang.document.TableData;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.starter.datasource.properties.DocumentProperties;
 import lombok.extern.slf4j.Slf4j;
 
@@ -230,7 +231,7 @@ public class DataSourceDocumentService {
         };
         for (String type : poolTypes) {
             try {
-                Class<?> poolClass = Class.forName(type);
+                Class<?> poolClass = ReflectUtils.forName(type);
                 if (ds.isWrapperFor(poolClass)) {
                     Object raw = ds.unwrap(poolClass);
                     try {

@@ -1,5 +1,6 @@
 package com.chua.starter.datasource.controller;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -71,7 +72,7 @@ public class DataSourceDocumentHandler {
                               String method, String path, String handlerMethod,
                               Class<?>... paramTypes) {
         try {
-            Method m = DataSourceDocumentController.class.getMethod(handlerMethod, paramTypes);
+            Method m = ReflectUtils.getMethod(DataSourceDocumentController.class, handlerMethod, paramTypes);
             RequestMappingInfo info = RequestMappingInfo.paths(basePath + path)
                     .methods(org.springframework.web.bind.annotation.RequestMethod.valueOf(method))
                     .build();

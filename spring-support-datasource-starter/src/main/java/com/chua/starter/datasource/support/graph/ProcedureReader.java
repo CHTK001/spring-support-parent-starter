@@ -106,6 +106,7 @@ public class ProcedureReader {
     }
 
     /** 读取MysqlLike */
+    // 豁免：查询 information_schema.ROUTINES 系统视图，无用户可控参数，仅读取数据库元数据
     private List<ProcedureInfo> readMysqlLike(Connection conn) throws SQLException {
         String sql = "SELECT ROUTINE_NAME, ROUTINE_TYPE, ROUTINE_SCHEMA, ROUTINE_COMMENT " +
                 "FROM information_schema.ROUTINES";
