@@ -305,7 +305,7 @@ public class MaterializedSqlInterceptor implements Interceptor {
         String className = statementId.substring(0, lastDot);
         String methodName = statementId.substring(lastDot + 1);
         try {
-            Class<?> mapperType = Class.forName(className);
+            Class<?> mapperType = ReflectUtils.forName(className);
             for (Method method : mapperType.getMethods()) {
                 if (!method.getName().equals(methodName)) {
                     continue;
