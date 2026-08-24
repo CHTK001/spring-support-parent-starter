@@ -13,7 +13,6 @@ import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * 基于 Spring WebClient 的 HTTP 客户端执行器。
@@ -71,13 +70,12 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
 
     @Override
     /** 执行Async */
-    public CompletableFuture<ClientResponse> executeAsync(ClientRequest request) {
+    public Mono<ClientResponse> executeAsync(ClientRequest request) {
         WebClient.RequestBodySpec spec = buildSpec(request);
         Object body = request.getBody();
-        Mono<ClientResponse> mono = body != null
+        return body != null
                 ? spec.bodyValue(body).exchangeToMono(this::mapResponse)
                 : spec.exchangeToMono(this::mapResponse);
-        return mono.toFuture();
     }
 
     @Override

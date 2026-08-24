@@ -12,6 +12,7 @@ import java.io.Serializable;
  */
 @Data
 public class MerchantDTO implements Serializable {
+    private static final long serialVersionUID = 1L;
     /** Merchant名称 */
     private String merchantName;
 

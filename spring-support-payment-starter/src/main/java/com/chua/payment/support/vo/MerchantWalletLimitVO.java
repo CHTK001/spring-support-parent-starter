@@ -11,6 +11,7 @@ import java.math.BigDecimal;
  */
 @Data
 public class MerchantWalletLimitVO implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /** MerchantID */
     private Long merchantId;
@@ -36,4 +37,3 @@ public class MerchantWalletLimitVO implements Serializable {
     /** Balance限制 */
     private BigDecimal balanceLimit;
 }
-

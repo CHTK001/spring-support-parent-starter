@@ -15,6 +15,7 @@ import java.util.List;
 @Data
 @Schema(name = "模型分组 DTO")
 public class AiGroupDTO implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * 分组主键 ID

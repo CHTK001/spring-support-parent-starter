@@ -15,6 +15,7 @@ import java.util.List;
 @Data
 @Schema(name = "模型供应商 DTO")
 public class AiProviderDTO implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * 供应商主键 ID

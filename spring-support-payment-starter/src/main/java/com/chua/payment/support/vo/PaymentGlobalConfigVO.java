@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
  */
 @Data
 public class PaymentGlobalConfigVO implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /** 配置密钥 */
     private String configKey;
@@ -42,4 +43,3 @@ public class PaymentGlobalConfigVO implements Serializable {
     /** 更新时间AT */
     private LocalDateTime updatedAt;
 }
-

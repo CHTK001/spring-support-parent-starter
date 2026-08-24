@@ -10,6 +10,7 @@ import java.io.Serializable;
  */
 @Data
 public class ProviderSpiOptionVO implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /** 通道类型 */
     private String channelType;
@@ -23,4 +24,3 @@ public class ProviderSpiOptionVO implements Serializable {
     /** 描述 */
     private String description;
 }
-

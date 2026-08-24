@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
  */
 @Data
 public class RefundOrderVO implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /** ID */
     private Long id;
@@ -79,4 +80,3 @@ public class RefundOrderVO implements Serializable {
     /** 更新时间AT */
     private LocalDateTime updatedAt;
 }
-

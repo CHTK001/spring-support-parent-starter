@@ -23,6 +23,7 @@ import java.io.Serializable;
  */
 @Data
 public class ApiResult<T> implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * 是否成功

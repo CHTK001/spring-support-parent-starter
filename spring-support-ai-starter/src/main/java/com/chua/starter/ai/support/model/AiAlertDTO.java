@@ -14,6 +14,7 @@ import java.io.Serializable;
 @Data
 @Schema(name = "告警规则 DTO")
 public class AiAlertDTO implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * 告警主键 ID

@@ -24,6 +24,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PageResult<T> implements Serializable {
+    private static final long serialVersionUID = 1L;
     /**
      * 每页显示条数，默认 10
      */
@@ -97,4 +98,3 @@ public class PageResult<T> implements Serializable {
         return tPageDTO;
     }
 }
-

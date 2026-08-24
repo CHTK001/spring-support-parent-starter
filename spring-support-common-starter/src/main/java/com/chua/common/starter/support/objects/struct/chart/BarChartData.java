@@ -10,6 +10,7 @@ import java.util.List;
  * @author CH
  */
 public class BarChartData implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /** 分类名称 */
     /** Categories */

@@ -11,6 +11,8 @@ import java.util.Map;
  */
 public class AiToolCall implements Serializable {
 
+    private static final long serialVersionUID = 1L;
+
     /**
      * 工具调用唯一 ID
      */

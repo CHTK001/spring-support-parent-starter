@@ -24,6 +24,7 @@ import java.io.Serializable;
 @Data
 @TableName("nomifun_message")
 public class StoredMessage implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * 消息主键（UUIDv7 字符串），由后端 {@code newId()} 生成并填充

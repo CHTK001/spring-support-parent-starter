@@ -14,6 +14,7 @@ import java.io.Serializable;
 @Data
 @Schema(name = "AppKey DTO")
 public class AiAppKeyDTO implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * AppKey 主键 ID

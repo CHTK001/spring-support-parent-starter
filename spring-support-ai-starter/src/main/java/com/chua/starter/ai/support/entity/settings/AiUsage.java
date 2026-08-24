@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 @TableName("sys_ai_usage")
 @Schema(name = "用量统计")
 public class AiUsage implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * 用量主键 ID

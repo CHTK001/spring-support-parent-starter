@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 @TableName("sys_ai_alert")
 @Schema(name = "告警规则")
 public class AiAlert implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * 告警规则 ID

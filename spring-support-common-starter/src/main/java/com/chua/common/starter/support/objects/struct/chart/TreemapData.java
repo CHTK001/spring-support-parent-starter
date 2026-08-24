@@ -10,6 +10,7 @@ import java.util.List;
  * @author CH
  */
 public class TreemapData implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /** 矩形块集合 */
     /** Blocks */

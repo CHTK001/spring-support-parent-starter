@@ -150,7 +150,7 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
         }
 
         // 直接创建安装记录（状态为已安装）
-        // TODO: 调用真正的安装流程（需要执行可执行文件等），这里仅记录管理状态
+        // TODO[@L153]: 调用真正的安装流程（需要执行可执行文件等），这里仅记录管理状态
         // 使用 SoftInstallRecordService 的逻辑?
         log.info("管理员手动安装本地软件: softwareId={}, userId={}, installPath={}",
                 request.getSoftwareId(), request.getUserId(), request.getInstallPath());

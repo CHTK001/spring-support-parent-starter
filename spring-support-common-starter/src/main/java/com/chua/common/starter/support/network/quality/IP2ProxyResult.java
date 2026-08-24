@@ -11,6 +11,8 @@ import java.io.Serializable;
  */
 public class IP2ProxyResult implements Serializable {
 
+    private static final long serialVersionUID = 1L;
+
     /** Not_supported */
     private static final String NOT_SUPPORTED = "NOT SUPPORTED";
     /** 是否为空 */

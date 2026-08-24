@@ -14,6 +14,7 @@ import java.util.List;
 @Data
 @Schema(name = "AI 模型定义 DTO")
 public class AiModelDTO implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * 模型主键

@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
  */
 @Data
 public class MerchantChannelVO implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /** ID */
     private Long id;
@@ -87,4 +88,3 @@ public class MerchantChannelVO implements Serializable {
     /** 更新时间AT */
     private LocalDateTime updatedAt;
 }
-
