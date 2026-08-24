@@ -8,6 +8,7 @@ import com.chua.starter.software.support.entity.SoftSoftware;
 import com.chua.starter.software.support.entity.SoftSource;
 import com.chua.starter.software.support.mapper.SoftSoftwareMapper;
 import com.chua.starter.software.support.pojo.install.InstallRequest;
+import com.chua.starter.software.support.service.SoftInstallRecordService;
 import com.chua.starter.software.support.service.SoftSoftwareService;
 import com.chua.starter.software.support.service.SoftSourceService;
 import com.chua.starter.software.support.service.local.LocalSoftwareService;
@@ -48,6 +49,8 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     private final LocalSoftwareSource localSoftwareSource;
     /** Softwaresources */
     private final List<SoftwareSource> softwareSources;
+    /** 安装记录服务 */
+    private final SoftInstallRecordService installRecordService;
 
     @Autowired
     /**
@@ -64,13 +67,15 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
                                     SoftSoftwareService softSoftwareService,
                                     SoftSoftwareMapper softSoftwareMapper,
                                     LocalSoftwareSource localSoftwareSource,
-                                    List<SoftwareSource> softwareSources) {
+                                    List<SoftwareSource> softwareSources,
+                                    SoftInstallRecordService installRecordService) {
         this.transactionTemplate = transactionTemplate;
         this.softSourceService = softSourceService;
         this.softSoftwareService = softSoftwareService;
         this.softSoftwareMapper = softSoftwareMapper;
         this.localSoftwareSource = localSoftwareSource;
         this.softwareSources = softwareSources;
+        this.installRecordService = installRecordService;
     }
 
     @Override
@@ -150,11 +155,18 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
         }
 
         // 直接创建安装记录（状态为已安装）
-        // TODO[@L153]: 调用真正的安装流程（需要执行可执行文件等），这里仅记录管理状态
-        // 使用 SoftInstallRecordService 的逻辑?
         log.info("管理员手动安装本地软件: softwareId={}, userId={}, installPath={}",
                 request.getSoftwareId(), request.getUserId(), request.getInstallPath());
-        return ReturnResult.ok("安装成功（模拟）");
+        try {
+            ReturnResult<Object> result = installRecordService.install(request);
+            if (result.isOk()) {
+                return ReturnResult.ok("安装成功");
+            }
+            return ReturnResult.illegal(result.getMessage());
+        } catch (Exception e) {
+            log.error("[本地软件安装] 安装失败: softwareId={}", request.getSoftwareId(), e);
+            return ReturnResult.error("安装失败: " + e.getMessage());
+        }
     }
 
     @Override

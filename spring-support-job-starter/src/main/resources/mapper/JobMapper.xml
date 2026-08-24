@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.job.support.store.JobMapper">
+
+    <!-- 按分组查询有效任务编号列表 -->
+    <select id="selectJobNosByGroup" resultType="java.lang.String">
+        SELECT sys_job_no
+        FROM sys_job
+        WHERE sys_job_group = #{group}
+          AND sys_job_is_deleted = 0
+    </select>
+
+</mapper>
