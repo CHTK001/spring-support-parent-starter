@@ -37,11 +37,11 @@ public class Knife4jProperties {
     /**
      * 账号
      */
-    private String username = "root";
+    private String username = "";
     /**
      * 密码
      */
-    private String password = "root123";
+    private String password = "";
     /**
      * 是否开启swagger注解记录用户操作日志
      */

@@ -28,12 +28,12 @@ public class ActuatorProperties {
     /**
      * 用户名
      */
-    private String username = "admin";
+    private String username = "";
 
     /**
      * 密码
      */
-    private String password = "admin";
+    private String password = "";
 
     /**
      * IP白名单

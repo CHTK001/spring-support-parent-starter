@@ -74,11 +74,11 @@ public class OsgiProperties {
         /**
          * SSH 默认用户名。
          */
-        private String username = "admin";
+        private String username = "";
 
         /**
          * SSH 默认密码。
          */
-        private String password = "admin";
+        private String password = "";
     }
 }
