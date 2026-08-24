@@ -16,6 +16,7 @@ package com.chua.starter.swagger.support.customize;
  * limitations under the License.
  */
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.github.xiaoymin.knife4j.annotations.ApiSupport;
 import com.github.xiaoymin.knife4j.core.conf.ExtensionsConstants;
 import com.github.xiaoymin.knife4j.core.conf.GlobalConstants;
