@@ -1,5 +1,6 @@
 package com.chua.starter.datasource.configuration;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.starter.datasource.support.AesPasswordDecryptor;
 import com.chua.starter.datasource.support.PasswordDecryptor;
 import lombok.extern.slf4j.Slf4j;
@@ -140,18 +141,15 @@ public class ENCEnvironmentPostProcessor implements EnvironmentPostProcessor, Or
      */
     private void scanByReflection(PropertySource<?> source, Map<String, Object> result) {
         try {
-            Class<?> enumerableClass = Class.forName("org.springframework.core.env.EnumerablePropertySource");
-            if (!enumerableClass.isInstance(source)) {
+            if (!ReflectUtils.forName("org.springframework.core.env.EnumerablePropertySource").isInstance(source)) {
                 return;
             }
-            java.lang.reflect.Method getNamesMethod = source.getClass().getMethod("getPropertyNames");
-            java.lang.reflect.Method getPropMethod = source.getClass().getMethod("getProperty", String.class);
-            String[] names = (String[]) getNamesMethod.invoke(source);
+            String[] names = (String[]) ReflectUtils.invoke(source, "getPropertyNames", String[].class);
             if (names == null) {
                 return;
             }
             for (String name : names) {
-                Object value = getPropMethod.invoke(source, name);
+                Object value = ReflectUtils.invoke(source, "getProperty", Object.class, name);
                 if (value instanceof String strValue && isEncValue(strValue)) {
                     String decrypted = resolveEncValue(strValue);
                     result.put(name, decrypted);

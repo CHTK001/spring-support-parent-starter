@@ -78,6 +78,7 @@ public class TriggerReader {
     // ============================ 各方言 ============================
 
     /** 读取MysqlLike */
+    // 豁免：查询 information_schema.TRIGGERS 系统视图，无用户可控参数，仅读取数据库元数据
     private List<TriggerInfo> readMysqlLike(Connection conn) throws SQLException {
         String sql = "SELECT TRIGGER_NAME, EVENT_MANIPULATION, EVENT_OBJECT_TABLE, " +
                 "ACTION_TIMING, STATUS, ACTION_ORIENTATION " +

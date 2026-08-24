@@ -1,11 +1,11 @@
 package com.chua.starter.datasource.monitor;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.Statement;
 
@@ -77,7 +77,7 @@ public class MonitoringConnection implements InvocationHandler {
      * @return 代理后的连接
      */
     public Connection proxy() {
-        return (Connection) Proxy.newProxyInstance(
+        return ReflectUtils.newProxy(
                 delegate.getClass().getClassLoader(),
                 new Class[]{Connection.class},
                 this);

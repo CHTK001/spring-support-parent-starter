@@ -115,12 +115,12 @@ public class ReportClientConfiguration implements ApplicationContextAware {
                 MonitorTopics.LOGGING_CONFIG
         );
 
-        // 注册 Job 处理器
+        // 注册 Job 处理器（配置类中 new 合法，由 Spring 管理这些 Handler Bean）
         JobDispatchHandler jobHandler = new JobDispatchHandler();
         syncClient.registerHandler(MonitorTopics.JOB_DISPATCH, jobHandler);
         syncClient.registerHandler(MonitorTopics.JOB_CANCEL, jobHandler);
 
-        // 注册 File 处理器
+        // 注册 File 处理器（配置类中 new 合法，由 Spring 管理这些 Handler Bean）
         FileHandler fileHandler = new FileHandler();
         syncClient.registerHandler(MonitorTopics.FILE_REQUEST, fileHandler);
 

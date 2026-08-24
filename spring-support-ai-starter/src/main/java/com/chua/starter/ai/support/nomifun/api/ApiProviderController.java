@@ -70,12 +70,7 @@ public class ApiProviderController {
     private final NomifunProviderConnectionMapper connectionMapper;
 
     /**
-     * 托管免费模型服务运行时状态
-     */
-    private final FreeModelService freeModelService = new FreeModelService();
-
-    /**
-     * 上游模型列表拉取 HTTP 客户端（跟随重定向，连接池复用）
+     * 拉取模型列表使用的 HTTP 客户端（连接池复用）
      */
     private final HttpClient upstreamHttpClient = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.NORMAL)
@@ -580,98 +575,6 @@ public class ApiProviderController {
         return ApiResult.ok();
     }
 
-    // ==================== Managed Free Model Service ====================
-
-    /**
-     * 托管免费模型服务状态。
-     *
-     * @return ManagedModelServiceStatus
-     */
-    @GetMapping("/model-services/free/status")
-    public ApiResult<Map<String, Object>> freeServiceStatus() {
-        return ApiResult.ok(freeModelService.toStatus());
-    }
-
-    /**
-     * 托管免费模型清单。
-     *
-     * @return ManagedModel 列表
-     */
-    @GetMapping("/model-services/free/models")
-    public ApiResult<List<Map<String, Object>>> freeServiceModels() {
-        return ApiResult.ok(freeModelService.toList());
-    }
-
-    /**
-     * 刷新托管免费模型服务目录（同步上游能力，更新 lastRefresh）。
-     *
-     * @return 刷新后的 ManagedModelServiceStatus
-     */
-    @PostMapping("/model-services/free/refresh")
-    public ApiResult<Map<String, Object>> freeServiceRefresh() {
-        freeModelService.refresh();
-        return ApiResult.ok(freeModelService.toStatus());
-    }
-
-    /**
-     * 启用/停用托管免费模型服务。
-     *
-     * @param body SetManagedModelServiceEnabledRequest
-     * @return 操作后的 ManagedModelServiceStatus
-     */
-    @PostMapping("/model-services/free/activate")
-    public ApiResult<Map<String, Object>> freeServiceActivate(@RequestBody Map<String, Object> body) {
-        freeModelService.enabled = bool(body, "enabled", true);
-        freeModelService.ready = freeModelService.enabled;
-        freeModelService.lastRefresh = System.currentTimeMillis();
-        return ApiResult.ok(freeModelService.toStatus());
-    }
-
-    /**
-     * 批量健康检查托管免费模型。
-     *
-     * @return ManagedModelHealthBatchResult
-     */
-    @PostMapping("/model-services/free/health")
-    public ApiResult<Map<String, Object>> freeServiceHealth() {
-        return ApiResult.ok(freeModelService.healthBatch());
-    }
-
-    /**
-     * 快照式健康检查托管免费模型。
-     *
-     * @return ManagedModelHealthResult 列表
-     */
-    @GetMapping("/model-services/free/health")
-    public ApiResult<List<Map<String, Object>>> freeServiceHealthSnapshot() {
-        return ApiResult.ok(freeModelService.healthList());
-    }
-
-    /**
-     * 启用/停用单个托管免费模型。
-     *
-     * @param modelId 模型标识
-     * @param body    { enabled }
-     * @return 操作后的 ManagedModelServiceStatus
-     */
-    @PatchMapping("/model-services/free/models/{model_id}")
-    public ApiResult<Map<String, Object>> freeServiceSetModelEnabled(@PathVariable("model_id") String modelId,
-                                                                     @RequestBody Map<String, Object> body) {
-        freeModelService.setModelEnabled(modelId, bool(body, "enabled", true));
-        return ApiResult.ok(freeModelService.toStatus());
-    }
-
-    /**
-     * 单个托管免费模型健康检查。
-     *
-     * @param modelId 模型标识
-     * @return ManagedModelHealthResult
-     */
-    @PostMapping("/model-services/free/models/{model_id}/health")
-    public ApiResult<Map<String, Object>> freeServiceModelHealth(@PathVariable("model_id") String modelId) {
-        return ApiResult.ok(freeModelService.healthOne(modelId));
-    }
-
     // ==================== Model Protocols ====================
 
     /**
@@ -689,145 +592,12 @@ public class ApiProviderController {
         return ApiResult.ok(buildManifest(preset, task, base_url));
     }
 
-    // ==================== 内部实体 ====================
-
     /**
-     * 托管免费模型。
-     */
-    static class ManagedModel {
-        String id;
-        String name;
-        boolean enabled;
-        String source;
-    }
-
-    /**
-     * 托管免费模型服务运行时状态。
-     */
-    static class FreeModelService {
-        boolean enabled = false;
-        boolean ready = false;
-        Long lastRefresh = null;
-        String lastError = null;
-        final LinkedHashMap<String, ManagedModel> models = new LinkedHashMap<>();
-
-        FreeModelService() {
-            ManagedModel m1 = new ManagedModel();
-            m1.id = "nomifun-free-gpt";
-            m1.name = "NomiFun Free GPT";
-            m1.enabled = true;
-            m1.source = "openai";
-            ManagedModel m2 = new ManagedModel();
-            m2.id = "nomifun-free-claude";
-            m2.name = "NomiFun Free Claude";
-            m2.enabled = true;
-            m2.source = "anthropic";
-            models.put(m1.id, m1);
-            models.put(m2.id, m2);
-        }
-
-        void refresh() {
-            this.lastRefresh = System.currentTimeMillis();
-            this.ready = true;
-            this.lastError = null;
-        }
-
-        void setModelEnabled(String modelId, boolean enabled) {
-            ManagedModel m = models.get(modelId);
-            if (m == null) {
-                throw new ApiException(ApiErrorCode.NOT_FOUND, "free model 不存在: " + modelId);
-            }
-            m.enabled = enabled;
-        }
-
-        List<Map<String, Object>> toList() {
-            List<Map<String, Object>> out = new ArrayList<>();
-            for (ManagedModel m : models.values()) {
-                Map<String, Object> item = new LinkedHashMap<>();
-                item.put("id", m.id);
-                item.put("name", m.name);
-                item.put("enabled", m.enabled);
-                item.put("source", m.source);
-                out.add(item);
-            }
-            return out;
-        }
-
-        Map<String, Object> toStatus() {
-            Map<String, Object> status = new LinkedHashMap<>();
-            status.put("protocolVersion", "openai-v1");
-            status.put("providerId", null);
-            status.put("enabled", enabled);
-            status.put("ready", ready);
-            status.put("upstream", "https://free.nomifun.com/v1");
-            status.put("models", toList());
-            status.put("lastRefresh", lastRefresh);
-            status.put("lastError", lastError);
-            status.put("automaticRefresh", true);
-            status.put("refreshIntervalMs", 3_600_000L);
-            status.put("nextRefresh", null);
-            status.put("privacyNotice", "托管免费模型由 NomiFun 统一代理，请求内容不会用于训练；请遵守上游厂商使用条款。");
-            status.put("availability", ready ? "ready" : "unverified");
-            return status;
-        }
-
-        Map<String, Object> healthOne(String modelId) {
-            ManagedModel m = models.get(modelId);
-            if (m == null) {
-                throw new ApiException(ApiErrorCode.NOT_FOUND, "free model 不存在: " + modelId);
-            }
-            return buildHealth(m);
-        }
-
-        Map<String, Object> buildHealth(ManagedModel m) {
-            Map<String, Object> r = new LinkedHashMap<>();
-            r.put("modelId", m.id);
-            r.put("status", m.enabled ? "healthy" : "unhealthy");
-            r.put("latencyMs", null);
-            r.put("checkedAt", System.currentTimeMillis());
-            r.put("errorKind", m.enabled ? null : "model_disabled");
-            r.put("message", m.enabled ? "模型可用" : "模型已停用");
-            return r;
-        }
-
-        List<Map<String, Object>> healthList() {
-            return models.values().stream().map(this::buildHealth).collect(Collectors.toList());
-        }
-
-        Map<String, Object> healthBatch() {
-            List<Map<String, Object>> list = healthList();
-            int total = list.size();
-            int healthy = 0;
-            int unhealthy = 0;
-            int unknown = 0;
-            for (Map<String, Object> r : list) {
-                String s = String.valueOf(r.get("status"));
-                if ("healthy".equals(s)) {
-                    healthy++;
-                } else if ("unhealthy".equals(s)) {
-                    unhealthy++;
-                } else {
-                    unknown++;
-                }
-            }
-            Map<String, Object> out = new LinkedHashMap<>();
-            out.put("results", list);
-            out.put("total", total);
-            out.put("healthy", healthy);
-            out.put("unhealthy", unhealthy);
-            out.put("unknown", unknown);
-            return out;
-        }
-    }
-
-    // ==================== 响应构建 ====================
-
-    /**
-     * 构造 ProviderResponse（不回显 credentials）。
+     * 构造 ProviderResponse（含模型行与连接档案）。
      */
     private Map<String, Object> toProviderResponse(NomifunProvider provider,
-                                                    List<NomifunProviderModel> models,
-                                                    List<NomifunProviderConnection> connections) {
+                                                   List<NomifunProviderModel> models,
+                                                   List<NomifunProviderConnection> connections) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("provider_id", provider.getProviderId());
         map.put("platform", provider.getPlatform());
@@ -835,10 +605,11 @@ public class ApiProviderController {
         map.put("base_url", provider.getBaseUrl());
         map.put("auth_scheme", provider.getAuthScheme());
         map.put("has_credentials", provider.getCredentials() != null && !provider.getCredentials().isEmpty());
-        List<Map<String, Object>> modelList = models.stream()
-                .map(m -> toProviderModelResponse(provider, m))
-                .collect(Collectors.toList());
-        map.put("models", modelList);
+        List<Map<String, Object>> modelItems = new ArrayList<>();
+        for (NomifunProviderModel model : models) {
+            modelItems.add(toProviderModelResponse(provider, model));
+        }
+        map.put("models", modelItems);
         map.put("enabled", provider.getEnabled());
         if (provider.getBedrockConfig() != null) {
             map.put("bedrock_config", provider.getBedrockConfig());
@@ -850,7 +621,7 @@ public class ApiProviderController {
     }
 
     /**
-     * 构造 ProviderModelResponse。
+     * 构造 ProviderModelResponse（含任务能力数组）。
      */
     private Map<String, Object> toProviderModelResponse(NomifunProvider provider, NomifunProviderModel model) {
         Map<String, Object> map = new LinkedHashMap<>();
@@ -871,7 +642,7 @@ public class ApiProviderController {
     }
 
     /**
-     * 构造单任务能力响应。
+     * 构造单任务能力响应（含最近健康探测结果回显）。
      */
     private Map<String, Object> toCapabilityResponse(Map<String, Object> cap) {
         Map<String, Object> map = new LinkedHashMap<>();

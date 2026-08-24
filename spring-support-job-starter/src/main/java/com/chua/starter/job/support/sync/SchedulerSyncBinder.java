@@ -1,5 +1,6 @@
 package com.chua.starter.job.support.sync;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.network.server.SyncServer;
 import com.chua.common.support.network.server.SyncServerListener;
 import com.chua.common.support.network.sync.SyncMessageHandler;
@@ -150,7 +151,7 @@ public class SchedulerSyncBinder {
         if ("com.chua.common.support.network.server.AbstractServer".equals(
                 syncServer.getClass().getSuperclass().getName())) {
             try {
-                syncServer.getClass().getSuperclass().getMethod("start").invoke(syncServer);
+                ReflectUtils.invoke(syncServer, "start", void.class);
                 log.info("[job] SyncServer 已启动, 等待 Executor 连接");
             } catch (NoSuchMethodException nsme) {
                 // 父类没有 start 方法 (可能版本不匹配), 通过 publish lazy start

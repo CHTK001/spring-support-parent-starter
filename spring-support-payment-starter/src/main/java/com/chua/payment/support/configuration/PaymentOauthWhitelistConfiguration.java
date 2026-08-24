@@ -1,5 +1,6 @@
 package com.chua.payment.support.configuration;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -30,13 +31,9 @@ public class PaymentOauthWhitelistConfiguration {
     public SmartInitializingSingleton paymentOauthWhitelistInitializer(ApplicationContext applicationContext) {
         return () -> {
             try {
-                Class<?> propertiesType = Class.forName("com.chua.starter.oauth.client.support.properties.AuthClientProperties");
+                Class<?> propertiesType = ReflectUtils.forName("com.chua.starter.oauth.client.support.properties.AuthClientProperties");
                 Object authClientProperties = applicationContext.getBean(propertiesType);
-                Method getWhitelist = propertiesType.getMethod("getWhitelist");
-                Method setWhitelist = propertiesType.getMethod("setWhitelist", List.class);
-
-                @SuppressWarnings("unchecked")
-                List<String> whitelist = (List<String>) getWhitelist.invoke(authClientProperties);
+                List<String> whitelist = (List<String>) ReflectUtils.invoke(authClientProperties, "getWhitelist", List.class);
                 List<String> updatedWhitelist = whitelist == null ? new ArrayList<>() : new ArrayList<>(whitelist);
 
                 boolean changed = false;
@@ -49,7 +46,7 @@ public class PaymentOauthWhitelistConfiguration {
                 }
 
                 if (changed) {
-                    setWhitelist.invoke(authClientProperties, updatedWhitelist);
+                    ReflectUtils.invoke(authClientProperties, "setWhitelist", void.class, List.class, updatedWhitelist);
                 }
             } catch (Exception e) {
                 log.warn("[Payment][OAuth] 注入白名单失败: {}", e.getMessage());

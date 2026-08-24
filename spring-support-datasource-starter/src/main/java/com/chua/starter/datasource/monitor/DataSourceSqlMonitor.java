@@ -1,5 +1,6 @@
 package com.chua.starter.datasource.monitor;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.collection.CircularLinkedSet;
 import com.chua.common.support.collection.OverflowPolicy;
 import lombok.extern.slf4j.Slf4j;
@@ -358,8 +359,7 @@ public class DataSourceSqlMonitor {
             return true;
         }
         try {
-            Method method = dataSource.getClass().getMethod("getTargetDataSource");
-            Object target = method.invoke(dataSource);
+            Object target = ReflectUtils.invoke(dataSource, "getTargetDataSource", Object.class);
             if (target instanceof DataSource targetDs) {
                 return isMonitored(targetDs);
             }

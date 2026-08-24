@@ -1,5 +1,6 @@
 package com.chua.starter.common.support.logger;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.utils.*;
 import com.chua.starter.common.support.utils.RequestUtils;
@@ -58,7 +59,7 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     @SuppressWarnings("unchecked")
     private static Class<? extends Annotation> resolveAnnotationClass(String className) {
         try {
-            return (Class<? extends Annotation>) Class.forName(className).asSubclass(Annotation.class);
+            return (Class<? extends Annotation>) ReflectUtils.forName(className).asSubclass(Annotation.class);
         } catch (ClassNotFoundException e) {
             return null;
         }
