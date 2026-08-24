@@ -88,7 +88,7 @@ public class RedisOperationProvider implements OperationProvider {
     public Mono<Long> deleteKeys(CollectContext ctx, List<String> keys) {
         return Mono.fromCallable(() -> {
             if (!configService.getBoolean(CONFIG_KEY_ALLOW_DELETE, false)) {
-                throw new UnsupportedOperationException("Redis 删除操作已禁用，请设置 monitor.redis.allowDelete=true");
+                throw new IllegalStateException("Redis 删除操作已禁用，请设置 monitor.redis.allowDelete=true");
             }
             try (RedisClient client = buildClient(ctx)) {
                 return client.del(keys.toArray(new String[0]));

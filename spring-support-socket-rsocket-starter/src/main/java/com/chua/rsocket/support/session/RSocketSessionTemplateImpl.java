@@ -156,7 +156,6 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     @Override
     /** 保存 */
     public SocketSession save(String clientId, SocketSession session) {
-        // TODO: 迁移到 ServiceProvider.of(SocketSession.class).getExtension("rsocket")
         if (session instanceof RSocketSessionImpl impl) {
             sessionCache.computeIfAbsent(clientId, k -> new CopyOnWriteArrayList<>()).add(impl);
             sessionClientMap.put(impl.getId(), clientId);
@@ -168,7 +167,6 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     /** 移除 */
     public void remove(String clientId, SocketSession session) {
         List<RSocketSessionImpl> sessions = sessionCache.get(clientId);
-        // TODO: 迁移到 ServiceProvider.of(SocketSession.class).getExtension("rsocket")
         if (sessions != null && session instanceof RSocketSessionImpl impl) {
             sessions.remove(impl);
             sessionClientMap.remove(impl.getId());

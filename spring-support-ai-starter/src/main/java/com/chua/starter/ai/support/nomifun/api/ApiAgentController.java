@@ -135,6 +135,62 @@ public class ApiAgentController {
         return ApiResult.ok();
     }
 
+    // =====================================================================
+    // Model Failover Queue（故障转移队列，agent.model_failover 偏好）
+    // =====================================================================
+
+    /**
+     * 故障转移配置存储（单例 JSON blob，进程内持久）
+     */
+    private final Map<String, Object> modelFailoverConfig = new ConcurrentHashMap<>(Map.of(
+            "enabled", false,
+            "queue", new ArrayList<Map<String, Object>>(),
+            "max_switches", 4));
+
+    @GetMapping("/agent/model-failover")
+    public ApiResult<Map<String, Object>> getModelFailover() {
+        return ApiResult.ok(new LinkedHashMap<>(modelFailoverConfig));
+    }
+
+    @PutMapping("/agent/model-failover")
+    public ApiResult<Map<String, Object>> updateModelFailover(@RequestBody(required = false) Map<String, Object> body) {
+        if (body == null) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "请求体不能为空");
+        }
+        Object enabled = body.get("enabled");
+        if (!(enabled instanceof Boolean)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "enabled 必须为布尔值");
+        }
+        Object maxSwitches = body.getOrDefault("max_switches", 4);
+        if (!(maxSwitches instanceof Number number) || number.intValue() < 1 || number.intValue() > 20) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "max_switches 必须在 1..20 之间");
+        }
+        if (!(body.get("queue") instanceof List<?> queue)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "queue 必须为数组");
+        }
+        List<Map<String, Object>> cleaned = new ArrayList<>();
+        for (Object item : queue) {
+            if (!(item instanceof Map<?, ?> raw)) {
+                throw new ApiException(ApiErrorCode.INVALID_PARAM, "queue 元素必须为对象");
+            }
+            Object providerId = ((Map<?, ?>) raw).get("provider_id");
+            Object model = ((Map<?, ?>) raw).get("model");
+            if (providerId == null || String.valueOf(providerId).isBlank()
+                    || model == null || String.valueOf(model).isBlank()) {
+                throw new ApiException(ApiErrorCode.INVALID_PARAM, "queue 元素缺少 provider_id / model");
+            }
+            Map<String, Object> candidate = new LinkedHashMap<>();
+            candidate.put("provider_id", String.valueOf(providerId));
+            candidate.put("model", String.valueOf(model));
+            cleaned.add(candidate);
+        }
+
+        modelFailoverConfig.put("enabled", enabled);
+        modelFailoverConfig.put("max_switches", ((Number) maxSwitches).intValue());
+        modelFailoverConfig.put("queue", cleaned);
+        return ApiResult.ok(new LinkedHashMap<>(modelFailoverConfig));
+    }
+
     @PostMapping("/agents/provider-health-check")
     public ApiResult<Map<String, Object>> providerHealthCheck(@RequestBody(required = false) Map<String, Object> body) {
         String providerId = str(body == null ? null : body.get("provider_id"));
@@ -186,7 +242,10 @@ public class ApiAgentController {
         capability.put("health", health);
         capability.put("health_checked_at", now);
         modelRow.setUpdatedAt(now);
-        modelMapper.updateById(modelRow);
+        // 复合主键 (provider_id, model)：显式按双键更新，避免同名模型跨供应商误伤
+        modelMapper.update(modelRow, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<NomifunProviderModel>()
+                .eq(NomifunProviderModel::getProviderId, providerId)
+                .eq(NomifunProviderModel::getModel, modelName));
 
         // 5. 组装契约响应
         Map<String, Object> result = new LinkedHashMap<>();

@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.nomifun.api;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.starter.ai.support.nomifun.common.ApiErrorCode;
 import com.chua.starter.ai.support.nomifun.common.ApiException;
@@ -549,7 +550,10 @@ public class ApiProviderController {
         } else {
             applyModelInput(existing, modelInput);
             existing.setUpdatedAt(System.currentTimeMillis());
-            modelMapper.updateById(existing);
+            // 复合主键 (provider_id, model)：显式按双键更新，避免同名模型跨供应商误伤
+            modelMapper.update(existing, new LambdaUpdateWrapper<NomifunProviderModel>()
+                    .eq(NomifunProviderModel::getProviderId, providerId)
+                    .eq(NomifunProviderModel::getModel, modelName));
             return ApiResult.ok(toProviderModelResponse(provider, existing));
         }
     }
