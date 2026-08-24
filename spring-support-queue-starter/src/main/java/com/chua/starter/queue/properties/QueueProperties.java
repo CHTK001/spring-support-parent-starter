@@ -310,12 +310,12 @@ public class QueueProperties {
         /**
          * 用户名
          */
-        private String username = "guest";
+        private String username = "";
 
         /**
          * 密码
          */
-        private String password = "guest";
+        private String password = "";
 
         /**
          * 虚拟主机
