@@ -896,6 +896,13 @@ public class ApiProviderController {
         if (cap.get("context_limit") != null) {
             map.put("context_limit", cap.get("context_limit"));
         }
+        // 最近一次健康探测结果（含 status/latency/error）
+        if (cap.get("health") != null) {
+            map.put("health", cap.get("health"));
+        }
+        if (cap.get("health_checked_at") != null) {
+            map.put("health_checked_at", cap.get("health_checked_at"));
+        }
         map.put("created_at", cap.get("created_at"));
         map.put("updated_at", cap.get("updated_at"));
         return map;
