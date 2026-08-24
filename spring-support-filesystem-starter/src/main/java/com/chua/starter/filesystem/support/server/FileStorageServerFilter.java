@@ -143,10 +143,10 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                     if (method == HttpMethod.HEAD) {
                         return error(response, 400, "HEAD requires object key");
                     }
-                    return handleList(storage, request, bucket, response);
+                    return handleList(storage, bucket, response);
                 }
                 return method == HttpMethod.GET
-                        ? handleGet(storage, request, response, key)
+                        ? handleGet(storage, request, bucket, response, key)
                         : handleExist(storage, response, key);
             }
             if (method == HttpMethod.PUT || method == HttpMethod.POST) {
@@ -192,25 +192,34 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     }
 
     /**
-     * 处理对象列表请求。
+     * 处理对象列表请求（存储桶根目录）。
      *
      * @param storage  存储实例
-     * @param request  请求
      * @param bucket   存储名
      * @param response 响应
      * @return 异步阶段
      */
-    private CompletionStage<Void> handleList(FileStorage storage, ServerRequest request, String bucket, ServerResponse response) {
+    private CompletionStage<Void> handleList(FileStorage storage, String bucket, ServerResponse response) {
         applyWatermarkHeader(response);
-        // 支持子目录浏览：?path=docs/2026
-        String dir = sanitizeKey(request.getParam("path"));
         ListObjectResult result = storage.listObject(ListObjectRequest.builder()
-                .filePath(dir == null || dir.isEmpty() ? null : dir)
                 .limit(Integer.MAX_VALUE)
                 .build());
         if (result.getResultCode() != ObjectResult.ResultCode.SUCCESS) {
             return error(response, 500, "List Objects Failed");
         }
+        return writeList(bucket, "", result, response);
+    }
+
+    /**
+     * 写出对象列表 JSON 响应。
+     *
+     * @param bucket 存储名
+     * @param dir    目录路径（根目录为空字符串）
+     * @param result 列表结果
+     * @param response 响应
+     * @return 异步阶段
+     */
+    private CompletionStage<Void> writeList(String bucket, String dir, ListObjectResult result, ServerResponse response) {
         StringBuilder json = new StringBuilder();
         json.append("{\"bucket\":\"").append(escapeJson(bucket)).append("\"")
                 .append(",\"path\":\"").append(escapeJson(dir == null ? "" : dir)).append("\"")
@@ -243,17 +252,23 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     /**
      * 处理对象下载/预览请求。
      *
+     * <p>当 Key 对应对象不存在而作为目录存在时（或路径以 {@code /} 结尾），
+     * 自动回退为该目录的对象列表 JSON，实现类资源管理器的路径式目录浏览。</p>
+     *
      * <p>支持 Range 分段（openRange）、附件下载（openDownload + download=true 参数）、
      * 内联预览（openPreview）、水印响应头（openWatermark）、远程文件拉取（openRemoteFile）。</p>
      *
      * @param storage  存储实例
      * @param request  请求
+     * @param bucket   存储名
      * @param response 响应
      * @param key      对象 Key
      * @return 异步阶段
      */
-    private CompletionStage<Void> handleGet(FileStorage storage, ServerRequest request, ServerResponse response, String key) {
+    private CompletionStage<Void> handleGet(FileStorage storage, ServerRequest request, String bucket, ServerResponse response, String key) {
         applyWatermarkHeader(response);
+        // 路径以 / 结尾视为明确的目录访问
+        boolean directoryIntent = request.getPath().endsWith("/");
 
         // 远程文件透传：Key 为完整 http(s) 地址时直接拉取
         if (setting.isOpenRemoteFile() && (key.startsWith("http://") || key.startsWith("https://"))) {
@@ -261,8 +276,29 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
 
         GetObjectResult result = storage.getObject(key);
-        if (result.getResultCode() != ObjectResult.ResultCode.SUCCESS || result.getInputStream() == null) {
+        if ((result.getResultCode() != ObjectResult.ResultCode.SUCCESS || result.getInputStream() == null)
+                && !directoryIntent) {
+            // 对象不存在时尝试按目录回退列出
+            ListObjectResult list = storage.listObject(ListObjectRequest.builder()
+                    .filePath(key)
+                    .limit(Integer.MAX_VALUE)
+                    .build());
+            if (list.getResultCode() == ObjectResult.ResultCode.SUCCESS
+                    && list.getMetadata() != null && !list.getMetadata().isEmpty()) {
+                return writeList(bucket, key, list, response);
+            }
             return error(response, 404, "Object Not Found: " + key);
+        }
+        if (directoryIntent) {
+            // 显式目录访问：直接列出（空目录返回空列表而非 404）
+            ListObjectResult list = storage.listObject(ListObjectRequest.builder()
+                    .filePath(key)
+                    .limit(Integer.MAX_VALUE)
+                    .build());
+            if (list.getResultCode() == ObjectResult.ResultCode.SUCCESS) {
+                return writeList(bucket, key, list, response);
+            }
+            return error(response, 404, "Directory Not Found: " + key);
         }
 
         byte[] data;

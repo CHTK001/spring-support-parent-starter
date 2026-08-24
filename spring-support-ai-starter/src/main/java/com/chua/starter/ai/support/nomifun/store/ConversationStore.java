@@ -16,8 +16,8 @@ import java.util.concurrent.ThreadLocalRandom;
  * 会话与消息持久化存储服务。
  *
  * <p>作为前端契约的会话状态层，提供会话 CRUD、消息追加与分页查询。
- * 基于 MyBatis-Plus 持久化到 H2（或 MySQL）数据库：会话存 {@code nomifun_conversation} 表，
- * 消息存 {@code nomifun_message} 表。JSON 字段（model/extra/content）通过
+ * 基于 MyBatis-Plus 持久化到 H2（或 MySQL）数据库：会话存 {@code sys_nomifun_conversation} 表，
+ * 消息存 {@code sys_nomifun_message} 表。JSON 字段（model/extra/content）通过
  * {@link com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler} 序列化存储。</p>
  *
  * <p>时间戳与主键由后端生成：主键为 UUIDv7 字符串，时间戳为 epoch 毫秒。</p>
