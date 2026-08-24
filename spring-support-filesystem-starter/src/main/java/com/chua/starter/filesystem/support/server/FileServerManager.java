@@ -189,7 +189,7 @@ public class FileServerManager implements AutoCloseable {
         try {
             Class<?> clazz = ReflectUtils.forName(type);
             return (Server) clazz.getDeclaredConstructor(ServerSetting.class).newInstance(setting);
-        } catch (ClassNotFoundException e) {
+        } catch (Exception e) {
             throw new IllegalArgumentException("Unknown server type: " + type + ", fallback to JDK", e);
         }
     }

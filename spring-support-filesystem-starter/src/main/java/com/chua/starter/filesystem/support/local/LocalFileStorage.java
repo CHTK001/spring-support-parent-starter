@@ -24,7 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.Collections;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -165,10 +165,45 @@ public class LocalFileStorage extends AbstractFileStorage {
     @Override
     /** ListObject */
     public ListObjectResult listObject(ListObjectRequest request) {
-        return ListObjectResult.builder()
-                .resultCode(ObjectResult.ResultCode.SUCCESS)
-                .metadata(Collections.<Metadata>emptyList())
-                .build();
+        try {
+            List<Metadata> metadataList = new java.util.ArrayList<>();
+            String dir = request.getFilePath();
+            Path targetDir = dir == null || dir.isEmpty() ? rootPath : rootPath.resolve(dir);
+            if (!Files.exists(targetDir) || !Files.isDirectory(targetDir)) {
+                return ListObjectResult.builder()
+                        .resultCode(ObjectResult.ResultCode.SUCCESS)
+                        .metadata(metadataList)
+                        .build();
+            }
+            int limit = request.getLimit() > 0 ? request.getLimit() : 10;
+            try (java.util.stream.Stream<Path> stream = Files.list(targetDir)) {
+                stream.sorted(java.util.Comparator.comparing(p -> p.getFileName().toString()))
+                        .limit(limit)
+                        .forEach(path -> {
+                            try {
+                                BasicFileAttributes attrs = Files.readAttributes(path, BasicFileAttributes.class);
+                                String name = path.getFileName().toString();
+                                metadataList.add(Metadata.builder()
+                                        .name(name)
+                                        .path(dir == null ? "" : dir)
+                                        .size(attrs.isDirectory() ? 0 : attrs.size())
+                                        .directory(attrs.isDirectory())
+                                        .lastModified(attrs.lastModifiedTime().toInstant().toEpochMilli())
+                                        .build());
+                            } catch (IOException ignored) {
+                            }
+                        });
+            }
+            return ListObjectResult.builder()
+                    .resultCode(ObjectResult.ResultCode.SUCCESS)
+                    .metadata(metadataList)
+                    .build();
+        } catch (IOException e) {
+            return ListObjectResult.builder()
+                    .resultCode(ObjectResult.ResultCode.FAILURE)
+                    .message(e.getMessage())
+                    .build();
+        }
     }
 
     /** 解析Key */
