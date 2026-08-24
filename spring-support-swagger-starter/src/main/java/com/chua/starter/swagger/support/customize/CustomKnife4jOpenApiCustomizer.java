@@ -190,7 +190,7 @@ public class CustomKnife4jOpenApiCustomizer implements GlobalOpenApiCustomizer {
         Set<Class<?>> classes = new HashSet<>();
         for (BeanDefinition beanDefinition : scanner.findCandidateComponents(packageName)) {
             try {
-                Class<?> clazz = Class.forName(beanDefinition.getBeanClassName());
+                Class<?> clazz = ReflectUtils.forName(beanDefinition.getBeanClassName());
                 classes.add(clazz);
             } catch (ClassNotFoundException ignore) {
 

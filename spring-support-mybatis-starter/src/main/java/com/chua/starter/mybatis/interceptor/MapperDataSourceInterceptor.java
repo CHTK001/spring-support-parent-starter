@@ -2,6 +2,7 @@ package com.chua.starter.mybatis.interceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.starter.datasource.annotation.DS;
 import com.chua.starter.datasource.properties.MultiDataSourceSettingProperties;
 import com.chua.starter.datasource.support.DataSourceContextSupport;
@@ -89,7 +90,7 @@ public class MapperDataSourceInterceptor implements Interceptor {
         String className = statementId.substring(0, lastDot);
         String methodName = statementId.substring(lastDot + 1);
         try {
-            Class<?> mapperType = Class.forName(className);
+            Class<?> mapperType = ReflectUtils.forName(className);
             for (Method method : mapperType.getMethods()) {
                 if (!method.getName().equals(methodName)) {
                     continue;
