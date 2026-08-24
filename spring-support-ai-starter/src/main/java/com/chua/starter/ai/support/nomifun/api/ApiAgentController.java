@@ -1,9 +1,14 @@
 package com.chua.starter.ai.support.nomifun.api;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.ai.support.nomifun.common.ApiErrorCode;
 import com.chua.starter.ai.support.nomifun.common.ApiException;
 import com.chua.starter.ai.support.nomifun.common.ApiResult;
+import com.chua.starter.ai.support.nomifun.mapper.NomifunProviderMapper;
+import com.chua.starter.ai.support.nomifun.mapper.NomifunProviderModelMapper;
 import com.chua.starter.ai.support.nomifun.store.ConversationStore;
+import com.chua.starter.ai.support.nomifun.store.NomifunProvider;
+import com.chua.starter.ai.support.nomifun.store.NomifunProviderModel;
 import com.chua.starter.ai.support.nomifun.ApiWebSocketPushService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +23,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -54,6 +64,28 @@ public class ApiAgentController {
      * WS 事件推送服务
      */
     private final ApiWebSocketPushService pushService;
+
+    /**
+     * 供应商 Mapper（健康检测读取凭证与地址）
+     */
+    private final NomifunProviderMapper providerMapper;
+
+    /**
+     * 供应商模型 Mapper（健康检测读取能力并回写结果）
+     */
+    private final NomifunProviderModelMapper modelMapper;
+
+    /**
+     * 健康探测超时时间
+     */
+    private static final Duration HEALTH_TIMEOUT = Duration.ofSeconds(15);
+
+    /**
+     * 共享 HTTP 客户端（连接池复用）
+     */
+    private final HttpClient healthHttpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
 
     /**
      * 内置 Agent 元数据目录（进程启动时初始化）
@@ -105,12 +137,222 @@ public class ApiAgentController {
 
     @PostMapping("/agents/provider-health-check")
     public ApiResult<Map<String, Object>> providerHealthCheck(@RequestBody(required = false) Map<String, Object> body) {
+        String providerId = str(body == null ? null : body.get("provider_id"));
+        String modelName = str(body == null ? null : body.get("model"));
+        String task = str(body == null ? null : body.get("task"));
+        if (providerId == null || modelName == null || task == null) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "provider_id / model / task 均为必填");
+        }
+
+        // 1. 加载供应商与模型行
+        NomifunProvider provider = providerMapper.selectById(providerId);
+        if (provider == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "provider 不存在: " + providerId);
+        }
+        NomifunProviderModel modelRow = modelMapper.selectOne(new LambdaQueryWrapper<NomifunProviderModel>()
+                .eq(NomifunProviderModel::getProviderId, providerId)
+                .eq(NomifunProviderModel::getModel, modelName));
+        if (modelRow == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "模型不存在: " + modelName);
+        }
+
+        // 2. 定位任务能力（无该任务能力直接参数错误）
+        Map<String, Object> capability = null;
+        if (modelRow.getCapabilities() != null) {
+            for (Map<String, Object> cap : modelRow.getCapabilities()) {
+                if (task.equals(str(cap.get("task")))) {
+                    capability = cap;
+                    break;
+                }
+            }
+        }
+        if (capability == null) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "模型 " + modelName + " 未声明任务能力: " + task);
+        }
+
+        // 3. 真实探测上游
+        long start = System.currentTimeMillis();
+        ProbeOutcome outcome = probe(provider, capability, modelName);
+
+        // 4. 持久化探测结果到能力 JSON（health + health_checked_at）
+        long now = System.currentTimeMillis();
+        long latency = outcome.latencyMs >= 0 ? outcome.latencyMs : now - start;
+        Map<String, Object> health = new LinkedHashMap<>();
+        health.put("status", outcome.status);
+        health.put("latency", latency);
+        if (outcome.error != null && !outcome.error.isBlank()) {
+            health.put("error", outcome.error);
+        }
+        capability.put("health", health);
+        capability.put("health_checked_at", now);
+        modelRow.setUpdatedAt(now);
+        modelMapper.updateById(modelRow);
+
+        // 5. 组装契约响应
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("provider_id", body == null ? null : body.get("provider_id"));
-        result.put("healthy", false);
-        result.put("status", "unknown");
-        result.put("detail", "内存后端未接入真实 provider，仅返回占位健康检查结果");
+        result.put("provider_id", providerId);
+        result.put("platform", provider.getPlatform());
+        result.put("model", modelName);
+        result.put("task", task);
+        result.put("status", outcome.status);
+        result.put("elapsed_ms", latency);
+        if (outcome.error != null && !outcome.error.isBlank()) {
+            result.put("message", outcome.error);
+        }
+        if (outcome.errorKind != null) {
+            result.put("error_kind", outcome.errorKind);
+        }
+        if (outcome.httpStatus > 0) {
+            result.put("http_status", outcome.httpStatus);
+        }
         return ApiResult.ok(result);
+    }
+
+    /**
+     * 按能力协议对上游发起最小真实请求。
+     *
+     * <p>chat → 最小补全（max_tokens=1）；embedding → 最小向量请求；
+     * 其余（图像/视频等生成类）→ GET /models 校验连通性与鉴权，避免产生实际生成费用。</p>
+     */
+    private ProbeOutcome probe(NomifunProvider provider, Map<String, Object> capability, String modelName) {
+        String protocol = str(capability.get("protocol"));
+        String overrideUrl = str(capability.get("base_url_override"));
+        String baseUrl = overrideUrl != null && !overrideUrl.isBlank() ? overrideUrl : provider.getBaseUrl();
+        if (baseUrl == null || baseUrl.isBlank()) {
+            return new ProbeOutcome("unhealthy", -1, "invalid_request", 0, "base_url 未配置");
+        }
+        String apiKey = extractApiKey(provider.getCredentials());
+        boolean chatProtocol = protocol != null && protocol.contains("chat");
+        boolean embeddingProtocol = protocol != null && protocol.contains("embedding");
+
+        try {
+            HttpRequest request;
+            if (chatProtocol) {
+                // OpenAI 兼容最小补全
+                Map<String, Object> payload = new LinkedHashMap<>();
+                payload.put("model", modelName);
+                payload.put("messages", List.of(Map.of("role", "user", "content", "ping")));
+                payload.put("max_tokens", 1);
+                payload.put("stream", false);
+                request = buildProbeRequest(baseUrl + "/chat/completions", apiKey, writeJson(payload));
+            } else if (embeddingProtocol) {
+                Map<String, Object> payload = new LinkedHashMap<>();
+                payload.put("model", modelName);
+                payload.put("input", "ping");
+                request = buildProbeRequest(baseUrl + "/embeddings", apiKey, writeJson(payload));
+            } else {
+                // 生成类任务只校验地址可达与鉴权有效
+                StringBuilder url = new StringBuilder(baseUrl.endsWith("/") ? baseUrl + "models" : baseUrl + "/models");
+                request = buildProbeRequest(url.toString(), apiKey, null);
+            }
+
+            HttpResponse<String> response = healthHttpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            int status = response.statusCode();
+            if (status >= 200 && status < 300) {
+                return new ProbeOutcome("healthy", -1, null, status, null);
+            }
+            return new ProbeOutcome("unhealthy", -1, mapErrorKind(status), status, httpErrorMessage(status, response.body()));
+        } catch (java.net.http.HttpTimeoutException e) {
+            return new ProbeOutcome("unhealthy", -1, "timeout", 0, "上游请求超时（15s）");
+        } catch (java.net.ConnectException e) {
+            return new ProbeOutcome("unhealthy", -1, "connection_error", 0, "无法连接上游: " + e.getMessage());
+        } catch (Exception e) {
+            log.warn("[agent] provider health probe failed: {}", e.getMessage());
+            return new ProbeOutcome("unhealthy", -1, "connection_error", 0, "探测失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 构建探测 HTTP 请求；GET 时 body 为 null。
+     */
+    private HttpRequest buildProbeRequest(String url, String apiKey, String jsonBody) {
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(HEALTH_TIMEOUT);
+        if (apiKey != null && !apiKey.isBlank()) {
+            builder.header("Authorization", "Bearer " + apiKey);
+        }
+        if (jsonBody != null) {
+            builder.header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody));
+        } else {
+            builder.GET();
+        }
+        return builder.build();
+    }
+
+    /**
+     * 序列化 JSON；失败返回空对象文本。
+     */
+    private String writeJson(Map<String, Object> payload) {
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(payload);
+        } catch (Exception e) {
+            return "{}";
+        }
+    }
+
+    /**
+     * HTTP 状态码 → 前端契约错误类别。
+     */
+    private String mapErrorKind(int status) {
+        switch (status) {
+            case 400: return "invalid_request";
+            case 401: return "unauthorized";
+            case 403: return "forbidden";
+            case 404: return "not_found";
+            case 429: return "rate_limited";
+            default: return status >= 500 ? "api_error" : "unknown";
+        }
+    }
+
+    /**
+     * 依据状态码生成简明错误信息。
+     */
+    private String httpErrorMessage(int status, String body) {
+        String hint;
+        switch (status) {
+            case 400: hint = "请求被拒绝（协议或参数不兼容）"; break;
+            case 401: hint = "API Key 无效或已过期"; break;
+            case 403: hint = "无权访问该模型"; break;
+            case 404: hint = "模型或接口路径不存在"; break;
+            case 429: hint = "请求过于频繁或配额受限"; break;
+            default: hint = "上游返回 " + status; break;
+        }
+        // 截断响应片段辅助排障
+        String snippet = body == null ? "" : body.replaceAll("\\s+", " ");
+        if (snippet.length() > 200) {
+            snippet = snippet.substring(0, 200) + "...";
+        }
+        return snippet.isEmpty() ? hint : hint + ": " + snippet;
+    }
+
+    /**
+     * 从凭证中提取首个可用 API Key（兼容 api_key 与 api_keys 形态）。
+     */
+    private String extractApiKey(Map<String, Object> credentials) {
+        if (credentials == null || credentials.isEmpty()) {
+            return null;
+        }
+        Object single = credentials.get("api_key");
+        if (single instanceof String s && !s.isBlank()) {
+            return s;
+        }
+        Object multi = credentials.get("api_keys");
+        if (multi instanceof List<?> list && !list.isEmpty() && list.get(0) instanceof String s && !s.isBlank()) {
+            return s;
+        }
+        return null;
+    }
+
+    private static String str(Object value) {
+        return value == null ? null : String.valueOf(value);
+    }
+
+    /**
+     * 探测结果内部载体。
+     */
+    private record ProbeOutcome(String status, long latencyMs, String errorKind, int httpStatus, String error) {
     }
 
     // =====================================================================
