@@ -14,7 +14,7 @@ import java.util.Map;
  * 前端会话实体（对齐前端 {@code TChatConversation}），同时作为 MyBatis-Plus ORM 实体。
  *
  * <p>会话主键为 {@code conversationId}（UUIDv7 字符串），由后端生成，前端不传。
- * 持久化到 {@code nomifun_conversation} 表。</p>
+ * 持久化到 {@code sys_nomifun_conversation} 表。</p>
  *
  * <p>JSON 字段说明：
  * <ul>
@@ -28,7 +28,7 @@ import java.util.Map;
  * @author CH
  */
 @Data
-@TableName("nomifun_conversation")
+@TableName("sys_nomifun_conversation")
 public class Conversation implements Serializable {
     private static final long serialVersionUID = 1L;
 

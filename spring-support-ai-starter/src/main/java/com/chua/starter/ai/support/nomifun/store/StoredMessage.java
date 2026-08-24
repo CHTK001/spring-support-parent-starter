@@ -12,7 +12,7 @@ import java.io.Serializable;
  * 会话消息实体（对齐前端 {@code StoredMessageResponse}），同时作为 MyBatis-Plus ORM 实体。
  *
  * <p>消息主键为 {@code messageId}（UUIDv7 字符串）；{@code msgId} 为历史字段，
- * 与 {@code messageId} 保持一致。持久化到 {@code nomifun_message} 表。</p>
+ * 与 {@code messageId} 保持一致。持久化到 {@code sys_nomifun_message} 表。</p>
  *
  * <p>JSON 字段说明：{@code content} 支持文本或结构化对象，通过
  * {@link JsonOrPlainTypeHandler} 落库 —— 纯文本按原样存储，结构化对象按 JSON 存储，
@@ -22,7 +22,7 @@ import java.io.Serializable;
  * @author CH
  */
 @Data
-@TableName("nomifun_message")
+@TableName("sys_nomifun_message")
 public class StoredMessage implements Serializable {
     private static final long serialVersionUID = 1L;
 
