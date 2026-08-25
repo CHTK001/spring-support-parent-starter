@@ -86,15 +86,13 @@ public class DataSyncApplication {
             defaults.put("plugin.datasync.mapping-source", "file");
             defaults.put("plugin.datasync.file-mapping.directory-path", MAPPING_DIR);
         }
-        // 启用 SSH 服务（端口 2222，admin/admin）
+        // 启用 SSH 服务（端口 2222，账号 admin/admin；password 为认证开关布尔型，密码值用 user-password）
         defaults.put("server.port", "28978");
         defaults.put("plugin.ssh.server.enabled", "true");
         defaults.put("plugin.ssh.server.port", "2222");
         defaults.put("plugin.ssh.server.host", "127.0.0.1");
         defaults.put("plugin.ssh.server.authentication.username", "admin");
-        defaults.put("plugin.ssh.server.authentication.password", "admin");
         defaults.put("plugin.ssh.server.authentication.user-password", "admin");
-        defaults.put("plugin.ssh.server.authentication.password-enabled", "true");
         defaults.put("plugin.ssh.server.file-transfer.sftp-enabled", "true");
         defaults.put("plugin.ssh.server.file-transfer.root-directory", "./");
         // OSGi shell 远程管理（端口 6666）
