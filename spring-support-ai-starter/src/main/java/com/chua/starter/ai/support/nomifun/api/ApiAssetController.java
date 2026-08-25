@@ -41,9 +41,18 @@ public class ApiAssetController {
 
     private String buildDefaultSvg(String name) {
         String initial = name.substring(0, Math.min(2, name.length())).toUpperCase();
+        // 按名称稳定取色，兜底图标也有可区分的品牌感
+        String[] palette = {"#6366f1", "#0ea5e9", "#10b981", "#f59e0b", "#f43f5e", "#8b5cf6", "#06b6d4", "#f97316"};
+        int h = 0;
+        for (int i = 0; i < name.length(); i++) {
+            h = (h * 31 + name.charAt(i)) & 0x7fffffff;
+        }
+        String color = palette[h % palette.length];
+        String colorLight = color + "33";
         return "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>" +
-               "<rect width='64' height='64' rx='12' fill='#6366f1'/>" +
-               "<text x='32' y='44' text-anchor='middle' font-size='24' font-weight='bold' fill='white'>" +
-               initial + "</text></svg>";
+               "<rect width='64' height='64' rx='14' fill='" + colorLight + "'/>" +
+               "<rect x='4' y='4' width='56' height='56' rx='11' fill='none' stroke='" + color + "' stroke-width='2' stroke-dasharray='0'/>" +
+               "<text x='32' y='43' text-anchor='middle' font-size='26' font-weight='700' fill='" + color + "' " +
+               "font-family='-apple-system,Segoe UI,sans-serif'>" + initial + "</text></svg>";
     }
 }
