@@ -51,13 +51,12 @@ CREATE TABLE IF NOT EXISTS `sys_nomifun_provider` (
 );
 
 CREATE TABLE IF NOT EXISTS `sys_nomifun_provider_model` (
-    `provider_id`        VARCHAR(64)  NOT NULL COMMENT '所属供应商ID',
+    `provider_id`        VARCHAR(64)  NOT NULL COMMENT '所属提供商ID',
     `model`              VARCHAR(255) NOT NULL COMMENT '模型名称',
     `enabled`            TINYINT      NOT NULL DEFAULT 1 COMMENT '是否启用',
     `sort_order`         INT          NOT NULL DEFAULT 0 COMMENT '排序序号',
     `description`        TEXT         NULL COMMENT '模型描述',
     `capabilities`       TEXT         NULL COMMENT '任务能力JSON数组',
-    `metrics`            JSON         NULL COMMENT '模型指标JSON（延迟/智能/输出速度）',
     `created_at`         BIGINT       NOT NULL COMMENT '创建时间（毫秒）',
     `updated_at`         BIGINT       NOT NULL COMMENT '更新时间（毫秒）',
     PRIMARY KEY (`provider_id`, `model`)

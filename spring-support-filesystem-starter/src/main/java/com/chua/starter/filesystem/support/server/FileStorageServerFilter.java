@@ -347,10 +347,13 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             return error(response, 500, "Read Object Failed");
         }
 
-        // 访问模式收敛：显式 download 参数优先，其次按设置降级
+        // 访问模式收敛：显式 preview/download 参数优先，其次按设置降级
+        boolean wantPreview = Boolean.parseBoolean(request.getParam("preview"));
         boolean wantDownload = Boolean.parseBoolean(request.getParam("download"));
         boolean download;
-        if (wantDownload && setting.isOpenDownload()) {
+        if (wantPreview && setting.isOpenPreview()) {
+            download = false;
+        } else if (wantDownload && setting.isOpenDownload()) {
             download = true;
         } else if (setting.isOpenPreview()) {
             download = false;

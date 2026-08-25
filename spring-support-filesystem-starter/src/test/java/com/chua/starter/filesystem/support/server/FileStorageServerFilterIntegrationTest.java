@@ -573,6 +573,15 @@ class FileStorageServerFilterIntegrationTest {
     }
 
     @Test
+    @DisplayName("MODE-05 preview=true 显式内联（与 download=true 对称）")
+    void mode05_explicitPreview() throws Exception {
+        client.send("PUT", objPath("m05.txt"), "m".getBytes(StandardCharsets.UTF_8));
+        HttpResponse get = client.send("GET", objPath("m05.txt") + "?preview=true", null);
+        assertEquals(200, get.status);
+        assertTrue(get.headers.getOrDefault("content-disposition", "").startsWith("inline"));
+    }
+
+    @Test
     @DisplayName("TYPE-01 json 扩展名推断 application/json")
     void type01_json() throws Exception {
         client.send("PUT", objPath("t01.json"), "{}".getBytes(StandardCharsets.UTF_8));
