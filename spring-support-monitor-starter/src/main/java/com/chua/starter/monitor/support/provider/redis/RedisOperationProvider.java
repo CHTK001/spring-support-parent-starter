@@ -14,7 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-import redis.clients.jedis.params.ScanParams;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -74,9 +73,9 @@ public class RedisOperationProvider implements OperationProvider {
         return Mono.fromCallable(() -> {
             try (RedisClient client = buildClient(ctx)) {
                 if (ttl != null) {
-                    client.set(key, value, (int) ttl.getSeconds());
+                    client.put(key, value, Duration.ofSeconds(ttl.getSeconds()));
                 } else {
-                    client.set(key, value);
+                    client.put(key, value);
                 }
                 return true;
             }
@@ -91,7 +90,13 @@ public class RedisOperationProvider implements OperationProvider {
                 throw new IllegalStateException("Redis 删除操作已禁用，请设置 monitor.redis.allowDelete=true");
             }
             try (RedisClient client = buildClient(ctx)) {
-                return client.del(keys.toArray(new String[0]));
+                long count = 0;
+                for (String key : keys) {
+                    if (client.delete(key)) {
+                        count++;
+                    }
+                }
+                return count;
             }
         }).subscribeOn(Schedulers.boundedElastic());
     }
@@ -122,7 +127,8 @@ public class RedisOperationProvider implements OperationProvider {
     public Mono<String> type(CollectContext ctx, String key) {
         return Mono.fromCallable(() -> {
             try (RedisClient client = buildClient(ctx)) {
-                return client.type(key);
+                Object result = client.reactiveExecCommand("TYPE " + key).block();
+                return result != null ? result.toString() : "none";
             }
         }).subscribeOn(Schedulers.boundedElastic());
     }
@@ -138,24 +144,19 @@ public class RedisOperationProvider implements OperationProvider {
      */
     private OperationProvider.ScanResult doScanKeys(CollectContext ctx, String pattern, String cursor, int count) {
         try (RedisClient client = buildClient(ctx)) {
-            String scanCursor = (cursor != null && !cursor.isEmpty() && !"0".equals(cursor)) ? cursor : "0";
-            int scanCount = count > 0 ? count : 100;
+            String match = pattern != null ? pattern : "*";
             List<String> keys = new ArrayList<>();
-            try (redis.clients.jedis.Jedis jedis = client.getPool().getResource()) {
-                ScanParams params = new ScanParams();
-                params.match(pattern != null ? pattern : "*");
-                params.count(scanCount);
-                String nextCursor = scanCursor;
-                do {
-                    redis.clients.jedis.resps.ScanResult<String> result = jedis.scan(nextCursor, params);
-                    List<String> resultKeys = result.getResult();
-                    if (resultKeys != null) {
-                        keys.addAll(resultKeys);
+            java.util.Map<String, String> result = client.findAllByPrefix(
+                    match.endsWith("*") ? match.substring(0, match.length() - 1) : match);
+            if (result != null) {
+                for (java.util.Map.Entry<String, String> entry : result.entrySet()) {
+                    keys.add(entry.getKey());
+                    if (keys.size() >= count * 10) {
+                        break;
                     }
-                    nextCursor = result.getCursor();
-                } while (!"0".equals(nextCursor) && keys.size() < scanCount * 10);
+                }
             }
-            return new OperationProvider.ScanResult(keys, "0".equals(scanCursor) ? null : scanCursor);
+            return new OperationProvider.ScanResult(keys, null);
         }
     }
 
