@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
-import redis.clients.jedis.Jedis;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -109,9 +108,8 @@ public class RedisLocalProvider implements MetricProvider {
      * @return INFO 文本
      */
     private String fetchInfo(RedisClient client) {
-        try (Jedis jedis = client.getPool().getResource()) {
-            return jedis.info();
-        }
+        Object result = client.reactiveExecCommand("INFO").block();
+        return result != null ? result.toString() : null;
     }
 
     /**
