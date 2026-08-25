@@ -227,6 +227,31 @@ class FileStorageServerFilterIntegrationTest {
     }
 
     @Test
+    @DisplayName("GET 目录路径应回退返回该目录的对象列表")
+    void shouldListSubDirectoryByPath() throws Exception {
+        send("PUT", "/local/nav/sub/deep.txt", "deep".getBytes(StandardCharsets.UTF_8));
+
+        // 一级目录
+        HttpResponse<String> level1 = send("GET", "/local/nav", null);
+        assertEquals(200, level1.statusCode(), "目录路径应返回 200 列表");
+        assertTrue(level1.body().contains("\"path\":\"nav\""), "列表应携带目录路径");
+        assertTrue(level1.body().contains("\"name\":\"sub\""), "一级目录应包含 sub");
+        assertTrue(level1.body().contains("\"directory\":true"), "sub 应标记为目录");
+
+        // 二级目录
+        HttpResponse<String> level2 = send("GET", "/local/nav/sub", null);
+        assertEquals(200, level2.statusCode());
+        assertTrue(level2.body().contains("deep.txt"), "二级目录应包含 deep.txt");
+        assertTrue(level2.body().contains("\"lastModified\":"),
+                "列表项应携带最后修改时间");
+
+        // 尾斜杠显式目录访问
+        HttpResponse<String> trailing = send("GET", "/local/nav/", null);
+        assertEquals(200, trailing.statusCode(), "尾斜杠目录访问应返回 200");
+        assertTrue(trailing.body().contains("\"path\":\"nav\""), "尾斜杠列表应指向 nav 目录");
+    }
+
+    @Test
     @DisplayName("DELETE 后对象应不可再获取")
     void shouldDeleteObject() throws Exception {
         send("PUT", "/local/gone.txt", "delete me".getBytes(StandardCharsets.UTF_8));
