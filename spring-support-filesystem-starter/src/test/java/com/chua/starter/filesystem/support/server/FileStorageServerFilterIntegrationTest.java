@@ -563,22 +563,26 @@ class FileStorageServerFilterIntegrationTest {
     }
 
     @Test
-    @DisplayName("MODE-02 download=true 强制附件（attachment + filename）")
+    @DisplayName("MODE-02 download 强制附件（标志式与 =true 等价）")
     void mode02_downloadAttachment() throws Exception {
         client.send("PUT", objPath("m02.txt"), "m".getBytes(StandardCharsets.UTF_8));
-        HttpResponse get = client.send("GET", objPath("m02.txt") + "?download=true", null);
-        String disposition = get.headers.getOrDefault("content-disposition", "");
-        assertTrue(disposition.startsWith("attachment"));
-        assertTrue(disposition.contains("filename="));
+        HttpResponse withValue = client.send("GET", objPath("m02.txt") + "?download=true", null);
+        HttpResponse flagOnly = client.send("GET", objPath("m02.txt") + "?download", null);
+        assertTrue(withValue.headers.getOrDefault("content-disposition", "").startsWith("attachment"));
+        assertTrue(flagOnly.headers.getOrDefault("content-disposition", "").startsWith("attachment"),
+                "?download 无值形式应等价于 download=true");
     }
 
     @Test
-    @DisplayName("MODE-05 preview=true 显式内联（与 download=true 对称）")
+    @DisplayName("MODE-05 preview 显式内联（标志式与 =true 等价）")
     void mode05_explicitPreview() throws Exception {
         client.send("PUT", objPath("m05.txt"), "m".getBytes(StandardCharsets.UTF_8));
-        HttpResponse get = client.send("GET", objPath("m05.txt") + "?preview=true", null);
-        assertEquals(200, get.status);
-        assertTrue(get.headers.getOrDefault("content-disposition", "").startsWith("inline"));
+        HttpResponse flagOnly = client.send("GET", objPath("m05.txt") + "?preview", null);
+        HttpResponse withValue = client.send("GET", objPath("m05.txt") + "?preview=true", null);
+        assertEquals(200, flagOnly.status);
+        assertTrue(flagOnly.headers.getOrDefault("content-disposition", "").startsWith("inline"),
+                "?preview 无值形式应为内联");
+        assertTrue(withValue.headers.getOrDefault("content-disposition", "").startsWith("inline"));
     }
 
     @Test
