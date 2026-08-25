@@ -348,8 +348,9 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
 
         // 访问模式收敛：显式 preview/download 参数优先，其次按设置降级
-        boolean wantPreview = Boolean.parseBoolean(request.getParam("preview"));
-        boolean wantDownload = Boolean.parseBoolean(request.getParam("download"));
+        // 参数支持标志式写法（?preview 等价 ?preview=true）
+        boolean wantPreview = boolParam(request, "preview");
+        boolean wantDownload = boolParam(request, "download");
         boolean download;
         if (wantPreview && setting.isOpenPreview()) {
             download = false;
@@ -578,6 +579,28 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * 解析布尔查询参数（标志式语义）。
+     *
+     * <p>{@code ?preview}、{@code ?preview=true}、{@code ?preview=1} 均视为 true；
+     * {@code ?preview=false}、{@code ?preview=0} 视为 false；参数缺省为 false。</p>
+     *
+     * @param request 请求
+     * @param name    参数名
+     * @return 参数开启状态
+     */
+    private boolean boolParam(ServerRequest request, String name) {
+        Map<String, String> params = request.getParams();
+        if (!params.containsKey(name)) {
+            return false;
+        }
+        String value = params.get(name);
+        if (value == null || value.isEmpty() || "true".equalsIgnoreCase(value) || "1".equals(value)) {
+            return true;
+        }
+        return false;
     }
 
     /**
