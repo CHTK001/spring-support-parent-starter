@@ -53,6 +53,23 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-datasource-starter</artifactId>
         </dependency>
+        <!-- 响应式引擎传递依赖修正：jspecify 被父 POM 管理为 provided，运行期签名解析仍需要它 -->
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <!-- Excel<->JDBC 双向同步探针所需：POI 全家随 excel-starter 引入 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-excel-starter</artifactId>
+            <version>${utils.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-fory-starter</artifactId>

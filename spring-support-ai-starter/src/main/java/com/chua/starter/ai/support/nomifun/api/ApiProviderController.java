@@ -366,11 +366,15 @@ public class ApiProviderController {
     @PostMapping("/providers/fetch-models")
     public ApiResult<Map<String, Object>> fetchModelsAnonymous(@RequestBody Map<String, Object> body) {
         String platform = requireStr(body, "platform");
-        String baseUrl = requireStr(body, "base_url");
+        // ONNX 本地离线模型的 base_url 存的是模型文件路径，创建前预览阶段允许为空
+        String baseUrl = str(body, "base_url");
+        if ((baseUrl == null || baseUrl.isBlank()) && !(platform != null && platform.toLowerCase().contains("onnx"))) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "base_url 不能为空");
+        }
         @SuppressWarnings("unchecked")
         Map<String, Object> credentials = body.get("credentials") instanceof Map
                 ? (Map<String, Object>) body.get("credentials") : null;
-        String authScheme = requireStr(body, "auth_scheme");
+        String authScheme = str(body, "auth_scheme");
         return ApiResult.ok(fetchModelsFromUpstream(platform, baseUrl, credentials, authScheme, false));
     }
 
@@ -551,6 +555,48 @@ public class ApiProviderController {
                     .eq(NomifunProviderModel::getModel, modelName));
             return ApiResult.ok(toProviderModelResponse(provider, existing));
         }
+    }
+
+    /**
+     * 重命名模型 ID（复合主键变更：复制行到新 ID 并删除旧行，原子完成）。
+     *
+     * @param body { provider_id, model, new_model }
+     * @return 重命名后的 ProviderModelResponse
+     */
+    @PostMapping("/provider-models/rename")
+    @Transactional
+    public ApiResult<Map<String, Object>> renameProviderModel(@RequestBody Map<String, Object> body) {
+        String providerId = requireStr(body, "provider_id");
+        NomifunProvider provider = requireProvider(providerId);
+        String oldName = requireStr(body, "model");
+        String newName = requireStr(body, "new_model");
+        // 新 ID 非法或与旧 ID 相同直接拒绝
+        if (newName.equals(oldName)) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "新模型 ID 不能与原 ID 相同");
+        }
+        NomifunProviderModel existing = modelMapper.selectOne(
+                new LambdaQueryWrapper<NomifunProviderModel>()
+                        .eq(NomifunProviderModel::getProviderId, providerId)
+                        .eq(NomifunProviderModel::getModel, oldName));
+        if (existing == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "provider model 不存在: " + oldName);
+        }
+        // 目标 ID 已被占用则冲突
+        NomifunProviderModel dup = modelMapper.selectOne(
+                new LambdaQueryWrapper<NomifunProviderModel>()
+                        .eq(NomifunProviderModel::getProviderId, providerId)
+                        .eq(NomifunProviderModel::getModel, newName));
+        if (dup != null) {
+            throw new ApiException(ApiErrorCode.CONFLICT, "模型 ID 已存在: " + newName);
+        }
+        // 复制到新 ID 并删除旧行（同事务原子生效）
+        existing.setModel(newName);
+        existing.setUpdatedAt(System.currentTimeMillis());
+        modelMapper.insert(existing);
+        modelMapper.delete(new LambdaQueryWrapper<NomifunProviderModel>()
+                .eq(NomifunProviderModel::getProviderId, providerId)
+                .eq(NomifunProviderModel::getModel, oldName));
+        return ApiResult.ok(toProviderModelResponse(provider, existing));
     }
 
     /**
@@ -804,6 +850,9 @@ public class ApiProviderController {
         String presetKey = preset == null ? null : preset.toLowerCase();
         ProtocolPreset pp = PROTOCOL_PRESETS.getOrDefault(presetKey,
                 new ProtocolPreset(presetKey != null ? presetKey : "custom", "https://api.openai.com/v1"));
+        // 本地模型（Ollama/ONNX）无需鉴权
+        boolean localModel = presetKey != null && (presetKey.contains("ollama") || presetKey.contains("onnx"));
+        String defaultAuthScheme = localModel ? "none" : "api_key";
         Map<String, Object> manifest = new LinkedHashMap<>();
         manifest.put("tasks", ALL_TASKS);
         manifest.put("preset", preset);
@@ -811,22 +860,22 @@ public class ApiProviderController {
         manifest.put("requested_task", task);
         manifest.put("platform_default_base_url", baseUrl != null ? baseUrl : pp.defaultBaseUrl);
         manifest.put("requires_user_input", false);
-        manifest.put("default_auth_scheme", "api_key");
+        manifest.put("default_auth_scheme", defaultAuthScheme);
         manifest.put("auth_schemes", authSchemes());
 
         Map<String, Object> recommendation = new LinkedHashMap<>();
         recommendation.put("protocol_id", pp.platform + "-openai-compat");
         recommendation.put("connection_role", "default");
         recommendation.put("default_base_url", pp.defaultBaseUrl);
-        recommendation.put("default_auth_scheme", "api_key");
+        recommendation.put("default_auth_scheme", defaultAuthScheme);
         recommendation.put("base_url_override_required", false);
         manifest.put("recommendation", recommendation);
 
-        manifest.put("protocols", List.of(buildProtocol(pp, task)));
+        manifest.put("protocols", List.of(buildProtocol(pp, task, defaultAuthScheme)));
         return manifest;
     }
 
-    private Map<String, Object> buildProtocol(ProtocolPreset pp, String task) {
+    private Map<String, Object> buildProtocol(ProtocolPreset pp, String task, String defaultAuthScheme) {
         Map<String, Object> protocol = new LinkedHashMap<>();
         protocol.put("protocol_id", pp.platform + "-openai-compat");
         protocol.put("supported_tasks", ALL_TASKS);
@@ -842,8 +891,9 @@ public class ApiProviderController {
         dc.put("connection_role", "default");
         dc.put("connection_label", null);
         dc.put("base_url", pp.defaultBaseUrl);
-        dc.put("auth_scheme", "api_key");
-        dc.put("requires_credentials", true);
+        dc.put("auth_scheme", defaultAuthScheme);
+        // 本地模型（Ollama/ONNX）无需凭证
+        dc.put("requires_credentials", !"none".equals(defaultAuthScheme));
         protocol.put("default_connections", List.of(dc));
         protocol.put("endpoints", List.of());
         return protocol;
@@ -951,14 +1001,22 @@ public class ApiProviderController {
     private Map<String, Object> fetchModelsFromUpstream(String platform, String baseUrl,
                                                         Map<String, Object> credentials,
                                                         String authScheme, boolean tryFix) {
+        // 平台标识统一小写后再判断协议族（前端可能传大写形式）
+        String platformLower = platform == null ? "" : platform.toLowerCase();
+        // ONNX 本地离线模型：base_url 存的是模型文件路径，没有远程目录可拉，
+        // 直接返回空列表（前端提示手输模型文件路径）
+        if (platformLower.contains("onnx")) {
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("models", new ArrayList<Map<String, Object>>());
+            return out;
+        }
         // 基础地址缺失直接判参数错误
         if (baseUrl == null || baseUrl.isBlank()) {
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "base_url 未配置，无法拉取模型列表");
         }
         String apiKey = extractApiKey(credentials);
-        // 平台标识统一小写后再判断协议族（前端可能传大写形式）
-        String platformLower = platform == null ? "" : platform.toLowerCase();
         boolean googleProtocol = platformLower.contains("gemini") || platformLower.contains("google");
+        boolean ollamaProtocol = platformLower.contains("ollama");
 
         // 首次按原始地址拉取
         List<Map<String, Object>> models = requestUpstreamModels(baseUrl, apiKey, googleProtocol);
@@ -971,6 +1029,11 @@ public class ApiProviderController {
                 fixedBaseUrl = fixed;
             }
         }
+        // Ollama 兼容回退：原生接口为 GET {base}/api/tags（响应 models[].name）
+        if (models == null && ollamaProtocol) {
+            String tagsUrl = baseUrl.replaceAll("/v1/?$", "");
+            models = requestOllamaTags(tagsUrl, apiKey);
+        }
         // 仍然失败则按无法连接处理
         if (models == null) {
             throw new ApiException(ApiErrorCode.BAD_GATEWAY, "无法从供应商拉取模型列表，请检查 API 地址和 Key");
@@ -981,6 +1044,49 @@ public class ApiProviderController {
             out.put("fixed_base_url", fixedBaseUrl);
         }
         return out;
+    }
+
+    /**
+     * 请求 Ollama 原生 {@code GET {base}/api/tags} 模型列表。
+     *
+     * @param baseUrl 基础地址（不含 /v1）
+     * @param apiKey  API Key（Ollama 通常无需鉴权，可为 null）
+     * @return 模型条目列表；请求失败返回 null
+     */
+    private List<Map<String, Object>> requestOllamaTags(String baseUrl, String apiKey) {
+        String url = baseUrl.endsWith("/") ? baseUrl + "api/tags" : baseUrl + "/api/tags";
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(UPSTREAM_TIMEOUT)
+                .GET();
+        try {
+            HttpResponse<String> response = upstreamHttpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                return null;
+            }
+            List<Map<String, Object>> models = new ArrayList<>();
+            com.fasterxml.jackson.databind.JsonNode root = readJson(response.body());
+            com.fasterxml.jackson.databind.JsonNode data = root == null ? null : root.get("models");
+            if (data != null && data.isArray()) {
+                for (com.fasterxml.jackson.databind.JsonNode item : data) {
+                    String name = item.path("name").asText(null);
+                    // 跳过无名条目
+                    if (name == null || name.isBlank()) {
+                        continue;
+                    }
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("id", name);
+                    m.put("name", name);
+                    m.put("tasks", inferTasks(name));
+                    m.put("traits", List.of("streaming"));
+                    models.add(m);
+                }
+            }
+            return models;
+        } catch (Exception e) {
+            // 网络层异常按不可达处理
+            return null;
+        }
     }
 
     /**
