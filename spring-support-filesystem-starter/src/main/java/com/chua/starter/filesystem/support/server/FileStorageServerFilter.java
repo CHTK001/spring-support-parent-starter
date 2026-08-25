@@ -17,6 +17,8 @@ import com.chua.common.support.storage.result.GetObjectResult;
 import com.chua.common.support.storage.result.ListObjectResult;
 import com.chua.common.support.storage.result.ObjectResult;
 import com.chua.common.support.storage.result.PutObjectResult;
+import com.chua.filestorage.support.preview.FileStoragePreviewProvider;
+import com.chua.filestorage.support.preview.PreviewResult;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.ByteArrayOutputStream;
@@ -67,6 +69,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * 文件存储设置
      */
     private final FileStorageSetting setting;
+
+    /**
+     * SPI 预览提供者缓存（懒加载，classpath 存在 utils-support-filestorage-starter 时可用）
+     */
+    private volatile List<FileStoragePreviewProvider> previewProviderCache;
 
     /**
      * 创建 FileStorageServerFilter 实例
@@ -352,19 +359,40 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         boolean wantPreview = boolParam(request, "preview");
         boolean wantDownload = boolParam(request, "download");
         boolean download;
-        if (wantPreview && setting.isOpenPreview()) {
+        if (!setting.isOpenPreview() && !setting.isOpenDownload()) {
+            // 严格模式：预览与下载均关闭 → 拒绝所有请求
+            return error(response, 403, "Access Denied: preview/download disabled");
+        } else if (wantPreview && setting.isOpenPreview()) {
+            // 显式 ?preview=true 且 openPreview 已启用 → 内联预览
             download = false;
         } else if (wantDownload && setting.isOpenDownload()) {
+            // 显式 ?download=true → 附件下载
             download = true;
-        } else if (setting.isOpenPreview()) {
+        } else if (!wantPreview && !wantDownload) {
+            // 无 ?preview 也无 ?download → 默认 inline（不强制下载，不触发 SPI）
             download = false;
         } else if (setting.isOpenDownload()) {
+            // ?preview=false 或 openPreview 未启用 → 退回下载
             download = true;
         } else {
-            return error(response, 403, "Access Denied: preview/download disabled");
+            // ?download=false 且 openPreview 已启用 → inline
+            download = false;
         }
         String fileName = key.contains("/") ? key.substring(key.lastIndexOf('/') + 1) : key;
         response.setHeader("Content-Disposition", buildDisposition(download, fileName));
+
+        // 显式 ?preview=true 时才尝试 SPI 预览（xlsx/docx/ppt 等 Office 文档转 HTML）
+        if (!download && wantPreview) {
+            byte[] previewPage = trySpiPreview(data, fileName);
+            if (previewPage != null) {
+                response.setStatus(200)
+                        .setHeader("X-FileStorage-Preview", "spi")
+                        .setContentType("text/html;charset=UTF-8")
+                        .setBody(previewPage)
+                        .end();
+                return CompletableFuture.completedFuture(null);
+            }
+        }
 
         // Range 分段下载
         String range = request.getHeader("Range");
@@ -601,6 +629,110 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             return true;
         }
         return false;
+    }
+
+    /**
+     * 尝试通过 SPI 预览提供者转换文件为 HTML 预览页。
+     *
+     * <p>classpath 中存在 utils-support-filestorage-starter 时，可预览
+     * xlsx/xls/docx/doc/pptx/ppt（Univer）、odt/ods/odp（OpenDocument）、vsd（Visio）等；
+     * 无可用提供者或转换失败时返回 null，回退为原始字节响应。</p>
+     *
+     * @param content  文件内容
+     * @param fileName 文件名（用于推断扩展名）
+     * @return HTML 页面字节，无法预览返回 null
+     */
+    private byte[] trySpiPreview(byte[] content, String fileName) {
+        List<FileStoragePreviewProvider> providers = previewProviders();
+        if (providers.isEmpty()) {
+            return null;
+        }
+        String ext = fileName.contains(".")
+                ? fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase() : "";
+        for (FileStoragePreviewProvider provider : providers) {
+            if (!provider.supports(ext, "")) {
+                continue;
+            }
+            try {
+                PreviewResult result = provider.preview(content, ext, "");
+                if (result == null) {
+                    continue;
+                }
+                return wrapPreviewPage(result).getBytes(StandardCharsets.UTF_8);
+            } catch (Exception e) {
+                log.warn("SPI 预览提供者 {} 转换失败: {}", provider.getClass().getSimpleName(), e.getMessage());
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 获取 SPI 预览提供者列表（懒加载并缓存）。
+     *
+     * @return 提供者列表（可能为空）
+     */
+    private List<FileStoragePreviewProvider> previewProviders() {
+        List<FileStoragePreviewProvider> cached = previewProviderCache;
+        if (cached != null) {
+            return cached;
+        }
+        synchronized (this) {
+            if (previewProviderCache == null) {
+                List<FileStoragePreviewProvider> loaded = new java.util.ArrayList<>();
+                try {
+                    loaded.addAll(com.chua.common.support.spi.ServiceProvider
+                            .of(FileStoragePreviewProvider.class).getNewExtensions(null));
+                } catch (Throwable t) {
+                    log.warn("SPI 预览提供者加载失败（缺少 utils-support-filestorage-starter 依赖时忽略）: {}", t.getMessage());
+                }
+                previewProviderCache = loaded;
+            }
+            return previewProviderCache;
+        }
+    }
+
+    /**
+     * 将预览结果组装为完整 HTML 页面。
+     *
+     * @param result 预览结果
+     * @return 完整 HTML 字符串
+     */
+    private String wrapPreviewPage(PreviewResult result) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">")
+                .append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
+        if (result.getEmbeddedCss() != null) {
+            sb.append("<style>").append(result.getEmbeddedCss()).append("</style>");
+        }
+        if (result.getCssUrls() != null) {
+            for (String url : result.getCssUrls()) {
+                sb.append("<link rel=\"stylesheet\" href=\"").append(escapeAttr(url)).append("\">");
+            }
+        }
+        sb.append("</head><body>");
+        if (result.getHtmlContent() != null) {
+            sb.append(result.getHtmlContent());
+        }
+        if (result.getEmbeddedJs() != null) {
+            sb.append("<script>").append(result.getEmbeddedJs()).append("</script>");
+        }
+        if (result.getJsUrls() != null) {
+            for (String url : result.getJsUrls()) {
+                sb.append("<script src=\"").append(escapeAttr(url)).append("\"></script>");
+            }
+        }
+        sb.append("</body></html>");
+        return sb.toString();
+    }
+
+    /**
+     * 转义 HTML 属性中的特殊字符。
+     *
+     * @param s 原始字符串
+     * @return 转义后的字符串
+     */
+    private static String escapeAttr(String s) {
+        return s.replace("&", "&amp;").replace("\"", "&quot;").replace("<", "&lt;");
     }
 
     /**
