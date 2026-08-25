@@ -158,11 +158,11 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
         log.info("管理员手动安装本地软件: softwareId={}, userId={}, installPath={}",
                 request.getSoftwareId(), request.getUserId(), request.getInstallPath());
         try {
-            ReturnResult<Object> result = installRecordService.install(request);
+            ReturnResult<InstallDetailResponse> result = installRecordService.install(request);
             if (result.isOk()) {
                 return ReturnResult.ok("安装成功");
             }
-            return ReturnResult.illegal(result.getMessage());
+            return ReturnResult.illegal(result.getMsg());
         } catch (Exception e) {
             log.error("[本地软件安装] 安装失败: softwareId={}", request.getSoftwareId(), e);
             return ReturnResult.error("安装失败: " + e.getMessage());
