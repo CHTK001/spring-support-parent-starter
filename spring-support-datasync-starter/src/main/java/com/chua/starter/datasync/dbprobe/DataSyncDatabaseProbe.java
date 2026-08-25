@@ -78,14 +78,10 @@ public class DataSyncDatabaseProbe {
         server.start();
         System.out.println("[DB-PROBE] DataSyncServer 启动成功, 等待定时调度执行");
 
-        // 保持 JVM 常驻 (无 web / 非守护线程)
-        synchronized (DataSyncDatabaseProbe.class) {
-            try {
-                DataSyncDatabaseProbe.class.wait();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }
+        // 等待调度执行 6 秒后退出 (cron=0/5 理论 1~2 轮)
+        try { Thread.sleep(6000); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+        server.stop();
+        System.exit(0);
     }
 
     /**
