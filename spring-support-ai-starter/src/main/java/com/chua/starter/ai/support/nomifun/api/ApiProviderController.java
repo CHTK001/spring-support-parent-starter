@@ -636,6 +636,10 @@ public class ApiProviderController {
                 ? model.getCapabilities().stream().map(this::toCapabilityResponse).collect(Collectors.toList())
                 : new ArrayList<>();
         map.put("capabilities", caps);
+        // 模型指标（延迟/智能/输出速度）
+        if (model.getMetrics() != null) {
+            map.put("metrics", model.getMetrics());
+        }
         map.put("created_at", model.getCreatedAt());
         map.put("updated_at", model.getUpdatedAt());
         return map;
@@ -729,6 +733,11 @@ public class ApiProviderController {
         } else {
             e.setCapabilities(new ArrayList<>());
         }
+        // metrics → 直接存原始 Map（延迟/智能/输出速度等）
+        Object metricsObj = input.get("metrics");
+        if (metricsObj instanceof Map<?, ?> metricsMap) {
+            e.setMetrics((Map<String, Object>) metricsMap);
+        }
         e.setCreatedAt(now);
         e.setUpdatedAt(now);
         return e;
@@ -758,6 +767,14 @@ public class ApiProviderController {
                     }
                 }
                 e.setCapabilities(caps);
+            }
+        }
+        if (input.containsKey("metrics")) {
+            Object metricsObj = input.get("metrics");
+            if (metricsObj instanceof Map<?, ?> metricsMap) {
+                e.setMetrics((Map<String, Object>) metricsMap);
+            } else {
+                e.setMetrics(null);
             }
         }
     }
@@ -909,6 +926,8 @@ public class ApiProviderController {
         m.put("infiniai", new ProtocolPreset("infiniai", "https://cloud.infini-ai.com/maas/v1"));
         m.put("ctyun", new ProtocolPreset("ctyun", "https://modelverse.cn/v1"));
         m.put("new-api", new ProtocolPreset("new-api", "http://localhost:3000/v1"));
+        // ONNX 本地离线模型：base_url 存模型文件路径，无远程端点
+        m.put("onnx", new ProtocolPreset("onnx", ""));
         m.put("custom", new ProtocolPreset("custom", "https://api.openai.com/v1"));
         PROTOCOL_PRESETS = Map.copyOf(m);
     }

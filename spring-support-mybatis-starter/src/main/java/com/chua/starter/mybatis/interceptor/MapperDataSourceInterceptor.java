@@ -91,6 +91,10 @@ public class MapperDataSourceInterceptor implements Interceptor {
         String methodName = statementId.substring(lastDot + 1);
         try {
             Class<?> mapperType = ReflectUtils.forName(className);
+            if (mapperType == null) {
+                log.debug("[MyBatis][DS] 未找到 Mapper 类型: {}", className);
+                return "";
+            }
             for (Method method : mapperType.getMethods()) {
                 if (!method.getName().equals(methodName)) {
                     continue;
@@ -105,8 +109,8 @@ public class MapperDataSourceInterceptor implements Interceptor {
             if (ds != null && StringUtils.hasText(ds.value())) {
                 return ds.value();
             }
-        } catch (ClassNotFoundException e) {
-            log.debug("[MyBatis][DS] 未找到 Mapper 类型: {}", className);
+        } catch (Exception e) {
+            log.debug("[MyBatis][DS] 解析 Mapper 类型异常: {}", className, e);
         }
         return "";
     }

@@ -3,6 +3,7 @@ package com.chua.starter.datasync.dbprobe;
 import com.chua.common.support.file.FileSystem;
 import com.chua.common.support.file.builder.WriteBuilder;
 import com.chua.common.support.concurrent.dispatcher.DispatcherConfig;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.chronicle.support.dispatcher.ChronicleDispatcherProvider;
 import com.chua.datasync.agent.support.AbstractDataSyncAgent;
 import com.chua.datasync.agent.support.DataSyncAgentSink;
@@ -575,6 +576,10 @@ public final class DataSyncExcelJdbcProbe {
         String name = "Excel单元格类型(字符串/数值/布尔/日期/公式)";
         Path excel = WORK_DIR.resolve("types.xlsx");
         Class<?> wbClass = ReflectUtils.forName("org.apache.poi.xssf.usermodel.XSSFWorkbook");
+        if (wbClass == null) {
+            System.out.println("[SKIP] Apache POI not on classpath");
+            return 0;
+        }
         try (java.io.Closeable wb = (java.io.Closeable) wbClass.getConstructor().newInstance()) {
             Object sheet = wbClass.getMethod("createSheet").invoke(wb);
             Object row0 = sheet.getClass().getMethod("createRow", int.class).invoke(sheet, 0);
@@ -842,6 +847,10 @@ public final class DataSyncExcelJdbcProbe {
      */
     private static void writeMultiSheetExcel(Path path) throws Exception {
         Class<?> wbClass = ReflectUtils.forName("org.apache.poi.xssf.usermodel.XSSFWorkbook");
+        if (wbClass == null) {
+            System.out.println("[SKIP] Apache POI not on classpath");
+            return;
+        }
         try (java.io.Closeable wb = (java.io.Closeable) wbClass.getConstructor().newInstance()) {
             Object sheet0 = wbClass.getMethod("createSheet", String.class).invoke(wb, "sheet0");
             fillSheetReflect(sheet0, 100, "user");

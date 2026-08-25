@@ -274,6 +274,24 @@ public class ApiAgentController {
      * 其余（图像/视频等生成类）→ GET /models 校验连通性与鉴权，避免产生实际生成费用。</p>
      */
     private ProbeOutcome probe(NomifunProvider provider, Map<String, Object> capability, String modelName) {
+        // ONNX 本地离线模型：base_url 即模型文件路径，只校验文件存在与可读
+        if ("onnx".equalsIgnoreCase(str(provider.getPlatform()))) {
+            String modelPath = str(capability.get("base_url_override"));
+            if (modelPath == null || modelPath.isBlank()) {
+                modelPath = provider.getBaseUrl();
+            }
+            if (modelPath == null || modelPath.isBlank()) {
+                return new ProbeOutcome("unhealthy", -1, "invalid_request", 0, "未配置模型文件路径");
+            }
+            java.io.File f = new java.io.File(modelPath);
+            if (!f.exists()) {
+                return new ProbeOutcome("unhealthy", -1, "not_found", 0, "模型文件不存在: " + modelPath);
+            }
+            if (!f.canRead()) {
+                return new ProbeOutcome("unhealthy", -1, "forbidden", 0, "模型文件不可读: " + modelPath);
+            }
+            return new ProbeOutcome("healthy", -1, null, 0, null);
+        }
         String protocol = str(capability.get("protocol"));
         String overrideUrl = str(capability.get("base_url_override"));
         String baseUrl = overrideUrl != null && !overrideUrl.isBlank() ? overrideUrl : provider.getBaseUrl();

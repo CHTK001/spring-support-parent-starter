@@ -60,6 +60,12 @@ public class NomifunProviderModel {
     private List<Map<String, Object>> capabilities;
 
     /**
+     * 模型指标JSON（延迟/智能/输出速度等，前端可配置）
+     */
+    @TableField(value = "metrics", typeHandler = JacksonTypeHandler.class)
+    private Map<String, Object> metrics;
+
+    /**
      * 创建时间（毫秒）
      */
     @TableField("created_at")
