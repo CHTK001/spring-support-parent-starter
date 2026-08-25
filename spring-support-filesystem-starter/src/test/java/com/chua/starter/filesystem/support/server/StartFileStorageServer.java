@@ -48,7 +48,7 @@ public class StartFileStorageServer {
                 .openRange(true)
                 .openWatermark(true)
                 .watermark("CONFIDENTIAL")
-                .openRemoteFile(false)
+                .openRemoteFile(true)
                 .build();
 
         // 创建过滤器并注册本地存储实例

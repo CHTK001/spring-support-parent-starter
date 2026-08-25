@@ -117,6 +117,19 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     @Override
     /** 响应式Do过滤 */
     public CompletionStage<Void> doFilter(ServerRequest request, ServerResponse response, ReactiveFilterChain chain) {
+        // 统一 CORS 支持（独立部署时浏览器跨域访问列表/上传/删除必需）
+        applyCorsHeaders(request, response);
+
+        // OPTIONS 预检请求直接放行
+        if (request.getMethod() == HttpMethod.OPTIONS) {
+            response.setStatus(204)
+                    .setHeader("Access-Control-Allow-Methods", "GET, HEAD, POST, PUT, DELETE, OPTIONS")
+                    .setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization")
+                    .setHeader("Access-Control-Max-Age", "3600")
+                    .end();
+            return CompletableFuture.completedFuture(null);
+        }
+
         String path = request.getPath();
         List<String> segments = splitPath(path);
         if (segments.isEmpty()) {
@@ -127,6 +140,14 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         if (storage == null) {
             // 未注册的存储路径放行，交由后续链路处理
             return passthrough(request, response, chain);
+        }
+
+        // 远程文件透传：路径形如 /{bucket}/http:/host/path 或 /{bucket}/https:/host/path
+        // （框架返回的路径已解码，远程地址被拆散为多段，此处按前缀重组还原）
+        if (setting.isOpenRemoteFile() && segments.size() > 2
+                && ("http:".equals(segments.get(1)) || "https:".equals(segments.get(1)))) {
+            String remoteUrl = segments.get(1) + "//" + String.join("/", segments.subList(2, segments.size()));
+            return handleRemoteFile(request, response, remoteUrl);
         }
 
         // 提取对象 Key（第二段之后的所有路径段），并做 URL 解码与穿越防护
@@ -173,6 +194,23 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     private CompletionStage<Void> error(ServerResponse response, int status, String message) {
         response.sendError(status, message);
         return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * 为响应追加 CORS 头（回显 Origin，支持任意来源跨域）。
+     *
+     * <p>无 Origin 头的请求（同源/直连工具）不做任何处理。</p>
+     *
+     * @param request  请求
+     * @param response 响应
+     */
+    private void applyCorsHeaders(ServerRequest request, ServerResponse response) {
+        String origin = request.getHeader("Origin");
+        if (origin == null || origin.isEmpty()) {
+            return;
+        }
+        response.setHeader("Access-Control-Allow-Origin", origin);
+        response.setHeader("Vary", "Origin");
     }
 
     /**
@@ -322,8 +360,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             return error(response, 403, "Access Denied: preview/download disabled");
         }
         String fileName = key.contains("/") ? key.substring(key.lastIndexOf('/') + 1) : key;
-        response.setHeader("Content-Disposition",
-                (download ? "attachment" : "inline") + "; filename=\"" + fileName + "\"");
+        response.setHeader("Content-Disposition", buildDisposition(download, fileName));
 
         // Range 分段下载
         String range = request.getHeader("Range");
@@ -357,10 +394,24 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * @param remoteUrl 远程地址
      * @return 异步阶段
      */
+    /**
+     * 处理远程文件拉取。
+     *
+     * <p>使用直连方式（不走系统代理），避免本机代理拦截内网地址导致拉取失败。</p>
+     *
+     * @param request  请求
+     * @param response 响应
+     * @param remoteUrl 远程地址
+     * @return 异步阶段
+     */
     private CompletionStage<Void> handleRemoteFile(ServerRequest request, ServerResponse response, String remoteUrl) {
         try {
+            java.net.HttpURLConnection connection = (java.net.HttpURLConnection)
+                    URI.create(remoteUrl).toURL().openConnection(java.net.Proxy.NO_PROXY);
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(10000);
             byte[] data;
-            try (InputStream in = URI.create(remoteUrl).toURL().openStream()) {
+            try (InputStream in = connection.getInputStream()) {
                 data = in.readAllBytes();
             }
             String fileName = remoteUrl.substring(remoteUrl.lastIndexOf('/') + 1);
@@ -499,7 +550,8 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     /**
      * 规范化对象 Key。
      *
-     * <p>执行 URL 解码，拒绝包含 {@code ..}、{@code :} 等危险片段的路径穿越 Key。</p>
+     * <p>执行 URL 解码，拒绝包含 {@code ..}、{@code :} 等危险片段的路径穿越 Key。
+     * http(s) 开头的远程地址仅在 openRemoteFile 开启时放行。</p>
      *
      * @param rawKey 原始 Key
      * @return 规范化后的 Key，非法时返回 null
@@ -510,6 +562,10 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
         try {
             String decoded = URLDecoder.decode(rawKey, StandardCharsets.UTF_8.name());
+            // 远程地址仅受 openRemoteFile 开关控制
+            if (decoded.startsWith("http://") || decoded.startsWith("https://")) {
+                return setting.isOpenRemoteFile() ? decoded : null;
+            }
             for (String segment : decoded.split("/")) {
                 if ("..".equals(segment) || segment.contains(":")) {
                     return null;
@@ -522,6 +578,32 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     }
 
     /**
+     * 构建 Content-Disposition 头。
+     *
+     * <p>ASCII 文件名直接使用 {@code filename}；含非 ASCII 字符时按 RFC 5987
+     * 追加 {@code filename*=UTF-8''} 编码形式，同时提供 ASCII 回退，
+     * 避免非法响应头导致服务端异常。</p>
+     *
+     * @param download true 表示附件下载（attachment），false 表示内联预览（inline）
+     * @param fileName 文件名
+     * @return Content-Disposition 头值
+     */
+    private String buildDisposition(boolean download, String fileName) {
+        String type = download ? "attachment" : "inline";
+        boolean ascii = fileName.chars().allMatch(c -> c > 31 && c < 127);
+        if (ascii) {
+            return type + "; filename=\"" + fileName + "\"";
+        }
+        try {
+            String encoded = java.net.URLEncoder.encode(fileName, StandardCharsets.UTF_8.name())
+                    .replace("+", "%20");
+            return type + "; filename=\"" + type + "\"" + "; filename*=UTF-8''" + encoded;
+        } catch (Exception e) {
+            return type;
+        }
+    }
+
+    /**
      * 按扩展名推断 Content-Type。
      *
      * @param fileName 文件名
@@ -529,7 +611,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      */
     private String resolveContentType(String fileName) {
         String lower = fileName.toLowerCase();
-        if (lower.endsWith(".txt") || lower.endsWith(".log")) {
+        if (lower.endsWith(".txt") || lower.endsWith(".log") || lower.endsWith(".md")) {
             return "text/plain;charset=UTF-8";
         }
         if (lower.endsWith(".json")) {
@@ -540,6 +622,12 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
         if (lower.endsWith(".xml")) {
             return "application/xml;charset=UTF-8";
+        }
+        if (lower.endsWith(".csv")) {
+            return "text/csv;charset=UTF-8";
+        }
+        if (lower.endsWith(".yaml") || lower.endsWith(".yml")) {
+            return "text/yaml;charset=UTF-8";
         }
         if (lower.endsWith(".pdf")) {
             return "application/pdf";
@@ -556,11 +644,41 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         if (lower.endsWith(".svg")) {
             return "image/svg+xml";
         }
+        if (lower.endsWith(".webp")) {
+            return "image/webp";
+        }
+        if (lower.endsWith(".bmp")) {
+            return "image/bmp";
+        }
+        if (lower.endsWith(".ico")) {
+            return "image/x-icon";
+        }
         if (lower.endsWith(".css")) {
             return "text/css;charset=UTF-8";
         }
         if (lower.endsWith(".js")) {
             return "application/javascript;charset=UTF-8";
+        }
+        if (lower.endsWith(".mp4") || lower.endsWith(".mov")) {
+            return "video/mp4";
+        }
+        if (lower.endsWith(".webm")) {
+            return "video/webm";
+        }
+        if (lower.endsWith(".ogg")) {
+            return "audio/ogg";
+        }
+        if (lower.endsWith(".mp3")) {
+            return "audio/mpeg";
+        }
+        if (lower.endsWith(".wav")) {
+            return "audio/wav";
+        }
+        if (lower.endsWith(".flac")) {
+            return "audio/flac";
+        }
+        if (lower.endsWith(".m4a")) {
+            return "audio/mp4";
         }
         return "application/octet-stream";
     }
