@@ -128,4 +128,15 @@ public class SpringBeanUtils {
         }
         return (T) applicationContext.getBean(name);
     }
+
+    /**
+     * 将 Spring Bean 依赖注入到指定对象中。
+     *
+     * @param bean 待注入的对象
+     */
+    public static void autowireBean(Object bean) {
+        if (applicationContext != null) {
+            applicationContext.getAutowireCapableBeanFactory().autowireBean(bean);
+        }
+    }
 }
