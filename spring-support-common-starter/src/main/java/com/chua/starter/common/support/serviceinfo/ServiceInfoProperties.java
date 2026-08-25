@@ -41,9 +41,9 @@ public class ServiceInfoProperties {
     private String authUsername = "admin";
 
     /**
-     * Basic Auth 密码。
+     * Basic Auth 密码（通过配置文件覆盖）。
      */
-    private String authPassword = "admin";
+    private String authPassword = "";
 
     /**
      * IP 白名单, 命中后跳过认证。支持精确匹配、通配符、CIDR。

@@ -77,9 +77,9 @@ public class SshServerProperties {
         private String username = "admin";
 
         /**
-         * 默认密码
+         * 默认密码（通过配置文件覆盖）
          */
-        private String userPassword = "admin123";
+        private String userPassword = "";
 
         /**
          * 公钥文件路径
