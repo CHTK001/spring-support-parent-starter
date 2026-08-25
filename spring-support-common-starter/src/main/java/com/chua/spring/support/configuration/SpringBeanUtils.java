@@ -5,6 +5,9 @@ import org.springframework.core.env.Environment;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
+import java.util.Collection;
+import java.util.Collections;
+
 /**
  * Spring Bean 工具类
  * <p>
@@ -94,6 +97,20 @@ public class SpringBeanUtils {
             return rmhm;
         }
         return null;
+    }
+
+    /**
+     * 获取指定类型的所有 Bean 实例。
+     *
+     * @param clz Bean 类型
+     * @param <T> Bean 类型参数
+     * @return 所有该类型的 Bean 集合
+     */
+    public static <T> Collection<T> getBeanList(Class<T> clz) {
+        if (applicationContext == null) {
+            return Collections.emptyList();
+        }
+        return applicationContext.getBeansOfType(clz).values();
     }
 
     /**

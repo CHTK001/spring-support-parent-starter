@@ -375,9 +375,9 @@ public class IntegrationDemoController {
                 "com.chua."
         };
         for (String prefix : prefixes) {
-            Class<?> clazz = ReflectUtils.forName(prefix + name);
-            if (clazz != null) {
-                return clazz;
+            Class<?> found = ReflectUtils.forName(prefix + name);
+            if (found != null) {
+                return found;
             }
         }
         return null;

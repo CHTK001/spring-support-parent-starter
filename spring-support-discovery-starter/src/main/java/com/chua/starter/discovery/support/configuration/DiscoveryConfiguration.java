@@ -42,8 +42,6 @@ import java.util.*;
 @Slf4j
 @EnableConfigurationProperties(DiscoveryListProperties.class)
 public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionRegistryPostProcessor {
-    /** 日志 */
-    private static final Logger log = LoggerFactory.getLogger(DiscoveryConfiguration.class);
     /** 环境 */
     private Environment environment;
 
