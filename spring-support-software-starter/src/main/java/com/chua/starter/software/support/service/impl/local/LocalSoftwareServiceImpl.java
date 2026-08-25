@@ -7,6 +7,7 @@ import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.software.support.entity.SoftSoftware;
 import com.chua.starter.software.support.entity.SoftSource;
 import com.chua.starter.software.support.mapper.SoftSoftwareMapper;
+import com.chua.starter.software.support.pojo.install.InstallDetailResponse;
 import com.chua.starter.software.support.pojo.install.InstallRequest;
 import com.chua.starter.software.support.service.SoftInstallRecordService;
 import com.chua.starter.software.support.service.SoftSoftwareService;
