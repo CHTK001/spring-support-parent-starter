@@ -153,10 +153,9 @@ public class SchedulerSyncBinder {
             try {
                 ReflectUtils.invoke(syncServer, "start", void.class);
                 log.info("[job] SyncServer 已启动, 等待 Executor 连接");
-            } catch (NoSuchMethodException nsme) {
-                // 父类没有 start 方法 (可能版本不匹配), 通过 publish lazy start
             } catch (Throwable ex) {
-                log.warn("[job] SyncServer start 失败 cause={}", ex.getMessage());
+                // 父类没有 start 方法 (可能版本不匹配), 通过 publish lazy start
+                log.debug("[job] SyncServer start 失败 cause={}", ex.getMessage());
             }
         }
         log.info("[job] SCHEDULER 同步绑定器已启动 nodeId={}", nodeId);

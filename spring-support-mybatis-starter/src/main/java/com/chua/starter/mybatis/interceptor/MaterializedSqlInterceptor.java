@@ -306,6 +306,9 @@ public class MaterializedSqlInterceptor implements Interceptor {
         String methodName = statementId.substring(lastDot + 1);
         try {
             Class<?> mapperType = ReflectUtils.forName(className);
+            if (mapperType == null) {
+                return NONE;
+            }
             for (Method method : mapperType.getMethods()) {
                 if (!method.getName().equals(methodName)) {
                     continue;
@@ -324,8 +327,8 @@ public class MaterializedSqlInterceptor implements Interceptor {
                         refresh.threshold() > 0 ? refresh.threshold() : properties.getDefaultThreshold(),
                         refresh.dataSource());
             }
-        } catch (ClassNotFoundException e) {
-            log.debug("[MyBatis][Materialized] 未找到 Mapper 类型: {}", className);
+        } catch (Exception e) {
+            log.debug("[MyBatis][Materialized] 解析 Mapper 类型异常: {}", className, e);
         }
         return NONE;
     }

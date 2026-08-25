@@ -141,12 +141,11 @@ public class SeataAutoConfiguration {
          * 检查数据源是否已经被 Seata 代理
          */
         private boolean isAlreadyProxied(DataSource dataSource) {
-            try {
-                Class<?> proxyClass = ReflectUtils.forName("io.seata.rm.datasource.DataSourceProxy");
-                return proxyClass.isInstance(dataSource);
-            } catch (ClassNotFoundException e) {
+            Class<?> proxyClass = ReflectUtils.forName("io.seata.rm.datasource.DataSourceProxy");
+            if (proxyClass == null) {
                 return false;
             }
+            return proxyClass.isInstance(dataSource);
         }
     }
 }

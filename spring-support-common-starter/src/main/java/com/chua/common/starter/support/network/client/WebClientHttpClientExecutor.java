@@ -5,6 +5,7 @@ import com.chua.common.support.network.client.ClientResponse;
 import com.chua.common.support.network.client.spi.HttpClientExecutor;
 import com.chua.common.support.network.http.HttpHeader;
 import com.chua.common.support.network.http.HttpVersion;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.spi.annotations.ConditionalOnClass;
 import com.chua.common.support.spi.annotations.Spi;
 import org.springframework.http.HttpMethod;
@@ -43,12 +44,7 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     @Override
     /** 是否Available */
     public boolean isAvailable() {
-        try {
-            Class.forName("org.springframework.web.reactive.function.client.WebClient");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
+        return ReflectUtils.forName("org.springframework.web.reactive.function.client.WebClient") != null;
     }
 
     @Override

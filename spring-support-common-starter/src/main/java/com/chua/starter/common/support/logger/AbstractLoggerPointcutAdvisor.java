@@ -58,11 +58,11 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
 
     @SuppressWarnings("unchecked")
     private static Class<? extends Annotation> resolveAnnotationClass(String className) {
-        try {
-            return (Class<? extends Annotation>) ReflectUtils.forName(className).asSubclass(Annotation.class);
-        } catch (ClassNotFoundException e) {
+        Class<?> clazz = ReflectUtils.forName(className);
+        if (clazz == null) {
             return null;
         }
+        return (Class<? extends Annotation>) clazz.asSubclass(Annotation.class);
     }
 
     /**

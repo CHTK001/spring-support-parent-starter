@@ -257,6 +257,9 @@ public class IntegrationDemoController {
             } else {
                 clazz = ReflectUtils.forName(type);
             }
+            if (clazz == null) {
+                return error("类未找到: " + type);
+            }
             List<?> list = osgiLauncher.getServices(clazz);
             List<Map<String, Object>> details = new ArrayList<>();
             for (Object svc : list) {
@@ -270,8 +273,6 @@ public class IntegrationDemoController {
             resp.put("count", list.size());
             resp.put("services", details);
             return resp;
-        } catch (ClassNotFoundException e) {
-            return error("类未找到: " + type);
         } catch (Exception e) {
             log.error("[OSGi] 服务查询失败", e);
             return error("服务查询失败: " + e.getMessage());
@@ -362,9 +363,9 @@ public class IntegrationDemoController {
     }
 
     private Class<?> resolveClass(String name) {
-        try {
-            return ReflectUtils.forName(name);
-        } catch (ClassNotFoundException ignore) {
+        Class<?> clazz = ReflectUtils.forName(name);
+        if (clazz != null) {
+            return clazz;
         }
         String[] prefixes = {
                 "com.chua.starter.datasync.support.spi.",
@@ -374,9 +375,9 @@ public class IntegrationDemoController {
                 "com.chua."
         };
         for (String prefix : prefixes) {
-            try {
-                return ReflectUtils.forName(prefix + name);
-            } catch (ClassNotFoundException ignore) {
+            Class<?> clazz = ReflectUtils.forName(prefix + name);
+            if (clazz != null) {
+                return clazz;
             }
         }
         return null;

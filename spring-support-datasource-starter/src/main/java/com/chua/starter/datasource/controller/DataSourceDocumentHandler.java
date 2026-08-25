@@ -72,7 +72,7 @@ public class DataSourceDocumentHandler {
                               String method, String path, String handlerMethod,
                               Class<?>... paramTypes) {
         try {
-            Method m = ReflectUtils.getMethod(DataSourceDocumentController.class, handlerMethod, paramTypes);
+            Method m = DataSourceDocumentController.class.getMethod(handlerMethod, paramTypes);
             RequestMappingInfo info = RequestMappingInfo.paths(basePath + path)
                     .methods(org.springframework.web.bind.annotation.RequestMethod.valueOf(method))
                     .build();
