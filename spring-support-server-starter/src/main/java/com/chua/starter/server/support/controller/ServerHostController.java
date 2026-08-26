@@ -103,6 +103,25 @@ public class ServerHostController {
     }
 
     /**
+     * 列表查询主机（GET，兼容前端列表页）
+     *
+     * <p>前端主机列表页使用 {@code GET /host} 并携带 {@code keyword/groupId/status} 过滤，
+     * 此处与 {@code POST /query} 行为一致，仅 HTTP 方法不同。</p>
+     *
+     * @param keyword 关键词，可为空
+     * @param groupId 分组 ID，可为空
+     * @param status  启用状态，可为空
+     * @return 主机列表
+     */
+    @Operation(summary = "列表查询主机（GET）")
+    @GetMapping
+    public ReturnResult<List<MsServerHost>> list(@RequestParam(required = false) String keyword,
+                                                 @RequestParam(required = false) Long groupId,
+                                                 @RequestParam(required = false) Integer status) {
+        return serverHostService.query(keyword, groupId, status);
+    }
+
+    /**
      * 启停主机
      *
      * @param id      主键

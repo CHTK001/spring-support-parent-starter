@@ -98,4 +98,37 @@ public class MonitorConfigServiceImpl implements MonitorConfigService {
             return ReturnResult.ok(entity);
         } catch (Exception e) { return ReturnResult.error(e.getMessage()); }
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(allEntries = true, cacheNames = "monitorConfig")
+    /** UpsertAll */
+    public ReturnResult<Integer> upsertAll(List<MsMonitorConfig> entities) {
+        if (entities == null || entities.isEmpty()) {
+            return ReturnResult.ok(0);
+        }
+        int count = 0;
+        try {
+            for (MsMonitorConfig entity : entities) {
+                if (entity.getMonitorConfigKey() == null || entity.getMonitorConfigKey().isBlank()) {
+                    continue;
+                }
+                ReturnResult<MsMonitorConfig> result = findByKey(entity.getMonitorConfigKey());
+                if (result.getData() != null) {
+                    MsMonitorConfig old = result.getData();
+                    old.setMonitorConfigValue(entity.getMonitorConfigValue());
+                    old.setMonitorConfigDesc(entity.getMonitorConfigDesc());
+                    old.setMonitorConfigKey(entity.getMonitorConfigKey());
+                    configMapper.updateById(old);
+                } else {
+                    configMapper.insert(entity);
+                }
+                count++;
+            }
+            return ReturnResult.ok(count);
+        } catch (Exception e) {
+            log.error("[monitor] 批量保存配置失败", e);
+            return ReturnResult.error(e.getMessage());
+        }
+    }
 }

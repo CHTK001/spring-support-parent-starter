@@ -200,6 +200,12 @@ public class MonitorController {
         return configService.upsert(config);
     }
 
+    @Operation(summary = "批量写入配置")
+    @PostMapping("/config/batch")
+    public ReturnResult<Integer> upsertConfigs(@RequestBody List<MsMonitorConfig> configs) {
+        return configService.upsertAll(configs);
+    }
+
     // ==================== 网关 ====================
 
     @Operation(summary = "新增网关")

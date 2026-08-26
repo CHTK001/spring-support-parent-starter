@@ -17,4 +17,12 @@ public interface MonitorConfigService {
     ReturnResult<Map<String, String>> getAll();
     List<MsMonitorConfig> listAll();
     ReturnResult<MsMonitorConfig> upsert(MsMonitorConfig entity);
+
+    /**
+     * 批量保存配置（页面"保存全部"使用）。
+     *
+     * @param entities 配置列表
+     * @return 保存数量
+     */
+    ReturnResult<Integer> upsertAll(List<MsMonitorConfig> entities);
 }
