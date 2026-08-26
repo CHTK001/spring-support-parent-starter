@@ -134,6 +134,18 @@ public class RedisLocalProvider implements MetricProvider {
             }
             String key = trimmed.substring(0, idx).trim();
             String value = trimmed.substring(idx + 1).trim();
+            // keyspace 段：db0:keys=123,expires=2,avg_ttl=0 —— 累加各 db 的 key 总数
+            if (key.startsWith("db") && value.contains("keys=")) {
+                int ks = value.indexOf("keys=");
+                int comma = value.indexOf(',', ks);
+                String keysRaw = comma > ks ? value.substring(ks + 5, comma) : value.substring(ks + 5);
+                Double kc = parseDouble(keysRaw);
+                if (kc != null) {
+                    Double acc = metrics.get("_db_keys_total");
+                    metrics.put("_db_keys_total", acc == null ? kc : acc + kc);
+                }
+                continue;
+            }
             Double num = parseDouble(value);
             if (num != null) {
                 metrics.put(key, num);
@@ -161,6 +173,7 @@ public class RedisLocalProvider implements MetricProvider {
         addMetric(result, "redis_cpu_user", metrics.get("used_cpu_user"));
         addMetric(result, "redis_cpu_sys", metrics.get("used_cpu_sys"));
         addMetric(result, "redis_rdb_last_save", metrics.get("rdb_last_save"));
+        addMetric(result, "redis_db_keys_total", metrics.get("_db_keys_total"));
 
         // 命中率
         Double hits = metrics.get("keyspace_hits");
