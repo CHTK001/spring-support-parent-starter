@@ -78,6 +78,13 @@
             <artifactId>utils-support-deeplearning-starter</artifactId>
         </dependency>
 
+        <!-- iLink 微信 Bot 扫码登录 SDK -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-ilink-starter</artifactId>
+            <version>4.0.0.42</version>
+        </dependency>
+
         <!-- ONNX 模型注册器（OCR 识别、文本向量等模型实现） -->
         <dependency>
             <groupId>com.chua</groupId>
