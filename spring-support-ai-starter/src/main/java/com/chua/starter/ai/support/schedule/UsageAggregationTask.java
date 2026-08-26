@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -149,11 +150,15 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             int total = 0;
             for (Map.Entry<String, UsageParser> entry : parsers.entrySet()) {
                 try {
-                    List<AiUsage> usages = entry.getValue().parseAll();
-                    if (usages == null || usages.isEmpty()) {
+                    List<AiUsage> batch = new ArrayList<>();
+                    // 响应式流：与 LocalToolUsageSyncService 保持一致，限流消费后统一落库
+                    entry.getValue().streamAll()
+                            .doOnNext(batch::add)
+                            .blockLast(java.time.Duration.ofSeconds(120));
+                    if (batch.isEmpty()) {
                         continue;
                     }
-                    for (AiUsage usage : usages) {
+                    for (AiUsage usage : batch) {
                         SysAiUsage record = toSysAiUsage(entry.getKey(), usage);
                         if (record != null) {
                             usageMapper.insert(record);
