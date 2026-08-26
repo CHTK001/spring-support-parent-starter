@@ -2,6 +2,7 @@ package com.chua.starter.monitor.support.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.monitor.support.context.MonitorAgentContext;
 import com.chua.starter.monitor.support.entity.MsMonitor;
 import com.chua.starter.monitor.support.mapper.MsMonitorMapper;
 import com.chua.starter.monitor.support.service.MetricService;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -26,14 +28,15 @@ import java.util.Map;
  * Agent 上报端点（开放 API，不走登录态）
  * <p>
  * 外部探针以 {@code X-Agent-Key} 头鉴权，key 与 MsMonitor.monitorAgentKey 匹配。
- * 推送数据与 Provider 轮询共用同一条写入管道（MySQL + InfluxDB + 告警评估）。
+ * 推送数据与 Provider 轮询共用同一条写入管道（MySQL + InfluxDB + 告警评估）；
+ * 心跳与推送均会刷新在线状态上下文。
  * </p>
  *
  * @author CH
  * @since 4.0.0.42
  */
 @Slf4j
-@Tag(name = "监控-Agent上报", description = "外部探针推送指标与心跳")
+@Tag(name = "监控-Agent上报", description = "外部探针推送指标、心跳与在线状态")
 @RestController
 @RequestMapping("/ms/monitor/agent")
 @RequiredArgsConstructor
@@ -48,8 +51,11 @@ public class AgentEndpointController {
     /** 指标服务 */
     private final MetricService metricService;
 
+    /** 探针上下文（心跳/在线状态） */
+    private final MonitorAgentContext agentContext;
+
     /**
-     * 心跳：探针周期性上报存活
+     * 心跳：探针周期性上报存活并刷新在线状态
      *
      * @param agentKey 探针标识
      * @return 服务端时间
@@ -62,8 +68,28 @@ public class AgentEndpointController {
         if (monitor == null) {
             return ReturnResult.error("无效的探针标识");
         }
+        agentContext.markActive(monitor.getId());
         return ReturnResult.ok(Map.of("serverTime", LocalDateTime.now().toString(),
                 "monitorId", monitor.getId()));
+    }
+
+    /**
+     * 探针在线状态列表（心跳上下文快照）
+     *
+     * @return 每个目标的最后心跳时间与在线标记
+     */
+    @Operation(summary = "探针在线状态")
+    @GetMapping("/status")
+    public ReturnResult<List<Map<String, Object>>> status() {
+        List<Map<String, Object>> result = new java.util.ArrayList<>();
+        for (MonitorAgentContext.AgentStatus status : agentContext.snapshot()) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("monitorId", status.monitorId());
+            item.put("lastHeartbeat", status.lastHeartbeat());
+            item.put("online", status.online());
+            result.add(item);
+        }
+        return ReturnResult.list(result);
     }
 
     /**
@@ -94,6 +120,8 @@ public class AgentEndpointController {
         if (monitor == null) {
             return ReturnResult.error("无效的探针标识");
         }
+        // 推送本身即活跃证明, 刷新心跳上下文
+        agentContext.markActive(monitor.getId());
         CollectResult result = new CollectResult();
         result.setMonitor(monitor);
         List<MetricPoint> points = parsePoints(body.get("points"));
