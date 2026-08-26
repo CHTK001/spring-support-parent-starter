@@ -859,6 +859,30 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         if (lower.endsWith(".eot")) {
             return "application/vnd.ms-fontobject";
         }
+        if (lower.endsWith(".epub")) {
+            return "application/epub+zip";
+        }
+        if (lower.endsWith(".rtf")) {
+            return "application/rtf";
+        }
+        if (lower.endsWith(".eml")) {
+            return "message/rfc822";
+        }
+        if (lower.endsWith(".ics")) {
+            return "text/calendar";
+        }
+        if (lower.endsWith(".vcf")) {
+            return "text/vcard";
+        }
+        if (lower.endsWith(".fbx")) {
+            return "application/octet-stream";
+        }
+        if (lower.endsWith(".blend")) {
+            return "application/octet-stream";
+        }
+        if (lower.endsWith(".shp")) {
+            return "application/octet-stream";
+        }
         return "application/octet-stream";
     }
 
