@@ -1,0 +1,49 @@
+# =====================================================================
+# 本地开发编排: guacd + InfluxDB(1.8, 与 utils-support-influxdb-starter 的
+# InfluxQL 语义匹配) + Redis(monitor 静默期依赖)
+#
+# 用法: docker compose up -d
+# 说明: 仅用于本地联调, 生产部署请使用 scripts/install-guacd.sh 与独立中间件
+# =====================================================================
+services:
+
+  # -------------------------------------------------------------------
+  # guacd: Apache Guacamole 协议守护进程(server-starter 远控网关依赖)
+  # 端口仅绑定本机回环, 后端经 server.support.guacd.host/port 访问
+  # -------------------------------------------------------------------
+  guacd:
+    image: guacamole/guacd:1.5.5
+    container_name: dev-guacd
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4822:4822"
+
+  # -------------------------------------------------------------------
+  # InfluxDB 1.8: 监控指标明细时序库
+  # 后端配置: monitor.influx.enabled=true / url=http://127.0.0.1:8086 /
+  #           database=monitor (启动后自动建库)
+  # -------------------------------------------------------------------
+  influxdb:
+    image: influxdb:1.8
+    container_name: dev-influxdb
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8086:8086"
+    environment:
+      INFLUXDB_DB: monitor
+      INFLUXDB_HTTP_AUTH_ENABLED: "false"
+    volumes:
+      - influx-data:/var/lib/influxdb
+
+  # -------------------------------------------------------------------
+  # Redis: 告警静默期 setNX 依赖(spring-boot-starter-data-redis 默认配置)
+  # -------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: dev-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+
+volumes:
+  influx-data:

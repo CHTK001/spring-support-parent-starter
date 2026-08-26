@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.configuration.client.GlobalChatClientManager;
-import com.chua.starter.ai.support.entity.settings.AiProvider;
+import com.chua.starter.ai.support.entity.settings.SysAiProvider;
 import com.chua.starter.ai.support.mapper.settings.AiProviderMapper;
 import com.chua.starter.ai.support.model.AiProviderDTO;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
@@ -67,8 +67,8 @@ public class AiProviderServiceImpl implements AiProviderService {
     @Override
     public List<AiProviderDTO> list() {
         return providerMapper.selectList(
-                        new LambdaQueryWrapper<AiProvider>()
-                                .orderByAsc(AiProvider::getCreateTime))
+                        new LambdaQueryWrapper<SysAiProvider>()
+                                .orderByAsc(SysAiProvider::getCreateTime))
                 .stream()
                 .map(p -> {
                     AiProviderDTO dto = toDto(p);
@@ -90,7 +90,7 @@ public class AiProviderServiceImpl implements AiProviderService {
     @Override
     @Transactional
     public AiProviderDTO create(AiProviderDTO provider) {
-        AiProvider entity = toEntity(provider);
+        SysAiProvider entity = toEntity(provider);
         LocalDateTime now = LocalDateTime.now();
         entity.setCreateTime(now);
         entity.setUpdateTime(now);
@@ -101,7 +101,7 @@ public class AiProviderServiceImpl implements AiProviderService {
             entity.setProviderDeleted(0);
         }
         providerMapper.insert(entity);
-        log.debug("[AiProvider] 新建成功: id={}, name={}", entity.getProviderId(), entity.getProviderName());
+        log.debug("[SysAiProvider] 新建成功: id={}, name={}", entity.getProviderId(), entity.getProviderName());
         return toDto(entity);
     }
 
@@ -115,11 +115,11 @@ public class AiProviderServiceImpl implements AiProviderService {
     @Override
     @Transactional
     public AiProviderDTO update(Long providerId, AiProviderDTO provider) {
-        AiProvider existing = providerMapper.selectById(providerId);
+        SysAiProvider existing = providerMapper.selectById(providerId);
         if (existing == null) {
             return null;
         }
-        AiProvider entity = toEntity(provider);
+        SysAiProvider entity = toEntity(provider);
         // 编辑时 apiKey 为空或为脱敏占位值则不覆盖，保留真实密钥
         if (entity.getProviderApiKey() == null || entity.getProviderApiKey().isBlank()
                 || entity.getProviderApiKey().contains("****")) {
@@ -128,7 +128,7 @@ public class AiProviderServiceImpl implements AiProviderService {
         entity.setProviderId(providerId);
         entity.setUpdateTime(LocalDateTime.now());
         providerMapper.updateById(entity);
-        log.debug("[AiProvider] 更新成功: id={}", providerId);
+        log.debug("[SysAiProvider] 更新成功: id={}", providerId);
         return toDto(providerMapper.selectById(providerId));
     }
 
@@ -141,7 +141,7 @@ public class AiProviderServiceImpl implements AiProviderService {
     @Transactional
     public void delete(Long providerId) {
         providerMapper.deleteById(providerId);
-        log.debug("[AiProvider] 删除成功: id={}", providerId);
+        log.debug("[SysAiProvider] 删除成功: id={}", providerId);
     }
 
     /**
@@ -154,10 +154,10 @@ public class AiProviderServiceImpl implements AiProviderService {
     @Override
     @Transactional
     public AiProviderDTO toggle(Long providerId, Boolean enabled) {
-        LambdaUpdateWrapper<AiProvider> wrapper = new LambdaUpdateWrapper<AiProvider>()
-                .eq(AiProvider::getProviderId, providerId)
-                .set(AiProvider::getProviderEnabled, enabled)
-                .set(AiProvider::getUpdateTime, LocalDateTime.now());
+        LambdaUpdateWrapper<SysAiProvider> wrapper = new LambdaUpdateWrapper<SysAiProvider>()
+                .eq(SysAiProvider::getProviderId, providerId)
+                .set(SysAiProvider::getProviderEnabled, enabled)
+                .set(SysAiProvider::getUpdateTime, LocalDateTime.now());
         providerMapper.update(null, wrapper);
         return toDto(providerMapper.selectById(providerId));
     }
@@ -172,7 +172,7 @@ public class AiProviderServiceImpl implements AiProviderService {
     @Override
     @Transactional
     public AiProviderDTO activate(Long providerId) {
-        AiProvider provider = providerMapper.selectById(providerId);
+        SysAiProvider provider = providerMapper.selectById(providerId);
         if (provider == null) {
             throw new IllegalStateException("供应商不存在: id=" + providerId);
         }
@@ -207,15 +207,15 @@ public class AiProviderServiceImpl implements AiProviderService {
         request.put("group", RUNTIME_GROUP);
         request.put("fields", fields);
         sysAiGlobalSettingService.replace(request);
-        log.info("[AiProvider] 供应商 {} 已激活为 OpenAI 兼容服务: baseUrl={}, model={}",
+        log.info("[SysAiProvider] 供应商 {} 已激活为 OpenAI 兼容服务: baseUrl={}, model={}",
                 provider.getProviderName(), baseUrl, models.get(0));
 
         // 确保供应商启用
         if (!Boolean.TRUE.equals(provider.getProviderEnabled())) {
-            LambdaUpdateWrapper<AiProvider> enableWrapper = new LambdaUpdateWrapper<AiProvider>()
-                    .eq(AiProvider::getProviderId, providerId)
-                    .set(AiProvider::getProviderEnabled, true)
-                    .set(AiProvider::getUpdateTime, LocalDateTime.now());
+            LambdaUpdateWrapper<SysAiProvider> enableWrapper = new LambdaUpdateWrapper<SysAiProvider>()
+                    .eq(SysAiProvider::getProviderId, providerId)
+                    .set(SysAiProvider::getProviderEnabled, true)
+                    .set(SysAiProvider::getUpdateTime, LocalDateTime.now());
             providerMapper.update(null, enableWrapper);
         }
 
@@ -246,7 +246,7 @@ public class AiProviderServiceImpl implements AiProviderService {
      * @param entity 供应商实体
      * @return 供应商 DTO
      */
-    private AiProviderDTO toDto(AiProvider entity) {
+    private AiProviderDTO toDto(SysAiProvider entity) {
         if (entity == null) {
             return null;
         }
@@ -269,8 +269,8 @@ public class AiProviderServiceImpl implements AiProviderService {
      * @param dto 供应商 DTO
      * @return 供应商实体
      */
-    private AiProvider toEntity(AiProviderDTO dto) {
-        AiProvider entity = new AiProvider();
+    private SysAiProvider toEntity(AiProviderDTO dto) {
+        SysAiProvider entity = new SysAiProvider();
         entity.setProviderName(dto.getName());
         entity.setProviderType(dto.getType());
         entity.setProviderLogo(dto.getLogo());

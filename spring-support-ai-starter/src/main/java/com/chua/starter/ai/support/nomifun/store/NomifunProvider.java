@@ -7,10 +7,11 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.Map;
 
 /**
- * nomifun 提供商持久化实体。
+ * AI 提供商持久化实体。
  *
  * <p>对应前端 {@code /api/providers} 契约，存储提供商的基础信息。
  * {@code credentials} 字段写入后不回显，响应仅以 {@code has_credentials} 布尔标识。</p>
@@ -20,7 +21,8 @@ import java.util.Map;
  */
 @Data
 @TableName(value = "sys_nomifun_provider", autoResultMap = true)
-public class NomifunProvider {
+public class NomifunProvider implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * 提供商ID（UUID）
@@ -79,12 +81,12 @@ public class NomifunProvider {
     /**
      * 创建时间（毫秒）
      */
-    @TableField("created_at")
+    @TableField("create_time")
     private Long createdAt;
 
     /**
      * 更新时间（毫秒）
      */
-    @TableField("updated_at")
+    @TableField("update_time")
     private Long updatedAt;
 }

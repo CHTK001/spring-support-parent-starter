@@ -2,7 +2,7 @@ package com.chua.starter.ai.support.service.impl.settings;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.chua.starter.ai.support.entity.settings.AiServiceStatus;
+import com.chua.starter.ai.support.entity.settings.SysAiServiceStatus;
 import com.chua.starter.ai.support.mapper.settings.AiServiceStatusMapper;
 import com.chua.starter.ai.support.model.AiServiceStatusDTO;
 import com.chua.starter.ai.support.service.settings.AiServiceStatusService;
@@ -39,9 +39,9 @@ public class AiServiceStatusServiceImpl implements AiServiceStatusService {
      */
     @Override
     public List<AiServiceStatusDTO> list() {
-        List<AiServiceStatus> statuses = statusMapper.selectList(
-                new LambdaQueryWrapper<AiServiceStatus>()
-                        .orderByAsc(AiServiceStatus::getStatusId));
+        List<SysAiServiceStatus> statuses = statusMapper.selectList(
+                new LambdaQueryWrapper<SysAiServiceStatus>()
+                        .orderByAsc(SysAiServiceStatus::getStatusId));
         return statuses.stream()
                 .map(status -> toDto(refreshUptime(status)))
                 .collect(Collectors.toList());
@@ -55,28 +55,28 @@ public class AiServiceStatusServiceImpl implements AiServiceStatusService {
     @Override
     @Transactional
     public void start(String serviceName) {
-        AiServiceStatus exist = statusMapper.selectOne(
-                new LambdaQueryWrapper<AiServiceStatus>()
-                        .eq(AiServiceStatus::getStatusServiceName, serviceName));
+        SysAiServiceStatus exist = statusMapper.selectOne(
+                new LambdaQueryWrapper<SysAiServiceStatus>()
+                        .eq(SysAiServiceStatus::getStatusServiceName, serviceName));
         LocalDateTime now = LocalDateTime.now();
         if (exist == null) {
-            AiServiceStatus status = new AiServiceStatus();
+            SysAiServiceStatus status = new SysAiServiceStatus();
             status.setStatusServiceName(serviceName);
             status.setStatusRunning(true);
             status.setStatusStartTime(now);
             status.setStatusUptimeSec(0L);
             status.setStatusUpdateTime(now);
             statusMapper.insert(status);
-            log.info("[AiServiceStatus] 服务 {} 启动", serviceName);
+            log.info("[SysAiServiceStatus] 服务 {} 启动", serviceName);
             return;
         }
-        LambdaUpdateWrapper<AiServiceStatus> wrapper = new LambdaUpdateWrapper<AiServiceStatus>()
-                .eq(AiServiceStatus::getStatusServiceName, serviceName)
-                .set(AiServiceStatus::getStatusRunning, true)
-                .set(AiServiceStatus::getStatusStartTime, now)
-                .set(AiServiceStatus::getStatusUpdateTime, now);
+        LambdaUpdateWrapper<SysAiServiceStatus> wrapper = new LambdaUpdateWrapper<SysAiServiceStatus>()
+                .eq(SysAiServiceStatus::getStatusServiceName, serviceName)
+                .set(SysAiServiceStatus::getStatusRunning, true)
+                .set(SysAiServiceStatus::getStatusStartTime, now)
+                .set(SysAiServiceStatus::getStatusUpdateTime, now);
         statusMapper.update(null, wrapper);
-        log.info("[AiServiceStatus] 服务 {} 启动", serviceName);
+        log.info("[SysAiServiceStatus] 服务 {} 启动", serviceName);
     }
 
     /**
@@ -87,21 +87,21 @@ public class AiServiceStatusServiceImpl implements AiServiceStatusService {
     @Override
     @Transactional
     public void stop(String serviceName) {
-        AiServiceStatus exist = statusMapper.selectOne(
-                new LambdaQueryWrapper<AiServiceStatus>()
-                        .eq(AiServiceStatus::getStatusServiceName, serviceName));
+        SysAiServiceStatus exist = statusMapper.selectOne(
+                new LambdaQueryWrapper<SysAiServiceStatus>()
+                        .eq(SysAiServiceStatus::getStatusServiceName, serviceName));
         if (exist == null) {
-            log.warn("[AiServiceStatus] 服务 {} 不存在，忽略停止", serviceName);
+            log.warn("[SysAiServiceStatus] 服务 {} 不存在，忽略停止", serviceName);
             return;
         }
         refreshUptime(exist);
-        LambdaUpdateWrapper<AiServiceStatus> wrapper = new LambdaUpdateWrapper<AiServiceStatus>()
-                .eq(AiServiceStatus::getStatusServiceName, serviceName)
-                .set(AiServiceStatus::getStatusRunning, false)
-                .set(AiServiceStatus::getStatusUptimeSec, exist.getStatusUptimeSec())
-                .set(AiServiceStatus::getStatusUpdateTime, LocalDateTime.now());
+        LambdaUpdateWrapper<SysAiServiceStatus> wrapper = new LambdaUpdateWrapper<SysAiServiceStatus>()
+                .eq(SysAiServiceStatus::getStatusServiceName, serviceName)
+                .set(SysAiServiceStatus::getStatusRunning, false)
+                .set(SysAiServiceStatus::getStatusUptimeSec, exist.getStatusUptimeSec())
+                .set(SysAiServiceStatus::getStatusUpdateTime, LocalDateTime.now());
         statusMapper.update(null, wrapper);
-        log.info("[AiServiceStatus] 服务 {} 停止", serviceName);
+        log.info("[SysAiServiceStatus] 服务 {} 停止", serviceName);
     }
 
     /**
@@ -110,7 +110,7 @@ public class AiServiceStatusServiceImpl implements AiServiceStatusService {
      * @param status 服务状态实体
      * @return 刷新后的服务状态实体
      */
-    private AiServiceStatus refreshUptime(AiServiceStatus status) {
+    private SysAiServiceStatus refreshUptime(SysAiServiceStatus status) {
         if (status.getStatusRunning() != null && status.getStatusRunning()
                 && status.getStatusStartTime() != null) {
             long sec = ChronoUnit.SECONDS.between(status.getStatusStartTime(), LocalDateTime.now());
@@ -125,7 +125,7 @@ public class AiServiceStatusServiceImpl implements AiServiceStatusService {
      * @param entity 服务状态实体
      * @return 服务状态 DTO
      */
-    private AiServiceStatusDTO toDto(AiServiceStatus entity) {
+    private AiServiceStatusDTO toDto(SysAiServiceStatus entity) {
         AiServiceStatusDTO dto = new AiServiceStatusDTO();
         dto.setName(entity.getStatusServiceName());
         dto.setRunning(entity.getStatusRunning());

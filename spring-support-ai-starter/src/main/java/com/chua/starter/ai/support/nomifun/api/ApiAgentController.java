@@ -232,7 +232,7 @@ public class ApiAgentController {
 
         // 4. 持久化探测结果到能力 JSON（health + health_checked_at）
         long now = System.currentTimeMillis();
-        long latency = outcome.latencyMs >= 0 ? outcome.latencyMs : now - start;
+        long latency = outcome.latencyMs >= 0 ? outcome.latencyMs : System.currentTimeMillis() - start;
         Map<String, Object> health = new LinkedHashMap<>();
         health.put("status", outcome.status);
         health.put("latency", latency);
@@ -240,7 +240,7 @@ public class ApiAgentController {
             health.put("error", outcome.error);
         }
         capability.put("health", health);
-        capability.put("health_checked_at", now);
+        capability.put("health_checked_at", System.currentTimeMillis());
         modelRow.setUpdatedAt(now);
         // 复合主键 (provider_id, model)：显式按双键更新，避免同名模型跨供应商误伤
         modelMapper.update(modelRow, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<NomifunProviderModel>()

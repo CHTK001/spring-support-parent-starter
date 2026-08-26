@@ -1,0 +1,171 @@
+package com.chua.starter.server.support.controller;
+
+import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.server.support.constants.ServerConstants;
+import com.chua.starter.server.support.entity.MsServerHost;
+import com.chua.starter.server.support.service.ServerHostService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+/**
+ * 服务器主机接口
+ * <p>
+ * 提供主机台账 CRUD、启停、连通性测试与身份绑定管理。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
+@Tag(name = "服务器资产-主机", description = "主机台账管理")
+@RestController
+@RequestMapping(ServerConstants.API_PREFIX + "/host")
+@RequiredArgsConstructor
+public class ServerHostController {
+
+    /** 主机服务 */
+    private final ServerHostService serverHostService;
+
+    /**
+     * 新增主机
+     *
+     * @param host 主机
+     * @return 结果
+     */
+    @Operation(summary = "新增主机")
+    @PostMapping
+    public ReturnResult<MsServerHost> create(@RequestBody MsServerHost host) {
+        return serverHostService.create(host);
+    }
+
+    /**
+     * 更新主机
+     *
+     * @param id   主键
+     * @param host 主机
+     * @return 结果
+     */
+    @Operation(summary = "更新主机")
+    @PutMapping("/{id}")
+    public ReturnResult<MsServerHost> update(@PathVariable Long id, @RequestBody MsServerHost host) {
+        return serverHostService.update(id, host);
+    }
+
+    /**
+     * 删除主机
+     *
+     * @param id 主键
+     * @return 结果
+     */
+    @Operation(summary = "删除主机")
+    @DeleteMapping("/{id}")
+    public ReturnResult<Void> delete(@PathVariable Long id) {
+        return serverHostService.delete(id);
+    }
+
+    /**
+     * 查询单个主机
+     *
+     * @param id 主键
+     * @return 结果
+     */
+    @Operation(summary = "查询单个主机")
+    @GetMapping("/{id}")
+    public ReturnResult<MsServerHost> get(@PathVariable Long id) {
+        return serverHostService.get(id);
+    }
+
+    /**
+     * 条件查询主机列表
+     *
+     * @param keyword 关键词，可为空
+     * @param groupId 分组 ID，可为空
+     * @param status  启用状态，可为空
+     * @return 主机列表
+     */
+    @Operation(summary = "条件查询主机")
+    @PostMapping("/query")
+    public ReturnResult<List<MsServerHost>> query(@RequestParam(required = false) String keyword,
+                                                  @RequestParam(required = false) Long groupId,
+                                                  @RequestParam(required = false) Integer status) {
+        return serverHostService.query(keyword, groupId, status);
+    }
+
+    /**
+     * 启停主机
+     *
+     * @param id      主键
+     * @param enabled 是否启用
+     * @return 结果
+     */
+    @Operation(summary = "启停主机")
+    @PutMapping("/{id}/status")
+    public ReturnResult<Void> updateStatus(@PathVariable Long id, @RequestParam boolean enabled) {
+        return serverHostService.updateStatus(id, enabled);
+    }
+
+    /**
+     * 连通性测试
+     *
+     * @param id 主键
+     * @return 测试输出（uname 等）
+     */
+    @Operation(summary = "连通性测试")
+    @PostMapping("/{id}/test-connect")
+    public ReturnResult<String> testConnect(@PathVariable Long id) {
+        return serverHostService.testConnect(id);
+    }
+
+    /**
+     * 绑定身份
+     *
+     * @param id         主机 ID
+     * @param identityId 身份 ID
+     * @param sort       优先级，可为空
+     * @return 结果
+     */
+    @Operation(summary = "绑定登录身份")
+    @PostMapping("/{id}/identity/{identityId}")
+    public ReturnResult<Void> bindIdentity(@PathVariable("id") Long id,
+                                           @PathVariable("identityId") Long identityId,
+                                           @RequestParam(required = false) Integer sort) {
+        return serverHostService.bindIdentity(id, identityId, sort);
+    }
+
+    /**
+     * 解除身份绑定
+     *
+     * @param id         主机 ID
+     * @param identityId 身份 ID
+     * @return 结果
+     */
+    @Operation(summary = "解除登录身份")
+    @DeleteMapping("/{id}/identity/{identityId}")
+    public ReturnResult<Void> unbindIdentity(@PathVariable("id") Long id,
+                                             @PathVariable("identityId") Long identityId) {
+        return serverHostService.unbindIdentity(id, identityId);
+    }
+
+    /**
+     * 查询已绑定身份 ID 列表
+     *
+     * @param id 主机 ID
+     * @return 身份 ID 列表（按优先级）
+     */
+    @Operation(summary = "查询已绑定身份")
+    @GetMapping("/{id}/identities")
+    public ReturnResult<List<Long>> listIdentities(@PathVariable Long id) {
+        return serverHostService.listBoundIdentityIds(id);
+    }
+}

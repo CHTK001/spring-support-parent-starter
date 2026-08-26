@@ -2,7 +2,7 @@ package com.chua.starter.ai.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.ai.support.entity.SysAiManufacturer;
-import com.chua.starter.ai.support.entity.settings.AiModel;
+import com.chua.starter.ai.support.entity.settings.SysAiModel;
 import com.chua.starter.ai.support.mapper.SysAiManufacturerMapper;
 import com.chua.starter.ai.support.mapper.settings.AiModelMapper;
 import com.chua.starter.ai.support.service.AiManufacturerFacadeService;
@@ -172,7 +172,7 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
         aiModelMapper.physicalDeleteByProviderId(manufacturer.getSysAiManufacturerId().longValue());
         int inserted = 0;
         for (String modelName : modelNames) {
-            AiModel model = new AiModel();
+            SysAiModel model = new SysAiModel();
             model.setModelCode(modelName);
             model.setModelName(modelName);
             model.setModelProviderId(manufacturer.getSysAiManufacturerId().longValue());

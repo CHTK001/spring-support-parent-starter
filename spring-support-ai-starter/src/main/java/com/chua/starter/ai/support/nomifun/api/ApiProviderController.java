@@ -212,18 +212,20 @@ public class ApiProviderController {
         if (body.containsKey("auth_scheme")) {
             entity.setAuthScheme(str(body, "auth_scheme"));
         }
-        if (body.containsKey("enabled")) {
-            entity.setEnabled(bool(body, "enabled", entity.getEnabled()));
+        if (body.containsKey("credentials")) {
+            entity.setCredentials(uncheckedCast(body.get("credentials")));
         }
-        if (body.containsKey("sort_order")) {
-            entity.setSortOrder(intv(body, "sort_order", entity.getSortOrder()));
+        if (body.containsKey("enabled")) {
+            entity.setEnabled(bool(body, "enabled", true));
         }
         if (body.containsKey("bedrock_config")) {
             entity.setBedrockConfig(uncheckedCast(body.get("bedrock_config")));
         }
-        // credentials 缺省 → 保留已有凭证；显式传 null 视为清空
-        if (body.containsKey("credentials")) {
-            entity.setCredentials(uncheckedCast(body.get("credentials")));
+        if (body.containsKey("platform")) {
+            entity.setPlatform(str(body, "platform"));
+        }
+        if (body.containsKey("sort_order")) {
+            entity.setSortOrder(intv(body, "sort_order", entity.getSortOrder()));
         }
         entity.setUpdatedAt(System.currentTimeMillis());
         providerMapper.updateById(entity);
@@ -459,7 +461,7 @@ public class ApiProviderController {
                 existing.setAuthScheme(str(body, "auth_scheme"));
             }
             if (body.containsKey("extra")) {
-                existing.setExtra(body.get("extra"));
+                existing.setExtra(uncheckedCast(body.get("extra")));
             }
             if (body.containsKey("credentials")) {
                 existing.setCredentials(uncheckedCast(body.get("credentials")));
@@ -837,7 +839,7 @@ public class ApiProviderController {
         e.setBaseUrl(requireStr(input, "base_url"));
         e.setAuthScheme(requireStr(input, "auth_scheme"));
         e.setCredentials(uncheckedCast(input.get("credentials")));
-        e.setExtra(input.get("extra"));
+        e.setExtra(uncheckedCast(input.get("extra")));
         e.setCreatedAt(now);
         e.setUpdatedAt(now);
         return e;

@@ -1,7 +1,7 @@
 package com.chua.starter.ai.support.service.impl.settings;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.chua.starter.ai.support.entity.settings.AiUsage;
+import com.chua.starter.ai.support.entity.settings.SysAiSettingUsage;
 import com.chua.starter.ai.support.mapper.settings.AiUsageMapper;
 import com.chua.starter.ai.support.model.AiUsageDTO;
 import com.chua.starter.ai.support.service.settings.AiUsageService;
@@ -42,10 +42,10 @@ public class AiUsageServiceImpl implements AiUsageService {
      */
     @Override
     public List<AiUsageDTO> query(String model) {
-        LambdaQueryWrapper<AiUsage> wrapper = new LambdaQueryWrapper<AiUsage>()
-                .orderByDesc(AiUsage::getUsageTimestamp);
+        LambdaQueryWrapper<SysAiSettingUsage> wrapper = new LambdaQueryWrapper<SysAiSettingUsage>()
+                .orderByDesc(SysAiSettingUsage::getUsageTimestamp);
         if (model != null && !model.isBlank()) {
-            wrapper.eq(AiUsage::getUsageModel, model);
+            wrapper.eq(SysAiSettingUsage::getUsageModel, model);
         }
         return usageMapper.selectList(wrapper)
                 .stream()
@@ -59,7 +59,7 @@ public class AiUsageServiceImpl implements AiUsageService {
      * @param entity 用量实体
      * @return 用量 DTO
      */
-    private AiUsageDTO toDto(AiUsage entity) {
+    private AiUsageDTO toDto(SysAiSettingUsage entity) {
         AiUsageDTO dto = new AiUsageDTO();
         dto.setModel(entity.getUsageModel());
         dto.setRequests(1L);

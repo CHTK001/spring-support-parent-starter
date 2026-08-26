@@ -1,7 +1,7 @@
 package com.chua.starter.ai.support.service.impl.settings;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.chua.starter.ai.support.entity.settings.AiGroup;
+import com.chua.starter.ai.support.entity.settings.SysAiGroup;
 import com.chua.starter.ai.support.mapper.settings.AiGroupMapper;
 import com.chua.starter.ai.support.model.AiGroupDTO;
 import com.chua.starter.ai.support.service.settings.AiGroupService;
@@ -47,8 +47,8 @@ public class AiGroupServiceImpl implements AiGroupService {
     @Override
     public List<AiGroupDTO> list() {
         return groupMapper.selectList(
-                        new LambdaQueryWrapper<AiGroup>()
-                                .orderByAsc(AiGroup::getGroupCreateTime))
+                        new LambdaQueryWrapper<SysAiGroup>()
+                                .orderByAsc(SysAiGroup::getGroupCreateTime))
                 .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
@@ -63,7 +63,7 @@ public class AiGroupServiceImpl implements AiGroupService {
     @Override
     @Transactional
     public AiGroupDTO create(AiGroupDTO group) {
-        AiGroup entity = toEntity(group);
+        SysAiGroup entity = toEntity(group);
         LocalDateTime now = LocalDateTime.now();
         entity.setGroupCreateTime(now);
         entity.setGroupUpdateTime(now);
@@ -74,7 +74,7 @@ public class AiGroupServiceImpl implements AiGroupService {
             entity.setGroupDeleted(0);
         }
         groupMapper.insert(entity);
-        log.debug("[AiGroup] 新建成功: id={}, name={}", entity.getGroupId(), entity.getGroupName());
+        log.debug("[SysAiGroup] 新建成功: id={}, name={}", entity.getGroupId(), entity.getGroupName());
         return toDto(entity);
     }
 
@@ -88,7 +88,7 @@ public class AiGroupServiceImpl implements AiGroupService {
     @Override
     @Transactional
     public AiGroupDTO update(Long groupId, AiGroupDTO group) {
-        AiGroup entity = toEntity(group);
+        SysAiGroup entity = toEntity(group);
         entity.setGroupId(groupId);
         entity.setGroupUpdateTime(LocalDateTime.now());
         groupMapper.updateById(entity);
@@ -104,7 +104,7 @@ public class AiGroupServiceImpl implements AiGroupService {
     @Transactional
     public void delete(Long groupId) {
         groupMapper.deleteById(groupId);
-        log.debug("[AiGroup] 删除成功: id={}", groupId);
+        log.debug("[SysAiGroup] 删除成功: id={}", groupId);
     }
 
     /**
@@ -113,7 +113,7 @@ public class AiGroupServiceImpl implements AiGroupService {
      * @param entity 分组实体
      * @return 分组 DTO
      */
-    private AiGroupDTO toDto(AiGroup entity) {
+    private AiGroupDTO toDto(SysAiGroup entity) {
         if (entity == null) {
             return null;
         }
@@ -133,8 +133,8 @@ public class AiGroupServiceImpl implements AiGroupService {
      * @param dto 分组 DTO
      * @return 分组实体
      */
-    private AiGroup toEntity(AiGroupDTO dto) {
-        AiGroup entity = new AiGroup();
+    private SysAiGroup toEntity(AiGroupDTO dto) {
+        SysAiGroup entity = new SysAiGroup();
         entity.setGroupName(dto.getName());
         entity.setGroupDescription(dto.getDescription());
         entity.setGroupModels(dto.getModels() == null ? "[]" : Json.toJson(dto.getModels()));

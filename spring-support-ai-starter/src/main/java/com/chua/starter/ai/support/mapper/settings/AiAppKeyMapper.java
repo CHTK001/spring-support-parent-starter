@@ -1,7 +1,7 @@
 package com.chua.starter.ai.support.mapper.settings;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.chua.starter.ai.support.entity.settings.AiAppKey;
+import com.chua.starter.ai.support.entity.settings.SysAiAppKey;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
@@ -11,5 +11,5 @@ import org.apache.ibatis.annotations.Mapper;
  * @author CH
  */
 @Mapper
-public interface AiAppKeyMapper extends BaseMapper<AiAppKey> {
+public interface AiAppKeyMapper extends BaseMapper<SysAiAppKey> {
 }
