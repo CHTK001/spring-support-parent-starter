@@ -73,16 +73,6 @@ public class InfluxMetricWriter {
     public boolean isAvailable() {
         return influxDbEngine != null;
     }
-    }
-
-    /**
-     * 是否可用（引擎装配成功）
-     *
-     * @return true 表示可写入
-     */
-    public boolean isAvailable() {
-        return influxDbEngine != null;
-    }
 
     /**
      * 写入整批采集结果
