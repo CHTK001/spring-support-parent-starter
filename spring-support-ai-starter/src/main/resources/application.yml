@@ -8,14 +8,12 @@ spring:
   application:
     name: ai-starter
   autoconfigure:
-    exclude:
+exclude:
       - com.chua.starter.datasource.configuration.ShardingSphereAutoConfiguration
       - com.chua.starter.datasource.configuration.DataSourceScriptConfiguration
       - com.chua.starter.filesystem.support.config.FileSystemAutoConfiguration
       - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchClientAutoConfiguration
       - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://172.16.0.40:3306/ai_test?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
@@ -28,10 +26,22 @@ spring:
   sql:
     init:
       mode: never
-  h2:
+h2:
     console:
       enabled: false
       path: /h2-console
+  data:
+    redis:
+      host: 172.16.0.40
+      port: 6379
+      # 无密码环境留空；有密码取消注释
+      # password:
+      timeout: 5s
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
   profiles:
     active: dev
   ai:
