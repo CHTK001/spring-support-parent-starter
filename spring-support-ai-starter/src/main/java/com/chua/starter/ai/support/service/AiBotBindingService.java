@@ -1,11 +1,15 @@
 package com.chua.starter.ai.support.service;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.chua.common.support.ai.bot.QrcodeListener;
 import com.chua.common.support.lang.json.Json;
-import com.chua.ilink.support.bot.ILinkBotClient;
+import com.chua.common.support.network.client.ClientRequest;
+import com.chua.common.support.network.client.ClientResponse;
+import com.chua.common.support.network.client.HttpClient;
+import com.chua.common.support.network.client.HttpClientFactory;
+import com.chua.common.support.network.http.HttpMethod;
 import com.chua.starter.ai.support.entity.SysAiBotBinding;
 import com.chua.starter.ai.support.mapper.SysAiBotBindingMapper;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,14 +19,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 微信 iLink Bot 绑定服务。
  *
- * <p>管理多个 Bot 绑定记录的增删改查与在线同步。
- * 每条绑定对应一个独立的微信 Bot 实例。</p>
+ * <p>管理多个 Bot 绑定记录的增删改查与扫码登录。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -32,16 +34,19 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class AiBotBindingService {
 
+    /** iLink Bot 官方 API 基础地址 */
+    private static final String ILINK_BASE = "https://ilinkai.weixin.qq.com";
+
     /** Bot 绑定 Mapper */
     private final SysAiBotBindingMapper botBindingMapper;
 
     /** 扫码会话内存表（key -> 会话状态）。生产环境可替换为 Redis。 */
-    private final Map<String, QrSession> qrSessions = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, QrSession> qrSessions = new ConcurrentHashMap<>();
+
+    // ==================== 绑定 CRUD ====================
 
     /**
-     * 获取全部绑定列表。
-     *
-     * @return 绑定列表，按创建时间降序
+     * 获取全部绑定列表（按创建时间降序）。
      */
     public List<SysAiBotBinding> listAll() {
         return botBindingMapper.selectList(
@@ -49,34 +54,16 @@ public class AiBotBindingService {
                         .orderByDesc(SysAiBotBinding::getCreateTime));
     }
 
-    /**
-     * 按 ID 获取绑定。
-     *
-     * @param id 绑定 ID
-     * @return 绑定信息或 null
-     */
     public SysAiBotBinding getById(Long id) {
         return botBindingMapper.selectById(id);
     }
 
-    /**
-     * 按 botId 查找绑定。
-     *
-     * @param botId iLink 分配的唯一标识
-     * @return 绑定信息或 null
-     */
     public SysAiBotBinding findByBotId(String botId) {
         return botBindingMapper.selectOne(
                 Wrappers.<SysAiBotBinding>lambdaQuery()
                         .eq(SysAiBotBinding::getBotId, botId));
     }
 
-    /**
-     * 创建或更新绑定（按 botId 去重）。
-     *
-     * @param binding 绑定实体
-     * @return 数据库 ID
-     */
     public Long saveOrUpdate(SysAiBotBinding binding) {
         SysAiBotBinding existing = findByBotId(binding.getBotId());
         if (existing != null) {
@@ -91,12 +78,6 @@ public class AiBotBindingService {
         return binding.getId();
     }
 
-    /**
-     * 更新在线状态。
-     *
-     * @param botId  Bot 唯一标识
-     * @param status 新状态（online / offline / expired）
-     */
     public void updateStatus(String botId, String status) {
         SysAiBotBinding binding = findByBotId(botId);
         if (binding != null) {
@@ -107,11 +88,6 @@ public class AiBotBindingService {
         }
     }
 
-    /**
-     * 删除绑定。
-     *
-     * @param id 数据库 ID
-     */
     public void delete(Long id) {
         botBindingMapper.deleteById(id);
     }
@@ -119,14 +95,13 @@ public class AiBotBindingService {
     // ==================== iLink 扫码登录 ====================
 
     /**
-     * 生成 iLink 二维码会话。
+     * 生成 iLink 扫码会话。
      *
-     * <p>异步发起 {@link ILinkBotClient#loginWithQR()}，
-     * 通过 {@link QrcodeListener} 回调捕获二维码 URL，
-     * 登录成功时自动将凭证写入 {@code sys_ai_bot_binding} 表。</p>
+     * <p>调用 {@code GET /ilink/bot/get_bot_qrcode} 获取二维码，
+     * 前端通过 {@link #checkQrCodeStatus(String)} 轮询确认状态，
+     * 扫码成功后自动将凭证写入 {@code sys_ai_bot_binding}。</p>
      *
-     * @param platform 平台标识（wechat / wecom），仅 wechat 支持扫码
-     * @return 二维码会话 key 与 URL（可能为空，需轮询 status 确认）
+     * @return 会话 key + 二维码图片 URL
      */
     public QrResult generateQrCode(String platform) {
         String key = UUID.randomUUID().toString();
@@ -134,38 +109,81 @@ public class AiBotBindingService {
         session.key = key;
         session.platform = platform;
         session.status = "pending";
-        session.expireAt = System.currentTimeMillis() + 180_000L; // 3 分钟超时
+        session.expireAt = System.currentTimeMillis() + 180_000L; // 3 分钟
 
         qrSessions.put(key, session);
 
-        ILinkBotClient client = new ILinkBotClient();
-        client.qrcodeListener(new QrcodeListener() {
-            @Override
-            public void newQrcode(String url, String k) {
-                session.qrUrl = url;
-                session.scanKey = k;
-                log.info("[Bot] 二维码已生成 key={} url={}", key, url);
+        // 同步调用 iLink API（最多等 10s），确保返回前二维码已就绪；
+        // bot_type=3 仅对应个人微信，企业微信（wecom）iLink 暂不支持扫码。
+        if ("wecom".equals(platform)) {
+            session.status = "error";
+            session.errorMsg = "企业微信不支持 iLink 扫码绑定";
+            log.warn("[Bot] wecom 扫码被拒绝 key={}", key);
+            return new QrResult(key, "");
+        }
+        try {
+            Map<String, Object> qrResp = iLinkGet("/ilink/bot/get_bot_qrcode?bot_type=3");
+            String qrCode = str(qrResp, "qrcode");
+            String qrImgUrl = str(qrResp, "qrcode_img_content");
+            if (qrCode != null && !qrCode.isBlank()) {
+                session.qrKey = qrCode;
+                session.qrImageUrl = qrImgUrl;
+                log.info("[Bot] 二维码已生成 key={} imgUrl={}", key, qrImgUrl);
+            } else {
+                session.status = "error";
+                session.errorMsg = "获取二维码失败";
+                log.warn("[Bot] 获取二维码返回空 key={}", key);
             }
+        } catch (Exception e) {
+            session.status = "error";
+            session.errorMsg = e.getMessage();
+            log.error("[Bot] 生成二维码异常 key={}", key, e);
+        }
 
-            @Override
-            public void scanned() {
-                session.status = "scanned";
-                log.info("[Bot] 二维码已扫描 key={}", key);
+        return new QrResult(key, session.qrImageUrl != null ? session.qrImageUrl : "");
+    }
+
+    /**
+     * 轮询扫码会话状态（前端每 3 秒调用一次）。
+     *
+     * <p>iLink 服务端对 get_qrcode_status 做长轮询（最长 35s 阻塞），
+     * 直接透传响应即可；confirmed 时返回 bot_token 与 bot_id。</p>
+     *
+     * @param key 会话 key
+     * @return 状态 + 凭证（confirmed 时）
+     */
+    public QrStatus checkQrCodeStatus(String key) {
+        QrSession session = qrSessions.get(key);
+        if (session == null) {
+            throw new IllegalArgumentException("key 无效或已过期");
+        }
+        // 懒清理过期 session
+        if (System.currentTimeMillis() > session.expireAt && !"confirmed".equals(session.status)) {
+            session.status = "expired";
+            qrSessions.remove(key);
+        }
+        if ("confirmed".equals(session.status) && session.botId != null) {
+            return new QrStatus("confirmed", session.botId, session.botToken);
+        }
+        // 长轮询：透传 iLink 响应（含 status: wait/scanned/confirmed/expired）
+        try {
+            Map<String, Object> resp = iLinkGet(
+                    "/ilink/bot/get_qrcode_status?qrcode=" + java.net.URLEncoder.encode(session.qrKey, "UTF-8"));
+            String status = str(resp, "status");
+            if (status != null) {
+                session.status = status;
             }
-
-            @Override
-            public void confirmed(String token, String botId, String userId) {
-                session.status = "confirmed";
-                session.botId = botId;
-                session.botToken = token;
-                log.info("[Bot] 扫码登录成功 key={} botId={}", key, botId);
+            if ("confirmed".equals(status)) {
+                session.botId = str(resp, "botId");
+                session.botToken = str(resp, "botToken");
+                String userId = str(resp, "userId");
+                log.info("[Bot] 扫码确认 key={} botId={}", key, session.botId);
                 // 自动持久化绑定记录
                 SysAiBotBinding binding = new SysAiBotBinding();
-                binding.setBotId(botId);
-                binding.setBotToken(token);
-                binding.setPlatform("wechat");
-                binding.setNickname(userId); // userId 作为初始昵称占位，用户可在 UI 中修改
-                binding.setGatewayPort(null);
+                binding.setBotId(session.botId);
+                binding.setBotToken(session.botToken);
+                binding.setPlatform(session.platform != null ? session.platform : "wechat");
+                binding.setNickname(userId != null ? userId : session.botId);
                 binding.setStatus("online");
                 binding.setBindSource("qrcode_scan");
                 binding.setCreateTime(LocalDateTime.now());
@@ -176,95 +194,78 @@ public class AiBotBindingService {
                 } catch (Exception e) {
                     log.error("[Bot] 写入绑定失败", e);
                 }
-            }
-
-            @Override
-            public void expired() {
+                // 从 Map 移除，避免重复轮询
+                qrSessions.remove(key);
+            } else if ("expired".equals(status)) {
                 session.status = "expired";
-                log.warn("[Bot] 二维码已过期 key={}", key);
+                qrSessions.remove(key);
             }
-
-            @Override
-            public void error(String reason, Throwable e) {
-                session.status = "error";
-                session.errorMsg = reason;
-                log.error("[Bot] 扫码异常 key={} reason={}", key, reason, e);
-            }
-        });
-
-        // 异步启动 iLink 登录流程（最长阻塞 180s）
-        CompletableFuture.runAsync(() -> {
-            try {
-                client.loginWithQR();
-            } catch (Exception e) {
-                log.error("[Bot] loginWithQR 异常 key={}", key, e);
-                session.status = "error";
-                session.errorMsg = e.getMessage();
-            }
-        });
-
-        // 等待二维码 URL 到位（最多 5 秒）
-        long start = System.currentTimeMillis();
-        while (session.qrUrl == null && System.currentTimeMillis() - start < 5_000) {
-            try { Thread.sleep(100); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); break; }
+            return new QrStatus(status != null ? status : "pending", session.botId, session.botToken);
+        } catch (Exception e) {
+            log.warn("[Bot] 轮询状态异常 key={}", key, e);
+            return new QrStatus("error", null, null);
         }
-        return new QrResult(key, session.qrUrl != null ? session.qrUrl : "");
     }
 
-    /**
-     * 查询二维码会话状态，供前端轮询。
-     *
-     * @param key 会话 key
-     * @return 状态（pending / scanned / confirmed / expired / error）及凭证
-     */
-    public QrStatus checkQrCodeStatus(String key) {
-        QrSession session = qrSessions.get(key);
-        if (session == null) {
-            throw new IllegalArgumentException("key 无效或已过期");
+    // ==================== iLink HTTP 工具 ====================
+
+    private Map<String, Object> iLinkGet(String path) {
+        ClientRequest request = ClientRequest.of(ILINK_BASE + path, HttpMethod.GET);
+        request.setConnectTimeout(10_000L);
+        request.setReadTimeout(60_000L); // iLink 长轮询最长 35s，留足余量
+        HttpClient client = HttpClientFactory.getClient();
+        ClientResponse response = client.execute(request);
+        return parseJson(response.getBodyString());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> parseJson(String body) {
+        try {
+            return Json.fromJson(body,
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+        } catch (Exception e) {
+            return Map.of();
         }
-        // 懒清理过期 session
-        if (System.currentTimeMillis() > session.expireAt && !"confirmed".equals(session.status)) {
-            session.status = "expired";
-        }
-        if ("confirmed".equals(session.status) && session.botId != null) {
-            return new QrStatus("confirmed", session.botId, session.botToken);
-        }
-        return new QrStatus(session.status, null, null);
+    }
+
+    private static String str(Map<String, Object> map, String key) {
+        if (map == null || !map.containsKey(key)) return null;
+        Object v = map.get(key);
+        return v == null ? null : v.toString();
     }
 
     // ==================== 内部 DTO ====================
 
-    /** 扫码会话状态机 */
     @Data
     static class QrSession {
         String key;
         String platform;
-        String status;         // pending / scanned / confirmed / expired / error
-        String qrUrl;
-        String scanKey;        // iLink SDK 内部的 qr key
+        /** pending / scanned / confirmed / expired / error */
+        String status;
+        /** iLink 返回的 qrcode key，用于轮询 */
+        String qrKey;
+        /** 二维码图片 URL（直接 img src） */
+        String qrImageUrl;
         String botId;
         String botToken;
         String errorMsg;
         long expireAt;
     }
 
-    /** 生成二维码响应 */
     @Data
     public static class QrResult {
-        /** 轮询 key */
+        /** 轮询 key（前端传给 /qrcode/status?key=） */
         private final String key;
-        /** 二维码图片 URL（iLink 提供，可直接 img src） */
-        private final String qrcodeUrl;
+        /** 二维码图片 URL（iLink 直接返回，前端 img src 使用；JSON 字段名 qrcodeUrl） */
+        @JsonProperty("qrcodeUrl")
+        private final String qrImageUrl;
     }
 
-    /** 轮询状态响应 */
     @Data
     public static class QrStatus {
         /** pending / scanned / confirmed / expired / error */
         private final String status;
-        /** 绑定成功后回填的 botId */
         private final String botId;
-        /** 绑定成功后回填的 token */
         private final String botToken;
     }
 }
