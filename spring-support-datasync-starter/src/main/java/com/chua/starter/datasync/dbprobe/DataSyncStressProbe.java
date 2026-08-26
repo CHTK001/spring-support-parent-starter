@@ -33,7 +33,7 @@ public final class DataSyncStressProbe {
     /** Main */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);
-        int[] rows = {10_000_000};
+        int[] rows = {100_000_000};
         int[] batches = {1000};
 
         System.err.println("========================================================================");
