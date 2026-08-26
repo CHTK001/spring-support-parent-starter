@@ -817,11 +817,17 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         if (lower.endsWith(".js")) {
             return "application/javascript;charset=UTF-8";
         }
-        if (lower.endsWith(".mp4") || lower.endsWith(".mov")) {
+        if (lower.endsWith(".mp4") || lower.endsWith(".mov") || lower.endsWith(".m4v") || lower.endsWith(".3gp")) {
             return "video/mp4";
         }
         if (lower.endsWith(".webm")) {
             return "video/webm";
+        }
+        if (lower.endsWith(".avi") || lower.endsWith(".wmv") || lower.endsWith(".flv")) {
+            return "video/x-msvideo";
+        }
+        if (lower.endsWith(".mkv") || lower.endsWith(".webm")) {
+            return "video/x-matroska";
         }
         if (lower.endsWith(".ogg")) {
             return "audio/ogg";
@@ -837,6 +843,21 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
         if (lower.endsWith(".m4a")) {
             return "audio/mp4";
+        }
+        if (lower.endsWith(".ttf")) {
+            return "font/ttf";
+        }
+        if (lower.endsWith(".otf")) {
+            return "font/otf";
+        }
+        if (lower.endsWith(".woff")) {
+            return "font/woff";
+        }
+        if (lower.endsWith(".woff2")) {
+            return "font/woff2";
+        }
+        if (lower.endsWith(".eot")) {
+            return "application/vnd.ms-fontobject";
         }
         return "application/octet-stream";
     }
