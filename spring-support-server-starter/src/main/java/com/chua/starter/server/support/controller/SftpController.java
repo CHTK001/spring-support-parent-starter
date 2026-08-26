@@ -98,7 +98,8 @@ public class SftpController {
      *
      * @param hostId     主机 ID
      * @param identityId 身份 ID，可为空
-     * @param directory  目标目录，可为空取根
+     * @param directory  目标目录，可为空取根（兼容旧参数名）
+     * @param path       目标目录，可为空取根（前端实际使用的参数名，优先于 directory）
      * @param file       文件
      * @return 远端路径
      */
@@ -107,8 +108,10 @@ public class SftpController {
     public ReturnResult<String> upload(@PathVariable Long hostId,
                                        @RequestParam(required = false) Long identityId,
                                        @RequestParam(required = false) String directory,
+                                       @RequestParam(required = false) String path,
                                        @RequestParam("file") MultipartFile file) {
-        return sftpService.upload(hostId, identityId, directory, file);
+        String targetDir = (path != null && !path.isBlank()) ? path : directory;
+        return sftpService.upload(hostId, identityId, targetDir, file);
     }
 
     /**
