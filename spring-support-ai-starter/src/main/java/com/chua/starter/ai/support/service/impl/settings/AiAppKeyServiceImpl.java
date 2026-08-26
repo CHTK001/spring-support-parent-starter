@@ -6,8 +6,8 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.entity.SysAiAppKey;
 import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;
 import org.springframework.cache.annotation.CacheEvict;
-import com.chua.starter.ai.support.entity.settings.AiGroup;
-import com.chua.starter.ai.support.entity.settings.AiProvider;
+import com.chua.starter.ai.support.entity.settings.SysAiGroup;
+import com.chua.starter.ai.support.entity.settings.SysAiProvider;
 import com.chua.starter.ai.support.mapper.SysAiAppKeyMapper;
 import com.chua.starter.ai.support.mapper.settings.AiGroupMapper;
 import com.chua.starter.ai.support.mapper.settings.AiProviderMapper;
@@ -66,7 +66,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
                 .stream().toList();
 
         Map<Long, String> providerNames = providerMapper.selectList(null).stream()
-                .collect(Collectors.toMap(AiProvider::getProviderId, AiProvider::getProviderName, (a, b) -> a));
+                .collect(Collectors.toMap(SysAiProvider::getProviderId, SysAiProvider::getProviderName, (a, b) -> a));
         Map<Integer, String> groupNames = resolveGroupNames();
 
         return ReturnResult.ok(keys.stream()
@@ -82,7 +82,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
      */
     private Map<Integer, String> resolveGroupNames() {
         return groupMapper.selectList(null).stream()
-                .collect(Collectors.toMap(g -> g.getGroupId().intValue(), AiGroup::getGroupName, (a, b) -> a));
+                .collect(Collectors.toMap(g -> g.getGroupId().intValue(), SysAiGroup::getGroupName, (a, b) -> a));
     }
 
     /**
@@ -110,7 +110,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
             entity.setSysAiAppKeyUseCount(0L);
         }
         appKeyMapper.insert(entity);
-        log.debug("[AiAppKey] 新建成功: id={}, name={}", entity.getSysAiAppKeyId(), entity.getSysAiAppKeyName());
+        log.debug("[SysAiAppKey] 新建成功: id={}, name={}", entity.getSysAiAppKeyId(), entity.getSysAiAppKeyName());
         return ReturnResult.ok(toDto(entity, resolveProvider(entity.getSysAiAppKeyProviderId()),
                 resolveGroup(entity.getSysAiAppKeyGroupId())));
     }
@@ -154,7 +154,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
             return ReturnResult.illegal("AppKey ID 不能为空");
         }
         appKeyMapper.deleteById(appKeyId.intValue());
-        log.debug("[AiAppKey] 删除成功: id={}", appKeyId);
+        log.debug("[SysAiAppKey] 删除成功: id={}", appKeyId);
         return ReturnResult.ok();
     }
 
@@ -192,7 +192,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
             return null;
         }
         return Optional.ofNullable(providerMapper.selectById(providerId))
-                .map(AiProvider::getProviderName)
+                .map(SysAiProvider::getProviderName)
                 .orElse(null);
     }
 
@@ -207,7 +207,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
             return null;
         }
         return Optional.ofNullable(groupMapper.selectById(groupId))
-                .map(AiGroup::getGroupName)
+                .map(SysAiGroup::getGroupName)
                 .orElse(null);
     }
 

@@ -110,4 +110,11 @@ public class MsMonitor extends SysBase {
     @Schema(description = "是否启用 1启用 0禁用", example = "1")
     /** Monitor是否启用 */
     private Integer monitorEnabled;
+
+    /**
+     * 探针标识（Agent 推送鉴权键，服务端生成或录入）
+     */
+    @TableField("ms_monitor_agent_key")
+    @Schema(description = "探针标识(Agent推送鉴权)", example = "8f14e45fceea167a5a36dedd4bea2543")
+    private String monitorAgentKey;
 }

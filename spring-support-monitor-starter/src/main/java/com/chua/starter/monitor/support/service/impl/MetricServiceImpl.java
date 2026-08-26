@@ -7,11 +7,14 @@ import com.chua.common.support.utils.NumberUtils;
 import com.chua.starter.monitor.support.entity.*;
 import com.chua.starter.monitor.support.mapper.*;
 import com.chua.starter.monitor.support.service.MetricService;
+import com.chua.starter.monitor.support.service.alarm.AlarmEngineService;
+import com.chua.starter.monitor.support.service.alarm.InfluxMetricWriter;
 import com.chua.starter.monitor.support.spi.CollectResult;
 import com.chua.starter.monitor.support.spi.MetricPoint;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -78,11 +81,29 @@ public class MetricServiceImpl implements MetricService {
      * JSON 序列化器
      */
     private final ObjectMapper objectMapper;
+    /**
+     * InfluxDB 写入器（monitor.influx.enabled=true 时装配，否则为空）
+     */
+    private final ObjectProvider<InfluxMetricWriter> influxWriterProvider;
+    /**
+     * 告警引擎（写入链路尾部评估）
+     */
+    private final AlarmEngineService alarmEngineService;
 
     /**
      * 默认批量插入大小
      */
     private static final int BATCH_SIZE = 200;
+
+    /**
+     * 获取可用的 InfluxDB 写入器
+     *
+     * @return 可用实例或 null（未启用/引擎缺失）
+     */
+    private InfluxMetricWriter influxWriter() {
+        InfluxMetricWriter writer = influxWriterProvider.getIfAvailable();
+        return writer != null && writer.isAvailable() ? writer : null;
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -129,6 +150,18 @@ public class MetricServiceImpl implements MetricService {
             batchInsertNetwork(netBatch);
             batchInsertJvm(jvmBatch);
             batchInsertRedis(redisBatch);
+            // 时序明细同步写 InfluxDB（未启用时跳过），失败不阻断主链路
+            InfluxMetricWriter writer = influxWriter();
+            if (writer != null) {
+                writer.write(result);
+            }
+            // 写入链路尾部：逐点评估告警规则
+            String monitorName = result.getMonitor() != null ? result.getMonitor().getMonitorName() : null;
+            for (MetricPoint point : result.getPoints()) {
+                if (monitorId != null && point.getValue() != null) {
+                    alarmEngineService.evaluate(monitorId, monitorName, point.getMetricName(), point.getValue());
+                }
+            }
             return ReturnResult.ok();
         } catch (Exception e) {
             log.error("写入采集结果失败", e);

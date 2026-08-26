@@ -7,10 +7,11 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.Map;
 
 /**
- * nomifun 提供商连接持久化实体。
+ * AI 提供商连接持久化实体。
  *
  * <p>对应前端 {@code /api/providers/{id}/connections} 契约，
  * 存储提供商的附加连接信息，凭证写入后不回显。</p>
@@ -20,7 +21,8 @@ import java.util.Map;
  */
 @Data
 @TableName(value = "sys_nomifun_provider_connection", autoResultMap = true)
-public class NomifunProviderConnection {
+public class NomifunProviderConnection implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * 连接ID（UUID）
@@ -68,17 +70,17 @@ public class NomifunProviderConnection {
      * 扩展字段JSON
      */
     @TableField(value = "extra", typeHandler = JacksonTypeHandler.class)
-    private Object extra;
+    private Map<String, Object> extra;
 
     /**
      * 创建时间（毫秒）
      */
-    @TableField("created_at")
+    @TableField("create_time")
     private Long createdAt;
 
     /**
      * 更新时间（毫秒）
      */
-    @TableField("updated_at")
+    @TableField("update_time")
     private Long updatedAt;
 }

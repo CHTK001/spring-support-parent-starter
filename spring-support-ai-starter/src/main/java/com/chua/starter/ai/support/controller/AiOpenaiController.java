@@ -62,6 +62,9 @@ public class AiOpenaiController extends BaseAiController {
      */
     private final AiChatFacadeService aiChatFacadeService;
 
+    /** AI 模型指标富集服务 */
+    private final com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService modelMetricsEnrichmentService;
+
     /**
      * SSE 超时时间（毫秒）
      */
@@ -173,15 +176,16 @@ public class AiOpenaiController extends BaseAiController {
         if (!modelDefinitions.isEmpty()) {
             // 优先使用详细模型定义
             for (ModelDefinition def : modelDefinitions) {
-                data.add(Map.of(
-                        "id", def.getId(),
-                        "object", "model",
-                        "created", (int) (System.currentTimeMillis() / 1000),
-                        "owned_by", "system",
-                        "name", def.getName() != null ? def.getName() : def.getId(),
-                        "description", def.getDescription() != null ? def.getDescription() : "",
-                        "capabilities", def.getCapabilities() != null ? def.getCapabilities() : List.of()
-                ));
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("id", def.getId());
+                row.put("object", "model");
+                row.put("created", (int) (System.currentTimeMillis() / 1000));
+                row.put("owned_by", "system");
+                row.put("name", def.getName() != null ? def.getName() : def.getId());
+                row.put("description", def.getDescription() != null ? def.getDescription() : "");
+                row.put("capabilities", def.getCapabilities() != null ? def.getCapabilities() : List.of());
+                modelMetricsEnrichmentService.enrich(def.getId(), row);
+                data.add(row);
             }
         } else {
             // 回退到模型 ID 列表

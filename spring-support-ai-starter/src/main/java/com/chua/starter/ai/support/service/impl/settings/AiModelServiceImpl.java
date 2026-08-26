@@ -2,8 +2,8 @@ package com.chua.starter.ai.support.service.impl.settings;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.ai.support.entity.SysAiManufacturer;
-import com.chua.starter.ai.support.entity.settings.AiModel;
-import com.chua.starter.ai.support.entity.settings.AiProvider;
+import com.chua.starter.ai.support.entity.settings.SysAiModel;
+import com.chua.starter.ai.support.entity.settings.SysAiProvider;
 import com.chua.starter.ai.support.mapper.SysAiManufacturerMapper;
 import com.chua.starter.ai.support.mapper.settings.AiModelMapper;
 import com.chua.starter.ai.support.mapper.settings.AiProviderMapper;
@@ -46,13 +46,13 @@ public class AiModelServiceImpl implements AiModelService {
     @Override
     /** List */
     public List<AiModelDTO> list() {
-        List<AiModel> models = modelMapper.selectList(
-                new LambdaQueryWrapper<AiModel>()
-                        .orderByAsc(AiModel::getModelSort)
-                        .orderByAsc(AiModel::getModelCreateTime));
+        List<SysAiModel> models = modelMapper.selectList(
+                new LambdaQueryWrapper<SysAiModel>()
+                        .orderByAsc(SysAiModel::getModelSort)
+                        .orderByAsc(SysAiModel::getModelCreateTime));
 
         Map<Long, String> providerNames = providerMapper.selectList(null).stream()
-                .collect(Collectors.toMap(AiProvider::getProviderId, AiProvider::getProviderName,
+                .collect(Collectors.toMap(SysAiProvider::getProviderId, SysAiProvider::getProviderName,
                         (a, b) -> a));
 
         return models.stream()
@@ -64,7 +64,7 @@ public class AiModelServiceImpl implements AiModelService {
     @Transactional
     /** 创建 */
     public AiModelDTO create(AiModelDTO model) {
-        AiModel entity = toEntity(model);
+        SysAiModel entity = toEntity(model);
         LocalDateTime now = LocalDateTime.now();
         entity.setModelCreateTime(now);
         entity.setModelUpdateTime(now);
@@ -75,7 +75,7 @@ public class AiModelServiceImpl implements AiModelService {
             entity.setModelDeleted(0);
         }
         modelMapper.insert(entity);
-        log.debug("[AiModel] 新建成功: id={}, code={}", entity.getModelId(), entity.getModelCode());
+        log.debug("[SysAiModel] 新建成功: id={}, code={}", entity.getModelId(), entity.getModelCode());
         return toDto(entity, resolveProviderName(entity.getModelProviderId(), null));
     }
 
@@ -83,11 +83,11 @@ public class AiModelServiceImpl implements AiModelService {
     @Transactional
     /** 更新 */
     public AiModelDTO update(Long modelId, AiModelDTO model) {
-        AiModel entity = toEntity(model);
+        SysAiModel entity = toEntity(model);
         entity.setModelId(modelId);
         entity.setModelUpdateTime(LocalDateTime.now());
         modelMapper.updateById(entity);
-        log.debug("[AiModel] 更新成功: id={}", modelId);
+        log.debug("[SysAiModel] 更新成功: id={}", modelId);
         return toDto(modelMapper.selectById(modelId), resolveProviderName(entity.getModelProviderId(), null));
     }
 
@@ -96,7 +96,7 @@ public class AiModelServiceImpl implements AiModelService {
     /** 删除 */
     public void delete(Long modelId) {
         modelMapper.deleteById(modelId);
-        log.debug("[AiModel] 删除成功: id={}", modelId);
+        log.debug("[SysAiModel] 删除成功: id={}", modelId);
     }
 
     /**
@@ -116,7 +116,7 @@ public class AiModelServiceImpl implements AiModelService {
                 return name;
             }
         } else {
-            AiProvider provider = providerMapper.selectById(providerId);
+            SysAiProvider provider = providerMapper.selectById(providerId);
             if (provider != null) {
                 return provider.getProviderName();
             }
@@ -127,7 +127,7 @@ public class AiModelServiceImpl implements AiModelService {
     }
 
     /** ToDto */
-    private AiModelDTO toDto(AiModel entity, String providerName) {
+    private AiModelDTO toDto(SysAiModel entity, String providerName) {
         if (entity == null) return null;
         AiModelDTO dto = new AiModelDTO();
         dto.setId(entity.getModelId());
@@ -147,8 +147,8 @@ public class AiModelServiceImpl implements AiModelService {
     }
 
     /** ToEntity */
-    private AiModel toEntity(AiModelDTO dto) {
-        AiModel entity = new AiModel();
+    private SysAiModel toEntity(AiModelDTO dto) {
+        SysAiModel entity = new SysAiModel();
         entity.setModelName(dto.getName());
         entity.setModelCode(dto.getCode());
         entity.setModelProviderId(dto.getProviderId());

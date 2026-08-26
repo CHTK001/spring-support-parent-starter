@@ -7,11 +7,12 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
 /**
- * nomifun 提供商模型持久化实体。
+ * AI 提供商模型持久化实体。
  *
  * <p>对应前端 {@code /api/providers/{id}/models} 契约，
  * 存储提供商下的模型能力信息，包含任务能力列表。</p>
@@ -21,7 +22,8 @@ import java.util.Map;
  */
 @Data
 @TableName(value = "sys_nomifun_provider_model", autoResultMap = true)
-public class NomifunProviderModel {
+public class NomifunProviderModel implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * 所属提供商ID
@@ -30,7 +32,7 @@ public class NomifunProviderModel {
     private String providerId;
 
     /**
-     * 模型名称（复合主键）
+     * 模型名称
      */
     @TableId(value = "model", type = IdType.INPUT)
     private String model;
@@ -60,7 +62,7 @@ public class NomifunProviderModel {
     private List<Map<String, Object>> capabilities;
 
     /**
-     * 模型指标JSON（延迟/智能/输出速度等，前端可配置）
+     * 模型指标JSON（延迟/智能/输出速度等）
      */
     @TableField(value = "metrics", typeHandler = JacksonTypeHandler.class)
     private Map<String, Object> metrics;
@@ -68,12 +70,12 @@ public class NomifunProviderModel {
     /**
      * 创建时间（毫秒）
      */
-    @TableField("created_at")
+    @TableField("create_time")
     private Long createdAt;
 
     /**
      * 更新时间（毫秒）
      */
-    @TableField("updated_at")
+    @TableField("update_time")
     private Long updatedAt;
 }

@@ -2,7 +2,7 @@ package com.chua.starter.ai.support.service.impl.settings;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.chua.starter.ai.support.entity.settings.AiAlert;
+import com.chua.starter.ai.support.entity.settings.SysAiAlert;
 import com.chua.starter.ai.support.mapper.settings.AiAlertMapper;
 import com.chua.starter.ai.support.model.AiAlertDTO;
 import com.chua.starter.ai.support.service.settings.AiAlertService;
@@ -45,8 +45,8 @@ public class AiAlertServiceImpl implements AiAlertService {
     @Override
     public List<AiAlertDTO> list() {
         return alertMapper.selectList(
-                        new LambdaQueryWrapper<AiAlert>()
-                                .orderByAsc(AiAlert::getAlertCreateTime))
+                        new LambdaQueryWrapper<SysAiAlert>()
+                                .orderByAsc(SysAiAlert::getAlertCreateTime))
                 .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
@@ -61,7 +61,7 @@ public class AiAlertServiceImpl implements AiAlertService {
     @Override
     @Transactional
     public AiAlertDTO create(AiAlertDTO alert) {
-        AiAlert entity = toEntity(alert);
+        SysAiAlert entity = toEntity(alert);
         LocalDateTime now = LocalDateTime.now();
         entity.setAlertCreateTime(now);
         entity.setAlertUpdateTime(now);
@@ -72,7 +72,7 @@ public class AiAlertServiceImpl implements AiAlertService {
             entity.setAlertDeleted(0);
         }
         alertMapper.insert(entity);
-        log.debug("[AiAlert] 新建成功: id={}, name={}", entity.getAlertId(), entity.getAlertName());
+        log.debug("[SysAiAlert] 新建成功: id={}, name={}", entity.getAlertId(), entity.getAlertName());
         return toDto(entity);
     }
 
@@ -86,7 +86,7 @@ public class AiAlertServiceImpl implements AiAlertService {
     @Override
     @Transactional
     public AiAlertDTO update(Long alertId, AiAlertDTO alert) {
-        AiAlert entity = toEntity(alert);
+        SysAiAlert entity = toEntity(alert);
         entity.setAlertId(alertId);
         entity.setAlertUpdateTime(LocalDateTime.now());
         alertMapper.updateById(entity);
@@ -102,7 +102,7 @@ public class AiAlertServiceImpl implements AiAlertService {
     @Transactional
     public void delete(Long alertId) {
         alertMapper.deleteById(alertId);
-        log.debug("[AiAlert] 删除成功: id={}", alertId);
+        log.debug("[SysAiAlert] 删除成功: id={}", alertId);
     }
 
     /**
@@ -115,10 +115,10 @@ public class AiAlertServiceImpl implements AiAlertService {
     @Override
     @Transactional
     public AiAlertDTO toggle(Long alertId, Boolean enabled) {
-        LambdaUpdateWrapper<AiAlert> wrapper = new LambdaUpdateWrapper<AiAlert>()
-                .eq(AiAlert::getAlertId, alertId)
-                .set(AiAlert::getAlertEnabled, enabled)
-                .set(AiAlert::getAlertUpdateTime, LocalDateTime.now());
+        LambdaUpdateWrapper<SysAiAlert> wrapper = new LambdaUpdateWrapper<SysAiAlert>()
+                .eq(SysAiAlert::getAlertId, alertId)
+                .set(SysAiAlert::getAlertEnabled, enabled)
+                .set(SysAiAlert::getAlertUpdateTime, LocalDateTime.now());
         alertMapper.update(null, wrapper);
         return toDto(alertMapper.selectById(alertId));
     }
@@ -129,7 +129,7 @@ public class AiAlertServiceImpl implements AiAlertService {
      * @param entity 告警实体
      * @return 告警 DTO
      */
-    private AiAlertDTO toDto(AiAlert entity) {
+    private AiAlertDTO toDto(SysAiAlert entity) {
         if (entity == null) {
             return null;
         }
@@ -151,8 +151,8 @@ public class AiAlertServiceImpl implements AiAlertService {
      * @param dto 告警 DTO
      * @return 告警实体
      */
-    private AiAlert toEntity(AiAlertDTO dto) {
-        AiAlert entity = new AiAlert();
+    private SysAiAlert toEntity(AiAlertDTO dto) {
+        SysAiAlert entity = new SysAiAlert();
         entity.setAlertName(dto.getName());
         entity.setAlertAppKeyId(dto.getAppKeyId());
         entity.setAlertCondition(dto.getCondition());

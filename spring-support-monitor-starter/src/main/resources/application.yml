@@ -11,6 +11,12 @@ spring:
     generate:
       enabled: false
 
+  # 独立联调模式: 启动时执行建表脚本(幂等, IF NOT EXISTS)
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/init/V1.0__init_monitor.sql,classpath:db/init/V1.1__alarm_and_agent.sql
+
   datasource:
     url: jdbc:h2:mem:monitordb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false
     driver-class-name: org.h2.Driver
@@ -33,6 +39,12 @@ plugin:
   api:
     request-decode:
       enable: false
+
+# InfluxDB 时序存储（启用后指标明细同步写入并支持 series 曲线查询）
+monitor.influx:
+  enabled: false
+  url: http://127.0.0.1:8086
+  database: monitor
 
 logging:
   level:

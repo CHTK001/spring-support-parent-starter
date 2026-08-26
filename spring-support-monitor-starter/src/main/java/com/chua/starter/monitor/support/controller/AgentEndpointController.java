@@ -1,0 +1,167 @@
+package com.chua.starter.monitor.support.controller;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.monitor.support.entity.MsMonitor;
+import com.chua.starter.monitor.support.mapper.MsMonitorMapper;
+import com.chua.starter.monitor.support.service.MetricService;
+import com.chua.starter.monitor.support.spi.CollectResult;
+import com.chua.starter.monitor.support.spi.MetricPoint;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Agent 上报端点（开放 API，不走登录态）
+ * <p>
+ * 外部探针以 {@code X-Agent-Key} 头鉴权，key 与 MsMonitor.monitorAgentKey 匹配。
+ * 推送数据与 Provider 轮询共用同一条写入管道（MySQL + InfluxDB + 告警评估）。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
+@Slf4j
+@Tag(name = "监控-Agent上报", description = "外部探针推送指标与心跳")
+@RestController
+@RequestMapping("/ms/monitor/agent")
+@RequiredArgsConstructor
+public class AgentEndpointController {
+
+    /** Agent 鉴权请求头 */
+    private static final String AGENT_KEY_HEADER = "X-Agent-Key";
+
+    /** 监控目标 Mapper */
+    private final MsMonitorMapper monitorMapper;
+
+    /** 指标服务 */
+    private final MetricService metricService;
+
+    /**
+     * 心跳：探针周期性上报存活
+     *
+     * @param agentKey 探针标识
+     * @return 服务端时间
+     */
+    @Operation(summary = "Agent 心跳")
+    @GetMapping("/heartbeat")
+    public ReturnResult<Map<String, Object>> heartbeat(
+            @RequestHeader(value = AGENT_KEY_HEADER, required = false) String agentKey) {
+        MsMonitor monitor = requireByAgentKey(agentKey);
+        if (monitor == null) {
+            return ReturnResult.error("无效的探针标识");
+        }
+        return ReturnResult.ok(Map.of("serverTime", LocalDateTime.now().toString(),
+                "monitorId", monitor.getId()));
+    }
+
+    /**
+     * 指标推送
+     * <p>
+     * 请求体结构：
+     * <pre>{@code
+     * {
+     *   "points": [
+     *     { "metricName": "cpu_usage", "value": 35.2, "unit": "%",
+     *       "tags": {"model":"x86"}, "targetTable": "ms_monitor_metric_cpu" }
+     *   ]
+     * }
+     * }</pre>
+     * targetTable 缺省时落通用表 ms_monitor_metric。
+     * </p>
+     *
+     * @param agentKey 探针标识
+     * @param body     指标载荷
+     * @return 结果
+     */
+    @Operation(summary = "Agent 指标推送")
+    @PostMapping("/metrics")
+    public ReturnResult<Void> pushMetrics(
+            @RequestHeader(value = AGENT_KEY_HEADER, required = false) String agentKey,
+            @RequestBody Map<String, Object> body) {
+        MsMonitor monitor = requireByAgentKey(agentKey);
+        if (monitor == null) {
+            return ReturnResult.error("无效的探针标识");
+        }
+        CollectResult result = new CollectResult();
+        result.setMonitor(monitor);
+        List<MetricPoint> points = parsePoints(body.get("points"));
+        if (points.isEmpty()) {
+            return ReturnResult.error("points 为空或格式非法");
+        }
+        result.setPoints(points);
+        ReturnResult<Void> writeResult = metricService.writeCollectResult(result);
+        if (!writeResult.isOk()) {
+            return writeResult;
+        }
+        return ReturnResult.ok();
+    }
+
+    /**
+     * 按探针标识加载启用的监控目标
+     *
+     * @param agentKey 探针标识
+     * @return 目标实体，未命中返回 null
+     */
+    private MsMonitor requireByAgentKey(String agentKey) {
+        if (agentKey == null || agentKey.isBlank()) {
+            return null;
+        }
+        return monitorMapper.selectOne(new LambdaQueryWrapper<MsMonitor>()
+                .eq(MsMonitor::getMonitorAgentKey, agentKey)
+                .eq(MsMonitor::getMonitorEnabled, 1)
+                .last("LIMIT 1"));
+    }
+
+    /**
+     * 宽松解析指标点数组
+     *
+     * @param raw 原始 JSON 数组对象
+     * @return 指标点列表（非法项跳过）
+     */
+    @SuppressWarnings("unchecked")
+    private List<MetricPoint> parsePoints(Object raw) {
+        List<MetricPoint> points = new java.util.ArrayList<>();
+        if (!(raw instanceof List<?> list)) {
+            return points;
+        }
+        for (Object item : list) {
+            if (!(item instanceof Map<?, ?> map)) {
+                continue;
+            }
+            try {
+                var point = new MetricPoint();
+                point.setMetricName(String.valueOf(map.get("metricName")));
+                point.setValue(Double.parseDouble(String.valueOf(map.get("value"))));
+                Object unit = map.get("unit");
+                if (unit != null) {
+                    point.setUnit(unit.toString());
+                }
+                Object tags = map.get("tags");
+                if (tags instanceof Map<?, ?> tagMap) {
+                    for (Map.Entry<?, ?> entry : tagMap.entrySet()) {
+                        point.getTags().put(String.valueOf(entry.getKey()), String.valueOf(entry.getValue()));
+                    }
+                }
+                Object targetTable = map.get("targetTable");
+                point.setTargetTable(targetTable == null || targetTable.toString().isBlank()
+                        ? "ms_monitor_metric" : targetTable.toString());
+                points.add(point);
+            } catch (Exception e) {
+                log.warn("[agent] 指标点解析失败: {}", e.getMessage());
+            }
+        }
+        return points;
+    }
+}
