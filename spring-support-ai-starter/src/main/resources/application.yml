@@ -59,6 +59,7 @@ plugin:
       - /provider/**
       - /v2/manufacturer/factories
       - /v2/global-settings
+      - /v2/ai/bot-binding/**
 
 logging:
   level:
