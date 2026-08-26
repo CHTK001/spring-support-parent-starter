@@ -1,10 +1,11 @@
 package com.chua.starter.ai.support.entity;
 
+import com.chua.starter.mybatis.pojo.SysBase;
 import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
 
@@ -18,14 +19,20 @@ import java.time.LocalDateTime;
  * @since 4.0.0.42
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("sys_ai_bot_binding")
-public class SysAiBotBinding {
+public class SysAiBotBinding extends SysBase {
 
     /**
      * 绑定 ID
      */
     @TableId(type = IdType.AUTO)
     private Long id;
+
+    /**
+     * 关联用户 ID
+     */
+    private Long userId;
 
     /**
      * Bot 唯一标识（iLink 分配的 botId）
@@ -68,17 +75,7 @@ public class SysAiBotBinding {
     private String bindSource;
 
     /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
-
-    /**
      * 最后活跃时间
      */
     private LocalDateTime lastActiveTime;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updateTime;
 }

@@ -11,35 +11,67 @@ import java.util.List;
 /**
  * 微信 iLink Bot 多绑定管理控制器。
  *
- * <p>支持多 Bot 绑定的增删改查、扫码绑定（微信）与状态更新。</p>
+* <p>支持对 Bot 绑定的增删改查、扫描绑定（微信）、状态更新。</p>
  */
 @RestController
 @RequestMapping("/v2/ai/bot-binding")
 @RequiredArgsConstructor
 public class AiBotBindingController {
 
+    /**
+     * Bot 绑定服务
+     */
     private final AiBotBindingService botBindingService;
 
+    /**
+     * 获取全部绑定列表。
+     *
+     * @return 绑定列表（按创建时间降序）
+     */
     @GetMapping("/list")
     public ReturnResult<List<SysAiBotBinding>> list() {
         return ReturnResult.ok(botBindingService.listAll());
     }
 
+    /**
+     * 按 ID 获取绑定详情。
+     *
+     * @param id 绑定 ID
+     * @return 绑定信息
+     */
     @GetMapping("/{id}")
     public ReturnResult<SysAiBotBinding> get(@PathVariable Long id) {
         return ReturnResult.ok(botBindingService.getById(id));
     }
 
+    /**
+     * 创建绑定。
+     *
+     * @param binding 绑定信息
+     * @return 数据库 ID
+     */
     @PostMapping("/create")
     public ReturnResult<Long> create(@RequestBody SysAiBotBinding binding) {
         return ReturnResult.ok(botBindingService.saveOrUpdate(binding));
     }
 
+    /**
+     * 更新绑定。
+     *
+     * @param binding 绑定信息（含 ID）
+     * @return 数据库 ID
+     */
     @PutMapping("/update")
     public ReturnResult<Long> update(@RequestBody SysAiBotBinding binding) {
         return ReturnResult.ok(botBindingService.saveOrUpdate(binding));
     }
 
+    /**
+     * 删除绑定。
+     *
+     * @param id 数据库 ID
+     * @return 操作结果
+     */
     @DeleteMapping("/{id}")
     public ReturnResult<Void> delete(@PathVariable Long id) {
         botBindingService.delete(id);
