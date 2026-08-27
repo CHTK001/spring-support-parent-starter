@@ -1,108 +1,93 @@
 package com.chua.starter.ai.support.entity;
 
+import com.chua.starter.mybatis.pojo.SysBase;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.FieldFill;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
 
 /**
- * AI 用量记录表
+ * AI 用量记录表。
  *
- * @since 4.0.0.42
  * @author CH
+ * @since 4.0.0.42
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("sys_ai_usage")
-public class SysAiUsage {
+public class SysAiUsage extends SysBase {
 
     /**
-     * 主键ID
+     * 主键 ID
      */
     @TableId(type = IdType.AUTO)
-    /** ID */
-    private Long id;
+    private Long sysAiUsageId;
 
     /**
-     * 分组：chat/image/video/colorize/vision/rag
+     * 分组：chat / image / video / colorize / vision / rag
      */
-    private String groupName;
+    private String sysAiUsageGroupName;
 
     /**
-     * 服务商：openai/zhipu/baidu 等
+     * 服务商：openai / zhipu / baidu 等
      */
-    private String provider;
+    private String sysAiUsageProvider;
 
     /**
      * 模型名称
      */
-    private String model;
+    private String sysAiUsageModel;
 
     /**
-     * 调用类型：sync/async
+     * 调用类型：sync / async
      */
-    private String callType;
+    private String sysAiUsageCallType;
 
     /**
      * 输入 Token 数
      */
-    private Integer promptTokens;
+    private Integer sysAiUsagePromptTokens;
 
     /**
      * 输出 Token 数
      */
-    private Integer completionTokens;
+    private Integer sysAiUsageCompletionTokens;
 
     /**
      * 总 Token 数
      */
-    private Integer totalTokens;
+    private Integer sysAiUsageTotalTokens;
 
     /**
      * 输入费用（单位：元）
      */
-    private Double inputCost;
+    private Double sysAiUsageInputCost;
 
     /**
      * 输出费用（单位：元）
      */
-    private Double outputCost;
+    private Double sysAiUsageOutputCost;
 
     /**
      * 总费用（单位：元）
      */
-    private Double totalCost;
+    private Double sysAiUsageTotalCost;
 
     /**
      * 请求 ID（关联调用日志）
      */
-    private String requestId;
+    private String sysAiUsageRequestId;
 
     /**
      * 用户标识（可选）
      */
-    private String userId;
+    private String sysAiUsageUserId;
 
     /**
      * 调用时间
      */
-    private LocalDateTime callTime;
-
-    /**
-     * 创建时间
-     */
-    @TableField(fill = FieldFill.INSERT)
-    /** Create时间 */
-    private LocalDateTime createTime;
-
-    /**
-     * 更新时间
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    /** Update时间 */
-    private LocalDateTime updateTime;
+    private LocalDateTime sysAiUsageCallTime;
 }
-

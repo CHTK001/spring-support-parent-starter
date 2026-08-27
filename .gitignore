@@ -70,3 +70,11 @@ sys
 
 # H2 文件库本地数据目录
 /data/
+# 运行时缓存与空文件
+osgi-cache/
+**/osgi-cache/
+null
+hs_err_pid*.log
+replay_pid*.log
+*.log.gz
+stash.diff
