@@ -85,6 +85,13 @@
             <version>4.0.0.42</version>
         </dependency>
 
+        <!-- 飞书 Bot（凭据配置型：appId/appSecret） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-feishu-starter</artifactId>
+            <version>4.0.0.42</version>
+        </dependency>
+
         <!-- ONNX 模型注册器（OCR 识别、文本向量等模型实现） -->
         <dependency>
             <groupId>com.chua</groupId>
