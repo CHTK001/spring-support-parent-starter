@@ -267,6 +267,37 @@ public class ApiSystemController {
     // -----------------------------------------------------------------------
 
     /**
+     * 返回当前认证状态（桌面模式免登录，直接返回已认证且无需 setup）。
+     *
+     * @return 认证状态
+     */
+    @GetMapping("/auth/status")
+    public ApiResult<Map<String, Object>> authStatus() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("success", true);
+        result.put("needs_setup", false);
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 返回当前登录用户信息（桌面模式返回默认管理员）。
+     *
+     * @return 用户信息
+     */
+    @GetMapping("/auth/user")
+    public ApiResult<Map<String, Object>> authUser() {
+        Map<String, Object> user = new LinkedHashMap<>();
+        user.put("user_id", "local-admin");
+        user.put("username", "admin");
+        user.put("display_name", "Admin");
+        user.put("role", "admin");
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("success", true);
+        result.put("user", user);
+        return ApiResult.ok(result);
+    }
+
+    /**
      * 校验当前密码并修改登录密码（纯后端占位实现）。
      *
      * @param body 请求体（含 current_password / new_password）

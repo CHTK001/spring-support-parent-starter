@@ -1,15 +1,19 @@
 package com.chua.starter.ai.support.toolmetrics;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.ai.support.model.BotBindingCreateRequest;
 import com.chua.starter.ai.support.model.BotBindingListResponse;
 import com.chua.starter.ai.support.entity.SysAiBotBinding;
+import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
+import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.service.AiBotBindingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,32 +37,41 @@ public class AiBotBindingController {
     private final AiBotBindingService botBindingService;
 
     /**
-     * AI 对话客户端注册中心（获取可用模型列表）
+     * 模型表 Mapper（Bot 可选的对话模型来自模型管理配置的 provider_model）
      */
-    private final com.chua.starter.ai.support.registry.ChatClientRegistry chatClientRegistry;
+    private final SysAiProviderModelMapper providerModelMapper;
 
     /**
-     * 获取可用于 Bot 的 AI 模型列表（供前端设置 Bot 的聊天模型）。
+     * 获取可用于 Bot 的对话模型列表（供前端设置 Bot 的聊天模型）。
      *
-     * <p>遍历所有已注册的 ChatClient，聚合各客户端的模型名，去重返回。</p>
+     * <p>数据源为模型管理配置的 provider_model 表（capability 含 chat 的模型），
+     * 与前端模型管理页面的数据一致。</p>
      *
-     * @return 模型名列表
+     * @return 对话模型名列表
      */
     @GetMapping("/models")
     public ReturnResult<List<String>> models() {
-        java.util.Set<String> models = new java.util.LinkedHashSet<>();
-        for (com.chua.common.support.ai.chat.ChatClient client : chatClientRegistry.getAll()) {
-            if (client == null) {
-                continue;
-            }
-            try {
-                models.addAll(client.listModels());
-            } catch (Exception e) {
-                // 单个客户端模型列举失败不影响整体
-                log.debug("[Bot] 获取客户端模型列表失败: {}", e.getMessage());
+        List<SysAiProviderModel> all = providerModelMapper.selectList(
+                Wrappers.<SysAiProviderModel>lambdaQuery()
+                        .eq(SysAiProviderModel::getEnabled, true));
+        List<String> chatModels = new ArrayList<>();
+        for (SysAiProviderModel m : all) {
+            if (hasCapability(m, "chat")) {
+                chatModels.add(m.getModel());
             }
         }
-        return ReturnResult.ok(new java.util.ArrayList<>(models));
+        return ReturnResult.ok(chatModels);
+    }
+
+    /**
+     * 判断模型是否具备指定任务能力（capabilities 为 [{task:...}]）。
+     */
+    private static boolean hasCapability(SysAiProviderModel m, String task) {
+        if (m.getCapabilities() == null) {
+            return false;
+        }
+        return m.getCapabilities().stream()
+                .anyMatch(c -> task.equals(c.get("task")));
     }
 
     /**
