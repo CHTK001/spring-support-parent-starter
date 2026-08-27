@@ -114,4 +114,53 @@ public class AiBotBindingController {
         resp.setLastActiveTime(entity.getLastActiveTime());
         return resp;
     }
+
+    // ==================== iLink 扫码绑定 ====================
+
+    /**
+     * 生成微信 iLink 扫码会话。
+     *
+     * <p>平台仅支持 wechat（iLink 扫码）；企业微信暂不支持，返回错误。</p>
+     *
+     * @param platform 平台类型，默认 wechat
+     * @return key + qrcodeUrl；qrcodeUrl 即时为空，前端轮询 status=ready 后从 QrStatus 取
+     */
+    @PostMapping("/qrcode")
+    public ReturnResult<AiBotBindingService.QrResult> generateQr(
+            @RequestParam(defaultValue = "wechat") String platform) {
+        if (!"wechat".equals(platform) && !"wecom".equals(platform)) {
+            return ReturnResult.illegal("platform 仅支持 wechat / wecom");
+        }
+        return ReturnResult.ok(botBindingService.generateQrCode(platform));
+    }
+
+    /**
+     * 轮询扫码会话状态。
+     *
+     * <p>前端每 3 秒调用一次；status 变为 confirmed 时表示绑定已完成，可刷新列表。</p>
+     *
+     * @param key 会话 key
+     * @return status + botId（confirmed 时回填）
+     */
+    @GetMapping("/qrcode/status")
+    public ReturnResult<AiBotBindingService.QrStatus> checkQrStatus(@RequestParam String key) {
+        return ReturnResult.ok(botBindingService.checkQrCodeStatus(key));
+    }
+
+    // ==================== 飞书（凭据配置型） ====================
+
+    /**
+     * 绑定飞书 Bot。
+     *
+     * <p>凭据配置型：传入飞书开放平台的 appId / appSecret。</p>
+     *
+     * @param appId     飞书应用 ID
+     * @param appSecret 飞书应用密钥
+     * @return 数据库 ID
+     */
+    @PostMapping("/feishu")
+    public ReturnResult<Long> bindFeishu(@RequestParam String appId,
+                                         @RequestParam String appSecret) {
+        return ReturnResult.ok(botBindingService.bindFeishu(appId, appSecret));
+    }
 }
