@@ -27,7 +27,7 @@ public class SysAiBotBinding extends SysBase {
     /**
      * 绑定 ID
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(value = "sys_ai_bot_binding_id", type = IdType.AUTO)
     private Long id;
 
     /**

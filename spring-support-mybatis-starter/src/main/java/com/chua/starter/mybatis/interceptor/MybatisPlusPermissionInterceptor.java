@@ -89,8 +89,13 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     public void beforeQuery(Executor executor, MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
         // 通过MP插件拿到即将执行的SQL
         PluginUtils.MPBoundSql mp = PluginUtils.mpBoundSql(boundSql);
-        // parserSingle方法是JsqlParserSupport父类实现的方法，这里会根据执行的SQL是查询、新增、修改、删除来调用不同的方法，例如：如果是查询，就会调用当前类的processSelect方法
-        mp.sql(parserSingle(mp.sql(), ms.getId()));
+        try {
+            // parserSingle方法是JsqlParserSupport父类实现的方法，这里会根据执行的SQL是查询、新增、修改、删除来调用不同的方法，例如：如果是查询，就会调用当前类的processSelect方法
+            mp.sql(parserSingle(mp.sql(), ms.getId()));
+        } catch (Exception e) {
+            // SQL 解析失败（如字段别名撞数据库保留字）时，跳过数据权限过滤，避免阻断查询
+            log.warn("[DataPermission] SQL 解析失败，跳过数据权限过滤: {}", e.getMessage());
+        }
     }
 
     /**

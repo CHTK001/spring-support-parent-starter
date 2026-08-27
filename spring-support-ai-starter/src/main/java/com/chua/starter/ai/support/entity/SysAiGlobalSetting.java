@@ -24,7 +24,7 @@ public class SysAiGlobalSetting {
     /**
      * 全局设置主键 ID
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(value = "sys_ai_global_setting_id", type = IdType.AUTO)
     /** SYSAI全局设置ID */
     private Long id;
 
@@ -32,7 +32,7 @@ public class SysAiGlobalSetting {
      * 设置分组（如 global / runtime / rag）
      */
     @TableField("sys_ai_global_setting_group")
-    private String group;
+    private String settingGroup;
 
     /**
      * 字段名
