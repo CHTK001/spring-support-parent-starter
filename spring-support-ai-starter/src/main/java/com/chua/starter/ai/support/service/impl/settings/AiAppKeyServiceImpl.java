@@ -62,7 +62,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     public ReturnResult<List<AiAppKeyDTO>> list() {
         List<SysAiAppKey> keys = appKeyMapper.selectList(
                         new LambdaQueryWrapper<SysAiAppKey>()
-                                .orderByDesc(SysAiAppKey::getSysAiAppKeyId))
+                                .orderByDesc(SysAiAppKey::getId))
                 .stream().toList();
 
         Map<Long, String> providerNames = providerMapper.selectList(null).stream()
@@ -70,8 +70,8 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         Map<Integer, String> groupNames = resolveGroupNames();
 
         return ReturnResult.ok(keys.stream()
-                .map(k -> toDto(k, providerNames.get(k.getSysAiAppKeyProviderId()),
-                        groupNames.get(k.getSysAiAppKeyGroupId())))
+                .map(k -> toDto(k, providerNames.get(k.getProviderId()),
+                        groupNames.get(k.getGroupId())))
                 .collect(Collectors.toList()));
     }
 
@@ -100,19 +100,19 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
         }
         SysAiAppKey entity = toEntity(dto);
         LocalDateTime now = LocalDateTime.now();
-        if (entity.getSysAiAppKeyStatus() == null) {
-            entity.setSysAiAppKeyStatus(1);
+        if (entity.getStatus() == null) {
+            entity.setStatus(1);
         }
-        if (entity.getSysAiAppKeyDelete() == null) {
-            entity.setSysAiAppKeyDelete(0);
+        if (entity.getDelete() == null) {
+            entity.setDelete(0);
         }
-        if (entity.getSysAiAppKeyUseCount() == null) {
-            entity.setSysAiAppKeyUseCount(0L);
+        if (entity.getUseCount() == null) {
+            entity.setUseCount(0L);
         }
         appKeyMapper.insert(entity);
-        log.debug("[SysAiAppKey] 新建成功: id={}, name={}", entity.getSysAiAppKeyId(), entity.getSysAiAppKeyName());
-        return ReturnResult.ok(toDto(entity, resolveProvider(entity.getSysAiAppKeyProviderId()),
-                resolveGroup(entity.getSysAiAppKeyGroupId())));
+        log.debug("[SysAiAppKey] 新建成功: id={}, name={}", entity.getId(), entity.getName());
+        return ReturnResult.ok(toDto(entity, resolveProvider(entity.getProviderId()),
+                resolveGroup(entity.getGroupId())));
     }
 
     /**
@@ -133,12 +133,12 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
             return ReturnResult.error("AppKey 不存在");
         }
         SysAiAppKey entity = toEntity(dto);
-        entity.setSysAiAppKeyId(appKeyId.intValue());
-        entity.setSysAiAppKeyDelete(0);
+        entity.setId(appKeyId.intValue());
+        entity.setDelete(0);
         appKeyMapper.updateById(entity);
         SysAiAppKey updated = appKeyMapper.selectById(appKeyId.intValue());
-        return ReturnResult.ok(toDto(updated, resolveProvider(updated.getSysAiAppKeyProviderId()),
-                resolveGroup(updated.getSysAiAppKeyGroupId())));
+        return ReturnResult.ok(toDto(updated, resolveProvider(updated.getProviderId()),
+                resolveGroup(updated.getGroupId())));
     }
 
     /**
@@ -172,13 +172,13 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
             return ReturnResult.illegal("AppKey ID 不能为空");
         }
         LambdaUpdateWrapper<SysAiAppKey> wrapper = new LambdaUpdateWrapper<SysAiAppKey>()
-                .eq(SysAiAppKey::getSysAiAppKeyId, appKeyId.intValue())
-                .set(SysAiAppKey::getSysAiAppKeyStatus, Boolean.TRUE.equals(enabled) ? 1 : 0)
-                .set(SysAiAppKey::getSysAiAppKeyEnabled, enabled);
+                .eq(SysAiAppKey::getId, appKeyId.intValue())
+                .set(SysAiAppKey::getStatus, Boolean.TRUE.equals(enabled) ? 1 : 0)
+                .set(SysAiAppKey::getEnabled, enabled);
         appKeyMapper.update(null, wrapper);
         SysAiAppKey entity = appKeyMapper.selectById(appKeyId.intValue());
-        return ReturnResult.ok(toDto(entity, resolveProvider(entity.getSysAiAppKeyProviderId()),
-                resolveGroup(entity.getSysAiAppKeyGroupId())));
+        return ReturnResult.ok(toDto(entity, resolveProvider(entity.getProviderId()),
+                resolveGroup(entity.getGroupId())));
     }
 
     /**
@@ -224,21 +224,21 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
             return null;
         }
         AiAppKeyDTO dto = new AiAppKeyDTO();
-        dto.setId(entity.getSysAiAppKeyId() != null ? entity.getSysAiAppKeyId().longValue() : null);
-        dto.setName(entity.getSysAiAppKeyName());
-        dto.setKey(entity.getSysAiAppKeyAppKey());
-        dto.setProvider(entity.getSysAiAppKeyProviderId());
+        dto.setId(entity.getId() != null ? entity.getId().longValue() : null);
+        dto.setName(entity.getName());
+        dto.setKey(entity.getAppKey());
+        dto.setProvider(entity.getProviderId());
         dto.setProviderName(providerName);
-        dto.setModel(entity.getSysAiAppKeyModel());
-        dto.setGroupId(entity.getSysAiAppKeyGroupId() != null ? entity.getSysAiAppKeyGroupId().longValue() : null);
+        dto.setModel(entity.getModel());
+        dto.setGroupId(entity.getGroupId() != null ? entity.getGroupId().longValue() : null);
         dto.setGroupName(groupName);
-        dto.setUseCount(entity.getSysAiAppKeyUseCount());
-        dto.setMaxUse(entity.getSysAiAppKeyMaxUse());
-        dto.setExpireTime(entity.getSysAiAppKeyExpireDatetime() != null
-                ? entity.getSysAiAppKeyExpireDatetime().format(FORMATTER) : null);
-        dto.setEnabled(entity.getSysAiAppKeyEnabled() != null
-                ? entity.getSysAiAppKeyEnabled()
-                : entity.getSysAiAppKeyStatus() != null && entity.getSysAiAppKeyStatus() == 1);
+        dto.setUseCount(entity.getUseCount());
+        dto.setMaxUse(entity.getMaxUse());
+        dto.setExpireTime(entity.getExpireDatetime() != null
+                ? entity.getExpireDatetime().format(FORMATTER) : null);
+        dto.setEnabled(entity.getEnabled() != null
+                ? entity.getEnabled()
+                : entity.getStatus() != null && entity.getStatus() == 1);
         dto.setCreatedAt(entity.getCreateTime() != null ? entity.getCreateTime().format(FORMATTER) : null);
         return dto;
     }
@@ -251,24 +251,24 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
      */
     private SysAiAppKey toEntity(AiAppKeyDTO dto) {
         SysAiAppKey entity = new SysAiAppKey();
-        entity.setSysAiAppKeyName(dto.getName());
+        entity.setName(dto.getName());
         if (dto.getKey() != null && !dto.getKey().isBlank()) {
-            entity.setSysAiAppKeyAppKey(dto.getKey());
-            entity.setSysAiAppKeySecret(dto.getKey());
+            entity.setAppKey(dto.getKey());
+            entity.setSecret(dto.getKey());
         }
-        entity.setSysAiAppKeyProviderId(dto.getProvider());
-        entity.setSysAiAppKeyModel(dto.getModel());
+        entity.setProviderId(dto.getProvider());
+        entity.setModel(dto.getModel());
         if (dto.getGroupId() != null) {
-            entity.setSysAiAppKeyGroupId(dto.getGroupId().intValue());
+            entity.setGroupId(dto.getGroupId().intValue());
         }
-        entity.setSysAiAppKeyEnabled(dto.getEnabled());
-        entity.setSysAiAppKeyStatus(Boolean.TRUE.equals(dto.getEnabled()) ? 1 : 0);
-        entity.setSysAiAppKeyUseCount(dto.getUseCount());
-        entity.setSysAiAppKeyMaxUse(dto.getMaxUse());
+        entity.setEnabled(dto.getEnabled());
+        entity.setStatus(Boolean.TRUE.equals(dto.getEnabled()) ? 1 : 0);
+        entity.setUseCount(dto.getUseCount());
+        entity.setMaxUse(dto.getMaxUse());
         if (dto.getExpireTime() != null && !dto.getExpireTime().isBlank()) {
-            entity.setSysAiAppKeyExpireDatetime(LocalDateTime.parse(dto.getExpireTime(), FORMATTER));
+            entity.setExpireDatetime(LocalDateTime.parse(dto.getExpireTime(), FORMATTER));
         } else if (dto.getMaxUse() == null) {
-            entity.setSysAiAppKeyExpireDatetime(null);
+            entity.setExpireDatetime(null);
         }
         return entity;
     }
