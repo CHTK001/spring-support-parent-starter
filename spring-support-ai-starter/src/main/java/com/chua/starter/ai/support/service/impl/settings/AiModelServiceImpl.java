@@ -123,7 +123,7 @@ public class AiModelServiceImpl implements AiModelService {
         }
         // 回退厂商表
         SysAiManufacturer manufacturer = manufacturerMapper.selectById(providerId.intValue());
-        return manufacturer != null ? manufacturer.getSysAiManufacturerName() : null;
+        return manufacturer != null ? manufacturer.getName() : null;
     }
 
     /** ToDto */

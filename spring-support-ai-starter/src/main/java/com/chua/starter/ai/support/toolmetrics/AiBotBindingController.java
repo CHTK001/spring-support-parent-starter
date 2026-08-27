@@ -102,16 +102,16 @@ public class AiBotBindingController {
      */
     private BotBindingListResponse toResponse(SysAiBotBinding entity) {
         BotBindingListResponse resp = new BotBindingListResponse();
-        resp.setId(entity.getSysAiBotBindingId());
-        resp.setBotId(entity.getSysAiBotBindingBotId());
-        resp.setPlatform(entity.getSysAiBotBindingPlatform());
-        resp.setNickname(entity.getSysAiBotBindingNickname());
-        resp.setAvatarUrl(entity.getSysAiBotBindingAvatarUrl());
-        resp.setGatewayPort(entity.getSysAiBotBindingGatewayPort());
-        resp.setStatus(entity.getSysAiBotBindingStatus());
-        resp.setBindSource(entity.getSysAiBotBindingBindSource());
+        resp.setId(entity.getId());
+        resp.setBotId(entity.getBotId());
+        resp.setPlatform(entity.getPlatform());
+        resp.setNickname(entity.getNickname());
+        resp.setAvatarUrl(entity.getAvatarUrl());
+        resp.setGatewayPort(entity.getGatewayPort());
+        resp.setStatus(entity.getStatus());
+        resp.setBindSource(entity.getBindSource());
         resp.setCreateTime(entity.getCreateTime());
-        resp.setLastActiveTime(entity.getSysAiBotBindingLastActiveTime());
+        resp.setLastActiveTime(entity.getLastActiveTime());
         return resp;
     }
 }

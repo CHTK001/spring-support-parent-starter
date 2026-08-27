@@ -54,8 +54,8 @@ public class ToolMetricsController {
     public ReturnResult<List<SysAiUsage>> list() {
         return ReturnResult.ok(sysAiUsageMapper.selectList(
                 Wrappers.<SysAiUsage>lambdaQuery()
-                        .eq(SysAiUsage::getGroupName, "local")
-                        .orderByDesc(SysAiUsage::getCallTime)
+                        .eq(SysAiUsage::getSysAiUsageGroupName, "local")
+                        .orderByDesc(SysAiUsage::getSysAiUsageCallTime)
                         .last("LIMIT 200")));
     }
 

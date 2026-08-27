@@ -81,26 +81,26 @@ public class LocalToolUsageSyncService {
         String requestId = dedupKey(source, u);
         Long exists = sysAiUsageMapper.selectCount(
                 com.baomidou.mybatisplus.core.toolkit.Wrappers.<SysAiUsage>lambdaQuery()
-                        .eq(SysAiUsage::getRequestId, requestId));
+                        .eq(SysAiUsage::getSysAiUsageRequestId, requestId));
         if (exists != null && exists > 0) { return false; }
         SysAiUsage row = new SysAiUsage();
-        row.setGroupName("local");
-        row.setProvider(u.getProvider() == null ? source : u.getProvider());
-        row.setModel(u.getModel());
-        row.setCallType("local-tool");
-        row.setPromptTokens(u.getInputTokens());
-        row.setCompletionTokens(u.getOutputTokens());
-        row.setTotalTokens(u.getTotalTokens());
+        row.setSysAiUsageGroupName("local");
+        row.setSysAiUsageProvider(u.getProvider() == null ? source : u.getProvider());
+        row.setSysAiUsageModel(u.getModel());
+        row.setSysAiUsageCallType("local-tool");
+        row.setSysAiUsagePromptTokens(u.getInputTokens());
+        row.setSysAiUsageCompletionTokens(u.getOutputTokens());
+        row.setSysAiUsageTotalTokens(u.getTotalTokens());
         Double inCost = u.getInputCost() == null ? null : u.getInputCost().doubleValue();
         Double outCost = u.getOutputCost() == null ? null : u.getOutputCost().doubleValue();
         Double totCost = u.getTotalCost() == null
                 ? ((inCost == null && outCost == null) ? null : nvl(inCost) + nvl(outCost))
                 : u.getTotalCost().doubleValue();
-        row.setInputCost(inCost);
-        row.setOutputCost(outCost);
-        row.setTotalCost(totCost);
-        row.setRequestId(requestId);
-        row.setCallTime(toDateTime(u.getStartTime()));
+        row.setSysAiUsageInputCost(inCost);
+        row.setSysAiUsageOutputCost(outCost);
+        row.setSysAiUsageTotalCost(totCost);
+        row.setSysAiUsageRequestId(requestId);
+        row.setSysAiUsageCallTime(toDateTime(u.getStartTime()));
         try {
             sysAiUsageMapper.insert(row);
             return true;

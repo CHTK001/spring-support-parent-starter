@@ -172,8 +172,8 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
         update.setUseCount(
                 (token.getUseCount() == null ? 0 : token.getUseCount()) + 1
         );
-        update.setSysAiUsageTotalTokens(
-                (token.getSysAiUsageTotalTokens() == null ? 0 : token.getSysAiUsageTotalTokens())
+        update.setTotalTokens(
+                (token.getTotalTokens() == null ? 0 : token.getTotalTokens())
                         + promptTokens + completionTokens
         );
         update.setLastUsedTime(LocalDateTime.now());

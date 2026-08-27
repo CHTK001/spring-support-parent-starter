@@ -89,7 +89,7 @@ public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient>
                 .baseSetting(setting)
                 .build();
 
-        return new PooledChatClient(compressionSettings);
+        return new PooledChatClient(() -> (ChatClient) CommonChatClientFactoryResolver.create(factory, compressionSettings.getBaseSetting()));
     }
 
     @Override
