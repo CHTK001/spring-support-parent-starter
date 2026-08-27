@@ -19,8 +19,10 @@ import java.time.LocalTime;
 import java.util.List;
 
 /**
- * 钱包限额服务实现
+ * 钱包限额服务实现，校验充值/转账/提现等操作是否超出商户额度限制。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor

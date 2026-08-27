@@ -2,6 +2,7 @@ package com.chua.starter.rpc.support.spring;
 
 import com.chua.common.support.network.rpc.RpcClient;
 import com.chua.common.support.network.rpc.RpcConsumerConfig;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.starter.rpc.support.circuitbreaker.RpcCircuitBreaker;
 import com.chua.starter.rpc.support.circuitbreaker.RpcCircuitBreakerManager;
 import com.chua.starter.rpc.support.interceptor.RpcInterceptor;
@@ -82,7 +83,7 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         // 处理Object方法
         if (method.getDeclaringClass() == Object.class) {
-            return method.invoke(this, args);
+            return ReflectUtils.invoke(this, method.getName(), method.getReturnType(), method.getParameterTypes(), args);
         }
 
         String serviceName = targetType.getName() + "." + method.getName();
@@ -115,7 +116,7 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
             try {
                 // 通过真实 RPC 客户端获取远程服务代理（网络调用），而非本地 bean 直调
                 T remote = rpcClient.get(targetType);
-                Object result = method.invoke(remote, args);
+                Object result = ReflectUtils.invoke(remote, method.getName(), method.getReturnType(), method.getParameterTypes(), args);
 
                 // 记录成功
                 if (circuitBreaker != null) {
@@ -234,7 +235,7 @@ public class SpringRpcInvocationHandler<T> implements InvocationHandler {
         }
         try {
             Method method = config.getClass().getMethod(methodName);
-            return method.invoke(config);
+            return ReflectUtils.invoke(config, method.getName(), method.getReturnType());
         } catch (ReflectiveOperationException ignored) {
             return null;
         }

@@ -23,32 +23,37 @@ public class SysAiGroup {
      */
     @TableId(type = IdType.AUTO)
     /** SYSAI分组ID */
-    private Integer sysAiGroupId;
+    private Integer id;
 
     /**
      * 分组名称
      */
-    private String sysAiGroupName;
+    @TableField("sys_ai_group_name")
+    private String name;
 
     /**
      * 分组描述
      */
-    private String sysAiGroupDesc;
+    @TableField("sys_ai_group_desc")
+    private String desc;
 
     /**
      * 排序值
      */
-    private Integer sysAiGroupSort;
+    @TableField("sys_ai_group_sort")
+    private Integer sort;
 
     /**
      * 状态：1 启用，0 禁用
      */
-    private Integer sysAiGroupStatus;
+    @TableField("sys_ai_group_status")
+    private Integer status;
 
     /**
      * 删除标记：0 未删除，1 已删除
      */
-    private Integer sysAiGroupDelete;
+    @TableField("sys_ai_group_delete")
+    private Integer delete;
 
     /**
      * 创建时间

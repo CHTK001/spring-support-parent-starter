@@ -32,8 +32,10 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * 商户渠道服务实现
+ * 商户渠道服务实现，负责支付渠道的增删改查、启用/禁用及路由配置。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor

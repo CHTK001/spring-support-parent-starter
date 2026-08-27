@@ -39,7 +39,9 @@ public class SoftConfigController {
     @GetMapping("/page")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /** Page */
-    public ReturnPageResult<SoftConfig> page(@ParameterObject Query<SoftConfig> query, @ParameterObject SoftwareConfigPageRequest request) {
+    public ReturnPageResult<SoftConfig> page(
+            @ParameterObject Query<SoftConfig> query,
+            @ParameterObject SoftwareConfigPageRequest request) {
         return PageResultUtils.ok(softConfigService.pageFor(query, request));
     }
 

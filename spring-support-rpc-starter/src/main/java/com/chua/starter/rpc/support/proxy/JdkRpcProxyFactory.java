@@ -1,7 +1,8 @@
 package com.chua.starter.rpc.support.proxy;
 
+import com.chua.common.support.reflection.ReflectUtils;
+
 import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Proxy;
 import java.util.List;
 
 /**
@@ -17,7 +18,7 @@ public class JdkRpcProxyFactory implements RpcProxyFactory {
     @Override
     /** 创建Proxy */
     public Object createProxy(ClassLoader classLoader, List<Class<?>> interfaces, InvocationHandler handler) {
-        return Proxy.newProxyInstance(
+        return ReflectUtils.newProxy(
                 classLoader,
                 interfaces.toArray(new Class[0]),
                 handler

@@ -26,8 +26,10 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 支付首页业务统计服务实现。
+ * 支付首页业务统计服务实现，提供订单、退款、商户等维度的数据汇总。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Service
 public class PaymentDashboardServiceImpl implements PaymentDashboardService {

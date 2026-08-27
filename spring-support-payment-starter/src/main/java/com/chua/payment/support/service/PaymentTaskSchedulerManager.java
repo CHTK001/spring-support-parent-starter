@@ -26,12 +26,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 
 /**
- * 支付动态调度任务管理器。
+ * 支付动态调度任务管理器，基于内部线程池执行支付订单超时取消、通知重试等定时任务。
  * <p>
  * 该实现仅在 {@code engine=internal} 时生效，负责 payment 模块内部的本地调度。
  * 切换到 {@code engine=job} 后，统一由 job-starter 轮询任务表并触发业务 Job。
  * </p>
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Slf4j
 @Service

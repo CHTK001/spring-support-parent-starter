@@ -1,5 +1,6 @@
 package com.chua.payment.support.provider;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.payment.support.configuration.PaymentProviderProperties;
 import com.chua.payment.support.exception.PaymentException;
@@ -10,8 +11,10 @@ import org.springframework.stereotype.Component;
 import java.util.Set;
 
 /**
- * 支付 provider SPI 注册中心
+ * 支付 provider SPI 注册中心，管理各支付渠道网关实例并提供获取入口。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Component
 public class PaymentProviderGatewayRegistry {
@@ -125,8 +128,8 @@ public class PaymentProviderGatewayRegistry {
             if (classLoader == null) {
                 classLoader = PaymentProviderGatewayRegistry.class.getClassLoader();
             }
-            return (Class<T>) Class.forName(typeName, false, classLoader);
-        } catch (ClassNotFoundException | LinkageError e) {
+            return (Class<T>) ReflectUtils.forName(typeName, classLoader);
+        } catch (LinkageError e) {
             if (required) {
                 throw new PaymentException("未找到支付 provider 依赖: " + providerName + " (" + typeName + ")", e);
             }

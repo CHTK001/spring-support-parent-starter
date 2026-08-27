@@ -74,10 +74,10 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
             key = "'sys:ai:manufacturer:list'")
     /** 保存 */
     public SysAiManufacturer save(SysAiManufacturer manufacturer) {
-        manufacturer.setSysAiManufacturerStatus(
-                manufacturer.getSysAiManufacturerStatus() == null ? 1 : manufacturer.getSysAiManufacturerStatus());
-        manufacturer.setSysAiManufacturerSort(
-                manufacturer.getSysAiManufacturerSort() == null ? 0 : manufacturer.getSysAiManufacturerSort());
+        manufacturer.setStatus(
+                manufacturer.getStatus() == null ? 1 : manufacturer.getStatus());
+        manufacturer.setSort(
+                manufacturer.getSort() == null ? 0 : manufacturer.getSort());
         manufacturer.setCreateTime(LocalDateTime.now());
         manufacturer.setUpdateTime(LocalDateTime.now());
         sysAiManufacturerMapper.insert(manufacturer);
@@ -89,20 +89,20 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
             key = "'sys:ai:manufacturer:list'")
     /** 更新 */
     public boolean update(SysAiManufacturer manufacturer) {
-        if (manufacturer == null || manufacturer.getSysAiManufacturerId() == null) {
+        if (manufacturer == null || manufacturer.getId() == null) {
             log.warn("[AiManufacturerFacade] update 失败: ID 为空");
             return false;
         }
         // 编辑/启停时脱敏占位值或空值不覆盖真实密钥（含 **** 的占位符直接置 null，避免覆盖损坏）
-        if (manufacturer.getSysAiManufacturerAppKey() != null
-                && (manufacturer.getSysAiManufacturerAppKey().isBlank()
-                || manufacturer.getSysAiManufacturerAppKey().contains("****"))) {
-            manufacturer.setSysAiManufacturerAppKey(null);
+        if (manufacturer.getAppKey() != null
+                && (manufacturer.getAppKey().isBlank()
+                || manufacturer.getAppKey().contains("****"))) {
+            manufacturer.setAppKey(null);
         }
-        if (manufacturer.getSysAiManufacturerApiSecret() != null
-                && (manufacturer.getSysAiManufacturerApiSecret().isBlank()
-                || manufacturer.getSysAiManufacturerApiSecret().contains("****"))) {
-            manufacturer.setSysAiManufacturerApiSecret(null);
+        if (manufacturer.getApiSecret() != null
+                && (manufacturer.getApiSecret().isBlank()
+                || manufacturer.getApiSecret().contains("****"))) {
+            manufacturer.setApiSecret(null);
         }
         manufacturer.setUpdateTime(LocalDateTime.now());
         return sysAiManufacturerMapper.updateById(manufacturer) > 0;
@@ -148,15 +148,15 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
         }
         SysAiManufacturer manufacturer = sysAiManufacturerMapper.selectOne(
                 new LambdaQueryWrapper<SysAiManufacturer>()
-                        .eq(SysAiManufacturer::getSysAiManufacturerCode, code));
+                        .eq(SysAiManufacturer::getCode, code));
         if (manufacturer == null) {
             log.warn("[AiManufacturerFacade] syncModels 失败: 厂商 {} 不存在", code);
             return 0;
         }
-        String baseUrl = manufacturer.getSysAiManufacturerBaseUrl();
-        String apiKey = manufacturer.getSysAiManufacturerAppKey() != null
-                ? manufacturer.getSysAiManufacturerAppKey()
-                : manufacturer.getSysAiManufacturerApiSecret();
+        String baseUrl = manufacturer.getBaseUrl();
+        String apiKey = manufacturer.getAppKey() != null
+                ? manufacturer.getAppKey()
+                : manufacturer.getApiSecret();
         if (baseUrl == null || baseUrl.isBlank()) {
             log.warn("[AiManufacturerFacade] syncModels 失败: 厂商 {} 未配置 baseUrl", code);
             return 0;
@@ -169,13 +169,13 @@ public class AiManufacturerFacadeServiceImpl implements AiManufacturerFacadeServ
         }
 
         // 先物理删除该厂商已有模型，再插入最新模型（避免逻辑删除残留导致的唯一索引冲突）
-        aiModelMapper.physicalDeleteByProviderId(manufacturer.getSysAiManufacturerId().longValue());
+        aiModelMapper.physicalDeleteByProviderId(manufacturer.getId().longValue());
         int inserted = 0;
         for (String modelName : modelNames) {
             SysAiModel model = new SysAiModel();
             model.setModelCode(modelName);
             model.setModelName(modelName);
-            model.setModelProviderId(manufacturer.getSysAiManufacturerId().longValue());
+            model.setModelProviderId(manufacturer.getId().longValue());
             model.setModelEnabled(Boolean.TRUE);
             model.setModelSort(inserted);
             aiModelMapper.insert(model);

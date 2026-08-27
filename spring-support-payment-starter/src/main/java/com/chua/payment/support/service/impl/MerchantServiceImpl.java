@@ -22,8 +22,10 @@ import org.springframework.util.StringUtils;
 import java.util.UUID;
 
 /**
- * 商户服务实现类
+ * 商户服务实现，负责商户的增删改查、激活/禁用等操作。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.ai.support.mapper.settings.AiModelMapper">
+
+    <!--
+        按厂商 ID 物理删除模型记录。
+        绕过逻辑删除标记，用于同步时的先删后插操作。
+    -->
+    <delete id="physicalDeleteByProviderId">
+        DELETE FROM sys_ai_model
+        WHERE sys_ai_model_provider_id = #{providerId}
+    </delete>
+
+</mapper>

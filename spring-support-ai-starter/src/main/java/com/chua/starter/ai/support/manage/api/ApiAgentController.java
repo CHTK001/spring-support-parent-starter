@@ -214,8 +214,8 @@ public class ApiAgentController {
 
         // 2. 定位任务能力（无该任务能力直接参数错误）
         Map<String, Object> capability = null;
-        if (modelRow.getSysAiProviderModelCapabilities() != null) {
-            for (Map<String, Object> cap : modelRow.getSysAiProviderModelCapabilities()) {
+        if (modelRow.getCapabilities() != null) {
+            for (Map<String, Object> cap : modelRow.getCapabilities()) {
                 if (task.equals(str(cap.get("task")))) {
                     capability = cap;
                     break;
@@ -241,7 +241,7 @@ public class ApiAgentController {
         }
         capability.put("health", health);
         capability.put("health_checked_at", System.currentTimeMillis());
-        modelRow.setSysAiProviderModelUpdatedAt(now);
+        modelRow.setUpdatedAt(now);
         // 复合主键 (provider_id, model)：显式按双键更新，避免同名模型跨供应商误伤
         modelMapper.update(modelRow, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<SysAiProviderModel>()
                 .eq(SysAiProviderModel::getProviderId, providerId)
@@ -250,7 +250,7 @@ public class ApiAgentController {
         // 5. 组装契约响应
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("provider_id", providerId);
-        result.put("platform", provider.getSysAiProviderPlatform());
+        result.put("platform", provider.getPlatform());
         result.put("model", modelName);
         result.put("task", task);
         result.put("status", outcome.status);
@@ -275,10 +275,10 @@ public class ApiAgentController {
      */
     private ProbeOutcome probe(SysAiProvider provider, Map<String, Object> capability, String modelName) {
         // ONNX 本地离线模型：base_url 即模型文件路径，只校验文件存在与可读
-        if ("onnx".equalsIgnoreCase(str(provider.getSysAiProviderPlatform()))) {
+        if ("onnx".equalsIgnoreCase(str(provider.getPlatform()))) {
             String modelPath = str(capability.get("base_url_override"));
             if (modelPath == null || modelPath.isBlank()) {
-                modelPath = provider.getSysAiProviderBaseUrl();
+                modelPath = provider.getBaseUrl();
             }
             if (modelPath == null || modelPath.isBlank()) {
                 return new ProbeOutcome("unhealthy", -1, "invalid_request", 0, "未配置模型文件路径");
@@ -294,11 +294,11 @@ public class ApiAgentController {
         }
         String protocol = str(capability.get("protocol"));
         String overrideUrl = str(capability.get("base_url_override"));
-        String baseUrl = overrideUrl != null && !overrideUrl.isBlank() ? overrideUrl : provider.getSysAiProviderBaseUrl();
+        String baseUrl = overrideUrl != null && !overrideUrl.isBlank() ? overrideUrl : provider.getBaseUrl();
         if (baseUrl == null || baseUrl.isBlank()) {
             return new ProbeOutcome("unhealthy", -1, "invalid_request", 0, "base_url 未配置");
         }
-        String apiKey = extractApiKey(provider.getSysAiProviderCredentials());
+        String apiKey = extractApiKey(provider.getCredentials());
         boolean chatProtocol = protocol != null && protocol.contains("chat");
         boolean embeddingProtocol = protocol != null && protocol.contains("embedding");
 
@@ -816,3 +816,4 @@ public class ApiAgentController {
         return agent;
     }
 }
+

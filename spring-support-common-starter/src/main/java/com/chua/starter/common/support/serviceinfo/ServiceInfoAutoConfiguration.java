@@ -120,49 +120,105 @@ public class ServiceInfoAutoConfiguration {
         if (registry.getEndpoints().isEmpty() && registry.getFlags().isEmpty()) {
             return;
         }
-        String sep = AnsiStyle.separator(80, '=');
-        StringBuilder sb = new StringBuilder();
-        sb.append('\n').append(sep).append('\n');
-        sb.append(AnsiStyle.bold(AnsiStyle.yellow("  服务信息"))).append('\n');
-        sb.append(sep).append('\n');
+        String c = AnsiStyle.CYAN;
+        String r = AnsiStyle.RESET;
+        String b = AnsiStyle.BOLD;
+        String y = AnsiStyle.YELLOW;
+        String gr = AnsiStyle.GRAY;
+        int W = 70;
+
+        StringBuilder sb = new StringBuilder('\n');
+        sb.append(c).append("╔").append(repeat('═', W)).append("╗").append(r).append('\n');
+        sb.append(c).append("║").append(r).append(ansiPad("  " + b + y + "服务信息", W - 2)).append(c).append("║").append(r).append('\n');
+        sb.append(c).append("╠").append(repeat('═', W)).append("╣").append(r).append('\n');
 
         if (!registry.getEndpoints().isEmpty()) {
-            sb.append(AnsiStyle.cyan("[端点]")).append('\n');
+            sb.append(c).append("╭").append(repeat('─', W)).append("╮").append(r).append('\n');
+            sb.append(c).append("║").append(r).append(ansiPad("  [端点]", W - 2)).append(c).append("║").append(r).append('\n');
+            sb.append(c).append("╰").append(repeat('─', W)).append("╯").append(r).append('\n');
             for (ServiceInfoRegistry.EndpointInfo ep : registry.getEndpoints().values()) {
-                sb.append("  ")
-                        .append(pad(ep.getGroup() + "/" + ep.getName(), 32))
-                        .append(' ').append(AnsiStyle.yellow(ep.getUrl()))
-                        .append(AnsiStyle.gray("  ; " + nullToEmpty(ep.getDescription())))
-                        .append('\n');
+                String label = nullToEmpty(ep.getGroup()) + "/" + ep.getName();
+                String url = ep.getUrl();
+                String desc = nullToEmpty(ep.getDescription());
+                int labelLen = ansiWidth(label);
+                int urlLen = ansiWidth(url);
+                int descLen = ansiWidth(desc);
+                int inner = W - 4;
+                int pad1 = Math.max(2, inner - labelLen - urlLen - descLen - 2);
+                sb.append(c).append("║").append(r)
+                        .append("    ").append(label).append(r)
+                        .append(ansiPad("", pad1)).append(c)
+                        .append(url).append(r)
+                        .append("  ").append(gr).append("; ").append(desc).append(r)
+                        .append(c).append("║").append(r).append('\n');
             }
         }
 
         if (!registry.getFlags().isEmpty()) {
-            sb.append(AnsiStyle.cyan("[开关]")).append('\n');
             java.util.Map<String, java.util.List<ServiceInfoRegistry.FlagInfo>> byGroup =
                     new java.util.LinkedHashMap<>();
             for (ServiceInfoRegistry.FlagInfo flag : registry.getFlags().values()) {
                 byGroup.computeIfAbsent(nullToEmpty(flag.getGroup()), k -> new java.util.ArrayList<>()).add(flag);
             }
             for (java.util.Map.Entry<String, java.util.List<ServiceInfoRegistry.FlagInfo>> e : byGroup.entrySet()) {
-                sb.append("  ").append(AnsiStyle.bold(e.getKey())).append('\n');
+                sb.append(c).append("╭").append(repeat('─', W)).append("╮").append(r).append('\n');
+                sb.append(c).append("║").append(r).append(ansiPad("  " + b + e.getKey(), W - 2)).append(c).append("║").append(r).append('\n');
+                sb.append(c).append("╰").append(repeat('─', W)).append("╯").append(r).append('\n');
                 for (ServiceInfoRegistry.FlagInfo flag : e.getValue()) {
                     String label = flag.getDescription() != null && !flag.getDescription().isEmpty()
                             ? flag.getDescription()
                             : flag.getName();
-                    sb.append("    ")
-                            .append(pad(label, 28))
-                            .append(' ').append(AnsiStyle.cnLabel(flag.getValue()));
-                    if (flag.getSuffix() != null && !flag.getSuffix().isEmpty()) {
-                        sb.append(' ').append(AnsiStyle.cyan(flag.getSuffix()));
-                    }
-                    sb.append('\n');
+                    String suffix = (flag.getSuffix() != null && !flag.getSuffix().isEmpty())
+                            ? " " + c + flag.getSuffix() + r : "";
+                    int labelLen = ansiWidth(label);
+                    int sufLen = suffix.isEmpty() ? 0 : ansiWidth(suffix);
+                    int inner = W - 4;
+                    int pad1 = Math.max(2, inner - labelLen - sufLen);
+                    sb.append(c).append("║").append(r)
+                            .append("      ").append(label).append(r)
+                            .append(ansiPad("", pad1)).append(c)
+                            .append(AnsiStyle.cnLabel(flag.getValue())).append(r)
+                            .append(suffix).append(c).append("║").append(r).append('\n');
                 }
             }
         }
 
-        sb.append(sep);
+        sb.append(c).append("╚").append(repeat('═', W)).append("╝").append(r);
         log.info("{}", sb);
+    }
+
+    /** Repeat */
+    private static String repeat(char ch, int count) {
+        StringBuilder sb = new StringBuilder(count);
+        for (int i = 0; i < count; i++) sb.append(ch);
+        return sb.toString();
+    }
+
+    /** AnsiWidth 计算去掉 ANSI 转义后的可见字符长度 */
+    private static int ansiWidth(String s) {
+        if (s == null) return 0;
+        int width = 0;
+        for (int i = 0; i < s.length(); ) {
+            if (s.charAt(i) == '\u001B' && i + 2 < s.length() && s.charAt(i + 1) == '[') {
+                int j = i + 2;
+                while (j < s.length() && Character.isLetterOrDigit(s.charAt(j))) j++;
+                i = j;
+            } else {
+                width++;
+                i++;
+            }
+        }
+        return width;
+    }
+
+    /** AnsiPad 在忽略 ANSI 颜色的情况下填充空格使输出宽度恰好为 target */
+    private static String ansiPad(String s, int target) {
+        if (target <= 0) return "";
+        int w = ansiWidth(s);
+        int need = Math.max(0, target - w);
+        StringBuilder sb = new StringBuilder(s);
+        for (int i = 0; i < need; i++) sb.append(' ');
+        return sb.toString();
     }
 
     /** NullToEmpty */

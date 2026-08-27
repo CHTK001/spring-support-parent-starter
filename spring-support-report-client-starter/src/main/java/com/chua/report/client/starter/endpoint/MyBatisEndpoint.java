@@ -17,10 +17,10 @@ import java.util.*;
 /**
  * MyBatis Actuator 端点
  * <p>
- * 通过 actuator 暴露 MyBatis 配置信息
+ * 通过 actuator 暴露 MyBatis 配置信息，包括 Mapper 数量、SQL 语句统计、
+ * 已加载资源列表等，便于运行时诊断和运维排查。
  * </p>
  *
- * @version 1.0.0
  * @since 2025/01/17
  * @author CH
  */
@@ -31,14 +31,17 @@ import java.util.*;
 public class MyBatisEndpoint {
 
 
+    /**
+     * SQL会话工厂，可为 null（MyBatis 未启用时）
+     */
     @Autowired(required = false)
-    /** SQL会话工厂 */
     private SqlSessionFactory sqlSessionFactory;
 
     /**
-     * 获取 MyBatis 概览信息
+     * 获取 MyBatis 概览信息，包括 Mapper 数量、SQL 语句统计、已加载资源等。
      *
-     * @return MyBatis 概览
+     * @return MyBatis 概览信息 Map，包含 enabled、mapperCount、mappedStatementCount 等字段
+     * @throws Exception 获取信息失败时记录错误日志并返回 error 字段
      */
     @ReadOperation
     public Map<String, Object> overview() {
@@ -84,10 +87,11 @@ public class MyBatisEndpoint {
     }
 
     /**
-     * 获取指定 Mapper 的详情
+     * 获取指定 Mapper 的详情，包括方法列表和 SQL 类型统计。
      *
-     * @param mapperName Mapper 名称（URL 编码）
-     * @return Mapper 详情
+     * @param mapperName Mapper 全限定类名（URL 编码）
+     * @return Mapper 详情 Map，包含 statements、methodCount 等字段
+     * @throws Exception 获取详情失败时记录错误日志并返回 error 字段
      */
     @ReadOperation
     public Map<String, Object> mapper(@Selector String mapperName) {

@@ -13,8 +13,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 /**
- * 支付全局配置服务实现
+ * 支付全局配置服务实现，管理系统级支付参数（回调地址、超时等）。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor

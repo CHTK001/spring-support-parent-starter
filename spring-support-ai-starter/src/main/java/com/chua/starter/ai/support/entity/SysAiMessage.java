@@ -26,7 +26,7 @@ public class SysAiMessage {
      */
     @TableId(type = IdType.AUTO)
     /** SYSAI消息ID */
-    private Long sysAiMessageId;
+    private Long id;
 
     /**
      * 会话 ID
@@ -39,29 +39,25 @@ public class SysAiMessage {
      * 消息角色（system / user / assistant / tool）
      */
     @TableField("sys_ai_message_role")
-    /** SYSAI消息role */
-    private String sysAiMessageRole;
+    private String role;
 
     /**
      * 消息类型（TEXT 等）
      */
     @TableField("sys_ai_message_type")
-    /** SYSAI消息类型 */
-    private String sysAiMessageType;
+    private String type;
 
     /**
      * 消息内容
      */
     @TableField("sys_ai_message_content")
-    /** SYSAI消息内容 */
-    private String sysAiMessageContent;
+    private String content;
 
     /**
      * 附件地址
      */
     @TableField("sys_ai_message_attachment")
-    /** SYSAI消息attachment */
-    private String sysAiMessageAttachment;
+    private String attachment;
 
     /**
      * 创建时间

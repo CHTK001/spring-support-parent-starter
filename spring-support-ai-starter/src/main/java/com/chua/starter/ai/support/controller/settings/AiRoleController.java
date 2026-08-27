@@ -97,7 +97,7 @@ public class AiRoleController {
     @PutMapping("/{id}")
     public boolean update(@Parameter(description = "角色主键") @PathVariable Integer id,
                           @RequestBody SysAiRole role) {
-        role.setSysAiRoleId(id);
+        role.setId(id);
         return roleService.update(role);
     }
 

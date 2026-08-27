@@ -24,7 +24,7 @@ public class SysAiTemplate {
      */
     @TableId(type = IdType.AUTO)
     /** SYSAI模板ID */
-    private Integer sysAiTemplateId;
+    private Integer id;
 
     /**
      * 所属模块 ID
@@ -37,50 +37,43 @@ public class SysAiTemplate {
      * 模板类型
      */
     @TableField("sys_ai_template_type")
-    /** SYSAI模板类型 */
-    private String sysAiTemplateType;
+    private String type;
 
     /**
      * 模板分类
      */
     @TableField("sys_ai_template_category")
-    /** SYSAI模板分类 */
-    private String sysAiTemplateCategory;
+    private String category;
 
     /**
      * 模板名称
      */
     @TableField("sys_ai_template_name")
-    /** SYSAI模板名称 */
-    private String sysAiTemplateName;
+    private String name;
 
     /**
      * 模板备注
      */
     @TableField("sys_ai_template_remark")
-    /** SYSAI模板remark */
-    private String sysAiTemplateRemark;
+    private String remark;
 
     /**
      * 模板内容（推荐提示词）
      */
     @TableField("sys_ai_template_recommend_prompt")
-    /** SYSAI模板内容 */
-    private String sysAiTemplateContent;
+    private String content;
 
     /**
      * 状态：1 启用，0 停用
      */
     @TableField("sys_ai_template_status")
-    /** SYSAI模板状态 */
-    private Integer sysAiTemplateStatus;
+    private Integer status;
 
     /**
      * 排序值
      */
     @TableField("sys_ai_template_sort")
-    /** SYSAI模板sort */
-    private Integer sysAiTemplateSort;
+    private Integer sort;
 
     /**
      * 创建时间

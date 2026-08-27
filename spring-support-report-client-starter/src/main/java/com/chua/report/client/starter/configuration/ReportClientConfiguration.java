@@ -1,5 +1,6 @@
 package com.chua.report.client.starter.configuration;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.report.client.starter.job.JobAnnotationScanner;
 import com.chua.report.client.starter.job.JobReporter;
 import com.chua.report.client.starter.properties.ReportProperties;
@@ -162,18 +163,13 @@ public class ReportClientConfiguration implements ApplicationContextAware {
         }
 
         // 注册 MyBatis 处理器
-        try {
-            Class.forName("org.apache.ibatis.session.SqlSessionFactory");
+        if (ReflectUtils.forName("org.apache.ibatis.session.SqlSessionFactory") != null) {
             syncClient.subscribe(MonitorTopics.MYBATIS_CONFIG);
             MyBatisConfigHandler myBatisHandler = new MyBatisConfigHandler();
             myBatisHandler.setApplicationContext(applicationContext);
             syncClient.registerHandler(MonitorTopics.MYBATIS_CONFIG, myBatisHandler);
             log.info("[ReportClient] 已注册 MyBatis 配置处理器");
-        } catch (ClassNotFoundException e) {
-            log.debug("[ReportClient] MyBatis 未启用，跳过注册 MyBatis 处理器");
         }
-
-        // 启动 URL QPS 统计上报
         if (reportProperties.getUrlQps().isEnabled()) {
             UrlQpsReporter urlQpsReporter = UrlQpsReporter.getInstance();
             urlQpsReporter.setSyncClient(syncClient);

@@ -137,7 +137,9 @@ public final class DataSyncAllInOneProbe {
         s1.registerSource(new DelimitedDataSyncAgentSource("empty-src", "empty-in", empty.toString(), ","));
         s1.registerSink(es);
         s1.addMapping(map("empty-csv", "0/1 * * * * ?"));
-        s1.start(); Thread.sleep(1500); s1.stop();
+        s1.start();
+        Thread.sleep(1500);
+        s1.stop();
         if (es.collected.isEmpty()) pass.add("边界: 空 CSV → 0 行写入");
         else fail.add("边界: 空 CSV → " + es.collected.size() + " 行(预期 0)");
 
@@ -152,7 +154,9 @@ public final class DataSyncAllInOneProbe {
             s2.registerSource(new DelimitedDataSyncAgentSource("miss-src", "miss-in", missing.toString(), ","));
             s2.registerSink(ms);
             s2.addMapping(map("miss-csv", "0/1 * * * * ?"));
-            s2.start(); Thread.sleep(1500); s2.stop();
+            s2.start();
+            Thread.sleep(1500);
+            s2.stop();
             pass.add("边界: 缺失源文件 → 不抛异常, 0 行");
         } catch (Exception e) {
             pass.add("边界: 缺失源文件 → 抛异常(" + e.getClass().getSimpleName() + "), 不阻塞");
@@ -170,7 +174,9 @@ public final class DataSyncAllInOneProbe {
             s3.registerSink(bs);
             s3.addMapping(new DefaultDataSyncMapping("batch-" + b, "batch-in", "batch-src", "batch-out", "batch-" + b,
                     null, List.of(), b, "fixed", "0/1 * * * * ?", Map.of(), new CronTrigger("0/1 * * * * ?", LocalDateTime.now())));
-            s3.start(); Thread.sleep(1500); s3.stop();
+            s3.start();
+            Thread.sleep(1500);
+            s3.stop();
             // cron=0/1 每秒触发，1.5s 窗口内实际执行 1~N 轮属正常竞态；
             // 关键断言是「总行数为 12 的整数倍」→ 每轮恰好完整写入 12 行，无丢失/重复损坏
             int n = bs.collected.size();
@@ -200,7 +206,9 @@ public final class DataSyncAllInOneProbe {
         s1.registerSink(c1s); s1.registerSink(c5s);
         s1.addMapping(map("cron-1s", "0/1 * * * * ?", "c1s", "cron-1s-sink"));
         s1.addMapping(map("cron-5s", "0/5 * * * * ?", "c5s", "cron-5s-sink"));
-        s1.start(); Thread.sleep(3500); s1.stop();
+        s1.start();
+        Thread.sleep(3500);
+        s1.stop();
         if (c1s.rounds >= 2) pass.add("调度: cron=0/1 → 3.5s 内 " + c1s.rounds + " 轮(≥2)");
         else fail.add("调度: cron=0/1 → 仅 " + c1s.rounds + " 轮");
         // 已知问题：DefaultSyncDataSchedulerManager 实际触发频率高于 cron 配置
@@ -242,7 +250,9 @@ public final class DataSyncAllInOneProbe {
             server.registerSink(sink);
             server.addMapping(map("cc-" + i, "0/1 * * * * ?", "cc-src-" + i, "cc-sink-" + i));
         }
-        server.start(); Thread.sleep(2500); server.stop();
+        server.start();
+        Thread.sleep(2500);
+        server.stop();
         long total = sinks.stream().mapToLong(s -> s.total).sum();
         if (total > 0) pass.add("并发: 5 映射同 tick 执行, 共 " + total + " 行");
         else fail.add("并发: 5 映射 0 行");

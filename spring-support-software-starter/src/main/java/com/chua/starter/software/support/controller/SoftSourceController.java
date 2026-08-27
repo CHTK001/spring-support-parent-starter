@@ -39,7 +39,9 @@ public class SoftSourceController {
     @GetMapping("/page")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /** Page */
-    public ReturnPageResult<SoftSource> page(@ParameterObject Query<SoftSource> query, @ParameterObject SoftSource request) {
+    public ReturnPageResult<SoftSource> page(
+            @ParameterObject Query<SoftSource> query,
+            @ParameterObject SoftSource request) {
         return PageResultUtils.ok(softSourceService.pageFor(query, request));
     }
 

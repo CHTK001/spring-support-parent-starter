@@ -1,5 +1,6 @@
 package com.chua.starter.job.support.schedule;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.SmartInitializingSingleton;
@@ -94,7 +95,7 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
         String methodName = method.getName();
         Runnable task = () -> {
             try {
-                method.invoke(bean);
+                ReflectUtils.invoke(bean, method.getName(), method.getReturnType());
             } catch (Throwable ex) {
                 log.error("[job] @Scheduled 执行失败 target={}#{}", beanName, methodName, ex);
             }

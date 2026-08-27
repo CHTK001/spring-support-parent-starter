@@ -15,9 +15,10 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 支付敏感字段加解密服务。
- * 支持新配置密钥，同时兼容历史固定密钥，避免旧数据无法解密。
+ * 支付敏感字段加解密服务，支持多密钥兼容（新旧密钥均能解密历史数据）。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Component
 public class PaymentCipherService {

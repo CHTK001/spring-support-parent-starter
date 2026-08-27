@@ -1,5 +1,6 @@
 package com.chua.payment.support.service.impl;
 
+import com.chua.payment.support.dto.WechatPayScoreNotifyDTO;
 import com.chua.payment.support.channel.support.AbstractMerchantPaymentChannel;
 import com.chua.payment.support.entity.MerchantChannel;
 import com.chua.payment.support.enums.ChannelStatus;
@@ -18,8 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 /**
- * 微信支付分回调服务实现
+ * 微信支付分回调服务实现，处理微信支付分异步通知并触发订单状态变更。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Service
 public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChannel implements WechatPayScoreNotifyService {
@@ -63,21 +66,14 @@ public class WechatPayScoreNotifyServiceImpl extends AbstractMerchantPaymentChan
      * @param signType signType
      * @param body body
      */
-    public TencentWechatPayScoreNotifyPayload handleNotify(Long channelId,
-                                                           String outOrderNo,
-                                                           String serialNumber,
-                                                           String timestamp,
-                                                           String nonce,
-                                                           String signature,
-                                                           String signType,
-                                                           String body) {
-        MerchantChannel channel = requireEnabledWechatChannel(channelId);
+    public TencentWechatPayScoreNotifyPayload handleNotify(WechatPayScoreNotifyDTO dto) {
+        MerchantChannel channel = requireEnabledWechatChannel(dto.channelId());
         TencentWechatPayScoreNotifyPayload payload = providerGatewayRegistry.tencentWechatPayGateway(providerSpi(channel, null))
-                .parsePayScoreNotify(buildWechatProperties(channel), buildWechatNotifyRequest(serialNumber, timestamp, nonce, signature, signType, body));
-        if (StringUtils.hasText(outOrderNo) && StringUtils.hasText(payload.getOutOrderNo()) && !outOrderNo.equals(payload.getOutOrderNo())) {
+                .parsePayScoreNotify(buildWechatProperties(channel), buildWechatNotifyRequest(dto.serialNumber(), dto.timestamp(), dto.nonce(), dto.signature(), dto.signType(), dto.body()));
+        if (StringUtils.hasText(dto.outOrderNo()) && StringUtils.hasText(payload.getOutOrderNo()) && !dto.outOrderNo().equals(payload.getOutOrderNo())) {
             throw new PaymentException("微信支付分回调路径订单号和报文订单号不一致");
         }
-        wechatPayScoreOrderService.handleNotify(channelId, outOrderNo, payload, body);
+        wechatPayScoreOrderService.handleNotify(dto.channelId(), dto.outOrderNo(), payload, dto.body());
         return payload;
     }
 

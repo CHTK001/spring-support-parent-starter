@@ -28,71 +28,62 @@ public class SysAiRole {
      */
     @TableId(type = IdType.AUTO)
     /** SYSAIroleID */
-    private Integer sysAiRoleId;
+    private Integer id;
 
     /**
      * 角色名称（如 Java 开发助理）
      */
     @TableField("sys_ai_role_name")
-    /** SYSAIrole名称 */
-    private String sysAiRoleName;
+    private String name;
 
     /**
      * 角色编码（唯一标识，如 java-dev）
      */
     @TableField("sys_ai_role_code")
-    /** SYSAIrole代码 */
-    private String sysAiRoleCode;
+    private String code;
 
     /**
      * 角色描述
      */
     @TableField("sys_ai_role_description")
-    /** SYSAIrole描述 */
-    private String sysAiRoleDescription;
+    private String description;
 
     /**
      * 系统提示词（人设核心，注入到对话 system 中）
      */
     @TableField("sys_ai_role_system_prompt")
-    /** SYSAIrolesystemprompt */
-    private String sysAiRoleSystemPrompt;
+    private String systemPrompt;
 
     /**
      * 绑定默认模型（可空，为空时使用全局默认模型）
      */
     @TableField("sys_ai_role_model")
-    /** SYSAIrole模型 */
-    private String sysAiRoleModel;
+    private String model;
 
     /**
      * 采样温度（可空，为空时使用默认温度）
      */
     @TableField("sys_ai_role_temperature")
-    /** SYSAIroletemperature */
-    private Double sysAiRoleTemperature;
+    private Double temperature;
 
     /**
      * 排序值
      */
     @TableField("sys_ai_role_sort")
-    /** SYSAIrolesort */
-    private Integer sysAiRoleSort;
+    private Integer sort;
 
     /**
      * 状态：1 启用，0 禁用
      */
     @TableField("sys_ai_role_status")
-    /** SYSAIrole状态 */
-    private Integer sysAiRoleStatus;
+    private Integer status;
 
     /**
      * 逻辑删除标记：0 未删除，1 已删除
      */
     @TableField("sys_ai_role_delete")
     @TableLogic
-    /** SYSAIroledelete */
-    private Integer sysAiRoleDelete;
+    private Integer delete;
 
     /**
      * 创建人名称

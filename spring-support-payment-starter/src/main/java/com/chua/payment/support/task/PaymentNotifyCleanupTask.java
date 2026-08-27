@@ -67,10 +67,8 @@ public class PaymentNotifyCleanupTask implements PaymentManagedTask {
     @Override
     @Job(
             value = "payment-notify-cleanup",
-            scheduleType = "cron",
-            scheduleTime = "0 0 2 * * ?",
-            desc = "清理已解决且超过保留期的回调异常记录。",
-            autoStart = true
+            cron = "0 0 2 * * ?",
+            desc = "清理已解决且超过保留期的回调异常记录。"
     )
     /** 执行 */
     public void execute() {

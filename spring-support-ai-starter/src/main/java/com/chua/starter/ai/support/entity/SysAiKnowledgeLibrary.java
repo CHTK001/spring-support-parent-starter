@@ -24,28 +24,25 @@ public class SysAiKnowledgeLibrary {
      */
     @TableId(type = IdType.AUTO)
     /** SYSAIknowledgelibraryID */
-    private Integer sysAiKnowledgeLibraryId;
+    private Integer id;
 
     /**
      * 知识库名称
      */
     @TableField("sys_ai_knowledge_library_name")
-    /** SYSAIknowledgelibrary名称 */
-    private String sysAiKnowledgeLibraryName;
+    private String name;
 
     /**
      * 知识库描述
      */
     @TableField("sys_ai_knowledge_library_description")
-    /** SYSAIknowledgelibrary描述 */
-    private String sysAiKnowledgeLibraryDescription;
+    private String description;
 
     /**
      * 状态：1 启用，0 停用
      */
     @TableField("sys_ai_knowledge_library_status")
-    /** SYSAIknowledgelibrary状态 */
-    private Integer sysAiKnowledgeLibraryStatus;
+    private Integer status;
 
     /**
      * 创建时间

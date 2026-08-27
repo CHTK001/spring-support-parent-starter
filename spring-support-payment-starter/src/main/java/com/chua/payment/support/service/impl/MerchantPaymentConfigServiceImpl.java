@@ -14,8 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 /**
- * 商户支付配置服务实现
+ * 商户支付配置服务实现，管理商户维度的支付功能开关与行为参数。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor

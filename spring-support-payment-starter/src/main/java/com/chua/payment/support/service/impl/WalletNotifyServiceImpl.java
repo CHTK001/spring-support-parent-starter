@@ -1,5 +1,8 @@
 package com.chua.payment.support.service.impl;
 
+import com.chua.payment.support.dto.WalletNotifyDTO;
+import com.chua.payment.support.dto.WalletTransferOpDTO;
+import com.chua.payment.support.dto.WalletWithdrawRequest;
 import com.chua.payment.support.entity.WalletOrder;
 import com.chua.payment.support.exception.PaymentException;
 import com.chua.payment.support.service.WalletAccountService;
@@ -13,8 +16,10 @@ import org.springframework.util.StringUtils;
 import java.util.Locale;
 
 /**
- * 钱包异步回调处理服务实现
+ * 钱包异步回调处理服务实现，根据渠道回调通知更新钱包订单状态及账户余额。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor
@@ -36,27 +41,22 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
      * @param payload payload
      * @param reason reason
      */
-    public void handleNotify(String orderType,
-                             String orderNo,
-                             String thirdPartyOrderNo,
-                             String status,
-                             String payload,
-                             String reason) {
-        if (!StringUtils.hasText(orderNo)) {
+    public void handleNotify(WalletNotifyDTO dto) {
+        if (!StringUtils.hasText(dto.orderNo())) {
             throw new PaymentException("钱包回调缺少订单号");
         }
-        WalletOrder walletOrder = walletOrderService.getByOrderNo(orderNo);
+        WalletOrder walletOrder = walletOrderService.getByOrderNo(dto.orderNo());
         if (walletOrder == null) {
-            throw new PaymentException("钱包订单不存在: " + orderNo);
+            throw new PaymentException("钱包订单不存在: " + dto.orderNo());
         }
-        validateOrderType(orderType, walletOrder);
+        validateOrderType(dto.orderType(), walletOrder);
 
-        String normalizedStatus = normalizeStatus(status);
+        String normalizedStatus = normalizeStatus(dto.status());
         switch (normalizedStatus) {
-            case "SUCCESS" -> handleSuccess(walletOrder, thirdPartyOrderNo, payload, reason);
-            case "PROCESSING" -> walletOrderService.markProcessing(orderNo, thirdPartyOrderNo, payload);
-            case "FAILED" -> walletOrderService.markFailed(orderNo, payload, StringUtils.hasText(reason) ? reason : "钱包回调失败");
-            default -> throw new PaymentException("不支持的钱包回调状态: " + status);
+            case "SUCCESS" -> handleSuccess(walletOrder, dto.thirdPartyOrderNo(), dto.payload(), dto.reason());
+            case "PROCESSING" -> walletOrderService.markProcessing(dto.orderNo(), dto.thirdPartyOrderNo(), dto.payload());
+            case "FAILED" -> walletOrderService.markFailed(dto.orderNo(), dto.payload(), StringUtils.hasText(dto.reason()) ? dto.reason() : "钱包回调失败");
+            default -> throw new PaymentException("不支持的钱包回调状态: " + dto.status());
         }
     }
 
@@ -94,24 +94,24 @@ public class WalletNotifyServiceImpl implements WalletNotifyService {
             return;
         }
         if ("TRANSFER".equals(normalizedOrderType)) {
-            walletAccountService.transfer(
+            walletAccountService.transfer(new WalletTransferOpDTO(
                     walletOrder.getMerchantId(),
                     walletOrder.getUserId(),
                     walletOrder.getRelatedUserId(),
                     walletOrder.getAmount(),
                     walletOrder.getOrderNo(),
                     operator,
-                    remark);
+                    remark));
             return;
         }
         if ("WITHDRAW".equals(normalizedOrderType)) {
-            walletAccountService.withdraw(
+            walletAccountService.withdraw(new WalletWithdrawRequest(
                     walletOrder.getMerchantId(),
                     walletOrder.getUserId(),
                     walletOrder.getAmount(),
                     walletOrder.getOrderNo(),
                     operator,
-                    remark);
+                    remark));
             return;
         }
         throw new PaymentException("不支持的钱包订单类型: " + walletOrder.getOrderType());

@@ -4,6 +4,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.payment.support.channel.WithdrawRequest;
 import com.chua.payment.support.common.PageResult;
 import com.chua.payment.support.common.Result;
+import com.chua.payment.support.dto.WalletLogQueryRequest;
+import com.chua.payment.support.dto.WalletOrderQueryRequest;
+import com.chua.payment.support.dto.WalletTransferOpDTO;
 import com.chua.payment.support.dto.WalletTransferDTO;
 import com.chua.payment.support.dto.WalletWithdrawDTO;
 import com.chua.payment.support.entity.WalletAccountLog;
@@ -76,7 +79,7 @@ public class MpWalletController {
         if (userId == null) {
             return Result.error(401, "未获取到当前账号");
         }
-        Page<WalletAccountLog> page = walletAccountService.pageLogs(pageNum, pageSize, merchantId, userId, bizType, bizNo, null, null);
+        Page<WalletAccountLog> page = walletAccountService.pageLogs(new WalletLogQueryRequest(pageNum, pageSize, merchantId, userId, bizType, bizNo, null, null));
         return Result.success(PageResult.of(page));
     }
 
@@ -100,7 +103,7 @@ public class MpWalletController {
         if (userId == null) {
             return Result.error(401, "未获取到当前账号");
         }
-        Page<WalletOrder> page = walletOrderService.page(pageNum, pageSize, merchantId, userId, orderType, status);
+        Page<WalletOrder> page = walletOrderService.page(new WalletOrderQueryRequest(pageNum, pageSize, merchantId, userId, orderType, status));
         return Result.success(PageResult.of(page));
     }
 
@@ -176,8 +179,9 @@ public class MpWalletController {
 
         String transferNo = "TRF" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
 
-        walletAccountService.transfer(dto.getMerchantId(), userId, dto.getToUserId(),
-                dto.getAmount(), transferNo, String.valueOf(userId), dto.getRemark());
+        walletAccountService.transfer(new WalletTransferOpDTO(
+                dto.getMerchantId(), userId, dto.getToUserId(),
+                dto.getAmount(), transferNo, String.valueOf(userId), dto.getRemark()));
         return Result.success();
     }
 }

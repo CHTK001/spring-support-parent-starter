@@ -46,8 +46,8 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
     public List<SysAiRole> list() {
         return sysAiRoleMapper.selectList(
                 Wrappers.lambdaQuery(SysAiRole.class)
-                        .eq(SysAiRole::getSysAiRoleDelete, DELETE_NOT_DELETED)
-                        .orderByAsc(SysAiRole::getSysAiRoleSort));
+                        .eq(SysAiRole::getDelete, DELETE_NOT_DELETED)
+                        .orderByAsc(SysAiRole::getSort));
     }
 
     /**
@@ -59,9 +59,9 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
     public List<SysAiRole> listEnabled() {
         return sysAiRoleMapper.selectList(
                 Wrappers.lambdaQuery(SysAiRole.class)
-                        .eq(SysAiRole::getSysAiRoleDelete, DELETE_NOT_DELETED)
-                        .eq(SysAiRole::getSysAiRoleStatus, STATUS_ENABLED)
-                        .orderByAsc(SysAiRole::getSysAiRoleSort));
+                        .eq(SysAiRole::getDelete, DELETE_NOT_DELETED)
+                        .eq(SysAiRole::getStatus, STATUS_ENABLED)
+                        .orderByAsc(SysAiRole::getSort));
     }
 
     /**
@@ -91,8 +91,8 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
         }
         return sysAiRoleMapper.selectOne(
                 Wrappers.lambdaQuery(SysAiRole.class)
-                        .eq(SysAiRole::getSysAiRoleCode, code)
-                        .eq(SysAiRole::getSysAiRoleDelete, DELETE_NOT_DELETED)
+                        .eq(SysAiRole::getCode, code)
+                        .eq(SysAiRole::getDelete, DELETE_NOT_DELETED)
                         .last("LIMIT 1"));
     }
 
@@ -104,18 +104,18 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
      */
     @Override
     public SysAiRole save(SysAiRole role) {
-        if (role.getSysAiRoleStatus() == null) {
-            role.setSysAiRoleStatus(STATUS_ENABLED);
+        if (role.getStatus() == null) {
+            role.setStatus(STATUS_ENABLED);
         }
-        if (role.getSysAiRoleDelete() == null) {
-            role.setSysAiRoleDelete(DELETE_NOT_DELETED);
+        if (role.getDelete() == null) {
+            role.setDelete(DELETE_NOT_DELETED);
         }
-        if (role.getSysAiRoleSort() == null) {
-            role.setSysAiRoleSort(0);
+        if (role.getSort() == null) {
+            role.setSort(0);
         }
         sysAiRoleMapper.insert(role);
         log.info("[SysAiRole] 新增角色: id={}, name={}, code={}",
-                role.getSysAiRoleId(), role.getSysAiRoleName(), role.getSysAiRoleCode());
+                role.getId(), role.getName(), role.getCode());
         return role;
     }
 
@@ -127,7 +127,7 @@ public class SysAiRoleServiceImpl implements SysAiRoleService {
      */
     @Override
     public boolean update(SysAiRole role) {
-        if (role == null || role.getSysAiRoleId() == null) {
+        if (role == null || role.getId() == null) {
             return false;
         }
         return sysAiRoleMapper.updateById(role) > 0;

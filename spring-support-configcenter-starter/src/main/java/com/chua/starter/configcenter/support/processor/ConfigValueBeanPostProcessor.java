@@ -4,6 +4,7 @@ import com.chua.common.support.config.center.ConfigCenter;
 import com.chua.common.support.config.center.ConfigListener;
 import com.chua.common.support.objects.annotation.ConfigValue;
 import com.chua.common.support.converter.Converter;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.utils.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
@@ -445,7 +446,7 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
         try {
             method.setAccessible(true);
             Object convertedValue = convertValue(value, method.getParameterTypes()[0]);
-            method.invoke(bean, convertedValue);
+            ReflectUtils.invoke(bean, method.getName(), method.getReturnType(), method.getParameterTypes(), convertedValue);
         } catch (Exception e) {
             log.error("注入配置值失败: method={}", method.getName(), e);
         }

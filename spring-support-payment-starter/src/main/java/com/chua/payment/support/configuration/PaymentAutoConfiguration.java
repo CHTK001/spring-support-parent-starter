@@ -15,8 +15,10 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 /**
- * 支付模块自动配置
+ * 支付模块自动配置类，注册 MyBatis Plus 拦截器、默认 OpenId 解析器与线程池调度器。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @AutoConfiguration
 @MapperScan("com.chua.payment.support.mapper")

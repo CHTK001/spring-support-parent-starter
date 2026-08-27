@@ -23,7 +23,7 @@ public class SysAiGroupModel {
      */
     @TableId(type = IdType.AUTO)
     /** SYSAI分组模型ID */
-    private Integer sysAiGroupModelId;
+    private Integer id;
 
     /**
      * 分组 ID

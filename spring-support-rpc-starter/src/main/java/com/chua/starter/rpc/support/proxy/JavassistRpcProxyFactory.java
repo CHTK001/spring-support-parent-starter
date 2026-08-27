@@ -1,5 +1,6 @@
 package com.chua.starter.rpc.support.proxy;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,14 +24,7 @@ public class JavassistRpcProxyFactory implements RpcProxyFactory {
     private static final boolean JAVASSIST_AVAILABLE;
 
     static {
-        boolean available = false;
-        try {
-            Class.forName("org.apache.dubbo.common.bytecode.Proxy");
-            available = true;
-        } catch (ClassNotFoundException ignored) {
-            // Javassist/Dubbo not available
-        }
-        JAVASSIST_AVAILABLE = available;
+        JAVASSIST_AVAILABLE = ReflectUtils.forName("org.apache.dubbo.common.bytecode.Proxy") != null;
     }
 
     @Override

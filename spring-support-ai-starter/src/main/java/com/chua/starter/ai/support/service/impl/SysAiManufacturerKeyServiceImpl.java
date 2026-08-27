@@ -62,10 +62,10 @@ public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyServ
      */
     @Override
     public SysAiManufacturerKey save(SysAiManufacturerKey manufacturerKey) {
-        manufacturerKey.setSysAiManufacturerKeyStatus(
-                manufacturerKey.getSysAiManufacturerKeyStatus() == null ? 1 : manufacturerKey.getSysAiManufacturerKeyStatus());
-        manufacturerKey.setSysAiManufacturerKeyWeight(
-                manufacturerKey.getSysAiManufacturerKeyWeight() == null ? 0 : manufacturerKey.getSysAiManufacturerKeyWeight());
+        manufacturerKey.setStatus(
+                manufacturerKey.getStatus() == null ? 1 : manufacturerKey.getStatus());
+        manufacturerKey.setWeight(
+                manufacturerKey.getWeight() == null ? 0 : manufacturerKey.getWeight());
         manufacturerKey.setCreateTime(LocalDateTime.now());
         manufacturerKey.setUpdateTime(LocalDateTime.now());
         manufacturerKeyMapper.insert(manufacturerKey);
@@ -80,23 +80,23 @@ public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyServ
      */
     @Override
     public boolean update(SysAiManufacturerKey manufacturerKey) {
-        if (manufacturerKey == null || manufacturerKey.getSysAiManufacturerKeyId() == null) {
+        if (manufacturerKey == null || manufacturerKey.getId() == null) {
             log.warn("[SysAiManufacturerKey] update 失败: ID 为空");
             return false;
         }
-        SysAiManufacturerKey existing = manufacturerKeyMapper.selectById(manufacturerKey.getSysAiManufacturerKeyId());
+        SysAiManufacturerKey existing = manufacturerKeyMapper.selectById(manufacturerKey.getId());
         // 编辑时脱敏占位值或空值不覆盖真实密钥
-        if (manufacturerKey.getSysAiManufacturerKeyValue() != null
-                && (manufacturerKey.getSysAiManufacturerKeyValue().isBlank()
-                || manufacturerKey.getSysAiManufacturerKeyValue().contains("****"))) {
-            manufacturerKey.setSysAiManufacturerKeyValue(
-                    existing != null ? existing.getSysAiManufacturerKeyValue() : null);
+        if (manufacturerKey.getValue() != null
+                && (manufacturerKey.getValue().isBlank()
+                || manufacturerKey.getValue().contains("****"))) {
+            manufacturerKey.setValue(
+                    existing != null ? existing.getValue() : null);
         }
-        if (manufacturerKey.getSysAiManufacturerKeySecret() != null
-                && (manufacturerKey.getSysAiManufacturerKeySecret().isBlank()
-                || manufacturerKey.getSysAiManufacturerKeySecret().contains("****"))) {
-            manufacturerKey.setSysAiManufacturerKeySecret(
-                    existing != null ? existing.getSysAiManufacturerKeySecret() : null);
+        if (manufacturerKey.getSecret() != null
+                && (manufacturerKey.getSecret().isBlank()
+                || manufacturerKey.getSecret().contains("****"))) {
+            manufacturerKey.setSecret(
+                    existing != null ? existing.getSecret() : null);
         }
         manufacturerKey.setUpdateTime(LocalDateTime.now());
         return manufacturerKeyMapper.updateById(manufacturerKey) > 0;
@@ -130,7 +130,7 @@ public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyServ
             log.warn("[SysAiManufacturerKey] toggle 失败: ID {} 不存在", id);
             return false;
         }
-        key.setSysAiManufacturerKeyStatus(Boolean.TRUE.equals(enabled) ? 1 : 0);
+        key.setStatus(Boolean.TRUE.equals(enabled) ? 1 : 0);
         key.setUpdateTime(LocalDateTime.now());
         return manufacturerKeyMapper.updateById(key) > 0;
     }

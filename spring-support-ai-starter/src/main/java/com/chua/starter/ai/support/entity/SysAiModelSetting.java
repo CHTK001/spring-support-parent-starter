@@ -24,56 +24,49 @@ public class SysAiModelSetting {
      */
     @TableId(type = IdType.AUTO)
     /** SYSAI模型设置ID */
-    private Integer sysAiModelSettingId;
+    private Integer id;
 
     /**
      * 所属模块 ID
      */
     @TableField("module_id")
-    /** SYSAI模型设置moduleID */
-    private Integer sysAiModelSettingModuleId;
+    private Integer moduleId;
 
     /**
      * 模型编码
      */
     @TableField("model_code")
-    /** SYSAI模型设置代码 */
-    private String sysAiModelSettingCode;
+    private String code;
 
     /**
      * 模型名称
      */
     @TableField("model_name")
-    /** SYSAI模型设置名称 */
-    private String sysAiModelSettingName;
+    private String name;
 
     /**
      * 模型厂商
      */
     @TableField("model_provider")
-    /** SYSAI模型设置提供者 */
-    private String sysAiModelSettingProvider;
+    private String provider;
 
     /**
      * 模型值（如 baseUrl / model 标识）
      */
     @TableField("model_value")
-    /** SYSAI模型设置值 */
-    private String sysAiModelSettingValue;
+    private String value;
 
     /**
      * 状态：1 启用，0 停用
      */
     @TableField("status")
-    /** SYSAI模型设置状态 */
-    private Integer sysAiModelSettingStatus;
+    private Integer status;
 
     /**
      * 排序值
      */
     @TableField("sort")
-    /** SYSAI模型设置sort */
-    private Integer sysAiModelSettingSort;
+    private Integer sort;
 
     /**
      * 创建时间

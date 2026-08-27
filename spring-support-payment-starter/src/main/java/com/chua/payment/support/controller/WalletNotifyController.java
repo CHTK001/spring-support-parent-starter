@@ -1,5 +1,7 @@
 package com.chua.payment.support.controller;
 
+import com.chua.payment.support.dto.LogNotifyDTO;
+import com.chua.payment.support.dto.WalletNotifyDTO;
 import com.chua.payment.support.entity.WalletOrder;
 import com.chua.payment.support.service.PaymentNotifyProcessService;
 import com.chua.payment.support.service.WalletNotifyService;
@@ -62,24 +64,26 @@ public class WalletNotifyController {
         WalletOrder walletOrder = walletOrderService.getByOrderNo(orderNo);
         String payload = buildPayload(params, body);
         var notifyLog = paymentNotifyProcessService.logNotify(
-                walletNotifyType(orderType),
-                walletOrder != null ? walletOrder.getMerchantId() : null,
-                null,
-                "WALLET",
-                normalizeOrderType(orderType),
-                orderNo,
-                null,
-                request,
-                payload);
+                new LogNotifyDTO(
+                        walletNotifyType(orderType),
+                        walletOrder != null ? walletOrder.getMerchantId() : null,
+                        null,
+                        "WALLET",
+                        normalizeOrderType(orderType),
+                        orderNo,
+                        null,
+                        request,
+                        payload));
         try {
             Map<String, Object> merged = mergePayload(params, body);
             walletNotifyService.handleNotify(
-                    orderType,
-                    orderNo,
-                    firstText(merged, "thirdPartyOrderNo", "tradeNo", "trade_no", "transactionId", "transaction_id"),
-                    firstText(merged, "status", "tradeStatus", "trade_status", "state", "resultStatus", "result_status", "code"),
-                    payload,
-                    firstText(merged, "reason", "message", "msg", "error", "errorMessage", "error_message", "errMsg"));
+                    new WalletNotifyDTO(
+                            orderType,
+                            orderNo,
+                            firstText(merged, "thirdPartyOrderNo", "tradeNo", "trade_no", "transactionId", "transaction_id"),
+                            firstText(merged, "status", "tradeStatus", "trade_status", "state", "resultStatus", "result_status", "code"),
+                            payload,
+                            firstText(merged, "reason", "message", "msg", "error", "errorMessage", "error_message", "errMsg")));
             paymentNotifyProcessService.markSuccess(notifyLog.getId(), "钱包回调处理成功");
             return "success";
         } catch (Exception e) {

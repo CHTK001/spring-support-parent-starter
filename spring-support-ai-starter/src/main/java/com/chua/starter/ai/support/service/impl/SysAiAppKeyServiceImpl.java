@@ -62,8 +62,8 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     public List<SysAiAppKey> list() {
         return sysAiAppKeyMapper.selectList(
                 Wrappers.lambdaQuery(SysAiAppKey.class)
-                        .eq(SysAiAppKey::getSysAiAppKeyDelete, 0)
-                        .orderByDesc(SysAiAppKey::getSysAiAppKeyId)
+                        .eq(SysAiAppKey::getDelete, 0)
+                        .orderByDesc(SysAiAppKey::getId)
         );
     }
 
@@ -72,15 +72,15 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     /** 保存 */
     public SysAiAppKey save(SysAiAppKey entity) {
         // 自动生成 sk- 格式密钥
-        if (StringUtils.isBlank(entity.getSysAiAppKeyAppKey())) {
-            entity.setSysAiAppKeyAppKey(KeyGenerator.generateKey());
+        if (StringUtils.isBlank(entity.getAppKey())) {
+            entity.setAppKey(KeyGenerator.generateKey());
         }
-        if (StringUtils.isBlank(entity.getSysAiAppKeySecret())) {
-            entity.setSysAiAppKeySecret(entity.getSysAiAppKeyAppKey());
+        if (StringUtils.isBlank(entity.getSecret())) {
+            entity.setSecret(entity.getAppKey());
         }
-        entity.setSysAiAppKeyStatus(entity.getSysAiAppKeyStatus() == null ? 1 : entity.getSysAiAppKeyStatus());
-        entity.setSysAiAppKeyDelete(entity.getSysAiAppKeyDelete() == null ? 0 : entity.getSysAiAppKeyDelete());
-        entity.setSysAiAppKeyUseCount(entity.getSysAiAppKeyUseCount() == null ? 0 : entity.getSysAiAppKeyUseCount());
+        entity.setStatus(entity.getStatus() == null ? 1 : entity.getStatus());
+        entity.setDelete(entity.getDelete() == null ? 0 : entity.getDelete());
+        entity.setUseCount(entity.getUseCount() == null ? 0 : entity.getUseCount());
         sysAiAppKeyMapper.insert(entity);
         return entity;
     }
@@ -110,7 +110,7 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
         if (!isValidAppKey(dbAppKey, ip)) {
             return false;
         }
-        return StringUtils.equals(secret, dbAppKey.getSysAiAppKeySecret());
+        return StringUtils.equals(secret, dbAppKey.getSecret());
     }
 
     @Override
@@ -143,33 +143,33 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
         if (dbAppKey == null) {
             return false;
         }
-        if (!Integer.valueOf(STATUS_ENABLED).equals(dbAppKey.getSysAiAppKeyStatus())) {
+        if (!Integer.valueOf(STATUS_ENABLED).equals(dbAppKey.getStatus())) {
             return false;
         }
         if (isExpired(dbAppKey)) {
             return false;
         }
         // 次数上限强制校验：达到 maxUse 后拒绝放行（配额限制）
-        Long maxUse = dbAppKey.getSysAiAppKeyMaxUse();
+        Long maxUse = dbAppKey.getMaxUse();
         if (maxUse != null && maxUse > 0) {
-            Long used = dbAppKey.getSysAiAppKeyUseCount() == null ? 0L : dbAppKey.getSysAiAppKeyUseCount();
+            Long used = dbAppKey.getUseCount() == null ? 0L : dbAppKey.getUseCount();
             if (used >= maxUse) {
                 log.warn("[SysAiAppKey] AppKey {} 已达次数上限({}/{})，拒绝访问",
-                        dbAppKey.getSysAiAppKeyAppKey(), used, maxUse);
+                        dbAppKey.getAppKey(), used, maxUse);
                 return false;
             }
         }
         // Token 总量配额校验：达到 maxTokens 后拒绝放行
-        Long maxTokens = dbAppKey.getSysAiAppKeyMaxTokens();
+        Long maxTokens = dbAppKey.getMaxTokens();
         if (maxTokens != null && maxTokens > 0) {
-            Long totalTokens = dbAppKey.getSysAiAppKeyTotalTokens() == null ? 0L : dbAppKey.getSysAiAppKeyTotalTokens();
+            Long totalTokens = dbAppKey.getTotalTokens() == null ? 0L : dbAppKey.getTotalTokens();
             if (totalTokens >= maxTokens) {
                 log.warn("[SysAiAppKey] AppKey {} 已达 Token 配额上限({}/{})，拒绝访问",
-                        dbAppKey.getSysAiAppKeyAppKey(), totalTokens, maxTokens);
+                        dbAppKey.getAppKey(), totalTokens, maxTokens);
                 return false;
             }
         }
-        String whitelist = dbAppKey.getSysAiAppKeyIpWhitelist();
+        String whitelist = dbAppKey.getIpWhitelist();
         if (StringUtils.isNotBlank(whitelist) && StringUtils.isNotBlank(ip)) {
             boolean allowed = Arrays.stream(whitelist.split(","))
                     .map(String::trim)
@@ -193,13 +193,13 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
             sysAiAppKeyMapper.updateUseCount(appKey);
             // 更新最后使用时间
             SysAiAppKey updateTime = new SysAiAppKey();
-            updateTime.setSysAiAppKeyAppKey(appKey);
-            updateTime.setSysAiAppKeyLastUsedTime(System.currentTimeMillis());
+            updateTime.setAppKey(appKey);
+            updateTime.setLastUsedTime(System.currentTimeMillis());
             sysAiAppKeyMapper.update(
                     null,
                     Wrappers.lambdaUpdate(SysAiAppKey.class)
-                            .eq(SysAiAppKey::getSysAiAppKeyAppKey, appKey)
-                            .set(SysAiAppKey::getSysAiAppKeyLastUsedTime, System.currentTimeMillis()));
+                            .eq(SysAiAppKey::getAppKey, appKey)
+                            .set(SysAiAppKey::getLastUsedTime, System.currentTimeMillis()));
         } catch (Exception e) {
             log.debug("更新 AppKey 使用信息失败: {}", e.getMessage());
         }
@@ -234,12 +234,12 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
             return null;
         }
         var wrapper = Wrappers.lambdaQuery(SysAiAppKey.class)
-                .select(SysAiAppKey::getSysAiAppKeyGroupId)
-                .eq(SysAiAppKey::getSysAiAppKeyAppKey, appKey)
-                .eq(SysAiAppKey::getSysAiAppKeyDelete, 0)
+                .select(SysAiAppKey::getGroupId)
+                .eq(SysAiAppKey::getAppKey, appKey)
+                .eq(SysAiAppKey::getDelete, 0)
                 .last("LIMIT 1");
         SysAiAppKey result = sysAiAppKeyMapper.selectOne(wrapper);
-        return result != null ? result.getSysAiAppKeyGroupId() : null;
+        return result != null ? result.getGroupId() : null;
     }
 
     
@@ -258,8 +258,8 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
         if (appKey == null) {
             return null;
         }
-        if (appKey.getSysAiAppKeyExpireTime() != null) {
-            return java.time.Instant.ofEpochMilli(appKey.getSysAiAppKeyExpireTime())
+        if (appKey.getExpireTime() != null) {
+            return java.time.Instant.ofEpochMilli(appKey.getExpireTime())
                     .atZone(java.time.ZoneId.systemDefault()).toEpochSecond();
         }
         return null;

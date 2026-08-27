@@ -59,7 +59,7 @@ public class AiBotBindingService {
     public SysAiBotBinding findByBotId(String botId) {
         return botBindingMapper.selectOne(
                 Wrappers.<SysAiBotBinding>lambdaQuery()
-                        .eq(SysAiBotBinding::getSysAiBotBindingBotId, botId));
+                        .eq(SysAiBotBinding::getBotId, botId));
     }
 
     /**
@@ -69,14 +69,14 @@ public class AiBotBindingService {
      * @return 数据库 ID
      */
     public Long saveOrUpdate(SysAiBotBinding binding) {
-        SysAiBotBinding existing = findByBotId(binding.getSysAiBotBindingBotId());
+        SysAiBotBinding existing = findByBotId(binding.getBotId());
         if (existing != null) {
-            binding.setSysAiBotBindingId(existing.getSysAiBotBindingId());
+            binding.setId(existing.getId());
             botBindingMapper.updateById(binding);
-            return existing.getSysAiBotBindingId();
+            return existing.getId();
         }
         botBindingMapper.insert(binding);
-        return binding.getSysAiBotBindingId();
+        return binding.getId();
     }
 
     /**
@@ -88,8 +88,8 @@ public class AiBotBindingService {
     public void updateStatus(String botId, String status) {
         SysAiBotBinding binding = findByBotId(botId);
         if (binding != null) {
-            binding.setSysAiBotBindingStatus(status);
-            binding.setSysAiBotBindingLastActiveTime(LocalDateTime.now());
+            binding.setStatus(status);
+            binding.setLastActiveTime(LocalDateTime.now());
             botBindingMapper.updateById(binding);
         }
     }

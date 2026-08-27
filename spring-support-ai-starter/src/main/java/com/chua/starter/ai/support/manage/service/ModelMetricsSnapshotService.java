@@ -137,7 +137,7 @@ public class ModelMetricsSnapshotService {
         for (SysAiProvider provider : providers) {
             List<SysAiProviderModel> rows = modelMapper.selectList(
                     new LambdaQueryWrapper<SysAiProviderModel>()
-                            .eq(SysAiProviderModel::getProviderId, provider.getSysAiProviderProviderId())
+                            .eq(SysAiProviderModel::getProviderId, provider.getProviderId())
                             .orderByAsc(SysAiProviderModel::getSortOrder));
             for (SysAiProviderModel row : rows) {
                 models.add(toRow(provider, row));
@@ -159,16 +159,16 @@ public class ModelMetricsSnapshotService {
      */
     private Map<String, Object> toRow(SysAiProvider provider, SysAiProviderModel row) {
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("provider_id", provider.getSysAiProviderProviderId());
-        out.put("provider_name", provider.getSysAiProviderName());
-        out.put("platform", provider.getSysAiProviderPlatform());
-        out.put("model", row.getSysAiUsageModel());
-        out.put("enabled", row.getSysAiProviderEnabled() == null || row.getSysAiProviderEnabled());
+        out.put("provider_id", provider.getProviderId());
+        out.put("provider_name", provider.getName());
+        out.put("platform", provider.getPlatform());
+        out.put("model", row.getModel());
+        out.put("enabled", row.getEnabled() == null || row.getEnabled());
         out.put("description", row.getDescription() == null ? "" : row.getDescription());
         out.put("source", "configured");
 
         // Artificial Analysis 静态指标（输入/输出价、智能、速度、首块延迟）
-        metricsEnrichmentService.enrich(row.getSysAiUsageModel(), out);
+        metricsEnrichmentService.enrich(row.getModel(), out);
 
         // 合并模型自身实时 metrics（用户维护/探测得到的延迟、智能、速度）
         Map<String, Object> metrics = row.getMetrics();

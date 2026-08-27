@@ -3,6 +3,8 @@ package com.chua.payment.support.controller.external;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.payment.support.common.PageResult;
 import com.chua.payment.support.common.Result;
+import com.chua.payment.support.dto.UserOrderQueryRequest;
+import com.chua.payment.support.dto.UserTransactionQueryRequest;
 import com.chua.payment.support.entity.TransactionRecord;
 import com.chua.payment.support.service.AccountPaymentQueryService;
 import com.chua.payment.support.service.PaymentOrderService;
@@ -46,7 +48,7 @@ public class CurrentAccountOrderController {
         if (userId == null) {
             return Result.error(401, "未获取到当前账号");
         }
-        return Result.success(PageResult.of(accountPaymentQueryService.listOrdersByUser(userId, page, size, orderNo, status)));
+        return Result.success(PageResult.of(accountPaymentQueryService.listOrdersByUser(new UserOrderQueryRequest(userId, page, size, orderNo, status))));
     }
 
     @GetMapping("/orders/{id}")
@@ -89,7 +91,7 @@ public class CurrentAccountOrderController {
         if (userId == null) {
             return Result.error(401, "未获取到当前账号");
         }
-        Page<TransactionRecord> page = accountPaymentQueryService.listTransactionsByUser(userId, pageNum, pageSize, orderNo, transactionType, status);
+        Page<TransactionRecord> page = accountPaymentQueryService.listTransactionsByUser(new UserTransactionQueryRequest(userId, pageNum, pageSize, orderNo, transactionType, status));
         return Result.success(PageResult.of(page));
     }
 

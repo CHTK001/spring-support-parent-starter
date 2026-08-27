@@ -106,10 +106,10 @@ public class ApiProviderController {
         for (SysAiProvider p : providers) {
             List<SysAiProviderModel> models = modelMapper.selectList(
                     new LambdaQueryWrapper<SysAiProviderModel>()
-                            .eq(SysAiProviderModel::getProviderId, p.getSysAiProviderProviderId()));
+                            .eq(SysAiProviderModel::getProviderId, p.getProviderId()));
             List<SysAiProviderConnection> connections = connectionMapper.selectList(
                     new LambdaQueryWrapper<SysAiProviderConnection>()
-                            .eq(SysAiProviderConnection::getProviderId, p.getSysAiProviderProviderId()));
+                            .eq(SysAiProviderConnection::getProviderId, p.getProviderId()));
             items.add(toProviderResponse(p, models, connections));
         }
         return ApiResult.ok(items);
@@ -153,17 +153,17 @@ public class ApiProviderController {
 
         // 创建 Provider 实体
         SysAiProvider entity = new SysAiProvider();
-        entity.setSysAiProviderProviderId(providerId);
-        entity.setSysAiProviderPlatform(requireStr(body, "platform"));
-        entity.setSysAiProviderName(requireStr(body, "name"));
-        entity.setSysAiProviderBaseUrl(requireStr(body, "base_url"));
-        entity.setSysAiProviderAuthScheme(requireStr(body, "auth_scheme"));
-        entity.setSysAiProviderCredentials(uncheckedCast(body.get("credentials")));
-        entity.setSysAiProviderEnabled(bool(body, "enabled", true));
-        entity.setSysAiProviderBedrockConfig(uncheckedCast(body.get("bedrock_config")));
-        entity.setSysAiProviderSortOrder(intv(body, "sort_order", providerMapper.selectCount(null).intValue()));
-        entity.setSysAiProviderCreatedAt(now);
-        entity.setSysAiProviderUpdatedAt(now);
+        entity.setProviderId(providerId);
+        entity.setPlatform(requireStr(body, "platform"));
+        entity.setName(requireStr(body, "name"));
+        entity.setBaseUrl(requireStr(body, "base_url"));
+        entity.setAuthScheme(requireStr(body, "auth_scheme"));
+        entity.setCredentials(uncheckedCast(body.get("credentials")));
+        entity.setEnabled(bool(body, "enabled", true));
+        entity.setBedrockConfig(uncheckedCast(body.get("bedrock_config")));
+        entity.setSortOrder(intv(body, "sort_order", providerMapper.selectCount(null).intValue()));
+        entity.setCreatedAt(now);
+        entity.setUpdatedAt(now);
         providerMapper.insert(entity);
 
         // 初始模型（原子创建必须包含至少一条可用模型）
@@ -204,30 +204,30 @@ public class ApiProviderController {
                                                          @RequestBody Map<String, Object> body) {
         SysAiProvider entity = requireProvider(providerId);
         if (body.containsKey("name")) {
-            entity.setSysAiProviderName(str(body, "name"));
+            entity.setName(str(body, "name"));
         }
         if (body.containsKey("base_url")) {
-            entity.setSysAiProviderBaseUrl(str(body, "base_url"));
+            entity.setBaseUrl(str(body, "base_url"));
         }
         if (body.containsKey("auth_scheme")) {
-            entity.setSysAiProviderAuthScheme(str(body, "auth_scheme"));
+            entity.setAuthScheme(str(body, "auth_scheme"));
         }
         if (body.containsKey("credentials")) {
-            entity.setSysAiProviderCredentials(uncheckedCast(body.get("credentials")));
+            entity.setCredentials(uncheckedCast(body.get("credentials")));
         }
         if (body.containsKey("enabled")) {
-            entity.setSysAiProviderEnabled(bool(body, "enabled", true));
+            entity.setEnabled(bool(body, "enabled", true));
         }
         if (body.containsKey("bedrock_config")) {
-            entity.setSysAiProviderBedrockConfig(uncheckedCast(body.get("bedrock_config")));
+            entity.setBedrockConfig(uncheckedCast(body.get("bedrock_config")));
         }
         if (body.containsKey("platform")) {
-            entity.setSysAiProviderPlatform(str(body, "platform"));
+            entity.setPlatform(str(body, "platform"));
         }
         if (body.containsKey("sort_order")) {
-            entity.setSysAiProviderSortOrder(intv(body, "sort_order", entity.getSysAiProviderSortOrder()));
+            entity.setSortOrder(intv(body, "sort_order", entity.getSortOrder()));
         }
-        entity.setSysAiProviderUpdatedAt(System.currentTimeMillis());
+        entity.setUpdatedAt(System.currentTimeMillis());
         providerMapper.updateById(entity);
 
         List<SysAiProviderModel> models = modelMapper.selectList(
@@ -274,20 +274,20 @@ public class ApiProviderController {
 
         // 克隆 Provider
         SysAiProvider clone = new SysAiProvider();
-        clone.setSysAiProviderProviderId(newId);
-        clone.setSysAiProviderPlatform(source.getSysAiProviderPlatform());
-        clone.setSysAiProviderName(body != null && body.get("name") != null
-                ? str(body, "name") : source.getSysAiProviderName() + " 副本");
-        clone.setSysAiProviderBaseUrl(source.getSysAiProviderBaseUrl());
-        clone.setSysAiProviderAuthScheme(source.getSysAiProviderAuthScheme());
-        clone.setSysAiProviderCredentials(source.getSysAiProviderCredentials() != null
-                ? new LinkedHashMap<>(source.getSysAiProviderCredentials()) : null);
-        clone.setSysAiProviderEnabled(source.getSysAiProviderEnabled());
-        clone.setSysAiProviderBedrockConfig(source.getSysAiProviderBedrockConfig() != null
-                ? new LinkedHashMap<>(source.getSysAiProviderBedrockConfig()) : null);
-        clone.setSysAiProviderSortOrder(providerMapper.selectCount(null).intValue());
-        clone.setSysAiProviderCreatedAt(now);
-        clone.setSysAiProviderUpdatedAt(now);
+        clone.setProviderId(newId);
+        clone.setPlatform(source.getPlatform());
+        clone.setName(body != null && body.get("name") != null
+                ? str(body, "name") : source.getName() + " 副本");
+        clone.setBaseUrl(source.getBaseUrl());
+        clone.setAuthScheme(source.getAuthScheme());
+        clone.setCredentials(source.getCredentials() != null
+                ? new LinkedHashMap<>(source.getCredentials()) : null);
+        clone.setEnabled(source.getEnabled());
+        clone.setBedrockConfig(source.getBedrockConfig() != null
+                ? new LinkedHashMap<>(source.getBedrockConfig()) : null);
+        clone.setSortOrder(providerMapper.selectCount(null).intValue());
+        clone.setCreatedAt(now);
+        clone.setUpdatedAt(now);
         providerMapper.insert(clone);
 
         // 深拷贝模型能力
@@ -296,15 +296,15 @@ public class ApiProviderController {
                         .eq(SysAiProviderModel::getProviderId, providerId));
         for (SysAiProviderModel srcModel : sourceModels) {
             SysAiProviderModel m = new SysAiProviderModel();
-            m.setSysAiProviderProviderId(newId);
-            m.setSysAiUsageModel(srcModel.getSysAiUsageModel());
-            m.setSysAiProviderEnabled(srcModel.getSysAiProviderEnabled());
-            m.setSysAiProviderSortOrder(srcModel.getSysAiProviderSortOrder());
+            m.setProviderId(newId);
+            m.setModel(srcModel.getModel());
+            m.setEnabled(srcModel.getEnabled());
+            m.setSortOrder(srcModel.getSortOrder());
             m.setDescription(srcModel.getDescription());
             m.setCapabilities(srcModel.getCapabilities() != null
                     ? new ArrayList<>(srcModel.getCapabilities()) : null);
-            m.setSysAiProviderCreatedAt(now);
-            m.setSysAiProviderUpdatedAt(now);
+            m.setCreatedAt(now);
+            m.setUpdatedAt(now);
             modelMapper.insert(m);
         }
 
@@ -315,16 +315,16 @@ public class ApiProviderController {
         for (SysAiProviderConnection srcConn : sourceConns) {
             SysAiProviderConnection c = new SysAiProviderConnection();
             c.setConnectionId(IdUtils.uuidv7());
-            c.setSysAiProviderProviderId(newId);
+            c.setProviderId(newId);
             c.setRole(srcConn.getRole());
             c.setLabel(srcConn.getLabel());
-            c.setSysAiProviderBaseUrl(srcConn.getSysAiProviderBaseUrl());
-            c.setSysAiProviderAuthScheme(srcConn.getSysAiProviderAuthScheme());
-            c.setSysAiProviderCredentials(srcConn.getSysAiProviderCredentials() != null
-                    ? new LinkedHashMap<>(srcConn.getSysAiProviderCredentials()) : null);
+            c.setBaseUrl(srcConn.getBaseUrl());
+            c.setAuthScheme(srcConn.getAuthScheme());
+            c.setCredentials(srcConn.getCredentials() != null
+                    ? new LinkedHashMap<>(srcConn.getCredentials()) : null);
             c.setExtra(srcConn.getExtra());
-            c.setSysAiProviderCreatedAt(now);
-            c.setSysAiProviderUpdatedAt(now);
+            c.setCreatedAt(now);
+            c.setUpdatedAt(now);
             connectionMapper.insert(c);
         }
 
@@ -352,8 +352,8 @@ public class ApiProviderController {
                                                               @RequestBody(required = false) Map<String, Object> body) {
         SysAiProvider entity = requireProvider(providerId);
         boolean tryFix = body != null && Boolean.TRUE.equals(body.get("try_fix"));
-        return ApiResult.ok(fetchModelsFromUpstream(entity.getSysAiProviderPlatform(), entity.getSysAiProviderBaseUrl(),
-                entity.getSysAiProviderCredentials(), entity.getSysAiProviderAuthScheme(), tryFix));
+        return ApiResult.ok(fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
+                entity.getCredentials(), entity.getAuthScheme(), tryFix));
     }
 
     /**
@@ -455,18 +455,18 @@ public class ApiProviderController {
                 existing.setLabel(str(body, "label"));
             }
             if (body.containsKey("base_url")) {
-                existing.setSysAiProviderBaseUrl(str(body, "base_url"));
+                existing.setBaseUrl(str(body, "base_url"));
             }
             if (body.containsKey("auth_scheme")) {
-                existing.setSysAiProviderAuthScheme(str(body, "auth_scheme"));
+                existing.setAuthScheme(str(body, "auth_scheme"));
             }
             if (body.containsKey("extra")) {
                 existing.setExtra(uncheckedCast(body.get("extra")));
             }
             if (body.containsKey("credentials")) {
-                existing.setSysAiProviderCredentials(uncheckedCast(body.get("credentials")));
+                existing.setCredentials(uncheckedCast(body.get("credentials")));
             }
-            existing.setSysAiProviderUpdatedAt(System.currentTimeMillis());
+            existing.setUpdatedAt(System.currentTimeMillis());
             connectionMapper.updateById(existing);
             return ApiResult.ok(toConnectionResponse(existing));
         }
@@ -514,7 +514,7 @@ public class ApiProviderController {
         List<SysAiProviderModel> models = modelMapper.selectList(qw);
         List<Map<String, Object>> items = new ArrayList<>();
         for (SysAiProviderModel model : models) {
-            SysAiProvider provider = providerMapper.selectById(model.getSysAiProviderProviderId());
+            SysAiProvider provider = providerMapper.selectById(model.getProviderId());
             if (provider != null) {
                 items.add(toProviderModelResponse(provider, model));
             }
@@ -550,7 +550,7 @@ public class ApiProviderController {
             return ApiResult.ok(toProviderModelResponse(provider, newModel));
         } else {
             applyModelInput(existing, modelInput);
-            existing.setSysAiProviderUpdatedAt(System.currentTimeMillis());
+            existing.setUpdatedAt(System.currentTimeMillis());
             // 复合主键 (provider_id, model)：显式按双键更新，避免同名模型跨供应商误伤
             modelMapper.update(existing, new LambdaUpdateWrapper<SysAiProviderModel>()
                     .eq(SysAiProviderModel::getProviderId, providerId)
@@ -592,8 +592,8 @@ public class ApiProviderController {
             throw new ApiException(ApiErrorCode.CONFLICT, "模型 ID 已存在: " + newName);
         }
         // 复制到新 ID 并删除旧行（同事务原子生效）
-        existing.setSysAiUsageModel(newName);
-        existing.setSysAiProviderUpdatedAt(System.currentTimeMillis());
+        existing.setModel(newName);
+        existing.setUpdatedAt(System.currentTimeMillis());
         modelMapper.insert(existing);
         modelMapper.delete(new LambdaQueryWrapper<SysAiProviderModel>()
                 .eq(SysAiProviderModel::getProviderId, providerId)
@@ -647,24 +647,24 @@ public class ApiProviderController {
                                                    List<SysAiProviderModel> models,
                                                    List<SysAiProviderConnection> connections) {
         Map<String, Object> map = new LinkedHashMap<>();
-        map.put("provider_id", provider.getSysAiProviderProviderId());
-        map.put("platform", provider.getSysAiProviderPlatform());
-        map.put("name", provider.getSysAiProviderName());
-        map.put("base_url", provider.getSysAiProviderBaseUrl());
-        map.put("auth_scheme", provider.getSysAiProviderAuthScheme());
-        map.put("has_credentials", provider.getSysAiProviderCredentials() != null && !provider.getSysAiProviderCredentials().isEmpty());
+        map.put("provider_id", provider.getProviderId());
+        map.put("platform", provider.getPlatform());
+        map.put("name", provider.getName());
+        map.put("base_url", provider.getBaseUrl());
+        map.put("auth_scheme", provider.getAuthScheme());
+        map.put("has_credentials", provider.getCredentials() != null && !provider.getCredentials().isEmpty());
         List<Map<String, Object>> modelItems = new ArrayList<>();
         for (SysAiProviderModel model : models) {
             modelItems.add(toProviderModelResponse(provider, model));
         }
         map.put("models", modelItems);
-        map.put("enabled", provider.getSysAiProviderEnabled());
-        if (provider.getSysAiProviderBedrockConfig() != null) {
-            map.put("bedrock_config", provider.getSysAiProviderBedrockConfig());
+        map.put("enabled", provider.getEnabled());
+        if (provider.getBedrockConfig() != null) {
+            map.put("bedrock_config", provider.getBedrockConfig());
         }
-        map.put("sort_order", provider.getSysAiProviderSortOrder());
-        map.put("created_at", provider.getSysAiProviderCreatedAt());
-        map.put("updated_at", provider.getSysAiProviderUpdatedAt());
+        map.put("sort_order", provider.getSortOrder());
+        map.put("created_at", provider.getCreatedAt());
+        map.put("updated_at", provider.getUpdatedAt());
         return map;
     }
 
@@ -673,10 +673,10 @@ public class ApiProviderController {
      */
     private Map<String, Object> toProviderModelResponse(SysAiProvider provider, SysAiProviderModel model) {
         Map<String, Object> map = new LinkedHashMap<>();
-        map.put("provider_id", provider.getSysAiProviderProviderId());
-        map.put("model", model.getSysAiUsageModel());
-        map.put("enabled", model.getSysAiProviderEnabled());
-        map.put("sort_order", model.getSysAiProviderSortOrder());
+        map.put("provider_id", provider.getProviderId());
+        map.put("model", model.getModel());
+        map.put("enabled", model.getEnabled());
+        map.put("sort_order", model.getSortOrder());
         if (model.getDescription() != null) {
             map.put("description", model.getDescription());
         }
@@ -688,8 +688,8 @@ public class ApiProviderController {
         if (model.getMetrics() != null) {
             map.put("metrics", model.getMetrics());
         }
-        map.put("created_at", model.getSysAiProviderCreatedAt());
-        map.put("updated_at", model.getSysAiProviderUpdatedAt());
+        map.put("created_at", model.getCreatedAt());
+        map.put("updated_at", model.getUpdatedAt());
         return map;
     }
 
@@ -741,17 +741,17 @@ public class ApiProviderController {
     private Map<String, Object> toConnectionResponse(SysAiProviderConnection conn) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("connection_id", conn.getConnectionId());
-        map.put("provider_id", conn.getSysAiProviderProviderId());
+        map.put("provider_id", conn.getProviderId());
         map.put("role", conn.getRole());
         if (conn.getLabel() != null) {
             map.put("label", conn.getLabel());
         }
-        map.put("base_url", conn.getSysAiProviderBaseUrl());
-        map.put("auth_scheme", conn.getSysAiProviderAuthScheme());
-        map.put("has_credentials", conn.getSysAiProviderCredentials() != null && !conn.getSysAiProviderCredentials().isEmpty());
+        map.put("base_url", conn.getBaseUrl());
+        map.put("auth_scheme", conn.getAuthScheme());
+        map.put("has_credentials", conn.getCredentials() != null && !conn.getCredentials().isEmpty());
         map.put("extra", conn.getExtra());
-        map.put("created_at", conn.getSysAiProviderCreatedAt());
-        map.put("updated_at", conn.getSysAiProviderUpdatedAt());
+        map.put("created_at", conn.getCreatedAt());
+        map.put("updated_at", conn.getUpdatedAt());
         return map;
     }
 
@@ -763,10 +763,10 @@ public class ApiProviderController {
     @SuppressWarnings("unchecked")
     private SysAiProviderModel toModelEntity(String providerId, Map<String, Object> input, long now) {
         SysAiProviderModel e = new SysAiProviderModel();
-        e.setSysAiProviderProviderId(providerId);
-        e.setSysAiUsageModel(requireStr(input, "model"));
-        e.setSysAiProviderEnabled(bool(input, "enabled", true));
-        e.setSysAiProviderSortOrder(intv(input, "sort_order", 0));
+        e.setProviderId(providerId);
+        e.setModel(requireStr(input, "model"));
+        e.setEnabled(bool(input, "enabled", true));
+        e.setSortOrder(intv(input, "sort_order", 0));
         e.setDescription(str(input, "description"));
         // capabilities → 直接存原始 List<Map>
         Object capsObj = input.get("capabilities");
@@ -786,8 +786,8 @@ public class ApiProviderController {
         if (metricsObj instanceof Map<?, ?> metricsMap) {
             e.setMetrics((Map<String, Object>) metricsMap);
         }
-        e.setSysAiProviderCreatedAt(now);
-        e.setSysAiProviderUpdatedAt(now);
+        e.setCreatedAt(now);
+        e.setUpdatedAt(now);
         return e;
     }
 
@@ -797,10 +797,10 @@ public class ApiProviderController {
     @SuppressWarnings("unchecked")
     private void applyModelInput(SysAiProviderModel e, Map<String, Object> input) {
         if (input.containsKey("enabled")) {
-            e.setSysAiProviderEnabled(bool(input, "enabled", e.getSysAiProviderEnabled()));
+            e.setEnabled(bool(input, "enabled", e.getEnabled()));
         }
         if (input.containsKey("sort_order")) {
-            e.setSysAiProviderSortOrder(intv(input, "sort_order", e.getSysAiProviderSortOrder()));
+            e.setSortOrder(intv(input, "sort_order", e.getSortOrder()));
         }
         if (input.containsKey("description")) {
             e.setDescription(str(input, "description"));
@@ -833,15 +833,15 @@ public class ApiProviderController {
     private SysAiProviderConnection toConnectionEntity(String providerId, Map<String, Object> input, long now) {
         SysAiProviderConnection e = new SysAiProviderConnection();
         e.setConnectionId(IdUtils.uuidv7());
-        e.setSysAiProviderProviderId(providerId);
+        e.setProviderId(providerId);
         e.setRole(requireStr(input, "role"));
         e.setLabel(str(input, "label"));
-        e.setSysAiProviderBaseUrl(requireStr(input, "base_url"));
-        e.setSysAiProviderAuthScheme(requireStr(input, "auth_scheme"));
-        e.setSysAiProviderCredentials(uncheckedCast(input.get("credentials")));
+        e.setBaseUrl(requireStr(input, "base_url"));
+        e.setAuthScheme(requireStr(input, "auth_scheme"));
+        e.setCredentials(uncheckedCast(input.get("credentials")));
         e.setExtra(uncheckedCast(input.get("extra")));
-        e.setSysAiProviderCreatedAt(now);
-        e.setSysAiProviderUpdatedAt(now);
+        e.setCreatedAt(now);
+        e.setUpdatedAt(now);
         return e;
     }
 
@@ -1367,3 +1367,4 @@ public class ApiProviderController {
         return (T) obj;
     }
 }
+

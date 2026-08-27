@@ -1,6 +1,11 @@
 package com.chua.payment.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.payment.support.dto.LogNotifyDTO;
+import com.chua.payment.support.dto.WalletNotifyDTO;
+import com.chua.payment.support.dto.WechatPayNotifyDTO;
+import com.chua.payment.support.dto.WechatPayScoreNotifyDTO;
+import com.chua.payment.support.dto.WechatRefundNotifyDTO;
 import com.chua.payment.support.entity.PaymentNotifyError;
 import com.chua.payment.support.entity.PaymentNotifyLog;
 import com.chua.payment.support.event.PaymentNotifyFailedEvent;
@@ -30,8 +35,10 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * 支付回调处理服务实现
+ * 支付回调处理服务实现，统一路由微信/支付宝/钱包等渠道的异步通知到对应处理器。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Slf4j
 @Service
@@ -67,26 +74,18 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
      * @param request request
      * @param body body
      */
-    public PaymentNotifyLog logNotify(String notifyType,
-                                      Long merchantId,
-                                      Long channelId,
-                                      String channelType,
-                                      String channelSubType,
-                                      String orderNo,
-                                      String refundNo,
-                                      HttpServletRequest request,
-                                      String body) {
+    public PaymentNotifyLog logNotify(LogNotifyDTO dto) {
         PaymentNotifyLog notifyLog = new PaymentNotifyLog();
-        notifyLog.setNotifyType(notifyType);
-        notifyLog.setMerchantId(merchantId);
-        notifyLog.setChannelId(channelId);
-        notifyLog.setChannelType(channelType);
-        notifyLog.setChannelSubType(channelSubType);
-        notifyLog.setOrderNo(orderNo);
-        notifyLog.setRefundNo(refundNo);
-        notifyLog.setRequestHeaders(extractHeaders(request));
-        notifyLog.setRequestBody(body);
-        notifyLog.setRequestParams(extractParams(request));
+        notifyLog.setNotifyType(dto.notifyType());
+        notifyLog.setMerchantId(dto.merchantId());
+        notifyLog.setChannelId(dto.channelId());
+        notifyLog.setChannelType(dto.channelType());
+        notifyLog.setChannelSubType(dto.channelSubType());
+        notifyLog.setOrderNo(dto.orderNo());
+        notifyLog.setRefundNo(dto.refundNo());
+        notifyLog.setRequestHeaders(extractHeaders(dto.request()));
+        notifyLog.setRequestBody(dto.body());
+        notifyLog.setRequestParams(extractParams(dto.request()));
         notifyLog.setProcessStatus("PENDING");
         notifyLog.setRetryCount(0);
         notifyLog.setReceivedAt(LocalDateTime.now());
@@ -95,7 +94,7 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
 
         eventPublisher.publishEvent(new PaymentNotifyReceivedEvent(
             this, null, notifyLog.getMerchantId(), notifyLog.getId(),
-            notifyType, channelType, channelSubType,
+            dto.notifyType(), dto.channelType(), dto.channelSubType(),
             notifyLog.getOrderNo(), notifyLog.getRefundNo(), isSignVerified(notifyLog.getSignVerified())
         ));
 
@@ -274,37 +273,40 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
             Map<String, String> headers = parseHeaders(notifyLog.getRequestHeaders());
             if (normalizedType.contains("PAYSCORE")) {
                 wechatPayScoreNotifyService.handleNotify(
-                        notifyLog.getChannelId(),
-                        notifyLog.getOrderNo(),
-                        headers.get("Wechatpay-Serial"),
-                        headers.get("Wechatpay-Timestamp"),
-                        headers.get("Wechatpay-Nonce"),
-                        headers.get("Wechatpay-Signature"),
-                        headers.get("Wechatpay-Signature-Type"),
-                        notifyLog.getRequestBody());
+                        new WechatPayScoreNotifyDTO(
+                                notifyLog.getChannelId(),
+                                notifyLog.getOrderNo(),
+                                headers.get("Wechatpay-Serial"),
+                                headers.get("Wechatpay-Timestamp"),
+                                headers.get("Wechatpay-Nonce"),
+                                headers.get("Wechatpay-Signature"),
+                                headers.get("Wechatpay-Signature-Type"),
+                                notifyLog.getRequestBody()));
                 return;
             }
             if (refundNotify || normalizedType.contains("REFUND")) {
                 paymentNotifyService.handleWechatRefundNotify(
-                        notifyLog.getChannelId(),
-                        notifyLog.getRefundNo(),
-                        headers.get("Wechatpay-Serial"),
-                        headers.get("Wechatpay-Timestamp"),
-                        headers.get("Wechatpay-Nonce"),
-                        headers.get("Wechatpay-Signature"),
-                        headers.get("Wechatpay-Signature-Type"),
-                        notifyLog.getRequestBody());
+                        new WechatRefundNotifyDTO(
+                                notifyLog.getChannelId(),
+                                notifyLog.getRefundNo(),
+                                headers.get("Wechatpay-Serial"),
+                                headers.get("Wechatpay-Timestamp"),
+                                headers.get("Wechatpay-Nonce"),
+                                headers.get("Wechatpay-Signature"),
+                                headers.get("Wechatpay-Signature-Type"),
+                                notifyLog.getRequestBody()));
                 return;
             }
             paymentNotifyService.handleWechatPayNotify(
-                    notifyLog.getChannelId(),
-                    notifyLog.getOrderNo(),
-                    headers.get("Wechatpay-Serial"),
-                    headers.get("Wechatpay-Timestamp"),
-                    headers.get("Wechatpay-Nonce"),
-                    headers.get("Wechatpay-Signature"),
-                    headers.get("Wechatpay-Signature-Type"),
-                    notifyLog.getRequestBody());
+                    new WechatPayNotifyDTO(
+                            notifyLog.getChannelId(),
+                            notifyLog.getOrderNo(),
+                            headers.get("Wechatpay-Serial"),
+                            headers.get("Wechatpay-Timestamp"),
+                            headers.get("Wechatpay-Nonce"),
+                            headers.get("Wechatpay-Signature"),
+                            headers.get("Wechatpay-Signature-Type"),
+                            notifyLog.getRequestBody()));
             return;
         }
         if (normalizedType.contains("ALIPAY") || "ALIPAY".equalsIgnoreCase(notifyLog.getChannelType())) {
@@ -321,12 +323,13 @@ public class PaymentNotifyProcessServiceImpl implements PaymentNotifyProcessServ
     private void dispatchWalletNotify(PaymentNotifyLog notifyLog) {
         Map<String, Object> payload = mergeNotifyPayload(notifyLog);
         walletNotifyService.handleNotify(
-                firstNonBlank(notifyLog.getChannelSubType(), deriveWalletOrderType(notifyLog.getNotifyType())),
-                notifyLog.getOrderNo(),
-                firstText(payload, "thirdPartyOrderNo", "tradeNo", "trade_no", "transactionId", "transaction_id"),
-                firstText(payload, "status", "tradeStatus", "trade_status", "state", "resultStatus", "result_status", "code"),
-                buildWalletPayload(notifyLog),
-                firstText(payload, "reason", "message", "msg", "error", "errorMessage", "error_message", "errMsg"));
+                new WalletNotifyDTO(
+                        firstNonBlank(notifyLog.getChannelSubType(), deriveWalletOrderType(notifyLog.getNotifyType())),
+                        notifyLog.getOrderNo(),
+                        firstText(payload, "thirdPartyOrderNo", "tradeNo", "trade_no", "transactionId", "transaction_id"),
+                        firstText(payload, "status", "tradeStatus", "trade_status", "state", "resultStatus", "result_status", "code"),
+                        buildWalletPayload(notifyLog),
+                        firstText(payload, "reason", "message", "msg", "error", "errorMessage", "error_message", "errMsg")));
     }
 
     /** 解析Headers */

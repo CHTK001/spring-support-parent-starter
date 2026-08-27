@@ -13,8 +13,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 将支付异步通知接口加入 OAuth 客户端白名单
+ * 将支付异步通知接口加入 OAuth 客户端白名单的配置类。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Slf4j
 @Configuration(proxyBeanMethods = false)

@@ -15,6 +15,9 @@ public class AuthConstant {
     /** Admin */
     public static final String ADMIN = "ADMIN";
 
+    /** Ops */
+    public static final String OPS = "OPS";
+
     /** Captcha_session_key */
     public static final String CAPTCHA_SESSION_KEY = "captcha_session_key";
 
