@@ -60,7 +60,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
             key = "'sys:ai:global:setting:' + #group + ':' + #field", unless = "#result == null || #result.isEmpty()")
     public Optional<String> getValue(String group, String field) {
         LambdaQueryWrapper<SysAiGlobalSetting> wrapper = Wrappers.<SysAiGlobalSetting>lambdaQuery()
-                .eq(SysAiGlobalSetting::getGroup, group)
+                .eq(SysAiGlobalSetting::getSettingGroup, group)
                 .eq(SysAiGlobalSetting::getField, field)
                 .eq(SysAiGlobalSetting::getStatus, 1);
         SysAiGlobalSetting setting = sysAiGlobalSettingMapper.selectOne(wrapper);
@@ -101,14 +101,14 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
     @Override
     public List<Map<String, Object>> list(String group) {
         LambdaQueryWrapper<SysAiGlobalSetting> wrapper = Wrappers.<SysAiGlobalSetting>lambdaQuery()
-                .eq(SysAiGlobalSetting::getGroup, group)
+                .eq(SysAiGlobalSetting::getSettingGroup, group)
                 .eq(SysAiGlobalSetting::getStatus, 1)
                 .orderByAsc(SysAiGlobalSetting::getSort);
         List<SysAiGlobalSetting> settings = sysAiGlobalSettingMapper.selectList(wrapper);
         List<Map<String, Object>> result = new ArrayList<>();
         for (SysAiGlobalSetting s : settings) {
             Map<String, Object> item = new LinkedHashMap<>();
-            item.put("group", s.getGroup());
+            item.put("group", s.getSettingGroup());
             item.put("field", s.getField());
             item.put("value", s.getValue());
             item.put("valueType", s.getValueType());
@@ -144,7 +144,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
 
         // 先删除旧配置
         LambdaQueryWrapper<SysAiGlobalSetting> deleteWrapper = Wrappers.<SysAiGlobalSetting>lambdaQuery()
-                .eq(SysAiGlobalSetting::getGroup, group);
+                .eq(SysAiGlobalSetting::getSettingGroup, group);
         sysAiGlobalSettingMapper.delete(deleteWrapper);
 
         // 再插入新配置
@@ -157,7 +157,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
         int sort = 0;
         for (Map<String, Object> field : fields) {
             SysAiGlobalSetting setting = new SysAiGlobalSetting();
-            setting.setGroup(group);
+            setting.setSettingGroup(group);
             setting.setField((String) field.getOrDefault("field", ""));
             setting.setValue(Objects.toString(field.get("value"), ""));
             setting.setValueType((String) field.getOrDefault("valueType", "STRING"));
@@ -198,7 +198,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
         }
         SysAiGlobalSetting existing = sysAiGlobalSettingMapper.selectOne(
                 Wrappers.<SysAiGlobalSetting>lambdaQuery()
-                        .eq(SysAiGlobalSetting::getGroup, group)
+                        .eq(SysAiGlobalSetting::getSettingGroup, group)
                         .eq(SysAiGlobalSetting::getField, field));
         LocalDateTime now = LocalDateTime.now();
         if (existing != null) {
@@ -210,7 +210,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
             sysAiGlobalSettingMapper.updateById(existing);
         } else {
             SysAiGlobalSetting setting = new SysAiGlobalSetting();
-            setting.setGroup(group);
+            setting.setSettingGroup(group);
             setting.setField(field);
             setting.setValue(value);
             setting.setValueType("STRING");
@@ -245,7 +245,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
         }
         SysAiGlobalSetting existing = sysAiGlobalSettingMapper.selectOne(
                 Wrappers.<SysAiGlobalSetting>lambdaQuery()
-                        .eq(SysAiGlobalSetting::getGroup, group)
+                        .eq(SysAiGlobalSetting::getSettingGroup, group)
                         .eq(SysAiGlobalSetting::getField, field));
         LocalDateTime now = LocalDateTime.now();
         if (existing != null) {
@@ -260,7 +260,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
             sysAiGlobalSettingMapper.updateById(existing);
         } else {
             SysAiGlobalSetting setting = new SysAiGlobalSetting();
-            setting.setGroup(group);
+            setting.setSettingGroup(group);
             setting.setField(field);
             setting.setValue(value);
             setting.setValueType(valueType != null ? valueType : "STRING");

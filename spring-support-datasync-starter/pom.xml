@@ -85,6 +85,12 @@
             <artifactId>utils-support-datalake-cdc-starter</artifactId>
             <version>${utils.version}</version>
         </dependency>
+        <!-- 实时订阅器探针所需 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-datalake-subscribe-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
         <!-- Excel<->JDBC 双向同步探针所需：POI 全家随 excel-starter 引入 -->
         <dependency>
             <groupId>com.chua</groupId>

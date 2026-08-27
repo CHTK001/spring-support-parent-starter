@@ -198,14 +198,21 @@ public class AiBotBindingService {
                     log.error("[Bot] 扫码登录异常 key={}", key, e);
                 }
             });
+
+            // 同步等待二维码 URL 生成（iLink 异步返回，最长等 8s），确保 POST /qrcode 直接返回二维码
+            long waitStart = System.currentTimeMillis();
+            while (session.qrImageUrl == null && "pending".equals(session.status)
+                    && System.currentTimeMillis() - waitStart < 8_000L) {
+                try { Thread.sleep(100); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+            }
         } catch (Exception e) {
             session.status = "error";
             session.errorMsg = "iLink SPI 加载失败: " + e.getMessage();
             log.error("[Bot] SPI 构建失败 key={}", key, e);
         }
 
-        // 立即返回 key，二维码 URL 通过轮询 status=ready 获取
-        return new QrResult(key, "");
+        // 直接返回二维码 URL（若同步等待期间已就绪）；前端无需再额外轮询拿 URL
+        return new QrResult(key, session.qrImageUrl != null ? session.qrImageUrl : "");
     }
 
     /**

@@ -2,13 +2,20 @@ package com.chua.starter.mybatis.interceptor;
 
 import com.baomidou.mybatisplus.extension.plugins.handler.DataPermissionHandler;
 import com.baomidou.mybatisplus.extension.plugins.inner.DataPermissionInterceptor;
+import com.baomidou.mybatisplus.core.toolkit.PluginUtils;
 import com.chua.common.support.utils.ObjectUtils;
 import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.common.support.oauth.CurrentUser;
 import com.chua.starter.mybatis.properties.MybatisPlusDataScopeProperties;
+import lombok.extern.slf4j.Slf4j;
 import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.update.Update;
+import org.apache.ibatis.executor.Executor;
+import org.apache.ibatis.mapping.BoundSql;
+import org.apache.ibatis.mapping.MappedStatement;
+import org.apache.ibatis.session.ResultHandler;
+import org.apache.ibatis.session.RowBounds;
 
 import java.util.function.Supplier;
 
@@ -17,6 +24,7 @@ import java.util.function.Supplier;
  *
  * @author CH
  */
+@Slf4j
 public class MybatisPlusDataPermissionInterceptor extends DataPermissionInterceptor {
     /** Dept_leader */
     private static final String DEPT_LEADER = "DEPT_LEADER";
@@ -76,6 +84,23 @@ public class MybatisPlusDataPermissionInterceptor extends DataPermissionIntercep
             return;
         }
         super.processSelect(select, index, sql, obj);
+    }
+
+    /**
+     * 查询前置处理：解析 SQL 并应用数据权限条件。
+     *
+     * <p>对 SQL 解析失败（如字段别名撞数据库保留字）做容错，
+     * 跳过数据权限过滤而不阻断查询。</p>
+     */
+    @Override
+    public void beforeQuery(Executor executor, MappedStatement ms, Object parameter,
+                            RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
+        PluginUtils.MPBoundSql mp = PluginUtils.mpBoundSql(boundSql);
+        try {
+            mp.sql(parserSingle(mp.sql(), ms.getId()));
+        } catch (Exception e) {
+            log.warn("[DataPermission] SQL 解析失败，跳过数据权限过滤: {}", e.getMessage());
+        }
     }
 
     /**
