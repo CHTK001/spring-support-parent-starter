@@ -27,55 +27,55 @@ public class SysAiBotBinding extends SysBase {
      * 绑定 ID
      */
     @TableId(type = IdType.AUTO)
-    private Long id;
+    private Long sysAiBotBindingId;
 
     /**
      * 关联用户 ID
      */
-    private Long userId;
+    private Long sysAiBotBindingUserId;
 
     /**
      * Bot 唯一标识（iLink 分配的 botId）
      */
-    private String botId;
+    private String sysAiBotBindingBotId;
 
     /**
      * 登录凭证 Token
      */
-    private String botToken;
+    private String sysAiBotBindingBotToken;
 
     /**
      * 平台类型（wechat / wecom）
      */
-    private String platform;
+    private String sysAiBotBindingPlatform;
 
     /**
      * Bot 昵称（来自微信资料）
      */
-    private String nickname;
+    private String sysAiBotBindingNickname;
 
     /**
-     * 厂商 logo 地址
+     * 头像地址
      */
-    private String avatarUrl;
+    private String sysAiBotBindingAvatarUrl;
 
     /**
      * 独立网关端口号
      */
-    private Integer gatewayPort;
+    private Integer sysAiBotBindingGatewayPort;
 
     /**
      * 状态：online / offline / expired
      */
-    private String status;
+    private String sysAiBotBindingStatus;
 
     /**
      * 绑定来源（qrcode_scan / manual_import）
      */
-    private String bindSource;
+    private String sysAiBotBindingBindSource;
 
     /**
      * 最后活跃时间
      */
-    private LocalDateTime lastActiveTime;
+    private LocalDateTime sysAiBotBindingLastActiveTime;
 }

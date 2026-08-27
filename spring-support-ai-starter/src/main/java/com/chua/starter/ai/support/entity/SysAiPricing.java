@@ -1,78 +1,63 @@
 package com.chua.starter.ai.support.entity;
 
+import com.chua.starter.mybatis.pojo.SysBase;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.FieldFill;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
 
 /**
- * AI 定价表（官方价格）
+ * AI 定价表（官方价格）。
  *
- * @since 4.0.0.42
  * @author CH
+ * @since 4.0.0.42
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("sys_ai_pricing")
-public class SysAiPricing {
+public class SysAiPricing extends SysBase {
 
     /**
-     * 主键ID
+     * 主键 ID
      */
     @TableId(type = IdType.AUTO)
-    /** ID */
-    private Long id;
+    private Long sysAiPricingId;
 
     /**
      * 服务商
      */
-    private String provider;
+    private String sysAiPricingProvider;
 
     /**
      * 模型名称
      */
-    private String model;
+    private String sysAiPricingModel;
 
     /**
-     * 输入价格（每1k tokens，单位元）
+     * 输入价格（每 1k tokens，单位元）
      */
-    private Double inputPricePer1k;
+    private Double sysAiPricingInputPricePer1k;
 
     /**
-     * 输出价格（每1k tokens，单位元）
+     * 输出价格（每 1k tokens，单位元）
      */
-    private Double outputPricePer1k;
+    private Double sysAiPricingOutputPricePer1k;
 
     /**
-     * 币种：CNY/USD
+     * 币种：CNY / USD
      */
-    private String currency;
+    private String sysAiPricingCurrency;
 
     /**
      * 生效日期
      */
-    private LocalDateTime effectiveDate;
+    private LocalDateTime sysAiPricingEffectiveDate;
 
     /**
      * 来源：manual（手动）/ sync（官方同步）
      */
-    private String source;
-
-    /**
-     * 创建时间
-     */
-    @TableField(fill = FieldFill.INSERT)
-    /** Create时间 */
-    private LocalDateTime createTime;
-
-    /**
-     * 更新时间
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    /** Update时间 */
-    private LocalDateTime updateTime;
+    private String sysAiPricingSource;
 }
-
