@@ -129,6 +129,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
                 record == null ? null : record.getId(), protocolType.name().toLowerCase(), null);
         Thread readerThread = new Thread(() -> pumpGuacdToBrowser(session), "guac-reader-" + tunnelId);
         readerThread.setDaemon(true);
+        session.setReaderThread(readerThread); // 写回引用，供 close() 中断
         session.setLastActiveTime(LocalDateTime.now());
         sessionRegistry.register(session);
         readerThread.start();
@@ -220,12 +221,11 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
                 session.sendToBrowser(instruction);
             }
         } catch (IOException | GuacamoleException e) {
-            if (!session.markClosed()) {
-                // 已被其他线程关闭，属预期路径
-                return;
-            }
+            // 不预调 markClosed()——统一由 close() 负责标记+清理，
+            // 避免异常分支跳过 socket 关闭和注册表移除导致泄漏
             log.info("[terminal] guacd 读通道结束 tunnelId={}: {}", session.getTunnelId(), e.getMessage());
         }
+        // close() 内部幂等：先标记 closed，再关 socket / WS / 移除注册表
         sessionRegistry.close(session, "guacd 关闭或读取结束");
         if (session.getSessionId() != null) {
             terminalSessionService.closeRecord(session.getSessionId(), "远端关闭");

@@ -49,7 +49,7 @@ public class ExecController {
         List<Long> hostIds = parseLongList(body.get("hostIds"));
         String command = (String) body.get("command");
         Integer timeout = toInteger(body.get("timeoutSeconds"));
-        return execService.runCommand(hostIds, command, timeout);
+        return execService.runCommand(hostIds, command, timeout, null);
     }
 
     /**

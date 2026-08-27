@@ -24,9 +24,10 @@ public interface ExecService {
      * @param hostIds        目标主机 ID 集合
      * @param command        命令内容
      * @param timeoutSeconds 单机命令超时（秒），空取默认值
+     * @param jobId          关联的计划任务 ID（可为空，非空时日志自动绑定 jobId）
      * @return 每台主机的执行日志
      */
-    ReturnResult<List<MsExecLog>> runCommand(List<Long> hostIds, String command, Integer timeoutSeconds);
+    ReturnResult<List<MsExecLog>> runCommand(List<Long> hostIds, String command, Integer timeoutSeconds, Long jobId);
 
     /**
      * 文件分发：上传到每台主机的指定目录

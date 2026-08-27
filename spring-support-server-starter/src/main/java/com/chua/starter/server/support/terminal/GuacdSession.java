@@ -43,8 +43,9 @@ public class GuacdSession {
     /** 协议名（小写：ssh/vnc/rdp） */
     private final String protocol;
 
-    /** 读线程（guacd -> 浏览器方向泵） */
-    private final Thread readerThread;
+    /** 读线程（guacd -> 浏览器方向泵），在 afterConnectionEstablished 中创建后写回 */
+    @Setter
+    private Thread readerThread;
 
     /** 关闭标记，防止重复关闭 */
     private final AtomicBoolean closed = new AtomicBoolean(false);
