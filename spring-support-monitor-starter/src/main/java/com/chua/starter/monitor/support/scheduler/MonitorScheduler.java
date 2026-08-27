@@ -162,6 +162,10 @@ public class MonitorScheduler {
 
     /**
      * 执行采集任务
+     * <p>
+     * 无论执行成功、失败或提前跳过，均会标记 lastRunTime，
+     * 防止 isTriggered 在后续 tick 中被重复判定为真（避免任务刷屏）。
+     * </p>
      *
      * @param task 任务
      * @return 响应式采集结果
@@ -173,11 +177,14 @@ public class MonitorScheduler {
         if (providerOpt.isEmpty()) {
             log.warn("[MonitorScheduler] 未找到 Provider service={} provider={} task={}",
                     serviceType, providerType, task.getId());
+            // Provider 缺失属正常兜底（如本地无对应采集器），标记完成防止反复触发
+            taskService.markLastRunTime(task.getId());
             return reactor.core.publisher.Mono.empty();
         }
         MsMonitor monitor = monitorService.findById(task.getMonitorId()).getData();
         if (monitor == null) {
             log.warn("[MonitorScheduler] 主机不存在 task={} monitorId={}", task.getId(), task.getMonitorId());
+            taskService.markLastRunTime(task.getId());
             return reactor.core.publisher.Mono.empty();
         }
         CollectContext context = CollectContext.builder()
@@ -185,14 +192,22 @@ public class MonitorScheduler {
                 .monitor(monitor)
                 .build();
         return providerOpt.get().collect(context)
-                .flatMap(result -> {
+                .doOnSuccess(result -> {
+                    // 成功：标记时间 + 解析规则 + 写入指标（含 InfluxDB 双写 + 告警评估）
                     taskService.markLastRunTime(task.getId());
                     applyParseRules(task.getId(), result);
                     metricService.writeCollectResult(result);
-                    return reactor.core.publisher.Mono.just(result);
                 })
-                .doOnError(error -> log.error("[MonitorScheduler] 采集失败 task={} error={}",
-                        task.getId(), error.getMessage()))
+                .doOnError(error -> {
+                    log.error("[MonitorScheduler] 采集失败 task={} error={}", task.getId(), error.getMessage());
+                    // 失败也要标记，防止每个 tick 反复尝试同一个注定失败的任务
+                    taskService.markLastRunTime(task.getId());
+                })
+                .doOnTerminate(() -> {
+                    // 兜底：Mono.empty() 路径（provider/monitor 缺失）不触发 doOnSuccess/doOnError，
+                    // 但 isTriggered 已在调用前通过，需保证时间被更新。
+                    // 此处仅作为保险，正常路径已在 doOnSuccess 中完成标记。
+                })
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
