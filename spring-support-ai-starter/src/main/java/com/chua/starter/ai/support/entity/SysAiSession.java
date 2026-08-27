@@ -26,21 +26,19 @@ public class SysAiSession {
      */
     @TableId(type = IdType.AUTO)
     /** SYSAI会话ID */
-    private Long sysAiSessionId;
+    private Long id;
 
     /**
      * 会话标题
      */
     @TableField("sys_ai_session_title")
-    /** SYSAI会话标题 */
-    private String sysAiSessionTitle;
+    private String title;
 
     /**
      * 会话类型（CHAT 等）
      */
     @TableField("sys_ai_session_type")
-    /** SYSAI会话类型 */
-    private String sysAiSessionType;
+    private String type;
 
     /**
      * 关联模块编码
@@ -60,8 +58,7 @@ public class SysAiSession {
      * 会话状态
      */
     @TableField("sys_ai_session_status")
-    /** SYSAI会话状态 */
-    private Integer sysAiSessionStatus;
+    private Integer status;
 
     /**
      * 创建时间

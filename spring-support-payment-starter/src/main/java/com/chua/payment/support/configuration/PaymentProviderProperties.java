@@ -7,8 +7,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 /**
- * 支付 provider SPI 默认配置
+ * 支付 provider SPI 默认配置，管理各渠道网关对应的 SPI 实现标识。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Component
 @ConfigurationProperties(prefix = "plugin.payment.provider")

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.payment.support.channel.RechargeRequest;
 import com.chua.payment.support.channel.TransferRequest;
 import com.chua.payment.support.channel.WithdrawRequest;
+import com.chua.payment.support.dto.WalletOrderQueryRequest;
 import com.chua.payment.support.entity.WalletOrder;
 import com.chua.payment.support.exception.PaymentException;
 import com.chua.payment.support.mapper.WalletOrderMapper;
@@ -20,8 +21,10 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * 钱包订单服务实现
+ * 钱包订单服务实现，负责钱包充值、转账、提现等资金流水订单的管理。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor
@@ -183,23 +186,25 @@ public class WalletOrderServiceImpl implements WalletOrderService {
     }
 
     @Override
-    /** Page */
-    public Page<WalletOrder> page(int pageNum, int pageSize, Long merchantId, Long userId, String orderType, String status) {
+    public Page<WalletOrder> page(WalletOrderQueryRequest request) {
+        if (request == null) {
+            throw new PaymentException("查询参数不能为空");
+        }
         LambdaQueryWrapper<WalletOrder> wrapper = new LambdaQueryWrapper<WalletOrder>()
                 .orderByDesc(WalletOrder::getCreateTime);
-        if (merchantId != null) {
-            wrapper.eq(WalletOrder::getMerchantId, merchantId);
+        if (request.merchantId() != null) {
+            wrapper.eq(WalletOrder::getMerchantId, request.merchantId());
         }
-        if (userId != null) {
-            wrapper.eq(WalletOrder::getUserId, userId);
+        if (request.userId() != null) {
+            wrapper.eq(WalletOrder::getUserId, request.userId());
         }
-        if (StringUtils.hasText(orderType)) {
-            wrapper.eq(WalletOrder::getOrderType, orderType);
+        if (StringUtils.hasText(request.orderType())) {
+            wrapper.eq(WalletOrder::getOrderType, request.orderType());
         }
-        if (StringUtils.hasText(status)) {
-            wrapper.eq(WalletOrder::getStatus, status);
+        if (StringUtils.hasText(request.status())) {
+            wrapper.eq(WalletOrder::getStatus, request.status());
         }
-        return walletOrderMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
+        return walletOrderMapper.selectPage(new Page<>(request.pageNum(), request.pageSize()), wrapper);
     }
 
     /** RequireOrder */

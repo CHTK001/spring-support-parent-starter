@@ -55,35 +55,35 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
             return;
         }
         SysAiUsage entity = new SysAiUsage();
-        entity.setGroupName(groupName);
-        entity.setProvider(provider);
-        entity.setModel(model);
-        entity.setCallType(callType);
-        entity.setPromptTokens(usage.getInputTokens());
-        entity.setCompletionTokens(usage.getOutputTokens());
-        entity.setTotalTokens(usage.getTotalTokens());
-        entity.setRequestId(requestId);
-        entity.setUserId(userId);
-        entity.setCallTime(LocalDateTime.now());
+        entity.setSysAiUsageGroupName(groupName);
+        entity.setSysAiUsageProvider(provider);
+        entity.setSysAiUsageModel(model);
+        entity.setSysAiUsageCallType(callType);
+        entity.setSysAiUsagePromptTokens(usage.getInputTokens());
+        entity.setSysAiUsageCompletionTokens(usage.getOutputTokens());
+        entity.setSysAiUsageTotalTokens(usage.getTotalTokens());
+        entity.setSysAiUsageRequestId(requestId);
+        entity.setSysAiUsageUserId(userId);
+        entity.setSysAiUsageCallTime(LocalDateTime.now());
 
         // 计算费用
         SysAiPricing pricing = pricingService.getLatestPricing(provider, model);
         if (pricing != null) {
             double inputCost = (usage.getInputTokens() != null ? usage.getInputTokens() : 0) / 1000.0 * pricing.getInputPricePer1k();
             double outputCost = (usage.getOutputTokens() != null ? usage.getOutputTokens() : 0) / 1000.0 * pricing.getOutputPricePer1k();
-            entity.setInputCost(inputCost);
-            entity.setOutputCost(outputCost);
-            entity.setTotalCost(inputCost + outputCost);
+            entity.setSysAiUsageInputCost(inputCost);
+            entity.setSysAiUsageOutputCost(outputCost);
+            entity.setSysAiUsageTotalCost(inputCost + outputCost);
         } else {
             log.warn("[Usage] 未找到定价: provider={}, model={}", provider, model);
-            entity.setInputCost(0.0);
-            entity.setOutputCost(0.0);
-            entity.setTotalCost(0.0);
+            entity.setSysAiUsageInputCost(0.0);
+            entity.setSysAiUsageOutputCost(0.0);
+            entity.setSysAiUsageTotalCost(0.0);
         }
 
         usageMapper.insert(entity);
         log.debug("[Usage] 记录成功: group={}, model={}, tokens={}, cost={}",
-                groupName, model, usage.getTotalTokens(), entity.getTotalCost());
+                groupName, model, usage.getTotalTokens(), entity.getSysAiUsageTotalCost());
     }
 
     @Override
@@ -101,21 +101,21 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
                                  LocalDateTime startTime, LocalDateTime endTime, int page, int size) {
         LambdaQueryWrapper<SysAiUsage> wrapper = new LambdaQueryWrapper<>();
         if (groupName != null) {
-            wrapper.eq(SysAiUsage::getGroupName, groupName);
+            wrapper.eq(SysAiUsage::getSysAiUsageGroupName, groupName);
         }
         if (provider != null) {
-            wrapper.eq(SysAiUsage::getProvider, provider);
+            wrapper.eq(SysAiUsage::getSysAiUsageProvider, provider);
         }
         if (model != null) {
-            wrapper.eq(SysAiUsage::getModel, model);
+            wrapper.eq(SysAiUsage::getSysAiUsageModel, model);
         }
         if (startTime != null) {
-            wrapper.ge(SysAiUsage::getCallTime, startTime);
+            wrapper.ge(SysAiUsage::getSysAiUsageCallTime, startTime);
         }
         if (endTime != null) {
-            wrapper.le(SysAiUsage::getCallTime, endTime);
+            wrapper.le(SysAiUsage::getSysAiUsageCallTime, endTime);
         }
-        wrapper.orderByDesc(SysAiUsage::getCallTime);
+        wrapper.orderByDesc(SysAiUsage::getSysAiUsageCallTime);
         Page<SysAiUsage> p = new Page<>(page, size);
         return usageMapper.selectPage(p, wrapper).getRecords();
     }
@@ -133,27 +133,27 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
                                          LocalDateTime startTime, LocalDateTime endTime) {
         LambdaQueryWrapper<SysAiUsage> wrapper = new LambdaQueryWrapper<>();
         if (groupName != null) {
-            wrapper.eq(SysAiUsage::getGroupName, groupName);
+            wrapper.eq(SysAiUsage::getSysAiUsageGroupName, groupName);
         }
         if (provider != null) {
-            wrapper.eq(SysAiUsage::getProvider, provider);
+            wrapper.eq(SysAiUsage::getSysAiUsageProvider, provider);
         }
         if (model != null) {
-            wrapper.eq(SysAiUsage::getModel, model);
+            wrapper.eq(SysAiUsage::getSysAiUsageModel, model);
         }
         if (startTime != null) {
-            wrapper.ge(SysAiUsage::getCallTime, startTime);
+            wrapper.ge(SysAiUsage::getSysAiUsageCallTime, startTime);
         }
         if (endTime != null) {
-            wrapper.le(SysAiUsage::getCallTime, endTime);
+            wrapper.le(SysAiUsage::getSysAiUsageCallTime, endTime);
         }
         List<SysAiUsage> list = usageMapper.selectList(wrapper);
         UsageStatistics stats = new UsageStatistics();
         stats.totalCalls = list.size();
-        stats.totalPromptTokens = list.stream().mapToInt(u -> u.getPromptTokens() != null ? u.getPromptTokens() : 0).sum();
-        stats.totalCompletionTokens = list.stream().mapToInt(u -> u.getCompletionTokens() != null ? u.getCompletionTokens() : 0).sum();
-        stats.totalTokens = list.stream().mapToInt(u -> u.getTotalTokens() != null ? u.getTotalTokens() : 0).sum();
-        stats.totalCost = list.stream().mapToDouble(u -> u.getTotalCost() != null ? u.getTotalCost() : 0).sum();
+        stats.totalPromptTokens = list.stream().mapToInt(u -> u.getSysAiUsagePromptTokens() != null ? u.getSysAiUsagePromptTokens() : 0).sum();
+        stats.totalCompletionTokens = list.stream().mapToInt(u -> u.getSysAiUsageCompletionTokens() != null ? u.getSysAiUsageCompletionTokens() : 0).sum();
+        stats.totalTokens = list.stream().mapToInt(u -> u.getSysAiUsageTotalTokens() != null ? u.getSysAiUsageTotalTokens() : 0).sum();
+        stats.totalCost = list.stream().mapToDouble(u -> u.getSysAiUsageTotalCost() != null ? u.getSysAiUsageTotalCost() : 0).sum();
         return stats;
     }
 }

@@ -1,5 +1,6 @@
 package com.chua.socket.support.handler;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.socket.support.SocketListener;
 import com.chua.socket.support.annotations.OnEvent;
 import com.chua.socket.support.session.SocketSession;
@@ -147,19 +148,19 @@ public class EventListenerProcessor {
             Class<?>[] paramTypes = method.getParameterTypes();
             
             switch (paramTypes.length) {
-                case 0 -> method.invoke(listener);
+                case 0 -> ReflectUtils.invoke(listener, method.getName(), method.getReturnType());
                 case 1 -> {
                     if (SocketSession.class.isAssignableFrom(paramTypes[0])) {
-                        method.invoke(listener, session);
+                        ReflectUtils.invoke(listener, method.getName(), method.getReturnType(), paramTypes, session);
                     } else {
-                        method.invoke(listener, data);
+                        ReflectUtils.invoke(listener, method.getName(), method.getReturnType(), paramTypes, data);
                     }
                 }
                 case 2 -> {
                     if (SocketSession.class.isAssignableFrom(paramTypes[0])) {
-                        method.invoke(listener, session, data);
+                        ReflectUtils.invoke(listener, method.getName(), method.getReturnType(), paramTypes, session, data);
                     } else {
-                        method.invoke(listener, data, session);
+                        ReflectUtils.invoke(listener, method.getName(), method.getReturnType(), paramTypes, data, session);
                     }
                 }
                 default -> log.warn("[EventProcessor] 不支持超过2个参数的事件处理方法: {}", getMethodName());

@@ -5,6 +5,11 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.payment.support.channel.WithdrawRequest;
 import com.chua.payment.support.common.PageResult;
 import com.chua.payment.support.common.Result;
+import com.chua.payment.support.dto.CreateApprovalDTO;
+import com.chua.payment.support.dto.WalletCancelWithdrawRequest;
+import com.chua.payment.support.dto.WalletLogQueryRequest;
+import com.chua.payment.support.dto.WalletOrderQueryRequest;
+import com.chua.payment.support.dto.WalletTransferOpDTO;
 import com.chua.payment.support.dto.WalletTransferDTO;
 import com.chua.payment.support.dto.WalletWithdrawDTO;
 import com.chua.payment.support.entity.PaymentGlobalConfig;
@@ -93,7 +98,7 @@ public class CurrentAccountWalletController {
         if (userId == null) {
             return Result.error(401, "未获取到当前账号");
         }
-        Page<WalletAccountLog> page = walletAccountService.pageLogs(pageNum, pageSize, merchantId, userId, bizType, bizNo, null, null);
+        Page<WalletAccountLog> page = walletAccountService.pageLogs(new WalletLogQueryRequest(pageNum, pageSize, merchantId, userId, bizType, bizNo, null, null));
         return Result.success(PageResult.of(page));
     }
 
@@ -117,7 +122,7 @@ public class CurrentAccountWalletController {
         if (userId == null) {
             return Result.error(401, "未获取到当前账号");
         }
-        Page<WalletOrder> page = walletOrderService.page(pageNum, pageSize, merchantId, userId, orderType, status);
+        Page<WalletOrder> page = walletOrderService.page(new WalletOrderQueryRequest(pageNum, pageSize, merchantId, userId, orderType, status));
         return Result.success(PageResult.of(page));
     }
 
@@ -181,9 +186,10 @@ public class CurrentAccountWalletController {
 
         // 创建提现审批记录（PENDING），不再直接创建订单
         WalletWithdrawApproval approval = walletWithdrawApprovalService.createApproval(
-                dto.getMerchantId(), userId, dto.getAmount(),
-                dto.getBankAccount(), dto.getBankName(), dto.getAccountName(),
-                withdrawNo, dto.getRemark());
+                new CreateApprovalDTO(
+                        dto.getMerchantId(), userId, dto.getAmount(),
+                        dto.getBankAccount(), dto.getBankName(), dto.getAccountName(),
+                        withdrawNo, dto.getRemark()));
 
         return Result.success(approval);
     }
@@ -209,8 +215,9 @@ public class CurrentAccountWalletController {
         }
 
         // 解冻余额（frozen → available）
-        walletAccountService.cancelWithdraw(approval.getMerchantId(), approval.getUserId(),
-                approval.getWithdrawNo(), approval.getAmount(), reason);
+        walletAccountService.cancelWithdraw(new WalletCancelWithdrawRequest(
+                approval.getMerchantId(), approval.getUserId(),
+                approval.getWithdrawNo(), approval.getAmount(), reason));
 
         // 标记审批为已拒绝（用户主动取消）
         walletWithdrawApprovalService.reject(approvalId, String.valueOf(userId),
@@ -247,8 +254,9 @@ public class CurrentAccountWalletController {
         // 强检验：fromUserId 和 operator 强制等于当前用户
         String transferNo = "TRF" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
 
-        walletAccountService.transfer(dto.getMerchantId(), userId, dto.getToUserId(),
-                dto.getAmount(), transferNo, String.valueOf(userId), dto.getRemark());
+        walletAccountService.transfer(new WalletTransferOpDTO(
+                dto.getMerchantId(), userId, dto.getToUserId(),
+                dto.getAmount(), transferNo, String.valueOf(userId), dto.getRemark()));
         return Result.success();
     }
 }

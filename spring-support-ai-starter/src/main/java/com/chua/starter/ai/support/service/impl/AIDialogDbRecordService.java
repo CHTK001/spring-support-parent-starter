@@ -44,15 +44,15 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     /** 创建Dialog */
     public AIDialog createDialog(String name) {
         SysAiSession session = new SysAiSession();
-        session.setSysAiSessionTitle(name == null || name.isBlank() ? "新对话" : name);
-        session.setSysAiSessionType("CHAT");
+        session.setTitle(name == null || name.isBlank() ? "新对话" : name);
+        session.setType("CHAT");
         session.setSysUserId("anonymous");
-        session.setSysAiSessionStatus(1);
+        session.setStatus(1);
         LocalDateTime now = LocalDateTime.now();
         session.setCreateTime(now);
         session.setUpdateTime(now);
         sessionMapper.insert(session);
-        log.debug("[AIDialogDb] 创建会话: id={}, title={}", session.getSysAiSessionId(), name);
+        log.debug("[AIDialogDb] 创建会话: id={}, title={}", session.getId(), name);
         return toDialog(session);
     }
 
@@ -72,7 +72,7 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     /** ListDialog */
     public List<AIDialog> listDialog() {
         return sessionMapper.selectList(new LambdaQueryWrapper<SysAiSession>()
-                        .eq(SysAiSession::getSysAiSessionStatus, 1)
+                        .eq(SysAiSession::getStatus, 1)
                         .orderByDesc(SysAiSession::getCreateTime))
                 .stream()
                 .map(this::toDialog)
@@ -84,7 +84,7 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     public List<ChatMessage> getDialogMessages(Long dialogId) {
         return messageMapper.selectList(new LambdaQueryWrapper<SysAiMessage>()
                         .eq(SysAiMessage::getSysAiSessionId, dialogId)
-                        .orderByAsc(SysAiMessage::getSysAiMessageId))
+                        .orderByAsc(SysAiMessage::getId))
                 .stream()
                 .map(this::toChatMessage)
                 .collect(Collectors.toList());
@@ -98,15 +98,15 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
         }
         SysAiMessage entity = new SysAiMessage();
         entity.setSysAiSessionId(dialogId);
-        entity.setSysAiMessageRole(message.getRole() != null ? message.getRole() : "user");
-        entity.setSysAiMessageType("TEXT");
-        entity.setSysAiMessageContent(message.getContent());
+        entity.setRole(message.getRole() != null ? message.getRole() : "user");
+        entity.setType("TEXT");
+        entity.setContent(message.getContent());
         LocalDateTime now = LocalDateTime.now();
         entity.setCreateTime(now);
         entity.setUpdateTime(now);
         messageMapper.insert(entity);
         // 同步 ID 与会话 ID，保持接口语义
-        message.setId(entity.getSysAiMessageId());
+        message.setId(entity.getId());
         message.setDialogId(dialogId);
         if (message.getTimestamp() == null) {
             message.setTimestamp(System.currentTimeMillis());
@@ -121,8 +121,8 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
      */
     private AIDialog toDialog(SysAiSession session) {
         AIDialog dialog = new AIDialog();
-        dialog.setId(session.getSysAiSessionId());
-        dialog.setName(session.getSysAiSessionTitle());
+        dialog.setId(session.getId());
+        dialog.setName(session.getTitle());
         dialog.setTimestamp(session.getCreateTime() != null
                 ? session.getCreateTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
                 : System.currentTimeMillis());
@@ -137,10 +137,10 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
      */
     private ChatMessage toChatMessage(SysAiMessage entity) {
         ChatMessage message = new ChatMessage();
-        message.setId(entity.getSysAiMessageId());
+        message.setId(entity.getId());
         message.setDialogId(entity.getSysAiSessionId());
-        message.setRole(entity.getSysAiMessageRole());
-        message.setContent(entity.getSysAiMessageContent());
+        message.setRole(entity.getRole());
+        message.setContent(entity.getContent());
         message.setTimestamp(entity.getCreateTime() != null
                 ? entity.getCreateTime().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
                 : System.currentTimeMillis());

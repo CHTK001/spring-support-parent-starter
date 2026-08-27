@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.payment.support.channel.PaymentResult;
 import com.chua.payment.support.dto.OrderCreateDTO;
 import com.chua.payment.support.dto.OrderPayDTO;
+import com.chua.payment.support.dto.PaymentOrderPageRequest;
 import com.chua.payment.support.dto.RefundApplyDTO;
+import com.chua.payment.support.dto.RefundSuccessDTO;
 import com.chua.payment.support.vo.OrderStateLogVO;
 import com.chua.payment.support.vo.OrderVO;
 
@@ -12,8 +14,10 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * 支付订单服务接口
+ * 支付订单服务接口，定义订单创建、支付、退款、状态流转等核心操作契约。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 public interface PaymentOrderService {
 
@@ -21,7 +25,7 @@ public interface PaymentOrderService {
 
     OrderVO getOrder(Long id);
 
-    Page<OrderVO> listOrders(int page, int size, Long merchantId, String orderNo, String status);
+    Page<OrderVO> listOrders(PaymentOrderPageRequest request);
 
     Page<OrderVO> listMerchantOrders(Long merchantId, int page, int size, String status);
 
@@ -52,12 +56,7 @@ public interface PaymentOrderService {
 
     boolean refundSuccess(Long id, BigDecimal refundAmount, String operator);
 
-    boolean refundSuccess(String refundNo,
-                          BigDecimal refundAmount,
-                          String thirdPartyRefundNo,
-                          String operator,
-                          String responsePayload,
-                          String remark);
+    boolean refundSuccess(RefundSuccessDTO dto);
 
     boolean refundFail(Long id, String reason, String operator);
 

@@ -6,6 +6,7 @@ import com.chua.payment.support.channel.support.AbstractMerchantPaymentChannel;
 import com.chua.payment.support.dto.WechatPayScoreCancelDTO;
 import com.chua.payment.support.dto.WechatPayScoreCompleteDTO;
 import com.chua.payment.support.dto.WechatPayScoreCreateDTO;
+import com.chua.payment.support.dto.WechatPayScoreOrderQueryRequest;
 import com.chua.payment.support.entity.MerchantChannel;
 import com.chua.payment.support.entity.WechatPayScoreOrder;
 import com.chua.payment.support.enums.ChannelStatus;
@@ -31,8 +32,10 @@ import java.util.Locale;
 import java.util.UUID;
 
 /**
- * 微信支付分订单服务实现
+ * 微信支付分订单服务实现，管理微信支付分场景下的免密支付订单生命周期。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Service
 public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChannel implements WechatPayScoreOrderService {
@@ -150,23 +153,25 @@ public class WechatPayScoreOrderServiceImpl extends AbstractMerchantPaymentChann
     }
 
     @Override
-    /** Page */
-    public Page<WechatPayScoreOrder> page(int pageNum, int pageSize, Long merchantId, Long channelId, String openId, String state) {
+    public Page<WechatPayScoreOrder> page(WechatPayScoreOrderQueryRequest request) {
+        if (request == null) {
+            throw new PaymentException("查询参数不能为空");
+        }
         LambdaQueryWrapper<WechatPayScoreOrder> wrapper = new LambdaQueryWrapper<WechatPayScoreOrder>()
                 .orderByDesc(WechatPayScoreOrder::getCreateTime);
-        if (merchantId != null) {
-            wrapper.eq(WechatPayScoreOrder::getMerchantId, merchantId);
+        if (request.merchantId() != null) {
+            wrapper.eq(WechatPayScoreOrder::getMerchantId, request.merchantId());
         }
-        if (channelId != null) {
-            wrapper.eq(WechatPayScoreOrder::getChannelId, channelId);
+        if (request.channelId() != null) {
+            wrapper.eq(WechatPayScoreOrder::getChannelId, request.channelId());
         }
-        if (StringUtils.hasText(openId)) {
-            wrapper.eq(WechatPayScoreOrder::getOpenId, openId);
+        if (StringUtils.hasText(request.openId())) {
+            wrapper.eq(WechatPayScoreOrder::getOpenId, request.openId());
         }
-        if (StringUtils.hasText(state)) {
-            wrapper.eq(WechatPayScoreOrder::getState, state);
+        if (StringUtils.hasText(request.state())) {
+            wrapper.eq(WechatPayScoreOrder::getState, request.state());
         }
-        return wechatPayScoreOrderMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
+        return wechatPayScoreOrderMapper.selectPage(new Page<>(request.pageNum(), request.pageSize()), wrapper);
     }
 
     @Override

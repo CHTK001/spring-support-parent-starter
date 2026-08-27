@@ -170,28 +170,28 @@ public class SysAiConversationStore {
      */
     public SysAiConversation patch(String conversationId, SysAiConversation patch) {
         SysAiConversation current = get(conversationId);
-        if (patch.getSysAiConversationName() != null) {
-            current.setSysAiConversationName(patch.getSysAiConversationName());
+        if (patch.getName() != null) {
+            current.setName(patch.getName());
         }
-        if (patch.getSysAiConversationModel() != null) {
-            current.setSysAiConversationModel(patch.getSysAiConversationModel());
+        if (patch.getModel() != null) {
+            current.setModel(patch.getModel());
         }
-        if (patch.getSysAiConversationExecutionTemplateId() != null) {
-            current.setSysAiConversationExecutionTemplateId(patch.getSysAiConversationExecutionTemplateId());
+        if (patch.getExecutionTemplateId() != null) {
+            current.setExecutionTemplateId(patch.getExecutionTemplateId());
         }
-        if (patch.getSysAiConversationPinnedAt() != null || patch.isSysAiConversationPinned()) {
-            current.setSysAiConversationPinned(patch.isSysAiConversationPinned());
-            current.setSysAiConversationPinnedAt(patch.getSysAiConversationPinnedAt() != null ? patch.getSysAiConversationPinnedAt() : (patch.isSysAiConversationPinned() ? System.currentTimeMillis() : null));
+        if (patch.getPinnedAt() != null || patch.isPinned()) {
+            current.setPinned(patch.isPinned());
+            current.setPinnedAt(patch.getPinnedAt() != null ? patch.getPinnedAt() : (patch.isPinned() ? System.currentTimeMillis() : null));
         }
-        if (patch.getSysAiConversationExtra() != null) {
-            Map<String, Object> extra = current.getSysAiConversationExtra();
+        if (patch.getExtra() != null) {
+            Map<String, Object> extra = current.getExtra();
             if (extra == null) {
                 extra = new java.util.HashMap<>();
-                current.setSysAiConversationExtra(extra);
+                current.setExtra(extra);
             }
-            extra.putAll(patch.getSysAiConversationExtra());
+            extra.putAll(patch.getExtra());
         }
-        current.setSysAiConversationModifiedAt(System.currentTimeMillis());
+        current.setModifiedAt(System.currentTimeMillis());
         conversationMapper.updateById(current);
         return current;
     }
@@ -311,7 +311,7 @@ public class SysAiConversationStore {
         // 找到锚点索引；锚点（含）之后的所有消息一并删除
         int idx = -1;
         for (int i = 0; i < all.size(); i++) {
-            if (messageId.equals(all.get(i).getSysAiConversationMessageMessageId())) {
+            if (messageId.equals(all.get(i).getMessageId())) {
                 idx = i;
                 break;
             }
@@ -319,7 +319,7 @@ public class SysAiConversationStore {
         if (idx >= 0) {
             List<String> idsToDelete = new ArrayList<>();
             for (int i = idx; i < all.size(); i++) {
-                idsToDelete.add(all.get(i).getSysAiConversationMessageMessageId());
+                idsToDelete.add(all.get(i).getMessageId());
             }
             LambdaQueryWrapper<SysAiConversationMessage> wrapper = new LambdaQueryWrapper<SysAiConversationMessage>()
                     .eq(SysAiConversationMessage::getConversationId, conversationId)

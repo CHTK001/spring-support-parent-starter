@@ -26,7 +26,7 @@ public class SysAiSessionCompression {
      */
     @TableId(type = IdType.AUTO)
     /** SYSAI会话compressionID */
-    private Integer sysAiSessionCompressionId;
+    private Integer id;
 
     /**
      * 会话 ID

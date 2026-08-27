@@ -7,6 +7,7 @@ import com.chua.payment.support.common.Result;
 import com.chua.payment.support.dto.OrderCreateDTO;
 import com.chua.payment.support.dto.OrderOperateDTO;
 import com.chua.payment.support.dto.OrderPayDTO;
+import com.chua.payment.support.dto.PaymentOrderPageRequest;
 import com.chua.payment.support.dto.RefundApplyDTO;
 import com.chua.payment.support.service.PaymentOrderService;
 import com.chua.payment.support.vo.OrderStateLogVO;
@@ -53,7 +54,7 @@ public class OrderController {
                                                   @RequestParam(required = false) Long merchantId,
                                                   @RequestParam(required = false) String orderNo,
                                                   @RequestParam(required = false) String status) {
-        Page<OrderVO> pageResult = orderService.listOrders(page, size, merchantId, orderNo, status);
+        Page<OrderVO> pageResult = orderService.listOrders(new PaymentOrderPageRequest(page, size, merchantId, orderNo, status));
         return Result.success(PageResult.of(pageResult));
     }
 

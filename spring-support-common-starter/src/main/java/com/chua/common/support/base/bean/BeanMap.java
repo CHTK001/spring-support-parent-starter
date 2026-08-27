@@ -1,5 +1,7 @@
 package com.chua.common.support.base.bean;
 
+import com.chua.common.support.reflection.ReflectUtils;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -57,7 +59,7 @@ public class BeanMap extends HashMap<String, Object> {
                     try {
                         java.lang.reflect.Method getter = property.getReadMethod();
                         if (null != getter) {
-                            Object value = getter.invoke(source);
+                            Object value = ReflectUtils.invoke(source, getter.getName(), getter.getReturnType());
                             if (value != null) {
                                 put(key, value);
                             }

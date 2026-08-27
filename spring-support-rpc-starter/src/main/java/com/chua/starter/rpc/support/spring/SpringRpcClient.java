@@ -8,7 +8,8 @@ import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
-import java.lang.reflect.Proxy;
+import com.chua.common.support.reflection.ReflectUtils;
+
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -113,7 +114,7 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
      * 创建代理对象，底层委托真实 RPC 客户端发起网络调用
      */
     private <T> Object createProxy(Class<T> targetType) {
-        return Proxy.newProxyInstance(
+        return ReflectUtils.newProxy(
             targetType.getClassLoader(),
             new Class<?>[]{targetType},
             new SpringRpcInvocationHandler<>(targetType, delegate(), applicationContext, consumerConfig)

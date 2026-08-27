@@ -42,7 +42,7 @@ public class GlobalExceptionHandler {
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining(", "));
         log.error("参数校验失败: {}", message);
-        return ReturnResult.error(REQUEST_PARAM_ERROR, message);
+        return ReturnResult.error(REQUEST_PARAM_ERROR.getCode(), message);
     }
 
     /**
@@ -54,7 +54,7 @@ public class GlobalExceptionHandler {
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining(", "));
         log.error("参数绑定失败: {}", message);
-        return ReturnResult.error(REQUEST_PARAM_ERROR, message);
+        return ReturnResult.error(REQUEST_PARAM_ERROR.getCode(), message);
     }
 
     /**
@@ -63,7 +63,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ReturnResult<Void> handleIllegalArgumentException(IllegalArgumentException e) {
         log.error("非法参数: {}", e.getMessage(), e);
-        return ReturnResult.error(REQUEST_PARAM_ERROR, e.getMessage());
+        return ReturnResult.error(REQUEST_PARAM_ERROR.getCode(), e.getMessage());
     }
 
     /**
@@ -72,6 +72,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ReturnResult<Void> handleException(Exception e) {
         log.error("系统异常: {}", e.getMessage(), e);
-        return ReturnResult.failure("系统异常，请联系管理员");
+        return ReturnResult.error(e.getMessage());
     }
 }

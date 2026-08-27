@@ -24,84 +24,73 @@ public class SysAiManufacturer {
      */
     @TableId(type = IdType.AUTO)
     /** SYSAImanufacturerID */
-    private Integer sysAiManufacturerId;
+    private Integer id;
 
     /**
      * 厂商编码（如 openai / zhipu / baidu）
      */
     @TableField("sys_ai_manufacturer_code")
-    /** SYSAImanufacturer代码 */
-    private String sysAiManufacturerCode;
+    private String code;
 
     /**
      * 厂商名称
      */
     @TableField("sys_ai_manufacturer_name")
-    /** SYSAImanufacturer名称 */
-    private String sysAiManufacturerName;
+    private String name;
 
     /**
      * 厂商工厂类型（如 openai / zhipu / anthropic）
      */
     @TableField("sys_ai_manufacturer_factory")
-    /** SYSAImanufacturer工厂 */
-    private String sysAiManufacturerFactory;
+    private String factory;
 
     /**
      * 厂商 API 基础地址
      */
     @TableField("sys_ai_manufacturer_base_url")
-    /** SYSAImanufacturerbaseURL */
-    private String sysAiManufacturerBaseUrl;
+    private String baseUrl;
 
     /**
      * 厂商应用 Key
      */
     @TableField("sys_ai_manufacturer_app_key")
-    /** SYSAImanufacturerAPP密钥 */
-    private String sysAiManufacturerAppKey;
+    private String appKey;
 
     /**
      * 厂商应用 Secret
      */
     @TableField("sys_ai_manufacturer_api_secret")
-    /** SYSAImanufacturerAPIsecret */
-    private String sysAiManufacturerApiSecret;
+    private String apiSecret;
 
     /**
      * 是否兼容 OpenAI 协议：1 是，0 否
      */
     @TableField("sys_ai_manufacturer_openai_compatible")
-    /** SYSAImanufactureropenaicompatible */
-    private Integer sysAiManufacturerOpenaiCompatible;
+    private Integer openaiCompatible;
 
     /**
      * 厂商 Logo 地址
      */
     @TableField("sys_ai_manufacturer_logo")
-    /** SYSAImanufacturerlogoURL */
-    private String sysAiManufacturerLogoUrl;
+    private String logoUrl;
 
     /**
      * 厂商备注描述
      */
     @TableField("sys_ai_manufacturer_remark")
-    /** SYSAImanufacturer描述 */
-    private String sysAiManufacturerDescription;
+    private String description;
 
     /**
      * 状态：1 启用，0 停用
      */
     @TableField("sys_ai_manufacturer_status")
-    /** SYSAImanufacturer状态 */
-    private Integer sysAiManufacturerStatus;
+    private Integer status;
 
     /**
      * 排序值
      */
     @TableField("sys_ai_manufacturer_sort")
-    /** SYSAImanufacturersort */
-    private Integer sysAiManufacturerSort;
+    private Integer sort;
 
     /**
      * 创建时间

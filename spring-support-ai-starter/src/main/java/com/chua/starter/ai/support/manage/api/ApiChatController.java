@@ -69,21 +69,21 @@ public class ApiChatController {
     public ApiResult<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
         SysAiConversation c = new SysAiConversation();
         String id = conversationStore.newId();
-        c.setSysAiConversationConversationId(id);
-        c.setSysAiConversationType((String) body.getOrDefault("type", "nomi"));
-        c.setSysAiConversationName((String) body.getOrDefault("name", "新对话"));
+        c.setConversationId(id);
+        c.setType((String) body.getOrDefault("type", "nomi"));
+        c.setName((String) body.getOrDefault("name", "新对话"));
         if (body.get("model") instanceof Map) {
-            c.setSysAiConversationModel(uncheckedCast(body.get("model")));
+            c.setModel(uncheckedCast(body.get("model")));
         }
         if (body.get("extra") instanceof Map) {
-            c.setSysAiConversationExtra(uncheckedCast(body.get("extra")));
+            c.setExtra(uncheckedCast(body.get("extra")));
         }
         if (body.get("execution_template_id") != null) {
-            c.setSysAiConversationExecutionTemplateId(String.valueOf(body.get("execution_template_id")));
+            c.setExecutionTemplateId(String.valueOf(body.get("execution_template_id")));
         }
         long now = System.currentTimeMillis();
-        c.setSysAiConversationCreatedAt(now);
-        c.setSysAiConversationModifiedAt(now);
+        c.setCreatedAt(now);
+        c.setModifiedAt(now);
         conversationStore.create(c);
         pushService.push("conversation.listChanged", Map.of("conversation_id", id, "action", "created"));
         return ApiResult.ok(toResponse(c));
@@ -110,22 +110,22 @@ public class ApiChatController {
     public ApiResult<Boolean> patch(@PathVariable String conversationId, @RequestBody Map<String, Object> body) {
         SysAiConversation patch = new SysAiConversation();
         if (body.containsKey("name")) {
-            patch.setSysAiConversationName((String) body.get("name"));
+            patch.setName((String) body.get("name"));
         }
         if (body.containsKey("pinned")) {
-            patch.setSysAiConversationPinned(Boolean.TRUE.equals(body.get("pinned")));
+            patch.setPinned(Boolean.TRUE.equals(body.get("pinned")));
         }
         if (body.containsKey("pinned_at") && body.get("pinned_at") != null) {
-            patch.setSysAiConversationPinnedAt(((Number) body.get("pinned_at")).longValue());
+            patch.setPinnedAt(((Number) body.get("pinned_at")).longValue());
         }
         if (body.containsKey("model") && body.get("model") instanceof Map) {
-            patch.setSysAiConversationModel(uncheckedCast(body.get("model")));
+            patch.setModel(uncheckedCast(body.get("model")));
         }
         if (body.containsKey("execution_template_id")) {
-            patch.setSysAiConversationExecutionTemplateId(String.valueOf(body.get("execution_template_id")));
+            patch.setExecutionTemplateId(String.valueOf(body.get("execution_template_id")));
         }
         if (body.containsKey("extra") && body.get("extra") instanceof Map) {
-            patch.setSysAiConversationExtra(uncheckedCast(body.get("extra")));
+            patch.setExtra(uncheckedCast(body.get("extra")));
         }
         conversationStore.patch(conversationId, patch);
         pushService.push("conversation.listChanged", Map.of("conversation_id", conversationId, "action", "updated"));
@@ -155,11 +155,11 @@ public class ApiChatController {
         // 2. 推送 userCreated
         pushService.push("message.userCreated", Map.of(
                 "conversation_id", conversationId,
-                "msg_id", userMsg.getSysAiConversationMessageMessageId(),
+                "msg_id", userMsg.getMessageId(),
                 "content", input,
                 "position", "right",
                 "status", "finish",
-                "created_at", userMsg.getSysAiConversationCreatedAt()
+                "created_at", userMsg.getCreatedAt()
         ));
 
         // 3. 生成 turn 与 assistant 消息 id
@@ -185,7 +185,7 @@ public class ApiChatController {
 
         // 5. 构建请求并异步流式调用（回调由 ChatClient 驱动，HTTP 立即返回）
         AiChatRequest request = buildRequest(conversation, input);
-        String modelName = request.getSysAiConversationModel();
+        String modelName = request.getModel();
 
         aiChatFacadeService.stream(request, (chunk) -> {
             if (chunk != null && !chunk.isEmpty()) {
@@ -202,8 +202,8 @@ public class ApiChatController {
             // 6. 保存 assistant 消息
             SysAiConversationMessage assistantMsg = newSysAiConversationMessage(conversationId, "text",
                     fullReply != null ? fullReply : "", "assistant", "left");
-            assistantMsg.setSysAiConversationMessageMessageId(assistantMsgId);
-            assistantMsg.setSysAiConversationMessageMsgId(assistantMsgId);
+            assistantMsg.setMessageId(assistantMsgId);
+            assistantMsg.setMsgId(assistantMsgId);
             conversationStore.addMessage(conversationId, assistantMsg);
 
             // 7. 推送 turn.completed
@@ -237,7 +237,7 @@ public class ApiChatController {
 
         // 8. 返回发送结果（前端据此校正乐观气泡）
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("msg_id", userMsg.getSysAiConversationMessageMessageId());
+        result.put("msg_id", userMsg.getMessageId());
         result.put("replayed", false);
         result.put("completed", false);
         return ApiResult.ok(result);
@@ -276,21 +276,21 @@ public class ApiChatController {
         Map<String, Object> source = uncheckedCast(convObj);
         String id = conversationStore.newId();
         SysAiConversation c = new SysAiConversation();
-        c.setSysAiConversationConversationId(id);
-        c.setSysAiConversationType((String) source.getOrDefault("type", "nomi"));
-        c.setSysAiConversationName((String) source.getOrDefault("name", "新对话"));
+        c.setConversationId(id);
+        c.setType((String) source.getOrDefault("type", "nomi"));
+        c.setName((String) source.getOrDefault("name", "新对话"));
         if (source.get("model") instanceof Map) {
-            c.setSysAiConversationModel(uncheckedCast(source.get("model")));
+            c.setModel(uncheckedCast(source.get("model")));
         }
         if (source.get("extra") instanceof Map) {
-            c.setSysAiConversationExtra(uncheckedCast(source.get("extra")));
+            c.setExtra(uncheckedCast(source.get("extra")));
         }
         if (source.get("execution_template_id") != null) {
-            c.setSysAiConversationExecutionTemplateId(String.valueOf(source.get("execution_template_id")));
+            c.setExecutionTemplateId(String.valueOf(source.get("execution_template_id")));
         }
         long now = System.currentTimeMillis();
-        c.setSysAiConversationCreatedAt(now);
-        c.setSysAiConversationModifiedAt(now);
+        c.setCreatedAt(now);
+        c.setModifiedAt(now);
         conversationStore.create(c);
         pushService.push("conversation.listChanged", Map.of("conversation_id", id, "action", "created"));
         return ApiResult.ok(toResponse(c));
@@ -335,15 +335,15 @@ public class ApiChatController {
     @PostMapping("/{conversationId}/clear-context")
     public ApiResult<Void> clearContext(@PathVariable String conversationId) {
         SysAiConversation c = conversationStore.get(conversationId);
-        if (c.getSysAiConversationExtra() != null) {
-            c.getSysAiConversationExtra().remove("summon");
+        if (c.getExtra() != null) {
+            c.getExtra().remove("summon");
         }
-        Map<String, Object> runtime = c.getSysAiConversationRuntime();
+        Map<String, Object> runtime = c.getRuntime();
         if (runtime != null) {
             runtime.remove("active_turn_id");
         }
-        c.setSysAiConversationRuntime(runtime);
-        c.setSysAiConversationModifiedAt(System.currentTimeMillis());
+        c.setRuntime(runtime);
+        c.setModifiedAt(System.currentTimeMillis());
         pushService.push("conversation.listChanged", Map.of("conversation_id", conversationId, "action", "updated"));
         return ApiResult.ok();
     }
@@ -360,10 +360,10 @@ public class ApiChatController {
     public ApiResult<Map<String, Object>> setSummon(@PathVariable String conversationId,
                                                     @RequestBody Map<String, Object> body) {
         SysAiConversation c = conversationStore.get(conversationId);
-        Map<String, Object> extra = c.getSysAiConversationExtra();
+        Map<String, Object> extra = c.getExtra();
         if (extra == null) {
             extra = new LinkedHashMap<>();
-            c.setSysAiConversationExtra(extra);
+            c.setExtra(extra);
         }
         Map<String, Object> summon = new LinkedHashMap<>();
         summon.put("companion_id", body.get("companion_id"));
@@ -371,7 +371,7 @@ public class ApiChatController {
         summon.put("skill_exclusions", body.getOrDefault("skill_exclusions", new ArrayList<>()));
         summon.put("summoned_at", System.currentTimeMillis());
         extra.put("summon", summon);
-        c.setSysAiConversationModifiedAt(System.currentTimeMillis());
+        c.setModifiedAt(System.currentTimeMillis());
         pushService.push("conversation.listChanged", Map.of("conversation_id", conversationId, "action", "updated"));
         return ApiResult.ok(summon);
     }
@@ -379,10 +379,10 @@ public class ApiChatController {
     @DeleteMapping("/{conversationId}/summon")
     public ApiResult<Void> clearSummon(@PathVariable String conversationId) {
         SysAiConversation c = conversationStore.get(conversationId);
-        if (c.getSysAiConversationExtra() != null) {
-            c.getSysAiConversationExtra().remove("summon");
+        if (c.getExtra() != null) {
+            c.getExtra().remove("summon");
         }
-        c.setSysAiConversationModifiedAt(System.currentTimeMillis());
+        c.setModifiedAt(System.currentTimeMillis());
         return ApiResult.ok();
     }
 
@@ -391,7 +391,7 @@ public class ApiChatController {
         List<SysAiConversation> all = conversationStore.list(Integer.MAX_VALUE);
         long count = all.stream()
                 .filter(c -> {
-                    Map<String, Object> rt = c.getSysAiConversationRuntime();
+                    Map<String, Object> rt = c.getRuntime();
                     return rt != null && rt.get("active_turn_id") != null;
                 })
                 .count();
@@ -463,7 +463,7 @@ public class ApiChatController {
     @GetMapping("/{conversationId}/mode")
     public ApiResult<Map<String, Object>> getMode(@PathVariable String conversationId) {
         SysAiConversation c = conversationStore.get(conversationId);
-        Map<String, Object> extra = c.getSysAiConversationExtra();
+        Map<String, Object> extra = c.getExtra();
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("mode", extra != null ? extra.get("mode") : null);
         return ApiResult.ok(result);
@@ -473,13 +473,13 @@ public class ApiChatController {
     public ApiResult<Map<String, Object>> setMode(@PathVariable String conversationId,
                                                   @RequestBody Map<String, Object> body) {
         SysAiConversation c = conversationStore.get(conversationId);
-        Map<String, Object> extra = c.getSysAiConversationExtra();
+        Map<String, Object> extra = c.getExtra();
         if (extra == null) {
             extra = new LinkedHashMap<>();
-            c.setSysAiConversationExtra(extra);
+            c.setExtra(extra);
         }
         extra.put("mode", body.get("mode"));
-        c.setSysAiConversationModifiedAt(System.currentTimeMillis());
+        c.setModifiedAt(System.currentTimeMillis());
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("mode", body.get("mode"));
         return ApiResult.ok(result);
@@ -553,11 +553,11 @@ public class ApiChatController {
         // 2. 推送 userCreated
         pushService.push("message.userCreated", Map.of(
                 "conversation_id", conversationId,
-                "msg_id", userMsg.getSysAiConversationMessageMessageId(),
+                "msg_id", userMsg.getMessageId(),
                 "content", input,
                 "position", "right",
                 "status", "finish",
-                "created_at", userMsg.getSysAiConversationCreatedAt()
+                "created_at", userMsg.getCreatedAt()
         ));
 
         // 3. 推送 turn.started
@@ -580,7 +580,7 @@ public class ApiChatController {
         // 4. 构建请求并异步流式调用
         SysAiConversation conversation = conversationStore.get(conversationId);
         AiChatRequest request = buildRequest(conversation, input);
-        String modelName = request.getSysAiConversationModel();
+        String modelName = request.getModel();
 
         aiChatFacadeService.stream(request, (chunk) -> {
             if (chunk != null && !chunk.isEmpty()) {
@@ -597,8 +597,8 @@ public class ApiChatController {
             // 5. 保存 assistant 消息
             SysAiConversationMessage assistantMsg = newSysAiConversationMessage(conversationId, "text",
                     fullReply != null ? fullReply : "", "assistant", "left");
-            assistantMsg.setSysAiConversationMessageMessageId(assistantMsgId);
-            assistantMsg.setSysAiConversationMessageMsgId(assistantMsgId);
+            assistantMsg.setMessageId(assistantMsgId);
+            assistantMsg.setMsgId(assistantMsgId);
             conversationStore.addMessage(conversationId, assistantMsg);
 
             // 6. 推送 turn.completed
@@ -632,7 +632,7 @@ public class ApiChatController {
 
         // 7. 返回发送结果
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("msg_id", userMsg.getSysAiConversationMessageMessageId());
+        result.put("msg_id", userMsg.getMessageId());
         result.put("replayed", false);
         result.put("completed", false);
         return ApiResult.ok(result);
@@ -658,36 +658,36 @@ public class ApiChatController {
     private SysAiConversationMessage newSysAiConversationMessage(String conversationId, String type, String content, String role, String position) {
         SysAiConversationMessage m = new SysAiConversationMessage();
         String id = conversationStore.newId();
-        m.setSysAiConversationMessageMessageId(id);
-        m.setSysAiConversationMessageMsgId(id);
-        m.setSysAiConversationConversationId(conversationId);
-        m.setSysAiConversationType(type);
-        m.setSysAiConversationMessageContent(content);
-        m.setSysAiConversationMessageRole(role);
-        m.setSysAiConversationMessagePosition(position);
-        m.setSysAiConversationMessageStatus("finish");
-        m.setSysAiConversationMessageHidden(false);
-        m.setSysAiConversationCreatedAt(System.currentTimeMillis());
+        m.setMessageId(id);
+        m.setMsgId(id);
+        m.setConversationId(conversationId);
+        m.setType(type);
+        m.setContent(content);
+        m.setRole(role);
+        m.setPosition(position);
+        m.setStatus("finish");
+        m.setHidden(false);
+        m.setCreatedAt(System.currentTimeMillis());
         return m;
     }
 
     private AiChatRequest buildRequest(SysAiConversation conversation, String userInput) {
         AiChatRequest request = new AiChatRequest();
         String modelName = null;
-        if (conversation.getSysAiConversationModel() != null && conversation.getSysAiConversationModel().get("model") != null) {
-            modelName = String.valueOf(conversation.getSysAiConversationModel().get("model"));
+        if (conversation.getModel() != null && conversation.getModel().get("model") != null) {
+            modelName = String.valueOf(conversation.getModel().get("model"));
         }
-        request.setSysAiConversationModel(modelName);
+        request.setModel(modelName);
         request.setStream(true);
 
         List<Map<String, Object>> msgList = new ArrayList<>();
-        if (conversation.getSysAiConversationExtra() != null && conversation.getSysAiConversationExtra().get("system_prompt") != null) {
+        if (conversation.getExtra() != null && conversation.getExtra().get("system_prompt") != null) {
             Map<String, Object> sys = new LinkedHashMap<>();
             sys.put("role", "system");
-            sys.put("content", String.valueOf(conversation.getSysAiConversationExtra().get("system_prompt")));
+            sys.put("content", String.valueOf(conversation.getExtra().get("system_prompt")));
             msgList.add(sys);
         }
-        for (SysAiConversationMessage m : conversationStore.allMessages(conversation.getSysAiConversationConversationId())) {
+        for (SysAiConversationMessage m : conversationStore.allMessages(conversation.getConversationId())) {
             if (!"text".equals(m.getType()) || m.getContent() == null) {
                 continue;
             }
@@ -704,30 +704,30 @@ public class ApiChatController {
 
     private Map<String, Object> toResponse(SysAiConversation c) {
         Map<String, Object> map = new LinkedHashMap<>();
-        map.put("conversation_id", c.getSysAiConversationConversationId());
+        map.put("conversation_id", c.getConversationId());
         map.put("type", c.getType());
-        map.put("name", c.getSysAiConversationName());
-        map.put("model", c.getSysAiConversationModel());
-        map.put("extra", c.getSysAiConversationExtra());
-        map.put("pinned", c.isSysAiConversationPinned());
-        map.put("pinned_at", c.getSysAiConversationPinnedAt());
-        map.put("created_at", c.getSysAiConversationCreatedAt());
+        map.put("name", c.getName());
+        map.put("model", c.getModel());
+        map.put("extra", c.getExtra());
+        map.put("pinned", c.isPinned());
+        map.put("pinned_at", c.getPinnedAt());
+        map.put("created_at", c.getCreatedAt());
         map.put("modified_at", c.getModifiedAt());
-        map.put("execution_template_id", c.getSysAiConversationExecutionTemplateId());
+        map.put("execution_template_id", c.getExecutionTemplateId());
         return map;
     }
 
     private Map<String, Object> toMessageResponse(SysAiConversationMessage m) {
         Map<String, Object> map = new LinkedHashMap<>();
-        map.put("message_id", m.getSysAiConversationMessageMessageId());
-        map.put("conversation_id", m.getSysAiConversationConversationId());
+        map.put("message_id", m.getMessageId());
+        map.put("conversation_id", m.getConversationId());
         map.put("msg_id", m.getMsgId());
         map.put("type", m.getType());
         map.put("content", m.getContent());
         map.put("position", m.getPosition());
         map.put("status", m.getStatus());
         map.put("hidden", m.isHidden());
-        map.put("created_at", m.getSysAiConversationCreatedAt());
+        map.put("created_at", m.getCreatedAt());
         return map;
     }
 
@@ -769,3 +769,4 @@ class ApiMessageSearchController {
         return ApiResult.ok(result);
     }
 }
+

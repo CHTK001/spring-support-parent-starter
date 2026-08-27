@@ -8,8 +8,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -45,7 +43,9 @@ import java.util.stream.Collectors;
  * payment 在 {@code engine=job} 模式下不再直接管理本地调度器，而是将运营端的
  * 查询、修改和手工触发请求转发到 scheduler 平台对应 namespace 的任务接口。
  * </p>
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Service
 @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "engine", havingValue = "job")
@@ -69,7 +69,6 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     private final ObjectMapper objectMapper;
     /** Rest模板 */
     private final RestTemplate restTemplate;
-    /** Console会话monitor */
     private final Object consoleSessionMonitor = new Object();
 
     /**
@@ -85,18 +84,14 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
      * 创建 PaymentPlatformSchedulerTaskOpsService 实例
      * @param environment environment
      * @param objectMapper objectMapper
-     * @param restTemplateBuilderProvider restTemplateBuilderProvider
+     * @param restTemplate restTemplate
      */
     public PaymentPlatformSchedulerTaskOpsService(Environment environment,
                                                   ObjectMapper objectMapper,
-                                                  ObjectProvider<RestTemplateBuilder> restTemplateBuilderProvider) {
+                                                  RestTemplate restTemplate) {
         this.environment = environment;
         this.objectMapper = objectMapper;
-        RestTemplateBuilder builder = restTemplateBuilderProvider.getIfAvailable(RestTemplateBuilder::new);
-        this.restTemplate = builder
-                .connectTimeout(DEFAULT_CONNECT_TIMEOUT)
-                .readTimeout(DEFAULT_READ_TIMEOUT)
-                .build();
+        this.restTemplate = restTemplate;
     }
 
     @Override
@@ -403,7 +398,7 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
 
     /** 构建RawUri */
     private URI buildRawUri(String... pathSegments) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(baseUrl());
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUrl());
         for (String pathSegment : pathSegments) {
             builder.pathSegment(pathSegment);
         }

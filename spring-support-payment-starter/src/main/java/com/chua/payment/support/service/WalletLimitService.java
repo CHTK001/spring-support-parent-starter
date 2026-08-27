@@ -5,8 +5,10 @@ import com.chua.payment.support.entity.MerchantWalletLimit;
 import java.math.BigDecimal;
 
 /**
- * 钱包限额服务
+ * 钱包限额服务接口，定义商户钱包充值/提现/转账额度校验契约。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 public interface WalletLimitService {
 

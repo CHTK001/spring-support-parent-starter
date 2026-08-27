@@ -2,6 +2,7 @@ package com.chua.payment.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.payment.support.dto.CreateApprovalDTO;
 import com.chua.payment.support.entity.WalletWithdrawApproval;
 import com.chua.payment.support.exception.PaymentException;
 import com.chua.payment.support.mapper.WalletWithdrawApprovalMapper;
@@ -17,8 +18,10 @@ import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 钱包提现审批服务实现
+ * 钱包提现审批服务实现，处理商户钱包提现申请的创建、审批与状态流转。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor
@@ -45,19 +48,17 @@ public class WalletWithdrawApprovalServiceImpl implements WalletWithdrawApproval
      * @param withdrawNo withdrawNo
      * @param remark remark
      */
-    public WalletWithdrawApproval createApproval(Long merchantId, Long userId, BigDecimal amount,
-                                                  String bankAccount, String bankName, String accountName,
-                                                  String withdrawNo, String remark) {
+    public WalletWithdrawApproval createApproval(CreateApprovalDTO dto) {
         WalletWithdrawApproval approval = new WalletWithdrawApproval();
-        approval.setMerchantId(merchantId);
-        approval.setUserId(userId);
-        approval.setAmount(amount);
-        approval.setBankAccount(bankAccount);
-        approval.setBankName(bankName);
-        approval.setAccountName(accountName);
-        approval.setWithdrawNo(withdrawNo);
+        approval.setMerchantId(dto.merchantId());
+        approval.setUserId(dto.userId());
+        approval.setAmount(dto.amount());
+        approval.setBankAccount(dto.bankAccount());
+        approval.setBankName(dto.bankName());
+        approval.setAccountName(dto.accountName());
+        approval.setWithdrawNo(dto.withdrawNo());
         approval.setStatus("PENDING");
-        approval.setRemark(remark);
+        approval.setRemark(dto.remark());
         approvalMapper.insert(approval);
         return approvalMapper.selectById(approval.getId());
     }

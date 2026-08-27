@@ -113,8 +113,15 @@ public final class DataSyncModeCompareProbe {
         System.err.printf("%-45s %5dms  %,d 行/s  rows=%d%n", label, ms, tp, count);
     }
     static final class CountSink implements DataSyncAgentSink {
-        final String id; final long exp; final AtomicLong count = new AtomicLong(); final CountDownLatch done;
-        CountSink(String id, long exp) { this.id = id; this.exp = exp; this.done = new CountDownLatch(1); }
+        final String id;
+        final long exp;
+        final AtomicLong count = new AtomicLong();
+        final CountDownLatch done;
+        CountSink(String id, long exp) {
+            this.id = id;
+            this.exp = exp;
+            this.done = new CountDownLatch(1);
+        }
         @Override public String sinkId() { return id; }
         @Override public void write(Flux<Map<String, Object>> rows) {
             rows.doOnNext(m -> { if (count.incrementAndGet() >= exp) done.countDown(); }).subscribe();

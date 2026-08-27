@@ -6,6 +6,7 @@ import com.chua.payment.support.channel.TransferRequest;
 import com.chua.payment.support.channel.WithdrawRequest;
 import com.chua.payment.support.common.PageResult;
 import com.chua.payment.support.common.Result;
+import com.chua.payment.support.dto.WalletOrderQueryRequest;
 import com.chua.payment.support.dto.WalletRechargeDTO;
 import com.chua.payment.support.dto.WalletTransferDTO;
 import com.chua.payment.support.dto.WalletWithdrawDTO;
@@ -76,7 +77,7 @@ public class WalletOrderController {
                                                   @RequestParam(required = false) Long userId,
                                                   @RequestParam(required = false) String orderType,
                                                   @RequestParam(required = false) String status) {
-        Page<WalletOrder> page = walletOrderService.page(pageNum, pageSize, merchantId, userId, orderType, status);
+        Page<WalletOrder> page = walletOrderService.page(new WalletOrderQueryRequest(pageNum, pageSize, merchantId, userId, orderType, status));
         Page<WalletOrderVO> voPage = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         voPage.setRecords(page.getRecords().stream().map(this::convert).toList());
         return Result.success(PageResult.of(voPage));

@@ -3,6 +3,7 @@ package com.chua.payment.support.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.payment.support.common.PageResult;
 import com.chua.payment.support.common.Result;
+import com.chua.payment.support.dto.TransactionRecordQueryRequest;
 import com.chua.payment.support.entity.TransactionRecord;
 import com.chua.payment.support.service.TransactionRecordService;
 import lombok.RequiredArgsConstructor;
@@ -61,7 +62,7 @@ public class TransactionController {
                                                       @RequestParam(required = false) String orderNo,
                                                       @RequestParam(required = false) String transactionType,
                                                       @RequestParam(required = false) Integer status) {
-        Page<TransactionRecord> page = transactionRecordService.page(pageNum, pageSize, merchantId, orderNo, transactionType, status);
+        Page<TransactionRecord> page = transactionRecordService.page(new TransactionRecordQueryRequest(pageNum, pageSize, merchantId, orderNo, transactionType, status));
         return Result.success(PageResult.of(page));
     }
 }

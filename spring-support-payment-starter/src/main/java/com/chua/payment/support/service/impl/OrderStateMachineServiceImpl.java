@@ -18,8 +18,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 订单状态机服务实现类
+ * 订单状态机服务实现，基于Spring Statemachine管理订单生命周期状态流转。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Slf4j
 @Service
@@ -89,8 +91,9 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
                 return OrderTransitionResult.REJECTED;
             }
 
-            orderStateLogService.log(orderId, fromState, toState, event.name(), operator,
-                    String.format("状态转换: %s -> %s", fromState.getDescription(), toState.getDescription()));
+            orderStateLogService.log(new com.chua.payment.support.dto.OrderStateLogRequest(
+                    orderId, fromState.name(), toState.name(), event.name(), operator,
+                    String.format("状态转换: %s -> %s", fromState.getDescription(), toState.getDescription())));
             return OrderTransitionResult.APPLIED;
         } finally {
             stateMachine.stop();

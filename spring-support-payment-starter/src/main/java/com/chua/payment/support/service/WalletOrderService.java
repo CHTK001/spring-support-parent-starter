@@ -4,11 +4,14 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.payment.support.channel.RechargeRequest;
 import com.chua.payment.support.channel.TransferRequest;
 import com.chua.payment.support.channel.WithdrawRequest;
+import com.chua.payment.support.dto.WalletOrderQueryRequest;
 import com.chua.payment.support.entity.WalletOrder;
 
 /**
- * 钱包订单服务
+ * 钱包订单服务接口，定义充值/转账/提现订单的创建与状态更新契约。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 public interface WalletOrderService {
 
@@ -55,6 +58,6 @@ public interface WalletOrderService {
     /**
      * 分页查询
      */
-    Page<WalletOrder> page(int pageNum, int pageSize, Long merchantId, Long userId, String orderType, String status);
+    Page<WalletOrder> page(WalletOrderQueryRequest request);
 }
 

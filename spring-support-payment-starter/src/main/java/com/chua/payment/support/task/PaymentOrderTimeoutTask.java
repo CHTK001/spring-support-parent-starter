@@ -112,10 +112,8 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
     @Override
     @Job(
             value = "payment-order-timeout-scan",
-            scheduleType = "cron",
-            scheduleTime = "0 */10 * * * ?",
-            desc = "按商户支付配置扫描超时订单并执行自动取消。",
-            autoStart = true
+            cron = "0 */10 * * * ?",
+            desc = "按商户支付配置扫描超时订单并执行自动取消。"
     )
     /** 执行 */
     public void execute() {

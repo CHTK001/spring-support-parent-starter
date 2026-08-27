@@ -3,7 +3,9 @@ package com.chua.payment.support.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.payment.support.common.PageResult;
 import com.chua.payment.support.common.Result;
+import com.chua.payment.support.dto.RefundOrderQueryRequest;
 import com.chua.payment.support.dto.RefundOperateDTO;
+import com.chua.payment.support.dto.RefundSuccessDTO;
 import com.chua.payment.support.entity.PaymentRefundOrder;
 import com.chua.payment.support.service.PaymentOrderService;
 import com.chua.payment.support.service.PaymentRefundOrderService;
@@ -58,7 +60,7 @@ public class RefundOrderController {
                                                   @RequestParam(required = false) String orderNo,
                                                   @RequestParam(required = false) String refundNo,
                                                   @RequestParam(required = false) String status) {
-        Page<RefundOrderVO> page = paymentRefundOrderService.page(pageNum, pageSize, merchantId, orderNo, refundNo, status);
+        Page<RefundOrderVO> page = paymentRefundOrderService.page(new RefundOrderQueryRequest(pageNum, pageSize, merchantId, orderNo, refundNo, status));
         return Result.success(PageResult.of(page));
     }
 
@@ -73,13 +75,13 @@ public class RefundOrderController {
     public Result<Boolean> markRefundSuccess(@PathVariable Long id,
                                              @RequestBody(required = false) RefundOperateDTO dto) {
         PaymentRefundOrder refundOrder = paymentRefundOrderService.getById(id);
-        return Result.success(paymentOrderService.refundSuccess(
+        return Result.success(paymentOrderService.refundSuccess(new RefundSuccessDTO(
                 refundOrder.getRefundNo(),
                 dto != null ? dto.getRefundAmount() : null,
                 dto != null ? dto.getThirdPartyRefundNo() : null,
                 dto != null ? dto.getOperator() : null,
                 null,
-                dto != null ? dto.getRemark() : null));
+                dto != null ? dto.getRemark() : null)));
     }
 
     @Operation(summary = "标记退款失败")

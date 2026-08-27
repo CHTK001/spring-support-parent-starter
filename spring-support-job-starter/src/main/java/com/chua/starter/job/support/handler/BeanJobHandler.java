@@ -4,6 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Method;
 
+import com.chua.common.support.reflection.ReflectUtils;
+
 /**
  * 基于 Spring Bean + 反射的任务处理器。
  *
@@ -94,7 +96,7 @@ public class BeanJobHandler implements JobHandler {
     public void execute() throws Exception {
         log.debug("[job] execute handler={} target={}#{}",
                 name, target.getClass().getSimpleName(), method.getName());
-        method.invoke(target);
+        ReflectUtils.invoke(target, method.getName(), method.getReturnType(), method.getParameterTypes());
     }
 
     @Override
@@ -104,7 +106,7 @@ public class BeanJobHandler implements JobHandler {
             return;
         }
         log.debug("[job] init handler={}", name);
-        initMethod.invoke(target);
+        ReflectUtils.invoke(target, initMethod.getName(), initMethod.getReturnType(), initMethod.getParameterTypes());
     }
 
     @Override
@@ -114,6 +116,6 @@ public class BeanJobHandler implements JobHandler {
             return;
         }
         log.debug("[job] destroy handler={}", name);
-        destroyMethod.invoke(target);
+        ReflectUtils.invoke(target, destroyMethod.getName(), destroyMethod.getReturnType(), destroyMethod.getParameterTypes());
     }
 }

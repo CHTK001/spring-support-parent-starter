@@ -10,7 +10,12 @@ import org.springframework.util.StringUtils;
 import java.security.Principal;
 import java.util.Locale;
 import java.util.Set;
-/** @author CH */
+/**
+ * 从 HttpServletRequest 中解析当前登录账户主体的工具类。
+ *
+ * @author CH
+ * @since 4.0.0.50
+ */
 
 @Component
 public class PaymentAccountPrincipalResolver {

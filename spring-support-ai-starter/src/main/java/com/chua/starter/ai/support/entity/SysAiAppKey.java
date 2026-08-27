@@ -27,31 +27,31 @@ public class SysAiAppKey {
      */
     @TableId(type = IdType.AUTO)
     /** SYSAIAPP密钥ID */
-    private Integer sysAiAppKeyId;
+    private Integer id;
 
     /**
      * 应用 ID
      */
-    private String sysAiAppKeyAppId;
+    @TableField("sys_ai_app_key_app_id")
+    private String appId;
 
     /**
      * 访问 Key
      */
     @TableField("sys_ai_app_key_app_key")
-    /** SYSAIAPP密钥APP密钥 */
-    private String sysAiAppKeyAppKey;
+    private String appKey;
 
     /**
      * 访问 Secret
      */
     @TableField("sys_ai_app_key_secret")
-    /** SYSAIAPP密钥secret */
-    private String sysAiAppKeySecret;
+    private String secret;
 
     /**
      * 密钥名称
      */
-    private String sysAiAppKeyName;
+    @TableField("sys_ai_app_key_name")
+    private String name;
 
     /**
      * 所属用户 ID
@@ -62,107 +62,104 @@ public class SysAiAppKey {
      * 状态：1 启用，0 禁用
      */
     @TableField("sys_ai_app_key_status")
-    /** SYSAIAPP密钥状态 */
-    private Integer sysAiAppKeyStatus;
+    private Integer status;
 
     /**
      * 删除标记：0 未删除，1 已删除
      */
     @TableField("sys_ai_app_key_delete")
     @TableLogic
-    /** SYSAIAPP密钥delete */
-    private Integer sysAiAppKeyDelete;
+    private Integer delete;
 
     /**
      * 分组 ID——Token/AppKey 绑定的分组
      */
-    private Integer sysAiAppKeyGroupId;
+    @TableField("sys_ai_app_key_group_id")
+    private Integer groupId;
 
     /**
      * 关联供应商 ID（面板层字段）
      */
     @TableField("sys_ai_app_key_provider_id")
-    /** SYSAIAPP密钥提供者ID */
-    private Long sysAiAppKeyProviderId;
+    private Long providerId;
 
     /**
      * 限定使用的模型（面板层字段）
      */
     @TableField("sys_ai_app_key_model")
-    /** SYSAIAPP密钥模型 */
-    private String sysAiAppKeyModel;
+    private String model;
 
     /**
      * 是否启用（面板层字段，与状态列互斥使用）
      */
     @TableField("sys_ai_app_key_enabled")
-    /** SYSAIAPP密钥是否启用 */
-    private Boolean sysAiAppKeyEnabled;
+    private Boolean enabled;
 
     /**
      * 过期时间（DATETIME，面板层字段，与 epoch 秒过期列并存）
      */
     @TableField("sys_ai_app_key_expire_datetime")
-    /** SYSAIAPP密钥expiredatetime */
-    private LocalDateTime sysAiAppKeyExpireDatetime;
+    private LocalDateTime expireDatetime;
 
     /**
      * 过期时间戳（秒）
      */
-    private Long sysAiAppKeyExpireTime;
+    @TableField("sys_ai_app_key_expire_time")
+    private Long expireTime;
 
     /**
      * 有效天数
      */
-    private Integer sysAiAppKeyValidDays;
+    @TableField("sys_ai_app_key_valid_days")
+    private Integer validDays;
 
     /**
      * IP 白名单（逗号分隔）
      */
-    private String sysAiAppKeyIpWhitelist;
+    @TableField("sys_ai_app_key_ip_whitelist")
+    private String ipWhitelist;
 
     /**
      * 最近使用时间戳（毫秒）
      */
-    private Long sysAiAppKeyLastUsedTime;
+    @TableField("sys_ai_app_key_last_used_time")
+    private Long lastUsedTime;
 
     /**
      * 使用次数
      */
     @TableField("sys_ai_app_key_use_count")
-    /** SYSAIAPP密钥USE数量 */
-    private Long sysAiAppKeyUseCount;
+    private Long useCount;
 
     /**
      * 次数上限（null 表示不限）
      */
     @TableField("sys_ai_app_key_max_use")
-    /** SYSAIAPP密钥最大值USE */
-    private Long sysAiAppKeyMaxUse;
+    private Long maxUse;
 
     /**
      * Token 总量上限（null 表示不限），用于控制 AppKey 累计消耗的 Token 总数
      */
     @TableField("sys_ai_app_key_max_tokens")
-    /** SYSAIAPP密钥最大值tokens */
-    private Long sysAiAppKeyMaxTokens;
+    private Long maxTokens;
 
     /**
      * 已使用 Token 累计值，每次对话成功后累加
      */
     @TableField("sys_ai_app_key_total_tokens")
-    /** SYSAIAPP密钥总数tokens */
-    private Long sysAiAppKeyTotalTokens;
+    private Long totalTokens;
 
     /**
      * 授权范围
      */
-    private String sysAiAppKeyScope;
+    @TableField("sys_ai_app_key_scope")
+    private String scope;
 
     /**
      * 备注说明
      */
-    private String sysAiAppKeyRemark;
+    @TableField("sys_ai_app_key_remark")
+    private String remark;
 
     /**
      * 创建人名称

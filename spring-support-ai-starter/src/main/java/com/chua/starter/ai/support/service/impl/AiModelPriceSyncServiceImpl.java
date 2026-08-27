@@ -44,13 +44,13 @@ public class AiModelPriceSyncServiceImpl implements AiModelPriceSyncService {
                 try {
                     List<SysAiModelSetting> settings = sysAiModelSettingMapper.selectList(
                             Wrappers.<SysAiModelSetting>lambdaQuery()
-                                    .eq(SysAiModelSetting::getSysAiModelSettingCode, modelName));
+                                    .eq(SysAiModelSetting::getCode, modelName));
                     if (settings.isEmpty()) {
                         continue;
                     }
                     // 更新模型名称
                     for (SysAiModelSetting setting : settings) {
-                        setting.setSysAiModelSettingName(modelName);
+                        setting.setName(modelName);
                         sysAiModelSettingMapper.updateById(setting);
                     }
                     synced++;
@@ -77,15 +77,15 @@ public class AiModelPriceSyncServiceImpl implements AiModelPriceSyncService {
                 try {
                     List<SysAiModelSetting> existing = sysAiModelSettingMapper.selectList(
                             Wrappers.<SysAiModelSetting>lambdaQuery()
-                                    .eq(SysAiModelSetting::getSysAiModelSettingCode, modelName));
+                                    .eq(SysAiModelSetting::getCode, modelName));
 
                     if (existing.isEmpty()) {
                         SysAiModelSetting setting = new SysAiModelSetting();
-                        setting.setSysAiModelSettingCode(modelName);
-                        setting.setSysAiModelSettingName(modelName);
-                        setting.setSysAiModelSettingProvider("");
-                        setting.setSysAiModelSettingStatus(1);
-                        setting.setSysAiModelSettingSort(synced);
+                        setting.setCode(modelName);
+                        setting.setName(modelName);
+                        setting.setProvider("");
+                        setting.setStatus(1);
+                        setting.setSort(synced);
                         sysAiModelSettingMapper.insert(setting);
                         synced++;
                     }
@@ -115,9 +115,9 @@ public class AiModelPriceSyncServiceImpl implements AiModelPriceSyncService {
             }
             List<SysAiModelSetting> settings = sysAiModelSettingMapper.selectList(
                     Wrappers.<SysAiModelSetting>lambdaQuery()
-                            .eq(SysAiModelSetting::getSysAiModelSettingCode, code));
+                            .eq(SysAiModelSetting::getCode, code));
             for (SysAiModelSetting setting : settings) {
-                setting.setSysAiModelSettingName(code);
+                setting.setName(code);
                 sysAiModelSettingMapper.updateById(setting);
             }
             log.info("[AiModelPriceSync] 模型 {} 价格同步完成", code);

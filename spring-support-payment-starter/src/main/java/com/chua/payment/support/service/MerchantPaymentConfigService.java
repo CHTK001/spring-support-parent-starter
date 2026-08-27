@@ -3,8 +3,10 @@ package com.chua.payment.support.service;
 import com.chua.payment.support.entity.MerchantPaymentConfig;
 
 /**
- * 商户支付配置服务
+ * 商户支付配置服务接口，定义商户维度支付参数与风控检查契约。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 public interface MerchantPaymentConfigService {
 

@@ -27,7 +27,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
-/** @author CH */
+/**
+ * 订单分表配置服务实现，管理支付订单的按时间分片策略及预创建任务。
+ *
+ * @author CH
+ * @since 4.0.0.50
+ */
 
 @Service
 @Slf4j

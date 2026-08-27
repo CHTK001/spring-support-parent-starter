@@ -8,7 +8,7 @@ spring:
   application:
     name: ai-starter
   autoconfigure:
-exclude:
+    exclude:
       - com.chua.starter.datasource.configuration.ShardingSphereAutoConfiguration
       - com.chua.starter.datasource.configuration.DataSourceScriptConfiguration
       - com.chua.starter.filesystem.support.config.FileSystemAutoConfiguration
@@ -26,7 +26,7 @@ exclude:
   sql:
     init:
       mode: never
-h2:
+  h2:
     console:
       enabled: false
       path: /h2-console

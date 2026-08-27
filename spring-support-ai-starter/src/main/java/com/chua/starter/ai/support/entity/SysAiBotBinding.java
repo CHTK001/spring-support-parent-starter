@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.entity;
 import com.chua.starter.mybatis.pojo.SysBase;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -27,55 +28,65 @@ public class SysAiBotBinding extends SysBase {
      * 绑定 ID
      */
     @TableId(type = IdType.AUTO)
-    private Long sysAiBotBindingId;
+    private Long id;
 
     /**
      * 关联用户 ID
      */
-    private Long sysAiBotBindingUserId;
+    @TableField("sys_ai_bot_binding_user_id")
+    private Long userId;
 
     /**
      * Bot 唯一标识（iLink 分配的 botId）
      */
-    private String sysAiBotBindingBotId;
+    @TableField("sys_ai_bot_binding_bot_id")
+    private String botId;
 
     /**
      * 登录凭证 Token
      */
-    private String sysAiBotBindingBotToken;
+    @TableField("sys_ai_bot_binding_bot_token")
+    private String botToken;
 
     /**
      * 平台类型（wechat / wecom）
      */
-    private String sysAiBotBindingPlatform;
+    @TableField("sys_ai_bot_binding_platform")
+    private String platform;
 
     /**
      * Bot 昵称（来自微信资料）
      */
-    private String sysAiBotBindingNickname;
+    @TableField("sys_ai_bot_binding_nickname")
+    private String nickname;
 
     /**
      * 头像地址
      */
-    private String sysAiBotBindingAvatarUrl;
+    @TableField("sys_ai_bot_binding_avatar_url")
+    private String avatarUrl;
 
     /**
      * 独立网关端口号
      */
-    private Integer sysAiBotBindingGatewayPort;
+    @TableField("sys_ai_bot_binding_gateway_port")
+    private Integer gatewayPort;
 
     /**
      * 状态：online / offline / expired
      */
-    private String sysAiBotBindingStatus;
+    @TableField("sys_ai_bot_binding_status")
+    private String status;
 
     /**
      * 绑定来源（qrcode_scan / manual_import）
      */
-    private String sysAiBotBindingBindSource;
+    @TableField("sys_ai_bot_binding_bind_source")
+    private String bindSource;
 
     /**
      * 最后活跃时间
      */
-    private LocalDateTime sysAiBotBindingLastActiveTime;
+    @TableField("sys_ai_bot_binding_last_active_time")
+    private LocalDateTime lastActiveTime;
 }

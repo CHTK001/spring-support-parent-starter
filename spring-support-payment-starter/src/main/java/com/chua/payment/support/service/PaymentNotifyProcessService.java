@@ -1,26 +1,20 @@
 package com.chua.payment.support.service;
 
+import com.chua.payment.support.dto.LogNotifyDTO;
 import com.chua.payment.support.entity.PaymentNotifyLog;
-import jakarta.servlet.http.HttpServletRequest;
 
 /**
- * 支付回调处理服务
+ * 支付回调处理服务接口，定义通知日志记录、分发与状态标记契约。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 public interface PaymentNotifyProcessService {
 
     /**
      * 记录回调日志
      */
-    PaymentNotifyLog logNotify(String notifyType,
-                               Long merchantId,
-                               Long channelId,
-                               String channelType,
-                               String channelSubType,
-                               String orderNo,
-                               String refundNo,
-                               HttpServletRequest request,
-                               String body);
+    PaymentNotifyLog logNotify(LogNotifyDTO dto);
 
     /**
      * 处理支付回调

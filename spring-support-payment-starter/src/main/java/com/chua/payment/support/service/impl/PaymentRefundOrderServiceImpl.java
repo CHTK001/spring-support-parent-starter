@@ -2,6 +2,9 @@ package com.chua.payment.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.payment.support.dto.CreateRefundOrderDTO;
+import com.chua.payment.support.dto.MarkRefundedDTO;
+import com.chua.payment.support.dto.RefundOrderQueryRequest;
 import com.chua.payment.support.entity.Merchant;
 import com.chua.payment.support.entity.MerchantChannel;
 import com.chua.payment.support.entity.PaymentOrder;
@@ -24,8 +27,10 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * 退款单服务实现
+ * 退款单服务实现，负责退款单的创建、状态更新、查询等操作。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor
@@ -49,32 +54,27 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
      * @param operator operator
      * @param requestPayload requestPayload
      */
-    public PaymentRefundOrder createRefundOrder(PaymentOrder order,
-                                                String refundNo,
-                                                BigDecimal refundAmount,
-                                                String reason,
-                                                String operator,
-                                                String requestPayload) {
-        if (order == null || order.getId() == null) {
+    public PaymentRefundOrder createRefundOrder(CreateRefundOrderDTO dto) {
+        if (dto.order() == null || dto.order().getId() == null) {
             throw new PaymentException("退款订单不存在");
         }
-        if (!StringUtils.hasText(refundNo)) {
+        if (!StringUtils.hasText(dto.refundNo())) {
             throw new PaymentException("退款单号不能为空");
         }
         PaymentRefundOrder entity = new PaymentRefundOrder();
-        entity.setRefundNo(refundNo);
-        entity.setOrderId(order.getId());
-        entity.setOrderNo(order.getOrderNo());
-        entity.setMerchantId(order.getMerchantId());
-        entity.setChannelId(order.getChannelId());
-        entity.setSourceOrderStatus(order.getStatus());
-        entity.setRefundAmount(refundAmount);
+        entity.setRefundNo(dto.refundNo());
+        entity.setOrderId(dto.order().getId());
+        entity.setOrderNo(dto.order().getOrderNo());
+        entity.setMerchantId(dto.order().getMerchantId());
+        entity.setChannelId(dto.order().getChannelId());
+        entity.setSourceOrderStatus(dto.order().getStatus());
+        entity.setRefundAmount(dto.refundAmount());
         entity.setStatus(RefundOrderStatus.PROCESSING.name());
-        entity.setReason(reason);
+        entity.setReason(dto.reason());
         entity.setNotifyStatus(0);
-        entity.setRequestPayload(requestPayload);
-        entity.setOperator(operator);
-        entity.setRemark(reason);
+        entity.setRequestPayload(dto.requestPayload());
+        entity.setOperator(dto.operator());
+        entity.setRemark(dto.reason());
         paymentRefundOrderMapper.insert(entity);
         return entity;
     }
@@ -118,25 +118,27 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     }
 
     @Override
-    /** Page */
-    public Page<RefundOrderVO> page(int pageNum, int pageSize, Long merchantId, String orderNo, String refundNo, String status) {
-        Page<PaymentRefundOrder> page = new Page<>(pageNum, pageSize);
+    public Page<RefundOrderVO> page(RefundOrderQueryRequest request) {
+        if (request == null) {
+            throw new PaymentException("查询参数不能为空");
+        }
+        Page<PaymentRefundOrder> page = new Page<>(request.pageNum(), request.pageSize());
         LambdaQueryWrapper<PaymentRefundOrder> wrapper = new LambdaQueryWrapper<>();
-        if (merchantId != null) {
-            wrapper.eq(PaymentRefundOrder::getMerchantId, merchantId);
+        if (request.merchantId() != null) {
+            wrapper.eq(PaymentRefundOrder::getMerchantId, request.merchantId());
         }
-        if (StringUtils.hasText(orderNo)) {
-            wrapper.eq(PaymentRefundOrder::getOrderNo, orderNo);
+        if (StringUtils.hasText(request.orderNo())) {
+            wrapper.eq(PaymentRefundOrder::getOrderNo, request.orderNo());
         }
-        if (StringUtils.hasText(refundNo)) {
-            wrapper.eq(PaymentRefundOrder::getRefundNo, refundNo);
+        if (StringUtils.hasText(request.refundNo())) {
+            wrapper.eq(PaymentRefundOrder::getRefundNo, request.refundNo());
         }
-        if (StringUtils.hasText(status)) {
-            wrapper.eq(PaymentRefundOrder::getStatus, status);
+        if (StringUtils.hasText(request.status())) {
+            wrapper.eq(PaymentRefundOrder::getStatus, request.status());
         }
         wrapper.orderByDesc(PaymentRefundOrder::getCreatedAt);
         Page<PaymentRefundOrder> entityPage = paymentRefundOrderMapper.selectPage(page, wrapper);
-        Page<RefundOrderVO> voPage = new Page<>(pageNum, pageSize, entityPage.getTotal());
+        Page<RefundOrderVO> voPage = new Page<>(request.pageNum(), request.pageSize(), entityPage.getTotal());
         voPage.setRecords(entityPage.getRecords().stream().map(this::convertToVO).toList());
         return voPage;
     }
@@ -235,29 +237,24 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
      * @param operator operator
      * @param remark remark
      */
-    public PaymentRefundOrder markRefunded(String refundNo,
-                                           BigDecimal refundAmount,
-                                           String thirdPartyRefundNo,
-                                           String responsePayload,
-                                           String operator,
-                                           String remark) {
-        PaymentRefundOrder entity = requireRefundOrder(refundNo);
+    public PaymentRefundOrder markRefunded(MarkRefundedDTO dto) {
+        PaymentRefundOrder entity = requireRefundOrder(dto.refundNo());
         entity.setStatus(RefundOrderStatus.REFUNDED.name());
         entity.setNotifyStatus(1);
-        if (refundAmount != null && refundAmount.compareTo(BigDecimal.ZERO) > 0) {
-            entity.setRefundAmount(refundAmount);
+        if (dto.refundAmount() != null && dto.refundAmount().compareTo(BigDecimal.ZERO) > 0) {
+            entity.setRefundAmount(dto.refundAmount());
         }
-        if (StringUtils.hasText(thirdPartyRefundNo)) {
-            entity.setThirdPartyRefundNo(thirdPartyRefundNo);
+        if (StringUtils.hasText(dto.thirdPartyRefundNo())) {
+            entity.setThirdPartyRefundNo(dto.thirdPartyRefundNo());
         }
-        if (responsePayload != null) {
-            entity.setResponsePayload(responsePayload);
+        if (dto.responsePayload() != null) {
+            entity.setResponsePayload(dto.responsePayload());
         }
-        if (StringUtils.hasText(operator)) {
-            entity.setOperator(operator);
+        if (StringUtils.hasText(dto.operator())) {
+            entity.setOperator(dto.operator());
         }
-        if (StringUtils.hasText(remark)) {
-            entity.setRemark(remark);
+        if (StringUtils.hasText(dto.remark())) {
+            entity.setRemark(dto.remark());
         }
         paymentRefundOrderMapper.updateById(entity);
         return entity;

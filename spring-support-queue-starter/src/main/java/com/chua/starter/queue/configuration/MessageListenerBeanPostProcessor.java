@@ -1,5 +1,6 @@
 package com.chua.starter.queue.configuration;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.starter.queue.Acknowledgment;
 import com.chua.starter.queue.Message;
 import com.chua.starter.queue.MessageHandler;
@@ -128,7 +129,7 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
         return (message, ack) -> {
             try {
                 Object[] args = resolveArguments(method, message, payloadType, ack);
-                method.invoke(bean, args);
+                ReflectUtils.invoke(bean, method.getName(), method.getReturnType(), method.getParameterTypes(), args);
                 
                 // 如果自动确认，处理成功后自动确认
                 if (autoAck) {
@@ -243,7 +244,7 @@ public class MessageListenerBeanPostProcessor implements BeanPostProcessor {
 
                 // 调用方法
                 Object[] args = resolveEventArguments(method, message, event, ack);
-                method.invoke(bean, args);
+                ReflectUtils.invoke(bean, method.getName(), method.getReturnType(), method.getParameterTypes(), args);
 
                 // 如果自动确认，处理成功后自动确认
                 if (autoAck) {

@@ -12,8 +12,10 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
- * 支付内置调度任务运维服务。
+ * 支付内置调度任务运维服务，基于内部线程池管理支付订单超时、通知重试等定时任务。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor

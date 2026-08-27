@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.payment.support.channel.WithdrawRequest;
 import com.chua.payment.support.common.PageResult;
 import com.chua.payment.support.common.Result;
+import com.chua.payment.support.dto.WalletCancelWithdrawRequest;
 import com.chua.payment.support.entity.WalletOrder;
 import com.chua.payment.support.entity.WalletWithdrawApproval;
 import com.chua.payment.support.service.WalletAccountService;
@@ -109,8 +110,9 @@ public class WalletWithdrawApprovalController {
         WalletWithdrawApproval approval = walletWithdrawApprovalService.getById(id);
 
         // 解冻余额（frozen → available）
-        walletAccountService.cancelWithdraw(approval.getMerchantId(), approval.getUserId(),
-                approval.getWithdrawNo(), approval.getAmount(), reason);
+        walletAccountService.cancelWithdraw(new WalletCancelWithdrawRequest(
+                approval.getMerchantId(), approval.getUserId(),
+                approval.getWithdrawNo(), approval.getAmount(), reason));
 
         // 更新审批状态为已拒绝
         walletWithdrawApprovalService.reject(id, operator, reason);

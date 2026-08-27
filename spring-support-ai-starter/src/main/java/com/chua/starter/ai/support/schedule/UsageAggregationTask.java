@@ -190,12 +190,12 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         }
         SysAiUsage record = new SysAiUsage();
         record.setSysAiUsageGroupName(providerName);
-        record.setSysAiUsageProvider(usage.getSysAiUsageProvider() != null ? usage.getSysAiUsageProvider() : providerName);
-        record.setSysAiUsageModel(usage.getSysAiUsageModel());
+        record.setSysAiUsageProvider(usage.getProvider() != null ? usage.getProvider() : providerName);
+        record.setSysAiUsageModel(usage.getModel());
         record.setSysAiUsageCallType("external");
         record.setSysAiUsagePromptTokens(usage.getInputTokens());
         record.setSysAiUsageCompletionTokens(usage.getOutputTokens());
-        record.setSysAiUsageTotalTokens(usage.getSysAiUsageTotalTokens());
+        record.setSysAiUsageTotalTokens(usage.getTotalTokens());
         record.setSysAiUsageInputCost(usage.getInputCost() != null ? usage.getInputCost().doubleValue() : null);
         record.setSysAiUsageOutputCost(usage.getOutputCost() != null ? usage.getOutputCost().doubleValue() : null);
         record.setSysAiUsageTotalCost(usage.getTotalCost() != null ? usage.getTotalCost().doubleValue() : null);
@@ -220,8 +220,8 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         lastRunTime = end;
 
         LambdaQueryWrapper<SysAiUsage> wrapper = new LambdaQueryWrapper<>();
-        wrapper.ge(SysAiUsage::getCallTime, start)
-                .lt(SysAiUsage::getCallTime, end);
+        wrapper.ge(SysAiUsage::getSysAiUsageCallTime, start)
+                .lt(SysAiUsage::getSysAiUsageCallTime, end);
         List<SysAiUsage> list = usageMapper.selectList(wrapper);
 
         if (list.isEmpty()) {
@@ -243,15 +243,15 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             List<SysAiUsage> items = entry.getValue();
 
             SysAiUsageDaily daily = new SysAiUsageDaily();
-            daily.setSysAiUsageDailyStatDate(statDate);
-            daily.setSysAiUsageGroupName(groupName);
-            daily.setSysAiUsageProvider(provider);
-            daily.setSysAiUsageModel(model);
-            daily.setSysAiUsageDailyTotalCalls(items.size());
-            daily.setSysAiUsageDailyTotalPromptTokens(items.stream().mapToInt(u -> u.getSysAiUsagePromptTokens() != null ? u.getSysAiUsagePromptTokens() : 0).sum());
-            daily.setSysAiUsageDailyTotalCompletionTokens(items.stream().mapToInt(u -> u.getSysAiUsageCompletionTokens() != null ? u.getSysAiUsageCompletionTokens() : 0).sum());
-            daily.setSysAiUsageTotalTokens(items.stream().mapToInt(u -> u.getSysAiUsageTotalTokens() != null ? u.getSysAiUsageTotalTokens() : 0).sum());
-            daily.setSysAiUsageTotalCost(items.stream().mapToDouble(u -> u.getTotalCost() != null ? u.getTotalCost() : 0).sum());
+            daily.setStatDate(statDate);
+            daily.setGroupName(groupName);
+            daily.setProvider(provider);
+            daily.setModel(model);
+            daily.setTotalCalls(items.size());
+            daily.setTotalPromptTokens(items.stream().mapToInt(u -> u.getSysAiUsagePromptTokens() != null ? u.getSysAiUsagePromptTokens() : 0).sum());
+            daily.setTotalCompletionTokens(items.stream().mapToInt(u -> u.getSysAiUsageCompletionTokens() != null ? u.getSysAiUsageCompletionTokens() : 0).sum());
+            daily.setTotalTokens(items.stream().mapToInt(u -> u.getSysAiUsageTotalTokens() != null ? u.getSysAiUsageTotalTokens() : 0).sum());
+            daily.setTotalCost(items.stream().mapToDouble(u -> u.getSysAiUsageTotalCost() != null ? u.getSysAiUsageTotalCost() : 0).sum());
 
             dailyMapper.insert(daily);
             log.debug("[UsageAggregation] 汇总: date={}, group={}, provider={}, model={}, calls={}",

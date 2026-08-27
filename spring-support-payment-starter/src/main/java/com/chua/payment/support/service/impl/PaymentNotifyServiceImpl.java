@@ -1,6 +1,9 @@
 package com.chua.payment.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.payment.support.dto.WechatPayNotifyDTO;
+import com.chua.payment.support.dto.WechatRefundNotifyDTO;
+import com.chua.payment.support.dto.RefundSuccessDTO;
 import com.chua.payment.support.channel.support.AbstractMerchantPaymentChannel;
 import com.chua.payment.support.entity.MerchantChannel;
 import com.chua.payment.support.entity.PaymentOrder;
@@ -32,8 +35,10 @@ import java.math.BigDecimal;
 import java.util.Map;
 
 /**
- * 第三方支付异步通知处理
+ * 第三方支付异步通知处理，负责微信/支付宝等渠道支付与退款回调解析和状态更新。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Slf4j
 @Service
@@ -88,20 +93,13 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
      * @param signType signType
      * @param body body
      */
-    public void handleWechatPayNotify(Long channelId,
-                                      String orderNo,
-                                      String serialNumber,
-                                      String timestamp,
-                                      String nonce,
-                                      String signature,
-                                      String signType,
-                                      String body) {
-        MerchantChannel channel = requireEnabledChannel(channelId, "WECHAT");
+    public void handleWechatPayNotify(WechatPayNotifyDTO dto) {
+        MerchantChannel channel = requireEnabledChannel(dto.channelId(), "WECHAT");
         TencentWechatPayNotifyPayload payload = providerGatewayRegistry.tencentWechatPayGateway(providerSpi(channel, null))
-                .parsePayNotify(buildWechatProperties(channel), buildWechatNotifyRequest(serialNumber, timestamp, nonce, signature, signType, body));
+                .parsePayNotify(buildWechatProperties(channel), buildWechatNotifyRequest(dto.serialNumber(), dto.timestamp(), dto.nonce(), dto.signature(), dto.signType(), dto.body()));
 
-        validateNotifyOrderNo(orderNo, payload.getOrderNo());
-        PaymentOrder order = requireOrder(firstNonBlank(orderNo, payload.getOrderNo()));
+        validateNotifyOrderNo(dto.orderNo(), payload.getOrderNo());
+        PaymentOrder order = requireOrder(firstNonBlank(dto.orderNo(), payload.getOrderNo()));
         validateOrderChannel(order, channel);
         validateWechatIdentity(channel, payload.getAppId(), payload.getMerchantId());
         validateAmount(order.getOrderAmount(), fenToYuan(payload.getTotalAmountFen()), "微信支付通知金额不匹配");
@@ -142,20 +140,13 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
      * @param signType signType
      * @param body body
      */
-    public void handleWechatRefundNotify(Long channelId,
-                                         String refundNo,
-                                         String serialNumber,
-                                         String timestamp,
-                                         String nonce,
-                                         String signature,
-                                         String signType,
-                                         String body) {
-        MerchantChannel channel = requireEnabledChannel(channelId, "WECHAT");
+    public void handleWechatRefundNotify(WechatRefundNotifyDTO dto) {
+        MerchantChannel channel = requireEnabledChannel(dto.channelId(), "WECHAT");
         TencentWechatRefundNotifyPayload payload = providerGatewayRegistry.tencentWechatPayGateway(providerSpi(channel, null))
-                .parseRefundNotify(buildWechatProperties(channel), buildWechatNotifyRequest(serialNumber, timestamp, nonce, signature, signType, body));
+                .parseRefundNotify(buildWechatProperties(channel), buildWechatNotifyRequest(dto.serialNumber(), dto.timestamp(), dto.nonce(), dto.signature(), dto.signType(), dto.body()));
 
-        validateNotifyRefundNo(refundNo, payload.getRefundNo());
-        PaymentRefundOrder refundOrder = resolveRefundOrder(firstNonBlank(refundNo, payload.getRefundNo()), payload.getRefundId(), payload.getOrderNo());
+        validateNotifyRefundNo(dto.refundNo(), payload.getRefundNo());
+        PaymentRefundOrder refundOrder = resolveRefundOrder(firstNonBlank(dto.refundNo(), payload.getRefundNo()), payload.getRefundId(), payload.getOrderNo());
         PaymentOrder order = requireOrder(refundOrder.getOrderNo());
         validateRefundChannel(refundOrder, channel);
         validateOrderChannel(order, channel);
@@ -168,13 +159,13 @@ public class PaymentNotifyServiceImpl extends AbstractMerchantPaymentChannel imp
         }
 
         switch (payload.getRefundStatus()) {
-            case "SUCCESS" -> paymentOrderService.refundSuccess(
+            case "SUCCESS" -> paymentOrderService.refundSuccess(new RefundSuccessDTO(
                     refundOrder.getRefundNo(),
                     refundAmount,
                     firstNonBlank(payload.getRefundId(), refundOrder.getThirdPartyRefundNo()),
                     "wechat-refund-notify",
                     toJson(payload),
-                    "微信退款回调成功");
+                    "微信退款回调成功"));
             case "CLOSED", "ABNORMAL" -> paymentOrderService.refundFail(
                     refundOrder.getRefundNo(),
                     toJson(payload),

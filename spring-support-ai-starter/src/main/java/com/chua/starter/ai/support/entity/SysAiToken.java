@@ -27,27 +27,31 @@ public class SysAiToken {
      */
     @TableId(type = IdType.AUTO)
     /** SYSAI令牌ID */
-    private Integer sysAiTokenId;
+    private Integer id;
 
     /**
      * 令牌名称
      */
-    private String sysAiTokenName;
+    @TableField("sys_ai_token_name")
+    private String name;
 
     /**
      * 令牌密钥（明文）
      */
-    private String sysAiTokenKey;
+    @TableField("sys_ai_token_key")
+    private String key;
 
     /**
      * 令牌密钥前缀（如 sk-）
      */
-    private String sysAiTokenKeyPrefix;
+    @TableField("sys_ai_token_key_prefix")
+    private String keyPrefix;
 
     /**
      * 令牌密钥哈希（用于快速查找）
      */
-    private String sysAiTokenKeyHash;
+    @TableField("sys_ai_token_key_hash")
+    private String keyHash;
 
     /**
      * 归属用户 ID
@@ -62,97 +66,116 @@ public class SysAiToken {
     /**
      * 分组 ID——Token 绑定的分组
      */
-    private Integer sysAiTokenGroupId;
+    @TableField("sys_ai_token_group_id")
+    private Integer groupId;
 
     /**
      * 状态：1 启用，0 禁用
      */
-    private Integer sysAiTokenStatus;
+    @TableField("sys_ai_token_status")
+    private Integer status;
 
     /**
      * 过期时间
      */
-    private LocalDateTime sysAiTokenExpireTime;
+    @TableField("sys_ai_token_expire_time")
+    private LocalDateTime expireTime;
 
     /**
      * 输入费率（每千 token）
      */
-    private BigDecimal sysAiTokenInputFee;
+    @TableField("sys_ai_token_input_fee")
+    private BigDecimal inputFee;
 
     /**
      * 输出费率（每千 token）
      */
-    private BigDecimal sysAiTokenOutputFee;
+    @TableField("sys_ai_token_output_fee")
+    private BigDecimal outputFee;
 
     /**
      * 累计输入费用
      */
-    private BigDecimal sysAiTokenTotalInputFee;
+    @TableField("sys_ai_token_total_input_fee")
+    private BigDecimal totalInputFee;
 
     /**
      * 累计输出费用
      */
-    private BigDecimal sysAiTokenTotalOutputFee;
+    @TableField("sys_ai_token_total_output_fee")
+    private BigDecimal totalOutputFee;
 
     /**
      * 累计总费用
      */
-    private BigDecimal sysAiTokenTotalFee;
+    @TableField("sys_ai_token_total_fee")
+    private BigDecimal totalFee;
 
     /**
      * 累计使用次数
      */
-    private Long sysAiTokenUseCount;
+    @TableField("sys_ai_token_use_count")
+    private Long useCount;
 
     /**
      * 累计使用 token 数
      */
-    private Long sysAiTokenTotalTokens;
+    @TableField("sys_ai_token_total_tokens")
+    private Long totalTokens;
 
     /**
      * 今日费用
      */
-    private BigDecimal sysAiTokenTodayFee;
+    @TableField("sys_ai_token_today_fee")
+    private BigDecimal todayFee;
 
     /**
      * 今日费用统计日期（yyyy-MM-dd）
      */
-    private String sysAiTokenTodayDate;
+    @TableField("sys_ai_token_today_date")
+    private String todayDate;
 
     /**
      * 最后使用时间
      */
-    private LocalDateTime sysAiTokenLastUsedTime;
+    @TableField("sys_ai_token_last_used_time")
+    private LocalDateTime lastUsedTime;
 
     /**
      * 删除标记：0 未删除，1 已删除
      */
-    private Integer sysAiTokenDelete;
+    @TableField("sys_ai_token_delete")
+    private Integer delete;
 
     /**
      * 允许的模型列表（逗号分隔）
      */
-    private String sysAiTokenAllowedModels;
+    @TableField("sys_ai_token_allowed_models")
+    private String allowedModels;
 
     /**
      * 限流：每分钟最大请求数
      */
-    private Integer sysAiTokenRateLimit;
+    @TableField("sys_ai_token_rate_limit")
+    private Integer rateLimit;
 
     /**
      * 限流计数器
      */
-    private Integer sysAiTokenRateCount;
+    @TableField("sys_ai_token_rate_count")
+    private Integer rateCount;
 
     /**
      * 限流窗口开始时间
      */
-    private LocalDateTime sysAiTokenRateWindowStart;
+    @TableField("sys_ai_token_rate_window_start")
+    private LocalDateTime rateWindowStart;
 
     /**
      * 备注
      */
-    private String sysAiTokenRemark;
+    @TableField("sys_ai_token_remark")
+    private String remark;
 
     /**
      * 创建人名称

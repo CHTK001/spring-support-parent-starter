@@ -1,5 +1,6 @@
 package com.chua.payment.support.service.impl;
 
+import com.chua.payment.support.dto.FinishNotifyLogDTO;
 import com.chua.payment.support.entity.PaymentNotifyLog;
 import com.chua.payment.support.mapper.PaymentNotifyLogMapper;
 import com.chua.payment.support.mapper.MerchantChannelMapper;
@@ -13,8 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 /**
- * 支付回调日志服务实现
+ * 支付回调日志服务实现，记录各渠道异步通知的请求与响应详情。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor
@@ -69,32 +72,25 @@ public class PaymentNotifyLogServiceImpl implements PaymentNotifyLogService {
      * @param relatedOrderId relatedOrderId
      * @param relatedRefundId relatedRefundId
      */
-    public void finish(Long logId,
-                       Integer signVerified,
-                       String channelType,
-                       String channelSubType,
-                       String processStatus,
-                       String processResult,
-                       Long relatedOrderId,
-                       Long relatedRefundId) {
-        if (logId == null) {
+    public void finish(FinishNotifyLogDTO dto) {
+        if (dto.logId() == null) {
             return;
         }
-        PaymentNotifyLog entity = paymentNotifyLogMapper.selectById(logId);
+        PaymentNotifyLog entity = paymentNotifyLogMapper.selectById(dto.logId());
         if (entity == null) {
             return;
         }
-        entity.setSignVerified(signVerified != null ? signVerified : entity.getSignVerified());
-        if (channelType != null) {
-            entity.setChannelType(channelType);
+        entity.setSignVerified(dto.signVerified() != null ? dto.signVerified() : entity.getSignVerified());
+        if (dto.channelType() != null) {
+            entity.setChannelType(dto.channelType());
         }
-        if (channelSubType != null) {
-            entity.setChannelSubType(channelSubType);
+        if (dto.channelSubType() != null) {
+            entity.setChannelSubType(dto.channelSubType());
         }
-        entity.setProcessStatus(processStatus);
-        entity.setProcessResult(processResult);
-        entity.setRelatedOrderId(relatedOrderId);
-        entity.setRelatedRefundId(relatedRefundId);
+        entity.setProcessStatus(dto.processStatus());
+        entity.setProcessResult(dto.processResult());
+        entity.setRelatedOrderId(dto.relatedOrderId());
+        entity.setRelatedRefundId(dto.relatedRefundId());
         entity.setProcessedTime(LocalDateTime.now());
         paymentNotifyLogMapper.updateById(entity);
     }

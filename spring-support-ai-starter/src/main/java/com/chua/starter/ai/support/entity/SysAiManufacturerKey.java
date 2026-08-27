@@ -26,7 +26,7 @@ public class SysAiManufacturerKey {
      */
     @TableId(value = "sys_ai_manufacturer_key_id", type = IdType.AUTO)
     /** SYSAImanufacturer密钥ID */
-    private Long sysAiManufacturerKeyId;
+    private Long id;
 
     /**
      * 厂商编码（关联 sys_ai_manufacturer.sys_ai_manufacturer_code）
@@ -46,43 +46,37 @@ public class SysAiManufacturerKey {
      * API Key
      */
     @TableField("sys_ai_manufacturer_key_value")
-    /** SYSAImanufacturer密钥值 */
-    private String sysAiManufacturerKeyValue;
+    private String value;
 
     /**
      * API Secret
      */
     @TableField("sys_ai_manufacturer_key_secret")
-    /** SYSAImanufacturer密钥secret */
-    private String sysAiManufacturerKeySecret;
+    private String secret;
 
     /**
      * 状态：1 启用，0 停用，-1 禁用
      */
     @TableField("sys_ai_manufacturer_key_status")
-    /** SYSAImanufacturer密钥状态 */
-    private Integer sysAiManufacturerKeyStatus;
+    private Integer status;
 
     /**
      * 权重（用于多 Key 轮询）
      */
     @TableField("sys_ai_manufacturer_key_weight")
-    /** SYSAImanufacturer密钥权重 */
-    private Integer sysAiManufacturerKeyWeight;
+    private Integer weight;
 
     /**
      * 限流标记时间戳（毫秒）
      */
     @TableField("sys_ai_manufacturer_key_rate_limited_at")
-    /** SYSAImanufacturer密钥比率limitedAT */
-    private Long sysAiManufacturerKeyRateLimitedAt;
+    private Long rateLimitedAt;
 
     /**
      * 备注
      */
     @TableField("sys_ai_manufacturer_key_remark")
-    /** SYSAImanufacturer密钥remark */
-    private String sysAiManufacturerKeyRemark;
+    private String remark;
 
     /**
      * 创建人名称

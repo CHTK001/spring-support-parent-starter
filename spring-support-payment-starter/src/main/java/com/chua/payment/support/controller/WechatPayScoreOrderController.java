@@ -6,6 +6,7 @@ import com.chua.payment.support.common.Result;
 import com.chua.payment.support.dto.WechatPayScoreCancelDTO;
 import com.chua.payment.support.dto.WechatPayScoreCompleteDTO;
 import com.chua.payment.support.dto.WechatPayScoreCreateDTO;
+import com.chua.payment.support.dto.WechatPayScoreOrderQueryRequest;
 import com.chua.payment.support.entity.WechatPayScoreOrder;
 import com.chua.payment.support.service.WechatPayScoreOrderService;
 import com.chua.payment.support.vo.WechatPayScoreOrderVO;
@@ -58,7 +59,7 @@ public class WechatPayScoreOrderController {
                                                           @RequestParam(required = false) Long channelId,
                                                           @RequestParam(required = false) String openId,
                                                           @RequestParam(required = false) String state) {
-        Page<WechatPayScoreOrder> page = wechatPayScoreOrderService.page(pageNum, pageSize, merchantId, channelId, openId, state);
+        Page<WechatPayScoreOrder> page = wechatPayScoreOrderService.page(new WechatPayScoreOrderQueryRequest(pageNum, pageSize, merchantId, channelId, openId, state));
         Page<WechatPayScoreOrderVO> voPage = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         voPage.setRecords(page.getRecords().stream().map(this::convert).toList());
         return Result.success(PageResult.of(voPage));

@@ -3,6 +3,8 @@ package com.chua.payment.support.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.payment.support.common.PageResult;
+import com.chua.payment.support.dto.PageNotifyErrorsRequest;
+import com.chua.payment.support.dto.PageNotifyLogsRequest;
 import com.chua.payment.support.dto.PaymentSchedulerTaskUpdateDTO;
 import com.chua.payment.support.entity.PaymentNotifyError;
 import com.chua.payment.support.entity.PaymentNotifyLog;
@@ -120,22 +122,23 @@ public class PaymentOpsController {
                                                        @RequestParam(required = false) String processStatus,
                                                        @RequestParam(required = false) String orderNo,
                                                        @RequestParam(required = false) String refundNo) {
+        PageNotifyLogsRequest request = new PageNotifyLogsRequest(pageNum, pageSize, notifyType, processStatus, orderNo, refundNo);
         LambdaQueryWrapper<PaymentNotifyLog> wrapper = new LambdaQueryWrapper<PaymentNotifyLog>()
                 .orderByDesc(PaymentNotifyLog::getReceivedTime)
                 .orderByDesc(PaymentNotifyLog::getId);
-        if (StringUtils.hasText(notifyType)) {
-            wrapper.eq(PaymentNotifyLog::getNotifyType, notifyType);
+        if (StringUtils.hasText(request.notifyType())) {
+            wrapper.eq(PaymentNotifyLog::getNotifyType, request.notifyType());
         }
-        if (StringUtils.hasText(processStatus)) {
-            wrapper.eq(PaymentNotifyLog::getProcessStatus, processStatus);
+        if (StringUtils.hasText(request.processStatus())) {
+            wrapper.eq(PaymentNotifyLog::getProcessStatus, request.processStatus());
         }
-        if (StringUtils.hasText(orderNo)) {
-            wrapper.eq(PaymentNotifyLog::getOrderNo, orderNo);
+        if (StringUtils.hasText(request.orderNo())) {
+            wrapper.eq(PaymentNotifyLog::getOrderNo, request.orderNo());
         }
-        if (StringUtils.hasText(refundNo)) {
-            wrapper.eq(PaymentNotifyLog::getRefundNo, refundNo);
+        if (StringUtils.hasText(request.refundNo())) {
+            wrapper.eq(PaymentNotifyLog::getRefundNo, request.refundNo());
         }
-        Page<PaymentNotifyLog> page = paymentNotifyLogMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
+        Page<PaymentNotifyLog> page = paymentNotifyLogMapper.selectPage(new Page<>(request.pageNum(), request.pageSize()), wrapper);
         return PageResult.of(page);
     }
 
@@ -147,22 +150,23 @@ public class PaymentOpsController {
                                                            @RequestParam(required = false) String status,
                                                            @RequestParam(required = false) String orderNo,
                                                            @RequestParam(required = false) String refundNo) {
+        PageNotifyErrorsRequest request = new PageNotifyErrorsRequest(pageNum, pageSize, notifyType, status, orderNo, refundNo);
         LambdaQueryWrapper<PaymentNotifyError> wrapper = new LambdaQueryWrapper<PaymentNotifyError>()
                 .orderByDesc(PaymentNotifyError::getCreateTime)
                 .orderByDesc(PaymentNotifyError::getId);
-        if (StringUtils.hasText(notifyType)) {
-            wrapper.eq(PaymentNotifyError::getNotifyType, notifyType);
+        if (StringUtils.hasText(request.notifyType())) {
+            wrapper.eq(PaymentNotifyError::getNotifyType, request.notifyType());
         }
-        if (StringUtils.hasText(status)) {
-            wrapper.eq(PaymentNotifyError::getStatus, status);
+        if (StringUtils.hasText(request.status())) {
+            wrapper.eq(PaymentNotifyError::getStatus, request.status());
         }
-        if (StringUtils.hasText(orderNo)) {
-            wrapper.eq(PaymentNotifyError::getOrderNo, orderNo);
+        if (StringUtils.hasText(request.orderNo())) {
+            wrapper.eq(PaymentNotifyError::getOrderNo, request.orderNo());
         }
-        if (StringUtils.hasText(refundNo)) {
-            wrapper.eq(PaymentNotifyError::getRefundNo, refundNo);
+        if (StringUtils.hasText(request.refundNo())) {
+            wrapper.eq(PaymentNotifyError::getRefundNo, request.refundNo());
         }
-        Page<PaymentNotifyError> page = paymentNotifyErrorMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
+        Page<PaymentNotifyError> page = paymentNotifyErrorMapper.selectPage(new Page<>(request.pageNum(), request.pageSize()), wrapper);
         return PageResult.of(page);
     }
 

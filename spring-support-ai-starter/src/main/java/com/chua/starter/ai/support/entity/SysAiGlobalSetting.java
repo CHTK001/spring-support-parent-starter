@@ -26,56 +26,49 @@ public class SysAiGlobalSetting {
      */
     @TableId(type = IdType.AUTO)
     /** SYSAI全局设置ID */
-    private Long sysAiGlobalSettingId;
+    private Long id;
 
     /**
      * 设置分组（如 global / runtime / rag）
      */
     @TableField("sys_ai_global_setting_group")
-    /** SYSAI全局设置分组 */
-    private String sysAiGlobalSettingGroup;
+    private String group;
 
     /**
      * 字段名
      */
     @TableField("sys_ai_global_setting_field")
-    /** SYSAI全局设置field */
-    private String sysAiGlobalSettingField;
+    private String field;
 
     /**
      * 字段值
      */
     @TableField("sys_ai_global_setting_value")
-    /** SYSAI全局设置值 */
-    private String sysAiGlobalSettingValue;
+    private String value;
 
     /**
      * 值类型（STRING / NUMBER / BOOLEAN）
      */
     @TableField("sys_ai_global_setting_value_type")
-    /** SYSAI全局设置值类型 */
-    private String sysAiGlobalSettingValueType;
+    private String valueType;
 
     /**
      * 字段描述
      */
     @TableField("sys_ai_global_setting_description")
-    /** SYSAI全局设置描述 */
-    private String sysAiGlobalSettingDescription;
+    private String description;
 
     /**
      * 排序值
      */
     @TableField("sys_ai_global_setting_sort")
-    /** SYSAI全局设置sort */
-    private Integer sysAiGlobalSettingSort;
+    private Integer sort;
 
     /**
      * 状态：1 启用，0 停用
      */
     @TableField("sys_ai_global_setting_status")
-    /** SYSAI全局设置状态 */
-    private Integer sysAiGlobalSettingStatus;
+    private Integer status;
 
     /**
      * 创建时间

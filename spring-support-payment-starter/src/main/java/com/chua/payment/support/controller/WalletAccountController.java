@@ -3,6 +3,7 @@ package com.chua.payment.support.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.payment.support.common.PageResult;
 import com.chua.payment.support.common.Result;
+import com.chua.payment.support.dto.WalletLogQueryRequest;
 import com.chua.payment.support.dto.WalletRechargeDTO;
 import com.chua.payment.support.entity.WalletAccountLog;
 import com.chua.payment.support.service.WalletAccountService;
@@ -45,14 +46,14 @@ public class WalletAccountController {
     }
 
     @GetMapping("/account/log/page")
-    /** PageLogs */
     public Result<PageResult<WalletAccountLog>> pageLogs(@RequestParam(defaultValue = "1") int pageNum,
-                                                         @RequestParam(defaultValue = "10") int pageSize,
-                                                         @RequestParam(required = false) Long merchantId,
-                                                         @RequestParam(required = false) Long userId,
-                                                         @RequestParam(required = false) String bizType,
-                                                         @RequestParam(required = false) String bizNo) {
-        Page<WalletAccountLog> page = walletAccountService.pageLogs(pageNum, pageSize, merchantId, userId, bizType, bizNo, null, null);
+                                                          @RequestParam(defaultValue = "10") int pageSize,
+                                                          @RequestParam(required = false) Long merchantId,
+                                                          @RequestParam(required = false) Long userId,
+                                                          @RequestParam(required = false) String bizType,
+                                                          @RequestParam(required = false) String bizNo) {
+        WalletLogQueryRequest request = new WalletLogQueryRequest(pageNum, pageSize, merchantId, userId, bizType, bizNo, null, null);
+        Page<WalletAccountLog> page = walletAccountService.pageLogs(request);
         return Result.success(PageResult.of(page));
     }
 }

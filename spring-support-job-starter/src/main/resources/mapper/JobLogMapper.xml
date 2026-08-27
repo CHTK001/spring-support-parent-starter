@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.job.support.store.JobLogMapper">
+
+    <!--
+        批量删除指定时间之前的日志记录。
+        用于日志清理，防止日志表数据无限增长。
+    -->
+    <delete id="deleteByTriggerTimeBefore">
+        DELETE FROM sys_job_log
+        WHERE sys_job_log_trigger_time &lt;= #{beforeTime}
+    </delete>
+
+</mapper>

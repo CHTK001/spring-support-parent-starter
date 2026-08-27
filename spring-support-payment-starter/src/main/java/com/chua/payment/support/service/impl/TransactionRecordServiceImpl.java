@@ -2,6 +2,7 @@ package com.chua.payment.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.payment.support.dto.TransactionRecordQueryRequest;
 import com.chua.payment.support.entity.TransactionRecord;
 import com.chua.payment.support.mapper.TransactionRecordMapper;
 import com.chua.payment.support.service.TransactionRecordService;
@@ -10,8 +11,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 /**
- * 交易流水服务实现
+ * 交易流水服务实现，提供支付、退款、充值、转账等交易记录的分页查询。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor
@@ -34,33 +37,33 @@ public class TransactionRecordServiceImpl implements TransactionRecordService {
     }
 
     @Override
-    /** ListByOrderNo */
     public Page<TransactionRecord> listByOrderNo(String orderNo, int pageNum, int pageSize) {
-        return page(pageNum, pageSize, null, orderNo, null, null);
+        return page(new TransactionRecordQueryRequest(pageNum, pageSize, null, orderNo, null, null));
     }
 
     @Override
-    /** ListByMerchantId */
     public Page<TransactionRecord> listByMerchantId(Long merchantId, int pageNum, int pageSize) {
-        return page(pageNum, pageSize, merchantId, null, null, null);
+        return page(new TransactionRecordQueryRequest(pageNum, pageSize, merchantId, null, null, null));
     }
 
     @Override
-    /** Page */
-    public Page<TransactionRecord> page(int pageNum, int pageSize, Long merchantId, String orderNo, String transactionType, Integer status) {
-        Page<TransactionRecord> page = new Page<>(pageNum, pageSize);
+    public Page<TransactionRecord> page(TransactionRecordQueryRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("查询参数不能为空");
+        }
+        Page<TransactionRecord> page = new Page<>(request.pageNum(), request.pageSize());
         LambdaQueryWrapper<TransactionRecord> wrapper = new LambdaQueryWrapper<>();
-        if (merchantId != null) {
-            wrapper.eq(TransactionRecord::getMerchantId, merchantId);
+        if (request.merchantId() != null) {
+            wrapper.eq(TransactionRecord::getMerchantId, request.merchantId());
         }
-        if (StringUtils.hasText(orderNo)) {
-            wrapper.eq(TransactionRecord::getOrderNo, orderNo);
+        if (StringUtils.hasText(request.orderNo())) {
+            wrapper.eq(TransactionRecord::getOrderNo, request.orderNo());
         }
-        if (StringUtils.hasText(transactionType)) {
-            wrapper.eq(TransactionRecord::getTransactionType, transactionType);
+        if (StringUtils.hasText(request.transactionType())) {
+            wrapper.eq(TransactionRecord::getTransactionType, request.transactionType());
         }
-        if (status != null) {
-            wrapper.eq(TransactionRecord::getStatus, status);
+        if (request.status() != null) {
+            wrapper.eq(TransactionRecord::getStatus, request.status());
         }
         wrapper.orderByDesc(TransactionRecord::getCreatedAt);
         return transactionRecordMapper.selectPage(page, wrapper);

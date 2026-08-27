@@ -52,8 +52,8 @@ public class AiManufacturerKeyController {
             return;
         }
         for (SysAiManufacturerKey key : list) {
-            key.setSysAiManufacturerKeyValue(mask(key.getSysAiManufacturerKeyValue()));
-            key.setSysAiManufacturerKeySecret(mask(key.getSysAiManufacturerKeySecret()));
+            key.setValue(mask(key.getValue()));
+            key.setSecret(mask(key.getSecret()));
         }
     }
 

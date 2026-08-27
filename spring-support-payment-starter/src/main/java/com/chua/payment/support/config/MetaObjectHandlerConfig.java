@@ -8,10 +8,10 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 
 /**
- * MyBatis Plus 字段自动填充配置
+ * MyBatis Plus 字段自动填充配置，自动维护 createdAt/updatedAt 时间戳。
  *
- * @since 2026-03-18
  * @author CH
+ * @since 4.0.0.50
  */
 @Component
 @ConditionalOnMissingBean(MetaObjectHandler.class)

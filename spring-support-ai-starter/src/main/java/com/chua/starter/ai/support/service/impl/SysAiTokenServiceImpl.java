@@ -49,8 +49,8 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     public List<SysAiToken> list() {
         return sysAiTokenMapper.selectList(
                 Wrappers.lambdaQuery(SysAiToken.class)
-                        .eq(SysAiToken::getSysAiTokenDelete, 0)
-                        .orderByDesc(SysAiToken::getSysAiTokenId)
+                        .eq(SysAiToken::getDelete, 0)
+                        .orderByDesc(SysAiToken::getId)
         );
     }
 
@@ -62,32 +62,32 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
         }
         return sysAiTokenMapper.selectList(
                 Wrappers.lambdaQuery(SysAiToken.class)
-                        .eq(SysAiToken::getSysAiTokenGroupId, groupId)
-                        .eq(SysAiToken::getSysAiTokenDelete, 0)
-                        .orderByDesc(SysAiToken::getSysAiTokenId)
+                        .eq(SysAiToken::getGroupId, groupId)
+                        .eq(SysAiToken::getDelete, 0)
+                        .orderByDesc(SysAiToken::getId)
         );
     }
 
     @Override
     /** 保存 */
     public SysAiToken save(SysAiToken token) {
-        if (StringUtils.isBlank(token.getSysAiTokenKey())) {
+        if (StringUtils.isBlank(token.getKey())) {
             String rawKey = KeyGenerator.generateKey();
-            token.setSysAiTokenKey(rawKey);
-            token.setSysAiTokenKeyPrefix("sk-");
-            token.setSysAiTokenKeyHash(sha256(rawKey));
+            token.setKey(rawKey);
+            token.setKeyPrefix("sk-");
+            token.setKeyHash(sha256(rawKey));
         }
-        if (token.getSysAiTokenStatus() == null) {
-            token.setSysAiTokenStatus(1);
+        if (token.getStatus() == null) {
+            token.setStatus(1);
         }
-        if (token.getSysAiTokenDelete() == null) {
-            token.setSysAiTokenDelete(0);
+        if (token.getDelete() == null) {
+            token.setDelete(0);
         }
-        if (token.getSysAiTokenUseCount() == null) {
-            token.setSysAiTokenUseCount(0L);
+        if (token.getUseCount() == null) {
+            token.setUseCount(0L);
         }
-        if (token.getSysAiTokenTotalFee() == null) {
-            token.setSysAiTokenTotalFee(BigDecimal.ZERO);
+        if (token.getTotalFee() == null) {
+            token.setTotalFee(BigDecimal.ZERO);
         }
         sysAiTokenMapper.insert(token);
         return token;
@@ -108,8 +108,8 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
             return false;
         }
         SysAiToken entity = new SysAiToken();
-        entity.setSysAiTokenId(tokenId);
-        entity.setSysAiTokenDelete(1);
+        entity.setId(tokenId);
+        entity.setDelete(1);
         return sysAiTokenMapper.updateById(entity) > 0;
     }
 
@@ -122,8 +122,8 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
         String hash = sha256(tokenKey);
         return sysAiTokenMapper.selectOne(
                 Wrappers.lambdaQuery(SysAiToken.class)
-                        .eq(SysAiToken::getSysAiTokenKeyHash, hash)
-                        .eq(SysAiToken::getSysAiTokenDelete, 0)
+                        .eq(SysAiToken::getKeyHash, hash)
+                        .eq(SysAiToken::getDelete, 0)
                         .last("LIMIT 1")
         );
     }
@@ -136,16 +136,16 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
             return null;
         }
         // 状态检查
-        if (!Integer.valueOf(STATUS_ENABLED).equals(token.getSysAiTokenStatus())) {
+        if (!Integer.valueOf(STATUS_ENABLED).equals(token.getStatus())) {
             return null;
         }
         // 过期检查
-        if (token.getSysAiTokenExpireTime() != null
-                && LocalDateTime.now().isAfter(token.getSysAiTokenExpireTime())) {
+        if (token.getExpireTime() != null
+                && LocalDateTime.now().isAfter(token.getExpireTime())) {
             return null;
         }
         // 分组检查——Token 只能访问其绑定的分组
-        if (groupId != null && !groupId.equals(token.getSysAiTokenGroupId())) {
+        if (groupId != null && !groupId.equals(token.getGroupId())) {
             return null;
         }
         return token;
@@ -155,7 +155,7 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     /** 获取分组IdByTokenKey */
     public Integer getGroupIdByTokenKey(String tokenKey) {
         SysAiToken token = findByTokenKey(tokenKey);
-        return token != null ? token.getSysAiTokenGroupId() : null;
+        return token != null ? token.getGroupId() : null;
     }
 
     @Override
@@ -168,35 +168,35 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
         }
         // 累加使用次数和 token 数
         SysAiToken update = new SysAiToken();
-        update.setSysAiTokenId(token.getSysAiTokenId());
-        update.setSysAiTokenUseCount(
-                (token.getSysAiTokenUseCount() == null ? 0 : token.getSysAiTokenUseCount()) + 1
+        update.setId(token.getId());
+        update.setUseCount(
+                (token.getUseCount() == null ? 0 : token.getUseCount()) + 1
         );
-        update.setSysAiTokenTotalTokens(
-                (token.getSysAiTokenTotalTokens() == null ? 0 : token.getSysAiTokenTotalTokens())
+        update.setSysAiUsageTotalTokens(
+                (token.getSysAiUsageTotalTokens() == null ? 0 : token.getSysAiUsageTotalTokens())
                         + promptTokens + completionTokens
         );
-        update.setSysAiTokenLastUsedTime(LocalDateTime.now());
+        update.setLastUsedTime(LocalDateTime.now());
         // 费用累加
         if (cost != null) {
-            BigDecimal currentInputFee = token.getSysAiTokenTotalInputFee() == null
-                    ? BigDecimal.ZERO : token.getSysAiTokenTotalInputFee();
-            BigDecimal currentOutputFee = token.getSysAiTokenTotalOutputFee() == null
-                    ? BigDecimal.ZERO : token.getSysAiTokenTotalOutputFee();
-            BigDecimal currentTotal = token.getSysAiTokenTotalFee() == null
-                    ? BigDecimal.ZERO : token.getSysAiTokenTotalFee();
-            update.setSysAiTokenTotalInputFee(currentInputFee.add(cost));
-            update.setSysAiTokenTotalOutputFee(currentOutputFee.add(cost));
-            update.setSysAiTokenTotalFee(currentTotal.add(cost));
+            BigDecimal currentInputFee = token.getTotalInputFee() == null
+                    ? BigDecimal.ZERO : token.getTotalInputFee();
+            BigDecimal currentOutputFee = token.getTotalOutputFee() == null
+                    ? BigDecimal.ZERO : token.getTotalOutputFee();
+            BigDecimal currentTotal = token.getTotalFee() == null
+                    ? BigDecimal.ZERO : token.getTotalFee();
+            update.setTotalInputFee(currentInputFee.add(cost));
+            update.setTotalOutputFee(currentOutputFee.add(cost));
+            update.setTotalFee(currentTotal.add(cost));
             // 今日费用
             String today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
-            if (!today.equals(token.getSysAiTokenTodayDate())) {
-                update.setSysAiTokenTodayFee(cost);
-                update.setSysAiTokenTodayDate(today);
+            if (!today.equals(token.getTodayDate())) {
+                update.setTodayFee(cost);
+                update.setTodayDate(today);
             } else {
-                BigDecimal todayFee = token.getSysAiTokenTodayFee() == null
-                        ? BigDecimal.ZERO : token.getSysAiTokenTodayFee();
-                update.setSysAiTokenTodayFee(todayFee.add(cost));
+                BigDecimal todayFee = token.getTodayFee() == null
+                        ? BigDecimal.ZERO : token.getTodayFee();
+                update.setTodayFee(todayFee.add(cost));
             }
         }
         sysAiTokenMapper.updateById(update);
@@ -209,29 +209,29 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
         if (token == null) {
             return false;
         }
-        Integer rateLimit = token.getSysAiTokenRateLimit();
+        Integer rateLimit = token.getRateLimit();
         if (rateLimit == null || rateLimit <= 0) {
             // 无限流
             return true;
         }
-        Integer rateCount = token.getSysAiTokenRateCount() == null ? 0 : token.getSysAiTokenRateCount();
-        LocalDateTime windowStart = token.getSysAiTokenRateWindowStart();
+        Integer rateCount = token.getRateCount() == null ? 0 : token.getRateCount();
+        LocalDateTime windowStart = token.getRateWindowStart();
         LocalDateTime now = LocalDateTime.now();
         // 检查是否在新窗口
         if (windowStart == null || windowStart.plusMinutes(1).isBefore(now)) {
             // 新窗口：重置计数器
             SysAiToken update = new SysAiToken();
-            update.setSysAiTokenId(token.getSysAiTokenId());
-            update.setSysAiTokenRateCount(1);
-            update.setSysAiTokenRateWindowStart(now);
+            update.setId(token.getId());
+            update.setRateCount(1);
+            update.setRateWindowStart(now);
             sysAiTokenMapper.updateById(update);
             return true;
         }
         if (rateCount < rateLimit) {
             // 窗口内未触发限流
             SysAiToken update = new SysAiToken();
-            update.setSysAiTokenId(token.getSysAiTokenId());
-            update.setSysAiTokenRateCount(rateCount + 1);
+            update.setId(token.getId());
+            update.setRateCount(rateCount + 1);
             sysAiTokenMapper.updateById(update);
             return true;
         }
@@ -252,8 +252,8 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
         }
         // 遍历启用 Token，直接使用已加载的实体检查限流，避免逐条再查库
         for (SysAiToken token : tokens) {
-            if (token.getSysAiTokenStatus() != null && token.getSysAiTokenStatus() == 1
-                    && token.getSysAiTokenKey() != null
+            if (token.getStatus() != null && token.getStatus() == 1
+                    && token.getKey() != null
                     && !checkRateLimit(token)) {
                 log.warn("[SysAiToken] 分组 {} 触达限流，拒绝请求", groupId);
                 return false;
@@ -272,25 +272,25 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
      * @return true 表示未触发限流，可以继续请求
      */
     private boolean checkRateLimit(SysAiToken token) {
-        Integer rateLimit = token.getSysAiTokenRateLimit();
+        Integer rateLimit = token.getRateLimit();
         if (rateLimit == null || rateLimit <= 0) {
             // 未配置限流，放行
             return true;
         }
-        Integer rateCount = token.getSysAiTokenRateCount() == null ? 0 : token.getSysAiTokenRateCount();
-        LocalDateTime windowStart = token.getSysAiTokenRateWindowStart();
+        Integer rateCount = token.getRateCount() == null ? 0 : token.getRateCount();
+        LocalDateTime windowStart = token.getRateWindowStart();
         LocalDateTime now = LocalDateTime.now();
         // 检查是否进入新的 1 分钟窗口
         if (windowStart == null || windowStart.plusMinutes(1).isBefore(now)) {
             // 新窗口：重置计数器为 1（本次请求）
-            token.setSysAiTokenRateCount(1);
-            token.setSysAiTokenRateWindowStart(now);
+            token.setRateCount(1);
+            token.setRateWindowStart(now);
             persistRateLimit(token);
             return true;
         }
         if (rateCount < rateLimit) {
             // 窗口内未超限，递增计数
-            token.setSysAiTokenRateCount(rateCount + 1);
+            token.setRateCount(rateCount + 1);
             persistRateLimit(token);
             return true;
         }
@@ -310,9 +310,9 @@ public class SysAiTokenServiceImpl implements SysAiTokenService {
     private void persistRateLimit(SysAiToken token) {
         try {
             SysAiToken update = new SysAiToken();
-            update.setSysAiTokenId(token.getSysAiTokenId());
-            update.setSysAiTokenRateCount(token.getSysAiTokenRateCount());
-            update.setSysAiTokenRateWindowStart(token.getSysAiTokenRateWindowStart());
+            update.setId(token.getId());
+            update.setRateCount(token.getRateCount());
+            update.setRateWindowStart(token.getRateWindowStart());
             sysAiTokenMapper.updateById(update);
         } catch (Exception e) {
             log.warn("[SysAiToken] 持久化限流计数失败: {}", e.getMessage());

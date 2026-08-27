@@ -42,7 +42,10 @@ public class SoftSoftwareController {
     @GetMapping("/page")
     @Permission(role = {AuthConstant.ADMIN, AuthConstant.SUPER_ADMIN})
     /** Page */
-    public ReturnPageResult<SoftSoftware> page(@ParameterObject Query<SoftSoftware> query, @ParameterObject SoftwarePageRequest request, @Parameter(hidden = true) @RequestHeader(value = "x-user-roles", required = false) Set<String> roles) {
+    public ReturnPageResult<SoftSoftware> page(
+            @ParameterObject Query<SoftSoftware> query,
+            @ParameterObject SoftwarePageRequest request,
+            @Parameter(hidden = true) @RequestHeader(value = "x-user-roles", required = false) Set<String> roles) {
         return PageResultUtils.ok(softSoftwareService.pageFor(query, request, request.getInstalledSoftwareIds()));
     }
 

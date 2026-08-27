@@ -2,6 +2,8 @@ package com.chua.payment.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.payment.support.dto.UserOrderQueryRequest;
+import com.chua.payment.support.dto.UserTransactionQueryRequest;
 import com.chua.payment.support.entity.Merchant;
 import com.chua.payment.support.entity.MerchantChannel;
 import com.chua.payment.support.entity.OrderStateLog;
@@ -23,7 +25,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
-/** @author CH */
+/**
+ * 账户支付查询服务实现，提供用户维度的订单、交易流水、状态日志查询。
+ *
+ * @author CH
+ * @since 4.0.0.50
+ */
 
 @Service
 @RequiredArgsConstructor
@@ -41,10 +48,12 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
     private final MerchantChannelMapper merchantChannelMapper;
 
     @Override
-    /** ListOrdersByUser */
-    public Page<OrderVO> listOrdersByUser(Long userId, int page, int size, String orderNo, String status) {
-        Page<PaymentOrder> source = paymentOrderMapper.selectPage(new Page<>(page, size), baseOrderWrapper(userId, orderNo, status));
-        Page<OrderVO> result = new Page<>(page, size, source.getTotal());
+    public Page<OrderVO> listOrdersByUser(UserOrderQueryRequest request) {
+        if (request == null) {
+            throw new PaymentException("查询参数不能为空");
+        }
+        Page<PaymentOrder> source = paymentOrderMapper.selectPage(new Page<>(request.page(), request.size()), baseOrderWrapper(request.userId(), request.orderNo(), request.status()));
+        Page<OrderVO> result = new Page<>(request.page(), request.size(), source.getTotal());
         result.setRecords(source.getRecords().stream().map(this::toOrderVO).toList());
         return result;
     }
@@ -63,21 +72,23 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
     }
 
     @Override
-    /** ListTransactionsByUser */
-    public Page<TransactionRecord> listTransactionsByUser(Long userId, int pageNum, int pageSize, String orderNo, String transactionType, Integer status) {
+    public Page<TransactionRecord> listTransactionsByUser(UserTransactionQueryRequest request) {
+        if (request == null) {
+            throw new PaymentException("查询参数不能为空");
+        }
         LambdaQueryWrapper<TransactionRecord> wrapper = new LambdaQueryWrapper<>();
-        wrapper.inSql(TransactionRecord::getOrderId, "select pay_order_id from pay_order where pay_order_user_id = " + userId + " and (pay_order_deleted is null or pay_order_deleted = 0)");
-        if (StringUtils.hasText(orderNo)) {
-            wrapper.eq(TransactionRecord::getOrderNo, orderNo.trim());
+        wrapper.inSql(TransactionRecord::getOrderId, "select pay_order_id from pay_order where pay_order_user_id = " + request.userId() + " and (pay_order_deleted is null or pay_order_deleted = 0)");
+        if (StringUtils.hasText(request.orderNo())) {
+            wrapper.eq(TransactionRecord::getOrderNo, request.orderNo().trim());
         }
-        if (StringUtils.hasText(transactionType)) {
-            wrapper.eq(TransactionRecord::getTransactionType, transactionType.trim());
+        if (StringUtils.hasText(request.transactionType())) {
+            wrapper.eq(TransactionRecord::getTransactionType, request.transactionType().trim());
         }
-        if (status != null) {
-            wrapper.eq(TransactionRecord::getStatus, status);
+        if (request.status() != null) {
+            wrapper.eq(TransactionRecord::getStatus, request.status());
         }
         wrapper.orderByDesc(TransactionRecord::getCreatedAt);
-        return transactionRecordMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
+        return transactionRecordMapper.selectPage(new Page<>(request.pageNum(), request.pageSize()), wrapper);
     }
 
     /** BaseOrderWrapper */

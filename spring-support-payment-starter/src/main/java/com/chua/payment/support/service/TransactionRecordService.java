@@ -1,11 +1,14 @@
 package com.chua.payment.support.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.payment.support.dto.TransactionRecordQueryRequest;
 import com.chua.payment.support.entity.TransactionRecord;
 
 /**
- * 交易流水服务接口
+ * 交易流水服务接口，定义流水记录的创建与分页查询契约。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 public interface TransactionRecordService {
 
@@ -17,6 +20,6 @@ public interface TransactionRecordService {
 
     Page<TransactionRecord> listByMerchantId(Long merchantId, int pageNum, int pageSize);
 
-    Page<TransactionRecord> page(int pageNum, int pageSize, Long merchantId, String orderNo, String transactionType, Integer status);
+    Page<TransactionRecord> page(TransactionRecordQueryRequest request);
 }
 

@@ -9,8 +9,12 @@ import com.chua.payment.support.channel.PaymentRequest;
 import com.chua.payment.support.channel.PaymentResult;
 import com.chua.payment.support.channel.RefundRequest;
 import com.chua.payment.support.channel.RefundResult;
+import com.chua.payment.support.dto.CreateRefundOrderDTO;
+import com.chua.payment.support.dto.MarkRefundedDTO;
 import com.chua.payment.support.dto.OrderCreateDTO;
 import com.chua.payment.support.dto.OrderPayDTO;
+import com.chua.payment.support.dto.OrderStateLogRequest;
+import com.chua.payment.support.dto.PaymentOrderPageRequest;
 import com.chua.payment.support.dto.RefundApplyDTO;
 import com.chua.payment.support.entity.Merchant;
 import com.chua.payment.support.entity.MerchantChannel;
@@ -27,6 +31,7 @@ import com.chua.payment.support.enums.RefundOrderStatus;
 import com.chua.payment.support.event.OrderCreatedEvent;
 import com.chua.payment.support.event.PaymentSuccessEvent;
 import com.chua.payment.support.event.RefundSuccessEvent;
+import com.chua.payment.support.dto.RefundSuccessDTO;
 import com.chua.payment.support.exception.PaymentException;
 import com.chua.payment.support.mapper.MerchantChannelMapper;
 import com.chua.payment.support.mapper.MerchantMapper;
@@ -57,8 +62,10 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 支付订单服务实现
+ * 支付订单服务实现，负责订单创建、支付、退款、状态流转等核心业务。
+ *
  * @author CH
+ * @since 4.0.0.50
  */
 @Service
 @Slf4j
@@ -161,7 +168,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         }
 
         stateMachineService.createStateMachine(order.getId());
-        orderStateLogService.log(order.getId(), null, OrderState.PENDING, "CREATE", "system", "订单创建");
+        orderStateLogService.log(new OrderStateLogRequest(order.getId(), null, OrderState.PENDING.name(), "CREATE", "system", "订单创建"));
 
         eventPublisher.publishEvent(new OrderCreatedEvent(
                 this,
@@ -186,29 +193,30 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
     }
 
     @Override
-    /** ListOrders */
-    public Page<OrderVO> listOrders(int page, int size, Long merchantId, String orderNo, String status) {
+    public Page<OrderVO> listOrders(PaymentOrderPageRequest request) {
+        if (request == null) {
+            throw new PaymentException("查询参数不能为空");
+        }
         LambdaQueryWrapper<PaymentOrder> wrapper = baseOrderWrapper()
                 .orderByDesc(PaymentOrder::getCreatedAt);
-        if (merchantId != null) {
-            wrapper.eq(PaymentOrder::getMerchantId, merchantId);
+        if (request.merchantId() != null) {
+            wrapper.eq(PaymentOrder::getMerchantId, request.merchantId());
         }
-        if (StringUtils.hasText(orderNo)) {
-            wrapper.eq(PaymentOrder::getOrderNo, orderNo);
+        if (StringUtils.hasText(request.orderNo())) {
+            wrapper.eq(PaymentOrder::getOrderNo, request.orderNo());
         }
-        if (StringUtils.hasText(status)) {
-            wrapper.eq(PaymentOrder::getStatus, status);
+        if (StringUtils.hasText(request.status())) {
+            wrapper.eq(PaymentOrder::getStatus, request.status());
         }
-        Page<PaymentOrder> orderPage = orderMapper.selectPage(new Page<>(page, size), wrapper);
-        Page<OrderVO> voPage = new Page<>(page, size, orderPage.getTotal());
+        Page<PaymentOrder> orderPage = orderMapper.selectPage(new Page<>(request.page(), request.size()), wrapper);
+        Page<OrderVO> voPage = new Page<>(request.page(), request.size(), orderPage.getTotal());
         voPage.setRecords(orderPage.getRecords().stream().map(this::convertToVO).toList());
         return voPage;
     }
 
     @Override
-    /** ListMerchantOrders */
     public Page<OrderVO> listMerchantOrders(Long merchantId, int page, int size, String status) {
-        return listOrders(page, size, merchantId, null, status);
+        return listOrders(new PaymentOrderPageRequest(page, size, merchantId, null, status));
     }
 
     @Override
@@ -458,9 +466,9 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         request.setNotifyUrl(paymentCallbackUrlResolver.resolveRefundNotifyUrl(channel, order.getMerchantId(), refundNo, order.getNotifyUrl()));
         String requestPayload = safeJson(request);
 
-        paymentRefundOrderService.createRefundOrder(order, refundNo, refundAmount,
+        paymentRefundOrderService.createRefundOrder(new CreateRefundOrderDTO(order, refundNo, refundAmount,
                 StringUtils.hasText(reason) ? "取消退款:" + reason : "取消退款",
-                operatorVal, requestPayload);
+                operatorVal, requestPayload));
 
         RefundResult result = paymentChannel.refund(channel, request);
         String responsePayload = safeJson(result);
@@ -469,15 +477,15 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         if ("REFUNDED".equals(result.getStatus())) {
             // 退款成功 → 标记退款成功 → 再改 CANCELLED
             BigDecimal actualAmount = result.getRefundAmount() != null ? result.getRefundAmount() : refundAmount;
-            paymentRefundOrderService.markRefunded(refundNo, actualAmount, thirdPartyRefundNo,
-                    responsePayload, operatorVal, "取消退款成功");
+            paymentRefundOrderService.markRefunded(new MarkRefundedDTO(refundNo, actualAmount, thirdPartyRefundNo,
+                    responsePayload, operatorVal, "取消退款成功"));
             PaymentOrder latestOrder = requireOrder(id);
             BigDecimal totalRefunded = aggregateRefundedAmount(latestOrder);
             syncRefundAggregate(latestOrder, totalRefunded);
             // 直接更新为 CANCELLED（不走状态机，因为 REFUNDED→CANCELLED 未定义）
             forceOrderStatus(id, OrderState.CANCELLED.name());
-            orderStateLogService.log(id, OrderState.REFUNDED, OrderState.CANCELLED,
-                    "CANCEL", operatorVal, "退款方式取消");
+            orderStateLogService.log(new OrderStateLogRequest(id, OrderState.REFUNDED.name(), OrderState.CANCELLED.name(),
+                    "CANCEL", operatorVal, "退款方式取消"));
             recordTransaction(latestOrder, "REFUND", actualAmount, 1,
                     thirdPartyRefundNo, requestPayload, responsePayload, "取消退款");
             return true;
@@ -488,9 +496,9 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
                     firstNonBlank(result.getMessage(), "取消退款失败"));
             // 退款失败 → 回退到 PAID
             forceOrderStatus(id, OrderState.PAID.name());
-            orderStateLogService.log(id, OrderState.REFUNDING, OrderState.PAID,
+            orderStateLogService.log(new OrderStateLogRequest(id, OrderState.REFUNDING.name(), OrderState.PAID.name(),
                     "REFUND_FAIL", operatorVal,
-                    firstNonBlank(result.getMessage(), "取消退款失败"));
+                    firstNonBlank(result.getMessage(), "取消退款失败")));
             throw new PaymentException("取消退款失败: " + result.getMessage());
         }
 
@@ -575,23 +583,24 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         request.setNotifyUrl(paymentCallbackUrlResolver.resolveRefundNotifyUrl(channel, latest.getMerchantId(), request.getRefundNo(), latest.getNotifyUrl()));
         String requestPayload = safeJson(request);
 
-        paymentRefundOrderService.createRefundOrder(latest,
+        paymentRefundOrderService.createRefundOrder(new CreateRefundOrderDTO(latest,
                 request.getRefundNo(),
                 refundAmount,
                 dto != null ? dto.getRefundReason() : null,
                 operator,
-                requestPayload);
+                requestPayload));
 
         RefundResult result = paymentChannel.refund(channel, request);
         String responsePayload = safeJson(result);
         String thirdPartyRefundNo = firstNonBlank(result.getTradeNo(), result.getRefundNo());
         if ("REFUNDED".equals(result.getStatus())) {
-            return refundSuccess(request.getRefundNo(),
+            return refundSuccess(new RefundSuccessDTO(
+                    request.getRefundNo(),
                     result.getRefundAmount() != null ? result.getRefundAmount() : refundAmount,
                     thirdPartyRefundNo,
                     operator,
                     responsePayload,
-                    firstNonBlank(result.getMessage(), dto != null ? dto.getRefundReason() : null));
+                    firstNonBlank(result.getMessage(), dto != null ? dto.getRefundReason() : null)));
         }
         if ("FAILED".equals(result.getStatus())) {
             return refundFail(request.getRefundNo(),
@@ -621,7 +630,7 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
             syncRefundAggregate(order, aggregateRefundedAmount(order));
             return true;
         }
-        return refundSuccess(refundOrder.getRefundNo(), refundAmount, refundOrder.getThirdPartyRefundNo(), operator, null, "手动标记退款成功");
+        return refundSuccess(new RefundSuccessDTO(refundOrder.getRefundNo(), refundAmount, refundOrder.getThirdPartyRefundNo(), operator, null, "手动标记退款成功"));
     }
 
     @Override
@@ -648,45 +657,41 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
      * @param responsePayload responsePayload
      * @param remark remark
      */
-    public boolean refundSuccess(String refundNo,
-                                 BigDecimal refundAmount,
-                                 String thirdPartyRefundNo,
-                                 String operator,
-                                 String responsePayload,
-                                 String remark) {
-        PaymentRefundOrder refundOrder = requireRefundOrder(refundNo);
+    public boolean refundSuccess(RefundSuccessDTO dto) {
+        PaymentRefundOrder refundOrder = requireRefundOrder(dto.refundNo());
         boolean alreadyRefunded = RefundOrderStatus.REFUNDED.name().equals(refundOrder.getStatus());
-        BigDecimal amount = refundAmount != null && refundAmount.compareTo(BigDecimal.ZERO) > 0
-                ? refundAmount
+        BigDecimal amount = dto.refundAmount() != null && dto.refundAmount().compareTo(BigDecimal.ZERO) > 0
+                ? dto.refundAmount()
                 : nullToZero(refundOrder.getRefundAmount());
-        PaymentRefundOrder latestRefundOrder = paymentRefundOrderService.markRefunded(refundNo,
+        PaymentRefundOrder latestRefundOrder = paymentRefundOrderService.markRefunded(new MarkRefundedDTO(
+                dto.refundNo(),
                 amount,
-                thirdPartyRefundNo,
-                responsePayload,
-                defaultOperator(operator),
-                firstNonBlank(remark, refundOrder.getReason()));
+                dto.thirdPartyRefundNo(),
+                dto.responsePayload(),
+                defaultOperator(dto.operator()),
+                firstNonBlank(dto.remark(), refundOrder.getReason())));
 
         PaymentOrder order = requireOrder(refundOrder.getOrderId());
         BigDecimal totalRefunded = aggregateRefundedAmount(order);
         syncRefundAggregate(order, totalRefunded);
         PaymentOrder latestOrder = requireOrder(order.getId());
         String targetStatus = resolveOrderStatusAfterRefundSuccess(latestOrder, totalRefunded);
-        changeOrderStatusIfNecessary(latestOrder, targetStatus, OrderEvent.REFUND_SUCCESS, operator, firstNonBlank(remark, "退款成功"));
+        changeOrderStatusIfNecessary(latestOrder, targetStatus, OrderEvent.REFUND_SUCCESS, dto.operator(), firstNonBlank(dto.remark(), "退款成功"));
         latestOrder = requireOrder(order.getId());
         if (!alreadyRefunded) {
             recordTransaction(latestOrder,
                     "REFUND",
                     latestRefundOrder.getRefundAmount(),
                     1,
-                    firstNonBlank(latestRefundOrder.getThirdPartyRefundNo(), thirdPartyRefundNo),
+                    firstNonBlank(latestRefundOrder.getThirdPartyRefundNo(), dto.thirdPartyRefundNo()),
                     latestRefundOrder.getRequestPayload(),
-                    responsePayload,
-                    firstNonBlank(remark, "退款成功"));
+                    dto.responsePayload(),
+                    firstNonBlank(dto.remark(), "退款成功"));
             eventPublisher.publishEvent(new RefundSuccessEvent(
                 this, null, latestOrder.getMerchantId(), latestOrder.getId(),
                 latestOrder.getOrderNo(), latestRefundOrder.getId(), latestRefundOrder.getRefundNo(),
                 latestOrder.getUserId(), latestRefundOrder.getRefundAmount(),
-                firstNonBlank(latestRefundOrder.getThirdPartyRefundNo(), thirdPartyRefundNo),
+                 firstNonBlank(latestRefundOrder.getThirdPartyRefundNo(), dto.thirdPartyRefundNo()),
                 latestOrder.getChannelType(), latestOrder.getChannelSubType()
             ));
         }
@@ -995,12 +1000,12 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             amount = resolvedPaidAmount(order);
         }
-        return paymentRefundOrderService.createRefundOrder(order,
+        return paymentRefundOrderService.createRefundOrder(new CreateRefundOrderDTO(order,
                 generateRefundNo(),
                 amount,
                 reason,
                 operator,
-                null);
+                null));
     }
 
     /** AggregateRefundedAmount */
@@ -1153,14 +1158,15 @@ public class PaymentOrderServiceImpl implements PaymentOrderService {
             }
             throw new PaymentException("订单状态更新失败: " + event.name());
         }
-        orderStateLogService.log(order.getId(),
-                fromState,
-                toState,
+        orderStateLogService.log(new OrderStateLogRequest(
+                order.getId(),
+                fromState.name(),
+                toState.name(),
                 event.name(),
                 defaultOperator(operator),
                 StringUtils.hasText(remark)
                         ? remark
-                        : String.format("状态转换: %s -> %s", fromState.getDescription(), toState.getDescription()));
+                        : String.format("Status change: %s -> %s", fromState.getDescription(), toState.getDescription())));
     }
 
     /** BackfillCompleteTime */

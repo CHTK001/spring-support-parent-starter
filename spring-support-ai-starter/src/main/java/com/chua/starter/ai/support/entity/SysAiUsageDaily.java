@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.entity;
 import com.chua.starter.mybatis.pojo.SysBase;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.IdType;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -24,50 +25,59 @@ public class SysAiUsageDaily extends SysBase {
      * 主键 ID
      */
     @TableId(type = IdType.AUTO)
-    private Long sysAiUsageDailyId;
+    private Long id;
 
     /**
      * 统计日期
      */
-    private LocalDate sysAiUsageDailyStatDate;
+    @TableField("sys_ai_usage_daily_stat_date")
+    private LocalDate statDate;
 
     /**
      * 分组
      */
-    private String sysAiUsageDailyGroupName;
+    @TableField("sys_ai_usage_daily_group_name")
+    private String groupName;
 
     /**
      * 服务商
      */
-    private String sysAiUsageDailyProvider;
+    @TableField("sys_ai_usage_daily_provider")
+    private String provider;
 
     /**
      * 模型
      */
-    private String sysAiUsageDailyModel;
+    @TableField("sys_ai_usage_daily_model")
+    private String model;
 
     /**
      * 总调用次数
      */
-    private Integer sysAiUsageDailyTotalCalls;
+    @TableField("sys_ai_usage_daily_total_calls")
+    private Integer totalCalls;
 
     /**
      * 总输入 Token
      */
-    private Integer sysAiUsageDailyTotalPromptTokens;
+    @TableField("sys_ai_usage_daily_total_prompt_tokens")
+    private Integer totalPromptTokens;
 
     /**
      * 总输出 Token
      */
-    private Integer sysAiUsageDailyTotalCompletionTokens;
+    @TableField("sys_ai_usage_daily_total_completion_tokens")
+    private Integer totalCompletionTokens;
 
     /**
      * 总 Token
      */
-    private Integer sysAiUsageDailyTotalTokens;
+    @TableField("sys_ai_usage_daily_total_tokens")
+    private Integer totalTokens;
 
     /**
      * 总费用（元）
      */
-    private Double sysAiUsageDailyTotalCost;
+    @TableField("sys_ai_usage_daily_total_cost")
+    private Double totalCost;
 }

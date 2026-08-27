@@ -82,10 +82,8 @@ public class PaymentNotifyRetryTask implements PaymentManagedTask {
     @Override
     @Job(
             value = "payment-notify-retry",
-            scheduleType = "cron",
-            scheduleTime = "0 */5 * * * ?",
-            desc = "扫描待重试的支付回调异常并自动回放。",
-            autoStart = true
+            cron = "0 */5 * * * ?",
+            desc = "扫描待重试的支付回调异常并自动回放。"
     )
     /** 执行 */
     public void execute() {

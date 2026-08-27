@@ -23,43 +23,67 @@ public class AiTemplateFacadeServiceImpl implements AiTemplateFacadeService {
     /** SYSAI模板mapper */
     private final SysAiTemplateMapper sysAiTemplateMapper;
 
+    /**
+     * 根据条件查询AI模板列表。
+     *
+     * @param moduleId    模块ID（可选）
+     * @param templateType 模板类型（可选）
+     * @param category    分类（可选）
+     * @param name        模板名称模糊匹配（可选）
+     * @param remark      备注模糊匹配（可选）
+     * @return 启用的模板列表，按排序字段升序、创建时间降序排列
+     */
     @Override
-    /** List */
     public List<SysAiTemplate> list(Integer moduleId, String templateType, String category, String name, String remark) {
         return sysAiTemplateMapper.selectList(
                 Wrappers.lambdaQuery(SysAiTemplate.class)
                         .eq(moduleId != null, SysAiTemplate::getSysAiModuleId, moduleId)
-                        .eq(StringUtils.isNotBlank(templateType), SysAiTemplate::getSysAiTemplateType, templateType)
-                        .eq(StringUtils.isNotBlank(category), SysAiTemplate::getSysAiTemplateCategory, category)
-                        .likeRight(StringUtils.isNotBlank(name), SysAiTemplate::getSysAiTemplateName, name)
-                        .likeRight(StringUtils.isNotBlank(remark), SysAiTemplate::getSysAiTemplateRemark, remark)
-                        .eq(SysAiTemplate::getSysAiTemplateStatus, 1)
-                        .orderByAsc(SysAiTemplate::getSysAiTemplateSort)
+                        .eq(StringUtils.isNotBlank(templateType), SysAiTemplate::getType, templateType)
+                        .eq(StringUtils.isNotBlank(category), SysAiTemplate::getCategory, category)
+                        .likeRight(StringUtils.isNotBlank(name), SysAiTemplate::getName, name)
+                        .likeRight(StringUtils.isNotBlank(remark), SysAiTemplate::getRemark, remark)
+                        .eq(SysAiTemplate::getStatus, 1)
+                        .orderByAsc(SysAiTemplate::getSort)
                         .orderByDesc(SysAiTemplate::getCreateTime)
         );
     }
 
+    /**
+     * 保存新AI模板，自动初始化ID为空、排序为0、状态为1及时间戳。
+     *
+     * @param template 待保存的模板对象
+     * @return 保存后的模板对象（含生成的ID）
+     */
     @Override
-    /** 保存 */
     public SysAiTemplate save(SysAiTemplate template) {
-        template.setSysAiTemplateId(null);
-        template.setSysAiTemplateSort(template.getSysAiTemplateSort() == null ? 0 : template.getSysAiTemplateSort());
-        template.setSysAiTemplateStatus(template.getSysAiTemplateStatus() == null ? 1 : template.getSysAiTemplateStatus());
+        template.setId(null);
+        template.setSort(template.getSort() == null ? 0 : template.getSort());
+        template.setStatus(template.getStatus() == null ? 1 : template.getStatus());
         template.setCreateTime(LocalDateTime.now());
         template.setUpdateTime(LocalDateTime.now());
         sysAiTemplateMapper.insert(template);
         return template;
     }
 
+    /**
+     * 根据主键更新AI模板，仅更新非空字段。
+     *
+     * @param template 待更新的模板对象
+     * @return 是否更新成功
+     */
     @Override
-    /** 更新 */
     public boolean update(SysAiTemplate template) {
         template.setUpdateTime(LocalDateTime.now());
         return sysAiTemplateMapper.updateById(template) > 0;
     }
 
+    /**
+     * 根据主键删除AI模板。
+     *
+     * @param templateId 模板ID
+     * @return 是否删除成功
+     */
     @Override
-    /** 删除ById */
     public boolean deleteById(Integer templateId) {
         return templateId != null && sysAiTemplateMapper.deleteById(templateId) > 0;
     }

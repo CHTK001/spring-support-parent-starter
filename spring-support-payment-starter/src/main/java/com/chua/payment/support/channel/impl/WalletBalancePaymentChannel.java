@@ -6,6 +6,8 @@ import com.chua.payment.support.channel.PaymentResult;
 import com.chua.payment.support.channel.RefundRequest;
 import com.chua.payment.support.channel.RefundResult;
 import com.chua.payment.support.channel.support.AbstractMerchantPaymentChannel;
+import com.chua.payment.support.dto.WalletPayRequest;
+import com.chua.payment.support.dto.WalletRefundRequest;
 import com.chua.payment.support.entity.MerchantChannel;
 import com.chua.payment.support.entity.WalletAccountLog;
 import com.chua.payment.support.exception.PaymentException;
@@ -47,12 +49,13 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
         if (request.getUserId() == null) {
             throw new PaymentException("钱包支付必须提供 userId");
         }
-        walletAccountService.pay(channel.getMerchantId(),
+        walletAccountService.pay(new WalletPayRequest(
+                channel.getMerchantId(),
                 request.getUserId(),
                 request.getAmount(),
                 request.getOrderNo(),
                 "wallet-pay",
-                firstNonBlank(request.getSubject(), request.getBody(), request.getOrderNo()));
+                firstNonBlank(request.getSubject(), request.getBody(), request.getOrderNo())));
 
         PaymentResult result = new PaymentResult();
         result.setSuccess(true);
@@ -84,12 +87,13 @@ public class WalletBalancePaymentChannel extends AbstractMerchantPaymentChannel 
         if (request.getUserId() == null) {
             throw new PaymentException("钱包退款缺少用户上下文");
         }
-        walletAccountService.refund(channel.getMerchantId(),
+        walletAccountService.refund(new WalletRefundRequest(
+                channel.getMerchantId(),
                 request.getUserId(),
                 request.getRefundAmount(),
                 request.getRefundNo(),
                 "wallet-refund",
-                request.getReason());
+                request.getReason()));
 
         RefundResult result = new RefundResult();
         result.setSuccess(true);

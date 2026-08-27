@@ -50,21 +50,24 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
 
     /**
      * 根据分组和字段名查询配置值（带缓存）。
+     *
+     * @param group 配置分组名
+     * @param field 配置字段名
+     * @return 配置值，不存在或为空时返回 Optional.empty()
      */
     @Override
     @Cacheable(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             key = "'sys:ai:global:setting:' + #group + ':' + #field", unless = "#result == null || #result.isEmpty()")
-    /** 获取Value */
     public Optional<String> getValue(String group, String field) {
         LambdaQueryWrapper<SysAiGlobalSetting> wrapper = Wrappers.<SysAiGlobalSetting>lambdaQuery()
-                .eq(SysAiGlobalSetting::getSysAiGlobalSettingGroup, group)
-                .eq(SysAiGlobalSetting::getSysAiGlobalSettingField, field)
-                .eq(SysAiGlobalSetting::getSysAiGlobalSettingStatus, 1);
+                .eq(SysAiGlobalSetting::getGroup, group)
+                .eq(SysAiGlobalSetting::getField, field)
+                .eq(SysAiGlobalSetting::getStatus, 1);
         SysAiGlobalSetting setting = sysAiGlobalSettingMapper.selectOne(wrapper);
         if (setting == null) {
             return Optional.empty();
         }
-        String value = setting.getSysAiGlobalSettingValue();
+        String value = setting.getValue();
         if (value == null) {
             return Optional.empty();
         }
@@ -73,6 +76,11 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
 
     /**
      * 读取布尔类型配置，查询失败或转换失败时返回默认值。
+     *
+     * @param group          配置分组名
+     * @param field          配置字段名
+     * @param defaultValue   默认值（查询失败或字段不存在时返回）
+     * @return 解析后的布尔值
      */
     @Override
     public boolean getBoolean(String group, String field, boolean defaultValue) {
@@ -86,36 +94,40 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
 
     /**
      * 列出指定分组下所有启用的配置项，按 sort 排序。
+     *
+     * @param group 配置分组名
+     * @return 配置项列表，每项包含 group、field、value、valueType、description、sort 字段
      */
     @Override
     public List<Map<String, Object>> list(String group) {
         LambdaQueryWrapper<SysAiGlobalSetting> wrapper = Wrappers.<SysAiGlobalSetting>lambdaQuery()
-                .eq(SysAiGlobalSetting::getSysAiGlobalSettingGroup, group)
-                .eq(SysAiGlobalSetting::getSysAiGlobalSettingStatus, 1)
-                .orderByAsc(SysAiGlobalSetting::getSysAiGlobalSettingSort);
+                .eq(SysAiGlobalSetting::getGroup, group)
+                .eq(SysAiGlobalSetting::getStatus, 1)
+                .orderByAsc(SysAiGlobalSetting::getSort);
         List<SysAiGlobalSetting> settings = sysAiGlobalSettingMapper.selectList(wrapper);
         List<Map<String, Object>> result = new ArrayList<>();
         for (SysAiGlobalSetting s : settings) {
             Map<String, Object> item = new LinkedHashMap<>();
-            item.put("group", s.getSysAiGlobalSettingGroup());
-            item.put("field", s.getSysAiGlobalSettingField());
-            item.put("value", s.getSysAiGlobalSettingValue());
-            item.put("valueType", s.getSysAiGlobalSettingValueType());
-            item.put("description", s.getSysAiGlobalSettingDescription());
-            item.put("sort", s.getSysAiGlobalSettingSort());
+            item.put("group", s.getGroup());
+            item.put("field", s.getField());
+            item.put("value", s.getValue());
+            item.put("valueType", s.getValueType());
+            item.put("description", s.getDescription());
+            item.put("sort", s.getSort());
             result.add(item);
         }
         return result;
     }
 
     /**
-     * 批量替换指定分组的配置：先删后插（事务内）。
+     * 批量替换指定分组的配置：先删后插（事务内），并清除缓存。
+     *
+     * @param request Map 对象，包含 group（分组名）和 fields（配置项列表）
      */
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             allEntries = true)
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
-    /** Replace */
     public void replace(Object request) {
         if (!(request instanceof Map)) {
             log.warn("[SysAiGlobalSetting] replace 参数类型不支持: {}", request.getClass());
@@ -132,7 +144,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
 
         // 先删除旧配置
         LambdaQueryWrapper<SysAiGlobalSetting> deleteWrapper = Wrappers.<SysAiGlobalSetting>lambdaQuery()
-                .eq(SysAiGlobalSetting::getSysAiGlobalSettingGroup, group);
+                .eq(SysAiGlobalSetting::getGroup, group);
         sysAiGlobalSettingMapper.delete(deleteWrapper);
 
         // 再插入新配置
@@ -145,13 +157,13 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
         int sort = 0;
         for (Map<String, Object> field : fields) {
             SysAiGlobalSetting setting = new SysAiGlobalSetting();
-            setting.setSysAiGlobalSettingGroup(group);
-            setting.setSysAiGlobalSettingField((String) field.getOrDefault("field", ""));
-            setting.setSysAiGlobalSettingValue(Objects.toString(field.get("value"), ""));
-            setting.setSysAiGlobalSettingValueType((String) field.getOrDefault("valueType", "STRING"));
-            setting.setSysAiGlobalSettingDescription((String) field.getOrDefault("description", ""));
-            setting.setSysAiGlobalSettingSort(sort++);
-            setting.setSysAiGlobalSettingStatus(1);
+            setting.setGroup(group);
+            setting.setField((String) field.getOrDefault("field", ""));
+            setting.setValue(Objects.toString(field.get("value"), ""));
+            setting.setValueType((String) field.getOrDefault("valueType", "STRING"));
+            setting.setDescription((String) field.getOrDefault("description", ""));
+            setting.setSort(sort++);
+            setting.setStatus(1);
             setting.setCreateTime(LocalDateTime.now());
             setting.setUpdateTime(LocalDateTime.now());
             sysAiGlobalSettingMapper.insert(setting);
@@ -169,12 +181,16 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
 
     /**
      * 增量写入/更新单字段配置，不影响分组内其它已有字段。
+     *
+     * @param group       配置分组名
+     * @param field       配置字段名
+     * @param value       配置值
+     * @param description 配置描述（可为 null）
      */
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             allEntries = true)
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
-    /** UpsertValue */
     public void upsertValue(String group, String field, String value, String description) {
         if (group == null || group.isBlank() || field == null || field.isBlank()) {
             log.warn("[SysAiGlobalSetting] upsertValue 缺少 group/field 参数");
@@ -182,25 +198,25 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
         }
         SysAiGlobalSetting existing = sysAiGlobalSettingMapper.selectOne(
                 Wrappers.<SysAiGlobalSetting>lambdaQuery()
-                        .eq(SysAiGlobalSetting::getSysAiGlobalSettingGroup, group)
-                        .eq(SysAiGlobalSetting::getSysAiGlobalSettingField, field));
+                        .eq(SysAiGlobalSetting::getGroup, group)
+                        .eq(SysAiGlobalSetting::getField, field));
         LocalDateTime now = LocalDateTime.now();
         if (existing != null) {
-            existing.setSysAiGlobalSettingValue(value);
+            existing.setValue(value);
             if (description != null) {
-                existing.setSysAiGlobalSettingDescription(description);
+                existing.setDescription(description);
             }
             existing.setUpdateTime(now);
             sysAiGlobalSettingMapper.updateById(existing);
         } else {
             SysAiGlobalSetting setting = new SysAiGlobalSetting();
-            setting.setSysAiGlobalSettingGroup(group);
-            setting.setSysAiGlobalSettingField(field);
-            setting.setSysAiGlobalSettingValue(value);
-            setting.setSysAiGlobalSettingValueType("STRING");
-            setting.setSysAiGlobalSettingDescription(description != null ? description : "");
-            setting.setSysAiGlobalSettingSort(0);
-            setting.setSysAiGlobalSettingStatus(1);
+            setting.setGroup(group);
+            setting.setField(field);
+            setting.setValue(value);
+            setting.setValueType("STRING");
+            setting.setDescription(description != null ? description : "");
+            setting.setSort(0);
+            setting.setStatus(1);
             setting.setCreateTime(now);
             setting.setUpdateTime(now);
             sysAiGlobalSettingMapper.insert(setting);
@@ -210,12 +226,18 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
 
     /**
      * 完整写入/更新单字段配置（含类型与排序）。
+     *
+     * @param group       配置分组名
+     * @param field       配置字段名
+     * @param value       配置值
+     * @param valueType   值类型（如 STRING、BOOLEAN）
+     * @param description 配置描述（可为 null）
+     * @param sort        排序值
      */
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS,
             allEntries = true)
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
-    /** UpsertField */
     public void upsertField(String group, String field, String value, String valueType, String description, int sort) {
         if (group == null || group.isBlank() || field == null || field.isBlank()) {
             log.warn("[SysAiGlobalSetting] upsertField 缺少 group/field 参数");
@@ -223,28 +245,28 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
         }
         SysAiGlobalSetting existing = sysAiGlobalSettingMapper.selectOne(
                 Wrappers.<SysAiGlobalSetting>lambdaQuery()
-                        .eq(SysAiGlobalSetting::getSysAiGlobalSettingGroup, group)
-                        .eq(SysAiGlobalSetting::getSysAiGlobalSettingField, field));
+                        .eq(SysAiGlobalSetting::getGroup, group)
+                        .eq(SysAiGlobalSetting::getField, field));
         LocalDateTime now = LocalDateTime.now();
         if (existing != null) {
             if (description != null) {
-                existing.setSysAiGlobalSettingDescription(description);
+                existing.setDescription(description);
             }
             if (valueType != null) {
-                existing.setSysAiGlobalSettingValueType(valueType);
+                existing.setValueType(valueType);
             }
-            existing.setSysAiGlobalSettingSort(sort);
+            existing.setSort(sort);
             existing.setUpdateTime(now);
             sysAiGlobalSettingMapper.updateById(existing);
         } else {
             SysAiGlobalSetting setting = new SysAiGlobalSetting();
-            setting.setSysAiGlobalSettingGroup(group);
-            setting.setSysAiGlobalSettingField(field);
-            setting.setSysAiGlobalSettingValue(value);
-            setting.setSysAiGlobalSettingValueType(valueType != null ? valueType : "STRING");
-            setting.setSysAiGlobalSettingDescription(description != null ? description : "");
-            setting.setSysAiGlobalSettingSort(sort);
-            setting.setSysAiGlobalSettingStatus(1);
+            setting.setGroup(group);
+            setting.setField(field);
+            setting.setValue(value);
+            setting.setValueType(valueType != null ? valueType : "STRING");
+            setting.setDescription(description != null ? description : "");
+            setting.setSort(sort);
+            setting.setStatus(1);
             setting.setCreateTime(now);
             setting.setUpdateTime(now);
             sysAiGlobalSettingMapper.insert(setting);
