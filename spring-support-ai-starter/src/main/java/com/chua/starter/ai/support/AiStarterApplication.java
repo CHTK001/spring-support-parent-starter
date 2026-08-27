@@ -12,14 +12,14 @@ import org.springframework.context.annotation.ComponentScan;
  * 默认关闭 API 鉴权（app_key_enabled=false），便于本地联调。</p>
  *
  * <p>{@code @MapperScan} 同时覆盖业务 Mapper（{@code ai.support.mapper}）与
- * nomifun 前端持久化 Mapper（{@code ai.support.nomifun.mapper}）。</p>
+ * nomifun 前端持久化 Mapper（{@code ai.support.manage.mapper}）。</p>
  *
  * @since 2026/7/29
  * @author CH
  */
 @SpringBootApplication
 @ComponentScan(basePackages = "com.chua.starter.ai.support")
-@MapperScan({"com.chua.starter.ai.support.mapper", "com.chua.starter.ai.support.nomifun.mapper"})
+@MapperScan({"com.chua.starter.ai.support.mapper", "com.chua.starter.ai.support.manage.mapper"})
 public class AiStarterApplication {
 
     /** Main */

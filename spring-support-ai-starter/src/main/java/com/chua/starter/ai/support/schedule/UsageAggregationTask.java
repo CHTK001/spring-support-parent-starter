@@ -189,18 +189,18 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             return null;
         }
         SysAiUsage record = new SysAiUsage();
-        record.setGroupName(providerName);
-        record.setProvider(usage.getProvider() != null ? usage.getProvider() : providerName);
-        record.setModel(usage.getModel());
-        record.setCallType("external");
-        record.setPromptTokens(usage.getInputTokens());
-        record.setCompletionTokens(usage.getOutputTokens());
-        record.setTotalTokens(usage.getTotalTokens());
-        record.setInputCost(usage.getInputCost() != null ? usage.getInputCost().doubleValue() : null);
-        record.setOutputCost(usage.getOutputCost() != null ? usage.getOutputCost().doubleValue() : null);
-        record.setTotalCost(usage.getTotalCost() != null ? usage.getTotalCost().doubleValue() : null);
-        record.setRequestId(usage.getRequestId());
-        record.setCallTime(usage.getStartTime() != null
+        record.setSysAiUsageGroupName(providerName);
+        record.setSysAiUsageProvider(usage.getSysAiUsageProvider() != null ? usage.getSysAiUsageProvider() : providerName);
+        record.setSysAiUsageModel(usage.getSysAiUsageModel());
+        record.setSysAiUsageCallType("external");
+        record.setSysAiUsagePromptTokens(usage.getInputTokens());
+        record.setSysAiUsageCompletionTokens(usage.getOutputTokens());
+        record.setSysAiUsageTotalTokens(usage.getSysAiUsageTotalTokens());
+        record.setSysAiUsageInputCost(usage.getInputCost() != null ? usage.getInputCost().doubleValue() : null);
+        record.setSysAiUsageOutputCost(usage.getOutputCost() != null ? usage.getOutputCost().doubleValue() : null);
+        record.setSysAiUsageTotalCost(usage.getTotalCost() != null ? usage.getTotalCost().doubleValue() : null);
+        record.setSysAiUsageRequestId(usage.getRequestId());
+        record.setSysAiUsageCallTime(usage.getStartTime() != null
                 ? LocalDateTime.ofInstant(Instant.ofEpochMilli(usage.getStartTime()), java.time.ZoneId.systemDefault())
                 : LocalDateTime.now());
         return record;
@@ -231,8 +231,8 @@ public class UsageAggregationTask implements SchedulingConfigurer {
 
         // 按日期、group, provider, model 分组聚合
         Map<String, List<SysAiUsage>> grouped = list.stream()
-                .collect(Collectors.groupingBy(u -> u.getCallTime().toLocalDate() + "|" + u.getGroupName()
-                        + "|" + u.getProvider() + "|" + u.getModel()));
+                .collect(Collectors.groupingBy(u -> u.getSysAiUsageCallTime().toLocalDate() + "|" + u.getSysAiUsageGroupName()
+                        + "|" + u.getSysAiUsageProvider() + "|" + u.getSysAiUsageModel()));
 
         for (Map.Entry<String, List<SysAiUsage>> entry : grouped.entrySet()) {
             String[] keys = entry.getKey().split("\\|");
@@ -243,15 +243,15 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             List<SysAiUsage> items = entry.getValue();
 
             SysAiUsageDaily daily = new SysAiUsageDaily();
-            daily.setStatDate(statDate);
-            daily.setGroupName(groupName);
-            daily.setProvider(provider);
-            daily.setModel(model);
-            daily.setTotalCalls(items.size());
-            daily.setTotalPromptTokens(items.stream().mapToInt(u -> u.getPromptTokens() != null ? u.getPromptTokens() : 0).sum());
-            daily.setTotalCompletionTokens(items.stream().mapToInt(u -> u.getCompletionTokens() != null ? u.getCompletionTokens() : 0).sum());
-            daily.setTotalTokens(items.stream().mapToInt(u -> u.getTotalTokens() != null ? u.getTotalTokens() : 0).sum());
-            daily.setTotalCost(items.stream().mapToDouble(u -> u.getTotalCost() != null ? u.getTotalCost() : 0).sum());
+            daily.setSysAiUsageDailyStatDate(statDate);
+            daily.setSysAiUsageGroupName(groupName);
+            daily.setSysAiUsageProvider(provider);
+            daily.setSysAiUsageModel(model);
+            daily.setSysAiUsageDailyTotalCalls(items.size());
+            daily.setSysAiUsageDailyTotalPromptTokens(items.stream().mapToInt(u -> u.getSysAiUsagePromptTokens() != null ? u.getSysAiUsagePromptTokens() : 0).sum());
+            daily.setSysAiUsageDailyTotalCompletionTokens(items.stream().mapToInt(u -> u.getSysAiUsageCompletionTokens() != null ? u.getSysAiUsageCompletionTokens() : 0).sum());
+            daily.setSysAiUsageTotalTokens(items.stream().mapToInt(u -> u.getSysAiUsageTotalTokens() != null ? u.getSysAiUsageTotalTokens() : 0).sum());
+            daily.setSysAiUsageTotalCost(items.stream().mapToDouble(u -> u.getTotalCost() != null ? u.getTotalCost() : 0).sum());
 
             dailyMapper.insert(daily);
             log.debug("[UsageAggregation] 汇总: date={}, group={}, provider={}, model={}, calls={}",

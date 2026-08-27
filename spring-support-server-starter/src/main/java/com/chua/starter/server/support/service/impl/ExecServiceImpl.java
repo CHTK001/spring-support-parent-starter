@@ -80,7 +80,7 @@ public class ExecServiceImpl implements ExecService {
     private final ServerProperties properties;
 
     @Override
-    public ReturnResult<List<MsExecLog>> runCommand(List<Long> hostIds, String command, Integer timeoutSeconds) {
+    public ReturnResult<List<MsExecLog>> runCommand(List<Long> hostIds, String command, Integer timeoutSeconds, Long jobId) {
         // 参数校验前置
         if (hostIds == null || hostIds.isEmpty()) {
             return ReturnResult.error("目标主机不能为空");
@@ -93,7 +93,7 @@ public class ExecServiceImpl implements ExecService {
             return ReturnResult.error("有效主机为空");
         }
         int timeout = timeoutSeconds == null || timeoutSeconds <= 0 ? DEFAULT_TIMEOUT_SECONDS : timeoutSeconds;
-        List<MsExecLog> logs = executeParallel(hosts, ServerConstants.EXEC_TYPE_COMMAND, null,
+        List<MsExecLog> logs = executeParallel(hosts, ServerConstants.EXEC_TYPE_COMMAND, jobId,
                 command, timeout, null);
         return ReturnResult.ok(logs);
     }
@@ -203,7 +203,7 @@ public class ExecServiceImpl implements ExecService {
             return ReturnResult.error("任务不存在: " + id);
         }
         return runCommand(parseHostIds(job.getMsExecJobHostIds()),
-                job.getMsExecJobCommand(), job.getMsExecJobTimeout());
+                job.getMsExecJobCommand(), job.getMsExecJobTimeout(), job.getId());
     }
 
     @Override
@@ -251,16 +251,8 @@ public class ExecServiceImpl implements ExecService {
     private void triggerJob(MsExecJob job) {
         try {
             List<Long> hostIds = parseHostIds(job.getMsExecJobHostIds());
-            List<MsExecLog> logs = runCommand(hostIds, job.getMsExecJobCommand(), job.getMsExecJobTimeout()).getData();
-            // 关联任务 ID 便于日志追溯
-            if (logs != null) {
-                for (MsExecLog item : logs) {
-                    item.setMsExecLogType(ServerConstants.EXEC_TYPE_COMMAND);
-                    item.setMsExecLogJobId(job.getId());
-                    item.setId(null);
-                    logMapper.insert(item);
-                }
-            }
+            // 透传 jobId，日志在 executeSingle 中统一落库（不再重复 insert）
+            runCommand(hostIds, job.getMsExecJobCommand(), job.getMsExecJobTimeout(), job.getId());
         } catch (Exception e) {
             log.warn("[exec] 计划任务执行异常 jobId={}: {}", job.getId(), e.getMessage());
         } finally {
