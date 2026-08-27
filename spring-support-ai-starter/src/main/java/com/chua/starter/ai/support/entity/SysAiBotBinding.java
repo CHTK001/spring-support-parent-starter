@@ -85,6 +85,12 @@ public class SysAiBotBinding extends SysBase {
     private String bindSource;
 
     /**
+     * 绑定的 AI 模型（用于微信聊天时 AI 回复）
+     */
+    @TableField("sys_ai_bot_binding_model")
+    private String model;
+
+    /**
      * 最后活跃时间
      */
     @TableField("sys_ai_bot_binding_last_active_time")

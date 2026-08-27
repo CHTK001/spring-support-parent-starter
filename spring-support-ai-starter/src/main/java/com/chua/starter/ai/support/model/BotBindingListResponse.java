@@ -54,6 +54,11 @@ public class BotBindingListResponse {
     private String bindSource;
 
     /**
+     * 绑定的 AI 模型（用于微信聊天时 AI 回复）
+     */
+    private String model;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;
