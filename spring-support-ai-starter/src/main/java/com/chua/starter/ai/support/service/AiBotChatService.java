@@ -6,8 +6,11 @@ import com.chua.common.support.ai.bot.BotMessageListener;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.ilink.support.bot.ILinkBotClient;
 import com.chua.starter.ai.support.entity.SysAiBotBinding;
+import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
+import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
+import com.chua.starter.ai.support.manage.store.SysAiProvider;
+import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.mapper.SysAiBotBindingMapper;
-import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.ContextRefreshedEvent;
@@ -26,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 收到微信消息后调用配置的 AI 模型生成回复，并通过 sendmessage 回发。</p>
  *
  * <p>每个 Bot 可配置独立的 AI 模型（{@link SysAiBotBinding#getModel()}），
- * 未配置时回退到默认 ChatClient。</p>
+ * AI 客户端基于模型管理配置的 provider（DB）即时构建。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -39,8 +42,11 @@ public class AiBotChatService {
     /** Bot 绑定 Mapper */
     private final SysAiBotBindingMapper botBindingMapper;
 
-    /** AI 对话客户端注册中心（按模型获取 ChatClient） */
-    private final ChatClientRegistry chatClientRegistry;
+    /** 模型表 Mapper（按模型名查所属 provider） */
+    private final SysAiProviderModelMapper providerModelMapper;
+
+    /** Provider 表 Mapper（获取 platform/baseUrl/凭证） */
+    private final SysAiProviderMapper providerMapper;
 
     /** 运行中的 Bot：botId -> iLink 客户端 */
     private final Map<String, ILinkBotClient> runningBots = new ConcurrentHashMap<>();
@@ -144,21 +150,58 @@ public class AiBotChatService {
     }
 
     /**
-     * 用 Bot 配置的模型（或默认）生成 AI 回复。
+     * 用 Bot 配置的模型生成 AI 回复。
+     *
+     * <p>基于模型管理配置的 provider（DB）即时构建 ChatClient：
+     * 根据模型名查 provider_model → provider（platform/baseUrl/凭证），
+     * 用 {@link ChatClient#create(String, String, String)} 构建并调用。</p>
      */
     private String aiReply(SysAiBotBinding bot, String userMsg) {
-        ChatClient chatClient = null;
-        // 优先使用 Bot 配置的模型
-        if (bot.getModel() != null && !bot.getModel().isBlank()) {
-            chatClient = chatClientRegistry.getByModel(bot.getModel());
+        String modelName = bot.getModel();
+        if (modelName == null || modelName.isBlank()) {
+            return "请先为该 Bot 设置 AI 模型。";
         }
-        if (chatClient == null) {
-            chatClient = chatClientRegistry.getDefault();
+        try {
+            // 1. 按模型名查 provider_model，确定所属 provider
+            SysAiProviderModel pm = providerModelMapper.selectOne(
+                    Wrappers.<SysAiProviderModel>lambdaQuery()
+                            .eq(SysAiProviderModel::getModel, modelName)
+                            .eq(SysAiProviderModel::getEnabled, true));
+            if (pm == null) {
+                log.warn("[BotChat] 模型 {} 未在模型管理中配置", modelName);
+                return "模型 " + modelName + " 未配置，请在模型管理中检查。";
+            }
+            // 2. 查 provider，取 platform / baseUrl / 凭证
+            SysAiProvider provider = providerMapper.selectById(pm.getProviderId());
+            if (provider == null || provider.getBaseUrl() == null) {
+                return "模型 " + modelName + " 的供应商不存在。";
+            }
+            String apiKey = extractApiKey(provider.getCredentials());
+            // 3. 构建 ChatClient 并回复
+            ChatClient chatClient = ChatClient.create(provider.getPlatform(), apiKey, provider.getBaseUrl())
+                    .model(modelName);
+            return chatClient.chatSync(userMsg);
+        } catch (Exception e) {
+            log.error("[BotChat] AI 回复失败 bot={} model={}", bot.getBotId(), modelName, e);
+            return "AI 回复失败：" + e.getMessage();
         }
-        if (chatClient == null) {
-            log.warn("[BotChat] 无可用 ChatClient（模型={}），无法回复", bot.getModel());
-            return "当前未配置可用的 AI 模型。";
+    }
+
+    /**
+     * 从 provider 凭证中提取 API Key。
+     *
+     * <p>凭证结构：{@code {"api_keys": ["sk-...", ...]}}，取第一个；
+     * 兼容 {@code apiKey} 键。</p>
+     */
+    private static String extractApiKey(Map<String, Object> credentials) {
+        if (credentials == null) {
+            return null;
         }
-        return chatClient.chatSync(userMsg);
+        Object keys = credentials.get("api_keys");
+        if (keys instanceof List<?> list && !list.isEmpty() && list.get(0) != null) {
+            return list.get(0).toString();
+        }
+        Object key = credentials.get("apiKey");
+        return key != null ? key.toString() : null;
     }
 }
