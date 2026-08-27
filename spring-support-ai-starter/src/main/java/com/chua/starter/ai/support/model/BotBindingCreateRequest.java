@@ -45,4 +45,9 @@ public class BotBindingCreateRequest {
      * 绑定来源
      */
     private String bindSource;
+
+    /**
+     * 绑定的 AI 模型（用于微信聊天时 AI 回复）
+     */
+    private String model;
 }

@@ -91,6 +91,22 @@ public class ApiProviderController {
     // ==================== Providers ====================
 
     /**
+     * 获取 Provider 凭证明文（仅限本地可信客户端调用）。
+     *
+     * @param providerId Provider 标识
+     * @return 凭证 Map（含 api_key 明文）
+     */
+    @GetMapping("/providers/{provider_id}/credentials")
+    public ApiResult<Map<String, Object>> getProviderCredentials(@PathVariable("provider_id") String providerId) {
+        SysAiProvider entity = requireProvider(providerId);
+        Map<String, Object> credentials = entity.getCredentials();
+        if (credentials == null) {
+            credentials = new java.util.LinkedHashMap<>();
+        }
+        return ApiResult.ok(credentials);
+    }
+
+    /**
      * 列举全部 Provider（按 sort_order 升序）。
      *
      * @return ProviderResponse 列表

@@ -42,6 +42,9 @@ public class AiBotBindingService {
     /** Bot 绑定 Mapper */
     private final SysAiBotBindingMapper botBindingMapper;
 
+    /** Bot 聊天引擎（微信消息轮询 + AI 回复） */
+    private final AiBotChatService aiBotChatService;
+
     /**
      * 扫码会话内存表（key -> 会话状态）。
      *
@@ -83,12 +86,18 @@ public class AiBotBindingService {
             binding.setId(existing.getId());
             binding.setUpdateTime(LocalDateTime.now());
             botBindingMapper.updateById(binding);
-            return existing.getId();
+        } else {
+            binding.setCreateTime(LocalDateTime.now());
+            binding.setUpdateTime(LocalDateTime.now());
+            botBindingMapper.insert(binding);
         }
-        binding.setCreateTime(LocalDateTime.now());
-        binding.setUpdateTime(LocalDateTime.now());
-        botBindingMapper.insert(binding);
-        return binding.getId();
+        // 微信 Bot 且在线且有凭证时，启动/刷新其消息轮询（AI 聊天）
+        if ("wechat".equals(binding.getPlatform())
+                && "online".equals(binding.getStatus())
+                && binding.getBotToken() != null && !binding.getBotToken().isBlank()) {
+            aiBotChatService.startBot(binding);
+        }
+        return binding.getId() != null ? binding.getId() : existing.getId();
     }
 
     /**
@@ -103,10 +112,20 @@ public class AiBotBindingService {
         binding.setLastActiveTime(LocalDateTime.now());
         binding.setUpdateTime(LocalDateTime.now());
         botBindingMapper.updateById(binding);
+        // 状态变化时启停消息轮询
+        if ("online".equals(status)) {
+            aiBotChatService.startBot(binding);
+        } else {
+            aiBotChatService.stopBot(botId);
+        }
     }
 
     public void delete(Long id) {
+        var binding = getById(id);
         botBindingMapper.deleteById(id);
+        if (binding != null && binding.getBotId() != null) {
+            aiBotChatService.stopBot(binding.getBotId());
+        }
     }
 
     // ==================== 微信 iLink 扫码登录 ====================
@@ -170,8 +189,14 @@ public class AiBotBindingService {
                     session.botId = botId;
                     session.botToken = token;
                     log.info("[Bot] 扫码确认 key={} botId={}", key, botId);
-                    saveBindingFromScan(key, session, userId);
-                    qrSessions.remove(key);
+                    // 校验凭证非空，避免写入 botId 为空的脏数据
+                    if (botId == null || botId.isBlank()) {
+                        log.warn("[Bot] 扫码确认但缺少 botId，跳过绑定 key={}", key);
+                    } else {
+                        saveBindingFromScan(key, session, userId);
+                    }
+                    // 保留 session 让前端轮询能读到 confirmed 状态后再关闭；
+                    // 会话到期后由懒清理机制回收
                 }
 
                 @Override
@@ -226,8 +251,9 @@ public class AiBotBindingService {
      */
     public QrStatus checkQrCodeStatus(String key) {
         var session = qrSessions.get(key);
+        // 会话不存在（已 confirmed 移除 / 已过期 / key 无效）：返回 expired，避免前端轮询报错
         if (session == null) {
-            throw new IllegalArgumentException("key 无效或已过期");
+            return new QrStatus("expired", null, null, null);
         }
         // 懒清理过期 session
         if (System.currentTimeMillis() > session.expireAt && !"confirmed".equals(session.status)) {

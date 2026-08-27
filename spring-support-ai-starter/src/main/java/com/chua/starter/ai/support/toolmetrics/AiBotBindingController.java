@@ -6,6 +6,7 @@ import com.chua.starter.ai.support.model.BotBindingListResponse;
 import com.chua.starter.ai.support.entity.SysAiBotBinding;
 import com.chua.starter.ai.support.service.AiBotBindingService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
  * @author CH
  * @since 4.0.0.42
  */
+@Slf4j
 @RestController
 @RequestMapping("/v2/ai/bot-binding")
 @RequiredArgsConstructor
@@ -29,6 +31,35 @@ public class AiBotBindingController {
      * Bot 绑定服务
      */
     private final AiBotBindingService botBindingService;
+
+    /**
+     * AI 对话客户端注册中心（获取可用模型列表）
+     */
+    private final com.chua.starter.ai.support.registry.ChatClientRegistry chatClientRegistry;
+
+    /**
+     * 获取可用于 Bot 的 AI 模型列表（供前端设置 Bot 的聊天模型）。
+     *
+     * <p>遍历所有已注册的 ChatClient，聚合各客户端的模型名，去重返回。</p>
+     *
+     * @return 模型名列表
+     */
+    @GetMapping("/models")
+    public ReturnResult<List<String>> models() {
+        java.util.Set<String> models = new java.util.LinkedHashSet<>();
+        for (com.chua.common.support.ai.chat.ChatClient client : chatClientRegistry.getAll()) {
+            if (client == null) {
+                continue;
+            }
+            try {
+                models.addAll(client.listModels());
+            } catch (Exception e) {
+                // 单个客户端模型列举失败不影响整体
+                log.debug("[Bot] 获取客户端模型列表失败: {}", e.getMessage());
+            }
+        }
+        return ReturnResult.ok(new java.util.ArrayList<>(models));
+    }
 
     /**
      * 获取全部绑定列表。
@@ -110,6 +141,7 @@ public class AiBotBindingController {
         resp.setGatewayPort(entity.getGatewayPort());
         resp.setStatus(entity.getStatus());
         resp.setBindSource(entity.getBindSource());
+        resp.setModel(entity.getModel());
         resp.setCreateTime(entity.getCreateTime());
         resp.setLastActiveTime(entity.getLastActiveTime());
         return resp;
