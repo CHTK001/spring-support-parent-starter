@@ -14,8 +14,10 @@ import java.util.Map;
  * AI 提供商持久化实体。
  *
  * <p>对应前端 {@code /api/providers} 契约，存储提供商的基础信息。
- * {@code credentials} 字段写入后不回显，响应仅以 {@code has_credentials} 布尔标识。
- * 表 {@code sys_ai_provider}，所有列以表名作为前缀。</p>
+ * {@code credentials} 字段写入后不回显，响应仅以 {@code has_credentials} 布尔标识。</p>
+ *
+ * <p>数据库列以表名 {@code sys_ai_provider_} 作为前缀，实体字段保持简短语义名，
+ * 通过 {@link TableField} 显式映射，前端契约稳定不变。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -29,65 +31,65 @@ public class SysAiProvider implements Serializable {
      * 提供商ID（UUID）
      */
     @TableId(value = "sys_ai_provider_id", type = IdType.INPUT)
-    private String sysAiProviderId;
+    private String providerId;
 
     /**
      * 平台类型（openai/anthropic/google等）
      */
     @TableField("sys_ai_provider_platform")
-    private String sysAiProviderPlatform;
+    private String platform;
 
     /**
      * 提供商名称
      */
     @TableField("sys_ai_provider_name")
-    private String sysAiProviderName;
+    private String name;
 
     /**
      * API基础URL
      */
     @TableField("sys_ai_provider_base_url")
-    private String sysAiProviderBaseUrl;
+    private String baseUrl;
 
     /**
      * 认证方式（api_key/bearer/oauth/none）
      */
     @TableField("sys_ai_provider_auth_scheme")
-    private String sysAiProviderAuthScheme;
+    private String authScheme;
 
     /**
      * 凭证JSON（写入后不回显）
      */
     @TableField(value = "sys_ai_provider_credentials", typeHandler = JacksonTypeHandler.class)
-    private Map<String, Object> sysAiProviderCredentials;
+    private Map<String, Object> credentials;
 
     /**
      * 是否启用
      */
     @TableField("sys_ai_provider_enabled")
-    private Boolean sysAiProviderEnabled;
+    private Boolean enabled;
 
     /**
      * AWS Bedrock配置JSON
      */
     @TableField(value = "sys_ai_provider_bedrock_config", typeHandler = JacksonTypeHandler.class)
-    private Map<String, Object> sysAiProviderBedrockConfig;
+    private Map<String, Object> bedrockConfig;
 
     /**
      * 排序序号
      */
     @TableField("sys_ai_provider_sort_order")
-    private Integer sysAiProviderSortOrder;
+    private Integer sortOrder;
 
     /**
      * 创建时间（毫秒）
      */
     @TableField("sys_ai_provider_create_time")
-    private Long sysAiProviderCreateTime;
+    private Long createdAt;
 
     /**
      * 更新时间（毫秒）
      */
     @TableField("sys_ai_provider_update_time")
-    private Long sysAiProviderUpdateTime;
+    private Long updatedAt;
 }

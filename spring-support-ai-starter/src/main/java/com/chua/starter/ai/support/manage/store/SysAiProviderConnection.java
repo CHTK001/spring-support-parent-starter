@@ -16,6 +16,9 @@ import java.util.Map;
  * <p>对应前端 {@code /api/providers/{id}/connections} 契约，
  * 存储提供商的附加连接信息，凭证写入后不回显。</p>
  *
+ * <p>数据库列以表名 {@code sys_ai_provider_connection_} 作为前缀，实体字段保持简短语义名，
+ * 通过 {@link TableField} 显式映射。</p>
+ *
  * @since 4.0.0.42
  * @author CH
  */
@@ -28,59 +31,59 @@ public class SysAiProviderConnection implements Serializable {
      * 连接ID（UUID）
      */
     @TableId(value = "sys_ai_provider_connection_id", type = IdType.INPUT)
-    private String sysAiProviderConnectionId;
+    private String connectionId;
 
     /**
      * 所属提供商ID
      */
     @TableField("sys_ai_provider_connection_provider_id")
-    private String sysAiProviderConnectionProviderId;
+    private String providerId;
 
     /**
      * 连接角色（default/backup等）
      */
     @TableField("sys_ai_provider_connection_role")
-    private String sysAiProviderConnectionRole;
+    private String role;
 
     /**
      * 连接标签
      */
     @TableField("sys_ai_provider_connection_label")
-    private String sysAiProviderConnectionLabel;
+    private String label;
 
     /**
      * 覆盖的基础URL
      */
     @TableField("sys_ai_provider_connection_base_url")
-    private String sysAiProviderConnectionBaseUrl;
+    private String baseUrl;
 
     /**
      * 覆盖的认证方式
      */
     @TableField("sys_ai_provider_connection_auth_scheme")
-    private String sysAiProviderConnectionAuthScheme;
+    private String authScheme;
 
     /**
      * 凭证JSON（写入后不回显）
      */
     @TableField(value = "sys_ai_provider_connection_credentials", typeHandler = JacksonTypeHandler.class)
-    private Map<String, Object> sysAiProviderConnectionCredentials;
+    private Map<String, Object> credentials;
 
     /**
      * 扩展字段JSON
      */
     @TableField(value = "sys_ai_provider_connection_extra", typeHandler = JacksonTypeHandler.class)
-    private Map<String, Object> sysAiProviderConnectionExtra;
+    private Map<String, Object> extra;
 
     /**
      * 创建时间（毫秒）
      */
     @TableField("sys_ai_provider_connection_create_time")
-    private Long sysAiProviderConnectionCreateTime;
+    private Long createdAt;
 
     /**
      * 更新时间（毫秒）
      */
     @TableField("sys_ai_provider_connection_update_time")
-    private Long sysAiProviderConnectionUpdateTime;
+    private Long updatedAt;
 }
