@@ -214,8 +214,8 @@ public class ApiAgentController {
 
         // 2. 定位任务能力（无该任务能力直接参数错误）
         Map<String, Object> capability = null;
-        if (modelRow.getCapabilities() != null) {
-            for (Map<String, Object> cap : modelRow.getCapabilities()) {
+        if (modelRow.getSysAiProviderModelCapabilities() != null) {
+            for (Map<String, Object> cap : modelRow.getSysAiProviderModelCapabilities()) {
                 if (task.equals(str(cap.get("task")))) {
                     capability = cap;
                     break;
@@ -241,7 +241,7 @@ public class ApiAgentController {
         }
         capability.put("health", health);
         capability.put("health_checked_at", System.currentTimeMillis());
-        modelRow.setSysAiProviderUpdatedAt(now);
+        modelRow.setSysAiProviderModelUpdatedAt(now);
         // 复合主键 (provider_id, model)：显式按双键更新，避免同名模型跨供应商误伤
         modelMapper.update(modelRow, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<SysAiProviderModel>()
                 .eq(SysAiProviderModel::getProviderId, providerId)

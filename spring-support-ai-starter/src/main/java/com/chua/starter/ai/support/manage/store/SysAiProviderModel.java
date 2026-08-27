@@ -14,8 +14,11 @@ import java.util.Map;
 /**
  * AI 提供商模型持久化实体。
  *
- * <p>对应前端 {@code /api/provider-models} 契约，复合主键
+ * <p>对应前端 {@code /api/provider-models} 契约，复合主键为
  * ({@code sys_ai_provider_model_provider_id}, {@code sys_ai_provider_model_model})。</p>
+ *
+ * <p>数据库列以表名 {@code sys_ai_provider_model_} 作为前缀，实体字段保持简短语义名，
+ * 通过 {@link TableField} 显式映射。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -29,53 +32,53 @@ public class SysAiProviderModel implements Serializable {
      * 所属提供商ID
      */
     @TableField("sys_ai_provider_model_provider_id")
-    private String sysAiProviderModelProviderId;
+    private String providerId;
 
     /**
      * 模型名称
      */
     @TableId(value = "sys_ai_provider_model_model", type = IdType.INPUT)
-    private String sysAiProviderModelModel;
+    private String model;
 
     /**
      * 是否启用
      */
     @TableField("sys_ai_provider_model_enabled")
-    private Boolean sysAiProviderModelEnabled;
+    private Boolean enabled;
 
     /**
      * 排序序号
      */
     @TableField("sys_ai_provider_model_sort_order")
-    private Integer sysAiProviderModelSortOrder;
+    private Integer sortOrder;
 
     /**
      * 模型描述
      */
     @TableField("sys_ai_provider_model_description")
-    private String sysAiProviderModelDescription;
+    private String description;
 
     /**
      * 任务能力JSON数组
      */
     @TableField(value = "sys_ai_provider_model_capabilities", typeHandler = JacksonTypeHandler.class)
-    private List<Map<String, Object>> sysAiProviderModelCapabilities;
+    private List<Map<String, Object>> capabilities;
 
     /**
      * 模型指标JSON（延迟/智能/输出速度等）
      */
     @TableField(value = "sys_ai_provider_model_metrics", typeHandler = JacksonTypeHandler.class)
-    private Map<String, Object> sysAiProviderModelMetrics;
+    private Map<String, Object> metrics;
 
     /**
      * 创建时间（毫秒）
      */
     @TableField("sys_ai_provider_model_create_time")
-    private Long sysAiProviderModelCreateTime;
+    private Long createdAt;
 
     /**
      * 更新时间（毫秒）
      */
     @TableField("sys_ai_provider_model_update_time")
-    private Long sysAiProviderModelUpdateTime;
+    private Long updatedAt;
 }
