@@ -87,6 +87,7 @@ public class DatalakeAdvancedProbe {
         sinkRegistry.values().forEach(DataSink::start);
 
         pipelineEngine = new DefaultPipelineEngine(pipelineManager, sinkRegistry, null);
+        ((DefaultPipelineManager) pipelineManager).setEngine((DefaultPipelineEngine) pipelineEngine);
         startTime = System.currentTimeMillis();
 
         log.info("[DatalakeAdvancedProbe] 基础设施就绪: log/stat/jdbc/failing 共 4 个 Sink");
