@@ -93,10 +93,13 @@
         </dependency>
 
         <!-- ONNX 模型注册器（OCR 识别、文本向量等模型实现） -->
+        <!-- ONNX 模型实现由 models-parent 按需引入；AI Starter 纯在线，不打包离线模型 jar -->
+        <!--
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-deeplearning-onnx-starter</artifactId>
         </dependency>
+        -->
 
         <dependency>
             <groupId>com.chua</groupId>
