@@ -119,6 +119,12 @@
             <artifactId>spring-support-filesystem-starter</artifactId>
         </dependency>
 
+        <!-- SSH 客户端（远程主机连接：真实握手、命令执行，基于 Apache MINA SSHD） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-ssh-starter</artifactId>
+        </dependency>
+
         <!-- Spring Support Common -->
         <dependency>
             <groupId>com.chua</groupId>

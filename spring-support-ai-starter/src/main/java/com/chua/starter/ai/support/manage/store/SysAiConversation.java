@@ -31,7 +31,7 @@ import java.util.Map;
  * @author CH
  */
 @Data
-@TableName("sys_ai_conversation")
+@TableName(value = "sys_ai_conversation", autoResultMap = true)
 public class SysAiConversation implements Serializable {
     private static final long serialVersionUID = 1L;
 
