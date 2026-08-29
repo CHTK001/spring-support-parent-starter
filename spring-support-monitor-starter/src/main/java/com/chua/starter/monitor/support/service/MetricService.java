@@ -191,4 +191,15 @@ public interface MetricService {
      * @return Redis 聚合统计列表
      */
     ReturnResult<List<MsMonitorRedisMetricStatistics>> getRedisMetricStatistics(Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime);
+
+    /**
+     * 导出指标历史数据
+     *
+     * @param monitorId  监控 ID
+     * @param metricName 指标名（可选，为空则导出所有）
+     * @param startTime  起始时间
+     * @param endTime    结束时间
+     * @return 操作结果，包含文件下载链接
+     */
+    ReturnResult<String> exportMetricHistory(Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime);
 }

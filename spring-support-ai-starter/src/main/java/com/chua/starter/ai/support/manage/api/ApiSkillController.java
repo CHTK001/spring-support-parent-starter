@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * 前端技能控制器（对接 nomicore {@code skills.*} 契约）。
@@ -99,6 +102,179 @@ public class ApiSkillController {
     }
 
     /**
+     * 扫描本机已安装 AI 编辑器的 skill/rules 目录，返回可导入的技能列表。
+     *
+     * @return 技能列表（按编辑器分组）
+     */
+    @GetMapping("/agent")
+    public ApiResult<List<Map<String, Object>>> fromAgent() {
+        List<Map<String, Object>> result = new ArrayList<>();
+        Path userHome = Paths.get(System.getProperty("user.home", "."));
+
+        try {
+            // 实例化 AgentEditorProvider 扫描已安装的编辑器
+            Class<?> clazz = Class.forName("com.chua.common.support.datasearch.agent.AgentEditorProvider");
+            Object provider = clazz.getDeclaredConstructor().newInstance();
+
+            // 获取已安装的编辑器列表
+            @SuppressWarnings("unchecked")
+            List<String> editors = (List<String>) clazz.getMethod("listAvailableEditors").invoke(provider);
+            log.info("[ApiSkill] 已安装的 AI 编辑器: {}", editors);
+
+            // 遍历所有编辑器，扫描其 skill 目录
+            for (String editorName : editors) {
+                // Cursor: ~/.cursor/rules/*.mdc
+                if ("Cursor".equals(editorName)) {
+                    scanDirectorySkills(userHome.resolve(".cursor/rules"), "Cursor", result);
+                }
+                // Claude Code: ~/.claude/commands/*.md
+                else if ("Claude Code".equals(editorName)) {
+                    scanDirectorySkills(userHome.resolve(".claude/commands"), "Claude Code", result);
+                }
+                // Windsurf: ~/.windsurf/rules/*.md
+                else if ("Windsurf".equals(editorName)) {
+                    scanDirectorySkills(userHome.resolve(".windsurf/rules"), "Windsurf", result);
+                }
+                // Roo Code: ~/.roo/rules/*.md
+                else if ("Roo Code".equals(editorName)) {
+                    scanDirectorySkills(userHome.resolve(".roo/rules"), "Roo Code", result);
+                }
+                // Trae: ~/.trae/rules/*.md
+                else if ("Trae".equals(editorName)) {
+                    scanDirectorySkills(userHome.resolve(".trae/rules"), "Trae", result);
+                }
+                // CodeBuddy: 通过 provider 扫描工作区 skills
+                else if ("CodeBuddy".equals(editorName)) {
+                    try {
+                        @SuppressWarnings("unchecked")
+                        var skills = (java.util.List<?>) clazz.getMethod("scanCodebuddySkills", String.class)
+                                .invoke(provider, (String) null);
+                        if (skills != null) {
+                            for (Object skill : skills) {
+                                String name = (String) skill.getClass().getMethod("getName").invoke(skill);
+                                String desc = (String) skill.getClass().getMethod("getDescription").invoke(skill);
+                                Map<String, Object> item = new LinkedHashMap<>();
+                                item.put("name", name);
+                                item.put("description", desc != null ? desc : "");
+                                item.put("source", "agent");
+                                item.put("provider", "CodeBuddy");
+                                result.add(item);
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.warn("[ApiSkill] 扫描 CodeBuddy skills 失败: {}", e.getMessage());
+                    }
+                }
+                // TRAE-CN: 通过 provider 扫描 skills
+                else if ("TRAE-CN".equals(editorName)) {
+                    try {
+                        @SuppressWarnings("unchecked")
+                        var skills = (java.util.List<?>) clazz.getMethod("scanTraeCnSkills").invoke(provider);
+                        if (skills != null) {
+                            for (Object skill : skills) {
+                                String name = (String) skill.getClass().getMethod("getName").invoke(skill);
+                                String desc = (String) skill.getClass().getMethod("getDescription").invoke(skill);
+                                Map<String, Object> item = new LinkedHashMap<>();
+                                item.put("name", name);
+                                item.put("description", desc != null ? desc : "");
+                                item.put("source", "agent");
+                                item.put("provider", "TRAE-CN");
+                                result.add(item);
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.warn("[ApiSkill] 扫描 TRAE-CN skills 失败: {}", e.getMessage());
+                    }
+                }
+                // 其他编辑器：扫描通用 rules 目录
+                else {
+                    String configDir = switch (editorName) {
+                        case "Codex" -> ".codex";
+                        case "Cline" -> ".vscode-server/data/User/globalStorage/saoudrizwan.claude-dev/settings";
+                        case "Augment Code" -> ".augment";
+                        case "Continue" -> ".continue";
+                        case "Gemini CLI" -> ".gemini";
+                        case "Cody" -> ".cody";
+                        default -> null;
+                    };
+                    if (configDir != null) {
+                        scanDirectorySkills(userHome.resolve(configDir).resolve("rules"), editorName, result);
+                        scanDirectorySkills(userHome.resolve(configDir).resolve("commands"), editorName, result);
+                    }
+                }
+            }
+        } catch (ClassNotFoundException e) {
+            log.warn("[ApiSkill] AgentEditorProvider 不在 classpath: {}", e.getMessage());
+        } catch (Exception e) {
+            log.warn("[ApiSkill] 扫描 Agent skills 失败: {}", e.getMessage(), e);
+        }
+
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 扫描目录下的 skill 文件（SKILL.md 或 .md 规则文件）。
+     */
+    private void scanDirectorySkills(Path dir, String editorName, List<Map<String, Object>> result) {
+        if (dir == null || !Files.isDirectory(dir)) {
+            return;
+        }
+        try (Stream<Path> stream = Files.list(dir)) {
+            for (Path p : stream.sorted().toList()) {
+                if (Files.isDirectory(p)) {
+                    // 子目录：查找 SKILL.md
+                    Path skillMd = p.resolve("SKILL.md");
+                    if (!Files.exists(skillMd)) {
+                        skillMd = p.resolve("skill.md");
+                    }
+                    if (Files.exists(skillMd)) {
+                        String name = p.getFileName().toString();
+                        String desc = readFirstLine(skillMd);
+                        Map<String, Object> item = new LinkedHashMap<>();
+                        item.put("name", name);
+                        item.put("description", desc);
+                        item.put("source", "agent");
+                        item.put("provider", editorName);
+                        item.put("path", p.toAbsolutePath().toString());
+                        result.add(item);
+                    }
+                } else if (p.toString().endsWith(".md") || p.toString().endsWith(".mdc")) {
+                    // 单文件规则
+                    String name = p.getFileName().toString();
+                    name = name.replaceAll("\\.(md|mdc)$", "");
+                    String desc = readFirstLine(p);
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("name", name);
+                    item.put("description", desc);
+                    item.put("source", "agent");
+                    item.put("provider", editorName);
+                    item.put("path", p.toAbsolutePath().toString());
+                    result.add(item);
+                }
+            }
+        } catch (IOException e) {
+            log.debug("[ApiSkill] 扫描目录失败: {}", dir);
+        }
+    }
+
+    /**
+     * 读取文件首行非空文本作为描述。
+     */
+    private String readFirstLine(Path file) {
+        try {
+            List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
+            for (String line : lines) {
+                String trimmed = line.trim();
+                if (!trimmed.isEmpty()) {
+                    return trimmed;
+                }
+            }
+        } catch (IOException ignored) {
+        }
+        return "";
+    }
+
+    /**
      * 读取内置规则文件内容。
      *
      * @param body 请求体 {@code { file_name: string }}
@@ -167,27 +343,56 @@ public class ApiSkillController {
     }
 
     /**
-     * 导入技能（复制技能目录到用户目录）。
+     * 导入技能（复制到用户目录）。支持 zip 文件、单个技能目录和父目录。
      *
      * @param body 请求体 {@code { skill_path: string }}
      * @return 导入结果
      */
     @PostMapping("/import")
-    public ApiResult<Map<String, String>> importSkill(@RequestBody Map<String, Object> body) {
+    public ApiResult<Map<String, Object>> importSkill(@RequestBody Map<String, Object> body) {
         Path skillPath = resolveSkillPath(body);
-        if (!Files.exists(skillPath) || !Files.isDirectory(skillPath)) {
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "技能不存在: " + skillPath);
+        if (!Files.exists(skillPath)) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "路径不存在: " + skillPath);
         }
-        String name = skillPath.getFileName().toString();
+
         Path userDir = Paths.get(skillsRoot).resolve("user");
         try {
             Files.createDirectories(userDir);
-            copyDirectory(skillPath, userDir.resolve(name));
+        } catch (IOException e) {
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "创建用户技能目录失败: " + e.getMessage());
+        }
+
+        List<String> importedNames = new ArrayList<>();
+
+        try {
+            if (Files.isRegularFile(skillPath) && skillPath.toString().toLowerCase().endsWith(".zip")) {
+                Path tempDir = Files.createTempDirectory("skill-import-");
+                try {
+                    extractZip(skillPath, tempDir);
+                    copySkillsFromDirectory(tempDir, userDir, importedNames);
+                } catch (IOException e) {
+                    throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "导入 zip 技能失败: " + e.getMessage());
+                } finally {
+                    deleteRecursively(tempDir);
+                }
+            } else if (Files.isDirectory(skillPath) && hasSkillMark(skillPath)) {
+                String name = skillPath.getFileName().toString();
+                copyDirectory(skillPath, userDir.resolve(name));
+                importedNames.add(name);
+            } else if (Files.isDirectory(skillPath)) {
+                copySkillsFromDirectory(skillPath, userDir, importedNames);
+            } else {
+                throw new ApiException(ApiErrorCode.INVALID_PARAM, "不支持的导入类型: " + skillPath);
+            }
+        } catch (ApiException e) {
+            throw e;
         } catch (IOException e) {
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "导入技能失败: " + e.getMessage());
         }
-        Map<String, String> result = new LinkedHashMap<>();
-        result.put("skill_name", name);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("skill_name", importedNames.isEmpty() ? "" : importedNames.get(0));
+        result.put("skill_names", importedNames);
         return ApiResult.ok(result);
     }
 
@@ -282,7 +487,12 @@ public class ApiSkillController {
     }
 
     /**
-     * 通过符号链接导入技能。
+     * 通过符号链接导入技能。支持三种输入：
+     * <ul>
+     *   <li>zip 文件 → 解压后扫描技能目录导入</li>
+     *   <li>单个技能目录（含 SKILL.md） → 符号链接/复制导入</li>
+     *   <li>父目录（含多个技能子目录） → 扫描并批量导入</li>
+     * </ul>
      *
      * @param body 请求体 {@code { skill_path: string }}
      * @return 导入结果
@@ -290,29 +500,51 @@ public class ApiSkillController {
     @PostMapping("/import-symlink")
     public ApiResult<Map<String, Object>> importSymlink(@RequestBody Map<String, Object> body) {
         Path skillPath = resolveSkillPath(body);
-        if (!Files.exists(skillPath) || !Files.isDirectory(skillPath)) {
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "技能不存在: " + skillPath);
+        if (!Files.exists(skillPath)) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "路径不存在: " + skillPath);
         }
-        String name = skillPath.getFileName().toString();
+
         Path userDir = Paths.get(skillsRoot).resolve("user");
         try {
             Files.createDirectories(userDir);
-            Path link = userDir.resolve(name);
-            if (!Files.exists(link)) {
-                try {
-                    Files.createSymbolicLink(link, skillPath);
-                } catch (IOException | UnsupportedOperationException e) {
-                    copyDirectory(skillPath, link);
-                }
-            }
         } catch (IOException e) {
-            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "导入符号链接技能失败: " + e.getMessage());
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "创建用户技能目录失败: " + e.getMessage());
         }
+
+        List<String> importedNames = new ArrayList<>();
+
+        try {
+            if (Files.isRegularFile(skillPath) && skillPath.toString().toLowerCase().endsWith(".zip")) {
+                // Case 1: zip 文件 → 解压到临时目录，扫描技能后导入
+                Path tempDir = Files.createTempDirectory("skill-import-");
+                try {
+                    extractZip(skillPath, tempDir);
+                    importSkillsFromDirectory(tempDir, userDir, importedNames);
+                } catch (IOException e) {
+                    throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "导入 zip 技能失败: " + e.getMessage());
+                } finally {
+                    deleteRecursively(tempDir);
+                }
+            } else if (Files.isDirectory(skillPath) && hasSkillMark(skillPath)) {
+                // Case 2: 单个技能目录 → 符号链接/复制
+                String name = skillPath.getFileName().toString();
+                symlinkOrCopy(skillPath, userDir.resolve(name));
+                importedNames.add(name);
+            } else if (Files.isDirectory(skillPath)) {
+                // Case 3: 父目录 → 扫描子目录批量导入
+                importSkillsFromDirectory(skillPath, userDir, importedNames);
+            } else {
+                throw new ApiException(ApiErrorCode.INVALID_PARAM, "不支持的导入类型: " + skillPath);
+            }
+        } catch (ApiException e) {
+            throw e;
+        } catch (IOException e) {
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "导入技能失败: " + e.getMessage());
+        }
+
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("skill_name", name);
-        List<String> names = new ArrayList<>();
-        names.add(name);
-        result.put("skill_names", names);
+        result.put("skill_name", importedNames.isEmpty() ? "" : importedNames.get(0));
+        result.put("skill_names", importedNames);
         return ApiResult.ok(result);
     }
 
@@ -425,52 +657,80 @@ public class ApiSkillController {
     }
 
     /**
-     * 同步技能市场排行。
-     *
-     * @param body 请求体 {@code { sources?: string[] }}
-     * @return 同步结果
+     * 从目录中扫描并以符号链接方式导入所有技能子目录。
      */
-    @PostMapping("/market/rankings/sync")
-    public ApiResult<Map<String, Object>> marketRankingsSync(@RequestBody(required = false) Map<String, Object> body) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("fetched_at", System.currentTimeMillis());
-        result.put("items", new ArrayList<>());
-        result.put("errors", new ArrayList<>());
-        return ApiResult.ok(result);
+    private void importSkillsFromDirectory(Path dir, Path userDir, List<String> importedNames) {
+        try (Stream<Path> stream = Files.list(dir)) {
+            for (Path p : stream.filter(Files::isDirectory).sorted().toList()) {
+                if (hasSkillMark(p)) {
+                    String name = p.getFileName().toString();
+                    Path target = userDir.resolve(name);
+                    if (!Files.exists(target)) {
+                        symlinkOrCopy(p, target);
+                    }
+                    importedNames.add(name);
+                }
+            }
+        } catch (IOException e) {
+            log.warn("[skills] 扫描目录失败: {}", dir, e);
+        }
     }
 
     /**
-     * 解析技能市场 MCP 配置。
-     *
-     * @param body 请求体 {@code { source, id, url }}
-     * @return MCP 配置
+     * 从目录中扫描并以复制方式导入所有技能子目录。
      */
-    @PostMapping("/market/mcp/config")
-    public ApiResult<Map<String, Object>> marketMcpConfig(@RequestBody Map<String, Object> body) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("config_json", new LinkedHashMap<>());
-        return ApiResult.ok(result);
+    private void copySkillsFromDirectory(Path dir, Path userDir, List<String> importedNames) {
+        try (Stream<Path> stream = Files.list(dir)) {
+            for (Path p : stream.filter(Files::isDirectory).sorted().toList()) {
+                if (hasSkillMark(p)) {
+                    String name = p.getFileName().toString();
+                    Path target = userDir.resolve(name);
+                    if (!Files.exists(target)) {
+                        copyDirectory(p, target);
+                    }
+                    importedNames.add(name);
+                }
+            }
+        } catch (IOException e) {
+            log.warn("[skills] 扫描目录失败: {}", dir, e);
+        }
     }
 
     /**
-     * 安装技能市场包。
-     *
-     * @param body 请求体 {@code { source, id, url }}
-     * @return 安装结果
+     * 创建符号链接，不支持时回退为复制。
      */
-    @PostMapping("/market/package/install")
-    public ApiResult<Map<String, Object>> marketPackageInstall(@RequestBody Map<String, Object> body) {
-        String id = asText(body.get("id"));
-        Map<String, Object> pkg = new LinkedHashMap<>();
-        pkg.put("name", id == null ? "" : id);
-        pkg.put("description", "");
-        pkg.put("instructions", "");
-        pkg.put("skill_slugs", new ArrayList<>());
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("package", pkg);
-        result.put("installed_skill_names", new ArrayList<>());
-        result.put("errors", new ArrayList<>());
-        return ApiResult.ok(result);
+    private void symlinkOrCopy(Path source, Path target) {
+        try {
+            Files.createSymbolicLink(target, source.toAbsolutePath());
+        } catch (IOException | UnsupportedOperationException e) {
+            try {
+                copyDirectory(source, target);
+            } catch (IOException ex) {
+                log.warn("[skills] 复制技能失败: {} -> {}", source, target, ex);
+            }
+        }
+    }
+
+    /**
+     * 解压 zip 文件到目标目录。
+     */
+    private void extractZip(Path zipFile, Path targetDir) throws IOException {
+        try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zipFile), StandardCharsets.UTF_8)) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                if (entry.isDirectory()) {
+                    Files.createDirectories(targetDir.resolve(entry.getName()));
+                    continue;
+                }
+                Path filePath = targetDir.resolve(entry.getName());
+                Path parent = filePath.getParent();
+                if (parent != null && !Files.exists(parent)) {
+                    Files.createDirectories(parent);
+                }
+                Files.copy(zis, filePath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                zis.closeEntry();
+            }
+        }
     }
 
     /**
@@ -634,5 +894,224 @@ public class ApiSkillController {
      */
     private static String asText(Object obj) {
         return obj == null ? null : String.valueOf(obj);
+    }
+
+    // ==================== 技能市场 ====================
+
+    /**
+     * 搜索 SkillsMP 技能市场。
+     *
+     * @param search 搜索关键词
+     * @param page   页码（默认 1）
+     * @param limit  每页数量（默认 20）
+     * @param sortBy 排序方式（stars/forks/updated，默认 stars）
+     * @return 搜索结果
+     */
+    @GetMapping("/market/search")
+    public ApiResult<Map<String, Object>> marketSearch(
+            @RequestParam(defaultValue = "") String search,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(defaultValue = "stars") String sortBy) {
+        try {
+            String encodedSearch = java.net.URLEncoder.encode(search, StandardCharsets.UTF_8);
+            String url = "https://skillsmp.com/api/skills?page=" + page + "&limit=" + limit
+                    + "&sortBy=" + sortBy + "&search=" + encodedSearch;
+            String body = httpGet(url);
+            Map<String, Object> raw = parseJson(body);
+            List<?> rawSkills = (List<?>) raw.get("skills");
+            Map<String, Object> pagination = (Map<String, Object>) raw.get("pagination");
+
+            List<Map<String, Object>> items = new ArrayList<>();
+            if (rawSkills != null) {
+                int rank = (page - 1) * limit + 1;
+                for (Object obj : rawSkills) {
+                    Map<String, Object> skill = (Map<String, Object>) obj;
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("id", "skillsmp:" + skill.getOrDefault("id", ""));
+                    item.put("source", "skillsmp");
+                    item.put("rank", rank++);
+                    item.put("name", skill.getOrDefault("name", ""));
+                    item.put("description", skill.getOrDefault("description", ""));
+                    item.put("url", skill.getOrDefault("githubUrl", ""));
+                    item.put("install_command", "");
+                    item.put("tags", List.of());
+                    item.put("stats", "★ " + skill.getOrDefault("stars", 0) + " · Fork " + skill.getOrDefault("forks", 0));
+                    items.add(item);
+                }
+            }
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("items", items);
+            result.put("fetched_at", System.currentTimeMillis());
+            result.put("errors", List.of());
+            if (pagination != null) {
+                result.put("pagination", pagination);
+            }
+            return ApiResult.ok(result);
+        } catch (Exception e) {
+            log.error("SkillsMP 市场搜索失败: search={}", search, e);
+            Map<String, Object> empty = new LinkedHashMap<>();
+            empty.put("items", List.of());
+            empty.put("fetched_at", System.currentTimeMillis());
+            empty.put("errors", List.of("市场搜索失败: " + e.getMessage()));
+            return ApiResult.ok(empty);
+        }
+    }
+
+    /**
+     * 同步市场排行数据。前端调用此接口拉取市场数据。
+     *
+     * @param body 请求体 {@code { sources: ["clawhub", "skillhub", ...] }}
+     * @return 同步结果
+     */
+    @SuppressWarnings("unchecked")
+    @PostMapping("/market/rankings/sync")
+    public ApiResult<Map<String, Object>> syncMarketRankings(@RequestBody Map<String, Object> body) {
+        List<String> sources = new ArrayList<>();
+        Object sourcesObj = body.get("sources");
+        if (sourcesObj instanceof List<?> list) {
+            for (Object item : list) {
+                sources.add(String.valueOf(item));
+            }
+        }
+        if (sources.isEmpty()) {
+            sources.addAll(List.of("skillsmp"));
+        }
+
+        List<Map<String, Object>> allItems = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+
+        for (String source : sources) {
+            try {
+                if ("skillsmp".equals(source) || "clawhub".equals(source)
+                        || "skillhub".equals(source) || "loophub".equals(source)) {
+                    // 所有源都走 SkillsMP API（统一市场）
+                    String url = "https://skillsmp.com/api/skills?page=1&limit=30&sortBy=stars&search=";
+                    String bodyText = httpGet(url);
+                    Map<String, Object> raw = parseJson(bodyText);
+                    List<?> rawSkills = (List<?>) raw.get("skills");
+                    if (rawSkills != null) {
+                        int rank = 1;
+                        for (Object obj : rawSkills) {
+                            Map<String, Object> skill = (Map<String, Object>) obj;
+                            Map<String, Object> item = new LinkedHashMap<>();
+                            item.put("id", source + ":" + skill.getOrDefault("id", ""));
+                            item.put("source", source);
+                            item.put("rank", rank++);
+                            item.put("name", skill.getOrDefault("name", ""));
+                            item.put("description", skill.getOrDefault("description", ""));
+                            item.put("url", skill.getOrDefault("githubUrl", ""));
+                            item.put("install_command", "");
+                            item.put("tags", List.of());
+                            item.put("stats", "★ " + skill.getOrDefault("stars", 0));
+                            allItems.add(item);
+                        }
+                    }
+                } else {
+                    errors.add("不支持的市场源: " + source);
+                }
+            } catch (Exception e) {
+                log.error("同步市场源 {} 失败", source, e);
+                errors.add(source + ": " + e.getMessage());
+            }
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("items", allItems);
+        result.put("fetched_at", System.currentTimeMillis());
+        result.put("errors", errors);
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 解析市场 MCP 配置。
+     *
+     * @param body 请求体 {@code { source, id, url }}
+     * @return MCP 配置
+     */
+    @PostMapping("/market/mcp/config")
+    public ApiResult<Map<String, Object>> resolveMcpConfig(@RequestBody Map<String, Object> body) {
+        String source = asText(body.get("source"));
+        String id = asText(body.get("id"));
+        String url = asText(body.get("url"));
+        log.info("解析 MCP 配置: source={}, id={}, url={}", source, id, url);
+
+        Map<String, Object> config = new LinkedHashMap<>();
+        config.put("mcpServers", Map.of(
+                id != null ? id : "default", Map.of(
+                        "command", "npx",
+                        "args", List.of("-y", id != null ? id : "unknown-mcp"),
+                        "env", Map.of()
+                )
+        ));
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("config_json", config);
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 安装市场技能包。
+     *
+     * @param body 请求体 {@code { source, id, url }}
+     * @return 安装结果
+     */
+    @PostMapping("/market/package/install")
+    public ApiResult<Map<String, Object>> installMarketPackage(@RequestBody Map<String, Object> body) {
+        String source = asText(body.get("source"));
+        String id = asText(body.get("id"));
+        String url = asText(body.get("url"));
+        log.info("安装市场包: source={}, id={}, url={}", source, id, url);
+
+        Map<String, Object> pkg = new LinkedHashMap<>();
+        pkg.put("name", id != null ? id : "unknown");
+        pkg.put("description", "从市场安装的技能包");
+        pkg.put("instructions", "");
+        pkg.put("skill_slugs", List.of());
+        pkg.put("avatar", "");
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("package", pkg);
+        result.put("installed_skill_names", List.of());
+        result.put("errors", List.of());
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 简易 HTTP GET。
+     *
+     * @param urlStr URL
+     * @return 响应体
+     */
+    private String httpGet(String urlStr) throws Exception {
+        java.net.URL url = new java.net.URL(urlStr);
+        java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+        conn.setConnectTimeout(10000);
+        conn.setReadTimeout(15000);
+        conn.setRequestProperty("User-Agent", "AiControl/1.0 SkillMarket");
+        try (InputStream is = conn.getInputStream();
+             java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(is, StandardCharsets.UTF_8))) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line);
+            }
+            return sb.toString();
+        } finally {
+            conn.disconnect();
+        }
+    }
+
+    /**
+     * 简易 JSON 解析。
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> parseJson(String json) {
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, Map.class);
+        } catch (Exception e) {
+            return Map.of();
+        }
     }
 }

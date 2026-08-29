@@ -5,12 +5,18 @@ import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.mapper.SysAiConversationMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiConversationMessageMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import javax.sql.DataSource;
 
 /**
  * 会话与消息持久化存储服务。
@@ -25,6 +31,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * @since 4.0.0.42
  * @author CH
  */
+@Slf4j
 @Service
 public class SysAiConversationStore {
 
@@ -49,14 +56,53 @@ public class SysAiConversationStore {
     private static final int MAX_LIST_LIMIT = 500;
 
     /**
-     * 构造注入 MyBatis-Plus Mapper。
+     * 构造注入 MyBatis-Plus Mapper，启动时自动补列。
      *
      * @param conversationMapper 会话 Mapper
      * @param messageMapper      消息 Mapper
+     * @param dataSource         数据源（用于启动时检查并补列）
      */
-    public SysAiConversationStore(SysAiConversationMapper conversationMapper, SysAiConversationMessageMapper messageMapper) {
+    public SysAiConversationStore(SysAiConversationMapper conversationMapper,
+                                   SysAiConversationMessageMapper messageMapper,
+                                   DataSource dataSource) {
         this.conversationMapper = conversationMapper;
         this.messageMapper = messageMapper;
+        ensureColumns(dataSource);
+    }
+
+    /**
+     * 启动时检查 sys_ai_conversation 表是否缺少 extra 等列，自动 ALTER TABLE 补上。
+     * 这样即使 MySQL 建表时遗漏了新列，重启后也能自动修复。
+     */
+    private void ensureColumns(DataSource dataSource) {
+        String table = "sys_ai_conversation";
+        String[][] neededColumns = {
+            {"sys_ai_conversation_extra", "TEXT NULL COMMENT '扩展字段JSON（Map）'"},
+            {"sys_ai_conversation_execution_template_id", "VARCHAR(64) NULL COMMENT '执行模板ID'"}
+        };
+        try (Connection conn = dataSource.getConnection()) {
+            String catalog = conn.getCatalog();
+            log.info("[Store] 数据库 catalog={}, 开始检查列...", catalog);
+            DatabaseMetaData meta = conn.getMetaData();
+            for (String[] col : neededColumns) {
+                boolean found = false;
+                try (ResultSet rs = meta.getColumns(catalog, null, table, col[0])) {
+                    found = rs.next();
+                    if (found) {
+                        log.info("[Store] 列 {} 已存在", col[0]);
+                    }
+                }
+                if (!found) {
+                    String sql = "ALTER TABLE `" + table + "` ADD COLUMN `" + col[0] + "` " + col[1];
+                    try (Statement stmt = conn.createStatement()) {
+                        stmt.execute(sql);
+                        log.info("[Store] 已自动补列: {}", col[0]);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[Store] 自动补列检查失败（非致命）: {}", e.getMessage());
+        }
     }
 
     /**

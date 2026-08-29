@@ -104,13 +104,12 @@ public class MybatisPlusConfiguration {
     }
 
     static {
+        // 不使用 sanitizeSingleSql，避免 JSQLParser 将 AS group 等关键字别名解析失败
         JsqlParserGlobal.setParserMultiFunc((sql) -> {
-            String formatSql = CCJSqlParserUtil.sanitizeSingleSql(sql);
-            return CCJSqlParserUtil.parseStatements(formatSql, JsqlParserGlobal.getExecutorService(), null);
+            return CCJSqlParserUtil.parseStatements(sql, JsqlParserGlobal.getExecutorService(), null);
         });
         JsqlParserGlobal.setParserSingleFunc((sql) -> {
-            String formatSql = CCJSqlParserUtil.sanitizeSingleSql(sql);
-            return CCJSqlParserUtil.parse(formatSql, JsqlParserGlobal.getExecutorService(), null);
+            return CCJSqlParserUtil.parse(sql, JsqlParserGlobal.getExecutorService(), null);
         });
     }
     /**

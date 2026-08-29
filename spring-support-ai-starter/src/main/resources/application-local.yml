@@ -4,7 +4,7 @@
 server:
   port: 8787
   servlet:
-    context-path: /
+    context-path:
 
 spring:
   application:
@@ -15,6 +15,8 @@ spring:
       - com.chua.starter.filesystem.support.config.FileSystemAutoConfiguration
       - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchClientAutoConfiguration
       - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration
+      - org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration
+      - org.springframework.boot.autoconfigure.mail.MailSenderValidatorAutoConfiguration
   data:
     redis:
       host: 172.16.0.40
@@ -50,7 +52,24 @@ spring:
 # 本地联调：关闭外部 OAuth / 协议服务器 / 文件系统
 plugin:
   oauth:
-    enable: false
+    enable: true
+    protocol: static
+    temp:
+      open: true
+      user: "admin"
+    whitelist:
+      - /login
+      - /v2/user/login
+      - /v2/user/logout
+      - /api/system/info
+      - /api/auth/status
+      - /api/auth/user
+      - /api/extensions/*
+      - /api/terminals
+      - /api/terminals/*
+      - /api/**
+      - /v2/**
+      - /ws
   protocol:
     enable: false
   filesystem:
@@ -59,18 +78,3 @@ plugin:
   datasource:
     script:
       enable: true
-      scan-mode: ONCE
-      script-path: "classpath*:db/init/*.sql"
-      database-type: mysql
-
-logging:
-  level:
-    com.chua.starter.ai.support: info
-
-mybatis-plus:
-  configuration:
-    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
-  global-config:
-    db-config:
-      id-type: ASSIGN_ID
-  mapper-locations: classpath*:mapper/**/*.xml

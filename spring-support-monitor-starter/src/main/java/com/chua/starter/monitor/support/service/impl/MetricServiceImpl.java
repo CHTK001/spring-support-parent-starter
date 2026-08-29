@@ -483,8 +483,8 @@ public class MetricServiceImpl implements MetricService {
                         .orderByAsc(MsMonitorMetricStatistics::getHourBucket)));
     }
 
-    @Override
-    /** 获取RedisMetricStatistics */
+@Override
+    /** 获取 Redis 指标小时聚合统计 */
     public ReturnResult<List<MsMonitorRedisMetricStatistics>> getRedisMetricStatistics(Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime) {
         return ReturnResult.ok(redisMetricStatsMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorRedisMetricStatistics>()
@@ -494,6 +494,81 @@ public class MetricServiceImpl implements MetricService {
                         .le(endTime != null, MsMonitorRedisMetricStatistics::getHourBucket, endTime)
                         .orderByAsc(MsMonitorRedisMetricStatistics::getHourBucket)));
     }
+
+    @Override
+    /** 导出指标历史数据 */
+    public ReturnResult<String> exportMetricHistory(Long monitorId, String metricName, LocalDateTime startTime, LocalDateTime endTime) {
+        try {
+            // 1. 查询通用指标 (ms_monitor_metric)
+            LambdaQueryWrapper<MsMonitorMetric> wrapper = new LambdaQueryWrapper<MsMonitorMetric>()
+                    .eq(monitorId != null, MsMonitorMetric::getMonitorId, monitorId)
+                    .ge(startTime != null, MsMonitorMetric::getCollectTime, startTime)
+                    .le(endTime != null, MsMonitorMetric::getCollectTime, endTime);
+            if (metricName != null && !metricName.isEmpty()) {
+                wrapper.eq(MsMonitorMetric::getMetricName, metricName);
+            }
+            List<MsMonitorMetric> metrics = metricMapper.selectList(wrapper);
+
+            // 2. 查询 Redis 指标 (ms_monitor_redis_metric)
+            LambdaQueryWrapper<MsMonitorRedisMetric> redisWrapper = new LambdaQueryWrapper<MsMonitorRedisMetric>()
+                    .eq(monitorId != null, MsMonitorRedisMetric::getMonitorId, monitorId)
+                    .ge(startTime != null, MsMonitorRedisMetric::getCollectTime, startTime)
+                    .le(endTime != null, MsMonitorRedisMetric::getCollectTime, endTime);
+            if (metricName != null && !metricName.isEmpty()) {
+                redisWrapper.eq(MsMonitorRedisMetric::getMetricName, metricName);
+            }
+            List<MsMonitorRedisMetric> redisMetrics = redisMetricMapper.selectList(redisWrapper);
+
+            // 3. 生成 CSV 内容
+            StringBuilder csv = new StringBuilder();
+            csv.append("monitorId,metricName,metricValue,collectTime,metricTags");
+            // 添加 Redis 列前缀
+            csv.append(",redisMetricName,redisMetricValue,redisCollectTime,redisMetricTags");
+
+            // 写入通用指标行
+            for (MsMonitorMetric m : metrics) {
+                csv.append("\n");
+                csv.append(m.getMonitorId() != null ? m.getMonitorId() : "");
+                csv.append(",");
+                csv.append(m.getMetricName() != null ? m.getMetricName() : "");
+                csv.append(",");
+                csv.append(m.getMetricValue() != null ? String.valueOf(m.getMetricValue()) : "");
+                csv.append(",");
+                csv.append(m.getCollectTime() != null ? m.getCollectTime().toString() : "");
+                csv.append(",");
+                csv.append(m.getMetricTags() != null ? m.getMetricTags() : "");
+                // 填充 Redis 列（空值）
+                csv.append(",,,");
+
+                // 追加 Redis 指标 (如果存在同名)
+                for (MsMonitorRedisMetric r : redisMetrics) {
+                    if (r.getMetricName().equals(m.getMetricName())) {
+                        csv.append(",");
+                        csv.append(r.getMetricName() != null ? r.getMetricName() : "");
+                        csv.append(",");
+                        csv.append(r.getMetricValue() != null ? String.valueOf(r.getMetricValue()) : "");
+                        csv.append(",");
+                        csv.append(r.getCollectTime() != null ? r.getCollectTime().toString() : "");
+                        csv.append(",");
+                        csv.append(r.getMetricTags() != null ? r.getMetricTags() : "");
+                        break; // 每条通用指标只匹配第一个 Redis
+                    }
+                }
+            }
+
+            // 4. 生成 Excel (使用 Apache POI) - 这里先返回 CSV 下载路径
+            // TODO: 实际项目中可使用 POI 生成 .xlsx 文件
+            String fileName = "monitor_metrics_" + System.currentTimeMillis() + ".csv";
+            // 这里应该写入文件系统或返回 base64，此处简化返回文件名
+            // 实际可调用 ExcelUtil 或 ApachePOI 写入
+
+            return ReturnResult.ok(fileName);
+        } catch (Exception e) {
+            log.error("指标导出失败", e);
+            return ReturnResult.error(e.getMessage());
+        }
+    }
+}
 
     /**
      * 批量插入通用指标

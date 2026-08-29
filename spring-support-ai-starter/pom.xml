@@ -125,14 +125,11 @@
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
-        <!-- OAuth 客户端鉴权（@Permission 管理端接口鉴权，对接外部 oauth 服务端） -->
-        <!-- 临时注释：oauth-client-starter 存在预编译错误，ai-starter 不直接依赖其类 -->
-        <!--
+        <!-- OAuth 客户端鉴权（@Permission 管理端接口鉴权、AuthController/UserAuthController 认证） -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-oauth-client-starter</artifactId>
         </dependency>
-        -->
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

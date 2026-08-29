@@ -50,4 +50,19 @@ public class BotBindingCreateRequest {
      * 绑定的 AI 模型（用于微信聊天时 AI 回复）
      */
     private String model;
+
+    /**
+     * 是否启用深度思考（默认 false，不开启）
+     */
+    private Boolean thinking;
+
+    /**
+     * 深度思考强度（low / medium / high）
+     */
+    private String thinkingEffort;
+
+    /**
+     * 系统提示词（AI 回复时注入的 system prompt）
+     */
+    private String systemPrompt;
 }

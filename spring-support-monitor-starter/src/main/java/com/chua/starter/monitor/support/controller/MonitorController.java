@@ -386,6 +386,24 @@ public class MonitorController {
         return metricService.getRedisMetricStatistics(monitorId, metricName, start, null);
     }
 
+    /**
+     * 导出指标历史数据
+     *
+     * @param monitorId 监控 ID
+     * @param metricName 指标名（可选，为空则导出所有）
+     * @param hours      过去 N 小时（可选）
+     * @return 操作结果，包含文件名
+     */
+    @Operation(summary = "导出指标历史数据")
+    @GetMapping("/metric/export/{monitorId}")
+    public ReturnResult<String> exportMetricHistory(
+            @PathVariable Long monitorId,
+            @RequestParam(required = false) String metricName,
+            @RequestParam(required = false, defaultValue = "24") Long hours) {
+        java.time.LocalDateTime start = hours != null ? java.time.LocalDateTime.now().minusHours(hours) : null;
+        return metricService.exportMetricHistory(monitorId, metricName, start, null);
+    }
+
     // ==================== Redis 操作 ====================
 
     @Operation(summary = "扫描 Redis Keys")

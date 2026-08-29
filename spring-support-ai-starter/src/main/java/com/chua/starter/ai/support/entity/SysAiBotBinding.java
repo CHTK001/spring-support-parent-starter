@@ -91,6 +91,24 @@ public class SysAiBotBinding extends SysBase {
     private String model;
 
     /**
+     * 是否启用深度思考（默认关闭）
+     */
+    @TableField("sys_ai_bot_binding_thinking")
+    private Boolean thinking;
+
+    /**
+     * 深度思考强度（low / medium / high，默认 high）
+     */
+    @TableField("sys_ai_bot_binding_thinking_effort")
+    private String thinkingEffort;
+
+    /**
+     * 系统提示词（AI 回复时注入的 system prompt）
+     */
+    @TableField("sys_ai_bot_binding_system_prompt")
+    private String systemPrompt;
+
+    /**
      * 最后活跃时间
      */
     @TableField("sys_ai_bot_binding_last_active_time")

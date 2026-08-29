@@ -9,10 +9,12 @@ import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
+import com.chua.starter.ai.support.manage.service.ModelMetricsSnapshotService;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,6 +33,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +55,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@Slf4j
 public class ApiProviderController {
 
     /**
@@ -68,6 +72,11 @@ public class ApiProviderController {
      * 提供商连接 Mapper
      */
     private final SysAiProviderConnectionMapper connectionMapper;
+
+    /**
+     * 模型价格/指标快照服务（读取 Redis 缓存，含价格/延迟/速度/智能等指标）
+     */
+    private final ModelMetricsSnapshotService metricsSnapshotService;
 
     /**
      * 拉取模型列表使用的 HTTP 客户端（连接池复用）
@@ -87,6 +96,32 @@ public class ApiProviderController {
      */
     private static final java.util.regex.Pattern UUID_V7_PATTERN = 
         java.util.regex.Pattern.compile("^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$");
+
+    /**
+     * 指标索引构建时间戳（毫秒）
+     */
+    private volatile long metricsIndexLoadedAt = 0;
+
+    /**
+     * 指标索引（providerId::model → 快照行），供查询接口从 Redis 缓存组装指标
+     */
+    private volatile Map<String, Map<String, Object>> metricsIndex = Map.of();
+
+    /**
+     * 指标索引 TTL（毫秒）：30 秒
+     */
+    private static final long METRICS_INDEX_TTL_MILLIS = 30_000;
+
+    /**
+     * 需要合并进模型行 metrics 的快照指标键。
+     */
+    private static final String[] METRIC_KEYS = {
+            "price_input_per_musd", "price_output_per_musd",
+            "price_cache_hit_per_musd", "price_cache_write_per_musd",
+            "intelligence_index", "output_speed_tps", "latency_first_token_seconds",
+            "probe_latency_ms", "icon_url", "reasoning_model", "web_search",
+            "image_input", "function_calling", "context_window_tokens"
+    };
 
     // ==================== Providers ====================
 
@@ -685,7 +720,7 @@ public class ApiProviderController {
     }
 
     /**
-     * 构造 ProviderModelResponse（含任务能力数组）。
+     * 构造 ProviderModelResponse（含任务能力数组），并从缓存快照合并价格/延迟/速度等指标。
      */
     private Map<String, Object> toProviderModelResponse(SysAiProvider provider, SysAiProviderModel model) {
         Map<String, Object> map = new LinkedHashMap<>();
@@ -700,13 +735,69 @@ public class ApiProviderController {
                 ? model.getCapabilities().stream().map(this::toCapabilityResponse).collect(Collectors.toList())
                 : new ArrayList<>();
         map.put("capabilities", caps);
-        // 模型指标（延迟/智能/输出速度）
-        if (model.getMetrics() != null) {
-            map.put("metrics", model.getMetrics());
+        // 模型指标：自身 metrics 优先，再从缓存快照合并价格/延迟/智能/速度等
+        Map<String, Object> metrics = model.getMetrics() != null
+                ? new LinkedHashMap<>(model.getMetrics())
+                : new LinkedHashMap<>();
+        Map<String, Object> cached = metricIndex().get(provider.getProviderId() + "::" + model.getModel());
+        if (cached != null) {
+            for (String key : METRIC_KEYS) {
+                Object value = cached.get(key);
+                if (value != null) {
+                    metrics.putIfAbsent(key, value);
+                }
+            }
+        }
+        if (!metrics.isEmpty()) {
+            map.put("metrics", metrics);
         }
         map.put("created_at", model.getCreatedAt());
         map.put("updated_at", model.getUpdatedAt());
         return map;
+    }
+
+    /**
+     * 构建（带 TTL 缓存）providerId::model → 缓存快照行的索引。
+     *
+     * <p>指标由 {@link ModelMetricsPushTask} 定时写入 Redis，本方法优先读取
+     * Redis 快照并本地缓存 30 秒，避免每个模型行重复解析快照。</p>
+     *
+     * @return 指标索引，快照为空时返回空 Map
+     */
+    private Map<String, Map<String, Object>> metricIndex() {
+        long now = System.currentTimeMillis();
+        if (now - metricsIndexLoadedAt <= METRICS_INDEX_TTL_MILLIS && !metricsIndex.isEmpty()) {
+            return metricsIndex;
+        }
+        synchronized (this) {
+            if (now - metricsIndexLoadedAt <= METRICS_INDEX_TTL_MILLIS && !metricsIndex.isEmpty()) {
+                return metricsIndex;
+            }
+            Map<String, Map<String, Object>> index = new HashMap<>();
+            try {
+                Map<String, Object> snapshot = metricsSnapshotService.latestSnapshot();
+                Object modelsObj = snapshot.get("models");
+                if (modelsObj instanceof List<?> list) {
+                    for (Object item : list) {
+                        if (!(item instanceof Map<?, ?> row)) {
+                            continue;
+                        }
+                        Object providerId = row.get("provider_id");
+                        Object modelName = row.get("model");
+                        if (providerId != null && modelName != null) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> rowMap = (Map<String, Object>) row;
+                            index.put(providerId + "::" + modelName, rowMap);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[ApiProvider] 缓存指标索引构建失败: {}", e.getMessage());
+            }
+            metricsIndex = index;
+            metricsIndexLoadedAt = now;
+        }
+        return metricsIndex;
     }
 
     /**

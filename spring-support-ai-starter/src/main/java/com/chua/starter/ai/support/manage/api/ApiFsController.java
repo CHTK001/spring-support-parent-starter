@@ -441,7 +441,7 @@ public class ApiFsController {
      * @return 目录条目列表
      */
     @GetMapping("/browse")
-    public ApiResult<List<Map<String, Object>>> browse(
+    public ApiResult<Map<String, Object>> browse(
             @RequestParam(defaultValue = "") String path,
             @RequestParam(defaultValue = "false") boolean showFiles) {
         Path dir = path.isBlank() ? Paths.get(System.getProperty("user.home")) : Paths.get(path).toAbsolutePath().normalize();
@@ -460,12 +460,20 @@ public class ApiFsController {
                         item.put("name", p.getFileName().toString());
                         item.put("path", p.toAbsolutePath().toString());
                         item.put("isDirectory", isDir);
+                        item.put("isFile", !isDir);
                         items.add(item);
                     });
         } catch (Exception e) {
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "浏览目录失败: " + e.getMessage());
         }
-        return ApiResult.ok(items);
+        Path parent = dir.getParent();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("items", items);
+        result.put("currentPath", dir.toAbsolutePath().toString());
+        result.put("canGoUp", parent != null);
+        result.put("parentPath", parent != null ? parent.toAbsolutePath().toString() : null);
+        result.put("isRoot", parent == null);
+        return ApiResult.ok(result);
     }
 
     /**

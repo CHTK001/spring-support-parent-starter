@@ -79,6 +79,12 @@
             <artifactId>utils-support-common-starter</artifactId>
         </dependency>
 
+        <!-- Spring Boot JavaMail - 邮件发送支持 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- 缓存功能模块 - 由消费方按需引入，避免反向依赖形成循环 -->
         <!-- 如需缓存支持，请直接依赖 spring-support-cache-starter -->
         <!--<dependency>
