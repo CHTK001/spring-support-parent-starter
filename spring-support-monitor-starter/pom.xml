@@ -93,12 +93,6 @@
             <version>${utils.version}</version>
         </dependency>
 
-        <!-- AI -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-ai-starter</artifactId>
-        </dependency>
-
         <!-- 日志 -->
         <dependency>
             <groupId>org.projectlombok</groupId>

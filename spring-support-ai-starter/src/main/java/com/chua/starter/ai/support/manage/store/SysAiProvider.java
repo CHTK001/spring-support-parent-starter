@@ -76,6 +76,12 @@ public class SysAiProvider implements Serializable {
     private Map<String, Object> bedrockConfig;
 
     /**
+     * 扩展配置JSON（如 {@code {"custom_headers": {"X-Key": "value"}}}）
+     */
+    @TableField(value = "sys_ai_provider_extra", typeHandler = JacksonTypeHandler.class)
+    private Map<String, Object> extra;
+
+    /**
      * 排序序号
      */
     @TableField("sys_ai_provider_sort_order")

@@ -146,6 +146,7 @@ public class ChatClientSettings {
                 .baseUrl(baseSetting.getBaseUrl())
                 .appKey(baseSetting.getAppKey())
                 .appSecret(baseSetting.getAppSecret())
+                .extraHeaders(baseSetting.getExtraHeaders())
                 .build();
     }
 

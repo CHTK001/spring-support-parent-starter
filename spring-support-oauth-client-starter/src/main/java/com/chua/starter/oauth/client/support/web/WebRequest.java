@@ -34,6 +34,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Map;
 
 /**
  * webrequest
@@ -326,7 +327,13 @@ public class WebRequest {
         if(isPass()) {
             return AuthenticationInformation.passAuthenticationInformation();
         }
-        
+
+        // AI AppKey 本地认证：Bearer Token 命中动态表则直接放行（单机/外部 OAuth 不可达场景）
+        AuthenticationInformation aiAppKeyResult = tryAuthenticateAiAppKey();
+        if (aiAppKeyResult != null) {
+            return aiAppKeyResult;
+        }
+
         Protocol protocolExtension = resolveProtocol();
         if (protocolExtension == null) {
             log.error("[WebRequest鉴权]协议未注册 - 协议: {}, 可用协议: {}", protocol,
@@ -378,6 +385,38 @@ public class WebRequest {
             return AuthenticationInformation.noAuth();
         }
         return protocolExtension.authentication(appKeySecret);
+    }
+
+    /**
+     * 尝试使用 AI AppKey 本地认证。
+     * <p>
+     * 启用 {@code plugin.oauth.ai-app-key.enabled} 时，对 Bearer Token 做本地动态表校验。
+     * 命中则返回已认证信息；未命中或未启用返回 {@code null}，由调用方走原 OAuth 协议。
+     * </p>
+     *
+     * @return 认证信息，未命中返回 {@code null}
+     */
+    private AuthenticationInformation tryAuthenticateAiAppKey() {
+        var support = com.chua.starter.oauth.client.support.appkey.AiAppKeySupport.get();
+        if (support == null || !support.isEnabled()) {
+            return null;
+        }
+        String token = getToken();
+        if (StringUtils.isBlank(token)) {
+            return null;
+        }
+        Map<String, Object> row = support.verifyAppKey(token);
+        if (row == null) {
+            log.debug("[WebRequest鉴权]AI AppKey 校验未命中: {}", protocol);
+            return null;
+        }
+        String username = support.resolveUsername(row, token);
+        UserResume userResume = new UserResume()
+                .setUsername(username)
+                .setNickName(username)
+                .setLoginType("ai-appkey");
+        log.debug("[WebRequest鉴权]AI AppKey 认证通过: user={}", username);
+        return new AuthenticationInformation(Information.OK, userResume);
     }
 
     /**

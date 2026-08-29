@@ -3,6 +3,10 @@ package com.chua.starter.ai.support.chat;
 import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.util.Map;
 
 /**
  * 聊天客户端配置解析器。
@@ -38,6 +42,8 @@ public final class ChatClientSettingsResolver {
                 "default"
         );
 
+        Map<String, String> extraHeaders = parseExtraHeaders(getValue(sysAiGlobalSettingService, "extra_headers"));
+
         ChatClientSetting setting = ChatClientSetting.builder()
                 .provider(provider)
                 .baseUrl(firstNonBlank(
@@ -52,6 +58,7 @@ public final class ChatClientSettingsResolver {
                         getValue(sysAiGlobalSettingService, "provider_app_secret"),
                         getValue(sysAiGlobalSettingService, "provider_secret_key")
                 ))
+                .extraHeaders(extraHeaders)
                 .build();
 
         return ChatClientSettings.builder()
@@ -136,5 +143,17 @@ public final class ChatClientSettingsResolver {
             }
         }
         return null;
+    }
+
+    /** 解析 extra_headers JSON 字符串为 Map */
+    private static Map<String, String> parseExtraHeaders(String json) {
+        if (StringUtils.isBlank(json)) {
+            return null;
+        }
+        try {
+            return new ObjectMapper().readValue(json, new TypeReference<Map<String, String>>() {});
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 }

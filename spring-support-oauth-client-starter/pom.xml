@@ -41,6 +41,13 @@
             <artifactId>spring-support-mybatis-starter</artifactId>
         </dependency>
 
+        <!-- 数据源引擎 - 提供 JdbcEngine 动态表查询（AI AppKey 校验，无需 Mapper） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-datasource-starter</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <dependency>
             <groupId>me.zhyd.oauth</groupId>
             <artifactId>JustAuth</artifactId>

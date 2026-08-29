@@ -41,6 +41,7 @@ final class CommonChatClientFactoryResolver {
                 .provider(provider)
                 .appKey(setting != null ? setting.getAppKey() : null)
                 .baseUrl(setting != null ? setting.getBaseUrl() : null)
+                .extraHeaders(setting != null ? setting.getExtraHeaders() : null)
                 .build();
         // 始终携带 setting 创建，保证 ZhipuChatClient 等无无参构造的实现能注入 apiKey/baseUrl
         try {
@@ -60,6 +61,7 @@ final class CommonChatClientFactoryResolver {
                 .provider(provider)
                 .appKey(setting != null ? setting.getAppKey() : null)
                 .baseUrl(setting != null ? setting.getBaseUrl() : null)
+                .extraHeaders(setting != null ? setting.getExtraHeaders() : null)
                 .build());
     }
 }
