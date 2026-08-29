@@ -1,6 +1,7 @@
-package com.chua.starter.mybatis.plugin;
+﻿package com.chua.starter.mybatis.plugin;
 
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.mybatis.plugin.PluginMyBatisMapperRegistry;
 import com.chua.spring.support.configuration.SpringBeanUtils;
 import com.chua.spring.support.plugin.integration.PluginBeanRegisteredEvent;
 import com.chua.spring.support.plugin.integration.PluginBeanUnregisteredEvent;
@@ -9,29 +10,30 @@ import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Set;
 
 /**
- * 插件 MyBatis 事件监听器，负责处理插件 Bean 注册与卸载事件。
+ * 插件 MyBatis Mapper 事件监听器
+ * <p>
+ * 监听插件 Bean 注册/卸载事件，自动处理 MyBatis Mapper 的注册和卸载
+ * </p>
  *
- * <p>当插件 Bean 注册到 Spring 容器时，自动识别 Mapper 接口并注册到 MyBatis；
- * 卸载时从 MyBatis 配置中移除对应 Mapper。</p>
- *
- * @since 4.0.0.42
  * @author CH
+ * @since 2025/01/15
  */
 @Slf4j
 @Component
+@Order(1000)
 public class PluginMyBatisEventListener {
 
     /**
      * SqlSessionFactory 列表
      */
     @Autowired(required = false)
-    /** SQL会话factories */
     private List<SqlSessionFactory> sqlSessionFactories;
 
     /**
@@ -39,7 +41,6 @@ public class PluginMyBatisEventListener {
      */
     private final PluginMyBatisMapperRegistry mapperRegistry;
 
-    /** 创建 PluginMyBatisEventListener 实例 */
     public PluginMyBatisEventListener() {
         this.mapperRegistry = ServiceProvider.of(PluginMyBatisMapperRegistry.class).getExtension();
     }
@@ -206,3 +207,5 @@ public class PluginMyBatisEventListener {
         }
     }
 }
+
+

@@ -1,13 +1,7 @@
 package com.chua.common.support.objects;
 
-import com.chua.common.support.objects.definition.MethodDefinition;
-import com.chua.common.support.objects.environment.Environment;
-import com.chua.common.support.objects.provider.ObjectProvider;
-import com.chua.common.support.objects.publisher.EventPublisher;
-
 import java.lang.annotation.Annotation;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -16,7 +10,6 @@ import java.util.Map;
  * @author CH
  */
 public interface ObjectContext {
-
     /**
      * 根据名称和类型获取 Bean 实例
      *
@@ -125,52 +118,20 @@ public interface ObjectContext {
      * @param requiredType 所需的 Bean 类型
      * @return ObjectProvider 实例
      */
-    <T> ObjectProvider<T> getBeanProvider(Class<T> requiredType);
+    <T> com.chua.common.support.objects.provider.ObjectProvider<T> getBeanProvider(Class<T> requiredType);
 
     /**
      * 获取当前上下文的环境配置接口
      *
      * @return Environment 实例
      */
-    Environment getEnvironment();
+    com.chua.common.support.objects.environment.Environment getEnvironment();
 
     /**
      * 发布事件，通知所有监听该事件的观察者
      *
      * @param event 事件对象
-     * @return 事件处理结果码
+     * @return 事件处理后的结果
      */
-    int publish(Object event);
-
-    /**
-     * 获取事件发布器
-     *
-     * @return 事件发布器实例
-     */
-    EventPublisher getEventPublisher();
-
-    /**
-     * 获取带有指定注解的方法定义列表
-     *
-     * @param annotationType 注解类型
-     * @return 方法定义列表
-     */
-    List<MethodDefinition> getMethodWithAnnotation(Class<? extends Annotation> annotationType);
-
-    /**
-     * 自动装配 Bean 的依赖
-     *
-     * @param bean 待装配的 Bean
-     */
-    void autowire(Object bean);
-
-    /**
-     * 注册一个 BeanDefinitionRegister（编程式挂接，绕过 SPI）。
-     *
-     * @param register 待注册的 BeanDefinitionRegister
-     * @return true 表示新增成功
-     */
-    default boolean registerBean(com.chua.common.support.objects.register.BeanDefinitionRegister register) {
-        return false;
-    }
+    Object publish(Object event);
 }

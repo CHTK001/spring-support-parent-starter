@@ -2,14 +2,11 @@ package com.chua.common.support.objects.impl;
 
 import com.chua.common.support.objects.ConfigureObjectContext;
 import com.chua.common.support.objects.ObjectContextSetting;
-import com.chua.common.support.objects.definition.MethodDefinition;
 import com.chua.common.support.objects.environment.Environment;
 import com.chua.common.support.objects.provider.ObjectProvider;
-import com.chua.common.support.objects.publisher.EventPublisher;
 
 import java.lang.annotation.Annotation;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -188,43 +185,13 @@ public class DefaultConfigureObjectContext implements ConfigureObjectContext {
     }
 
     /**
-     * 发布事件（当前实现始终返回 0）
+     * 发布事件（当前实现始终返回 null）
      *
      * @param event 事件对象
-     * @return 0
-     */
-    @Override
-    public int publish(Object event) {
-        return 0;
-    }
-
-    /**
-     * 获取事件发布器（当前实现始终返回 null）
-     *
      * @return null
      */
     @Override
-    public EventPublisher getEventPublisher() {
+    public Object publish(Object event) {
         return null;
-    }
-
-    /**
-     * 获取带有指定注解的方法定义（当前实现始终返回 null）
-     *
-     * @param annotationType 注解类型
-     * @return null
-     */
-    @Override
-    public List<MethodDefinition> getMethodWithAnnotation(Class<? extends Annotation> annotationType) {
-        return null;
-    }
-
-    /**
-     * 自动装配 Bean（当前实现为空操作）
-     *
-     * @param bean 待装配的 Bean
-     */
-    @Override
-    public void autowire(Object bean) {
     }
 }

@@ -23,12 +23,12 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static com.chua.common.support.constant.NameConstant.*;
 import static com.chua.common.support.network.http.HttpConstant.CONTENT_TYPE;
 import static java.time.LocalDateTime.*;
 import static java.time.format.DateTimeFormatter.*;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 参数日志过滤器
@@ -51,40 +51,28 @@ import org.slf4j.LoggerFactory;
  *     open-interface-log: true  # 是否开启接口日志事件
  * </pre>
  *
+ * @author CH
  * @version 1.0.0
  * @since 2023/09/08
- * @author CH
  */
-@SuppressWarnings("removal")
+@Slf4j
 public class ParameterLogFilter implements Filter {
-    /** log */
-    private static final Logger log= LoggerFactory.getLogger(ParameterLogFilter.class);
-        /** DATTIMFORMATTER */
-        public static final DateTimeFormatter DATE_TIME_FORMATTER= ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
-    /** logProperties */
+        public static final DateTimeFormatter DATE_TIME_FORMATTER = ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
     private final LogProperties logProperties;
-    /** applicationContext */
     private final ApplicationContext applicationContext;
-    /** interface服务Log */
-    private final ExecutorService interfaceServiceLog= Executors.newVirtualThreadPerTaskExecutor();
+    private final ExecutorService interfaceServiceLog = Executors.newVirtualThreadPerTaskExecutor();
     
     /**
      * 请求开始时间的属性名
      */
     private static final String REQUEST_START_TIME = "REQUEST_START_TIME";
 
-    /**
-     * 创建 ParameterLogFilter 实例
-     * @param logProperties logProperties
-     * @param ApplicationContext ApplicationContext
-     */
     public ParameterLogFilter(LogProperties logProperties, ApplicationContext applicationContext) {
         this.logProperties = logProperties;
         this.applicationContext = applicationContext;
     }
 
     @Override
-    /** Do过滤 */
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
             throws IOException, ServletException {
         if (!(servletRequest instanceof HttpServletRequest request) 
@@ -97,7 +85,7 @@ public class ParameterLogFilter implements Filter {
         long startTime = System.currentTimeMillis();
         request.setAttribute(REQUEST_START_TIME, startTime);
 
-        ContentCachingRequestWrapper requestWrapper = new ContentCachingRequestWrapper(request, 8192);
+        ContentCachingRequestWrapper requestWrapper = new ContentCachingRequestWrapper(request);
         ContentCachingResponseWrapper responseWrapper = new ContentCachingResponseWrapper(response);
         
         String connection = requestWrapper.getHeader("upgrade");
@@ -152,7 +140,7 @@ public class ParameterLogFilter implements Filter {
             }
 
             // GET/DELETE 请求
-            if (StringUtils.isEmpty(contentType) || "GET".equals(method) || "DELETE".equals(method)) {
+            if (StringUtils.isEmpty(contentType) || GET.equals(method) || DELETE.equals(method)) {
                 appendUrl(logBuilder, requestWrapper);
                 appendQuery(logBuilder, requestWrapper);
                 appendHeader(logBuilder, requestWrapper);
@@ -164,7 +152,7 @@ public class ParameterLogFilter implements Filter {
             }
 
             // POST/PUT/PATCH 请求
-            if ("POST".equalsIgnoreCase(method) || "PUT".equalsIgnoreCase(method) || "PATCH".equalsIgnoreCase(method)) {
+            if (POST.equalsIgnoreCase(method) || PUT.equalsIgnoreCase(method) || "patch".equalsIgnoreCase(method)) {
                 appendBody(logBuilder, requestWrapper);
                 appendHeader(logBuilder, requestWrapper);
                 log.debug("\n{}", logBuilder.toString());
@@ -201,15 +189,15 @@ public class ParameterLogFilter implements Filter {
         
         // 打印响应体（限制大小）
         byte[] content = responseWrapper.getContentAsByteArray();
-        if (content.length > 0) {
+        if (content.length > 0 && content.length < NumberConstant.TWO_THOUSAND) {
             String responseBody = new String(content, StandardCharsets.UTF_8);
             // 截取前500字符
             if (responseBody.length() > 500) {
                 responseBody = responseBody.substring(0, 500) + "...(截断)";
             }
             sb.append("║ 响应内容: ").append(responseBody).append("\n");
-        } else {
-            sb.append("║ (无响应内容)").append("\n");
+        } else if (content.length >= NumberConstant.TWO_THOUSAND) {
+            sb.append("║ 响应内容: (内容过长，共 ").append(content.length).append(" 字节)\n");
         }
         
         sb.append("║ 耗时: ").append(costTime).append("ms\n");
@@ -324,7 +312,7 @@ public class ParameterLogFilter implements Filter {
         String queryString = request.getQueryString();
         if (StringUtils.isNotEmpty(queryString)) {
             sb.append("╟──────────────────── 请求参数 ────────────────────\n");
-            if (queryString.length() < NumberConstant.NUMBER_1000) {
+            if (queryString.length() < NumberConstant.ONE_THOUSAND) {
                 String decoded = URLDecoder.decode(queryString, StandardCharsets.UTF_8);
                 sb.append("║ ").append(decoded).append("\n");
             } else {
@@ -342,16 +330,20 @@ public class ParameterLogFilter implements Filter {
     private void appendBody(StringBuilder sb, ContentCachingRequestWrapper requestWrapper) {
         sb.append("║ 请求方法: ").append(requestWrapper.getMethod()).append("\n");
         sb.append("║ 请求URL: ").append(requestWrapper.getRequestURL()).append("\n");
-
-        byte[] content = requestWrapper.getContentAsByteArray();
-        if (content.length > 0) {
-            String body = new String(content, StandardCharsets.UTF_8);
-            if (body.length() > 500) {
-                body = body.substring(0, 500) + "...(截断)";
+        
+        String body;
+        try {
+            body = new String(requestWrapper.getContentAsByteArray(), requestWrapper.getCharacterEncoding());
+        } catch (java.io.UnsupportedEncodingException e) {
+            body = new String(requestWrapper.getContentAsByteArray(), java.nio.charset.StandardCharsets.UTF_8);
+        }
+        if (StringUtils.isNotEmpty(body)) {
+            sb.append("╟──────────────────── 请求体 ────────────────────\n");
+            if (body.length() < NumberConstant.TWO_THOUSAND) {
+                sb.append("║ ").append(body).append("\n");
+            } else {
+                sb.append("║ (请求体过长，共 ").append(body.length()).append(" 字符)\n");
             }
-            sb.append("║ ").append(body).append("\n");
-        } else {
-            sb.append("║ (无请求体)\n");
         }
     }
 }

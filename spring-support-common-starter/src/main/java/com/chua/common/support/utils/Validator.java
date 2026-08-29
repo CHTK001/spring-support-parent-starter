@@ -8,21 +8,16 @@ import java.util.regex.Pattern;
  * 提供手机号、邮箱、身份证号等常见格式的验证
  * </p>
  *
- * @since 2025-07-22
  * @author CH
+ * @since 2025-07-22
  */
 public class Validator {
 
-    /** Mobile_pattern */
     private static final Pattern MOBILE_PATTERN = Pattern.compile("^1[3-9]\\d{9}$");
-    /** Email_pattern */
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
-    /** Id_card_pattern */
     private static final Pattern ID_CARD_PATTERN = Pattern.compile("^[1-9]\\d{5}(19|20)\\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\\d|3[01])\\d{3}[\\dXx]$");
-    /** Ip_pattern */
     private static final Pattern IP_PATTERN = Pattern.compile("^(25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.(25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.(25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.(25[0-5]|2[0-4]\\d|[01]?\\d\\d?)$");
 
-    /** 创建 Validator 实例 */
     private Validator() {
     }
 
