@@ -82,7 +82,8 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
                 new SettingItem("context_compression_retain_messages", "6", "NUMBER", "压缩后保留最近消息数", 17),
                 new SettingItem("protocol_server_enabled", "false", "BOOLEAN", "是否启用聚合协议服务（独立端口，提供 OpenAI/Claude/Gemini 三协议端点）", 18),
                 new SettingItem("protocol_server_port", "8090", "NUMBER", "聚合协议服务端口（OpenAI/Claude/Gemini 三协议统一入口）", 19),
-                new SettingItem("protocol_server_host", "0.0.0.0", "STRING", "聚合协议服务绑定地址", 20)
+                new SettingItem("protocol_server_host", "0.0.0.0", "STRING", "聚合协议服务绑定地址", 20),
+                new SettingItem("extra_headers", "", "JSON", "自定义请求头（JSON 格式，如 {\"X-Custom\": \"value\"}）", 21)
         );
     }
 }

@@ -5,3 +5,4 @@ com.chua.starter.datasource.configuration.DataSourceScriptConfiguration
 com.chua.starter.datasource.support.DataSourceInspect
 com.chua.starter.datasource.configuration.DocumentAutoConfiguration
 com.chua.starter.datasource.monitor.SqlMonitorAutoConfiguration
+com.chua.starter.datasource.configuration.H2EngineAutoConfiguration

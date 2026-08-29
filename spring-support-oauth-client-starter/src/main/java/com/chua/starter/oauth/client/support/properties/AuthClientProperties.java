@@ -247,6 +247,53 @@ public class AuthClientProperties {
      */
     private Fingerprint fingerprint = new Fingerprint();
 
+    /**
+     * AI AppKey 本地认证配置
+     * <p>
+     * 启用后，OAuth 过滤器对 Bearer Token 先做本地 AI AppKey 校验
+     * （通过 {@link com.chua.datasource.support.engine.JdbcEngine} 动态查表，无需 Mapper）。
+     * 用于单机部署或外部 OAuth 服务不可达时的 AI AppKey 认证。
+     * </p>
+     */
+    private AiAppKey aiAppKey = new AiAppKey();
+
+    /**
+     * AI AppKey 本地认证配置
+     */
+    @Data
+    public static class AiAppKey {
+
+        /**
+         * 是否启用 AI AppKey 本地认证
+         */
+        private boolean enabled = false;
+
+        /**
+         * AppKey 表名（动态表，默认 AI 模块的 sys_ai_app_key）
+         */
+        private String tableName = "sys_ai_app_key";
+
+        /**
+         * AppKey 列名（默认 sys_ai_app_key_app_key）
+         */
+        private String appKeyColumn = "sys_ai_app_key_app_key";
+
+        /**
+         * 状态列名（1 启用 / 0 停用，默认 sys_ai_app_key_status）
+         */
+        private String statusColumn = "sys_ai_app_key_status";
+
+        /**
+         * 过期时间列名（默认 sys_ai_app_key_expire_datetime，可为空）
+         */
+        private String expireTimeColumn = "sys_ai_app_key_expire_datetime";
+
+        /**
+         * 用户名列（返回给认证结果使用，默认取 appKeyColumn）
+         */
+        private String usernameColumn;
+    }
+
 
     /**
      * AK/SK 密钥配置

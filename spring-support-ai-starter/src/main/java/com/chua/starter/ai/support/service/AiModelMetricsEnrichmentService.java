@@ -62,10 +62,13 @@ public class AiModelMetricsEnrichmentService {
      * <p>命中的字段以固定键名写入 row：</p>
      * <ul>
      *   <li>{@code price_input_per_musd} / {@code price_output_per_musd}（USD/百万 Token）</li>
+     *   <li>{@code price_cache_hit_per_musd} / {@code price_cache_write_per_musd}（缓存价）</li>
      *   <li>{@code intelligence_index}</li>
      *   <li>{@code output_speed_tps}（Token/秒）</li>
      *   <li>{@code latency_first_token_seconds}</li>
      *   <li>{@code icon_url}</li>
+     *   <li>{@code reasoning_model} / {@code web_search} / {@code image_input} / {@code function_calling}</li>
+     *   <li>{@code context_window_tokens}</li>
      * </ul>
      *
      * @param modelId 模型 ID（如 gpt-4o、deepseek-v4-flash）
@@ -82,6 +85,13 @@ public class AiModelMetricsEnrichmentService {
         putIfNotNull(row, "output_speed_tps", rec.outputSpeedTps);
         putIfNotNull(row, "latency_first_token_seconds", rec.latencyFirstTokenSeconds);
         putIfNotNull(row, "icon_url", rec.iconUrl);
+        putIfNotNull(row, "reasoning_model", rec.reasoning);
+        putIfNotNull(row, "web_search", rec.webSearch);
+        putIfNotNull(row, "image_input", rec.imageInput);
+        putIfNotNull(row, "function_calling", rec.functionCalling);
+        putIfNotNull(row, "price_cache_hit_per_musd", rec.cacheHitPrice);
+        putIfNotNull(row, "price_cache_write_per_musd", rec.cacheWritePrice);
+        putIfNotNull(row, "context_window_tokens", rec.contextWindowTokens);
     }
 
     /**
@@ -170,7 +180,14 @@ public class AiModelMetricsEnrichmentService {
                     md.getIntelligenceIndex(),
                     md.getOutputSpeedTokensPerSecond(),
                     md.getLatencyFirstTokenSeconds(),
-                    md.getIconUrl()));
+                    md.getIconUrl(),
+                    md.getReasoning(),
+                    md.getWebSearch(),
+                    md.getImageInput(),
+                    md.getFunctionCalling(),
+                    md.getCacheHitPrice(),
+                    md.getCacheWritePrice(),
+                    md.getContextWindowTokens()));
         }
         return idx;
     }
@@ -232,6 +249,13 @@ public class AiModelMetricsEnrichmentService {
                   .append(",\"ttft\":").append(r.latencyFirstTokenSeconds)
                   .append(",\"icon\":")
                   .append(r.iconUrl == null ? "null" : "\"" + esc(r.iconUrl) + "\"")
+                  .append(",\"reason\":").append(r.reasoning)
+                  .append(",\"wsrch\":").append(r.webSearch)
+                  .append(",\"imgin\":").append(r.imageInput)
+                  .append(",\"fncall\":").append(r.functionCalling)
+                  .append(",\"cachehit\":").append(r.cacheHitPrice)
+                  .append(",\"cachewr\":").append(r.cacheWritePrice)
+                  .append(",\"ctx\":").append(r.contextWindowTokens)
                   .append('}');
             }
             sb.append(']');
@@ -267,7 +291,14 @@ public class AiModelMetricsEnrichmentService {
                         dec(o.get("intel")),
                         dec(o.get("spd")),
                         dec(o.get("ttft")),
-                        o.get("icon") == null ? null : String.valueOf(o.get("icon"))));
+                        o.get("icon") == null ? null : String.valueOf(o.get("icon")),
+                        bool(o.get("reason")),
+                        bool(o.get("wsrch")),
+                        bool(o.get("imgin")),
+                        bool(o.get("fncall")),
+                        dec(o.get("cachehit")),
+                        dec(o.get("cachewr")),
+                        lng(o.get("ctx"))));
             }
             return out;
         } catch (Throwable t) {
@@ -303,6 +334,28 @@ public class AiModelMetricsEnrichmentService {
     }
 
     /**
+     * 空值安全的布尔转换（磁盘旧快照缺字段时返回 null）。
+     *
+     * @param v 原始值
+     * @return 布尔或 null
+     */
+    private Boolean bool(Object v) {
+        return v == null ? null : Boolean.valueOf(String.valueOf(v));
+    }
+
+    /**
+     * 空值安全的长整型转换。
+     *
+     * @param v 原始值
+     * @return 数值或 null
+     */
+    private Long lng(Object v) {
+        if (v == null) { return null; }
+        try { return Long.valueOf(String.valueOf(v).split("\\.")[0]); }
+        catch (NumberFormatException e) { return null; }
+    }
+
+    /**
      * JSON 字符串转义。
      *
      * @param s 原始文本
@@ -329,7 +382,21 @@ public class AiModelMetricsEnrichmentService {
             /** 首 Token 延迟（秒） */
             BigDecimal latencyFirstTokenSeconds,
             /** 图标地址 */
-            String iconUrl) {
+            String iconUrl,
+            /** 是否深度思考（推理模型） */
+            Boolean reasoning,
+            /** 是否联网查询 */
+            Boolean webSearch,
+            /** 是否图片识别（视觉输入） */
+            Boolean imageInput,
+            /** 是否函数调用 */
+            Boolean functionCalling,
+            /** 缓存命中输入价（USD/百万 Token） */
+            BigDecimal cacheHitPrice,
+            /** 缓存写入价（USD/百万 Token） */
+            BigDecimal cacheWritePrice,
+            /** 上下文窗口（Token 数） */
+            Long contextWindowTokens) {
     }
 
     /**

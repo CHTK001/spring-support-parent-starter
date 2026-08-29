@@ -33,7 +33,10 @@ CREATE TABLE IF NOT EXISTS `sys_ai_provider` (
     `sys_ai_provider_auth_scheme` VARCHAR(32)  NOT NULL DEFAULT 'api_key' COMMENT 'api_key/bearer/oauth/none',
     `sys_ai_provider_credentials` TEXT         NULL COMMENT 'JSON',
     `sys_ai_provider_enabled`     TINYINT      NOT NULL DEFAULT 1 COMMENT '',
-    `sys_ai_provider_bedrock_config` TEXT      NULL COMMENT 'AWS BedrockJSON',
+    `sys_ai_provider_bedrock_config` TEXT      NULL COMMENT 'AWS BedrockJSON',
+
+
+    `sys_ai_provider_extra`      TEXT NULL COMMENT 'JSON',
     `sys_ai_provider_sort_order`  INT          NOT NULL DEFAULT 0 COMMENT '',
     `sys_ai_provider_create_time` BIGINT       NOT NULL COMMENT '',
     `sys_ai_provider_update_time` BIGINT       NOT NULL COMMENT '',

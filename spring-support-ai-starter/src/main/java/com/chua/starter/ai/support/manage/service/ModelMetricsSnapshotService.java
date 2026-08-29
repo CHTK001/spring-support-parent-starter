@@ -25,13 +25,11 @@ import java.util.concurrent.TimeUnit;
  * 模型价格/指标快照服务。
  *
  * <p>定时枚举全部已配置供应商与模型，用 {@link AiModelMetricsEnrichmentService}
- * （Artificial Analysis 指标源）匹配「输入价格/输出价格/智能/输出速度/首块延迟」，
- * 合并模型自身的 <code>metrics</code> 实时字段与能力健康探测延迟，构建一份快照
- * 同时做两件事：</p>
- * <ul>
- *   <li>写入 Redis（key {@code nomifun:model-metrics:latest}，TTL 12h），供查询接口读取</li>
- *   <li>经 WebSocket 广播 {@code <b>model.metrics.push</b>} 主题推送前端</li>
- * </ul>
+ * （Artificial Analysis 指标源）匹配「输入价格/输出价格/缓存价格/智能/输出速度/首块延迟/
+ * 深度思考/联网查询/图片识别/函数调用」，合并模型自身的 <code>metrics</code> 实时字段
+ * 与能力健康探测延迟，构建一份快照写入 Redis（key {@code nomifun:model-metrics:latest}，
+ * TTL 12h），供查询接口按需读取。不再经 WebSocket 定时推送，前端通过
+ * {@code GET /api/model-metrics} 从缓存获取。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -82,17 +80,16 @@ public class ModelMetricsSnapshotService {
     private final ApiWebSocketPushService pushService;
 
     /**
-     * 构建最新快照：枚举配置模型 → 匹配指标 → 写 Redis → WS 推送。
+     * 构建最新快照并写入 Redis（不推送 WS，查询接口按需读取缓存）。
      *
      * <p>指标缺失不回退失败：该模型行仍会进入快照，价格/速度等字段置 null，
-     * 前端展示占位符。Redis 写入失败仅告警（不影响 WS 推送）。</p>
+     * 前端展示占位符。Redis 写入失败仅告警。</p>
      *
      * @return 本次快照
      */
     public Map<String, Object> buildAndPushSnapshot() {
         Map<String, Object> snapshot = buildSnapshotInternal();
         persistToRedis(snapshot);
-        pushService.push(SysAiWsTopics.MODEL_METRICS_PUSH, snapshot);
         return snapshot;
     }
 

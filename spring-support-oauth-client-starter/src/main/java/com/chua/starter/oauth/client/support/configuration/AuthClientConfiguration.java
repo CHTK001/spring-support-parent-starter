@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoRegistry;
+import com.chua.starter.oauth.client.support.appkey.AiAppKeySupport;
 import com.chua.starter.oauth.client.support.filter.AuthFilter;
 import com.chua.starter.oauth.client.support.interceptor.PermissionInterceptor;
 import com.chua.starter.oauth.client.support.interceptor.TokenForTypeInterceptor;
@@ -288,6 +289,30 @@ public class AuthClientConfiguration
     /** WhitelistFileWatcher */
     public WhitelistFileWatcher whitelistFileWatcher(AuthClientProperties authClientProperties) {
         return new WhitelistFileWatcher(authClientProperties);
+    }
+
+    /**
+     * AI AppKey 本地认证支持
+     * <p>
+     * 基于 {@link com.chua.datasource.support.engine.JdbcEngine} 动态查询 AppKey 表，
+     * 无需编写 Mapper，用于单机部署或外部 OAuth 服务不可达时的 AI AppKey 认证。
+     * 仅在 {@code plugin.oauth.ai-app-key.enabled=true} 且存在 DataSource 时装配。
+     * </p>
+     *
+     * @param authClientProperties OAuth 客户端配置
+     * @param dataSource           应用数据源
+     * @return AI AppKey 认证支持实例
+     */
+    @Bean
+    @ConditionalOnProperty(prefix = "plugin.oauth.ai-app-key", name = "enabled", havingValue = "true")
+    @ConditionalOnMissingBean
+    public AiAppKeySupport aiAppKeySupport(AuthClientProperties authClientProperties,
+                                           javax.sql.DataSource dataSource) {
+        AiAppKeySupport support = new AiAppKeySupport(authClientProperties, dataSource);
+        AiAppKeySupport.register(support);
+        log.info("[AuthClientConfiguration] 已启用 AI AppKey 本地认证 - 表: {}",
+                authClientProperties.getAiAppKey().getTableName());
+        return support;
     }
 
     @Bean

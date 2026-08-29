@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.common.support.ai.bot.BotInboundMessage;
 import com.chua.common.support.ai.bot.BotMessageListener;
 import com.chua.common.support.ai.chat.ChatClient;
+import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.ilink.support.bot.ILinkBotClient;
 import com.chua.starter.ai.support.entity.SysAiBotBinding;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
@@ -18,6 +19,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -96,10 +98,10 @@ public class AiBotChatService {
         client.addErrorListener(e -> log.warn("[BotChat] Bot {} 消息轮询出错: {}", bot.getBotId(), e.getMessage()));
 
         runningBots.put(bot.getBotId(), client);
-        // 后台线程启动消息轮询（getupdates 长轮询阻塞）
+        // 已有 botToken 时直接轮询（getupdates 长轮询阻塞），避免 start() 强制重新扫码登录
         new Thread(() -> {
             try {
-                client.start();
+                client.startPolling();
             } catch (Exception e) {
                 log.error("[BotChat] Bot {} 启动失败", bot.getBotId(), e);
             }
@@ -177,8 +179,14 @@ public class AiBotChatService {
                 return "模型 " + modelName + " 的供应商不存在。";
             }
             String apiKey = extractApiKey(provider.getCredentials());
+            Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
             // 3. 构建 ChatClient 并回复
-            ChatClient chatClient = ChatClient.create(provider.getPlatform(), apiKey, provider.getBaseUrl())
+            ChatClient chatClient = ChatClient.create(ChatClientSetting.builder()
+                    .provider(provider.getPlatform())
+                    .appKey(apiKey)
+                    .baseUrl(provider.getBaseUrl())
+                    .extraHeaders(extraHeaders)
+                    .build())
                     .model(modelName);
             return chatClient.chatSync(userMsg);
         } catch (Exception e) {
@@ -203,5 +211,28 @@ public class AiBotChatService {
         }
         Object key = credentials.get("apiKey");
         return key != null ? key.toString() : null;
+    }
+
+    /**
+     * 从 provider extra 中提取 custom_headers。
+     *
+     * <p>extra 结构：{@code {"custom_headers": {"X-Key": "value", ...}}}</p>
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String, String> extractExtraHeaders(Map<String, Object> extra) {
+        if (extra == null) {
+            return null;
+        }
+        Object headers = extra.get("custom_headers");
+        if (headers instanceof Map<?, ?> map) {
+            Map<String, String> result = new HashMap<>();
+            map.forEach((k, v) -> {
+                if (k != null && v != null) {
+                    result.put(k.toString(), v.toString());
+                }
+            });
+            return result.isEmpty() ? null : result;
+        }
+        return null;
     }
 }
