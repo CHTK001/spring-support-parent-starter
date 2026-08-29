@@ -1,9 +1,11 @@
 package com.chua.starter.common.support.api.response;
+import com.chua.common.support.annotation.IgnoreReturnType;
+import com.chua.common.support.network.http.ContentDisposition;
+import com.chua.common.support.network.http.ContentType;
 import com.chua.common.support.lang.code.ReturnCode;
+import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.lang.code.ReturnPreconditioning;
-import com.chua.common.support.annotation.IgnoreReturnType;
-import com.chua.starter.common.support.lang.ReturnPageResult;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import com.chua.starter.common.support.api.properties.ApiProperties;
 import jakarta.annotation.Resource;
@@ -33,8 +35,7 @@ import java.util.function.Supplier;
 
 import static com.chua.common.support.utils.ClassUtils.isAssignableFrom;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 统一返回值处理
@@ -42,15 +43,14 @@ import org.slf4j.LoggerFactory;
  * 自动将返回值包装为统一的 Result 格式。
  * </p>
  *
+ * @author CH
  * @since 2024/01/01
  * @version 1.0.0
- * @author CH
  */
+@Slf4j
 @RestControllerAdvice
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>, EnvironmentAware {
-    /** log */
-    private static final Logger log= LoggerFactory.getLogger(ApiUniformResponseBodyAdvice.class);
         /**
      * 忽略包装的URL关键字
      */
@@ -65,8 +65,7 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
      * 流式响应类型
      */
     private static final String EVENT_STREAM = "event-stream";
-    /** OCTESTREAM */
-    private static final String OCTET_STREAM= "octet-stream";
+    private static final String OCTET_STREAM = "octet-stream";
     
     /**
      * PageResult类名后缀
@@ -74,25 +73,19 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
     private static final String PAGE_RESULT_SUFFIX = "result.PageResult";
 
     @Resource(name = "uniform")
-    /** executor服务 */
     private ExecutorService executorService;
 
-    /** apiProperties */
     private ApiProperties apiProperties;
-    /** ignoreFormatPackages */
     private String[] ignoreFormatPackages;
-    /** noPackages */
     private boolean noPackages;
 
     @Override
-    /** Supports */
     public boolean supports(MethodParameter methodParameter, Class<? extends HttpMessageConverter<?>> aClass) {
         return true;
     }
 
     @SneakyThrows
     @Override
-    /** BeforeBody写入 */
     public Object beforeBodyWrite(Object o, MethodParameter methodParameter, MediaType mediaType, Class<? extends HttpMessageConverter<?>> aClass, ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse) {
         if (o instanceof ReturnPreconditioning<?> preconditioning) {
             return bodyWithPreconditioning(preconditioning, serverHttpResponse);
@@ -131,12 +124,11 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
             return createFluxBody(flux, serverHttpResponse);
         }
 
-        return ReturnResult.ok(o);
+        return ReturnResult.success(o);
     }
 
-    /** 创建FluxBody */
     private Object createFluxBody(Flux<?> flux, ServerHttpResponse serverHttpResponse) {
-        return flux.map(it -> ReturnResult.<Object>ok(it));
+        return flux.map(it -> ReturnResult.success(it));
     }
 
     /**
@@ -171,37 +163,53 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
      * @return 处理结果
      */
     private Object bodyWithPreconditioning(ReturnPreconditioning<?> preconditioning, ServerHttpResponse serverHttpResponse) {
+        ContentType contentType = preconditioning.getContentType();
+        if (null != contentType) {
+            serverHttpResponse.getHeaders().setContentType(MediaType.valueOf(contentType.getMimeType()));
+        }
+
+        ContentDisposition contentDisposition = preconditioning.getContentDisposition();
+        if (null != contentDisposition) {
+            serverHttpResponse.getHeaders().setContentDisposition(org.springframework.http.ContentDisposition.attachment()
+                    .filename(contentDisposition.getFilename(), contentDisposition.getCharset())
+                    .name(contentDisposition.getName())
+                    .build());
+        }
+
         return createNewResult(preconditioning);
     }
 
-    /** 创建NewResult */
     private Object createNewResult(ReturnPreconditioning<?> preconditioning) {
-        ReturnResult<?> result = preconditioning.asResult();
+        ReturnResult<?> result = preconditioning.toResult();
         if (!preconditioning.isSuccessful()) {
             return result;
         }
-        Object data = preconditioning.getData();
-        if (data instanceof Supplier) {
-            DeferredResult<Object> deferredResult = new DeferredResult<>();
+        Object data = !preconditioning.hasUnpack() ? result : result.getData();
+        if (preconditioning.isAsync() && Supplier.class.isAssignableFrom(data.getClass())) {
+            DeferredResult deferredResult = new DeferredResult<>((long) preconditioning.getTimeoutMillis());
             executorService.execute(Thread.ofVirtual()
-                    .unstarted(() -> {
-                        try {
+                    .unstarted(new Runnable() {
+                        @Override
+                        public void run() {
                             deferredResult.setResult(((Supplier<?>) data).get());
-                        } catch (Exception throwable) {
-                            deferredResult.setErrorResult(throwable);
                         }
                     })
             );
             deferredResult.onTimeout(() -> {
                         deferredResult.setErrorResult(ReturnResult.error(ReturnCode.SYSTEM_EXECUTION_TIMEOUT.getCode(), ReturnCode.SYSTEM_EXECUTION_TIMEOUT.getMsg()));
             });
+
+                    deferredResult.onError(throwable -> {
+                        log.error("[统一响应]异步任务执行失败", throwable);
+                        deferredResult.setErrorResult(ReturnResult.error(ReturnCode.SYSTEM_EXECUTION_ERROR.getCode(), ReturnCode.SYSTEM_EXECUTION_ERROR.getMsg()));
+                    });
+
             return deferredResult;
         }
         return data;
     }
 
     @SneakyThrows
-    /** 是否IgnoreReturn格式化 */
     private boolean isIgnoreReturnFormat(MethodParameter methodParameter, Method method, Class<?> controllerClass, ServerHttpRequest serverHttpRequest, MediaType mediaType) {
         // 检查方法级别注解
         if (methodParameter.hasMethodAnnotation(ApiReturnFormatIgnore.class)) {
@@ -237,7 +245,6 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
     }
 
     @Override
-    /** 设置Environment */
     public void setEnvironment(Environment environment) {
         apiProperties = Binder.get(environment)
                 .bindOrCreate(ApiProperties.PRE, ApiProperties.class);

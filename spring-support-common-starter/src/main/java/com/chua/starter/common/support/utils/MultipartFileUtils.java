@@ -9,7 +9,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 /**
  * 处理多部分文件（MultipartFile）工具类，提供文件上传和转换功能。
- * @author CH
  */
 public class MultipartFileUtils {
     /**
@@ -70,6 +69,17 @@ public class MultipartFileUtils {
      * @return 文件保存路径
      */
     public static ReturnResult<String> transferTo(InputStream inputStream, String name, File parent, String folder, boolean clearFolder) {
+        if(clearFolder) {
+            try {
+                deleteRecursively(new File(parent, folder));
+            } catch (IOException e) {
+                return ReturnResult.illegal("保存驱动清除失败");
+            }
+        }
+        File folderFile = new File(parent, folder);
+        folderFile.mkdirs();
+
+
         File driverFile = new File(parent, folder + "/" + name);
         try (InputStream is = inputStream;
              OutputStream os = new FileOutputStream(driverFile)
@@ -107,6 +117,17 @@ public class MultipartFileUtils {
      * @return 文件保存路径
      */
     public static ReturnResult<String> transferTo(InputStream inputStream, String name, File parent, boolean clearFolder) {
+        if(clearFolder) {
+            try {
+                deleteRecursively(parent);
+            } catch (IOException e) {
+//                return ReturnResult.illegal("保存驱动清除失败, " + StringUtils.subAfter(e.getCause().getMessage(), ":", true));
+
+            }
+        }
+        parent.mkdirs();
+
+
         File driverFile = new File(parent, name);
         try (InputStream is = inputStream;
              OutputStream os = new FileOutputStream(driverFile)
@@ -131,9 +152,10 @@ public class MultipartFileUtils {
             return null;
         }
 
-        File tempFile = File.createTempFile("multipart", ".tmp");
-        file.transferTo(tempFile.toPath());
-        return tempFile;
+        Path tempDir = java.nio.file.Files.createTempDirectory("multipart");
+        File file1 = tempDir.resolve(file.getOriginalFilename()).toFile();
+        file.transferTo(file1.toPath());
+        return file1;
     }
     /**
      * 将多部分文件内容转移到指定的文件中。

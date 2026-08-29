@@ -2,7 +2,7 @@ package com.chua.starter.common.support.provider;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
-import com.chua.common.support.spi.definition.SpiOption;
+import com.chua.common.support.spi.SpiOption;
 import com.chua.common.support.spi.definition.ServiceDefinition;
 import com.chua.common.support.spi.definition.ServiceDefinitionUtils;
 import com.chua.common.support.utils.ArrayUtils;
@@ -24,7 +24,9 @@ import org.springframework.web.bind.annotation.RestController;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
-import java.util.stream.Collectors;
+
+import static com.chua.starter.common.support.constant.CacheConstant.CACHE_MANAGER_FOR_SYSTEM;
+import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_ALWAYS;
 
 /**
  * 获取选项
@@ -49,9 +51,7 @@ public class OptionalProvider {
     }
 
 
-    /** API属性 */
     private final ApiProperties apiProperties;
-    /** Bean工厂 */
     private final BeanFactory beanFactory;
     /**
      * 获取选项
@@ -61,7 +61,7 @@ public class OptionalProvider {
      */
     @Operation(summary = "获取已经加载选项")
     @GetMapping("objects/get")
-    @Cacheable(cacheManager = "system", cacheNames = "redis-cache--1", key = "'OPTION:OBJECT_GET' + #type + '' + #name")
+    @Cacheable(cacheManager = CACHE_MANAGER_FOR_SYSTEM, cacheNames = REDIS_CACHE_ALWAYS, key = "'OPTION:OBJECT_GET' + #type + '' + #name")
     public ReturnResult<List<SpiOption>> objects(String type, @RequestParam(required =false) String name) {
         if(StringUtils.isBlank(type)) {
             return ReturnResult.error("参数不能为空");
@@ -72,20 +72,27 @@ public class OptionalProvider {
         if (beanFactory instanceof ListableBeanFactory listableBeanFactory) {
             beanOfTypes = listableBeanFactory.getBeansOfType(aClass);
         }
-        List<SpiOption> options = MapUtils.mapToList(beanOfTypes, (key, value) -> {
-            ServiceDefinition def = ServiceDefinitionUtils.buildDefinitionAlias(aClass, null, value, value.getClass(), null, key, 0);
-            return SpiOption.of(def.getName(), "", new String[0]);
+        List<SpiOption> options = MapUtils.mapToList(beanOfTypes, (key, value) -> new SpiOption() {
+            private final ServiceDefinition def = ServiceDefinitionUtils.buildDefinitionAlias(aClass, null, value, value.getClass(), null, key, 0);
+            @Override
+            public String name() {
+                return def.getName();
+            }
+            @Override
+            public String[] supportedTypes() {
+                return new String[0];
+            }
         });
         if(!StringUtils.isBlank(name)) {
              for (SpiOption option : options) {
                 String optionName = option.name();
                 if(StringUtils.equalsIgnoreCase(optionName, name)) {
-                    return ReturnResult.ok(Collections.singletonList(option));
+                    return ReturnResult.success(Collections.singletonList(option));
                 }
             }
         }
 
-        return ReturnResult.ok(options);
+        return ReturnResult.success(options);
     }
 
     /**
@@ -127,24 +134,24 @@ public class OptionalProvider {
      */
     @Operation(summary = "获取选项")
     @GetMapping("get")
-    @Cacheable(cacheManager = "system", cacheNames = "redis-cache--1", key = "'OPTION:GET' + #type + '' + #name")
+    @Cacheable(cacheManager = CACHE_MANAGER_FOR_SYSTEM, cacheNames = REDIS_CACHE_ALWAYS, key = "'OPTION:GET' + #type + '' + #name")
     public ReturnResult<List<SpiOption>> get(String type, @RequestParam(required =false) String name) {
         if(StringUtils.isBlank(type)) {
             return ReturnResult.error("参数不能为空");
         }
 
         type = StringUtils.utf8Str(type);
-        List<?> rawOptions = ServiceProvider.of(getType(type)).options();
-        List<SpiOption> options = rawOptions.stream().map(o -> (SpiOption) o).collect(Collectors.toList());
+        List<SpiOption> options = ServiceProvider.of(getType(type)).options();
         if(!StringUtils.isBlank(name)) {
             List<SpiOption> collect = options.stream().filter(spiOption -> {
+                String[] supportedTypes = spiOption.supportedTypes();
                 String optionName = spiOption.name();
-                return StringUtils.containsIgnoreCase(optionName, name);
+                return ArrayUtils.containsIgnoreCase(supportedTypes, name) || StringUtils.containsIgnoreCase(optionName, name);
             }).toList();
-             return ReturnResult.ok(collect);
+             return ReturnResult.success(collect);
         }
 
-        return ReturnResult.ok(options);
+        return ReturnResult.success(options);
     }
     /**
      * 获取选项
@@ -154,7 +161,7 @@ public class OptionalProvider {
      */
     @Operation(summary = "获取选项")
     @GetMapping("list")
-    @Cacheable(cacheManager = "system", cacheNames = "redis-cache--1", key = "'OPTION:LIST' + #type + '' + #name")
+    @Cacheable(cacheManager = CACHE_MANAGER_FOR_SYSTEM, cacheNames = REDIS_CACHE_ALWAYS, key = "'OPTION:LIST' + #type + '' + #name")
     public ReturnResult<Map<String, List<SpiOption>>> list(String type, @RequestParam(required =false) String name) {
         if(StringUtils.isBlank(type)) {
             return ReturnResult.error("参数不能为空");
@@ -164,8 +171,7 @@ public class OptionalProvider {
         for (String s : split) {
             String[] types = getTypes(s);
             for (String item : types) {
-                List<?> rawOptions = ServiceProvider.of(item).options();
-                List<SpiOption> options = rawOptions.stream().map(o -> (SpiOption) o).collect(Collectors.toList());
+                List<SpiOption> options = ServiceProvider.of(item).options();
                 if(!StringUtils.isBlank(name)) {
                     for (SpiOption option : options) {
                         String optionName = option.name();
@@ -180,6 +186,7 @@ public class OptionalProvider {
             }
         }
 
-        return ReturnResult.ok(map);
+        return ReturnResult.success(map);
     }
 }
+

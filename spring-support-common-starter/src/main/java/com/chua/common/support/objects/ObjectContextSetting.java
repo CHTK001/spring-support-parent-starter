@@ -87,11 +87,8 @@ public class ObjectContextSetting {
      * ObjectContextSetting 构建器类
      */
     public static class Builder {
-        /** SPI是否启用 */
         private boolean spiEnabled = true;
-        /** Annotationscan是否启用 */
         private boolean annotationScanEnabled = true;
-        /** Scanpackages */
         private List<String> scanPackages = new ArrayList<>();
 
         /**
