@@ -1,7 +1,6 @@
 package com.chua.starter.datasource.configuration;
 
 import com.chua.common.support.lang.datasource.flyway.Flyway;
-import com.chua.datasource.support.engine.JdbcReactorEngine;
 import com.chua.h2.support.cleanup.H2CleanupPlugin;
 import com.chua.h2.support.dialect.H2Dialect;
 import com.chua.h2.support.engine.H2Engine;
@@ -101,9 +100,8 @@ public class H2EngineAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @Order(Ordered.LOWEST_PRECEDENCE + 1)
-    public Flyway h2Flyway(H2Engine engine) {
-        com.chua.h2.support.flyway.H2Flyway flyway = new com.chua.h2.support.flyway.H2Flyway(
-                toJdbcReactorEngine(engine));
+    public com.chua.h2.support.flyway.H2Flyway h2Flyway(DataSource h2DataSource) {
+        com.chua.h2.support.flyway.H2Flyway flyway = new com.chua.h2.support.flyway.H2Flyway(h2DataSource);
         if (properties.getScriptPath() != null && !properties.getScriptPath().isBlank()) {
             flyway.location(properties.getScriptPath());
             int count = flyway.migrate();
@@ -119,86 +117,5 @@ public class H2EngineAutoConfiguration {
     @ConditionalOnMissingBean
     public H2CleanupPlugin h2CleanupPlugin(H2Engine engine) {
         return new H2CleanupPlugin(engine);
-    }
-
-    /**
-     * 将 H2Engine 桥接到 JdbcReactorEngine（用于 flyway）。
-     * <p>
-     * H2Engine 本身不实现 ReactorEngine，通过 SPI 获取的 JdbcReactorEngine 作为桥接目标。
-     * </p>
-     */
-    private JdbcReactorEngine toJdbcReactorEngine(H2Engine engine) {
-        // H2Engine 通过 SPI 注册为 "h2"，返回自身；JdbcReactorEngine 通过 "jdbc" 获取
-        // 直接用 H2Engine.execute() 包装为简单桥接
-        return new JdbcReactorEngine() {
-            @Override
-            public <T> com.chua.datasource.support.wrapper.ReactorLambdaQueryWrapper<T> query(Class<T> entityClass) {
-                throw new UnsupportedOperationException("H2 Flyway 不使用 Lambda 查询");
-            }
-
-            @Override
-            public <T> com.chua.datasource.support.wrapper.ReactorLambdaUpdateWrapper<T> update(Class<T> entityClass) {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public <T> com.chua.datasource.support.wrapper.ReactorLambdaDeleteWrapper<T> delete(Class<T> entityClass) {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public reactor.core.publisher.Flux<java.util.Map<String, Object>> query(String sql, Object... params) {
-                return reactor.core.publisher.Flux.defer(() -> {
-                    try {
-                        java.sql.Connection conn = getConnection();
-                        java.sql.PreparedStatement ps = conn.prepareStatement(sql);
-                        for (int i = 0; i < params.length; i++) ps.setObject(i + 1, params[i]);
-                        java.sql.ResultSet rs = ps.executeQuery();
-                        java.sql.ResultSetMetaData meta = rs.getMetaData();
-                        int cols = meta.getColumnCount();
-                        java.util.List<java.util.Map<String, Object>> rows = new java.util.ArrayList<>();
-                        while (rs.next()) {
-                            java.util.Map<String, Object> row = new java.util.LinkedHashMap<>();
-                            for (int i = 1; i <= cols; i++) {
-                                row.put(meta.getColumnLabel(i), rs.getObject(i));
-                            }
-                            rows.add(row);
-                        }
-                        rs.close();
-                        ps.close();
-                        conn.close();
-                        return reactor.core.publisher.Flux.fromIterable(rows);
-                    } catch (Exception e) {
-                        return reactor.core.publisher.Flux.error(e);
-                    }
-                });
-            }
-
-            @Override
-            public <T> reactor.core.publisher.Flux<T> query(String sql, Class<T> rowType, Object... params) {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public reactor.core.publisher.Mono<Integer> execute(String sql, Object... params) {
-                return reactor.core.publisher.Mono.fromCallable(() -> {
-                    try (java.sql.Connection conn = getConnection();
-                         java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
-                        for (int i = 0; i < params.length; i++) ps.setObject(i + 1, params[i]);
-                        return ps.executeUpdate();
-                    }
-                });
-            }
-
-            @Override
-            public reactor.core.publisher.Flux<Integer> batch(String sql, java.util.List<Object[]> batchParams) {
-                throw new UnsupportedOperationException();
-            }
-
-            private java.sql.Connection getConnection() throws Exception {
-                return DriverManager.getConnection(properties.getUrl(),
-                        properties.getUsername(), properties.getPassword());
-            }
-        };
     }
 }
