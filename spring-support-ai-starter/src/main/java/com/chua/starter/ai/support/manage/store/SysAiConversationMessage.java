@@ -23,7 +23,7 @@ import java.io.Serializable;
  * @author CH
  */
 @Data
-@TableName("sys_ai_conversation_message")
+@TableName(value = "sys_ai_conversation_message", autoResultMap = true)
 public class SysAiConversationMessage implements Serializable {
     private static final long serialVersionUID = 1L;
 

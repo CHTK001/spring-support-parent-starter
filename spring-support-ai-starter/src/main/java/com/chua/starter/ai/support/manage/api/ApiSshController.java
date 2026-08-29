@@ -1,10 +1,9 @@
 package com.chua.starter.ai.support.manage.api;
 
-import com.chua.starter.ai.support.manage.common.ApiErrorCode;
-import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
-import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
-import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
+import com.chua.starter.ai.support.manage.ssh.SshConnectionManager;
+import com.chua.starter.ai.support.manage.store.SysAiSshHost;
+import com.chua.starter.ai.support.manage.store.SysAiSshHostStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -16,17 +15,20 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * SSH 主机簿控制器，替代 nomicore 的 {@code /api/ssh-hosts} 契约。
+ * 远程主机（SSH 主机簿）控制器，对齐前端 {@code /api/ssh-hosts} 契约。
  *
- * <p>维护可复用的远程主机连接档案（{@code ssh_host_id} 主键），密钥字段写回时脱敏为
- * {@code "***"}；链接实时状态通过 {@code ssh.status} 事件推送。当前为进程内内存实现。</p>
+ * <p>提供可复用远程主机连接档案（{@code ssh_host_id} 主键）的增删改查，
+ * 密钥字段写入后不回显明文（响应恒为掩码 {@code "***"}）；链接实时状态
+ * 通过 {@code ssh.status} WebSocket 事件推送，快照见 {@code /statuses}。</p>
+ *
+ * <p>响应字段为 camelCase（对齐前端 {@code IApiSshHost}），
+ * 与 {@code SysAiConversation} 等 manage 域的 snake_case 契约不同——这是 SSH
+ * 主机簿独有的契约，前端 {@code fromApiSshHost} 仅做主键 brand 化转换。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -38,162 +40,199 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ApiSshController {
 
     /**
-     * 主键生成与基础存储工具
+     * 主机簿持久化存储
      */
-    private final SysAiConversationStore conversationStore;
+    private final SysAiSshHostStore sshHostStore;
 
     /**
-     * WS 事件推送服务
+     * SSH 连接管理（真实握手 / 状态机 / WS 推送）
      */
-    private final ApiWebSocketPushService pushService;
+    private final SshConnectionManager connectionManager;
 
     /**
-     * 主机档案：ssh_host_id → 主机
+     * 查询全部主机。
+     *
+     * @return 主机列表（密钥字段脱敏）
      */
-    private final Map<String, Map<String, Object>> hosts = new ConcurrentHashMap<>();
-
     @GetMapping
     public ApiResult<List<Map<String, Object>>> list() {
-        return ApiResult.ok(new ArrayList<>(hosts.values()));
+        return ApiResult.ok(sshHostStore.listAll().stream().map(this::toResponse).toList());
     }
 
+    /**
+     * 查询单台主机。
+     *
+     * @param sshHostId 主机 ID
+     * @return 主机（密钥字段脱敏）
+     */
     @GetMapping("/{sshHostId}")
     public ApiResult<Map<String, Object>> get(@PathVariable String sshHostId) {
-        return ApiResult.ok(requireHost(sshHostId));
+        return ApiResult.ok(toResponse(sshHostStore.get(sshHostId)));
     }
 
+    /**
+     * 新增主机并落库。
+     *
+     * @param body 请求体（camelCase，密钥为明文）
+     * @return 创建的主机（密钥字段脱敏）
+     */
     @PostMapping
     public ApiResult<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
-        String hostId = conversationStore.newId();
-        Map<String, Object> host = new LinkedHashMap<>();
-        host.put("ssh_host_id", hostId);
-        host.put("name", body.getOrDefault("name", "未命名主机"));
-        host.put("host", body.get("host"));
-        host.put("port", body.getOrDefault("port", 22));
-        host.put("username", body.get("username"));
-        host.put("auth_type", body.getOrDefault("auth_type", "password"));
-        host.put("password", mask((String) body.get("password")));
-        host.put("private_key", mask((String) body.get("private_key")));
-        host.put("passphrase", mask((String) body.get("passphrase")));
-        host.put("certificate", mask((String) body.get("certificate")));
-        host.put("sudo_password", mask((String) body.get("sudo_password")));
-        host.put("host_fingerprint", body.get("host_fingerprint"));
-        host.put("status", "unknown");
+        SysAiSshHost host = new SysAiSshHost();
+        host.setSshHostId(sshHostStore.newId());
+        host.setName(asString(body.get("name"), "未命名主机"));
+        host.setHost(asString(body.get("host"), ""));
+        host.setPort(body.get("port") instanceof Number n ? n.intValue() : 22);
+        host.setUsername(asString(body.get("username"), ""));
+        host.setAuthType(asString(body.get("authType"), "password"));
+        host.setPassword(asString(body.get("password"), null));
+        host.setPrivateKey(asString(body.get("privateKey"), null));
+        host.setPassphrase(asString(body.get("passphrase"), null));
+        host.setCertificate(asString(body.get("certificate"), null));
+        host.setSudoPassword(asString(body.get("sudoPassword"), null));
+        host.setStatus("unknown");
         long now = System.currentTimeMillis();
-        host.put("last_connected_at", null);
-        host.put("created_at", now);
-        host.put("updated_at", now);
-        hosts.put(hostId, host);
-        return ApiResult.ok(host);
+        host.setLastConnectedAt(null);
+        host.setCreatedAt(now);
+        host.setUpdatedAt(now);
+        return ApiResult.ok(toResponse(sshHostStore.create(host)));
     }
 
+    /**
+     * 部分更新主机（密钥字段带掩码哨兵则保留原值）。
+     *
+     * @param sshHostId 主机 ID
+     * @param body      请求体（camelCase，密钥为明文或掩码哨兵）
+     * @return 更新后的主机（密钥字段脱敏）
+     */
     @PutMapping("/{sshHostId}")
     public ApiResult<Map<String, Object>> update(@PathVariable String sshHostId,
-                                                  @RequestBody Map<String, Object> body) {
-        Map<String, Object> host = requireHost(sshHostId);
-        putIfPresent(host, body, "name");
-        putIfPresent(host, body, "host");
-        putIfPresent(host, body, "port");
-        putIfPresent(host, body, "username");
-        putIfPresent(host, body, "auth_type");
-        putIfPresent(host, body, "host_fingerprint");
-        if (body.containsKey("password")) {
-            host.put("password", mask((String) body.get("password")));
-        }
-        if (body.containsKey("private_key")) {
-            host.put("private_key", mask((String) body.get("private_key")));
-        }
-        if (body.containsKey("passphrase")) {
-            host.put("passphrase", mask((String) body.get("passphrase")));
-        }
-        if (body.containsKey("certificate")) {
-            host.put("certificate", mask((String) body.get("certificate")));
-        }
-        if (body.containsKey("sudo_password")) {
-            host.put("sudo_password", mask((String) body.get("sudo_password")));
-        }
-        host.put("updated_at", System.currentTimeMillis());
-        return ApiResult.ok(host);
+                                                 @RequestBody Map<String, Object> body) {
+        SysAiSshHost updates = new SysAiSshHost();
+        if (body.containsKey("name")) updates.setName(asString(body.get("name"), null));
+        if (body.containsKey("host")) updates.setHost(asString(body.get("host"), null));
+        if (body.containsKey("port")) updates.setPort(body.get("port") instanceof Number n ? n.intValue() : null);
+        if (body.containsKey("username")) updates.setUsername(asString(body.get("username"), null));
+        if (body.containsKey("authType")) updates.setAuthType(asString(body.get("authType"), null));
+        if (body.containsKey("password")) updates.setPassword(asString(body.get("password"), null));
+        if (body.containsKey("privateKey")) updates.setPrivateKey(asString(body.get("privateKey"), null));
+        if (body.containsKey("passphrase")) updates.setPassphrase(asString(body.get("passphrase"), null));
+        if (body.containsKey("certificate")) updates.setCertificate(asString(body.get("certificate"), null));
+        if (body.containsKey("sudoPassword")) updates.setSudoPassword(asString(body.get("sudoPassword"), null));
+        return ApiResult.ok(toResponse(sshHostStore.update(sshHostId, updates)));
     }
 
+    /**
+     * 删除主机（同时关闭其关联链路）。
+     *
+     * @param sshHostId 主机 ID
+     * @return 空结果
+     */
     @DeleteMapping("/{sshHostId}")
     public ApiResult<Void> delete(@PathVariable String sshHostId) {
-        requireHost(sshHostId);
-        hosts.remove(sshHostId);
+        sshHostStore.delete(sshHostId);
+        connectionManager.forgetHost(sshHostId);
         return ApiResult.ok();
     }
 
+    /**
+     * 真实测试主机连通性（SSH 握手 + 探活）。
+     *
+     * @param sshHostId 主机 ID
+     * @return 测试结果 {@code {ok, message}}
+     */
     @PostMapping("/{sshHostId}/test-connection")
     public ApiResult<Map<String, Object>> testConnection(@PathVariable String sshHostId) {
-        Map<String, Object> host = requireHost(sshHostId);
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("ok", false);
-        result.put("message", "内存后端未接入真实 SSH，仅返回占位连接测试结果");
-        host.put("status", "error");
-        host.put("last_connected_at", System.currentTimeMillis());
-        pushStatus(host, "closed", false, false, false);
-        return ApiResult.ok(result);
+        SysAiSshHost host = sshHostStore.get(sshHostId);
+        return ApiResult.ok(connectionManager.testConnection(host));
     }
 
+    /**
+     * 查询全部链路实时状态快照（与 {@code ssh.status} 事件同一形状）。
+     *
+     * @return 状态列表（camelCase）
+     */
     @GetMapping("/statuses")
     public ApiResult<List<Map<String, Object>>> statuses() {
-        List<Map<String, Object>> list = new ArrayList<>();
-        for (Map<String, Object> host : hosts.values()) {
-            list.add(buildStatus(host, "idle", null, null, false));
-        }
-        return ApiResult.ok(list);
+        return ApiResult.ok(connectionManager.statuses());
     }
 
+    /**
+     * 扫描本机 {@code ~/.ssh/config} 提供的候选主机（当前返回空占位）。
+     *
+     * @return 扫描结果
+     */
     @GetMapping("/import-candidates")
     public ApiResult<Map<String, Object>> importCandidates() {
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("candidates", new ArrayList<Map<String, Object>>());
+        result.put("configPath", null);
+        result.put("hosts", List.of());
         return ApiResult.ok(result);
     }
 
+    /**
+     * 将候选主机批量导入主机簿（当前返回空占位）。
+     *
+     * @param body 请求体：aliases
+     * @return 导入结果
+     */
     @PostMapping("/import")
     public ApiResult<Map<String, Object>> importHosts(@RequestBody Map<String, Object> body) {
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("imported", new ArrayList<Map<String, Object>>());
+        result.put("imported", List.of());
+        result.put("skipped", List.of());
         return ApiResult.ok(result);
     }
 
-    private void pushStatus(Map<String, Object> host, String state, Boolean reaped, Boolean retryable, boolean detail) {
-        Map<String, Object> status = buildStatus(host, state, reaped, retryable, detail);
-        pushService.push("ssh.status", status);
+    /**
+     * 实体转前端契约响应（密钥字段脱敏为 {@code "***"}）。
+     *
+     * @param host 主机实体
+     * @return camelCase 响应 Map
+     */
+    private Map<String, Object> toResponse(SysAiSshHost host) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("sshHostId", host.getSshHostId());
+        map.put("name", host.getName());
+        map.put("host", host.getHost());
+        map.put("port", host.getPort());
+        map.put("username", host.getUsername());
+        map.put("authType", host.getAuthType());
+        map.put("password", mask(host.getPassword()));
+        map.put("privateKey", mask(host.getPrivateKey()));
+        map.put("passphrase", mask(host.getPassphrase()));
+        map.put("certificate", mask(host.getCertificate()));
+        map.put("sudoPassword", mask(host.getSudoPassword()));
+        map.put("hostFingerprint", host.getHostFingerprint());
+        map.put("status", host.getStatus());
+        map.put("lastConnectedAt", host.getLastConnectedAt());
+        map.put("createdAt", host.getCreatedAt());
+        map.put("updatedAt", host.getUpdatedAt());
+        return map;
     }
 
-    private Map<String, Object> buildStatus(Map<String, Object> host, String state, Boolean reaped,
-                                            Boolean retryable, boolean withDetail) {
-        Map<String, Object> status = new LinkedHashMap<>();
-        status.put("ssh_host_id", host.get("ssh_host_id"));
-        status.put("conversation_id", "");
-        status.put("state", state);
-        status.put("attempt", 0);
-        status.put("next_retry_in_ms", null);
-        status.put("host_fingerprint", host.get("host_fingerprint"));
-        status.put("detail", withDetail ? "内存后端占位状态" : null);
-        status.put("reaped", reaped);
-        status.put("retryable", retryable);
-        status.put("changed_at", System.currentTimeMillis());
-        return status;
-    }
-
-    private String mask(String value) {
+    /**
+     * 密钥脱敏：存在则返回掩码哨兵，否则返回 null。
+     *
+     * @param value 原始值
+     * @return 脱敏值
+     */
+    private static String mask(String value) {
         return (value == null || value.isEmpty()) ? null : "***";
     }
 
-    private void putIfPresent(Map<String, Object> host, Map<String, Object> body, String key) {
-        if (body.containsKey(key)) {
-            host.put(key, body.get(key));
+    /**
+     * 安全取字符串（含 Number 转字符串的兜底）。
+     *
+     * @param value        原始值
+     * @param defaultValue 缺失或空时的默认值
+     * @return 字符串值
+     */
+    private static String asString(Object value, String defaultValue) {
+        if (value == null) {
+            return defaultValue;
         }
-    }
-
-    private Map<String, Object> requireHost(String sshHostId) {
-        Map<String, Object> host = hosts.get(sshHostId);
-        if (host == null) {
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "SSH 主机不存在: " + sshHostId);
-        }
-        return host;
+        String str = String.valueOf(value);
+        return str.isEmpty() ? defaultValue : str;
     }
 }

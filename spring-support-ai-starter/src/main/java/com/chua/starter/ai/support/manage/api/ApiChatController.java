@@ -7,6 +7,9 @@ import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.store.SysAiConversation;
 import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
 import com.chua.starter.ai.support.manage.store.SysAiConversationMessage;
+import com.chua.starter.ai.support.manage.store.SysAiSshHost;
+import com.chua.starter.ai.support.manage.store.SysAiSshHostStore;
+import com.chua.starter.ai.support.manage.ssh.SshConnectionManager;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
 import lombok.RequiredArgsConstructor;
@@ -61,6 +64,16 @@ public class ApiChatController {
     private final ApiWebSocketPushService pushService;
 
     /**
+     * 远程主机（SSH）连接管理服务
+     */
+    private final SshConnectionManager sshConnectionManager;
+
+    /**
+     * 远程主机主机簿存储（校验绑定主机是否存在）
+     */
+    private final SysAiSshHostStore sshHostStore;
+
+    /**
      * 会话产物（artifacts）内存存储：conversationId → 产物列表（进程内占位实现）
      */
     private final Map<String, List<Map<String, Object>>> artifacts = new ConcurrentHashMap<>();
@@ -85,8 +98,28 @@ public class ApiChatController {
         c.setCreatedAt(now);
         c.setModifiedAt(now);
         conversationStore.create(c);
+        // 绑定远程主机（extra.ssh_host_id）的会话：校验主机存在并异步拨号，
+        // 使会话 header 上的「远程主机」状态药丸真实可见。
+        if (c.getExtra() != null && c.getExtra().get("ssh_host_id") != null) {
+            dialBoundSshHost(String.valueOf(c.getExtra().get("ssh_host_id")), id);
+        }
         pushService.push("conversation.listChanged", Map.of("conversation_id", id, "action", "created"));
         return ApiResult.ok(toResponse(c));
+    }
+
+    /**
+     * 为绑定远程主机的会话发起异步拨号（主机不存在时仅告警，不阻塞会话创建）。
+     *
+     * @param sshHostId       主机 ID
+     * @param conversationId  会话 ID
+     */
+    private void dialBoundSshHost(String sshHostId, String conversationId) {
+        try {
+            SysAiSshHost host = sshHostStore.get(sshHostId);
+            sshConnectionManager.dial(host, conversationId);
+        } catch (Exception e) {
+            log.warn("[Chat] 绑定远程主机拨号失败: ssh_host_id={} err={}", sshHostId, e.getMessage());
+        }
     }
 
     @GetMapping
