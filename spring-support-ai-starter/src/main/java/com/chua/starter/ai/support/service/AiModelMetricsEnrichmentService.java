@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.service;
 
 import com.chua.common.support.ai.chat.ModelDefinition;
+import com.chua.common.support.datasearch.pricing.spi.AbstractModelMetricsProvider;
 import com.chua.common.support.datasearch.pricing.spi.ModelMetricsProvider;
 import com.chua.common.support.spi.ServiceProvider;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +46,23 @@ public class AiModelMetricsEnrichmentService {
      * 指标数据源名称
      */
     private static final String SOURCE_NAME = "artificialanalysis";
+
+    /**
+     * 静态初始化：确保 brotli4j native 库可用。
+     *
+     * <p>HttpClient5 会自动请求 brotli 编码并解压响应，但 brotli4j 的 native 库
+     * 需要显式调用 {@code Brotli4jLoader.ensureAvailability()} 才会加载；未加载时
+     * 解压会抛 {@code UnsatisfiedLinkError}，导致在线指标同步失败。这里用反射调用
+     * 以避免编译期硬依赖 brotli4j（运行时才在 classpath）。</p>
+     */
+    static {
+        try {
+            Class<?> loader = Class.forName("com.aayushatharva.brotli4j.Brotli4jLoader");
+            loader.getMethod("ensureAvailability").invoke(null);
+        } catch (Throwable ignored) {
+            // brotli4j 缺失时静默降级（在线同步失败，回退磁盘快照）
+        }
+    }
 
     /**
      * 指标索引：归一化模型名 → 记录
@@ -163,10 +181,17 @@ public class AiModelMetricsEnrichmentService {
         ModelMetricsProvider provider = ServiceProvider.of(ModelMetricsProvider.class)
                 .getExtension(SOURCE_NAME);
         if (provider == null) { return Map.of(); }
-        List<ModelDefinition> list = safeMetrics(provider);
-        if (list.isEmpty()) {
-            provider.syncFromOnline();
+        List<ModelDefinition> list;
+        if (provider instanceof AbstractModelMetricsProvider abstractProvider) {
+            // SPI 实例未注入 configSaveOrLoader，getMetrics()/syncFromOnline() 无法持久化读取，
+            // 直接调用在线抓取方法拿原始列表。
+            list = abstractProvider.fetchOnlinePricing();
+        } else {
             list = safeMetrics(provider);
+            if (list.isEmpty()) {
+                provider.syncFromOnline();
+                list = safeMetrics(provider);
+            }
         }
         if (list == null || list.isEmpty()) { return Map.of(); }
         Map<String, MetricsRecord> idx = new HashMap<>();

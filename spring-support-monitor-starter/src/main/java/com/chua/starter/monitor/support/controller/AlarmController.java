@@ -161,4 +161,76 @@ public class AlarmController {
                                           @RequestParam(defaultValue = "false") boolean falseAlarm) {
         return alarmEngineService.handleEvent(id, remark, falseAlarm);
     }
+
+    /**
+     * 测试告警规则
+     *
+     * @param ruleId    规则 ID
+     * @param monitorId 监控 ID（可选，为空则测试全局规则）
+     * @param metricName 指标名
+     * @param value     指标值
+     * @return 是否触发
+     */
+    @Operation(summary = "测试告警规则")
+    @GetMapping("/rule/{id}/test")
+    public ReturnResult<Boolean> testRule(@PathVariable Long ruleId,
+                                          @RequestParam(required = false) Long monitorId,
+                                          @RequestParam(required = false) String metricName,
+                                          @RequestParam(required = false) Double value) {
+        return alarmEngineService.testRule(ruleId, monitorId, metricName, value);
+    }
+
+    // ==================== 维护窗口 ====================
+
+    /**
+     * 新增维护窗口
+     *
+     * @param window 维护窗口
+     * @return 结果
+     */
+    @Operation(summary = "新增维护窗口")
+    @PostMapping("/maintenance-window")
+    public ReturnResult<MsMonitorAlarmMaintenanceWindow> createMaintenanceWindow(
+            @RequestBody MsMonitorAlarmMaintenanceWindow window) {
+        return alarmEngineService.createMaintenanceWindow(window);
+    }
+
+    /**
+     * 更新维护窗口
+     *
+     * @param id     主键
+     * @param window 维护窗口
+     * @return 结果
+     */
+    @Operation(summary = "更新维护窗口")
+    @PutMapping("/maintenance-window/{id}")
+    public ReturnResult<MsMonitorAlarmMaintenanceWindow> updateMaintenanceWindow(@PathVariable Long id,
+                                                                               @RequestBody MsMonitorAlarmMaintenanceWindow window) {
+        return alarmEngineService.updateMaintenanceWindow(id, window);
+    }
+
+    /**
+     * 删除维护窗口
+     *
+     * @param id 主键
+     * @return 结果
+     */
+    @Operation(summary = "删除维护窗口")
+    @DeleteMapping("/maintenance-window/{id}")
+    public ReturnResult<Void> deleteMaintenanceWindow(@PathVariable Long id) {
+        return alarmEngineService.deleteMaintenanceWindow(id);
+    }
+
+    /**
+     * 维护窗口列表
+     *
+     * @param policyId 策略 ID 过滤（可选）
+     * @return 列表
+     */
+    @Operation(summary = "维护窗口列表")
+    @GetMapping("/maintenance-window")
+    public ReturnResult<List<MsMonitorAlarmMaintenanceWindow>> listMaintenanceWindows(
+            @RequestParam(required = false) Long policyId) {
+        return alarmEngineService.listMaintenanceWindows(policyId);
+    }
 }

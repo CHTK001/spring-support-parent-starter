@@ -114,7 +114,7 @@ public class WebRequest {
             return false;
         }
 
-        uri = StringUtils.isNotBlank(contextPath) ? StringUtils.removeStart(uri, contextPath) : uri;
+        uri = StringUtils.isNotBlank(contextPath) && !"/".equals(contextPath) ? StringUtils.removeStart(uri, contextPath) : uri;
         if(isResource(uri)) {
             log.debug("[WebRequest白名单]静态资源放行 - URI: {}", uri);
             return true;

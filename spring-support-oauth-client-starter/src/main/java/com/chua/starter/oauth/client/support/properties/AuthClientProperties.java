@@ -34,6 +34,8 @@ public class AuthClientProperties {
             "/**/oauth",
             "/**/doLogin",
             "/**/logout",
+            "/login",
+            "/logout",
             "/doc.html",
             "/actuator",
             "/actuator/**",
@@ -51,7 +53,15 @@ public class AuthClientProperties {
             "/**/*.html",
             "/**/users/loginCode",
             "/v3/api-docs/**",
-            "/**/node/receive_push"
+            "/**/node/receive_push",
+            "/api/system/info",
+            "/api/auth/status",
+            "/api/auth/user",
+            "/api/extensions/**",
+            "/api/terminals",
+            "/api/terminals/**",
+            "/api/providers/**/credentials",
+            "/api/settings/client"
     );
 
     /** 创建 AuthClientProperties 实例 */

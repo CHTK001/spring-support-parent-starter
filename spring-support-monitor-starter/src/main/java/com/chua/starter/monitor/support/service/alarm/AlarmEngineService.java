@@ -34,6 +34,54 @@ public interface AlarmEngineService {
      */
     void reload();
 
+    /**
+     * 测试告警规则
+     *
+     * @param ruleId    规则 ID
+     * @param monitorId 监控 ID（可选，为空则测试全局规则）
+     * @param metricName 指标名
+     * @param value     指标值
+     * @return 是否触发告警
+     */
+    ReturnResult<Boolean> testRule(Long ruleId, Long monitorId, String metricName, Double value);
+
+    // ==================== 维护窗口 ====================
+
+    /**
+     * 新增维护窗口
+     *
+     * @param window 维护窗口
+     * @return 结果
+     */
+    ReturnResult<MsMonitorAlarmMaintenanceWindow> createMaintenanceWindow(
+            MsMonitorAlarmMaintenanceWindow window);
+
+    /**
+     * 更新维护窗口
+     *
+     * @param id     主键
+     * @param window 维护窗口
+     * @return 结果
+     */
+    ReturnResult<MsMonitorAlarmMaintenanceWindow> updateMaintenanceWindow(Long id,
+                                                                        MsMonitorAlarmMaintenanceWindow window);
+
+    /**
+     * 删除维护窗口
+     *
+     * @param id 主键
+     * @return 结果
+     */
+    ReturnResult<Void> deleteMaintenanceWindow(Long id);
+
+    /**
+     * 维护窗口列表
+     *
+     * @param policyId 策略 ID 过滤（可选）
+     * @return 列表
+     */
+    ReturnResult<List<MsMonitorAlarmMaintenanceWindow>> listMaintenanceWindows(Long policyId);
+
     // ==================== 策略 CRUD ====================
 
     /**

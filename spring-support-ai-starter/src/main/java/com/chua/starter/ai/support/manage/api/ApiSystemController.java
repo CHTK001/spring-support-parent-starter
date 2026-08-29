@@ -4,6 +4,7 @@ import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
+import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -81,6 +82,7 @@ public class ApiSystemController {
      *
      * @return 系统信息（缓存目录 / 工作目录 / 日志目录 / 存储代际 / 平台 / 架构）
      */
+    @TokenForIgnore
     @GetMapping("/system/info")
     public ApiResult<Map<String, Object>> systemInfo() {
         Map<String, Object> info = new LinkedHashMap<>();
@@ -271,6 +273,7 @@ public class ApiSystemController {
      *
      * @return 认证状态
      */
+    @TokenForIgnore
     @GetMapping("/auth/status")
     public ApiResult<Map<String, Object>> authStatus() {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -284,10 +287,11 @@ public class ApiSystemController {
      *
      * @return 用户信息
      */
+    @TokenForIgnore
     @GetMapping("/auth/user")
     public ApiResult<Map<String, Object>> authUser() {
         Map<String, Object> user = new LinkedHashMap<>();
-        user.put("user_id", "local-admin");
+        user.put("user_id", "0192e000-7000-7000-8000-000000000001");
         user.put("username", "admin");
         user.put("display_name", "Admin");
         user.put("role", "admin");

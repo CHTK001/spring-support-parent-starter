@@ -15,8 +15,12 @@ CREATE TABLE IF NOT EXISTS filesystem_upload_merge_log (
     update_name VARCHAR(50)
 );
 
-CREATE INDEX IF NOT EXISTS idx_filesystem_upload_merge_log_upload_id
-    ON filesystem_upload_merge_log(filesystem_upload_merge_log_upload_id);
+SET @idx1 = IF(
+    EXISTS (SELECT 1 FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='filesystem_upload_merge_log' AND index_name='idx_filesystem_upload_merge_log_upload_id'),
+    'SELECT 1',
+    'CREATE INDEX idx_filesystem_upload_merge_log_upload_id ON filesystem_upload_merge_log(filesystem_upload_merge_log_upload_id)'
+);
+PREPARE fs_stmt FROM @idx1; EXECUTE fs_stmt; DEALLOCATE PREPARE fs_stmt;
 
 CREATE TABLE IF NOT EXISTS filesystem_upload_upload_log (
     filesystem_upload_upload_log_id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -35,5 +39,9 @@ CREATE TABLE IF NOT EXISTS filesystem_upload_upload_log (
     update_name VARCHAR(50)
 );
 
-CREATE INDEX IF NOT EXISTS idx_filesystem_upload_upload_log_upload_id
-    ON filesystem_upload_upload_log(filesystem_upload_upload_log_upload_id);
+SET @idx2 = IF(
+    EXISTS (SELECT 1 FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='filesystem_upload_upload_log' AND index_name='idx_filesystem_upload_upload_log_upload_id'),
+    'SELECT 1',
+    'CREATE INDEX idx_filesystem_upload_upload_log_upload_id ON filesystem_upload_upload_log(filesystem_upload_upload_log_upload_id)'
+);
+PREPARE fs_stmt FROM @idx2; EXECUTE fs_stmt; DEALLOCATE PREPARE fs_stmt;

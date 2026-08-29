@@ -6,6 +6,7 @@ import com.chua.common.support.ai.bot.QrcodeListener;
 import com.chua.feishu.support.bot.FeishuBotClient;
 import com.chua.ilink.support.bot.ILinkBotClient;
 import com.chua.starter.ai.support.entity.SysAiBotBinding;
+import com.chua.starter.ai.support.manage.store.BotUserSummary;
 import com.chua.starter.ai.support.mapper.SysAiBotBindingMapper;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
@@ -14,10 +15,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * 微信 iLink Bot 绑定服务。
@@ -62,6 +68,76 @@ public class AiBotBindingService {
         return botBindingMapper.selectList(
                 Wrappers.<SysAiBotBinding>lambdaQuery()
                         .orderByDesc(SysAiBotBinding::getCreateTime));
+    }
+
+    /**
+     * 管理员视角查看指定用户绑定的 Bot 列表。
+     *
+     * @param userId 用户 ID（null 表示未绑定用户的全部记录）
+     * @return 绑定列表（按创建时间降序）
+     */
+    public List<SysAiBotBinding> listByUser(Long userId) {
+        return botBindingMapper.selectList(
+                Wrappers.<SysAiBotBinding>lambdaQuery()
+                        .eq(userId != null, SysAiBotBinding::getUserId, userId)
+                        .isNull(userId == null, SysAiBotBinding::getUserId)
+                        .orderByDesc(SysAiBotBinding::getCreateTime));
+    }
+
+    /**
+     * 管理员视角的用户聚合列表：按 userId 分组统计每个用户绑定的 Bot 数与在线数。
+     *
+     * @return 用户摘要列表（含未分配用户组的记录）
+     */
+    public List<BotUserSummary> listUserSummaries() {
+        List<SysAiBotBinding> all = botBindingMapper.selectList(
+                Wrappers.<SysAiBotBinding>lambdaQuery()
+                        .orderByDesc(SysAiBotBinding::getCreateTime));
+        Map<Long, List<SysAiBotBinding>> byUser = all.stream()
+                .filter(b -> b.getUserId() != null)
+                .collect(Collectors.groupingBy(SysAiBotBinding::getUserId));
+
+        List<BotUserSummary> result = new ArrayList<>();
+        for (Map.Entry<Long, List<SysAiBotBinding>> e : byUser.entrySet()) {
+            BotUserSummary s = summarize(e.getKey(), e.getValue());
+            result.add(s);
+        }
+        // 未分配用户（userId 为 null）的记录归入同一组
+        List<SysAiBotBinding> unassigned = all.stream()
+                .filter(b -> b.getUserId() == null)
+                .collect(Collectors.toList());
+        if (!unassigned.isEmpty()) {
+            result.add(summarize(null, unassigned));
+        }
+        return result;
+    }
+
+    /**
+     * 将同属一个用户的绑定记录聚合成摘要。
+     *
+     * @param userId 用户 ID（可空，表示未分配）
+     * @param bots   该用户的绑定记录
+     * @return 用户摘要
+     */
+    private BotUserSummary summarize(Long userId, List<SysAiBotBinding> bots) {
+        BotUserSummary summary = new BotUserSummary();
+        summary.setOwner(userId != null ? String.valueOf(userId) : "unassigned");
+        long online = bots.stream().filter(b -> "online".equals(b.getStatus())).count();
+        summary.setBotCount(bots.size());
+        summary.setOnlineCount(online);
+        summary.setOfflineCount(bots.size() - online);
+        summary.setNickname(bots.stream()
+                .map(SysAiBotBinding::getNickname)
+                .filter(n -> n != null && !n.isBlank())
+                .findFirst()
+                .orElse(userId != null ? String.valueOf(userId) : "未分配"));
+        summary.setLastActiveTime(bots.stream()
+                .map(SysAiBotBinding::getLastActiveTime)
+                .filter(Objects::nonNull)
+                .map(t -> t.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
+                .max(Long::compareTo)
+                .orElse(null));
+        return summary;
     }
 
     public SysAiBotBinding getById(Long id) {

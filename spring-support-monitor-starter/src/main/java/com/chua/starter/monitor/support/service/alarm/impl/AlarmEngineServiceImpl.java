@@ -4,9 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsMonitor;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmEvent;
+import com.chua.starter.monitor.support.entity.MsMonitorAlarmMaintenanceWindow;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmPolicy;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmRule;
 import com.chua.starter.monitor.support.mapper.MsMonitorAlarmEventMapper;
+import com.chua.starter.monitor.support.mapper.MsMonitorAlarmMaintenanceWindowMapper;
 import com.chua.starter.monitor.support.mapper.MsMonitorAlarmPolicyMapper;
 import com.chua.starter.monitor.support.mapper.MsMonitorAlarmRuleMapper;
 import com.chua.starter.monitor.support.mapper.MsMonitorMapper;
@@ -80,6 +82,9 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
 
     /** 连续触发计数器：ruleId:monitorId -> 计数 */
     private final Map<String, AtomicInteger> consecutiveCounter = new ConcurrentHashMap<>();
+
+    /** 维护窗口 Mapper */
+    private final MsMonitorAlarmMaintenanceWindowMapper maintenanceWindowMapper;
 
     /**
      * 启动时加载规则缓存
@@ -304,49 +309,103 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
      * @param metricName  指标名
      * @param value       实际值
      */
-    private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String monitorName,
-                                 String metricName, BigDecimal value) {
-        String silenceKey = SILENCE_KEY_PREFIX + rule.getId() + ":" + monitorId;
-        int silenceMinutes = rule.getMsMonitorAlarmRuleSilenceMinutes() == null ? 10 : rule.getMsMonitorAlarmRuleSilenceMinutes();
-        Boolean first = redisTemplate.opsForValue()
-                .setIfAbsent(silenceKey, "1", Duration.ofMinutes(silenceMinutes));
-        if (!Boolean.TRUE.equals(first)) {
-            log.debug("[alarm] 静默期内跳过 rule={} monitor={}", rule.getId(), monitorId);
-            return;
-        }
-        // 目标名兜底查询
-        String resolvedName = monitorName;
-        if (isBlank(resolvedName)) {
-            MsMonitor monitor = monitorMapper.selectById(monitorId);
-            resolvedName = monitor != null ? monitor.getMonitorName() : String.valueOf(monitorId);
-        }
-        // 落事件
-        var event = new MsMonitorAlarmEvent();
-        event.setMsMonitorAlarmEventMonitorId(monitorId);
-        event.setMsMonitorAlarmEventMonitorName(resolvedName);
-        event.setMsMonitorAlarmEventRuleId(rule.getId());
-        event.setMsMonitorAlarmEventMetricName(metricName);
-        event.setMsMonitorAlarmEventAlarmValue(value);
-        event.setMsMonitorAlarmEventThreshold(rule.getMsMonitorAlarmRuleThreshold());
-        event.setMsMonitorAlarmEventLevel(isBlank(rule.getMsMonitorAlarmRuleLevel()) ? "P2" : rule.getMsMonitorAlarmRuleLevel());
-        event.setMsMonitorAlarmEventStatus("NEW");
-        event.setMsMonitorAlarmEventTriggerTime(LocalDateTime.now());
-        eventMapper.insert(event);
-        // 渠道投递（单渠道失败不影响其他）
-        String title = String.format("[%s] %s %s=%s", event.getMsMonitorAlarmEventLevel(),
-                resolvedName, metricName, value.toPlainString());
-        String content = String.format("指标 %s 当前值 %s 已连续超过阈值 %s（条件 %s），请及时处理。",
-                metricName, value.toPlainString(), rule.getMsMonitorAlarmRuleThreshold().toPlainString(),
-                rule.getMsMonitorAlarmRuleCondition());
-        for (NotifySender sender : notifySenders) {
+private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String monitorName,
+                             String metricName, BigDecimal value) {
+            // ---- 新增：维护窗口检查 ----
+            // 如果当前时间在活跃的维护窗口内，则跳过告警（不受静默期影响）
             try {
-                sender.send(title, content, null);
+                LocalDateTime now = LocalDateTime.now();
+                int nowWeekday = now.getDayOfWeek().getValue() % 7; // Monday=1 -> 1, Sunday=7 -> 0
+                String weekdays = String.valueOf(nowWeekday);
+                // 查询启用中的维护窗口
+                LambdaQueryWrapper<MsMonitorAlarmMaintenanceWindow> mwWrapper = new LambdaQueryWrapper<MsMonitorAlarmMaintenanceWindow>()
+                        .eq(MsMonitorAlarmMaintenanceWindow::getMsMonitorAlarmMaintenanceWindowEnabled, 1);
+                if (rule.getMsMonitorAlarmRuleLevel() != null) {
+                    mwWrapper.eq(MsMonitorAlarmMaintenanceWindow::getWindowLevel, rule.getMsMonitorAlarmRuleLevel());
+                } else {
+                    // 全局级别的窗口（level 为空）
+                    mwWrapper.isNull(MsMonitorAlarmMaintenanceWindow::getWindowLevel);
+                }
+                List<MsMonitorAlarmMaintenanceWindow> windows = maintenanceWindowMapper.selectList(mwWrapper);
+                boolean inMaintenance = false;
+                for (MsMonitorAlarmMaintenanceWindow window : windows) {
+                    // 检查周日目标：weekdays 为空则每天生效，否则匹配
+                    if (window.getWeekdays() == null || window.getWeekdays().isEmpty() || window.getWeekdays().contains(weekdays)) {
+                        // 检查时间范围：每天的 startTime ~ endTime
+                        String[] startParts = window.getStartTime().split(":");
+                        String[] endParts = window.getEndTime().split(":");
+                        int startHour = Integer.parseInt(startParts[0]);
+                        int startMin = Integer.parseInt(startParts[1]);
+                        int endHour = Integer.parseInt(endParts[0]);
+                        int endMin = Integer.parseInt(endParts[1]);
+                        // 将当前时间转换为分钟数便于比较
+                        int nowMinutes = now.getHour() * 60 + now.getMinute();
+                        int startMinutes = startHour * 60 + startMin;
+                        int endMinutes = endHour * 60 + endMin;
+                        // 处理跨午夜的情况（例如 22:00 ~ 06:00）
+                        boolean inRange;
+                        if (startMinutes < endMinutes) {
+                            inRange = nowMinutes >= startMinutes && nowMinutes < endMinutes;
+                        } else {
+                            inRange = nowMinutes >= startMinutes || nowMinutes < endMinutes;
+                        }
+                        if (inRange) {
+                            inMaintenance = true;
+                            break;
+                        }
+                    }
+                }
+                if (inMaintenance) {
+                    log.debug("[alarm] 维护窗口内跳过告警 rule={} monitor={}", rule.getId(), monitorId);
+                    return;
+                }
             } catch (Exception e) {
-                log.warn("[alarm] 通知渠道 {} 发送失败: {}", sender.channel(), e.getMessage());
+                log.warn("[alarm] 维护窗口检查异常: {}", e.getMessage());
+                // 异常时不阻断主链路，继续走常规静默期逻辑
             }
-        }
-        log.info("[alarm] 告警触发 rule={} monitor={} metric={} value={}",
-                rule.getId(), monitorId, metricName, value);
+            // --------------------------------------------
+
+            String silenceKey = SILENCE_KEY_PREFIX + rule.getId() + ":" + monitorId;
+            int silenceMinutes = rule.getMsMonitorAlarmRuleSilenceMinutes() == null ? 10 : rule.getMsMonitorAlarmRuleSilenceMinutes();
+            Boolean first = redisTemplate.opsForValue()
+                    .setIfAbsent(silenceKey, "1", Duration.ofMinutes(silenceMinutes));
+            if (!Boolean.TRUE.equals(first)) {
+                log.debug("[alarm] 静默期内跳过 rule={} monitor={}", rule.getId(), monitorId);
+                return;
+            }
+            // 目标名兜底查询
+            String resolvedName = monitorName;
+            if (isBlank(resolvedName)) {
+                MsMonitor monitor = monitorMapper.selectById(monitorId);
+                resolvedName = monitor != null ? monitor.getMonitorName() : String.valueOf(monitorId);
+            }
+            // 落事件
+            var event = new MsMonitorAlarmEvent();
+            event.setMsMonitorAlarmEventMonitorId(monitorId);
+            event.setMsMonitorAlarmEventMonitorName(resolvedName);
+            event.setMsMonitorAlarmEventRuleId(rule.getId());
+            event.setMsMonitorAlarmEventMetricName(metricName);
+            event.setMsMonitorAlarmEventAlarmValue(value);
+            event.setMsMonitorAlarmEventThreshold(rule.getMsMonitorAlarmRuleThreshold());
+            event.setMsMonitorAlarmEventLevel(isBlank(rule.getMsMonitorAlarmRuleLevel()) ? "P2" : rule.getMsMonitorAlarmRuleLevel());
+            event.setMsMonitorAlarmEventStatus("NEW");
+            event.setMsMonitorAlarmEventTriggerTime(LocalDateTime.now());
+            eventMapper.insert(event);
+            // 渠道投递（单渠道失败不影响其他）
+            String title = String.format("[%s] %s %s=%s", event.getMsMonitorAlarmEventLevel(),
+                    resolvedName, metricName, value.toPlainString());
+            String content = String.format("指标 %s 当前值 %s 已连续超过阈值 %s（条件 %s），请及时处理。",
+                    metricName, value.toPlainString(), rule.getMsMonitorAlarmRuleThreshold().toPlainString(),
+                    rule.getMsMonitorAlarmRuleCondition());
+            for (NotifySender sender : notifySenders) {
+                try {
+                    sender.send(title, content, null);
+                } catch (Exception e) {
+                    log.warn("[alarm] 通知渠道 {} 发送失败: {}", sender.channel(), e.getMessage());
+                }
+            }
+            log.info("[alarm] 告警触发 rule={} monitor={} metric={} value={}",
+                    rule.getId(), monitorId, metricName, value);
     }
 
     /**
@@ -399,7 +458,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
         return ruleId + ":" + monitorId;
     }
 
-    /**
+/**
      * 空串判断
      *
      * @param value 待判断字符串
@@ -407,5 +466,112 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
      */
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    @Override
+    /** 新增维护窗口 */
+    public ReturnResult<MsMonitorAlarmMaintenanceWindow> createMaintenanceWindow(
+            MsMonitorAlarmMaintenanceWindow window) {
+        if (window == null || isBlank(window.getWindowName())) {
+            return ReturnResult.error("窗口名称不能为空");
+        }
+        window.setMsMonitorAlarmMaintenanceWindowEnabled(window.getMsMonitorAlarmMaintenanceWindowEnabled() == null ? 1 : window.getMsMonitorAlarmMaintenanceWindowEnabled());
+        maintenanceWindowMapper.insert(window);
+        return ReturnResult.ok(window);
+    }
+
+    @Override
+    /** 更新维护窗口 */
+    public ReturnResult<MsMonitorAlarmMaintenanceWindow> updateMaintenanceWindow(Long id,
+                                                                              MsMonitorAlarmMaintenanceWindow window) {
+        MsMonitorAlarmMaintenanceWindow exists = maintenanceWindowMapper.selectById(id);
+        if (exists == null) {
+            return ReturnResult.error("维护窗口不存在: " + id);
+        }
+        if (!isBlank(window.getWindowName())) {
+            exists.setWindowName(window.getWindowName());
+        }
+        if (window.getMsMonitorAlarmMaintenanceWindowLevel() != null) {
+            exists.setWindowLevel(window.getMsMonitorAlarmMaintenanceWindowLevel());
+        }
+        if (window.getStartTime() != null) {
+            exists.setStartTime(window.getStartTime());
+        }
+        if (window.getEndTime() != null) {
+            exists.setEndTime(window.getEndTime());
+        }
+        if (window.getWeekdays() != null) {
+            exists.setWeekdays(window.getWeekdays());
+        }
+        if (window.getMsMonitorAlarmMaintenanceWindowEnabled() != null) {
+            exists.setMsMonitorAlarmMaintenanceWindowEnabled(window.getMsMonitorAlarmMaintenanceWindowEnabled());
+        }
+        if (!isBlank(window.getRemark())) {
+            exists.setRemark(window.getRemark());
+        }
+        maintenanceWindowMapper.updateById(exists);
+        return ReturnResult.ok(exists);
+    }
+
+    @Override
+    /** 删除维护窗口 */
+    public ReturnResult<Void> deleteMaintenanceWindow(Long id) {
+        maintenanceWindowMapper.deleteById(id);
+        return ReturnResult.success();
+    }
+
+    @Override
+    /** 维护窗口列表 */
+    public ReturnResult<List<MsMonitorAlarmMaintenanceWindow>> listMaintenanceWindows(
+            Long policyId) {
+        LambdaQueryWrapper<MsMonitorAlarmMaintenanceWindow> wrapper = new LambdaQueryWrapper<MsMonitorAlarmMaintenanceWindow>()
+                .eq(policyId != null, MsMonitorAlarmMaintenanceWindow::getPolicyId, policyId)
+                .eq(MsMonitorAlarmMaintenanceWindow::getMsMonitorAlarmMaintenanceWindowEnabled, 1)
+                .orderByDesc(MsMonitorAlarmMaintenanceWindow::getId);
+        return ReturnResult.list(maintenanceWindowMapper.selectList(wrapper));
+    }
+}
+
+    @Override
+    /** 测试告警规则 */
+    public ReturnResult<Boolean> testRule(Long ruleId, Long monitorId, String metricName, Double value) {
+        try {
+            // 1. 获取规则详情
+            MsMonitorAlarmRule rule = ruleMapper.selectById(ruleId);
+            if (rule == null) {
+                return ReturnResult.error("规则不存在: " + ruleId);
+            }
+            if (rule.getMsMonitorAlarmRuleEnabled() != 1) {
+                return ReturnResult.error("规则已禁用");
+            }
+
+            // 2. 临时将规则加入缓存进行测试
+            Map<String, List<MsMonitorAlarmRule>> originalCache = new java.util.HashMap<>(ruleCache);
+            ruleCache.computeIfAbsent(rule.getMsMonitorAlarmRuleMetricName(), k -> new java.util.ArrayList<>()).add(rule);
+
+            // 3. 执行阈值比较判断
+            BigDecimal current = value != null ? BigDecimal.valueOf(value) : BigDecimal.ZERO;
+            int cmp = current.compareTo(rule.getMsMonitorAlarmRuleThreshold());
+            boolean conditionHit = false;
+            switch (rule.getMsMonitorAlarmRuleCondition()) {
+                case "GT": conditionHit = cmp > 0; break;
+                case "GE": conditionHit = cmp >= 0; break;
+                case "EQ": conditionHit = cmp == 0; break;
+                case "LE": conditionHit = cmp <= 0; break;
+                case "LT": conditionHit = cmp < 0; break;
+                default: conditionHit = false;
+            }
+
+            // 4. 在测试模式下，仅判断阈值条件是否命中（不计入连续计数）
+            boolean wouldTrigger = conditionHit;
+
+            // 5. 恢复原缓存
+            ruleCache = originalCache;
+
+            return ReturnResult.ok(wouldTrigger);
+        } catch (Exception e) {
+            log.error("告警规则测试失败", e);
+            return ReturnResult.error(e.getMessage());
+        }
     }
 }

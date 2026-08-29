@@ -19,6 +19,16 @@ public class BotBindingListResponse {
     private Long id;
 
     /**
+     * 归属用户 ID（可为空，表示未分配用户）
+     */
+    private Long userId;
+
+    /**
+     * 归属用户昵称（来自绑定记录 nickname，扫码场景为微信 openid）
+     */
+    private String userName;
+
+    /**
      * Bot 唯一标识
      */
     private String botId;
@@ -57,6 +67,21 @@ public class BotBindingListResponse {
      * 绑定的 AI 模型（用于微信聊天时 AI 回复）
      */
     private String model;
+
+    /**
+     * 是否启用深度思考（默认 false）
+     */
+    private Boolean thinking;
+
+    /**
+     * 深度思考强度（low / medium / high）
+     */
+    private String thinkingEffort;
+
+    /**
+     * 系统提示词（AI 回复时注入的 system prompt）
+     */
+    private String systemPrompt;
 
     /**
      * 创建时间
