@@ -152,7 +152,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
         }
         try {
             // 浏览器 -> guacd 方向：原样透传指令文本（底层接口按字符数组写入）
-            session.getSocket().getWriter().write(message.getPayload().toCharArray());
+            session.getTunnel().write(message.getPayload());
             session.setLastActiveTime(LocalDateTime.now());
         } catch (GuacamoleException e) {
             log.warn("[terminal] 指令写入 guacd 失败 tunnelId={}: {}", session.getTunnelId(), e.getMessage());
@@ -213,7 +213,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
                 if (Thread.currentThread().isInterrupted()) {
                     break;
                 }
-                char[] buffer = session.getSocket().getReader().read();
+                char[] buffer = session.getTunnel().read();
                 if (buffer == null) {
                     break;
                 }
