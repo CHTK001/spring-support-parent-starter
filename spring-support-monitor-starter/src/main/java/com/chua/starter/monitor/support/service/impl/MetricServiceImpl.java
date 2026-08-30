@@ -568,7 +568,6 @@ public class MetricServiceImpl implements MetricService {
             return ReturnResult.error(e.getMessage());
         }
     }
-}
 
     /**
      * 批量插入通用指标

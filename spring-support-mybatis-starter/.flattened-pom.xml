@@ -44,6 +44,7 @@
     <dependency>
       <groupId>com.chua</groupId>
       <artifactId>spring-support-datasource-starter</artifactId>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>p6spy</groupId>
@@ -65,7 +66,7 @@
     </dependency>
     <dependency>
       <groupId>com.baomidou</groupId>
-      <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+      <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
     </dependency>
     <dependency>
       <groupId>com.baomidou</groupId>
@@ -81,12 +82,12 @@
     </dependency>
     <dependency>
       <groupId>com.chua</groupId>
-      <artifactId>utils-support-mysql-starter</artifactId>
+      <artifactId>spring-support-swagger-starter</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.chua</groupId>
-      <artifactId>spring-support-swagger-starter</artifactId>
-      <scope>provided</scope>
+      <artifactId>utils-support-common-starter</artifactId>
     </dependency>
   </dependencies>
 </project>

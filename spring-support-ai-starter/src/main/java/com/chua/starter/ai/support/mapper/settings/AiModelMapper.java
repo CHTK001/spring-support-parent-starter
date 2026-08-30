@@ -2,7 +2,6 @@ package com.chua.starter.ai.support.mapper.settings;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.ai.support.entity.settings.SysAiModel;
-import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Param;
 
 /**
@@ -18,6 +17,5 @@ public interface AiModelMapper extends BaseMapper<SysAiModel> {
      * @param providerId 厂商 ID
      * @return 删除的行数
      */
-    @Delete("DELETE FROM sys_ai_model WHERE sys_ai_model_provider_id = #{providerId}")
     int physicalDeleteByProviderId(@Param("providerId") Long providerId);
 }

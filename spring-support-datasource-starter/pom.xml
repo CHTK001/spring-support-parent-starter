@@ -98,6 +98,7 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <!-- H2 嵌入式数据库引擎（utils 核心实现） -->

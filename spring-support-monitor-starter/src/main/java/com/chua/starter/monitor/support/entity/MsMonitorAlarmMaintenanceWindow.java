@@ -51,7 +51,7 @@ public class MsMonitorAlarmMaintenanceWindow implements Serializable {
      */
     @TableField("ms_monitor_alarm_maintenance_window_level")
     @Schema(description = "告警级别", example = "P2")
-    private String windowLevel;
+    private String msMonitorAlarmMaintenanceWindowLevel;
 
     /**
      * 起始时间（每天）
@@ -79,7 +79,7 @@ public class MsMonitorAlarmMaintenanceWindow implements Serializable {
      */
     @TableField("ms_monitor_alarm_maintenance_window_enabled")
     @Schema(description = "是否启用", example = "1")
-    private Integer enabled;
+    private Integer msMonitorAlarmMaintenanceWindowEnabled;
 
     /**
      * 备注
