@@ -99,11 +99,8 @@ public class GuacdSessionRegistry {
         if (session.getReaderThread() != null && session.getReaderThread().isAlive()) {
             session.getReaderThread().interrupt();
         }
-        try {
-            session.getSocket().close();
-        } catch (GuacamoleException e) {
-            log.warn("[terminal] 关闭 guacd Socket 失败 tunnelId={}", session.getTunnelId(), e);
-        }
+        // 关闭 guacd 隧道（幂等）
+        session.getTunnel().close();
         try {
             if (session.getWebSocketSession().isOpen()) {
                 synchronized (session.getSendLock()) {

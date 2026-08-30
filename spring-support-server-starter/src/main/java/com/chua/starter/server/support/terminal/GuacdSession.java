@@ -58,17 +58,17 @@ public class GuacdSession {
      *
      * @param tunnelId          会话唯一标识
      * @param webSocketSession  浏览器 WS 会话
-     * @param socket            guacd Socket
+     * @param tunnel            guacd 隧道
      * @param hostId            主机 ID
      * @param sessionId         审计记录 ID
      * @param protocol          协议名
      * @param readerThread      读线程
      */
-    public GuacdSession(String tunnelId, WebSocketSession webSocketSession, GuacamoleSocket socket,
+    public GuacdSession(String tunnelId, WebSocketSession webSocketSession, GuacdTunnel tunnel,
                         Long hostId, Long sessionId, String protocol, Thread readerThread) {
         this.tunnelId = tunnelId;
         this.webSocketSession = webSocketSession;
-        this.socket = socket;
+        this.tunnel = tunnel;
         this.hostId = hostId;
         this.sessionId = sessionId;
         this.protocol = protocol;
