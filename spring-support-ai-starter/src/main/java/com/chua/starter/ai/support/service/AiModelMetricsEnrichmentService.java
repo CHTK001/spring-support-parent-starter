@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.service;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.ai.chat.ModelDefinition;
 import com.chua.common.support.datasearch.pricing.spi.AbstractModelMetricsProvider;
 import com.chua.common.support.datasearch.pricing.spi.ModelMetricsProvider;
@@ -48,6 +49,43 @@ public class AiModelMetricsEnrichmentService {
     private static final String SOURCE_NAME = "artificialanalysis";
 
     /**
+     * 硬编码兜底定价（USD/百万 Token）—— 用于不在 Artificial Analysis 数据库中的模型。
+     * 键为归一化模型名，值为 {input, output}。
+     */
+    private static final Map<String, double[]> FALLBACK_PRICING = new java.util.HashMap<>();
+
+    static {
+        // Agnes AI 自有模型（基于 OpenRouter 同类产品参考定价）
+        FALLBACK_PRICING.put("agnes-2-5-flash", new double[]{0.10, 0.40});
+        FALLBACK_PRICING.put("agnes-image-2-0-flash", new double[]{0.00, 0.20});
+        FALLBACK_PRICING.put("agnes-image-2-1-flash", new double[]{0.00, 0.30});
+        FALLBACK_PRICING.put("agnes-video-v2-0", new double[]{0.00, 5.00});
+        // GLM 系列（硅基流动公开定价）
+        FALLBACK_PRICING.put("glm-4-flash", new double[]{0.00, 0.00});
+        FALLBACK_PRICING.put("glm-4.1v-thinking-flash", new double[]{0.00, 0.00});
+        // Google Gemini
+        FALLBACK_PRICING.put("gemini-2.0-flash", new double[]{0.10, 0.40});
+        // SenseNova
+        FALLBACK_PRICING.put("sensenova-6.7-flash-lite", new double[]{0.02, 0.06});
+        // OpenRouter 免费嵌入模型
+        FALLBACK_PRICING.put("llama-nemotron-embed-vl-1b-v2-free", new double[]{0.00, 0.00});
+        FALLBACK_PRICING.put("nemotron-3-embed-1b-free", new double[]{0.00, 0.00});
+        FALLBACK_PRICING.put("bge-large-en-v1.5", new double[]{0.00, 0.00});
+        // Qwen 免费模型
+        FALLBACK_PRICING.put("qwen3-coder-free", new double[]{0.00, 0.00});
+        FALLBACK_PRICING.put("qwen3-next-80b-a3b-instruct-free", new double[]{0.30, 0.30});
+        // Nemotron
+        FALLBACK_PRICING.put("nemotron-nano-12b-v2-vl-free", new double[]{0.00, 0.00});
+        // CogVideo
+        FALLBACK_PRICING.put("cogvideox-flash", new double[]{0.00, 1.00});
+        FALLBACK_PRICING.put("cogview-3-flash", new double[]{0.00, 0.50});
+        // DeepSeek（与 AA 数据对齐，确保一致）
+        FALLBACK_PRICING.put("deepseek-v4-flash-free", new double[]{0.14, 0.28});
+        FALLBACK_PRICING.put("deepseek-v4-flash", new double[]{0.14, 0.28});
+        FALLBACK_PRICING.put("deepseek-ai-deepseek-v4-flash", new double[]{0.14, 0.28});
+    }
+
+    /**
      * 静态初始化：确保 brotli4j native 库可用。
      *
      * <p>HttpClient5 会自动请求 brotli 编码并解压响应，但 brotli4j 的 native 库
@@ -57,8 +95,10 @@ public class AiModelMetricsEnrichmentService {
      */
     static {
         try {
-            Class<?> loader = Class.forName("com.aayushatharva.brotli4j.Brotli4jLoader");
-            loader.getMethod("ensureAvailability").invoke(null);
+            Class<?> loader = ReflectUtils.forName("com.aayushatharva.brotli4j.Brotli4jLoader");
+            if (loader != null) {
+                ReflectUtils.invoke(null, "ensureAvailability", void.class);
+            }
         } catch (Throwable ignored) {
             // brotli4j 缺失时静默降级（在线同步失败，回退磁盘快照）
         }
@@ -94,22 +134,38 @@ public class AiModelMetricsEnrichmentService {
      */
     public void enrich(String modelId, Map<String, Object> row) {
         MetricsRecord rec = find(modelId);
-        if (rec == null) {
-            return;
+        if (rec != null) {
+            // AA 数据完整，直接写入
+            putIfNotNull(row, "price_input_per_musd", rec.inputPerMillion);
+            putIfNotNull(row, "price_output_per_musd", rec.outputPerMillion);
+            putIfNotNull(row, "intelligence_index", rec.intelligenceIndex);
+            putIfNotNull(row, "output_speed_tps", rec.outputSpeedTps);
+            putIfNotNull(row, "latency_first_token_seconds", rec.latencyFirstTokenSeconds);
+            putIfNotNull(row, "icon_url", rec.iconUrl);
+            putIfNotNull(row, "reasoning_model", rec.reasoning);
+            putIfNotNull(row, "web_search", rec.webSearch);
+            putIfNotNull(row, "image_input", rec.imageInput);
+            putIfNotNull(row, "function_calling", rec.functionCalling);
+            putIfNotNull(row, "price_cache_hit_per_musd", rec.cacheHitPrice);
+            putIfNotNull(row, "price_cache_write_per_musd", rec.cacheWritePrice);
+            putIfNotNull(row, "context_window_tokens", rec.contextWindowTokens);
+        } else {
+            // AA 无数据，尝试硬编码兜底定价
+            applyFallbackPricing(modelId, row);
         }
-        putIfNotNull(row, "price_input_per_musd", rec.inputPerMillion);
-        putIfNotNull(row, "price_output_per_musd", rec.outputPerMillion);
-        putIfNotNull(row, "intelligence_index", rec.intelligenceIndex);
-        putIfNotNull(row, "output_speed_tps", rec.outputSpeedTps);
-        putIfNotNull(row, "latency_first_token_seconds", rec.latencyFirstTokenSeconds);
-        putIfNotNull(row, "icon_url", rec.iconUrl);
-        putIfNotNull(row, "reasoning_model", rec.reasoning);
-        putIfNotNull(row, "web_search", rec.webSearch);
-        putIfNotNull(row, "image_input", rec.imageInput);
-        putIfNotNull(row, "function_calling", rec.functionCalling);
-        putIfNotNull(row, "price_cache_hit_per_musd", rec.cacheHitPrice);
-        putIfNotNull(row, "price_cache_write_per_musd", rec.cacheWritePrice);
-        putIfNotNull(row, "context_window_tokens", rec.contextWindowTokens);
+    }
+
+    /**
+     * 应用硬编码兜底定价：只补充 price_input/output，其余指标保持 null。
+     */
+    private void applyFallbackPricing(String modelId, Map<String, Object> row) {
+        String key = normalize(modelId);
+        double[] prices = FALLBACK_PRICING.get(key);
+        if (prices == null) { return; }
+        BigDecimal inPrice = scale(BigDecimal.valueOf(prices[0]));
+        BigDecimal outPrice = scale(BigDecimal.valueOf(prices[1]));
+        if (inPrice != null) { row.put("price_input_per_musd", inPrice); }
+        if (outPrice != null) { row.put("price_output_per_musd", outPrice); }
     }
 
     /**
