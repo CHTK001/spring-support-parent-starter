@@ -343,46 +343,6 @@ public class SignUtils {
     }
 
     /**
-     * 计算 MD5 十六进制摘要
-     *
-     * @param input 输入字符串
-     * @return MD5 十六进制字符串
-     */
-    private static String md5Hex(String input) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder();
-            for (byte b : digest) {
-                sb.append(String.format("%02x", b & 0xff));
-            }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("MD5 algorithm not available", e);
-        }
-    }
-
-    /**
-     * 计算 SHA-256 十六进制摘要
-     *
-     * @param input 输入字符串
-     * @return SHA-256 十六进制字符串
-     */
-    private static String sha256Hex(String input) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder();
-            for (byte b : digest) {
-                sb.append(String.format("%02x", b & 0xff));
-            }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 algorithm not available", e);
-        }
-    }
-
-    /**
      * 打印调试信息
      *
      * @param secretKey 密钥

@@ -22,22 +22,106 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 模型价格/指标快照服务。
- *
- * <p>定时枚举全部已配置供应商与模型，用 {@link AiModelMetricsEnrichmentService}
- * （Artificial Analysis 指标源）匹配「输入价格/输出价格/缓存价格/智能/输出速度/首块延迟/
- * 深度思考/联网查询/图片识别/函数调用」，合并模型自身的 <code>metrics</code> 实时字段
- * 与能力健康探测延迟，构建一份快照写入 Redis（key {@code nomifun:model-metrics:latest}，
- * TTL 12h），供查询接口按需读取。不再经 WebSocket 定时推送，前端通过
- * {@code GET /api/model-metrics} 从缓存获取。</p>
- *
- * @since 4.0.0.42
- * @author CH
- */
+     * 模型价格/指标快照服务。
+     *
+     * <p>定时枚举全部已配置供应商与模型，用 {@link AiModelMetricsEnrichmentService}
+     * （Artificial Analysis 指标源）匹配「输入价格/输出价格/缓存价格/智能/输出速度/首块延迟/
+     * 深度思考/联网查询/图片识别/函数调用」，合并模型自身的 <code>metrics</code> 实时字段
+     * 与能力健康探测延迟，构建一份快照写入 Redis（key {@code nomifun:model-metrics:latest}，
+     * TTL 12h），供查询接口按需读取。不再经 WebSocket 定时推送，前端通过
+     * {@code GET /api/model-metrics} 从缓存获取。</p>
+     *
+     * <p>快照行同时输出厂商 Logo（{@code provider_logo}）与模型 Logo（{@code icon_url}，
+     * 以 Artificial Analysis 图标优先，缺省回退厂商 Logo），供前端渲染真实品牌图。</p>
+     *
+     * @since 4.0.0.42
+     * @author CH
+     */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ModelMetricsSnapshotService {
+
+    /**
+     * 平台标识 → Logo 静态资源基名（对应 {@code /api/assets/logos/{base}}）。
+     * 与前端 {@code modelPlatforms.ts} 的 MODEL_PLATFORMS 命名对齐；缺失平台忽略。
+     */
+    private static final Map<String, String> PLATFORM_LOGO = logoMap();
+
+    /**
+     * 由平台标识解析厂商 Logo URL（外部部署时由前端按运行时地址展开）。
+     *
+     * @param platform 平台标识（区分大小写匹配后统一小写）
+     * @return Logo 相对 URL，平台未配置时返回 null
+     */
+    public static String providerLogoUrl(String platform) {
+        if (platform == null) {
+            return null;
+        }
+        String base = PLATFORM_LOGO.get(platform.toLowerCase());
+        if (base == null) {
+            return null;
+        }
+        return "/api/assets/logos/" + base;
+    }
+
+    /**
+     * 构建平台 → Logo 基名映射。
+     *
+     * @return 不可变映射
+     */
+    private static Map<String, String> logoMap() {
+        Map<String, String> m = new java.util.HashMap<>();
+        m.put("openai", "openai");
+        m.put("anthropic", "anthropic");
+        m.put("google", "gemini");
+        m.put("gemini", "gemini");
+        m.put("gemini-vertex-ai", "gemini");
+        m.put("azure", "microsoft");
+        m.put("bedrock", "bedrock");
+        m.put("siliconflow", "siliconflow");
+        m.put("deepseek", "deepseek");
+        m.put("qwen", "qwen");
+        m.put("dashscope", "qwen");
+        m.put("dashscope-coding", "qwen");
+        m.put("moonshot-cn", "kimi");
+        m.put("moonshot-global", "kimi");
+        m.put("moonshot", "kimi");
+        m.put("grok", "xai");
+        m.put("xai", "xai");
+        m.put("zhipu", "zhipu");
+        m.put("glm-coding-plan", "zhipu");
+        m.put("ark", "volcengine");
+        m.put("ark-coding-plan", "volcengine");
+        m.put("ark-agent-plan", "volcengine");
+        m.put("qianfan", "baidu");
+        m.put("qianfan-coding-plan", "baidu");
+        m.put("hunyuan", "tencent");
+        m.put("hunyuan-global", "tencent");
+        m.put("lingyi", "lingyiwanwu");
+        m.put("stepfun", "stepfun");
+        m.put("stepfun-plan", "stepfun");
+        m.put("minimax", "minimax");
+        m.put("minimax-code", "minimax");
+        m.put("minimax-coding-plan", "minimax");
+        m.put("mimo", "mimo");
+        m.put("mimo-token-plan-cn", "mimo");
+        m.put("mimo-token-plan-sgp", "mimo");
+        m.put("mimo-token-plan-ams", "mimo");
+        m.put("novita", "novita");
+        m.put("openrouter", "openrouter");
+        m.put("poe", "poe");
+        m.put("ppio", "ppio");
+        m.put("modelscope", "modelscope");
+        m.put("infiniai", "infiniai");
+        m.put("ctyun", "ctyun");
+        m.put("new-api", "newapi");
+        m.put("onnx", "onnx");
+        m.put("sensenova", "sensenova");
+        m.put("agnes", "agnes");
+        m.put("opencode", "opencode");
+        return Map.copyOf(m);
+    }
 
     /**
      * Redis 快照 key
@@ -103,6 +187,55 @@ public class ModelMetricsSnapshotService {
     }
 
     /**
+     * 立即将某模型的实测探测延迟写入 Redis 快照，替换该模型旧值。
+     *
+     * <p>由健康检测（监控检测）接口在探测成功后调用：读取现有 Redis 快照，
+     * 定位 {@code provider_id + model} 对应的行并更新 {@code latency_ms}，
+     * 写回 Redis（保持 TTL）。Redis 无快照或模型行不存在时静默跳过，
+     * 不干扰调用方。</p>
+     *
+     * @param providerId 提供商 ID
+     * @param model      模型名
+     * @param latencyMs  实测延迟（毫秒）
+     */
+    public void updateProbeLatency(String providerId, String model, long latencyMs) {
+        try {
+            String cached = stringRedisTemplate.opsForValue().get(REDIS_KEY);
+            if (cached == null || cached.isBlank()) {
+                return;
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> parsed = objectMapper.readValue(cached, Map.class);
+            Object modelsObj = parsed.get("models");
+            if (!(modelsObj instanceof List<?> list)) {
+                return;
+            }
+            boolean updated = false;
+            for (Object item : list) {
+                if (!(item instanceof Map<?, ?> row)) {
+                    continue;
+                }
+                if (providerId.equals(String.valueOf(row.get("provider_id")))
+                        && model.equals(String.valueOf(row.get("model")))) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> rowMap = (Map<String, Object>) row;
+                    rowMap.put("latency_ms", latencyMs);
+                    rowMap.remove("probe_latency_ms");
+                    updated = true;
+                    break;
+                }
+            }
+            if (updated) {
+                persistToRedis(parsed);
+                log.debug("[ModelMetrics] 已更新模型探测延迟 provider={} model={} latency={}ms",
+                        providerId, model, latencyMs);
+            }
+        } catch (Exception e) {
+            log.warn("[ModelMetrics] 更新探测延迟到 Redis 失败: {}", e.getMessage());
+        }
+    }
+
+    /**
      * 读取最近一次 Redis 快照；无快照时现场构建一份并返回。
      *
      * @return 快照 Map，构造失败时返回空结构
@@ -163,9 +296,20 @@ public class ModelMetricsSnapshotService {
         out.put("enabled", row.getEnabled() == null || row.getEnabled());
         out.put("description", row.getDescription() == null ? "" : row.getDescription());
         out.put("source", "configured");
+        // 厂商 Logo（/api/assets/logos/{base}），供前端渲染真实品牌图
+        String providerLogo = providerLogoUrl(provider.getPlatform());
+        if (providerLogo != null) {
+            out.put("provider_logo", providerLogo);
+        }
 
         // Artificial Analysis 静态指标（输入/输出价、智能、速度、首块延迟）
         metricsEnrichmentService.enrich(row.getModel(), out);
+
+        // 模型 Logo：AA 命中则用其图标，否则回退厂商 Logo
+        Object iconUrl = out.get("icon_url");
+        if ((iconUrl == null || String.valueOf(iconUrl).isBlank()) && providerLogo != null) {
+            out.put("icon_url", providerLogo);
+        }
 
         // 合并模型自身实时 metrics（用户维护/探测得到的延迟、智能、速度）
         Map<String, Object> metrics = row.getMetrics();
@@ -176,9 +320,10 @@ public class ModelMetricsSnapshotService {
         }
 
         // 能力健康探测延迟（最近一次 health.latency，单位 ms）
+        // 直接写入 latency_ms，替代之前的缓存值，反映本机到端点的实际探测延迟
         Long probeLatencyMs = firstCapabilityLatency(row);
-        if (probeLatencyMs != null) {
-            out.put("probe_latency_ms", probeLatencyMs);
+        if (probeLatencyMs != null && probeLatencyMs >= 0) {
+            out.put("latency_ms", probeLatencyMs);
         }
 
         // 缓存价格：指标源无缓存价字段时沿用模型 metrics 自定义值，缺失为 null
