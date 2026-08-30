@@ -50,8 +50,18 @@ public class ServerProperties {
         private String host = "127.0.0.1";
 
         /**
-         * guacd 端口
+         * guacd �˿�
          */
         private int port = 4822;
+
+        /**
+         * RDP 磁盘映射挂载根目录（enable-drive 时使用）
+         */
+        private String drivePath = "/opt/spring-support/drive";
+
+        /**
+         * 屏幕录制文件输出目录
+         */
+        private String recordingPath = "/opt/spring-support/recordings";
     }
 }
