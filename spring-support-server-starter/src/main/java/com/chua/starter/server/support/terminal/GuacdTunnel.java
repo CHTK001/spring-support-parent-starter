@@ -210,7 +210,7 @@ public class GuacdTunnel {
      * @throws GuacamoleException 写入失败
      */
     public void writeInstruction(String opcode, String... args) throws GuacamoleException {
-        this.write(s -> s.writeInstruction(new GuacamoleInstruction(opcode, args)));
+        socket.getWriter().writeInstruction(new GuacamoleInstruction(opcode, args));
     }
 
     /**
