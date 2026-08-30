@@ -1,5 +1,6 @@
-﻿package com.chua.starter.mybatis.plugin;
+package com.chua.starter.mybatis.plugin;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.mybatis.plugin.PluginMyBatisMapperRegistry;
 import com.chua.spring.support.configuration.SpringBeanUtils;
@@ -158,10 +159,7 @@ public class PluginMyBatisEventListener {
             }
 
             // 如果容器中没有，尝试通过类名加载
-            return Class.forName(beanName, true, Thread.currentThread().getContextClassLoader());
-        } catch (ClassNotFoundException e) {
-            log.debug("[PluginMyBatis][事件]无法获取 Bean 类型: {}", beanName);
-            return null;
+            return ReflectUtils.forName(beanName, Thread.currentThread().getContextClassLoader());
         } catch (Exception e) {
             log.debug("[PluginMyBatis][事件]获取 Bean 类型失败: {}", beanName, e);
             return null;

@@ -1,7 +1,6 @@
 package com.chua.starter.job.support.store;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.Date;
@@ -20,6 +19,5 @@ public interface JobLogMapper extends BaseMapper<JobLogEntity> {
      * @param beforeTime 截止时间 (Oracle DATE 列)
      * @return 删除记录数
      */
-    @Delete("DELETE FROM sys_job_log WHERE sys_job_log_trigger_time <= #{beforeTime}")
     int deleteByTriggerTimeBefore(@Param("beforeTime") Date beforeTime);
 }

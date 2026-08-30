@@ -1,5 +1,8 @@
 package com.chua.starter.ai.support.manage.api;
 
+import com.chua.common.support.ai.skill.SkillDefinition;
+import com.chua.common.support.datasearch.skill.spi.SkillOfflineProvider;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
@@ -104,157 +107,43 @@ public class ApiSkillController {
     /**
      * 扫描本机已安装 AI 编辑器的 skill/rules 目录，返回可导入的技能列表。
      *
-     * @return 技能列表（按编辑器分组）
+     * <p>通过 {@link ServiceProvider} SPI 收集全部离线 {@link SkillOfflineProvider} 实现，
+     * 汇总每个已安装 agent 的 {@code listAgentSkills()} 扫描结果，避免反射与硬编码目录。</p>
+     *
+     * @return 技能列表（按 provider 分组）
      */
     @GetMapping("/agent")
     public ApiResult<List<Map<String, Object>>> fromAgent() {
         List<Map<String, Object>> result = new ArrayList<>();
-        Path userHome = Paths.get(System.getProperty("user.home", "."));
-
-        try {
-            // 实例化 AgentEditorProvider 扫描已安装的编辑器
-            Class<?> clazz = Class.forName("com.chua.common.support.datasearch.agent.AgentEditorProvider");
-            Object provider = clazz.getDeclaredConstructor().newInstance();
-
-            // 获取已安装的编辑器列表
-            @SuppressWarnings("unchecked")
-            List<String> editors = (List<String>) clazz.getMethod("listAvailableEditors").invoke(provider);
-            log.info("[ApiSkill] 已安装的 AI 编辑器: {}", editors);
-
-            // 遍历所有编辑器，扫描其 skill 目录
-            for (String editorName : editors) {
-                // Cursor: ~/.cursor/rules/*.mdc
-                if ("Cursor".equals(editorName)) {
-                    scanDirectorySkills(userHome.resolve(".cursor/rules"), "Cursor", result);
-                }
-                // Claude Code: ~/.claude/commands/*.md
-                else if ("Claude Code".equals(editorName)) {
-                    scanDirectorySkills(userHome.resolve(".claude/commands"), "Claude Code", result);
-                }
-                // Windsurf: ~/.windsurf/rules/*.md
-                else if ("Windsurf".equals(editorName)) {
-                    scanDirectorySkills(userHome.resolve(".windsurf/rules"), "Windsurf", result);
-                }
-                // Roo Code: ~/.roo/rules/*.md
-                else if ("Roo Code".equals(editorName)) {
-                    scanDirectorySkills(userHome.resolve(".roo/rules"), "Roo Code", result);
-                }
-                // Trae: ~/.trae/rules/*.md
-                else if ("Trae".equals(editorName)) {
-                    scanDirectorySkills(userHome.resolve(".trae/rules"), "Trae", result);
-                }
-                // CodeBuddy: 通过 provider 扫描工作区 skills
-                else if ("CodeBuddy".equals(editorName)) {
-                    try {
-                        @SuppressWarnings("unchecked")
-                        var skills = (java.util.List<?>) clazz.getMethod("scanCodebuddySkills", String.class)
-                                .invoke(provider, (String) null);
-                        if (skills != null) {
-                            for (Object skill : skills) {
-                                String name = (String) skill.getClass().getMethod("getName").invoke(skill);
-                                String desc = (String) skill.getClass().getMethod("getDescription").invoke(skill);
-                                Map<String, Object> item = new LinkedHashMap<>();
-                                item.put("name", name);
-                                item.put("description", desc != null ? desc : "");
-                                item.put("source", "agent");
-                                item.put("provider", "CodeBuddy");
-                                result.add(item);
-                            }
-                        }
-                    } catch (Exception e) {
-                        log.warn("[ApiSkill] 扫描 CodeBuddy skills 失败: {}", e.getMessage());
-                    }
-                }
-                // TRAE-CN: 通过 provider 扫描 skills
-                else if ("TRAE-CN".equals(editorName)) {
-                    try {
-                        @SuppressWarnings("unchecked")
-                        var skills = (java.util.List<?>) clazz.getMethod("scanTraeCnSkills").invoke(provider);
-                        if (skills != null) {
-                            for (Object skill : skills) {
-                                String name = (String) skill.getClass().getMethod("getName").invoke(skill);
-                                String desc = (String) skill.getClass().getMethod("getDescription").invoke(skill);
-                                Map<String, Object> item = new LinkedHashMap<>();
-                                item.put("name", name);
-                                item.put("description", desc != null ? desc : "");
-                                item.put("source", "agent");
-                                item.put("provider", "TRAE-CN");
-                                result.add(item);
-                            }
-                        }
-                    } catch (Exception e) {
-                        log.warn("[ApiSkill] 扫描 TRAE-CN skills 失败: {}", e.getMessage());
-                    }
-                }
-                // 其他编辑器：扫描通用 rules 目录
-                else {
-                    String configDir = switch (editorName) {
-                        case "Codex" -> ".codex";
-                        case "Cline" -> ".vscode-server/data/User/globalStorage/saoudrizwan.claude-dev/settings";
-                        case "Augment Code" -> ".augment";
-                        case "Continue" -> ".continue";
-                        case "Gemini CLI" -> ".gemini";
-                        case "Cody" -> ".cody";
-                        default -> null;
-                    };
-                    if (configDir != null) {
-                        scanDirectorySkills(userHome.resolve(configDir).resolve("rules"), editorName, result);
-                        scanDirectorySkills(userHome.resolve(configDir).resolve("commands"), editorName, result);
-                    }
-                }
-            }
-        } catch (ClassNotFoundException e) {
-            log.warn("[ApiSkill] AgentEditorProvider 不在 classpath: {}", e.getMessage());
-        } catch (Exception e) {
-            log.warn("[ApiSkill] 扫描 Agent skills 失败: {}", e.getMessage(), e);
+        Map<String, SkillOfflineProvider> providers = ServiceProvider.of(SkillOfflineProvider.class).list();
+        if (providers == null || providers.isEmpty()) {
+            log.warn("[ApiSkill] 未发现任何 SkillOfflineProvider 实现");
+            return ApiResult.ok(result);
         }
-
-        return ApiResult.ok(result);
-    }
-
-    /**
-     * 扫描目录下的 skill 文件（SKILL.md 或 .md 规则文件）。
-     */
-    private void scanDirectorySkills(Path dir, String editorName, List<Map<String, Object>> result) {
-        if (dir == null || !Files.isDirectory(dir)) {
-            return;
-        }
-        try (Stream<Path> stream = Files.list(dir)) {
-            for (Path p : stream.sorted().toList()) {
-                if (Files.isDirectory(p)) {
-                    // 子目录：查找 SKILL.md
-                    Path skillMd = p.resolve("SKILL.md");
-                    if (!Files.exists(skillMd)) {
-                        skillMd = p.resolve("skill.md");
-                    }
-                    if (Files.exists(skillMd)) {
-                        String name = p.getFileName().toString();
-                        String desc = readFirstLine(skillMd);
-                        Map<String, Object> item = new LinkedHashMap<>();
-                        item.put("name", name);
-                        item.put("description", desc);
-                        item.put("source", "agent");
-                        item.put("provider", editorName);
-                        item.put("path", p.toAbsolutePath().toString());
-                        result.add(item);
-                    }
-                } else if (p.toString().endsWith(".md") || p.toString().endsWith(".mdc")) {
-                    // 单文件规则
-                    String name = p.getFileName().toString();
-                    name = name.replaceAll("\\.(md|mdc)$", "");
-                    String desc = readFirstLine(p);
+        for (Map.Entry<String, SkillOfflineProvider> entry : providers.entrySet()) {
+            SkillOfflineProvider provider = entry.getValue();
+            try {
+                if (!provider.isInstalled()) {
+                    continue;
+                }
+                List<SkillDefinition> skills = provider.listAgentSkills();
+                if (skills == null || skills.isEmpty()) {
+                    continue;
+                }
+                for (SkillDefinition skill : skills) {
                     Map<String, Object> item = new LinkedHashMap<>();
-                    item.put("name", name);
-                    item.put("description", desc);
+                    item.put("name", skill.getName());
+                    item.put("description", skill.getDescription() != null ? skill.getDescription() : "");
                     item.put("source", "agent");
-                    item.put("provider", editorName);
-                    item.put("path", p.toAbsolutePath().toString());
+                    item.put("provider", entry.getKey());
                     result.add(item);
                 }
+                log.info("[ApiSkill] SkillOfflineProvider[{}] 扫描到 {} 个 Agent 技能", entry.getKey(), skills.size());
+            } catch (Exception e) {
+                log.warn("[ApiSkill] SkillOfflineProvider[{}] 扫描 Agent 技能失败: {}", entry.getKey(), e.getMessage());
             }
-        } catch (IOException e) {
-            log.debug("[ApiSkill] 扫描目录失败: {}", dir);
         }
+        return ApiResult.ok(result);
     }
 
     /**

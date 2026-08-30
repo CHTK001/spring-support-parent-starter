@@ -321,10 +321,10 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
                 LambdaQueryWrapper<MsMonitorAlarmMaintenanceWindow> mwWrapper = new LambdaQueryWrapper<MsMonitorAlarmMaintenanceWindow>()
                         .eq(MsMonitorAlarmMaintenanceWindow::getMsMonitorAlarmMaintenanceWindowEnabled, 1);
                 if (rule.getMsMonitorAlarmRuleLevel() != null) {
-                    mwWrapper.eq(MsMonitorAlarmMaintenanceWindow::getWindowLevel, rule.getMsMonitorAlarmRuleLevel());
+                    mwWrapper.eq(MsMonitorAlarmMaintenanceWindow::getMsMonitorAlarmMaintenanceWindowLevel, rule.getMsMonitorAlarmRuleLevel());
                 } else {
                     // 全局级别的窗口（level 为空）
-                    mwWrapper.isNull(MsMonitorAlarmMaintenanceWindow::getWindowLevel);
+                    mwWrapper.isNull(MsMonitorAlarmMaintenanceWindow::getMsMonitorAlarmMaintenanceWindowLevel);
                 }
                 List<MsMonitorAlarmMaintenanceWindow> windows = maintenanceWindowMapper.selectList(mwWrapper);
                 boolean inMaintenance = false;
@@ -492,7 +492,7 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
             exists.setWindowName(window.getWindowName());
         }
         if (window.getMsMonitorAlarmMaintenanceWindowLevel() != null) {
-            exists.setWindowLevel(window.getMsMonitorAlarmMaintenanceWindowLevel());
+            exists.setMsMonitorAlarmMaintenanceWindowLevel(window.getMsMonitorAlarmMaintenanceWindowLevel());
         }
         if (window.getStartTime() != null) {
             exists.setStartTime(window.getStartTime());
@@ -530,7 +530,6 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
                 .orderByDesc(MsMonitorAlarmMaintenanceWindow::getId);
         return ReturnResult.list(maintenanceWindowMapper.selectList(wrapper));
     }
-}
 
     @Override
     /** 测试告警规则 */
