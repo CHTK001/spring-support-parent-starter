@@ -203,12 +203,8 @@ public class GuacdTunnel {
      * @throws GuacamoleException 写入失败
      */
     public void write(char[] data) throws GuacamoleException {
-        GuacamoleWriter writer = tunnel.acquireWriter();
-        try {
-            writer.write(data);
-        } finally {
-            tunnel.releaseWriter();
-        }
+        GuacamoleWriter writer = socket.getWriter();
+        writer.write(data);
     }
 
     /**
@@ -229,17 +225,13 @@ public class GuacdTunnel {
      * @throws GuacamoleException 写入失败
      */
     private void write(Consumer<GuacamoleWriter> writer) throws GuacamoleException {
-        GuacamoleWriter filtered = new FilteredGuacamoleWriter(tunnel.acquireWriter(), instruction -> {
-            if (GuacamoleTunnel.INTERNAL_DATA_OPCODE.equals(instruction.getOpcode())) {
+        GuacamoleWriter filtered = new FilteredGuacamoleWriter(socket.getWriter(), instruction -> {
+            if ("blob".equals(instruction.getOpcode())) {
                 return null;
             }
             return instruction;
         });
-        try {
-            writer.accept(filtered);
-        } finally {
-            tunnel.releaseWriter();
-        }
+        writer.accept(filtered);
     }
 
     /**
