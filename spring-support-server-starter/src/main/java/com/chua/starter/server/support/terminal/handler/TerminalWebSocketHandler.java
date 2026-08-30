@@ -113,7 +113,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
         try {
             tunnel = connectionFactory.create(protocolType,
                     hostResult.getData().getServerHostAddress(), targetPort, resolved.getData(), tunnelId);
-        } catch (GuacamoleException | RuntimeException e) {
+        } catch (RuntimeException e) {
             log.warn("[terminal] guacd 握手失败 hostId={} protocol={}: {}", hostId, protocolName, e.getMessage());
             reject(wsSession, "guacd 握手失败: " + e.getMessage());
             return;
