@@ -84,12 +84,6 @@ public class GuacdTunnel {
      */
     public void connect() throws GuacamoleException {
         this.socket = new ConfiguredGuacamoleSocket(new InetGuacamoleSocket(serverAddress, serverPort), serverConfig, clientConfig);
-        this.tunnel = new GuacamoleTunnel(socket) {
-            @Override
-            public String getUUID() {
-                return uuid;
-            }
-        };
     }
 
     /**
