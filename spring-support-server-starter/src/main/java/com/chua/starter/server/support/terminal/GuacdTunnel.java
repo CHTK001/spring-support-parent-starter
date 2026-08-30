@@ -7,13 +7,11 @@ import org.apache.guacamole.io.GuacamoleWriter;
 import org.apache.guacamole.net.GuacamoleSocket;
 import org.apache.guacamole.net.InetGuacamoleSocket;
 import org.apache.guacamole.protocol.ConfiguredGuacamoleSocket;
-import org.apache.guacamole.protocol.FilteredGuacamoleWriter;
 import org.apache.guacamole.protocol.GuacamoleClientInformation;
 import org.apache.guacamole.protocol.GuacamoleConfiguration;
 import org.apache.guacamole.protocol.GuacamoleInstruction;
 
 import java.util.Map;
-import java.util.function.Consumer;
 
 /**
  * guacd 隧道封装（对齐 Orion-Visor 的 GuacdTunnel）
@@ -211,22 +209,6 @@ public class GuacdTunnel {
      */
     public void writeInstruction(String opcode, String... args) throws GuacamoleException {
         socket.getWriter().writeInstruction(new GuacamoleInstruction(opcode, args));
-    }
-
-    /**
-     * 写入结构化指令（过滤内部指令）
-     *
-     * @param writer 写入函数
-     * @throws GuacamoleException 写入失败
-     */
-    private void write(Consumer<GuacamoleWriter> writer) throws GuacamoleException {
-        GuacamoleWriter filtered = new FilteredGuacamoleWriter(socket.getWriter(), instruction -> {
-            if ("blob".equals(instruction.getOpcode())) {
-                return null;
-            }
-            return instruction;
-        });
-        writer.accept(filtered);
     }
 
     /**
