@@ -108,11 +108,12 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
         }
 
         // 与 guacd 握手（阻塞操作，失败即拒绝连接）
-        ConfiguredGuacamoleSocket socket;
+        String tunnelId = java.util.UUID.randomUUID().toString();
+        GuacdTunnel tunnel;
         try {
-            socket = connectionFactory.create(protocolType,
-                    hostResult.getData().getServerHostAddress(), targetPort, resolved.getData());
-        } catch (GuacamoleException e) {
+            tunnel = connectionFactory.create(protocolType,
+                    hostResult.getData().getServerHostAddress(), targetPort, resolved.getData(), tunnelId);
+        } catch (GuacamoleException | RuntimeException e) {
             log.warn("[terminal] guacd 握手失败 hostId={} protocol={}: {}", hostId, protocolName, e.getMessage());
             reject(wsSession, "guacd 握手失败: " + e.getMessage());
             return;
@@ -124,8 +125,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
                 protocolType.name(), userName, resolveClientIp(wsSession));
 
         // 组装会话并启动 guacd -> 浏览器方向的读线程
-        String tunnelId = java.util.UUID.randomUUID().toString();
-        var session = new GuacdSession(tunnelId, wsSession, socket, hostId,
+        var session = new GuacdSession(tunnelId, wsSession, tunnel, hostId,
                 record == null ? null : record.getId(), protocolType.name().toLowerCase(), null);
         Thread readerThread = new Thread(() -> pumpGuacdToBrowser(session), "guac-reader-" + tunnelId);
         readerThread.setDaemon(true);
