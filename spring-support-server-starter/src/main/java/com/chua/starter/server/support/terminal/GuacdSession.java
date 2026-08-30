@@ -2,7 +2,6 @@ package com.chua.starter.server.support.terminal;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.guacamole.net.GuacamoleSocket;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -31,8 +30,8 @@ public class GuacdSession {
     /** 浏览器侧 WebSocket 会话 */
     private final WebSocketSession webSocketSession;
 
-    /** guacd 侧 Socket（含握手后的配置） */
-    private final GuacamoleSocket socket;
+    /** guacd 侧隧道（含握手后的配置） */
+    private final GuacdTunnel tunnel;
 
     /** 主机 ID */
     private final Long hostId;
