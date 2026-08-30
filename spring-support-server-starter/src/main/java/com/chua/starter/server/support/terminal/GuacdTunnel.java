@@ -5,7 +5,6 @@ import org.apache.guacamole.GuacamoleException;
 import org.apache.guacamole.io.GuacamoleReader;
 import org.apache.guacamole.io.GuacamoleWriter;
 import org.apache.guacamole.net.GuacamoleSocket;
-import org.apache.guacamole.net.GuacamoleTunnel;
 import org.apache.guacamole.net.InetGuacamoleSocket;
 import org.apache.guacamole.protocol.ConfiguredGuacamoleSocket;
 import org.apache.guacamole.protocol.FilteredGuacamoleWriter;
@@ -241,12 +240,8 @@ public class GuacdTunnel {
      * @throws GuacamoleException 读取失败
      */
     public char[] read() throws GuacamoleException {
-        GuacamoleReader reader = tunnel.acquireReader();
-        try {
-            return reader.read();
-        } finally {
-            tunnel.releaseReader();
-        }
+        GuacamoleReader reader = socket.getReader();
+        return reader.read();
     }
 
     /**
@@ -255,7 +250,7 @@ public class GuacdTunnel {
      * @return 是否打开
      */
     public boolean isOpen() {
-        return tunnel != null && tunnel.isOpen();
+        return socket != null && socket.isOpen();
     }
 
     /**
@@ -266,9 +261,9 @@ public class GuacdTunnel {
             return;
         }
         this.closed = true;
-        if (tunnel != null) {
+        if (socket != null) {
             try {
-                tunnel.close();
+                socket.close();
             } catch (Exception ignored) {
             }
         }
