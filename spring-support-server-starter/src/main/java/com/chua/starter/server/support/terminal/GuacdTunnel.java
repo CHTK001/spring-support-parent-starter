@@ -50,10 +50,6 @@ public class GuacdTunnel {
     @Getter
     private GuacamoleSocket socket;
 
-    /** 隧道 */
-    @Getter
-    private GuacamoleTunnel tunnel;
-
     /** 关闭标记 */
     private volatile boolean closed;
 
