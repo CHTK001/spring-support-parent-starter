@@ -204,9 +204,9 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (!resolved.isOk()) {
             return ReturnResult.error(resolved.getMsg());
         }
-        try (var handle = SshClients.open(host.getServerHostAddress(),
-                host.getServerHostPort(), resolved.getData())) {
-            handle.client().connect();
+        SshClients.Handle handle = null;
+        try {
+            handle = connectionManager.borrow(host, resolved.getData());
             // 登录+认证成功即为连通; banner 仅尽力获取(exec 通道不可用时不影响结论)
             String banner = "connected";
             if ("LINUX".equalsIgnoreCase(host.getServerHostOsType())) {
@@ -226,6 +226,10 @@ public class ServerHostServiceImpl implements ServerHostService {
             markOnline(host.getId(), false);
             log.warn("[server] 连通性测试失败 hostId={} address={}: {}", id, host.getServerHostAddress(), e.getMessage());
             return ReturnResult.error("连接失败: " + e.getMessage());
+        } finally {
+            if (handle != null) {
+                connectionManager.release(id);
+            }
         }
     }
 

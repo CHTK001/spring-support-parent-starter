@@ -2,6 +2,7 @@ package com.chua.starter.server.support.scheduler;
 
 import com.chua.common.support.task.timer.Timer;
 import com.chua.common.support.task.timer.TimerTask;
+import com.chua.starter.server.support.connection.ConnectionManager;
 import com.chua.starter.server.support.event.ServerConfigChangedEvent;
 import com.chua.starter.server.support.service.ServerConfigService;
 import jakarta.annotation.PostConstruct;
@@ -22,6 +23,7 @@ import java.util.concurrent.TimeUnit;
  *   <li>硬件定时采集（host.collect.*）</li>
  *   <li>计划任务扫描（ms_exec_job）</li>
  *   <li>终端会话空闲清理</li>
+ *   <li>连接缓存健康检查（connection.*）</li>
  * </ul>
  * 系统设置保存后通过 {@link ServerConfigChangedEvent} 触发动态重排，
  * 间隔/开关调整即时生效，无需重启。
@@ -62,6 +64,9 @@ public class ServerTaskScheduler {
     /** 会话空闲清理器 */
     private final SessionIdleSweeper sessionIdleSweeper;
 
+    /** 连接缓存管理器 */
+    private final ConnectionManager connectionManager;
+
     /** 时间轮实例 */
     private Timer timer;
 
@@ -77,6 +82,9 @@ public class ServerTaskScheduler {
     /** 会话清理定时任务 */
     private volatile TimerTask sessionTask;
 
+    /** 连接健康检查定时任务 */
+    private volatile TimerTask connectionTask;
+
     /**
      * 启动：初始化时间轮并注册全部周期任务
      */
@@ -87,7 +95,8 @@ public class ServerTaskScheduler {
         rescheduleCollect();
         rescheduleExec();
         rescheduleSession();
-        log.info("[task-scheduler] 时间轮调度器已启动: 在离线/采集/计划任务/会话清理");
+        rescheduleConnection();
+        log.info("[task-scheduler] 时间轮调度器已启动: 在离线/采集/计划任务/会话清理/连接健康检查");
     }
 
     /**
@@ -164,6 +173,22 @@ public class ServerTaskScheduler {
         cancelTask(sessionTask);
         sessionTask = timer.scheduleAtFixedRate(sessionIdleSweeper::sweep,
                 120, 60, TimeUnit.SECONDS);
+    }
+
+    /**
+     * 重排连接健康检查
+     */
+    private void rescheduleConnection() {
+        cancelTask(connectionTask);
+        int interval = normalizeInterval(configService.getInt("connection.sweep.interval", 60));
+        connectionTask = timer.scheduleAtFixedRate(() -> {
+            long idle = configService.getInt("connection.idle.timeout", 300);
+            try {
+                connectionManager.sweep(idle);
+            } catch (Exception e) {
+                log.warn("[task-scheduler] 连接健康检查异常: {}", e.getMessage());
+            }
+        }, interval, interval, TimeUnit.SECONDS);
     }
 
     /**

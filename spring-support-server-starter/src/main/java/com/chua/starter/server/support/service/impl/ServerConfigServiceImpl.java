@@ -46,6 +46,9 @@ public class ServerConfigServiceImpl implements ServerConfigService {
         DEFAULTS.put("host.agent.enabled", "false");
         // 远控设置
         DEFAULTS.put("host.remote.enabled", "true");
+        // 连接缓存
+        DEFAULTS.put("connection.sweep.interval", "60");
+        DEFAULTS.put("connection.idle.timeout", "300");
     }
 
     /** 配置 Mapper */
@@ -203,6 +206,8 @@ public class ServerConfigServiceImpl implements ServerConfigService {
         desc.put("host.collect.interval", "定时采集间隔(秒)");
         desc.put("host.agent.enabled", "Agent 推送开关");
         desc.put("host.remote.enabled", "远控功能开关");
+        desc.put("connection.sweep.interval", "连接健康检查间隔(秒)");
+        desc.put("connection.idle.timeout", "连接空闲超时(秒)");
         return desc.getOrDefault(key, "系统配置");
     }
 }
