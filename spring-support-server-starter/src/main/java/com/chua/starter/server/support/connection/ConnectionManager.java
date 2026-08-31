@@ -147,8 +147,10 @@ public class ConnectionManager {
 
     /**
      * 重建并连接
+     *
+     * @throws IOException 连接失败时抛出
      */
-    private Entry rebuild(MsServerHost host, SshCredential credential, String fp, long now) {
+    private Entry rebuild(MsServerHost host, SshCredential credential, String fp, long now) throws IOException {
         Long hostId = host.getId();
         Entry old = cache.remove(hostId);
         if (old != null) {
