@@ -1136,12 +1136,12 @@ public class ApiProviderController {
         boolean ollamaProtocol = platformLower.contains("ollama");
 
         // 首次按原始地址拉取
-        List<Map<String, Object>> models = requestUpstreamModels(baseUrl, apiKey, googleProtocol);
+        List<Map<String, Object>> models = requestUpstreamModels(baseUrl, apiKey, googleProtocol, proxy);
         String fixedBaseUrl = null;
         // 404 且允许修正时，尝试补全 /v1 再拉一次（用户常见漏填 /v1 的场景）
         if (models == null && tryFix && !googleProtocol) {
             String fixed = baseUrl.endsWith("/") ? baseUrl + "v1" : baseUrl + "/v1";
-            models = requestUpstreamModels(fixed, apiKey, false);
+            models = requestUpstreamModels(fixed, apiKey, false, proxy);
             if (models != null) {
                 fixedBaseUrl = fixed;
             }
@@ -1149,7 +1149,7 @@ public class ApiProviderController {
         // Ollama 兼容回退：原生接口为 GET {base}/api/tags（响应 models[].name）
         if (models == null && ollamaProtocol) {
             String tagsUrl = baseUrl.replaceAll("/v1/?$", "");
-            models = requestOllamaTags(tagsUrl, apiKey);
+            models = requestOllamaTags(tagsUrl, apiKey, proxy);
         }
         // 仍然失败则按无法连接处理
         if (models == null) {
@@ -1168,16 +1168,17 @@ public class ApiProviderController {
      *
      * @param baseUrl 基础地址（不含 /v1）
      * @param apiKey  API Key（Ollama 通常无需鉴权，可为 null）
+     * @param proxy   HTTP 代理地址（可为空）
      * @return 模型条目列表；请求失败返回 null
      */
-    private List<Map<String, Object>> requestOllamaTags(String baseUrl, String apiKey) {
+    private List<Map<String, Object>> requestOllamaTags(String baseUrl, String apiKey, String proxy) {
         String url = baseUrl.endsWith("/") ? baseUrl + "api/tags" : baseUrl + "/api/tags";
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .timeout(UPSTREAM_TIMEOUT)
                 .GET();
         try {
-            HttpResponse<String> response = upstreamHttpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = httpClient(proxy).send(builder.build(), HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 return null;
             }
