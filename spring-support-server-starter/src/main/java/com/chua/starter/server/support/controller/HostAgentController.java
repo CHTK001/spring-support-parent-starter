@@ -85,9 +85,18 @@ public class HostAgentController {
      * @param payload 上报数据
      */
     private void applyPayload(MsServerHost host, Map<String, Object> payload) {
-        host.setServerHostCpuCores(num(payload.get("cpuCores"), host.getServerHostCpuCores()));
-        host.setServerHostMemoryMb(num(payload.get("memoryMb"), host.getServerHostMemoryMb()));
-        host.setServerHostDiskGb(num(payload.get("diskGb"), host.getServerHostDiskGb()));
+        Integer cpuCores = toInteger(payload.get("cpuCores"));
+        if (cpuCores != null) {
+            host.setServerHostCpuCores(cpuCores);
+        }
+        Long memoryMb = toLong(payload.get("memoryMb"));
+        if (memoryMb != null) {
+            host.setServerHostMemoryMb(memoryMb);
+        }
+        Long diskGb = toLong(payload.get("diskGb"));
+        if (diskGb != null) {
+            host.setServerHostDiskGb(diskGb);
+        }
         if (payload.get("osVersion") != null) {
             host.setServerHostOsVersion(String.valueOf(payload.get("osVersion")));
         }
@@ -104,39 +113,47 @@ public class HostAgentController {
     }
 
     /**
-     * 数值安全转换（非数值返回默认值）
+     * 安全转为 Integer（null/非数字返回 null）
      *
-     * @param value    原始值
-     * @param defValue 默认值
-     * @param <T>      数值类型
-     * @return 转换结果
+     * @param value 原始值
+     * @return Integer 或 null
      */
-    private <T extends Number> T num(Object value, T defValue) {
+    private Integer toInteger(Object value) {
         if (value == null) {
-            return defValue;
+            return null;
         }
         try {
             if (value instanceof Number n) {
-                if (defValue instanceof Long) {
-                    return (T) Long.valueOf(n.longValue());
-                }
-                if (defValue instanceof Integer) {
-                    return (T) Integer.valueOf(n.intValue());
-                }
-                return (T) Double.valueOf(n.doubleValue());
+                return n.intValue();
             }
             String s = String.valueOf(value).trim();
-            if (s.isEmpty()) {
-                return defValue;
-            }
-            if (defValue instanceof Long) {
-                return (T) Long.valueOf(s);
-            }
-            if (defValue instanceof Integer) {
-                return (T) Integer.valueOf(s);
-            }
-            return (T) Double.valueOf(s);
+            return s.isEmpty() ? null : Integer.valueOf(s);
         } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 安全转为 Long（null/非数字返回 null）
+     *
+     * @param value 原始值
+     * @return Long 或 null
+     */
+    private Long toLong(Object value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            if (value instanceof Number n) {
+                return n.longValue();
+            }
+            String s = String.valueOf(value).trim();
+            return s.isEmpty() ? null : Long.valueOf(s);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+}
             return defValue;
         }
     }
