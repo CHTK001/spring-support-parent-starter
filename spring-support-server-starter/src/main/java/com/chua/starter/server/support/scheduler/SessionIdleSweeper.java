@@ -4,14 +4,13 @@ import com.chua.starter.server.support.config.ServerProperties;
 import com.chua.starter.server.support.terminal.GuacdSessionRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
  * 终端会话空闲清理任务
  * <p>
- * 周期扫描 guacd 会话注册表，关闭超过空闲阈值的远控连接，
- * 防止浏览器异常断开后 guacd 侧资源长期占用。
+ * 由 {@link ServerTaskScheduler} 时间轮驱动，周期扫描 guacd 会话注册表，
+ * 关闭超过空闲阈值的远控连接，防止浏览器异常断开后 guacd 侧资源长期占用。
  * </p>
  *
  * @author CH
@@ -29,9 +28,8 @@ public class SessionIdleSweeper {
     private final ServerProperties properties;
 
     /**
-     * 每分钟执行一次空闲扫描
+     * 执行空闲扫描
      */
-    @Scheduled(fixedDelay = 60_000L, initialDelay = 120_000L)
     public void sweep() {
         int closed = sessionRegistry.sweepIdle(properties.getSessionIdleMinutes());
         if (closed > 0) {

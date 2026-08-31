@@ -3,18 +3,22 @@ package com.chua.starter.server.support.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.server.support.entity.MsServerConfig;
+import com.chua.starter.server.support.event.ServerConfigChangedEvent;
 import com.chua.starter.server.support.mapper.MsServerConfigMapper;
 import com.chua.starter.server.support.service.ServerConfigService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 服务器系统配置服务实现
@@ -47,6 +51,9 @@ public class ServerConfigServiceImpl implements ServerConfigService {
     /** 配置 Mapper */
     private final MsServerConfigMapper configMapper;
 
+    /** 应用事件发布器 */
+    private final ApplicationEventPublisher eventPublisher;
+
     @Override
     public ReturnResult<List<MsServerConfig>> listAll() {
         return ReturnResult.ok(configMapper.selectList(
@@ -71,6 +78,7 @@ public class ServerConfigServiceImpl implements ServerConfigService {
         if (map == null) {
             return ReturnResult.error("配置不能为空");
         }
+        Set<String> changedKeys = new HashSet<>();
         for (Map.Entry<String, Object> entry : map.entrySet()) {
             String key = entry.getKey();
             if (key == null || key.isBlank()) {
@@ -88,6 +96,15 @@ public class ServerConfigServiceImpl implements ServerConfigService {
             } else {
                 exists.setConfigValue(value);
                 configMapper.updateById(exists);
+            }
+            changedKeys.add(key);
+        }
+        // 配置变更后发布事件，时间轮调度器据此动态重排周期任务
+        if (!changedKeys.isEmpty()) {
+            try {
+                eventPublisher.publishEvent(new ServerConfigChangedEvent(changedKeys));
+            } catch (Exception e) {
+                log.warn("[config] 发布配置变更事件失败: {}", e.getMessage());
             }
         }
         return ReturnResult.success();

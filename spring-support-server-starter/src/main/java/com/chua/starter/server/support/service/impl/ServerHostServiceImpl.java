@@ -100,6 +100,8 @@ public class ServerHostServiceImpl implements ServerHostService {
         // 探针标识服务端生成，保证全局唯一
         host.setServerHostAgentKey(generateAgentKey());
         hostMapper.insert(host);
+        // 携带账号密码/PEM 时自动建身份并绑定，保证新增即可测连/远控
+        autoCreateIdentity(host);
         return ReturnResult.ok(hostMapper.selectById(host.getId()));
     }
 
@@ -388,6 +390,188 @@ public class ServerHostServiceImpl implements ServerHostService {
             log.warn("[server] 硬件探测失败 hostId={} address={}: {}", hostId, host.getServerHostAddress(), e.getMessage());
             return ReturnResult.error("硬件探测失败: " + e.getMessage());
         }
+    }
+
+    @Override
+    public ReturnResult<String> refreshPublicIp(Long hostId) {
+        MsServerHost host = hostMapper.selectById(hostId);
+        if (host == null) {
+            return ReturnResult.error("主机不存在: " + hostId);
+        }
+        String publicIp = fetchPublicIp(host);
+        if (isBlank(publicIp)) {
+            return ReturnResult.error("无法获取公网 IP: " + host.getServerHostName());
+        }
+        host.setServerHostPublicIp(publicIp);
+        hostMapper.updateById(host);
+        return ReturnResult.ok(publicIp, "公网 IP 已刷新");
+    }
+
+    /**
+     * 采集目标主机出口公网 IP
+     * <p>
+     * 优先走 SSH（curl ifconfig.me / ipinfo.io），SSH 不可用时回退到本机出口 IP 探测。
+     * 127/localhost 等本地地址直接返回空串不探测。
+     * </p>
+     *
+     * @param host 主机
+     * @return 公网 IP，获取失败返回空串
+     */
+    private String fetchPublicIp(MsServerHost host) {
+        String address = host.getServerHostAddress();
+        if (isBlank(address) || "127.0.0.1".equals(address.trim()) || "localhost".equalsIgnoreCase(address.trim())) {
+            return "";
+        }
+        // 优先通过 SSH 在目标主机上探测出口 IP
+        try {
+            ReturnResult<SshCredential> resolved = resolveCredential(host.getId(), null);
+            if (resolved.isOk()) {
+                try (var handle = SshClients.open(host.getServerHostAddress(),
+                        host.getServerHostPort(), resolved.getData())) {
+                    handle.client().connect();
+                    for (String cmd : new String[]{
+                            "curl -s --max-time 5 ifconfig.me",
+                            "curl -s --max-time 5 ipinfo.io/ip",
+                            "wget -qO- --timeout=5 ifconfig.me"}) {
+                        String ip = execQuiet(handle, cmd);
+                        if (!isBlank(ip) && isIp(ip.trim())) {
+                            return ip.trim();
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[server] SSH 探测公网IP失败, 回退本机探测 hostId={}", host.getId(), e);
+        }
+        // 回退：探测本机出口 IP（供公网资产参考）
+        try {
+            String ip = fetchViaHttp("https://ifconfig.me");
+            if (isBlank(ip)) {
+                ip = fetchViaHttp("https://api.ipify.org");
+            }
+            return isBlank(ip) ? "" : ip.trim();
+        } catch (Exception e) {
+            log.debug("[server] 本机公网IP探测失败 hostId={}", host.getId(), e);
+            return "";
+        }
+    }
+
+    /**
+     * 通过 HTTP GET 获取文本响应
+     *
+     * @param url 地址
+     * @return 响应文本，失败返回空串
+     */
+    private String fetchViaHttp(String url) {
+        try {
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(5000);
+            conn.setRequestMethod("GET");
+            try (var in = conn.getInputStream()) {
+                return new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).trim();
+            }
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /**
+     * 判断字符串是否为 IPv4
+     *
+     * @param value 字符串
+     * @return 是否为 IP
+     */
+    private boolean isIp(String value) {
+        if (value == null) {
+            return false;
+        }
+        String[] parts = value.trim().split("\\.");
+        if (parts.length != 4) {
+            return false;
+        }
+        for (String part : parts) {
+            if (part.isEmpty() || part.length() > 3) {
+                return false;
+            }
+            for (int i = 0; i < part.length(); i++) {
+                if (!Character.isDigit(part.charAt(i))) {
+                    return false;
+                }
+            }
+            if (Integer.parseInt(part) > 255) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public MsServerHost autoCreateIdentity(MsServerHost host) {
+        if (host == null || host.getId() == null) {
+            return host;
+        }
+        String account = host.getServerHostAccount();
+        String password = host.getServerHostPassword();
+        String privateKey = host.getServerHostPrivateKey();
+        boolean hasPassword = !isBlank(account) && !isBlank(password);
+        boolean hasKey = !isBlank(account) && !isBlank(privateKey);
+        if (!hasPassword && !hasKey) {
+            return host;
+        }
+        try {
+            // 避免同名身份堆积：名称使用 主机名@账号 模板
+            String base = (host.getServerHostName() == null ? "host" : host.getServerHostName()) + "@" + account;
+            MsServerIdentity identity = new MsServerIdentity();
+            identity.setMsServerIdentityName(base);
+            identity.setMsServerIdentityUsername(account.trim());
+            identity.setMsServerIdentityRemark("新增主机自动创建");
+            if (hasKey) {
+                // 密钥方式：入库私钥并引用
+                MsServerKey key = new MsServerKey();
+                key.setMsServerKeyName(base + "-key");
+                key.setMsServerKeyType(detectKeyType(privateKey));
+                key.setMsServerKeyPrivateKey(cipher.encrypt(privateKey.trim()));
+                key.setMsServerKeyRemark("新增主机自动创建");
+                keyMapper.insert(key);
+                identity.setMsServerIdentityAuthType(AuthType.PUBLIC_KEY.name());
+                identity.setMsServerIdentityKeyId(key.getId());
+            } else {
+                identity.setMsServerIdentityAuthType(AuthType.PASSWORD.name());
+                identity.setMsServerIdentityPassword(cipher.encrypt(password));
+            }
+            identityMapper.insert(identity);
+            // 绑定到主机（最高优先级：排最前）
+            var relation = new MsServerHostIdentity();
+            relation.setMsServerHostIdentityHostId(host.getId());
+            relation.setMsServerHostIdentityIdentityId(identity.getId());
+            relation.setMsServerHostIdentitySort(1);
+            hostIdentityMapper.delete(new LambdaQueryWrapper<MsServerHostIdentity>()
+                    .eq(MsServerHostIdentity::getMsServerHostIdentityHostId, host.getId()));
+            hostIdentityMapper.insert(relation);
+            log.info("[server] 新增主机自动创建身份 hostId={} identityId={} type={}",
+                    host.getId(), identity.getId(), identity.getMsServerIdentityAuthType());
+        } catch (Exception e) {
+            log.warn("[server] 自动创建身份失败 hostId={} account={}: {}", host.getId(), account, e.getMessage());
+        }
+        return host;
+    }
+
+    /**
+     * 从 PEM 私钥内容推断密钥类型
+     *
+     * @param privateKey PEM 私钥
+     * @return RSA / ED25519 / ECDSA
+     */
+    private String detectKeyType(String privateKey) {
+        String t = privateKey == null ? "" : privateKey;
+        if (t.contains("ED25519")) {
+            return "ED25519";
+        }
+        if (t.contains("EC PRIVATE KEY") || t.contains("ECDSA")) {
+            return "ECDSA";
+        }
+        return "RSA";
     }
 
     /**

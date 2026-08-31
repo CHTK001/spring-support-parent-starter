@@ -3,14 +3,13 @@ package com.chua.starter.server.support.scheduler;
 import com.chua.starter.server.support.service.ExecService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
  * 批量计划任务调度器
  * <p>
- * 每 30 秒扫描一次到期任务（ms_exec_job.next_run_time），
- * 到期即触发执行并回写 last/next 运行时间。
+ * 由 {@link ServerTaskScheduler} 时间轮驱动，每 30 秒扫描一次到期任务
+ * （ms_exec_job.next_run_time），到期即触发执行并回写 last/next 运行时间。
  * </p>
  *
  * @author CH
@@ -25,9 +24,8 @@ public class ExecJobScheduler {
     private final ExecService execService;
 
     /**
-     * 定时扫描到期任务
+     * 扫描到期任务
      */
-    @Scheduled(fixedDelay = 30_000L, initialDelay = 60_000L)
     public void tick() {
         try {
             int fired = execService.tickDueJobs();

@@ -125,4 +125,24 @@ public interface ServerHostService {
      * @return 更新后的主机（含硬件信息）
      */
     ReturnResult<MsServerHost> detectHardware(Long hostId);
+
+    /**
+     * 刷新公网 IP：通过 ifconfig.me/ipinfo.io 探测目标主机出口公网 IP 并回写
+     *
+     * @param hostId 主机 ID
+     * @return 刷新后的公网 IP
+     */
+    ReturnResult<String> refreshPublicIp(Long hostId);
+
+    /**
+     * 新增主机时自动创建登录身份并绑定
+     * <p>
+     * 优先使用主机上直接携带的账号密码 / 私钥（pem），
+     * 未携带时回退为第一顺位已绑定身份（保证可测连）。
+     * </p>
+     *
+     * @param host 主机（含 serverHostAccount/Password/PrivateKey 瞬态字段）
+     * @return 处理后的主机
+     */
+    MsServerHost autoCreateIdentity(MsServerHost host);
 }

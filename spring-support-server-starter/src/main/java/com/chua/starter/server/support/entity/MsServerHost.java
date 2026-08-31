@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.chua.starter.mybatis.pojo.SysBase;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -168,4 +169,28 @@ public class MsServerHost extends SysBase {
     @TableField("ms_server_host_private_ip")
     @Schema(description = "内网IP", example = "10.0.0.3")
     private String serverHostPrivateIp;
+
+    /**
+     * 登录账号（瞬态，新增表单直接提交，不落库）
+     */
+    @TableField(exist = false)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Schema(description = "登录账号(瞬态)")
+    private String serverHostAccount;
+
+    /**
+     * 登录密码（瞬态，新增表单直接提交，不落库）
+     */
+    @TableField(exist = false)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Schema(description = "登录密码(瞬态)")
+    private String serverHostPassword;
+
+    /**
+     * PEM 私钥内容（瞬态，新增表单直接提交，不落库）
+     */
+    @TableField(exist = false)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Schema(description = "PEM私钥(瞬态)")
+    private String serverHostPrivateKey;
 }
