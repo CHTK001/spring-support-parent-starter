@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_provider` (
     `sys_ai_provider_enabled`     TINYINT      NOT NULL DEFAULT 1 COMMENT '是否启用',
     `sys_ai_provider_bedrock_config` TEXT      NULL COMMENT 'AWS Bedrock配置JSON',
     `sys_ai_provider_extra`      TEXT         NULL COMMENT '扩展配置JSON（如自定义请求头）',
+    `sys_ai_provider_proxy`      VARCHAR(512) NULL COMMENT 'HTTP代理地址（如 http://127.0.0.1:7890、socks5://127.0.0.1:1080）',
     `sys_ai_provider_sort_order`  INT          NOT NULL DEFAULT 0 COMMENT '排序序号',
     `sys_ai_provider_create_time` BIGINT       NOT NULL COMMENT '创建时间（毫秒）',
     `sys_ai_provider_update_time` BIGINT       NOT NULL COMMENT '更新时间（毫秒）',
