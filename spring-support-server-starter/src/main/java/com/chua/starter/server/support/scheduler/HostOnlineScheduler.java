@@ -1,19 +1,14 @@
 package com.chua.starter.server.support.scheduler;
 
 import com.chua.starter.server.support.entity.MsServerHost;
-import com.chua.starter.server.support.enums.HostCollectType;
 import com.chua.starter.server.support.mapper.MsServerHostMapper;
 import com.chua.starter.server.support.service.ServerConfigService;
-import com.chua.starter.server.support.spi.CollectOutcome;
-import com.chua.starter.server.support.spi.HostCollectContext;
 import com.chua.starter.server.support.spi.HostCollectProvider;
 import com.chua.starter.server.support.spi.HostCollectProviderRegistry;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -72,17 +67,12 @@ public class HostOnlineScheduler {
 
     /**
      * 硬件定时采集（由时间轮按配置间隔驱动）
-     * <p>按配置的采集方式（SCHEDULED/AGENT/HTTP/SNMP/PROMETHEUS...）经 SPI 路由到
-     * 具体 Provider 执行，统一以响应式（Flux）消费采集结果，屏蔽主动/被动差异。</p>
+     * <p>按配置的采集方式（scheduled/agent）经 SPI 路由到具体 Provider 执行。
+     * scheduled 走 SSH 探测；agent 由 Agent 主动上报，此轮询仅作兜底回写。</p>
      */
     public void collectTick() {
         try {
-            HostCollectType mode = HostCollectType.of(
-                    configService.getString("host.collect.mode", "SCHEDULED"));
-            if (mode == null) {
-                log.warn("[collect] 未识别的采集方式: {}", mode);
-                return;
-            }
+            String mode = configService.getString("host.collect.mode", "scheduled");
             Optional<HostCollectProvider> providerOpt = collectRegistry.resolve(mode);
             if (providerOpt.isEmpty()) {
                 log.warn("[collect] 未找到采集 Provider: mode={}", mode);
@@ -91,22 +81,18 @@ public class HostOnlineScheduler {
             HostCollectProvider provider = providerOpt.get();
             List<MsServerHost> hosts = hostMapper.selectList(
                     new LambdaQueryWrapper<MsServerHost>().eq(MsServerHost::getServerHostStatus, 1));
-            long[] ok = {0};
-            Flux.fromIterable(hosts)
-                    .map(host -> HostCollectContext.builder().mode(mode).host(host).build())
-                    .filter(provider::supports)
-                    .flatMap(context -> provider.collect(context).onErrorResume(e ->
-                            Mono.just(CollectOutcome.fail(e.getMessage()))))
-                    .doOnNext(outcome -> {
-                        if (outcome != null && outcome.isSuccess()) {
-                            ok[0]++;
-                        }
-                    })
-                    .subscribe(
-                            outcome -> {
-                            },
-                            error -> log.warn("[collect] 采集流异常: {}", error.getMessage()),
-                            () -> log.info("[collect] 采集完成: {} 台成功, 共 {} 台, mode={}", ok[0], hosts.size(), mode));
+            int ok = 0;
+            for (MsServerHost host : hosts) {
+                try {
+                    if (provider.collect(host).isSuccess()) {
+                        ok++;
+                    }
+                } catch (Exception e) {
+                    log.debug("[collect] 采集失败 hostId={} address={}: {}",
+                            host.getId(), host.getServerHostAddress(), e.getMessage());
+                }
+            }
+            log.info("[collect] 采集完成: {} 台成功, 共 {} 台, mode={}", ok, hosts.size(), mode);
         } catch (Exception e) {
             log.warn("[collect] 定时采集异常: {}", e.getMessage());
         }

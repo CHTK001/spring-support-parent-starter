@@ -6,7 +6,6 @@ import com.chua.starter.server.support.mapper.MsServerHostMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 
@@ -14,8 +13,7 @@ import java.time.LocalDateTime;
  * Agent 主动上报采集 Provider（AGENT）
  * <p>
  * 目标主机上的 Agent 主动上报硬件/状态数据，服务端按 agentKey 定位主机并回写。
- * 不主动发起连接，适用于无法从服务端直连（NAT / 防火墙）的主机。
- * 上报侧直接回写，响应式仅作统一封装。
+ * 不主动发起 SSH，适用于无法从服务端直连（NAT / 防火墙）的主机。
  * </p>
  *
  * @author CH
@@ -35,17 +33,7 @@ public class AgentHostCollectProvider implements HostCollectProvider {
     }
 
     @Override
-    public Mono<CollectOutcome> collect(HostCollectContext context) {
-        return Mono.fromCallable(() -> doCollect(context));
-    }
-
-    /**
-     * 同步回写 Agent 上报数据
-     *
-     * @param context 上下文
-     * @return 结果
-     */
-    private CollectOutcome doCollect(HostCollectContext context) {
+    public CollectOutcome collect(HostCollectContext context) {
         if (context == null || context.getHost() == null || context.getHost().getId() == null) {
             return CollectOutcome.fail("主机数据不完整");
         }
