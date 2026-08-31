@@ -26,7 +26,9 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class AgentHostCollectProvider implements HostCollectProvider {
 
-    /** 主机 Mapper */
+    /** 
+     * 主机 Mapper 
+     **/
     private final MsServerHostMapper hostMapper;
 
     @Override
