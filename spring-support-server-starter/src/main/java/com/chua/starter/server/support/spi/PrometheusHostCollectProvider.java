@@ -6,6 +6,8 @@ import com.chua.starter.server.support.mapper.MsServerHostMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -67,7 +69,18 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
     }
 
     @Override
-    public CollectOutcome collect(HostCollectContext context) {
+    public Mono<CollectOutcome> collect(HostCollectContext context) {
+        return Mono.fromCallable(() -> doCollect(context))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    /**
+     * 同步执行 Prometheus 拉取
+     *
+     * @param context 上下文
+     * @return 结果
+     */
+    private CollectOutcome doCollect(HostCollectContext context) {
         MsServerHost host = context == null ? null : context.getHost();
         if (host == null || host.getId() == null) {
             return CollectOutcome.fail("主机数据不完整");
@@ -122,24 +135,20 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
      * @param body 指标文本
      */
     private void applyMetrics(MsServerHost host, String body) {
-        // CPU 使用率 = 1 - idle/total
         double idleSum = sumGroup(CPU_IDLE, body);
         double totalSum = sumGroup(CPU_TOTAL, body);
         if (totalSum > 0 && idleSum >= 0) {
             double usage = (1 - idleSum / totalSum) * 100;
-            // 回写为 CPU 使用率（0-100 取整），核数无法从 Prometheus 直接得出，保留原有值
             if (host.getServerHostCpuCores() == null) {
                 host.setServerHostCpuCores((int) Math.round(usage));
             }
         }
-        // 内存
         double memTotal = firstDouble(MEM_TOTAL, body);
         double memAvailable = firstDouble(MEM_AVAILABLE, body);
         if (memTotal > 0) {
             long usedMb = Math.round((memTotal - Math.max(memAvailable, 0)) / 1024 / 1024);
             host.setServerHostMemoryMb(usedMb);
         }
-        // 磁盘
         double diskTotal = firstDouble(DISK_TOTAL, body);
         double diskAvailable = firstDouble(DISK_AVAILABLE, body);
         if (diskTotal > 0) {

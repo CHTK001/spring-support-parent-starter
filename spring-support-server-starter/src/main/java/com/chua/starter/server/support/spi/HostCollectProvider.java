@@ -1,10 +1,14 @@
 package com.chua.starter.server.support.spi;
 
+import reactor.core.publisher.Mono;
+
 /**
- * 主机采集 Provider SPI
+ * 主机采集 Provider SPI（响应式）
  * <p>
  * 采集方式可插拔扩展：新增采集方式只需实现本接口并注册为 Spring Bean，
  * 注册中心按 {@link #type()} 自动路由，调度零改动。
+ * 无论主动（SSH/HTTP/SNMP/Prometheus）还是被动（Agent 上报），
+ * 上层统一通过 {@link Mono} 获取数据，屏蔽底层差异。
  * 与 monitor 模块 {@code MetricProvider} 的设计保持一致。
  * </p>
  *
@@ -21,12 +25,12 @@ public interface HostCollectProvider {
     com.chua.starter.server.support.enums.HostCollectType type();
 
     /**
-     * 执行一次采集
+     * 执行一次采集（响应式）
      *
      * @param context 采集上下文（含目标主机）
-     * @return 采集结果
+     * @return 采集结果 Mono
      */
-    CollectOutcome collect(HostCollectContext context);
+    Mono<CollectOutcome> collect(HostCollectContext context);
 
     /**
      * 判断是否支持当前采集任务
