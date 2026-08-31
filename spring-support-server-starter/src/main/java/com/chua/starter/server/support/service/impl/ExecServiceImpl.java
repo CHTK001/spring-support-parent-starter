@@ -3,6 +3,7 @@ package com.chua.starter.server.support.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.server.support.config.ServerProperties;
+import com.chua.starter.server.support.connection.ConnectionManager;
 import com.chua.starter.server.support.constants.ServerConstants;
 import com.chua.starter.server.support.entity.MsExecJob;
 import com.chua.starter.server.support.entity.MsExecLog;
@@ -75,6 +76,9 @@ public class ExecServiceImpl implements ExecService {
 
     /** 主机服务 */
     private final ServerHostService serverHostService;
+
+    /** 连接缓存管理器 */
+    private final ConnectionManager connectionManager;
 
     /** 服务属性 */
     private final ServerProperties properties;
@@ -354,9 +358,9 @@ public class ExecServiceImpl implements ExecService {
      */
     private void execViaSsh(MsServerHost host, SshCredential credential, String command,
                             int timeout, MsExecLog item) throws Exception {
-        try (var handle = SshClients.open(host.getServerHostAddress(),
-                host.getServerHostPort(), credential)) {
-            handle.client().connect();
+        SshClients.Handle handle = null;
+        try {
+            handle = connectionManager.borrow(host, credential);
             var result = handle.client().exec().command(command).execute();
             item.setMsExecLogOutput(truncate(result.stdout()));
             item.setMsExecLogExitCode(result.exitCode());
@@ -365,6 +369,10 @@ public class ExecServiceImpl implements ExecService {
             }
             if (result.exitCode() != 0) {
                 throw new IllegalStateException(result.stderr());
+            }
+        } finally {
+            if (handle != null) {
+                connectionManager.release(host.getId());
             }
         }
     }
