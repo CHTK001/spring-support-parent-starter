@@ -1213,9 +1213,10 @@ public class ApiProviderController {
      * @param baseUrl        基础地址
      * @param apiKey         API Key（可能为 null，如 Ollama 本地实例）
      * @param googleProtocol 是否使用 Gemini 协议
+     * @param proxy          HTTP 代理地址（可为空）
      * @return 模型条目列表；请求失败返回 null（由调用方决定是否重试/报错）
      */
-    private List<Map<String, Object>> requestUpstreamModels(String baseUrl, String apiKey, boolean googleProtocol) {
+    private List<Map<String, Object>> requestUpstreamModels(String baseUrl, String apiKey, boolean googleProtocol, String proxy) {
         // 拼接模型列表 URL：OpenAI 兼容为 {base}/models，Gemini 为 {base}/models?key=xxx
         StringBuilder url = new StringBuilder(baseUrl.endsWith("/") ? baseUrl + "models" : baseUrl + "/models");
         if (googleProtocol && apiKey != null && !apiKey.isBlank()) {
