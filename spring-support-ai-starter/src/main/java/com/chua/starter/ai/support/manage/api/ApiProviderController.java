@@ -212,7 +212,6 @@ public class ApiProviderController {
         entity.setCredentials(uncheckedCast(body.get("credentials")));
         entity.setEnabled(bool(body, "enabled", true));
         entity.setBedrockConfig(uncheckedCast(body.get("bedrock_config")));
-        entity.setExtra(uncheckedCast(body.get("extra")));
         entity.setProxy(str(body, "proxy"));
         entity.setSortOrder(intv(body, "sort_order", providerMapper.selectCount(null).intValue()));
         entity.setCreatedAt(now);
@@ -273,6 +272,9 @@ public class ApiProviderController {
         }
         if (body.containsKey("bedrock_config")) {
             entity.setBedrockConfig(uncheckedCast(body.get("bedrock_config")));
+        }
+        if (body.containsKey("proxy")) {
+            entity.setProxy(str(body, "proxy"));
         }
         if (body.containsKey("platform")) {
             entity.setPlatform(str(body, "platform"));
@@ -338,6 +340,7 @@ public class ApiProviderController {
         clone.setEnabled(source.getEnabled());
         clone.setBedrockConfig(source.getBedrockConfig() != null
                 ? new LinkedHashMap<>(source.getBedrockConfig()) : null);
+        clone.setProxy(source.getProxy());
         clone.setSortOrder(providerMapper.selectCount(null).intValue());
         clone.setCreatedAt(now);
         clone.setUpdatedAt(now);
