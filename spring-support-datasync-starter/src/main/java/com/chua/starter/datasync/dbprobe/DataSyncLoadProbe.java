@@ -12,6 +12,7 @@ import com.chua.starter.datasync.mapping.DefaultDataSyncMapping;
 import com.chua.starter.datasync.mapping.DefaultDataSyncMappingManager;
 import com.chua.starter.datasync.model.DataSyncMapping;
 import reactor.core.publisher.Flux;
+import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -43,6 +44,7 @@ import java.util.stream.Collectors;
  *
  * @since 4.0.0.42
  */
+@Slf4j
 public final class DataSyncLoadProbe {
 
     /**
@@ -89,13 +91,13 @@ public final class DataSyncLoadProbe {
                     config.cron(), config.params(), new CronTrigger(config.cron(), LocalDateTime.now())));
         }
 
-        System.out.println("[LOAD-PROBE] 并发映射数=3, 每源行数=" + LINES_PER_SOURCE + ", batch=1000");
-        System.out.println("[LOAD-PROBE] cron=0/1 * * * * ? (同一调度 tick 同时到点)");
+        log.info("[LOAD-PROBE] 并发映射数=3, 每源行数={}, batch=1000", LINES_PER_SOURCE);
+        log.info("[LOAD-PROBE] cron=0/1 * * * * ? (同一调度 tick 同时到点)");
 
         long start = System.nanoTime();
         mappings.forEach(server::addMapping);
         server.start();
-        System.out.println("[LOAD-PROBE] 服务器启动耗时=" + (System.nanoTime() - start) / 1_000_000 + "ms");
+        log.info("[LOAD-PROBE] 服务器启动耗时={}ms", (System.nanoTime() - start) / 1_000_000);
 
         // 观察 3 个 tick（约 3 秒），等待 3 轮触发
         Thread.sleep(3500);
@@ -103,18 +105,18 @@ public final class DataSyncLoadProbe {
         // 聚合结果
         for (Map.Entry<String, TimerSink> e : sinks.entrySet()) {
             TimerSink s = e.getValue();
-            System.out.println();
-            System.out.println("[LOAD-PROBE] === " + e.getKey() + " ===");
-            System.out.println("[LOAD-PROBE] 执行轮次=" + s.rounds() + ", 总行数=" + s.totalRows());
-            System.out.println("[LOAD-PROBE] 总耗时=" + s.totalMillis() + "ms, 执行线程=" + s.threads()
-                    + ", 吞吐=" + (s.totalRows() * 1000L / Math.max(1, s.totalMillis())) + " 行/秒");
+            log.info("");
+            log.info("[LOAD-PROBE] === {} ===", e.getKey());
+            log.info("[LOAD-PROBE] 执行轮次={}, 总行数={}", s.rounds(), s.totalRows());
+            log.info("[LOAD-PROBE] 总耗时={}ms, 执行线程={}, 吞吐={} 行/秒",
+                    s.totalMillis(), s.threads(), s.totalRows() * 1000L / Math.max(1, s.totalMillis()));
             if (s.firstRoundMillis() >= 0) {
-                System.out.println("[LOAD-PROBE] 首轮耗时=" + s.firstRoundMillis() + "ms (5 万行整源注入)");
+                log.info("[LOAD-PROBE] 首轮耗时={}ms (5 万行整源注入)", s.firstRoundMillis());
             }
         }
 
         server.stop();
-        System.out.println("[LOAD-PROBE] 探针结束");
+        log.info("[LOAD-PROBE] 探针结束");
     }
 
     /**

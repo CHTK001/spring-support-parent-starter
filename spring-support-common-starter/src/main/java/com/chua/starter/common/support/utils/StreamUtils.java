@@ -16,6 +16,13 @@ import java.util.stream.Collectors;
  * @author CH
  */
 public class StreamUtils {
+
+    /**
+     * 私有构造函数，防止实例化
+     */
+    private StreamUtils() {
+    }
+
     /**
      * 获取第一个
      *

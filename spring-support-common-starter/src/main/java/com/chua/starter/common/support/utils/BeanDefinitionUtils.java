@@ -15,6 +15,12 @@ import java.util.Map;
 public class BeanDefinitionUtils {
 
     /**
+     * 私有构造函数，防止实例化
+     */
+    private BeanDefinitionUtils() {
+    }
+
+    /**
      * 转换
      *
      * @param resource 资源

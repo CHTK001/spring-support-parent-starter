@@ -16,6 +16,9 @@ import java.util.List;
  */
 public class PageUtils {
 
+    private PageUtils() {
+    }
+
     /**
      * 将 List 数据包装为 MyBatis Plus 的 IPage 对象
      *

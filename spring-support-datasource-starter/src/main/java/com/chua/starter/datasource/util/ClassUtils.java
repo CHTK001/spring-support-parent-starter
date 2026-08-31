@@ -22,6 +22,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class ClassUtils {
 
+    private ClassUtils() {
+    }
+
     protected static final Map<Class<?>, Type[]> ACTUAL = new ConcurrentHashMap<>();
     /** Empty_string_array */
     private static final String[] EMPTY_STRING_ARRAY = new String[0];

@@ -12,6 +12,9 @@ import java.util.concurrent.Callable;
  */
 public class NewTrackManager {
 
+    private NewTrackManager() {
+    }
+
     /** Track_cache */
     private static final ThreadLocal<Stack<Span>> TRACK_CACHE = new ThreadLocal<>();
 

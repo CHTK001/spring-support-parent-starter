@@ -14,6 +14,12 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 public class RequestUtils {
 
     /**
+     * 私有构造函数，防止实例化
+     */
+    private RequestUtils() {
+    }
+
+    /**
      * 用户ID请求头名称
      */
     private static final String USER_ID_HEADER = "X-User-Id";

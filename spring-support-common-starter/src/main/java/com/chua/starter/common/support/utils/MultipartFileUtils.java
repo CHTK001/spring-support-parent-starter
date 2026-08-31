@@ -11,6 +11,13 @@ import java.nio.file.Path;
  * 处理多部分文件（MultipartFile）工具类，提供文件上传和转换功能。
  */
 public class MultipartFileUtils {
+
+    /**
+     * 私有构造函数，防止实例化
+     */
+    private MultipartFileUtils() {
+    }
+
     /**
      * 将上传的多部分文件转移到指定的父目录下，并根据是否清除目录进行处理。
      *

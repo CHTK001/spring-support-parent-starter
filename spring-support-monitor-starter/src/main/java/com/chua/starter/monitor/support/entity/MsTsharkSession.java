@@ -1,0 +1,64 @@
+package com.chua.starter.monitor.support.entity;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.chua.starter.mybatis.pojo.SysBase;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.time.LocalDateTime;
+
+/**
+ * 网络抓包会话
+ */
+@Data
+@EqualsAndHashCode(callSuper = true)
+@Schema(description = "网络抓包会话")
+@TableName("ms_tshark_session")
+public class MsTsharkSession extends SysBase {
+
+    private static final long serialVersionUID = 1L;
+
+    @TableId(value = "id", type = IdType.AUTO)
+    @Schema(description = "主键", example = "1")
+    private Long id;
+
+    @TableField("ms_tshark_session_name")
+    @Schema(description = "会话名称", example = "eth0 临时抓包")
+    private String sessionName;
+
+    @TableField("ms_tshark_session_interface")
+    @Schema(description = "抓包网卡", example = "eth0")
+    private String captureInterface;
+
+    @TableField("ms_tshark_session_filter")
+    @Schema(description = "抓包过滤表达式(BPF)", example = "tcp port 8080")
+    private String captureFilter;
+
+    @TableField("ms_tshark_session_status")
+    @Schema(description = "状态: 0已停止 1抓包中", example = "1")
+    private Integer captureStatus;
+
+    @TableField("ms_tshark_session_packet_count")
+    @Schema(description = "抓取数据包总数", example = "1024")
+    private Integer packetCount;
+
+    @TableField("ms_tshark_session_file_path")
+    @Schema(description = "pcap 文件路径")
+    private String filePath;
+
+    @TableField("ms_tshark_session_duration")
+    @Schema(description = "抓包时长(秒)", example = "30")
+    private Integer captureDuration;
+
+    @TableField("ms_tshark_session_start_time")
+    @Schema(description = "开始时间", example = "2026-08-30T10:00:00")
+    private LocalDateTime startTime;
+
+    @TableField("ms_tshark_session_end_time")
+    @Schema(description = "结束时间", example = "2026-08-30T10:00:30")
+    private LocalDateTime endTime;
+}

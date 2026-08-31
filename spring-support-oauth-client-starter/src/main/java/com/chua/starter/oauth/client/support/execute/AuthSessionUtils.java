@@ -16,6 +16,9 @@ import org.springframework.web.context.request.ServletRequestAttributes;
  */
 public final class AuthSessionUtils {
 
+    private AuthSessionUtils() {
+    }
+
     /**
      * Session 中存储用户信息的键
      */

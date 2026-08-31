@@ -14,6 +14,12 @@ import jakarta.servlet.http.HttpServletResponse;
 public class ResponseUtils {
 
     /**
+     * 私有构造函数，防止实例化
+     */
+    private ResponseUtils() {
+    }
+
+    /**
      * 获取当前请求的HttpServletResponse对象
      * <p>通过Spring的RequestContextHolder获取当前线程绑定的请求属性，从而获取HttpServletResponse对象。</p>
      * <p>使用示例：</p>

@@ -7,8 +7,8 @@ import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.ToString;
 
-import com.chua.common.support.network.http.ContentDisposition;
-import com.chua.common.support.network.http.ContentType;
+import com.chua.starter.common.support.http.ContentDisposition;
+import com.chua.starter.common.support.http.ContentType;
 
 /**
  * 返回前置条件

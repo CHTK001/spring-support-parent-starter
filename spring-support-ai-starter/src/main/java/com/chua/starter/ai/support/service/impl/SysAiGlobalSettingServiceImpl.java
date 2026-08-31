@@ -249,6 +249,7 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
                         .eq(SysAiGlobalSetting::getField, field));
         LocalDateTime now = LocalDateTime.now();
         if (existing != null) {
+            existing.setValue(value);
             if (description != null) {
                 existing.setDescription(description);
             }

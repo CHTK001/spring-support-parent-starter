@@ -10,6 +10,13 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry;
  * @author CH
  */
 public class BeanDefinitionRegistryUtils {
+
+    /**
+     * 私有构造函数，防止实例化
+     */
+    private BeanDefinitionRegistryUtils() {
+    }
+
     /**
      * 注册定义
      *

@@ -17,6 +17,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
 
@@ -35,6 +36,7 @@ import javax.sql.DataSource;
  * @since 4.0.0.42
  * @author CH
  */
+@Slf4j
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class, DataSourceInspect.class})
 @Import(DataSyncAutoConfiguration.class)
 public class DataSyncApplication {
@@ -106,11 +108,11 @@ public class DataSyncApplication {
 
         // 打印配置
         DatasyncProperties properties = context.getBean(DatasyncProperties.class);
-        System.out.println("[DATA-SYNC] enabled=" + properties.isEnabled());
-        System.out.println("[DATA-SYNC] mapping-source=" + properties.getMappingSource());
-        System.out.println("[DATA-SYNC] file-mapping.directory-path=" + properties.getFileMapping().getDirectoryPath());
-        System.out.println("[DATA-SYNC] database-mapping.enabled=" + properties.getDatabaseMapping().isEnabled());
-        System.out.println("[DATA-SYNC] database-mapping.table-prefix=" + properties.getDatabaseMapping().getTablePrefix());
+        log.info("[DATA-SYNC] enabled={}", properties.isEnabled());
+        log.info("[DATA-SYNC] mapping-source={}", properties.getMappingSource());
+        log.info("[DATA-SYNC] file-mapping.directory-path={}", properties.getFileMapping().getDirectoryPath());
+        log.info("[DATA-SYNC] database-mapping.enabled={}", properties.getDatabaseMapping().isEnabled());
+        log.info("[DATA-SYNC] database-mapping.table-prefix={}", properties.getDatabaseMapping().getTablePrefix());
 
         // 文件模式显式触发映射扫描
         if (!databaseMode) {
@@ -120,11 +122,9 @@ public class DataSyncApplication {
 
         // 打印已加载映射
         DataSyncMappingManager mappingManager = context.getBean(DataSyncMappingManager.class);
-        System.out.println("[DATA-SYNC] 已加载映射数=" + mappingManager.getMappings().size());
-        mappingManager.getMappings().forEach(m -> System.out.println("[DATA-SYNC] 映射: id=" + m.mappingId()
-                + ", source=" + m.sourceId()
-                + ", sink=" + m.sinkId()
-                + ", mappings=" + m.mappings()));
+        log.info("[DATA-SYNC] 已加载映射数={}", mappingManager.getMappings().size());
+        mappingManager.getMappings().forEach(m -> log.info("[DATA-SYNC] 映射: id={}, source={}, sink={}, mappings={}",
+                m.mappingId(), m.sourceId(), m.sinkId(), m.mappings()));
 
         // 启动 DataSyncServer
         DefaultDataSyncServer server = context.getBean(DefaultDataSyncServer.class);
@@ -132,8 +132,8 @@ public class DataSyncApplication {
 
         // 注册测试 Source/Sink，使定时调度真正执行数据同步
         registerSampleSourcesAndSinks(server, databaseMode, useMysql);
-        System.out.println("[DATA-SYNC] 已注册测试 Source/Sink，等待定时调度执行");
-        System.out.println("[DATA-SYNC] DataSyncServer 启动成功");
+        log.info("[DATA-SYNC] 已注册测试 Source/Sink，等待定时调度执行");
+        log.info("[DATA-SYNC] DataSyncServer 启动成功");
     }
 
     /**
@@ -152,11 +152,11 @@ public class DataSyncApplication {
         // 确保 Sink 输出目录存在（DelimitedDataSyncAgentSink 不会自动创建父目录）
         java.io.File outDir = new java.io.File("target/datasync-out");
         if (!outDir.exists() && !outDir.mkdirs()) {
-            System.out.println("[DATA-SYNC] 创建输出目录失败: " + outDir.getAbsolutePath());
+            log.warn("[DATA-SYNC] 创建输出目录失败: {}", outDir.getAbsolutePath());
         }
         java.io.File outDirDb = new java.io.File("target/datasync-out-db");
         if (!outDirDb.exists() && !outDirDb.mkdirs()) {
-            System.out.println("[DATA-SYNC] 创建输出目录失败: " + outDirDb.getAbsolutePath());
+            log.warn("[DATA-SYNC] 创建输出目录失败: {}", outDirDb.getAbsolutePath());
         }
 
         if (databaseMode && useMysql) {
