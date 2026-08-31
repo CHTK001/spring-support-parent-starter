@@ -7,6 +7,7 @@ import com.chua.starter.server.support.service.ServerHostService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -186,5 +187,79 @@ public class ServerHostController {
     @GetMapping("/{id}/identities")
     public ReturnResult<List<Long>> listIdentities(@PathVariable Long id) {
         return serverHostService.listBoundIdentityIds(id);
+    }
+
+    /**
+     * 硬件探测：SSH 连上目标主机自动采集 CPU/内存/磁盘/系统版本/IP
+     *
+     * @param id 主机 ID
+     * @return 更新后的主机（含硬件信息）
+     */
+    @Operation(summary = "硬件探测")
+    @PostMapping("/{id}/detect")
+    public ReturnResult<MsServerHost> detect(@PathVariable Long id) {
+        return serverHostService.detectHardware(id);
+    }
+
+    /**
+     * 导出主机列表（CSV 下载）
+     *
+     * @param keyword 关键词，可为空
+     * @param groupId 分组 ID，可为空
+     * @return CSV 文件流
+     */
+    @Operation(summary = "导出主机列表(CSV)")
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> export(@RequestParam(required = false) String keyword,
+                                         @RequestParam(required = false) Long groupId) {
+        ReturnResult<List<MsServerHost>> result = serverHostService.query(keyword, groupId, null);
+        List<MsServerHost> list = result.getData();
+        if (list == null) {
+            list = java.util.List.of();
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append('\uFEFF'); // UTF-8 BOM，Excel 打开不乱码
+        sb.append("ID,名称,编码,地址,端口,系统类型,系统版本,CPU核心,内存(MB),磁盘(GB),公网IP,内网IP,标签,描述,状态,在线\n");
+        for (MsServerHost h : list) {
+            sb.append(joinCsv(h.getId())).append(',');
+            sb.append(joinCsv(h.getServerHostName())).append(',');
+            sb.append(joinCsv(h.getServerHostCode())).append(',');
+            sb.append(joinCsv(h.getServerHostAddress())).append(',');
+            sb.append(joinCsv(h.getServerHostPort())).append(',');
+            sb.append(joinCsv(h.getServerHostOsType())).append(',');
+            sb.append(joinCsv(h.getServerHostOsVersion())).append(',');
+            sb.append(joinCsv(h.getServerHostCpuCores())).append(',');
+            sb.append(joinCsv(h.getServerHostMemoryMb())).append(',');
+            sb.append(joinCsv(h.getServerHostDiskGb())).append(',');
+            sb.append(joinCsv(h.getServerHostPublicIp())).append(',');
+            sb.append(joinCsv(h.getServerHostPrivateIp())).append(',');
+            sb.append(joinCsv(h.getServerHostTags())).append(',');
+            sb.append(joinCsv(h.getServerHostDescription())).append(',');
+            sb.append(h.getServerHostStatus() != null && h.getServerHostStatus() == 1 ? "启用" : "停用").append(',');
+            sb.append(h.getServerHostOnline() != null && h.getServerHostOnline() == 1 ? "在线" : "离线").append('\n');
+        }
+        byte[] bytes = sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=hosts-" + System.currentTimeMillis() + ".csv")
+                .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, "text/csv; charset=utf-8")
+                .body(bytes);
+    }
+
+    /**
+     * CSV 字段转义（含逗号/引号/换行时加引号）
+     *
+     * @param value 字段值
+     * @return 转义后的 CSV 字段
+     */
+    private String joinCsv(Object value) {
+        if (value == null) {
+            return "";
+        }
+        String s = String.valueOf(value);
+        if (s.contains(",") || s.contains("\"") || s.contains("\n")) {
+            return "\"" + s.replace("\"", "\"\"") + "\"";
+        }
+        return s;
     }
 }

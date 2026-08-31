@@ -177,7 +177,7 @@ public class ServerHostServiceImpl implements ServerHostService {
             wrapper.eq(MsServerHost::getServerHostStatus, status);
         }
         wrapper.orderByDesc(MsServerHost::getId);
-        return ReturnResult.list(hostMapper.selectList(wrapper));
+        return ReturnResult.ok(hostMapper.selectList(wrapper));
     }
 
     @Override
@@ -275,7 +275,7 @@ public class ServerHostServiceImpl implements ServerHostService {
         for (MsServerHostIdentity relation : relations) {
             ids.add(relation.getMsServerHostIdentityIdentityId());
         }
-        return ReturnResult.list(ids);
+        return ReturnResult.ok(ids);
     }
 
     @Override
@@ -324,6 +324,107 @@ public class ServerHostServiceImpl implements ServerHostService {
         // 密码认证：直接解密口令
         return ReturnResult.ok(new SshCredential(username,
                 cipher.decrypt(identity.getMsServerIdentityPassword()), null));
+    }
+
+    @Override
+    public ReturnResult<MsServerHost> detectHardware(Long hostId) {
+        MsServerHost host = hostMapper.selectById(hostId);
+        if (host == null) {
+            return ReturnResult.error("主机不存在: " + hostId);
+        }
+        ReturnResult<SshCredential> resolved = resolveCredential(hostId, null);
+        if (!resolved.isOk()) {
+            return ReturnResult.error(resolved.getMsg());
+        }
+        try (var handle = SshClients.open(host.getServerHostAddress(),
+                host.getServerHostPort(), resolved.getData())) {
+            handle.client().connect();
+            // 采集 CPU 核心
+            String cpu = execQuiet(handle, "nproc");
+            if (isNumeric(cpu)) {
+                host.setServerHostCpuCores(Integer.valueOf(cpu.trim()));
+            }
+            // 采集内存(MB)
+            String mem = execQuiet(handle, "free -m | awk '/^Mem:/{print $2}'");
+            if (isNumeric(mem)) {
+                host.setServerHostMemoryMb(Long.valueOf(mem.trim()));
+            }
+            // 采集磁盘(GB, 根分区)
+            String disk = execQuiet(handle, "df -k / | awk 'NR==2{printf \"%.0f\", $2/1024/1024}'");
+            if (isNumeric(disk)) {
+                host.setServerHostDiskGb(Long.valueOf(disk.trim()));
+            }
+            // 采集系统版本
+            String os = execQuiet(handle, "cat /etc/os-release 2>/dev/null | grep -m1 PRETTY_NAME | cut -d'=' -f2 | tr -d '\"'");
+            if (isBlank(os)) {
+                os = execQuiet(handle, "uname -sr");
+            }
+            if (!isBlank(os)) {
+                host.setServerHostOsVersion(os.trim());
+                // 从版本关键字推断系统类型
+                String lower = os.toLowerCase();
+                if (lower.contains("windows") || lower.contains("microsoft")) {
+                    host.setServerHostOsType("WINDOWS");
+                } else if (lower.contains("darwin") || lower.contains("mac")) {
+                    host.setServerHostOsType("MACOS");
+                } else {
+                    host.setServerHostOsType("LINUX");
+                }
+            }
+            // 采集架构
+            String arch = execQuiet(handle, "uname -m");
+            if (!isBlank(arch)) {
+                host.setServerHostOsArch(arch.trim());
+            }
+            // 采集内网 IP
+            String ip = execQuiet(handle, "hostname -I 2>/dev/null | awk '{print $1}'");
+            if (!isBlank(ip)) {
+                host.setServerHostPrivateIp(ip.trim());
+            }
+            hostMapper.updateById(host);
+            markOnline(hostId, true);
+            return ReturnResult.ok(hostMapper.selectById(hostId), "硬件探测成功");
+        } catch (Exception e) {
+            log.warn("[server] 硬件探测失败 hostId={} address={}: {}", hostId, host.getServerHostAddress(), e.getMessage());
+            return ReturnResult.error("硬件探测失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 静默执行命令并返回输出（失败返回空串）
+     *
+     * @param handle  SSH 句柄
+     * @param command 命令
+     * @return 标准输出，异常返回空串
+     */
+    private String execQuiet(SshClients.Handle handle, String command) {
+        try {
+            return handle.client().exec().command(command).executeAndGetOutput();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /**
+     * 判断字符串是否为纯数字
+     *
+     * @param value 字符串
+     * @return 是否纯数字
+     */
+    private boolean isNumeric(String value) {
+        if (value == null) {
+            return false;
+        }
+        String t = value.trim();
+        if (t.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < t.length(); i++) {
+            if (!Character.isDigit(t.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
