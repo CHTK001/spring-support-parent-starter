@@ -126,4 +126,46 @@ public class MsServerHost extends SysBase {
     @TableField("ms_server_host_description")
     @Schema(description = "描述", example = "核心业务服务器")
     private String serverHostDescription;
+
+    /**
+     * CPU 核心数
+     */
+    @TableField("ms_server_host_cpu_cores")
+    @Schema(description = "CPU核心数", example = "8")
+    private Integer serverHostCpuCores;
+
+    /**
+     * 内存容量(MB)
+     */
+    @TableField("ms_server_host_memory_mb")
+    @Schema(description = "内存容量(MB)", example = "16384")
+    private Long serverHostMemoryMb;
+
+    /**
+     * 磁盘容量(GB)
+     */
+    @TableField("ms_server_host_disk_gb")
+    @Schema(description = "磁盘容量(GB)", example = "100")
+    private Long serverHostDiskGb;
+
+    /**
+     * 系统版本
+     */
+    @TableField("ms_server_host_os_version")
+    @Schema(description = "系统版本", example = "Ubuntu 24.04 LTS")
+    private String serverHostOsVersion;
+
+    /**
+     * 公网 IP
+     */
+    @TableField("ms_server_host_public_ip")
+    @Schema(description = "公网IP", example = "124.221.230.112")
+    private String serverHostPublicIp;
+
+    /**
+     * 内网 IP
+     */
+    @TableField("ms_server_host_private_ip")
+    @Schema(description = "内网IP", example = "10.0.0.3")
+    private String serverHostPrivateIp;
 }

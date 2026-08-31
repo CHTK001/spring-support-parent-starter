@@ -117,4 +117,12 @@ public interface ServerHostService {
      * @return 凭据结果，data 为解密后的凭据
      */
     ReturnResult<SshCredential> resolveCredential(Long hostId, Long identityId);
+
+    /**
+     * 硬件探测：SSH 连上目标主机，自动采集 CPU/内存/磁盘/系统版本/IP 并回写
+     *
+     * @param hostId 主机 ID
+     * @return 更新后的主机（含硬件信息）
+     */
+    ReturnResult<MsServerHost> detectHardware(Long hostId);
 }
