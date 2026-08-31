@@ -87,10 +87,10 @@
 
         <!-- 缓存功能模块 - 由消费方按需引入，避免反向依赖形成循环 -->
         <!-- 如需缓存支持，请直接依赖 spring-support-cache-starter -->
-        <dependency>
+        <!--<dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-cache-starter</artifactId>
-        </dependency>
+        </dependency>-->
 
         <!-- Jakarta Servlet API - 提供 Servlet 相关接口 -->
         <dependency>
