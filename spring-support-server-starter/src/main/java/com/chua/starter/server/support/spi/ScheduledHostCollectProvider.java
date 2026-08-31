@@ -5,14 +5,11 @@ import com.chua.starter.server.support.service.ServerHostService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 /**
  * 定时 SSH 采集 Provider（SCHEDULED）
  * <p>
- * 通过 SSH 连接目标主机采集硬件信息（CPU/内存/磁盘/系统版本/IP）。
- * SSH 为阻塞 IO，在 boundedElastic 调度器上执行，避免阻塞 Web 线程。
+ * 由时间轮驱动，通过 SSH 连接目标主机采集硬件信息（CPU/内存/磁盘/系统版本/IP）。
  * </p>
  *
  * @author CH
@@ -32,18 +29,7 @@ public class ScheduledHostCollectProvider implements HostCollectProvider {
     }
 
     @Override
-    public Mono<CollectOutcome> collect(HostCollectContext context) {
-        return Mono.fromCallable(() -> doCollect(context))
-                .subscribeOn(Schedulers.boundedElastic());
-    }
-
-    /**
-     * 同步执行采集
-     *
-     * @param context 上下文
-     * @return 结果
-     */
-    private CollectOutcome doCollect(HostCollectContext context) {
+    public CollectOutcome collect(HostCollectContext context) {
         if (context == null || context.getHost() == null || context.getHost().getId() == null) {
             return CollectOutcome.fail("主机数据不完整");
         }
