@@ -154,7 +154,3 @@ public class HostAgentController {
         }
     }
 }
-            return defValue;
-        }
-    }
-}
