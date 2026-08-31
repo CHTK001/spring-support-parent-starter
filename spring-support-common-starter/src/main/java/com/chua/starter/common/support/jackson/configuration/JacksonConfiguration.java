@@ -50,6 +50,7 @@ import org.slf4j.LoggerFactory;
  * @author CH
  */
 @EnableConfigurationProperties(JacksonProperties.class)
+@SuppressWarnings({"removal"})
 public class JacksonConfiguration {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(JacksonConfiguration.class);
