@@ -718,6 +718,7 @@ public class ApiProviderController {
         if (provider.getBedrockConfig() != null) {
             map.put("bedrock_config", provider.getBedrockConfig());
         }
+        map.put("proxy", provider.getProxy());
         map.put("sort_order", provider.getSortOrder());
         map.put("created_at", provider.getCreatedAt());
         map.put("updated_at", provider.getUpdatedAt());
