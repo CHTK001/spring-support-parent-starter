@@ -191,7 +191,7 @@ public class DefaultConfigureObjectContext implements ConfigureObjectContext {
      * @return null
      */
     @Override
-    public Object publish(Object event) {
-        return null;
+    public int publish(Object event) {
+        return 0;
     }
 }

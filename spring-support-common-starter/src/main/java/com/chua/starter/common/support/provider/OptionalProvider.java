@@ -141,7 +141,7 @@ public class OptionalProvider {
         }
 
         type = StringUtils.utf8Str(type);
-        List<SpiOption> options = ServiceProvider.of(getType(type)).options();
+        List<SpiOption> options = toSpiOptions(ServiceProvider.of(getType(type)).options());
         if(!StringUtils.isBlank(name)) {
             List<SpiOption> collect = options.stream().filter(spiOption -> {
                 String[] supportedTypes = spiOption.supportedTypes();
@@ -171,7 +171,7 @@ public class OptionalProvider {
         for (String s : split) {
             String[] types = getTypes(s);
             for (String item : types) {
-                List<SpiOption> options = ServiceProvider.of(item).options();
+                List<SpiOption> options = toSpiOptions(ServiceProvider.of(item).options());
                 if(!StringUtils.isBlank(name)) {
                     for (SpiOption option : options) {
                         String optionName = option.name();
@@ -187,6 +187,15 @@ public class OptionalProvider {
         }
 
         return ReturnResult.success(map);
+    }
+
+    /** 把 ServiceProvider.options() 的 List<?> 安全转换为 List<SpiOption>（元素实际均为 SpiOption） */
+    @SuppressWarnings("unchecked")
+    private static List<SpiOption> toSpiOptions(List<?> raw) {
+        if (raw == null) {
+            return Collections.emptyList();
+        }
+        return (List<SpiOption>) raw;
     }
 }
 
