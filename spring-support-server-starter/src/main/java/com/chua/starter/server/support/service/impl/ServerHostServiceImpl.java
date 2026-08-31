@@ -2,6 +2,7 @@ package com.chua.starter.server.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.server.support.connection.ConnectionManager;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.entity.MsServerHostIdentity;
 import com.chua.starter.server.support.entity.MsServerIdentity;
@@ -74,6 +75,9 @@ public class ServerHostServiceImpl implements ServerHostService {
 
     /** 凭据加解密器 */
     private final CredentialCipher cipher;
+
+    /** 连接缓存管理器 */
+    private final ConnectionManager connectionManager;
 
     /** 探针标识随机源 */
     private final SecureRandom secureRandom = new SecureRandom();
@@ -342,9 +346,9 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (!resolved.isOk()) {
             return ReturnResult.error(resolved.getMsg());
         }
-        try (var handle = SshClients.open(host.getServerHostAddress(),
-                host.getServerHostPort(), resolved.getData())) {
-            handle.client().connect();
+        SshClients.Handle handle = null;
+        try {
+            handle = connectionManager.borrow(host, resolved.getData());
             // 采集 CPU 核心
             String cpu = execQuiet(handle, "nproc");
             if (isNumeric(cpu)) {
@@ -393,6 +397,10 @@ public class ServerHostServiceImpl implements ServerHostService {
         } catch (Exception e) {
             log.warn("[server] 硬件探测失败 hostId={} address={}: {}", hostId, host.getServerHostAddress(), e.getMessage());
             return ReturnResult.error("硬件探测失败: " + e.getMessage());
+        } finally {
+            if (handle != null) {
+                connectionManager.release(hostId);
+            }
         }
     }
 
@@ -430,9 +438,9 @@ public class ServerHostServiceImpl implements ServerHostService {
         try {
             ReturnResult<SshCredential> resolved = resolveCredential(host.getId(), null);
             if (resolved.isOk()) {
-                try (var handle = SshClients.open(host.getServerHostAddress(),
-                        host.getServerHostPort(), resolved.getData())) {
-                    handle.client().connect();
+                SshClients.Handle handle = null;
+                try {
+                    handle = connectionManager.borrow(host, resolved.getData());
                     for (String cmd : new String[]{
                             "curl -s --max-time 5 ifconfig.me",
                             "curl -s --max-time 5 ipinfo.io/ip",
@@ -441,6 +449,10 @@ public class ServerHostServiceImpl implements ServerHostService {
                         if (!isBlank(ip) && isIp(ip.trim())) {
                             return ip.trim();
                         }
+                    }
+                } finally {
+                    if (handle != null) {
+                        connectionManager.release(host.getId());
                     }
                 }
             }
