@@ -51,15 +51,15 @@ public class HostAgentController {
      */
     @Operation(summary = "Agent推送采集数据")
     @PostMapping("/{agentKey}/push")
-    public ReturnResult<String> push(@PathVariable String agentKey, @RequestBody Map<String, Object> payload) {
+    public Mono<ReturnResult<String>> push(@PathVariable String agentKey, @RequestBody Map<String, Object> payload) {
         if (agentKey == null || agentKey.isBlank()) {
-            return ReturnResult.error("agentKey 不能为空");
+            return Mono.just(ReturnResult.error("agentKey 不能为空"));
         }
         MsServerHost host = hostMapper.selectOne(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MsServerHost>()
                         .eq(MsServerHost::getServerHostAgentKey, agentKey.trim()));
         if (host == null) {
-            return ReturnResult.error("未找到 agentKey 对应的主机: " + agentKey);
+            return Mono.just(ReturnResult.error("未找到 agentKey 对应的主机: " + agentKey));
         }
         try {
             if (payload != null) {

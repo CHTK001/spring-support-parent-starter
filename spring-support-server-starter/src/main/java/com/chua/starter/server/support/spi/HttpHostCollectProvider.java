@@ -6,6 +6,8 @@ import com.chua.starter.server.support.mapper.MsServerHostMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * HTTP 接口拉取采集 Provider（HTTP）
@@ -35,7 +37,18 @@ public class HttpHostCollectProvider implements HostCollectProvider {
     }
 
     @Override
-    public CollectOutcome collect(HostCollectContext context) {
+    public Mono<CollectOutcome> collect(HostCollectContext context) {
+        return Mono.fromCallable(() -> doCollect(context))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    /**
+     * 同步执行 HTTP 拉取
+     *
+     * @param context 上下文
+     * @return 结果
+     */
+    private CollectOutcome doCollect(HostCollectContext context) {
         MsServerHost host = context == null ? null : context.getHost();
         if (host == null || host.getId() == null) {
             return CollectOutcome.fail("主机数据不完整");
