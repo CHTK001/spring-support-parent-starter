@@ -202,6 +202,18 @@ public class ServerHostController {
     }
 
     /**
+     * 刷新公网 IP：探测目标主机出口公网 IP 并回写
+     *
+     * @param id 主机 ID
+     * @return 刷新后的公网 IP
+     */
+    @Operation(summary = "刷新公网IP")
+    @PostMapping("/{id}/refresh-public-ip")
+    public ReturnResult<String> refreshPublicIp(@PathVariable Long id) {
+        return serverHostService.refreshPublicIp(id);
+    }
+
+    /**
      * 导出主机列表（CSV 下载）
      *
      * @param keyword 关键词，可为空
