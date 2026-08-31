@@ -3,8 +3,10 @@ package com.chua.starter.server.support.controller;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.server.support.constants.ServerConstants;
 import com.chua.starter.server.support.entity.MsServerHost;
+import com.chua.starter.server.support.enums.HostCollectType;
 import com.chua.starter.server.support.mapper.MsServerHostMapper;
 import com.chua.starter.server.support.spi.AgentHostCollectProvider;
+import com.chua.starter.server.support.spi.HostCollectContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
@@ -62,12 +65,16 @@ public class HostAgentController {
             if (payload != null) {
                 applyPayload(host, payload);
             }
-            var outcome = agentProvider.collect(host);
-            return outcome.isSuccess()
-                    ? ReturnResult.ok(outcome.getMessage())
-                    : ReturnResult.error(outcome.getMessage());
+            HostCollectContext context = HostCollectContext.builder()
+                    .mode(HostCollectType.AGENT)
+                    .host(host)
+                    .build();
+            return agentProvider.collect(context)
+                    .map(outcome -> outcome.isSuccess()
+                            ? ReturnResult.ok(outcome.getMessage())
+                            : ReturnResult.error(outcome.getMessage()));
         } catch (Exception e) {
-            return ReturnResult.error("Agent 数据回写失败: " + e.getMessage());
+            return Mono.just(ReturnResult.error("Agent 数据回写失败: " + e.getMessage()));
         }
     }
 

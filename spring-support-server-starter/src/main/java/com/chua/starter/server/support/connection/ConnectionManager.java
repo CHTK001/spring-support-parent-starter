@@ -171,8 +171,7 @@ public class ConnectionManager {
      * 判断缓存连接是否已关闭
      */
     private boolean isClosed(Entry entry) {
-        var session = entry.handle.client().getSession();
-        return session == null || session.isClosed();
+        return !entry.handle.client().isConnected();
     }
 
     /**

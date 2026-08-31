@@ -42,12 +42,6 @@
     <dependency>
       <groupId>org.apache.calcite</groupId>
       <artifactId>calcite-core</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>commons-logging</groupId>
-          <artifactId>commons-logging</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
@@ -81,10 +75,18 @@
     <dependency>
       <groupId>com.h2database</groupId>
       <artifactId>h2</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-h2-starter</artifactId>
+      <version>${project.version}</version>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>com.alibaba</groupId>
-      <artifactId>druid-spring-boot-3-starter</artifactId>
+      <artifactId>druid-spring-boot-4-starter</artifactId>
+      <version>${druid.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -126,8 +128,12 @@
     <dependency>
       <groupId>org.apache.seata</groupId>
       <artifactId>seata-all</artifactId>
-      <version>2.6.0</version>
       <scope>provided</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-datasource-starter</artifactId>
       <optional>true</optional>
     </dependency>
     <dependency>
