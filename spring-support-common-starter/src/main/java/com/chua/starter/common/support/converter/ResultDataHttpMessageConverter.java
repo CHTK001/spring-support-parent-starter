@@ -23,6 +23,7 @@ import java.lang.reflect.Type;
  * @author CH
  */
 
+@SuppressWarnings({"removal"})
 public class ResultDataHttpMessageConverter
         extends MappingJackson2HttpMessageConverter {
     @Override
