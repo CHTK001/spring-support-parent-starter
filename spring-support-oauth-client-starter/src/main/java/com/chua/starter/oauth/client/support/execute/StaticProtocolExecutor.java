@@ -144,6 +144,8 @@ public class StaticProtocolExecutor implements ProtocolExecutor {
         }
 
         String passwd = CollectionUtils.find(userAndPassword, 1);
-        return user.equals(username) && DigestUtils.md5(passwd).equals(password);
+        // 兼容明文与 md5 两种密码提交方式（前端登录页通常提交明文）
+        return user.equals(username)
+                && (passwd.equals(password) || DigestUtils.md5(passwd).equals(password));
     }
 }

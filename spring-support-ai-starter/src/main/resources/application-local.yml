@@ -56,7 +56,7 @@ plugin:
     protocol: static
     temp:
       open: true
-      user: "admin"
+      user: "admin:admin123"
     whitelist:
       - /login
       - /v2/user/login
