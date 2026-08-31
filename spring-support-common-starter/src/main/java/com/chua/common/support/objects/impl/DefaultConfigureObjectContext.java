@@ -2,11 +2,15 @@ package com.chua.common.support.objects.impl;
 
 import com.chua.common.support.objects.ConfigureObjectContext;
 import com.chua.common.support.objects.ObjectContextSetting;
+import com.chua.common.support.objects.definition.MethodDefinition;
 import com.chua.common.support.objects.environment.Environment;
 import com.chua.common.support.objects.provider.ObjectProvider;
+import com.chua.common.support.objects.publisher.EventPublisher;
 
 import java.lang.annotation.Annotation;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -193,5 +197,19 @@ public class DefaultConfigureObjectContext implements ConfigureObjectContext {
     @Override
     public int publish(Object event) {
         return 0;
+    }
+
+    @Override
+    public List<MethodDefinition> getMethodWithAnnotation(Class<? extends Annotation> annotationType) {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public void autowire(Object obj) {
+    }
+
+    @Override
+    public EventPublisher getEventPublisher() {
+        return new EventPublisher();
     }
 }

@@ -1,0 +1,191 @@
+package com.chua.starter.server.support.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.server.support.entity.MsServerConfig;
+import com.chua.starter.server.support.mapper.MsServerConfigMapper;
+import com.chua.starter.server.support.service.ServerConfigService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 服务器系统配置服务实现
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class ServerConfigServiceImpl implements ServerConfigService {
+
+    /** JSON 序列化器 */
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    /** 默认配置 */
+    private static final Map<String, String> DEFAULTS = new HashMap<>();
+
+    static {
+        // 在离线检测
+        DEFAULTS.put("host.online.enabled", "true");
+        DEFAULTS.put("host.online.interval", "60");
+        // 采集设置
+        DEFAULTS.put("host.collect.enabled", "false");
+        DEFAULTS.put("host.collect.mode", "scheduled");
+        DEFAULTS.put("host.collect.interval", "3600");
+        // agent 推送
+        DEFAULTS.put("host.agent.enabled", "false");
+        // 远控设置
+        DEFAULTS.put("host.remote.enabled", "true");
+    }
+
+    /** 配置 Mapper */
+    private final MsServerConfigMapper configMapper;
+
+    @Override
+    public ReturnResult<List<MsServerConfig>> listAll() {
+        return ReturnResult.ok(configMapper.selectList(
+                new LambdaQueryWrapper<MsServerConfig>().orderByAsc(MsServerConfig::getConfigKey)));
+    }
+
+    @Override
+    public ReturnResult<Map<String, Object>> getConfigMap() {
+        Map<String, Object> merged = new HashMap<>(DEFAULTS);
+        for (MsServerConfig cfg : configMapper.selectList(null)) {
+            Object parsed = parseValue(cfg.getConfigValue());
+            if (parsed != null) {
+                merged.put(cfg.getConfigKey(), parsed);
+            }
+        }
+        return ReturnResult.ok(merged);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ReturnResult<Void> saveConfig(Map<String, Object> map) {
+        if (map == null) {
+            return ReturnResult.error("配置不能为空");
+        }
+        for (Map.Entry<String, Object> entry : map.entrySet()) {
+            String key = entry.getKey();
+            if (key == null || key.isBlank()) {
+                continue;
+            }
+            String value = serializeValue(entry.getValue());
+            MsServerConfig exists = configMapper.selectOne(
+                    new LambdaQueryWrapper<MsServerConfig>().eq(MsServerConfig::getConfigKey, key));
+            if (exists == null) {
+                MsServerConfig cfg = new MsServerConfig();
+                cfg.setConfigKey(key);
+                cfg.setConfigValue(value);
+                cfg.setConfigDesc(defaultDesc(key));
+                configMapper.insert(cfg);
+            } else {
+                exists.setConfigValue(value);
+                configMapper.updateById(exists);
+            }
+        }
+        return ReturnResult.success();
+    }
+
+    @Override
+    public String getString(String key, String defValue) {
+        MsServerConfig cfg = configMapper.selectOne(
+                new LambdaQueryWrapper<MsServerConfig>().eq(MsServerConfig::getConfigKey, key));
+        if (cfg == null || cfg.getConfigValue() == null) {
+            return defValue;
+        }
+        Object parsed = parseValue(cfg.getConfigValue());
+        return parsed == null ? defValue : String.valueOf(parsed);
+    }
+
+    @Override
+    public boolean getBoolean(String key, boolean defValue) {
+        String v = getString(key, String.valueOf(defValue));
+        return "true".equalsIgnoreCase(v) || "1".equals(v);
+    }
+
+    @Override
+    public int getInt(String key, int defValue) {
+        String v = getString(key, String.valueOf(defValue));
+        try {
+            return Integer.parseInt(v.trim());
+        } catch (NumberFormatException e) {
+            return defValue;
+        }
+    }
+
+    /**
+     * 解析存储值（JSON 标量原样，字符串去引号）
+     *
+     * @param raw 原始存储值
+     * @return 解析后的值
+     */
+    private Object parseValue(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String t = raw.trim();
+        if (t.isEmpty()) {
+            return "";
+        }
+        try {
+            if (t.startsWith("\"") || t.startsWith("{") || t.startsWith("[")
+                    || t.startsWith("true") || t.startsWith("false") || isNumeric(t)) {
+                return MAPPER.readValue(t, new TypeReference<Object>() { });
+            }
+        } catch (Exception ignored) {
+            // 非 JSON 走原文
+        }
+        return raw;
+    }
+
+    /**
+     * 序列化值（字符串带引号，其余 JSON）
+     *
+     * @param value 值
+     * @return 存储串
+     */
+    private String serializeValue(Object value) {
+        try {
+            return MAPPER.writeValueAsString(value);
+        } catch (Exception e) {
+            return String.valueOf(value);
+        }
+    }
+
+    /**
+     * 判断纯数字
+     */
+    private boolean isNumeric(String s) {
+        if (s == null || s.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < s.length(); i++) {
+            if (!Character.isDigit(s.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 配置键默认描述
+     */
+    private String defaultDesc(String key) {
+        Map<String, String> desc = new HashMap<>();
+        desc.put("host.online.enabled", "在离线自动检测开关");
+        desc.put("host.online.interval", "在离线检测间隔(秒)");
+        desc.put("host.collect.enabled", "硬件采集开关");
+        desc.put("host.collect.mode", "采集方式: scheduled/agent");
+        desc.put("host.collect.interval", "定时采集间隔(秒)");
+        desc.put("host.agent.enabled", "Agent 推送开关");
+        desc.put("host.remote.enabled", "远控功能开关");
+        return desc.getOrDefault(key, "系统配置");
+    }
+}
