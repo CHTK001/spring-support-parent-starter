@@ -212,6 +212,8 @@ public class ApiProviderController {
         entity.setCredentials(uncheckedCast(body.get("credentials")));
         entity.setEnabled(bool(body, "enabled", true));
         entity.setBedrockConfig(uncheckedCast(body.get("bedrock_config")));
+        entity.setExtra(uncheckedCast(body.get("extra")));
+        entity.setProxy(str(body, "proxy"));
         entity.setSortOrder(intv(body, "sort_order", providerMapper.selectCount(null).intValue()));
         entity.setCreatedAt(now);
         entity.setUpdatedAt(now);
