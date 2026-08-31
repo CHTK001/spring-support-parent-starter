@@ -409,7 +409,7 @@ public class ApiProviderController {
         SysAiProvider entity = requireProvider(providerId);
         boolean tryFix = body != null && Boolean.TRUE.equals(body.get("try_fix"));
         return ApiResult.ok(fetchModelsFromUpstream(entity.getPlatform(), entity.getBaseUrl(),
-                entity.getCredentials(), entity.getAuthScheme(), tryFix));
+                entity.getCredentials(), entity.getAuthScheme(), entity.getProxy(), tryFix));
     }
 
     /**
@@ -433,7 +433,8 @@ public class ApiProviderController {
         Map<String, Object> credentials = body.get("credentials") instanceof Map
                 ? (Map<String, Object>) body.get("credentials") : null;
         String authScheme = str(body, "auth_scheme");
-        return ApiResult.ok(fetchModelsFromUpstream(platform, baseUrl, credentials, authScheme, false));
+        String proxy = str(body, "proxy");
+        return ApiResult.ok(fetchModelsFromUpstream(platform, baseUrl, credentials, authScheme, proxy, false));
     }
 
     // ==================== Provider Connections ====================
@@ -1110,12 +1111,13 @@ public class ApiProviderController {
      * @param baseUrl     供应商 API 基础地址
      * @param credentials 凭证（兼容 api_key 字符串与 api_keys 数组两种形态）
      * @param authScheme  鉴权方式（api_key 等）
+     * @param proxy       HTTP 代理地址（可为空）
      * @param tryFix      是否在 404 时尝试补全 /v1 后重试
      * @return FetchModelsResponse（models + 可选 fixed_base_url）
      */
     private Map<String, Object> fetchModelsFromUpstream(String platform, String baseUrl,
                                                         Map<String, Object> credentials,
-                                                        String authScheme, boolean tryFix) {
+                                                        String authScheme, String proxy, boolean tryFix) {
         // 平台标识统一小写后再判断协议族（前端可能传大写形式）
         String platformLower = platform == null ? "" : platform.toLowerCase();
         // ONNX 本地离线模型：base_url 存的是模型文件路径，没有远程目录可拉，
