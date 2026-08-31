@@ -13,6 +13,7 @@ import com.chua.starter.datasync.scanner.JsonConfigFileParser;
 import com.chua.starter.datasync.scanner.PropertiesConfigFileParser;
 import com.chua.starter.datasync.scanner.YamlConfigFileParser;
 import com.chua.starter.datasync.scheduler.DefaultSyncDataSchedulerManager;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 
 import java.nio.charset.StandardCharsets;
@@ -31,6 +32,7 @@ import java.util.concurrent.atomic.LongAdder;
  *
  * @since 4.0.0.42
  */
+@Slf4j
 public final class DataSyncAllInOneProbe {
 
     /** Work_dir */
@@ -59,12 +61,13 @@ public final class DataSyncAllInOneProbe {
         // 5. 多映射并发
         testConcurrency();
         // 汇总
-        System.out.println("\n========================================");
-        System.out.println("[ALL-IN-ONE] 通过: " + pass.size() + " / 失败: " + fail.size());
-        pass.forEach(p -> System.out.println("  PASS | " + p));
-        info.forEach(i -> System.out.println("  INFO | " + i));
-        fail.forEach(f -> System.out.println("  FAIL | " + f));
-        System.out.println("========================================");
+        log.info("");
+        log.info("========================================");
+        log.info("[ALL-IN-ONE] 通过: {} / 失败: {}", pass.size(), fail.size());
+        pass.forEach(p -> log.info("  PASS | {}", p));
+        info.forEach(i -> log.info("  INFO | {}", i));
+        fail.forEach(f -> log.info("  FAIL | {}", f));
+        log.info("========================================");
         System.exit(fail.isEmpty() ? 0 : 1);
     }
 

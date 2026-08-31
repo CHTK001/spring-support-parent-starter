@@ -18,6 +18,9 @@ import static com.chua.starter.datasource.support.DynamicDataSource.TARGET_DATA_
 @Slf4j
 public class DataSourceContextSupport {
 
+    private DataSourceContextSupport() {
+    }
+
     public static final Map<Object, Object> DATA_SOURCE_MAP = new ConcurrentHashMap<>();
 
     /**

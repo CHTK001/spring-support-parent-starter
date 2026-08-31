@@ -68,7 +68,6 @@ plugin:
       - /v2/v1/**
       - /provider/**
       - /v2/manufacturer/factories
-      - /v2/global-settings
       - /v2/ai/bot-binding/**
 
 logging:

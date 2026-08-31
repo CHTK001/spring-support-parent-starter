@@ -15,7 +15,10 @@ import java.util.Locale;
  */
 public class LocaleUtils {
 
-    static ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
+    private LocaleUtils() {
+    }
+
+    static final ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
     static{
         messageSource.setDefaultEncoding(StandardCharsets.UTF_8.toString());
         messageSource.setBasename("i18n/message");

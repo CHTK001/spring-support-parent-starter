@@ -4,6 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 import org.springframework.context.ApplicationContext;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 装配关闭探针，验证 {@code plugin.datasync.enabled=false} 时 DataSync 自动配置完全关闭。
@@ -16,6 +17,7 @@ import org.springframework.context.ApplicationContext;
  * @since 4.0.0.42
  * @author CH
  */
+@Slf4j
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
 public class DataSyncDisabledProbe {
 
@@ -43,9 +45,9 @@ public class DataSyncDisabledProbe {
         } catch (Exception ignore) {
             hasServer = false;
         }
-        System.out.println("[DISABLED] datasync-related bean count=" + datasyncRelated.size());
-        System.out.println("[DISABLED] datasync-related beans=" + datasyncRelated);
-        System.out.println("[DISABLED] has DataSyncServer=" + hasServer);
-        System.out.println("[DISABLED] context started ok, datasync auto-config disabled");
+        log.info("[DISABLED] datasync-related bean count={}", datasyncRelated.size());
+        log.info("[DISABLED] datasync-related beans={}", datasyncRelated);
+        log.info("[DISABLED] has DataSyncServer={}", hasServer);
+        log.info("[DISABLED] context started ok, datasync auto-config disabled");
     }
 }

@@ -11,6 +11,7 @@ import com.chua.starter.datasync.DefaultDataSyncServer;
 import com.chua.starter.datasync.agent.AgentServerManager;
 import com.chua.starter.datasync.agent.DataSyncAgentServer;
 import com.chua.starter.datasync.mapping.DefaultDataSyncMappingManager;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.util.List;
@@ -38,6 +39,7 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * @since 4.0.0.42
  */
+@Slf4j
 public final class DataSyncReconnectProbe {
 
     /**
@@ -73,7 +75,7 @@ public final class DataSyncReconnectProbe {
             public void onClientConnected(java.lang.String clientId, Map<String, Object> metadata) {
                 connected.incrementAndGet();
                 eventLog.add("CONNECT:" + clientId);
-                System.out.println("[RECONNECT-PROBE] 客户端接入: " + clientId);
+                log.info("[RECONNECT-PROBE] 客户端接入: {}", clientId);
             }
 
             @Override
@@ -81,7 +83,7 @@ public final class DataSyncReconnectProbe {
             public void onClientDisconnected(String clientId) {
                 disconnected.incrementAndGet();
                 eventLog.add("DISCONNECT:" + clientId);
-                System.out.println("[RECONNECT-PROBE] 客户端断开: " + clientId);
+                log.info("[RECONNECT-PROBE] 客户端断开: {}", clientId);
             }
 
             @Override
@@ -89,7 +91,7 @@ public final class DataSyncReconnectProbe {
             public void onMessage(String clientId, String topic, Object data) {
                 received.incrementAndGet();
                 eventLog.add("MESSAGE:" + topic + "=" + data);
-                System.out.println("[RECONNECT-PROBE] 收到数据: client=" + clientId + ", topic=" + topic + ", data=" + data);
+                log.info("[RECONNECT-PROBE] 收到数据: client={}, topic={}, data={}", clientId, topic, data);
             }
 
             @Override
@@ -97,12 +99,12 @@ public final class DataSyncReconnectProbe {
             public void onError(String clientId, Throwable throwable) {
                 onErrorCount.incrementAndGet();
                 eventLog.add("ERROR:" + clientId + ":" + throwable.getMessage());
-                System.out.println("[RECONNECT-PROBE] 连接异常: client=" + clientId + ", err=" + throwable.getMessage());
+                log.info("[RECONNECT-PROBE] 连接异常: client={}, err={}", clientId, throwable.getMessage());
             }
         });
 
         // 1. 正常连接
-        System.out.println("[RECONNECT-PROBE] 步骤1: 启动 SyncServer 端口=" + PORT);
+        log.info("[RECONNECT-PROBE] 步骤1: 启动 SyncServer 端口={}", PORT);
         syncServer.start();
         sleep(1200);
 
@@ -112,16 +114,16 @@ public final class DataSyncReconnectProbe {
         client.subscribe("sink:data:user-sink", (routedTopic, data) -> {
             lastMessage.set(routedTopic + "=" + data);
             subscribed.countDown();
-            System.out.println("[RECONNECT-PROBE] 客户端#1 收到服务端数据: " + routedTopic + "=" + data);
+            log.info("[RECONNECT-PROBE] 客户端#1 收到服务端数据: {}={}", routedTopic, data);
         });
         client.subscribe("source:data:user-source", (routedTopic, data) -> {
             lastMessage.set(routedTopic + "=" + data);
             subscribed.countDown();
-            System.out.println("[RECONNECT-PROBE] 客户端#1 收到服务端数据: " + routedTopic + "=" + data);
+            log.info("[RECONNECT-PROBE] 客户端#1 收到服务端数据: {}={}", routedTopic, data);
         });
 
         client.connect();
-        System.out.println("[RECONNECT-PROBE] 客户端#1 已连接, isConnected=" + client.isConnected());
+        log.info("[RECONNECT-PROBE] 客户端#1 已连接, isConnected={}", client.isConnected());
 
         // 监听掉线事件：证明"突然掉线"被 TcpSyncClient 检测到（onError 回调）。
         // 注意：TcpSyncClient 掉线后仅回调 onError，不会自动复位 connected 标志，
@@ -132,28 +134,28 @@ public final class DataSyncReconnectProbe {
             /** On记录错误 */
             public void onError(String protocol, Throwable cause) {
                 errorCallbacks.incrementAndGet();
-                System.out.println("[RECONNECT-PROBE] 客户端检测到掉线: " + protocol + " -> " + cause.getMessage());
+                log.info("[RECONNECT-PROBE] 客户端检测到掉线: {} -> {}", protocol, cause.getMessage());
             }
         });
 
         // 2. 客户端向服务端推送数据（模拟 datasync 数据投递）
-        System.out.println("[RECONNECT-PROBE] 步骤2: 客户端#1 向服务端发送数据");
+        log.info("[RECONNECT-PROBE] 步骤2: 客户端#1 向服务端发送数据");
         client.send("sink:data:user-sink", "batch-1:张三,30");
         client.send("sink:data:user-sink", "batch-1:李四,25");
         sleep(1200);
 
         // 服务端向客户端发布数据（模拟 datasync topic 广播）
-        System.out.println("[RECONNECT-PROBE] 步骤2b: 服务端向客户端发布数据");
+        log.info("[RECONNECT-PROBE] 步骤2b: 服务端向客户端发布数据");
         syncServer.publish("sink:data:user-sink", "server-push-1");
         syncServer.publish("source:data:user-source", "server-push-2");
         subscribed.await(5, TimeUnit.SECONDS);
 
         // 3. 突然掉线：服务端停止（客户端 read 线程将收到 Socket closed -> onError -> 自动重连）
-        System.out.println("[RECONNECT-PROBE] 步骤3: 服务端 stop() 模拟突然掉线");
+        log.info("[RECONNECT-PROBE] 步骤3: 服务端 stop() 模拟突然掉线");
         try {
             syncServer.stop();
         } catch (Exception e) {
-            System.out.println("[RECONNECT-PROBE] 服务端停止异常(可忽略): " + e.getMessage());
+            log.info("[RECONNECT-PROBE] 服务端停止异常(可忽略): {}", e.getMessage());
         }
         sleep(1500);
 
@@ -163,11 +165,11 @@ public final class DataSyncReconnectProbe {
             client.send("sink:data:user-sink", "should-fail");
         } catch (Exception e) {
             wasInDownWindow = true;
-            System.out.println("[RECONNECT-PROBE] 掉线窗口内发送失败(符合预期): " + e.getClass().getSimpleName());
+            log.info("[RECONNECT-PROBE] 掉线窗口内发送失败(符合预期): {}", e.getClass().getSimpleName());
         }
 
         // 4. 短线重连：服务端重新启动 + 客户端显式重连（disconnect + connect 清理旧 Socket 重建链路）
-        System.out.println("[RECONNECT-PROBE] 步骤4: 服务端重新 start() + 客户端 disconnect+connect 短线重连");
+        log.info("[RECONNECT-PROBE] 步骤4: 服务端重新 start() + 客户端 disconnect+connect 短线重连");
         syncServer.start();
         sleep(1500);
 
@@ -178,25 +180,25 @@ public final class DataSyncReconnectProbe {
             // 忽略断开清理异常
         }
         client.connect();
-        System.out.println("[RECONNECT-PROBE] 客户端#1 重连后 isConnected=" + client.isConnected());
+        log.info("[RECONNECT-PROBE] 客户端#1 重连后 isConnected={}", client.isConnected());
 
         // 重连后再次发送数据，验证链路完全恢复
         client.send("sink:data:user-sink", "batch-3:赵六,32");
-        System.out.println("[RECONNECT-PROBE] 重连后发送数据成功, isConnected=" + client.isConnected());
+        log.info("[RECONNECT-PROBE] 重连后发送数据成功, isConnected={}", client.isConnected());
         sleep(1200);
         syncServer.publish("sink:data:user-sink", "server-push-after-reconnect");
         sleep(1200);
 
         // 汇总
-        System.out.println();
-        System.out.println("[RECONNECT-PROBE] ===== 验证结果汇总 =====");
-        System.out.println("[RECONNECT-PROBE] 服务端收到客户端消息数=" + received.get());
-        System.out.println("[RECONNECT-PROBE] 客户端接入事件=" + connected.get() + ", 断开事件=" + disconnected.get());
-        System.out.println("[RECONNECT-PROBE] 掉线窗口内发送被拒=" + wasInDownWindow + ", 连接异常(客户端回调)=" + errorCallbacks.get());
-        System.out.println("[RECONNECT-PROBE] 短线重连结果 isConnected=" + client.isConnected());
-        System.out.println("[RECONNECT-PROBE] 重连后链路恢复(收到>=3条客户端消息且 isConnected)="
-                + (received.get() >= 3 && client.isConnected()));
-        System.out.println("[RECONNECT-PROBE] 事件流水(=重连自愈通过): " + eventLog);
+        log.info("");
+        log.info("[RECONNECT-PROBE] ===== 验证结果汇总 =====");
+        log.info("[RECONNECT-PROBE] 服务端收到客户端消息数={}", received.get());
+        log.info("[RECONNECT-PROBE] 客户端接入事件={}, 断开事件={}", connected.get(), disconnected.get());
+        log.info("[RECONNECT-PROBE] 掉线窗口内发送被拒={}, 连接异常(客户端回调)={}", wasInDownWindow, errorCallbacks.get());
+        log.info("[RECONNECT-PROBE] 短线重连结果 isConnected={}", client.isConnected());
+        log.info("[RECONNECT-PROBE] 重连后链路恢复(收到>=3条客户端消息且 isConnected)={}",
+                received.get() >= 3 && client.isConnected());
+        log.info("[RECONNECT-PROBE] 事件流水(=重连自愈通过): {}", eventLog);
 
         // 清理
         try {
@@ -209,7 +211,7 @@ public final class DataSyncReconnectProbe {
         } catch (Exception ignored) {
             // 忽略
         }
-        System.out.println("[RECONNECT-PROBE] 探针结束");
+        log.info("[RECONNECT-PROBE] 探针结束");
     }
 
     /**

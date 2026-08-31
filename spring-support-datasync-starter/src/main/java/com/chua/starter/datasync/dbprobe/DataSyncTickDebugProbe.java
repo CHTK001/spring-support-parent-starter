@@ -10,6 +10,7 @@ import com.chua.starter.datasync.mapping.DefaultDataSyncMappingManager;
 import com.chua.starter.datasync.model.DataSyncMapping;
 import com.chua.starter.datasync.scheduler.DefaultSyncDataSchedulerManager;
 import reactor.core.publisher.Flux;
+import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -26,6 +27,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * @author CH
  * @since 4.0.0.42
  */
+@Slf4j
 public final class DataSyncTickDebugProbe {
 
     /** 工作目录 */
@@ -52,7 +54,7 @@ public final class DataSyncTickDebugProbe {
             @Override public void write(Flux<Map<String, Object>> rows) {
                 String ts = java.time.LocalTime.now().toString().substring(0, 12);
                 hits.add(ts + " " + Thread.currentThread().getName());
-                System.out.println("[WRITE] " + ts + " thread=" + Thread.currentThread().getName());
+                log.info("[WRITE] {} thread={}", ts, Thread.currentThread().getName());
             }
             @Override public void close() { }
         });
@@ -65,7 +67,7 @@ public final class DataSyncTickDebugProbe {
         server.start();
         Thread.sleep(5000);
         server.stop();
-        System.out.println("[SUMMARY] 5s 窗口 write 次数=" + hits.size() + "（cron=0/1 理论 5~6 次）");
+        log.info("[SUMMARY] 5s 窗口 write 次数={}（cron=0/1 理论 5~6 次）", hits.size());
         System.exit(0);
     }
 }

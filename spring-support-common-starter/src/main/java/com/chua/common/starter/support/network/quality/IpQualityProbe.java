@@ -1,6 +1,7 @@
 package com.chua.common.starter.support.network.quality;
 
 import com.chua.common.support.utils.CommandLine;
+import lombok.extern.slf4j.Slf4j;
 
 import java.nio.file.Path;
 
@@ -9,6 +10,7 @@ import java.nio.file.Path;
  *
  * @author CH
  */
+@Slf4j
 public class IpQualityProbe {
 
     /**
@@ -54,18 +56,18 @@ public class IpQualityProbe {
         IP2ProxyLiteIpQualityDetector detector = new IP2ProxyLiteIpQualityDetector(Path.of(binPath));
         for (String ip : testIps) {
             IpQuality q = detector.detect(ip.trim());
-            System.out.println("IP: " + ip);
-            System.out.println("  国家代码: " + q.getCountry());
-            System.out.println("  省份: " + q.getRegion());
-            System.out.println("  城市: " + q.getCity());
-            System.out.println("  运营商: " + q.getIsp());
-            System.out.println("  代理: " + q.isProxy());
-            System.out.println("  VPN: " + q.isVpn());
-            System.out.println("  Tor: " + q.isTor());
-            System.out.println("  数据中心: " + q.isDataCenter());
-            System.out.println("  云服务: " + q.isCloudService());
-            System.out.println("  使用类型: " + q.getUsageType());
-            System.out.println();
+            log.info("IP: {}", ip);
+            log.info("  国家代码: {}", q.getCountry());
+            log.info("  省份: {}", q.getRegion());
+            log.info("  城市: {}", q.getCity());
+            log.info("  运营商: {}", q.getIsp());
+            log.info("  代理: {}", q.isProxy());
+            log.info("  VPN: {}", q.isVpn());
+            log.info("  Tor: {}", q.isTor());
+            log.info("  数据中心: {}", q.isDataCenter());
+            log.info("  云服务: {}", q.isCloudService());
+            log.info("  使用类型: {}", q.getUsageType());
+            log.info("");
         }
     }
 }

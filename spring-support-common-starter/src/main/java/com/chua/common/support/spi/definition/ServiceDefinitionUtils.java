@@ -6,6 +6,10 @@ package com.chua.common.support.spi.definition;
  * @author CH
  */
 public class ServiceDefinitionUtils {
+
+    private ServiceDefinitionUtils() {
+    }
+
     /**
      * 构建服务定义的别名
      * <p>根据传入的参数生成服务定义对象，优先使用 key 作为服务名称，

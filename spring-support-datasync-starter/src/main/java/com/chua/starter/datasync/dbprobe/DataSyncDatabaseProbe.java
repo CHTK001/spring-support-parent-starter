@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.sql.DataSource;
 import java.io.File;
@@ -31,6 +32,7 @@ import java.io.File;
  * @since 4.0.0.42
  * @author CH
  */
+@Slf4j
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class, DataSourceInspect.class})
 @Import(DataSyncAutoConfiguration.class)
 public class DataSyncDatabaseProbe {
@@ -55,20 +57,15 @@ public class DataSyncDatabaseProbe {
 
         // 打印加载结果
         DataSyncMappingManager mappingManager = context.getBean(DataSyncMappingManager.class);
-        System.out.println("[DB-PROBE] 已加载映射数=" + mappingManager.getMappings().size());
-        mappingManager.getMappings().forEach(m -> System.out.println("[DB-PROBE] 映射: id=" + m.mappingId()
-                + ", source=" + m.sourceId()
-                + ", sink=" + m.sinkId()
-                + ", batch=" + m.batch()
-                + ", cron=" + m.cron()
-                + ", params=" + m.params()
-                + ", mappings=" + m.mappings()));
+        log.info("[DB-PROBE] 已加载映射数={}", mappingManager.getMappings().size());
+        mappingManager.getMappings().forEach(m -> log.info("[DB-PROBE] 映射: id={}, source={}, sink={}, batch={}, cron={}, params={}, mappings={}",
+                m.mappingId(), m.sourceId(), m.sinkId(), m.batch(), m.cron(), m.params(), m.mappings()));
 
         // 启动 DataSyncServer + 注册 CSV source/sink, 使 db-user-sync 定时真实执行
         DefaultDataSyncServer server = context.getBean(DefaultDataSyncServer.class);
         File outDir = new File("target/datasync-out-db");
         if (!outDir.exists() && !outDir.mkdirs()) {
-            System.out.println("[DB-PROBE] 创建输出目录失败");
+            log.warn("[DB-PROBE] 创建输出目录失败");
         }
         server.registerSource(new DelimitedDataSyncAgentSource(
                 "user-source", "user-input",
@@ -76,7 +73,7 @@ public class DataSyncDatabaseProbe {
         server.registerSink(new CsvDataSyncAgentSink(
                 "user-sink", "target/datasync-out-db/user-sink.csv"));
         server.start();
-        System.out.println("[DB-PROBE] DataSyncServer 启动成功, 等待定时调度执行");
+        log.info("[DB-PROBE] DataSyncServer 启动成功, 等待定时调度执行");
 
         // 等待调度执行 6 秒后退出 (cron=0/5 理论 1~2 轮)
         try { Thread.sleep(6000); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }

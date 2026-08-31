@@ -1,7 +1,7 @@
 package com.chua.starter.common.support.api.response;
 import com.chua.common.support.annotation.IgnoreReturnType;
-import com.chua.common.support.network.http.ContentDisposition;
-import com.chua.common.support.network.http.ContentType;
+import com.chua.starter.common.support.http.ContentDisposition;
+import com.chua.starter.common.support.http.ContentType;
 import com.chua.common.support.lang.code.ReturnCode;
 import com.chua.common.support.lang.code.ReturnPageResult;
 import com.chua.common.support.lang.code.ReturnResult;

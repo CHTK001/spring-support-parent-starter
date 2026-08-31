@@ -68,7 +68,6 @@ plugin:
       - /api/terminals
       - /api/terminals/*
       - /api/**
-      - /v2/**
       - /ws
   protocol:
     enable: false

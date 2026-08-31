@@ -28,6 +28,10 @@ import org.slf4j.LoggerFactory;
  * @author CH
  */
 public class NonceUtils {
+
+    private NonceUtils() {
+    }
+
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(NonceUtils.class);
 
