@@ -82,6 +82,13 @@ public class SysAiProvider implements Serializable {
     private Map<String, Object> extra;
 
     /**
+     * HTTP 代理地址（如 {@code http://127.0.0.1:7890}、{@code socks5://127.0.0.1:1080}），
+     * 用于 Google 等无法直连的厂商单独走代理。
+     */
+    @TableField("sys_ai_provider_proxy")
+    private String proxy;
+
+    /**
      * 排序序号
      */
     @TableField("sys_ai_provider_sort_order")
