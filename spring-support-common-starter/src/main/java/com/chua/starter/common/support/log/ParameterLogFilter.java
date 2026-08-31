@@ -85,7 +85,7 @@ public class ParameterLogFilter implements Filter {
         long startTime = System.currentTimeMillis();
         request.setAttribute(REQUEST_START_TIME, startTime);
 
-        ContentCachingRequestWrapper requestWrapper = new ContentCachingRequestWrapper(request);
+        ContentCachingRequestWrapper requestWrapper = new ContentCachingRequestWrapper(request, 0);
         ContentCachingResponseWrapper responseWrapper = new ContentCachingResponseWrapper(response);
         
         String connection = requestWrapper.getHeader("upgrade");

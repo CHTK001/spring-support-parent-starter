@@ -171,7 +171,10 @@ public class ApiUniformResponseBodyAdvice implements ResponseBodyAdvice<Object>,
         ContentDisposition contentDisposition = preconditioning.getContentDisposition();
         if (null != contentDisposition) {
             serverHttpResponse.getHeaders().setContentDisposition(org.springframework.http.ContentDisposition.attachment()
-                    .filename(contentDisposition.getFilename(), contentDisposition.getCharset())
+                    .filename(contentDisposition.getFilename(),
+                            contentDisposition.getCharset() != null
+                                    ? java.nio.charset.Charset.forName(contentDisposition.getCharset())
+                                    : java.nio.charset.StandardCharsets.UTF_8)
                     .name(contentDisposition.getName())
                     .build());
         }
