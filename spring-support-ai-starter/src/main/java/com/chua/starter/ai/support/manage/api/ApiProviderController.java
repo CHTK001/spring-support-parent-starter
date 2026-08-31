@@ -1231,7 +1231,7 @@ public class ApiProviderController {
             builder.header("Authorization", "Bearer " + apiKey);
         }
         try {
-            HttpResponse<String> response = upstreamHttpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = httpClient(proxy).send(builder.build(), HttpResponse.BodyHandlers.ofString());
             int status = response.statusCode();
             // 按前端契约映射错误码
             if (status == 401) {
