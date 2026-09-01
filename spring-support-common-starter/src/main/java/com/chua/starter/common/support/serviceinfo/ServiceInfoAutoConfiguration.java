@@ -125,66 +125,108 @@ public class ServiceInfoAutoConfiguration {
         String b = AnsiStyle.BOLD;
         String y = AnsiStyle.YELLOW;
         String gr = AnsiStyle.GRAY;
-        int W = 70;
+        char TL = '+';
+        char TR = '+';
+        char BL = '+';
+        char BR = '+';
+        char HS = '-';
+        char VS = '|';
+
+        // 先扫描所有行, 算出真实最大可见宽度
+        int maxWidth = computeMaxVisibleWidth(registry);
+        int W = Math.max(70, maxWidth + 4); // +4 = 左右各一个 | 再加2字符余量
 
         StringBuilder sb = new StringBuilder('\n');
-        sb.append(c).append("╔").append(repeat('═', W)).append("╗").append(r).append('\n');
-        sb.append(c).append("║").append(r).append(ansiPad("  " + b + y + "服务信息", W - 2)).append(c).append("║").append(r).append('\n');
-        sb.append(c).append("╠").append(repeat('═', W)).append("╣").append(r).append('\n');
+        sb.append(c).append(TL).append(repeat(HS, W)).append(TR).append(r).append('\n');
+        sb.append(c).append(VS).append(r).append(ansiPad2("  " + b + y + "服务信息", W - 2)).append(c).append(VS).append(r).append('\n');
+        sb.append(c).append(TL).append(repeat(HS, W)).append(TR).append(r).append('\n');
+
+        int maxLabelWidth = 0;
+        for (ServiceInfoRegistry.EndpointInfo ep : registry.getEndpoints().values()) {
+            int w = visibleWidth(nullToEmpty(ep.getGroup()) + "/" + ep.getName());
+            if (w > maxLabelWidth) maxLabelWidth = w;
+        }
+        for (java.util.Map.Entry<String, java.util.List<ServiceInfoRegistry.FlagInfo>> e : groupedFlags(registry).entrySet()) {
+            for (ServiceInfoRegistry.FlagInfo flag : e.getValue()) {
+                String label = flag.getDescription() != null && !flag.getDescription().isEmpty()
+                        ? flag.getDescription()
+                        : flag.getName();
+                int w = visibleWidth(label);
+                if (w > maxLabelWidth) maxLabelWidth = w;
+            }
+        }
+        maxLabelWidth = Math.max(maxLabelWidth, 8);
 
         if (!registry.getEndpoints().isEmpty()) {
-            sb.append(c).append("╭").append(repeat('─', W)).append("╮").append(r).append('\n');
-            sb.append(c).append("║").append(r).append(ansiPad("  [端点]", W - 2)).append(c).append("║").append(r).append('\n');
-            sb.append(c).append("╰").append(repeat('─', W)).append("╯").append(r).append('\n');
+            sb.append(c).append(TL).append(repeat(HS, W)).append(TR).append(r).append('\n');
+            sb.append(c).append(VS).append(r).append(ansiPad2("  " + b + "[端点]", W - 2)).append(c).append(VS).append(r).append('\n');
+            sb.append(c).append(TL).append(repeat(HS, W)).append(TR).append(r).append('\n');
             for (ServiceInfoRegistry.EndpointInfo ep : registry.getEndpoints().values()) {
                 String label = nullToEmpty(ep.getGroup()) + "/" + ep.getName();
                 String url = ep.getUrl();
                 String desc = nullToEmpty(ep.getDescription());
-                int labelLen = ansiWidth(label);
-                int urlLen = ansiWidth(url);
-                int descLen = ansiWidth(desc);
-                int inner = W - 4;
-                int pad1 = Math.max(2, inner - labelLen - urlLen - descLen - 2);
-                sb.append(c).append("║").append(r)
+                int labelW = visibleWidth(label);
+                int urlW = visibleWidth(url);
+                int descW = visibleWidth(desc);
+                int pad = Math.max(2, W - 4 - labelW - urlW - descW);
+                sb.append(c).append(VS).append(r)
                         .append("    ").append(label).append(r)
-                        .append(ansiPad("", pad1)).append(c)
+                        .append(ansiPad2("", pad)).append(c)
                         .append(url).append(r)
                         .append("  ").append(gr).append("; ").append(desc).append(r)
-                        .append(c).append("║").append(r).append('\n');
+                        .append(c).append(VS).append(r).append('\n');
             }
         }
 
         if (!registry.getFlags().isEmpty()) {
-            java.util.Map<String, java.util.List<ServiceInfoRegistry.FlagInfo>> byGroup =
-                    new java.util.LinkedHashMap<>();
-            for (ServiceInfoRegistry.FlagInfo flag : registry.getFlags().values()) {
-                byGroup.computeIfAbsent(nullToEmpty(flag.getGroup()), k -> new java.util.ArrayList<>()).add(flag);
-            }
+            java.util.Map<String, java.util.List<ServiceInfoRegistry.FlagInfo>> byGroup = groupedFlags(registry);
             for (java.util.Map.Entry<String, java.util.List<ServiceInfoRegistry.FlagInfo>> e : byGroup.entrySet()) {
-                sb.append(c).append("╭").append(repeat('─', W)).append("╮").append(r).append('\n');
-                sb.append(c).append("║").append(r).append(ansiPad("  " + b + e.getKey(), W - 2)).append(c).append("║").append(r).append('\n');
-                sb.append(c).append("╰").append(repeat('─', W)).append("╯").append(r).append('\n');
+                sb.append(c).append(TL).append(repeat(HS, W)).append(TR).append(r).append('\n');
+                sb.append(c).append(VS).append(r).append(ansiPad2("  " + b + e.getKey(), W - 2)).append(c).append(VS).append(r).append('\n');
+                sb.append(c).append(TL).append(repeat(HS, W)).append(TR).append(r).append('\n');
                 for (ServiceInfoRegistry.FlagInfo flag : e.getValue()) {
                     String label = flag.getDescription() != null && !flag.getDescription().isEmpty()
                             ? flag.getDescription()
                             : flag.getName();
                     String suffix = (flag.getSuffix() != null && !flag.getSuffix().isEmpty())
                             ? " " + c + flag.getSuffix() + r : "";
-                    int labelLen = ansiWidth(label);
-                    int sufLen = suffix.isEmpty() ? 0 : ansiWidth(suffix);
-                    int inner = W - 4;
-                    int pad1 = Math.max(2, inner - labelLen - sufLen);
-                    sb.append(c).append("║").append(r)
+                    int labelW = visibleWidth(label);
+                    int sufW = suffix.isEmpty() ? 0 : visibleWidth(suffix);
+                    int pad = Math.max(2, W - 4 - labelW - sufW);
+                    sb.append(c).append(VS).append(r)
                             .append("      ").append(label).append(r)
-                            .append(ansiPad("", pad1)).append(c)
+                            .append(ansiPad2("", pad)).append(c)
                             .append(AnsiStyle.cnLabel(flag.getValue())).append(r)
-                            .append(suffix).append(c).append("║").append(r).append('\n');
+                            .append(suffix).append(c).append(VS).append(r).append('\n');
                 }
             }
         }
 
-        sb.append(c).append("╚").append(repeat('═', W)).append("╝").append(r);
+        sb.append(c).append(BL).append(repeat(HS, W)).append(BR).append(r);
         log.info("{}", sb);
+    }
+
+    /** computeMaxVisibleWidth 扫描所有行计算内容最大可见列宽 */
+    private static int computeMaxVisibleWidth(ServiceInfoRegistry registry) {
+        int max = 0;
+        for (ServiceInfoRegistry.EndpointInfo ep : registry.getEndpoints().values()) {
+            int labelW = visibleWidth(nullToEmpty(ep.getGroup()) + "/" + ep.getName());
+            int urlW = visibleWidth(ep.getUrl());
+            int descW = visibleWidth(nullToEmpty(ep.getDescription()));
+            int w = 4 + labelW + 2 + urlW + 2 + descW; // 左边距+label+pad+url+";"+desc
+            if (w > max) max = w;
+        }
+        for (ServiceInfoRegistry.FlagInfo flag : registry.getFlags().values()) {
+            String label = flag.getDescription() != null && !flag.getDescription().isEmpty()
+                    ? flag.getDescription()
+                    : flag.getName();
+            int labelW = visibleWidth(label);
+            int sufW = flag.getSuffix() != null && !flag.getSuffix().isEmpty()
+                    ? visibleWidth(" " + flag.getSuffix()) : 0;
+            int w = 6 + labelW + sufW;
+            if (w > max) max = w;
+        }
+        return max;
     }
 
     /** Repeat */
@@ -194,7 +236,7 @@ public class ServiceInfoAutoConfiguration {
         return sb.toString();
     }
 
-    /** AnsiWidth 计算去掉 ANSI 转义后的可见字符长度 */
+    /** AnsiWidth 计算去掉 ANSI 转义后的可见字符长度 (纯 ASCII, 每个字符算 1) */
     private static int ansiWidth(String s) {
         if (s == null) return 0;
         int width = 0;
@@ -211,10 +253,44 @@ public class ServiceInfoAutoConfiguration {
         return width;
     }
 
-    /** AnsiPad 在忽略 ANSI 颜色的情况下填充空格使输出宽度恰好为 target */
+    /** VisibleWidth 终端可见列宽: CJK/全角字符算 2, 其余算 1 */
+    private static int visibleWidth(String s) {
+        if (s == null) return 0;
+        int w = 0;
+        for (int i = 0; i < s.length(); ) {
+            if (s.charAt(i) == '\u001B' && i + 2 < s.length() && s.charAt(i + 1) == '[') {
+                int j = i + 2;
+                while (j < s.length() && Character.isLetterOrDigit(s.charAt(j))) j++;
+                i = j;
+            } else {
+                char ch = s.charAt(i++);
+                w += isFullwidth(ch) ? 2 : 1;
+            }
+        }
+        return w;
+    }
+
+    /** IsFullwidth */
+    private static boolean isFullwidth(char ch) {
+        return (ch >= '\u4E00' && ch <= '\u9FFF')
+                || (ch >= '\u3000' && ch <= '\u303F')
+                || (ch >= '\uFF00' && ch <= '\uFFEF');
+    }
+
+    /** AnsiPad 在忽略 ANSI 颜色的情况下填充空格使输出宽度恰好为 target (基于终端可见列宽) */
     private static String ansiPad(String s, int target) {
         if (target <= 0) return "";
         int w = ansiWidth(s);
+        int need = Math.max(0, target - w);
+        StringBuilder sb = new StringBuilder(s);
+        for (int i = 0; i < need; i++) sb.append(' ');
+        return sb.toString();
+    }
+
+    /** AnsiPad2 同上但使用终端可见列宽 (CJK 算 2 列) */
+    private static String ansiPad2(String s, int target) {
+        if (target <= 0) return "";
+        int w = visibleWidth(s);
         int need = Math.max(0, target - w);
         StringBuilder sb = new StringBuilder(s);
         for (int i = 0; i < need; i++) sb.append(' ');
@@ -226,12 +302,13 @@ public class ServiceInfoAutoConfiguration {
         return s == null ? "" : s;
     }
 
-    /** Pad */
-    private static String pad(String s, int len) {
-        if (s == null) s = "";
-        if (s.length() >= len) return s;
-        StringBuilder sb = new StringBuilder(s);
-        while (sb.length() < len) sb.append(' ');
-        return sb.toString();
+    /** GroupedFlags 按 group 分组 */
+    private static java.util.Map<String, java.util.List<ServiceInfoRegistry.FlagInfo>> groupedFlags(
+            ServiceInfoRegistry registry) {
+        java.util.Map<String, java.util.List<ServiceInfoRegistry.FlagInfo>> byGroup = new java.util.LinkedHashMap<>();
+        for (ServiceInfoRegistry.FlagInfo flag : registry.getFlags().values()) {
+            byGroup.computeIfAbsent(nullToEmpty(flag.getGroup()), k -> new java.util.ArrayList<>()).add(flag);
+        }
+        return byGroup;
     }
 }

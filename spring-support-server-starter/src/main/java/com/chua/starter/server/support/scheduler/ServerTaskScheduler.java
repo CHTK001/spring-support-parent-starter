@@ -46,11 +46,8 @@ public class ServerTaskScheduler {
     /** 最小调度间隔（秒） */
     private static final int MIN_INTERVAL_SECONDS = 5;
 
-    /** 在离线检测配置前缀 */
-    private static final String PREFIX_ONLINE = "host.online";
-
-    /** 采集配置前缀 */
-    private static final String PREFIX_COLLECT = "host.collect";
+    /** 主机级检测/采集扫描粒度（秒）：每 5s 扫描一次所有启用主机，按各自间隔决定是否执行 */
+    private static final int HOST_SCAN_INTERVAL_SECONDS = 5;
 
     /** 系统配置服务 */
     private final ServerConfigService configService;
@@ -111,7 +108,8 @@ public class ServerTaskScheduler {
     }
 
     /**
-     * 配置变更监听：按变更前缀动态重排对应周期任务
+     * 主机级配置变更监听：重新注册周期任务
+     * <p>主机配置变更（新增/编辑/删除）或全局 connection 配置变更时触发。</p>
      *
      * @param event 配置变更事件
      */
@@ -120,41 +118,27 @@ public class ServerTaskScheduler {
         if (timer == null || !timer.isRunning()) {
             return;
         }
-        if (event.containsPrefix(PREFIX_ONLINE)) {
-            rescheduleOnline();
-        }
-        if (event.containsPrefix(PREFIX_COLLECT)) {
-            rescheduleCollect();
-        }
+        rescheduleOnline();
+        rescheduleCollect();
         log.info("[task-scheduler] 配置变更已重排周期任务: {}", event.getKeys());
     }
 
     /**
-     * 重排在离线检测任务
+     * 重排在离线检测任务：固定细粒度扫描，各主机按自身开关/间隔决定是否探测
      */
     private void rescheduleOnline() {
         cancelTask(onlineTask);
-        if (!configService.getBoolean("host.online.enabled", true)) {
-            onlineTask = null;
-            return;
-        }
-        int interval = normalizeInterval(configService.getInt("host.online.interval", 60));
         onlineTask = timer.scheduleAtFixedRate(onlineScheduler::tick,
-                interval, interval, TimeUnit.SECONDS);
+                HOST_SCAN_INTERVAL_SECONDS, HOST_SCAN_INTERVAL_SECONDS, TimeUnit.SECONDS);
     }
 
     /**
-     * 重排采集任务
+     * 重排采集任务：固定细粒度扫描，各主机按自身开关/间隔/方式决定是否采集
      */
     private void rescheduleCollect() {
         cancelTask(collectTask);
-        if (!configService.getBoolean("host.collect.enabled", false)) {
-            collectTask = null;
-            return;
-        }
-        int interval = normalizeInterval(configService.getInt("host.collect.interval", 3600));
         collectTask = timer.scheduleAtFixedRate(onlineScheduler::collectTick,
-                interval, interval, TimeUnit.SECONDS);
+                HOST_SCAN_INTERVAL_SECONDS, HOST_SCAN_INTERVAL_SECONDS, TimeUnit.SECONDS);
     }
 
     /**

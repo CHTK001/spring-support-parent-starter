@@ -101,6 +101,28 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (host.getServerHostOnline() == null) {
             host.setServerHostOnline(ONLINE_UNKNOWN);
         }
+        // 主机级系统配置默认值
+        if (host.getServerHostOnlineEnabled() == null) {
+            host.setServerHostOnlineEnabled(1);
+        }
+        if (host.getServerHostOnlineInterval() == null) {
+            host.setServerHostOnlineInterval(60);
+        }
+        if (host.getServerHostCollectEnabled() == null) {
+            host.setServerHostCollectEnabled(0);
+        }
+        if (host.getServerHostCollectMode() == null || isBlank(host.getServerHostCollectMode())) {
+            host.setServerHostCollectMode("SCHEDULED");
+        }
+        if (host.getServerHostCollectInterval() == null) {
+            host.setServerHostCollectInterval(3600);
+        }
+        if (host.getServerHostAgentEnabled() == null) {
+            host.setServerHostAgentEnabled(0);
+        }
+        if (host.getServerHostRemoteEnabled() == null) {
+            host.setServerHostRemoteEnabled(1);
+        }
         // 探针标识服务端生成，保证全局唯一
         host.setServerHostAgentKey(generateAgentKey());
         hostMapper.insert(host);
@@ -143,6 +165,28 @@ public class ServerHostServiceImpl implements ServerHostService {
         }
         if (!isBlank(host.getServerHostDescription())) {
             exists.setServerHostDescription(host.getServerHostDescription());
+        }
+        // 主机级系统配置（开关可为 0/1，用 != null 覆盖以便显式关闭）
+        if (host.getServerHostOnlineEnabled() != null) {
+            exists.setServerHostOnlineEnabled(host.getServerHostOnlineEnabled());
+        }
+        if (host.getServerHostOnlineInterval() != null && host.getServerHostOnlineInterval() > 0) {
+            exists.setServerHostOnlineInterval(host.getServerHostOnlineInterval());
+        }
+        if (host.getServerHostCollectEnabled() != null) {
+            exists.setServerHostCollectEnabled(host.getServerHostCollectEnabled());
+        }
+        if (!isBlank(host.getServerHostCollectMode())) {
+            exists.setServerHostCollectMode(host.getServerHostCollectMode());
+        }
+        if (host.getServerHostCollectInterval() != null && host.getServerHostCollectInterval() > 0) {
+            exists.setServerHostCollectInterval(host.getServerHostCollectInterval());
+        }
+        if (host.getServerHostAgentEnabled() != null) {
+            exists.setServerHostAgentEnabled(host.getServerHostAgentEnabled());
+        }
+        if (host.getServerHostRemoteEnabled() != null) {
+            exists.setServerHostRemoteEnabled(host.getServerHostRemoteEnabled());
         }
         // 透传前端提交的凭据瞬态字段（账号密码/PEM），供 autoCreateIdentity 创建/更新身份
         exists.setServerHostAccount(host.getServerHostAccount());
