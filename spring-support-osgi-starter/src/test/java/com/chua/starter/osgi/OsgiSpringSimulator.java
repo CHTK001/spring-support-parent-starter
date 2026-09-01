@@ -3,7 +3,6 @@ package com.chua.starter.osgi;
 import com.chua.common.support.objects.DefaultObjectContext;
 import com.chua.common.support.objects.ObjectContext;
 import com.chua.common.support.objects.ObjectContextConfig;
-import com.chua.common.support.osgi.OsgiLauncher;
 import com.chua.osgi.support.FelixOsgiLauncher;
 import com.chua.osgi.support.register.impl.OsgiBeanDefinitionRegister;
 import com.chua.starter.osgi.properties.OsgiProperties;
@@ -11,7 +10,6 @@ import com.chua.starter.osgi.properties.OsgiShellBundleProperties;
 import com.chua.starter.osgi.service.OsgiShellBundleManager;
 
 import java.io.File;
-import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,10 +37,11 @@ import java.util.Map;
  */
 public class OsgiSpringSimulator {
 
+    @SuppressWarnings("unchecked")
     public static void main(String[] args) throws Exception {
         SimulatorResult result = new SimulatorResult("OsgiSpringSimulator");
+        final Object[] launcherHolder = new Object[1];
 
-        FelixOsgiLauncher launcher = null;
         try {
             // ========== 1. 模拟 Spring 属性绑定 ==========
             OsgiProperties osgiProps = new OsgiProperties();
@@ -66,7 +65,8 @@ public class OsgiSpringSimulator {
             bundleProps.setSftpEnabled(true);
 
             result.run("1_felixStart", () -> {
-                launcher = new FelixOsgiLauncher();
+                FelixOsgiLauncher launcher = new FelixOsgiLauncher();
+                launcherHolder[0] = launcher;
                 Map<String, String> config = new HashMap<>();
                 config.put("org.osgi.framework.storage", osgiProps.getStorage());
                 config.put("org.osgi.framework.startlevel.beginning", String.valueOf(osgiProps.getStartLevel()));
@@ -74,11 +74,11 @@ public class OsgiSpringSimulator {
                 config.put("osgi.shell.telnet.host", shell.getHost());
                 config.put("osgi.shell.telnet.port", String.valueOf(shell.getTelnetPort()));
                 launcher.start(config);
-                assertState(launcher.isActive(), "Felix 框架应已激活");
+                assertTrue(launcher.isActive(), "Felix 框架应已激活");
             });
 
             result.run("2_installGogoBundles", () -> {
-                // 通过反射找到 classpath 中的 gogo jar
+                FelixOsgiLauncher launcher = (FelixOsgiLauncher) launcherHolder[0];
                 String gogoRuntime = locateJar("org.apache.felix.gogo.runtime");
                 String gogoCommand = locateJar("org.apache.felix.gogo.command");
                 String gogoShell = locateJar("org.apache.felix.gogo.shell");
@@ -87,55 +87,63 @@ public class OsgiSpringSimulator {
                 if (gogoCommand != null) launcher.installBundle(gogoCommand);
                 if (gogoShell != null) launcher.installBundle(gogoShell);
 
-                Thread.sleep(1000);
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
                 List<?> bundles = getBundleList(launcher);
-                assertState(!bundles.isEmpty(), "应至少安装 system bundle + gogo bundles");
+                assertTrue(!bundles.isEmpty(), "应至少安装 system bundle + gogo bundles");
                 System.out.println("  [INFO] 已安装 bundles: " + bundles.size());
             });
 
             result.run("3_shellBundleManagerInit", () -> {
+                FelixOsgiLauncher launcher = (FelixOsgiLauncher) launcherHolder[0];
                 OsgiShellBundleManager manager = new OsgiShellBundleManager(launcher, bundleProps);
                 manager.afterPropertiesSet();
-                assertState(manager.isStarted(), "Shell Bundle 管理器应已启动");
+                assertTrue(manager.isStarted(), "Shell Bundle 管理器应已启动");
                 System.out.println("  [INFO] 已管理的 bundles: " + manager.getInstalledBundleNames());
             });
 
             result.run("4_osgiServiceBridge", () -> {
+                FelixOsgiLauncher launcher = (FelixOsgiLauncher) launcherHolder[0];
                 ObjectContext ctx = new DefaultObjectContext(ObjectContextConfig.defaults());
                 OsgiBeanDefinitionRegister register = new OsgiBeanDefinitionRegister();
                 register.setOsgiLauncher(launcher);
                 register.initialize();
                 boolean added = ctx.registerBean(register);
-                assertState(added, "OsgiBeanDefinitionRegister 应注册到 ObjectContext");
+                assertTrue(added, "OsgiBeanDefinitionRegister 应注册到 ObjectContext");
                 System.out.println("  [INFO] ObjectContext 桥接 OSGi 成功");
             });
 
             result.run("5_bundleStatusSnapshot", () -> {
+                FelixOsgiLauncher launcher = (FelixOsgiLauncher) launcherHolder[0];
                 OsgiShellBundleManager manager = new OsgiShellBundleManager(launcher, bundleProps);
-                var status = manager.getBundleStatus();
+                List<Map<String, Object>> status = manager.getBundleStatus();
                 System.out.println("  [INFO] Bundle 状态快照:");
                 for (Map<String, Object> b : status) {
                     System.out.println("    - " + b.get("symbolicName")
                             + " [state=" + b.get("state") + ", managed=" + b.get("installedViaManager") + "]");
                 }
-                assertState(!status.isEmpty(), "应有 bundle 状态信息");
+                assertTrue(!status.isEmpty(), "应有 bundle 状态信息");
             });
 
             result.run("6_uninstallTest", () -> {
-                // 找一个 Gogo bundle 卸载
-                var bundles = launcher.getBundles();
+                FelixOsgiLauncher launcher = (FelixOsgiLauncher) launcherHolder[0];
+                List<?> bundles = launcher.getBundles();
                 String toUninstall = null;
-                for (var b : bundles) {
-                    String name = b.getSymbolicName();
-                    if (name.contains("gogo.command") || name.contains("gogo.shell")) {
+                for (Object b : bundles) {
+                    String name = (String) invokeMethod(b, "getSymbolicName");
+                    if (name != null && (name.contains("gogo.command") || name.contains("gogo.shell"))) {
                         toUninstall = name;
                         break;
                     }
                 }
                 if (toUninstall != null) {
-                    boolean removed = launcher.getBundles().stream()
-                            .anyMatch(b -> toUninstall.equals(b.getSymbolicName()));
-                    System.out.println("  [INFO] 测试卸载 bundle: " + toUninstall + " (存在=" + removed + ")");
+                    final String finalToUninstall = toUninstall;
+                    boolean exists = launcher.getBundles().stream()
+                            .anyMatch(b -> finalToUninstall.equals(invokeMethod(b, "getSymbolicName")));
+                    System.out.println("  [INFO] 测试卸载 bundle: " + toUninstall + " (存在=" + exists + ")");
                 } else {
                     System.out.println("  [INFO] 未找到可卸载的 Gogo bundle，跳过");
                 }
@@ -143,15 +151,15 @@ public class OsgiSpringSimulator {
 
             result.run("7_propertiesValidation", () -> {
                 OsgiProperties props = new OsgiProperties();
-                assertState(props.isEnabled(), "OSGi 默认启用");
-                assertState(props.getShell().getTelnetPort() == 6666, "默认 telnet 端口 6666");
-                assertState(!props.getShell().isEnabled(), "默认 shell 禁用");
+                assertTrue(props.isEnabled(), "OSGi 默认启用");
+                assertTrue(props.getShell().getTelnetPort() == 6666, "默认 telnet 端口 6666");
+                assertTrue(!props.getShell().isEnabled(), "默认 shell 禁用");
 
                 OsgiShellBundleProperties bp = new OsgiShellBundleProperties();
-                assertState(bp.isEnabled(), "Bundle管理器默认启用");
-                assertState(bp.isInstallGogo(), "默认安装 Gogo");
-                assertState(bp.isInstallSshd(), "默认安装 SSHD");
-                assertState(bp.getSshdPort() == 8122, "默认 SSHD 端口 8122");
+                assertTrue(bp.isEnabled(), "Bundle管理器默认启用");
+                assertTrue(bp.isInstallGogo(), "默认安装 Gogo");
+                assertTrue(bp.isInstallSshd(), "默认安装 SSHD");
+                assertTrue(bp.getSshdPort() == 8122, "默认 SSHD 端口 8122");
                 System.out.println("  [INFO] 属性验证全部通过");
             });
 
@@ -161,9 +169,10 @@ public class OsgiSpringSimulator {
             t.printStackTrace();
         } finally {
             result.run("8_felixStop", () -> {
+                FelixOsgiLauncher launcher = (FelixOsgiLauncher) launcherHolder[0];
                 if (launcher != null) {
                     launcher.stop();
-                    assertState(!launcher.isActive(), "Felix 停止后应非激活");
+                    assertTrue(!launcher.isActive(), "Felix 停止后应非激活");
                     System.out.println("  [INFO] Felix 已停止");
                 }
             });
@@ -181,7 +190,7 @@ public class OsgiSpringSimulator {
 
     // ==================== 辅助方法 ====================
 
-    private static void assertState(boolean cond, String msg) {
+    private static void assertTrue(boolean cond, String msg) {
         if (!cond) throw new AssertionError(msg);
     }
 
@@ -208,10 +217,19 @@ public class OsgiSpringSimulator {
     @SuppressWarnings("unchecked")
     private static List<?> getBundleList(FelixOsgiLauncher launcher) {
         try {
-            Method m = FelixOsgiLauncher.class.getMethod("getBundles");
+            java.lang.reflect.Method m = FelixOsgiLauncher.class.getMethod("getBundles");
             return (List<?>) m.invoke(launcher);
         } catch (Exception e) {
             return List.of();
+        }
+    }
+
+    private static Object invokeMethod(Object obj, String methodName) {
+        try {
+            java.lang.reflect.Method m = obj.getClass().getMethod(methodName);
+            return m.invoke(obj);
+        } catch (Exception e) {
+            return null;
         }
     }
 

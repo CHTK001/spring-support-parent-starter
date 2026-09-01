@@ -1,0 +1,193 @@
+package com.chua.starter.ai.support.manage.api;
+
+import com.chua.starter.ai.support.manage.common.ApiErrorCode;
+import com.chua.starter.ai.support.manage.common.ApiException;
+import com.chua.starter.ai.support.manage.common.ApiResult;
+import com.chua.starter.ai.support.service.SysAiAgentService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Agent 管理控制器（主 Agent / 子 Agent 的 CRUD 与编排）。
+ *
+ * <p>对应前端「Agent 管理」页：新增/编辑 Agent，配置模型（provider + model）、
+ * MCP、Skill、SystemPrompt 与策略；主从编排图（X6）保存/加载；
+ * 以及将 Agent 注册为模型（Agent-as-Model）供对话链路选择。</p>
+ *
+ * <p>数据持久化到 {@code sys_ai_agent} 表，运行时经 {@link SysAiAgentService}
+ * 动态构建并注册到 {@code AgentRegistry}。</p>
+ *
+ * @since 4.0.0.42
+ * @author CH
+ */
+@RestController
+@RequestMapping("/api/agents/managed")
+@RequiredArgsConstructor
+@Slf4j
+public class ApiAgentManageController {
+
+    /**
+     * Agent 管理服务
+     */
+    private final SysAiAgentService agentService;
+
+    /**
+     * 列举全部主 Agent（含子 Agent）。
+     *
+     * @return 主 Agent 列表
+     */
+    @GetMapping
+    public ApiResult<List<Map<String, Object>>> listAgents() {
+        return ApiResult.ok(agentService.listAgents());
+    }
+
+    /**
+     * 获取单个 Agent 详情（含子 Agent）。
+     *
+     * @param agentId Agent ID
+     * @return Agent 详情
+     */
+    @GetMapping("/{agentId}")
+    public ApiResult<Map<String, Object>> getAgent(@PathVariable("agentId") String agentId) {
+        return ApiResult.ok(agentService.getAgent(agentId));
+    }
+
+    /**
+     * 创建主 Agent。
+     *
+     * @param body 创建请求
+     * @return 创建后的 Agent
+     */
+    @PostMapping
+    public ApiResult<Map<String, Object>> createAgent(@RequestBody Map<String, Object> body) {
+        return ApiResult.ok(agentService.createAgent(body));
+    }
+
+    /**
+     * 更新主 Agent。
+     *
+     * @param agentId Agent ID
+     * @param body    更新请求
+     * @return 更新后的 Agent
+     */
+    @PutMapping("/{agentId}")
+    public ApiResult<Map<String, Object>> updateAgent(@PathVariable("agentId") String agentId,
+                                                       @RequestBody Map<String, Object> body) {
+        return ApiResult.ok(agentService.updateAgent(agentId, body));
+    }
+
+    /**
+     * 删除主 Agent（级联删除子 Agent）。
+     *
+     * @param agentId Agent ID
+     * @return 成功
+     */
+    @DeleteMapping("/{agentId}")
+    public ApiResult<Void> deleteAgent(@PathVariable("agentId") String agentId) {
+        agentService.deleteAgent(agentId);
+        return ApiResult.ok();
+    }
+
+    /**
+     * 创建子 Agent。
+     *
+     * @param agentId 主 Agent ID
+     * @param body    子 Agent 请求
+     * @return 创建后的子 Agent
+     */
+    @PostMapping("/{agentId}/sub-agents")
+    public ApiResult<Map<String, Object>> createSubAgent(@PathVariable("agentId") String agentId,
+                                                          @RequestBody Map<String, Object> body) {
+        return ApiResult.ok(agentService.createSubAgent(agentId, body));
+    }
+
+    /**
+     * 更新子 Agent。
+     *
+     * @param agentId 主 Agent ID
+     * @param subId   子 Agent ID
+     * @param body    更新请求
+     * @return 更新后的子 Agent
+     */
+    @PutMapping("/{agentId}/sub-agents/{subId}")
+    public ApiResult<Map<String, Object>> updateSubAgent(@PathVariable("agentId") String agentId,
+                                                          @PathVariable("subId") String subId,
+                                                          @RequestBody Map<String, Object> body) {
+        return ApiResult.ok(agentService.updateSubAgent(agentId, subId, body));
+    }
+
+    /**
+     * 删除子 Agent。
+     *
+     * @param agentId 主 Agent ID
+     * @param subId   子 Agent ID
+     * @return 成功
+     */
+    @DeleteMapping("/{agentId}/sub-agents/{subId}")
+    public ApiResult<Void> deleteSubAgent(@PathVariable("agentId") String agentId,
+                                           @PathVariable("subId") String subId) {
+        agentService.deleteSubAgent(agentId, subId);
+        return ApiResult.ok();
+    }
+
+    /**
+     * 保存编排图（节点 + 连线）。
+     *
+     * @param agentId Agent ID
+     * @param body    { nodes, edges }
+     * @return 保存结果
+     */
+    @PostMapping("/{agentId}/orchestration")
+    public ApiResult<Map<String, Object>> saveOrchestration(@PathVariable("agentId") String agentId,
+                                                             @RequestBody Map<String, Object> body) {
+        return ApiResult.ok(agentService.saveOrchestration(agentId, body));
+    }
+
+    /**
+     * 加载编排图。
+     *
+     * @param agentId Agent ID
+     * @return { nodes, edges, mode }
+     */
+    @GetMapping("/{agentId}/orchestration")
+    public ApiResult<Map<String, Object>> getOrchestration(@PathVariable("agentId") String agentId) {
+        return ApiResult.ok(agentService.getOrchestration(agentId));
+    }
+
+    /**
+     * 注册为模型（Agent-as-Model）。
+     *
+     * @param agentId   Agent ID
+     * @param modelName 模型名（可选）
+     * @return 注册结果
+     */
+    @PostMapping("/{agentId}/register")
+    public ApiResult<Map<String, Object>> registerAsModel(@PathVariable("agentId") String agentId,
+                                                           @RequestParam(required = false) String model_name) {
+        return ApiResult.ok(agentService.registerAsModel(agentId, model_name));
+    }
+
+    /**
+     * 重建运行时 Agent（编排保存后热更新）。
+     *
+     * @param agentId Agent ID
+     * @return 成功
+     */
+    @PostMapping("/{agentId}/rebuild")
+    public ApiResult<Void> rebuild(@PathVariable("agentId") String agentId) {
+        agentService.rebuildAgentById(agentId);
+        return ApiResult.ok();
+    }
+}

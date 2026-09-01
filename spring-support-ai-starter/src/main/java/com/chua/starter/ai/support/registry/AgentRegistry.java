@@ -164,6 +164,54 @@ public class AgentRegistry {
     }
 
     /**
+     * 注册已构建的 Agent 实例（保留子 Agent 独立模型/MCP/Skill 配置）。
+     *
+     * @param name         Agent 名称
+     * @param agent        已构建的 Agent 实例
+     * @param groups       分组标签
+     * @param capabilities 能力标签
+     * @return 注册后的 Agent 实例
+     */
+    public Agent registerInstance(String name, Agent agent, String[] groups, String[] capabilities) {
+        if (name == null || agent == null) {
+            log.warn("[AgentRegistry] 注册参数不完整: name={}, agent={}", name, agent);
+            return null;
+        }
+        // 注入全局 SkillManager / McpManager
+        if (skillManager != null) {
+            try {
+                agent.skillManager(skillManager);
+            } catch (Exception e) {
+                log.warn("[AgentRegistry] 注入 SkillManager 失败: {}", e.getMessage());
+            }
+        }
+        if (mcpManager != null) {
+            try {
+                agent.mcpManager(mcpManager);
+            } catch (Exception e) {
+                log.warn("[AgentRegistry] 注入 McpManager 失败: {}", e.getMessage());
+            }
+        }
+
+        agentIndex.put(name, agent);
+        allAgents.add(agent);
+
+        if (groups != null) {
+            for (String group : groups) {
+                groupIndex.computeIfAbsent(group, k -> new CopyOnWriteArrayList<>()).add(agent);
+            }
+        }
+        if (capabilities != null) {
+            for (String capability : capabilities) {
+                capabilityIndex.computeIfAbsent(capability, k -> new CopyOnWriteArrayList<>()).add(agent);
+            }
+        }
+
+        log.info("[AgentRegistry] 注册 Agent 实例: name={}", name);
+        return agent;
+    }
+
+    /**
      * 批量注册 Agent 定义（延迟初始化）。
      * <p>在 ChatClient 就绪后统一初始化。</p>
      *
@@ -265,9 +313,9 @@ public class AgentRegistry {
     }
 
     /**
-     * 获取所有已注册的 Agent 名称。
+     * 获取所有已注册的 provider 名称。
      *
-     * @return Agent 名称集合
+     * @return provider 名称集合
      */
     public Set<String> getNames() {
         return Collections.unmodifiableSet(agentIndex.keySet());
@@ -290,6 +338,32 @@ public class AgentRegistry {
      */
     public boolean hasAgent(String name) {
         return agentIndex.containsKey(name);
+    }
+
+    /**
+     * 注销 Agent（移除所有索引并关闭）。
+     *
+     * @param name Agent 名称
+     * @return 是否注销成功（原已注册）
+     */
+    public boolean unregister(String name) {
+        Agent agent = agentIndex.remove(name);
+        if (agent == null) {
+            return false;
+        }
+        allAgents.remove(agent);
+        if (masterAgent == agent) {
+            masterAgent = null;
+        }
+        groupIndex.values().forEach(list -> list.remove(agent));
+        capabilityIndex.values().forEach(list -> list.remove(agent));
+        try {
+            agent.close();
+        } catch (Exception e) {
+            log.warn("[AgentRegistry] 关闭 Agent 失败: name={}", name, e);
+        }
+        log.info("[AgentRegistry] 注销 Agent: name={}", name);
+        return true;
     }
 
     /**

@@ -4,6 +4,9 @@ import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
 import io.modelcontextprotocol.client.transport.HttpClientSseClientTransport;
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
+import io.modelcontextprotocol.client.transport.ServerParameters;
+import io.modelcontextprotocol.client.transport.StdioClientTransport;
+import io.modelcontextprotocol.json.McpJsonDefaults;
 import io.modelcontextprotocol.spec.McpSchema;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -46,20 +49,26 @@ public class McpConnectionService {
         Map<String, Object> result = new LinkedHashMap<>();
         String type = transport == null ? "" : String.valueOf(transport.getOrDefault("type", ""));
         String url = transport == null ? "" : String.valueOf(transport.getOrDefault("url", ""));
-        if (url == null || url.isBlank()) {
+        boolean isStdio = "stdio".equalsIgnoreCase(type);
+
+        // stdio 用本地命令启动，不要求 URL；HTTP/SSE 必须提供 URL
+        if (!isStdio && (url == null || url.isBlank())) {
             result.put("success", false);
             result.put("error", "MCP 服务器 URL 不能为空");
             result.put("code", "BAD_REQUEST");
             return result;
         }
-
-        @SuppressWarnings("unchecked")
-        Map<String, Object> headers =
-                transport.get("headers") instanceof Map<?, ?> h ? (Map<String, Object>) h : null;
+        if (isStdio && (transport == null || transport.get("command") == null
+                || String.valueOf(transport.get("command")).isBlank())) {
+            result.put("success", false);
+            result.put("error", "stdio MCP 服务器 command 不能为空");
+            result.put("code", "BAD_REQUEST");
+            return result;
+        }
 
         try {
             io.modelcontextprotocol.spec.McpClientTransport clientTransport =
-                    buildTransport(type, url, headers);
+                    buildTransport(transport);
             if (clientTransport == null) {
                 result.put("success", false);
                 result.put("error", "不支持的 MCP 传输类型: " + type);
@@ -86,7 +95,7 @@ public class McpConnectionService {
                 return result;
             }
         } catch (Exception e) {
-            log.warn("[McpConnection] 连接 MCP 服务器失败: name={}, url={}, err={}", name, url, e.getMessage());
+            log.warn("[McpConnection] 连接 MCP 服务器失败: name={}, type={}, err={}", name, type, e.getMessage());
             result.put("success", false);
             result.put("error", e.getMessage() == null ? String.valueOf(e) : e.getMessage());
             result.put("code", "CONNECTION_FAILED");
@@ -95,15 +104,20 @@ public class McpConnectionService {
     }
 
     /**
-     * 根据传输类型构建 MCP client transport。
+     * 根据传输配置构建 MCP client transport。
      *
-     * @param type    http / streamable_http / sse
-     * @param url     服务器地址
-     * @param headers 可选自定义请求头
+     * @param transport transport 配置（type + url/command/args/env + headers）
      * @return 对应 transport，不支持的 type 返回 null
      */
-    private io.modelcontextprotocol.spec.McpClientTransport buildTransport(
-            String type, String url, Map<String, Object> headers) {
+    private io.modelcontextprotocol.spec.McpClientTransport buildTransport(Map<String, Object> transport) {
+        String type = transport == null ? "" : String.valueOf(transport.getOrDefault("type", ""));
+        String url = transport == null ? "" : String.valueOf(transport.getOrDefault("url", ""));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> headers =
+                transport == null || !(transport.get("headers") instanceof Map<?, ?> h)
+                        ? null
+                        : (Map<String, Object>) h;
+
         String normalized = type == null ? "" : type.toLowerCase();
         switch (normalized) {
             case "http":
@@ -112,6 +126,8 @@ public class McpConnectionService {
                 return buildStreamableHttpTransport(url, headers);
             case "sse":
                 return buildSseTransport(url, headers);
+            case "stdio":
+                return buildStdioTransport(transport);
             default:
                 return null;
         }
@@ -130,6 +146,38 @@ public class McpConnectionService {
         HttpClientSseClientTransport.Builder builder = HttpClientSseClientTransport.builder(url);
         applyHeaders(builder, headers);
         return builder.build();
+    }
+
+    /** 构建 stdio 本地进程 transport（command + args + env） */
+    private io.modelcontextprotocol.spec.McpClientTransport buildStdioTransport(Map<String, Object> transport) {
+        String command = String.valueOf(transport.getOrDefault("command", ""));
+        ServerParameters.Builder builder = ServerParameters.builder(command);
+
+        Object rawArgs = transport.get("args");
+        if (rawArgs instanceof Iterable<?> iterable) {
+            List<String> args = new ArrayList<>();
+            for (Object a : iterable) {
+                args.add(String.valueOf(a));
+            }
+            if (!args.isEmpty()) {
+                builder.args(args);
+            }
+        }
+
+        Object rawEnv = transport.get("env");
+        if (rawEnv instanceof Map<?, ?> envMap) {
+            Map<String, String> env = new HashMap<>();
+            for (Map.Entry<?, ?> e : envMap.entrySet()) {
+                if (e.getValue() != null) {
+                    env.put(String.valueOf(e.getKey()), String.valueOf(e.getValue()));
+                }
+            }
+            if (!env.isEmpty()) {
+                builder.env(env);
+            }
+        }
+
+        return new StdioClientTransport(builder.build(), McpJsonDefaults.getMapper());
     }
 
     /** 把自定义 header 应用到请求构造器（默认每次请求都带上） */

@@ -6,9 +6,15 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * OSGi 集成配置属性。
  *
- * <p>配置前缀：{@code plugin.osgi}。控制 Felix 框架启动、Gogo shell 远程管理（SSH/Telnet）。</p>
+ * <p>配置前缀：{@code plugin.osgi}。控制 Felix 框架启动和远程管理。</p>
  *
- * @since 4.0.0.42
+ * <p>远程管理策略：shell 只支持一种协议，由 {@code protocol} 决定：
+ * <ul>
+ *   <li>{@code ssh}（默认）— 通过 Apache SSHD bundle 提供 SSH 远程管理</li>
+ *   <li>{@code telnet} — 通过 Gogo shell bundle 提供 Telnet 远程管理（仅当 sshd-osgi 不在 classpath 时回退）</li>
+ * </ul></p>
+ *
+ * @since 4.0.0.43
  * @author CH
  */
 @Data
@@ -31,58 +37,50 @@ public class OsgiProperties {
     private int startLevel = 4;
 
     /**
-     * Gogo shell 远程管理配置。
+     * 远程管理配置（SSH 或 Telnet，二选一）。
      */
     private Shell shell = new Shell();
 
     /**
-     * OSGi Shell Bundle 自动安装配置（Gogo + SSHD）。
-     */
-    private OsgiShellBundleProperties shellBundles = new OsgiShellBundleProperties();
-
-    /**
-     * Gogo shell 远程管理配置。
+     * 远程管理配置。
+     *
+     * <p>单一协议原则：shell 同时只启用一种远程连接方式。
+     * 默认使用 SSH（端口 8122），安全性更高。</p>
      */
     @Data
     public static class Shell {
 
         /**
-         * 是否启用 Gogo shell 远程管理。
+         * 是否启用远程管理。
          */
         private boolean enabled = false;
 
         /**
-         * Telnet 监听端口（0 表示不启用 Telnet）。
+         * 协议类型：{@code ssh}（默认）或 {@code telnet}。
          */
-        private int telnetPort = 6666;
+        private String protocol = "ssh";
 
         /**
-         * SSH 监听端口（0 表示不启用 SSH）。
+         * 监听端口。
+         * <ul>
+         *   <li>SSH 协议：默认 8122</li>
+         *   <li>Telnet 协议：默认 6666</li>
+         * </ul>
          */
-        private int sshPort = 0;
+        private int port;
 
         /**
-         * SSH/Telnet 绑定地址。
+         * 绑定地址。
          */
         private String host = "127.0.0.1";
 
         /**
-         * 是否启用 SSH（兼容旧配置，等价于 sshPort &gt; 0）。
-         */
-        private boolean sshEnabled = false;
-
-        /**
-         * SSH 主机密钥文件路径（不配置时自动生成到缓存目录）。
-         */
-        private String sshKeys;
-
-        /**
-         * SSH 默认用户名。
+         * 认证用户名（SSH 模式）。
          */
         private String username = "";
 
         /**
-         * SSH 默认密码。
+         * 认证密码（SSH 模式）。
          */
         private String password = "";
     }

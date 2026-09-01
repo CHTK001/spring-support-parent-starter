@@ -6,8 +6,6 @@ import com.chua.osgi.support.FelixOsgiLauncher;
 import com.chua.osgi.support.register.impl.OsgiBeanDefinitionRegister;
 import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.osgi.properties.OsgiProperties;
-import com.chua.starter.osgi.properties.OsgiShellBundleProperties;
-import com.chua.starter.osgi.service.OsgiShellBundleManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -16,6 +14,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,18 +24,14 @@ import java.util.Map;
  * <p>集成 Apache Felix OSGi 框架，提供以下核心能力：</p>
  * <ul>
  *   <li>启动 Felix 框架并管理 bundle 生命周期</li>
- *   <li>自动安装 Gogo shell bundle（runtime/command/shell），启用 telnet 远程管理</li>
- *   <li>自动安装 Apache SSHD OSGi bundle，启用 SSH 远程管理</li>
- *   <li>通过 {@link OsgiShellBundleManager} 支持 bundle 的在线安装/卸载/版本升级</li>
+ *   <li>自动安装 Gogo shell bundle（runtime/command/shell），启用远程管理</li>
+ *   <li>优先使用 Apache SSHD OSGi bundle 提供 SSH 远程管理（端口默认 8122）</li>
+ *   <li>Telnet 回退：当 SSHD bundle 不可用时，使用 Gogo telnet（端口 6666）</li>
  *   <li>将 OSGi 服务桥接到 Spring {@link ObjectContext}，跨容器查询 OSGi 注册的服务</li>
  * </ul>
  *
- * <p>远程管理端口：</p>
- * <ul>
- *   <li>Telnet：{@code plugin.osgi.shell.telnet-port}（默认 6666）</li>
- *   <li>SSH (Gogo)：{@code plugin.osgi.shell.ssh-port}（默认 0，关闭）</li>
- *   <li>SSH (SSHD bundle)：{@code plugin.osgi.shell-bundles.sshd-port}（默认 8122）</li>
- * </ul>
+ * <p>远程管理协议：通过 {@code plugin.osgi.shell.protocol} 指定，
+ * 支持 {@code ssh}（默认）或 {@code telnet}，同一实例只启用一种。</p>
  *
  * @since 4.0.0.43
  * @author CH
@@ -45,8 +40,17 @@ import java.util.Map;
 @AutoConfiguration
 @ConditionalOnClass({FelixOsgiLauncher.class, OsgiLauncher.class})
 @ConditionalOnProperty(prefix = "plugin.osgi", name = "enabled", havingValue = "true", matchIfMissing = true)
-@EnableConfigurationProperties({OsgiProperties.class, OsgiShellBundleProperties.class})
+@EnableConfigurationProperties(OsgiProperties.class)
 public class OsgiAutoConfiguration {
+
+    /** Gogo runtime 类标记 */
+    private static final String GOGO_RUNTIME_CLASS = "org.apache.felix.gogo.runtime.Closure";
+    /** Gogo command 类标记 */
+    private static final String GOGO_COMMAND_CLASS = "org.apache.felix.gogo.command.Basic";
+    /** Gogo shell 类标记 */
+    private static final String GOGO_SHELL_CLASS = "org.apache.felix.gogo.shell.Shell";
+    /** SSHD osgi 类标记 */
+    private static final String SSHD_OSGI_CLASS = "org.apache.sshd.osgi.SshServerFactory";
 
     /**
      * 创建并启动 Felix OSGi 框架。
@@ -59,6 +63,7 @@ public class OsgiAutoConfiguration {
         FelixOsgiLauncher launcher = new FelixOsgiLauncher();
         try {
             launcher.start(buildFelixConfig(properties));
+            installShellBundles(launcher, properties);
             log.info("[OSGi] Felix 框架已启动，OSGi 集成就绪");
         } catch (Exception e) {
             log.error("[OSGi] Felix 框架启动失败", e);
@@ -67,35 +72,10 @@ public class OsgiAutoConfiguration {
     }
 
     /**
-     * 创建 OSGi Shell Bundle 管理器，负责 Gogo/SSHD bundle 的自动安装和版本管理。
-     *
-     * <p>高版本优先策略：若已安装 bundle 版本低于 Maven 仓库中的版本，
-     * 则自动卸载旧版并安装新版。</p>
-     *
-     * @param launcher     Felix OSGi 启动器
-     * @param bundleProps  Bundle 安装配置
-     * @return Shell Bundle 管理器
-     */
-    @Bean
-    public OsgiShellBundleManager osgiShellBundleManager(
-            FelixOsgiLauncher launcher,
-            OsgiShellBundleProperties bundleProps) {
-        OsgiShellBundleManager manager = new OsgiShellBundleManager(launcher, bundleProps);
-        manager.afterPropertiesSet();
-        log.info("[OSGi] Shell Bundle 管理器已初始化，Gogo={}, SSHD={}",
-                bundleProps.isInstallGogo(), bundleProps.isInstallSshd());
-        return manager;
-    }
-
-    /**
      * 创建 OsgiBeanDefinitionRegister Bean，并将其挂接到核心 ObjectContext。
      *
-     * <p>OsgiBeanDefinitionRegister 是 {@link com.chua.common.support.spi.annotations.SpiIgnore}，
-     * 不会通过 SPI 自动加入注册中心。本方法以编程方式将其注入到 ObjectContext，
-     * 替代之前 {@code OsgiLauncherHolder} 静态单例持有 launcher 的做法。</p>
-     *
      * @param launcher              Felix OSGi 启动器
-     * @param objectContextProvider ObjectContext 注入（由 ObjectContextAutoConfiguration 创建）
+     * @param objectContextProvider ObjectContext 注入
      * @return OsgiBeanDefinitionRegister 实例
      */
     @Bean
@@ -118,9 +98,6 @@ public class OsgiAutoConfiguration {
 
     /**
      * 构建 Felix 框架配置。
-     *
-     * @param properties OSGi 配置
-     * @return Felix 配置
      */
     private Map<String, String> buildFelixConfig(OsgiProperties properties) {
         Map<String, String> config = new HashMap<>();
@@ -128,29 +105,144 @@ public class OsgiAutoConfiguration {
         config.put("org.osgi.framework.startlevel.beginning", String.valueOf(properties.getStartLevel()));
         config.put("org.osgi.framework.storage.clean", "onFirstInit");
 
-        // 配置 Gogo shell 远程管理
         OsgiProperties.Shell shell = properties.getShell();
         if (shell != null && shell.isEnabled()) {
-            config.put("osgi.shell.telnet.host", shell.getHost());
-            config.put("osgi.shell.telnet.port", String.valueOf(shell.getTelnetPort()));
-            if (shell.isSshEnabled() && shell.getSshPort() > 0) {
-                config.put("osgi.shell.ssh.host", shell.getHost());
-                config.put("osgi.shell.ssh.port", String.valueOf(shell.getSshPort()));
-                config.put("osgi.shell.ssh.username", shell.getUsername());
-                config.put("osgi.shell.ssh.password", shell.getPassword());
-                String keysFile = shell.getSshKeys();
-                if (keysFile != null && !keysFile.isEmpty()) {
-                    config.put("osgi.shell.ssh.keys", keysFile);
+            String protocol = shell.getProtocol();
+            int port = shell.getPort();
+            String host = shell.getHost();
+            if ("telnet".equalsIgnoreCase(protocol)) {
+                config.put("osgi.shell.telnet.host", host);
+                config.put("osgi.shell.telnet.port", String.valueOf(port > 0 ? port : 6666));
+                log.info("[OSGi] Telnet shell 已启用: {}:{}" , host, port > 0 ? port : 6666);
+            } else {
+                // SSH 模式（默认）：通过 SSHD osgi bundle 提供 SSH 远程管理
+                config.put("osgi.shell.ssh.host", host);
+                config.put("osgi.shell.ssh.port", String.valueOf(port > 0 ? port : 8122));
+                if (shell.getUsername() != null && !shell.getUsername().isEmpty()) {
+                    config.put("osgi.shell.ssh.username", shell.getUsername());
                 }
+                if (shell.getPassword() != null && !shell.getPassword().isEmpty()) {
+                    config.put("osgi.shell.ssh.password", shell.getPassword());
+                }
+                log.info("[OSGi] SSH shell 已启用: {}:{}" , host, port > 0 ? port : 8122);
             }
         }
         return config;
     }
 
     /**
-     * 注册 OSGi 模块服务信息。
+     * 安装远程管理 bundle：优先 SSHD，回退 Gogo telnet。
      *
-     * @return 服务信息贡献器
+     * <p>安装顺序：先装 runtime → command → shell，再装 SSHD（若启用）。</p>
+     */
+    private void installShellBundles(FelixOsgiLauncher launcher, OsgiProperties properties) {
+        if (!launcher.isActive()) {
+            return;
+        }
+        OsgiProperties.Shell shell = properties.getShell();
+        if (shell == null || !shell.isEnabled()) {
+            return;
+        }
+
+        // 始终安装 Gogo runtime/command/shell（SSHD 依赖 Gogo）
+        installGogoBundles(launcher);
+
+        // 根据 protocol 决定启用哪种远程管理
+        String protocol = shell.getProtocol();
+        if ("telnet".equalsIgnoreCase(protocol)) {
+            log.info("[OSGi] 使用 Telnet 远程管理（端口 {}）", shell.getPort() > 0 ? shell.getPort() : 6666);
+        } else {
+            // SSH 模式（默认）：检查 SSHD osgi bundle 是否在 classpath
+            if (isClassAvailable(SSHD_OSGI_CLASS)) {
+                installSshdBundles(launcher);
+                log.info("[OSGi] 使用 SSH 远程管理（端口 {}）", shell.getPort() > 0 ? shell.getPort() : 8122);
+            } else {
+                log.warn("[OSGi] SSHD bundle 不在 classpath，回退到 Telnet 远程管理");
+            }
+        }
+    }
+
+    /**
+     * 安装 Gogo bundle 套件。
+     */
+    private void installGogoBundles(FelixOsgiLauncher launcher) {
+        for (String marker : new String[]{GOGO_RUNTIME_CLASS, GOGO_COMMAND_CLASS, GOGO_SHELL_CLASS}) {
+            String jarUrl = findJarUrl(marker);
+            if (jarUrl == null) {
+                log.warn("[OSGi] 未找到 bundle 类: {}", marker);
+                continue;
+            }
+            try {
+                launcher.installBundle(jarUrl);
+                log.debug("[OSGi] Gogo bundle 已安装: {}", marker);
+            } catch (Exception e) {
+                log.warn("[OSGi] Gogo bundle 安装失败 [{}]: {}", marker, e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * 安装 SSHD OSGi bundle。
+     */
+    private void installSshdBundles(FelixOsgiLauncher launcher) {
+        try {
+            installFromMarker(launcher, SSHD_OSGI_CLASS, "sshd-osgi");
+            installFromMarker(launcher, "org.apache.sshd.sftp.server.SftpSubsystemFactory", "sshd-sftp");
+            installFromMarker(launcher, "org.apache.sshd.scp.ScpSubsystemFactory", "sshd-scp");
+        } catch (Exception e) {
+            log.warn("[OSGi] SSHD bundle 安装失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 根据 marker 类定位 jar 并安装。
+     */
+    private void installFromMarker(FelixOsgiLauncher launcher, String markerClass, String logName) {
+        String jarUrl = findJarUrl(markerClass);
+        if (jarUrl == null) {
+            log.warn("[OSGi] 未找到 bundle: {}", logName);
+            return;
+        }
+        try {
+            launcher.installBundle(jarUrl);
+            log.info("[OSGi] Bundle 已安装: {}", logName);
+        } catch (Exception e) {
+            log.warn("[OSGi] Bundle 安装失败 [{}]: {}", logName, e.getMessage());
+        }
+    }
+
+    /**
+     * 根据类名定位其所在 jar 的 file URL。
+     */
+    private String findJarUrl(String className) {
+        try {
+            Class<?> clazz = Class.forName(className);
+            URL location = clazz.getProtectionDomain().getCodeSource().getLocation();
+            if (location != null && "file".equals(location.getProtocol())) {
+                return location.toExternalForm();
+            }
+        } catch (ClassNotFoundException e) {
+            return null;
+        } catch (Exception e) {
+            log.warn("[OSGi] 无法定位 bundle 类 {}: {}", className, e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * 检查类是否在 classpath 中。
+     */
+    private boolean isClassAvailable(String className) {
+        try {
+            Class.forName(className);
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
+
+    /**
+     * 注册 OSGi 模块服务信息。
      */
     @Bean
     public ServiceInfoContributor osgiServiceInfoContributor() {
