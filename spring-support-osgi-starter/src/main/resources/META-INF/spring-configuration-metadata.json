@@ -9,11 +9,6 @@
       "name": "plugin.osgi.shell",
       "type": "com.chua.starter.osgi.properties.OsgiProperties$Shell",
       "sourceType": "com.chua.starter.osgi.properties.OsgiProperties"
-    },
-    {
-      "name": "plugin.osgi.shell-bundles",
-      "type": "com.chua.starter.osgi.properties.OsgiShellBundleProperties",
-      "sourceType": "com.chua.starter.osgi.properties.OsgiShellBundleProperties"
     }
   ],
   "properties": [
@@ -41,120 +36,44 @@
     {
       "name": "plugin.osgi.shell.enabled",
       "type": "java.lang.Boolean",
-      "description": "是否启用 Gogo shell 远程管理（Telnet/SSH）。",
+      "description": "是否启用远程管理（SSH 或 Telnet）。",
       "sourceType": "com.chua.starter.osgi.properties.OsgiProperties$Shell",
       "defaultValue": false
     },
     {
-      "name": "plugin.osgi.shell.telnet-port",
-      "type": "java.lang.Integer",
-      "description": "Telnet 监听端口（0 表示不启用 Telnet）。",
+      "name": "plugin.osgi.shell.protocol",
+      "type": "java.lang.String",
+      "description": "远程管理协议：ssh（默认，端口 8122）或 telnet（端口 6666）。同一实例只启用一种。",
       "sourceType": "com.chua.starter.osgi.properties.OsgiProperties$Shell",
-      "defaultValue": 6666
+      "defaultValue": "ssh"
     },
     {
-      "name": "plugin.osgi.shell.ssh-port",
+      "name": "plugin.osgi.shell.port",
       "type": "java.lang.Integer",
-      "description": "Gogo SSH 监听端口（0 表示不启用）。",
+      "description": "监听端口（0 表示使用协议默认端口：SSH=8122，Telnet=6666）。",
       "sourceType": "com.chua.starter.osgi.properties.OsgiProperties$Shell",
       "defaultValue": 0
     },
     {
       "name": "plugin.osgi.shell.host",
       "type": "java.lang.String",
-      "description": "SSH/Telnet 绑定地址。",
+      "description": "绑定地址。",
       "sourceType": "com.chua.starter.osgi.properties.OsgiProperties$Shell",
       "defaultValue": "127.0.0.1"
     },
     {
-      "name": "plugin.osgi.shell.ssh-enabled",
-      "type": "java.lang.Boolean",
-      "description": "是否启用 Gogo SSH（兼容旧配置）。",
-      "sourceType": "com.chua.starter.osgi.properties.OsgiProperties$Shell",
-      "defaultValue": false
-    },
-    {
       "name": "plugin.osgi.shell.username",
       "type": "java.lang.String",
-      "description": "SSH 默认用户名。",
+      "description": "认证用户名（SSH 模式）。",
       "sourceType": "com.chua.starter.osgi.properties.OsgiProperties$Shell",
       "defaultValue": ""
     },
     {
       "name": "plugin.osgi.shell.password",
       "type": "java.lang.String",
-      "description": "SSH 默认密码。",
+      "description": "认证密码（SSH 模式）。",
       "sourceType": "com.chua.starter.osgi.properties.OsgiProperties$Shell",
       "defaultValue": ""
-    },
-    {
-      "name": "plugin.osgi.shell.ssh-keys",
-      "type": "java.lang.String",
-      "description": "SSH 主机密钥文件路径。",
-      "sourceType": "com.chua.starter.osgi.properties.OsgiProperties$Shell"
-    },
-    {
-      "name": "plugin.osgi.shell-bundles.enabled",
-      "type": "java.lang.Boolean",
-      "description": "是否启用 OSGi Shell Bundle 管理器。",
-      "sourceType": "com.chua.starter.osgi.properties.OsgiShellBundleProperties",
-      "defaultValue": true
-    },
-    {
-      "name": "plugin.osgi.shell-bundles.install-gogo",
-      "type": "java.lang.Boolean",
-      "description": "是否自动安装 Gogo bundle 套件（runtime/command/shell）。",
-      "sourceType": "com.chua.starter.osgi.properties.OsgiShellBundleProperties",
-      "defaultValue": true
-    },
-    {
-      "name": "plugin.osgi.shell-bundles.install-sshd",
-      "type": "java.lang.Boolean",
-      "description": "是否自动安装 Apache SSHD OSGi bundle。",
-      "sourceType": "com.chua.starter.osgi.properties.OsgiShellBundleProperties",
-      "defaultValue": true
-    },
-    {
-      "name": "plugin.osgi.shell-bundles.sshd-port",
-      "type": "java.lang.Integer",
-      "description": "SSHD bundle 监听端口。",
-      "sourceType": "com.chua.starter.osgi.properties.OsgiShellBundleProperties",
-      "defaultValue": 8122
-    },
-    {
-      "name": "plugin.osgi.shell-bundles.sshd-host",
-      "type": "java.lang.String",
-      "description": "SSHD bundle 绑定地址。",
-      "sourceType": "com.chua.starter.osgi.properties.OsgiShellBundleProperties",
-      "defaultValue": "127.0.0.1"
-    },
-    {
-      "name": "plugin.osgi.shell-bundles.sshd-username",
-      "type": "java.lang.String",
-      "description": "SSHD 认证用户名。",
-      "sourceType": "com.chua.starter.osgi.properties.OsgiShellBundleProperties",
-      "defaultValue": "admin"
-    },
-    {
-      "name": "plugin.osgi.shell-bundles.sshd-password",
-      "type": "java.lang.String",
-      "description": "SSHD 认证密码。",
-      "sourceType": "com.chua.starter.osgi.properties.OsgiShellBundleProperties",
-      "defaultValue": ""
-    },
-    {
-      "name": "plugin.osgi.shell-bundles.sftp-enabled",
-      "type": "java.lang.Boolean",
-      "description": "是否启用 SFTP 子系统。",
-      "sourceType": "com.chua.starter.osgi.properties.OsgiShellBundleProperties",
-      "defaultValue": true
-    },
-    {
-      "name": "plugin.osgi.shell-bundles.allow-root-login",
-      "type": "java.lang.Boolean",
-      "description": "是否允许 root 登录（仅测试用途）。",
-      "sourceType": "com.chua.starter.osgi.properties.OsgiShellBundleProperties",
-      "defaultValue": false
     }
   ],
   "hints": [],
