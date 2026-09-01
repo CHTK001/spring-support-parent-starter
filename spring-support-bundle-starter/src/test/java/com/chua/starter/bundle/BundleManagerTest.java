@@ -64,6 +64,15 @@ public class BundleManagerTest {
                 System.out.println("  [INFO] 已安装: " + result.artifactId() + ":" + result.version());
             });
 
+            // ========== 测试 2b: 安装 SSHD core + sftp（验证依赖顺序）==========
+            r.run("install_sshd_core", () -> {
+                BundleManagerService.InstallResult r1 = manager.install("org.apache.sshd:sshd-core:2.13.2");
+                System.out.println("  [INFO] sshd-core: " + (r1.success() ? "已安装" : r1.message()));
+                BundleManagerService.InstallResult r2 = manager.install("org.apache.sshd:sshd-sftp:2.13.2");
+                System.out.println("  [INFO] sshd-sftp: " + (r2.success() ? "已安装" : r2.message()));
+                assertTrue(r1.success(), "sshd-core 应安装成功");
+            });
+
             // ========== 测试 3: 重复安装同一版本应返回成功但无变化 ==========
             r.run("reinstall_sameVersion", () -> {
                 BundleManagerService.InstallResult result = manager.install("org.apache.felix:org.apache.felix.gogo.runtime:1.1.6");

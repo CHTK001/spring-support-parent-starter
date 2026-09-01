@@ -78,6 +78,13 @@
             <artifactId>utils-support-deeplearning-starter</artifactId>
         </dependency>
 
+        <!-- Agent 编排运行时（AgentScope：多 Agent 协作、子 Agent 路由/流水线/扇出） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-deeplearning-agentscope-starter</artifactId>
+            <version>4.0.0.42</version>
+        </dependency>
+
         <!-- iLink 微信 Bot 扫码登录 SDK -->
         <dependency>
             <groupId>com.chua</groupId>

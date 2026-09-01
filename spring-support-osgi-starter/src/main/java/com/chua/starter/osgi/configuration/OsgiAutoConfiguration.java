@@ -183,15 +183,15 @@ public class OsgiAutoConfiguration {
 
     /**
      * 安装 SSHD OSGi bundle。
+     *
+     * <p>安装顺序必须遵守依赖关系：sshd-core → sshd-osgi → sshd-sftp → sshd-scp。</p>
      */
     private void installSshdBundles(FelixOsgiLauncher launcher) {
-        try {
-            installFromMarker(launcher, SSHD_OSGI_CLASS, "sshd-osgi");
-            installFromMarker(launcher, "org.apache.sshd.sftp.server.SftpSubsystemFactory", "sshd-sftp");
-            installFromMarker(launcher, "org.apache.sshd.scp.ScpSubsystemFactory", "sshd-scp");
-        } catch (Exception e) {
-            log.warn("[OSGi] SSHD bundle 安装失败: {}", e.getMessage());
-        }
+        // sshd-core 是其他 SSHD bundle 的基础依赖，必须先安装
+        installFromMarker(launcher, "org.apache.sshd.server.SshServer", "sshd-core");
+        installFromMarker(launcher, SSHD_OSGI_CLASS, "sshd-osgi");
+        installFromMarker(launcher, "org.apache.sshd.sftp.server.SftpSubsystemFactory", "sshd-sftp");
+        installFromMarker(launcher, "org.apache.sshd.scp.ScpSubsystemFactory", "sshd-scp");
     }
 
     /**

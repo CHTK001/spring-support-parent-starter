@@ -142,11 +142,12 @@ public class BundleManagerService {
             return Collections.emptyList();
         }
         return launcher.getBundles().stream().map(b -> {
+            String name = b.getSymbolicName();
             Map<String, Object> info = new java.util.HashMap<>();
-            info.put("symbolicName", b.getSymbolicName());
+            info.put("symbolicName", name);
             info.put("state", b.getState());
             info.put("version", b.getVersion());
-            info.put("managed", installedBundles.containsKey(b.getSymbolicName()));
+            info.put("managed", name != null && installedBundles.containsKey(name));
             return info;
         }).collect(Collectors.toList());
     }
@@ -170,7 +171,10 @@ public class BundleManagerService {
 
     private OsgiBundle findExisting(String artifactId) {
         return launcher.getBundles().stream()
-                .filter(b -> b.getSymbolicName().contains(artifactId))
+                .filter(b -> {
+                    String name = b.getSymbolicName();
+                    return name != null && name.contains(artifactId);
+                })
                 .findFirst()
                 .orElse(null);
     }

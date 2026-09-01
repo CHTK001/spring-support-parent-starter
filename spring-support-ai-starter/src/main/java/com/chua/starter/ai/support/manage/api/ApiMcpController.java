@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.manage.api;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
+import com.chua.starter.ai.support.manage.store.McpServerStore;
 import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
 import lombok.RequiredArgsConstructor;
@@ -20,13 +21,12 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * MCP 服务控制器，替代 nomicore 的 {@code /api/mcp/*} 契约。
  *
  * <p>维护 MCP 服务器档案（{@code mcp_server_id} 主键）、批量导入、启停切换、连接测试与
- * OAuth 握手路由。当前为进程内内存实现。</p>
+ * OAuth 握手路由。档案持久化到 {@code sys_ai_mcp_server} 表（MySQL）。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -53,13 +53,13 @@ public class ApiMcpController {
     private final McpConnectionService mcpConnectionService;
 
     /**
-     * MCP 服务器档案：mcp_server_id → 服务器
+     * MCP 服务器档案数据库存储
      */
-    private final Map<String, Map<String, Object>> servers = new ConcurrentHashMap<>();
+    private final McpServerStore mcpServerStore;
 
     @GetMapping("/servers")
     public ApiResult<List<Map<String, Object>>> listServers() {
-        return ApiResult.ok(new ArrayList<>(servers.values()));
+        return ApiResult.ok(mcpServerStore.listAll());
     }
 
     @PostMapping("/servers")
@@ -68,7 +68,7 @@ public class ApiMcpController {
         Map<String, Object> server = newLinked(body);
         server.put("mcp_server_id", serverId);
         server.putIfAbsent("name", "未命名 MCP");
-        server.putIfAbsent("transport", "stdio");
+        server.putIfAbsent("transport", Map.of("type", "stdio"));
         server.putIfAbsent("enabled", true);
         server.putIfAbsent("original_json", "");
         server.putIfAbsent("builtin", false);
@@ -76,8 +76,7 @@ public class ApiMcpController {
         long now = System.currentTimeMillis();
         server.put("created_at", now);
         server.put("updated_at", now);
-        servers.put(serverId, server);
-        return ApiResult.ok(server);
+        return ApiResult.ok(mcpServerStore.insert(server));
     }
 
     @PostMapping("/servers/import")
@@ -105,13 +104,13 @@ public class ApiMcpController {
             }
         });
         server.put("updated_at", System.currentTimeMillis());
-        return ApiResult.ok(server);
+        return ApiResult.ok(mcpServerStore.update(server));
     }
 
     @DeleteMapping("/servers/{serverId}")
     public ApiResult<Void> deleteServer(@PathVariable String serverId) {
         requireServer(serverId);
-        servers.remove(serverId);
+        mcpServerStore.delete(serverId);
         return ApiResult.ok();
     }
 
@@ -122,7 +121,7 @@ public class ApiMcpController {
         boolean next = !(enabled instanceof Boolean && (Boolean) enabled);
         server.put("enabled", next);
         server.put("updated_at", System.currentTimeMillis());
-        return ApiResult.ok(server);
+        return ApiResult.ok(mcpServerStore.update(server));
     }
 
     @GetMapping("/agent-configs")
@@ -173,7 +172,7 @@ public class ApiMcpController {
     }
 
     private Map<String, Object> requireServer(String serverId) {
-        Map<String, Object> server = servers.get(serverId);
+        Map<String, Object> server = mcpServerStore.get(serverId);
         if (server == null) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "MCP 服务器不存在: " + serverId);
         }

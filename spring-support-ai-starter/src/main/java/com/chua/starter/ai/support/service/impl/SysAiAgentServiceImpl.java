@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.ai.agent.Agent;
 import com.chua.common.support.ai.agent.AgentDefinition;
 import com.chua.common.support.ai.agent.AgentMode;
+import com.chua.common.support.ai.chat.AgentModelDefinition;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
 import com.chua.common.support.utils.IdUtils;
@@ -12,6 +13,7 @@ import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
 import com.chua.starter.ai.support.manage.store.SysAiAgent;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.registry.AgentRegistry;
+import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.SysAiAgentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +45,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
     private final SysAiAgentMapper agentMapper;
     private final SysAiProviderMapper providerMapper;
     private final AgentRegistry agentRegistry;
+    private final ChatClientRegistry chatClientRegistry;
 
     private static final String STRATEGY_KEY_MODE = "mode";
     private static final String STRATEGY_KEY_PLANNING = "planning";
@@ -238,6 +241,16 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
                 ? modelName : "agent-" + agent.getName();
         rebuildAgent(agent);
 
+        // Agent-as-Model：包装为 ChatClient 注册到对话注册中心
+        Agent runtime = agentRegistry.getByName(agent.getName());
+        if (runtime != null) {
+            chatClientRegistry.register("agent", resolvedModel, new AgentModelDefinition(runtime),
+                    "chat", "tools", "skills", "routing");
+            log.info("[Agent] Agent {} 已注册为模型 {}", agent.getName(), resolvedModel);
+        } else {
+            log.warn("[Agent] Agent 运行时不可用，模型 {} 未注册到对话链路", resolvedModel);
+        }
+
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("agentId", agentId);
         result.put("agentName", agent.getName());
@@ -298,7 +311,13 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
             }
 
             AgentDefinition definition = masterBuilder.build();
-            Agent agentInstance = Agent.create("agentscope").definition(definition);
+            Agent agentInstance = Agent.create("agentscope");
+            if (agentInstance == null) {
+                log.warn("[Agent] AgentScope 运行时不可用（缺少 agentscope SPI 实现），跳过运行时注册 name={}",
+                        agentName);
+                return;
+            }
+            agentInstance.definition(definition);
             if (masterClient != null) {
                 agentInstance.chatClient(masterClient);
             }
