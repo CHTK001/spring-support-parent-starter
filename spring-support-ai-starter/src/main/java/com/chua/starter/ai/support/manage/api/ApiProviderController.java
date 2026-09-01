@@ -40,6 +40,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -80,6 +81,11 @@ public class ApiProviderController {
      * 模型价格/指标快照服务（读取 Redis 缓存，含价格/延迟/速度/智能等指标）
      */
     private final ModelMetricsSnapshotService metricsSnapshotService;
+
+    /**
+     * Agent 模型注册中心（动态注入 Agent 虚拟 Provider）
+     */
+    private final com.chua.starter.ai.support.registry.ChatClientRegistry chatClientRegistry;
 
     /**
      * 拉取模型列表使用的 HTTP 客户端（连接池复用）
@@ -166,6 +172,14 @@ public class ApiProviderController {
                             .eq(SysAiProviderConnection::getProviderId, p.getProviderId()));
             items.add(toProviderResponse(p, models, connections));
         }
+
+        // 注入已注册的 Agent 模型作为虚拟 Provider
+        List<String> registeredAgentModels = new ArrayList<>(chatClientRegistry.getRegisteredAgentModels());
+        if (!registeredAgentModels.isEmpty()) {
+            Map<String, Object> agentProvider = buildAgentProvider(registeredAgentModels);
+            items.add(0, agentProvider);
+        }
+
         return ApiResult.ok(items);
     }
 
@@ -1539,8 +1553,50 @@ public class ApiProviderController {
     }
 
     /**
-     * 代理 HttpClient 缓存：proxy 地址 → 客户端。
+     * 所有已注册的 ChatClient 列表
      */
     private final Map<String, HttpClient> proxyHttpClients = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * 构建 Agent 虚拟 Provider（含已注册的 Agent 模型列表）。
+     */
+    private Map<String, Object> buildAgentProvider(List<String> modelNames) {
+        long now = System.currentTimeMillis();
+        List<Map<String, Object>> models = new ArrayList<>();
+        for (String modelName : modelNames) {
+            Map<String, Object> model = new LinkedHashMap<>();
+            model.put("provider_id", "agent");
+            model.put("model", modelName);
+            model.put("enabled", true);
+            model.put("sort_order", 0);
+            model.put("description", "Agent: " + modelName.replace("agent-", ""));
+            Map<String, Object> capability = new LinkedHashMap<>();
+            capability.put("task", "chat");
+            capability.put("traits", List.of());
+            capability.put("protocol", "agent");
+            capability.put("connection_role", "user");
+            capability.put("allow_cross_origin_credentials", false);
+            capability.put("provider_params", null);
+            capability.put("created_at", now);
+            capability.put("updated_at", now);
+            model.put("capabilities", List.of(capability));
+            model.put("created_at", now);
+            model.put("updated_at", now);
+            models.add(model);
+        }
+        Map<String, Object> provider = new LinkedHashMap<>();
+        provider.put("provider_id", "agent");
+        provider.put("platform", "agent");
+        provider.put("name", "Agent");
+        provider.put("base_url", "");
+        provider.put("auth_scheme", "none");
+        provider.put("has_credentials", false);
+        provider.put("models", models);
+        provider.put("enabled", true);
+        provider.put("sort_order", -1);
+        provider.put("created_at", now);
+        provider.put("updated_at", now);
+        return provider;
+    }
 }
 

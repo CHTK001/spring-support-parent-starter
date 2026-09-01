@@ -94,6 +94,13 @@
             <version>${utils.version}</version>
         </dependency>
 
+        <!-- TShark 网络抓包 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-tshark-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+
         <!-- 日志 -->
         <dependency>
             <groupId>org.projectlombok</groupId>

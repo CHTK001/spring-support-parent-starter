@@ -16,8 +16,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Agent 管理控制器（主 Agent / 子 Agent 的 CRUD 与编排）。
@@ -175,8 +178,50 @@ public class ApiAgentManageController {
      */
     @PostMapping("/{agentId}/register")
     public ApiResult<Map<String, Object>> registerAsModel(@PathVariable("agentId") String agentId,
-                                                           @RequestParam(required = false) String model_name) {
+                                                            @RequestParam(required = false) String model_name) {
         return ApiResult.ok(agentService.registerAsModel(agentId, model_name));
+    }
+
+    /**
+     * 取消注册模型。
+     *
+     * @param agentId Agent ID
+     * @return 成功
+     */
+    @DeleteMapping("/{agentId}/register")
+    public ApiResult<Void> unregisterModel(@PathVariable("agentId") String agentId) {
+        agentService.unregisterModel(agentId);
+        return ApiResult.ok();
+    }
+
+    /**
+     * 查询 Agent 注册模型状态。
+     *
+     * @param agentId Agent ID
+     * @return { registered, model_name }
+     */
+    @GetMapping("/{agentId}/registered-model")
+    public ApiResult<Map<String, Object>> getRegisteredModel(@PathVariable("agentId") String agentId) {
+        return ApiResult.ok(agentService.getRegisteredModelInfo(agentId));
+    }
+
+    /**
+     * 获取所有已注册为模型的 Agent 列表（供模型管理页展示）。
+     *
+     * @return { model_name, agent_name, agent_id } 列表
+     */
+    @GetMapping("/registered-models")
+    public ApiResult<List<Map<String, Object>>> listRegisteredModels() {
+        Set<String> names = agentService.getRegisteredAgentModelNames();
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (String name : names) {
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("model_name", name);
+            // 通过 agent 名称反查 agent_id（名称格式为 agent-<name>）
+            entry.put("agent_name", name.startsWith("agent-") ? name.substring(6) : name);
+            result.add(entry);
+        }
+        return ApiResult.ok(result);
     }
 
     /**

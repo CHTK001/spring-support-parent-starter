@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.toolmetrics;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.reflection.ReflectUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
@@ -47,12 +48,13 @@ public class AiGatewayController {
         }
         try {
             Object webServer = applicationContext.getBean("webServer");
-            Object tomcat = webServer.getClass().getMethod("getTomcat").invoke(webServer);
-            Object service = tomcat.getClass().getMethod("getService").invoke(tomcat);
-            Class<?> connClass = Class.forName("org.apache.catalina.connector.Connector");
-            Object conn = connClass.getConstructor(int.class).newInstance(port);
-            service.getClass().getMethod("addConnector", connClass).invoke(service, conn);
-            conn.getClass().getMethod("start").invoke(conn);
+            Object tomcat = ReflectUtils.invoke(webServer, "getTomcat", Object.class);
+            Object service = ReflectUtils.invoke(tomcat, "getService", Object.class);
+            Class<?> connClass = ReflectUtils.forName("org.apache.catalina.connector.Connector");
+            Object conn = ReflectUtils.instantiate(connClass, port);
+            ReflectUtils.invoke(service, "addConnector", Void.class,
+                    new Class<?>[]{connClass}, conn);
+            ReflectUtils.invoke(conn, "start", Void.class);
             activeConnector = conn;
             log.info("[AiGateway] 独立端口 {} 已启动", port);
             return ReturnResult.ok("已启动端口 " + port);
@@ -71,14 +73,12 @@ public class AiGatewayController {
     public ReturnResult<String> stop() {
         if (activeConnector == null) { return ReturnResult.ok("未在运行"); }
         try {
-            activeConnector.getClass().getMethod("stop").invoke(activeConnector);
-            Object tomcat = applicationContext.getBean("webServer")
-                    .getClass().getMethod("getTomcat").invoke(
-                            applicationContext.getBean("webServer"));
-            Object service = tomcat.getClass().getMethod("getService").invoke(tomcat);
-            service.getClass().getMethod("removeConnector",
-                    Class.forName("org.apache.catalina.connector.Connector"))
-                    .invoke(service, activeConnector);
+            ReflectUtils.invoke(activeConnector, "stop", Void.class);
+            Object tomcat = ReflectUtils.invoke(applicationContext.getBean("webServer"), "getTomcat", Object.class);
+            Object service = ReflectUtils.invoke(tomcat, "getService", Object.class);
+            ReflectUtils.invoke(service, "removeConnector", Void.class,
+                    new Class<?>[]{ReflectUtils.forName("org.apache.catalina.connector.Connector")},
+                    activeConnector);
             log.info("[AiGateway] 端口已停止");
         } catch (Exception e) {
             log.debug("[AiGateway] 停止异常: {}", e.getMessage());
@@ -98,8 +98,7 @@ public class AiGatewayController {
         int port = -1;
         if (running) {
             try {
-                port = (int) activeConnector.getClass()
-                        .getMethod("getPort").invoke(activeConnector);
+                port = (int) ReflectUtils.invoke(activeConnector, "getPort", int.class);
             } catch (Exception ignored) { }
         }
         return ReturnResult.ok(Map.of("running", running, "port", port));

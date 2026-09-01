@@ -4,6 +4,7 @@ import com.chua.starter.ai.support.manage.store.SysAiAgent;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * AI Agent 管理服务。
@@ -108,6 +109,28 @@ public interface SysAiAgentService {
      * @return 注册结果
      */
     Map<String, Object> registerAsModel(String agentId, String modelName);
+
+    /**
+     * 取消注册 Agent 模型，从对话注册中心移除。
+     *
+     * @param agentId Agent ID
+     */
+    void unregisterModel(String agentId);
+
+    /**
+     * 查询 Agent 是否已注册为模型。
+     *
+     * @param agentId Agent ID
+     * @return 注册状态（含 modelName，未注册时 model_name 为 null）
+     */
+    Map<String, Object> getRegisteredModelInfo(String agentId);
+
+    /**
+     * 获取所有已注册的 Agent 模型名称。
+     *
+     * @return 模型名称集合
+     */
+    Set<String> getRegisteredAgentModelNames();
 
     /**
      * 构建并注册 Agent 到 AgentRegistry（重建运行时）。

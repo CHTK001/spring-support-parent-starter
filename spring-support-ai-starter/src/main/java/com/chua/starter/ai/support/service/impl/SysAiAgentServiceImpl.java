@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.ai.agent.Agent;
 import com.chua.common.support.ai.agent.AgentDefinition;
 import com.chua.common.support.ai.agent.AgentMode;
-import com.chua.common.support.ai.chat.AgentModelDefinition;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
+import com.chua.starter.ai.support.chat.AgentChatClient;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.starter.ai.support.manage.mapper.SysAiAgentMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * AI Agent 管理服务实现。
@@ -244,7 +245,7 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         // Agent-as-Model：包装为 ChatClient 注册到对话注册中心
         Agent runtime = agentRegistry.getByName(agent.getName());
         if (runtime != null) {
-            chatClientRegistry.register("agent", resolvedModel, new AgentModelDefinition(runtime),
+            chatClientRegistry.registerAgentModel(resolvedModel, new AgentChatClient(runtime),
                     "chat", "tools", "skills", "routing");
             log.info("[Agent] Agent {} 已注册为模型 {}", agent.getName(), resolvedModel);
         } else {
@@ -257,6 +258,32 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         result.put("modelName", resolvedModel);
         result.put("status", "registered");
         return result;
+    }
+
+    @Override
+    public void unregisterModel(String agentId) {
+        SysAiAgent agent = requireAgent(agentId);
+        String resolvedModel = agent.getName() != null ? "agent-" + agent.getName() : agentId;
+        chatClientRegistry.unregisterAgentModel(resolvedModel);
+        log.info("[Agent] Agent {} 已从模型注册中心注销", agent.getName());
+    }
+
+    @Override
+    public Map<String, Object> getRegisteredModelInfo(String agentId) {
+        SysAiAgent agent = requireAgent(agentId);
+        String resolvedModel = "agent-" + agent.getName();
+        boolean registered = chatClientRegistry.isAgentModelRegistered(resolvedModel);
+        Map<String, Object> info = new LinkedHashMap<>();
+        info.put("agentId", agentId);
+        info.put("agentName", agent.getName());
+        info.put("modelName", registered ? resolvedModel : null);
+        info.put("registered", registered);
+        return info;
+    }
+
+    @Override
+    public Set<String> getRegisteredAgentModelNames() {
+        return chatClientRegistry.getRegisteredAgentModels();
     }
 
     // ==================== 运行时构建 ====================
@@ -439,6 +466,10 @@ public class SysAiAgentServiceImpl implements SysAiAgentService {
         map.put("sort_order", agent.getSortOrder());
         map.put("created_at", agent.getCreatedAt());
         map.put("updated_at", agent.getUpdatedAt());
+        if (agent.getParentId() == null) {
+            String resolvedModel = "agent-" + agent.getName();
+            map.put("registered_model_name", chatClientRegistry.isAgentModelRegistered(resolvedModel) ? resolvedModel : null);
+        }
         if (includeSubs) {
             map.put("sub_agents", subAgentsOf(agent.getAgentId()).stream()
                     .map(sub -> toResponse(sub, false))

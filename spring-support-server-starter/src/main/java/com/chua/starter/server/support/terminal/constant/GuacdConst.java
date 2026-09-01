@@ -25,7 +25,7 @@ public interface GuacdConst {
     /** 用户名 */
     String USERNAME = "username";
 
-    /** 密码 */
+    /** 密码占位符，实际值应从配置 guacd.password 注入 */
     String PASSWORD = "password";
 
     /** 颜色深度 8/16/24 */

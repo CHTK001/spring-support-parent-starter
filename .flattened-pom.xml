@@ -71,6 +71,7 @@
     <module>spring-support-sync-starter</module>
     <module>spring-support-datasync-starter</module>
     <module>spring-support-osgi-starter</module>
+    <module>spring-support-bundle-starter</module>
     <module>spring-support-spider-starter</module>
     <module>spring-support-discovery-starter</module>
     <module>spring-support-configcenter-starter</module>
@@ -460,6 +461,11 @@
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-osgi-starter</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-bundle-starter</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
