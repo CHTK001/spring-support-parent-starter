@@ -78,6 +78,7 @@ public class CompressionChatClientFactoryBean implements FactoryBean<ChatClient>
                 .baseUrl(firstNonBlank(getValue("compression_provider_base_url"), getValue("provider_base_url"), getValue("provider_api_address")))
                 .appKey(firstNonBlank(getValue("compression_provider_api_key"), getValue("provider_api_key"), getValue("provider_app_key")))
                 .appSecret(firstNonBlank(getValue("compression_provider_app_secret"), getValue("provider_app_secret"), getValue("provider_secret_key")))
+                .proxy(firstNonBlank(getValue("compression_provider_proxy"), getValue("provider_proxy")))
                 .build();
 
         ChatClientSettings compressionSettings = ChatClientSettings.builder()
