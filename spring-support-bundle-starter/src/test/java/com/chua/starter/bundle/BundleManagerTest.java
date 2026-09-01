@@ -60,7 +60,7 @@ public class BundleManagerTest {
             // ========== 测试 2: 安装 Gogo command ==========
             r.run("install_gogoCommand", () -> {
                 BundleManagerService.InstallResult result = manager.install("org.apache.felix:org.apache.felix.gogo.command:1.1.2");
-                assertTrue(result.success()(), "gogo.command 应安装成功: " + result.message());
+                assertTrue(result.success(), "gogo.command 应安装成功: " + result.message());
                 System.out.println("  [INFO] 已安装: " + result.artifactId() + ":" + result.version());
             });
 
