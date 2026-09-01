@@ -18,6 +18,7 @@ public class LocaleUtils {
     private LocaleUtils() {
     }
 
+    // final 确保不可变引用，静态初始化块完成一次性配置；ResourceBundleMessageSource 本身线程安全
     static final ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
     static{
         messageSource.setDefaultEncoding(StandardCharsets.UTF_8.toString());

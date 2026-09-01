@@ -34,13 +34,13 @@ public class RpcProperties {
      */
     private Set<String> scan;
     /**
-     * ak
+     * ak，从配置项 rpc.access-key 注入，严禁硬编码
      */
-    private String accessKey = "331000";
+    private String accessKey = "";
     /**
-     * sk
+     * sk，从配置项 rpc.secret-key 注入，严禁硬编码
      */
-    private String secretKey = "St0ojc";
+    private String secretKey = "";
     /**
      * 服务序列
      */

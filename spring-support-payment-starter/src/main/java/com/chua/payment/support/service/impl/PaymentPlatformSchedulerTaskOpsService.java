@@ -58,7 +58,7 @@ public class PaymentPlatformSchedulerTaskOpsService implements PaymentSchedulerT
     /** Default_console_username */
     private static final String DEFAULT_CONSOLE_USERNAME = "admin";
     /** Default_console_password */
-    private static final String DEFAULT_CONSOLE_PASSWORD = "admin123456";
+    private static final String DEFAULT_CONSOLE_PASSWORD = "${payment.console.password:}";
     /** Standard_date_time */
     private static final DateTimeFormatter STANDARD_DATE_TIME =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");

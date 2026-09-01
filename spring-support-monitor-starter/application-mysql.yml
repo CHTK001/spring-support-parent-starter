@@ -1,0 +1,24 @@
+spring:
+  sql:
+    init:
+      mode: never
+  datasource:
+    url: jdbc:mysql://172.16.0.40:3306/report?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: root@
+    hikari:
+      pool-name: MonitorHikariPool
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  h2:
+    console:
+      enabled: false
+
+logging:
+  level:
+    com.chua.starter.monitor.support: info

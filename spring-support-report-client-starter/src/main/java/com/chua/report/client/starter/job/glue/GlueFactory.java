@@ -19,8 +19,8 @@ import java.util.concurrent.ConcurrentMap;
 public class GlueFactory {
 
 
-    /** Glue工厂 */
-    private static GlueFactory glueFactory = new GlueFactory();
+    /** Glue工厂（volatile 保证多线程可见性，refreshInstance 会重新赋值） */
+    private static volatile GlueFactory glueFactory = new GlueFactory();
     /** 获取Instance */
     public static GlueFactory getInstance(){
         return glueFactory;

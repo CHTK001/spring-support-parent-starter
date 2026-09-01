@@ -91,6 +91,11 @@ public class ChatClientRegistry {
     private final List<ChatClient> allClients = new CopyOnWriteArrayList<>();
 
     /**
+     * 已注册为 Agent 模型的名称集合（provider="agent" 时的专用追踪）
+     */
+    private final Set<String> registeredAgentModelNames = ConcurrentHashMap.newKeySet();
+
+    /**
      * 注册 ChatClient。
      *
      * @param provider   提供者标识（如 "openai", "zhipu", "hunyuan"）
@@ -137,6 +142,63 @@ public class ChatClientRegistry {
      */
     public void register(String provider, ChatClient client) {
         register(provider, null, client);
+    }
+
+    /**
+     * 注册 Agent 模型（provider="agent"），同时追踪到 registeredAgentModelNames。
+     *
+     * @param modelName    模型名称
+     * @param client       ChatClient 实例
+     * @param capabilities 能力标签
+     */
+    public void registerAgentModel(String modelName, ChatClient client, String... capabilities) {
+        if (modelName == null || client == null) {
+            log.warn("[ChatClientRegistry] 注册 Agent 模型参数不完整: modelName={}, client={}", modelName, client);
+            return;
+        }
+        // 先幂等移除旧注册
+        unregisterAgentModel(modelName);
+        // 注册到通用索引
+        register("agent", modelName, client, capabilities);
+        // 追踪 Agent 模型名称
+        registeredAgentModelNames.add(modelName);
+        log.info("[ChatClientRegistry] 注册 Agent 模型: {}", modelName);
+    }
+
+    /**
+     * 注销 Agent 模型（从所有索引 + 追踪集合中移除）。
+     *
+     * @param modelName 模型名称
+     */
+    public void unregisterAgentModel(String modelName) {
+        if (modelName == null) return;
+        String key = modelName.toLowerCase();
+        registeredAgentModelNames.remove(modelName);
+        // 通过 modelIndex 找到要移除的 client
+        ChatClient target = modelIndex.get(key);
+        if (target != null) {
+            // 从所有索引中移除
+            providerIndex.values().remove(target);
+            modelIndex.entrySet().removeIf(e -> e.getValue() == target);
+            capabilityIndex.values().forEach(list -> list.remove(target));
+            allClients.remove(target);
+        }
+        log.info("[ChatClientRegistry] 注销 Agent 模型: {}", modelName);
+    }
+
+    /**
+     * 判断某个模型名称是否已注册为 Agent 模型。
+     */
+    public boolean isAgentModelRegistered(String modelName) {
+        if (modelName == null) return false;
+        return registeredAgentModelNames.contains(modelName);
+    }
+
+    /**
+     * 获取所有已注册的 Agent 模型名称。
+     */
+    public Set<String> getRegisteredAgentModels() {
+        return Collections.unmodifiableSet(registeredAgentModelNames);
     }
 
     /**

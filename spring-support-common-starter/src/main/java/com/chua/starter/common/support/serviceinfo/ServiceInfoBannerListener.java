@@ -5,6 +5,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.event.SmartApplicationListener;
 import org.springframework.core.Ordered;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 启动横幅监听器。
@@ -19,6 +20,7 @@ import org.springframework.core.Ordered;
  * @author CH
  */
 public class ServiceInfoBannerListener implements SmartApplicationListener {
+    private static final Logger log = LoggerFactory.getLogger(ServiceInfoBannerListener.class);
 
     /** Detector */
     private final ServiceInfoEndpointDetector detector;
@@ -63,7 +65,7 @@ public class ServiceInfoBannerListener implements SmartApplicationListener {
             ServiceInfoAutoConfiguration.printBanner(ServiceInfoRegistry.getInstance());
             bannerPrinted = true;
         } catch (Exception e) {
-            System.err.println("[ServiceInfo] 横幅渲染失败: " + e.getMessage());
+            log.error("[ServiceInfo] 横幅渲染失败", e);
         }
     }
 
@@ -77,7 +79,7 @@ public class ServiceInfoBannerListener implements SmartApplicationListener {
             if (registry.getFlags().isEmpty() && registry.getEndpoints().isEmpty()) {
                 return;
             }
-            System.err.println("[ServiceInfo] 应用启动失败, 已注册的开关/端点如下, 用于排错:");
+            log.warn("[ServiceInfo] 应用启动失败, 已注册的开关/端点如下, 用于排错:");
             ServiceInfoAutoConfiguration.printBanner(registry);
         } catch (Exception e) {
             // 启动失败时静默, 不抛出
