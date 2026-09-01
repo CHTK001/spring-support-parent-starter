@@ -1486,5 +1486,61 @@ public class ApiProviderController {
     private <T> T uncheckedCast(Object obj) {
         return (T) obj;
     }
+
+    /**
+     * 按代理地址获取（缓存）的 HTTP 客户端。
+     *
+     * <p>未配置代理时返回共享 {@link #upstreamHttpClient}；配置了代理（如
+     * {@code http://127.0.0.1:7890}、{@code socks5://127.0.0.1:1080}）时按代理地址
+     * 复用缓存的带 {@link ProxySelector} 客户端，避免每个请求重复创建。</p>
+     *
+     * @param proxy HTTP 代理地址，可为空
+     * @return HttpClient
+     */
+    private HttpClient httpClient(String proxy) {
+        if (proxy == null || proxy.isBlank()) {
+            return upstreamHttpClient;
+        }
+        return proxyHttpClients.computeIfAbsent(proxy.trim(), addr -> HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .connectTimeout(Duration.ofSeconds(10))
+                .proxy(ProxySelector.of(new java.net.InetSocketAddress(
+                        proxyHost(addr), proxyPort(addr))))
+                .build());
+    }
+
+    /**
+     * 解析代理地址的主机名（支持 {@code http://host:port} 与 {@code socks5://host:port}）。
+     */
+    private static String proxyHost(String proxy) {
+        String trimmed = proxy.trim();
+        int scheme = trimmed.indexOf("://");
+        String rest = scheme >= 0 ? trimmed.substring(scheme + 3) : trimmed;
+        int colon = rest.lastIndexOf(':');
+        return colon > 0 ? rest.substring(0, colon) : rest;
+    }
+
+    /**
+     * 解析代理地址的端口（默认 8080）。
+     */
+    private static int proxyPort(String proxy) {
+        String trimmed = proxy.trim();
+        int scheme = trimmed.indexOf("://");
+        String rest = scheme >= 0 ? trimmed.substring(scheme + 3) : trimmed;
+        int colon = rest.lastIndexOf(':');
+        if (colon <= 0 || colon == rest.length() - 1) {
+            return 8080;
+        }
+        try {
+            return Integer.parseInt(rest.substring(colon + 1));
+        } catch (NumberFormatException ex) {
+            return 8080;
+        }
+    }
+
+    /**
+     * 代理 HttpClient 缓存：proxy 地址 → 客户端。
+     */
+    private final Map<String, HttpClient> proxyHttpClients = new java.util.concurrent.ConcurrentHashMap<>();
 }
 

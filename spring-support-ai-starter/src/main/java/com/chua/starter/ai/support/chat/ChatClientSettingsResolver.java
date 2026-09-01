@@ -58,6 +58,7 @@ public final class ChatClientSettingsResolver {
                         getValue(sysAiGlobalSettingService, "provider_app_secret"),
                         getValue(sysAiGlobalSettingService, "provider_secret_key")
                 ))
+                .proxy(getValue(sysAiGlobalSettingService, "provider_proxy"))
                 .extraHeaders(extraHeaders)
                 .build();
 

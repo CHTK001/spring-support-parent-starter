@@ -335,6 +335,7 @@ public class AiBotChatService {
                     .appKey(apiKey)
                     .baseUrl(provider.getBaseUrl())
                     .extraHeaders(extraHeaders)
+                    .proxy(provider.getProxy())
                     .build())
                     .model(modelName);
             // Bot 配置了 System Prompt 时注入

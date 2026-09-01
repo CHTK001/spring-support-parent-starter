@@ -1,13 +1,18 @@
 package com.chua.starter.ai.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.chua.common.support.ai.chat.ChatClient;
+import com.chua.common.support.ai.chat.ChatClientSetting;
+import com.chua.common.support.ai.chat.ChatMessage;
+import com.chua.common.support.ai.chat.ChatResponse;
+import com.chua.common.support.ai.chat.ChatSyncResponse;
 import com.chua.common.support.ai.chat.ModelDefinition;
-import com.chua.starter.ai.support.chat.ChatClient;
-import com.chua.starter.ai.support.chat.ChatContext;
-import com.chua.starter.ai.support.chat.ChatMessage;
-import com.chua.starter.ai.support.chat.ChatScope;
 import com.chua.starter.ai.support.entity.SysAiGroup;
 import com.chua.starter.ai.support.entity.SysAiGroupModel;
+import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
+import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
+import com.chua.starter.ai.support.manage.store.SysAiProvider;
+import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.mapper.SysAiGroupMapper;
 import com.chua.starter.ai.support.mapper.SysAiGroupModelMapper;
 import com.chua.starter.ai.support.model.AiChatRequest;
@@ -30,6 +35,13 @@ import java.util.stream.Collectors;
  * <p>通过 {@link ChatClientRegistry} 路由到对应的 {@link ChatClient}，
  * 完成同步/流式对话、模型列表查询与模型定义查询。</p>
  *
+ * <p>当请求指定的模型/提供商在模型管理（DB provider）中配置时，优先按 DB
+ * 中的平台/地址/凭证/代理动态构建 ChatClient，使每个提供商可独立配置代理
+ * （如 Google 需要单独走代理）。DB 未命中时回退全局注册中心。</p>
+ *
+ * <p>对话统一走底层 {@link com.chua.common.support.ai.chat.ChatClient} 的
+ * {@code chatSyncWithResponse} / {@code chat} API，保证任意 SPI 客户端可被调用。</p>
+ *
  * @since 4.0.0.42
  * @author CH
  */
@@ -44,6 +56,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final SysAiGroupMapper sysAiGroupMapper;
     private final SysAiGroupModelMapper sysAiGroupModelMapper;
     private final SysAiPricingService sysAiPricingService;
+    private final SysAiProviderMapper sysAiProviderMapper;
+    private final SysAiProviderModelMapper sysAiProviderModelMapper;
 
     // ==================== 同步对话 ====================
 
@@ -53,9 +67,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         if (client == null) {
             throw new IllegalStateException("No available ChatClient for model: " + request.getModel());
         }
-        ChatScope scope = buildChatScope(request);
+        ChatClient configured = configureClient(client, request);
         try {
-            com.chua.common.support.ai.chat.ChatResponse response = client.chat(scope);
+            ChatSyncResponse response = configured.chatSyncWithResponse(promptOf(request));
             return buildResult(response);
         } catch (Exception e) {
             log.error("[AiChat] call failed: model={}", request.getModel(), e);
@@ -75,13 +89,17 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             return emitter;
         }
 
-        ChatScope scope = buildChatScope(request);
+        ChatClient configured = configureClient(client, request);
         StringBuilder fullResponse = new StringBuilder();
 
         CompletableFuture.runAsync(() -> {
             try {
-                client.chat(scope,
-                        chunk -> {
+                configured.chat(promptOf(request),
+                        response -> {
+                            String chunk = response.getContent() != null ? response.getContent() : "";
+                            if (chunk.isEmpty()) {
+                                return;
+                            }
                             fullResponse.append(chunk);
                             try {
                                 emitter.send(SseEmitter.event().name("message").data(chunk));
@@ -140,10 +158,6 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             return new ArrayList<>(chatClientRegistry.getModels());
         }
 
-        Set<Integer> moduleIds = groupModels.stream()
-                .map(SysAiGroupModel::getSysAiModuleId)
-                .collect(Collectors.toSet());
-
         return chatClientRegistry.getModels().stream()
                 .collect(Collectors.toList());
     }
@@ -170,64 +184,199 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
 
     // ==================== 内部方法 ====================
 
+    /**
+     * 解析对话 ChatClient。
+     *
+     * <p>优先按请求模型名从 DB 动态构建（支持每个提供商独立代理），
+     * DB 未命中时回退注册中心按模型/提供商/默认顺序查找。</p>
+     *
+     * @param request 对话请求
+     * @return 底层 ChatClient，找不到返回 null
+     */
     private ChatClient resolveChatClient(AiChatRequest request) {
         String model = request.getModel();
         String provider = request.getProvider();
 
         if (model != null && !model.isBlank()) {
-            com.chua.common.support.ai.chat.ChatClient client = chatClientRegistry.getByModel(model);
-            if (client instanceof ChatClient cc) {
-                return cc;
+            SysAiProvider dbProvider = resolveDbProviderByModel(model);
+            if (dbProvider != null) {
+                ChatClient dbClient = buildProviderChatClient(dbProvider, model);
+                if (dbClient != null) {
+                    return dbClient;
+                }
+            }
+        }
+
+        if (model != null && !model.isBlank()) {
+            ChatClient client = chatClientRegistry.getByModel(model);
+            if (client != null) {
+                return client;
             }
         }
         if (provider != null && !provider.isBlank()) {
-            com.chua.common.support.ai.chat.ChatClient client = chatClientRegistry.getByProvider(provider);
-            if (client instanceof ChatClient cc) {
-                return cc;
+            ChatClient client = chatClientRegistry.getByProvider(provider);
+            if (client != null) {
+                return client;
             }
         }
-        com.chua.common.support.ai.chat.ChatClient defaultClient = chatClientRegistry.getDefault();
-        return defaultClient instanceof ChatClient cc ? cc : null;
+        return chatClientRegistry.getDefault();
     }
 
-    private ChatScope buildChatScope(AiChatRequest request) {
-        Map<String, Object> params = request.getParameters() != null
-                ? new LinkedHashMap<>(request.getParameters())
-                : new LinkedHashMap<>();
-        if (request.getThink() != null) {
-            params.put("think", request.getThink());
+    /**
+     * 按模型名查询 DB 中启用的 provider 配置。
+     *
+     * @param model 模型名称
+     * @return DB 中启用的 provider，未命中返回 null
+     */
+    private SysAiProvider resolveDbProviderByModel(String model) {
+        if (model == null || model.isBlank()) {
+            return null;
         }
-        if (request.getSearch() != null) {
-            params.put("search", request.getSearch());
+        try {
+            SysAiProviderModel pm = sysAiProviderModelMapper.selectOne(
+                    new LambdaQueryWrapper<SysAiProviderModel>()
+                            .eq(SysAiProviderModel::getModel, model)
+                            .eq(SysAiProviderModel::getEnabled, true)
+                            .last("LIMIT 1"));
+            if (pm == null) {
+                return null;
+            }
+            SysAiProvider provider = sysAiProviderMapper.selectById(pm.getProviderId());
+            return provider != null && Boolean.TRUE.equals(provider.getEnabled()) ? provider : null;
+        } catch (Exception e) {
+            log.warn("[AiChat] 解析 DB provider 失败 model={}: {}", model, e.getMessage());
+            return null;
         }
+    }
 
-        ChatScope.ChatScopeBuilder builder = ChatScope.builder()
-                .model(request.getModel())
-                .systemPrompt(request.getSystemPrompt())
-                .input(request.getPrompt())
-                .temperature(request.getTemperature())
-                .maxTokens(request.getMaxTokens())
-                .imageUrls(request.getImageUrls())
-                .parameters(params);
+    /**
+     * 从 DB provider 动态构建带代理的 ChatClient。
+     *
+     * @param provider DB provider 配置
+     * @param model    模型名称
+     * @return 底层 ChatClient，构建失败返回 null
+     */
+    private ChatClient buildProviderChatClient(SysAiProvider provider, String model) {
+        try {
+            String apiKey = extractApiKey(provider.getCredentials());
+            Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
+            ChatClientSetting setting = ChatClientSetting.builder()
+                    .provider(provider.getPlatform())
+                    .appKey(apiKey)
+                    .baseUrl(provider.getBaseUrl())
+                    .extraHeaders(extraHeaders)
+                    .proxy(provider.getProxy())
+                    .build();
+            ChatClient raw = ChatClient.create(setting);
+            if (raw == null) {
+                return null;
+            }
+            return raw.model(model);
+        } catch (Exception e) {
+            log.warn("[AiChat] 构建 DB ChatClient 失败 provider={} model={}: {}",
+                    provider.getProviderId(), model, e.getMessage());
+            return null;
+        }
+    }
 
+    /**
+     * 应用请求级参数（模型/系统提示词/温度/最大 tokens/历史/思考/搜索）到客户端。
+     *
+     * @param client  客户端
+     * @param request 对话请求
+     * @return 配置后的客户端
+     */
+    private ChatClient configureClient(ChatClient client, AiChatRequest request) {
+        ChatClient c = client;
+        if (request.getModel() != null && !request.getModel().isBlank()) {
+            c = c.model(request.getModel());
+        }
+        if (request.getSystemPrompt() != null && !request.getSystemPrompt().isBlank()) {
+            c = c.system(request.getSystemPrompt());
+        }
+        if (request.getTemperature() != null) {
+            c = c.temperature(request.getTemperature());
+        }
+        if (request.getMaxTokens() != null) {
+            c = c.maxTokens(request.getMaxTokens());
+        }
+        if (Boolean.TRUE.equals(request.getThink())) {
+            c = c.thinking(true);
+            if (request.getParameters() != null && request.getParameters().get("thinking_effort") != null) {
+                c = c.thinkingEffort(String.valueOf(request.getParameters().get("thinking_effort")));
+            }
+        }
+        if (Boolean.TRUE.equals(request.getSearch())) {
+            c = c.smartSearch(true);
+        }
+        if (request.getImageUrls() != null) {
+            for (String imageUrl : request.getImageUrls()) {
+                if (imageUrl != null && !imageUrl.isBlank()) {
+                    c = c.addImage(imageUrl);
+                }
+            }
+        }
         if (request.getMessages() != null && !request.getMessages().isEmpty()) {
-            ChatContext context = new ChatContext();
             List<ChatMessage> history = new ArrayList<>();
             for (Map<String, Object> msg : request.getMessages()) {
                 String role = msg.get("role") != null ? msg.get("role").toString() : "user";
                 String content = msg.get("content") != null ? msg.get("content").toString() : "";
                 history.add(new ChatMessage(role, content));
             }
-            context.setHistory(history);
-            builder.context(context);
+            c = c.history(history);
         }
-
-        return builder.build();
+        return c;
     }
 
-    private Map<String, Object> buildResult(com.chua.common.support.ai.chat.ChatResponse response) {
+    /**
+     * 提取用户本次输入文本。
+     *
+     * @param request 对话请求
+     * @return 用户输入（可为空字符串）
+     */
+    private static String promptOf(AiChatRequest request) {
+        return request.getPrompt() != null ? request.getPrompt() : "";
+    }
+
+    /**
+     * 从 provider 凭证中提取 API Key（兼容 {@code api_keys} 数组与 {@code apiKey} 键）。
+     */
+    private static String extractApiKey(Map<String, Object> credentials) {
+        if (credentials == null) {
+            return null;
+        }
+        Object keys = credentials.get("api_keys");
+        if (keys instanceof List<?> list && !list.isEmpty() && list.get(0) != null) {
+            return list.get(0).toString();
+        }
+        Object key = credentials.get("apiKey");
+        return key != null ? key.toString() : null;
+    }
+
+    /**
+     * 从 provider extra 中提取 {@code custom_headers}。
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String, String> extractExtraHeaders(Map<String, Object> extra) {
+        if (extra == null) {
+            return null;
+        }
+        Object headers = extra.get("custom_headers");
+        if (headers instanceof Map<?, ?> map) {
+            Map<String, String> result = new HashMap<>();
+            map.forEach((k, v) -> {
+                if (k != null && v != null) {
+                    result.put(k.toString(), v.toString());
+                }
+            });
+            return result.isEmpty() ? null : result;
+        }
+        return null;
+    }
+
+    private Map<String, Object> buildResult(ChatSyncResponse response) {
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("text", response.getContent() != null ? response.getContent() : "");
+        result.put("text", response.getText() != null ? response.getText() : "");
         if (response.getUsage() != null) {
             result.put("promptTokens", response.getUsage().getInputTokens());
             result.put("completionTokens", response.getUsage().getOutputTokens());
