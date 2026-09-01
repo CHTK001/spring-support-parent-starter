@@ -78,3 +78,4 @@ hs_err_pid*.log
 replay_pid*.log
 *.log.gz
 stash.diff
+cp_*.txt

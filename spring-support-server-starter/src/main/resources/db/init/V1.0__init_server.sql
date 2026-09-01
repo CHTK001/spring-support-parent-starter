@@ -1,7 +1,9 @@
 -- =====================================================================
--- 服务器资产模块初始化脚本 (spring-support-server-starter)
+-- 服务器资产模块 DDL 初始化脚本 (spring-support-server-starter)
 -- 目标库: MySQL 8.0+ / 兼容 H2 MySQL 模式
 -- 说明: 表名与列名均以 ms_server_* 前缀组织, 与监控模块(ms_monitor_*)风格一致
+-- 本文件为唯一 DDL: 全部建表(含主机扩展字段与主机级配置字段)与系统配置表
+-- 初始化数据见 V1.0__initdata_server.sql
 -- @author CH
 -- @since 4.0.0.42
 -- =====================================================================
@@ -84,6 +86,20 @@ CREATE TABLE IF NOT EXISTS ms_server_host (
     ms_server_host_online_time  DATETIME     NULL                    COMMENT '最近在线时间',
     ms_server_host_agent_key    CHAR(32)     NULL                    COMMENT '探针标识',
     ms_server_host_description  VARCHAR(255) NULL                    COMMENT '描述',
+    ms_server_host_cpu_cores    INT          NULL                    COMMENT 'CPU核心数',
+    ms_server_host_memory_mb    BIGINT       NULL                    COMMENT '内存容量(MB)',
+    ms_server_host_disk_gb      BIGINT       NULL                    COMMENT '磁盘容量(GB)',
+    ms_server_host_os_version   VARCHAR(128) NULL                    COMMENT '系统版本',
+    ms_server_host_public_ip    VARCHAR(64)  NULL                    COMMENT '公网IP',
+    ms_server_host_private_ip   VARCHAR(64)  NULL                    COMMENT '内网IP',
+    ms_server_host_online_enabled    INT NULL DEFAULT 1      COMMENT '在离线检测开关(主机级)',
+    ms_server_host_online_interval   INT NULL DEFAULT 60     COMMENT '在离线检测间隔秒(主机级)',
+    ms_server_host_collect_enabled   INT NULL DEFAULT 0      COMMENT '硬件采集开关(主机级)',
+    ms_server_host_collect_mode      VARCHAR(16) NULL DEFAULT 'SCHEDULED' COMMENT '采集方式(主机级)',
+    ms_server_host_collect_interval  INT NULL DEFAULT 3600   COMMENT '采集间隔秒(主机级)',
+    ms_server_host_last_collect_time DATETIME NULL            COMMENT '最近采集时间(主机级)',
+    ms_server_host_agent_enabled     INT NULL DEFAULT 0      COMMENT 'Agent上报开关(主机级)',
+    ms_server_host_remote_enabled    INT NULL DEFAULT 1      COMMENT '远控开关(主机级)',
     create_by                   INT          NULL                    COMMENT '创建人',
     create_name                 VARCHAR(64)  NULL                    COMMENT '创建人名称',
     create_time                 DATETIME     NULL                    COMMENT '创建时间',
@@ -203,3 +219,21 @@ CREATE TABLE IF NOT EXISTS ms_exec_log (
     KEY idx_exec_log_job (ms_exec_log_job_id),
     KEY idx_exec_log_type (ms_exec_log_type)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '批量执行日志';
+
+-- ---------------------------------------------------------------------
+-- 11. 服务器系统配置 (key-value)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ms_server_config (
+    id                     BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    ms_server_config_key   VARCHAR(128) NOT NULL                COMMENT '配置键',
+    ms_server_config_value VARCHAR(2048) NULL                   COMMENT '配置值(JSON字符串)',
+    ms_server_config_desc  VARCHAR(255) NULL                    COMMENT '配置说明',
+    create_by              INT          NULL                    COMMENT '创建人',
+    create_name            VARCHAR(64)  NULL                    COMMENT '创建人名称',
+    create_time            DATETIME     NULL                    COMMENT '创建时间',
+    update_name            VARCHAR(64)  NULL                    COMMENT '更新人名称',
+    update_by              INT          NULL                    COMMENT '更新人',
+    update_time            DATETIME     NULL                    COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_server_config_key (ms_server_config_key)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '服务器系统配置';
