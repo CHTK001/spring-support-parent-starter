@@ -171,6 +171,62 @@ public class MsServerHost extends SysBase {
     private String serverHostPrivateIp;
 
     /**
+     * 在离线检测开关（主机级）
+     */
+    @TableField("ms_server_host_online_enabled")
+    @Schema(description = "在离线检测开关(主机级)", example = "1")
+    private Integer serverHostOnlineEnabled;
+
+    /**
+     * 在离线检测间隔(秒)（主机级）
+     */
+    @TableField("ms_server_host_online_interval")
+    @Schema(description = "在离线检测间隔秒(主机级)", example = "60")
+    private Integer serverHostOnlineInterval;
+
+    /**
+     * 硬件采集开关（主机级）
+     */
+    @TableField("ms_server_host_collect_enabled")
+    @Schema(description = "硬件采集开关(主机级)", example = "0")
+    private Integer serverHostCollectEnabled;
+
+    /**
+     * 采集方式（主机级）
+     */
+    @TableField("ms_server_host_collect_mode")
+    @Schema(description = "采集方式(主机级): SCHEDULED/AGENT/HTTP/PROMETHEUS", example = "SCHEDULED")
+    private String serverHostCollectMode;
+
+    /**
+     * 采集间隔(秒)（主机级）
+     */
+    @TableField("ms_server_host_collect_interval")
+    @Schema(description = "采集间隔秒(主机级)", example = "3600")
+    private Integer serverHostCollectInterval;
+
+    /**
+     * 最近采集时间（主机级，采集节奏控制）
+     */
+    @TableField("ms_server_host_last_collect_time")
+    @Schema(description = "最近采集时间(主机级)")
+    private java.time.LocalDateTime serverHostLastCollectTime;
+
+    /**
+     * Agent 上报开关（主机级）
+     */
+    @TableField("ms_server_host_agent_enabled")
+    @Schema(description = "Agent上报开关(主机级)", example = "0")
+    private Integer serverHostAgentEnabled;
+
+    /**
+     * 远控开关（主机级）
+     */
+    @TableField("ms_server_host_remote_enabled")
+    @Schema(description = "远控开关(主机级)", example = "1")
+    private Integer serverHostRemoteEnabled;
+
+    /**
      * 登录账号（瞬态，新增表单直接提交，不落库）
      */
     @TableField(exist = false)

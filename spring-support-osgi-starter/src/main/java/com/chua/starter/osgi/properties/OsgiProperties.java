@@ -36,6 +36,11 @@ public class OsgiProperties {
     private Shell shell = new Shell();
 
     /**
+     * OSGi Shell Bundle 自动安装配置（Gogo + SSHD）。
+     */
+    private OsgiShellBundleProperties shellBundles = new OsgiShellBundleProperties();
+
+    /**
      * Gogo shell 远程管理配置。
      */
     @Data

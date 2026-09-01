@@ -3,7 +3,6 @@ package com.chua.starter.server.support.scheduler;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.enums.HostCollectType;
 import com.chua.starter.server.support.mapper.MsServerHostMapper;
-import com.chua.starter.server.support.service.ServerConfigService;
 import com.chua.starter.server.support.spi.CollectOutcome;
 import com.chua.starter.server.support.spi.HostCollectContext;
 import com.chua.starter.server.support.spi.HostCollectProvider;
@@ -17,16 +16,22 @@ import reactor.core.publisher.Mono;
 
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * 主机在离线定时检测器
+ * 主机在离线定时检测器 / 定时采集器（主机级配置）
  * <p>
- * 由 {@link ServerTaskScheduler} 按系统配置的间隔周期驱动：
- * 探测所有启用主机的 TCP 连通性并更新在线状态；
- * 按 {@code host.collect.mode}（scheduled）执行硬件采集。
- * 探测开关/间隔均可通过系统设置配置，配置变更后由时间轮动态重排。
+ * 由 {@link ServerTaskScheduler} 固定细粒度扫描驱动。
+ * 每台主机的在离线检测开关/间隔、采集开关/方式/间隔均独立配置（存于主机字段）：
+ * <ul>
+ *   <li>在离线：仅探测 {@code onlineEnabled=1} 且到达 {@code onlineInterval} 的主机</li>
+ *   <li>采集：仅采集 {@code collectEnabled=1} 且到达 {@code collectInterval} 的主机，
+ *       经采集 SPI 按主机自身 {@code collectMode} 路由</li>
+ * </ul>
+ * 127.0.0.1 / localhost 视为本机直接在线（hairpin NAT 特判）。
  * </p>
  *
  * @author CH
@@ -40,75 +45,128 @@ public class HostOnlineScheduler {
     /** 主机 Mapper */
     private final MsServerHostMapper hostMapper;
 
-    /** 系统配置服务 */
-    private final ServerConfigService configService;
-
     /** 采集 Provider 注册中心（SPI 按 mode 路由） */
     private final HostCollectProviderRegistry collectRegistry;
 
     /** TCP 连接超时(毫秒) */
     private static final int CONNECT_TIMEOUT_MS = 3000;
 
+    /** 默认在离线间隔(秒) */
+    private static final int DEFAULT_ONLINE_INTERVAL = 60;
+
+    /** 默认采集间隔(秒) */
+    private static final int DEFAULT_COLLECT_INTERVAL = 3600;
+
+    /** 最小间隔(秒) */
+    private static final int MIN_INTERVAL = 5;
+
+    /** 状态：启用 */
+    private static final int ENABLED = 1;
+
     /**
-     * 在离线检测（由时间轮按配置间隔驱动）
+     * 在离线检测：扫描所有启用主机，按各自开关/间隔决定是否探测
      */
     public void tick() {
         try {
             List<MsServerHost> hosts = hostMapper.selectList(
                     new LambdaQueryWrapper<MsServerHost>().eq(MsServerHost::getServerHostStatus, 1));
+            LocalDateTime now = LocalDateTime.now();
             int online = 0;
+            int probed = 0;
             for (MsServerHost host : hosts) {
+                // 主机级在离线开关
+                if (!isEnabled(host.getServerHostOnlineEnabled())) {
+                    continue;
+                }
+                int interval = normalizeInterval(
+                        host.getServerHostOnlineInterval() == null ? DEFAULT_ONLINE_INTERVAL : host.getServerHostOnlineInterval());
+                // 到达间隔才探测
+                if (!isDue(host.getServerHostOnlineTime(), interval, now)) {
+                    continue;
+                }
+                probed++;
                 boolean reachable = isReachable(host);
                 if (reachable) {
                     online++;
                 }
                 updateOnline(host.getId(), reachable);
             }
-            log.info("[online] 在离线检测完成: {} 台启用主机, {} 台在线", hosts.size(), online);
+            if (probed > 0) {
+                log.info("[online] 在离线检测完成: 探测 {} 台, {} 台在线", probed, online);
+            }
         } catch (Exception e) {
             log.warn("[online] 在离线检测异常: {}", e.getMessage());
         }
     }
 
     /**
-     * 硬件定时采集（由时间轮按配置间隔驱动）
-     * <p>按配置的采集方式（SCHEDULED/AGENT/HTTP/SNMP/PROMETHEUS...）经 SPI 路由到
-     * 具体 Provider 执行，统一以响应式（Flux）消费采集结果，屏蔽主动/被动差异。</p>
+     * 硬件定时采集：扫描所有启用主机，按各自开关/间隔/方式经 SPI 采集
      */
     public void collectTick() {
         try {
-            HostCollectType mode = HostCollectType.of(
-                    configService.getString("host.collect.mode", "SCHEDULED"));
-            if (mode == null) {
-                log.warn("[collect] 未识别的采集方式: {}", mode);
-                return;
-            }
-            Optional<HostCollectProvider> providerOpt = collectRegistry.resolve(mode);
-            if (providerOpt.isEmpty()) {
-                log.warn("[collect] 未找到采集 Provider: mode={}", mode);
-                return;
-            }
-            HostCollectProvider provider = providerOpt.get();
             List<MsServerHost> hosts = hostMapper.selectList(
                     new LambdaQueryWrapper<MsServerHost>().eq(MsServerHost::getServerHostStatus, 1));
+            LocalDateTime now = LocalDateTime.now();
+            // 过滤出到期的采集主机
+            List<MsServerHost> dueHosts = hosts.stream()
+                    .filter(h -> isEnabled(h.getServerHostCollectEnabled()))
+                    .filter(h -> {
+                        int interval = normalizeInterval(h.getServerHostCollectInterval() == null
+                                ? DEFAULT_COLLECT_INTERVAL : h.getServerHostCollectInterval());
+                        return isDue(h.getServerHostLastCollectTime(), interval, now);
+                    })
+                    .toList();
+            if (dueHosts.isEmpty()) {
+                return;
+            }
             long[] ok = {0};
-            Flux.fromIterable(hosts)
-                    .map(host -> HostCollectContext.builder().mode(mode).host(host).build())
-                    .filter(provider::supports)
-                    .flatMap(context -> provider.collect(context).onErrorResume(e ->
-                            Mono.just(CollectOutcome.fail(e.getMessage()))))
-                    .doOnNext(outcome -> {
-                        if (outcome != null && outcome.isSuccess()) {
-                            ok[0]++;
+            Flux.fromIterable(dueHosts)
+                    .map(host -> {
+                        HostCollectType mode = HostCollectType.of(
+                                host.getServerHostCollectMode() == null ? "SCHEDULED" : host.getServerHostCollectMode());
+                        return new HostCollectContext(mode, host);
+                    })
+                    .filter(ctx -> ctx.getMode() != null)
+                    .flatMap(context -> {
+                        Optional<HostCollectProvider> providerOpt = collectRegistry.resolve(context.getMode());
+                        if (providerOpt.isEmpty()) {
+                            log.warn("[collect] 未找到采集 Provider: mode={}", context.getMode());
+                            markCollected(context.getHost());
+                            return Mono.empty();
                         }
+                        return providerOpt.get().collect(context)
+                                .doOnNext(outcome -> {
+                                    if (outcome.isSuccess()) {
+                                        ok[0]++;
+                                    }
+                                })
+                                .doFinally(signal -> markCollected(context.getHost()))
+                                .onErrorResume(e -> {
+                                    log.warn("[collect] 采集失败 hostId={}: {}", context.getHost().getId(), e.getMessage());
+                                    return Mono.just(CollectOutcome.fail(e.getMessage()));
+                                });
                     })
                     .subscribe(
                             outcome -> {
                             },
                             error -> log.warn("[collect] 采集流异常: {}", error.getMessage()),
-                            () -> log.info("[collect] 采集完成: {} 台成功, 共 {} 台, mode={}", ok[0], hosts.size(), mode));
+                            () -> log.info("[collect] 采集完成: {} 台成功, 共 {} 台", ok[0], dueHosts.size()));
         } catch (Exception e) {
             log.warn("[collect] 定时采集异常: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 回写最近采集时间（无论成功失败，防止每次扫描重复采集同一主机）
+     *
+     * @param host 主机
+     */
+    private void markCollected(MsServerHost host) {
+        try {
+            host.setServerHostLastCollectTime(LocalDateTime.now());
+            hostMapper.updateById(host);
+        } catch (Exception e) {
+            log.warn("[collect] 回写采集时间失败 hostId={}", host.getId(), e);
         }
     }
 
@@ -153,5 +211,40 @@ public class HostOnlineScheduler {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /**
+     * 判断开关是否启用（null 视为启用）
+     *
+     * @param flag 开关值
+     * @return 是否启用
+     */
+    private boolean isEnabled(Integer flag) {
+        return flag == null || flag == ENABLED;
+    }
+
+    /**
+     * 判断是否到达执行间隔（lastTime 为空视为到期）
+     *
+     * @param lastTime 上次执行时间
+     * @param interval 间隔（秒）
+     * @param now      当前时间
+     * @return 是否到期
+     */
+    private boolean isDue(LocalDateTime lastTime, int interval, LocalDateTime now) {
+        if (lastTime == null) {
+            return true;
+        }
+        return Duration.between(lastTime, now).getSeconds() >= interval;
+    }
+
+    /**
+     * 归一化间隔（不小于最小间隔）
+     *
+     * @param interval 间隔（秒）
+     * @return 归一化间隔
+     */
+    private int normalizeInterval(int interval) {
+        return interval < MIN_INTERVAL ? MIN_INTERVAL : interval;
     }
 }
