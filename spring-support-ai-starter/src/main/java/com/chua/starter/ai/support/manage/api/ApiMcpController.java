@@ -48,6 +48,11 @@ public class ApiMcpController {
     private final ApiWebSocketPushService pushService;
 
     /**
+     * MCP 真实连接服务（SDK 连接 + 工具列举）
+     */
+    private final McpConnectionService mcpConnectionService;
+
+    /**
      * MCP 服务器档案：mcp_server_id → 服务器
      */
     private final Map<String, Map<String, Object>> servers = new ConcurrentHashMap<>();
@@ -127,11 +132,11 @@ public class ApiMcpController {
 
     @PostMapping("/test-connection")
     public ApiResult<Map<String, Object>> testConnection(@RequestBody Map<String, Object> body) {
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("success", false);
-        result.put("error", "内存后端未接入真实 MCP，仅返回占位连接测试结果");
-        result.put("code", "NO_COMPLETER");
-        return ApiResult.ok(result);
+        String name = body.get("name") == null ? "" : String.valueOf(body.get("name"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> transport =
+                body.get("transport") instanceof Map<?, ?> m ? (Map<String, Object>) m : null;
+        return ApiResult.ok(mcpConnectionService.testConnection(name, transport));
     }
 
     @PostMapping("/oauth/check-status")

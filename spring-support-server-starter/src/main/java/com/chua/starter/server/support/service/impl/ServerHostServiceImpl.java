@@ -144,7 +144,13 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (!isBlank(host.getServerHostDescription())) {
             exists.setServerHostDescription(host.getServerHostDescription());
         }
+        // 透传前端提交的凭据瞬态字段（账号密码/PEM），供 autoCreateIdentity 创建/更新身份
+        exists.setServerHostAccount(host.getServerHostAccount());
+        exists.setServerHostPassword(host.getServerHostPassword());
+        exists.setServerHostPrivateKey(host.getServerHostPrivateKey());
         hostMapper.updateById(exists);
+        // 携带账号密码/PEM 时自动创建/更新登录身份并绑定（编辑时亦可调整凭据）
+        autoCreateIdentity(exists);
         return ReturnResult.ok(hostMapper.selectById(id));
     }
 
