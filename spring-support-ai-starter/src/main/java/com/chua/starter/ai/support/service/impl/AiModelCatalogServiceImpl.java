@@ -275,7 +275,7 @@ public class AiModelCatalogServiceImpl implements AiModelCatalogService {
             return (T) EmbeddingClient.create(provider, "");
         }
         if (clientClass == AudioClient.class) {
-            return (T) AudioClient.create(provider, "");
+            return (T) com.chua.common.support.ai.audio.VirtualClient.create(provider, "");
         }
         if (clientClass == TextToAudioClient.class) {
             return (T) TextToAudioClient.create(provider, "");
