@@ -22,7 +22,8 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
-// import com.fasterxml.jackson.module.paramnames.ParameterNamesModule; // 由 Spring Boot 自动提供
+// import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
+// 由 Spring Boot 自动提供，无需手动引入
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

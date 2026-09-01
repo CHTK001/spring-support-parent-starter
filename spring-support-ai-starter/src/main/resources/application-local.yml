@@ -77,3 +77,4 @@ plugin:
   datasource:
     script:
       enable: true
+      validate-checksum: false
