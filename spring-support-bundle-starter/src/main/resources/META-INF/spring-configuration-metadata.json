@@ -1,0 +1,48 @@
+{
+  "groups": [
+    {
+      "name": "plugin.bundle",
+      "type": "com.chua.starter.bundle.properties.BundleProperties",
+      "sourceType": "com.chua.starter.bundle.properties.BundleProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "plugin.bundle.enabled",
+      "type": "java.lang.Boolean",
+      "description": "是否启用 Bundle 管理器（默认禁用，需显式开启）。",
+      "sourceType": "com.chua.starter.bundle.properties.BundleProperties",
+      "defaultValue": false
+    },
+    {
+      "name": "plugin.bundle.install-at-startup",
+      "type": "java.util.List<java.lang.String>",
+      "description": "启动时自动安装的 Bundle Maven 坐标列表，格式：groupId:artifactId:version。",
+      "sourceType": "com.chua.starter.bundle.properties.BundleProperties"
+    },
+    {
+      "name": "plugin.bundle.uninstall-at-startup",
+      "type": "java.util.List<java.lang.String>",
+      "description": "启动时自动卸载的 Bundle 符号名列表。",
+      "sourceType": "com.chua.starter.bundle.properties.BundleProperties"
+    },
+    {
+      "name": "plugin.bundle.auto-upgrade",
+      "type": "java.lang.Boolean",
+      "description": "是否允许自动升级已有 bundle（默认 true）。",
+      "sourceType": "com.chua.starter.bundle.properties.BundleProperties",
+      "defaultValue": true
+    },
+    {
+      "name": "plugin.bundle.repository-url",
+      "type": "java.lang.String",
+      "description": "Maven 仓库 URL（用于从远程解析 bundle）。",
+      "sourceType": "com.chua.starter.bundle.properties.BundleProperties",
+      "defaultValue": "https://repo1.maven.org/maven2"
+    }
+  ],
+  "hints": [],
+  "ignored": {
+    "properties": []
+  }
+}
