@@ -71,3 +71,17 @@ plugin:
     script:
       enable: true
       validate-checksum: false
+  osgi:
+    enabled: true
+    storage: ./target/osgi-runtime-cache
+    start-level: 4
+    shell:
+      enabled: true
+      port: 8122
+      host: 127.0.0.1
+      username: admin
+      password: admin123
+      ssh-enabled: true
+      ssh-port: 8122
+      ssh-username: admin
+      ssh-password: admin123
