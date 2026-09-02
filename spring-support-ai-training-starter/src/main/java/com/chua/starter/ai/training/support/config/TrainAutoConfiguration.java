@@ -10,6 +10,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 
 /**
@@ -36,9 +37,9 @@ public class TrainAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public TrainService trainService(TrainProperties properties) {
+    public TrainService trainService(TrainProperties properties, ApplicationEventPublisher eventPublisher) {
         log.info("[Train] 注册 TrainService");
-        return new TrainServiceImpl(properties);
+        return new TrainServiceImpl(properties, eventPublisher);
     }
 
     /**
