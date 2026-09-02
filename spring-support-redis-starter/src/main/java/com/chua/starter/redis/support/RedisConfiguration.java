@@ -13,7 +13,7 @@ import com.chua.starter.redis.support.service.impl.TimeSeriesServiceImpl;
 import com.chua.starter.redis.support.service.impl.RedisSearchServiceImpl;
 import com.chua.starter.redis.support.service.impl.SimpleRedisServiceImpl;
 import com.chua.starter.redis.support.kv.RedisKvEngine;
-import com.chua.starter.redis.support.utils.StringUtils;
+import com.chua.common.support.utils.StringUtils;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.DeserializationFeature;
