@@ -27,7 +27,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>用 {@code python/yolo_mock_service.py}（纯标准库 mock，模拟 yolo_train_service.py
  * 的线协议：PORT= 协商 → /start → /status 轮询 → done）驱动真实 {@link YoloTrainProvider}，
- * 验证 Java↔python 全链路：子进程拉起、端口协商、HTTP 下发、轮询回收。</p>
+ * 验证 Java↔python 全链路：子进程拉起、端口协商、HTTP 下发、轮询回收。
+ * 另用 {@code python/yolo_crash_service.py}（/start 回 200 后进程退出）回归
+ * 「子进程中途崩溃 → 快速判定失败」而非空转轮询至超时。</p>
  *
  * <p>不依赖 ultralytics / 数据集 / 联网，仅需本机有 python（无 python 时整类跳过）。
  * python 可执行经系统属性 {@code ai.training.yolo.python} 显式注入，避免 PATH 歧义；
@@ -43,6 +45,7 @@ class YoloBridgeSmokeTest {
     private static final String PROP_PYTHON = "ai.training.yolo.python";
     private static final String PROP_SCRIPT = "ai.training.yolo.script";
     private static final String CLASS_PATH_MOCK = "python/yolo_mock_service.py";
+    private static final String CLASS_PATH_CRASH = "python/yolo_crash_service.py";
 
     private String savedPythonProp;
     private String savedScriptProp;
@@ -73,7 +76,7 @@ class YoloBridgeSmokeTest {
                 "path: " + dataDir + "\nnames:\n  0: cat\n  1: dog\n", StandardCharsets.UTF_8);
 
         // mock 脚本落盘临时文件
-        Path script = extractMockScript();
+        Path script = extractClassPathScript(CLASS_PATH_MOCK);
         // python 显式注入（避免 PATH 解析差异）
         System.setProperty(PROP_PYTHON, resolvePython());
         System.setProperty(PROP_SCRIPT, script.toString());
@@ -131,14 +134,75 @@ class YoloBridgeSmokeTest {
         assertThat(end.getStatus()).isEqualTo(TrainStatus.SUCCESS);
     }
 
+    @Test
+    @DisplayName("python 子进程中途崩溃时快速判定失败，而非空转至轮询超时")
+    void trainFailsFastWhenPythonProcessCrashes() throws Exception {
+        Path dataDir = Files.createTempDirectory("yolo-crash-data");
+        Files.writeString(dataDir.resolve("data.yaml"),
+                "path: " + dataDir + "\nnames:\n  0: cat\n  1: dog\n", StandardCharsets.UTF_8);
+
+        // crash 脚本：/start 回 200 后 0.4s 退出进程，模拟训练中途崩溃
+        Path script = extractClassPathScript(CLASS_PATH_CRASH);
+        System.setProperty(PROP_PYTHON, resolvePython());
+        System.setProperty(PROP_SCRIPT, script.toString());
+
+        TrainContext ctx = new TrainContext(
+                "mock-pretrain.zip",      // modelPath
+                dataDir.resolve("out").toString(), // savePath
+                dataDir.toString());      // dataRootPath
+
+        AtomicInteger failed = new AtomicInteger(0);
+        AtomicReference<TrainProgress> lastProgress = new AtomicReference<>();
+
+        YoloTrainProvider provider = new YoloTrainProvider();
+        long startMs = System.currentTimeMillis();
+        TrainResult result = provider.train(TrainArgument.defaults(), ctx, new TrainListener() {
+            @Override
+            public void onStarted(TrainProgress p) {
+                lastProgress.set(p);
+            }
+
+            @Override
+            public void onEpochCompleted(TrainProgress p) {
+                lastProgress.set(p);
+            }
+
+            @Override
+            public void onFinished(TrainProgress p) {
+                lastProgress.set(p);
+            }
+
+            @Override
+            public void onFailed(TrainProgress p, Throwable cause) {
+                failed.incrementAndGet();
+                lastProgress.set(p);
+            }
+        });
+        long elapsedMs = System.currentTimeMillis() - startMs;
+
+        assertThat(result.isSuccess())
+                .as("子进程崩溃应判定训练失败")
+                .isFalse();
+        assertThat(result.getErrorMessage()).as("失败应带回错误描述").isNotBlank();
+        assertThat(failed.get()).as("应收到 onFailed 回调").isEqualTo(1);
+        TrainProgress end = lastProgress.get();
+        assertThat(end).isNotNull();
+        assertThat(end.getStatus()).isEqualTo(TrainStatus.FAILED);
+        // 崩溃必须"快速失败"：provider 轮询超时为 6 分钟，此处收紧到 60s——
+        // 回归验证「子进程死亡 → 立即判定失败」而非空转轮询直到超时（修复前行为）。
+        assertThat(elapsedMs)
+                .as("子进程崩溃应在秒级判定失败，而非空转至 6 分钟轮询超时")
+                .isLessThan(60_000L);
+    }
+
     // ------------------------------------------------------------------ 辅助
 
-    /** 从 classpath 提取 mock 脚本到临时文件。 */
-    private Path extractMockScript() throws IOException {
-        Path tmp = Files.createTempFile("yolo_mock_", ".py");
-        try (InputStream in = YoloBridgeSmokeTest.class.getClassLoader().getResourceAsStream(CLASS_PATH_MOCK)) {
+    /** 从 classpath 提取指定脚本到临时文件。 */
+    private Path extractClassPathScript(String classPathResource) throws IOException {
+        Path tmp = Files.createTempFile("yolo_script_", ".py");
+        try (InputStream in = YoloBridgeSmokeTest.class.getClassLoader().getResourceAsStream(classPathResource)) {
             if (in == null) {
-                throw new IOException("classpath 中未找到 mock 脚本: " + CLASS_PATH_MOCK);
+                throw new IOException("classpath 中未找到脚本: " + classPathResource);
             }
             Files.copy(in, tmp, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         }
