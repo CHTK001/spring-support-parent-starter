@@ -21,9 +21,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * YOLO 训练引擎（type=yolo, engine=python-http）。
@@ -34,7 +38,8 @@ import java.util.concurrent.TimeUnit;
  *
  * <p>HTTP 协议（见 python 脚本）：</p>
  * <ul>
- *   <li>{@code POST /start}：{data, model, epochs, imgsz, device, project, name} → 起训练线程，返回 task=1</li>
+ *   <li>{@code POST /start}：{data, model, epochs, imgsz, device, project, name} → 起训练线程，返回 task=1；
+ *       data 为 Java 侧定位到的 <b>data.yaml 文件路径</b>（自动容忍 dataset/ 等子目录布局）</li>
  *   <li>{@code GET  /status}：{status: starting|running|done|failed, current_epoch, total_epochs, best_map, message, best_model}</li>
  * </ul>
  *
@@ -52,6 +57,12 @@ public class YoloTrainProvider implements TrainProvider {
     private static final long TRAIN_TIMEOUT_MIN = 6 * 60;
     private static final long START_TIMEOUT_MS = 60_000;
 
+    /**
+     * data.yaml 递归定位的最大目录深度（容忍 dataset/ 等一层子目录打包，
+     * 也允许再深一层；Ultralytics 官方导出一般不深于此）。
+     */
+    static final int MAX_DATA_YAML_DEPTH = 3;
+
     @Override
     public String type() {
         return "yolo";
@@ -65,6 +76,15 @@ public class YoloTrainProvider implements TrainProvider {
     @Override
     public TrainResult train(TrainArgument argument, TrainContext ctx, TrainListener listener) throws Exception {
         long startMs = System.currentTimeMillis();
+
+        // 0) 前置（引擎回调前）：定位 data.yaml。Ultralytics 数据集布局允许 data.yaml
+        //    嵌套于 dataset/ 等子目录，故递归向下定位；找不到给出含实际内容的可操作错误。
+        Path dataYaml = locateDataYaml(Path.of(ctx.dataRootPath()));
+        if (dataYaml == null) {
+            throw new IllegalArgumentException(buildMissingDataYamlMessage(Path.of(ctx.dataRootPath())));
+        }
+        Path datasetDir = dataYaml.getParent();
+
         int total = argument.getEpoch() != null ? argument.getEpoch() : 10;
         TrainProgress progress = new TrainProgress()
                 .setStatus(TrainStatus.RUNNING)
@@ -72,14 +92,6 @@ public class YoloTrainProvider implements TrainProvider {
         if (listener != null) {
             listener.onStarted(progress);
         }
-
-        // 0) 前置：YOLO 数据目录需含 data.yaml
-        Path dataYaml = Path.of(ctx.dataRootPath()).resolve("data.yaml");
-        if (!Files.isRegularFile(dataYaml)) {
-            throw new IllegalArgumentException("YOLO 训练需要数据目录含 data.yaml: " + dataYaml);
-        }
-        // 数据集目录（含 data.yaml）的父目录作为 --data 指向 data.yaml 所在目录本身
-        Path datasetDir = Path.of(ctx.dataRootPath()).toAbsolutePath();
 
         // 1) 解析 python 与脚本
         String pythonCmd = resolvePython();
@@ -99,10 +111,61 @@ public class YoloTrainProvider implements TrainProvider {
             HttpClient client = HttpClient.newBuilder()
                     .connectTimeout(Duration.ofSeconds(10))
                     .build();
-            startTraining(client, port, argument, datasetDir, ctx);
+            startTraining(client, port, argument, dataYaml, datasetDir, ctx);
             return pollUntilDone(client, port, total, ctx, progress, listener, startMs);
         } finally {
             destroy(process);
+        }
+    }
+
+    /**
+     * 递归定位数据根目录下的 data.yaml（Ultralytics 布局）。
+     *
+     * <p>容忍常见打包差异：data.yaml 可位于根目录，也可嵌套在 dataset/ 等子目录
+     * （深度上限 {@link #MAX_DATA_YAML_DEPTH}）。多个候选时取目录层级最浅的一个
+     * （通常即数据集真正入口）；未找到返回 {@code null}。</p>
+     *
+     * @param dataRoot 解压后的数据根目录
+     * @return data.yaml 绝对路径；未找到返回 null
+     * @throws IOException 目录不可读时抛出
+     */
+    static Path locateDataYaml(Path dataRoot) throws IOException {
+        List<Path> found;
+        try (Stream<Path> stream = Files.walk(dataRoot, MAX_DATA_YAML_DEPTH)) {
+            found = stream
+                    .filter(Files::isRegularFile)
+                    .filter(p -> p.getFileName().toString().equalsIgnoreCase("data.yaml"))
+                    .map(Path::toAbsolutePath)
+                    .sorted(Comparator.comparingInt(Path::getNameCount))
+                    .collect(Collectors.toList());
+        }
+        return found.isEmpty() ? null : found.get(0);
+    }
+
+    /**
+     * 构造"未找到 data.yaml"的可操作错误信息：附数据目录顶层实际内容，便于使用者定位打包问题。
+     */
+    private static String buildMissingDataYamlMessage(Path dataRoot) {
+        String listing;
+        try {
+            listing = listTopLevel(dataRoot);
+        } catch (IOException e) {
+            listing = "（无法列出目录内容: " + e.getMessage() + "）";
+        }
+        return "YOLO 训练需要 Ultralytics 布局数据集（images/ + labels/ + data.yaml）。数据目录 "
+                + dataRoot.toAbsolutePath() + " 下（含子目录，深度 ≤" + MAX_DATA_YAML_DEPTH + "）未找到 data.yaml；"
+                + "实际顶层内容: [" + listing + "]。请确认上传的 ZIP 内含 data.yaml（可位于 dataset/ 等子目录）。";
+    }
+
+    /**
+     * 列出数据目录顶层条目（目录带 / 后缀），供错误提示使用。
+     */
+    private static String listTopLevel(Path dataRoot) throws IOException {
+        try (Stream<Path> stream = Files.list(dataRoot)) {
+            return stream
+                    .sorted(Comparator.comparing(p -> p.getFileName().toString()))
+                    .map(p -> p.getFileName().toString() + (Files.isDirectory(p) ? "/" : ""))
+                    .collect(Collectors.joining(", "));
         }
     }
 
@@ -173,9 +236,10 @@ public class YoloTrainProvider implements TrainProvider {
     }
 
     private void startTraining(HttpClient client, int port, TrainArgument arg,
-                               Path datasetDir, TrainContext ctx) throws Exception {
+                               Path dataYaml, Path datasetDir, TrainContext ctx) throws Exception {
         Map<String, Object> body = new HashMap<>();
-        body.put("data", datasetDir.toString());
+        // data 传 data.yaml 文件路径（ultralytics 原生支持，yaml 内相对路径基于其所在目录解析）
+        body.put("data", dataYaml.toString());
         body.put("model", "yolo11n.pt");
         body.put("epochs", arg.getEpoch() != null ? arg.getEpoch() : 10);
         body.put("imgsz", 640);
@@ -193,7 +257,7 @@ public class YoloTrainProvider implements TrainProvider {
         if (resp.statusCode() != 200) {
             throw new IllegalStateException("python 训练启动失败: HTTP " + resp.statusCode() + " " + resp.body());
         }
-        log.info("[YOLO] 训练请求已下发: {}", json);
+        log.info("[YOLO] 训练请求已下发: dataYaml={}, dataset={}", dataYaml, datasetDir);
     }
 
     private TrainResult pollUntilDone(HttpClient client, int port, int total, TrainContext ctx,
