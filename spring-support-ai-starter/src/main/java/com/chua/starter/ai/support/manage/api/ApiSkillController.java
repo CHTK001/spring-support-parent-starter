@@ -803,9 +803,13 @@ public class ApiSkillController {
             @RequestParam(defaultValue = "20") int limit,
             @RequestParam(defaultValue = "stars") String sortBy) {
         try {
-            String encodedSearch = java.net.URLEncoder.encode(search, StandardCharsets.UTF_8);
-            String url = "https://skillsmp.com/api/skills?page=" + page + "&limit=" + limit
-                    + "&sortBy=" + sortBy + "&search=" + encodedSearch;
+            StringBuilder urlBuilder = new StringBuilder("https://skillsmp.com/api/skills?page=")
+                    .append(page).append("&limit=").append(limit)
+                    .append("&sortBy=").append(sortBy);
+            if (search != null && !search.isBlank()) {
+                urlBuilder.append("&search=").append(java.net.URLEncoder.encode(search, StandardCharsets.UTF_8));
+            }
+            String url = urlBuilder.toString();
             String body = httpGet(url);
             Map<String, Object> raw = parseJson(body);
             List<?> rawSkills = (List<?>) raw.get("skills");
@@ -876,7 +880,7 @@ public class ApiSkillController {
                 if ("skillsmp".equals(source) || "clawhub".equals(source)
                         || "skillhub".equals(source) || "loophub".equals(source)) {
                     // 所有源都走 SkillsMP API（统一市场）
-                    String url = "https://skillsmp.com/api/skills?page=1&limit=30&sortBy=stars&search=";
+                    String url = "https://skillsmp.com/api/skills?page=1&limit=30&sortBy=stars";
                     String bodyText = httpGet(url);
                     Map<String, Object> raw = parseJson(bodyText);
                     List<?> rawSkills = (List<?>) raw.get("skills");
