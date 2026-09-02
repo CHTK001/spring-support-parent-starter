@@ -7,6 +7,8 @@ import com.chua.deeplearning.support.dl4j.TrainResult;
 import com.chua.deeplearning.support.dl4j.TrainStatus;
 import com.chua.starter.ai.training.support.spi.TrainContext;
 import com.chua.starter.ai.training.support.spi.TrainProvider;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.BufferedReader;
@@ -62,6 +64,12 @@ public class YoloTrainProvider implements TrainProvider {
      * 也允许再深一层；Ultralytics 官方导出一般不深于此）。
      */
     static final int MAX_DATA_YAML_DEPTH = 3;
+
+    /**
+     * JSON 编解码器（协议体 /start 与 /status 的字段值可能含逗号、冒号等特殊字符，
+     * 统一走标准 JSON 解析，避免手工 split 解析错位）。
+     */
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
     public String type() {
@@ -246,7 +254,7 @@ public class YoloTrainProvider implements TrainProvider {
         body.put("device", "cpu");
         body.put("project", ctx.savePath());
         body.put("name", "train");
-        String json = toJson(body);
+        String json = OBJECT_MAPPER.writeValueAsString(body);
 
         HttpRequest req = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/start"))
                 .timeout(Duration.ofSeconds(30))
@@ -280,10 +288,10 @@ public class YoloTrainProvider implements TrainProvider {
                 continue;
             }
 
-            Map<String, String> s = parseStatus(resp.body());
-            String status = s.getOrDefault("status", "running");
-            progress.setCurrentEpoch(parseInt(s.get("current_epoch"), 0));
-            double map = parseDouble(s.get("best_map"), 0.0);
+            JsonNode statusNode = parseStatus(resp.body());
+            String status = statusNode.path("status").asText("running");
+            progress.setCurrentEpoch(statusNode.path("current_epoch").asInt(0));
+            double map = statusNode.path("best_map").asDouble(0.0);
             if (map > progress.getBestScore()) {
                 progress.setBestScore(map);
             }
@@ -293,7 +301,7 @@ public class YoloTrainProvider implements TrainProvider {
             }
 
             if ("done".equals(status)) {
-                String bestModel = s.getOrDefault("best_model", ctx.savePath());
+                String bestModel = statusNode.path("best_model").asText(ctx.savePath());
                 progress.setStatus(TrainStatus.SUCCESS).setStage("训练完成").setProgress(100);
                 if (listener != null) {
                     listener.onFinished(progress);
@@ -307,7 +315,7 @@ public class YoloTrainProvider implements TrainProvider {
                         .setElapsedMs(elapsed);
             }
             if ("failed".equals(status)) {
-                String msg = s.getOrDefault("message", "python 训练失败");
+                String msg = statusNode.path("message").asText("python 训练失败");
                 progress.setStatus(TrainStatus.FAILED);
                 if (listener != null) {
                     listener.onFailed(progress, new RuntimeException(msg));
@@ -323,59 +331,11 @@ public class YoloTrainProvider implements TrainProvider {
         return new TrainResult().setSuccess(false).setErrorMessage("训练超时(>=" + TRAIN_TIMEOUT_MIN + "min)");
     }
 
-    private Map<String, String> parseStatus(String body) {
-        Map<String, String> m = new HashMap<>();
-        String inner = body;
-        int s = body.indexOf('{');
-        int e = body.lastIndexOf('}');
-        if (s >= 0 && e > s) {
-            inner = body.substring(s + 1, e);
-        }
-        for (String pair : inner.split(",")) {
-            int colon = pair.indexOf(':');
-            if (colon > 0) {
-                String k = pair.substring(0, colon).replace("\"", "").trim();
-                String v = pair.substring(colon + 1).replace("\"", "").trim();
-                m.put(k, v);
-            }
-        }
-        return m;
-    }
-
-    private String toJson(Map<String, Object> m) {
-        StringBuilder sb = new StringBuilder("{");
-        boolean first = true;
-        for (Map.Entry<String, Object> en : m.entrySet()) {
-            if (!first) {
-                sb.append(',');
-            }
-            first = false;
-            sb.append('"').append(en.getKey()).append("\":");
-            Object v = en.getValue();
-            if (v instanceof Number) {
-                sb.append(v);
-            } else {
-                sb.append('"').append(String.valueOf(v).replace("\\", "\\\\")
-                        .replace("\"", "\\\"")).append('"');
-            }
-        }
-        return sb.append('}').toString();
-    }
-
-    private int parseInt(String v, int def) {
-        try {
-            return (int) Double.parseDouble(v.trim());
-        } catch (Exception e) {
-            return def;
-        }
-    }
-
-    private double parseDouble(String v, double def) {
-        try {
-            return Double.parseDouble(v.trim());
-        } catch (Exception e) {
-            return def;
-        }
+    /**
+     * 解析 /status 响应体为 JSON 树（标准解析，字段值含逗号/冒号/引号均不串位）。
+     */
+    private JsonNode parseStatus(String body) throws Exception {
+        return OBJECT_MAPPER.readTree(body);
     }
 
     private void destroy(Process process) {

@@ -39,7 +39,8 @@ def _run_train():
         state["current_epoch"] = i
         state["best_map"] = round(0.10 + i * 0.05, 4)
     state["status"] = "done"
-    state["message"] = "mock train complete"
+    # message 故意含逗号/冒号：回归验证 Java 侧标准 JSON 解析（手写 split 会在此串位）
+    state["message"] = "mock complete, best at C:/mock/best.pt, map=0.25"
     state["best_model"] = "C:/mock/best.pt"
 
 
