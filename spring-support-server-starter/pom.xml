@@ -62,13 +62,6 @@
             <artifactId>utils-support-ssh-starter</artifactId>
         </dependency>
 
-        <!-- 嵌入式数据库 H2：服务器默认使用 H2 文件库（生产可切 MySQL），需打入 fat jar -->
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
         <!-- 远控协议网关：Apache Guacamole 客户端库（对接 guacd 守护进程） -->
         <dependency>
             <groupId>org.apache.guacamole</groupId>

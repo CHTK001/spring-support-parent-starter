@@ -89,19 +89,6 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- H2 数据库驱动（启动测试用） -->
-        <!-- H2 数据库驱动（启动测试用） -->
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <!-- 继承父 pom 的 maven-compiler-plugin (3.13.0 + lombok annotation processor + add opens 配置)
