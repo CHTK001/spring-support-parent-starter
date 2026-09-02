@@ -7,7 +7,6 @@ import com.chua.deeplearning.support.dl4j.TrainResult;
 import com.chua.deeplearning.support.dl4j.TrainStatus;
 import com.chua.starter.ai.training.support.spi.TrainProviders;
 import lombok.Getter;
-import lombok.Setter;
 
 import java.time.Instant;
 
@@ -76,8 +75,9 @@ public class TrainTask {
     /**
      * 训练类型（引擎路由键，如 resnet50 / yolo）。创建时默认 resnet50，
      * 启动训练前可经 {@link #selectType(String)} 显式指定（仅 PENDING 可改）。
+     * 注意：类型变更必须走 {@link #selectType(String)}（含 PENDING-only 守卫），
+     * 不提供公开 setter，避免绕开状态机直接改写类型。
      */
-    @Setter
     private volatile String type = TrainProviders.DEFAULT_TYPE;
 
     /**
