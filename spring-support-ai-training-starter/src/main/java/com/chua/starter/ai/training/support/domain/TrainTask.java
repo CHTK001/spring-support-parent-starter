@@ -5,7 +5,9 @@ import com.chua.deeplearning.support.dl4j.TrainListener;
 import com.chua.deeplearning.support.dl4j.TrainProgress;
 import com.chua.deeplearning.support.dl4j.TrainResult;
 import com.chua.deeplearning.support.dl4j.TrainStatus;
+import com.chua.starter.ai.training.support.spi.TrainProviders;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.time.Instant;
 
@@ -72,6 +74,13 @@ public class TrainTask {
     private volatile String errorMessage;
 
     /**
+     * 训练类型（引擎路由键，如 resnet50 / yolo）。创建时默认 resnet50，
+     * 启动训练前可经 {@link #selectType(String)} 显式指定（仅 PENDING 可改）。
+     */
+    @Setter
+    private volatile String type = TrainProviders.DEFAULT_TYPE;
+
+    /**
      * 领域工厂：创建新训练任务。
      *
      * @param originalFileName 上传文件名
@@ -111,6 +120,21 @@ public class TrainTask {
         this.progress = new TrainProgress()
                 .setStatus(TrainStatus.RUNNING)
                 .setStage("准备训练");
+    }
+
+    /**
+     * 指定训练类型（引擎路由键）。null/空串回退默认类型，仅 PENDING 可改。
+     *
+     * @param type 训练类型（resnet50 / yolo ...）；null 视为未指定
+     * @return 本次实际生效的类型
+     * @throws IllegalStateException 已启动后不可再改类型
+     */
+    public String selectType(String type) {
+        if (status != TrainStatus.PENDING) {
+            throw new IllegalStateException("任务状态为 " + status + "，不可再改训练类型（仅 PENDING 可指定）");
+        }
+        this.type = (type == null || type.isBlank()) ? TrainProviders.DEFAULT_TYPE : type;
+        return this.type;
     }
 
     /**

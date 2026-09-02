@@ -23,12 +23,13 @@ public interface TrainService {
     TrainTask createTask(String originalFileName, String dataPath);
 
     /**
-     * 启动异步训练（后台线程执行 DL4J 训练）。
+     * 启动异步训练（后台线程执行，引擎按 type 经 SPI 分发）。
      *
      * @param taskId 任务 ID
+     * @param type   训练类型（resnet50 / yolo）；null 视为默认 resnet50
      * @throws Exception 训练启动失败（任务不存在或已在运行）
      */
-    void startTraining(String taskId) throws Exception;
+    void startTraining(String taskId, String type) throws Exception;
 
     /**
      * 获取任务状态。
