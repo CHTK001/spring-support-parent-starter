@@ -347,20 +347,20 @@ public class ApiChatController {
     public ApiResult<Void> cancel(@PathVariable String conversationId) {
         conversationStore.get(conversationId);
         String turnId = conversationStore.newId();
+        java.util.Map<String, Object> runtimeMap = new LinkedHashMap<>();
+        runtimeMap.put("state", "ai_waiting_input");
+        runtimeMap.put("can_send_message", true);
+        runtimeMap.put("has_runtime", false);
+        runtimeMap.put("is_processing", false);
+        runtimeMap.put("pending_confirmations", 0);
+        runtimeMap.put("active_turn_id", (Object) null);
         pushService.push("turn.completed", Map.of(
                 "conversation_id", conversationId,
                 "turn_id", turnId,
                 "status", "finished",
                 "state", "ai_waiting_input",
                 "can_send_message", true,
-                "runtime", Map.of(
-                        "state", "ai_waiting_input",
-                        "can_send_message", true,
-                        "has_runtime", false,
-                        "is_processing", false,
-                        "pending_confirmations", 0,
-                        "active_turn_id", (Object) null
-                )
+                "runtime", runtimeMap
         ));
         return ApiResult.ok();
     }
@@ -635,20 +635,20 @@ public class ApiChatController {
             conversationStore.addMessage(conversationId, assistantMsg);
 
             // 6. 推送 turn.completed
+            java.util.Map<String, Object> runtimeMap = new LinkedHashMap<>();
+            runtimeMap.put("state", "ai_waiting_input");
+            runtimeMap.put("can_send_message", true);
+            runtimeMap.put("has_runtime", false);
+            runtimeMap.put("is_processing", false);
+            runtimeMap.put("pending_confirmations", 0);
+            runtimeMap.put("active_turn_id", (Object) null);
             pushService.push("turn.completed", Map.of(
                     "conversation_id", conversationId,
                     "turn_id", turnId,
                     "status", "finished",
                     "state", "ai_waiting_input",
                     "can_send_message", true,
-                    "runtime", Map.of(
-                            "state", "ai_waiting_input",
-                            "can_send_message", true,
-                            "has_runtime", false,
-                            "is_processing", false,
-                            "pending_confirmations", 0,
-                            "active_turn_id", (Object) null
-                    ),
+                    "runtime", runtimeMap,
                     "workspace", "",
                     "model", Map.of("platform", "", "name", modelName != null ? modelName : "",
                             "use_model", modelName != null ? modelName : ""),
