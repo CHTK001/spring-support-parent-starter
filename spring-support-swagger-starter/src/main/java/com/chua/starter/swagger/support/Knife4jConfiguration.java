@@ -137,12 +137,17 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
                 || ManagementPortType.get(environment).equals(ManagementPortType.DIFFERENT));
     }
 
+    /**
+     * Knife4j 模块开关。
+     *
+     * <p>只注册"模块开关": 端点 (含 host:port 的完整 URL) 由
+     * {@code ServiceInfoEndpointDetector} 统一探测注册, 此处不再重复注册, 否则横幅会出现两行 doc.html。</p>
+     *
+     * @return ServiceInfoContributor
+     */
     @Bean
     /** KnifejServiceInfoContributor */
     public ServiceInfoContributor knife4jServiceInfoContributor() {
-        return registry -> {
-            registry.registerEndpoint("文档", "接口文档", "/doc.html", "接口文档");
-            registry.registerFlag("knife4j", "文档", true, "Knife4j接口文档");
-        };
+        return registry -> registry.registerFlag("knife4j", "文档", true, "Knife4j接口文档");
     }
 }
