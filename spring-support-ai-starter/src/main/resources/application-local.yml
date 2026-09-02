@@ -52,7 +52,7 @@ spring:
 # 本地联调：关闭外部 OAuth / 协议服务器 / 文件系统；OAuth 全部放行（白名单通配）
 plugin:
   oauth:
-    enable: false
+    enable: true
     protocol: static
     temp:
       open: true
@@ -66,5 +66,5 @@ plugin:
     dir-list: false
   datasource:
     script:
-      enable: true
+      enable: false
       validate-checksum: false

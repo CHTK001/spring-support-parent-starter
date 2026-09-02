@@ -89,6 +89,21 @@ public class AiConfiguration {
     }
 
     /**
+     * 本地回显 ChatClient 兜底 —— 无外部 AI 服务时保证会话链路可用。
+     *
+     * <p>当用户自行定义了名为 {@code echoChatClient} 的 Bean 时本兜底自动退避；
+     * 未配置真实 ChatClient 时，{@link #defaultChatClient} 仍会聚合本兜底，
+     * 使 chat 会话链路（POST → WS 流式 → turn.completed）在无模型环境下可联调，
+     * 生产环境应自行配置真实提供商客户端覆盖。</p>
+     */
+    @Bean
+    @ConditionalOnMissingBean(name = "echoChatClient")
+    public EchoChatClient echoChatClient() {
+        log.info("[AiConfiguration] 注册本地 Echo ChatClient（无真实模型时的兜底）");
+        return new EchoChatClient();
+    }
+
+    /**
      * 默认 ChatClient — 聚合客户端。
      *
      * <p>通过 SPI 发现 ChatClient 实现，聚合为 AggregateChatClient。
@@ -143,6 +158,11 @@ public class AiConfiguration {
                 chatClientRegistry.register("aggregate", "aggregate", aggregate, "chat", "routing", "aggregate");
             } else {
                 chatClientRegistry.register(entry.getKey(), client);
+                // 无聚合客户端时，用首个普通客户端兜底默认，保证 resolveChatClient 永不落空
+                if (chatClientRegistry.getDefault() == null) {
+                    chatClientRegistry.setDefault(client);
+                    log.info("[AiConfiguration] 设置默认 ChatClient: {}", entry.getKey());
+                }
             }
         }
 
