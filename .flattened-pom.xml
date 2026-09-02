@@ -86,6 +86,7 @@
     <module>spring-support-monitor-starter</module>
     <module>spring-support-server-starter</module>
     <module>spring-support-ai-starter</module>
+    <module>spring-support-ai-training-starter</module>
     <module>spring-support-message-starter</module>
     <module>spring-support-software-starter</module>
     <module>spring-support-taskdistribution-starter</module>
