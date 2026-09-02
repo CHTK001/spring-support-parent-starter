@@ -54,7 +54,7 @@ import java.util.List;
  * @author CH
  */
 @Slf4j
-@ConditionalOnProperty(prefix = "plugin.oauth", name = "enable", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(prefix = "plugin.oauth", name = "enable", havingValue = "true", matchIfMissing = true)
 @Configuration
 @EnableConfigurationProperties({ AuthClientProperties.class })
 public class AuthClientConfiguration

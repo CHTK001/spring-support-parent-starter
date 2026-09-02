@@ -40,6 +40,10 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
         if (Proxy.isProxyClass(targetClass)) {
             return false;
         }
+        // 跳过 @TokenForIgnore 标注的方法（登录、登出、token 刷新等免鉴权场景）
+        if (AnnotatedElementUtils.hasAnnotation(method, com.chua.starter.oauth.client.support.annotation.TokenForIgnore.class)) {
+            return false;
+        }
         return AnnotatedElementUtils.hasAnnotation(method, Permission.class) ||
                 AnnotatedElementUtils.hasAnnotation(targetClass, Permission.class);
     }
@@ -66,8 +70,17 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
                 
                 UserResume userInfo = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getUserInfo(UserResume.class);
                 if(null == userInfo) {
-                    log.warn("[权限拦截器]用户信息为空，拒绝访问 - 方法: {}", methodName);
-                    throw new OauthException("您的账号没有权限, 请联系管理员分配!");
+                    // 无鉴权来源（未登录/本地联调直连）时注入游客身份，而非 admin：
+                    // 无任何角色与权限，仅能通过未限定角色/权限的公开 @Permission 接口；
+                    // 需要特定角色或权限的接口仍会被拒绝，避免匿名提权。
+                    log.debug("[权限拦截器]用户信息为空，注入游客上下文 - 方法: {}", methodName);
+                    userInfo = new UserResume();
+                    userInfo.setUserId("-1");
+                    userInfo.setUsername("游客");
+                    userInfo.setUid("guest");
+                    userInfo.setRoles(java.util.Collections.emptySet());
+                    userInfo.setPermission(java.util.Collections.emptySet());
+                    com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUserInfo(userInfo);
                 }
                 
                 log.debug("[权限拦截器]当前用户 - 用户名: {}, 用户ID: {}", 
