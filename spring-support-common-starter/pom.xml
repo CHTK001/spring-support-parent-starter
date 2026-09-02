@@ -258,6 +258,13 @@
             <version>${ip2proxy.version}</version>
             <scope>provided</scope>
         </dependency>
+
+        <!-- 单元测试 (仅 test scope, 不传递给消费方) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
     <build>
         <plugins>

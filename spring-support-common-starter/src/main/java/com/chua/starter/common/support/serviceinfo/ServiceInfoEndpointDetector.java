@@ -40,6 +40,8 @@ public class ServiceInfoEndpointDetector {
         registry.registerEndpoint("通用", "应用自身",
                 base + "/service-info", "服务信息聚合端点");
 
+        // swagger 开关由 spring-support-swagger-starter 自己注册 (模块维度: 生效即开启),
+        // 这里只负责补上带 host:port 的完整端点 URL, 避免同一端点被注册两次
         boolean hasSwagger = hasProperty("springdoc.swagger-ui.enabled")
                 || hasProperty("knife4j.enable")
                 || hasProperty("plugin.swagger.enable");
@@ -47,7 +49,6 @@ public class ServiceInfoEndpointDetector {
             registry.registerEndpoint("文档", "swagger",
                     base + "/doc.html", "Knife4j 接口文档");
         }
-        registry.registerFlag("swagger", "文档", hasSwagger, "Knife4j 接口文档");
 
         boolean hasActuator = hasProperty("management.endpoints.web.exposure.include");
         if (hasActuator) {
