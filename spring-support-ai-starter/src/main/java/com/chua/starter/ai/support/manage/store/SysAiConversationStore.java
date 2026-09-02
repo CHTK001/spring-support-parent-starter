@@ -126,7 +126,7 @@ public class SysAiConversationStore {
      *
      * @return 36 位 UUIDv7 字符串
      */
-    private String generateUuidV7() {
+    public static String generateUuidV7() {
         long millis = System.currentTimeMillis();
         byte[] bytes = new byte[16];
 

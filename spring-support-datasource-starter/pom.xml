@@ -94,13 +94,6 @@
             <artifactId>sqlite-jdbc</artifactId>
         </dependency>
 
-        <!-- H2内存数据库 - 用于小表物理化副本 -->
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>test</scope>
-        </dependency>
-
         <!-- H2 嵌入式数据库引擎（utils 核心实现） -->
         <dependency>
             <groupId>com.chua</groupId>

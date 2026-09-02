@@ -17,6 +17,9 @@ spring:
       - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration
       - org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration
       - org.springframework.boot.autoconfigure.mail.MailSenderValidatorAutoConfiguration
+      - org.springframework.boot.actuate.autoconfigure.endpoint.web.servlet.WebMvcEndpointManagementContextConfiguration
+      - com.chua.starter.datasource.configuration.DocumentAutoConfiguration
+      - org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration
   data:
     redis:
       host: 172.16.0.40
@@ -66,5 +69,5 @@ plugin:
     dir-list: false
   datasource:
     script:
-      enable: false
+      enable: true
       validate-checksum: false
