@@ -60,17 +60,18 @@ public class TrainServiceImpl implements TrainService {
     }
 
     @Override
-    public void startTraining(String taskId) throws Exception {
+    public void startTraining(String taskId, String type) throws Exception {
         TrainTask task = taskStore.get(taskId);
         if (task == null) {
             throw new IllegalArgumentException("任务不存在: " + taskId);
         }
 
-        // 领域对象自校验并流转状态（PENDING → RUNNING）
+        // 先锁定训练类型（缺省兼容默认 DL4J；仅 PENDING 可指定），再流转状态
+        task.selectType(type);
         task.start();
 
-        // 引擎按类型从 SPI 注册表解析（type 缺省兼容默认 DL4J）
-        TrainProvider provider = TrainProviders.require(TrainProviders.DEFAULT_TYPE);
+        // 引擎按任务类型从 SPI 注册表解析（type 在 trigger 时写入任务，缺省兼容默认 DL4J）
+        TrainProvider provider = TrainProviders.require(task.getType());
         TrainContext ctx = new TrainContext(
                 properties.getModelPath(),
                 properties.getSavePath(),

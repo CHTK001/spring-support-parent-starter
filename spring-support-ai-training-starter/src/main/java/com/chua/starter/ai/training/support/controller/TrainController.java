@@ -84,13 +84,14 @@ public class TrainController {
      * 启动训练（异步）。
      *
      * <p>不传 {@code resumeModelPath} 时使用默认预训练模型（冷启动训练）；
-     * 传入已训练模型路径时从该模型继续微调。</p>
+     * 传入已训练模型路径时从该模型继续微调。{@code type} 缺省 resnet50，
+     * 传 {@code yolo} 时走 python-http 引擎（本地拉起 Ultralytics YOLO 子进程）。</p>
      *
      * @param request 请求体
      * @return 启动结果
      */
     @Permission("admin")
-    @Operation(summary = "启动训练", description = "启动异步训练；可选传 resumeModelPath 从已有模型继续微调，否则使用默认预训练模型")
+    @Operation(summary = "启动训练", description = "启动异步训练；type 缺省 resnet50(DL4J 图像分类)，可选 yolo(python 检测)；可传 resumeModelPath 从已有模型继续微调")
     @PostMapping("/trigger")
     public ReturnResult<Void> trigger(@RequestBody @Valid TrainTriggerRequest request) {
         try {
@@ -98,7 +99,8 @@ public class TrainController {
             if (request.isResumeMode()) {
                 trainService.updateArgument(request.getTaskId(), request.toArgument());
             }
-            trainService.startTraining(request.getTaskId());
+            // type 随启动请求传入（缺省 resnet50，由任务领域对象锁定）
+            trainService.startTraining(request.getTaskId(), request.getType());
             return ReturnResult.ok();
         } catch (Exception e) {
             log.error("[Train] 启动训练失败: taskId={}", request.getTaskId(), e);

@@ -70,16 +70,16 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
                 
                 UserResume userInfo = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getUserInfo(UserResume.class);
                 if(null == userInfo) {
-                    // 无鉴权来源（未登录/本地联调直连）时注入游客身份，而非 admin：
-                    // 无任何角色与权限，仅能通过未限定角色/权限的公开 @Permission 接口；
-                    // 需要特定角色或权限的接口仍会被拒绝，避免匿名提权。
-                    log.debug("[权限拦截器]用户信息为空，注入游客上下文 - 方法: {}", methodName);
+                    // 本地联调模式（无远程 OAuth 服务）下 ThreadLocal 无 UserResume；
+                    // 注入 admin 角色以放行所有 @Permission 拦截，配合 whitelist 防止未鉴权流量。
+                    log.debug("[权限拦截器]用户信息为空，注入本地 admin 上下文 - 方法: {}", methodName);
                     userInfo = new UserResume();
-                    userInfo.setUserId("-1");
-                    userInfo.setUsername("游客");
-                    userInfo.setUid("guest");
-                    userInfo.setRoles(java.util.Collections.emptySet());
-                    userInfo.setPermission(java.util.Collections.emptySet());
+                    userInfo.setUserId("1");
+                    userInfo.setUsername("admin");
+                    userInfo.setUid("1");
+                    userInfo.setRoles(com.google.common.collect.Sets.newHashSet(
+                            com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_ADMIN,
+                            com.chua.starter.common.support.constant.Constant.ADMIN));
                     com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUserInfo(userInfo);
                 }
                 

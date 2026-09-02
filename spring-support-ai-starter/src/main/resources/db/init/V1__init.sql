@@ -3,6 +3,11 @@
 -- 由 db/init/*.sql + schema.sql 合并生成。
 -- ============================================================================
 
+-- ============================================================
+-- PART 1: 表结构（DDL）
+-- ============================================================
+
+-- 1. 清理遗留表
 DROP TABLE IF EXISTS `sys_nomifun_provider_connection`;
 
 DROP TABLE IF EXISTS `sys_nomifun_provider_model`;
@@ -13,45 +18,7 @@ DROP TABLE IF EXISTS `sys_nomifun_message`;
 
 DROP TABLE IF EXISTS `sys_nomifun_conversation`;
 
-ALTER TABLE `sys_ai_bot_binding`
-    ADD COLUMN `sys_ai_bot_binding_model` VARCHAR(128) NULL COMMENT '绑定的 AI 模型（用于微信聊天时 AI 回复）' AFTER `sys_ai_bot_binding_bind_source`;
-
-SET @dbname = DATABASE();
-
-SET @tablename = 'sys_ai_provider';
-
-SET @columnname = 'sys_ai_provider_extra';
-
-SET @preparedStatement = (SELECT IF(
-  (
-    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = @dbname
-      AND TABLE_NAME = @tablename
-      AND COLUMN_NAME = @columnname
-  ) > 0,
-  'SELECT 1',
-  CONCAT('ALTER TABLE `', @tablename, '` ADD COLUMN `', @columnname, '` TEXT NULL COMMENT ''扩展配置JSON'' AFTER `sys_ai_provider_bedrock_config`')
-));
-
-PREPARE alterIfNotExists FROM @preparedStatement;
-
-EXECUTE alterIfNotExists;
-
-DEALLOCATE PREPARE alterIfNotExists;
-
-SET @columnname = 'sys_ai_provider_proxy';
-
-SET @preparedStatement = (SELECT IF(
-  (
-    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = @dbname
-      AND TABLE_NAME = @tablename
-      AND COLUMN_NAME = @columnname
-  ) > 0,
-  'SELECT 1',
-  CONCAT('ALTER TABLE `', @tablename, '` ADD COLUMN `', @columnname, '` VARCHAR(512) NULL COMMENT ''HTTP代理地址（如 http://127.0.0.1:7890、socks5://127.0.0.1:1080）'' AFTER `sys_ai_provider_extra`')
-));
-
+-- 2. 表结构
 CREATE TABLE IF NOT EXISTS `sys_ai_provider` (
     `sys_ai_provider_id`         VARCHAR(64)  NOT NULL COMMENT '提供商ID（UUIDv7）',
     `sys_ai_provider_platform`    VARCHAR(64)  NOT NULL COMMENT '平台类型（openai/anthropic/google等）',
@@ -1008,6 +975,53 @@ CREATE TABLE IF NOT EXISTS `sys_ai_requirement` (
     `update_time` BIGINT DEFAULT NULL,
     PRIMARY KEY (`sys_ai_requirement_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='需求条目';
+
+CREATE TABLE IF NOT EXISTS `sys_ai_data_source` (`sys_ai_data_source_id` VARCHAR(36) NOT NULL COMMENT '数据源 ID（UUIDv7）', `sys_ai_data_source_name` VARCHAR(128) NOT NULL COMMENT '数据源名称', `sys_ai_data_source_type` VARCHAR(64) NOT NULL COMMENT '类型: lark / jira / notion / generic', `sys_ai_data_source_config` TEXT NULL COMMENT '配置 JSON', `sys_ai_data_source_enabled` TINYINT NOT NULL DEFAULT 1 COMMENT '是否启用', `sys_ai_data_source_sync_cron` VARCHAR(64) NULL COMMENT '同步 cron 表达式', `sys_ai_data_source_last_sync_at` BIGINT NULL COMMENT '上次同步时间戳', `sys_ai_data_source_last_sync_status` VARCHAR(32) NULL COMMENT '上次同步状态', `sys_ai_data_source_last_sync_error` VARCHAR(512) NULL COMMENT '上次同步错误', `create_name` VARCHAR(64) NULL, `create_by` INT NULL, `create_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP, `update_name` VARCHAR(64) NULL, `update_by` INT NULL, `update_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (`sys_ai_data_source_id`), KEY `idx_sys_ai_ds_type` (`sys_ai_data_source_type`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='需求数据源提供方配置';
+
+-- 3. 列变更（ALTER TABLE）
+ALTER TABLE `sys_ai_bot_binding`
+    ADD COLUMN `sys_ai_bot_binding_model` VARCHAR(128) NULL COMMENT '绑定的 AI 模型（用于微信聊天时 AI 回复）' AFTER `sys_ai_bot_binding_bind_source`;
+
+-- 4. 动态列变更（幂等 PREPARE/EXECUTE）
+SET @dbname = DATABASE();
+
+SET @tablename = 'sys_ai_provider';
+
+SET @columnname = 'sys_ai_provider_extra';
+
+SET @preparedStatement = (SELECT IF(
+  (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = @dbname
+      AND TABLE_NAME = @tablename
+      AND COLUMN_NAME = @columnname
+  ) > 0,
+  'SELECT 1',
+  CONCAT('ALTER TABLE `', @tablename, '` ADD COLUMN `', @columnname, '` TEXT NULL COMMENT ''扩展配置JSON'' AFTER `sys_ai_provider_bedrock_config`')
+));
+
+PREPARE alterIfNotExists FROM @preparedStatement;
+
+EXECUTE alterIfNotExists;
+
+DEALLOCATE PREPARE alterIfNotExists;
+
+SET @columnname = 'sys_ai_provider_proxy';
+
+SET @preparedStatement = (SELECT IF(
+  (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = @dbname
+      AND TABLE_NAME = @tablename
+      AND COLUMN_NAME = @columnname
+  ) > 0,
+  'SELECT 1',
+  CONCAT('ALTER TABLE `', @tablename, '` ADD COLUMN `', @columnname, '` VARCHAR(512) NULL COMMENT ''HTTP代理地址（如 http://127.0.0.1:7890、socks5://127.0.0.1:1080）'' AFTER `sys_ai_provider_extra`')
+));
+
+-- ============================================================
+-- PART 2: 初始化数据（DML）
+-- ============================================================
 
 INSERT IGNORE INTO `sys_ai_face_group` (`sys_ai_face_group_name`, `sys_ai_face_group_sort`)
 VALUES ('default', 0);

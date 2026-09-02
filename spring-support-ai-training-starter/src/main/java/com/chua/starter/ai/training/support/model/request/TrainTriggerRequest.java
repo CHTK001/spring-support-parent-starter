@@ -32,6 +32,13 @@ public class TrainTriggerRequest {
     private String resumeModelPath;
 
     /**
+     * 训练类型（引擎路由键）。可选，缺省 {@code resnet50}（DL4J 图像分类迁移学习）；
+     * 传 {@code yolo} 走 python-http 引擎（本地拉起 Ultralytics YOLO 子进程）。
+     */
+    @Schema(description = "训练类型；resnet50(默认,DL4J 图像分类) / yolo(python 检测)", example = "resnet50")
+    private String type;
+
+    /**
      * 是否为续训练模式（由领域语义驱动，非简单 getter 委托）。
      *
      * @return true 若指定了续训模型
