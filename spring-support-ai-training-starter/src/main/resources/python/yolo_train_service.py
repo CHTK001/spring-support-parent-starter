@@ -13,7 +13,8 @@ YOLO 训练一次性 HTTP 服务（与 Java YoloTrainProvider 配套）。
   GET  /health  -> {"ok": true}
 
 约定：
-  - data 为含 data.yaml 的数据集目录（YOLO 官方布局：images/ + labels/ + data.yaml）。
+  - data 为 data.yaml 文件路径（YOLO 官方布局：images/ + labels/ + data.yaml）；
+    Java 侧已递归定位（容忍 dataset/ 等子目录）。兼容直接传数据集目录：脚本内自动补全目录下的 data.yaml。
   - 训练完成时把 best.pt 拷贝到 project/ 目录（Java 以 best.pt 存在为完成信号）。
   - 服务在启动后把 "PORT=<port>" 打印到 stdout 首行，供 Java 协商端口后关闭子进程句柄。
   - 训练失败会记录 message 并以 status=failed 返回，同时退出码非 0。
@@ -67,8 +68,14 @@ def _run_train(args):
         name = args.get("name", "train")
         total = int(args.get("epochs", 10))
         state.total_epochs = total
+        # data 兼容两种入参：data.yaml 路径，或含 data.yaml 的数据集目录（自动补全）
+        data_arg = args["data"]
+        if os.path.isdir(data_arg):
+            candidate = os.path.join(data_arg, "data.yaml")
+            if os.path.isfile(candidate):
+                data_arg = candidate
         model.train(
-            data=args["data"],
+            data=data_arg,
             epochs=total,
             imgsz=int(args.get("imgsz", 640)),
             device=args.get("device", "cpu"),
