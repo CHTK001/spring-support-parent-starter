@@ -216,6 +216,10 @@ public class StaticProtocol extends AbstractProtocol {
     /**
      * 获取访问令牌
      *
+     * <p>静态协议下基于 {@code plugin.oauth.temp.user} 验证账号密码，
+     * 命中后通过 {@link TokenCipher} 签发 token，role/userId 与
+     * {@link #newAuthenticationInformation} 保持一致（admin → SUPER_ADMIN + ADMIN）。</p>
+     *
      * @param username  用户名
      * @param password  密码
      * @param authType  认证类型
@@ -224,7 +228,69 @@ public class StaticProtocol extends AbstractProtocol {
      */
     @Override
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
-        return null;
+        try {
+            String tempUser = authClientProperties.getTemp() != null
+                    ? authClientProperties.getTemp().getUser() : null;
+            if (StringUtils.isBlank(tempUser)) {
+                log.warn("[StaticProtocol] 临时账号未配置 (plugin.oauth.temp.user)");
+                return null;
+            }
+            String[] parts = tempUser.split(":", 2);
+            if (parts.length != 2) {
+                log.warn("[StaticProtocol] 临时账号格式错误 - 期望 user:password");
+                return null;
+            }
+            if (!parts[0].equals(username) || !parts[1].equals(password)) {
+                log.warn("[StaticProtocol] 临时账号不匹配 - 输入: {}", username);
+                return null;
+            }
+
+            UserResult userResult = new UserResult();
+            userResult.setUserId("1");
+            userResult.setUid(DigestUtils.sha1("1"));
+            userResult.setUsername(parts[0]);
+            userResult.setNickName(parts[0]);
+            userResult.setLoginType(authType != null ? authType.getCode() : "web");
+            userResult.setOpenId(userResult.getUid());
+            userResult.setUnionId(userResult.getUid());
+            if (ADMIN.equalsIgnoreCase(parts[0])) {
+                userResult.setRoles(Sets.newHashSet(SUPER_ADMIN, ADMIN));
+            } else {
+                userResult.setRoles(Sets.newHashSet(OPS));
+            }
+            userResult.setExpireTime(System.currentTimeMillis() / 1000 + 7L * 24 * 60 * 60);
+
+            String token = TokenCipher.encrypt(userResult);
+            if (StringUtils.isBlank(token)) {
+                log.warn("[StaticProtocol] TokenCipher 签发失败");
+                return null;
+            }
+            userResult.setToken(token);
+            userResult.setRefreshToken(token);
+
+            LoginAuthResult result = new LoginAuthResult();
+            result.setCode(200);
+            result.setToken(token);
+            result.setRefreshToken(token);
+            result.setFingerprint(userResult.getFingerprint());
+            UserResume userResume = new UserResume();
+            userResume.setUserId(userResult.getUserId());
+            userResume.setUid(userResult.getUid());
+            userResume.setUsername(userResult.getUsername());
+            userResume.setNickName(userResult.getNickName());
+            userResume.setLoginType(userResult.getLoginType());
+            userResume.setRoles(userResult.getRoles());
+            userResume.setOpenId(userResult.getOpenId());
+            userResume.setUnionId(userResult.getUnionId());
+            userResume.setFingerprint(userResult.getFingerprint());
+            userResume.setPermission(userResult.getPermission());
+            userResume.setExpireTime(userResult.getExpireTime());
+            result.setUserResume(userResume);
+            return result;
+        } catch (Exception e) {
+            log.error("[StaticProtocol] getAccessToken 异常", e);
+            return null;
+        }
     }
 
     /**

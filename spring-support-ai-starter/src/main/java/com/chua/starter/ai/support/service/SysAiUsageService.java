@@ -70,5 +70,11 @@ public interface SysAiUsageService {
         public Integer totalTokens;
         /** 总数cost */
         public Double totalCost;
+        /** 缓存读取Token */
+        public Integer totalCachedTokens;
+        /** 原始费用(未折扣) */
+        public Double standardCost;
+        /** 平均耗时(ms) */
+        public Double avgLatency;
     }
 }
