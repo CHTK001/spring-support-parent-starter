@@ -27,6 +27,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DataServiceImpl implements DataService {
 
+    /** 文件名净化后为空时的回退名。 */
+    static final String DEFAULT_FILE_NAME = "upload.zip";
+
     private final TrainProperties properties;
 
     @Override
@@ -38,11 +41,36 @@ public class DataServiceImpl implements DataService {
         }
         Path uploadDir = Path.of(properties.getUploadPath());
         Files.createDirectories(uploadDir);
-        String safeName = UUID.randomUUID() + "_" + name;
+        // 文件名净化（基名 + 剔除非法字符）：originalFilename 可能携带路径分隔符/盘符，
+        // 直接拼入 Path.resolve 有逃逸上传目录的隐患（配合随机前缀防重名）
+        String safeName = UUID.randomUUID() + "_" + sanitizeFileName(name);
         Path target = uploadDir.resolve(safeName);
         Files.write(target, data);
         log.info("[Train] 文件已保存: {}", target);
         return target.toAbsolutePath().toString();
+    }
+
+    /**
+     * 净化客户端原始文件名：仅保留末段路径基名，并剔除路径分隔符与
+     * Windows/通用非法字符（{@code \ / : * ? " < > |} 及控制字符）。
+     * 净化结果为空（全非法字符/纯路径）时回退 {@link #DEFAULT_FILE_NAME}。
+     *
+     * <p>包可见便于单测直接覆盖净化规则。</p>
+     *
+     * @param name 客户端原始文件名（可为 null）
+     * @return 安全文件名（不含任何路径分隔符/非法字符）
+     */
+    static String sanitizeFileName(String name) {
+        if (name == null) {
+            return DEFAULT_FILE_NAME;
+        }
+        String base = name;
+        int slash = Math.max(base.lastIndexOf('/'), base.lastIndexOf('\\'));
+        if (slash >= 0) {
+            base = base.substring(slash + 1);
+        }
+        String cleaned = base.replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "");
+        return cleaned.isBlank() ? DEFAULT_FILE_NAME : cleaned;
     }
 
     @Override
