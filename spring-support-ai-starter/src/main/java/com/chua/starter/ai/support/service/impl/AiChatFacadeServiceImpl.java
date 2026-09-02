@@ -15,6 +15,7 @@ import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.mapper.SysAiGroupMapper;
 import com.chua.starter.ai.support.mapper.SysAiGroupModelMapper;
+import com.chua.starter.ai.support.interceptor.UsageRecorderInterceptor;
 import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
@@ -58,6 +59,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final SysAiPricingService sysAiPricingService;
     private final SysAiProviderMapper sysAiProviderMapper;
     private final SysAiProviderModelMapper sysAiProviderModelMapper;
+    private final UsageRecorderInterceptor usageRecorderInterceptor;
 
     // ==================== 同步对话 ====================
 
@@ -70,6 +72,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         ChatClient configured = configureClient(client, request);
         try {
             ChatSyncResponse response = configured.chatSyncWithResponse(promptOf(request));
+            recordUsage(configured, "chat", response);
             return buildResult(response);
         } catch (Exception e) {
             log.error("[AiChat] call failed: model={}", request.getModel(), e);
@@ -91,11 +94,15 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
 
         ChatClient configured = configureClient(client, request);
         StringBuilder fullResponse = new StringBuilder();
+        final com.chua.common.support.ai.AiUsage[] lastUsage = new com.chua.common.support.ai.AiUsage[1];
 
         CompletableFuture.runAsync(() -> {
             try {
                 configured.chat(promptOf(request),
                         response -> {
+                            if (response.getState() == com.chua.common.support.ai.chat.ChatResponse.State.STOP) {
+                                lastUsage[0] = response.getUsage();
+                            }
                             String chunk = response.getContent() != null ? response.getContent() : "";
                             if (chunk.isEmpty()) {
                                 return;
@@ -114,6 +121,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                             }
                         },
                         () -> {
+                            if (lastUsage[0] != null) {
+                                recordUsage(lastUsage[0]);
+                            }
                             String reply = fullResponse.toString();
                             if (onComplete != null) {
                                 try {
@@ -336,6 +346,52 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
      */
     private static String promptOf(AiChatRequest request) {
         return request.getPrompt() != null ? request.getPrompt() : "";
+    }
+
+    private void recordUsage(ChatClient client, String callType, ChatSyncResponse response) {
+        recordUsage(client, callType, response != null ? response.getUsage() : null);
+    }
+
+    private void recordUsage(ChatClient client, String callType, com.chua.common.support.ai.AiUsage usage) {
+        if (usage == null) {
+            return;
+        }
+        try {
+            usageRecorderInterceptor.record(
+                    null,
+                    usage.getProvider(),
+                    usage.getModel() != null ? usage.getModel() : client.getModel(),
+                    callType,
+                    usage,
+                    UUID.randomUUID().toString(),
+                    null
+            );
+        } catch (Exception e) {
+            log.warn("[UsageRecorder] 记录失败: {}", e.getMessage());
+        }
+    }
+
+    private void recordUsage(com.chua.common.support.ai.AiUsage usage) {
+        recordUsage(usage, "chat_stream");
+    }
+
+    private void recordUsage(com.chua.common.support.ai.AiUsage usage, String callType) {
+        if (usage == null) {
+            return;
+        }
+        try {
+            usageRecorderInterceptor.record(
+                    null,
+                    usage.getProvider(),
+                    usage.getModel(),
+                    callType,
+                    usage,
+                    UUID.randomUUID().toString(),
+                    null
+            );
+        } catch (Exception e) {
+            log.warn("[UsageRecorder] 记录失败: {}", e.getMessage());
+        }
     }
 
     /**

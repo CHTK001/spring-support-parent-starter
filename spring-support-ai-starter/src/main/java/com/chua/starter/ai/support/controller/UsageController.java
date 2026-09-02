@@ -1,6 +1,8 @@
 package com.chua.starter.ai.support.controller;
 
+import com.chua.common.support.datasearch.usage.spi.UsageParser;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.entity.SysAiUsage;
 import com.chua.starter.ai.support.service.SysAiUsageService;
 import com.chua.starter.common.support.annotations.Permission;
@@ -8,6 +10,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -36,6 +42,12 @@ public class UsageController {
      * 用量服务
      */
     private final SysAiUsageService usageService;
+
+    /**
+     * Spring 应用上下文（用于收集 Spring 容器中的 UsageParser 实现）
+     */
+    @Autowired
+    private ApplicationContext applicationContext;
 
     @Permission("admin")
     @Operation(summary = "用量列表", description = "分页查询用量明细")
@@ -109,5 +121,45 @@ public class UsageController {
                 "avgLatency", stats.avgLatency,
                 "standardCost", stats.standardCost
         ));
+    }
+
+    @Permission("admin")
+    @Operation(summary = "用量数据源列表", description = "返回已注册的 UsageParser SPI 实现列表")
+    @GetMapping("/parsers")
+    public ReturnResult<List<Map<String, Object>>> parsers() {
+        Map<String, UsageParser> allParsers = new LinkedHashMap<>();
+
+        // 1. 优先从 Spring 容器收集（如系统默认的 SystemUsageParser）
+        try {
+            Map<String, UsageParser> springBeans = applicationContext.getBeansOfType(UsageParser.class);
+            for (UsageParser parser : springBeans.values()) {
+                allParsers.putIfAbsent(parser.name(), parser);
+            }
+        } catch (Exception e) {
+            log.warn("[Usage] 收集 Spring UsageParser 失败: {}", e.getMessage());
+        }
+
+        // 2. 再收集 SPI 注册的外部工具解析器（opencode/codex 等）
+        try {
+            Map<String, UsageParser> spiParsers = ServiceProvider.of(UsageParser.class).list();
+            if (spiParsers != null) {
+                for (Map.Entry<String, UsageParser> entry : spiParsers.entrySet()) {
+                    allParsers.putIfAbsent(entry.getKey(), entry.getValue());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[Usage] SPI 收集 UsageParser 失败: {}", e.getMessage());
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map.Entry<String, UsageParser> e : allParsers.entrySet()) {
+            Map<String, Object> item = Map.of(
+                    "name", e.getKey(),
+                    "type", e.getValue().getClass().getSimpleName(),
+                    "enabled", true
+            );
+            result.add(item);
+        }
+        return ReturnResult.ok(result);
     }
 }
