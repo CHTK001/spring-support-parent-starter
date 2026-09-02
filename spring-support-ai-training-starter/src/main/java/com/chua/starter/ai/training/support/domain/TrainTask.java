@@ -107,11 +107,12 @@ public class TrainTask {
     }
 
     /**
-     * 启动训练（PENDING → RUNNING）。
+     * 启动训练（PENDING → RUNNING）。同步方法保证并发重复触发时
+     * 同一任务只允许一次成功流转（后到者看到 RUNNING 即抛）。
      *
      * @throws IllegalStateException 非 PENDING 状态时抛出
      */
-    public void start() {
+    public synchronized void start() {
         if (status != TrainStatus.PENDING) {
             throw new IllegalStateException("任务状态为 " + status + "，不可启动（仅 PENDING 可启动）");
         }
@@ -129,7 +130,7 @@ public class TrainTask {
      * @return 本次实际生效的类型
      * @throws IllegalStateException 已启动后不可再改类型
      */
-    public String selectType(String type) {
+    public synchronized String selectType(String type) {
         if (status != TrainStatus.PENDING) {
             throw new IllegalStateException("任务状态为 " + status + "，不可再改训练类型（仅 PENDING 可指定）");
         }
@@ -142,7 +143,7 @@ public class TrainTask {
      *
      * @param result 训练结果（含 bestScore、elapsedMs、labels）
      */
-    public void succeed(TrainResult result) {
+    public synchronized void succeed(TrainResult result) {
         this.status = TrainStatus.SUCCESS;
         this.finishedAt = Instant.now();
         if (result.getBestScore() != 0) {
@@ -161,7 +162,7 @@ public class TrainTask {
      *
      * @param errorMessage 错误描述
      */
-    public void fail(String errorMessage) {
+    public synchronized void fail(String errorMessage) {
         this.status = TrainStatus.FAILED;
         this.finishedAt = Instant.now();
         this.errorMessage = errorMessage;
@@ -173,7 +174,7 @@ public class TrainTask {
      * @param errorMessage 错误描述
      * @param cause        原始异常
      */
-    public void fail(String errorMessage, Throwable cause) {
+    public synchronized void fail(String errorMessage, Throwable cause) {
         this.status = TrainStatus.FAILED;
         this.finishedAt = Instant.now();
         this.errorMessage = errorMessage;
@@ -185,7 +186,7 @@ public class TrainTask {
     /**
      * 标记训练被取消。
      */
-    public void cancel() {
+    public synchronized void cancel() {
         this.status = TrainStatus.CANCELLED;
         this.finishedAt = Instant.now();
         this.errorMessage = "训练被中断";

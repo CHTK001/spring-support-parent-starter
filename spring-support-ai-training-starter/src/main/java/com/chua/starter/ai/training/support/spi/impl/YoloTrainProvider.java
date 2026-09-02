@@ -120,7 +120,7 @@ public class YoloTrainProvider implements TrainProvider {
                     .connectTimeout(Duration.ofSeconds(10))
                     .build();
             startTraining(client, port, argument, dataYaml, datasetDir, ctx);
-            return pollUntilDone(client, port, total, ctx, progress, listener, startMs);
+            return pollUntilDone(client, port, process, total, ctx, progress, listener, startMs);
         } finally {
             destroy(process);
         }
@@ -268,7 +268,7 @@ public class YoloTrainProvider implements TrainProvider {
         log.info("[YOLO] 训练请求已下发: dataYaml={}, dataset={}", dataYaml, datasetDir);
     }
 
-    private TrainResult pollUntilDone(HttpClient client, int port, int total, TrainContext ctx,
+    private TrainResult pollUntilDone(HttpClient client, int port, Process process, int total, TrainContext ctx,
                                       TrainProgress progress, TrainListener listener, long startMs)
             throws Exception {
         long deadline = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(TRAIN_TIMEOUT_MIN);
@@ -280,6 +280,16 @@ public class YoloTrainProvider implements TrainProvider {
             try {
                 resp = client.send(req, HttpResponse.BodyHandlers.ofString());
             } catch (IOException e) {
+                // 子进程已退出（崩溃/被杀）时再轮询只会空转到超时——立即判定失败，不必空等 TRAIN_TIMEOUT_MIN
+                if (!process.isAlive()) {
+                    String msg = "python 训练服务已退出（进程结束），训练中断";
+                    log.error("[YOLO] {}", msg);
+                    progress.setStatus(TrainStatus.FAILED).setStage("训练失败");
+                    if (listener != null) {
+                        listener.onFailed(progress, new IllegalStateException(msg));
+                    }
+                    return new TrainResult().setSuccess(false).setErrorMessage(msg);
+                }
                 Thread.sleep(1500);
                 continue;
             }
