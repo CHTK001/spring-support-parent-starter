@@ -60,6 +60,14 @@ public class ApiSkillController {
     private String skillsRoot;
 
     /**
+     * Skill 市场 API 基础地址，可通过环境变量或配置覆盖。
+     * 示例：https://skillsmp.com/api/skills
+     *       https://api.example.com/skills
+     */
+    @Value("${ai.skills-market-url:https://skillsmp.com/api/skills}")
+    private String skillsMarketUrl;
+
+    /**
      * 用户自定义外部技能搜索路径（内存维护）
      */
     private final List<Map<String, String>> externalPaths = new CopyOnWriteArrayList<>();
@@ -803,8 +811,8 @@ public class ApiSkillController {
             @RequestParam(defaultValue = "20") int limit,
             @RequestParam(defaultValue = "stars") String sortBy) {
         try {
-            StringBuilder urlBuilder = new StringBuilder("https://skillsmp.com/api/skills?page=")
-                    .append(page).append("&limit=").append(limit)
+            StringBuilder urlBuilder = new StringBuilder(skillsMarketUrl)
+                    .append("?page=").append(page).append("&limit=").append(limit)
                     .append("&sortBy=").append(sortBy);
             if (search != null && !search.isBlank()) {
                 urlBuilder.append("&search=").append(java.net.URLEncoder.encode(search, StandardCharsets.UTF_8));
@@ -880,7 +888,7 @@ public class ApiSkillController {
                 if ("skillsmp".equals(source) || "clawhub".equals(source)
                         || "skillhub".equals(source) || "loophub".equals(source)) {
                     // 所有源都走 SkillsMP API（统一市场）
-                    String url = "https://skillsmp.com/api/skills?page=1&limit=30&sortBy=stars";
+                    String url = skillsMarketUrl + "?page=1&limit=30&sortBy=stars";
                     String bodyText = httpGet(url);
                     Map<String, Object> raw = parseJson(bodyText);
                     List<?> rawSkills = (List<?>) raw.get("skills");

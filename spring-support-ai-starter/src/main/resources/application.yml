@@ -1,8 +1,11 @@
 server:
-  # 8787 固定为 nomifun 前端桌面壳模式的本地网关端口（pages/ai index.html 注入 __backendPort）
+  # 8787 固定为 ai 前端运行模式时的固定端口，pages/ai index.html 注入 __backendPort
   port: 8787
   servlet:
     context-path: /
+
+ai:
+  skills-market-url: https://skillsmp.com/api/skills
 
 spring:
   application:

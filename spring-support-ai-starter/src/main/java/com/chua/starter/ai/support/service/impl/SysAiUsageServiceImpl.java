@@ -65,6 +65,9 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
         entity.setSysAiUsageRequestId(requestId);
         entity.setSysAiUsageUserId(userId);
         entity.setSysAiUsageCallTime(LocalDateTime.now());
+        entity.setSysAiUsageFirstTokenLatency(usage.getFirstTokenLatencyMillis());
+        entity.setSysAiUsageTotalLatency(usage.getDurationMillis());
+        entity.setSysAiUsageCachedTokens(usage.getCacheTokens());
 
         // 计算费用
         SysAiPricing pricing = pricingService.getLatestPricing(provider, model);
@@ -74,6 +77,16 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
             entity.setSysAiUsageInputCost(inputCost);
             entity.setSysAiUsageOutputCost(outputCost);
             entity.setSysAiUsageTotalCost(inputCost + outputCost);
+            entity.setSysAiUsageOriginalCost(inputCost + outputCost);
+            entity.setSysAiUsageInputPricePer1M(pricing.getInputPricePer1k() * 1000.0);
+            entity.setSysAiUsageOutputPricePer1M(pricing.getOutputPricePer1k() * 1000.0);
+            if (usage.getCacheTokens() != null && usage.getCacheTokens() > 0) {
+                double cacheCost = usage.getCacheTokens() / 1000.0 * pricing.getInputPricePer1k() * 0.5;
+                entity.setSysAiUsageCachedCost(cacheCost);
+                entity.setSysAiUsageTotalCost(entity.getSysAiUsageTotalCost() + cacheCost);
+                entity.setSysAiUsageOriginalCost(entity.getSysAiUsageOriginalCost() + cacheCost);
+                entity.setSysAiUsageCacheReadPricePer1M(pricing.getInputPricePer1k() * 1000.0 * 0.5);
+            }
         } else {
             log.warn("[Usage] 未找到定价: provider={}, model={}", provider, model);
             entity.setSysAiUsageInputCost(0.0);
@@ -154,6 +167,10 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
         stats.totalCompletionTokens = list.stream().mapToInt(u -> u.getSysAiUsageCompletionTokens() != null ? u.getSysAiUsageCompletionTokens() : 0).sum();
         stats.totalTokens = list.stream().mapToInt(u -> u.getSysAiUsageTotalTokens() != null ? u.getSysAiUsageTotalTokens() : 0).sum();
         stats.totalCost = list.stream().mapToDouble(u -> u.getSysAiUsageTotalCost() != null ? u.getSysAiUsageTotalCost() : 0).sum();
+        stats.totalCachedTokens = list.stream().mapToInt(u -> u.getSysAiUsageCachedTokens() != null ? u.getSysAiUsageCachedTokens() : 0).sum();
+        stats.standardCost = list.stream().mapToDouble(u -> u.getSysAiUsageOriginalCost() != null ? u.getSysAiUsageOriginalCost() : 0).sum();
+        long totalLatency = list.stream().mapToLong(u -> u.getSysAiUsageTotalLatency() != null ? u.getSysAiUsageTotalLatency() : 0L).sum();
+        stats.avgLatency = list.size() > 0 ? (double) totalLatency / list.size() : 0.0;
         return stats;
     }
 }

@@ -104,7 +104,10 @@ public class UsageController {
                 "totalPromptTokens", stats.totalPromptTokens,
                 "totalCompletionTokens", stats.totalCompletionTokens,
                 "totalTokens", stats.totalTokens,
-                "totalCost", stats.totalCost
+                "totalCost", stats.totalCost,
+                "totalCachedTokens", stats.totalCachedTokens,
+                "avgLatency", stats.avgLatency,
+                "standardCost", stats.standardCost
         ));
     }
 }
