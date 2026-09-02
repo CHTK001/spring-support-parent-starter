@@ -134,8 +134,11 @@ public class TrainServiceImpl implements TrainService {
         if (task == null) {
             throw new IllegalArgumentException("任务不存在: " + taskId);
         }
-        if (task.getStatus() == TrainStatus.RUNNING) {
-            throw new IllegalStateException("任务正在运行中，无法修改超参数: " + taskId);
+        // 仅 PENDING 可修改（与领域 selectType 同语义）：RUNNING 修改会污染进行中训练，
+        // 终态(SUCCESS/FAILED/CANCELLED)任务无法重触发，修改无意义且误导调用方。
+        if (task.getStatus() != TrainStatus.PENDING) {
+            throw new IllegalStateException(
+                    "任务状态为 " + task.getStatus() + "，不可修改超参数（仅 PENDING 可修改）: " + taskId);
         }
         // 领域对象内部完成合并（仅覆盖非空字段）
         task.mergeArgument(argument);
