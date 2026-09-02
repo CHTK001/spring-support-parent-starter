@@ -1,1 +1,2 @@
 com.chua.starter.ai.training.support.spi.impl.Dl4jTrainProvider
+com.chua.starter.ai.training.support.spi.impl.YoloTrainProvider
