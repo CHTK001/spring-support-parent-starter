@@ -49,7 +49,7 @@ spring:
       vector-storage: memory
       embedding-engine: memory
 
-# 本地联调：关闭外部 OAuth / 协议服务器 / 文件系统
+# 本地联调：关闭外部 OAuth / 协议服务器 / 文件系统；OAuth 全部放行（白名单通配）
 plugin:
   oauth:
     enable: false
@@ -58,17 +58,7 @@ plugin:
       open: true
       user: "admin:admin123"
     whitelist:
-      - /login
-      - /v2/user/login
-      - /v2/user/logout
-      - /api/system/info
-      - /api/auth/status
-      - /api/auth/user
-      - /api/extensions/*
-      - /api/terminals
-      - /api/terminals/*
-      - /api/**
-      - /ws
+      - /**
   protocol:
     enable: false
   filesystem:
