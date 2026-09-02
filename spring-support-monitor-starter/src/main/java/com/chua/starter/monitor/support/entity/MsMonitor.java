@@ -117,4 +117,11 @@ public class MsMonitor extends SysBase {
     @TableField("ms_monitor_agent_key")
     @Schema(description = "探针标识(Agent推送鉴权)", example = "8f14e45fceea167a5a36dedd4bea2543")
     private String monitorAgentKey;
+
+    /**
+     * 关联服务器主机 ID（ms_server_host.id，用于联动服务器台账配置）
+     */
+    @TableField("ms_server_host_id")
+    @Schema(description = "关联服务器主机ID", example = "1")
+    private Long msServerHostId;
 }

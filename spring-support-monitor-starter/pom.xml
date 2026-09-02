@@ -19,6 +19,12 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
+        <!-- 服务器台账（资产联动 server-hosts 查询） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-server-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
@@ -106,13 +112,6 @@
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
             <version>8.0.33</version>
-            <scope>runtime</scope>
-        </dependency>
-
-        <!-- H2 内存数据库（默认 profile 使用） -->
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
             <scope>runtime</scope>
         </dependency>
 

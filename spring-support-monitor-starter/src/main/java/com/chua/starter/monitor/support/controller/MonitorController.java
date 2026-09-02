@@ -2,6 +2,8 @@ package com.chua.starter.monitor.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.entity.MsMonitor;
+import com.chua.starter.server.support.entity.MsServerHost;
+import com.chua.starter.server.support.service.ServerHostService;
 import com.chua.starter.monitor.support.entity.MsMonitorConfig;
 import com.chua.starter.monitor.support.entity.MsMonitorGateway;
 import com.chua.starter.monitor.support.entity.MsMonitorMetric;
@@ -78,6 +80,10 @@ public class MonitorController {
     /** 提供者注册表 */
     private final ProviderRegistry providerRegistry;
 
+    /** 服务器台账服务（资产联动 server-hosts 查询） */
+    /** 服务器主机服务 */
+    private final ServerHostService serverHostService;
+
     // ==================== 资产 CRUD ====================
 
     @Operation(summary = "新增资产")
@@ -109,6 +115,56 @@ public class MonitorController {
     @GetMapping
     public ReturnResult<List<MsMonitor>> listMonitor() {
         return monitorService.listAll();
+    }
+
+    // ==================== 关联服务器台账 ====================
+
+    /**
+     * 查询可用服务器主机列表（资产表单联动下拉）。
+     *
+     * @return 主机简表列表（id/name/address/port/osType）
+     */
+    @Operation(summary = "查询可用服务器主机列表")
+    @GetMapping("/server-hosts")
+    public ReturnResult<List<Map<String, Object>>> listServerHosts() {
+        java.util.List<Map<String, Object>> result = new java.util.ArrayList<>();
+        try {
+            ReturnResult<java.util.List<MsServerHost>> q = serverHostService.query(null, null, 1);
+            java.util.List<MsServerHost> hosts = q.getData();
+            if (hosts != null) {
+                for (MsServerHost h : hosts) {
+                    Map<String, Object> item = new java.util.LinkedHashMap<>();
+                    item.put("id", h.getId());
+                    item.put("serverHostName", h.getServerHostName());
+                    item.put("serverHostAddress", h.getServerHostAddress());
+                    item.put("serverHostPort", h.getServerHostPort());
+                    item.put("serverHostOsType", h.getServerHostOsType());
+                    result.add(item);
+                }
+            }
+        } catch (Exception e) {
+            // 台账模块未启用时静默降级为空列表
+        }
+        return ReturnResult.ok(result);
+    }
+
+    /**
+     * 获取指定服务器主机详情（资产联动回填）。
+     *
+     * @param id 服务器主机 ID
+     * @return 主机详情
+     */
+    @Operation(summary = "获取服务器主机详情")
+    @GetMapping("/server-host/{id}")
+    public ReturnResult<MsServerHost> getServerHost(@PathVariable Long id) {
+        ReturnResult<MsServerHost> result = serverHostService.get(id);
+        if (result.getData() != null) {
+            MsServerHost h = result.getData();
+            h.setServerHostAccount(null);
+            h.setServerHostPassword(null);
+            h.setServerHostPrivateKey(null);
+        }
+        return result;
     }
 
     // ==================== 任务 CRUD ====================

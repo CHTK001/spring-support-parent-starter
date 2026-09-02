@@ -52,7 +52,7 @@ spring:
 # 本地联调：关闭外部 OAuth / 协议服务器 / 文件系统
 plugin:
   oauth:
-    enable: true
+    enable: false
     protocol: static
     temp:
       open: true
