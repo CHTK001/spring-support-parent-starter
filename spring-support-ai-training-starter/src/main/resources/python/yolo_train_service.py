@@ -15,9 +15,11 @@ YOLO 训练一次性 HTTP 服务（与 Java YoloTrainProvider 配套）。
 约定：
   - data 为 data.yaml 文件路径（YOLO 官方布局：images/ + labels/ + data.yaml）；
     Java 侧已递归定位（容忍 dataset/ 等子目录）。兼容直接传数据集目录：脚本内自动补全目录下的 data.yaml。
-  - 训练完成时把 best.pt 拷贝到 project/ 目录（Java 以 best.pt 存在为完成信号）。
+  - 训练期间通过 ultralytics 回调（on_train_epoch_end / on_fit_epoch_end）实时刷新
+    current_epoch / best_map，/status 轮询可看到逐 epoch 进度（mock 与之同构）。
+    训练完成时把 best.pt 路径写入 best_model（Java 以 status=done + best_model 为完成信号）。
   - 服务在启动后把 "PORT=<port>" 打印到 stdout 首行，供 Java 协商端口后关闭子进程句柄。
-  - 训练失败会记录 message 并以 status=failed 返回，同时退出码非 0。
+  - 训练失败会记录 message 并以 status=failed 返回；进程由 Java 侧在读取终态后 destroy 回收。
 
 依赖：pip install ultralytics
 """
@@ -58,12 +60,49 @@ def _free_port():
     return port
 
 
+def _on_train_epoch_end(trainer):
+    """ultralytics 逐 epoch 回调：刷新 current_epoch（epoch 为 0 基索引）。"""
+    try:
+        state.status = "running"
+        total = getattr(trainer, "epochs", None) or state.total_epochs
+        if total:
+            state.total_epochs = int(total)
+        epoch = getattr(trainer, "epoch", None)
+        if epoch is not None:
+            state.current_epoch = int(epoch) + 1
+    except Exception:  # noqa: BLE001 —— 进度刷新失败不影响训练主流程
+        pass
+
+
+def _on_fit_epoch_end(trainer):
+    """ultralytics 每轮拟合结束回调：刷新 best_map（Java 侧自行取运行期最大值）。"""
+    try:
+        metrics = getattr(trainer, "metrics", None) or {}
+        m = metrics.get("metrics/mAP50-95(B)") or metrics.get("mAP50-95(B)") or 0.0
+        try:
+            m = float(m)
+        except (TypeError, ValueError):
+            m = 0.0
+        if m > state.best_map:
+            state.best_map = m
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def _run_train(args):
     global state
     try:
         if YOLO is None:
             raise RuntimeError("ultralytics 未安装: " + (_IMPORT_ERR or "import failed"))
         model = YOLO(args.get("model", "yolo11n.pt"))
+        # 进度上报：训练期间逐 epoch 刷新 current_epoch/best_map，供 Java /status 轮询。
+        # add_callback 为 ultralytics 稳定 API；个别版本缺失时静默跳过，仅损失实时进度，不影响训练完成。
+        for event, fn in (("on_train_epoch_end", _on_train_epoch_end),
+                          ("on_fit_epoch_end", _on_fit_epoch_end)):
+            try:
+                model.add_callback(event, fn)
+            except Exception:  # noqa: BLE001
+                pass
         project = args.get("project", "runs")
         name = args.get("name", "train")
         total = int(args.get("epochs", 10))
