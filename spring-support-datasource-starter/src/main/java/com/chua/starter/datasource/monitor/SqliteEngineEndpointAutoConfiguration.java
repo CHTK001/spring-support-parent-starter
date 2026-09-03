@@ -1,5 +1,7 @@
 package com.chua.starter.datasource.monitor;
 
+import com.chua.sqlite.support.engine.SqliteEngine;
+import com.chua.starter.datasource.configuration.SqliteEngineAutoConfiguration;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
