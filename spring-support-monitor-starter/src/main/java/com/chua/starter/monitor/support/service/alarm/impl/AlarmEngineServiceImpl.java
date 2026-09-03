@@ -83,6 +83,13 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     /** 连续触发计数器：ruleId:monitorId -> 计数 */
     private final Map<String, AtomicInteger> consecutiveCounter = new ConcurrentHashMap<>();
 
+    /**
+     * Redis 不可用时的内存静默期降级表：silenceKey → 静默截止 epoch 毫秒。
+     * <p>独立部署(无 Redis)或 Redis 短暂不可用时, 以此表完成 SETNX+TTL 的等价语义,
+     * 保证告警事件仍能落库, 而非被异常吞掉导致一条告警都不记录。</p>
+     */
+    private final Map<String, Long> memorySilence = new ConcurrentHashMap<>();
+
     /** 维护窗口 Mapper */
     private final MsMonitorAlarmMaintenanceWindowMapper maintenanceWindowMapper;
 
@@ -301,6 +308,38 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     // ==================== 内部逻辑 ====================
 
     /**
+     * 获取静默期「锁」。优先走 Redis SETNX+TTL；Redis 不可用时降级为 JVM 内存表,
+     * 使独立(无 Redis)部署下告警事件仍能正常落库, 而不被 Redis 异常吞掉。
+     *
+     * @param silenceKey    静默键(rule:monitor)
+     * @param silenceMinutes 静默分钟
+     * @return true=首次触发(放行); false=静默期内(跳过)或获取失败(保守跳过)
+     */
+    private Boolean acquireSilence(String silenceKey, int silenceMinutes) {
+        // 1) 优先 Redis：可用时返回其 SETNX 结果
+        try {
+            return redisTemplate.opsForValue()
+                    .setIfAbsent(silenceKey, "1", Duration.ofMinutes(silenceMinutes));
+        } catch (Exception ignored) {
+            log.debug("[alarm] Redis 不可用, 使用内存静默期降级: {}", silenceKey);
+        }
+        // 2) 内存降级：SETNX+TTL 等价语义
+        long now = System.currentTimeMillis();
+        long until = now + (long) silenceMinutes * 60_000L;
+        Long prev = memorySilence.putIfAbsent(silenceKey, until);
+        if (prev != null) {
+            // 已有锁：判断是否过期
+            if (prev <= now) {
+                // 已过期, 尝试抢占(TTL 续期语义)
+                long replaced = memorySilence.replace(silenceKey, prev, until) ? until : prev;
+                return replaced == until;
+            }
+            return false; // 静默期内
+        }
+        return true; // 首次设置成功
+    }
+
+    /**
      * 通过静默期判定后真实触发告警
      *
      * @param rule        规则
@@ -310,8 +349,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
      * @param value       实际值
      */
 private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String monitorName,
-                             String metricName, BigDecimal value) {
-            // ---- 新增：维护窗口检查 ----
+                             String metricName, BigDecimal value) {            // ---- 新增：维护窗口检查 ----
             // 如果当前时间在活跃的维护窗口内，则跳过告警（不受静默期影响）
             try {
                 LocalDateTime now = LocalDateTime.now();
@@ -367,8 +405,7 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
 
             String silenceKey = SILENCE_KEY_PREFIX + rule.getId() + ":" + monitorId;
             int silenceMinutes = rule.getMsMonitorAlarmRuleSilenceMinutes() == null ? 10 : rule.getMsMonitorAlarmRuleSilenceMinutes();
-            Boolean first = redisTemplate.opsForValue()
-                    .setIfAbsent(silenceKey, "1", Duration.ofMinutes(silenceMinutes));
+            Boolean first = acquireSilence(silenceKey, silenceMinutes);
             if (!Boolean.TRUE.equals(first)) {
                 log.debug("[alarm] 静默期内跳过 rule={} monitor={}", rule.getId(), monitorId);
                 return;
