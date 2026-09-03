@@ -5,10 +5,12 @@ import com.chua.common.support.ai.bot.BotInboundMessage;
 import com.chua.common.support.ai.bot.BotMessageListener;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.chat.ChatClientSetting;
+import com.chua.common.support.ai.chat.ChatSyncResponse;
 import com.chua.common.support.ai.bot.BotSendResult;
 import com.chua.ilink.support.bot.ILinkBotClient;
 import com.chua.starter.ai.support.entity.SysAiBotBinding;
 import com.chua.starter.ai.support.entity.SysAiBotMessage;
+import com.chua.starter.ai.support.interceptor.UsageRecorderInterceptor;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
@@ -30,6 +32,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -67,6 +70,9 @@ public class AiBotChatService {
 
     /** 全局设置读取（Bot 默认模型兜底） */
     private final GlobalSettingReader globalSettingReader;
+
+    /** 用量记录拦截器（记录每次 Bot AI 调用的 token/费用） */
+    private final UsageRecorderInterceptor usageRecorderInterceptor;
 
     /** 运行中的 Bot：botId -> iLink 客户端 */
     private final Map<String, ILinkBotClient> runningBots = new ConcurrentHashMap<>();
