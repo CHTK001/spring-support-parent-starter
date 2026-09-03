@@ -4,7 +4,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.starter.monitor.support.asset.model.AssetDetailView;
 import com.chua.starter.monitor.support.asset.model.AssetDetailView.NodeChannel;
+import com.chua.starter.monitor.support.asset.model.AssetDetailView.MonitorItem;
+import com.chua.starter.monitor.support.entity.MsMonitor;
+import com.chua.starter.monitor.support.entity.MsMonitorAlarmEvent;
 import com.chua.starter.monitor.support.entity.MsServerNode;
+import com.chua.starter.monitor.support.mapper.MsMonitorMapper;
+import com.chua.starter.monitor.support.mapper.MsMonitorAlarmEventMapper;
 import com.chua.starter.monitor.support.mapper.MsServerNodeMapper;
 import com.chua.starter.monitor.support.server.ServerNodeRegistry;
 import com.chua.starter.server.support.entity.MsServerHost;
@@ -14,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -40,6 +46,10 @@ public class AssetLinkageService {
     private final MsServerNodeMapper nodeMapper;
     /** 服务节点运行时注册表 */
     private final ServerNodeRegistry nodeRegistry;
+    /** 监控项 Mapper */
+    private final MsMonitorMapper monitorMapper;
+    /** 告警事件 Mapper */
+    private final MsMonitorAlarmEventMapper alarmEventMapper;
 
     /**
      * 按主机 ID 聚合资产详情。
@@ -127,7 +137,127 @@ public class AssetLinkageService {
         }
         view.setChannels(channels);
         view.setRunningCount(running);
+
+        // 资产 → 监控项 → 告警 聚合
+        aggregateMonitorsAndAlarms(view, host);
         return view;
+    }
+
+    /**
+     * 聚合该资产关联的监控项及其活跃告警。
+     *
+     * @param view 资产视图（就地填充）
+     * @param host 主机台账
+     */
+    private void aggregateMonitorsAndAlarms(AssetDetailView view, MsServerHost host) {
+        List<MsMonitor> monitors = loadMonitorsForHost(host);
+        if (monitors.isEmpty()) {
+            view.setMonitorCount(0);
+            view.setActiveAlarmCount(0);
+            view.setMonitors(new ArrayList<>());
+            return;
+        }
+        List<Long> monitorIds = monitors.stream().map(MsMonitor::getId).collect(Collectors.toList());
+        // 一次查出这些监控项的全部告警事件
+        List<MsMonitorAlarmEvent> alarms = alarmEventMapper.selectList(
+                new LambdaQueryWrapper<MsMonitorAlarmEvent>()
+                        .in(MsMonitorAlarmEvent::getMsMonitorAlarmEventMonitorId, monitorIds));
+        // 按 monitorId 归集活跃告警
+        Map<Long, List<MsMonitorAlarmEvent>> byMonitor = alarms == null ? Map.of()
+                : alarms.stream().collect(Collectors.groupingBy(MsMonitorAlarmEvent::getMsMonitorAlarmEventMonitorId));
+
+        List<MonitorItem> items = new ArrayList<>();
+        int totalActive = 0;
+        for (MsMonitor m : monitors) {
+            List<MsMonitorAlarmEvent> active = byMonitor.getOrDefault(m.getId(), new ArrayList<>())
+                    .stream().filter(a -> !isProcessed(a)).collect(Collectors.toList());
+            totalActive += active.size();
+            MonitorItem item = new MonitorItem()
+                    .setMonitorId(m.getId())
+                    .setName(m.getMonitorName())
+                    .setHost(m.getMonitorHost())
+                    .setServiceType(m.getServiceType())
+                    .setEnabled(toBoolean(m.getMonitorEnabled()))
+                    .setActiveAlarmCount(active.size())
+                    .setMaxLevel(maxLevel(active));
+            items.add(item);
+        }
+        view.setMonitors(items);
+        view.setMonitorCount(items.size());
+        view.setActiveAlarmCount(totalActive);
+    }
+
+    /**
+     * 从库里取关联该主机的监控项（通过 ms_server_host_id 或主机 IP 兜底匹配）。
+     *
+     * @param host 主机
+     * @return 监控项列表
+     */
+    private List<MsMonitor> loadMonitorsForHost(MsServerHost host) {
+        // 首选 ms_server_host_id 精确关联
+        if (host.getId() != null) {
+            List<MsMonitor> byId = monitorMapper.selectList(new LambdaQueryWrapper<MsMonitor>()
+                    .eq(MsMonitor::getMsServerHostId, host.getId()));
+            if (!byId.isEmpty()) {
+                return byId;
+            }
+        }
+        // 兜底: 监控项主机地址与资产 IP 匹配
+        if (host.getServerHostAddress() != null && !host.getServerHostAddress().isBlank()) {
+            return monitorMapper.selectList(new LambdaQueryWrapper<MsMonitor>()
+                    .eq(MsMonitor::getMonitorHost, host.getServerHostAddress().trim()));
+        }
+        return new ArrayList<>();
+    }
+
+    /**
+     * 告警是否已处理（NEW 之外的状态视为已结束）。
+     *
+     * @param alarm 告警事件
+     * @return true 已处理
+     */
+    private static boolean isProcessed(MsMonitorAlarmEvent alarm) {
+        String s = alarm.getMsMonitorAlarmEventStatus();
+        return s != null && !"NEW".equalsIgnoreCase(s) && !"ACTIVE".equalsIgnoreCase(s);
+    }
+
+    /**
+     * 取未处理告警中的最高级别（P0 最高）。
+     *
+     * @param alarms 未处理告警
+     * @return 最高级别；无则 null
+     */
+    private static String maxLevel(List<MsMonitorAlarmEvent> alarms) {
+        if (alarms == null || alarms.isEmpty()) {
+            return null;
+        }
+        String max = null;
+        for (MsMonitorAlarmEvent a : alarms) {
+            String lv = a.getMsMonitorAlarmEventLevel();
+            if (lv == null || lv.isBlank()) {
+                continue;
+            }
+            if (max == null || severity(lv) < severity(max)) {
+                max = lv;
+            }
+        }
+        return max;
+    }
+
+    /**
+     * 告警级别严重度（P0=0 最高，P4=4最低；未知按 P9）。
+     *
+     * @param level 级别
+     * @return 严重度数字
+     */
+    private static int severity(String level) {
+        try {
+            String digit = level.trim().substring(1);
+            int v = Integer.parseInt(digit);
+            return Math.max(0, Math.min(v, 4));
+        } catch (Exception e) {
+            return 9;
+        }
     }
 
     /**

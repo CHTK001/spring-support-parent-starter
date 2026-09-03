@@ -49,6 +49,13 @@ public class AssetDetailView {
     /** 服务节点摘要列表 */
     private List<NodeChannel> channels;
 
+    /** 关联监控项数量 */
+    private Integer monitorCount;
+    /** 未处理(活跃)告警数 */
+    private Integer activeAlarmCount;
+    /** 该资产关联的监控项及告警量 */
+    private List<MonitorItem> monitors;
+
     /**
      * 单个服务节点 / 通道摘要。
      */
@@ -69,5 +76,27 @@ public class AssetDetailView {
         private String url;
         /** 附加信息 */
         private Map<String, Object> extra;
+    }
+
+    /**
+     * 资产关联的监控项及告警摘要。
+     */
+    @Data
+    @Accessors(chain = true)
+    public static class MonitorItem {
+        /** 监控项 ID */
+        private Long monitorId;
+        /** 监控项名称 */
+        private String name;
+        /** 主机地址 */
+        private String host;
+        /** 服务类型 */
+        private String serviceType;
+        /** 是否启用 */
+        private Boolean enabled;
+        /** 该监控项未处理(活跃)告警数 */
+        private Integer activeAlarmCount;
+        /** 最高告警级别(未处理告警中的最高级) */
+        private String maxLevel;
     }
 }
