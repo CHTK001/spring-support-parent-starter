@@ -438,9 +438,9 @@ public class UsageAggregationTask implements SchedulingConfigurer {
 
         // 仅在全部批次处理完成后才推进 lastRunTime，避免重复聚合
         if (totalAggregated > 0) {
-            lastRunTime = end;
+            lastRunTime = queryEnd;
         }
 
-        log.info("[UsageAggregation] {} ~ {} 聚合完成，共 {} 条记录", start, end, totalAggregated);
+        log.info("[UsageAggregation] {} ~ {} 聚合完成，共 {} 条记录", start, queryEnd, totalAggregated);
     }
 }
