@@ -33,6 +33,9 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+
 /**
  * AI 用量聚合任务
  * <p>
@@ -54,11 +57,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
-        name = "spring.ai.usage.enabled",
-        havingValue = "true",
-        matchIfMissing = true
-)
 public class UsageAggregationTask implements SchedulingConfigurer {
 
     /**
@@ -357,78 +355,87 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         }
         lastRunTime = end;
 
-        LambdaQueryWrapper<SysAiUsage> wrapper = new LambdaQueryWrapper<>();
-        wrapper.ge(SysAiUsage::getSysAiUsageCallTime, start)
-                .lt(SysAiUsage::getSysAiUsageCallTime, end);
-        List<SysAiUsage> list = usageMapper.selectList(wrapper);
+        int batchSize = 10000;
+        long totalAggregated = 0;
+        Page<SysAiUsage> page;
+        int p = 1;
+        do {
+            LambdaQueryWrapper<SysAiUsage> wrapper = new LambdaQueryWrapper<>();
+            wrapper.ge(SysAiUsage::getSysAiUsageCallTime, start)
+                    .lt(SysAiUsage::getSysAiUsageCallTime, end)
+                    .orderByAsc(SysAiUsage::getSysAiUsageId);
+            page = usageMapper.selectPage(new Page<>(p, batchSize), wrapper);
+            List<SysAiUsage> list = page.getRecords();
 
-        if (list.isEmpty()) {
-            log.info("[UsageAggregation] {} ~ {} 无用量数据", start, end);
-            return;
-        }
-
-        // 按日期、group, provider, model 分组聚合
-        Map<String, List<SysAiUsage>> grouped = list.stream()
-                .collect(Collectors.groupingBy(u -> u.getSysAiUsageCallTime().toLocalDate() + "|" + u.getSysAiUsageGroupName()
-                        + "|" + u.getSysAiUsageProvider() + "|" + u.getSysAiUsageModel()));
-
-        for (Map.Entry<String, List<SysAiUsage>> entry : grouped.entrySet()) {
-            String[] keys = entry.getKey().split("\\|");
-            LocalDate statDate = LocalDate.parse(keys[0]);
-            String groupName = keys[1];
-            String provider = keys[2];
-            String model = keys[3];
-            List<SysAiUsage> items = entry.getValue();
-
-            BigDecimal totalCachedTokens = BigDecimal.ZERO;
-            BigDecimal totalLatency = BigDecimal.ZERO;
-            BigDecimal totalCost = BigDecimal.ZERO;
-            BigDecimal standardCost = BigDecimal.ZERO;
-
-            for (SysAiUsage item : items) {
-                int promptTokens = item.getSysAiUsagePromptTokens() != null ? item.getSysAiUsagePromptTokens() : 0;
-                int completionTokens = item.getSysAiUsageCompletionTokens() != null ? item.getSysAiUsageCompletionTokens() : 0;
-                int cachedTokens = item.getSysAiUsageCachedTokens() != null ? item.getSysAiUsageCachedTokens() : 0;
-                long latency = item.getSysAiUsageTotalLatency() != null ? item.getSysAiUsageTotalLatency() : 0;
-                totalCachedTokens = totalCachedTokens.add(BigDecimal.valueOf(cachedTokens));
-                totalLatency = totalLatency.add(BigDecimal.valueOf(latency));
-
-                SysAiPricing pricing = pricingService.getLatestPricing(provider, model);
-                BigDecimal inputPrice = pricing != null && pricing.getInputPricePer1k() != null
-                        ? BigDecimal.valueOf(pricing.getInputPricePer1k()) : BigDecimal.ZERO;
-                BigDecimal outputPrice = pricing != null && pricing.getOutputPricePer1k() != null
-                        ? BigDecimal.valueOf(pricing.getOutputPricePer1k()) : BigDecimal.ZERO;
-                BigDecimal tokenCost = BigDecimal.valueOf(promptTokens)
-                        .divide(BigDecimal.valueOf(1000), 10, RoundingMode.HALF_UP)
-                        .multiply(inputPrice)
-                        .add(BigDecimal.valueOf(completionTokens)
-                                .divide(BigDecimal.valueOf(1000), 10, RoundingMode.HALF_UP)
-                                .multiply(outputPrice));
-                standardCost = standardCost.add(tokenCost);
-                Double itemCost = item.getSysAiUsageTotalCost();
-                totalCost = totalCost.add((itemCost != null && itemCost != 0)
-                        ? BigDecimal.valueOf(itemCost) : tokenCost);
+            if (list.isEmpty()) {
+                break;
             }
 
-            SysAiUsageDaily daily = new SysAiUsageDaily();
-            daily.setStatDate(statDate);
-            daily.setGroupName(groupName);
-            daily.setProvider(provider);
-            daily.setModel(model);
-            daily.setTotalCalls(items.size());
-            daily.setTotalPromptTokens(items.stream().mapToInt(u -> u.getSysAiUsagePromptTokens() != null ? u.getSysAiUsagePromptTokens() : 0).sum());
-            daily.setTotalCompletionTokens(items.stream().mapToInt(u -> u.getSysAiUsageCompletionTokens() != null ? u.getSysAiUsageCompletionTokens() : 0).sum());
-            daily.setTotalTokens(items.stream().mapToInt(u -> u.getSysAiUsageTotalTokens() != null ? u.getSysAiUsageTotalTokens() : 0).sum());
-            daily.setTotalCachedTokens(totalCachedTokens.intValueExact());
-            daily.setTotalLatency(totalLatency.longValueExact());
-            daily.setTotalCost(totalCost.doubleValue());
-            daily.setStandardCost(standardCost.doubleValue());
+            // 按日期、group, provider, model 分组聚合
+            Map<String, List<SysAiUsage>> grouped = list.stream()
+                    .collect(Collectors.groupingBy(u -> u.getSysAiUsageCallTime().toLocalDate() + "|" + u.getSysAiUsageGroupName()
+                            + "|" + u.getSysAiUsageProvider() + "|" + u.getSysAiUsageModel()));
 
-            dailyMapper.insert(daily);
-            log.debug("[UsageAggregation] 汇总: date={}, group={}, provider={}, model={}, calls={}",
-                    statDate, groupName, provider, model, items.size());
-        }
-        log.info("[UsageAggregation] {} ~ {} 聚合完成，共 {} 条记录，{} 个分组",
-                start, end, list.size(), grouped.size());
+            for (Map.Entry<String, List<SysAiUsage>> entry : grouped.entrySet()) {
+                String[] keys = entry.getKey().split("\\|");
+                LocalDate statDate = LocalDate.parse(keys[0]);
+                String groupName = keys[1];
+                String provider = keys[2];
+                String model = keys[3];
+                List<SysAiUsage> items = entry.getValue();
+
+                BigDecimal totalCachedTokens = BigDecimal.ZERO;
+                BigDecimal totalLatency = BigDecimal.ZERO;
+                BigDecimal totalCost = BigDecimal.ZERO;
+                BigDecimal standardCost = BigDecimal.ZERO;
+
+                for (SysAiUsage item : items) {
+                    int promptTokens = item.getSysAiUsagePromptTokens() != null ? item.getSysAiUsagePromptTokens() : 0;
+                    int completionTokens = item.getSysAiUsageCompletionTokens() != null ? item.getSysAiUsageCompletionTokens() : 0;
+                    int cachedTokens = item.getSysAiUsageCachedTokens() != null ? item.getSysAiUsageCachedTokens() : 0;
+                    long latency = item.getSysAiUsageTotalLatency() != null ? item.getSysAiUsageTotalLatency() : 0;
+                    totalCachedTokens = totalCachedTokens.add(BigDecimal.valueOf(cachedTokens));
+                    totalLatency = totalLatency.add(BigDecimal.valueOf(latency));
+
+                    SysAiPricing pricing = pricingService.getLatestPricing(provider, model);
+                    BigDecimal inputPrice = pricing != null && pricing.getInputPricePer1k() != null
+                            ? BigDecimal.valueOf(pricing.getInputPricePer1k()) : BigDecimal.ZERO;
+                    BigDecimal outputPrice = pricing != null && pricing.getOutputPricePer1k() != null
+                            ? BigDecimal.valueOf(pricing.getOutputPricePer1k()) : BigDecimal.ZERO;
+                    BigDecimal tokenCost = BigDecimal.valueOf(promptTokens)
+                            .divide(BigDecimal.valueOf(1000), 10, RoundingMode.HALF_UP)
+                            .multiply(inputPrice)
+                            .add(BigDecimal.valueOf(completionTokens)
+                                    .divide(BigDecimal.valueOf(1000), 10, RoundingMode.HALF_UP)
+                                    .multiply(outputPrice));
+                    standardCost = standardCost.add(tokenCost);
+                    Double itemCost = item.getSysAiUsageTotalCost();
+                    totalCost = totalCost.add((itemCost != null && itemCost != 0)
+                            ? BigDecimal.valueOf(itemCost) : tokenCost);
+                }
+
+                SysAiUsageDaily daily = new SysAiUsageDaily();
+                daily.setStatDate(statDate);
+                daily.setGroupName(groupName);
+                daily.setProvider(provider);
+                daily.setModel(model);
+                daily.setTotalCalls(items.size());
+                daily.setTotalPromptTokens(items.stream().mapToInt(u -> u.getSysAiUsagePromptTokens() != null ? u.getSysAiUsagePromptTokens() : 0).sum());
+                daily.setTotalCompletionTokens(items.stream().mapToInt(u -> u.getSysAiUsageCompletionTokens() != null ? u.getSysAiUsageCompletionTokens() : 0).sum());
+                daily.setTotalTokens(items.stream().mapToInt(u -> u.getSysAiUsageTotalTokens() != null ? u.getSysAiUsageTotalTokens() : 0).sum());
+                daily.setTotalCachedTokens(totalCachedTokens.intValueExact());
+                daily.setTotalLatency(totalLatency.longValueExact());
+                daily.setTotalCost(totalCost.doubleValue());
+                daily.setStandardCost(standardCost.doubleValue());
+
+                dailyMapper.insert(daily);
+                totalAggregated += items.size();
+                log.debug("[UsageAggregation] 汇总: date={}, group={}, provider={}, model={}, calls={}",
+                        statDate, groupName, provider, model, items.size());
+            }
+            p++;
+        } while (page.hasNext());
+
+        log.info("[UsageAggregation] {} ~ {} 聚合完成，共 {} 条记录", start, end, totalAggregated);
     }
 }
