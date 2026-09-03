@@ -6,6 +6,7 @@ import com.chua.starter.ai.support.mapper.SysAiPricingMapper;
 import com.chua.starter.ai.support.mapper.SysAiUsageDailyMapper;
 import com.chua.starter.ai.support.mapper.SysAiUsageMapper;
 import com.chua.starter.ai.support.schedule.UsageAggregationTask;
+import com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.ai.support.service.SysAiUsageService;
 import com.chua.starter.ai.support.service.impl.SysAiPricingServiceImpl;
@@ -49,9 +50,14 @@ public class UsageAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(SysAiPricingService.class)
-    /** SysAiPricingService */
-    public SysAiPricingService sysAiPricingService(SysAiPricingMapper pricingMapper) {
-        return new SysAiPricingServiceImpl(pricingMapper);
+    /**
+     * SysAiPricingService
+     * @param pricingMapper     定价 Mapper
+     * @param metricsEnrichment AA 模型指标服务（含定价缓存）
+     */
+    public SysAiPricingService sysAiPricingService(SysAiPricingMapper pricingMapper,
+                                                   AiModelMetricsEnrichmentService metricsEnrichment) {
+        return new SysAiPricingServiceImpl(pricingMapper, metricsEnrichment);
     }
 
     @Bean

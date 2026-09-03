@@ -55,8 +55,10 @@ public class WorkshopAssetController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "40") int pageSize) {
 
-        List<?> items = assetService.listAssets(kind, collection, ungrouped, q, tag, inLibrary, sort, page, pageSize);
-        long total = assetService.countAssets(kind, collection, ungrouped, q, tag, inLibrary);
+        WorkshopAssetService.AssetQueryRequest req = new WorkshopAssetService.AssetQueryRequest(
+                kind, collection, ungrouped, q, tag, inLibrary, sort, page, pageSize);
+        List<?> items = assetService.listAssets(req);
+        long total = assetService.countAssets(req);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("items", items);

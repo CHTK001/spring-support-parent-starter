@@ -1,24 +1,8 @@
--- ============================================================================
--- V1__init.sql - AI 中台初始化脚本（合并版）
--- 由 db/init/*.sql + schema.sql 合并生成。
--- ============================================================================
-
--- ============================================================
--- PART 1: 表结构（DDL）
--- ============================================================
-
--- 1. 清理遗留表
 DROP TABLE IF EXISTS `sys_nomifun_provider_connection`;
-
 DROP TABLE IF EXISTS `sys_nomifun_provider_model`;
-
 DROP TABLE IF EXISTS `sys_nomifun_provider`;
-
 DROP TABLE IF EXISTS `sys_nomifun_message`;
-
 DROP TABLE IF EXISTS `sys_nomifun_conversation`;
-
--- 2. 表结构
 CREATE TABLE IF NOT EXISTS `sys_ai_provider` (
     `sys_ai_provider_id`         VARCHAR(64)  NOT NULL COMMENT '提供商ID（UUIDv7）',
     `sys_ai_provider_platform`    VARCHAR(64)  NOT NULL COMMENT '平台类型（openai/anthropic/google等）',
@@ -35,7 +19,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_provider` (
     `sys_ai_provider_update_time` BIGINT       NOT NULL COMMENT '更新时间（毫秒）',
     PRIMARY KEY (`sys_ai_provider_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI 提供商';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_provider_model` (
     `sys_ai_provider_model_provider_id`    VARCHAR(64)  NOT NULL COMMENT '所属提供商ID',
     `sys_ai_provider_model_model`          VARCHAR(255) NOT NULL COMMENT '模型名称',
@@ -48,7 +31,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_provider_model` (
     `sys_ai_provider_model_update_time`    BIGINT       NOT NULL COMMENT '更新时间（毫秒）',
     PRIMARY KEY (`sys_ai_provider_model_provider_id`, `sys_ai_provider_model_model`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI 提供商模型';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_provider_connection` (
     `sys_ai_provider_connection_id`         VARCHAR(64)  NOT NULL COMMENT '连接ID（UUID）',
     `sys_ai_provider_connection_provider_id` VARCHAR(64) NOT NULL COMMENT '所属提供商ID',
@@ -63,7 +45,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_provider_connection` (
     PRIMARY KEY (`sys_ai_provider_connection_id`),
     KEY `idx_ai_provider_conn_pid` (`sys_ai_provider_connection_provider_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI 提供商连接';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_conversation` (
     `sys_ai_conversation_id`                 VARCHAR(36)  NOT NULL COMMENT '会话ID（UUIDv7）',
     `sys_ai_conversation_type`               VARCHAR(32)  NOT NULL DEFAULT 'nomi' COMMENT '会话类型',
@@ -77,7 +58,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_conversation` (
     `sys_ai_conversation_execution_template_id` VARCHAR(64) NULL COMMENT '执行模板ID',
     PRIMARY KEY (`sys_ai_conversation_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI 会话';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_conversation_message` (
     `sys_ai_conversation_message_id`             VARCHAR(36)  NOT NULL COMMENT '消息ID（UUIDv7）',
     `sys_ai_conversation_message_conversation_id` VARCHAR(36)  NOT NULL COMMENT '所属会话ID',
@@ -92,7 +72,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_conversation_message` (
     PRIMARY KEY (`sys_ai_conversation_message_id`),
     KEY `idx_ai_conv_msg_conv` (`sys_ai_conversation_message_conversation_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI 会话消息';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_bot_binding` (
     `sys_ai_bot_binding_id`               BIGINT       NOT NULL AUTO_INCREMENT COMMENT '绑定 ID',
     `sys_ai_bot_binding_user_id`          BIGINT       NULL COMMENT '关联用户 ID',
@@ -117,70 +96,66 @@ CREATE TABLE IF NOT EXISTS `sys_ai_bot_binding` (
     PRIMARY KEY (`sys_ai_bot_binding_id`),
     KEY `idx_sys_ai_bot_binding_bot_id` (`sys_ai_bot_binding_bot_id`)
 );
-
-CREATE TABLE IF NOT EXISTS `sys_ai_pricing` (
-    `sys_ai_pricing_id`                  BIGINT       NOT NULL AUTO_INCREMENT COMMENT ' ID',
-    `sys_ai_pricing_provider`            VARCHAR(64)  NULL COMMENT '',
-    `sys_ai_pricing_model`              VARCHAR(128) NULL COMMENT '',
-    `sys_ai_pricing_input_price_per_1k`  DOUBLE       NULL COMMENT ' 1k tokens',
-    `sys_ai_pricing_output_price_per_1k` DOUBLE      NULL COMMENT ' 1k tokens',
-    `sys_ai_pricing_currency`           VARCHAR(8)   NULL COMMENT 'CNY / USD',
-    `sys_ai_pricing_effective_date`     DATETIME     NULL COMMENT '',
-    `sys_ai_pricing_source`             VARCHAR(32)  NULL COMMENT 'manual / sync',
-    `create_name`                        VARCHAR(64)  NULL COMMENT '',
-    `create_by`                          INT          NULL COMMENT '',
-    `create_time`                        DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '',
-    `update_name`                        VARCHAR(64)  NULL COMMENT '',
-    `update_by`                          INT          NULL COMMENT '',
-    `update_time`                        DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '',
-    PRIMARY KEY (`sys_ai_pricing_id`)
+CREATE TABLE IF NOT EXISTS `sys_ai_pricing` (
+    `sys_ai_pricing_id`                  BIGINT       NOT NULL AUTO_INCREMENT COMMENT ' ID',
+    `sys_ai_pricing_provider`            VARCHAR(64)  NULL COMMENT '',
+    `sys_ai_pricing_model`              VARCHAR(128) NULL COMMENT '',
+    `sys_ai_pricing_input_price_per_1k`  DOUBLE       NULL COMMENT ' 1k tokens',
+    `sys_ai_pricing_output_price_per_1k` DOUBLE      NULL COMMENT ' 1k tokens',
+    `sys_ai_pricing_currency`           VARCHAR(8)   NULL COMMENT 'CNY / USD',
+    `sys_ai_pricing_effective_date`     DATETIME     NULL COMMENT '',
+    `sys_ai_pricing_source`             VARCHAR(32)  NULL COMMENT 'manual / sync',
+    `create_name`                        VARCHAR(64)  NULL COMMENT '',
+    `create_by`                          INT          NULL COMMENT '',
+    `create_time`                        DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '',
+    `update_name`                        VARCHAR(64)  NULL COMMENT '',
+    `update_by`                          INT          NULL COMMENT '',
+    `update_time`                        DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '',
+    PRIMARY KEY (`sys_ai_pricing_id`)
 );
-
-CREATE TABLE IF NOT EXISTS `sys_ai_usage` (
-    `sys_ai_usage_id`                   BIGINT       NOT NULL AUTO_INCREMENT COMMENT ' ID',
-    `sys_ai_usage_group_name`           VARCHAR(32)  NULL COMMENT 'chat / image / video / colorize / vision / rag',
-    `sys_ai_usage_provider`            VARCHAR(64)  NULL COMMENT 'openai / zhipu / baidu ',
-    `sys_ai_usage_model`               VARCHAR(128) NULL COMMENT '',
-    `sys_ai_usage_call_type`           VARCHAR(16)  NULL COMMENT 'sync / async',
-    `sys_ai_usage_prompt_tokens`        INT          NULL COMMENT ' Token ',
-    `sys_ai_usage_completion_tokens`    INT          NULL COMMENT ' Token ',
-    `sys_ai_usage_total_tokens`        INT          NULL COMMENT ' Token ',
-    `sys_ai_usage_input_cost`          DOUBLE       NULL COMMENT '',
-    `sys_ai_usage_output_cost`         DOUBLE       NULL COMMENT '',
-    `sys_ai_usage_total_cost`          DOUBLE       NULL COMMENT '',
-    `sys_ai_usage_request_id`          VARCHAR(128) NULL COMMENT ' ID',
-    `sys_ai_usage_user_id`             VARCHAR(64)  NULL COMMENT '',
-    `sys_ai_usage_call_time`           DATETIME     NULL COMMENT '',
-    `create_name`                       VARCHAR(64)  NULL COMMENT '',
-    `create_by`                         INT          NULL COMMENT '',
-    `create_time`                       DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '',
-    `update_name`                       VARCHAR(64)  NULL COMMENT '',
-    `update_by`                         INT          NULL COMMENT '',
-    `update_time`                       DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '',
-    PRIMARY KEY (`sys_ai_usage_id`),
-    KEY `idx_sys_ai_usage_request_id` (`sys_ai_usage_request_id`)
+CREATE TABLE IF NOT EXISTS `sys_ai_usage` (
+    `sys_ai_usage_id`                   BIGINT       NOT NULL AUTO_INCREMENT COMMENT ' ID',
+    `sys_ai_usage_group_name`           VARCHAR(32)  NULL COMMENT 'chat / image / video / colorize / vision / rag',
+    `sys_ai_usage_provider`            VARCHAR(64)  NULL COMMENT 'openai / zhipu / baidu ',
+    `sys_ai_usage_model`               VARCHAR(128) NULL COMMENT '',
+    `sys_ai_usage_call_type`           VARCHAR(16)  NULL COMMENT 'sync / async',
+    `sys_ai_usage_prompt_tokens`        INT          NULL COMMENT ' Token ',
+    `sys_ai_usage_completion_tokens`    INT          NULL COMMENT ' Token ',
+    `sys_ai_usage_total_tokens`        INT          NULL COMMENT ' Token ',
+    `sys_ai_usage_input_cost`          DOUBLE       NULL COMMENT '',
+    `sys_ai_usage_output_cost`         DOUBLE       NULL COMMENT '',
+    `sys_ai_usage_total_cost`          DOUBLE       NULL COMMENT '',
+    `sys_ai_usage_request_id`          VARCHAR(128) NULL COMMENT ' ID',
+    `sys_ai_usage_user_id`             VARCHAR(64)  NULL COMMENT '',
+    `sys_ai_usage_call_time`           DATETIME     NULL COMMENT '',
+    `create_name`                       VARCHAR(64)  NULL COMMENT '',
+    `create_by`                         INT          NULL COMMENT '',
+    `create_time`                       DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '',
+    `update_name`                       VARCHAR(64)  NULL COMMENT '',
+    `update_by`                         INT          NULL COMMENT '',
+    `update_time`                       DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '',
+    PRIMARY KEY (`sys_ai_usage_id`),
+    KEY `idx_sys_ai_usage_request_id` (`sys_ai_usage_request_id`)
 );
-
-CREATE TABLE IF NOT EXISTS `sys_ai_usage_daily` (
-    `sys_ai_usage_daily_id`                     BIGINT       NOT NULL AUTO_INCREMENT COMMENT ' ID',
-    `sys_ai_usage_daily_stat_date`              DATE         NULL COMMENT '',
-    `sys_ai_usage_daily_group_name`            VARCHAR(32)  NULL COMMENT '',
-    `sys_ai_usage_daily_provider`              VARCHAR(64)  NULL COMMENT '',
-    `sys_ai_usage_daily_model`                 VARCHAR(128) NULL COMMENT '',
-    `sys_ai_usage_daily_total_calls`           INT          NULL COMMENT '',
-    `sys_ai_usage_daily_total_prompt_tokens`   INT          NULL COMMENT ' Token',
-    `sys_ai_usage_daily_total_completion_tokens` INT       NULL COMMENT ' Token',
-    `sys_ai_usage_daily_total_tokens`         INT          NULL COMMENT ' Token',
-    `sys_ai_usage_daily_total_cost`           DOUBLE       NULL COMMENT '',
-    `create_name`                               VARCHAR(64)  NULL COMMENT '',
-    `create_by`                                 INT          NULL COMMENT '',
-    `create_time`                               DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '',
-    `update_name`                               VARCHAR(64)  NULL COMMENT '',
-    `update_by`                                 INT          NULL COMMENT '',
-    `update_time`                               DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '',
-    PRIMARY KEY (`sys_ai_usage_daily_id`)
+CREATE TABLE IF NOT EXISTS `sys_ai_usage_daily` (
+    `sys_ai_usage_daily_id`                     BIGINT       NOT NULL AUTO_INCREMENT COMMENT ' ID',
+    `sys_ai_usage_daily_stat_date`              DATE         NULL COMMENT '',
+    `sys_ai_usage_daily_group_name`            VARCHAR(32)  NULL COMMENT '',
+    `sys_ai_usage_daily_provider`              VARCHAR(64)  NULL COMMENT '',
+    `sys_ai_usage_daily_model`                 VARCHAR(128) NULL COMMENT '',
+    `sys_ai_usage_daily_total_calls`           INT          NULL COMMENT '',
+    `sys_ai_usage_daily_total_prompt_tokens`   INT          NULL COMMENT ' Token',
+    `sys_ai_usage_daily_total_completion_tokens` INT       NULL COMMENT ' Token',
+    `sys_ai_usage_daily_total_tokens`         INT          NULL COMMENT ' Token',
+    `sys_ai_usage_daily_total_cost`           DOUBLE       NULL COMMENT '',
+    `create_name`                               VARCHAR(64)  NULL COMMENT '',
+    `create_by`                                 INT          NULL COMMENT '',
+    `create_time`                               DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '',
+    `update_name`                               VARCHAR(64)  NULL COMMENT '',
+    `update_by`                                 INT          NULL COMMENT '',
+    `update_time`                               DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '',
+    PRIMARY KEY (`sys_ai_usage_daily_id`)
 );
-
 CREATE TABLE IF NOT EXISTS `sys_agent_browser_lane` (
     `lane_id`                 VARCHAR(64)  NOT NULL COMMENT 'Lane ID',
     `lane_name`               VARCHAR(255) NULL COMMENT 'Lane 显示名称',
@@ -214,7 +189,6 @@ CREATE TABLE IF NOT EXISTS `sys_agent_browser_lane` (
     INDEX `idx_lane_lifecycle` (`lifecycle_state`),
     INDEX `idx_lane_user` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='浏览器 Lane 信息';
-
 CREATE TABLE IF NOT EXISTS `sys_agent_browser_tab` (
     `tab_id`                  VARCHAR(64)  NOT NULL COMMENT 'Tab ID',
     `lane_id`                 VARCHAR(64)  NOT NULL COMMENT 'Lane ID',
@@ -227,7 +201,6 @@ CREATE TABLE IF NOT EXISTS `sys_agent_browser_tab` (
     PRIMARY KEY (`tab_id`),
     INDEX `idx_tab_lane` (`lane_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='浏览器 Tab 信息';
-
 CREATE TABLE IF NOT EXISTS `sys_agent_browser_host` (
     `host_id`                 VARCHAR(64)  NOT NULL COMMENT 'Host ID',
     `state`                   VARCHAR(32)  NOT NULL DEFAULT 'running' COMMENT '状态',
@@ -240,14 +213,12 @@ CREATE TABLE IF NOT EXISTS `sys_agent_browser_host` (
     `updated_at`              BIGINT       NOT NULL COMMENT '更新时间',
     PRIMARY KEY (`host_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='浏览器宿主进程信息';
-
 CREATE TABLE IF NOT EXISTS `sys_agent_browser_setting` (
     `setting_key`             VARCHAR(128) NOT NULL COMMENT '设置键',
     `setting_value`           TEXT         NULL COMMENT '设置值',
     `updated_at`              BIGINT       NOT NULL COMMENT '更新时间',
     PRIMARY KEY (`setting_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='浏览器全局设置';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_module` (
   `sys_ai_module_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_module_name` VARCHAR(255) NOT NULL COMMENT '',
@@ -283,7 +254,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_module` (
   PRIMARY KEY (`sys_ai_module_id`),
   UNIQUE KEY `uk_sys_ai_module_code` (`sys_ai_module_code`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_manufacturer` (
   `sys_ai_manufacturer_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_manufacturer_code` VARCHAR(128) NOT NULL COMMENT '',
@@ -317,7 +287,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_manufacturer` (
   PRIMARY KEY (`sys_ai_manufacturer_id`),
   UNIQUE KEY `uk_sys_ai_manufacturer_code` (`sys_ai_manufacturer_code`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_session_compression` (
   `sys_ai_session_compression_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_session_id` INT NOT NULL COMMENT 'ID',
@@ -335,7 +304,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_session_compression` (
   PRIMARY KEY (`sys_ai_session_compression_id`),
   UNIQUE KEY `uk_ai_session_compression_session` (`sys_ai_session_id`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_session` (
   `sys_ai_session_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_session_title` VARCHAR(255) NOT NULL COMMENT '',
@@ -352,7 +320,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_session` (
   PRIMARY KEY (`sys_ai_session_id`),
   KEY `idx_ai_session_user_type` (`sys_user_id`, `sys_ai_session_type`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_message` (
   `sys_ai_message_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_session_id` INT NOT NULL COMMENT 'ID',
@@ -369,7 +336,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_message` (
   PRIMARY KEY (`sys_ai_message_id`),
   KEY `idx_ai_message_session` (`sys_ai_session_id`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_task` (
   `sys_ai_task_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_task_uid` VARCHAR(64) DEFAULT NULL COMMENT '',
@@ -396,7 +362,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_task` (
   PRIMARY KEY (`sys_ai_task_id`),
   KEY `idx_ai_task_user_type` (`sys_user_id`, `sys_ai_task_type`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_style` (
   `sys_ai_style_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_module_id` INT NOT NULL COMMENT 'ID',
@@ -415,7 +380,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_style` (
   KEY `idx_ai_style_module` (`sys_ai_module_id`),
   UNIQUE KEY `uk_ai_style_code` (`sys_ai_module_id`, `sys_ai_style_code`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_template` (
   `sys_ai_template_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_module_id` INT NOT NULL COMMENT 'ID',
@@ -441,7 +405,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_template` (
   PRIMARY KEY (`sys_ai_template_id`),
   KEY `idx_ai_template_module` (`sys_ai_module_id`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_setting` (
   `sys_ai_setting_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_module_id` INT NOT NULL COMMENT 'ID',
@@ -461,7 +424,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_setting` (
   KEY `idx_ai_setting_module` (`sys_ai_module_id`),
   UNIQUE KEY `uk_ai_setting_field` (`sys_ai_module_id`, `sys_ai_setting_field`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_global_setting` (
   `sys_ai_global_setting_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_global_setting_group` VARCHAR(64) NOT NULL DEFAULT 'default' COMMENT '',
@@ -480,7 +442,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_global_setting` (
   PRIMARY KEY (`sys_ai_global_setting_id`),
   UNIQUE KEY `uk_ai_global_setting_field` (`sys_ai_global_setting_group`, `sys_ai_global_setting_field`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_app_key` (
   `sys_ai_app_key_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_app_key_app_id` VARCHAR(128) DEFAULT NULL COMMENT 'ID',
@@ -515,7 +476,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_app_key` (
   PRIMARY KEY (`sys_ai_app_key_id`),
   UNIQUE KEY `uk_ai_app_key_value` (`sys_ai_app_key_app_key`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_face_library` (
   `sys_ai_face_library_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_face_library_name` VARCHAR(128) NOT NULL COMMENT '/',
@@ -537,7 +497,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_face_library` (
   KEY `idx_face_group` (`sys_ai_face_library_group`),
   KEY `idx_face_name` (`sys_ai_face_library_name`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_face_recognize_record` (
   `sys_ai_face_recognize_record_id` INT NOT NULL AUTO_INCREMENT,
   `sys_ai_face_recognize_record_thumbnail` LONGTEXT COMMENT '(base64)',
@@ -556,7 +515,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_face_recognize_record` (
   PRIMARY KEY (`sys_ai_face_recognize_record_id`),
   KEY `idx_record_create_time` (`create_time`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_face_group` (
   `sys_ai_face_group_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_face_group_name` VARCHAR(64) NOT NULL COMMENT '',
@@ -572,7 +530,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_face_group` (
   PRIMARY KEY (`sys_ai_face_group_id`),
   UNIQUE KEY `uk_group_name` (`sys_ai_face_group_name`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_image_library` (
   `sys_ai_image_library_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_image_library_name` VARCHAR(255) DEFAULT NULL COMMENT '/',
@@ -595,7 +552,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_image_library` (
   KEY `idx_image_create_time` (`create_time`),
   KEY `idx_image_tags` (`sys_ai_image_library_tags`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_knowledge_graph_entity` (
   `sys_ai_knowledge_graph_entity_id`       INT           NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_knowledge_graph_entity_uid`      VARCHAR(64)   NOT NULL COMMENT '(UUID)',
@@ -619,7 +575,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_knowledge_graph_entity` (
   KEY `idx_kg_entity_name` (`sys_ai_knowledge_graph_entity_name`),
   KEY `idx_kg_entity_library` (`sys_ai_knowledge_graph_library_id`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_knowledge_graph_relation` (
   `sys_ai_knowledge_graph_relation_id`                 INT           NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_knowledge_graph_relation_uid`                VARCHAR(64)   NOT NULL COMMENT '(UUID)',
@@ -644,7 +599,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_knowledge_graph_relation` (
   KEY `idx_kg_relation_type` (`sys_ai_knowledge_graph_relation_type`),
   KEY `idx_kg_relation_library` (`sys_ai_knowledge_graph_relation_library_id`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_knowledge_library` (
   `sys_ai_knowledge_library_id`                      INT           NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_knowledge_library_name`                    VARCHAR(128)  NOT NULL COMMENT '',
@@ -670,7 +624,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_knowledge_library` (
   PRIMARY KEY (`sys_ai_knowledge_library_id`),
   UNIQUE KEY `uk_lib_name` (`sys_ai_knowledge_library_name`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_reid_library` (
   `sys_ai_reid_library_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_reid_library_face_id` INT DEFAULT NULL COMMENT 'ID',
@@ -693,7 +646,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_reid_library` (
   KEY `idx_reid_face_id` (`sys_ai_reid_library_face_id`),
   KEY `idx_reid_name` (`sys_ai_reid_library_name`)
 ) COMMENT='AI ReID';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_knowledge_graph_entity_attribute` (
   `attr_id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `entity_uid`       VARCHAR(64)  NOT NULL COMMENT 'UUID',
@@ -714,7 +666,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_knowledge_graph_entity_attribute` (
   KEY `idx_attr_library` (`library_id`),
   KEY `idx_attr_name` (`attr_name`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_manufacturer_key` (
   `sys_ai_manufacturer_key_id` INT NOT NULL AUTO_INCREMENT COMMENT '',
   `sys_ai_manufacturer_code` VARCHAR(255) DEFAULT NULL COMMENT '',
@@ -734,7 +685,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_manufacturer_key` (
   PRIMARY KEY (`sys_ai_manufacturer_key_id`),
   KEY `idx_mfr_key_code` (`sys_ai_manufacturer_code`)
 ) COMMENT='AI  API Key ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_token` (
   `sys_ai_token_id` INT NOT NULL AUTO_INCREMENT COMMENT '',
   `sys_ai_token_name` VARCHAR(128) DEFAULT NULL COMMENT '',
@@ -773,7 +723,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_token` (
   KEY `idx_token_key_hash` (`sys_ai_token_key_hash`),
   KEY `idx_token_status` (`sys_ai_token_status`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_balance` (
   `sys_ai_balance_id` INT NOT NULL AUTO_INCREMENT COMMENT '',
   `sys_user_id` INT DEFAULT NULL COMMENT 'ID',
@@ -798,7 +747,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_balance` (
   KEY `idx_balance_user` (`sys_user_id`),
   KEY `idx_balance_status` (`sys_ai_balance_status`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_group` (
     `sys_ai_group_id` INT AUTO_INCREMENT PRIMARY KEY COMMENT '',
     `sys_ai_group_name` VARCHAR(128) NOT NULL COMMENT '',
@@ -814,7 +762,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_group` (
     `update_time` TIMESTAMP COMMENT '',
     `update_by` VARCHAR(64) COMMENT ''
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_group_model` (
     `sys_ai_group_model_id` INT AUTO_INCREMENT PRIMARY KEY COMMENT '',
     `sys_ai_group_id` INT NOT NULL COMMENT ' ID',
@@ -822,7 +769,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_group_model` (
     `create_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '',
     UNIQUE KEY `uk_group_module` (`sys_ai_group_id`, `sys_ai_module_id`)
 ) COMMENT='-';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_model` (
     `sys_ai_model_id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '',
     `sys_ai_model_name` VARCHAR(255) NOT NULL COMMENT '',
@@ -840,7 +786,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_model` (
     `sys_ai_model_cache_price` DECIMAL(12,4) DEFAULT 0.0000 COMMENT '(1k tokens)',
     UNIQUE KEY `uk_sys_ai_model_code` (`sys_ai_model_code`)
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_service_status` (
     `sys_ai_service_status_id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '',
     `sys_ai_service_status_service_name` VARCHAR(255) NOT NULL COMMENT '',
@@ -850,7 +795,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_service_status` (
     `sys_ai_service_status_uptime_sec` BIGINT DEFAULT 0 COMMENT '()',
     `sys_ai_service_status_update_time` DATETIME DEFAULT NULL COMMENT ''
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_alert` (
     `sys_ai_alert_id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '',
     `sys_ai_alert_name` VARCHAR(255) NOT NULL COMMENT '',
@@ -863,7 +807,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_alert` (
     `sys_ai_alert_update_time` DATETIME DEFAULT NULL COMMENT '',
     `sys_ai_alert_deleted` INT DEFAULT 0 COMMENT ''
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_model_setting` (
     `sys_ai_model_setting_id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '',
     `module_id` INT DEFAULT NULL COMMENT ' ID',
@@ -876,7 +819,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_model_setting` (
     `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '',
     `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT ''
 ) COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_role` (
     `sys_ai_role_id` INT AUTO_INCREMENT PRIMARY KEY COMMENT '',
     `sys_ai_role_name` VARCHAR(128) NOT NULL COMMENT '',
@@ -893,7 +835,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_role` (
     `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '',
     UNIQUE KEY `uk_sys_ai_role_code` (`sys_ai_role_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI ';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_ssh_host` (
     `sys_ai_ssh_host_id`               VARCHAR(36)  NOT NULL COMMENT '主机主键（UUIDv7）',
     `sys_ai_ssh_host_name`             VARCHAR(255) NULL COMMENT '主机显示名称',
@@ -913,7 +854,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_ssh_host` (
     `sys_ai_ssh_host_updated_at`       BIGINT       NOT NULL COMMENT '最后更新时间（毫秒）',
     PRIMARY KEY (`sys_ai_ssh_host_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='远程主机（SSH 主机簿）';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_agent` (
     `sys_ai_agent_id`            VARCHAR(64)  NOT NULL COMMENT 'Agent ID（UUIDv7）',
     `sys_ai_agent_parent_id`     VARCHAR(64)  NULL COMMENT '所属主 Agent ID（空表示主 Agent）',
@@ -934,7 +874,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_agent` (
     PRIMARY KEY (`sys_ai_agent_id`),
     KEY `idx_ai_agent_parent` (`sys_ai_agent_parent_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI Agent 定义';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_mcp_server` (
     `sys_ai_mcp_server_id`          VARCHAR(36)  NOT NULL COMMENT 'MCP 服务器主键（UUIDv7）',
     `sys_ai_mcp_server_name`        VARCHAR(255) NOT NULL COMMENT '服务器显示名称',
@@ -950,7 +889,6 @@ CREATE TABLE IF NOT EXISTS `sys_ai_mcp_server` (
     PRIMARY KEY (`sys_ai_mcp_server_id`),
     KEY `idx_sys_ai_mcp_server_name` (`sys_ai_mcp_server_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='MCP 服务器档案';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_requirement` (
     `sys_ai_requirement_id` VARCHAR(36) NOT NULL COMMENT '需求 ID（UUIDv7）',
     `sys_ai_requirement_display_no` INT DEFAULT NULL COMMENT '展示序号（自增）',
@@ -975,20 +913,12 @@ CREATE TABLE IF NOT EXISTS `sys_ai_requirement` (
     `update_time` BIGINT DEFAULT NULL,
     PRIMARY KEY (`sys_ai_requirement_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='需求条目';
-
 CREATE TABLE IF NOT EXISTS `sys_ai_data_source` (`sys_ai_data_source_id` VARCHAR(36) NOT NULL COMMENT '数据源 ID（UUIDv7）', `sys_ai_data_source_name` VARCHAR(128) NOT NULL COMMENT '数据源名称', `sys_ai_data_source_type` VARCHAR(64) NOT NULL COMMENT '类型: lark / jira / notion / generic', `sys_ai_data_source_config` TEXT NULL COMMENT '配置 JSON', `sys_ai_data_source_enabled` TINYINT NOT NULL DEFAULT 1 COMMENT '是否启用', `sys_ai_data_source_sync_cron` VARCHAR(64) NULL COMMENT '同步 cron 表达式', `sys_ai_data_source_last_sync_at` BIGINT NULL COMMENT '上次同步时间戳', `sys_ai_data_source_last_sync_status` VARCHAR(32) NULL COMMENT '上次同步状态', `sys_ai_data_source_last_sync_error` VARCHAR(512) NULL COMMENT '上次同步错误', `create_name` VARCHAR(64) NULL, `create_by` INT NULL, `create_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP, `update_name` VARCHAR(64) NULL, `update_by` INT NULL, `update_time` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (`sys_ai_data_source_id`), KEY `idx_sys_ai_ds_type` (`sys_ai_data_source_type`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='需求数据源提供方配置';
-
--- 3. 列变更（ALTER TABLE）
 ALTER TABLE `sys_ai_bot_binding`
     ADD COLUMN `sys_ai_bot_binding_model` VARCHAR(128) NULL COMMENT '绑定的 AI 模型（用于微信聊天时 AI 回复）' AFTER `sys_ai_bot_binding_bind_source`;
-
--- 4. 动态列变更（幂等 PREPARE/EXECUTE）
 SET @dbname = DATABASE();
-
 SET @tablename = 'sys_ai_provider';
-
 SET @columnname = 'sys_ai_provider_extra';
-
 SET @preparedStatement = (SELECT IF(
   (
     SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
@@ -999,15 +929,10 @@ SET @preparedStatement = (SELECT IF(
   'SELECT 1',
   CONCAT('ALTER TABLE `', @tablename, '` ADD COLUMN `', @columnname, '` TEXT NULL COMMENT ''扩展配置JSON'' AFTER `sys_ai_provider_bedrock_config`')
 ));
-
 PREPARE alterIfNotExists FROM @preparedStatement;
-
 EXECUTE alterIfNotExists;
-
 DEALLOCATE PREPARE alterIfNotExists;
-
 SET @columnname = 'sys_ai_provider_proxy';
-
 SET @preparedStatement = (SELECT IF(
   (
     SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
@@ -1018,27 +943,17 @@ SET @preparedStatement = (SELECT IF(
   'SELECT 1',
   CONCAT('ALTER TABLE `', @tablename, '` ADD COLUMN `', @columnname, '` VARCHAR(512) NULL COMMENT ''HTTP代理地址（如 http://127.0.0.1:7890、socks5://127.0.0.1:1080）'' AFTER `sys_ai_provider_extra`')
 ));
-
--- ============================================================
--- PART 2: 初始化数据（DML）
--- ============================================================
-
 INSERT IGNORE INTO `sys_ai_face_group` (`sys_ai_face_group_name`, `sys_ai_face_group_sort`)
 VALUES ('default', 0);
-
 INSERT IGNORE INTO `sys_ai_knowledge_library` (
   `sys_ai_knowledge_library_name`, `sys_ai_knowledge_library_description`, `sys_ai_knowledge_library_sort`
 ) VALUES ('', '', 0);
-
 INSERT IGNORE INTO `sys_ai_knowledge_library` (
   `sys_ai_knowledge_library_name`, `sys_ai_knowledge_library_description`,
   `sys_ai_knowledge_library_summary`, `sys_ai_knowledge_library_sort`
 ) VALUES ('', ' - 184280', '## 
-
 184-280
-
 ## 
-
 ### 
 - 
 - 
@@ -1052,7 +967,6 @@ INSERT IGNORE INTO `sys_ai_knowledge_library` (
 - 
 - 
 - 
-
 ### 
 - 
 - 
@@ -1066,7 +980,6 @@ INSERT IGNORE INTO `sys_ai_knowledge_library` (
 - 
 - 
 - 
-
 ### 
 - 
 - 
@@ -1078,7 +991,6 @@ INSERT IGNORE INTO `sys_ai_knowledge_library` (
 - 
 - 
 - 
-
 ### /
 - 
 - 
@@ -1089,9 +1001,7 @@ INSERT IGNORE INTO `sys_ai_knowledge_library` (
 - 
 - 
 - 
-
 ## 
-
 - served_as
 - father_of
 - brother_of
@@ -1104,9 +1014,7 @@ INSERT IGNORE INTO `sys_ai_knowledge_library` (
 - succeeded_by/
 - assassinated
 - surrendered_to
-
 ## 
-
 - 184 
 - 189 
 - 190 
@@ -1128,11 +1036,8 @@ INSERT IGNORE INTO `sys_ai_knowledge_library` (
 - 263 
 - 265 
 - 280 
-
 ## 
-
 ', 1);
-
 INSERT INTO `sys_ai_manufacturer` (
   `sys_ai_manufacturer_code`, `sys_ai_manufacturer_name`,
   `sys_ai_manufacturer_factory`, `sys_ai_manufacturer_base_url`,
@@ -1291,13 +1196,11 @@ WHERE NOT EXISTS (
   SELECT 1 FROM `sys_ai_manufacturer`
   WHERE `sys_ai_manufacturer_code` = seed.code
 );
-
 UPDATE `sys_ai_manufacturer`
 SET `sys_ai_manufacturer_base_url` = 'https://newapis.xyz/v1',
     `sys_ai_manufacturer_claude_compatible` = 1
 WHERE `sys_ai_manufacturer_code` = 'infer-ai'
   AND (`sys_ai_manufacturer_claude_compatible` = 0 OR `sys_ai_manufacturer_base_url` = 'https://newapis.xyz');
-
 INSERT INTO `sys_ai_module` (
   `sys_ai_module_name`, `sys_ai_module_code`, `sys_ai_module_type`,
   `sys_ai_module_vendor`, `sys_ai_module_status`, `sys_ai_module_sort`,
@@ -1341,7 +1244,6 @@ SELECT * FROM (
     1,
     0.0000, 0.0000,
     'ModelScope - DeepSeek V4 Flash1M'
-
   UNION ALL
   SELECT 'GPT-4o', 'gpt-4o',
     'CHAT', 'openai', 1, 101,
@@ -1363,7 +1265,6 @@ SELECT * FROM (
     1,
     1.7500, 14.0000,
     'OpenAI - GPT-5.2 '
-
   UNION ALL
   SELECT 'DeepSeek-V3 (SiliconFlow)', 'deepseek-ai/DeepSeek-V3',
     'CHAT', 'siliconflow', 1, 111,
@@ -1385,7 +1286,6 @@ SELECT * FROM (
     1,
     0.1000, 0.1000,
     'SiliconFlow - Meta Llama 3.1 8B '
-
   UNION ALL
   SELECT 'DeepSeek Chat', 'deepseek-chat',
     'CHAT', 'deepseek', 1, 116,
@@ -1407,7 +1307,6 @@ SELECT * FROM (
     1,
     0.1400, 0.2800,
     'DeepSeek - '
-
   UNION ALL
   SELECT 'Qwen-Plus', 'qwen-plus',
     'CHAT', 'aliyun', 1, 121,
@@ -1429,7 +1328,6 @@ SELECT * FROM (
     1,
     0.0350, 0.1400,
     ' - Qwen-Turbo '
-
   UNION ALL
   SELECT 'Ollama Llama 3.2', 'llama3.2',
     'CHAT', 'ollama', 1, 131,
@@ -1451,7 +1349,6 @@ SELECT * FROM (
     1,
     0.0000, 0.0000,
     'Ollama - DeepSeek R1 '
-
   UNION ALL
   SELECT 'Doubao Pro 32K', 'doubao-pro-32k',
     'CHAT', 'doubao', 1, 141,
@@ -1466,7 +1363,6 @@ SELECT * FROM (
     1,
     0.4000, 1.0000,
     ' - doubao-lite-32k '
-
   UNION ALL
   SELECT 'Hunyuan Pro', 'hunyuan-pro',
     'CHAT', 'tencent', 1, 146,
@@ -1481,7 +1377,6 @@ SELECT * FROM (
     1,
     0.2000, 0.8000,
     ' - hunyuan-standard '
-
   UNION ALL
   SELECT 'Moonshot v1 32K', 'moonshot-v1-32k',
     'CHAT', 'kimi', 1, 151,
@@ -1496,7 +1391,6 @@ SELECT * FROM (
     1,
     0.0000, 0.0000,
     ' - kimi-k2-thinking MoE '
-
   UNION ALL
   SELECT 'MiniMax abab6.5s', 'abab6.5s-chat',
     'CHAT', 'minimax', 1, 156,
@@ -1511,7 +1405,6 @@ SELECT * FROM (
     1,
     0.0000, 0.0000,
     'MiniMax - abab6.5-pro '
-
   UNION ALL
   SELECT 'GLM-4-Plus', 'glm-4-plus',
     'CHAT', 'zhipu', 1, 161,
@@ -1533,7 +1426,6 @@ SELECT * FROM (
     1,
     0.0100, 0.0100,
     ' - GLM-4-Air '
-
   UNION ALL
   SELECT 'Gemini 2.0 Flash', 'gemini-2.0-flash',
     'CHAT', 'google', 1, 166,
@@ -1548,7 +1440,6 @@ SELECT * FROM (
     1,
     1.0000, 4.0000,
     'Google - Gemini 2.0 Pro '
-
   UNION ALL
   SELECT ' Text Chat', 'pangu-text-chat',
     'CHAT', 'huawei', 1, 171,
@@ -1563,7 +1454,6 @@ SELECT * FROM (
     1,
     0.0050, 0.0050,
     ' - pangu-text-turbo  /tokens '
-
   UNION ALL
   SELECT 'Claude Opus 4.7', 'claude-opus-4-7',
     'CHAT', 'claude', 1, 176,
@@ -1585,7 +1475,6 @@ SELECT * FROM (
     1,
     1.0000, 5.0000,
     'Anthropic - Claude Haiku 4.5 '
-
   UNION ALL
   SELECT 'Spark Pro', 'Spark Pro',
     'CHAT', 'xunfei', 1, 181,
@@ -1600,7 +1489,6 @@ SELECT * FROM (
     1,
     0.0120, 0.0120,
     ' - Spark Max  /tokens '
-
   UNION ALL
   SELECT 'GLM-4.7 (Z.AI)', 'GLM-4.7',
     'CHAT', 'zai', 1, 186,
@@ -1704,12 +1592,10 @@ WHERE NOT EXISTS (
   SELECT 1 FROM `sys_ai_module`
   WHERE `sys_ai_module_code` = seed.code
 );
-
 UPDATE `sys_ai_module`
 SET `sys_ai_module_concurrency` = 1
 WHERE `sys_ai_module_code` IN ('GLM-4.7-Flash', 'GLM-4.7', 'GLM-4.6V', 'GLM-4.6')
   AND (`sys_ai_module_concurrency` IS NULL OR `sys_ai_module_concurrency` = 0);
-
 INSERT INTO `sys_ai_module` (
   `sys_ai_module_name`, `sys_ai_module_code`, `sys_ai_module_model_id`, `sys_ai_module_type`,
   `sys_ai_module_vendor`, `sys_ai_module_version`, `sys_ai_module_local`, `sys_ai_module_status`,
@@ -1975,7 +1861,6 @@ WHERE NOT EXISTS (
   SELECT 1 FROM `sys_ai_module`
   WHERE `sys_ai_module_code` = seed.code
 );
-
 INSERT INTO `sys_ai_global_setting` (
   `sys_ai_global_setting_group`,
   `sys_ai_global_setting_field`,
@@ -2100,7 +1985,6 @@ WHERE NOT EXISTS (
   WHERE `sys_ai_global_setting_group` = seed.grp
     AND `sys_ai_global_setting_field` = seed.fld
 );
-
 DELETE FROM `sys_ai_module`
 WHERE `sys_ai_module_type` = 'LLM'
   AND `sys_ai_module_code` NOT IN (
@@ -2129,39 +2013,29 @@ WHERE `sys_ai_module_type` = 'LLM'
     'google/gemma-4-26b-a4b-it:free',
     'deepseek-default', 'deepseek-v4-flash-l'
   );
-
 UPDATE `sys_ai_module`
 SET `sys_ai_module_type` = 'CHAT'
 WHERE `sys_ai_module_type` = 'LLM';
-
 INSERT IGNORE INTO `sys_ai_group` (`sys_ai_group_id`, `sys_ai_group_name`, `sys_ai_group_desc`, `sys_ai_group_sort`, `sys_ai_group_status`)
 VALUES (1, '', '', 0, 1);
-
 INSERT INTO `sys_ai_role` (`sys_ai_role_name`, `sys_ai_role_code`, `sys_ai_role_description`, `sys_ai_role_system_prompt`, `sys_ai_role_sort`, `sys_ai_role_status`, `sys_ai_role_delete`)
 VALUES ('', 'default', ' AI ', ' AI ', 0, 1, 0)
 ON DUPLICATE KEY UPDATE `sys_ai_role_name` = VALUES(`sys_ai_role_name`);
-
 INSERT INTO `sys_ai_role` (`sys_ai_role_name`, `sys_ai_role_code`, `sys_ai_role_description`, `sys_ai_role_system_prompt`, `sys_ai_role_sort`, `sys_ai_role_status`, `sys_ai_role_delete`)
 VALUES ('Java ', 'java-dev', ' Java ', ' Java  Spring BootMyBatis', 1, 1, 0)
 ON DUPLICATE KEY UPDATE `sys_ai_role_name` = VALUES(`sys_ai_role_name`);
-
 INSERT INTO `sys_ai_role` (`sys_ai_role_name`, `sys_ai_role_code`, `sys_ai_role_description`, `sys_ai_role_system_prompt`, `sys_ai_role_sort`, `sys_ai_role_status`, `sys_ai_role_delete`)
 VALUES ('UI ', 'ui-designer', ' UI/UX ', ' UI/UX  Vue 3Element PlusTailwind CSS Vercel/Linear ', 2, 1, 0)
 ON DUPLICATE KEY UPDATE `sys_ai_role_name` = VALUES(`sys_ai_role_name`);
-
 INSERT IGNORE INTO `sys_ai_knowledge_library` (
   `sys_ai_knowledge_library_name`, `sys_ai_knowledge_library_description`, `sys_ai_knowledge_library_sort`
 ) VALUES ('默认知识�?, '系统默认知识�?, 0);
-
 INSERT IGNORE INTO `sys_ai_knowledge_library` (
   `sys_ai_knowledge_library_name`, `sys_ai_knowledge_library_description`,
   `sys_ai_knowledge_library_summary`, `sys_ai_knowledge_library_sort`
 ) VALUES ('三国演义', '《三国演义》历史知识图�?- 184年黄巾起义至280年西晋统一', '## 提取范围
-
 三国时期�?84�?280年）是中国历史上一个群雄割据的动荡时期。请提取以下各类实体和关系�?
-
 ## 鏍稿績浜虹墿锛堟寜闃佃惀锛?
-
 ### 蜀汉（刘备阵营�?
 - 刘备（字玄德，蜀汉开国皇帝）
 - 关羽（字云长，五虎上将之首）
@@ -2175,7 +2049,6 @@ INSERT IGNORE INTO `sys_ai_knowledge_library` (
 - 庞统（字士元，军师中郎将�?
 - 法正（字孝直，尚书令�?
 - 马谡（字幼常，参军）
-
 ### 曹魏（曹操阵营）
 - 鏇规搷锛堝瓧瀛熷痉锛岄瓘姝﹀笣锛?
 - 曹丕（字子桓，魏文帝�?
@@ -2189,7 +2062,6 @@ INSERT IGNORE INTO `sys_ai_knowledge_library` (
 - 贾诩（字文和，太尉）
 - 典韦（曹操近卫统领）
 - 徐晃（字公明，右将军�?
-
 ### 东吴（孙权阵营）
 - 孙坚（字文台，破虏将军）
 - 孙策（字伯符，讨逆将军）
@@ -2201,7 +2073,6 @@ INSERT IGNORE INTO `sys_ai_knowledge_library` (
 - 黄盖（字公覆，偏将军�?
 - 甘宁（字兴霸，折冲将军）
 - 太史慈（字子义，建昌都尉�?
-
 ### 群雄/其他
 - 吕布（字奉先，温侯）
 - 董卓（字仲颖，太师）
@@ -2212,9 +2083,7 @@ INSERT IGNORE INTO `sys_ai_knowledge_library` (
 - 王允（字子师，司徒）
 - 刘表（字景升，荆州牧�?
 - 张角（太平道创始人）
-
 ## 需要提取的关系类型
-
 - 鍚涜嚕锛坰erved_as锛夛細浜虹墿鏈嶅姟浜庢煇鍚涗富鎴栨斂鏉?
 - 父子（father_of）：父子血缘关�?
 - 鍏勫紵锛坆rother_of锛夛細鍏勫紵鍏崇郴锛堝惈缁撲箟锛?
@@ -2227,9 +2096,7 @@ INSERT IGNORE INTO `sys_ai_knowledge_library` (
 - 继承（succeeded_by）：职位/政权继承
 - 暗杀（assassinated）：刺杀行为
 - 鎶曢檷锛坰urrendered_to锛夛細鎶曢檷鏌愬娍鍔?
-
 ## 重要事件时间�?
-
 - 184骞?榛勫肪璧蜂箟鐖嗗彂
 - 189骞?钁ｅ崜鍏ヤ含涔辨斂
 - 190骞?鍏充笢璇镐警璁ㄨ懀
@@ -2251,11 +2118,8 @@ INSERT IGNORE INTO `sys_ai_knowledge_library` (
 - 263骞?閭撹壘閽熶細浼愯渶锛岃渶姹夌伃浜?
 - 265骞?鍙搁┈鐐庡缓绔嬭タ鏅?
 - 280�?西晋灭吴统一天下
-
 ## 势力阵营
-
 蜀汉、曹魏、东吴三方鼎立，每个角色应标注所属势力�?, 1);
-
 INSERT INTO `sys_ai_manufacturer` (
   `sys_ai_manufacturer_code`, `sys_ai_manufacturer_name`,
   `sys_ai_manufacturer_factory`, `sys_ai_manufacturer_base_url`,
@@ -2266,7 +2130,6 @@ INSERT INTO `sys_ai_manufacturer` (
   `sys_ai_manufacturer_remark`
 )
 SELECT * FROM (
-
   SELECT 'local-onnx' AS code, '本地ONNX模型' AS name,
     NULL AS factory, NULL AS base_url,
     NULL AS app_key,
@@ -2297,133 +2160,114 @@ SELECT * FROM (
     1, 0, 1, 30,
     '闃块噷 ModelScope 鎺ㄧ悊 API锛屾敮鎸?Qwen3 绛夋ā鍨?
   UNION ALL
-
   SELECT 'openai', 'OpenAI',
     NULL, 'https://api.openai.com/v1',
     '',
     1, 0, 1, 100,
     'OpenAI API锛屾敮鎸?GPT-4o / GPT-4o-mini / o3 绛夋ā鍨?
   UNION ALL
-
   SELECT 'siliconflow', '纭呭熀娴佸姩锛圫iliconFlow锛?,
     NULL, 'https://api.siliconflow.cn/v1',
     '',
     1, 0, 1, 110,
     'SiliconFlow 开源模�?API 服务，支�?DeepSeek-V3 / Qwen2.5 / Llama �?
   UNION ALL
-
   SELECT 'deepseek', 'DeepSeek',
     NULL, 'https://api.deepseek.com',
     '',
     1, 0, 1, 115,
     'DeepSeek 瀹樻柟 API锛屾敮鎸?deepseek-chat / deepseek-reasoner'
   UNION ALL
-
   SELECT 'aliyun', '阿里云通义千问',
     NULL, 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     '',
     1, 0, 1, 120,
     '阿里�?DashScope API，支�?Qwen-Plus / Qwen-Max 等通义千问模型'
   UNION ALL
-
   SELECT 'ollama', 'Ollama（本地）',
     NULL, 'http://localhost:11434',
     '',
     1, 0, 1, 130,
     'Ollama 本地大模型服务，支持 Llama / Qwen / DeepSeek 等本地运�?
   UNION ALL
-
   SELECT 'doubao', '璞嗗寘澶фā鍨?,
     NULL, 'https://ark.cn-beijing.volces.com/api/v3',
     '',
     1, 0, 1, 140,
     '瀛楄妭璺冲姩璞嗗寘澶фā鍨?API锛屾敮鎸?doubao-pro / doubao-lite 绯诲垪'
   UNION ALL
-
   SELECT 'tencent', '腾讯混元',
     NULL, 'https://api.hunyuan.cloud.tencent.com/v1',
     '',
     1, 0, 1, 145,
     '腾讯混元大模�?API，支�?hunyuan-pro / hunyuan-standard'
   UNION ALL
-
   SELECT 'kimi', '鏈堜箣鏆楅潰锛圞imi锛?,
     NULL, 'https://api.moonshot.cn/v1',
     '',
     1, 0, 1, 150,
     '鏈堜箣鏆楅潰 Kimi API锛屾敮鎸?moonshot-v1 / kimi-k2 绯诲垪'
   UNION ALL
-
   SELECT 'minimax', 'MiniMax',
     NULL, 'https://api.minimax.chat/v1',
     '',
     1, 0, 1, 155,
     'MiniMax API锛屾敮鎸?abab6.5 绯诲垪妯″瀷'
   UNION ALL
-
   SELECT 'zhipu', '鏅鸿氨锛圸hipu AI锛?,
     NULL, 'https://open.bigmodel.cn/api/paas/v4',
     '',
     1, 0, 1, 160,
     '智谱 AI 开放平台，支持 GLM-4 系列模型'
   UNION ALL
-
   SELECT 'google', 'Google Gemini',
     NULL, 'https://generativelanguage.googleapis.com/v1beta',
     '',
     0, 0, 1, 165,
     'Google Gemini API锛屾敮鎸?gemini-2.0-flash / gemini-2.0-pro'
   UNION ALL
-
   SELECT 'huawei', '鍗庝负浜戠洏鍙?,
     NULL, 'https://pangu.cn-north-4.myhuaweicloud.com/v1',
     '',
     1, 0, 1, 170,
     '鍗庝负浜戠洏鍙ゅぇ妯″瀷 API锛屾敮鎸?pangu-text 绯诲垪'
   UNION ALL
-
   SELECT 'claude', 'Anthropic Claude',
     NULL, 'https://api.anthropic.com',
     '',
     0, 1, 1, 175,
     'Anthropic Claude API锛屾敮鎸?Claude Opus / Sonnet 绯诲垪'
   UNION ALL
-
   SELECT 'xunfei', '讯飞星火',
     NULL, 'https://spark-api.xf-yun.com/v3.5',
     '',
     0, 0, 1, 180,
     '讯飞星火大模�?API，支�?Spark Pro / Max / V3.5 系列'
   UNION ALL
-
   SELECT 'zai', 'Z.AI（智谱生态）',
     NULL, 'https://api.z.ai/api/paas/v4',
     'REPLACE_WITH_ZHIPU_KEY',
     1, 0, 1, 185,
     'Z.AI API锛堟櫤璋辩敓鎬侊級锛屾彁渚?GLM-4.7 / GLM-4.6 / Cogview / CogVideo 绛夋棗鑸版ā鍨?
   UNION ALL
-
   SELECT 'openrouter', 'OpenRouter',
     NULL, 'https://openrouter.ai/api/v1/chat/completions',
     'sk-or-REPLACE_WITH_OPENROUTER_KEY',
     1, 0, 1, 195,
     'OpenRouter API 聚合平台，提供多种开�?商业模型的统一访问入口'
   UNION ALL
-
   SELECT 'deepseek-default', 'DeepSeek 本地',
     NULL, 'http://127.0.0.1:27777/v1',
     'sk-REPLACE_WITH_DEEPSEEK_KEY',
     1, 0, 1, 200,
     '本地部署�?DeepSeek 模型，兼�?OpenAI API'
   UNION ALL
-
   SELECT 'sixthsense', 'Sixthsense LLM',
     NULL, 'https://sixthsense-llm.com',
     'sk-REPLACE_WITH_SIXTHSENSE_KEY',
     0, 1, 1, 205,
     'Sixthsense LLM API，Claude Code 兼容协议，支�?deepseek-v4-flash-l'
   UNION ALL
-
   SELECT 'safetensors', 'SafeTensors锛堟湰鍦癙ython锛?,
     NULL, NULL,
     NULL,
@@ -2434,7 +2278,6 @@ WHERE NOT EXISTS (
   SELECT 1 FROM `sys_ai_manufacturer`
   WHERE `sys_ai_manufacturer_code` = seed.code
 );
-
 INSERT INTO `sys_ai_module` (
   `sys_ai_module_name`, `sys_ai_module_code`, `sys_ai_module_type`,
   `sys_ai_module_vendor`, `sys_ai_module_status`, `sys_ai_module_sort`,
@@ -2444,7 +2287,6 @@ INSERT INTO `sys_ai_module` (
   `sys_ai_module_remark`
 )
 SELECT * FROM (
-
   SELECT 'KAT-Coder-Exp-72B-1010' AS name, 'KAT-Coder-Exp-72B-1010' AS code,
     'CHAT' AS type, 'baishan' AS vendor, 1 AS status, 10 AS sort,
     0 AS vlm, 0 AS think,
@@ -2479,9 +2321,7 @@ SELECT * FROM (
     1,
     0.0000, 0.0000,
     'ModelScope - DeepSeek V4 Flash（免费，1M上下文）'
-
   UNION ALL
-
   SELECT 'GPT-4o', 'gpt-4o',
     'CHAT', 'openai', 1, 101,
     1, 0,
@@ -2502,9 +2342,7 @@ SELECT * FROM (
     1,
     1.7500, 14.0000,
     'OpenAI - GPT-5.2 最新旗舰模�?
-
   UNION ALL
-
   SELECT 'DeepSeek-V3 (SiliconFlow)', 'deepseek-ai/DeepSeek-V3',
     'CHAT', 'siliconflow', 1, 111,
     0, 0,
@@ -2525,9 +2363,7 @@ SELECT * FROM (
     1,
     0.1000, 0.1000,
     'SiliconFlow - Meta Llama 3.1 8B 轻量模型'
-
   UNION ALL
-
   SELECT 'DeepSeek Chat', 'deepseek-chat',
     'CHAT', 'deepseek', 1, 116,
     0, 0,
@@ -2548,9 +2384,7 @@ SELECT * FROM (
     1,
     0.1400, 0.2800,
     'DeepSeek - 代码专用模型，编程能力强'
-
   UNION ALL
-
   SELECT 'Qwen-Plus', 'qwen-plus',
     'CHAT', 'aliyun', 1, 121,
     0, 0,
@@ -2571,9 +2405,7 @@ SELECT * FROM (
     1,
     0.0350, 0.1400,
     '阿里�?- Qwen-Turbo 轻量快速模�?
-
   UNION ALL
-
   SELECT 'Ollama Llama 3.2', 'llama3.2',
     'CHAT', 'ollama', 1, 131,
     0, 0,
@@ -2594,9 +2426,7 @@ SELECT * FROM (
     1,
     0.0000, 0.0000,
     'Ollama - DeepSeek R1 本地免费运行'
-
   UNION ALL
-
   SELECT 'Doubao Pro 32K', 'doubao-pro-32k',
     'CHAT', 'doubao', 1, 141,
     0, 0,
@@ -2610,9 +2440,7 @@ SELECT * FROM (
     1,
     0.4000, 1.0000,
     '瀛楄妭璺冲姩 - doubao-lite-32k 杞婚噺鐗堥暱涓婁笅鏂囨ā鍨?
-
   UNION ALL
-
   SELECT 'Hunyuan Pro', 'hunyuan-pro',
     'CHAT', 'tencent', 1, 146,
     0, 0,
@@ -2626,9 +2454,7 @@ SELECT * FROM (
     1,
     0.2000, 0.8000,
     '腾讯混元 - hunyuan-standard 标准版模�?
-
   UNION ALL
-
   SELECT 'Moonshot v1 32K', 'moonshot-v1-32k',
     'CHAT', 'kimi', 1, 151,
     0, 0,
@@ -2642,9 +2468,7 @@ SELECT * FROM (
     1,
     0.0000, 0.0000,
     '月之暗面 - kimi-k2-thinking 推理强化模型，MoE 架构'
-
   UNION ALL
-
   SELECT 'MiniMax abab6.5s', 'abab6.5s-chat',
     'CHAT', 'minimax', 1, 156,
     0, 0,
@@ -2658,9 +2482,7 @@ SELECT * FROM (
     1,
     0.0000, 0.0000,
     'MiniMax - abab6.5-pro 专业版模型，最强性能'
-
   UNION ALL
-
   SELECT 'GLM-4-Plus', 'glm-4-plus',
     'CHAT', 'zhipu', 1, 161,
     0, 0,
@@ -2681,9 +2503,7 @@ SELECT * FROM (
     1,
     0.0100, 0.0100,
     '智谱 - GLM-4-Air 轻量模型'
-
   UNION ALL
-
   SELECT 'Gemini 2.0 Flash', 'gemini-2.0-flash',
     'CHAT', 'google', 1, 166,
     1, 0,
@@ -2697,9 +2517,7 @@ SELECT * FROM (
     1,
     1.0000, 4.0000,
     'Google - Gemini 2.0 Pro 鏃楄埌澶氭ā鎬佹ā鍨?
-
   UNION ALL
-
   SELECT '盘古 Text Chat', 'pangu-text-chat',
     'CHAT', 'huawei', 1, 171,
     0, 0,
@@ -2713,9 +2531,7 @@ SELECT * FROM (
     1,
     0.0050, 0.0050,
     '华为�?- pangu-text-turbo 极速响应模型（�?¥/千tokens 计费�?
-
   UNION ALL
-
   SELECT 'Claude Opus 4.7', 'claude-opus-4-7',
     'CHAT', 'claude', 1, 176,
     1, 0,
@@ -2736,9 +2552,7 @@ SELECT * FROM (
     1,
     1.0000, 5.0000,
     'Anthropic - Claude Haiku 4.5 轻量快速模�?
-
   UNION ALL
-
   SELECT 'Spark Pro', 'Spark Pro',
     'CHAT', 'xunfei', 1, 181,
     0, 0,
@@ -2752,9 +2566,7 @@ SELECT * FROM (
     1,
     0.0120, 0.0120,
     '讯飞 - Spark Max 旗舰模型（按 ¥/千tokens 计费�?
-
   UNION ALL
-
   SELECT 'GLM-4.7 (Z.AI)', 'GLM-4.7',
     'CHAT', 'zai', 1, 186,
     0, 0,
@@ -2811,7 +2623,6 @@ SELECT * FROM (
     0.0000, 0.0000,
     'Z.AI - CogVideoX-Flash 视频生成模型'
   UNION ALL
-
   SELECT 'Nemotron-3-Nano-Omni-30B-A3B-Reasoning (OpenRouter)', 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
     'CHAT', 'openrouter', 1, 196,
     0, 1,
@@ -2840,7 +2651,6 @@ SELECT * FROM (
     0.0000, 0.0000,
     'OpenRouter - Google Gemma 4 26B A4B IT（免费，262K上下文）'
   UNION ALL
-
   SELECT 'DeepSeek-Default', 'deepseek-default',
     'CHAT', 'deepseek-default', 1, 200,
     0, 0,
@@ -2848,7 +2658,6 @@ SELECT * FROM (
     0.0000, 0.0000,
     '本地 DeepSeek 默认模型（http://127.0.0.1:27777�?
   UNION ALL
-
   SELECT 'DeepSeek-V4-Flash-L', 'deepseek-v4-flash-l',
     'CHAT', 'sixthsense', 1, 201,
     0, 0,
@@ -2860,26 +2669,22 @@ WHERE NOT EXISTS (
   SELECT 1 FROM `sys_ai_module`
   WHERE `sys_ai_module_code` = seed.code
 );
-
 INSERT INTO `sys_ai_module` (
   `sys_ai_module_name`, `sys_ai_module_code`, `sys_ai_module_model_id`, `sys_ai_module_type`,
   `sys_ai_module_vendor`, `sys_ai_module_version`, `sys_ai_module_local`, `sys_ai_module_status`,
   `sys_ai_module_sort`, `sys_ai_module_remark`
 )
 SELECT * FROM (
-
   SELECT '本地 ONNX 图像上色 (DDColor)' AS name, 'local-onnx-colorization' AS code,
     'traced_ddcolor' AS model_id, 'COLORIZATION' AS type,
     'local-onnx' AS vendor, 'onnx' AS ver, 1 AS local, 1 AS status, 10 AS sort,
     '内置本地 ONNX DDColor 图像上色模块' AS remark
   UNION ALL
-
   SELECT '本地 ONNX 图片增强 (Real-ESRGAN)', 'local-onnx-resolution',
     'real_esrgan', 'RESOLUTION',
     'local-onnx', 'onnx', 1, 1, 20,
     '内置本地 ONNX Real-ESRGAN 图片增强模块'
   UNION ALL
-
   SELECT '本地 ONNX 人脸增强 (GFPGAN)', 'local-onnx-face-enhance',
     'gfpgan', 'FACE',
     'local-onnx', 'onnx', 1, 1, 30,
@@ -2890,7 +2695,6 @@ SELECT * FROM (
     'local-onnx', 'onnx', 1, 1, 31,
     '内置本地 ONNX RestoreFormer++ 人脸增强模块'
   UNION ALL
-
   SELECT '本地 ONNX 人脸检�?(Slim)', 'local-onnx-face-detect-slim',
     'slim', 'FACE_DETECT',
     'local-onnx', 'onnx', 1, 1, 40,
@@ -2936,7 +2740,6 @@ SELECT * FROM (
     'local-onnx', 'onnx', 1, 1, 48,
     '基于 YOLOv5 �?ONNX 人脸检测模型（640px�?
   UNION ALL
-
   SELECT '本地 ONNX 人脸特征 (ArcFace 512D)', 'local-onnx-face-feature-arcface',
     'face_feature', 'FACE_FEATURE',
     'local-onnx', 'onnx', 1, 1, 50,
@@ -2947,7 +2750,6 @@ SELECT * FROM (
     'local-onnx', 'onnx', 1, 1, 51,
     '内置本地 ONNX ResNet-50 512D 人脸特征提取模块'
   UNION ALL
-
   SELECT '本地 ONNX 抠图 (U2Net)', 'local-onnx-matting-u2net',
     'u2net', 'MATTING',
     'local-onnx', 'onnx', 1, 1, 60,
@@ -2993,7 +2795,6 @@ SELECT * FROM (
     'local-onnx', 'onnx', 1, 1, 68,
     '内置本地 ONNX RMBG-2.0 高精度图像抠图模�?
   UNION ALL
-
   SELECT '本地 ONNX 图像特征 (CLIP ViT-B-32)', 'local-onnx-image-feature-clip-b32',
     'CLIP-ViT-B-32-IMAGE', 'IMAGE_FEATURE',
     'local-onnx', 'onnx', 1, 1, 70,
@@ -3014,7 +2815,6 @@ SELECT * FROM (
     'local-onnx', 'onnx', 1, 1, 73,
     '内置本地 ONNX MobileCLIP 轻量级图像特征提取模�?
   UNION ALL
-
   SELECT '本地 ONNX 文字识别 (PP-OCRv4)', 'local-onnx-ocr-ppv4',
     'PP-OCRv4_mobile_det_infer', 'OCR',
     'local-onnx', 'onnx', 1, 1, 80,
@@ -3040,7 +2840,6 @@ SELECT * FROM (
     'local-onnx', 'onnx', 1, 1, 84,
     '内置本地 ONNX ConvNext 车牌识别模块'
   UNION ALL
-
   SELECT '本地 ONNX 动漫/真人二分�?, 'local-onnx-cls-anime-real',
     'anime_real_cls', 'CLASSIFICATION',
     'local-onnx', 'onnx', 1, 1, 90,
@@ -3051,7 +2850,6 @@ SELECT * FROM (
     'local-onnx', 'onnx', 1, 1, 91,
     '内置本地 ONNX CLIP + CL-Tagger 轻量动漫图片二分类器'
   UNION ALL
-
   SELECT '本地 ONNX 行人重识�?(YouTu ReID 768D)', 'local-onnx-person-reid-youtu',
     NULL, 'REID',
     'local-onnx', 'onnx', 1, 1, 100,
@@ -3062,7 +2860,6 @@ SELECT * FROM (
     'local-onnx', 'onnx', 1, 1, 101,
     '基于 OSNet-AIN 的本�?ONNX 行人重识别模型（512d�?
   UNION ALL
-
   SELECT '本地 SafeTensor Qwen2.5-0.5B', 'local-safetensor-qwen2.5-0.5b',
     'qwen2.5-0.5b', 'CHAT',
     'safetensors', 'safetensor', 1, 1, 201,
@@ -3093,7 +2890,6 @@ SELECT * FROM (
     'safetensors', 'safetensor', 1, 1, 206,
     'Qwen2.5 Coder 7B 代码生成专用模型'
   UNION ALL
-
   SELECT '本地 SafeTensor Qwen2-0.5B', 'local-safetensor-qwen2-0.5b',
     'qwen2-0.5b', 'CHAT',
     'safetensors', 'safetensor', 1, 1, 207,
@@ -3109,7 +2905,6 @@ SELECT * FROM (
     'safetensors', 'safetensor', 1, 1, 209,
     'Qwen2 7B 标准文本生成模型'
   UNION ALL
-
   SELECT '本地 SafeTensor Llama3.2-1B', 'local-safetensor-llama3.2-1b',
     'llama3.2-1b', 'CHAT',
     'safetensors', 'safetensor', 1, 1, 211,
@@ -3120,7 +2915,6 @@ SELECT * FROM (
     'safetensors', 'safetensor', 1, 1, 212,
     'Meta Llama 3.2 3B 高效文本生成模型'
   UNION ALL
-
   SELECT '本地 SafeTensor MiniMind2-104M', 'local-safetensor-minimind2-104m',
     'minimind2-104m', 'CHAT',
     'safetensors', 'safetensor', 1, 1, 213,
@@ -3140,7 +2934,6 @@ WHERE NOT EXISTS (
   SELECT 1 FROM `sys_ai_module`
   WHERE `sys_ai_module_code` = seed.code
 );
-
 INSERT INTO `sys_ai_global_setting` (
   `sys_ai_global_setting_group`,
   `sys_ai_global_setting_field`,
@@ -3155,7 +2948,6 @@ INSERT INTO `sys_ai_global_setting` (
   `update_by`
 )
 SELECT * FROM (
-
   SELECT 'runtime' AS grp, 'enabled' AS fld, 'true' AS val, 'BOOLEAN' AS vtype,
     '是否启用 AI ChatClient' AS descr, 5 AS sort, 1 AS st, 'system' AS cn, 1 AS cb, 'system' AS un, 1 AS ub
   UNION ALL
@@ -3190,7 +2982,6 @@ SELECT * FROM (
   SELECT 'runtime', 'charge_enabled', 'false', 'BOOLEAN', '每次请求扣减额度', 41, 1, 'system', 1, 'system', 1
   UNION ALL
   SELECT 'runtime', 'stop_when_balance_lt_0', 'true', 'BOOLEAN', '余额不足时停止服�?, 42, 1, 'system', 1, 'system', 1
-
   UNION ALL
   SELECT 'face_recognition', 'default_face_detect_model', 'local-onnx-face-detect-slim', 'STRING', '默认人脸检测模�?, 10, 1, 'system', 1, 'system', 1
   UNION ALL
@@ -3207,7 +2998,6 @@ SELECT * FROM (
   SELECT 'face_recognition', 'animation_face_filter_enabled', 'true', 'BOOLEAN', '动漫人脸过滤(开启后可防止动�?插画图片通过人脸识别)', 70, 1, 'system', 1, 'system', 1
   UNION ALL
   SELECT 'face_recognition', 'anime_face_detect_model', '', 'STRING', '动漫人脸检测模�?留空则自动查�?', 80, 1, 'system', 1, 'system', 1
-
   UNION ALL
   SELECT 'image_search', 'default_image_feature_model', 'CLIP-ViT-B-32-IMAGE', 'STRING', '默认图像特征提取模型', 10, 1, 'system', 1, 'system', 1
   UNION ALL
@@ -3220,7 +3010,6 @@ SELECT * FROM (
   SELECT 'image_search', 'max_image_size', '1024', 'INT', '图像最大边�?超此值压�?', 50, 1, 'system', 1, 'system', 1
   UNION ALL
   SELECT 'image_search', 'face_enhance_enabled', 'false', 'BOOLEAN', '是否启用图像增强', 60, 1, 'system', 1, 'system', 1
-
   UNION ALL
   SELECT 'ocr', 'default_ocr_model', 'local-onnx-ocr-ppv5', 'STRING', '默认OCR模型', 10, 1, 'system', 1, 'system', 1
   UNION ALL
@@ -3239,7 +3028,6 @@ SELECT * FROM (
   SELECT 'ocr', 'enhance_binarize', 'false', 'BOOLEAN', '二值化处理', 80, 1, 'system', 1, 'system', 1
   UNION ALL
   SELECT 'ocr', 'enhance_deskew', 'true', 'BOOLEAN', '倾斜校正', 90, 1, 'system', 1, 'system', 1
-
   UNION ALL
   SELECT 'knowledge_graph', 'enabled', 'true', 'BOOLEAN', '是否启用知识图谱功能', 5, 1, 'system', 1, 'system', 1
   UNION ALL
@@ -3252,7 +3040,6 @@ SELECT * FROM (
   SELECT 'knowledge_graph', 'embedding_dimension', '512', 'INT', '实体嵌入向量维度', 60, 1, 'system', 1, 'system', 1
   UNION ALL
   SELECT 'knowledge_graph', 'vector_storage_engine', 'jvector', 'STRING', '实体嵌入向量存储引擎', 70, 1, 'system', 1, 'system', 1
-
   UNION ALL
   SELECT 'person_reid', 'default_reid_model', 'local-onnx-person-reid-youtu', 'STRING',
     '默认 ReID 模型', 10, 1, 'system', 1, 'system', 1
@@ -3271,28 +3058,22 @@ WHERE NOT EXISTS (
   WHERE `sys_ai_global_setting_group` = seed.grp
     AND `sys_ai_global_setting_field` = seed.fld
 );
-
 INSERT IGNORE INTO `sys_ai_group` (`sys_ai_group_id`, `sys_ai_group_name`, `sys_ai_group_desc`, `sys_ai_group_sort`, `sys_ai_group_status`)
 VALUES (1, '全部模型', '可访问所有已启用的模�?, 0, 1);
-
 INSERT INTO `sys_ai_role` (`sys_ai_role_name`, `sys_ai_role_code`, `sys_ai_role_description`, `sys_ai_role_system_prompt`, `sys_ai_role_sort`, `sys_ai_role_status`, `sys_ai_role_delete`)
 VALUES ('通用助手', 'default', '通用 AI 助手，无特殊人设', '你是一个智�?AI 助手，请用中文友好地回答用户的问题�?, 0, 1, 0)
 ON DUPLICATE KEY UPDATE `sys_ai_role_name` = VALUES(`sys_ai_role_name`);
-
 INSERT INTO `sys_ai_role` (`sys_ai_role_name`, `sys_ai_role_code`, `sys_ai_role_description`, `sys_ai_role_system_prompt`, `sys_ai_role_sort`, `sys_ai_role_status`, `sys_ai_role_delete`)
 VALUES ('Java 开发助�?, 'java-dev', '专业�?Java 后端开发工程师', '你是一个资深的 Java 后端开发工程师，精�?Spring Boot、MyBatis、微服务架构。请用中文回答技术问题，提供代码示例时遵循最佳实践�?, 1, 1, 0)
 ON DUPLICATE KEY UPDATE `sys_ai_role_name` = VALUES(`sys_ai_role_name`);
-
 INSERT INTO `sys_ai_role` (`sys_ai_role_name`, `sys_ai_role_code`, `sys_ai_role_description`, `sys_ai_role_system_prompt`, `sys_ai_role_sort`, `sys_ai_role_status`, `sys_ai_role_delete`)
 VALUES ('UI 设计�?, 'ui-designer', '前端 UI/UX 设计�?, '你是一个优秀的前�?UI/UX 设计师，精�?Vue 3、Element Plus、Tailwind CSS。设计风格简洁现代，参�?Vercel/Linear 设计语言�?, 2, 1, 0)
 ON DUPLICATE KEY UPDATE `sys_ai_role_name` = VALUES(`sys_ai_role_name`);
-
 INSERT IGNORE INTO `sys_ai_group_model` (
     `sys_ai_group_model_id`, `sys_ai_group_id`, `sys_ai_module_id`, `create_time`
 ) VALUES (
     1, 1, 1, CURRENT_TIMESTAMP
 );
-
 INSERT IGNORE INTO `sys_ai_pricing` (
     `provider`, `model`, `input_price_per1k`, `output_price_per1k`,
     `currency`, `effective_date`, `source`
@@ -3302,17 +3083,108 @@ INSERT IGNORE INTO `sys_ai_pricing` (
     ('openai', 'gpt-4o-mini', 0.001500, 0.006000, 'USD', CURRENT_TIMESTAMP, 'manual'),
     ('deepseek', 'deepseek-chat', 0.002000, 0.008000, 'CNY', CURRENT_TIMESTAMP, 'manual'),
     ('zhipu', 'glm-4-flash', 0.000000, 0.000000, 'CNY', CURRENT_TIMESTAMP, 'manual');
-
 INSERT INTO sys_agent_browser_setting (setting_key, setting_value, updated_at) VALUES 
     ('display_mode', 'auto', UNIX_TIMESTAMP() * 1000);
-
 INSERT INTO sys_agent_browser_setting (setting_key, setting_value, updated_at) VALUES 
     ('resource_policy', '{"preset":"automatic"}', UNIX_TIMESTAMP() * 1000);
-
 INSERT INTO sys_agent_browser_setting (setting_key, setting_value, updated_at) VALUES 
     ('login_status', '{"open":false}', UNIX_TIMESTAMP() * 1000);
-
 INSERT INTO sys_agent_browser_host (host_id, state, epoch, headful, identity_mode, lane_count, rss_bytes, created_at, updated_at)
 VALUES ('default-host', 'running', 1, FALSE, 'anonymous', 0, 0, UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000);
-
-
+CREATE TABLE IF NOT EXISTS `sys_ai_requirement` (
+    `sys_ai_requirement_id` VARCHAR(36) NOT NULL COMMENT '需求 ID（UUIDv7）',
+    `sys_ai_requirement_display_no` INT NOT NULL COMMENT '展示序号（自增）',
+    `sys_ai_requirement_title` VARCHAR(255) NOT NULL COMMENT '需求标题',
+    `sys_ai_requirement_content` TEXT COMMENT '需求内容（Markdown）',
+    `sys_ai_requirement_tag` VARCHAR(64) DEFAULT NULL COMMENT '标签',
+    `sys_ai_requirement_order_key` VARCHAR(64) DEFAULT NULL COMMENT '执行次序（点分十进制）',
+    `sys_ai_requirement_status` VARCHAR(32) DEFAULT 'pending' COMMENT '状态',
+    `sys_ai_requirement_completion_note` TEXT COMMENT '完成记录',
+    `sys_ai_requirement_owner_conversation_id` VARCHAR(36) DEFAULT NULL COMMENT '来源会话 ID',
+    `sys_ai_requirement_owner_terminal_id` VARCHAR(36) DEFAULT NULL COMMENT '来源终端 ID',
+    `sys_ai_requirement_origin` VARCHAR(64) DEFAULT NULL COMMENT '创建来源',
+    `sys_ai_requirement_started_at` BIGINT DEFAULT NULL COMMENT '开始执行时间戳',
+    `sys_ai_requirement_completed_at` BIGINT DEFAULT NULL COMMENT '完成时间戳',
+    `sys_ai_requirement_attempt_count` INT DEFAULT 0 COMMENT '重试次数',
+    `sys_ai_requirement_extra` JSON COMMENT '扩展字段 JSON',
+    `create_name` VARCHAR(100) DEFAULT NULL,
+    `create_by` INT DEFAULT NULL,
+    `create_time` BIGINT DEFAULT NULL,
+    `update_name` VARCHAR(100) DEFAULT NULL,
+    `update_by` INT DEFAULT NULL,
+    `update_time` BIGINT DEFAULT NULL,
+    PRIMARY KEY (`sys_ai_requirement_id`),
+    UNIQUE KEY `uk_display_no` (`sys_ai_requirement_display_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='需求条目';
+CREATE TABLE IF NOT EXISTS `sys_ai_data_source` (
+    `sys_ai_data_source_id` VARCHAR(36) NOT NULL COMMENT '数据源 ID（UUIDv7）',
+    `sys_ai_data_source_name` VARCHAR(128) NOT NULL COMMENT '数据源名称',
+    `sys_ai_data_source_type` VARCHAR(64) NOT NULL COMMENT '类型: lark/jira/notion/generic',
+    `sys_ai_data_source_config` TEXT NULL COMMENT '配置 JSON（app_id, app_secret, table_id, api_url 等）',
+    `sys_ai_data_source_enabled` TINYINT NOT NULL DEFAULT 1 COMMENT '是否启用',
+    `sys_ai_data_source_sync_cron` VARCHAR(64) NULL COMMENT '同步 cron 表达式',
+    `sys_ai_data_source_last_sync_at` BIGINT NULL COMMENT '上次同步时间戳',
+    `sys_ai_data_source_last_sync_status` VARCHAR(32) NULL COMMENT '上次同步状态: success/failed',
+    `sys_ai_data_source_last_sync_error` VARCHAR(512) NULL COMMENT '上次同步错误信息',
+    `create_name` VARCHAR(64) NULL,
+    `create_by` INT NULL,
+    `create_time` BIGINT NULL COMMENT '创建时间戳（epoch ms）',
+    `update_name` VARCHAR(64) NULL,
+    `update_by` INT NULL,
+    `update_time` BIGINT NULL COMMENT '更新时间戳（epoch ms）',
+    PRIMARY KEY (`sys_ai_data_source_id`),
+    KEY `idx_sys_ai_ds_type` (`sys_ai_data_source_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='需求数据源提供方配置';
+ALTER TABLE `sys_ai_data_source` MODIFY COLUMN `create_time` BIGINT NULL COMMENT '创建时间戳（epoch ms）';
+ALTER TABLE `sys_ai_data_source` MODIFY COLUMN `update_time` BIGINT NULL COMMENT '更新时间戳（epoch ms）';
+SELECT COUNT(*) INTO @v14_exist FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_ai_usage' AND column_name = 'sys_ai_usage_inference_strength';
+SET @v14_sql = IF(@v14_exist = 0, 'ALTER TABLE `sys_ai_usage` ADD COLUMN `sys_ai_usage_inference_strength` VARCHAR(32) NULL COMMENT ''推理强度'' AFTER `sys_ai_usage_call_type`', 'SELECT 1');
+PREPARE v14_stmt FROM @v14_sql; EXECUTE v14_stmt; DEALLOCATE PREPARE v14_stmt;
+SELECT COUNT(*) INTO @v14_exist FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_ai_usage' AND column_name = 'sys_ai_usage_endpoint';
+SET @v14_sql = IF(@v14_exist = 0, 'ALTER TABLE `sys_ai_usage` ADD COLUMN `sys_ai_usage_endpoint` VARCHAR(255) NULL COMMENT ''端点URL'' AFTER `sys_ai_usage_inference_strength`', 'SELECT 1');
+PREPARE v14_stmt FROM @v14_sql; EXECUTE v14_stmt; DEALLOCATE PREPARE v14_stmt;
+SELECT COUNT(*) INTO @v14_exist FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_ai_usage' AND column_name = 'sys_ai_usage_ip';
+SET @v14_sql = IF(@v14_exist = 0, 'ALTER TABLE `sys_ai_usage` ADD COLUMN `sys_ai_usage_ip` VARCHAR(64) NULL COMMENT ''请求IP'' AFTER `sys_ai_usage_endpoint`', 'SELECT 1');
+PREPARE v14_stmt FROM @v14_sql; EXECUTE v14_stmt; DEALLOCATE PREPARE v14_stmt;
+SELECT COUNT(*) INTO @v14_exist FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_ai_usage' AND column_name = 'sys_ai_usage_type';
+SET @v14_sql = IF(@v14_exist = 0, 'ALTER TABLE `sys_ai_usage` ADD COLUMN `sys_ai_usage_type` VARCHAR(32) NULL COMMENT ''请求类型: chat/completion/embedding'' AFTER `sys_ai_usage_ip`', 'SELECT 1');
+PREPARE v14_stmt FROM @v14_sql; EXECUTE v14_stmt; DEALLOCATE PREPARE v14_stmt;
+SELECT COUNT(*) INTO @v14_exist FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_ai_usage' AND column_name = 'sys_ai_usage_billing_mode';
+SET @v14_sql = IF(@v14_exist = 0, 'ALTER TABLE `sys_ai_usage` ADD COLUMN `sys_ai_usage_billing_mode` VARCHAR(32) NULL COMMENT ''计费模式: pay_as_you_go/subscription'' AFTER `sys_ai_usage_type`', 'SELECT 1');
+PREPARE v14_stmt FROM @v14_sql; EXECUTE v14_stmt; DEALLOCATE PREPARE v14_stmt;
+SELECT COUNT(*) INTO @v14_exist FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_ai_usage' AND column_name = 'sys_ai_usage_cached_tokens';
+SET @v14_sql = IF(@v14_exist = 0, 'ALTER TABLE `sys_ai_usage` ADD COLUMN `sys_ai_usage_cached_tokens` INT NULL COMMENT ''缓存读取 Token'' AFTER `sys_ai_usage_total_cost`', 'SELECT 1');
+PREPARE v14_stmt FROM @v14_sql; EXECUTE v14_stmt; DEALLOCATE PREPARE v14_stmt;
+SELECT COUNT(*) INTO @v14_exist FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_ai_usage' AND column_name = 'sys_ai_usage_cached_cost';
+SET @v14_sql = IF(@v14_exist = 0, 'ALTER TABLE `sys_ai_usage` ADD COLUMN `sys_ai_usage_cached_cost` DOUBLE NULL COMMENT ''缓存读取成本'' AFTER `sys_ai_usage_cached_tokens`', 'SELECT 1');
+PREPARE v14_stmt FROM @v14_sql; EXECUTE v14_stmt; DEALLOCATE PREPARE v14_stmt;
+SELECT COUNT(*) INTO @v14_exist FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_ai_usage' AND column_name = 'sys_ai_usage_input_price_per_1m';
+SET @v14_sql = IF(@v14_exist = 0, 'ALTER TABLE `sys_ai_usage` ADD COLUMN `sys_ai_usage_input_price_per_1m` DOUBLE NULL COMMENT ''输入单价(每1M Token)'' AFTER `sys_ai_usage_cached_cost`', 'SELECT 1');
+PREPARE v14_stmt FROM @v14_sql; EXECUTE v14_stmt; DEALLOCATE PREPARE v14_stmt;
+SELECT COUNT(*) INTO @v14_exist FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_ai_usage' AND column_name = 'sys_ai_usage_output_price_per_1m';
+SET @v14_sql = IF(@v14_exist = 0, 'ALTER TABLE `sys_ai_usage` ADD COLUMN `sys_ai_usage_output_price_per_1m` DOUBLE NULL COMMENT ''输出单价(每1M Token)'' AFTER `sys_ai_usage_input_price_per_1m`', 'SELECT 1');
+PREPARE v14_stmt FROM @v14_sql; EXECUTE v14_stmt; DEALLOCATE PREPARE v14_stmt;
+SELECT COUNT(*) INTO @v14_exist FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_ai_usage' AND column_name = 'sys_ai_usage_cache_read_price_per_1m';
+SET @v14_sql = IF(@v14_exist = 0, 'ALTER TABLE `sys_ai_usage` ADD COLUMN `sys_ai_usage_cache_read_price_per_1m` DOUBLE NULL COMMENT ''缓存读取单价(每1M Token)'' AFTER `sys_ai_usage_output_price_per_1m`', 'SELECT 1');
+PREPARE v14_stmt FROM @v14_sql; EXECUTE v14_stmt; DEALLOCATE PREPARE v14_stmt;
+SELECT COUNT(*) INTO @v14_exist FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_ai_usage' AND column_name = 'sys_ai_usage_service_tier';
+SET @v14_sql = IF(@v14_exist = 0, 'ALTER TABLE `sys_ai_usage` ADD COLUMN `sys_ai_usage_service_tier` VARCHAR(32) NULL COMMENT ''服务档位'' AFTER `sys_ai_usage_cache_read_price_per_1m`', 'SELECT 1');
+PREPARE v14_stmt FROM @v14_sql; EXECUTE v14_stmt; DEALLOCATE PREPARE v14_stmt;
+SELECT COUNT(*) INTO @v14_exist FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_ai_usage' AND column_name = 'sys_ai_usage_ratio';
+SET @v14_sql = IF(@v14_exist = 0, 'ALTER TABLE `sys_ai_usage` ADD COLUMN `sys_ai_usage_ratio` DOUBLE NULL COMMENT ''倍率'' AFTER `sys_ai_usage_service_tier`', 'SELECT 1');
+PREPARE v14_stmt FROM @v14_sql; EXECUTE v14_stmt; DEALLOCATE PREPARE v14_stmt;
+SELECT COUNT(*) INTO @v14_exist FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_ai_usage' AND column_name = 'sys_ai_usage_original_cost';
+SET @v14_sql = IF(@v14_exist = 0, 'ALTER TABLE `sys_ai_usage` ADD COLUMN `sys_ai_usage_original_cost` DOUBLE NULL COMMENT ''原始费用(未折扣)'' AFTER `sys_ai_usage_ratio`', 'SELECT 1');
+PREPARE v14_stmt FROM @v14_sql; EXECUTE v14_stmt; DEALLOCATE PREPARE v14_stmt;
+SELECT COUNT(*) INTO @v14_exist FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_ai_usage' AND column_name = 'sys_ai_usage_first_token_latency';
+SET @v14_sql = IF(@v14_exist = 0, 'ALTER TABLE `sys_ai_usage` ADD COLUMN `sys_ai_usage_first_token_latency` BIGINT NULL COMMENT ''首字延迟(ms)'' AFTER `sys_ai_usage_original_cost`', 'SELECT 1');
+PREPARE v14_stmt FROM @v14_sql; EXECUTE v14_stmt; DEALLOCATE PREPARE v14_stmt;
+SELECT COUNT(*) INTO @v14_exist FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_ai_usage' AND column_name = 'sys_ai_usage_total_latency';
+SET @v14_sql = IF(@v14_exist = 0, 'ALTER TABLE `sys_ai_usage` ADD COLUMN `sys_ai_usage_total_latency` BIGINT NULL COMMENT ''总耗时(ms)'' AFTER `sys_ai_usage_first_token_latency`', 'SELECT 1');
+PREPARE v14_stmt FROM @v14_sql; EXECUTE v14_stmt; DEALLOCATE PREPARE v14_stmt;
+ALTER TABLE `sys_ai_usage_daily`
+    ADD COLUMN `sys_ai_usage_daily_total_cached_tokens` INT DEFAULT 0 COMMENT '缓存读取 Token 合计' AFTER `sys_ai_usage_daily_total_cost`,
+    ADD COLUMN `sys_ai_usage_daily_total_latency` BIGINT DEFAULT 0 COMMENT '总耗时(ms)合计' AFTER `sys_ai_usage_daily_total_cached_tokens`,
+    ADD COLUMN `sys_ai_usage_daily_standard_cost` DOUBLE DEFAULT 0 COMMENT '标准费用(官方价格)' AFTER `sys_ai_usage_daily_total_latency`;
+DELETE FROM `workshop_asset`
+WHERE `asset_id` NOT REGEXP '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$';

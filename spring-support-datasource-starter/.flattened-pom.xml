@@ -79,6 +79,12 @@
       <optional>true</optional>
     </dependency>
     <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-sqlite-starter</artifactId>
+      <version>${project.version}</version>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
       <groupId>com.alibaba</groupId>
       <artifactId>druid-spring-boot-4-starter</artifactId>
       <version>${druid.version}</version>

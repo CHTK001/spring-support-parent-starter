@@ -1,11 +1,7 @@
 package com.chua.starter.ai.support.service;
 
 import com.chua.common.support.lang.json.Json;
-import com.chua.common.support.lang.json.JsonArray;
 import com.chua.common.support.utils.IdUtils;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.starter.ai.support.entity.WorkshopAsset;
 import com.chua.starter.ai.support.mapper.WorkshopAssetMapper;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
@@ -38,6 +34,9 @@ public class WorkshopAssetService {
 
     private final WorkshopAssetMapper assetMapper;
     private final SysAiGlobalSettingService globalSettingService;
+
+    /** 分页每页最大条数，防止超大 pageSize 拖垮查询 */
+    private static final int MAX_PAGE_SIZE = 200;
 
     /** 物理文件存储根目录，从全局设置读取，未配置时回退到默认值 */
     private String resolveStorageDir() {
@@ -78,94 +77,57 @@ public class WorkshopAssetService {
     }
 
     /**
-     * 分页查询资产列表，支持 kind / collection / search / tag / sort 过滤。
+     * 资产查询参数对象。
      *
-     * @param kind     资产类型过滤（image/video/text），null 表示全部
+     * @param kind       资产类型过滤（image/video/text），null 表示全部
      * @param collection 集合名称过滤，null 表示全部
      * @param ungrouped  是否仅查未分组资产
      * @param query      标题/标签模糊搜索
      * @param tag        精确标签匹配
-     * @param inLibrary  是否仅在库中
+     * @param inLibrary  是否仅在库中，null 表示不过滤
      * @param sort       排序方式（created_desc/created_asc/updated_desc/name_asc/size_desc）
      * @param page       页码（从 1 开始）
-     * @param pageSize   每页数量
+     * @param pageSize   每页数量（建议 1-200）
+     */
+    public record AssetQueryRequest(
+            String kind,
+            String collection,
+            boolean ungrouped,
+            String query,
+            String tag,
+            Boolean inLibrary,
+            String sort,
+            int page,
+            int pageSize
+    ) {
+    }
+
+    /**
+     * 分页查询资产列表，支持 kind / collection / search / tag / sort 过滤。
+     *
+     * @param req 查询参数
      * @return 分页结果（items + total）
      */
-    public List<WorkshopAsset> listAssets(
-            String kind, String collection, boolean ungrouped,
-            String query, String tag, Boolean inLibrary,
-            String sort, int page, int pageSize) {
-        LambdaQueryWrapper<WorkshopAsset> w = new LambdaQueryWrapper<>();
-
-        // in_library 过滤
-        if (inLibrary != null) {
-            w.eq(WorkshopAsset::getInLibrary, inLibrary);
-        }
-
-        // kind 过滤
-        if (kind != null && !kind.isBlank()) {
-            w.eq(WorkshopAsset::getKind, kind);
-        }
-
-        // collection / ungrouped 过滤（互斥）
-        if (ungrouped) {
-            w.and(x -> x.isNull(WorkshopAsset::getCollection).or().eq(WorkshopAsset::getCollection, ""));
-        } else if (collection != null && !collection.isBlank()) {
-            w.eq(WorkshopAsset::getCollection, collection);
-        }
-
-        // 标题模糊搜索（转义 LIKE 通配符，防止注入）+ 标签 JSON_SEARCH（走 XML mapper）
-        if (query != null && !query.isBlank()) {
-            String escaped = escapeLike(query);
-            List<String> tagIds = assetMapper.selectIdsByTags(escaped);
-            w.and(x -> {
-                x.like(WorkshopAsset::getTitle, escaped);
-                if (!tagIds.isEmpty()) {
-                    x.or().in(WorkshopAsset::getAssetId, tagIds);
-                }
-            });
-        }
-
-        // 排序
-        switch (sort != null ? sort : "created_desc") {
-            case "created_asc" -> w.orderByAsc(WorkshopAsset::getCreatedAt);
-            case "updated_desc" -> w.orderByDesc(WorkshopAsset::getUpdatedAt);
-            case "updated_asc" -> w.orderByAsc(WorkshopAsset::getUpdatedAt);
-            case "name_asc" -> w.orderByAsc(WorkshopAsset::getTitle);
-            case "size_desc" -> w.orderByDesc(WorkshopAsset::getBytes);
-            case "size_asc" -> w.orderByAsc(WorkshopAsset::getBytes);
-            default -> w.orderByDesc(WorkshopAsset::getCreatedAt);
-        }
-
-        Page<WorkshopAsset> p = new Page<>(page, pageSize);
-        Page<WorkshopAsset> result = assetMapper.selectPage(p, w);
-        return result.getRecords();
+    public List<WorkshopAsset> listAssets(AssetQueryRequest req) {
+        int safePage = Math.max(req.page(), 1);
+        int safePageSize = Math.min(Math.max(req.pageSize(), 1), MAX_PAGE_SIZE);
+        int offset = (safePage - 1) * safePageSize;
+        return assetMapper.selectPageByFilter(
+                req.kind(), req.collection(), req.ungrouped(),
+                req.query(), req.tag(), req.inLibrary(),
+                req.sort(), offset, safePageSize);
     }
 
     /**
      * 统计符合条件的资产总数。
+     *
+     * @param req 查询参数（仅使用过滤字段，忽略分页）
+     * @return 符合过滤条件的资产总数
      */
-    public long countAssets(String kind, String collection, boolean ungrouped,
-                            String query, String tag, Boolean inLibrary) {
-        LambdaQueryWrapper<WorkshopAsset> w = new LambdaQueryWrapper<>();
-        if (inLibrary != null) w.eq(WorkshopAsset::getInLibrary, inLibrary);
-        if (kind != null && !kind.isBlank()) w.eq(WorkshopAsset::getKind, kind);
-        if (ungrouped) {
-            w.and(x -> x.isNull(WorkshopAsset::getCollection).or().eq(WorkshopAsset::getCollection, ""));
-        } else if (collection != null && !collection.isBlank()) {
-            w.eq(WorkshopAsset::getCollection, collection);
-        }
-        if (query != null && !query.isBlank()) {
-            String escaped = escapeLike(query);
-            List<String> tagIds = assetMapper.selectIdsByTags(escaped);
-            w.and(x -> {
-                x.like(WorkshopAsset::getTitle, escaped);
-                if (!tagIds.isEmpty()) {
-                    x.or().in(WorkshopAsset::getAssetId, tagIds);
-                }
-            });
-        }
-        return assetMapper.selectCount(w);
+    public long countAssets(AssetQueryRequest req) {
+        return assetMapper.countByFilter(
+                req.kind(), req.collection(), req.ungrouped(),
+                req.query(), req.tag(), req.inLibrary());
     }
 
     /**
@@ -245,15 +207,8 @@ public class WorkshopAssetService {
         if (asset == null) {
             throw new RuntimeException("资产不存在: " + assetId);
         }
-        LambdaUpdateWrapper<WorkshopAsset> update = new LambdaUpdateWrapper<>();
-        update.eq(WorkshopAsset::getAssetId, assetId);
-        if (title != null) update.set(WorkshopAsset::getTitle, title);
-        if (collection != null) update.set(WorkshopAsset::getCollection, collection.isEmpty() ? null : collection);
-        if (tags != null) update.set(WorkshopAsset::getTags,
-                tags.isEmpty() ? "[]" : Json.createJsonArray(tags).toString());
-        if (inLibrary != null) update.set(WorkshopAsset::getInLibrary, inLibrary);
-        update.set(WorkshopAsset::getUpdatedAt, Instant.now().toEpochMilli());
-        assetMapper.update(null, update);
+        String tagsJson = tags != null ? (tags.isEmpty() ? "[]" : Json.createJsonArray(tags).toString()) : null;
+        assetMapper.updateMeta(assetId, title, collection, tagsJson, inLibrary, Instant.now().toEpochMilli());
         return assetMapper.selectById(assetId);
     }
 
@@ -282,10 +237,10 @@ public class WorkshopAssetService {
      */
     @Transactional
     public int renameCollection(String from, String to) {
-        LambdaUpdateWrapper<WorkshopAsset> update = new LambdaUpdateWrapper<>();
-        update.eq(WorkshopAsset::getCollection, from);
-        update.set(WorkshopAsset::getCollection, to == null || to.isBlank() ? null : to);
-        return assetMapper.update(null, update);
+        if (from == null || from.isBlank()) {
+            return 0;
+        }
+        return assetMapper.renameCollection(from, to);
     }
 
     /**
@@ -297,19 +252,11 @@ public class WorkshopAssetService {
 
     /**
      * 获取所有非空集合名称列表。
+     *
+     * @return 去重升序的集合名列表
      */
     public List<String> listCollections() {
-        return assetMapper.selectList(
-                new LambdaQueryWrapper<WorkshopAsset>()
-                        .select(WorkshopAsset::getCollection)
-                        .isNotNull(WorkshopAsset::getCollection)
-                        .ne(WorkshopAsset::getCollection, "")
-                        .groupBy(WorkshopAsset::getCollection)
-        ).stream()
-                .map(WorkshopAsset::getCollection)
-                .distinct()
-                .sorted()
-                .toList();
+        return assetMapper.selectDistinctCollections();
     }
 
     private static String escapeLike(String s) {

@@ -8,3 +8,5 @@ com.chua.starter.datasource.monitor.SqlMonitorAutoConfiguration
 com.chua.starter.datasource.configuration.H2EngineAutoConfiguration
 com.chua.starter.datasource.configuration.CalciteAutoConfiguration
 com.chua.starter.datasource.configuration.ShardingAutoConfiguration
+com.chua.starter.datasource.configuration.SqliteEngineAutoConfiguration
+com.chua.starter.datasource.monitor.SqliteEngineEndpointAutoConfiguration

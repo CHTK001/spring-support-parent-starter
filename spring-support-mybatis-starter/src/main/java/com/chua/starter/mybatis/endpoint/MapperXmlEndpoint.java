@@ -1,0 +1,192 @@
+package com.chua.starter.mybatis.endpoint;
+
+import com.chua.starter.mybatis.reloader.FileInfo;
+import com.chua.starter.mybatis.reloader.Reload;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
+import org.springframework.boot.actuate.endpoint.annotation.Selector;
+import org.springframework.boot.actuate.endpoint.annotation.WriteOperation;
+import org.springframework.boot.actuate.endpoint.web.annotation.WebEndpoint;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Mapper XML 编辑器端点
+ * <p>
+ * 提供嵌入式 Mapper XML 查看、编辑、保存和热重载功能。
+ * 仅在 mapper-reload Bean 存在时生效（即 plugin.mybatis.open-xml-reload=true）。
+ * </p>
+ * <p>
+ * Actuator API 路径：<br/>
+ * GET  /actuator/mybatis-xml/files     — 列出所有 Mapper XML<br/>
+ * GET  /actuator/mybatis-xml/content/{name} — 读取 XML 内容<br/>
+ * POST /actuator/mybatis-xml/save/{name}   — 保存并热重载<br/>
+ * POST /actuator/mybatis-xml/reload/{name} — 仅触发热重载<br/>
+ * <br/>
+ * Web 编辑器路径：<br/>
+ * GET  /mybatis/xml/editor            — 嵌入式编辑器页面
+ * </p>
+ *
+ * @author CH
+ */
+@Slf4j
+@WebEndpoint(id = "mybatis-xml")
+@ConditionalOnBean(name = "mapper-reload")
+public class MapperXmlEndpoint {
+
+    private final Reload reload;
+
+    public MapperXmlEndpoint(Reload reload) {
+        this.reload = reload;
+    }
+
+    /**
+     * 列出所有已加载的 Mapper XML 文件信息
+     */
+    @ReadOperation
+    public List<FileInfo> files() {
+        return reload.listFiles();
+    }
+
+    /**
+     * 读取指定 XML 文件的原始内容
+     *
+     * @param name 文件名（如 UserMapper.xml）
+     */
+    @ReadOperation
+    public ResponseEntity<Map<String, Object>> content(@Selector String name) {
+        if (StringUtils.isBlank(name)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "name 不能为空"));
+        }
+        List<FileInfo> files = reload.listFiles();
+        FileInfo target = files.stream()
+                .filter(f -> f.getName().equals(name))
+                .findFirst()
+                .orElse(null);
+        if (target == null) {
+            return ResponseEntity.notFound().build();
+        }
+        try {
+            String content = readFileContent(name);
+            return ResponseEntity.ok(Map.of(
+                    "name", name,
+                    "path", target.getPath(),
+                    "type", target.getType(),
+                    "watchable", target.isWatchable(),
+                    "content", content
+            ));
+        } catch (IOException e) {
+            log.error("读取 XML 内容失败: {}", name, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * 保存 XML 内容到本地文件并触发热重载
+     * <p>仅对可写本地文件生效；JAR 内资源无法保存。</p>
+     *
+     * @param name 文件名
+     */
+    @WriteOperation
+    public ResponseEntity<Map<String, Object>> save(@Selector String name,
+                                                     @RequestBody(required = false) Map<String, String> body) {
+        if (StringUtils.isBlank(name)) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "name 不能为空"));
+        }
+        String content = body != null ? body.get("content") : null;
+        if (StringUtils.isBlank(content)) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "content 不能为空"));
+        }
+
+        List<FileInfo> files = reload.listFiles();
+        FileInfo target = files.stream()
+                .filter(f -> f.getName().equals(name))
+                .findFirst()
+                .orElse(null);
+        if (target == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!"FILE".equals(target.getType())) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "ok", false,
+                    "message", "该文件不可写（非本地文件系统资源）：" + target.getPath()
+            ));
+        }
+
+        try {
+            Path path = Path.of(target.getPath());
+            Files.writeString(path, content, StandardCharsets.UTF_8);
+            String result = reload.reload(name);
+            boolean ok = result.contains("成功");
+            return ResponseEntity.ok(Map.of(
+                    "ok", ok,
+                    "message", result,
+                    "path", path.toAbsolutePath().toString()
+            ));
+        } catch (IOException e) {
+            log.error("保存文件失败: {}", name, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("ok", false, "message", "保存失败: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 手动触发指定文件热重载（不修改内容）
+     *
+     * @param name 文件名
+     */
+    @WriteOperation
+    public ResponseEntity<Map<String, Object>> reload(@Selector String name) {
+        if (StringUtils.isBlank(name)) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "name 不能为空"));
+        }
+        String result = reload.reload(name);
+        boolean ok = result.contains("成功");
+        return ResponseEntity.ok(Map.of("ok", ok, "message", result));
+    }
+
+    // -------------------------------------------------------------------------
+    // 嵌入式编辑器页面（通过 /mybatis/xml/editor 访问）
+    // -------------------------------------------------------------------------
+
+    /**
+     * 返回嵌入式 XML 编辑器 HTML 页面
+     */
+    @GetMapping(path = "/mybatis/xml/editor", produces = "text/html;charset=UTF-8")
+    public ResponseEntity<String> editorPage() {
+        Resource resource = new ClassPathResource("static/mybatis/xml-editor.html");
+        if (!resource.exists() || !resource.isReadable()) {
+            return ResponseEntity.notFound().build();
+        }
+        try {
+            String html = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            return ResponseEntity.ok(html);
+        } catch (IOException e) {
+            log.error("读取编辑器页面失败", e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    private String readFileContent(String filename) throws IOException {
+        Resource[] resources = new org.springframework.core.io.support.PathMatchingResourcePatternResolver()
+                .getResources("classpath*:**/" + filename);
+        if (resources.length > 0 && resources[0].isReadable()) {
+            return new String(resources[0].getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        }
+        throw new IOException("找不到资源: " + filename);
+    }
+}

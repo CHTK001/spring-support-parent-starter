@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MyBatis XML 编辑器</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xquery/xquery.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1e1e1e; color: #d4d4d4; height: 100vh; display: flex; flex-direction: column; }
+    .header { background: #2d2d2d; padding: 10px 20px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid #3e3e3e; flex-shrink: 0; }
+    .header h1 { font-size: 16px; font-weight: 600; color: #6cb6ff; white-space: nowrap; }
+    .header .badge { font-size: 11px; background: #2d4a2d; color: #89d185; padding: 2px 8px; border-radius: 10px; }
+    .layout { display: flex; flex: 1; overflow: hidden; }
+    .sidebar { width: 260px; background: #252526; border-right: 1px solid #3e3e3e; display: flex; flex-direction: column; flex-shrink: 0; }
+    .sidebar-header { padding: 10px 14px; font-size: 11px; text-transform: uppercase; color: #858585; letter-spacing: 0.5px; border-bottom: 1px solid #3e3e3e; display: flex; justify-content: space-between; align-items: center; }
+    .sidebar-list { flex: 1; overflow-y: auto; }
+    .file-item { padding: 7px 14px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 8px; border-left: 2px solid transparent; transition: all 0.15s; }
+    .file-item:hover { background: #2a2d2e; }
+    .file-item.active { background: #37373d; border-left-color: #007acc; color: #ffffff; }
+    .file-item .icon { color: #e8a735; font-size: 12px; flex-shrink: 0; }
+    .file-item .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-item .tag { font-size: 10px; padding: 1px 5px; border-radius: 3px; margin-left: auto; flex-shrink: 0; }
+    .tag-watchable { background: #2d4a2d; color: #89d185; }
+    .tag-unwatchable { background: #4a2d2d; color: #f48771; }
+    .editor-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .editor-toolbar { background: #2d2d2d; padding: 8px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #3e3e3e; flex-shrink: 0; }
+    .editor-toolbar .file-path { font-size: 12px; color: #858585; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .btn { padding: 5px 14px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; transition: background 0.15s; }
+    .btn-primary { background: #007acc; color: #fff; }
+    .btn-primary:hover { background: #1a8aff; }
+    .btn-success { background: #2d6a2d; color: #89d185; }
+    .btn-success:hover { background: #3a8a3a; }
+    .btn-secondary { background: #3e3e42; color: #ccc; }
+    .btn-secondary:hover { background: #505055; }
+    .cm-editor-wrap { flex: 1; overflow: hidden; }
+    .CodeMirror { height: 100% !important; font-size: 13px; font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace; }
+    .status-bar { background: #007acc; color: #fff; padding: 3px 14px; font-size: 12px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    .status-bar .status-msg { flex: 1; }
+    .status-bar .status-ok { color: #89d185; }
+    .status-bar .status-err { color: #f48771; }
+    .empty-state { display: flex; align-items: center; justify-content: center; flex: 1; color: #858585; font-size: 14px; }
+    #toast { position: fixed; top: 20px; right: 20px; padding: 10px 18px; border-radius: 6px; font-size: 13px; z-index: 9999; transition: opacity 0.3s; opacity: 0; pointer-events: none; }
+    #toast.show { opacity: 1; }
+    #toast.ok { background: #2d4a2d; color: #89d185; border: 1px solid #89d185; }
+    #toast.err { background: #4a2d2d; color: #f48771; border: 1px solid #f48771; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>&#9883; MyBatis XML Editor</h1>
+    <span class="badge" id="fileCount">0 files</span>
+  </div>
+
+  <div class="layout">
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <span>Mappers</span>
+        <button class="btn btn-secondary" style="padding:2px 8px;font-size:11px;" onclick="loadFiles()">refresh</button>
+      </div>
+      <div class="sidebar-list" id="fileList">
+        <div class="empty-state">Loading...</div>
+      </div>
+    </div>
+
+    <div class="editor-area">
+      <div class="editor-toolbar" id="toolbar" style="display:none;">
+        <span class="file-path" id="filePath"></span>
+        <button class="btn btn-secondary" onclick="reloadCurrent()">reload</button>
+        <button class="btn btn-success" onclick="saveCurrent()">save &amp; reload</button>
+      </div>
+      <div class="cm-editor-wrap" id="editorWrap">
+        <div class="empty-state">Select a mapper XML to edit</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar" id="statusBar">
+    <span class="status-msg" id="statusMsg">Ready</span>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    let editor = null;
+    let files = [];
+    let currentFile = null;
+    let currentContent = '';
+
+    async function loadFiles() {
+      try {
+        const res = await fetch('/actuator/mybatis-xml/files');
+        files = await res.json();
+        document.getElementById('fileCount').textContent = files.length + ' files';
+        renderList();
+      } catch (e) {
+        setStatus('Failed to load file list: ' + e.message, 'err');
+        toast('加载文件列表失败', 'err');
+      }
+    }
+
+    function renderList() {
+      const list = document.getElementById('fileList');
+      if (!files.length) {
+        list.innerHTML = '<div class="empty-state">No mapper XML found</div>';
+        return;
+      }
+      list.innerHTML = files.map(f => `
+        <div class="file-item ${currentFile === f.name ? 'active' : ''}" onclick="openFile('${escHtml(f.name)}')">
+          <span class="icon">&#9830;</span>
+          <span class="name" title="${escHtml(f.path)}">${escHtml(f.name)}</span>
+          <span class="tag ${f.watchable ? 'tag-watchable' : 'tag-unwatchable'}">${f.watchable ? 'RW' : 'RO'}</span>
+        </div>
+      `).join('');
+    }
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    async function openFile(name) {
+      currentFile = name;
+      renderList();
+      setStatus('Loading ' + name + '...', 'ok');
+      document.getElementById('toolbar').style.display = 'flex';
+
+      try {
+        const res = await fetch('/actuator/mybatis-xml/content/' + encodeURIComponent(name));
+        if (!res.ok) {
+          setStatus('Failed to load: ' + name, 'err');
+          toast('加载失败', 'err');
+          return;
+        }
+        const data = await res.json();
+        currentContent = data.content;
+        document.getElementById('filePath').textContent = data.path;
+
+        const wrap = document.getElementById('editorWrap');
+        wrap.innerHTML = '<textarea id="cmTarget"></textarea>';
+
+        if (editor) { editor.toTextArea(); editor = null; }
+
+        editor = CodeMirror.fromTextArea(document.getElementById('cmTarget'), {
+          mode: 'application/xml',
+          theme: 'dracula',
+          lineNumbers: true,
+          indentWithTabs: true,
+          smartIndent: true,
+          tabSize: 2,
+          lineWrapping: false,
+          extraKeys: {
+            'Ctrl-S': function() { saveCurrent(); },
+            'Ctrl-Shift-S': function() { saveCurrent(); }
+          }
+        });
+        editor.setValue(currentContent);
+        editor.focus();
+        setStatus('Loaded: ' + name, 'ok');
+      } catch (e) {
+        setStatus('Error: ' + e.message, 'err');
+        toast('加载失败', 'err');
+      }
+    }
+
+    async function saveCurrent() {
+      if (!currentFile || !editor) return;
+      const content = editor.getValue();
+      try {
+        const res = await fetch('/actuator/mybatis-xml/save/' + encodeURIComponent(currentFile), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          currentContent = content;
+          setStatus('Saved & reloaded: ' + currentFile, 'ok');
+          toast('保存成功', 'ok');
+        } else {
+          setStatus('Save failed: ' + (data.message || ''), 'err');
+          toast('保存失败: ' + data.message, 'err');
+        }
+      } catch (e) {
+        setStatus('Save error: ' + e.message, 'err');
+        toast('保存失败', 'err');
+      }
+    }
+
+    async function reloadCurrent() {
+      if (!currentFile) return;
+      try {
+        const res = await fetch('/actuator/mybatis-xml/reload/' + encodeURIComponent(currentFile), { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) {
+          setStatus('Reloaded: ' + currentFile, 'ok');
+          toast('重载成功', 'ok');
+        } else {
+          setStatus('Reload failed: ' + (data.message || ''), 'err');
+          toast('重载失败', 'err');
+        }
+      } catch (e) {
+        setStatus('Reload error: ' + e.message, 'err');
+        toast('重载失败', 'err');
+      }
+    }
+
+    function setStatus(msg, type) {
+      const el = document.getElementById('statusMsg');
+      el.textContent = msg;
+      el.className = 'status-msg status-' + type;
+    }
+
+    function toast(msg, type) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = type + ' show';
+      setTimeout(() => { el.className = type; }, 3000);
+    }
+
+    loadFiles();
+  </script>
+</body>
+</html>

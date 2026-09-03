@@ -6,6 +6,7 @@ import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
+import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,15 +22,23 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -42,7 +51,7 @@ import java.util.zip.ZipInputStream;
  * {@code user} 子目录存放用户自定义技能。</p>
  *
  * <p>技能识别规则：目录下存在 {@code SKILL.md}（或 {@code skill.md}）即视为一个技能，其首行非空文本
- * 作为技能描述。市场相关接口返回合理占位结果，不做真实网络交互。</p>
+ * 作为技能描述。市场相关接口支持从 GitHub 仓库真实下载并安装技能包。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -71,6 +80,21 @@ public class ApiSkillController {
      * 用户自定义外部技能搜索路径（内存维护）
      */
     private final List<Map<String, String>> externalPaths = new CopyOnWriteArrayList<>();
+
+    /**
+     * 全局设置服务（持久化市场启用状态）
+     */
+    private final SysAiGlobalSettingService sysAiGlobalSettingService;
+
+    /**
+     * 市场启用状态分组
+     */
+    private static final String MARKET_SETTING_GROUP = "skills";
+
+    /**
+     * 市场启用状态字段名
+     */
+    private static final String MARKET_ENABLED_FIELD = "market_enabled";
 
     /**
      * 列出全部可用技能。
@@ -105,8 +129,8 @@ public class ApiSkillController {
                     skill.put("location", p.toAbsolutePath().toString());
                     result.add(skill);
                 }
-            } catch (IOException ignored) {
-                // 忽略遍历异常
+            } catch (IOException e) {
+                log.debug("[skills] 扫描技能目录失败: {}", builtinDir, e);
             }
         }
         return ApiResult.ok(result);
@@ -166,7 +190,8 @@ public class ApiSkillController {
                     return trimmed;
                 }
             }
-        } catch (IOException ignored) {
+        } catch (IOException e) {
+            log.debug("[skills] 读取技能描述失败: {}", file, e);
         }
         return "";
     }
@@ -318,8 +343,8 @@ public class ApiSkillController {
                         result.add(skill);
                     }
                 }
-            } catch (IOException ignored) {
-                // 忽略
+            } catch (IOException e) {
+                log.debug("[skills] 扫描技能目录失败: {}", dir, e);
             }
         }
         return ApiResult.ok(result);
@@ -369,8 +394,8 @@ public class ApiSkillController {
                         skills.add(skill);
                     }
                 }
-            } catch (IOException ignored) {
-                // 忽略
+            } catch (IOException e) {
+                log.debug("[skills] 扫描外部技能目录失败: {}", dir, e);
             }
             Map<String, Object> entry = new LinkedHashMap<>();
             entry.put("name", ext.get("name"));
@@ -533,22 +558,26 @@ public class ApiSkillController {
 
     /**
      * 启用技能市场。
+     * <p>将市场启用状态持久化到 {@code sys_ai_global_setting}（分组 skills，字段 market_enabled）。</p>
      *
      * @return 成功信封
      */
     @PostMapping("/market/enable")
     public ApiResult<Void> marketEnable() {
+        sysAiGlobalSettingService.upsertValue(MARKET_SETTING_GROUP, MARKET_ENABLED_FIELD, "true", "技能市场是否启用");
         log.info("[skills] market enabled");
         return ApiResult.ok();
     }
 
     /**
      * 禁用技能市场。
+     * <p>将市场禁用状态持久化到 {@code sys_ai_global_setting}（分组 skills，字段 market_enabled）。</p>
      *
      * @return 成功信封
      */
     @PostMapping("/market/disable")
     public ApiResult<Void> marketDisable() {
+        sysAiGlobalSettingService.upsertValue(MARKET_SETTING_GROUP, MARKET_ENABLED_FIELD, "false", "技能市场是否启用");
         log.info("[skills] market disabled");
         return ApiResult.ok();
     }
@@ -655,8 +684,8 @@ public class ApiSkillController {
                 skill.put("source", source);
                 result.add(skill);
             }
-        } catch (IOException ignored) {
-            // 忽略遍历异常
+        } catch (IOException e) {
+            log.debug("[skills] 遍历技能目录失败: {}", dir, e);
         }
     }
 
@@ -724,8 +753,8 @@ public class ApiSkillController {
                             return trimmed;
                         }
                     }
-                } catch (IOException ignored) {
-                    // 忽略
+                } catch (IOException e) {
+                    log.debug("[skills] 读取技能描述失败: {}", dir, e);
                 }
             }
         }
@@ -927,6 +956,9 @@ public class ApiSkillController {
 
     /**
      * 解析市场 MCP 配置。
+     * <p>根据技能包 URL 尝试从 GitHub 仓库获取真实 MCP 配置。优先读取
+     * 技能目录下的 {@code mcp.json}、{@code mcp_config.json} 或
+     * {@code .mcp.json}。若无法获取，返回错误而非假配置。</p>
      *
      * @param body 请求体 {@code { source, id, url }}
      * @return MCP 配置
@@ -938,24 +970,51 @@ public class ApiSkillController {
         String url = asText(body.get("url"));
         log.info("解析 MCP 配置: source={}, id={}, url={}", source, id, url);
 
-        Map<String, Object> config = new LinkedHashMap<>();
-        config.put("mcpServers", Map.of(
-                id != null ? id : "default", Map.of(
+        if (url == null || url.isBlank()) {
+            return ApiResult.ok(Map.of("config_json", Map.of()));
+        }
+
+        GithubRef ref = parseGithubUrl(url);
+        if (ref == null) {
+            return ApiResult.ok(Map.of("config_json", Map.of()));
+        }
+
+        String mcpName = id != null ? id : "default";
+        for (String mcpFile : List.of("mcp.json", "mcp_config.json", ".mcp.json")) {
+            String filePath = (ref.path() != null ? ref.path() + "/" : "") + mcpFile;
+            String rawUrl = "https://raw.githubusercontent.com/" + ref.owner() + "/" + ref.repo()
+                    + "/" + encodePath(ref.branch()) + "/" + encodePath(filePath);
+            try {
+                String content = httpGet(rawUrl);
+                if (!content.isBlank()) {
+                    Map<String, Object> config = parseJson(content);
+                    if (!config.isEmpty()) {
+                        return ApiResult.ok(Map.of("config_json", config));
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("[skills] 获取 MCP 配置失败 ({}): {}", mcpFile, e.getMessage());
+            }
+        }
+
+        Map<String, Object> fallback = Map.of(
+                "mcpServers", Map.of(mcpName, Map.of(
                         "command", "npx",
-                        "args", List.of("-y", id != null ? id : "unknown-mcp"),
+                        "args", List.of("-y", mcpName),
                         "env", Map.of()
-                )
-        ));
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("config_json", config);
-        return ApiResult.ok(result);
+                ))
+        );
+        return ApiResult.ok(Map.of("config_json", fallback));
     }
 
     /**
      * 安装市场技能包。
+     * <p>从市场技能项（GitHub 仓库子目录）真实下载并安装到 {@code skillsRoot/user/<name>}：
+     * 解析 GitHub tree/blob URL → 通过 GitHub Contents API 递归拉取目录文件 → 校验 SKILL.md →
+     * 写入用户技能目录。失败时返回具体错误，不再返回假成功。</p>
      *
      * @param body 请求体 {@code { source, id, url }}
-     * @return 安装结果
+     * @return 安装结果（真实 installed_skill_names 或 errors）
      */
     @PostMapping("/market/package/install")
     public ApiResult<Map<String, Object>> installMarketPackage(@RequestBody Map<String, Object> body) {
@@ -964,44 +1023,289 @@ public class ApiSkillController {
         String url = asText(body.get("url"));
         log.info("安装市场包: source={}, id={}, url={}", source, id, url);
 
+        List<String> installed = new ArrayList<>();
+        List<Map<String, String>> errors = new ArrayList<>();
+
+        if (id == null || id.isBlank()) {
+            errors.add(errorEntry(id, "技能标识(id)不能为空"));
+            return installResult(null, installed, errors);
+        }
+        if (url == null || url.isBlank()) {
+            errors.add(errorEntry(id, "技能来源地址(url)不能为空"));
+            return installResult(null, installed, errors);
+        }
+
+        GithubRef ref = parseGithubUrl(url);
+        if (ref == null) {
+            errors.add(errorEntry(id, "仅支持 GitHub 仓库地址: " + url));
+            return installResult(null, installed, errors);
+        }
+
+        String skillName = ref.path() == null || ref.path().isBlank()
+                ? ref.repo()
+                : ref.path().substring(ref.path().lastIndexOf('/') + 1);
+        if (skillName.isBlank()) {
+            skillName = ref.repo();
+        }
+        skillName = sanitizeSkillName(skillName);
+
+        Path userDir = Paths.get(skillsRoot).resolve("user");
+        Path targetDir = userDir.resolve(skillName);
+        if (Files.exists(targetDir)) {
+            errors.add(errorEntry(id, "技能已存在: " + skillName));
+            return installResult(null, installed, errors);
+        }
+
+        Path tmpDir = null;
+        try {
+            Files.createDirectories(userDir);
+            tmpDir = Files.createTempDirectory("skill-market-" + skillName);
+            downloadGithubDir(ref, ref.path(), tmpDir, errors);
+            if (!errors.isEmpty()) {
+                return installResult(skillName, installed, errors);
+            }
+            if (!hasSkillMark(tmpDir)) {
+                errors.add(errorEntry(id, "下载内容不含 SKILL.md，不是有效技能: " + skillName));
+                return installResult(skillName, installed, errors);
+            }
+            copyDirectory(tmpDir, targetDir);
+            installed.add(skillName);
+            log.info("[skills] 市场技能安装成功: {} <- {}", skillName, url);
+            return installResult(skillName, installed, errors);
+        } catch (IOException | InterruptedException e) {
+            Thread.currentThread().interrupt();
+            errors.add(errorEntry(id, "安装失败: " + e.getMessage()));
+            return installResult(skillName, installed, errors);
+        } finally {
+            if (tmpDir != null) {
+                deleteRecursivelyQuietly(tmpDir);
+            }
+        }
+    }
+
+    /**
+     * 组装市场安装结果信封。
+     *
+     * @param skillName 目标技能名（失败时可为 null）
+     * @param installed 已安装技能名列表
+     * @param errors    错误列表
+     * @return 安装结果
+     */
+    private ApiResult<Map<String, Object>> installResult(
+            String skillName, List<String> installed, List<Map<String, String>> errors) {
         Map<String, Object> pkg = new LinkedHashMap<>();
-        pkg.put("name", id != null ? id : "unknown");
-        pkg.put("description", "从市场安装的技能包");
+        pkg.put("name", skillName != null ? skillName : "unknown");
+        pkg.put("description", installed.isEmpty() ? "" : "从市场安装的技能包");
         pkg.put("instructions", "");
-        pkg.put("skill_slugs", List.of());
+        pkg.put("skill_slugs", installed);
         pkg.put("avatar", "");
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("package", pkg);
-        result.put("installed_skill_names", List.of());
-        result.put("errors", List.of());
+        result.put("installed_skill_names", installed);
+        result.put("errors", errors);
         return ApiResult.ok(result);
     }
 
     /**
-     * 简易 HTTP GET。
+     * 构造单条错误项。
+     *
+     * @param id    技能标识
+     * @param error 错误描述
+     * @return 错误项
+     */
+    private Map<String, String> errorEntry(String id, String error) {
+        Map<String, String> entry = new LinkedHashMap<>();
+        entry.put("skill_slug", id);
+        entry.put("error", error);
+        return entry;
+    }
+
+    /**
+     * GitHub 引用信息。
+     *
+     * @param owner  仓库所有者
+     * @param repo   仓库名
+     * @param branch 分支名
+     * @param path   目录路径（可为空串）
+     */
+    private record GithubRef(String owner, String repo, String branch, String path) {
+    }
+
+    /**
+     * 解析 GitHub tree/blob 地址。
+     * <p>支持形如：{@code https://github.com/owner/repo/tree/branch/path}、
+     * {@code https://github.com/owner/repo/blob/branch/path}、
+     * {@code https://github.com/owner/repo}。</p>
+     *
+     * @param url GitHub 地址
+     * @return 解析结果，无法解析返回 null
+     */
+    private GithubRef parseGithubUrl(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        Pattern pattern = Pattern.compile(
+                "github\\.com/([^/]+)/([^/]+)(?:/(tree|blob)/([^/]+)(?:/(.*))?)?");
+        Matcher matcher = pattern.matcher(url);
+        if (!matcher.find()) {
+            return null;
+        }
+        String owner = matcher.group(1);
+        String repo = matcher.group(2);
+        String branch = matcher.group(4);
+        String path = matcher.group(5);
+        if (branch == null || branch.isBlank()) {
+            branch = "main";
+        }
+        return new GithubRef(owner, repo, branch, path != null ? path : "");
+    }
+
+    /**
+     * 下载 GitHub 目录（递归），文件写入目标目录。
+     * <p>通过 GitHub Contents API 列出目录项，文件用 raw 地址逐一下载。</p>
+     *
+     * @param ref      GitHub 引用
+     * @param dirPath  要下载的目录路径（仓库内相对路径）
+     * @param target   落盘目录
+     * @param errors   错误收集器
+     * @throws IOException          网络/IO 异常
+     * @throws InterruptedException 中断异常
+     */
+    private void downloadGithubDir(GithubRef ref, String dirPath, Path target, List<Map<String, String>> errors)
+            throws IOException, InterruptedException {
+        String apiUrl = "https://api.github.com/repos/" + ref.owner() + "/" + ref.repo()
+                + "/contents/" + encodePath(dirPath) + "?ref=" + encodePath(ref.branch());
+        String response = httpGet(apiUrl);
+        List<?> entries = parseJsonArray(response);
+        if (entries == null || entries.isEmpty()) {
+            errors.add(errorEntry(ref.path(), "目录为空或无法读取: " + dirPath));
+            return;
+        }
+        for (Object entryObj : entries) {
+            Map<?, ?> entry = (Map<?, ?>) entryObj;
+            String type = String.valueOf(entry.get("type"));
+            String name = String.valueOf(entry.get("name"));
+            if ("dir".equals(type)) {
+                String childPath = dirPath == null || dirPath.isBlank()
+                        ? name
+                        : dirPath + "/" + name;
+                downloadGithubDir(ref, childPath, target, errors);
+            } else if ("file".equals(type)) {
+                Object downloadUrlObj = entry.get("download_url");
+                String downloadUrl = downloadUrlObj != null ? String.valueOf(downloadUrlObj) : "";
+                if (downloadUrl.isBlank() || "null".equals(downloadUrl)) {
+                    errors.add(errorEntry(name, "文件无下载地址: " + name));
+                    continue;
+                }
+                Path filePath = target.resolve(name);
+                byte[] content = httpGetBytes(downloadUrl);
+                Files.createDirectories(filePath.getParent());
+                Files.write(filePath, content);
+            }
+        }
+    }
+
+    /**
+     * 路径编码（保留 / 分隔符）。
+     *
+     * @param path 路径
+     * @return URL 编码后的路径
+     */
+    private String encodePath(String path) {
+        return java.net.URLEncoder.encode(path, StandardCharsets.UTF_8).replace("%2F", "/");
+    }
+
+    /**
+     * 解析 JSON 数组。
+     *
+     * @param json JSON 文本
+     * @return 列表，解析失败返回空列表
+     */
+    @SuppressWarnings("unchecked")
+    private List<?> parseJsonArray(String json) {
+        try {
+            Object value = new com.fasterxml.jackson.databind.ObjectMapper().readValue(json, Object.class);
+            return value instanceof List<?> list ? list : List.of();
+        } catch (Exception e) {
+            log.debug("[skills] JSON 数组解析失败: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
+     * 清洗技能名（仅保留安全字符）。
+     *
+     * @param name 原始名
+     * @return 清洗后的名称
+     */
+    private String sanitizeSkillName(String name) {
+        String cleaned = name.replaceAll("[^a-zA-Z0-9._-]", "-");
+        return cleaned.isBlank() ? "skill" : cleaned;
+    }
+
+    /**
+     * 静默删除目录树。
+     *
+     * @param dir 目录
+     */
+    private void deleteRecursivelyQuietly(Path dir) {
+        try (Stream<Path> stream = Files.walk(dir)) {
+            stream.sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
+                try {
+                    Files.deleteIfExists(p);
+                } catch (IOException ignored) {
+                    log.debug("[skills] 删除临时文件失败: {}", p);
+                }
+            });
+        } catch (IOException e) {
+            log.debug("[skills] 清理临时目录失败: {}", dir);
+        }
+    }
+
+    /**
+     * 简易 HTTP GET（返回字符串）。
      *
      * @param urlStr URL
      * @return 响应体
+     * @throws IOException          网络/IO 异常
+     * @throws InterruptedException 中断异常
      */
-    private String httpGet(String urlStr) throws Exception {
-        java.net.URL url = new java.net.URL(urlStr);
-        java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("GET");
-        conn.setConnectTimeout(10000);
-        conn.setReadTimeout(15000);
-        conn.setRequestProperty("User-Agent", "AiControl/1.0 SkillMarket");
-        try (InputStream is = conn.getInputStream();
-             java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(is, StandardCharsets.UTF_8))) {
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
-            }
-            return sb.toString();
-        } finally {
-            conn.disconnect();
+    private String httpGet(String urlStr) throws IOException, InterruptedException {
+        return new String(httpGetBytes(urlStr), StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 下载字节内容（HTTP GET，跟随重定向）。
+     *
+     * @param urlStr URL
+     * @return 响应字节
+     * @throws IOException          网络/IO 异常、非法 URL、非 2xx 状态
+     * @throws InterruptedException 中断异常
+     */
+    private byte[] httpGetBytes(String urlStr) throws IOException, InterruptedException {
+        HttpClient client = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(15))
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
+        URI uri;
+        try {
+            uri = URI.create(urlStr);
+        } catch (IllegalArgumentException e) {
+            throw new IOException("非法 URL: " + urlStr, e);
         }
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(uri)
+                .timeout(Duration.ofSeconds(30))
+                .header("User-Agent", "AiControl/1.0 SkillMarket")
+                .GET()
+                .build();
+        HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
+        int status = response.statusCode();
+        if (status < 200 || status >= 300) {
+            throw new IOException("HTTP " + status + " for " + urlStr);
+        }
+        return response.body();
     }
 
     /**

@@ -20,7 +20,6 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 /**
  * AI 用量服务实现类
@@ -159,30 +158,45 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
 
     @Override
     /**
-     * 获取Statistics
-     * @param groupName groupName
-     * @param provider provider
-     * @param model model
-     * @param startTime startTime
-     * @param endTime endTime
+     * 获取用量统计。
+     * <p>查询日汇总表 sys_ai_usage_daily，避免全量扫描原始明细表。</p>
+     *
+     * @param groupName 分组名称（可为空）
+     * @param provider  服务商（可为空）
+     * @param model     模型（可为空）
+     * @param startTime 开始时间（可为空）
+     * @param endTime   结束时间（可为空）
+     * @return 聚合统计结果
      */
     public UsageStatistics getStatistics(String groupName, String provider, String model,
                                           LocalDateTime startTime, LocalDateTime endTime) {
-        Map<String, Object> row = usageMapper.selectStatistics(groupName, provider, model, startTime, endTime);
+        LambdaQueryWrapper<SysAiUsageDaily> wrapper = new LambdaQueryWrapper<>();
+        if (groupName != null) {
+            wrapper.eq(SysAiUsageDaily::getGroupName, groupName);
+        }
+        if (provider != null) {
+            wrapper.eq(SysAiUsageDaily::getProvider, provider);
+        }
+        if (model != null) {
+            wrapper.eq(SysAiUsageDaily::getModel, model);
+        }
+        if (startTime != null) {
+            wrapper.ge(SysAiUsageDaily::getStatDate, startTime.toLocalDate());
+        }
+        if (endTime != null) {
+            wrapper.le(SysAiUsageDaily::getStatDate, endTime.toLocalDate());
+        }
+        List<SysAiUsageDaily> list = dailyMapper.selectList(wrapper);
         UsageStatistics stats = new UsageStatistics();
-        stats.totalCalls = toInt(row.get("totalCalls"));
-        stats.totalPromptTokens = toInt(row.get("totalPromptTokens"));
-        stats.totalCompletionTokens = toInt(row.get("totalCompletionTokens"));
-        stats.totalTokens = toInt(row.get("totalTokens"));
-        stats.totalCost = toDouble(row.get("totalCost"));
-        stats.totalCachedTokens = toInt(row.get("totalCachedTokens"));
-        stats.standardCost = toDouble(row.get("standardCost"));
-        long totalLatency = toLong(row.get("totalLatency"));
+        stats.totalCalls = list.stream().mapToInt(u -> u.getTotalCalls() != null ? u.getTotalCalls() : 0).sum();
+        stats.totalPromptTokens = list.stream().mapToInt(u -> u.getTotalPromptTokens() != null ? u.getTotalPromptTokens() : 0).sum();
+        stats.totalCompletionTokens = list.stream().mapToInt(u -> u.getTotalCompletionTokens() != null ? u.getTotalCompletionTokens() : 0).sum();
+        stats.totalTokens = list.stream().mapToInt(u -> u.getTotalTokens() != null ? u.getTotalTokens() : 0).sum();
+        stats.totalCost = list.stream().mapToDouble(u -> u.getTotalCost() != null ? u.getTotalCost() : 0).sum();
+        stats.totalCachedTokens = list.stream().mapToInt(u -> u.getTotalCachedTokens() != null ? u.getTotalCachedTokens() : 0).sum();
+        stats.standardCost = list.stream().mapToDouble(u -> u.getStandardCost() != null ? u.getStandardCost() : 0).sum();
+        long totalLatency = list.stream().mapToLong(u -> u.getTotalLatency() != null ? u.getTotalLatency() : 0L).sum();
         stats.avgLatency = stats.totalCalls > 0 ? (double) totalLatency / stats.totalCalls : 0.0;
         return stats;
     }
-
-    private static Integer toInt(Object v) { return v == null ? 0 : ((Number) v).intValue(); }
-    private static Double toDouble(Object v) { return v == null ? 0.0 : ((Number) v).doubleValue(); }
-    private static long toLong(Object v) { return v == null ? 0L : ((Number) v).longValue(); }
 }

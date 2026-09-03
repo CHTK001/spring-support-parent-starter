@@ -102,6 +102,14 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- SQLite 嵌入式数据库引擎（utils 核心实现） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-sqlite-starter</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
+
         <!-- ========== 数据源连接池依赖 (provided - 用户按需引入) ========== -->
         
         <!-- Druid连接池 - 阿里巴巴高性能数据库连接池 -->
