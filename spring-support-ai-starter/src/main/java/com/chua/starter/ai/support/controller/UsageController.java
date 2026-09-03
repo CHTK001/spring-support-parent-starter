@@ -171,7 +171,16 @@ public class UsageController {
     }
 
     @Permission("admin")
-    @Operation(summary = "用量同步日志", description = "返回最近一次定时同步产生的日志")
+    @Operation(summary = "手动触发同步聚合", description = "立即执行外部数据同步与日汇总表聚合")
+    @PostMapping("/trigger")
+    public ReturnResult<String> trigger() {
+        UsageAggregationTask task = applicationContext.getBean(UsageAggregationTask.class);
+        task.run();
+        return ReturnResult.ok("已触发同步聚合");
+    }
+
+    @Permission("admin")
+    @Operation(summary = "获取同步日志", description = "查看最近一次定时同步聚合的日志")
     @GetMapping("/logs")
     public ReturnResult<List<UsageAggregationTask.SyncLogEntry>> logs() {
         return ReturnResult.ok(UsageAggregationTask.getSyncLogs());
