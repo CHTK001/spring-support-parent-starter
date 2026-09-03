@@ -123,14 +123,17 @@ public class ApiChatController {
     }
 
     @GetMapping
-    public ApiResult<Map<String, Object>> list(@RequestParam(required = false, defaultValue = "50") int limit,
-                                               @RequestParam(required = false) String cursor) {
-        List<SysAiConversation> items = conversationStore.list(limit);
-        Map<String, Object> page = new LinkedHashMap<>();
-        page.put("items", items.stream().map(this::toResponse).toList());
-        page.put("total", items.size());
-        page.put("has_more", false);
-        return ApiResult.ok(page);
+    public ApiResult<Map<String, Object>> list(@RequestParam(required = false, defaultValue = "1") int page,
+                                               @RequestParam(required = false, defaultValue = "50") int page_size) {
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<SysAiConversation> paging =
+                conversationStore.page(page, page_size);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("items", paging.getRecords().stream().map(this::toResponse).toList());
+        result.put("total", paging.getTotal());
+        result.put("page", paging.getCurrent());
+        result.put("page_size", paging.getSize());
+        result.put("has_more", paging.getCurrent() * paging.getSize() < paging.getTotal());
+        return ApiResult.ok(result);
     }
 
     @GetMapping("/{conversationId}")
