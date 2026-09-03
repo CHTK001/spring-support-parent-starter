@@ -133,6 +133,15 @@ public class ServerNodeRegistry {
         if (protocol == null) {
             throw new IllegalArgumentException("未知协议类型: " + node.getProtocol());
         }
+        // 幂等: 已存在且运行中的实例直接复用, 避免重复 bind 导致 BindException / 端口泄漏
+        RuntimeServer existing = runtimes.get(node.getId());
+        if (existing != null && existing.isRunning()) {
+            return existing;
+        }
+        // 若残留未运行或错误实例, 先清理, 避免旧 server 占着端口
+        if (existing != null) {
+            stop(node.getId());
+        }
         RuntimeServer runtime = new RuntimeServer();
         runtime.setId(node.getId());
         runtime.setName(node.getName());
@@ -515,21 +524,30 @@ public class ServerNodeRegistry {
             this.error = error;
         }
 
-        /**
-         * 运行状态。
-         *
-         * @return RUNNING / STOPPED / ERROR
-         */
-        public String status() {
-            Server s = this.server;
-            if (s != null && s.isRunning()) {
-                return "RUNNING";
-            }
-            if (s != null) {
-                return "STOPPED";
-            }
-            return error != null ? "ERROR" : "STOPPED";
+/**
+     * 运行状态。
+     *
+     * @return RUNNING / STOPPED / ERROR
+     */
+    public String status() {
+        Server s = this.server;
+        if (s != null && s.isRunning()) {
+            return "RUNNING";
         }
+        if (s != null) {
+            return "STOPPED";
+        }
+        return error != null ? "ERROR" : "STOPPED";
     }
+
+    /**
+     * 是否处于运行中(server 非空且底层服务器正在运行)。
+     *
+     * @return true=运行中
+     */
+    public boolean isRunning() {
+        return server != null && server.isRunning();
+    }
+}
 
 }
