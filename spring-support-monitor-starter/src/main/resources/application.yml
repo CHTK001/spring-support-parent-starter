@@ -17,10 +17,11 @@ spring:
   # 独立联调模式: 启动时执行建表脚本(幂等, IF NOT EXISTS)
   # 含 server-starter 的资产台账 DDL(V1.0__init_server.sql),
   # 使 monitor 独立 H2 下也具备 ms_server_host 等表, 供资产联动查询
+  # V1.3 补充 ms_monitor.ms_server_host_id 列, 打通资产→监控项
   sql:
     init:
       mode: always
-      schema-locations: classpath:db/init/V1.0__init_monitor.sql,classpath:db/init/V1.1__alarm_and_agent.sql,classpath:db/init/V1.0__init_server.sql
+      schema-locations: classpath:db/init/V1.0__init_monitor.sql,classpath:db/init/V1.1__alarm_and_agent.sql,classpath:db/init/V1.0__init_server.sql,classpath:db/init/V1.3__monitor_host_link.sql
 
   datasource:
     url: jdbc:h2:mem:monitordb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false
