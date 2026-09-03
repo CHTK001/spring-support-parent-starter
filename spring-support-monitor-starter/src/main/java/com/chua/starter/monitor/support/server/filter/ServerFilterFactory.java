@@ -201,16 +201,39 @@ public class ServerFilterFactory {
     private void wireStorages(Class<?> filterClass, Object filter) {
         try {
             Class<?> storageClass = Class.forName(FILE_STORAGE_CLASS);
-            String[] beanNames = applicationContext.getBeanNamesForType(storageClass);
-            if (beanNames.length == 0) {
-                log.info("[ServerFilterFactory] 容器中未发现 FileStorage Bean, 文件服务器暂无存储桶");
-                return;
-            }
             Method addStorage = filterClass.getMethod("addFileStorage", String.class, storageClass);
+
+            // 1) 优先注册 Spring 容器中直接暴露的 FileStorage Bean
+            int registered = 0;
+            String[] beanNames = applicationContext.getBeanNamesForType(storageClass);
             for (String beanName : beanNames) {
                 Object storage = applicationContext.getBean(beanName);
                 addStorage.invoke(filter, beanName, storage);
-                log.info("[ServerFilterFactory] 注册文件存储桶: {} -> {}", beanName, storage.getClass().getSimpleName());
+                registered++;
+                log.info("[ServerFilterFactory] 注册文件存储桶(Bean): {} -> {}", beanName, storage.getClass().getSimpleName());
+            }
+
+            // 2) 兜底: FileStorageTemplate 的 storageMap 常以内部 Map 形式持有 Provider,
+            //    并不注册为独立 Bean —— 从模板取桶, 使 file-storage 过滤器真正有后端可用
+            try {
+                Object template = applicationContext.getBean("fileStorageTemplate");
+                @SuppressWarnings("unchecked")
+                Map<String, Object> storageMap = (Map<String, Object>) template.getClass()
+                        .getMethod("getStorageMap").invoke(template);
+                for (Map.Entry<String, Object> entry : storageMap.entrySet()) {
+                    if (storageClass.isInstance(entry.getValue())) {
+                        addStorage.invoke(filter, entry.getKey(), entry.getValue());
+                        registered++;
+                        log.info("[ServerFilterFactory] 注册文件存储桶(Template): {} -> {}",
+                                entry.getKey(), entry.getValue().getClass().getSimpleName());
+                    }
+                }
+            } catch (Exception ignored) {
+                // fileStorageTemplate Bean 不存在(非 filesystem-starter 场景)时忽略
+            }
+
+            if (registered == 0) {
+                log.info("[ServerFilterFactory] 未发现任何 FileStorage 存储桶, 文件服务器暂无后端");
             }
         } catch (ClassNotFoundException e) {
             log.warn("[ServerFilterFactory] FileStorage 类型不可用, 跳过存储桶注册: {}", e.getMessage());

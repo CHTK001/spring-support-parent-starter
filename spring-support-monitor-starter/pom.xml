@@ -52,6 +52,14 @@
             <artifactId>spring-support-mybatis-starter</artifactId>
         </dependency>
 
+        <!-- 文件服务器插件(可选): file-storage ServerFilter 使用, 使 HTTP 服务器可挂 FileStorageServerFilter 变文件服务器。
+             仅需要其中的 ServerFilter/Setting/LocalFileStorage 类; 其 web 分片上传自动配置 FileSystemAutoConfiguration
+             引用的 Bean 在 monitor 未装配, 已在 application.yml 通过 spring.autoconfigure.exclude 排除 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-filesystem-starter</artifactId>
+        </dependency>
+
         <!-- 缓存 -->
         <dependency>
             <groupId>com.chua</groupId>

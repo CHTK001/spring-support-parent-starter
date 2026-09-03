@@ -7,6 +7,9 @@ spring:
   autoconfigure:
     exclude:
       - com.chua.metrics.support.MetricsAutoConfiguration
+      # filesystem-starter 自带的 web 分片上传链(auto-config 引用 monitor 未装配的 Service/Controller Bean), 排除之;
+      # 我们只需其 FileStorageServerFilter/Setting/LocalFileStorage 类(file-storage 插件反射加载)
+      - com.chua.starter.filesystem.support.config.FileSystemAutoConfiguration
   ai:
     generate:
       enabled: false

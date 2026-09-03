@@ -172,12 +172,33 @@ public class UsageController {
     }
 
     @Permission("admin")
-    @Operation(summary = "手动触发同步聚合", description = "立即执行外部数据同步与日汇总表聚合")
+    @Operation(summary = "手动触发同步聚合", description = "立即执行外部数据同步与日汇总表聚合（异步执行）")
     @PostMapping("/trigger")
     public ReturnResult<String> trigger() {
         UsageAggregationTask task = applicationContext.getBean(UsageAggregationTask.class);
-        task.run();
-        return ReturnResult.ok("已触发同步聚合");
+        new Thread(() -> {
+            try {
+                task.run();
+            } catch (Exception e) {
+                log.error("[UsageTrigger] 同步聚合失败: {}", e.getMessage(), e);
+            }
+        }, "usage-trigger").start();
+        return ReturnResult.ok("已触发同步聚合（后台执行）");
+    }
+
+    @Permission("admin")
+    @Operation(summary = "仅执行聚合", description = "跳过外部同步，仅对已有明细数据执行日汇总（异步执行）")
+    @PostMapping("/aggregate")
+    public ReturnResult<String> aggregate() {
+        UsageAggregationTask task = applicationContext.getBean(UsageAggregationTask.class);
+        new Thread(() -> {
+            try {
+                task.aggregate();
+            } catch (Exception e) {
+                log.error("[UsageAggregate] 聚合失败: {}", e.getMessage(), e);
+            }
+        }, "usage-aggregate").start();
+        return ReturnResult.ok("已触发聚合（后台执行）");
     }
 
     @Permission("admin")

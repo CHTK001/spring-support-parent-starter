@@ -365,7 +365,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                     .lt(SysAiUsage::getSysAiUsageCallTime, end)
                     .orderByAsc(SysAiUsage::getSysAiUsageId);
             page = usageMapper.selectPage(new Page<>(p, batchSize), wrapper);
-            List<SysAiUsage> list = page.getRecords();
+            List<SysAiUsage> list = usageMapper.selectPage(new Page<>(p, batchSize), wrapper).getRecords();
 
             if (list.isEmpty()) {
                 break;
@@ -434,7 +434,12 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                         statDate, groupName, provider, model, items.size());
             }
             p++;
-        } while (page.hasNext());
+        } while (page != null && page.hasNext());
+
+        // 仅在全部批次处理完成后才推进 lastRunTime，避免重复聚合
+        if (totalAggregated > 0) {
+            lastRunTime = end;
+        }
 
         log.info("[UsageAggregation] {} ~ {} 聚合完成，共 {} 条记录", start, end, totalAggregated);
     }

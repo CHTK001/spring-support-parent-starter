@@ -288,11 +288,14 @@ public class ApiChatController {
                                                        @RequestParam(required = false) String cursor,
                                                        @RequestParam(required = false) String day) {
         conversationStore.get(conversationId);
-        List<SysAiConversationMessage> msgs = conversationStore.listMessages(conversationId, page, page_size);
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<SysAiConversationMessage> paging =
+                conversationStore.pageMessages(conversationId, page, page_size);
         Map<String, Object> pageResult = new LinkedHashMap<>();
-        pageResult.put("items", msgs.stream().map(this::toMessageResponse).toList());
-        pageResult.put("total", msgs.size());
-        pageResult.put("has_more", false);
+        pageResult.put("items", paging.getRecords().stream().map(this::toMessageResponse).toList());
+        pageResult.put("total", paging.getTotal());
+        pageResult.put("page", paging.getCurrent());
+        pageResult.put("page_size", paging.getSize());
+        pageResult.put("has_more", paging.getCurrent() * paging.getSize() < paging.getTotal());
         return ApiResult.ok(pageResult);
     }
 
