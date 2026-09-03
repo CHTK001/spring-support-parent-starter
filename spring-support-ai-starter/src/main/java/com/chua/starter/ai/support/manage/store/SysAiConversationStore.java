@@ -245,14 +245,18 @@ public class SysAiConversationStore {
     /**
      * 分页列出会话（按创建时间倒序，最近在前）。
      *
-     * @param limit 返回条数（默认 50，上限 500）
+     * @param limit  返回条数（默认 50，上限 500）
+     * @param cursor 上一页最后一条的 created_at（毫秒），用于游标分页；为 null 时从头查
      * @return 会话列表
      */
-    public List<SysAiConversation> list(int limit) {
+    public List<SysAiConversation> list(int limit, Long cursor) {
         int size = limit <= 0 ? 50 : Math.min(limit, MAX_LIST_LIMIT);
         LambdaQueryWrapper<SysAiConversation> wrapper = new LambdaQueryWrapper<SysAiConversation>()
-                .orderByDesc(SysAiConversation::getCreatedAt)
-                .last("LIMIT " + size);
+                .orderByDesc(SysAiConversation::getCreatedAt);
+        if (cursor != null) {
+            wrapper.lt(SysAiConversation::getCreatedAt, cursor);
+        }
+        wrapper.last("LIMIT " + (size + 1));
         return conversationMapper.selectList(wrapper);
     }
 
