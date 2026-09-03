@@ -22,9 +22,9 @@ import java.time.LocalDate;
 public class SysAiUsageDaily extends SysBase {
 
     /**
-     * 主键 ID
+     * 统计 ID
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(type = IdType.AUTO, value = "sys_ai_usage_daily_id")
     private Long id;
 
     /**

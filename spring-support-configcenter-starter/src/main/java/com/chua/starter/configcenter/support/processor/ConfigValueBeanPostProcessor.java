@@ -17,7 +17,13 @@ import org.springframework.core.env.Environment;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -204,9 +210,6 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
             String expression = annotation.value();
             ParsedExpression parsed = parseExpression(expression);
 
-            // 处理配置推送
-            handlePublish(annotation, parsed, beanName, field.getName());
-
             // 注入初始值
             String value = resolveValue(parsed.key(), parsed.defaultValue());
             injectFieldValue(bean, field, value);
@@ -248,9 +251,6 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
             String expression = annotation.value();
             ParsedExpression parsed = parseExpression(expression);
 
-            // 处理配置推送
-            handlePublish(annotation, parsed, beanName, method.getName());
-
             // 注入初始值
             String value = resolveValue(parsed.key(), parsed.defaultValue());
             injectMethodValue(bean, method, value);
@@ -273,82 +273,6 @@ public class ConfigValueBeanPostProcessor implements BeanPostProcessor, Environm
                         parsed.key(), beanName, method.getName());
             }
         }
-    }
-
-    /**
-     * 处理配置推送
-     *
-     * @param annotation 注解
-     * @param parsed     解析后的表达式
-     * @param beanName   Bean名称
-     * @param memberName 成员名称（字段或方法）
-     */
-    private void handlePublish(ConfigValue annotation, ParsedExpression parsed, String beanName, String memberName) {
-        // 检查配置中心是否支持推送
-        // 注意：ConfigValue 注解当前不支持 publish 和 publishIfAbsent 方法
-        // 如果需要推送功能，需要在 ConfigValue 注解中添加这些方法
-        if (configCenter == null || !configCenter.isSupportPublish()) {
-            // 暂时注释掉，因为 ConfigValue 注解中没有 publish() 和 publishIfAbsent() 方法
-            // if (annotation.publish() || annotation.publishIfAbsent()) {
-            //     log.warn("配置中心不支持推送，忽略推送配置: key={}, bean={}, member={}",
-            //             parsed.key(), beanName, memberName);
-            // }
-            return;
-        }
-
-        // 注意：ConfigValue 注解当前不支持 publish、publishIfAbsent、dataId、group 方法
-        // 如果需要推送功能，需要在 ConfigValue 注解中添加这些方法
-        // 暂时注释掉推送相关代码
-        /*
-        // 获取要推送的值
-        String publishValue = getPublishValue(annotation, parsed);
-        if (StringUtils.isEmpty(publishValue)) {
-            return;
-        }
-
-        // 获取dataId和group
-        String dataId = StringUtils.isNotEmpty(annotation.dataId()) ? annotation.dataId() : configCenter.getDefaultDataId();
-        String group = StringUtils.isNotEmpty(annotation.group()) ? annotation.group() : configCenter.getDefaultGroup();
-
-        boolean success = false;
-        if (annotation.publish()) {
-            // 强制推送
-            success = configCenter.publish(dataId, group, parsed.key(), publishValue);
-            if (success) {
-                log.info("[配置中心]强制推送配置成功: dataId={}, group={}, key={}, value={}",
-                        dataId, group, parsed.key(), publishValue);
-            } else {
-                log.warn("[配置中心]强制推送配置失败: dataId={}, group={}, key={}",
-                        dataId, group, parsed.key());
-            }
-        } else if (annotation.publishIfAbsent()) {
-            // 仅当不存在时推送
-            success = configCenter.publishIfAbsent(dataId, group, parsed.key(), publishValue);
-            if (success) {
-                log.info("[配置中心]推送配置成功（不存在时）: dataId={}, group={}, key={}, value={}",
-                        dataId, group, parsed.key(), publishValue);
-            } else {
-                log.debug("[配置中心]配置已存在，跳过推送: dataId={}, group={}, key={}",
-                        dataId, group, parsed.key());
-            }
-        }
-        */
-    }
-
-    /**
-     * 获取要推送的值
-     *
-     * @param annotation 注解
-     * @param parsed     解析后的表达式
-     * @return 要推送的值
-     */
-    private String getPublishValue(ConfigValue annotation, ParsedExpression parsed) {
-        // 优先使用注解的defaultValue属性
-        if (StringUtils.isNotEmpty(annotation.defaultValue())) {
-            return annotation.defaultValue();
-        }
-        // 其次使用表达式中的默认值
-        return parsed.defaultValue();
     }
 
     /**

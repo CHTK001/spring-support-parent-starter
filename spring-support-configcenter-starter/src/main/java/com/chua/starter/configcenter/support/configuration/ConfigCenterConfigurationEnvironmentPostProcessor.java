@@ -18,7 +18,10 @@ import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MutablePropertySources;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -147,18 +150,20 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         List<String> loaded = new ArrayList<>(strings.size());
         
         // 2.1 优先加载带环境后缀的配置
-        for (String string : strings) {
-            String newName = "application-%s-%s.yml".formatted(string, active);
-            Map<String, Object> stringObjectMap = configCenter.get(newName);
-            if (null == stringObjectMap || stringObjectMap.isEmpty()) {
-                continue;
-            }
+        if (StringUtils.isNotEmpty(active)) {
+            for (String string : strings) {
+                String newName = "application-%s-%s.yml".formatted(string, active);
+                Map<String, Object> stringObjectMap = configCenter.get(newName);
+                if (null == stringObjectMap || stringObjectMap.isEmpty()) {
+                    continue;
+                }
 
-            environment.getPropertySources()
-                    .addLast(new OriginTrackedMapPropertySource(newName, stringObjectMap));
-            LOADED_CONFIG_NAMES.add(newName);
-            log.info("[配置中心]加载配置: {}", newName);
-            loaded.add(string);
+                environment.getPropertySources()
+                        .addLast(new OriginTrackedMapPropertySource(newName, stringObjectMap));
+                LOADED_CONFIG_NAMES.add(newName);
+                log.info("[配置中心]加载配置: {}", newName);
+                loaded.add(string);
+            }
         }
         
         // 2.2 加载不带环境后缀的配置
