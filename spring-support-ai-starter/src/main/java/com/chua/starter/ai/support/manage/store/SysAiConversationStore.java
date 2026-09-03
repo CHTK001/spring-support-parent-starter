@@ -277,17 +277,18 @@ public class SysAiConversationStore {
      * @param conversationId 会话 ID
      * @param page          页号（从 1 开始）
      * @param pageSize      每页条数（默认 50，上限 200）
-     * @return 消息列表
+     * @return 分页结果（含 total）
      */
-    public List<SysAiConversationMessage> listMessages(String conversationId, int page, int pageSize) {
-        int size = pageSize <= 0 ? 50 : Math.min(pageSize, MAX_PAGE_SIZE);
-        int from = Math.max(page, 0);
-        int offset = (from <= 0 ? 1 : from - 1) * size;
+    public com.baomidou.mybatisplus.extension.plugins.pagination.Page<SysAiConversationMessage> pageMessages(
+            String conversationId, int page, int pageSize) {
+        long current = page <= 0 ? 1 : page;
+        long size = pageSize <= 0 ? 50 : Math.min(pageSize, MAX_PAGE_SIZE);
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<SysAiConversationMessage> paging =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(current, size);
         LambdaQueryWrapper<SysAiConversationMessage> wrapper = new LambdaQueryWrapper<SysAiConversationMessage>()
                 .eq(SysAiConversationMessage::getConversationId, conversationId)
-                .orderByAsc(SysAiConversationMessage::getCreatedAt)
-                .last("LIMIT " + offset + "," + size);
-        return messageMapper.selectList(wrapper);
+                .orderByAsc(SysAiConversationMessage::getCreatedAt);
+        return messageMapper.selectPage(paging, wrapper);
     }
 
     /**
