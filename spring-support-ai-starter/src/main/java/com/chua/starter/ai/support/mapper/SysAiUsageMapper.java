@@ -6,16 +6,38 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 
 /**
- * AI 用量 Mapper
+ * AI 用量 Mapper。
  *
  * @since 4.0.0.42
  * @author CH
  */
 @Mapper
 public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
+
+    /**
+     * 用量聚合统计结果。
+     *
+     * @param totalCalls          总调用次数
+     * @param totalPromptTokens   总输入 Token
+     * @param totalCompletionTokens 总输出 Token
+     * @param totalTokens         总 Token
+     * @param totalCost           总费用（元）
+     * @param totalCachedTokens   缓存读取 Token
+     * @param standardCost        标准费用（官方价格计算，未折扣）
+     * @param totalLatency        总耗时（ms）
+     */
+    record UsageStatsRow(
+            Integer totalCalls,
+            Integer totalPromptTokens,
+            Integer totalCompletionTokens,
+            Integer totalTokens,
+            Double totalCost,
+            Integer totalCachedTokens,
+            Double standardCost,
+            Long totalLatency
+    ) {}
 
     /**
      * 数据库端聚合统计——单条 SQL 完成 SUM/COUNT，配合索引秒级返回，避免全量装载到 JVM。
@@ -25,10 +47,9 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
      * @param model     模型（可为空）
      * @param startTime 开始时间（可为空，不传则不限起始时间）
      * @param endTime   结束时间（可为空，不传则不限截止时间）
-     * @return 聚合结果 Map，键名：totalCalls / totalPromptTokens / totalCompletionTokens /
-     *         totalTokens / totalCost / totalCachedTokens / standardCost / totalLatency
+     * @return 聚合统计行，所有字段可能为 null（无数据时）
      */
-    Map<String, Object> selectStatistics(
+    UsageStatsRow selectStatistics(
             @Param("groupName") String groupName,
             @Param("provider") String provider,
             @Param("model") String model,

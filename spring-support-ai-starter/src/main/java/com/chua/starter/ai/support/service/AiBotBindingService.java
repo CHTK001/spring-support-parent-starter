@@ -140,10 +140,22 @@ public class AiBotBindingService {
         return summary;
     }
 
+    /**
+     * 按 ID 查询 Bot 绑定记录。
+     *
+     * @param id 绑定记录 ID，不能为 null
+     * @return 绑定记录，不存在时返回 null
+     */
     public SysAiBotBinding getById(Long id) {
         return botBindingMapper.selectById(id);
     }
 
+    /**
+     * 按 Bot 唯一标识查询绑定记录。
+     *
+     * @param botId Bot 唯一标识，不能为 null 或空字符串
+     * @return 绑定记录，不存在时返回 null
+     */
     public SysAiBotBinding findByBotId(String botId) {
         return botBindingMapper.selectOne(
                 Wrappers.<SysAiBotBinding>lambdaQuery()

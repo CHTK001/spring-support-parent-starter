@@ -6,6 +6,8 @@ import com.chua.common.support.utils.BeanUtils;
 import com.chua.common.support.utils.CollectionUtils;
 import com.chua.starter.mybatis.entity.Query;
 import com.chua.starter.mybatis.entity.Sorting;
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
 
 import java.util.Collection;
 import java.util.List;
@@ -76,5 +78,64 @@ public class MybatisUtils {
         List<T> ts = BeanUtils.copyPropertiesList(records, type);
         page.setRecords(ts);
         return page;
+    }
+
+    /**
+     * 根据 Statement ID 执行 XML 映射的查询，返回列表
+     *
+     * @param sqlSessionFactory SqlSessionFactory
+     * @param statementId       映射语句ID，格式为 "namespace.methodName"
+     * @param params            参数对象
+     * @param <T>               返回类型
+     * @return 查询结果列表
+     */
+    public static <T> List<T> selectList(SqlSessionFactory sqlSessionFactory, String statementId, Object params) {
+        try (SqlSession session = sqlSessionFactory.openSession(true)) {
+            return session.selectList(statementId, params);
+        }
+    }
+
+    /**
+     * 根据 Statement ID 执行 XML 映射的查询，返回单条记录
+     *
+     * @param sqlSessionFactory SqlSessionFactory
+     * @param statementId       映射语句ID
+     * @param params            参数对象
+     * @param <T>               返回类型
+     * @return 查询结果
+     */
+    public static <T> T selectOne(SqlSessionFactory sqlSessionFactory, String statementId, Object params) {
+        try (SqlSession session = sqlSessionFactory.openSession(true)) {
+            return session.selectOne(statementId, params);
+        }
+    }
+
+    /**
+     * 执行原生 SQL 查询
+     *
+     * @param sqlSessionFactory SqlSessionFactory
+     * @param sql               SQL 语句
+     * @param params            参数数组
+     * @param <T>               返回类型
+     * @return 查询结果列表
+     */
+    public static <T> List<T> query(SqlSessionFactory sqlSessionFactory, String sql, Object... params) {
+        try (SqlSession session = sqlSessionFactory.openSession(true)) {
+            return session.selectList(sql, params);
+        }
+    }
+
+    /**
+     * 执行原生 SQL 更新（INSERT/UPDATE/DELETE）
+     *
+     * @param sqlSessionFactory SqlSessionFactory
+     * @param sql               SQL 语句
+     * @param params            参数数组
+     * @return 影响行数
+     */
+    public static int execute(SqlSessionFactory sqlSessionFactory, String sql, Object... params) {
+        try (SqlSession session = sqlSessionFactory.openSession(true)) {
+            return session.update(sql, params);
+        }
     }
 }

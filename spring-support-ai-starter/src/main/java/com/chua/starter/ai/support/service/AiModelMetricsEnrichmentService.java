@@ -175,6 +175,16 @@ public class AiModelMetricsEnrichmentService {
      * @param modelId 模型 ID
      * @return 命中的指标记录，未命中返回 null
      */
+    /**
+     * 按模型标识查找 AA 定价记录（精确匹配优先，模糊匹配兜底）。
+     *
+     * @param modelId 模型标识，如 deepseek-v4-pro
+     * @return 定价记录，未找到时返回 null
+     */
+    public MetricsRecord getPricingRecord(String modelId) {
+        return find(modelId);
+    }
+
     private MetricsRecord find(String modelId) {
         ensureLoaded();
         if (index.isEmpty()) { return null; }
@@ -452,7 +462,7 @@ public class AiModelMetricsEnrichmentService {
     /**
      * 单条模型指标记录。
      */
-    record MetricsRecord(
+    public record MetricsRecord(
             /** 归一化键 */
             String normalizedKey,
             /** 输入单价（USD/百万 Token） */

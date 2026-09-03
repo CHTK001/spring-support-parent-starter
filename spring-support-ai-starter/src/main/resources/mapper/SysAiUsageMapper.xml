@@ -6,7 +6,7 @@
         用量聚合统计：单条 SQL 完成 COUNT/SUM，避免全量装载到 JVM。
         配合 sys_ai_usage_call_time 索引，秒级返回统计结果。
     -->
-    <select id="selectStatistics" resultType="java.util.Map">
+    <select id="selectStatistics" resultType="com.chua.starter.ai.support.mapper.SysAiUsageMapper$UsageStatsRow">
         SELECT
             COUNT(*) AS totalCalls,
             COALESCE(SUM(sys_ai_usage_prompt_tokens), 0) AS totalPromptTokens,
