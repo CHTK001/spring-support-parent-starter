@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.manage.store.datasource;
 
+import com.chua.common.support.spi.annotations.Spi;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -47,6 +48,7 @@ import java.util.*;
  */
 @Slf4j
 @Component
+@Spi("generic")
 public class GenericApiRequirementDataSource implements IRequirementDataSource {
 
     private static final String TYPE = "generic";
@@ -176,7 +178,9 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
     public boolean testConnection(Map<String, Object> config) {
         try {
             String apiUrl = getString(config, "api_url");
-            if (apiUrl == null) return false;
+            if (apiUrl == null) {
+                return false;
+            }
             // 发一次 HEAD 或 GET，验证连通性
             HttpClient client = HttpClient.newHttpClient();
             HttpRequest request = HttpRequest.newBuilder()
@@ -199,20 +203,32 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
     private List<Map<String, Object>> extractRecords(Map<String, Object> resp) {
         // 常见格式1: { "data": [...] }
         Object data = resp.get("data");
-        if (data instanceof List) return (List<Map<String, Object>>) data;
+        if (data instanceof List) {
+            return (List<Map<String, Object>>) data;
+        }
         // 常见格式2: { "results": [...] }
         Object results = resp.get("results");
-        if (results instanceof List) return (List<Map<String, Object>>) results;
+        if (results instanceof List) {
+            return (List<Map<String, Object>>) results;
+        }
         // 常见格式3: { "issues": [...] } (Jira)
         Object issues = resp.get("issues");
-        if (issues instanceof List) return (List<Map<String, Object>>) issues;
+        if (issues instanceof List) {
+            return (List<Map<String, Object>>) issues;
+        }
         // 常见格式4: { "objects": [...] } (Notion)
         Object objects = resp.get("objects");
-        if (objects instanceof List) return (List<Map<String, Object>>) objects;
+        if (objects instanceof List) {
+            return (List<Map<String, Object>>) objects;
+        }
         // 常见格式5: 顶层就是 array
-        if (resp.get("") instanceof List) return (List<Map<String, Object>>) resp.get("");
+        if (resp.get("") instanceof List) {
+            return (List<Map<String, Object>>) resp.get("");
+        }
         // 尝试把整个 resp 当作单条记录
-        if (!resp.isEmpty()) return Collections.singletonList(resp);
+        if (!resp.isEmpty()) {
+            return Collections.singletonList(resp);
+        }
         return Collections.emptyList();
     }
 
@@ -237,13 +253,19 @@ public class GenericApiRequirementDataSource implements IRequirementDataSource {
     /** 通过点分路径从嵌套 Map 中取值：如 "status.name" → map.get("status").get("name") */
     @SuppressWarnings("unchecked")
     private Object getByDotPath(Map<String, Object> map, String path) {
-        if (map == null || path == null) return null;
+        if (map == null || path == null) {
+            return null;
+        }
         String[] parts = path.split("\\.");
         Object current = map;
         for (String part : parts) {
-            if (!(current instanceof Map)) return null;
+            if (!(current instanceof Map)) {
+                return null;
+            }
             current = ((Map<String, Object>) current).get(part);
-            if (current == null) return null;
+            if (current == null) {
+                return null;
+            }
         }
         return current;
     }

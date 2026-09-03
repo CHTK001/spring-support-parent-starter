@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.manage.store.datasource;
 
+import com.chua.common.support.spi.ServiceProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -9,7 +10,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.ServiceLoader;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -48,6 +48,8 @@ public class RequirementDataSourceRegistry implements ApplicationRunner {
 
     /**
      * 获取所有已注册的数据源类型列表。
+     *
+     * @return 已注册类型（升序），如 ["GENERIC","LARK","LOCAL"]
      */
     public List<String> list() {
         return Collections.unmodifiableList(
@@ -57,6 +59,8 @@ public class RequirementDataSourceRegistry implements ApplicationRunner {
 
     /**
      * 获取所有已注册的数据源提供方。
+     *
+     * @return 提供方列表，按 type 升序
      */
     public List<IRequirementDataSource> allProviders() {
         return Collections.unmodifiableList(
@@ -67,14 +71,25 @@ public class RequirementDataSourceRegistry implements ApplicationRunner {
     }
 
     /**
-     * 应用启动时通过 SPI 自动注册所有数据源提供方。
+     * 根据类型字符串获取提供方，找不到时返回 null。
+     *
+     * @param type 数据源类型（大写，如 "LARK"）
+     * @return 对应的提供方；未注册返回 null
+     */
+    public IRequirementDataSource getProvider(String type) {
+        return registry.get(type);
+    }
+
+    /**
+     * 应用启动时通过自定义 SPI 自动注册所有数据源提供方。
+     *
+     * @param args 启动参数（本方法不读取）
      */
     @Override
     public void run(ApplicationArguments args) {
-        ServiceLoader.load(IRequirementDataSource.class).forEach(provider -> {
-            String type = provider.type();
-            registry.put(type, provider);
-            log.info("[DataSourceRegistry] 注册数据源提供方: type={}", type);
+        ServiceProvider.of(IRequirementDataSource.class).forEach((name, provider) -> {
+            registry.put(name, provider);
+            log.info("[DataSourceRegistry] 注册数据源提供方: type={}", name);
         });
         log.info("[DataSourceRegistry] 已注册 {} 个数据源提供方: {}", registry.size(), list());
     }

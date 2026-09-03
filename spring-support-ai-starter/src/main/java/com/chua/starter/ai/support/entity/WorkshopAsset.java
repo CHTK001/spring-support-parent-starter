@@ -3,17 +3,23 @@ package com.chua.starter.ai.support.entity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.Data;
 
 /**
- * 创意工坊资产实体，对应表 {@code workshop_asset}。
+ * 创意工坊资产实体，对应 {@code workshop_asset} 表。
  *
- * <p>存储图片、视频、文本三种类型的创作素材，包含元数据、存储路径和来源信息。</p>
+ * <p>存储图片、视频、文本三类创意素材，含元数据、存储路径、来源信息。</p>
+ *
+ * <p>JSON 序列化使用 snake_case（与前端 {@code WorkshopAsset} 契约一致，
+ * 前端 {@code parseAssetId(asset.asset_id)} 依赖 {@code asset_id} 字段）。</p>
  *
  * @author CH
  */
 @Data
 @TableName("workshop_asset")
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class WorkshopAsset {
 
     /**

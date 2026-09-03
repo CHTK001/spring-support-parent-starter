@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.manage.store.datasource;
 
+import com.chua.common.support.spi.annotations.Spi;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -40,6 +41,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
+@Spi("lark")
 public class LarkRequirementDataSource implements IRequirementDataSource {
 
     private static final String TYPE = "lark";
@@ -103,9 +105,13 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
     public boolean testConnection(Map<String, Object> config) {
         try {
             String accessToken = getAccessToken(config);
-            if (accessToken == null) return false;
+            if (accessToken == null) {
+                return false;
+            }
             String tableId = getString(config, "table_id");
-            if (tableId == null) return false;
+            if (tableId == null) {
+                return false;
+            }
             List<Map<String, Object>> records = fetchRecords(accessToken, tableId);
             return records != null;
         } catch (Exception e) {
@@ -120,7 +126,9 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
     private String getAccessToken(Map<String, Object> config) {
         String appId = getString(config, "app_id");
         String appSecret = getString(config, "app_secret");
-        if (appId == null || appSecret == null) return null;
+        if (appId == null || appSecret == null) {
+            return null;
+        }
 
         try {
             String url = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal";
@@ -135,10 +143,14 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
                     .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() != 200) return null;
+            if (response.statusCode() != 200) {
+                return null;
+            }
 
             Map<String, Object> resp = parseJson(response.body());
-            if (resp == null) return null;
+            if (resp == null) {
+                return null;
+            }
             Object token = resp.get("tenant_access_token");
             return token != null ? token.toString() : null;
         } catch (Exception e) {
@@ -179,7 +191,9 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
                 }
 
                 Map<String, Object> resp = parseJson(response.body());
-                if (resp == null) break;
+                if (resp == null) {
+                    break;
+                }
 
                 Object items = resp.get("items");
                 if (items instanceof List) {
@@ -197,10 +211,16 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
 
     private String getFieldText(Map<String, Object> record, String fieldName) {
         Object fields = record.get("fields");
-        if (!(fields instanceof Map)) return null;
+        if (!(fields instanceof Map)) {
+            return null;
+        }
         Object val = ((Map<?, ?>) fields).get(fieldName);
-        if (val == null) return null;
-        if (val instanceof String) return (String) val;
+        if (val == null) {
+            return null;
+        }
+        if (val instanceof String) {
+            return (String) val;
+        }
         if (val instanceof List) {
             List<?> list = (List<?>) val;
             if (!list.isEmpty() && list.get(0) instanceof Map) {
@@ -220,16 +240,18 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
     }
 
     private String mapStatus(String raw) {
-        if (raw == null) return "pending";
-        switch (raw.trim().toLowerCase()) {
-            case "未开始": case "not_started": case "pending":   return "pending";
-            case "进行中": case "in_progress": case "doing":     return "in_progress";
-            case "已完成": case "done": case "completed":        return "done";
-            case "已取消": case "cancelled": case "closed":      return "cancelled";
-            case "待复核": case "needs_review":                  return "needs_review";
-            case "失败": case "failed":                          return "failed";
-            default: return "pending";
+        if (raw == null) {
+            return "pending";
         }
+        return switch (raw.trim().toLowerCase()) {
+            case "未开始", "not_started", "pending" -> "pending";
+            case "进行中", "in_progress", "doing" -> "in_progress";
+            case "已完成", "done", "completed" -> "done";
+            case "已取消", "cancelled", "closed" -> "cancelled";
+            case "待复核", "needs_review" -> "needs_review";
+            case "失败", "failed" -> "failed";
+            default -> "pending";
+        };
     }
 
     private String getString(Map<String, Object> map, String key) {
@@ -243,7 +265,9 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
     }
 
     private String escapeJson(String s) {
-        if (s == null) return "";
+        if (s == null) {
+            return "";
+        }
         return s.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 

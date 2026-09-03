@@ -73,11 +73,6 @@
       <artifactId>sqlite-jdbc</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.h2database</groupId>
-      <artifactId>h2</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>com.chua</groupId>
       <artifactId>utils-support-h2-starter</artifactId>
       <version>${project.version}</version>

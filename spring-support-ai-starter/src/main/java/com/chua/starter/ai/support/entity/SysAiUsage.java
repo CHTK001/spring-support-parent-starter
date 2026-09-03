@@ -106,10 +106,13 @@ public class SysAiUsage extends SysBase {
     /** 缓存读取成本 */
     private Double sysAiUsageCachedCost;
     /** 输入单价(每1M Token) */
+    @com.baomidou.mybatisplus.annotation.TableField("sys_ai_usage_input_price_per_1m")
     private Double sysAiUsageInputPricePer1M;
     /** 输出单价(每1M Token) */
+    @com.baomidou.mybatisplus.annotation.TableField("sys_ai_usage_output_price_per_1m")
     private Double sysAiUsageOutputPricePer1M;
     /** 缓存读取单价(每1M Token) */
+    @com.baomidou.mybatisplus.annotation.TableField("sys_ai_usage_cache_read_price_per_1m")
     private Double sysAiUsageCacheReadPricePer1M;
     /** 服务档位 */
     private String sysAiUsageServiceTier;

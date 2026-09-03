@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.service;
 
 import com.chua.common.support.ai.AiUsage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.starter.ai.support.entity.SysAiUsage;
 
 import java.time.LocalDateTime;
@@ -40,7 +41,7 @@ public interface SysAiUsageService {
      * @param size 每页大小
      * @return 用量列表
      */
-    List<SysAiUsage> list(String groupName, String provider, String model,
+    Page<SysAiUsage> list(String groupName, String provider, String model,
                           LocalDateTime startTime, LocalDateTime endTime, int page, int size);
 
     /**

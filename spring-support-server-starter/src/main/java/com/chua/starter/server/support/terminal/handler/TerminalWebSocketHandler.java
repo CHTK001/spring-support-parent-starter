@@ -150,9 +150,16 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             log.warn("[terminal] 收到未注册会话的指令 sessionId={}", wsSession.getId());
             return;
         }
+        String payload = message.getPayload();
+        // 过滤 guacamole-common-js 自定义隧道的心跳/内部控制指令，避免透传给 guacd 导致 parse error
+        if (payload != null && payload.startsWith("internal.")) {
+            log.debug("[terminal] 丢弃内部控制指令 tunnelId={} payload={}", session.getTunnelId(), payload);
+            session.setLastActiveTime(LocalDateTime.now());
+            return;
+        }
         try {
             // 浏览器 -> guacd 方向：原样透传指令文本（底层接口按字符数组写入）
-            session.getTunnel().write(message.getPayload());
+            session.getTunnel().write(payload);
             session.setLastActiveTime(LocalDateTime.now());
         } catch (GuacamoleException e) {
             log.warn("[terminal] 指令写入 guacd 失败 tunnelId={}: {}", session.getTunnelId(), e.getMessage());

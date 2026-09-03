@@ -107,7 +107,7 @@ public class GuacdConnectionFactory {
         tunnel.setParameter(GuacdConst.FONT_NAME, "monospace");
         tunnel.setParameter(GuacdConst.FONT_SIZE, 12);
         tunnel.setParameter(GuacdConst.TERMINAL_TYPE, "xterm-256color");
-        tunnel.setParameter(GuacdConst.BACKSPACE, "visible");
+        tunnel.setParameter(GuacdConst.BACKSPACE, 127);
     }
 
     /**

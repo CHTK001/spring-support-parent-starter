@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -107,7 +108,7 @@ public class AiModelMetricsEnrichmentService {
     /**
      * 指标索引：归一化模型名 → 记录
      */
-    private volatile Map<String, MetricsRecord> index = Map.of();
+    private final ConcurrentHashMap<String, MetricsRecord> index = new ConcurrentHashMap<>();
 
     /**
      * 上次加载时间戳
@@ -210,7 +211,8 @@ public class AiModelMetricsEnrichmentService {
             }
 
             if (fresh != null && !fresh.isEmpty()) {
-                index = indexOf(fresh);
+                index.clear();
+                index.putAll(indexOf(fresh));
                 lastLoadAt.set(now);
                 saveToDisk(fresh);
                 log.info("[AiModelMetrics] 在线指标已加载并持久化，共 {} 条", fresh.size());
@@ -220,7 +222,8 @@ public class AiModelMetricsEnrichmentService {
             // 在线失败 → 回退磁盘持久化快照（陈旧数据优于无数据）
             List<MetricsRecord> stale = loadFromDisk();
             if (stale != null && !stale.isEmpty()) {
-                index = indexOf(stale);
+                index.clear();
+                index.putAll(indexOf(stale));
                 log.warn("[AiModelMetrics] 使用磁盘持久化快照（陈旧数据），共 {} 条", stale.size());
             }
         }

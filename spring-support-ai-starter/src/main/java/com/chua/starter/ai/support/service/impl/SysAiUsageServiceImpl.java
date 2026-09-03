@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.ai.AiUsage;
 import com.chua.starter.ai.support.entity.SysAiPricing;
 import com.chua.starter.ai.support.entity.SysAiUsage;
+import com.chua.starter.ai.support.entity.SysAiUsageDaily;
+import com.chua.starter.ai.support.mapper.SysAiUsageDailyMapper;
 import com.chua.starter.ai.support.mapper.SysAiUsageMapper;
 import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.ai.support.service.SysAiUsageService;
@@ -13,8 +15,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * AI 用量服务实现类
@@ -31,6 +37,11 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
      * 用量 Mapper
      */
     private final SysAiUsageMapper usageMapper;
+
+    /**
+     * 日汇总 Mapper
+     */
+    private final SysAiUsageDailyMapper dailyMapper;
 
     /**
      * 定价服务
@@ -71,20 +82,32 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
 
         // 计算费用
         SysAiPricing pricing = pricingService.getLatestPricing(provider, model);
-        if (pricing != null) {
-            double inputCost = (usage.getInputTokens() != null ? usage.getInputTokens() : 0) / 1000.0 * pricing.getInputPricePer1k();
-            double outputCost = (usage.getOutputTokens() != null ? usage.getOutputTokens() : 0) / 1000.0 * pricing.getOutputPricePer1k();
-            entity.setSysAiUsageInputCost(inputCost);
-            entity.setSysAiUsageOutputCost(outputCost);
-            entity.setSysAiUsageTotalCost(inputCost + outputCost);
-            entity.setSysAiUsageOriginalCost(inputCost + outputCost);
+        if (pricing != null && pricing.getInputPricePer1k() != null && pricing.getOutputPricePer1k() != null) {
+            int inputTokens = usage.getInputTokens() != null ? usage.getInputTokens() : 0;
+            int outputTokens = usage.getOutputTokens() != null ? usage.getOutputTokens() : 0;
+            BigDecimal inputPrice = BigDecimal.valueOf(pricing.getInputPricePer1k());
+            BigDecimal outputPrice = BigDecimal.valueOf(pricing.getOutputPricePer1k());
+            BigDecimal inputCost = BigDecimal.valueOf(inputTokens)
+                    .divide(BigDecimal.valueOf(1000), 10, RoundingMode.HALF_UP)
+                    .multiply(inputPrice);
+            BigDecimal outputCost = BigDecimal.valueOf(outputTokens)
+                    .divide(BigDecimal.valueOf(1000), 10, RoundingMode.HALF_UP)
+                    .multiply(outputPrice);
+            BigDecimal total = inputCost.add(outputCost);
+            entity.setSysAiUsageInputCost(inputCost.doubleValue());
+            entity.setSysAiUsageOutputCost(outputCost.doubleValue());
+            entity.setSysAiUsageTotalCost(total.doubleValue());
+            entity.setSysAiUsageOriginalCost(total.doubleValue());
             entity.setSysAiUsageInputPricePer1M(pricing.getInputPricePer1k() * 1000.0);
             entity.setSysAiUsageOutputPricePer1M(pricing.getOutputPricePer1k() * 1000.0);
             if (usage.getCacheTokens() != null && usage.getCacheTokens() > 0) {
-                double cacheCost = usage.getCacheTokens() / 1000.0 * pricing.getInputPricePer1k() * 0.5;
-                entity.setSysAiUsageCachedCost(cacheCost);
-                entity.setSysAiUsageTotalCost(entity.getSysAiUsageTotalCost() + cacheCost);
-                entity.setSysAiUsageOriginalCost(entity.getSysAiUsageOriginalCost() + cacheCost);
+                BigDecimal cacheCost = BigDecimal.valueOf(usage.getCacheTokens())
+                        .divide(BigDecimal.valueOf(1000), 10, RoundingMode.HALF_UP)
+                        .multiply(inputPrice)
+                        .multiply(BigDecimal.valueOf(0.5));
+                entity.setSysAiUsageCachedCost(cacheCost.doubleValue());
+                entity.setSysAiUsageTotalCost(total.add(cacheCost).doubleValue());
+                entity.setSysAiUsageOriginalCost(total.add(cacheCost).doubleValue());
                 entity.setSysAiUsageCacheReadPricePer1M(pricing.getInputPricePer1k() * 1000.0 * 0.5);
             }
         } else {
@@ -110,7 +133,7 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
      * @param page page
      * @param size size
      */
-    public List<SysAiUsage> list(String groupName, String provider, String model,
+    public Page<SysAiUsage> list(String groupName, String provider, String model,
                                  LocalDateTime startTime, LocalDateTime endTime, int page, int size) {
         LambdaQueryWrapper<SysAiUsage> wrapper = new LambdaQueryWrapper<>();
         if (groupName != null) {
@@ -130,7 +153,8 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
         }
         wrapper.orderByDesc(SysAiUsage::getSysAiUsageCallTime);
         Page<SysAiUsage> p = new Page<>(page, size);
-        return usageMapper.selectPage(p, wrapper).getRecords();
+        usageMapper.selectPage(p, wrapper);
+        return p;
     }
 
     @Override
@@ -143,34 +167,22 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
      * @param endTime endTime
      */
     public UsageStatistics getStatistics(String groupName, String provider, String model,
-                                         LocalDateTime startTime, LocalDateTime endTime) {
-        LambdaQueryWrapper<SysAiUsage> wrapper = new LambdaQueryWrapper<>();
-        if (groupName != null) {
-            wrapper.eq(SysAiUsage::getSysAiUsageGroupName, groupName);
-        }
-        if (provider != null) {
-            wrapper.eq(SysAiUsage::getSysAiUsageProvider, provider);
-        }
-        if (model != null) {
-            wrapper.eq(SysAiUsage::getSysAiUsageModel, model);
-        }
-        if (startTime != null) {
-            wrapper.ge(SysAiUsage::getSysAiUsageCallTime, startTime);
-        }
-        if (endTime != null) {
-            wrapper.le(SysAiUsage::getSysAiUsageCallTime, endTime);
-        }
-        List<SysAiUsage> list = usageMapper.selectList(wrapper);
+                                          LocalDateTime startTime, LocalDateTime endTime) {
+        Map<String, Object> row = usageMapper.selectStatistics(groupName, provider, model, startTime, endTime);
         UsageStatistics stats = new UsageStatistics();
-        stats.totalCalls = list.size();
-        stats.totalPromptTokens = list.stream().mapToInt(u -> u.getSysAiUsagePromptTokens() != null ? u.getSysAiUsagePromptTokens() : 0).sum();
-        stats.totalCompletionTokens = list.stream().mapToInt(u -> u.getSysAiUsageCompletionTokens() != null ? u.getSysAiUsageCompletionTokens() : 0).sum();
-        stats.totalTokens = list.stream().mapToInt(u -> u.getSysAiUsageTotalTokens() != null ? u.getSysAiUsageTotalTokens() : 0).sum();
-        stats.totalCost = list.stream().mapToDouble(u -> u.getSysAiUsageTotalCost() != null ? u.getSysAiUsageTotalCost() : 0).sum();
-        stats.totalCachedTokens = list.stream().mapToInt(u -> u.getSysAiUsageCachedTokens() != null ? u.getSysAiUsageCachedTokens() : 0).sum();
-        stats.standardCost = list.stream().mapToDouble(u -> u.getSysAiUsageOriginalCost() != null ? u.getSysAiUsageOriginalCost() : 0).sum();
-        long totalLatency = list.stream().mapToLong(u -> u.getSysAiUsageTotalLatency() != null ? u.getSysAiUsageTotalLatency() : 0L).sum();
-        stats.avgLatency = list.size() > 0 ? (double) totalLatency / list.size() : 0.0;
+        stats.totalCalls = toInt(row.get("totalCalls"));
+        stats.totalPromptTokens = toInt(row.get("totalPromptTokens"));
+        stats.totalCompletionTokens = toInt(row.get("totalCompletionTokens"));
+        stats.totalTokens = toInt(row.get("totalTokens"));
+        stats.totalCost = toDouble(row.get("totalCost"));
+        stats.totalCachedTokens = toInt(row.get("totalCachedTokens"));
+        stats.standardCost = toDouble(row.get("standardCost"));
+        long totalLatency = toLong(row.get("totalLatency"));
+        stats.avgLatency = stats.totalCalls > 0 ? (double) totalLatency / stats.totalCalls : 0.0;
         return stats;
     }
+
+    private static Integer toInt(Object v) { return v == null ? 0 : ((Number) v).intValue(); }
+    private static Double toDouble(Object v) { return v == null ? 0.0 : ((Number) v).doubleValue(); }
+    private static long toLong(Object v) { return v == null ? 0L : ((Number) v).longValue(); }
 }
