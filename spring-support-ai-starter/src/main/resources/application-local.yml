@@ -44,7 +44,7 @@ spring:
       mode: never
   ai:
     usage:
-      enabled: true
+      enabled: false
     generate:
       enabled: false
     rag:
@@ -71,17 +71,7 @@ plugin:
     script:
       enable: true
       validate-checksum: false
-  osgi:
-    enabled: true
-    storage: ./target/osgi-runtime-cache
-    start-level: 4
-    shell:
-      enabled: true
-      port: 8122
-      host: 127.0.0.1
-      username: admin
-      password: admin123
-      ssh-enabled: true
-      ssh-port: 8122
-      ssh-username: admin
-      ssh-password: admin123
+
+# 技能目录指向实际位置（相对 user.dir 的默认值 ./skills 在当前 CWD 下不存在）
+nomifun:
+  skills-root: "D:\\ch\\project\\spring-support-parent-starter\\spring-support-ai-starter\\skills"

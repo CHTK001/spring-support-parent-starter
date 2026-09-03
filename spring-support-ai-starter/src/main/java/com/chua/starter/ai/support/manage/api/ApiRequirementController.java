@@ -4,6 +4,7 @@ import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
+import com.chua.starter.ai.support.manage.store.SysAiRequirementStore;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +22,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * <p>维护需求条目（{@code requirement_id} 主键）、标签统计、看板、自动作业（AutoWork）与
  * 标签绑定。关键变更推送 {@code requirement.created / requirement.updated /
  * requirement.statusChanged / requirement.deleted} 与 {@code autowork.*} 事件。
- * 当前为进程内内存实现。</p>
+ * 数据持久化到 {@code sys_ai_requirement} 表。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -41,111 +41,106 @@ import java.util.concurrent.atomic.AtomicLong;
 @Slf4j
 public class ApiRequirementController {
 
-    /**
-     * 主键生成与基础存储工具
-     */
     private final SysAiConversationStore conversationStore;
-
-    /**
-     * WS 事件推送服务
-     */
     private final ApiWebSocketPushService pushService;
-
-    /**
-     * 需求条目：requirement_id → 需求
-     */
-    private final Map<String, Map<String, Object>> requirements = new ConcurrentHashMap<>();
-
-    /**
-     * 自增展示序号
-     */
+    private final SysAiRequirementStore requirementStore;
     private final AtomicLong displaySeq = new AtomicLong(1);
+
+    // ======================== 需求 CRUD ========================
 
     @GetMapping
     public ApiResult<Map<String, Object>> list(@RequestParam(required = false) String tag,
-                                              @RequestParam(required = false) String status,
-                                              @RequestParam(required = false) String conversation_id,
-                                              @RequestParam(required = false) String q,
-                                              @RequestParam(required = false) String order_by,
-                                              @RequestParam(required = false) String order,
-                                              @RequestParam(required = false, defaultValue = "1") int page,
-                                              @RequestParam(required = false, defaultValue = "50") int page_size) {
-        List<Map<String, Object>> items = new ArrayList<>();
-        for (Map<String, Object> req : requirements.values()) {
-            if (tag != null && !tag.equals(req.get("tag"))) {
-                continue;
-            }
-            if (status != null && !status.equals(req.get("status"))) {
-                continue;
-            }
-            if (conversation_id != null && !conversation_id.equals(req.get("owner_conversation_id"))) {
-                continue;
-            }
-            if (q != null && !((String) req.get("title")).toLowerCase().contains(q.toLowerCase())) {
-                continue;
-            }
-            items.add(req);
+                                               @RequestParam(required = false) String status,
+                                               @RequestParam(required = false) String conversation_id,
+                                               @RequestParam(required = false) String q,
+                                               @RequestParam(required = false) String order_by,
+                                               @RequestParam(required = false) String order,
+                                               @RequestParam(required = false, defaultValue = "1") int page,
+                                               @RequestParam(required = false, defaultValue = "50") int page_size) {
+        Map<String, Object> result = requirementStore.list(tag, status, q, order_by, order, page, page_size);
+        if (conversation_id != null && !conversation_id.isEmpty()) {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> items = (List<Map<String, Object>>) result.get("items");
+            items.removeIf(r -> !conversation_id.equals(r.get("owner_conversation_id")));
+            result.put("total", (long) items.size());
+            result.put("has_more", false);
         }
-        Map<String, Object> pageResult = new LinkedHashMap<>();
-        pageResult.put("items", items);
-        pageResult.put("total", items.size());
-        pageResult.put("has_more", false);
-        return ApiResult.ok(pageResult);
+        return ApiResult.ok(result);
     }
 
     @GetMapping("/tags")
     public ApiResult<List<Map<String, Object>>> tags() {
-        Map<String, Map<String, Object>> summary = new LinkedHashMap<>();
-        for (Map<String, Object> req : requirements.values()) {
-            String tag = (String) req.get("tag");
-            Map<String, Object> s = summary.computeIfAbsent(tag, k -> {
-                Map<String, Object> m = new LinkedHashMap<>();
-                m.put("tag", k);
-                for (String key : new String[]{"pending", "in_progress", "done", "failed", "cancelled", "needs_review"}) {
-                    m.put(key, 0);
-                }
-                m.put("total", 0);
-                m.put("paused", false);
-                return m;
-            });
-            String status = (String) req.get("status");
-            if (s.containsKey(status)) {
-                s.put(status, ((Number) s.get(status)).intValue() + 1);
-            }
-            s.put("total", ((Number) s.get("total")).intValue() + 1);
-        }
-        return ApiResult.ok(new ArrayList<>(summary.values()));
+        return ApiResult.ok(requirementStore.tags());
     }
 
     @GetMapping("/board")
     public ApiResult<Map<String, Object>> board(@RequestParam String tag) {
-        Map<String, Object> board = new LinkedHashMap<>();
-        board.put("tag", tag);
-        for (String key : new String[]{"pending", "in_progress", "done", "failed", "cancelled", "needs_review"}) {
-            board.put(key, new ArrayList<>());
-        }
-        return ApiResult.ok(board);
+        return ApiResult.ok(requirementStore.board(tag));
     }
 
-    @GetMapping("/tag-bindings")
-    public ApiResult<List<Map<String, Object>>> tagBindings() {
-        return ApiResult.ok(new ArrayList<>());
+    @GetMapping("/{requirementId}")
+    public ApiResult<Map<String, Object>> get(@PathVariable String requirementId) {
+        Map<String, Object> req = requirementStore.get(requirementId);
+        if (req == null) throw new ApiException(ApiErrorCode.NOT_FOUND, "需求不存在: " + requirementId);
+        return ApiResult.ok(req);
     }
+
+    @PostMapping
+    public ApiResult<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
+        Map<String, Object> req = requirementStore.create(body);
+        pushService.push("requirement.created", req);
+        return ApiResult.ok(req);
+    }
+
+    @PutMapping("/{requirementId}")
+    public ApiResult<Map<String, Object>> update(@PathVariable String requirementId,
+                                                 @RequestBody Map<String, Object> body) {
+        Map<String, Object> req = requirementStore.update(requirementId, body);
+        if (req == null) throw new ApiException(ApiErrorCode.NOT_FOUND, "需求不存在: " + requirementId);
+        boolean changed = Boolean.TRUE.equals(req.get("__status_changed__"));
+        pushService.push("requirement.updated", req);
+        if (changed) pushService.push("requirement.statusChanged", req);
+        return ApiResult.ok(req);
+    }
+
+    @DeleteMapping("/{requirementId}")
+    public ApiResult<Void> remove(@PathVariable String requirementId) {
+        if (!requirementStore.remove(requirementId)) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "需求不存在: " + requirementId);
+        }
+        pushService.push("requirement.deleted", Map.of("requirement_id", requirementId));
+        return ApiResult.ok();
+    }
+
+    @PostMapping("/batch-delete")
+    public ApiResult<Map<String, Object>> batchDelete(@RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<String> ids = (List<String>) body.get("requirement_ids");
+        int deleted = requirementStore.batchDelete(ids);
+        for (String id : ids) {
+            pushService.push("requirement.deleted", Map.of("requirement_id", id));
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("deleted", deleted);
+        return ApiResult.ok(result);
+    }
+
+    // ======================== AutoWork ========================
 
     @PostMapping("/autowork")
     public ApiResult<Map<String, Object>> setAutoWork(@RequestBody Map<String, Object> body) {
-        Map<String, Object> state = new LinkedHashMap<>();
-        state.put("kind", body.getOrDefault("kind", "conversation"));
-        state.put("target_id", body.get("target_id"));
-        state.put("run_state", body.getOrDefault("run_state", "off"));
-        state.put("current_requirement_id", body.get("current_requirement_id"));
+        String kind = body.getOrDefault("kind", "conversation").toString();
+        String targetId = body.get("target_id") != null ? body.get("target_id").toString() : null;
+        boolean enabled = Boolean.parseBoolean(body.getOrDefault("enabled", false).toString());
+        String tag = body.get("tag") != null ? body.get("tag").toString() : null;
+        boolean fromAdmin = Boolean.parseBoolean(body.getOrDefault("from_admin", false).toString());
+        Map<String, Object> state = requirementStore.setAutoWork(kind, targetId, enabled, tag, fromAdmin);
         pushService.push("autowork.statusChanged", state);
         return ApiResult.ok(state);
     }
 
     @GetMapping("/autowork/{kind}/{targetId}")
-    public ApiResult<Map<String, Object>> getAutoWork(@PathVariable String kind,
-                                                      @PathVariable String targetId) {
+    public ApiResult<Map<String, Object>> getAutoWork(@PathVariable String kind, @PathVariable String targetId) {
         Map<String, Object> state = new LinkedHashMap<>();
         state.put("kind", kind);
         state.put("target_id", targetId);
@@ -156,113 +151,89 @@ public class ApiRequirementController {
 
     @PostMapping("/tags/{tag}/resume")
     public ApiResult<Map<String, Object>> resumeTag(@PathVariable String tag,
-                                                    @RequestBody(required = false) Map<String, Object> body) {
-        Map<String, Object> summary = new LinkedHashMap<>();
-        summary.put("tag", tag);
-        summary.put("total", 0);
-        summary.put("pending", 0);
-        summary.put("in_progress", 0);
-        summary.put("done", 0);
-        summary.put("failed", 0);
-        summary.put("cancelled", 0);
-        summary.put("needs_review", 0);
-        summary.put("paused", false);
+                                                     @RequestBody(required = false) Map<String, Object> body) {
+        boolean requeueFailed = body != null && Boolean.TRUE.equals(body.get("requeue_failed"));
+        Map<String, Object> summary = requirementStore.resumeTag(tag, requeueFailed);
         pushService.push("autowork.tagPaused", Map.of("tag", tag, "reason", "manual_resume"));
         return ApiResult.ok(summary);
     }
 
-    @GetMapping("/{requirementId}")
-    public ApiResult<Map<String, Object>> get(@PathVariable String requirementId) {
-        return ApiResult.ok(requireRequirement(requirementId));
+    // ======================== 数据源管理 ========================
+
+    /**
+     * 获取所有数据源列表。
+     */
+    @GetMapping("/data-sources")
+    public ApiResult<List<Map<String, Object>>> listDataSources() {
+        return ApiResult.ok(requirementStore.listDataSources());
     }
 
-    @PostMapping
-    public ApiResult<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
-        String requirementId = conversationStore.newId();
-        long now = System.currentTimeMillis();
-        Map<String, Object> req = new LinkedHashMap<>();
-        req.put("requirement_id", requirementId);
-        req.put("display_no", displaySeq.getAndIncrement());
-        req.put("title", body.getOrDefault("title", "未命名需求"));
-        req.put("content", body.getOrDefault("content", ""));
-        req.put("tag", body.getOrDefault("tag", "default"));
-        req.put("order_key", body.getOrDefault("order_key", String.valueOf(now)));
-        req.put("status", body.getOrDefault("status", "pending"));
-        req.put("completion_note", null);
-        req.put("owner_conversation_id", body.get("owner_conversation_id"));
-        req.put("owner_terminal_id", body.get("owner_terminal_id"));
-        req.put("started_at", null);
-        req.put("completed_at", null);
-        req.put("attempt_count", 0);
-        req.put("created_by", body.getOrDefault("created_by", "user"));
-        req.put("created_at", now);
-        req.put("updated_at", now);
-        requirements.put(requirementId, req);
-        pushService.push("requirement.created", req);
-        return ApiResult.ok(req);
+    /**
+     * 获取可用的数据源类型列表。
+     */
+    @GetMapping("/data-sources/types")
+    public ApiResult<List<String>> dataSourceTypes() {
+        return ApiResult.ok(requirementStore.availableTypes());
     }
 
-    @PutMapping("/{requirementId}")
-    public ApiResult<Map<String, Object>> update(@PathVariable String requirementId,
-                                                 @RequestBody Map<String, Object> body) {
-        Map<String, Object> req = requireRequirement(requirementId);
-        String oldStatus = (String) req.get("status");
-        if (body.containsKey("title")) {
-            req.put("title", body.get("title"));
+    /**
+     * 创建数据源。
+     */
+    @PostMapping("/data-sources")
+    public ApiResult<Map<String, Object>> createDataSource(@RequestBody Map<String, Object> body) {
+        Map<String, Object> ds = requirementStore.createDataSource(body);
+        if (ds == null) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "不支持的数据源类型");
         }
-        if (body.containsKey("content")) {
-            req.put("content", body.get("content"));
-        }
-        if (body.containsKey("tag")) {
-            req.put("tag", body.get("tag"));
-        }
-        if (body.containsKey("order_key")) {
-            req.put("order_key", body.get("order_key"));
-        }
-        if (body.containsKey("status")) {
-            req.put("status", body.get("status"));
-        }
-        if (body.containsKey("completion_note")) {
-            req.put("completion_note", body.get("completion_note"));
-        }
-        req.put("updated_at", System.currentTimeMillis());
-        pushService.push("requirement.updated", req);
-        if (!oldStatus.equals(req.get("status"))) {
-            pushService.push("requirement.statusChanged", req);
-        }
-        return ApiResult.ok(req);
+        return ApiResult.ok(ds);
     }
 
-    @DeleteMapping("/{requirementId}")
-    public ApiResult<Void> remove(@PathVariable String requirementId) {
-        requireRequirement(requirementId);
-        requirements.remove(requirementId);
-        pushService.push("requirement.deleted", Map.of("requirement_id", requirementId));
+    /**
+     * 更新数据源。
+     */
+    @PutMapping("/data-sources/{id}")
+    public ApiResult<Map<String, Object>> updateDataSource(@PathVariable String id,
+                                                            @RequestBody Map<String, Object> body) {
+        Map<String, Object> ds = requirementStore.updateDataSource(id, body);
+        if (ds == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "数据源不存在: " + id);
+        }
+        return ApiResult.ok(ds);
+    }
+
+    /**
+     * 删除数据源。
+     */
+    @DeleteMapping("/data-sources/{id}")
+    public ApiResult<Void> removeDataSource(@PathVariable String id) {
+        if (!requirementStore.removeDataSource(id)) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND, "数据源不存在: " + id);
+        }
         return ApiResult.ok();
     }
 
-    @PostMapping("/batch-delete")
-    public ApiResult<Map<String, Object>> batchDelete(@RequestBody Map<String, Object> body) {
-        int deleted = 0;
-        Object raw = body.get("requirement_ids");
-        if (raw instanceof List) {
-            for (Object id : (List<?>) raw) {
-                if (requirements.remove(String.valueOf(id)) != null) {
-                    deleted++;
-                    pushService.push("requirement.deleted", Map.of("requirement_id", String.valueOf(id)));
-                }
-            }
-        }
+    /**
+     * 测试数据源连接。
+     */
+    @PostMapping("/data-sources/{id}/test")
+    public ApiResult<Map<String, Object>> testDataSource(@PathVariable String id) {
+        boolean ok = requirementStore.testDataSource(id);
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("deleted", deleted);
+        result.put("id", id);
+        result.put("connected", ok);
         return ApiResult.ok(result);
     }
 
-    private Map<String, Object> requireRequirement(String requirementId) {
-        Map<String, Object> req = requirements.get(requirementId);
-        if (req == null) {
-            throw new ApiException(ApiErrorCode.NOT_FOUND, "需求不存在: " + requirementId);
+    /**
+     * 触发数据源同步。
+     */
+    @PostMapping("/data-sources/{id}/sync")
+    public ApiResult<Map<String, Object>> syncDataSource(@PathVariable String id) {
+        Map<String, Object> result = requirementStore.syncDataSource(id);
+        Object error = result.get("error");
+        if (error != null) {
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, error.toString());
         }
-        return req;
+        return ApiResult.ok(result);
     }
 }

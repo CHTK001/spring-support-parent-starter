@@ -1,5 +1,8 @@
 package com.chua.starter.ai.support.service;
 
+import com.chua.common.support.lang.json.Json;
+import com.chua.common.support.lang.json.JsonArray;
+import com.chua.common.support.utils.IdUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -14,10 +17,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.List;
 
@@ -170,14 +173,14 @@ public class WorkshopAssetService {
      */
     @Transactional
     public WorkshopAsset createTextAsset(String title, String content, String collection, List<String> tags) {
-        String id = generateUuidV7();
+        String id = IdUtils.uuidv7();
         long now = Instant.now().toEpochMilli();
         WorkshopAsset asset = new WorkshopAsset();
         asset.setAssetId(id);
         asset.setKind("text");
         asset.setTitle(title);
         asset.setCollection(collection);
-        asset.setTags(tags != null ? toJsonArray(tags) : "[]");
+        asset.setTags(tags != null && !tags.isEmpty() ? Json.createJsonArray(tags).toString() : "[]");
         asset.setInLibrary(true);
         asset.setTextContent(content);
         asset.setCreatedAt(now);
@@ -206,11 +209,13 @@ public class WorkshopAssetService {
 
         String originalName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "upload";
         String ext = originalName.substring(originalName.lastIndexOf('.'));
-        String fileId = generateUuidV7();
+        String fileId = IdUtils.uuidv7();
         String relativePath = "assets/" + fileId + ext;
         Path targetPath = Path.of(resolveStorageDir(), relativePath);
         Files.createDirectories(targetPath.getParent());
-        Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+        try (InputStream in = file.getInputStream()) {
+            Files.copy(in, targetPath, StandardCopyOption.REPLACE_EXISTING);
+        }
 
         long now = Instant.now().toEpochMilli();
         WorkshopAsset asset = new WorkshopAsset();
@@ -218,7 +223,7 @@ public class WorkshopAssetService {
         asset.setKind(file.getContentType().startsWith("image/") ? "image" : "video");
         asset.setTitle(title != null && !title.isBlank() ? title : originalName);
         asset.setCollection(collection);
-        asset.setTags(tags != null ? toJsonArray(tags) : "[]");
+        asset.setTags(tags != null && !tags.isEmpty() ? Json.createJsonArray(tags).toString() : "[]");
         asset.setMime(file.getContentType());
         asset.setBytes(file.getSize());
         asset.setInLibrary(inLibrary);
@@ -244,7 +249,8 @@ public class WorkshopAssetService {
         update.eq(WorkshopAsset::getAssetId, assetId);
         if (title != null) update.set(WorkshopAsset::getTitle, title);
         if (collection != null) update.set(WorkshopAsset::getCollection, collection.isEmpty() ? null : collection);
-        if (tags != null) update.set(WorkshopAsset::getTags, toJsonArray(tags));
+        if (tags != null) update.set(WorkshopAsset::getTags,
+                tags.isEmpty() ? "[]" : Json.createJsonArray(tags).toString());
         if (inLibrary != null) update.set(WorkshopAsset::getInLibrary, inLibrary);
         update.set(WorkshopAsset::getUpdatedAt, Instant.now().toEpochMilli());
         assetMapper.update(null, update);
@@ -306,50 +312,6 @@ public class WorkshopAssetService {
                 .toList();
     }
 
-    private String toJsonArray(List<String> tags) {
-        if (tags == null || tags.isEmpty()) return "[]";
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < tags.size(); i++) {
-            if (i > 0) sb.append(",");
-            sb.append("\"").append(tags.get(i).replace("\\", "\\\\").replace("\"", "\\\"")).append("\"");
-        }
-        sb.append("]");
-        return sb.toString();
-    }
-
-    /**
-     * 生成 UUIDv7 格式 ID（与前端 parseAssetId 兼容：规范小写 36 字符 UUIDv7）。
-     */
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-
-    private String generateUuidV7() {
-        long unixMs = System.currentTimeMillis();
-        byte[] ts = new byte[6];
-        for (int i = 5; i >= 0; i--) {
-            ts[5 - i] = (byte) (unixMs >> (i * 8));
-        }
-        byte[] rand = new byte[10];
-        SECURE_RANDOM.nextBytes(rand);
-        byte[] uuid = new byte[16];
-        System.arraycopy(ts, 0, uuid, 0, 6);
-        // version 7: bits 48-51 = 0111
-        uuid[6] = (byte) ((uuid[6] & 0x0F) | 0x70);
-        // variant: bits 64-65 = 10
-        uuid[8] = (byte) ((uuid[8] & 0x3F) | 0x80);
-        return toUuidString(uuid);
-    }
-
-    private static String toUuidString(byte[] uuid) {
-        return String.format("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-                uuid[0], uuid[1], uuid[2], uuid[3],
-                uuid[4], uuid[5], uuid[6], uuid[7],
-                uuid[8], uuid[9], uuid[10], uuid[11],
-                uuid[12], uuid[13], uuid[14], uuid[15]);
-    }
-
-    /**
-     * 转义 LIKE 通配符，防止查询注入（% → \%，_ → \_）。
-     */
     private static String escapeLike(String s) {
         return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }

@@ -80,4 +80,22 @@ public class SysAiUsageDaily extends SysBase {
      */
     @TableField("sys_ai_usage_daily_total_cost")
     private Double totalCost;
+
+    /**
+     * 缓存读取 Token 合计
+     */
+    @TableField("sys_ai_usage_daily_total_cached_tokens")
+    private Integer totalCachedTokens;
+
+    /**
+     * 总耗时（毫秒）合计，配合调用次数计算平均耗时
+     */
+    @TableField("sys_ai_usage_daily_total_latency")
+    private Long totalLatency;
+
+    /**
+     * 标准费用（官方价格计算，未折扣）
+     */
+    @TableField("sys_ai_usage_daily_standard_cost")
+    private Double standardCost;
 }

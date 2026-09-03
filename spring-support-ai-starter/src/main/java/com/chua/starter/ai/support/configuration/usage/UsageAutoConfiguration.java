@@ -38,11 +38,13 @@ public class UsageAutoConfiguration {
     /**
      * SysAiUsageService
      * @param usageMapper usageMapper
+     * @param dailyMapper dailyMapper
      * @param pricingService pricingService
      */
     public SysAiUsageService sysAiUsageService(SysAiUsageMapper usageMapper,
+                                               SysAiUsageDailyMapper dailyMapper,
                                                SysAiPricingService pricingService) {
-        return new SysAiUsageServiceImpl(usageMapper, pricingService);
+        return new SysAiUsageServiceImpl(usageMapper, dailyMapper, pricingService);
     }
 
     @Bean
@@ -66,10 +68,12 @@ public class UsageAutoConfiguration {
      * @param usageMapper usageMapper
      * @param dailyMapper dailyMapper
      * @param settingReader settingReader
+     * @param pricingService pricingService
      */
     public UsageAggregationTask usageAggregationTask(SysAiUsageMapper usageMapper,
                                                      SysAiUsageDailyMapper dailyMapper,
-                                                     GlobalSettingReader settingReader) {
-        return new UsageAggregationTask(settingReader, usageMapper, dailyMapper);
+                                                     GlobalSettingReader settingReader,
+                                                     SysAiPricingService pricingService) {
+        return new UsageAggregationTask(settingReader, usageMapper, dailyMapper, pricingService);
     }
 }

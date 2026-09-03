@@ -2,7 +2,11 @@ package com.chua.starter.ai.support.manage.store;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.chua.starter.ai.support.manage.mapper.SysAiDataSourceMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiRequirementMapper;
+import com.chua.starter.ai.support.manage.store.datasource.IRequirementDataSource;
+import com.chua.starter.ai.support.manage.store.datasource.LocalDbRequirementDataSource;
+import com.chua.starter.ai.support.manage.store.datasource.RequirementDataSourceRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -26,10 +30,16 @@ import java.util.concurrent.atomic.AtomicLong;
 public class SysAiRequirementStore {
 
     private final SysAiRequirementMapper requirementMapper;
+    private final SysAiDataSourceMapper dataSourceMapper;
+    private final RequirementDataSourceRegistry registry;
     private final AtomicLong displaySeq = new AtomicLong(1);
 
-    public SysAiRequirementStore(SysAiRequirementMapper requirementMapper) {
+    public SysAiRequirementStore(SysAiRequirementMapper requirementMapper,
+                                 SysAiDataSourceMapper dataSourceMapper,
+                                 RequirementDataSourceRegistry registry) {
         this.requirementMapper = requirementMapper;
+        this.dataSourceMapper = dataSourceMapper;
+        this.registry = registry;
         // 从数据库读取最大 display_no，防止序号重复；表不存在时降级为 1
         try {
             LambdaQueryWrapper<SysAiRequirement> wrapper = new LambdaQueryWrapper<>();
@@ -46,7 +56,11 @@ public class SysAiRequirementStore {
         log.info("[RequirementStore] 初始化完成，当前序号起始值={}", displaySeq.get());
     }
 
-    /** 生成新的 UUIDv7 风格 ID */
+    /**
+     * 生成新的 UUIDv7 风格 ID。
+     *
+     * @return 36 位 UUIDv7 字符串
+     */
     public String newId() {
         return SysAiConversationStore.generateUuidV7();
     }
@@ -117,8 +131,14 @@ public class SysAiRequirementStore {
 
     /**
      * 获取单个需求。
+     *
+     * @param requirementId 需求 ID（UUIDv7），不能为 null 或空
+     * @return 需求数据 Map；不存在时返回 null
      */
     public Map<String, Object> get(String requirementId) {
+        if (requirementId == null || requirementId.isEmpty()) {
+            throw new IllegalArgumentException("requirementId 不能为空");
+        }
         SysAiRequirement r = requirementMapper.selectById(requirementId);
         if (r == null) {
             return null;
@@ -128,6 +148,9 @@ public class SysAiRequirementStore {
 
     /**
      * 创建需求。
+     *
+     * @param body 请求体，title/tag 缺省时使用默认值
+     * @return 创建后的需求数据 Map
      */
     public Map<String, Object> create(Map<String, Object> body) {
         SysAiRequirement r = new SysAiRequirement();
@@ -191,17 +214,22 @@ public class SysAiRequirementStore {
      * @return 删除成功返回 true
      */
     public boolean remove(String requirementId) {
+        if (requirementId == null || requirementId.isEmpty()) {
+            throw new IllegalArgumentException("requirementId 不能为空");
+        }
         return requirementMapper.deleteById(requirementId) > 0;
     }
 
     /**
      * 批量删除需求。
      *
-     * @param requirementIds 需求 ID 列表
+     * @param requirementIds 需求 ID 列表，不能为 null；空列表返回 0
      * @return 删除条数
      */
     public int batchDelete(List<String> requirementIds) {
-        if (requirementIds == null || requirementIds.isEmpty()) return 0;
+        if (requirementIds == null || requirementIds.isEmpty()) {
+            return 0;
+        }
         LambdaQueryWrapper<SysAiRequirement> wrapper = new LambdaQueryWrapper<>();
         wrapper.in(SysAiRequirement::getRequirementId, requirementIds);
         return requirementMapper.delete(wrapper);
@@ -211,6 +239,8 @@ public class SysAiRequirementStore {
 
     /**
      * 标签统计：每个标签的需求计数（按状态分组）。
+     *
+     * @return 标签统计列表，每项含 tag/total/各状态计数
      */
     public List<Map<String, Object>> tags() {
         LambdaQueryWrapper<SysAiRequirement> wrapper = new LambdaQueryWrapper<>();
@@ -246,8 +276,14 @@ public class SysAiRequirementStore {
 
     /**
      * 看板数据：按状态分组的特定标签下的需求。
+     *
+     * @param tag 标签，不能为 null 或空
+     * @return 看板数据 Map（tag + 各状态下的需求列表）
      */
     public Map<String, Object> board(String tag) {
+        if (tag == null || tag.isEmpty()) {
+            throw new IllegalArgumentException("tag 不能为空");
+        }
         Map<String, Object> board = new LinkedHashMap<>();
         board.put("tag", tag);
         for (String key : new String[]{"pending", "in_progress", "done", "failed", "cancelled", "needs_review"}) {
@@ -269,6 +305,13 @@ public class SysAiRequirementStore {
 
     /**
      * 设置标签自动执行状态（AutoWork）。
+     *
+     * @param kind        执行类型（conversation/terminal）
+     * @param targetId    目标会话或终端 ID
+     * @param enabled     是否启用
+     * @param tag         关联标签
+     * @param fromAdmin   是否来自管理员入口（标签会话管理）
+     * @return AutoWork 状态 Map（run_state、已办数等）
      */
     public Map<String, Object> setAutoWork(String kind, String targetId, boolean enabled, String tag, boolean fromAdmin) {
         Map<String, Object> state = new LinkedHashMap<>();
@@ -284,6 +327,10 @@ public class SysAiRequirementStore {
 
     /**
      * 恢复标签（取消暂停）。
+     *
+     * @param tag           标签名，不能为空
+     * @param requeueFailed 是否将失败需求重新入队
+     * @return 标签汇总 Map（各状态计数）
      */
     public Map<String, Object> resumeTag(String tag, boolean requeueFailed) {
         Map<String, Object> summary = new LinkedHashMap<>();
@@ -303,43 +350,241 @@ public class SysAiRequirementStore {
     // ======================== 数据源管理 ========================
 
     /**
-     * 获取所有数据源配置列表。
-     * TODO: 对接 SysAiDataSourceMapper 实现持久化查询。
+     * 获取所有数据源配置列表（含简要信息，不含敏感配置字段）。
+     *
+     * @return 数据源列表，每项包含 id/name/type/enabled/lastSyncStatus 等概要字段
      */
     public List<Map<String, Object>> listDataSources() {
-        return new ArrayList<>();
+        List<SysAiDataSource> all = dataSourceMapper.selectList(
+                new LambdaQueryWrapper<SysAiDataSource>().orderByDesc(SysAiDataSource::getCreateTime));
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (SysAiDataSource ds : all) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", ds.getId());
+            m.put("name", ds.getName());
+            m.put("type", ds.getType());
+            m.put("enabled", ds.getEnabled() != null ? ds.getEnabled() : true);
+            m.put("last_sync_status", ds.getLastSyncStatus());
+            m.put("last_sync_at", ds.getLastSyncAt());
+            m.put("created_at", ds.getCreateTime());
+            result.add(m);
+        }
+        return result;
     }
 
     /**
      * 创建数据源配置。
-     * TODO: 对接 SysAiDataSourceMapper 实现持久化写入。
+     *
+     * @param body 请求体，须包含 name、type，可选 config（JSON）、enabled、syncCron
+     * @return 创建后的数据源 Map；若 type 不支持返回 null
      */
     public Map<String, Object> createDataSource(Map<String, Object> body) {
-        return new LinkedHashMap<>();
+        String name = getString(body, "name");
+        String type = getString(body, "type");
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("数据源名称不能为空");
+        }
+        if (type == null || type.isEmpty()) {
+            throw new IllegalArgumentException("数据源类型不能为空");
+        }
+        type = type.toUpperCase();
+        IRequirementDataSource provider = registry.getProvider(type);
+        if (provider == null) {
+            log.warn("[DataSource] 不支持的类型: {}", type);
+            return null;
+        }
+        Map<String, Object> config = body.containsKey("config") ? (Map<String, Object>) body.get("config") : new LinkedHashMap<>();
+        SysAiDataSource ds = new SysAiDataSource();
+        ds.setId(newId());
+        ds.setName(name);
+        ds.setType(type);
+        ds.setConfig(config);
+        ds.setEnabled(body.containsKey("enabled") ? Boolean.parseBoolean(body.get("enabled").toString()) : true);
+        ds.setSyncCron(getString(body, "sync_cron"));
+        ds.setCreateTime(System.currentTimeMillis());
+        ds.setUpdateTime(System.currentTimeMillis());
+        dataSourceMapper.insert(ds);
+        return toDataSourceMap(ds);
     }
 
     /**
-     * 更新数据源配置。
-     * TODO: 对接 SysAiDataSourceMapper 实现持久化更新。
+     * 更新数据源配置（部分更新）。
+     *
+     * @param id   数据源 ID
+     * @param body 更新字段（name/type/config/enabled/sync_cron）
+     * @return 更新后的数据源 Map；若不存在返回 null
      */
     public Map<String, Object> updateDataSource(String id, Map<String, Object> body) {
-        return new LinkedHashMap<>();
+        SysAiDataSource existing = dataSourceMapper.selectById(id);
+        if (existing == null) {
+            return null;
+        }
+        LambdaUpdateWrapper<SysAiDataSource> update = new LambdaUpdateWrapper<>();
+        update.eq(SysAiDataSource::getId, id);
+        if (body.containsKey("name"))         update.set(SysAiDataSource::getName,         getString(body, "name"));
+        if (body.containsKey("enabled"))      update.set(SysAiDataSource::getEnabled,       body.containsKey("enabled") ? Boolean.parseBoolean(body.get("enabled").toString()) : null);
+        if (body.containsKey("config"))       update.set(SysAiDataSource::getConfig,        body.get("config"));
+        if (body.containsKey("sync_cron"))    update.set(SysAiDataSource::getSyncCron,      getString(body, "sync_cron"));
+        update.set(SysAiDataSource::getUpdateTime, System.currentTimeMillis());
+        dataSourceMapper.update(null, update);
+        return toDataSourceMap(dataSourceMapper.selectById(id));
     }
 
     /**
      * 删除数据源配置。
-     * TODO: 对接 SysAiDataSourceMapper 实现持久化删除。
+     *
+     * @param id 数据源 ID
+     * @return 删除成功返回 true
      */
     public boolean removeDataSource(String id) {
-        return false;
+        return dataSourceMapper.deleteById(id) > 0;
     }
 
     /**
-     * 触发数据源同步。
-     * TODO: 委托给 RequirementDataSourceRegistry.syncAll()。
+     * 触发单个数据源同步。
+     *
+     * @param id 数据源 ID
+     * @return 同步结果 Map（含 synced/count/error）
      */
+    @SuppressWarnings("unchecked")
     public Map<String, Object> syncDataSource(String id) {
-        return new LinkedHashMap<>();
+        SysAiDataSource ds = dataSourceMapper.selectById(id);
+        if (ds == null) {
+            return Map.of("id", id, "error", "数据源不存在");
+        }
+        if (Boolean.FALSE.equals(ds.getEnabled())) {
+            return Map.of("id", id, "error", "数据源已禁用");
+        }
+        String typeUpper = ds.getType() != null ? ds.getType().toUpperCase() : null;
+        IRequirementDataSource provider = registry.getProvider(typeUpper);
+        if (provider == null) {
+            dataSourceMapper.update(null, new LambdaUpdateWrapper<SysAiDataSource>()
+                    .eq(SysAiDataSource::getId, id)
+                    .set(SysAiDataSource::getLastSyncStatus, "failed")
+                    .set(SysAiDataSource::getLastSyncError, "未注册的数据源类型: " + ds.getType())
+                    .set(SysAiDataSource::getLastSyncAt, System.currentTimeMillis()));
+            return Map.of("id", id, "error", "未注册的数据源类型: " + ds.getType());
+        }
+
+        // local 类型：通过 fetchRemoteRequirements 获取完整记录并写入本地库
+        if ("LOCAL".equals(typeUpper) && provider instanceof LocalDbRequirementDataSource localDs) {
+            return syncLocalDb(ds, localDs);
+        }
+
+        try {
+            int count = provider.sync(ds.getConfig() != null ? ds.getConfig() : new LinkedHashMap<>(),
+                    ds.getLastSyncAt() != null ? ds.getLastSyncAt() : 0L);
+            dataSourceMapper.update(null, new LambdaUpdateWrapper<SysAiDataSource>()
+                    .eq(SysAiDataSource::getId, id)
+                    .set(SysAiDataSource::getLastSyncStatus, "success")
+                    .set(SysAiDataSource::getLastSyncAt, System.currentTimeMillis()));
+            return Map.of("id", id, "synced", count, "status", "success");
+        } catch (Exception e) {
+            log.error("[DataSource] 同步失败: id={}", id, e);
+            dataSourceMapper.update(null, new LambdaUpdateWrapper<SysAiDataSource>()
+                    .eq(SysAiDataSource::getId, id)
+                    .set(SysAiDataSource::getLastSyncStatus, "failed")
+                    .set(SysAiDataSource::getLastSyncError, e.getMessage().substring(0, Math.min(512, e.getMessage().length())))
+                    .set(SysAiDataSource::getLastSyncAt, System.currentTimeMillis()));
+            return Map.of("id", id, "error", e.getMessage());
+        }
+    }
+
+    /**
+     * 同步本地/远程 MySQL 数据库的需求记录到本地库。
+     *
+     * @param ds      数据源实体
+     * @param provider 提供方实例
+     * @return 同步结果
+     */
+    private Map<String, Object> syncLocalDb(SysAiDataSource ds, LocalDbRequirementDataSource provider) {
+        List<Map<String, Object>> remoteRecords;
+        try {
+            remoteRecords = provider.fetchRemoteRequirements(ds.getConfig() != null ? ds.getConfig() : new LinkedHashMap<>());
+        } catch (Exception e) {
+            log.error("[LocalDbDS] 读取远程需求失败: id={}", ds.getId(), e);
+            dataSourceMapper.update(null, new LambdaUpdateWrapper<SysAiDataSource>()
+                    .eq(SysAiDataSource::getId, ds.getId())
+                    .set(SysAiDataSource::getLastSyncStatus, "failed")
+                    .set(SysAiDataSource::getLastSyncError, e.getMessage())
+                    .set(SysAiDataSource::getLastSyncAt, System.currentTimeMillis()));
+            return Map.of("id", ds.getId(), "error", e.getMessage());
+        }
+        int synced = 0;
+        for (Map<String, Object> row : remoteRecords) {
+            String remoteId = (String) row.get("requirement_id");
+            if (remoteId == null || remoteId.isEmpty()) continue;
+            try {
+                Map<String, Object> existing = get(remoteId);
+                if (existing == null) {
+                    // 新建
+                    create(row);
+                } else {
+                    // 更新（只更新本地未修改的字段，避免覆盖本地变更）
+                    Map<String, Object> patch = new LinkedHashMap<>();
+                    patch.put("title", row.get("title"));
+                    patch.put("content", row.get("content"));
+                    patch.put("tag", row.get("tag"));
+                    patch.put("status", row.get("status"));
+                    patch.put("order_key", row.get("order_key"));
+                    patch.put("completion_note", row.get("completion_note"));
+                    update(remoteId, patch);
+                }
+                synced++;
+            } catch (Exception e) {
+                log.warn("[LocalDbDS] 写入本地失败: id={}", remoteId, e);
+            }
+        }
+        dataSourceMapper.update(null, new LambdaUpdateWrapper<SysAiDataSource>()
+                .eq(SysAiDataSource::getId, ds.getId())
+                .set(SysAiDataSource::getLastSyncStatus, "success")
+                .set(SysAiDataSource::getLastSyncAt, System.currentTimeMillis()));
+        return Map.of("id", ds.getId(), "synced", synced, "total_remote", remoteRecords.size(), "status", "success");
+    }
+
+    /**
+     * 测试数据源连接是否可用。
+     *
+     * @param id 数据源 ID，不能为空
+     * @return true = 连接正常，false = 数据源不存在或连接失败
+     */
+    public boolean testDataSource(String id) {
+        if (id == null || id.isEmpty()) {
+            throw new IllegalArgumentException("id 不能为空");
+        }
+        SysAiDataSource ds = dataSourceMapper.selectById(id);
+        if (ds == null) {
+            return false;
+        }
+        IRequirementDataSource provider = registry.getProvider(ds.getType());
+        if (provider == null) {
+            return false;
+        }
+        return provider.testConnection(ds.getConfig() != null ? ds.getConfig() : new LinkedHashMap<>());
+    }
+
+    /**
+     * 获取注册表中所有可用的数据源类型列表。
+     *
+     * @return 已注册类型列表
+     */
+    public List<String> availableTypes() {
+        return registry.list();
+    }
+
+    private Map<String, Object> toDataSourceMap(SysAiDataSource ds) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", ds.getId());
+        m.put("name", ds.getName());
+        m.put("type", ds.getType());
+        m.put("enabled", ds.getEnabled() != null ? ds.getEnabled() : true);
+        m.put("sync_cron", ds.getSyncCron());
+        m.put("last_sync_at", ds.getLastSyncAt());
+        m.put("last_sync_status", ds.getLastSyncStatus());
+        m.put("last_sync_error", ds.getLastSyncError());
+        m.put("created_at", ds.getCreateTime());
+        m.put("updated_at", ds.getUpdateTime());
+        return m;
     }
 
     // ======================== 私有工具 ========================

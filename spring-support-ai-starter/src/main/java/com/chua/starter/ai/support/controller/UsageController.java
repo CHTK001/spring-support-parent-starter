@@ -1,9 +1,11 @@
 package com.chua.starter.ai.support.controller;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.common.support.datasearch.usage.spi.UsageParser;
 import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.ai.support.entity.SysAiUsage;
+import com.chua.starter.ai.support.schedule.UsageAggregationTask;
 import com.chua.starter.ai.support.service.SysAiUsageService;
 import com.chua.starter.common.support.annotations.Permission;
 import io.swagger.v3.oas.annotations.Operation;
@@ -77,7 +79,7 @@ public class UsageController {
      * @param startTime startTime
      * @param endTime endTime
      */
-    public ReturnResult<List<SysAiUsage>> list(
+    public ReturnResult<?> list(
             @RequestParam(required = false) String groupName,
             @RequestParam(required = false) String provider,
             @RequestParam(required = false) String model,
@@ -85,8 +87,13 @@ public class UsageController {
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
-        List<SysAiUsage> list = usageService.list(groupName, provider, model, startTime, endTime, page, size);
-        return ReturnResult.ok(list);
+        Page<?> p = usageService.list(groupName, provider, model, startTime, endTime, page, size);
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("records", p.getRecords());
+        result.put("total", p.getTotal());
+        result.put("page", p.getCurrent());
+        result.put("pageSize", p.getSize());
+        return ReturnResult.ok(result);
     }
 
     @Permission("admin")
@@ -161,5 +168,12 @@ public class UsageController {
             result.add(item);
         }
         return ReturnResult.ok(result);
+    }
+
+    @Permission("admin")
+    @Operation(summary = "用量同步日志", description = "返回最近一次定时同步产生的日志")
+    @GetMapping("/logs")
+    public ReturnResult<List<UsageAggregationTask.SyncLogEntry>> logs() {
+        return ReturnResult.ok(UsageAggregationTask.getSyncLogs());
     }
 }

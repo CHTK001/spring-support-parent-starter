@@ -712,13 +712,17 @@ public class ApiChatController {
         }
         request.setModel(modelName);
         request.setStream(true);
+        request.setPrompt(userInput);
 
         List<Map<String, Object>> msgList = new ArrayList<>();
         if (conversation.getExtra() != null && conversation.getExtra().get("system_prompt") != null) {
-            Map<String, Object> sys = new LinkedHashMap<>();
-            sys.put("role", "system");
-            sys.put("content", String.valueOf(conversation.getExtra().get("system_prompt")));
-            msgList.add(sys);
+            String systemPrompt = String.valueOf(conversation.getExtra().get("system_prompt"));
+            if (!systemPrompt.isBlank()) {
+                Map<String, Object> sys = new LinkedHashMap<>();
+                sys.put("role", "system");
+                sys.put("content", systemPrompt);
+                msgList.add(sys);
+            }
         }
         for (SysAiConversationMessage m : conversationStore.allMessages(conversation.getConversationId())) {
             if (!"text".equals(m.getType()) || m.getContent() == null) {
