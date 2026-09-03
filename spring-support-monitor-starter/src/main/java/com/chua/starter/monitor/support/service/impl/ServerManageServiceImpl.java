@@ -131,6 +131,12 @@ public class ServerManageServiceImpl implements ServerManageService {
             if (node == null) {
                 return ReturnResult.error("节点不存在: " + id);
             }
+            // 幂等: 已在运行则直接返回当前视图, 避免重复 bind 导致 BindException
+            RuntimeServer existing = nodeRegistry.get(id);
+            if (existing != null && existing.isRunning()) {
+                log.info("[ServerManage] 节点已在运行, 幂等跳过: id={} name={}", id, node.getName());
+                return ReturnResult.ok(toView(node));
+            }
             nodeRegistry.start(node);
             return ReturnResult.ok(toView(node));
         } catch (Exception e) {
