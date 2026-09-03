@@ -353,7 +353,11 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             // 首次执行聚合最近一天数据
             start = end.minusDays(1);
         }
-        lastRunTime = end;
+        // 每次聚合1小时窗口，逐步回填历史数据
+        LocalDateTime queryEnd = start.plusHours(1);
+        if (queryEnd.isAfter(end)) {
+            queryEnd = end;
+        }
 
         int batchSize = 10000;
         long totalAggregated = 0;
@@ -362,10 +366,10 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         do {
             LambdaQueryWrapper<SysAiUsage> wrapper = new LambdaQueryWrapper<>();
             wrapper.ge(SysAiUsage::getSysAiUsageCallTime, start)
-                    .lt(SysAiUsage::getSysAiUsageCallTime, end)
+                    .lt(SysAiUsage::getSysAiUsageCallTime, queryEnd)
                     .orderByAsc(SysAiUsage::getSysAiUsageId);
             page = usageMapper.selectPage(new Page<>(p, batchSize), wrapper);
-            List<SysAiUsage> list = usageMapper.selectPage(new Page<>(p, batchSize), wrapper).getRecords();
+            List<SysAiUsage> list = page.getRecords();
 
             if (list.isEmpty()) {
                 break;

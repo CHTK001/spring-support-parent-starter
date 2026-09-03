@@ -354,7 +354,24 @@ public class AiBotChatService {
                     chatClient.thinkingEffort(bot.getThinkingEffort());
                 }
             }
-            return chatClient.chatSync(userMsg);
+            // 4. 调用模型并记录用量（token/费用入库，供 usage 页统计）
+            ChatSyncResponse response = chatClient.chatSyncWithResponse(userMsg);
+            if (response != null && response.getUsage() != null) {
+                try {
+                    usageRecorderInterceptor.record(
+                            null,
+                            provider.getPlatform(),
+                            modelName,
+                            "bot",
+                            response.getUsage(),
+                            UUID.randomUUID().toString(),
+                            null
+                    );
+                } catch (Exception e) {
+                    log.warn("[BotChat] 用量记录失败 bot={} err={}", bot.getBotId(), e.getMessage());
+                }
+            }
+            return response != null && response.getText() != null ? response.getText() : "";
         } catch (Exception e) {
             log.error("[BotChat] AI 回复失败 bot={} model={}", bot.getBotId(), modelName, e);
             return "AI 回复失败：" + e.getMessage();
