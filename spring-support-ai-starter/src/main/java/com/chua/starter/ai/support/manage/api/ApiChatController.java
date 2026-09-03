@@ -424,8 +424,9 @@ public class ApiChatController {
 
     @GetMapping("/active-count")
     public ApiResult<Map<String, Object>> activeCount() {
-        List<SysAiConversation> all = conversationStore.list(Integer.MAX_VALUE);
-        long count = all.stream()
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<SysAiConversation> paging =
+                conversationStore.page(1, 500);
+        long count = paging.getRecords().stream()
                 .filter(c -> {
                     Map<String, Object> rt = c.getRuntime();
                     return rt != null && rt.get("active_turn_id") != null;
