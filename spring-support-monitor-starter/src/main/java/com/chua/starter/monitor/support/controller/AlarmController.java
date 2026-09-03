@@ -174,7 +174,7 @@ public class AlarmController {
      * @return 是否触发
      */
     @Operation(summary = "测试告警规则")
-    @GetMapping("/rule/{id}/test")
+    @GetMapping("/rule/{ruleId}/test")
     public ReturnResult<Boolean> testRule(@PathVariable Long ruleId,
                                           @RequestParam(required = false) Long monitorId,
                                           @RequestParam(required = false) String metricName,
