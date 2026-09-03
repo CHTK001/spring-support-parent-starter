@@ -1,6 +1,7 @@
 package com.chua.starter.datasource.configuration;
 
 import com.chua.common.support.lang.datasource.flyway.Flyway;
+import com.chua.sqlite.support.engine.SqliteEngine;
 import com.chua.starter.datasource.properties.SqliteDataSourceProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
