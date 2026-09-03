@@ -422,7 +422,7 @@ public class ServerNodeRegistry {
         }
     }
 
-    private void applyBoolean(java.util.function.BooleanConsumer setter, Map<String, Object> config, String key) {
+    private void applyBoolean(java.util.function.Consumer<Boolean> setter, Map<String, Object> config, String key) {
         Object v = config.get(key);
         if (v != null && !String.valueOf(v).isBlank()) {
             String s = String.valueOf(v).trim().toLowerCase();
