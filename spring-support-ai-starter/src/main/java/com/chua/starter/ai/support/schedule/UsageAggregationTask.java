@@ -134,11 +134,6 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     private final SysAiPricingService pricingService;
 
     /**
-     * 上次聚合开始时间，用于增量聚合
-     */
-    private volatile LocalDateTime lastRunTime = null;
-
-    /**
      * 注册动态调度任务，每次执行后按配置间隔计算下次执行时间。
      *
      * @param taskRegistrar 调度任务注册器
@@ -159,8 +154,8 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             return;
         }
         recordLog("INFO", "开始定时同步与聚合 (" + java.time.LocalTime.now().withNano(0) + ")");
-        syncExternalUsage();
-        aggregateToday();
+        self.syncExternalUsage();
+        self.aggregateToday();
     }
 
     /**
