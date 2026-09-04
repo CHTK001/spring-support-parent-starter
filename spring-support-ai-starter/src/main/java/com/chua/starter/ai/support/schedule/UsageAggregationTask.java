@@ -156,6 +156,9 @@ public class UsageAggregationTask implements SchedulingConfigurer {
 
     /**
      * 调度入口：先校验开关，关闭时跳过。
+     * <p>定时任务只做当天轻量聚合（DB 端 GROUP BY，秒级、低压力）；
+     * 重的外部工具用量全量拉取 {@link #syncExternalUsage()} 仅由手动接口触发，
+     * 避免定时任务长连接把数据库连接池耗尽。</p>
      */
     public void run() {
         if (!isUsageEnabled()) {
@@ -163,8 +166,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             recordLog(LOG_LEVEL_WARN, "用量分析未启用，跳过本次执行");
             return;
         }
-        recordLog(LOG_LEVEL_INFO, "开始定时同步与聚合 (" + java.time.LocalTime.now().withNano(0) + ")");
-        self.syncExternalUsage();
+        recordLog(LOG_LEVEL_INFO, "开始定时聚合 (" + java.time.LocalTime.now().withNano(0) + ")");
         self.aggregateToday();
     }
 
