@@ -72,6 +72,10 @@ plugin:
       - /provider/**
       - /v2/manufacturer/factories
       - /v2/ai/bot-binding/**
+      - /v2/ocr/**
+      - /v2/face/**
+      - /v2/usage/list
+      - /v2/ai/models/**
 
 logging:
   level:
