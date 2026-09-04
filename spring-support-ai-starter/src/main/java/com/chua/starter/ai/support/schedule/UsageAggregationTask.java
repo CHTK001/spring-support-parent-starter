@@ -48,8 +48,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
  * 每次执行：
  * <ol>
  *   <li>通过 datasearch 的 {@link UsageParser} SPI 拉取所有外部工具用量，写入本地用量表</li>
- *   <li>聚合上次执行时间点至当前时间内的用量明细数据到日汇总表</li>
+ *   <li>聚合当天用量明细数据到日汇总表（默认只聚合当天，压力小）</li>
  * </ol>
+ * <p>历史数据回填请调用 {@link #aggregateAll()}（手动全量同步），由接口异步触发。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -108,6 +109,13 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     private ApplicationContext applicationContext;
 
     /**
+     * 自引用：方法内部通过代理调用，确保 {@link Transactional} 与 AOP 生效。
+     */
+    @org.springframework.beans.factory.annotation.Autowired
+    @org.springframework.context.annotation.Lazy
+    private UsageAggregationTask self;
+
+    /**
      * 日汇总 Mapper
      */
     private final SysAiUsageDailyMapper dailyMapper;
@@ -144,7 +152,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         }
         recordLog("INFO", "开始定时同步与聚合 (" + java.time.LocalTime.now().withNano(0) + ")");
         syncExternalUsage();
-        aggregate();
+        aggregateToday();
     }
 
     /**
