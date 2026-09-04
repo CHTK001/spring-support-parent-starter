@@ -376,7 +376,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         LocalDate today = LocalDate.now();
         LocalDateTime start = today.atStartOfDay();
         LocalDateTime end = LocalDateTime.now();
-        long total = aggregateRange(start, end);
+        long total = self.aggregateRange(start, end);
         recordLog("INFO", String.format("当日聚合完成 [%s]，共 %d 条记录", today, total));
         log.info("[UsageAggregation] 当日聚合完成: date={}, records={}", today, total);
     }
@@ -398,7 +398,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         LocalDate endDay = now.toLocalDate();
         long total = 0;
         for (LocalDate day = startDay; !day.isAfter(endDay); day = day.plusDays(1)) {
-            total += aggregateRange(day.atStartOfDay(), day.plusDays(1).atStartOfDay());
+            total += self.aggregateRange(day.atStartOfDay(), day.plusDays(1).atStartOfDay());
         }
         recordLog("INFO", String.format("全量同步完成 [%s ~ %s]，共 %d 条记录", startDay, endDay, total));
         log.info("[UsageAggregation] 全量同步完成: {} ~ {}, records={}", startDay, endDay, total);
