@@ -293,6 +293,15 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
+        
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <!-- 作为内部 starter 库被其它模块依赖：禁用 fat-jar repackage，保留原始 jar 结构 -->
+                    
         </plugins>
     </build>
-</project>
+
+
+
