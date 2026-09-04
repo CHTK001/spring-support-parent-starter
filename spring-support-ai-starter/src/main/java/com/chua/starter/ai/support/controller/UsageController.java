@@ -172,7 +172,7 @@ public class UsageController {
     }
 
     @Permission("admin")
-    @Operation(summary = "手动触发同步聚合", description = "立即执行外部数据同步与日汇总表聚合（异步执行）")
+    @Operation(summary = "手动触发同步聚合", description = "立即执行外部数据同步与当天日汇总表聚合（异步执行）")
     @PostMapping("/trigger")
     public ReturnResult<String> trigger() {
         UsageAggregationTask task = applicationContext.getBean(UsageAggregationTask.class);
@@ -187,7 +187,7 @@ public class UsageController {
     }
 
     @Permission("admin")
-    @Operation(summary = "仅执行聚合", description = "跳过外部同步，仅对已有明细数据执行日汇总（异步执行）")
+    @Operation(summary = "仅执行当天聚合", description = "跳过外部同步，仅对当天已有明细数据执行日汇总（异步执行）")
     @PostMapping("/aggregate")
     public ReturnResult<String> aggregate() {
         UsageAggregationTask task = applicationContext.getBean(UsageAggregationTask.class);
@@ -198,7 +198,22 @@ public class UsageController {
                 log.error("[UsageAggregate] 聚合失败: {}", e.getMessage(), e);
             }
         }, "usage-aggregate").start();
-        return ReturnResult.ok("已触发聚合（后台执行）");
+        return ReturnResult.ok("已触发当天聚合（后台执行）");
+    }
+
+    @Permission("admin")
+    @Operation(summary = "手动全量同步", description = "对全部历史用量明细执行全量聚合回填日汇总表（异步执行）")
+    @PostMapping("/aggregate-all")
+    public ReturnResult<String> aggregateAll() {
+        UsageAggregationTask task = applicationContext.getBean(UsageAggregationTask.class);
+        new Thread(() -> {
+            try {
+                task.aggregateAll();
+            } catch (Exception e) {
+                log.error("[UsageAggregateAll] 全量聚合失败: {}", e.getMessage(), e);
+            }
+        }, "usage-aggregate-all").start();
+        return ReturnResult.ok("已触发全量同步（后台执行）");
     }
 
     @Permission("admin")
