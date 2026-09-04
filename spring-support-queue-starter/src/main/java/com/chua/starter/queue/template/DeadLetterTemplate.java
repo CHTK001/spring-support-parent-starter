@@ -35,8 +35,6 @@ import java.util.function.BiConsumer;
  */
 @Slf4j
 public class DeadLetterTemplate implements MessageTemplate {
-    /** 日志 */
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DeadLetterTemplate.class);
 
     /**
      * 死信队列前缀

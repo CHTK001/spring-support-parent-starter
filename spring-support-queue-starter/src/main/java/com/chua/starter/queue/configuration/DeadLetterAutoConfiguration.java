@@ -26,8 +26,6 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties(DeadLetterProperties.class)
 @ConditionalOnProperty(prefix = DeadLetterProperties.PREFIX, name = "enable", havingValue = "true")
 public class DeadLetterAutoConfiguration {
-    /** 日志 */
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DeadLetterAutoConfiguration.class);
 
     @Autowired
     /** Deadletter属性 */
