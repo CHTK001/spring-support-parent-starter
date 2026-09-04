@@ -109,6 +109,13 @@ public class SysAiBotBinding extends SysBase {
     private String systemPrompt;
 
     /**
+     * 是否记录 AI 用量（token/费用），bot 专属开关，默认开启。
+     * 关闭后该 bot 的 AI 调用不计入 usage 统计。
+     */
+    @TableField("sys_ai_bot_binding_record_usage")
+    private Boolean recordUsage;
+
+    /**
      * 最后活跃时间
      */
     @TableField("sys_ai_bot_binding_last_active_time")
