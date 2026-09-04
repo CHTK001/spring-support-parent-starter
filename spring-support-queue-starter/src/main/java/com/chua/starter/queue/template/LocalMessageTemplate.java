@@ -38,8 +38,6 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
  */
 @Slf4j
 public class LocalMessageTemplate implements MessageTemplate {
-    /** 日志 */
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LocalMessageTemplate.class);
 
     /** 类型 */
     private static final String TYPE = "local";

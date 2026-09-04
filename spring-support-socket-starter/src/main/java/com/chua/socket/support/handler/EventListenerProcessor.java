@@ -5,8 +5,6 @@ import com.chua.socket.support.SocketListener;
 import com.chua.socket.support.annotations.OnEvent;
 import com.chua.socket.support.session.SocketSession;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
 import java.util.List;
@@ -24,9 +22,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 @Slf4j
 public class EventListenerProcessor {
-
-    /** 日志 */
-    private static final Logger log = LoggerFactory.getLogger(EventListenerProcessor.class);
 
     /**
      * 事件处理器映射
