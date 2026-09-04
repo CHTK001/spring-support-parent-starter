@@ -223,8 +223,9 @@ public class UsageAggregationTask implements SchedulingConfigurer {
 
     /**
      * 通过 datasearch UsageParser SPI 解析所有外部工具本地用量，写入本地用量表。
+     * <p>注意：不使用 {@link Transactional}——外部解析可能耗时（每个 Parser 最多阻塞 120s），
+     * 若包在事务里会长时间占用数据库连接导致连接池耗尽。逐条插入由 MyBatis 自动提交。</p>
      */
-    @Transactional
     public void syncExternalUsage() {
         Map<String, UsageParser> parsers = collectParsers();
         if (parsers == null || parsers.isEmpty()) {

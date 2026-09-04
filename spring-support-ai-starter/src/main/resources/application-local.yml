@@ -44,7 +44,7 @@ spring:
       mode: never
   ai:
     usage:
-      enabled: false
+      enabled: true
     generate:
       enabled: false
     rag:
