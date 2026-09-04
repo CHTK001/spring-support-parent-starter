@@ -104,14 +104,12 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
-        
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <!-- 作为内部 starter 库被其它模块依赖：禁用 fat-jar repackage，保留原始 jar 结构 -->
-                    
+                    <!-- 作为内部 starter 库被其它模块依赖：禁用 fat-jar repackage，保留原始 jar 结构，避免下游模块无法解析 BOOT-INF/classes 之外的类 -->
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+
         </plugins>
     </build>
 
