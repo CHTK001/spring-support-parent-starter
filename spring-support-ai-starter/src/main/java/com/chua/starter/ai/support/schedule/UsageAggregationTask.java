@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
@@ -72,6 +73,16 @@ public class UsageAggregationTask implements SchedulingConfigurer {
      * 同步日志缓冲上限
      */
     private static final int LOG_BUFFER_LIMIT = 200;
+
+    /**
+     * 聚合分页批次大小
+     */
+    private static final int BATCH_SIZE = 10000;
+
+    /**
+     * 分组键分隔符
+     */
+    private static final String GROUP_KEY_SEPARATOR = "|";
 
     /**
      * 最近一次同步运行日志（线程安全，供 /v2/usage/logs 读取）
@@ -410,8 +421,8 @@ public class UsageAggregationTask implements SchedulingConfigurer {
      * 聚合指定时间范围内的 usage 明细到日汇总表（按天、group、provider、model 分组）。
      * <p>采用「先删后插」策略：同一天重新聚合时先删除旧汇总，避免重复累计。</p>
      *
-     * @param start 开始时间（含）
-     * @param end   结束时间（不含）
+     * @param start 开始时间（含），为 null 时默认取当天 00:00:00
+     * @param end   结束时间（不含），为 null 时默认取当前时间
      * @return 聚合的明细条数
      */
     @Transactional
