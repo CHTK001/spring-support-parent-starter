@@ -35,6 +35,11 @@
     <description>Spring Support框架AI深度学习功能模块，提供人脸检测、特征提取、OCR、版面分析等AI能力</description>
 
     <!-- 项目属性配置 -->
+    <properties>
+        <!-- 作为内部 starter 被依赖模块使用时默认跳过 fat-jar repackage，保留原始 jar 结构；
+             需要可执行包时构建传 -Dspring-boot.repackage.skip=false -->
+        <spring-boot.repackage.skip>true</spring-boot.repackage.skip>
+    </properties>
 
 <!-- 依赖配置 -->
     <dependencies>
@@ -283,8 +288,8 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <!-- 作为内部 starter 库被其它模块依赖：禁用 fat-jar repackage，保留原始 jar 结构 -->
-                    <skip>true</skip>
+                    <mainClass>com.chua.starter.ai.support.AiStarterApplication</mainClass>
+                    <skip>${spring-boot.repackage.skip}</skip>
                 </configuration>
             </plugin>
         </plugins>

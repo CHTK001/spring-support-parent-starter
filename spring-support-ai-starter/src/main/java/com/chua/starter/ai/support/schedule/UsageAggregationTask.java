@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
@@ -431,7 +430,6 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             queryEnd = LocalDateTime.now();
         }
 
-        int batchSize = 10000;
         long totalAggregated = 0;
         Map<LocalDate, Map<String, List<SysAiUsage>>> byDate = new java.util.TreeMap<>();
 
@@ -442,7 +440,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             wrapper.ge(SysAiUsage::getSysAiUsageCallTime, queryStart)
                     .lt(SysAiUsage::getSysAiUsageCallTime, queryEnd)
                     .orderByAsc(SysAiUsage::getSysAiUsageId);
-            page = usageMapper.selectPage(new Page<>(p, batchSize), wrapper);
+            page = usageMapper.selectPage(new Page<>(p, BATCH_SIZE), wrapper);
             List<SysAiUsage> list = page.getRecords();
 
             if (list.isEmpty()) {
@@ -451,7 +449,9 @@ public class UsageAggregationTask implements SchedulingConfigurer {
 
             for (SysAiUsage u : list) {
                 LocalDate d = u.getSysAiUsageCallTime().toLocalDate();
-                String key = u.getSysAiUsageGroupName() + "|" + u.getSysAiUsageProvider() + "|" + u.getSysAiUsageModel();
+                String key = u.getSysAiUsageGroupName() + GROUP_KEY_SEPARATOR
+                        + u.getSysAiUsageProvider() + GROUP_KEY_SEPARATOR
+                        + u.getSysAiUsageModel();
                 byDate.computeIfAbsent(d, k -> new LinkedHashMap<>())
                         .computeIfAbsent(key, k -> new ArrayList<>())
                         .add(u);
@@ -474,7 +474,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         for (Map.Entry<LocalDate, Map<String, List<SysAiUsage>>> dateEntry : byDate.entrySet()) {
             LocalDate statDate = dateEntry.getKey();
             for (Map.Entry<String, List<SysAiUsage>> entry : dateEntry.getValue().entrySet()) {
-                String[] keys = entry.getKey().split("\\|");
+                String[] keys = entry.getKey().split("\\" + GROUP_KEY_SEPARATOR);
                 String groupName = keys[0];
                 String provider = keys[1];
                 String model = keys[2];
