@@ -291,6 +291,13 @@
                     <mainClass>com.chua.starter.ai.support.AiStarterApplication</mainClass>
                     <skip>${spring-boot.repackage.skip}</skip>
                 </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
 </build>
