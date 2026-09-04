@@ -84,6 +84,21 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     private static final String GROUP_KEY_SEPARATOR = "|";
 
     /**
+     * 同步日志级别：INFO
+     */
+    private static final String LOG_LEVEL_INFO = "INFO";
+
+    /**
+     * 同步日志级别：WARN
+     */
+    private static final String LOG_LEVEL_WARN = "WARN";
+
+    /**
+     * 同步日志级别：ERROR
+     */
+    private static final String LOG_LEVEL_ERROR = "ERROR";
+
+    /**
      * 最近一次同步运行日志（线程安全，供 /v2/usage/logs 读取）
      */
     private static final java.util.concurrent.ConcurrentLinkedDeque<SyncLogEntry> SYNC_LOGS =
@@ -149,10 +164,10 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     public void run() {
         if (!isUsageEnabled()) {
             log.debug("[UsageAggregation] 用量分析未启用，跳过本次执行");
-            recordLog("WARN", "用量分析未启用，跳过本次执行");
+            recordLog(LOG_LEVEL_WARN, "用量分析未启用，跳过本次执行");
             return;
         }
-        recordLog("INFO", "开始定时同步与聚合 (" + java.time.LocalTime.now().withNano(0) + ")");
+        recordLog(LOG_LEVEL_INFO, "开始定时同步与聚合 (" + java.time.LocalTime.now().withNano(0) + ")");
         self.syncExternalUsage();
         self.aggregateToday();
     }
@@ -218,7 +233,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         Map<String, UsageParser> parsers = collectParsers();
         if (parsers == null || parsers.isEmpty()) {
             log.debug("[UsageAggregation] 未发现 UsageParser 实现");
-            recordLog("WARN", "未发现可用用量数据源，跳过外部同步");
+            recordLog(LOG_LEVEL_WARN, "未发现可用用量数据源，跳过外部同步");
             return;
         }
         int total = 0;
@@ -239,17 +254,17 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                         total++;
                     }
                 }
-                recordLog("INFO", String.format("[%s] 同步 %d 条用量", entry.getKey(), batch.size()));
+                recordLog(LOG_LEVEL_INFO, String.format("[%s] 同步 %d 条用量", entry.getKey(), batch.size()));
             } catch (Exception e) {
                 log.warn("[UsageAggregation] UsageParser[{}] 同步失败: {}", entry.getKey(), e.getMessage());
-                recordLog("ERROR", String.format("[%s] 同步失败: %s", entry.getKey(), e.getMessage()));
+                recordLog(LOG_LEVEL_ERROR, String.format("[%s] 同步失败: %s", entry.getKey(), e.getMessage()));
             }
         }
         if (total > 0) {
             log.info("[UsageAggregation] 已同步 {} 条外部用量（共 {} 个 Parser）", total, parsers.size());
-            recordLog("INFO", String.format("本次共同步 %d 条外部用量（%d 个数据源）", total, parsers.size()));
+            recordLog(LOG_LEVEL_INFO, String.format("本次共同步 %d 条外部用量（%d 个数据源）", total, parsers.size()));
         } else {
-            recordLog("INFO", "本次外部同步无新增数据（本地工具无可用记录）");
+            recordLog(LOG_LEVEL_INFO, "本次外部同步无新增数据（本地工具无可用记录）");
         }
     }
 
@@ -357,9 +372,8 @@ public class UsageAggregationTask implements SchedulingConfigurer {
      * <p>定时任务与「仅聚合」接口共用：只聚合当天 usage 明细到日汇总表，
      * 触发一次汇总一次，扫描量小、压力小。</p>
      */
-    @Transactional
     public void aggregate() {
-        aggregateToday();
+        self.aggregateToday();
     }
 
     /**
@@ -371,7 +385,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         LocalDateTime start = today.atStartOfDay();
         LocalDateTime end = LocalDateTime.now();
         long total = self.aggregateRange(start, end);
-        recordLog("INFO", String.format("当日聚合完成 [%s]，共 %d 条记录", today, total));
+        recordLog(LOG_LEVEL_INFO, String.format("当日聚合完成 [%s]，共 %d 条记录", today, total));
         log.info("[UsageAggregation] 当日聚合完成: date={}, records={}", today, total);
     }
 
@@ -385,7 +399,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime earliest = findEarliestUsageTime();
         if (earliest == null) {
-            recordLog("INFO", "全量同步：无任何用量明细数据");
+            recordLog(LOG_LEVEL_INFO, "全量同步：无任何用量明细数据");
             return;
         }
         LocalDate startDay = earliest.toLocalDate();
@@ -394,7 +408,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         for (LocalDate day = startDay; !day.isAfter(endDay); day = day.plusDays(1)) {
             total += self.aggregateRange(day.atStartOfDay(), day.plusDays(1).atStartOfDay());
         }
-        recordLog("INFO", String.format("全量同步完成 [%s ~ %s]，共 %d 条记录", startDay, endDay, total));
+        recordLog(LOG_LEVEL_INFO, String.format("全量同步完成 [%s ~ %s]，共 %d 条记录", startDay, endDay, total));
         log.info("[UsageAggregation] 全量同步完成: {} ~ {}, records={}", startDay, endDay, total);
     }
 
