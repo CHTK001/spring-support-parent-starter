@@ -354,9 +354,11 @@ public class AiBotChatService {
                     chatClient.thinkingEffort(bot.getThinkingEffort());
                 }
             }
-            // 4. 调用模型并记录用量（token/费用入库，供 usage 页统计）
+            // 4. 调用模型并记录用量（token/费用入库，供 usage 页统计）。
+            //    受「设置 → 启用用量分析」全局开关控制：关闭时跳过记录。
             ChatSyncResponse response = chatClient.chatSyncWithResponse(userMsg);
-            if (response != null && response.getUsage() != null) {
+            boolean usageEnabled = globalSettingReader.getBool("global", "enable_usage_analysis", true);
+            if (usageEnabled && response != null && response.getUsage() != null) {
                 try {
                     usageRecorderInterceptor.record(
                             null,
