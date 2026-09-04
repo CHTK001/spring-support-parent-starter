@@ -30,10 +30,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 /**
@@ -351,29 +348,92 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     }
 
     /**
-     * 聚合执行入口。
+     * 聚合执行入口（默认当天）。
+     * <p>定时任务与「仅聚合」接口共用：只聚合当天 usage 明细到日汇总表，
+     * 触发一次汇总一次，扫描量小、压力小。</p>
      */
     @Transactional
     public void aggregate() {
+        aggregateToday();
+    }
+
+    /**
+     * 聚合当天 usage 明细到日汇总表（当天 00:00:00 ~ 当前时间）。
+     */
+    @Transactional
+    public void aggregateToday() {
+        LocalDate today = LocalDate.now();
+        LocalDateTime start = today.atStartOfDay();
         LocalDateTime end = LocalDateTime.now();
-        LocalDateTime start = lastRunTime;
-        if (start == null) {
-            // 首次执行聚合最近一天数据
-            start = end.minusDays(1);
+        long total = aggregateRange(start, end);
+        recordLog("INFO", String.format("当日聚合完成 [%s]，共 %d 条记录", today, total));
+        log.info("[UsageAggregation] 当日聚合完成: date={}, records={}", today, total);
+    }
+
+    /**
+     * 手动全量同步：聚合全部历史 usage 明细到日汇总表。
+     * <p>从最早一条用量记录所在日期开始，按天窗口逐段聚合，避免一次性扫描全表
+     * 造成内存/连接压力；接口调用方负责异步执行。</p>
+     */
+    @Transactional
+    public void aggregateAll() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime earliest = findEarliestUsageTime();
+        if (earliest == null) {
+            recordLog("INFO", "全量同步：无任何用量明细数据");
+            return;
         }
-        // 每次聚合1小时窗口，逐步回填历史数据
-        LocalDateTime queryEnd = start.plusHours(1);
-        if (queryEnd.isAfter(end)) {
-            queryEnd = end;
+        LocalDate startDay = earliest.toLocalDate();
+        LocalDate endDay = now.toLocalDate();
+        long total = 0;
+        for (LocalDate day = startDay; !day.isAfter(endDay); day = day.plusDays(1)) {
+            total += aggregateRange(day.atStartOfDay(), day.plusDays(1).atStartOfDay());
+        }
+        recordLog("INFO", String.format("全量同步完成 [%s ~ %s]，共 %d 条记录", startDay, endDay, total));
+        log.info("[UsageAggregation] 全量同步完成: {} ~ {}, records={}", startDay, endDay, total);
+    }
+
+    /**
+     * 查询最早的用量明细时间。
+     *
+     * @return 最早调用时间，无数据返回 null
+     */
+    private LocalDateTime findEarliestUsageTime() {
+        LambdaQueryWrapper<SysAiUsage> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByAsc(SysAiUsage::getSysAiUsageCallTime)
+                .last("LIMIT 1");
+        List<SysAiUsage> list = usageMapper.selectList(wrapper);
+        return list.isEmpty() ? null : list.get(0).getSysAiUsageCallTime();
+    }
+
+    /**
+     * 聚合指定时间范围内的 usage 明细到日汇总表（按天、group、provider、model 分组）。
+     * <p>采用「先删后插」策略：同一天重新聚合时先删除旧汇总，避免重复累计。</p>
+     *
+     * @param start 开始时间（含）
+     * @param end   结束时间（不含）
+     * @return 聚合的明细条数
+     */
+    @Transactional
+    public long aggregateRange(LocalDateTime start, LocalDateTime end) {
+        LocalDateTime queryStart = start;
+        LocalDateTime queryEnd = end;
+        if (queryStart == null) {
+            queryStart = LocalDate.now().atStartOfDay();
+        }
+        if (queryEnd == null) {
+            queryEnd = LocalDateTime.now();
         }
 
         int batchSize = 10000;
         long totalAggregated = 0;
+        Map<LocalDate, Map<String, List<SysAiUsage>>> byDate = new java.util.TreeMap<>();
+
         Page<SysAiUsage> page;
         int p = 1;
         do {
             LambdaQueryWrapper<SysAiUsage> wrapper = new LambdaQueryWrapper<>();
-            wrapper.ge(SysAiUsage::getSysAiUsageCallTime, start)
+            wrapper.ge(SysAiUsage::getSysAiUsageCallTime, queryStart)
                     .lt(SysAiUsage::getSysAiUsageCallTime, queryEnd)
                     .orderByAsc(SysAiUsage::getSysAiUsageId);
             page = usageMapper.selectPage(new Page<>(p, batchSize), wrapper);
@@ -383,17 +443,35 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                 break;
             }
 
-            // 按日期、group, provider, model 分组聚合
-            Map<String, List<SysAiUsage>> grouped = list.stream()
-                    .collect(Collectors.groupingBy(u -> u.getSysAiUsageCallTime().toLocalDate() + "|" + u.getSysAiUsageGroupName()
-                            + "|" + u.getSysAiUsageProvider() + "|" + u.getSysAiUsageModel()));
+            for (SysAiUsage u : list) {
+                LocalDate d = u.getSysAiUsageCallTime().toLocalDate();
+                String key = u.getSysAiUsageGroupName() + "|" + u.getSysAiUsageProvider() + "|" + u.getSysAiUsageModel();
+                byDate.computeIfAbsent(d, k -> new LinkedHashMap<>())
+                        .computeIfAbsent(key, k -> new ArrayList<>())
+                        .add(u);
+            }
+            totalAggregated += list.size();
+            p++;
+        } while (page != null && page.hasNext());
 
-            for (Map.Entry<String, List<SysAiUsage>> entry : grouped.entrySet()) {
+        if (totalAggregated == 0) {
+            log.info("[UsageAggregation] {} ~ {} 无数据，跳过聚合", queryStart, queryEnd);
+            return 0;
+        }
+
+        // 先删后插：删除本窗口涉及的日期在日汇总表中的旧数据
+        for (LocalDate d : byDate.keySet()) {
+            dailyMapper.delete(new LambdaQueryWrapper<SysAiUsageDaily>()
+                    .eq(SysAiUsageDaily::getStatDate, d));
+        }
+
+        for (Map.Entry<LocalDate, Map<String, List<SysAiUsage>>> dateEntry : byDate.entrySet()) {
+            LocalDate statDate = dateEntry.getKey();
+            for (Map.Entry<String, List<SysAiUsage>> entry : dateEntry.getValue().entrySet()) {
                 String[] keys = entry.getKey().split("\\|");
-                LocalDate statDate = LocalDate.parse(keys[0]);
-                String groupName = keys[1];
-                String provider = keys[2];
-                String model = keys[3];
+                String groupName = keys[0];
+                String provider = keys[1];
+                String model = keys[2];
                 List<SysAiUsage> items = entry.getValue();
 
                 BigDecimal totalCachedTokens = BigDecimal.ZERO;
@@ -441,18 +519,12 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                 daily.setStandardCost(standardCost.doubleValue());
 
                 dailyMapper.insert(daily);
-                totalAggregated += items.size();
                 log.debug("[UsageAggregation] 汇总: date={}, group={}, provider={}, model={}, calls={}",
                         statDate, groupName, provider, model, items.size());
             }
-            p++;
-        } while (page != null && page.hasNext());
-
-        // 仅在全部批次处理完成后才推进 lastRunTime，避免重复聚合
-        if (totalAggregated > 0) {
-            lastRunTime = queryEnd;
         }
 
-        log.info("[UsageAggregation] {} ~ {} 聚合完成，共 {} 条记录", start, queryEnd, totalAggregated);
+        log.info("[UsageAggregation] {} ~ {} 聚合完成，共 {} 条记录", queryStart, queryEnd, totalAggregated);
+        return totalAggregated;
     }
 }
