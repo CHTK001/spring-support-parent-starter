@@ -24,7 +24,7 @@ public class SysAiSessionCompression {
     /**
      * 压缩上下文主键 ID
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(value = "sys_ai_session_compression_id", type = IdType.AUTO)
     /** SYSAI会话compressionID */
     private Integer id;
 

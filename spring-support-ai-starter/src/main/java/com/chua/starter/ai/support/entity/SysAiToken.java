@@ -25,7 +25,7 @@ public class SysAiToken {
     /**
      * 令牌主键
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(value = "sys_ai_token_id", type = IdType.AUTO)
     /** SYSAI令牌ID */
     private Integer id;
 

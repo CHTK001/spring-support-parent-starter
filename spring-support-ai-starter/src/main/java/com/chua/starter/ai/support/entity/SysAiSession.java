@@ -24,7 +24,7 @@ public class SysAiSession {
     /**
      * 会话主键 ID
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(value = "sys_ai_session_id", type = IdType.AUTO)
     /** SYSAI会话ID */
     private Long id;
 

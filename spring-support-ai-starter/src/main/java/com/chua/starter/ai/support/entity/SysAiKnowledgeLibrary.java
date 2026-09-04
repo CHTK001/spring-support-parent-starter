@@ -22,7 +22,7 @@ public class SysAiKnowledgeLibrary {
     /**
      * 知识库主键 ID
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(value = "sys_ai_knowledge_library_id", type = IdType.AUTO)
     /** SYSAIknowledgelibraryID */
     private Integer id;
 
