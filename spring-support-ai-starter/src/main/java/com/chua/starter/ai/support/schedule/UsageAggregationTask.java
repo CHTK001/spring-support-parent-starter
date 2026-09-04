@@ -378,9 +378,9 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     /**
      * 手动全量同步：聚合全部历史 usage 明细到日汇总表。
      * <p>从最早一条用量记录所在日期开始，按天窗口逐段聚合，避免一次性扫描全表
-     * 造成内存/连接压力；接口调用方负责异步执行。</p>
+     * 造成内存/连接压力；每天一次独立事务（经由 {@link #self} 代理调用
+     * {@link #aggregateRange}），单天失败不影响其余日期；接口调用方负责异步执行。</p>
      */
-    @Transactional
     public void aggregateAll() {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime earliest = findEarliestUsageTime();
