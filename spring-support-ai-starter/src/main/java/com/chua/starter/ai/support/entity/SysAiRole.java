@@ -26,7 +26,7 @@ public class SysAiRole {
     /**
      * 角色主键 ID
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(value = "sys_ai_role_id", type = IdType.AUTO)
     /** SYSAIroleID */
     private Integer id;
 

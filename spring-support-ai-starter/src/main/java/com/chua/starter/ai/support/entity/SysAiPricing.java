@@ -24,7 +24,7 @@ public class SysAiPricing extends SysBase {
     /**
      * 主键 ID
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(value = "sys_ai_pricing_id", type = IdType.AUTO)
     private Long id;
 
     /**

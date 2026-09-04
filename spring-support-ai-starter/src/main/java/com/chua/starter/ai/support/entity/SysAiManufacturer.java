@@ -22,7 +22,7 @@ public class SysAiManufacturer {
     /**
      * 厂商主键 ID
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(value = "sys_ai_manufacturer_id", type = IdType.AUTO)
     /** SYSAImanufacturerID */
     private Integer id;
 

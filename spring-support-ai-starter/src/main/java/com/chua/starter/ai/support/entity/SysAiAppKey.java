@@ -25,7 +25,7 @@ public class SysAiAppKey {
     /**
      * 应用密钥主键 ID
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(value = "sys_ai_app_key_id", type = IdType.AUTO)
     /** SYSAIAPP密钥ID */
     private Integer id;
 

@@ -30,8 +30,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import java.util.Objects;
 
 /**
  * AI 用量聚合任务
@@ -391,9 +390,8 @@ public class UsageAggregationTask implements SchedulingConfigurer {
 
     /**
      * 手动全量同步：聚合全部历史 usage 明细到日汇总表。
-     * <p>从最早一条用量记录所在日期开始，按天窗口逐段聚合，避免一次性扫描全表
-     * 造成内存/连接压力；每天一次独立事务（经由 {@link #self} 代理调用
-     * {@link #aggregateRange}），单天失败不影响其余日期；接口调用方负责异步执行。</p>
+     * <p>一次遍历全部历史数据（分页），按天分组后先删后插；
+     * 接口调用方负责异步执行。</p>
      */
     public void aggregateAll() {
         LocalDateTime now = LocalDateTime.now();
@@ -404,10 +402,9 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         }
         LocalDate startDay = earliest.toLocalDate();
         LocalDate endDay = now.toLocalDate();
-        long total = 0;
-        for (LocalDate day = startDay; !day.isAfter(endDay); day = day.plusDays(1)) {
-            total += self.aggregateRange(day.atStartOfDay(), day.plusDays(1).atStartOfDay());
-        }
+        LocalDateTime start = startDay.atStartOfDay();
+        LocalDateTime end = endDay.plusDays(1).atStartOfDay();
+        long total = self.aggregateRange(start, end);
         recordLog(LOG_LEVEL_INFO, String.format("全量同步完成 [%s ~ %s]，共 %d 条记录", startDay, endDay, total));
         log.info("[UsageAggregation] 全量同步完成: {} ~ {}, records={}", startDay, endDay, total);
     }
@@ -429,33 +426,31 @@ public class UsageAggregationTask implements SchedulingConfigurer {
      * 聚合指定时间范围内的 usage 明细到日汇总表（按天、group、provider、model 分组）。
      * <p>采用「先删后插」策略：同一天重新聚合时先删除旧汇总，避免重复累计。</p>
      *
-     * @param start 开始时间（含），为 null 时默认取当天 00:00:00
-     * @param end   结束时间（不含），为 null 时默认取当前时间
+     * @param start 开始时间（含），不能为 null
+     * @param end   结束时间（不含），不能为 null
      * @return 聚合的明细条数
+     * @throws NullPointerException 当 start 或 end 为 null 时
      */
     @Transactional
     public long aggregateRange(LocalDateTime start, LocalDateTime end) {
-        LocalDateTime queryStart = start;
-        LocalDateTime queryEnd = end;
-        if (queryStart == null) {
-            queryStart = LocalDate.now().atStartOfDay();
-        }
-        if (queryEnd == null) {
-            queryEnd = LocalDateTime.now();
-        }
+        Objects.requireNonNull(start, "start must not be null");
+        Objects.requireNonNull(end, "end must not be null");
 
         long totalAggregated = 0;
         Map<LocalDate, Map<String, List<SysAiUsage>>> byDate = new java.util.TreeMap<>();
 
-        Page<SysAiUsage> page;
-        int p = 1;
-        do {
+        // keyset 分页：以主键 ID 为游标，避免大表上 OFFSET 深分页的性能退化
+        Long lastId = null;
+        while (true) {
             LambdaQueryWrapper<SysAiUsage> wrapper = new LambdaQueryWrapper<>();
-            wrapper.ge(SysAiUsage::getSysAiUsageCallTime, queryStart)
-                    .lt(SysAiUsage::getSysAiUsageCallTime, queryEnd)
-                    .orderByAsc(SysAiUsage::getSysAiUsageId);
-            page = usageMapper.selectPage(new Page<>(p, BATCH_SIZE), wrapper);
-            List<SysAiUsage> list = page.getRecords();
+            wrapper.ge(SysAiUsage::getSysAiUsageCallTime, start)
+                    .lt(SysAiUsage::getSysAiUsageCallTime, end);
+            if (lastId != null) {
+                wrapper.gt(SysAiUsage::getSysAiUsageId, lastId);
+            }
+            wrapper.orderByAsc(SysAiUsage::getSysAiUsageId)
+                    .last("LIMIT " + BATCH_SIZE);
+            List<SysAiUsage> list = usageMapper.selectList(wrapper);
 
             if (list.isEmpty()) {
                 break;
@@ -471,11 +466,11 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                         .add(u);
             }
             totalAggregated += list.size();
-            p++;
-        } while (page != null && page.hasNext());
+            lastId = list.get(list.size() - 1).getSysAiUsageId();
+        }
 
         if (totalAggregated == 0) {
-            log.info("[UsageAggregation] {} ~ {} 无数据，跳过聚合", queryStart, queryEnd);
+            log.info("[UsageAggregation] {} ~ {} 无数据，跳过聚合", start, end);
             return 0;
         }
 
@@ -494,6 +489,13 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                 String model = keys[2];
                 List<SysAiUsage> items = entry.getValue();
 
+                // 定价在 group 内相同，组级别查询一次，避免对每条明细重复查询（N+1）
+                SysAiPricing pricing = pricingService.getLatestPricing(provider, model);
+                BigDecimal inputPrice = pricing != null && pricing.getInputPricePer1k() != null
+                        ? BigDecimal.valueOf(pricing.getInputPricePer1k()) : BigDecimal.ZERO;
+                BigDecimal outputPrice = pricing != null && pricing.getOutputPricePer1k() != null
+                        ? BigDecimal.valueOf(pricing.getOutputPricePer1k()) : BigDecimal.ZERO;
+
                 BigDecimal totalCachedTokens = BigDecimal.ZERO;
                 BigDecimal totalLatency = BigDecimal.ZERO;
                 BigDecimal totalCost = BigDecimal.ZERO;
@@ -507,11 +509,6 @@ public class UsageAggregationTask implements SchedulingConfigurer {
                     totalCachedTokens = totalCachedTokens.add(BigDecimal.valueOf(cachedTokens));
                     totalLatency = totalLatency.add(BigDecimal.valueOf(latency));
 
-                    SysAiPricing pricing = pricingService.getLatestPricing(provider, model);
-                    BigDecimal inputPrice = pricing != null && pricing.getInputPricePer1k() != null
-                            ? BigDecimal.valueOf(pricing.getInputPricePer1k()) : BigDecimal.ZERO;
-                    BigDecimal outputPrice = pricing != null && pricing.getOutputPricePer1k() != null
-                            ? BigDecimal.valueOf(pricing.getOutputPricePer1k()) : BigDecimal.ZERO;
                     BigDecimal tokenCost = BigDecimal.valueOf(promptTokens)
                             .divide(BigDecimal.valueOf(1000), 10, RoundingMode.HALF_UP)
                             .multiply(inputPrice)
@@ -544,7 +541,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             }
         }
 
-        log.info("[UsageAggregation] {} ~ {} 聚合完成，共 {} 条记录", queryStart, queryEnd, totalAggregated);
+        log.info("[UsageAggregation] {} ~ {} 聚合完成，共 {} 条记录", start, end, totalAggregated);
         return totalAggregated;
     }
 }

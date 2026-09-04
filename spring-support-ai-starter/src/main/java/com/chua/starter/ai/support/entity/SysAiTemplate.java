@@ -22,7 +22,7 @@ public class SysAiTemplate {
     /**
      * 模板主键 ID
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(value = "sys_ai_template_id", type = IdType.AUTO)
     /** SYSAI模板ID */
     private Integer id;
 

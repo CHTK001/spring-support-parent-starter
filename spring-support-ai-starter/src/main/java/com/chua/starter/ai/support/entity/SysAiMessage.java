@@ -24,7 +24,7 @@ public class SysAiMessage {
     /**
      * 消息主键 ID
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(value = "sys_ai_message_id", type = IdType.AUTO)
     /** SYSAI消息ID */
     private Long id;
 

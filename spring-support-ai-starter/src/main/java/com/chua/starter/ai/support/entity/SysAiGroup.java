@@ -21,7 +21,7 @@ public class SysAiGroup {
     /**
      * 分组主键
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(value = "sys_ai_group_id", type = IdType.AUTO)
     /** SYSAI分组ID */
     private Integer id;
 

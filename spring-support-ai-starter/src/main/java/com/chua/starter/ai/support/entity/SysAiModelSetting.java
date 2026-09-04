@@ -22,7 +22,7 @@ public class SysAiModelSetting {
     /**
      * 模型设置主键 ID
      */
-    @TableId(type = IdType.AUTO)
+    @TableId(value = "sys_ai_model_setting_id", type = IdType.AUTO)
     /** SYSAI模型设置ID */
     private Integer id;
 
