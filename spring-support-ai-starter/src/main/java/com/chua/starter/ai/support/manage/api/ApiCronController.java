@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.manage.api;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
+import com.chua.starter.ai.support.manage.store.SysAiConversation;
 import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
 import lombok.RequiredArgsConstructor;
@@ -165,8 +166,36 @@ public class ApiCronController {
         executed.put("cron_job_id", cronJobId);
         executed.put("status", "ok");
         pushService.push("cron.job-executed", executed);
+        SysAiConversation c = new SysAiConversation();
+        String conversationId = conversationStore.newId();
+        c.setConversationId(conversationId);
+        c.setType((String) job.getOrDefault("agent_type", "nomi"));
+        Map<String, Object> metadata = (Map<String, Object>) job.get("metadata");
+        String name = job.getOrDefault("name", "定时任务").toString();
+        c.setName(name);
+        Object agentConfig = metadata != null ? metadata.get("agent_config") : null;
+        if (agentConfig instanceof Map) {
+            Map<String, Object> raw = uncheckedCast(agentConfig);
+            Map<String, Object> model = new LinkedHashMap<>();
+            if (raw.get("provider_id") != null) {
+                model.put("provider_id", raw.get("provider_id"));
+            }
+            if (raw.get("model") != null) {
+                model.put("model", raw.get("model"));
+            }
+            c.setModel(model);
+        }
+        Map<String, Object> extra = new LinkedHashMap<>();
+        extra.put("cron_job_id", cronJobId);
+        extra.put("source", "cron");
+        c.setExtra(extra);
+        long now = System.currentTimeMillis();
+        c.setCreatedAt(now);
+        c.setModifiedAt(now);
+        conversationStore.create(c);
+        pushService.push("conversation.listChanged", Map.of("conversation_id", conversationId, "action", "created"));
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("conversation_id", conversationStore.newId());
+        result.put("conversation_id", conversationId);
         return ApiResult.ok(result);
     }
 
@@ -212,5 +241,9 @@ public class ApiCronController {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "定时任务不存在: " + cronJobId);
         }
         return job;
+    }
+
+    private static Map<String, Object> uncheckedCast(Object obj) {
+        return (Map<String, Object>) obj;
     }
 }

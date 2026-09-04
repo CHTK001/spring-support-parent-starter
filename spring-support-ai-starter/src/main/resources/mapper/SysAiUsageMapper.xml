@@ -36,4 +36,28 @@
         </where>
     </select>
 
+<!--
+        按天+group+provider+model 分组的日聚合：单条 SQL 完成，避免全量装载到 JVM。
+        配合 sys_ai_usage_call_time 索引秒级返回。
+    -->
+    <select id="selectDailyAggregate" resultType="com.chua.starter.ai.support.mapper.SysAiUsageMapper$DailyAggregateRow">
+        SELECT
+            DATE(sys_ai_usage_call_time) AS statDate,
+            sys_ai_usage_group_name AS groupName,
+            sys_ai_usage_provider AS provider,
+            sys_ai_usage_model AS model,
+            COUNT(*) AS totalCalls,
+            COALESCE(SUM(sys_ai_usage_prompt_tokens), 0) AS totalPromptTokens,
+            COALESCE(SUM(sys_ai_usage_completion_tokens), 0) AS totalCompletionTokens,
+            COALESCE(SUM(sys_ai_usage_total_tokens), 0) AS totalTokens,
+            COALESCE(SUM(sys_ai_usage_total_cost), 0) AS totalCost,
+            COALESCE(SUM(sys_ai_usage_cached_tokens), 0) AS totalCachedTokens,
+            COALESCE(SUM(sys_ai_usage_total_latency), 0) AS totalLatency
+        FROM sys_ai_usage
+        WHERE sys_ai_usage_call_time &gt;= #{startTime}
+          AND sys_ai_usage_call_time &lt; #{endTime}
+        GROUP BY DATE(sys_ai_usage_call_time), sys_ai_usage_group_name, sys_ai_usage_provider, sys_ai_usage_model
+        ORDER BY statDate
+    </select>
+
 </mapper>

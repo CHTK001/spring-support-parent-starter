@@ -55,25 +55,25 @@ public class SysAiUsageDaily extends SysBase {
      * 总调用次数
      */
     @TableField("sys_ai_usage_daily_total_calls")
-    private Integer totalCalls;
+    private Long totalCalls;
 
     /**
      * 总输入 Token
      */
     @TableField("sys_ai_usage_daily_total_prompt_tokens")
-    private Integer totalPromptTokens;
+    private Long totalPromptTokens;
 
     /**
      * 总输出 Token
      */
     @TableField("sys_ai_usage_daily_total_completion_tokens")
-    private Integer totalCompletionTokens;
+    private Long totalCompletionTokens;
 
     /**
      * 总 Token
      */
     @TableField("sys_ai_usage_daily_total_tokens")
-    private Integer totalTokens;
+    private Long totalTokens;
 
     /**
      * 总费用（元）
@@ -85,7 +85,7 @@ public class SysAiUsageDaily extends SysBase {
      * 缓存读取 Token 合计
      */
     @TableField("sys_ai_usage_daily_total_cached_tokens")
-    private Integer totalCachedTokens;
+    private Long totalCachedTokens;
 
     /**
      * 总耗时（毫秒）合计，配合调用次数计算平均耗时

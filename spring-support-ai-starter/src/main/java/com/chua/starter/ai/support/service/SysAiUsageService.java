@@ -62,17 +62,17 @@ public interface SysAiUsageService {
      */
     class UsageStatistics {
         /** 总数calls */
-        public Integer totalCalls;
+        public Long totalCalls;
         /** 总数prompttokens */
-        public Integer totalPromptTokens;
+        public Long totalPromptTokens;
         /** 总数completiontokens */
-        public Integer totalCompletionTokens;
+        public Long totalCompletionTokens;
         /** 总数tokens */
-        public Integer totalTokens;
+        public Long totalTokens;
         /** 总数cost */
         public Double totalCost;
         /** 缓存读取Token */
-        public Integer totalCachedTokens;
+        public Long totalCachedTokens;
         /** 原始费用(未折扣) */
         public Double standardCost;
         /** 平均耗时(ms) */

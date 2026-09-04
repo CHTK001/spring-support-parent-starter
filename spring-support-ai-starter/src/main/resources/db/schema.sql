@@ -164,10 +164,10 @@ CREATE TABLE IF NOT EXISTS `sys_ai_usage_daily` (
     `sys_ai_usage_daily_group_name`            VARCHAR(32)  NULL COMMENT '',
     `sys_ai_usage_daily_provider`              VARCHAR(64)  NULL COMMENT '',
     `sys_ai_usage_daily_model`                 VARCHAR(128) NULL COMMENT '',
-    `sys_ai_usage_daily_total_calls`           INT          NULL COMMENT '',
-    `sys_ai_usage_daily_total_prompt_tokens`   INT          NULL COMMENT ' Token',
-    `sys_ai_usage_daily_total_completion_tokens` INT       NULL COMMENT ' Token',
-    `sys_ai_usage_daily_total_tokens`         INT          NULL COMMENT ' Token',
+    `sys_ai_usage_daily_total_calls`           BIGINT       NULL COMMENT '',
+    `sys_ai_usage_daily_total_prompt_tokens`   BIGINT       NULL COMMENT ' Token',
+    `sys_ai_usage_daily_total_completion_tokens` BIGINT    NULL COMMENT ' Token',
+    `sys_ai_usage_daily_total_tokens`         BIGINT       NULL COMMENT ' Token',
     `sys_ai_usage_daily_total_cost`           DOUBLE       NULL COMMENT '',
     `create_name`                               VARCHAR(64)  NULL COMMENT '',
     `create_by`                                 INT          NULL COMMENT '',
