@@ -355,10 +355,10 @@ public class AiBotChatService {
                 }
             }
             // 4. 调用模型并记录用量（token/费用入库，供 usage 页统计）。
-            //    受「设置 → 启用用量分析」全局开关控制：关闭时跳过记录。
+            //    受 Bot 绑定上的「记录用量」专属开关控制：关闭时不记录。
             ChatSyncResponse response = chatClient.chatSyncWithResponse(userMsg);
-            boolean usageEnabled = globalSettingReader.getBool("global", "enable_usage_analysis", true);
-            if (usageEnabled && response != null && response.getUsage() != null) {
+            boolean recordUsage = !Boolean.FALSE.equals(bot.getRecordUsage());
+            if (recordUsage && response != null && response.getUsage() != null) {
                 try {
                     usageRecorderInterceptor.record(
                             null,
