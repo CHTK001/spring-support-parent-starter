@@ -252,21 +252,6 @@
 
     <build>
         <plugins>
-            <!-- Spring Boot 启动插件：支持 mvn spring-boot:run 启动服务 -->
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <mainClass>com.chua.starter.ai.support.AiStarterApplication</mainClass>
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>repackage</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -299,9 +284,13 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <!-- 作为内部 starter 库被其它模块依赖：禁用 fat-jar repackage，保留原始 jar 结构 -->
-                    
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+
         </plugins>
     </build>
+
 
 
 

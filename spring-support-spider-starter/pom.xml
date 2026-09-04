@@ -130,23 +130,18 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
-            <!-- Spring Boot Maven插件（本地真实启动 + repackage） -->
+            <!-- Spring Boot Maven插件：作为内部 starter 库被其它模块依赖，禁用 fat-jar repackage，保留原始 jar 结构 -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <skip>false</skip>
+                    <skip>true</skip>
                 </configuration>
             </plugin>
-        
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <!-- 作为内部 starter 库被其它模块依赖：禁用 fat-jar repackage，保留原始 jar 结构 -->
-                    
+
         </plugins>
     </build>
+
 
 
 
