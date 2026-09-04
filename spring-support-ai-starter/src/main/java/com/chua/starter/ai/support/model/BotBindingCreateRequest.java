@@ -65,4 +65,9 @@ public class BotBindingCreateRequest {
      * 系统提示词（AI 回复时注入的 system prompt）
      */
     private String systemPrompt;
+
+    /**
+     * 是否记录 AI 用量（token/费用），bot 专属开关，默认开启
+     */
+    private Boolean recordUsage;
 }

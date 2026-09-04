@@ -333,6 +333,7 @@ public class AiBotBindingController {
         resp.setThinking(entity.getThinking());
         resp.setThinkingEffort(entity.getThinkingEffort());
         resp.setSystemPrompt(entity.getSystemPrompt());
+        resp.setRecordUsage(entity.getRecordUsage());
         resp.setCreateTime(entity.getCreateTime());
         resp.setLastActiveTime(entity.getLastActiveTime());
         return resp;
