@@ -5,7 +5,9 @@ import com.chua.starter.ai.support.entity.SysAiUsage;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * AI 用量 Mapper。
@@ -53,6 +55,47 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
             @Param("groupName") String groupName,
             @Param("provider") String provider,
             @Param("model") String model,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime
+    );
+
+    /**
+     * 按天分组的日聚合结果（供每日汇总表回填）。
+     *
+     * @param statDate 统计日期
+     * @param groupName 分组名称
+     * @param provider  服务商
+     * @param model     模型
+     * @param totalCalls 总调用次数
+     * @param totalPromptTokens 总输入 Token
+     * @param totalCompletionTokens 总输出 Token
+     * @param totalTokens 总 Token
+     * @param totalCost 总费用（元）
+     * @param totalCachedTokens 缓存读取 Token
+     * @param totalLatency 总耗时（ms）
+     */
+    record DailyAggregateRow(
+            LocalDate statDate,
+            String groupName,
+            String provider,
+            String model,
+            Long totalCalls,
+            Long totalPromptTokens,
+            Long totalCompletionTokens,
+            Long totalTokens,
+            Double totalCost,
+            Long totalCachedTokens,
+            Long totalLatency
+    ) {}
+
+    /**
+     * 数据库端按天、group、provider、model 分组聚合，一次 SQL 返回全部日汇总数据。
+     *
+     * @param startTime 开始时间（含），不能为 null
+     * @param endTime   结束时间（不含），不能为 null
+     * @return 按天分组的聚合行列表，无数据时为空列表
+     */
+    List<DailyAggregateRow> selectDailyAggregate(
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime
     );

@@ -42,13 +42,13 @@ public class SysAiPricing extends SysBase {
     /**
      * 输入价格（每 1k tokens，单位元）
      */
-    @TableField("sys_ai_pricing_input_price_per1k")
+    @TableField("sys_ai_pricing_input_price_per_1k")
     private Double inputPricePer1k;
 
     /**
      * 输出价格（每 1k tokens，单位元）
      */
-    @TableField("sys_ai_pricing_output_price_per1k")
+    @TableField("sys_ai_pricing_output_price_per_1k")
     private Double outputPricePer1k;
 
     /**

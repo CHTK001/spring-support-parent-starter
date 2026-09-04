@@ -188,12 +188,12 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
         }
         List<SysAiUsageDaily> list = dailyMapper.selectList(wrapper);
         UsageStatistics stats = new UsageStatistics();
-        stats.totalCalls = list.stream().mapToInt(u -> u.getTotalCalls() != null ? u.getTotalCalls() : 0).sum();
-        stats.totalPromptTokens = list.stream().mapToInt(u -> u.getTotalPromptTokens() != null ? u.getTotalPromptTokens() : 0).sum();
-        stats.totalCompletionTokens = list.stream().mapToInt(u -> u.getTotalCompletionTokens() != null ? u.getTotalCompletionTokens() : 0).sum();
-        stats.totalTokens = list.stream().mapToInt(u -> u.getTotalTokens() != null ? u.getTotalTokens() : 0).sum();
+        stats.totalCalls = list.stream().mapToLong(u -> u.getTotalCalls() != null ? u.getTotalCalls() : 0L).sum();
+        stats.totalPromptTokens = list.stream().mapToLong(u -> u.getTotalPromptTokens() != null ? u.getTotalPromptTokens() : 0L).sum();
+        stats.totalCompletionTokens = list.stream().mapToLong(u -> u.getTotalCompletionTokens() != null ? u.getTotalCompletionTokens() : 0L).sum();
+        stats.totalTokens = list.stream().mapToLong(u -> u.getTotalTokens() != null ? u.getTotalTokens() : 0L).sum();
         stats.totalCost = list.stream().mapToDouble(u -> u.getTotalCost() != null ? u.getTotalCost() : 0).sum();
-        stats.totalCachedTokens = list.stream().mapToInt(u -> u.getTotalCachedTokens() != null ? u.getTotalCachedTokens() : 0).sum();
+        stats.totalCachedTokens = list.stream().mapToLong(u -> u.getTotalCachedTokens() != null ? u.getTotalCachedTokens() : 0L).sum();
         stats.standardCost = list.stream().mapToDouble(u -> u.getStandardCost() != null ? u.getStandardCost() : 0).sum();
         long totalLatency = list.stream().mapToLong(u -> u.getTotalLatency() != null ? u.getTotalLatency() : 0L).sum();
         stats.avgLatency = stats.totalCalls > 0 ? (double) totalLatency / stats.totalCalls : 0.0;
