@@ -150,3 +150,89 @@ CREATE TABLE IF NOT EXISTS sys_ai_app_key (
   create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- -------------------------------------------------------------------
+-- 远程主机（SSH 主机簿）— /api/ssh-hosts 读写依赖此表
+-- -------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sys_ai_ssh_host (
+  sys_ai_ssh_host_id             VARCHAR(36) NOT NULL PRIMARY KEY,
+  sys_ai_ssh_host_name           VARCHAR(255),
+  sys_ai_ssh_host_host           VARCHAR(255),
+  sys_ai_ssh_host_port           INT DEFAULT 22,
+  sys_ai_ssh_host_username       VARCHAR(128),
+  sys_ai_ssh_host_auth_type      VARCHAR(32) DEFAULT 'password',
+  sys_ai_ssh_host_password       VARCHAR(1024),
+  sys_ai_ssh_host_private_key    CLOB,
+  sys_ai_ssh_host_passphrase     VARCHAR(1024),
+  sys_ai_ssh_host_certificate    CLOB,
+  sys_ai_ssh_host_sudo_password  VARCHAR(1024),
+  sys_ai_ssh_host_host_fingerprint VARCHAR(512),
+  sys_ai_ssh_host_status         VARCHAR(32) DEFAULT 'unknown',
+  sys_ai_ssh_host_last_connected_at BIGINT,
+  sys_ai_ssh_host_created_at     BIGINT NOT NULL,
+  sys_ai_ssh_host_updated_at     BIGINT NOT NULL
+);
+
+-- -------------------------------------------------------------------
+-- AI Agent 定义 — /v2/ai/agents 依赖此表
+-- -------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sys_ai_agent (
+  sys_ai_agent_id              VARCHAR(64) NOT NULL PRIMARY KEY,
+  sys_ai_agent_parent_id       VARCHAR(64),
+  sys_ai_agent_name            VARCHAR(128) NOT NULL,
+  sys_ai_agent_description     VARCHAR(512),
+  sys_ai_agent_role            VARCHAR(255),
+  sys_ai_agent_instruction     CLOB,
+  sys_ai_agent_system_prompt   CLOB,
+  sys_ai_agent_provider_id     VARCHAR(64),
+  sys_ai_agent_model           VARCHAR(255),
+  sys_ai_agent_mcp_ids         CLOB,
+  sys_ai_agent_skill_ids       CLOB,
+  sys_ai_agent_strategy        CLOB,
+  sys_ai_agent_enabled         TINYINT DEFAULT 1,
+  sys_ai_agent_sort_order      INT DEFAULT 0,
+  sys_ai_agent_create_time     BIGINT NOT NULL,
+  sys_ai_agent_update_time     BIGINT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ai_agent_parent ON sys_ai_agent(sys_ai_agent_parent_id);
+
+-- -------------------------------------------------------------------
+-- MCP 服务器定义 — /v2/mcp/* 依赖此表
+-- -------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sys_ai_mcp_server (
+  sys_ai_mcp_server_id          VARCHAR(36) NOT NULL PRIMARY KEY,
+  sys_ai_mcp_server_name        VARCHAR(255) NOT NULL,
+  sys_ai_mcp_server_description VARCHAR(512),
+  sys_ai_mcp_server_transport   CLOB NOT NULL,
+  sys_ai_mcp_server_original_json CLOB,
+  sys_ai_mcp_server_enabled     TINYINT DEFAULT 1,
+  sys_ai_mcp_server_status      VARCHAR(32) DEFAULT 'unknown',
+  sys_ai_mcp_server_create_time BIGINT NOT NULL,
+  sys_ai_mcp_server_update_time BIGINT NOT NULL
+);
+
+-- -------------------------------------------------------------------
+-- 用量日志/浏览历史 — Usage/Session 相关接口依赖此表
+-- -------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sys_ai_bot_message (
+  sys_ai_bot_message_id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+  sys_ai_bot_message_session_id VARCHAR(64),
+  sys_ai_bot_message_role       VARCHAR(32),
+  sys_ai_bot_message_content    CLOB,
+  sys_ai_bot_message_bot_id     VARCHAR(128),
+  sys_ai_bot_message_platform   VARCHAR(32),
+  sys_ai_bot_message_create_time BIGINT,
+  sys_ai_bot_message_update_time BIGINT
+);
+
+-- -------------------------------------------------------------------
+-- OCR 分组默认配置项（与 OcrGlobalSettingProvider 对齐，供演示/联调）
+-- -------------------------------------------------------------------
+INSERT INTO sys_ai_global_setting (sys_ai_global_setting_group, sys_ai_global_setting_field, sys_ai_global_setting_value, sys_ai_global_setting_value_type, sys_ai_global_setting_description, sys_ai_global_setting_sort, sys_ai_global_setting_status) VALUES
+('ocr','detector_model','paddleocrv6-det','STRING','文字检测模型（paddleocrv6-det / paddleocrv6-medium-det）',1,1),
+('ocr','recognizer_model','paddleocrv6-rec','STRING','文字识别模型（paddleocrv6-rec / paddleocrv6-medium-rec / svtr-extractor / paddle-ocr-recognition / pp-word-extractor）',2,1),
+('ocr','detector_threshold','0.5','NUMBER','OCR 检测置信度阈值（过滤低置信度文本框，0~1）',3,1),
+('ocr','sort_reading_order','true','BOOLEAN','是否按阅读顺序排序（先 y 后 x）',4,1),
+('ocr','direction_model','','STRING','方向矫正模型（pp-word-rotate，留空关闭）',5,1),
+('ocr','restorer_model','','STRING','文字超分修复模型（text-bsr，留空关闭）',6,1),
+('ocr','device','cpu','STRING','推理设备（cpu / cuda）',7,1);
