@@ -287,7 +287,6 @@
                     <skip>true</skip>
                 </configuration>
             </plugin>
-
-        
-    </build>
+        </plugins>
+</build>
 </project>
