@@ -103,6 +103,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_bot_binding` (
     `sys_ai_bot_binding_thinking`        TINYINT      NOT NULL DEFAULT 0 COMMENT '是否启用深度思考（默认关闭）',
     `sys_ai_bot_binding_thinking_effort` VARCHAR(16)  NULL COMMENT '深度思考强度（low / medium / high）',
     `sys_ai_bot_binding_system_prompt`   TEXT         NULL COMMENT '系统提示词（AI 回复时注入的 system prompt）',
+    sys_ai_bot_binding_record_usage   TINYINT      NOT NULL DEFAULT 1 COMMENT '是否记录 AI 用量（bot 专属开关，默认开启）',
     `sys_ai_bot_binding_last_active_time` DATETIME     NULL COMMENT '最后活跃时间',
     `create_name`                         VARCHAR(64)  NULL COMMENT '创建人姓名',
     `create_by`                           INT          NULL COMMENT '创建人',
