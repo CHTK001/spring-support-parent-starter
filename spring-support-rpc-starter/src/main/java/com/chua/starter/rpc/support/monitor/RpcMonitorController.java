@@ -15,7 +15,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * RPC 监控端点，暴露当前 RPC 服务端的连接信息与运行时指标。
@@ -87,12 +89,18 @@ public class RpcMonitorController {
             return new MetricsInfo(false, new RpcMetrics("unknown"));
         }
         RpcMetrics metrics = server.getMetrics();
-        List<RpcMetrics.MethodStat> methodStats = new ArrayList<>(metrics.getMethodStats());
+        Map<String, RpcMetrics.MethodStat> merged = new LinkedHashMap<>();
+        for (RpcMetrics.MethodStat stat : metrics.getMethodStats()) {
+            merged.putIfAbsent(stat.method(), stat);
+        }
         MetricsRpcInterceptor interceptor = metricsRpcInterceptor.getIfAvailable();
         if (interceptor != null) {
-            methodStats.addAll(interceptor.getMethodStats());
+            for (RpcMetrics.MethodStat stat : interceptor.getMethodStats()) {
+                // 协议层（filter）统计优先；客户端拦截器仅补充协议层未覆盖的方法
+                merged.putIfAbsent(stat.method(), stat);
+            }
         }
-        metrics.setMethodStats(methodStats);
+        metrics.setMethodStats(new ArrayList<>(merged.values()));
         return new MetricsInfo(true, metrics);
     }
 
