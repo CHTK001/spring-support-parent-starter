@@ -52,6 +52,12 @@
             <artifactId>utils-support-shardingv5-starter</artifactId>
         </dependency>
 
+        <!-- UEBA 分析引擎自动装配验证 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-ueba-starter</artifactId>
+        </dependency>
+
         <!-- 测试：spring-boot-starter-test + h2 + webmvc-test（Boot 4 中 MockMvc 测试支持
              模块化为独立构件 spring-boot-webmvc-test） -->
         <dependency>
