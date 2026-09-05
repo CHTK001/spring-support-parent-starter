@@ -1,7 +1,9 @@
 package com.chua.starter.monitor.support.config;
 
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
@@ -23,4 +25,17 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableScheduling
 @EnableTransactionManagement
 public class MonitorAutoConfiguration {
+
+    /**
+     * 监控模块的 ServiceInfo 贡献者。
+     *
+     * @param properties Influx 配置
+     * @return ServiceInfoContributor
+     */
+    @Bean
+    public ServiceInfoContributor monitorServiceInfoContributor(MonitorInfluxProperties properties) {
+        return registry -> registry.registerFlag("monitor", "监控", true,
+                "监控模块",
+                "[Influx: " + (properties.isEnabled() ? "开" : "关") + "]");
+    }
 }
