@@ -35,12 +35,35 @@ class ShardingRealTest {
 
     @BeforeEach
     void assumeShardingAvailable() {
-        boolean classPresent = org.springframework.util.ClassUtils.isPresent(
-                "com.chua.shardingv5.support.conversion.ShardingV5Conversion",
-                getClass().getClassLoader());
-        Assumptions.assumeTrue(shardingDataSource != null,
-                "分片引擎未装配：shardingDataSource Bean 不存在（运行时 ShardingV5Conversion 类 present="
-                        + classPresent + "）");
+        ClassLoader cl = getClass().getClassLoader();
+        String className = "com.chua.shardingv5.support.conversion.ShardingV5Conversion";
+        String resourceName = className.replace('.', '/') + ".class";
+        java.net.URL resource = cl.getResource(resourceName);
+        boolean classPresent = resource != null;
+        // 链接失败取证：类资源存在但加载失败时，Class.forName 抛出携带缺失依赖的异常链
+        String linkage = "";
+        if (resource != null) {
+            try {
+                Class.forName(className, false, cl);
+            } catch (Throwable t) {
+                Throwable cause = t.getCause() != null ? t.getCause() : t;
+                linkage = "，加载失败: " + t.getClass().getSimpleName() + " <- 根因: " + cause;
+            }
+        }
+        // java.class.path 取证：分片相关构件是否在 surefire fork 类路径
+        StringBuilder forkCp = new StringBuilder();
+        if (!classPresent || !linkage.isEmpty()) {
+            for (String entry : System.getProperty("java.class.path", "").split(java.io.File.pathSeparator)) {
+                if (entry.contains("shardingv5") || entry.contains("shardingsphere")) {
+                    forkCp.append(" | ").append(entry.substring(entry.lastIndexOf('\\') + 1));
+                }
+            }
+        }
+        Assumptions.assumeTrue(shardingDataSource != null && classPresent && linkage.isEmpty(),
+                "分片引擎未装配：shardingDataSource=" + (shardingDataSource != null)
+                        + "，运行时类资源 present=" + classPresent
+                        + (resource != null ? "（" + resource + "）" : "") + linkage
+                        + "，fork 类路径分片构件:" + (forkCp.length() == 0 ? " 无" : forkCp.toString()));
     }
 
     @BeforeEach
