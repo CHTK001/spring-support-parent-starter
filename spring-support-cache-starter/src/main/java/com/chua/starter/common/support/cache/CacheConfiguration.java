@@ -42,6 +42,7 @@ import static com.chua.starter.common.support.constant.CacheConstant.*;
  */
 @Configuration
 @EnableConfigurationProperties(CacheProperties.class)
+@ConditionalOnClass(name = "org.springframework.data.redis.serializer.RedisSerializer")
 @AutoConfigureAfter(name = "com.chua.starter.redis.support.CacheConfiguration")
 public class CacheConfiguration {
 

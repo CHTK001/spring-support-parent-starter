@@ -10,7 +10,7 @@ import java.lang.annotation.*;
  *
  * @since 2022/7/29 8:23
  */
-@Target(ElementType.METHOD)
+@Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface Permission {
