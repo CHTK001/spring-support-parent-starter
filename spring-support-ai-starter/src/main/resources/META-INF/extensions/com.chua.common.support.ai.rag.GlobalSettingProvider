@@ -1,4 +1,7 @@
+com.chua.starter.ai.support.configuration.asr.AsrGlobalSettingProvider
+com.chua.starter.ai.support.configuration.bot.BotGlobalSettingProvider
 com.chua.starter.ai.support.configuration.face.FaceGlobalSettingProvider
+com.chua.starter.ai.support.configuration.ocr.OcrGlobalSettingProvider
 com.chua.starter.ai.support.configuration.rag.RagGlobalSettingProvider
 com.chua.starter.ai.support.configuration.input.InputOptimizeGlobalSettingProvider
 com.chua.starter.ai.support.configuration.runtime.RuntimeGlobalSettingProvider
