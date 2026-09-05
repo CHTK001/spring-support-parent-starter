@@ -5,6 +5,7 @@ import com.chua.starter.ai.training.support.service.DataService;
 import com.chua.starter.ai.training.support.service.TrainService;
 import com.chua.starter.ai.training.support.service.impl.DataServiceImpl;
 import com.chua.starter.ai.training.support.service.impl.TrainServiceImpl;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -51,5 +52,18 @@ public class TrainAutoConfiguration {
     public TrainController trainController(DataService dataService, TrainService trainService) {
         log.info("[Train] 注册 TrainController");
         return new TrainController(dataService, trainService);
+    }
+
+    /**
+     * AI 训练平台的 ServiceInfo 贡献者。
+     *
+     * @param properties 训练配置
+     * @return ServiceInfoContributor
+     */
+    @Bean
+    public ServiceInfoContributor trainServiceInfoContributor(TrainProperties properties) {
+        return registry -> registry.registerFlag("ai-training", "AI训练", properties.isEnabled(),
+                "AI 训练平台",
+                "[上传限制: " + properties.getMaxSize() + "MB]");
     }
 }
