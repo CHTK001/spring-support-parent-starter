@@ -251,7 +251,6 @@
         <flatten-maven-plugin.version>1.6.0</flatten-maven-plugin.version>
         <maven-enforcer-plugin.version>3.4.1</maven-enforcer-plugin.version>
         <maven-gpg-plugin.version>3.2.4</maven-gpg-plugin.version>
-        <mockito.version>5.17.0</mockito.version>  <!-- Mockito版本，由spring-boot-dependencies BOM管理，此处显式声明供surefire argLine引用 -->
         
         <!-- 构建控制属性 -->
         <skipTests>true</skipTests>  <!-- 默认跳过测试，可通过 mvn clean install -DskipTests=false 执行测试 -->
@@ -1207,7 +1206,6 @@
                 <version>${maven-surefire-plugin.version}</version>
                 <configuration>
                     <skipTests>${skipTests}</skipTests>
-                    <argLine>${surefire.jvm.args} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
                 </configuration>
             </plugin>
             <!-- Maven JavaDoc插件 - 生成API文档 (已注释
