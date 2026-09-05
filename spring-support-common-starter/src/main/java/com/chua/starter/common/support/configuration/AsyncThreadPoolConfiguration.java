@@ -4,6 +4,7 @@ import com.chua.starter.common.support.application.ModuleEnvironmentRegistration
 import com.chua.starter.common.support.constant.Constant;
 import com.chua.starter.common.support.log.MdcTaskDecorator;
 import com.chua.starter.common.support.properties.AsyncThreadPoolProperties;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import jakarta.annotation.PostConstruct;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -97,6 +98,21 @@ public class AsyncThreadPoolConfiguration implements AsyncConfigurer {
     /** 获取AsyncExecutor */
     public Executor getAsyncExecutor() {
         return asyncExecutor();
+    }
+
+    /**
+     * 异步线程池的 ServiceInfo 贡献者。
+     *
+     * @return ServiceInfoContributor
+     */
+    @Bean
+    public ServiceInfoContributor asyncThreadPoolServiceInfoContributor() {
+        return registry -> registry.registerFlag("async", "异步",
+                asyncProperties.isEnable(),
+                "异步线程池 (AsyncConfigurer)",
+                "[核心: " + asyncProperties.getCorePoolSize()
+                        + " 最大: " + asyncProperties.getMaxPoolSize()
+                        + " 队列: " + asyncProperties.getQueueCapacity() + "]");
     }
 }
 

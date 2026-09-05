@@ -1,10 +1,10 @@
 package com.chua.starter.ai.support.service;
 
-import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.starter.ai.support.entity.WorkshopAsset;
 import com.chua.starter.ai.support.mapper.WorkshopAssetMapper;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,6 +34,21 @@ public class WorkshopAssetService {
 
     private final WorkshopAssetMapper assetMapper;
     private final SysAiGlobalSettingService globalSettingService;
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    /**
+     * 把标签列表序列化为 JSON 数组字符串存储（空/空列表 -> "[]"）。
+     */
+    private static String toTagsJson(List<String> tags) {
+        if (tags == null || tags.isEmpty()) return "[]";
+        try {
+            return OBJECT_MAPPER.writeValueAsString(tags);
+        } catch (Exception e) {
+            log.warn("[WorkshopAssetService] 序列化 tags 失败", e);
+            return "[]";
+        }
+    }
 
     /** 分页每页最大条数，防止超大 pageSize 拖垮查询 */
     private static final int MAX_PAGE_SIZE = 200;
@@ -142,7 +157,7 @@ public class WorkshopAssetService {
         asset.setKind("text");
         asset.setTitle(title);
         asset.setCollection(collection);
-        asset.setTags(tags != null && !tags.isEmpty() ? Json.createJsonArray(tags).toString() : "[]");
+        asset.setTags(tags != null && !tags.isEmpty() ? toTagsJson(tags) : "[]");
         asset.setInLibrary(true);
         asset.setTextContent(content);
         asset.setCreatedAt(now);
@@ -185,7 +200,7 @@ public class WorkshopAssetService {
         asset.setKind(file.getContentType().startsWith("image/") ? "image" : "video");
         asset.setTitle(title != null && !title.isBlank() ? title : originalName);
         asset.setCollection(collection);
-        asset.setTags(tags != null && !tags.isEmpty() ? Json.createJsonArray(tags).toString() : "[]");
+        asset.setTags(tags != null && !tags.isEmpty() ? toTagsJson(tags) : "[]");
         asset.setMime(file.getContentType());
         asset.setBytes(file.getSize());
         asset.setInLibrary(inLibrary);
@@ -207,7 +222,7 @@ public class WorkshopAssetService {
         if (asset == null) {
             throw new RuntimeException("资产不存在: " + assetId);
         }
-        String tagsJson = tags != null ? (tags.isEmpty() ? "[]" : Json.createJsonArray(tags).toString()) : null;
+        String tagsJson = tags != null ? (tags.isEmpty() ? "[]" : toTagsJson(tags)) : null;
         assetMapper.updateMeta(assetId, title, collection, tagsJson, inLibrary, Instant.now().toEpochMilli());
         return assetMapper.selectById(assetId);
     }

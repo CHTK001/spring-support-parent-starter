@@ -15,9 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * RPC 监控端点，暴露当前 RPC 服务端的连接信息与运行时指标。
@@ -51,76 +49,51 @@ public class RpcMonitorController {
     /**
      * 获取 RPC 服务端基本信息。
      *
-     * @return 基本信息映射
+     * @return 服务端基本信息
      */
     @GetMapping("/info")
-    public Map<String, Object> info() {
+    public MonitorInfo info() {
         RpcServer server = currentServer();
-        Map<String, Object> result = new LinkedHashMap<>();
         if (server == null) {
-            result.put("enabled", false);
-            return result;
+            return new MonitorInfo(false, null, 0, List.of());
         }
-        result.put("enabled", true);
-        result.put("protocol", server.getProtocol());
-        result.put("serviceCount", server.getServiceCount());
-        result.put("services", collectServices());
-        return result;
+        return new MonitorInfo(true, server.getProtocol(), server.getServiceCount(), collectServices());
     }
 
     /**
      * 获取当前连接信息。
      *
-     * @return 连接信息映射
+     * @return 连接信息
      */
     @GetMapping("/connections")
-    public Map<String, Object> connections() {
+    public ConnectionsInfo connections() {
         RpcServer server = currentServer();
-        Map<String, Object> result = new LinkedHashMap<>();
         if (server == null) {
-            result.put("enabled", false);
-            return result;
+            return new ConnectionsInfo(false, null, 0, List.of());
         }
         List<RpcConnectionInfo> connections = server.getConnections();
-        result.put("enabled", true);
-        result.put("protocol", server.getProtocol());
-        result.put("count", connections.size());
-        result.put("connections", connections);
-        return result;
+        return new ConnectionsInfo(true, server.getProtocol(), connections.size(), connections);
     }
 
     /**
      * 获取运行时指标。
      *
-     * @return 指标映射
+     * @return 指标快照（含方法级调用统计）
      */
     @GetMapping("/metrics")
-    public Map<String, Object> metrics() {
+    public MetricsInfo metrics() {
         RpcServer server = currentServer();
-        Map<String, Object> result = new LinkedHashMap<>();
         if (server == null) {
-            result.put("enabled", false);
-            return result;
+            return new MetricsInfo(false, new RpcMetrics("unknown"));
         }
         RpcMetrics metrics = server.getMetrics();
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("protocol", metrics.getProtocol());
-        payload.put("startTime", metrics.getStartTime());
-        payload.put("totalCalls", metrics.getTotalCalls());
-        payload.put("successCalls", metrics.getSuccessCalls());
-        payload.put("failureCalls", metrics.getFailureCalls());
-        payload.put("activeCalls", metrics.getActiveCalls());
-        payload.put("totalConnections", metrics.getTotalConnections());
-        payload.put("serviceCount", metrics.getServiceCount());
         List<RpcMetrics.MethodStat> methodStats = new ArrayList<>(metrics.getMethodStats());
         MetricsRpcInterceptor interceptor = metricsRpcInterceptor.getIfAvailable();
         if (interceptor != null) {
             methodStats.addAll(interceptor.getMethodStats());
         }
-        payload.put("methodStats", methodStats);
-        result.put("enabled", true);
-        result.put("metrics", payload);
-        return result;
+        metrics.setMethodStats(methodStats);
+        return new MetricsInfo(true, metrics);
     }
 
     /**
@@ -150,5 +123,37 @@ public class RpcMonitorController {
             }
         }
         return services;
+    }
+
+    /**
+     * 服务端基本信息。
+     *
+     * @param enabled      RPC 是否启用
+     * @param protocol     协议名称
+     * @param serviceCount 服务数量
+     * @param services     服务接口全限定名列表
+     */
+    public record MonitorInfo(boolean enabled, String protocol, int serviceCount, List<String> services) {
+    }
+
+    /**
+     * 连接信息响应。
+     *
+     * @param enabled     RPC 是否启用
+     * @param protocol    协议名称
+     * @param count       连接数量
+     * @param connections 连接详情列表
+     */
+    public record ConnectionsInfo(boolean enabled, String protocol, int count,
+                                  List<RpcConnectionInfo> connections) {
+    }
+
+    /**
+     * 指标响应。
+     *
+     * @param enabled RPC 是否启用
+     * @param metrics 指标快照
+     */
+    public record MetricsInfo(boolean enabled, RpcMetrics metrics) {
     }
 }

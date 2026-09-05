@@ -6,6 +6,7 @@ import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.store.McpServerStore;
 import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
+import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,10 +24,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * MCP 服务控制器，替代 nomicore 的 {@code /api/mcp/*} 契约。
+ * MCP �������������� nomicore �� {@code /api/mcp/*} ��Լ��
  *
- * <p>维护 MCP 服务器档案（{@code mcp_server_id} 主键）、批量导入、启停切换、连接测试与
- * OAuth 握手路由。档案持久化到 {@code sys_ai_mcp_server} 表（MySQL）。</p>
+ * <p>ά�� MCP ������������{@code mcp_server_id} ���������������롢��ͣ�л������Ӳ�����
+ * OAuth ����·�ɡ������־û��� {@code sys_ai_mcp_server} ����MySQL����</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -38,24 +39,39 @@ import java.util.Map;
 public class ApiMcpController {
 
     /**
-     * 主键生成与基础存储工具
+     * MCP �г����ÿ���飺MCP �г�����״̬�洢�ڴ˷����档
+     */
+    private static final String MCP_MARKET_GROUP = "mcp";
+
+    /**
+     * MCP �г������ֶΣ�true=������false=�رա�
+     */
+    private static final String MCP_MARKET_ENABLED_FIELD = "market_enabled";
+
+    /**
+     * ��������������洢����
      */
     private final SysAiConversationStore conversationStore;
 
     /**
-     * WS 事件推送服务
+     * WS �¼����ͷ���
      */
     private final ApiWebSocketPushService pushService;
 
     /**
-     * MCP 真实连接服务（SDK 连接 + 工具列举）
+     * MCP ��ʵ���ӷ���SDK ���� + �����о٣�
      */
     private final McpConnectionService mcpConnectionService;
 
     /**
-     * MCP 服务器档案数据库存储
+     * MCP �������������ݿ�洢
      */
     private final McpServerStore mcpServerStore;
+
+    /**
+     * ȫ���������񣨶�ȡ/д�� MCP �г����ؿ���
+     */
+    private final SysAiGlobalSettingService globalSettingService;
 
     @GetMapping("/servers")
     public ApiResult<List<Map<String, Object>>> listServers() {
@@ -161,6 +177,45 @@ public class ApiMcpController {
     @GetMapping("/oauth/authenticated")
     public ApiResult<List<String>> oauthAuthenticated() {
         return ApiResult.ok(new ArrayList<>());
+    }
+
+    /**
+     * 启用 MCP 市场。
+     * <p>将 MCP 市场启用状态持久化到 {@code sys_ai_global_setting}（分组 mcp，字段 market_enabled）。</p>
+     *
+     * @return 成功信封
+     */
+    @PostMapping("/market/enable")
+    public ApiResult<Void> mcpMarketEnable() {
+        globalSettingService.upsertValue(MCP_MARKET_GROUP, MCP_MARKET_ENABLED_FIELD, "true", "MCP 市场是否启用");
+        log.info("[mcp] market enabled");
+        return ApiResult.ok();
+    }
+
+    /**
+     * 禁用 MCP 市场。
+     * <p>将 MCP 市场禁用状态持久化到 {@code sys_ai_global_setting}（分组 mcp，字段 market_enabled）。</p>
+     *
+     * @return 成功信封
+     */
+    @PostMapping("/market/disable")
+    public ApiResult<Void> mcpMarketDisable() {
+        globalSettingService.upsertValue(MCP_MARKET_GROUP, MCP_MARKET_ENABLED_FIELD, "false", "MCP 市场是否启用");
+        log.info("[mcp] market disabled");
+        return ApiResult.ok();
+    }
+
+    /**
+     * 查询 MCP 市场启用状态。
+     *
+     * @return 市场启用状态（enabled=true 表示市场开启；默认开启）
+     */
+    @GetMapping("/market/status")
+    public ApiResult<Map<String, Object>> mcpMarketStatus() {
+        boolean enabled = globalSettingService.getBoolean(MCP_MARKET_GROUP, MCP_MARKET_ENABLED_FIELD, true);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("enabled", enabled);
+        return ApiResult.ok(result);
     }
 
     private Map<String, Object> newLinked(Map<String, Object> source) {
