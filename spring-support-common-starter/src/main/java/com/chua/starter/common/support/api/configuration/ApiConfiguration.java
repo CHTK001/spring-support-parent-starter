@@ -158,6 +158,24 @@ public class ApiConfiguration implements EnvironmentAware  {
         return new ApiRequestDecodeRegister(apiProperties.getDecode());
     }
 
+    /**
+     * 版本路由映射：{@code @ApiVersion} 同路径多版本路由（查询参数 apiVersion / 请求头 X-Api-Version）。
+     *
+     * <p>开关 {@code plugin.api.version.enable} 默认开启（非实验性功能，遵循"默认开关默认开启"约定）；
+     * 无版本参数/头部的请求匹配所有版本，非版本化接口不受影响。</p>
+     *
+     * @param apiProperties api 配置
+     * @param environment   环境
+     * @return 版本路由映射器
+     */
+    @Bean
+    @ConditionalOnMissingBean(ApiVersionRequestMappingHandlerMapping.class)
+    @ConditionalOnProperty(name = "plugin.api.version.enable", havingValue = "true", matchIfMissing = true)
+    public ApiVersionRequestMappingHandlerMapping apiVersionRequestMappingHandlerMapping(
+            ApiProperties apiProperties, Environment environment) {
+        return new ApiVersionRequestMappingHandlerMapping(apiProperties, environment);
+    }
+
 
     /**
      * 创建统一响应体建议实例。

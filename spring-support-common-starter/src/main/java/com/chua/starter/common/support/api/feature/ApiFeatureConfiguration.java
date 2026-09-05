@@ -3,11 +3,12 @@ package com.chua.starter.common.support.api.feature;
 import com.chua.starter.common.support.api.annotations.ApiFeature;
 import com.chua.starter.common.support.api.interceptor.ApiControlInterceptor;
 import com.chua.starter.common.support.api.properties.ApiProperties;
-import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.SmartInitializingSingleton;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.env.Environment;
 import org.springframework.web.method.HandlerMethod;
@@ -41,7 +42,7 @@ import java.util.Map;
 @Slf4j
 @Configuration
 @ConditionalOnProperty(name = "plugin.api.feature.enable", havingValue = "true", matchIfMissing = true)
-public class ApiFeatureConfiguration implements WebMvcConfigurer {
+public class ApiFeatureConfiguration implements WebMvcConfigurer, SmartInitializingSingleton {
 
     /**
      * 全路径拦截模式：拦截所有 HTTP 请求
@@ -95,11 +96,12 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer {
      *
      * @param apiProperties                 API 配置属性
      * @param environment                   Spring 环境对象
-     * @param requestMappingHandlerMapping  Spring MVC 请求映射处理器
+     * @param requestMappingHandlerMapping  Spring MVC 请求映射处理器（@Lazy 打破
+     *                                      WebMvcConfigurer 与自定义版本映射 Bean 的装配环）
      */
     public ApiFeatureConfiguration(ApiProperties apiProperties,
                                    Environment environment,
-                                   RequestMappingHandlerMapping requestMappingHandlerMapping) {
+                                   @Lazy RequestMappingHandlerMapping requestMappingHandlerMapping) {
         this.apiProperties = apiProperties;
         this.environment = environment;
         this.requestMappingHandlerMapping = requestMappingHandlerMapping;
@@ -139,14 +141,22 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer {
     }
 
     /**
-     * 启动时扫描 Spring MVC 中所有 {@link ApiFeature} 注解标记的方法或类，
+     * 所有单例创建完成后扫描 Spring MVC 中所有 {@link ApiFeature} 注解标记的方法或类，
      * 注册到 {@link ApiFeatureManager} 中。
+     *
+     * <p>不能在 {@code @PostConstruct} 中执行：创建期解析 {@code RequestMappingHandlerMapping}
+     * 会触发 {@code WebMvcConfigurer} 集合解析，与正在创建的自身形成循环引用
+     * （@Lazy 仅在构造期生效，init 期使用仍会触发）。</p>
      *
      * <p>查找顺序：先方法级注解，再类级注解。同一功能开关 value 重复注册时，
      * 后注册的会覆盖前者。</p>
      */
-    @PostConstruct
-    public void scanApiFeatures() {
+    @Override
+    public void afterSingletonsInstantiated() {
+        scanApiFeatures();
+    }
+
+    private void scanApiFeatures() {
         Map<RequestMappingInfo, HandlerMethod> handlerMethods = requestMappingHandlerMapping.getHandlerMethods();
         ApiFeatureManager featureManager = apiFeatureManager();
 

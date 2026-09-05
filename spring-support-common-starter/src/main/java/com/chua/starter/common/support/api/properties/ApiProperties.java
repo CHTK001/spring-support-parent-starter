@@ -723,8 +723,9 @@ import java.util.Map;
 
         /**
          * 是否开启灰度发布功能
+         * <p>默认开启（非实验性功能，遵循"默认开关默认开启"约定）</p>
          */
-        private boolean enable = false;
+        private boolean enable = true;
 
         /**
          * 灰度标识请求头名称
@@ -780,6 +781,11 @@ import java.util.Map;
         /** 是否启用 */
         public boolean isEnable() {
             return enable;
+        }
+
+        /** 设置是否启用 */
+        public void setEnable(boolean enable) {
+            this.enable = enable;
         }
 
         /** 获取HeaderName */
