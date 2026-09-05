@@ -1,8 +1,10 @@
 package com.chua.starter.server.support.config;
 
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
@@ -25,4 +27,18 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableConfigurationProperties(ServerProperties.class)
 @EnableTransactionManagement
 public class ServerAutoConfiguration {
+
+    /**
+     * 服务器资产模块的 ServiceInfo 贡献者。
+     *
+     * @param properties 配置属性
+     * @return ServiceInfoContributor
+     */
+    @Bean
+    public ServiceInfoContributor serverServiceInfoContributor(ServerProperties properties) {
+        return registry -> registry.registerFlag("server", "服务器资产", properties.isEnabled(),
+                "服务器资产模块",
+                "[并发: " + properties.getExecConcurrency() + " 会话超时: "
+                        + properties.getSessionIdleMinutes() + "min]");
+    }
 }
