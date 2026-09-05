@@ -51,6 +51,11 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
      */
     private final SysAiPricingService pricingService;
 
+    /**
+     * IP 地址转物理地址服务（spring-support-common，带 Redis 缓存）
+     */
+    private final IptablesService iptablesService;
+
     @Override
     @Transactional
     /**
