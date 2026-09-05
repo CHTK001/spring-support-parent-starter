@@ -1,5 +1,6 @@
 package com.chua.starter.ueba.configuration;
 
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.ueba.support.Ueba;
 import com.chua.ueba.support.engine.UebaEngine;
 import com.chua.ueba.support.engine.UebaEngineBuilder;
