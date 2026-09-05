@@ -70,4 +70,17 @@ public class UebaAutoConfiguration {
                 properties.getModelDir(), properties.isLlm());
         return engine;
     }
+
+    /**
+     * UEBA 分析引擎的 ServiceInfo 贡献者。
+     *
+     * @param properties UEBA 配置属性
+     * @return ServiceInfoContributor
+     */
+    @Bean
+    public ServiceInfoContributor uebaServiceInfoContributor(UebaProperties properties) {
+        return registry -> registry.registerFlag("ueba", "UEBA", true,
+                "UEBA 分析引擎",
+                "[LLM: " + (properties.isLlm() ? "开" : "关") + "]");
+    }
 }
