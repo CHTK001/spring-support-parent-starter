@@ -70,9 +70,9 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     private static final long SERIAL_GAP_MILLIS = 5000;
 
     /**
-     * 同步日志缓冲上限
+     * 同步日志缓冲上限（前端展示最新 100 条）
      */
-    private static final int LOG_BUFFER_LIMIT = 200;
+    private static final int LOG_BUFFER_LIMIT = 100;
 
     /**
      * 分组键分隔符
@@ -166,7 +166,6 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             recordLog(LOG_LEVEL_WARN, "用量分析未启用，跳过本次执行");
             return;
         }
-        recordLog(LOG_LEVEL_INFO, "开始定时聚合 (" + java.time.LocalTime.now().withNano(0) + ")");
         self.aggregateToday();
     }
 

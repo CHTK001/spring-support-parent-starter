@@ -1,0 +1,27 @@
+# 排除 AuthClientConfiguration：其 AuthFilter 依赖真实 OAuth 服务（无服务时 403 拦截所有请求）；
+# AOP 权限拦截链（PermissionInterceptor）由 PermissionInterceptorConfiguration 以真实类注册，
+# 与生产装配一致，本测试应用以"本地联调（无用户上下文注入 admin）"模式运行
+spring:
+  autoconfigure:
+    exclude: com.chua.starter.oauth.client.support.configuration.AuthClientConfiguration
+  application:
+    name: spring-support-test-app
+  datasource:
+    url: jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+
+# oauth-client：本地联调模式（无远程 OAuth 服务时 ThreadLocal 注入 admin 上下文）；
+# whitelist 放行测试端点；block-address 指向永不匹配路径以关闭 AuthFilter 的 token 认证
+# （权限校验仍由 AOP PermissionInterceptor 把关，与生产拦截链一致）
+plugin:
+  oauth:
+    enable: true
+    block-address:
+      - /__authfilter_off__/**
+    whitelist:
+      - /api/permission/**
+      - /api/datascope/**
+      - /api/api-version/**
+      - /api/ds/**

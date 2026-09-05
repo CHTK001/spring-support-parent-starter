@@ -13,7 +13,7 @@ import com.chua.starter.ai.support.service.SysAiUsageService;
 import com.chua.starter.common.support.service.IptablesService;
 import com.chua.starter.common.support.utils.IpUtils;
 import com.chua.common.support.lang.code.ReturnResult;
-import com.chua.common.support.geo.GeoCity;
+import com.chua.common.support.network.ip.GeoCity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

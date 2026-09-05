@@ -115,7 +115,9 @@ public class ApiSystemController {
     }
 
     /**
-     * 持久化用户选择的目录配置。由拦截器负责角色（admin/superadmin）和 dev profile 校验。
+     * 持久化用户选择的目录配置。
+     * 角色校验由 @Permission 注解经 oauth PermissionInterceptor 处理。
+     * dev profile 校验在此处直接执行。
      *
      * @param body 请求体（含 work_dir / cache_dir / log_dir）
      * @return 成功信封
@@ -123,6 +125,13 @@ public class ApiSystemController {
     @Permission(role = {"admin", "superadmin"})
     @PostMapping("/system/work-dir")
     public ApiResult<Void> workDir(@RequestBody Map<String, Object> body) {
+        // 仅 dev profile 允许修改系统目录
+        String[] profiles = environment.getActiveProfiles();
+        boolean isDev = profiles.length == 0 || "dev".equals(profiles[0]);
+        if (!isDev) {
+            log.warn("拒绝非 dev profile 修改系统目录: profiles={}", profiles);
+            throw new ApiException(ApiErrorCode.FORBIDDEN, "系统目录仅允许在 dev 模式下修改");
+        }
         Object workDir = body.get("work_dir");
         Object cacheDir = body.get("cache_dir");
         Object logDir = body.get("log_dir");

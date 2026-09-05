@@ -53,6 +53,7 @@
   </developers>
   <modules>
     <module>spring-support-datasource-starter</module>
+    <module>spring-support-test-app</module>
     <module>spring-support-common-starter</module>
     <module>spring-support-cache-starter</module>
     <module>spring-support-mybatis-starter</module>
