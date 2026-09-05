@@ -9,6 +9,7 @@ import com.chua.starter.rpc.support.annotation.AnnotationPropertyValuesAdapter;
 import com.chua.starter.rpc.support.attrbute.RpcAttribute;
 import com.chua.starter.rpc.support.filter.ScanExcludeFilter;
 import com.chua.starter.rpc.support.holder.ServicePackagesHolder;
+import com.chua.starter.rpc.support.monitor.RpcServerHolder;
 import com.chua.starter.rpc.support.properties.RpcProperties;
 import com.chua.starter.rpc.support.service.RpcServiceBean;
 import com.google.common.collect.Lists;
@@ -164,6 +165,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
         RpcProtocolConfig protocolConfig = (protocolConfigs != null && !protocolConfigs.isEmpty()) ? protocolConfigs.get(0) : null;
         String appName = environment.resolvePlaceholders(rpcProperties.getApplicationName());
         this.rpcServer = RpcServer.createService(rpcProperties.getType().name(), registryConfigs, protocolConfig, appName);
+        RpcServerHolder.setRpcServer(this.rpcServer);
         printStartupInfo();
     }
     

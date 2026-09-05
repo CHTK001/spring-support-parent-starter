@@ -84,7 +84,14 @@
             <artifactId>spring-support-swagger-starter</artifactId>
             <scope>provided</scope>
         </dependency>
-        
+
+        <!-- 测试框架（JUnit 5 + Spring Boot Test） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <!-- 继承父 pom 的 maven-compiler-plugin (3.13.0 + lombok annotation processor + add opens 配置)

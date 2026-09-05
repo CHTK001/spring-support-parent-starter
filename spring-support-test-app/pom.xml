@@ -45,6 +45,13 @@
             <artifactId>spring-support-datasource-starter</artifactId>
         </dependency>
 
+        <!-- 数据源分片（ShardingSphere 5.x 集成）：datasource starter 的可选依赖，显式引入以激活
+             ShardingAutoConfiguration（@ConditionalOnClass(ShardingV5Conversion)） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-shardingv5-starter</artifactId>
+        </dependency>
+
         <!-- 测试：spring-boot-starter-test + h2 + webmvc-test（Boot 4 中 MockMvc 测试支持
              模块化为独立构件 spring-boot-webmvc-test） -->
         <dependency>

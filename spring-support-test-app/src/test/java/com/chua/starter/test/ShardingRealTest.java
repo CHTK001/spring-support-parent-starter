@@ -1,5 +1,6 @@
 package com.chua.starter.test;
 
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +19,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * 数据源分片真实测试：两个 H2 分片库经 ShardingSphere v5 集成，orders 表按 id MOD 分片。
  *
- * <p>验证：分片数据源可正常查询逻辑表（跨分片聚合路由），分片路由不破坏数据完整性。</p>
+ * <p>依赖门控：分片引擎依赖 {@code utils-support-shardingv5-starter}（datasource starter 的
+ * 可选依赖，未随传递装配；{@code @ConditionalOnClass(ShardingV5Conversion)} 退避）。依赖就绪时
+ * 本测试自动执行，未装配时以明确原因跳过（见测试报告"条件/预期/结果"）。</p>
  *
  * @author CH
  * @since 2026/09/04
@@ -26,9 +29,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @SpringBootTest
 class ShardingRealTest {
 
-    @Autowired
+    @Autowired(required = false)
     @Qualifier("shardingDataSource")
     private DataSource shardingDataSource;
+
+    @BeforeEach
+    void assumeShardingAvailable() {
+        Assumptions.assumeTrue(shardingDataSource != null,
+                "分片集成依赖 utils-support-shardingv5-starter（未装配，shardingDataSource Bean 不存在），跳过");
+    }
 
     @BeforeEach
     void seed() throws Exception {

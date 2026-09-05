@@ -34,13 +34,48 @@ class ApiVersionGrayRealTest {
 
     @Autowired
     private MockMvc mockMvc;
-    @Autowired(required = false)
-    private ApiVersionRequestMappingHandlerMapping versionMapping;
+    @Autowired
+    private org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping requestMappingHandlerMapping;
 
-    /** 诊断：自定义版本映射 Bean 是否注册成功 */
+    /** 接管验证：实际生效的请求映射器应为版本路由映射（WebMvcRegistrations 接管成功） */
     @Test
-    void versionMappingRegistered() {
-        assertNotNull(versionMapping, "ApiVersionRequestMappingHandlerMapping 应注册为 Bean");
+    void mappingTakeoverVerified() {
+        assertNotNull(requestMappingHandlerMapping,
+                "RequestMappingHandlerMapping 应存在");
+        assertNotNull((ApiVersionRequestMappingHandlerMapping) requestMappingHandlerMapping,
+                "映射器应为 ApiVersionRequestMappingHandlerMapping（WebMvcRegistrations 接管）");
+    }
+
+    /** 查询参数路由：apiVersion=1 -> v1 实现 */
+    @Test
+    void routeByQueryParamV1() throws Exception {
+        mockMvc.perform(get("/api/api-version/greet").param("apiVersion", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.version").value("1"));
+    }
+
+    /** 查询参数路由：apiVersion=2 -> v2 实现 */
+    @Test
+    void routeByQueryParamV2() throws Exception {
+        mockMvc.perform(get("/api/api-version/greet").param("apiVersion", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.version").value("2"));
+    }
+
+    /** 请求头路由：X-Api-Version: 1 -> v1 实现 */
+    @Test
+    void routeByHeader() throws Exception {
+        mockMvc.perform(get("/api/api-version/greet").header("X-Api-Version", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.version").value("1"));
+    }
+
+    /** 特殊值：apiVersion=latest -> 最新版本（v2） */
+    @Test
+    void routeByLatest() throws Exception {
+        mockMvc.perform(get("/api/api-version/greet").param("apiVersion", "latest"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.version").value("2"));
     }
 
     /** 软灰度命中：username 在灰度名单（gray-user）内 -> 放行并返回 X-Gray-Hit 响应头 */
