@@ -10,6 +10,7 @@ import com.chua.starter.common.support.api.annotations.ApiFeature;
 import com.chua.starter.common.support.api.annotations.ApiGray;
 import com.chua.starter.common.support.api.annotations.ApiInternal;
 import com.chua.starter.common.support.api.annotations.ApiMock;
+import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.api.feature.ApiFeatureManager;
 import com.chua.starter.common.support.api.gray.ApiGrayEvaluator;
 import com.chua.starter.common.support.api.properties.ApiProperties;
@@ -106,6 +107,11 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
 
         // 处理 @ApiGray
         if (!handleApiGray(handlerMethod, request, response)) {
+            return false;
+        }
+
+        // 处理 @Permission（角色 + dev profile 校验）
+        if (!handlePermission(handlerMethod, request, response)) {
             return false;
         }
 
@@ -494,7 +500,82 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
     }
 
     /**
-     * 写入 JSON 响应
+     * 处理 @Permission 注解
+     * <p>校验用户角色是否在允许列表中，且当前运行 profile 为 dev。</p>
+     * <p>角色来源优先级：x-user-role 请求头 → session attributes → request attributes。</p>
+     */
+    private boolean handlePermission(HandlerMethod handlerMethod, HttpServletRequest request,
+                                     HttpServletResponse response) throws IOException {
+        Permission permission = AnnotationUtils.findAnnotation(handlerMethod.getMethod(), Permission.class);
+        if (permission == null) {
+            permission = AnnotationUtils.findAnnotation(handlerMethod.getBeanType(), Permission.class);
+        }
+        if (permission == null) {
+            return true;
+        }
+
+        String[] requiredRoles = permission.role();
+        if (requiredRoles == null || requiredRoles.length == 0) {
+            return true;
+        }
+
+        // 解析当前用户角色
+        String userRole = resolveUserRole(request);
+
+        boolean roleAllowed = false;
+        for (String role : requiredRoles) {
+            if (role.equalsIgnoreCase(userRole)) {
+                roleAllowed = true;
+                break;
+            }
+        }
+        if (!roleAllowed) {
+            log.warn("权限拒绝：uri={}, userRole={}, requiredRoles={}", request.getRequestURI(), userRole, requiredRoles);
+            writeResponse(response, HttpServletResponse.SC_FORBIDDEN, ReturnResult.error("仅管理员可操作"));
+            return false;
+        }
+
+        // 校验 dev profile
+        String[] activeProfiles = environment.getActiveProfiles();
+        boolean isDev = activeProfiles.length == 0 || "dev".equals(activeProfiles[0]);
+        if (!isDev) {
+            log.warn("禁止在非 dev 模式修改敏感配置：uri={}, profiles={}", request.getRequestURI(), activeProfiles);
+            writeResponse(response, HttpServletResponse.SC_FORBIDDEN, ReturnResult.error("系统目录仅允许在 dev 模式下修改"));
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * 解析当前用户角色
+     * <p>优先从 x-user-role 请求头获取，其次 session，最后 request attribute。</p>
+     */
+    private String resolveUserRole(HttpServletRequest request) {
+        // 1. 请求头（WebUI 前端在 authenticated 时通过 httpBridge 注入）
+        String headerRole = request.getHeader("x-user-role");
+        if (StringUtils.isNotBlank(headerRole)) {
+            return headerRole.trim().toLowerCase();
+        }
+        // 2. session
+        var session = request.getSession(false);
+        if (session != null) {
+            Object role = session.getAttribute("role");
+            if (role instanceof String str && StringUtils.isNotBlank(str)) {
+                return str.trim().toLowerCase();
+            }
+        }
+        // 3. request attribute（由上游过滤器注入）
+        Object attrRole = request.getAttribute("role");
+        if (attrRole instanceof String str && StringUtils.isNotBlank(str)) {
+            return str.trim().toLowerCase();
+        }
+        // 默认 admin（本地信任场景）
+        return "admin";
+    }
+
+    /**
+     * 写 JSON 响应
      */
     private void writeResponse(HttpServletResponse response, int status, Object body) throws IOException {
         response.setStatus(status);

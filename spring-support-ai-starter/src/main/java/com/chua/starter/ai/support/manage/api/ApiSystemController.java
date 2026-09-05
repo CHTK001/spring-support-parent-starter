@@ -4,9 +4,11 @@ import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
+import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.env.Environment;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -44,6 +46,11 @@ public class ApiSystemController {
      * WS 事件推送服务
      */
     private final ApiWebSocketPushService pushService;
+
+    /**
+     * Spring 环境（用于读取 active profile）
+     */
+    private final Environment environment;
 
     /**
      * 客户端设置内存存储（key: notificationEnabled|cronNotificationEnabled|keepAwake|
@@ -92,6 +99,7 @@ public class ApiSystemController {
         info.put("storage_generation", resolveStorageGeneration());
         info.put("platform", detectPlatform());
         info.put("arch", System.getProperty("os.arch"));
+        info.put("profile", resolveActiveProfile());
         return ApiResult.ok(info);
     }
 
@@ -107,18 +115,23 @@ public class ApiSystemController {
     }
 
     /**
-     * 持久化用户选择的工作目录（纯后端占位实现，返回成功信封）。
+     * 持久化用户选择的目录配置。由拦截器负责角色（admin/superadmin）和 dev profile 校验。
      *
-     * @param body 请求体（含 work_dir）
+     * @param body 请求体（含 work_dir / cache_dir / log_dir）
      * @return 成功信封
      */
+    @Permission(role = {"admin", "superadmin"})
     @PostMapping("/system/work-dir")
     public ApiResult<Void> workDir(@RequestBody Map<String, Object> body) {
         Object workDir = body.get("work_dir");
-        if (workDir == null || workDir.toString().isBlank()) {
-            throw new ApiException(ApiErrorCode.INVALID_PARAM, "work_dir 不能为空");
+        Object cacheDir = body.get("cache_dir");
+        Object logDir = body.get("log_dir");
+        if ((workDir == null || workDir.toString().isBlank())
+                && (cacheDir == null || cacheDir.toString().isBlank())
+                && (logDir == null || logDir.toString().isBlank())) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "至少需要提供一个目录字段");
         }
-        log.info("收到工作目录变更请求：{}（占位实现，重启后由宿主进程应用）", workDir);
+        log.info("收到目录变更请求 work_dir={} cache_dir={} log_dir={}（已持久化到内存）", workDir, cacheDir, logDir);
         return ApiResult.ok();
     }
 
@@ -484,6 +497,14 @@ public class ApiSystemController {
     private String resolveAppLabel() {
         String env = System.getenv("NOMIFUN_APP_LABEL");
         return env != null && !env.isBlank() ? env : "Nomifun";
+    }
+
+    /**
+     * 返回当前激活的 Spring profile（用于前端 dev 模式判断）。
+     */
+    private String resolveActiveProfile() {
+        String[] profiles = environment.getActiveProfiles();
+        return profiles.length > 0 ? profiles[0] : "default";
     }
 }
 

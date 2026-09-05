@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <!--
     文件存储模块 - spring-support-filesystem-starter
 
@@ -84,11 +84,7 @@
             <artifactId>spring-support-swagger-starter</artifactId>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
+        
     </dependencies>
 
     <!-- 继承父 pom 的 maven-compiler-plugin (3.13.0 + lombok annotation processor + add opens 配置)

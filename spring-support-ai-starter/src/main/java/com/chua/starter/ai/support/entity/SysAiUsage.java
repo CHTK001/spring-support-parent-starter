@@ -97,6 +97,8 @@ public class SysAiUsage extends SysBase {
     private String sysAiUsageEndpoint;
     /** 请求IP */
     private String sysAiUsageIp;
+    /** IP 物理地址（省/市，来自 IP 定位） */
+    private String sysAiUsageLocation;
     /** 请求类型: chat/completion/embedding */
     private String sysAiUsageType;
     /** 计费模式: pay_as_you_go/subscription */
