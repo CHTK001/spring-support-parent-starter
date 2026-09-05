@@ -91,14 +91,6 @@
             <artifactId>utils-support-spring-starter</artifactId>
         </dependency>
 
-        <!-- 测试：接口权限/按钮权限拦截器单元测试（MockHttpServletRequest 需 spring-test；
-             版本由 Boot 4.1.0 parent 管理） -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
     </dependencies>
 
     <build>

@@ -11,6 +11,7 @@ import com.chua.starter.ai.support.service.SysAiPricingService;
 import com.chua.starter.ai.support.service.SysAiUsageService;
 import com.chua.starter.ai.support.service.impl.SysAiPricingServiceImpl;
 import com.chua.starter.ai.support.service.impl.SysAiUsageServiceImpl;
+import com.chua.starter.common.support.service.IptablesService;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -44,8 +45,9 @@ public class UsageAutoConfiguration {
      */
     public SysAiUsageService sysAiUsageService(SysAiUsageMapper usageMapper,
                                                SysAiUsageDailyMapper dailyMapper,
-                                               SysAiPricingService pricingService) {
-        return new SysAiUsageServiceImpl(usageMapper, dailyMapper, pricingService);
+                                               SysAiPricingService pricingService,
+                                               IptablesService iptablesService) {
+        return new SysAiUsageServiceImpl(usageMapper, dailyMapper, pricingService, iptablesService);
     }
 
     @Bean

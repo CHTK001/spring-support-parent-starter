@@ -8,11 +8,11 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 /**
- * api 版本演示控制器。
+ * api 版本演示控制器：同路径多版本路由。
  *
- * <p>框架观察：{@code ApiVersionRequestMappingHandlerMapping} 在 Boot 4.1 下注册后
- * 无法取代默认映射（同路径多版本方法触发 Ambiguous mapping），版本路由特性暂不可用——
- * 此处仅保留单方法演示 {@code @ApiVersion} 注解存在性（路由缺陷见测试报告）。</p>
+ * <p>{@code @ApiVersion} 标注在方法上，由 {@code ApiVersionRequestMappingHandlerMapping}
+ * （经 {@code WebMvcRegistrations} 装配）按查询参数 {@code apiVersion} / 请求头
+ * {@code X-Api-Version} 路由；{@code latest} 关键字匹配最新版本。</p>
  *
  * @author CH
  * @since 2026/09/04
@@ -23,7 +23,13 @@ public class ApiVersionDemoController {
 
     @GetMapping
     @ApiVersion("1")
-    public Map<String, Object> greet() {
+    public Map<String, Object> greetV1() {
         return Map.of("version", "1", "message", "hello-v1");
+    }
+
+    @GetMapping
+    @ApiVersion("2")
+    public Map<String, Object> greetV2() {
+        return Map.of("version", "2", "message", "hello-v2");
     }
 }

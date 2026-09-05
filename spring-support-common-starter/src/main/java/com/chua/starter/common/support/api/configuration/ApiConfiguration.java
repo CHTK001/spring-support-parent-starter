@@ -24,6 +24,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
+import org.springframework.boot.webmvc.autoconfigure.WebMvcRegistrations;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import org.slf4j.Logger;
@@ -161,19 +162,27 @@ public class ApiConfiguration implements EnvironmentAware  {
     /**
      * 版本路由映射：{@code @ApiVersion} 同路径多版本路由（查询参数 apiVersion / 请求头 X-Api-Version）。
      *
+     * <p>经 {@link WebMvcRegistrations#getRequestMappingHandlerMapping()} 交由 Boot 4.x
+     * 的 {@code DelegatingWebMvcConfiguration} 装配——Boot 4 的默认映射为继承 Bean，
+     * 竞争式 {@code @Bean} 无法令其退避（Ambiguous mapping），WebMvcRegistrations 是官方扩展点。</p>
+     *
      * <p>开关 {@code plugin.api.version.enable} 默认开启（非实验性功能，遵循"默认开关默认开启"约定）；
      * 无版本参数/头部的请求匹配所有版本，非版本化接口不受影响。</p>
      *
      * @param apiProperties api 配置
      * @param environment   环境
-     * @return 版本路由映射器
+     * @return 版本路由注册器
      */
     @Bean
-    @ConditionalOnMissingBean(ApiVersionRequestMappingHandlerMapping.class)
+    @ConditionalOnMissingBean(WebMvcRegistrations.class)
     @ConditionalOnProperty(name = "plugin.api.version.enable", havingValue = "true", matchIfMissing = true)
-    public ApiVersionRequestMappingHandlerMapping apiVersionRequestMappingHandlerMapping(
-            ApiProperties apiProperties, Environment environment) {
-        return new ApiVersionRequestMappingHandlerMapping(apiProperties, environment);
+    public WebMvcRegistrations webMvcRegistrations(ApiProperties apiProperties, Environment environment) {
+        return new WebMvcRegistrations() {
+            @Override
+            public RequestMappingHandlerMapping getRequestMappingHandlerMapping() {
+                return new ApiVersionRequestMappingHandlerMapping(apiProperties, environment);
+            }
+        };
     }
 
 

@@ -83,9 +83,10 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
     @Override
     public ApiVersionCondition getMatchingCondition(HttpServletRequest httpServletRequest) {
         // 1. 从查询参数获取版本号 ?apiVersion=1 或 ?apiVersion=v1 或 ?apiVersion=latest
-        Map<String, String> queryParams = MapUtils.asMap(httpServletRequest.getQueryString(), "&", "=");
-        String versionStr = MapUtils.getString(queryParams, VERSION_PARAM);
-        
+        //    使用 getParameter 而非解析 getQueryString：QueryString 在部分环境（MockMvc）为 null，
+        //    且手工切分存在编码/嵌套解析问题
+        String versionStr = httpServletRequest.getParameter(VERSION_PARAM);
+
         // 2. 如果没有查询参数，尝试从请求头获取 X-Api-Version
         if (null == versionStr || versionStr.isEmpty()) {
             versionStr = httpServletRequest.getHeader(VERSION_HEADER);
@@ -126,8 +127,7 @@ Version apiVersionValue = Version.of(currentApiVersion.value());
      * @return 是否为 latest
      */
     private boolean isLatestVersion(HttpServletRequest httpServletRequest) {
-        Map<String, String> queryParams = MapUtils.asMap(httpServletRequest.getQueryString(), "&", "=");
-        String versionStr = MapUtils.getString(queryParams, VERSION_PARAM);
+        String versionStr = httpServletRequest.getParameter(VERSION_PARAM);
         if (null == versionStr || versionStr.isEmpty()) {
             versionStr = httpServletRequest.getHeader(VERSION_HEADER);
         }

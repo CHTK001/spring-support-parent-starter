@@ -11,6 +11,15 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password: ""
+    # 数据源分片（ShardingSphere v5 集成）：orders 表按 id MOD 分片到两个 H2 分片库
+    sharding:
+      enabled: true
+      databases:
+        - jdbc:h2:mem:shard0;DB_CLOSE_DELAY=-1
+        - jdbc:h2:mem:shard1;DB_CLOSE_DELAY=-1
+      tables:
+        - logic-table: orders
+          sharding-column: id
 
 # 数据权限（@DataScope）启用：字段列名使用框架默认值（sys_dept_id / create_by）；
 # oauth-client：本地联调模式（无远程 OAuth 服务时 ThreadLocal 注入 admin 上下文）；
@@ -53,14 +62,3 @@ plugin:
         url: jdbc:h2:mem:ds2;DB_CLOSE_DELAY=-1
         username: sa
         password: ""
-
-# 数据源分片（ShardingSphere v5 集成）：orders 表按 id MOD 分片到两个 H2 分片库
-  datasource:
-    sharding:
-      enabled: true
-      databases:
-        - jdbc:h2:mem:shard0;DB_CLOSE_DELAY=-1
-        - jdbc:h2:mem:shard1;DB_CLOSE_DELAY=-1
-      tables:
-        - logic-table: orders
-          sharding-column: id

@@ -9,6 +9,7 @@ import com.chua.starter.oauth.client.support.exception.OauthException;
 import com.chua.starter.oauth.client.support.user.UserResume;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
@@ -17,6 +18,8 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.Order;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -34,6 +37,13 @@ import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_
 @Slf4j
 @Order(1)
 public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor implements InitializingBean, Ordered {
+
+    /** 只读角色：拥有该角色的账号禁止写操作（优先于所有权限，含超级管理员） */
+    private static final String READ_ONLY_ROLE = "READ_ONLY";
+
+    /** 安全方法（只读操作放行） */
+    private static final Set<String> SAFE_METHODS = Set.of("GET", "HEAD", "OPTIONS");
+
     @Override
     /** Matches */
     public boolean matches(Method method, Class<?> targetClass) {
@@ -88,7 +98,17 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
 
                 Set<String> roles = userInfo.getRoles();
                 log.debug("[权限拦截器]用户角色: {}", roles);
-                
+
+                // 只读角色优先于所有权限：READ_ONLY 角色禁止写操作（POST/PUT/DELETE/PATCH），
+                // 置于超级管理员检查之前，对超管同样生效；无请求上下文时不阻断（非 HTTP 调用）
+                if (CollectionUtils.containsIgnoreCase(roles, READ_ONLY_ROLE)) {
+                    HttpServletRequest request = currentRequest();
+                    if (request != null && !isSafeMethod(request.getMethod())) {
+                        log.warn("[权限拦截器]只读角色禁止写操作 - 用户: {}, 方法: {}", userInfo.getUsername(), methodName);
+                        throw new OauthException("只读角色不允许执行写操作!");
+                    }
+                }
+
                 // 超级管理员检查
                 if (AuthConstant.isSuperAdmin(roles)) {
                     log.info("[权限拦截器]超级管理员放行 - 用户: {}, 方法: {}", userInfo.getUsername(), methodName);
@@ -203,6 +223,21 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
             return permission;
         }
         return method.getDeclaringClass().getDeclaredAnnotation(Permission.class);
+    }
+
+    /** 获取当前 HTTP 请求；无请求上下文（非 HTTP 调用）返回 null */
+    private static HttpServletRequest currentRequest() {
+        try {
+            ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            return attributes == null ? null : attributes.getRequest();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** 是否安全方法（只读操作） */
+    private static boolean isSafeMethod(String method) {
+        return method != null && SAFE_METHODS.contains(method.toUpperCase());
     }
 
     @Override
