@@ -9,6 +9,7 @@ import com.chua.starter.common.support.log.RestTemplateTraceIdInterceptor;
 import com.chua.starter.common.support.processor.ResponseModelViewMethodProcessor;
 import com.chua.starter.common.support.jackson.configuration.JacksonProperties;
 import com.chua.starter.common.support.properties.MessageConverterProperties;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.common.support.api.encode.ApiContentNegotiationStrategy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.BeansException;
@@ -114,6 +115,20 @@ public class MessageConverterWebMvcConfigurer implements WebMvcConfigurer, Appli
         filterRegistrationBean.setOrder(Integer.MIN_VALUE);
         filterRegistrationBean.addUrlPatterns("/*");
         return filterRegistrationBean;
+    }
+
+    /**
+     * 消息转换器的 ServiceInfo 贡献者。
+     *
+     * @return ServiceInfoContributor
+     */
+    @Bean
+    public ServiceInfoContributor messageConverterServiceInfoContributor() {
+        return registry -> registry.registerFlag("message-converter", "消息转换",
+                messageConverterProperties.getEnable(),
+                "消息转换器 (JSON/XML/YAML/CBOR)",
+                "[脱敏: " + (messageConverterProperties.getOpenDesensitize() ? "开" : "关")
+                        + " 加解密: " + (messageConverterProperties.getOpenCrypto() ? "开" : "关") + "]");
     }
 
     @Override

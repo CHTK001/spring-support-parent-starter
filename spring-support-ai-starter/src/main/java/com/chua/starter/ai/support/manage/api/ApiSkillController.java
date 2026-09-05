@@ -97,6 +97,13 @@ public class ApiSkillController {
     private static final String MARKET_ENABLED_FIELD = "market_enabled";
 
     /**
+     * 按市场源的启用状态字段名前缀（skills.market_clawhub_enabled / market_skillhub_mcp_enabled 等）。
+     * 未显式配置时默认启用。
+     */
+    private static final String MARKET_SOURCE_FIELD_PREFIX = "market_";
+    private static final String MARKET_SOURCE_FIELD_SUFFIX = "_enabled";
+
+    /**
      * 列出全部可用技能。
      *
      * @return 技能列表
@@ -154,28 +161,46 @@ public class ApiSkillController {
         }
         for (Map.Entry<String, SkillOfflineProvider> entry : providers.entrySet()) {
             SkillOfflineProvider provider = entry.getValue();
+            Map<String, Object> providerItem = new LinkedHashMap<>();
+            providerItem.put("provider", entry.getKey());
+            providerItem.put("name", provider.name());
+            List<SkillDefinition> skills = List.of();
             try {
-                if (!provider.isInstalled()) {
-                    continue;
+                if (provider.isInstalled()) {
+                    skills = provider.listAgentSkills();
                 }
-                List<SkillDefinition> skills = provider.listAgentSkills();
-                if (skills == null || skills.isEmpty()) {
-                    continue;
-                }
-                for (SkillDefinition skill : skills) {
-                    Map<String, Object> item = new LinkedHashMap<>();
-                    item.put("name", skill.getName());
-                    item.put("description", skill.getDescription() != null ? skill.getDescription() : "");
-                    item.put("source", "agent");
-                    item.put("provider", entry.getKey());
-                    result.add(item);
-                }
-                log.info("[ApiSkill] SkillOfflineProvider[{}] 扫描到 {} 个 Agent 技能", entry.getKey(), skills.size());
             } catch (Exception e) {
                 log.warn("[ApiSkill] SkillOfflineProvider[{}] 扫描 Agent 技能失败: {}", entry.getKey(), e.getMessage());
             }
+            List<Map<String, Object>> skillItems = new ArrayList<>();
+            for (SkillDefinition skill : skills) {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("name", skill.getName());
+                item.put("description", skill.getDescription() != null ? skill.getDescription() : "");
+                item.put("source", "agent");
+                item.put("provider", entry.getKey());
+                skillItems.add(item);
+            }
+            providerItem.put("installed", !skills.isEmpty() || safeInstalled(provider));
+            providerItem.put("skill_count", skillItems.size());
+            providerItem.put("skills", skillItems);
+            result.add(providerItem);
+            if (!skillItems.isEmpty()) {
+                log.info("[ApiSkill] SkillOfflineProvider[{}] 扫描到 {} 个 Agent 技能", entry.getKey(), skillItems.size());
+            }
         }
         return ApiResult.ok(result);
+    }
+
+    /**
+     * 安全读取 provider 是否安装（兜底 try/catch）。
+     */
+    private boolean safeInstalled(SkillOfflineProvider provider) {
+        try {
+            return provider.isInstalled();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**
@@ -580,6 +605,67 @@ public class ApiSkillController {
         sysAiGlobalSettingService.upsertValue(MARKET_SETTING_GROUP, MARKET_ENABLED_FIELD, "false", "技能市场是否启用");
         log.info("[skills] market disabled");
         return ApiResult.ok();
+    }
+
+    /**
+     * 查询技能市场启用状态。
+     *
+     * @return 市场启用状态（enabled=true 表示市场开启；默认开启）
+     */
+    @GetMapping("/market/status")
+    public ApiResult<Map<String, Object>> marketStatus() {
+        boolean enabled = sysAiGlobalSettingService.getBoolean(MARKET_SETTING_GROUP, MARKET_ENABLED_FIELD, true);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("enabled", enabled);
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 按市场源启用/禁用。源值示例：clawhub、loophub、skillhub、skillhub_mcp、mcpworld、clawhub_plugins、skillhub_packages。
+     * <p>持久化到 {@code sys_ai_global_setting}（分组 skills，字段 market_<source>_enabled）。</p>
+     *
+     * @param source 市场源标识
+     * @param enabled 是否启用
+     * @return 成功信封
+     */
+    @PostMapping("/market/source/toggle")
+    public ApiResult<Void> marketSourceToggle(@RequestBody Map<String, Object> body) {
+        String source = asText(body.get("source"));
+        boolean enabled = body.get("enabled") != null && Boolean.parseBoolean(String.valueOf(body.get("enabled")));
+        if (source == null || source.isBlank()) {
+            throw new ApiException(ApiErrorCode.PARAM_ERROR, "市场源不能为空");
+        }
+        sysAiGlobalSettingService.upsertValue(
+                MARKET_SETTING_GROUP,
+                MARKET_SOURCE_FIELD_PREFIX + source + MARKET_SOURCE_FIELD_SUFFIX,
+                String.valueOf(enabled),
+                "市场源 " + source + " 是否启用");
+        log.info("[skills] market source {} -> {}", source, enabled);
+        return ApiResult.ok();
+    }
+
+    /**
+     * 查询各市场源启用状态。未显式配置的源默认启用。
+     *
+     * @param sources 要查询的市场源列表（可空，为空时返回全部已知源）
+     * @return {@code { sources: { "<source>": boolean, ... } }}
+     */
+    @GetMapping("/market/sources/status")
+    public ApiResult<Map<String, Object>> marketSourcesStatus(@RequestParam(required = false) List<String> sources) {
+        Map<String, Object> statusMap = new LinkedHashMap<>();
+        if (sources == null || sources.isEmpty()) {
+            sources = List.of("clawhub", "loophub", "skillhub", "skillhub_mcp", "mcpworld", "clawhub_plugins", "skillhub_packages");
+        }
+        for (String source : sources) {
+            boolean enabled = sysAiGlobalSettingService.getBoolean(
+                    MARKET_SETTING_GROUP,
+                    MARKET_SOURCE_FIELD_PREFIX + source + MARKET_SOURCE_FIELD_SUFFIX,
+                    true);
+            statusMap.put(source, enabled);
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("sources", statusMap);
+        return ApiResult.ok(result);
     }
 
     /**

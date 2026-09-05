@@ -13,11 +13,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.chua.starter.ai.support.entity.WorkshopAsset;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -57,11 +62,15 @@ public class WorkshopAssetController {
 
         WorkshopAssetService.AssetQueryRequest req = new WorkshopAssetService.AssetQueryRequest(
                 kind, collection, ungrouped, q, tag, inLibrary, sort, page, pageSize);
-        List<?> items = assetService.listAssets(req);
+        List<WorkshopAsset> items = assetService.listAssets(req);
         long total = assetService.countAssets(req);
 
+        List<Map<String, Object>> contractItems = new ArrayList<>();
+        for (WorkshopAsset asset : items) {
+            contractItems.add(toContractMap(asset));
+        }
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("items", items);
+        result.put("items", contractItems);
         result.put("total", total);
         return result;
     }
@@ -213,8 +222,49 @@ public class WorkshopAssetController {
 
     private Map<String, Object> wrapAsset(Object asset) {
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("data", asset);
+        result.put("data", asset instanceof WorkshopAsset wa ? toContractMap(wa) : asset);
         result.put("success", true);
         return result;
+    }
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    /**
+     * 将实体转为前端 WorkshopAsset 契约结构：
+     * tags/origin 从 JSON 字符串解析为数组/对象，并补充 url / thumb_url 字段。
+     */
+    private Map<String, Object> toContractMap(WorkshopAsset a) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("asset_id", a.getAssetId());
+        m.put("kind", a.getKind());
+        m.put("title", a.getTitle());
+        m.put("collection", a.getCollection());
+        m.put("tags", parseJsonValue(a.getTags(), List.of()));
+        m.put("mime", a.getMime());
+        m.put("width", a.getWidth());
+        m.put("height", a.getHeight());
+        m.put("bytes", a.getBytes());
+        m.put("in_library", Boolean.TRUE.equals(a.getInLibrary()));
+        m.put("text_content", a.getTextContent());
+        m.put("origin", parseJsonValue(a.getOrigin(), null));
+        m.put("url", "/api/workshop/files/" + a.getAssetId());
+        m.put("thumb_url", a.getThumbPath() != null && !a.getThumbPath().isBlank()
+                ? "/api/workshop/files/" + a.getAssetId() + "?thumb=1" : null);
+        m.put("created_at", a.getCreatedAt());
+        m.put("updated_at", a.getUpdatedAt());
+        return m;
+    }
+
+    /**
+     * 解析 JSON 字符串为原生 List/Map；空或解析失败回退到 fallback。
+     */
+    private Object parseJsonValue(String raw, Object fallback) {
+        if (raw == null || raw.isBlank()) return fallback;
+        try {
+            return OBJECT_MAPPER.readValue(raw, Object.class);
+        } catch (Exception e) {
+            log.warn("[WorkshopAsset] JSON 字段解析失败, 原值: {}", raw);
+            return fallback;
+        }
     }
 }

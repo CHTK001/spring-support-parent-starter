@@ -2,6 +2,26 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.chua.starter.ai.support.mapper.WorkshopAssetMapper">
 
+    <!-- 显式列名映射：表列带 asset_ 前缀，与实体字段名不同，不能用 resultType 自动映射 -->
+    <resultMap id="assetMap" type="com.chua.starter.ai.support.entity.WorkshopAsset">
+        <id property="assetId" column="asset_id"/>
+        <result property="kind" column="asset_kind"/>
+        <result property="title" column="asset_title"/>
+        <result property="collection" column="asset_collection"/>
+        <result property="tags" column="asset_tags"/>
+        <result property="mime" column="asset_mime"/>
+        <result property="width" column="asset_width"/>
+        <result property="height" column="asset_height"/>
+        <result property="bytes" column="asset_bytes"/>
+        <result property="inLibrary" column="asset_in_library"/>
+        <result property="textContent" column="asset_text_content"/>
+        <result property="origin" column="asset_origin"/>
+        <result property="filePath" column="asset_file_path"/>
+        <result property="thumbPath" column="asset_thumb_path"/>
+        <result property="createdAt" column="asset_created_at"/>
+        <result property="updatedAt" column="asset_updated_at"/>
+    </resultMap>
+
     <!-- 复用：查询过滤条件片段 -->
     <sql id="filterWhere">
         <where>
@@ -39,7 +59,7 @@
         SELECT asset_id FROM workshop_asset WHERE JSON_SEARCH(asset_tags, 'one', #{query}) IS NOT NULL
     </select>
 
-    <select id="selectPageByFilter" resultType="com.chua.starter.ai.support.entity.WorkshopAsset">
+    <select id="selectPageByFilter" resultMap="assetMap">
         SELECT * FROM workshop_asset
         <include refid="filterWhere"/>
         ORDER BY

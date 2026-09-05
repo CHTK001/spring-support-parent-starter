@@ -161,6 +161,10 @@ public class UsageController {
 
         List<Map<String, Object>> result = new ArrayList<>();
         for (Map.Entry<String, UsageParser> e : allParsers.entrySet()) {
+            // SPI 扫描可能返回 value 为 null 的条目（声明存在但实现加载失败），跳过避免 NPE
+            if (e.getKey() == null || e.getValue() == null) {
+                continue;
+            }
             Map<String, Object> item = Map.of(
                     "name", e.getKey(),
                     "type", e.getValue().getClass().getSimpleName(),

@@ -64,12 +64,6 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     private static final String GROUP = "global";
 
     /**
-     * 串行执行的间隔（毫秒）：上一次同步/聚合完成后，等待该时长再执行下一次。
-     * 不再使用可配置的「用量上报间隔」，改为固定短间隔串行执行。
-     */
-    private static final long SERIAL_GAP_MILLIS = 5000;
-
-    /**
      * 同步日志缓冲上限（前端展示最新 100 条）
      */
     private static final int LOG_BUFFER_LIMIT = 100;
@@ -195,9 +189,20 @@ public class UsageAggregationTask implements SchedulingConfigurer {
     }
 
     /**
-     * 计算下次执行时间：固定短间隔串行执行。
-     * 上一次运行完成后，再等待 {@link #SERIAL_GAP_MILLIS} 触发下一次，保证不重叠。
-     * <p>关键：必须基于 {@code lastCompletionTime} 计算，而非「当前时间+间隔」。
+     * 用量上报间隔键（秒），从全局设置读取；未配置时默认 {@link #DEFAULT_REPORT_INTERVAL_SEC}。
+     */
+    private static final String SETTING_REPORT_INTERVAL = "usage_report_interval";
+
+    /**
+     * 默认用量上报间隔（秒）——未配置时取 300 秒（5 分钟）。
+     */
+    private static final int DEFAULT_REPORT_INTERVAL_SEC = 300;
+
+    /**
+     * 计算下次执行时间：按「用量上报间隔（秒）」串行执行。
+     * <p>间隔取自全局设置 {@code usage_report_interval}，驱动一次同步/聚合的节奏；
+     * 上一次运行完成后，再等待该间隔触发下一次，保证不重叠。
+     * 关键：必须基于 {@code lastCompletionTime} 计算，而非「当前时间+间隔」。
      * 否则任务执行耗时超过间隔时，调度器会按当前时间再次触发，造成并发执行，
      * 多个 {@code @Transactional} 任务同时占用数据库连接，耗尽连接池。</p>
      *
@@ -205,12 +210,14 @@ public class UsageAggregationTask implements SchedulingConfigurer {
      * @return 下次执行时间
      */
     private Instant nextTriggerTime(TriggerContext triggerContext) {
+        int intervalSec = settingReader.getInt(GROUP, SETTING_REPORT_INTERVAL, DEFAULT_REPORT_INTERVAL_SEC);
+        long gapMillis = Math.max(intervalSec, 1) * 1000L;
         java.util.Date lastCompletion = triggerContext.lastCompletionTime();
         if (lastCompletion == null) {
             lastCompletion = triggerContext.lastScheduledExecutionTime();
         }
         Instant base = lastCompletion != null ? lastCompletion.toInstant() : Instant.now();
-        return base.plusMillis(SERIAL_GAP_MILLIS);
+        return base.plusMillis(gapMillis);
     }
 
     /**

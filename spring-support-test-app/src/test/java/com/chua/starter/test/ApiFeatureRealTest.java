@@ -27,12 +27,12 @@ class ApiFeatureRealTest {
     @Autowired
     private MockMvc mockMvc;
 
-    /** 实验性功能（defaultEnabled=false）：拦截返回 503 + 未开放提示 */
+    /** 实验性功能（defaultEnabled=false）：拦截返回 503 + 未开放提示（ReturnResult.msg 字段） */
     @Test
     void disabledFeatureReturns503() throws Exception {
         mockMvc.perform(get("/api/feature/beta"))
                 .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.message").value("此功能暂未开放"));
+                .andExpect(jsonPath("$.msg").value("此功能暂未开放"));
     }
 
     /** 常规功能（defaultEnabled=true）：正常放行 200 */
