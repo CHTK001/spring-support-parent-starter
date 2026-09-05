@@ -22,6 +22,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
@@ -203,6 +204,17 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
             return ReturnResult.error(REQUEST_PARAM_FORMAT_ERROR.getCode(), "数据类型转换失败");
         }
         return ReturnResult.error(REQUEST_PARAM_FORMAT_ERROR.getCode(), "参数'" + propertyName + "'类型转换失败");
+    }
+
+    /**
+     * 未映射资源（含编码/路径遍历变体等无对应处理器的请求）：
+     * 返回 404 而非 500（NoResourceFoundException 由 DispatcherServlet 对静态资源探测抛出）
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public <T> ReturnResult<T> handleNoResourceFoundException(NoResourceFoundException e) {
+        logWarn("资源不存在（未映射路径）: " + e.getMessage(), e);
+        return ReturnResult.error("资源不存在");
     }
 
     // ==================== HTTP/JSON 解析异常 ====================
