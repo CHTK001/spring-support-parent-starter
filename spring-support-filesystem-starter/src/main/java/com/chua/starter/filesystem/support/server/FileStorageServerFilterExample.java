@@ -1,13 +1,23 @@
 package com.chua.starter.filesystem.support.server;
 
+import com.chua.common.support.network.http.HttpHeader;
 import com.chua.common.support.network.http.HttpMethod;
 import com.chua.common.support.network.server.filter.ReactiveFilterChain;
 import com.chua.common.support.network.server.request.ServerRequest;
 import com.chua.common.support.network.server.response.ServerResponse;
 import com.chua.common.support.storage.FileStorage;
-import com.chua.common.support.storage.result.ObjectResult;
+import com.chua.common.support.storage.metadata.Metadata;
+import com.chua.common.support.storage.request.ExistObjectRequest;
+import com.chua.common.support.storage.request.ListObjectRequest;
+import com.chua.common.support.storage.request.PutObjectRequest;
+import com.chua.common.support.storage.result.DeleteObjectResult;
+import com.chua.common.support.storage.result.ExistObjectResult;
+import com.chua.common.support.storage.result.GetObjectResult;
+import com.chua.common.support.storage.result.ListObjectResult;
+import com.chua.common.support.storage.result.PutObjectResult;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
@@ -15,7 +25,7 @@ import java.util.concurrent.CompletionStage;
 /**
  * FileStorageServerFilter 使用示例：演示文件存储过滤器的典型用法。
  *
- * <p>覆盖注册存储、列表/上传/删除对象、CORS 处理等场景。</p>
+ * <p>覆盖过滤器创建、存储注册/注销、OPTIONS 预检、未注册 bucket 放行等场景。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -56,13 +66,14 @@ public class FileStorageServerFilterExample {
         total++;
 
         // 3. 添加并移除存储
-        Map<String, FileStorage> storages = Map.of("test", createMockStorage());
-        for (var entry : storages.entrySet()) {
-            filter.addFileStorage(entry.getKey(), entry.getValue());
-        }
-        assert filter.getStorageMap().containsKey("test") : "[FAIL] 应包含 test 存储";
+        filter.addFileStorage("test", createMockStorage());
+        // 验证存储已注册（通过反射访问私有字段）
+        boolean hasTest = com.chua.common.support.reflection.ReflectUtils.getField(filter, "storageMap") != null
+                && ((Map<?, ?>) com.chua.common.support.reflection.ReflectUtils.getField(filter, "storageMap")).containsKey("test");
+        assert hasTest : "[FAIL] 应包含 test 存储";
         filter.removeFileStorage("test");
-        assert !filter.getStorageMap().containsKey("test") : "[FAIL] 移除后不应包含 test 存储";
+        boolean removed = !((Map<?, ?>) com.chua.common.support.reflection.ReflectUtils.getField(filter, "storageMap")).containsKey("test");
+        assert removed : "[FAIL] 移除后不应包含 test 存储";
         log.info("[PASS] addFileStorage / removeFileStorage OK");
         pass++;
         total++;
@@ -122,39 +133,54 @@ public class FileStorageServerFilterExample {
     private static FileStorage createMockStorage() {
         return new FileStorage() {
             @Override
-            public com.chua.common.support.storage.result.PutObjectResult putObject(
-                    com.chua.common.support.storage.request.PutObjectRequest request) {
-                return com.chua.common.support.storage.result.PutObjectResult.success("/mock/key");
+            public PutObjectResult putObject(PutObjectRequest request) {
+                return PutObjectResult.builder().resultCode(ObjectResult.ResultCode.SUCCESS).url("/mock/key").build();
             }
 
             @Override
-            public com.chua.common.support.storage.result.GetObjectResult getObject(String key) {
+            public GetObjectResult getObject(com.chua.common.support.storage.request.GetObjectRequest request) {
+                return null;
+            }
+
+            @Override
+            public GetObjectResult getObject(String key) {
                 if ("notfound".equals(key)) {
-                    return com.chua.common.support.storage.result.GetObjectResult.notFound();
+                    return GetObjectResult.builder().resultCode(ObjectResult.ResultCode.FAILURE).build();
                 }
-                return com.chua.common.support.storage.result.GetObjectResult.success(
-                        "mock-content".getBytes(), "text/plain", 12);
+                byte[] content = "mock-content".getBytes();
+                return GetObjectResult.builder()
+                        .resultCode(ObjectResult.ResultCode.SUCCESS)
+                        .inputStream(new ByteArrayInputStream(content))
+                        .build();
             }
 
             @Override
-            public com.chua.common.support.storage.result.DeleteObjectResult deleteObject(String key) {
-                return com.chua.common.support.storage.result.DeleteObjectResult.success();
+            public DeleteObjectResult deleteObject(String key) {
+                return DeleteObjectResult.builder().resultCode(ObjectResult.ResultCode.SUCCESS).build();
             }
 
             @Override
-            public com.chua.common.support.storage.result.ExistObjectResult existObject(
-                    com.chua.common.support.storage.request.ExistObjectRequest request) {
-                return com.chua.common.support.storage.result.ExistObjectResult.exists();
+            public ExistObjectResult existObject(ExistObjectRequest request) {
+                return ExistObjectResult.builder().exists(true).build();
             }
 
             @Override
-            public com.chua.common.support.storage.result.ListObjectResult listObject(
-                    com.chua.common.support.storage.request.ListObjectRequest request) {
-                return com.chua.common.support.storage.result.ListObjectResult.success(
-                        List.of(com.chua.common.support.storage.metadata.Metadata.builder()
-                                .name("item1").size(100).directory(false).lastModified(System.currentTimeMillis())
-                                .build()));
+            public ListObjectResult listObject(ListObjectRequest request) {
+                return ListObjectResult.builder()
+                        .resultCode(ObjectResult.ResultCode.SUCCESS)
+                        .metadata(List.of(Metadata.builder()
+                                .name("item1").size(100).directory(false)
+                                .lastModified(System.currentTimeMillis()).build()))
+                        .build();
             }
+
+            @Override
+            public com.chua.common.support.storage.MultipartStorage createMultipartStorage() {
+                throw new UnsupportedOperationException("not supported in mock");
+            }
+
+            @Override
+            public void close() throws Exception {}
         };
     }
 
@@ -162,7 +188,7 @@ public class FileStorageServerFilterExample {
         private final HttpMethod method;
         private final String path;
         private final Map<String, String> params = Map.of();
-        private final Map<String, String> headers = Map.of();
+        private final HttpHeader headers = HttpHeader.create();
 
         MockRequest(HttpMethod method, String path) {
             this.method = method;
@@ -170,29 +196,51 @@ public class FileStorageServerFilterExample {
         }
 
         @Override public HttpMethod getMethod() { return method; }
+        @Override public String getUri() { return path; }
         @Override public String getPath() { return path; }
         @Override public Map<String, String> getParams() { return params; }
-        @Override public Map<String, String> getHeaders() { return headers; }
+        @Override public String getParam(String name) { return params.get(name); }
+        @Override public HttpHeader getHeaders() { return headers; }
         @Override public String getHeader(String name) { return headers.get(name); }
-        @Override public String getBody() { return null; }
-        @Override public byte[] getBodyBytes() { return null; }
+        @Override public String getContentType() { return null; }
+        @Override public long getContentLength() { return -1; }
+        @Override public byte[] getBody() { return null; }
+        @Override public String getBodyString() { return null; }
+        @Override public java.io.InputStream getInputStream() { return null; }
+        @Override public String getRemoteAddress() { return "127.0.0.1"; }
+        @Override public int getRemotePort() { return 0; }
+        @Override public Map<String, Object> getAttributes() { return Map.of(); }
+        @Override public Object getAttribute(String name) { return null; }
+        @Override public void setAttribute(String name, Object value) {}
     }
 
     static class MockResponse implements ServerResponse {
         private int status = 0;
-        private final Map<String, String> headers = new java.util.HashMap<>();
-        private Object body;
+        private final HttpHeader headers = HttpHeader.create();
+        private byte[] bodyBytes;
 
         @Override public ServerResponse setStatus(int status) { this.status = status; return this; }
         @Override public int getStatus() { return status; }
-        @Override public ServerResponse setHeader(String name, String value) { headers.put(name, value); return this; }
+        @Override public ServerResponse setHeader(String name, String value) { headers.add(name, value); return this; }
         @Override public String getHeader(String name) { return headers.get(name); }
-        @Override public Map<String, String> getHeaders() { return headers; }
-        @Override public ServerResponse setContentType(String contentType) { setHeader("Content-Type", contentType); return this; }
-        @Override public ServerResponse setBody(Object body) { this.body = body; return this; }
+        @Override public HttpHeader getHeaders() { return headers; }
+        @Override public ServerResponse setContentType(String contentType) { headers.add("Content-Type", contentType); return this; }
+        @Override public String getContentType() { return headers.get("Content-Type"); }
+        @Override public ServerResponse setBody(byte[] body) { this.bodyBytes = body; return this; }
+        @Override public ServerResponse setBody(String body) { this.bodyBytes = body.getBytes(java.nio.charset.StandardCharsets.UTF_8); return this; }
+        @Override public byte[] getBody() { return bodyBytes; }
+        @Override public java.io.OutputStream getOutputStream() { return null; }
+        @Override public ServerResponse sendRedirect(String location) { return this; }
+        @Override public ServerResponse sendError(int statusCode, String message) { this.status = statusCode; return this; }
+        @Override public void flush() {}
+        @Override public boolean isCommitted() { return false; }
+        @Override public boolean isEnded() { return false; }
         @Override public void end() {}
-        @Override public void end(Object body) { this.body = body; }
-        @Override public void sendError(int status, String message) { this.status = status; }
+        @Override public void writeRaw(byte[] bytes) {
+            if (bodyBytes == null) bodyBytes = bytes;
+            else bodyBytes = java.util.Arrays.copyOf(bodyBytes, bodyBytes.length + bytes.length);
+            System.arraycopy(bytes, 0, bodyBytes, bodyBytes.length - bytes.length, bytes.length);
+        }
         public int getStatusVal() { return status; }
         public String getHeaderVal(String name) { return headers.get(name); }
     }

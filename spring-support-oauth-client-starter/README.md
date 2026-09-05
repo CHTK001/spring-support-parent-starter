@@ -254,6 +254,73 @@ public class SecureController {
 }
 ```
 
+### 3.1 @Permission 注解（接口权限 / 按钮权限 / 只读角色）——推荐
+
+#### 🎯 场景与用途
+
+- **接口权限**：标注在 Controller/Service 方法或类上，要求用户持有指定权限码或角色才能访问（方法级、类级均可）。
+- **按钮权限**：按钮与接口共用同一套权限码——前端按权限码控制按钮显隐，后端在接口上用 `@Permission` 拦截兜底，防止绕过前端直接调用。
+- **只读角色**：账号授予 `READ_ONLY` 角色后，写操作（POST/PUT/DELETE/PATCH）一律拒绝，**优先于所有权限（含超级管理员）**。
+
+#### 📦 注解属性
+
+| 属性 | 类型 | 说明 | 示例 |
+|---|---|---|---|
+| `value` / `permission`（互为别名） | `String[]` | 权限标识列表，用户拥有**任一**即满足 | `@Permission("user:delete")` |
+| `role` | `String[]` | 角色标识列表，用户拥有**任一**即满足 | `@Permission(role = "ADMIN")` |
+
+匹配语义：权限码或角色**任一命中即放行**；两者都不满足则拒绝（抛 `OauthException`，由应用层 `OauthExceptionAdvice` 映射为 403）。
+
+#### 🧩 使用示例
+
+```java
+// 接口权限：需要 user:delete 权限码
+@PostMapping("/user/delete")
+@Permission("user:delete")
+public Result<Void> deleteUser(@RequestBody DeleteRequest request) {
+    return userService.delete(request);
+}
+
+// 按钮权限：按钮绑定同一权限码（前端控制显隐，后端拦截兜底）
+// 前端：hasPermission('user:add') 为 true 才渲染"新增用户"按钮
+@PostMapping("/user/add")
+@Permission("user:add")
+public Result<Void> addUser(@RequestBody User user) {
+    return userService.create(user);
+}
+
+// 角色权限：ADMIN 或 USER_MANAGER 任一角色放行
+@GetMapping("/user/export")
+@Permission(role = {"ADMIN", "USER_MANAGER"})
+public Result<Void> exportUsers() { ... }
+
+// 类级注解：整个 Controller 统一权限（@Target 支持 TYPE）
+@RestController
+@RequestMapping("/api/order")
+@Permission("order:manage")
+public class OrderController { ... }
+```
+
+#### 🔒 只读角色（READ_ONLY）
+
+给账号授予 `READ_ONLY` 角色后：
+
+| 请求方法 | 行为 |
+|---|---|
+| GET / HEAD / OPTIONS | 正常放行（只读操作） |
+| POST / PUT / DELETE / PATCH | 一律拒绝（403），即使持有对应权限码甚至为超级管理员 |
+
+适用于：只读报表账号、审计账号、只读第三方对接账号等场景。校验发生在 `PermissionInterceptor` 权限判断**之前**，因此优先级最高；无 HTTP 请求上下文（非 Web 调用）时不阻断。
+
+#### 📖 怎么用（接入步骤）
+
+1. 引入 `spring-support-oauth-client-starter` + `spring-support-common-starter`；
+2. 用户信息（`UserResume`）经认证后存入 Session，其中 `permission` 为权限码集合、`roles` 为角色集合；
+3. 在方法/类上标注 `@Permission`（权限码或角色，任一命中放行）；
+4. 本地联调模式（无远程 OAuth 服务）下无用户上下文时自动注入本地 admin 放行；生产环境须接入真实 OAuth 认证。
+
+> ⚠️ **注意事项**：权限码/角色为"任一命中"（OR）语义；按钮权限码与接口权限码必须一致；`READ_ONLY` 为内置只读角色名，改名需同步修改 `PermissionInterceptor.READ_ONLY_ROLE`。
+
 ### 4. 过滤器和拦截器
 
 #### 自定义安全过滤器

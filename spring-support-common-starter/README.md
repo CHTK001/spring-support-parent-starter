@@ -566,3 +566,116 @@ logging:
 ```
 
 这将输出详细的处理过程日志，帮助定位问题。
+
+### 13. api 版本 / 灰度 / 功能开关（@ApiVersion / @ApiGray / @ApiFeature）
+
+> ⚠️ **前提**：`ApiConfiguration` / `ApiFeatureConfiguration` 未注册为自动配置，使用以下功能前须在应用上显式导入：
+>
+> ```java
+> @SpringBootApplication
+> @Import({ApiConfiguration.class, ApiFeatureConfiguration.class})
+> public class Application { ... }
+> ```
+
+#### 13.1 @ApiVersion —— 接口版本路由
+
+**🎯 场景与用途**：同一路径的接口渐进升级，新老版本并存——老客户端不感知新版本，新客户端显式指定版本号；适用于接口不兼容升级、按渠道/租户分发不同版本等场景。
+
+**📦 注解属性**
+
+| 属性 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| `value` | `String` | `"1"` | 版本号（语义化版本，如 `"1"`、`"1.2"`、`"v2"`） |
+
+**📖 路由方式**（由 `ApiVersionRequestMappingHandlerMapping` 接管映射后生效）：
+
+| 方式 | 示例 |
+|---|---|
+| 查询参数 | `GET /api/greet?apiVersion=1` |
+| 请求头 | `GET /api/greet` + `X-Api-Version: 1` |
+| latest 关键字 | `?apiVersion=latest` → 命中最大可用版本 |
+
+匹配语义：请求版本 ≥ 接口版本才匹配；未指定版本时匹配所有接口、按版本降序取最大（即默认命中最新版）；`latest` 恒匹配并取最大版本。
+
+**🧩 使用示例**（同一路径两个版本并存）：
+
+```java
+@RestController
+@RequestMapping("/api/greet")
+public class GreetController {
+
+    @GetMapping
+    @ApiVersion("1")
+    public Result<String> greetV1() { return Result.ok("hello-v1"); }
+
+    @GetMapping
+    @ApiVersion("2")
+    public Result<String> greetV2() { return Result.ok("hello-v2"); }
+}
+```
+
+**🔧 实现机制（已修复）**：Boot 4.x 下默认映射为 `DelegatingWebMvcConfiguration` 的继承 Bean，竞争式 `@Bean` 无法令其退避（同路径多版本会 Ambiguous mapping）——`ApiConfiguration` 现经 **`WebMvcRegistrations`**（Boot 官方扩展点）装配 `ApiVersionRequestMappingHandlerMapping`，并将版本参数读取修正为 `getParameter`（`getQueryString` 在 MockMvc 等环境为 null）。开关 `plugin.api.version.enable` 默认开启。
+
+#### 13.2 @ApiGray —— 接口灰度发布
+
+**🎯 场景与用途**：让**部分用户先体验新功能**（名单/百分比/规则），命中用户获得灰度版本并返回 `X-Gray-Hit: true` 响应头；未命中用户走默认逻辑。**软灰度**（默认）不阻断未命中用户，**强制灰度**（`forceGray=true`）未命中直接拒绝——适用于新功能内测、AB 分流、渐进放量。
+
+**📦 注解属性**
+
+| 属性 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| `value` | `String` | `""` | 灰度版本标识（命中时写入 `X-Gray-Hit-Version` 头） |
+| `description` | `String` | `""` | 功能描述 |
+| `percentage` | `int` | `0` | 灰度百分比（0-100） |
+| `rule` | `String` | `""` | SpEL 规则（按请求上下文动态命中） |
+| `users` | `String[]` | `{}` | 灰度用户名单（按会话 username/userId 匹配） |
+| `ips` | `String[]` | `{}` | 灰度 IP 名单 |
+| `roles` | `String[]` | `{}` | 灰度角色名单 |
+| `headers` | `String[]` | `{}` | 灰度请求头规则 |
+| `fallback` | `String` | `""` | 强制灰度未命中时的降级转发路径 |
+| `notInGrayMessage` | `String` | `"您暂未被邀请体验此功能"` | 未命中提示文案 |
+| `notInGrayStatus` | `int` | `200` | 未命中拒绝状态码（强制灰度时生效，建议 403） |
+| `forceGray` | `boolean` | `false` | 强制灰度：未命中直接拒绝（默认软灰度放行） |
+| `group` | `String` | `"default"` | 灰度分组 |
+
+**🧩 使用示例**：
+
+```java
+// 软灰度：gray-user 命中灰度体验，其余用户照常访问默认逻辑
+@GetMapping("/preview")
+@ApiGray(users = {"gray-user"})
+public Result<String> preview() { return Result.ok("gray-preview-ok"); }
+
+// 强制灰度：非名单用户 403（未获邀体验）
+@GetMapping("/preview-force")
+@ApiGray(users = {"gray-user"}, forceGray = true, notInGrayStatus = 403)
+public Result<String> previewForce() { return Result.ok("gray-force-ok"); }
+```
+
+**📖 怎么用**：会话需包含用户上下文（`username`/`userId`；角色经请求/会话 `roles` 属性读取），灰度名单匹配即命中（返回 `X-Gray-Hit` 响应头）；全局开关 `plugin.api.gray.enable` 默认开启（非实验性功能）；拦截器由 `ApiFeatureConfiguration` 注册（`/**`，排除 `/error` 与 `/actuator/**`）。
+
+#### 13.3 @ApiFeature —— 功能开关
+
+**🎯 场景与用途**：按功能标记控制开放状态——未开放的功能返回统一提示（默认 503），适用于功能内测白名单、运营开关、渐进放量；与灰度（按用户分流）不同，功能开关是"整个功能开放与否"的全局/分组控制。
+
+**📦 注解属性**
+
+| 属性 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| `value` | `String` | （必填） | 功能标识 |
+| `description` | `String` | `""` | 功能描述 |
+| `group` | `String` | `"default"` | 功能分组 |
+| `defaultEnabled` | `boolean` | `true` | 默认是否开放（实验性功能建议 `false`） |
+| `disabledMessage` | `String` | `"此功能暂未开放"` | 未开放提示文案 |
+| `disabledStatus` | `int` | `503` | 未开放响应状态码 |
+
+**🧩 使用示例**：
+
+```java
+// 实验性功能：默认关闭，开关开启后放行
+@GetMapping("/beta")
+@ApiFeature(value = "beta-feature", defaultEnabled = false)
+public Result<String> beta() { return Result.ok("beta-ok"); }
+```
+
+**📖 怎么用**：`ApiFeatureConfiguration` 在单例创建完成后扫描全部 `@ApiFeature` 注册到 `ApiFeatureManager`（方法级优先、类级兜底，同标识后注册覆盖前者）；拦截器按开关状态放行/拒绝。开关状态经运行时 API 或属性动态调整。
