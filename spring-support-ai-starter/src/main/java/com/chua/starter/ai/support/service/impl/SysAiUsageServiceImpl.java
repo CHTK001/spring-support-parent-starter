@@ -87,6 +87,23 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
         entity.setSysAiUsageFirstTokenLatency(usage.getFirstTokenLatencyMillis());
         entity.setSysAiUsageTotalLatency(usage.getDurationMillis());
         entity.setSysAiUsageCachedTokens(usage.getCacheTokens());
+        entity.setSysAiUsageInferenceStrength("默认");
+        entity.setSysAiUsageEndpoint("/v1/chat/completions");
+        entity.setSysAiUsageType("chat");
+        entity.setSysAiUsageBillingMode("pay_as_you_go");
+
+        // 本机请求兜底：默认本机 IPv4；非本机部署可由拦截器回填真实客户端 IP
+        String clientIp = IpUtils.getLocalIpv4();
+        entity.setSysAiUsageIp(clientIp);
+        // IP 转物理地址（复用 spring-support-common IptablesService，带 Redis 缓存）
+        try {
+            ReturnResult<GeoCity> geo = iptablesService.transferAddress(clientIp);
+            if (geo != null && geo.isOk() && geo.getData() != null) {
+                entity.setSysAiUsageLocation(geo.getData().toString());
+            }
+        } catch (Exception e) {
+            log.debug("[Usage] IP 定位失败: ip={}, err={}", clientIp, e.getMessage());
+        }
 
         // 计算费用
         SysAiPricing pricing = pricingService.getLatestPricing(provider, model);
