@@ -1,11 +1,7 @@
 package com.chua.starter.common.support.cache;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -15,17 +11,8 @@ import org.springframework.cache.caffeine.CaffeineCacheManager;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Primary;
-import org.springframework.data.redis.cache.RedisCacheConfiguration;
-import org.springframework.data.redis.cache.RedisCacheManager;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.RedisSerializationContext;
-import org.springframework.data.redis.serializer.RedisSerializer;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import static com.chua.starter.common.support.constant.CacheConstant.*;
@@ -42,7 +29,6 @@ import static com.chua.starter.common.support.constant.CacheConstant.*;
  */
 @Configuration
 @EnableConfigurationProperties(CacheProperties.class)
-@ConditionalOnClass(name = "org.springframework.data.redis.serializer.RedisSerializer")
 @AutoConfigureAfter(name = "com.chua.starter.redis.support.CacheConfiguration")
 public class CacheConfiguration {
 
@@ -83,54 +69,6 @@ public class CacheConfiguration {
         manager.setCaffeine(builder);
         manager.setAllowNullValues(properties.isCacheNullValues());
         return manager;
-    }
-
-    /**
-     * Redis 缓存管理器
-     * <p>
-     * 当未显式定义 redisCacheManager Bean 时，根据 CacheProperties 创建。
-     * </p>
-     */
-    @Bean(name = CacheProperties.REDIS_BEAN_NAME)
-    @ConditionalOnMissingBean(name = CacheProperties.REDIS_BEAN_NAME)
-    @ConditionalOnClass({RedisConnectionFactory.class, RedisCacheManager.class})
-    @ConditionalOnBean(RedisConnectionFactory.class)
-    @ConditionalOnProperty(prefix = CacheProperties.PRE, name = "enabled", havingValue = "true")
-    public CacheManager redisCacheManager(
-            CacheProperties properties,
-            RedisConnectionFactory connectionFactory,
-            @Lazy ObjectMapper objectMapper) {
-
-        CacheProperties.RedisProperties redisProps = properties.getRedis();
-
-        RedisSerializer<String> keySerializer = new StringRedisSerializer();
-        GenericJackson2JsonRedisSerializer valueSerializer =
-                new GenericJackson2JsonRedisSerializer(objectMapper);
-
-        RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
-                .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(keySerializer))
-                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(valueSerializer));
-
-        if (!properties.isCacheNullValues()) {
-            config = config.disableCachingNullValues();
-        }
-
-        if (redisProps.getTtl() > 0) {
-            config = config.entryTtl(Duration.ofSeconds(redisProps.getTtl()));
-        } else if (redisProps.getTtl() == TTL_NEVER_EXPIRE) {
-            config = config.entryTtl(Duration.ZERO);
-        }
-
-        if (redisProps.isUseKeyPrefix()) {
-            String prefix = redisProps.getKeyPrefix();
-            config = config.prefixCacheNameWith(prefix);
-            config = config.computePrefixWith(name -> name + redisProps.getSeparator());
-        }
-
-        return RedisCacheManager.builder(connectionFactory)
-                .cacheDefaults(config)
-                .allowCreateOnMissingCache(true)
-                .build();
     }
 
     /**

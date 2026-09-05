@@ -79,20 +79,6 @@ public class OcrConfigController {
             }
         }
 
-        // 补充数据库中已存在但 SPI 未声明的字段（保留兼容）
-        for (Map<String, Object> m : current) {
-            String f = String.valueOf(m.get("field"));
-            if (fields.stream().noneMatch(x -> f.equals(x.get("field")))) {
-                Map<String, Object> field = new LinkedHashMap<>();
-                field.put("field", f);
-                field.put("valueType", m.get("valueType"));
-                field.put("description", m.get("description"));
-                field.put("sort", m.get("sort"));
-                field.put("value", m.get("value"));
-                fields.add(field);
-            }
-        }
-
         fields.sort((a, b) -> Integer.compare(toInt(a.get("sort")), toInt(b.get("sort"))));
         return ReturnResult.ok(fields);
     }

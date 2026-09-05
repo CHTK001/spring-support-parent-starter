@@ -1,0 +1,7 @@
+com.chua.starter.ai.support.manage.api.market.ClawHubSkillMarketSourceProvider
+com.chua.starter.ai.support.manage.api.market.LoopHubSkillMarketSourceProvider
+com.chua.starter.ai.support.manage.api.market.SkillHubSkillMarketSourceProvider
+com.chua.starter.ai.support.manage.api.market.SkillHubMcpSkillMarketSourceProvider
+com.chua.starter.ai.support.manage.api.market.McpWorldSkillMarketSourceProvider
+com.chua.starter.ai.support.manage.api.market.ClawHubPluginsSkillMarketSourceProvider
+com.chua.starter.ai.support.manage.api.market.SkillHubPackagesSkillMarketSourceProvider

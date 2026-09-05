@@ -59,6 +59,11 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
         m.put("ragChunkSize", new String[]{"rag", "rag_chunk_size"});
         m.put("ragChunkOverlap", new String[]{"rag", "rag_chunk_overlap"});
         m.put("ragSplitter", new String[]{"global", "rag_splitter"});
+        m.put("workshopStorageDir", new String[]{"workshop", "storage_dir"});
+        m.put("workshopMaxUploadSizeMb", new String[]{"workshop", "max_upload_size_mb"});
+        m.put("workshopAllowedExtensions", new String[]{"workshop", "allowed_extensions"});
+        m.put("protocolServerEnabled", new String[]{"runtime", "protocol_server_enabled"});
+        m.put("protocolServerPort", new String[]{"runtime", "protocol_server_port"});
         return java.util.Map.copyOf(m);
     }
 
@@ -84,6 +89,11 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
         dto.setRagChunkSize(getInt("ragChunkSize", null));
         dto.setRagChunkOverlap(getInt("ragChunkOverlap", null));
         dto.setRagSplitter(getStr("ragSplitter"));
+        dto.setWorkshopStorageDir(getStr("workshopStorageDir"));
+        dto.setWorkshopMaxUploadSizeMb(getInt("workshopMaxUploadSizeMb", null));
+        dto.setWorkshopAllowedExtensions(getStr("workshopAllowedExtensions"));
+        dto.setProtocolServerEnabled(getBool("protocolServerEnabled", null));
+        dto.setProtocolServerPort(getInt("protocolServerPort", null));
         return dto;
     }
 
@@ -111,6 +121,11 @@ public class AiGlobalSettingServiceImpl implements AiGlobalSettingService {
         put("ragChunkSize", setting.getRagChunkSize());
         put("ragChunkOverlap", setting.getRagChunkOverlap());
         put("ragSplitter", setting.getRagSplitter());
+        put("workshopStorageDir", setting.getWorkshopStorageDir());
+        put("workshopMaxUploadSizeMb", setting.getWorkshopMaxUploadSizeMb());
+        put("workshopAllowedExtensions", setting.getWorkshopAllowedExtensions());
+        put("protocolServerEnabled", setting.getProtocolServerEnabled());
+        put("protocolServerPort", setting.getProtocolServerPort());
         return get();
     }
 

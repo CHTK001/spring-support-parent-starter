@@ -147,9 +147,44 @@ public class AiGlobalSettingDTO implements Serializable {
     private Integer ragChunkOverlap;
 
     /**
-     * RAG 文本切片策略（TextSplitter SPI 名称，默认 sentence）
+     * RAG �ı���Ƭ���ԣ�TextSplitter SPI ���ƣ�Ĭ�� sentence��
      */
-    @Schema(description = "RAG 文本切片策略")
+    @Schema(description = "RAG �ı���Ƭ����")
     /** RAGsplitter */
     private String ragSplitter;
+
+    /**
+     * ���⹤���ʲ��洢Ŀ¼��ӳ�䵽 workshop.storage_dir��
+     */
+    @Schema(description = "���⹤���ʲ��洢Ŀ¼")
+    /** Workshop存储目录 */
+    private String workshopStorageDir;
+
+    /**
+     * ���⹤�������ϴ���С���ޣ�MB����ӳ�䵽 workshop.max_upload_size_mb��
+     */
+    @Schema(description = "���⹤�������ϴ���С����(MB)")
+    /** �����ϴ���С���� */
+    private Integer workshopMaxUploadSizeMb;
+
+    /**
+     * ���⹤�������ϴ��ļ���չ����Ȩ�б���Ӣ�Ķ��ŷָ����� jpg,png,webp,mp4 ������ӳ�䵽 workshop.allowed_extensions��
+     */
+    @Schema(description = "���⹤�������ϴ��ļ���չ��(��ŷָ�, �� jpg,png,webp,mp4)")
+    /** �ϴ��ļ���չ�� */
+    private String workshopAllowedExtensions;
+
+    /**
+     * �Ƿ���������Э������ OpenAIClient/Claude/Gemini ��Ӧ�˵㣩��ӳ�䵽 runtime.protocol_server_enabled��
+     */
+    @Schema(description = "�Ƿ���������Э������")
+    /** Э��������Ƿ����� */
+    private Boolean protocolServerEnabled;
+
+    /**
+     * ����Э������˿ڣ�ӳ�䵽 runtime.protocol_server_port��
+     */
+    @Schema(description = "����Э������˿�")
+    /** Э��������˿� */
+    private Integer protocolServerPort;
 }
