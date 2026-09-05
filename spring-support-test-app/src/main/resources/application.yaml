@@ -53,3 +53,14 @@ plugin:
         url: jdbc:h2:mem:ds2;DB_CLOSE_DELAY=-1
         username: sa
         password: ""
+
+# 数据源分片（ShardingSphere v5 集成）：orders 表按 id MOD 分片到两个 H2 分片库
+  datasource:
+    sharding:
+      enabled: true
+      databases:
+        - jdbc:h2:mem:shard0;DB_CLOSE_DELAY=-1
+        - jdbc:h2:mem:shard1;DB_CLOSE_DELAY=-1
+      tables:
+        - logic-table: orders
+          sharding-column: id
