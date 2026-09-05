@@ -1219,6 +1219,26 @@
                     <skipTests>${skipTests}</skipTests>
                 </configuration>
             </plugin>
+            <!-- JaCoCo 覆盖率插件：prepare-agent 注入探针（test 阶段）、report 生成覆盖率报告（verify 阶段） -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.13</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <!-- Maven JavaDoc插件 - 生成API文档 (已注释
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
