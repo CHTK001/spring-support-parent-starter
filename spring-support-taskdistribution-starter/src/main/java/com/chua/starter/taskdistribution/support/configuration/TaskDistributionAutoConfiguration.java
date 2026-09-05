@@ -11,6 +11,7 @@ import com.chua.common.support.taskdistribution.store.FileTaskStore;
 import com.chua.common.support.taskdistribution.store.InMemoryTaskStore;
 import com.chua.common.support.taskdistribution.store.TaskStore;
 import com.chua.common.support.taskdistribution.task.TaskIdGenerator;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.taskdistribution.support.mapper.TaskStoreMapper;
 import com.chua.starter.taskdistribution.support.properties.TaskDistributionProperties;
 import com.chua.starter.taskdistribution.support.store.DbTaskStore;
@@ -168,5 +169,18 @@ public class TaskDistributionAutoConfiguration {
                 }
             }
         };
+    }
+
+    /**
+     * 任务分发的 ServiceInfo 贡献者。
+     *
+     * @param properties 配置属性
+     * @return ServiceInfoContributor
+     */
+    @Bean
+    public ServiceInfoContributor taskDistributionServiceInfoContributor(TaskDistributionProperties properties) {
+        return registry -> registry.registerFlag("taskdistribution", "任务分发", true,
+                "任务分发模块",
+                "[存储: " + properties.getStoreType() + " 策略: " + properties.getStrategy() + "]");
     }
 }
