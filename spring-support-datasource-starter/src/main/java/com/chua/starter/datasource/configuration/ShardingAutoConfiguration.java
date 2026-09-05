@@ -122,12 +122,19 @@ public class ShardingAutoConfiguration {
             }
         }
 
-        // 配置分库规则
-        if (properties.getDatabases() != null && !properties.getDatabases().isEmpty()) {
+        // 配置分库规则：分库与分表同前缀/同分片列对齐（原固定前缀 "db"/"user_id" 与表前缀不匹配，
+        // 导致 findDbConfig 永远找不到分库配置、分库+分表分支从不激活——修正为按表逐表注册）
+        boolean dbShardingEnabled = properties.getDatabases() != null && properties.getDatabases().size() > 1;
+        if (dbShardingEnabled) {
             String algoName = "db_mod";
             shardingV5.algo(algoName, "MOD");
-            // 分库使用用户 ID 作为分片键
-            shardingV5.db("db", "user_id", properties.getDatabases().size(), algoName);
+            if (properties.getTables() != null) {
+                for (ShardingDataSourceProperties.ShardingTableConfig tableConfig : properties.getTables()) {
+                    // 分库使用与分表相同的分片列，按库数 MOD 路由
+                    shardingV5.db(tableConfig.getLogicTable(), tableConfig.getShardingColumn(),
+                            properties.getDatabases().size(), algoName);
+                }
+            }
             log.info("[Sharding] 配置分库: {} 个数据库", properties.getDatabases().size());
         }
 
