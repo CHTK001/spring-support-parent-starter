@@ -160,6 +160,8 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             recordLog(LOG_LEVEL_WARN, "用量分析未启用，跳过本次执行");
             return;
         }
+        recordLog(LOG_LEVEL_INFO, "开始定时同步与聚合 (" + java.time.LocalTime.now().withNano(0) + ")");
+        self.syncExternalUsage();
         self.aggregateToday();
     }
 

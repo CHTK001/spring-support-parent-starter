@@ -52,6 +52,13 @@
             <artifactId>utils-support-shardingv5-starter</artifactId>
         </dependency>
 
+        <!-- 分片引擎运行期必需：shardingv5 starter 对 utils-support-datasource-starter 为 provided（不传递），
+             缺失时 DataSourceConversion 链接失败 -> @ConditionalOnClass(ShardingV5Conversion) 退避（测试跳过） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-datasource-starter</artifactId>
+        </dependency>
+
         <!-- UEBA 分析引擎自动装配验证 -->
         <dependency>
             <groupId>com.chua</groupId>
