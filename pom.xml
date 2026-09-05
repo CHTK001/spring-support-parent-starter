@@ -155,6 +155,9 @@
         <!-- AI训练平台模块 -->
         <module>spring-support-ai-training-starter</module>
 
+        <!-- UEBA 用户实体行为分析模块 -->
+        <module>spring-support-ueba-starter</module>
+
         <!-- 消息推送模块 -->
         <module>spring-support-message-starter</module>               <!-- 消息推送集成 -->
 
@@ -646,6 +649,13 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-ai-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- UEBA 用户实体行为分析模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-ueba-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

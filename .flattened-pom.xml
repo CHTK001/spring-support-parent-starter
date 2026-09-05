@@ -88,6 +88,7 @@
     <module>spring-support-server-starter</module>
     <module>spring-support-ai-starter</module>
     <module>spring-support-ai-training-starter</module>
+    <module>spring-support-ueba-starter</module>
     <module>spring-support-message-starter</module>
     <module>spring-support-software-starter</module>
     <module>spring-support-taskdistribution-starter</module>
@@ -477,6 +478,11 @@
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-ai-starter</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-ueba-starter</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
