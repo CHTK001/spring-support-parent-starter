@@ -272,6 +272,31 @@ public class AiBotChatService {
     }
 
     /**
+     * 删除单个会话的聊天记录（按 Bot + 微信用户），并广播到 IM 页。
+     *
+     * <p>用于清理僵尸会话：绑定记录已删除后，消息表仍残留历史，
+     * 通过此接口按 botId + fromUser 定向清除。</p>
+     *
+     * @param botId    Bot 唯一标识
+     * @param fromUser 微信用户 ID
+     * @return 删除的消息条数
+     */
+    public int deleteConversation(String botId, String fromUser) {
+        int deleted = botMessageMapper.delete(
+                Wrappers.<SysAiBotMessage>lambdaQuery()
+                        .eq(SysAiBotMessage::getBotId, botId)
+                        .eq(fromUser != null && !fromUser.isBlank(), SysAiBotMessage::getFromUser, fromUser));
+        log.info("[BotChat] 删除会话 botId={} fromUser={} 共 {} 条消息", botId, fromUser, deleted);
+        // 通知 IM 页刷新会话列表
+        Map<String, Object> push = new HashMap<>();
+        push.put("type", "bot.conversation-deleted");
+        push.put("botId", botId);
+        push.put("fromUser", fromUser);
+        webSocketHandler.broadcast("bot.conversation-deleted", push);
+        return deleted;
+    }
+
+    /**
      * 落库一条 Bot 聊天消息（失败不阻断主流程），并广播到 IM 页。
      *
      * @param botId    Bot 唯一标识

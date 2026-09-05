@@ -174,6 +174,21 @@ public class AiBotBindingController {
     }
 
     /**
+     * 删除单个会话的聊天记录（清理僵尸会话）。
+     *
+     * <p>绑定记录删除后消息表仍会残留历史，此接口按 botId + fromUser 定向清除。</p>
+     *
+     * @param botId    Bot 唯一标识
+     * @param fromUser 微信用户 ID（可空，空则删除该 Bot 全部会话）
+     * @return 删除的消息条数
+     */
+    @DeleteMapping("/conversations")
+    public ReturnResult<Integer> deleteConversation(@RequestParam String botId,
+                                                    @RequestParam(required = false) String fromUser) {
+        return ReturnResult.ok(aiBotChatService.deleteConversation(botId, fromUser));
+    }
+
+    /**
      * 查询 Bot 默认 AI 模型（全局设置 bot.default_model，Bot 未单独配置时兜底）。
      *
      * @return 默认模型名（可能为空）
