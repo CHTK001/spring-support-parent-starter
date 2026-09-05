@@ -633,7 +633,7 @@ public class ApiSkillController {
         String source = asText(body.get("source"));
         boolean enabled = body.get("enabled") != null && Boolean.parseBoolean(String.valueOf(body.get("enabled")));
         if (source == null || source.isBlank()) {
-            throw new ApiException(ApiErrorCode.PARAM_ERROR, "市场源不能为空");
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "市场源不能为空");
         }
         sysAiGlobalSettingService.upsertValue(
                 MARKET_SETTING_GROUP,
