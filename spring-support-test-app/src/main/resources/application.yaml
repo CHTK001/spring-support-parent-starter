@@ -17,10 +17,16 @@ spring:
 # whitelist 放行测试端点；block-address 指向永不匹配路径以关闭 AuthFilter 的 token 认证
 # （权限校验仍由 AOP PermissionInterceptor 把关，与生产拦截链一致）
 plugin:
-  # api 版本/灰度：开启灰度全局开关（ApiControlInterceptor 灰度校验生效）
+  # api 版本/灰度：开启灰度全局开关（ApiControlInterceptor 灰度校验生效）；
+  # uniform/encode/decode 为响应增强（默认开启），测试聚焦版本路由与灰度，显式关闭保持原始响应
   api:
     gray:
       enable: true
+    uniform: false
+    encode:
+      enable: false
+    decode:
+      enable: false
   mybatis:
     data:
       scope:
@@ -34,3 +40,16 @@ plugin:
       - /api/datascope/**
       - /api/api-version/**
       - /api/ds/**
+
+# 多数据源（@DS 动态切换 + 数据源合并）：两个独立 H2 内存库，各含可区分的 region 数据
+  multi-datasource:
+    enable: true
+    data-source:
+      - name: ds1
+        url: jdbc:h2:mem:ds1;DB_CLOSE_DELAY=-1
+        username: sa
+        password: ""
+      - name: ds2
+        url: jdbc:h2:mem:ds2;DB_CLOSE_DELAY=-1
+        username: sa
+        password: ""

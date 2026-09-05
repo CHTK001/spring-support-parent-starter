@@ -392,6 +392,26 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                         .end();
                 return CompletableFuture.completedFuture(null);
             }
+            // JSON Hero 内联预览：.json 文件通过 iframe 嵌入 jsonhero.io 渲染
+            if (fileName.toLowerCase().endsWith(".json")) {
+                String json = new String(data, StandardCharsets.UTF_8);
+                String encoded = java.util.Base64.getEncoder().encodeToString(json.getBytes(StandardCharsets.UTF_8));
+                String heroUrl = "https://jsonhero.io/new?j=" + encoded;
+                String html = "<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">"
+                        + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+                        + "<title>JSON Hero - " + escapeJson(fileName) + "</title>"
+                        + "<style>html,body{margin:0;padding:0;height:100%;overflow:hidden}"
+                        + "iframe{width:100%;height:100%;border:none}</style>"
+                        + "</head><body>"
+                        + "<iframe src=\"" + escapeAttr(heroUrl) + "\" allowfullscreen></iframe>"
+                        + "</body></html>";
+                response.setStatus(200)
+                        .setHeader("X-FileStorage-Preview", "jsonhero")
+                        .setContentType("text/html;charset=UTF-8")
+                        .setBody(html.getBytes(StandardCharsets.UTF_8))
+                        .end();
+                return CompletableFuture.completedFuture(null);
+            }
         }
 
         // Range 分段下载
