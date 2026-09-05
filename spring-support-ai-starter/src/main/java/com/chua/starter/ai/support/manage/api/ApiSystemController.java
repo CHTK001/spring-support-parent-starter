@@ -129,7 +129,7 @@ public class ApiSystemController {
         String[] profiles = environment.getActiveProfiles();
         boolean isDev = profiles.length == 0 || "dev".equals(profiles[0]);
         if (!isDev) {
-            log.warn("拒绝非 dev profile 修改系统目录: profiles={}", profiles);
+            log.warn("拒绝非 dev profile 修改系统目录: profiles={}", (Object) profiles);
             throw new ApiException(ApiErrorCode.FORBIDDEN, "系统目录仅允许在 dev 模式下修改");
         }
         Object workDir = body.get("work_dir");

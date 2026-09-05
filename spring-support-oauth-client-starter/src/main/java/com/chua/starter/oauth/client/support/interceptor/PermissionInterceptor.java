@@ -99,9 +99,10 @@ public class PermissionInterceptor extends StaticMethodMatcherPointcutAdvisor im
                 Set<String> roles = userInfo.getRoles();
                 log.debug("[权限拦截器]用户角色: {}", roles);
 
-                // 只读角色优先于所有权限：READ_ONLY 角色禁止写操作（POST/PUT/DELETE/PATCH），
+                // 只读账号优先于所有权限：账号级 readonly（OAuth 服务端数据库返回）或
+                // READ_ONLY 角色（兼容兜底）任一命中即禁止写操作（POST/PUT/DELETE/PATCH）；
                 // 置于超级管理员检查之前，对超管同样生效；无请求上下文时不阻断（非 HTTP 调用）
-                if (CollectionUtils.containsIgnoreCase(roles, READ_ONLY_ROLE)) {
+                if (userInfo.isReadonly() || CollectionUtils.containsIgnoreCase(roles, READ_ONLY_ROLE)) {
                     HttpServletRequest request = currentRequest();
                     if (request != null && !isSafeMethod(request.getMethod())) {
                         log.warn("[权限拦截器]只读角色禁止写操作 - 用户: {}, 方法: {}", userInfo.getUsername(), methodName);

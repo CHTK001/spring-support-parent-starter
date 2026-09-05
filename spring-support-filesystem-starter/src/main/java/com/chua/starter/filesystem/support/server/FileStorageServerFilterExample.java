@@ -14,6 +14,7 @@ import com.chua.common.support.storage.result.DeleteObjectResult;
 import com.chua.common.support.storage.result.ExistObjectResult;
 import com.chua.common.support.storage.result.GetObjectResult;
 import com.chua.common.support.storage.result.ListObjectResult;
+import com.chua.common.support.storage.result.ObjectResult;
 import com.chua.common.support.storage.result.PutObjectResult;
 import lombok.extern.slf4j.Slf4j;
 
@@ -82,7 +83,7 @@ public class FileStorageServerFilterExample {
         try {
             MockRequest optsReq = new MockRequest(HttpMethod.OPTIONS, "/");
             MockResponse optsResp = new MockResponse();
-            CompletionStage<Void> stage = filter.doFilter(optsReq, optsResp, (req, resp) -> {
+            CompletionStage<Void> stage = filter.doFilter(optsReq, optsResp, (ServerRequest req, ServerResponse resp) -> {
                 throw new AssertionError("OPTIONS 应被过滤器拦截，不应进入后续链");
             });
             stage.toCompletableFuture().get();
@@ -100,7 +101,7 @@ public class FileStorageServerFilterExample {
             MockRequest req = new MockRequest(HttpMethod.GET, "/unknown-bucket");
             boolean[] chained = {false};
             MockResponse resp = new MockResponse();
-            filter.doFilter(req, resp, (r, response) -> {
+            filter.doFilter(req, resp, (ServerRequest r, ServerResponse response) -> {
                 chained[0] = true;
                 response.setStatus(200).setBody("chained").end();
                 return java.util.concurrent.CompletableFuture.completedFuture(null);
@@ -216,7 +217,7 @@ public class FileStorageServerFilterExample {
 
     static class MockResponse implements ServerResponse {
         private int status = 0;
-        private final HttpHeader headers = HttpHeader.create();
+        private HttpHeader headers = HttpHeader.create();
         private byte[] bodyBytes;
 
         @Override public ServerResponse setStatus(int status) { this.status = status; return this; }
@@ -241,7 +242,7 @@ public class FileStorageServerFilterExample {
             else bodyBytes = java.util.Arrays.copyOf(bodyBytes, bodyBytes.length + bytes.length);
             System.arraycopy(bytes, 0, bodyBytes, bodyBytes.length - bytes.length, bytes.length);
         }
-        public int getStatusVal() { return status; }
+        @Override public ServerResponse reset() { status = 0; headers = HttpHeader.create(); bodyBytes = null; return this; }
         public String getHeaderVal(String name) { return headers.get(name); }
     }
 }

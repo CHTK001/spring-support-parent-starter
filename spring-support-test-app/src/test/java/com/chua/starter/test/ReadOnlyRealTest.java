@@ -32,17 +32,30 @@ class ReadOnlyRealTest {
     private MockMvc mockMvc;
 
     private MockHttpSession sessionWith(Set<String> roles, Set<String> permissions) {
+        return sessionWith(roles, permissions, false);
+    }
+
+    private MockHttpSession sessionWith(Set<String> roles, Set<String> permissions, boolean readonly) {
         UserResume user = new UserResume();
         user.setUserId("1");
         user.setUsername("readonly-user");
         user.setUid("1");
         user.setRoles(roles);
+        user.setReadonly(readonly);
         if (permissions != null) {
             user.setPermission(permissions);
         }
         MockHttpSession session = new MockHttpSession();
         session.setAttribute("userInfo", user);
         return session;
+    }
+
+    /** 只读账号字段（OAuth 服务端数据库返回 readonly=true，无 READ_ONLY 角色）：GET 放行、POST 拒绝 */
+    @Test
+    void readonlyFieldBlocksWriteButAllowsRead() throws Exception {
+        MockHttpSession session = sessionWith(Set.of("USER"), Set.of("user:query", "user:delete"), true);
+        mockMvc.perform(get("/api/permission/query").session(session)).andExpect(status().isOk());
+        mockMvc.perform(post("/api/permission/delete").session(session)).andExpect(status().isForbidden());
     }
 
     /** 只读角色 + 写权限：GET 放行、POST 拒绝（只读优先于权限码） */

@@ -3,6 +3,8 @@ package com.chua.starter.oauth.client.support.protocol;
 import com.chua.common.support.lang.json.Json;
 import com.chua.common.support.lang.json.JsonObject;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.network.client.ClientResponse;
+import com.chua.common.support.network.client.HttpClientFactory;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.StringUtils;
@@ -28,6 +30,8 @@ import lombok.extern.slf4j.Slf4j;
 import me.zhyd.oauth.exception.AuthException;
 import org.slf4j.MDC;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -158,7 +162,29 @@ public class HttpProtocol extends AbstractProtocol {
         String authTypeCode = (authType == null || authType == com.chua.starter.oauth.client.support.enums.AuthType.NONE)
                 ? "WEB" : authType.getCode().toUpperCase();
         jsonObject.put("x-oauth-auth-type", authTypeCode);
-        jsonObject.put("x-oauth-ext", ext);
+        // 将 ext 中携带的浏览器/系统信息同步到请求体，方便服务端记录登录日志
+        if (ext != null) {
+            jsonObject.put("x-oauth-ext", ext);
+            if (!ext.containsKey("ua")) {
+                jakarta.servlet.http.HttpServletRequest request = RequestUtils.getRequest();
+                if (request != null) {
+                    String ua = request.getHeader("User-Agent");
+                    if (StringUtils.isNotBlank(ua)) {
+                        ext.put("ua", ua);
+                    }
+                }
+            }
+        } else {
+            jakarta.servlet.http.HttpServletRequest request = RequestUtils.getRequest();
+            Map<String, Object> newExt = new java.util.HashMap<>();
+            if (request != null) {
+                String ua = request.getHeader("User-Agent");
+                if (StringUtils.isNotBlank(ua)) {
+                    newExt.put("ua", ua);
+                }
+            }
+            jsonObject.put("x-oauth-ext", newExt);
+        }
         AuthenticationInformation information = createAuthenticationInformation(jsonObject, null, authClientProperties.getLoginPage());
         log.info("[Login] 状态={}, 用户={}, 类型={}",
                 information.getInformation().getCode(), username, authTypeCode);
@@ -565,6 +591,71 @@ public class HttpProtocol extends AbstractProtocol {
                 TraceContext.clear();
             }
         }
+    }
+
+    @Override
+    public Map<String, Object> getFingerprintUser(String fingerprint) {
+        if (StringUtils.isBlank(fingerprint)) {
+            return null;
+        }
+        try {
+            String selectedUrl = selectUrl();
+            if (selectedUrl == null) {
+                return null;
+            }
+            String url = StringUtils.endWithAppend(selectedUrl, "/")
+                    + "oauth/admin/fingerprint/by-fingerprint?fingerprint="
+                    + com.google.common.net.UrlEscapers.urlFormParameterEscaper().escape(fingerprint);
+            ClientResponse response = HttpClientFactory.of(url).header("x-oauth-token", "").get();
+            if (response.getStatusCode() == 200) {
+                String body = response.getBodyString();
+                if (StringUtils.isNotBlank(body)) {
+                    ReturnResult<Map<String, Object>> result = Json.fromJson(body, ReturnResult.class);
+                    if (result != null && result.isOk() && result.getData() != null) {
+                        Map<String, Object> data = result.getData();
+                        if (Boolean.TRUE.equals(data.get("found"))) {
+                            data.remove("found");
+                            return data;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[HttpProtocol] 指纹查询失败: fingerprint={}", fingerprint, e);
+        }
+        return null;
+    }
+
+    @Override
+    public List<Map<String, Object>> getFingerprintUsersByIp(String ip) {
+        if (StringUtils.isBlank(ip)) {
+            return Collections.emptyList();
+        }
+        try {
+            String selectedUrl = selectUrl();
+            if (selectedUrl == null) {
+                return Collections.emptyList();
+            }
+            String url = StringUtils.endWithAppend(selectedUrl, "/")
+                    + "oauth/admin/fingerprint/by-ip?ip="
+                    + com.google.common.net.UrlEscapers.urlFormParameterEscaper().escape(ip);
+            ClientResponse response = HttpClientFactory.of(url).header("x-oauth-token", "").get();
+            if (response.getStatusCode() == 200) {
+                String body = response.getBodyString();
+                if (StringUtils.isNotBlank(body)) {
+                    ReturnResult<Map<String, Object>> result = Json.fromJson(body, ReturnResult.class);
+                    if (result != null && result.isOk() && result.getData() != null) {
+                        Object users = result.getData().get("users");
+                        if (users instanceof List) {
+                            return (List<Map<String, Object>>) users;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[HttpProtocol] IP指纹查询失败: ip={}", ip, e);
+        }
+        return Collections.emptyList();
     }
 
 }

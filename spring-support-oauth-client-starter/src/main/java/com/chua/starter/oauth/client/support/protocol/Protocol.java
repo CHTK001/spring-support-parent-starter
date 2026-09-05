@@ -133,6 +133,28 @@ public interface Protocol {
     }
 
     /**
+     * 根据指纹反查用户信息
+     * <p>用于安全审计：通过浏览器指纹查询对应用户身份</p>
+     *
+     * @param fingerprint 浏览器指纹
+     * @return 用户信息 Map（含 userId、username、ip 等），不存在返回 null
+     */
+    default Map<String, Object> getFingerprintUser(String fingerprint) {
+        return null;
+    }
+
+    /**
+     * 根据 IP 反查登录用户列表
+     * <p>用于安全审计：查询指定 IP 地址上登录过的所有用户</p>
+     *
+     * @param ip 客户端 IP 地址
+     * @return 用户信息列表，不存在返回空列表
+     */
+    default java.util.List<Map<String, Object>> getFingerprintUsersByIp(String ip) {
+        return java.util.Collections.emptyList();
+    }
+
+    /**
      * 指纹验证结果
      */
     @Data

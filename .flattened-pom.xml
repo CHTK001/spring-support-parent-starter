@@ -163,7 +163,7 @@
     <statemachine.version>4.0.0</statemachine.version>
     <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
     <maven-release-plugin.version>3.0.1</maven-release-plugin.version>
-    <dubbo.version>3.1.1</dubbo.version>
+    <dubbo.version>3.3.6</dubbo.version>
     <spring.boot.version>4.1.0</spring.boot.version>
     <utils.version>4.0.0.42</utils.version>
     <hutool.version>5.8.29</hutool.version>

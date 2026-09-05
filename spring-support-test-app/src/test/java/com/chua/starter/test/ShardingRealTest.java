@@ -35,8 +35,12 @@ class ShardingRealTest {
 
     @BeforeEach
     void assumeShardingAvailable() {
+        boolean classPresent = org.springframework.util.ClassUtils.isPresent(
+                "com.chua.shardingv5.support.conversion.ShardingV5Conversion",
+                getClass().getClassLoader());
         Assumptions.assumeTrue(shardingDataSource != null,
-                "分片集成依赖 utils-support-shardingv5-starter（未装配，shardingDataSource Bean 不存在），跳过");
+                "分片引擎未装配：shardingDataSource Bean 不存在（运行时 ShardingV5Conversion 类 present="
+                        + classPresent + "）");
     }
 
     @BeforeEach

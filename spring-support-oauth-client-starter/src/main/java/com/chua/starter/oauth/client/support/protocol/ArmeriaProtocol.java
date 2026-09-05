@@ -19,6 +19,7 @@ import com.chua.starter.oauth.client.support.runtime.OauthClientRuntimeContext;
 import com.chua.starter.oauth.client.support.user.LoginAuthResult;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import com.google.common.base.Strings;
+import com.google.common.net.UrlEscapers;
 import com.chua.starter.oauth.client.support.resilience.OAuthClientResilience;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
@@ -30,6 +31,8 @@ import lombok.extern.slf4j.Slf4j;
 import me.zhyd.oauth.exception.AuthException;
 
 import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -493,5 +496,86 @@ public class ArmeriaProtocol extends AbstractProtocol {
             }
             return AuthenticationInformation.authServerError();
         }
+    }
+
+    @Override
+    public Map<String, Object> getFingerprintUser(String fingerprint) {
+        if (StringUtils.isBlank(fingerprint)) {
+            return null;
+        }
+        try {
+            String selectedUrl = selectUrl();
+            if (selectedUrl == null) {
+                return null;
+            }
+            String base = StringUtils.endWithAppend(selectedUrl, "/")
+                    + "oauth/admin/fingerprint/by-fingerprint";
+            String uri = base + "?fingerprint="
+                    + UrlEscapers.urlFormParameterEscaper().escape(fingerprint);
+            AggregatedHttpResponse response = WebClient.builder(base)
+                    .build()
+                    .prepare()
+                    .get(uri)
+                    .header(HttpHeaderNames.of("x-oauth-token"), "")
+                    .execute()
+                    .aggregate()
+                    .join();
+            if (response.status().code() == 200) {
+                String body = response.contentUtf8();
+                if (StringUtils.isNotBlank(body)) {
+                    ReturnResult<Map<String, Object>> result = Json.fromJson(body, ReturnResult.class);
+                    if (result != null && result.isOk() && result.getData() != null) {
+                        Map<String, Object> data = result.getData();
+                        if (Boolean.TRUE.equals(data.get("found"))) {
+                            data.remove("found");
+                            return data;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[ArmeriaProtocol] 指纹查询失败: fingerprint={}", fingerprint, e);
+        }
+        return null;
+    }
+
+    @Override
+    public List<Map<String, Object>> getFingerprintUsersByIp(String ip) {
+        if (StringUtils.isBlank(ip)) {
+            return Collections.emptyList();
+        }
+        try {
+            String selectedUrl = selectUrl();
+            if (selectedUrl == null) {
+                return Collections.emptyList();
+            }
+            String base = StringUtils.endWithAppend(selectedUrl, "/")
+                    + "oauth/admin/fingerprint/by-ip";
+            String uri = base + "?ip="
+                    + UrlEscapers.urlFormParameterEscaper().escape(ip);
+            AggregatedHttpResponse response = WebClient.builder(base)
+                    .build()
+                    .prepare()
+                    .get(uri)
+                    .header(HttpHeaderNames.of("x-oauth-token"), "")
+                    .execute()
+                    .aggregate()
+                    .join();
+            if (response.status().code() == 200) {
+                String body = response.contentUtf8();
+                if (StringUtils.isNotBlank(body)) {
+                    ReturnResult<Map<String, Object>> result = Json.fromJson(body, ReturnResult.class);
+                    if (result != null && result.isOk() && result.getData() != null) {
+                        Object users = result.getData().get("users");
+                        if (users instanceof List) {
+                            return (List<Map<String, Object>>) users;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[ArmeriaProtocol] IP指纹查询失败: ip={}", ip, e);
+        }
+        return Collections.emptyList();
     }
 }

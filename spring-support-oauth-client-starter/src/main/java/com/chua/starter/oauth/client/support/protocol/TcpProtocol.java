@@ -451,4 +451,78 @@ public class TcpProtocol extends AbstractProtocol {
         Object value = map.get(key);
         return value != null ? value.toString() : defaultValue;
     }
+
+    @Override
+    public Map<String, Object> getFingerprintUser(String fingerprint) {
+        if (StringUtils.isBlank(fingerprint)) {
+            return null;
+        }
+        try {
+            JsonObject requestJson = new JsonObject();
+            requestJson.put("fingerprint", fingerprint);
+            String payload = requestJson.toJSONString();
+            String frame = "/fingerprint/by-fingerprint:" + payload;
+            byte[] frameBytes = frame.getBytes(StandardCharsets.UTF_8);
+            String selectedUrl = selectUrl();
+            if (selectedUrl == null) {
+                return null;
+            }
+            String host = extractHost(selectedUrl);
+            int port = extractPort(selectedUrl, 19180);
+            byte[] responseBytes = tcpClient.call(host, port, frameBytes);
+            if (responseBytes == null || responseBytes.length == 0) {
+                return null;
+            }
+            String responseBody = new String(responseBytes, StandardCharsets.UTF_8);
+            ReturnResult<?> returnResult = Json.fromJson(responseBody, ReturnResult.class);
+            if (returnResult != null && returnResult.isOk() && returnResult.getData() != null) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> data = (Map<String, Object>) returnResult.getData();
+                if (Boolean.TRUE.equals(data.get("found"))) {
+                    data.remove("found");
+                    return data;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[TcpProtocol] 指纹查询失败: fingerprint={}", fingerprint, e);
+        }
+        return null;
+    }
+
+    @Override
+    public java.util.List<Map<String, Object>> getFingerprintUsersByIp(String ip) {
+        if (StringUtils.isBlank(ip)) {
+            return java.util.Collections.emptyList();
+        }
+        try {
+            JsonObject requestJson = new JsonObject();
+            requestJson.put("ip", ip);
+            String payload = requestJson.toJSONString();
+            String frame = "/fingerprint/by-ip:" + payload;
+            byte[] frameBytes = frame.getBytes(StandardCharsets.UTF_8);
+            String selectedUrl = selectUrl();
+            if (selectedUrl == null) {
+                return java.util.Collections.emptyList();
+            }
+            String host = extractHost(selectedUrl);
+            int port = extractPort(selectedUrl, 19180);
+            byte[] responseBytes = tcpClient.call(host, port, frameBytes);
+            if (responseBytes == null || responseBytes.length == 0) {
+                return java.util.Collections.emptyList();
+            }
+            String responseBody = new String(responseBytes, StandardCharsets.UTF_8);
+            ReturnResult<?> returnResult = Json.fromJson(responseBody, ReturnResult.class);
+            if (returnResult != null && returnResult.isOk() && returnResult.getData() != null) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> data = (Map<String, Object>) returnResult.getData();
+                Object users = data.get("users");
+                if (users instanceof java.util.List) {
+                    return (java.util.List<Map<String, Object>>) users;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[TcpProtocol] IP指纹查询失败: ip={}", ip, e);
+        }
+        return java.util.Collections.emptyList();
+    }
 }

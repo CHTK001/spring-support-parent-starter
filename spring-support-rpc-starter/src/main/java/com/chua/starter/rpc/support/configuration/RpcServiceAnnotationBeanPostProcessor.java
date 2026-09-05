@@ -133,6 +133,12 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
             // In spring 3.x, may be not call postProcessBeanDefinitionRegistry(), so scan service class here
             scanServiceBeans(resolvedPackagesToScan, registry);
         }
+
+        // 启动 RPC 服务端（Dubbo/SOFA 在 register() 时已导出，此处为 JSON 等
+        // 需要显式 afterPropertiesSet() 才能启动监听服务的实现提供兜底）
+        if (rpcServer != null) {
+            rpcServer.afterPropertiesSet();
+        }
     }
 
     @Override

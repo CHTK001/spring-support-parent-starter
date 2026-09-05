@@ -915,8 +915,10 @@ public class ApiSkillController {
         for (String source : sources) {
             try {
                 if ("skillsmp".equals(source) || "clawhub".equals(source)
-                        || "skillhub".equals(source) || "loophub".equals(source)) {
-                    // 所有源都走 SkillsMP API（统一市场）
+                        || "skillhub".equals(source) || "loophub".equals(source)
+                        || "skillhub_packages".equals(source)) {
+                    // 所有源都走 SkillsMP API（统一市场）。skillhub_packages（专家包）与
+                    // skillhub 共用该数据流，仅以不同的 source 前缀区分，供前端专家包市场展示。
                     String url = skillsMarketUrl + "?page=1&limit=30&sortBy=stars";
                     String bodyText = httpGet(url);
                     Map<String, Object> raw = parseJson(bodyText);
