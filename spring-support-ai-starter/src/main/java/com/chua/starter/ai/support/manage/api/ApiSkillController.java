@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.manage.api;
 import com.chua.common.support.ai.skill.SkillDefinition;
 import com.chua.common.support.datasearch.skill.spi.SkillOfflineProvider;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.ai.support.manage.api.market.SkillMarketSourceProvider;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
 import com.chua.starter.ai.support.manage.common.ApiResult;
@@ -645,26 +646,40 @@ public class ApiSkillController {
     }
 
     /**
-     * 查询各市场源启用状态。未显式配置的源默认启用。
+     * 查询各市场源配置（由 {@link SkillMarketSourceProvider} SPI 枚举，含启用状态）。
+     * 未显式配置的源默认启用。
      *
-     * @param sources 要查询的市场源列表（可空，为空时返回全部已知源）
-     * @return {@code { sources: { "<source>": boolean, ... } }}
+     * @param marketType 可选：marketType 过滤（skill/mcp/plugin/preset）；为空返回全部
+     * @return {@code { sources: [{ source, displayName, url, marketType, enabled }] }}
      */
     @GetMapping("/market/sources/status")
-    public ApiResult<Map<String, Object>> marketSourcesStatus(@RequestParam(required = false) List<String> sources) {
-        Map<String, Object> statusMap = new LinkedHashMap<>();
-        if (sources == null || sources.isEmpty()) {
-            sources = List.of("clawhub", "loophub", "skillhub", "skillhub_mcp", "mcpworld", "clawhub_plugins", "skillhub_packages");
-        }
-        for (String source : sources) {
-            boolean enabled = sysAiGlobalSettingService.getBoolean(
-                    MARKET_SETTING_GROUP,
-                    MARKET_SOURCE_FIELD_PREFIX + source + MARKET_SOURCE_FIELD_SUFFIX,
-                    true);
-            statusMap.put(source, enabled);
+    public ApiResult<Map<String, Object>> marketSourcesStatus(
+            @RequestParam(required = false) String marketType) {
+        List<Map<String, Object>> sources = new ArrayList<>();
+        Map<String, SkillMarketSourceProvider> providers =
+                ServiceProvider.of(SkillMarketSourceProvider.class).list();
+        if (providers != null) {
+            for (Map.Entry<String, SkillMarketSourceProvider> entry : providers.entrySet()) {
+                SkillMarketSourceProvider provider = entry.getValue();
+                String type = provider.marketType();
+                if (marketType != null && !marketType.isBlank() && !marketType.equals(type)) {
+                    continue;
+                }
+                boolean enabled = sysAiGlobalSettingService.getBoolean(
+                        MARKET_SETTING_GROUP,
+                        MARKET_SOURCE_FIELD_PREFIX + entry.getKey() + MARKET_SOURCE_FIELD_SUFFIX,
+                        provider.defaultEnabled());
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("source", entry.getKey());
+                item.put("displayName", provider.displayName());
+                item.put("url", provider.url());
+                item.put("marketType", type);
+                item.put("enabled", enabled);
+                sources.add(item);
+            }
         }
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("sources", statusMap);
+        result.put("sources", sources);
         return ApiResult.ok(result);
     }
 

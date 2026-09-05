@@ -92,6 +92,24 @@ public class WorkshopAssetService {
     }
 
     /**
+     * 白名单上传扩展名（小写，不含点）。空扩展名视为允许（无扩展名文件）。
+     *
+     * @param ext 扩展名（已小写），可为空字符串
+     * @return true 表示允许上传
+     */
+    private boolean isExtensionAllowed(String ext) {
+        if (ext == null || ext.isEmpty()) {
+            return true;
+        }
+        return java.util.Set.of(
+                        "png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico",
+                        "mp4", "webm", "mov", "avi", "mkv", "mp3", "wav", "ogg", "flac",
+                        "pdf", "txt", "md", "json", "html", "csv", "xlsx", "xls", "doc", "docx", "ppt", "pptx",
+                        "zip", "tar", "gz", "7z", "onnx", "bin", "wasm")
+                .contains(ext);
+    }
+
+    /**
      * 资产查询参数对象。
      *
      * @param kind       资产类型过滤（image/video/text），null 表示全部
@@ -185,9 +203,13 @@ public class WorkshopAssetService {
         }
 
         String originalName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "upload";
-        String ext = originalName.substring(originalName.lastIndexOf('.'));
+        String ext = originalName.contains(".")
+                ? originalName.substring(originalName.lastIndexOf('.') + 1).toLowerCase() : "";
+        if (!isExtensionAllowed(ext)) {
+            throw new IOException("UNSUPPORTED_EXTENSION: " + ext);
+        }
         String fileId = IdUtils.uuidv7();
-        String relativePath = "assets/" + fileId + ext;
+        String relativePath = "assets/" + fileId + (ext.isEmpty() ? "" : "." + ext);
         Path targetPath = Path.of(resolveStorageDir(), relativePath);
         Files.createDirectories(targetPath.getParent());
         try (InputStream in = file.getInputStream()) {

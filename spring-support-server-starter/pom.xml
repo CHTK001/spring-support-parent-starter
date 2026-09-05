@@ -100,7 +100,7 @@
                 <configuration>
                     <mainClass>com.chua.starter.server.support.ServerApplication</mainClass>
                     <!-- 作为内部 starter 库被其它模块依赖：禁用 fat-jar repackage，保留 BOOT-INF 之前的原始 jar 结构，避免下游模块无法解析 com.chua.starter.server.support.* 类 -->
-                    <skip>false</skip>
+                    <skip>true</skip>
                 </configuration>
             </plugin>
             <plugin>

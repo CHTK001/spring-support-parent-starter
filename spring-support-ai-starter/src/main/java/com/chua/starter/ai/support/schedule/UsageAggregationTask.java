@@ -245,24 +245,41 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         }
         int total = 0;
         for (Map.Entry<String, UsageParser> entry : parsers.entrySet()) {
+            // 跳过 "system" parser ——它从 sys_ai_usage 读取（写入目标表），不拉外部数据，避免循环阻塞
+            if ("system".equals(entry.getKey())) {
+                continue;
+            }
             try {
                 List<AiUsage> batch = new ArrayList<>();
-                // 响应式流：与 LocalToolUsageSyncService 保持一致，限流消费后统一落库
+                // 响应式流：限流消费，避免大表全量装载把内存打满
                 entry.getValue().streamAll()
                         .doOnNext(batch::add)
-                        .blockLast(java.time.Duration.ofSeconds(120));
+                        .blockLast(java.time.Duration.ofSeconds(300));
                 if (batch.isEmpty()) {
                     continue;
                 }
+                // 增量同步：仅插入 call_time 晚于库内该 group 最大时间的记录，
+                // 避免全量重复插入拖慢同步，也保证新数据能进来（旧实现按 ASC 排，新数据永远被超时截断）
+                LocalDateTime since = maxCallTimeOfGroup(entry.getKey());
+                int inserted = 0;
                 for (AiUsage usage : batch) {
+                    LocalDateTime callTime = usage.getStartTime() != null
+                            ? LocalDateTime.ofInstant(Instant.ofEpochMilli(usage.getStartTime()), java.time.ZoneId.systemDefault())
+                            : null;
+                    if (since != null && (callTime == null || !callTime.isAfter(since))) {
+                        continue;
+                    }
                     SysAiUsage record = toSysAiUsage(entry.getKey(), usage);
                     if (record != null) {
                         usageMapper.insert(record);
+                        inserted++;
                         total++;
                     }
                 }
-                recordLog(LOG_LEVEL_INFO, String.format("[%s] 同步 %d 条用量", entry.getKey(), batch.size()));
-            } catch (Exception e) {
+                recordLog(LOG_LEVEL_INFO, String.format("[%s] 同步 %d 条用量（新增 %d）", entry.getKey(), batch.size(), inserted));
+            } catch (Throwable e) {
+                // 用 Throwable 而非 Exception：单个 Parser 的 Error（如缺依赖 NoClassDefFoundError）
+                // 也会捕获，避免中断后续 parser 的同步
                 log.warn("[UsageAggregation] UsageParser[{}] 同步失败: {}", entry.getKey(), e.getMessage());
                 recordLog(LOG_LEVEL_ERROR, String.format("[%s] 同步失败: %s", entry.getKey(), e.getMessage()));
             }
@@ -273,6 +290,22 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         } else {
             recordLog(LOG_LEVEL_INFO, "本次外部同步无新增数据（本地工具无可用记录）");
         }
+    }
+
+    /**
+     * 查询指定 group 在 `sys_ai_usage` 中已入库的最大调用时间。
+     *
+     * @param groupName 分组名称
+     * @return 最大调用时间；无记录时返回 null
+     */
+    private LocalDateTime maxCallTimeOfGroup(String groupName) {
+        List<SysAiUsage> list = usageMapper.selectList(new LambdaQueryWrapper<SysAiUsage>()
+                .select(SysAiUsage::getSysAiUsageCallTime)
+                .eq(SysAiUsage::getSysAiUsageGroupName, groupName)
+                .isNotNull(SysAiUsage::getSysAiUsageCallTime)
+                .orderByDesc(SysAiUsage::getSysAiUsageCallTime)
+                .last("LIMIT 1"));
+        return list.isEmpty() ? null : list.get(0).getSysAiUsageCallTime();
     }
 
     /**
