@@ -1,9 +1,14 @@
 # 排除 AuthClientConfiguration：其 AuthFilter 依赖真实 OAuth 服务（无服务时 403 拦截所有请求）；
 # AOP 权限拦截链（PermissionInterceptor）由 PermissionInterceptorConfiguration 以真实类注册，
 # 与生产装配一致，本测试应用以"本地联调（无用户上下文注入 admin）"模式运行
+# 排除 DataSourceScriptConfiguration：脚本运行器（BeanPostProcessor）的版本记录表 DDL 含 MySQL
+# 专属 COMMENT 子句（H2 报 bad SQL grammar），启动期经分片代理的版本查询抛 TableNotFound 毒化
+# ShardingSphere 模式元数据 -> 分片路由查询不可用；脚本功能非本批测试目标（与生产装配差异已记录）
 spring:
   autoconfigure:
-    exclude: com.chua.starter.oauth.client.support.configuration.AuthClientConfiguration
+    exclude:
+      - com.chua.starter.oauth.client.support.configuration.AuthClientConfiguration
+      - com.chua.starter.datasource.configuration.DataSourceScriptConfiguration
   application:
     name: spring-support-test-app
   datasource:
@@ -15,8 +20,8 @@ spring:
     sharding:
       enabled: true
       databases:
-        - jdbc:h2:mem:shard0;DB_CLOSE_DELAY=-1
-        - jdbc:h2:mem:shard1;DB_CLOSE_DELAY=-1
+        - jdbc:h2:mem:shard0;DB_CLOSE_DELAY=-1;MODE=MYSQL;IGNORECASE=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE
+        - jdbc:h2:mem:shard1;DB_CLOSE_DELAY=-1;MODE=MYSQL;IGNORECASE=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE
       tables:
         - logic-table: orders
           sharding-column: id
