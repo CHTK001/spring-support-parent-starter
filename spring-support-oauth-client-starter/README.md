@@ -301,9 +301,16 @@ public Result<Void> exportUsers() { ... }
 public class OrderController { ... }
 ```
 
-#### 🔒 只读角色（READ_ONLY）
+#### 🔒 只读账号（readonly 字段 + READ_ONLY 角色）
 
-给账号授予 `READ_ONLY` 角色后：
+账号只读由两种来源任一触发（**均来自 OAuth 服务端数据库查询，非配置文件**）：
+
+| 来源 | 说明 |
+|---|---|
+| 账号级 `readonly` 字段（推荐） | OAuth 服务端用户表增加只读字段（如 `user_readonly`），认证/用户信息接口在 `UserResume` 返回 `readonly: true/false`；客户端经 `userInfo.isReadonly()` 判断 |
+| `READ_ONLY` 角色（兼容兜底） | 账号角色含 `READ_ONLY` 时同样生效（角色数据同样来自服务端数据库） |
+
+命中只读后：
 
 | 请求方法 | 行为 |
 |---|---|
@@ -312,14 +319,22 @@ public class OrderController { ... }
 
 适用于：只读报表账号、审计账号、只读第三方对接账号等场景。校验发生在 `PermissionInterceptor` 权限判断**之前**，因此优先级最高；无 HTTP 请求上下文（非 Web 调用）时不阻断。
 
+> 🗄️ **服务端返回契约**：用户表需含只读字段（建议 `user_readonly` TINYINT/boolean），登录/用户信息接口在返回的 `UserResume` 中输出 `readonly`；`UserResume` 其余用户数据（角色、权限码、部门、数据权限等）同样全部来自服务端数据库查询，客户端不通过配置文件承载任何业务数据。
+>
+> 🖥️ **前端同步契约**（`readonly` 字段前后端联调约定）：
+> - **字段**：`readonly`，`boolean`，`true`=只读账号；由用户信息接口从 `UserResume` 返回（JSON 示例：`"userInfo": { "userId": "...", "username": "...", "readonly": true }`）。
+> - **账号管理页**：创建/编辑账号表单增加"是否只读"开关（对应服务端 `user_readonly` 字段）；用户列表/详情展示只读状态标识。
+> - **操作按钮**：当前用户 `readonly=true` 时前端**同步禁用写操作按钮**（新增/编辑/删除/导入等），仅保留查询/导出——与后端 `PermissionInterceptor` 拦截一致（前端提示"只读账号不允许写操作"）。
+> - **登录态响应**：若应用自建用户信息接口（如 ai-starter 的 `UserAuthController` 手工组装 map），需在返回体中补 `readonly` 字段（取 `userResume.isReadonly()`）。
+
 #### 📖 怎么用（接入步骤）
 
 1. 引入 `spring-support-oauth-client-starter` + `spring-support-common-starter`；
-2. 用户信息（`UserResume`）经认证后存入 Session，其中 `permission` 为权限码集合、`roles` 为角色集合；
+2. 用户信息（`UserResume`）经认证后存入 Session，其中 `permission` 为权限码集合、`roles` 为角色集合、`readonly` 为服务端返回的只读标记；
 3. 在方法/类上标注 `@Permission`（权限码或角色，任一命中放行）；
 4. 本地联调模式（无远程 OAuth 服务）下无用户上下文时自动注入本地 admin 放行；生产环境须接入真实 OAuth 认证。
 
-> ⚠️ **注意事项**：权限码/角色为"任一命中"（OR）语义；按钮权限码与接口权限码必须一致；`READ_ONLY` 为内置只读角色名，改名需同步修改 `PermissionInterceptor.READ_ONLY_ROLE`。
+> ⚠️ **注意事项**：权限码/角色为"任一命中"（OR）语义；按钮权限码与接口权限码必须一致；`READ_ONLY` 为兼容兜底的角色名（`PermissionInterceptor.READ_ONLY_ROLE`），新接入建议使用账号级 `readonly` 字段。
 
 ### 4. 过滤器和拦截器
 

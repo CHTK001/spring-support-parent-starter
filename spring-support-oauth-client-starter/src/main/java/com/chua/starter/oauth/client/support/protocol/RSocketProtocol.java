@@ -374,4 +374,56 @@ public class RSocketProtocol extends AbstractProtocol {
             log.info("RSocket OAuth 客户端已关闭");
         }
     }
+
+    @Override
+    public Map<String, Object> getFingerprintUser(String fingerprint) {
+        if (StringUtils.isBlank(fingerprint)) {
+            return null;
+        }
+        try {
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.put("fingerprint", fingerprint);
+            AuthenticationInformation information = sendRSocketRequest("fingerprint/by-fingerprint", jsonObject, null);
+            if (information.getInformation() == Information.OK && information.getReturnResult() != null) {
+                Object data = information.getReturnResult();
+                if (data instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> resultMap = (Map<String, Object>) data;
+                    if (Boolean.TRUE.equals(resultMap.get("found"))) {
+                        resultMap.remove("found");
+                        return resultMap;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[RSocketProtocol] 指纹查询失败: fingerprint={}", fingerprint, e);
+        }
+        return null;
+    }
+
+    @Override
+    public java.util.List<Map<String, Object>> getFingerprintUsersByIp(String ip) {
+        if (StringUtils.isBlank(ip)) {
+            return java.util.Collections.emptyList();
+        }
+        try {
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.put("ip", ip);
+            AuthenticationInformation information = sendRSocketRequest("fingerprint/by-ip", jsonObject, null);
+            if (information.getInformation() == Information.OK && information.getReturnResult() != null) {
+                Object data = information.getReturnResult();
+                if (data instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> resultMap = (Map<String, Object>) data;
+                    Object users = resultMap.get("users");
+                    if (users instanceof java.util.List) {
+                        return (java.util.List<Map<String, Object>>) users;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[RSocketProtocol] IP指纹查询失败: ip={}", ip, e);
+        }
+        return java.util.Collections.emptyList();
+    }
 }

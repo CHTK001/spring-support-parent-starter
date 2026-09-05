@@ -1,32 +1,33 @@
 package com.chua.starter.test;
 
-import com.chua.starter.test.mapper.DsRegionMapper;
-import com.chua.starter.test.service.DsSwitchService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.web.servlet.MockMvc;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 多数据源（@DS）与数据源合并真实测试：两个独立 H2 内存库经 MultiDataSource 合并为
- * 一个可路由数据源，{@code @DS} 在 Service 级与 mapper 级均正确路由。
+ * 多数据源（@DS）与数据源合并**接口级**真实测试：经 MockMvc 走 HTTP 接口
+ * （{@code /api/ds/**}）驱动 Service/mapper 级 {@code @DS} 路由与默认路由。
  *
  * @author CH
  * @since 2026/09/04
  */
 @SpringBootTest
+@AutoConfigureMockMvc
 class MultiDatasourceRealTest {
 
     @Autowired
-    private DsSwitchService dsSwitchService;
-    @Autowired
-    private DsRegionMapper dsRegionMapper;
+    private MockMvc mockMvc;
 
     @BeforeEach
     void seed() throws Exception {
@@ -45,24 +46,33 @@ class MultiDatasourceRealTest {
         }
     }
 
-    /** Service 级 @DS：方法标注 ds1/ds2 -> 方法内查询路由到对应数据源 */
+    /** 接口级：GET /api/ds/region/ds1、/ds2 -> Service 级 @DS 路由到对应数据源 */
     @Test
-    void serviceLevelDsRouting() {
-        assertEquals("ds1-data", dsSwitchService.regionFromDs1(), "Service 级 @DS(\"ds1\") 应路由到 ds1");
-        assertEquals("ds2-data", dsSwitchService.regionFromDs2(), "Service 级 @DS(\"ds2\") 应路由到 ds2");
+    void serviceLevelDsRouting() throws Exception {
+        mockMvc.perform(get("/api/ds/region/ds1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value("ds1-data"));
+        mockMvc.perform(get("/api/ds/region/ds2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value("ds2-data"));
     }
 
-    /** mapper 级 @DS：直接标注在数据访问层方法上，同样正确切换 */
+    /** 接口级：GET /api/ds/region/mapper/ds1、/ds2 -> mapper 级 @DS 路由 */
     @Test
-    void mapperLevelDsRouting() {
-        assertEquals("ds1-data", dsRegionMapper.queryRegionDs1(), "mapper 级 @DS(\"ds1\") 应路由到 ds1");
-        assertEquals("ds2-data", dsRegionMapper.queryRegionDs2(), "mapper 级 @DS(\"ds2\") 应路由到 ds2");
+    void mapperLevelDsRouting() throws Exception {
+        mockMvc.perform(get("/api/ds/region/mapper/ds1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value("ds1-data"));
+        mockMvc.perform(get("/api/ds/region/mapper/ds2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value("ds2-data"));
     }
 
-    /** 默认路由（无 @DS）：DynamicDataSource 缺省取 master（主数据源 = spring.datasource） */
+    /** 接口级：GET /api/ds/region（无 @DS）-> 主数据源（master = spring.datasource） */
     @Test
-    void defaultRouting() {
-        assertEquals("master-data", dsSwitchService.defaultRegion(),
-                "无 @DS 应使用主数据源（master = spring.datasource）");
+    void defaultRouting() throws Exception {
+        mockMvc.perform(get("/api/ds/region"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value("master-data"));
     }
 }

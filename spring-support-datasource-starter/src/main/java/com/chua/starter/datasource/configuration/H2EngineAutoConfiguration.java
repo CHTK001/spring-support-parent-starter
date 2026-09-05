@@ -100,8 +100,8 @@ public class H2EngineAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @Order(Ordered.LOWEST_PRECEDENCE + 1)
-    public com.chua.h2.support.flyway.H2Flyway h2Flyway(DataSource h2DataSource) {
-        com.chua.h2.support.flyway.H2Flyway flyway = new com.chua.h2.support.flyway.H2Flyway(h2DataSource);
+    public Flyway h2Flyway(H2Engine h2Engine) {
+        Flyway flyway = h2Engine.flyway();
         if (properties.getScriptPath() != null && !properties.getScriptPath().isBlank()) {
             flyway.location(properties.getScriptPath());
             int count = flyway.migrate();

@@ -1,6 +1,8 @@
 package com.chua.starter.common.support.log;
 
 import com.chua.starter.common.support.application.ModuleEnvironmentRegistration;
+import com.chua.starter.common.support.constant.MdcConstant;
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,6 +94,31 @@ public class LogConfiguration {
                 logProperties.isEnable(), logProperties.isOpenInterfaceLog());
         
         return registration;
+    }
+
+    /**
+     * 日志/MDC 模块的 ServiceInfo 贡献者: 输出 MDC 链路追踪、参数日志过滤器等开关状态。
+     *
+     * <p>MDC 链路追踪由 {@link MdcHandlerFilter} 实现, 通过
+     * {@link com.chua.starter.common.support.configuration.MessageConverterWebMvcConfigurer}
+     * 注册为全局过滤器, order 为 {@link Integer#MIN_VALUE} (过滤链最前), 永久开启无需配置。</p>
+     *
+     * @return ServiceInfoContributor
+     */
+    @Bean
+    public ServiceInfoContributor logServiceInfoContributor() {
+        return registry -> {
+            registry.registerFlag("mdc", "日志", true,
+                    "MDC 链路追踪 (traceId)", "[位置: 过滤链最前] [Header: " + MdcConstant.X_TRACE_ID + "]");
+            registry.registerFlag("mdc-async", "日志", true,
+                    "MDC 异步线程传递 (MdcTaskDecorator)", "[位置: 异步线程池]");
+            registry.registerFlag("param-log", "日志", logProperties.isEnable(),
+                    "HTTP 参数日志过滤器", "[配置: plugin.log.enable]");
+            registry.registerFlag("interface-log", "日志", logProperties.isOpenInterfaceLog(),
+                    "接口日志事件", "[配置: plugin.log.open-interface-log]");
+            registry.registerFlag("slow-request", "日志", true,
+                    "慢请求 WARN 日志", "[阈值: " + logProperties.getSlowRequestThresholdMs() + "ms]");
+        };
     }
 
 }

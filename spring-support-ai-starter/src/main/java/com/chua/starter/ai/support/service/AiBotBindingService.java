@@ -341,7 +341,7 @@ public class AiBotBindingService {
         var session = qrSessions.get(key);
         // 会话不存在（已 confirmed 移除 / 已过期 / key 无效）：返回 expired，避免前端轮询报错
         if (session == null) {
-            return new QrStatus("expired", null, null, null);
+            return new QrStatus("expired", null, null, null, null);
         }
         // 懒清理过期 session
         if (System.currentTimeMillis() > session.expireAt && !"confirmed".equals(session.status)) {
@@ -349,9 +349,9 @@ public class AiBotBindingService {
             qrSessions.remove(key);
         }
         if ("confirmed".equals(session.status) && session.botId != null) {
-            return new QrStatus("confirmed", session.qrImageUrl, session.botId, session.botToken);
+            return new QrStatus("confirmed", session.qrImageUrl, session.botId, session.botToken, session.expireAt);
         }
-        return new QrStatus(session.status != null ? session.status : "pending", session.qrImageUrl, null, null);
+        return new QrStatus(session.status != null ? session.status : "pending", session.qrImageUrl, null, null, session.expireAt);
     }
 
     /**
@@ -463,10 +463,12 @@ public class AiBotBindingService {
      * @param qrcodeUrl ready 时附带，前端 img src 直接使用；其他状态为 null
      * @param botId     绑定成功后回填
      * @param botToken  绑定成功后回填
+     * @param expireAt  二维码过期时间戳（毫秒），前端据此展示倒计时并到期自动刷新
      */
     public record QrStatus(String status,
                            String qrcodeUrl,
                            String botId,
-                           String botToken) {
+                           String botToken,
+                           @JsonProperty("expireAt") Long expireAt) {
     }
 }

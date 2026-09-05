@@ -111,6 +111,13 @@ public class UserResume {
     private boolean admin;
 
     /**
+     * 是否只读账号
+     * <p>由 OAuth 服务端数据库查询返回（用户表只读字段），非配置文件配置；
+     * 只读账号禁止写操作（POST/PUT/DELETE/PATCH），优先于所有权限（含超级管理员）</p>
+     */
+    private boolean readonly;
+
+    /**
      * 错误消息
      */
     private String message;

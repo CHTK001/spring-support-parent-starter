@@ -372,8 +372,8 @@ public class UserService extends ServiceImpl<UserMapper, User> {
 
 #### 📖 怎么用（接入步骤）
 
-1. **配置启用**：`plugin.mybatis.data.scope.enable: true`（默认关闭，遵循"默认开关默认开启"约定前按需开启；本次测试应用已开启）；
-2. **提供用户上下文**：实现 `AuthService` 接口（提供当前用户 `userId`、`deptId`、数据权限类型、`SUPER_ADMIN` 标识等），插件经其获取当前用户；
+1. **配置启用**：`plugin.mybatis.data.scope.enable: true`（配置仅承载功能开关与表/列名**结构映射**，不承载业务数据）；
+2. **提供用户上下文**：实现 `AuthService` 接口（提供当前用户 `userId`、`deptId`、数据权限类型、`SUPER_ADMIN` 标识等）——**这些用户数据一律来自 OAuth 服务端数据库查询**（经认证会话 `UserResume`/用户信息接口返回），插件经其获取当前用户，不使用配置文件硬编码业务数据；
 3. **标注注解**：在 Mapper 方法（或接口类级）标注 `@DataScope`；超管角色自动旁路全量可见；
 4. **多表关联**：查询涉及多张表时通过 `deptAlias`/`userAlias` 指定别名，避免字段歧义；
 5. **字段约定**：表须含 `dept-id-column`（默认 `sys_dept_id`）与 `current-user-id-column`（默认 `create_by`），否则不应用过滤。
