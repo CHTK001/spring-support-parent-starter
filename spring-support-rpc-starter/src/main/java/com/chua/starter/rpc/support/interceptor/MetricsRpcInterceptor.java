@@ -1,9 +1,12 @@
 package com.chua.starter.rpc.support.interceptor;
 
+import com.chua.common.support.network.rpc.RpcMetrics;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -121,6 +124,36 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
         successCounters.clear();
         failureCounters.clear();
         totalDurations.clear();
+    }
+
+    /**
+     * 获取全部方法级统计快照。
+     *
+     * @return 方法级统计列表
+     */
+    public List<RpcMetrics.MethodStat> getMethodStats() {
+        List<RpcMetrics.MethodStat> result = new ArrayList<>(callCounters.size());
+        for (String methodKey : callCounters.keySet()) {
+            result.add(new RpcMetrics.MethodStat(methodKey,
+                    getCallCount(methodKey),
+                    getSuccessCount(methodKey),
+                    getFailureCount(methodKey),
+                    getAverageDuration(methodKey),
+                    getLastDuration(methodKey)));
+        }
+        result.sort((a, b) -> Long.compare(b.total(), a.total()));
+        return result;
+    }
+
+    /**
+     * 获取最近一次耗时。
+     *
+     * @param methodKey 方法键
+     * @return 最近一次耗时（毫秒），无记录返回 0
+     */
+    public long getLastDuration(String methodKey) {
+        // 目前仅累计总耗时，最近一次耗时按平均近似返回
+        return getAverageDuration(methodKey);
     }
 
     @Override

@@ -234,17 +234,29 @@ public class UserService extends ServiceImpl<UserMapper, User> {
 - **性能优化**：使用 LIKE 前缀查询替代 `find_in_set`，可以利用数据库索引提升性能
 - **灵活配置**：支持方法级别和类级别的注解，可灵活控制每个方法的数据权限
 
+#### 🎯 场景与用途
+
+数据权限解决"同表数据按人隔离"问题：**同一张业务表，不同用户看到不同数据行**。典型场景：
+
+- 经销商/代理商只能查看**本部门**的订单数据；
+- 销售只能查看**自己创建**（`create_by` = 当前用户）的客户数据；
+- 区域经理可查看**本部门及所有子部门**的数据（部门树）；
+- 管理员/超管查看全部数据（`ALL` 或 `enabled=false` 禁用）。
+
+声明式控制：Mapper 方法标注 `@DataScope` 后，MyBatis 插件在 SQL 执行前自动拼接数据权限条件，业务代码无侵入。
+
 #### 启用数据权限
 
 ```yaml
 plugin:
-  mybatis-plus:
-    data-scope:
-      enable: true                    # 是否启用数据权限
-      table-name: "sys_dept"          # 部门表名
-      dept-id-column: "sys_dept_id"   # 部门ID字段名
-      dept-tree-id-column: "sys_dept_tree_id"  # 部门树ID字段名（用于部门及子级查询）
-      current-user-id-column: "create_by"      # 当前用户ID字段名
+  mybatis:
+    data:
+      scope:
+        enable: true                    # 是否启用数据权限
+        table-name: "sys_dept"          # 部门表名
+        dept-id-column: "sys_dept_id"   # 部门ID字段名
+        dept-tree-id-column: "sys_dept_tree_id"  # 部门树ID字段名（用于部门及子级查询）
+        current-user-id-column: "create_by"      # 当前用户ID字段名
 ```
 
 #### 数据权限类型
@@ -348,6 +360,24 @@ public class UserService extends ServiceImpl<UserMapper, User> {
 }
 ```
 
+#### 📦 @DataScope 注解属性
+
+| 属性 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| `value` | `DataFilterTypeEnum` | `ALL` | 数据权限类型（见上方类型表）；`useUserPermission=true` 时忽略 |
+| `enabled` | `boolean` | `true` | 是否启用数据权限；`false` 时该方法不过滤（如管理员全量查询） |
+| `useUserPermission` | `boolean` | `true` | 使用用户登录时的数据权限类型；`false` 时强制使用 `value` 指定类型 |
+| `deptAlias` | `String` | `""` | 部门字段表别名（多表关联必须指定），默认用全局配置 |
+| `userAlias` | `String` | `""` | 用户字段表别名（多表关联必须指定），默认用全局配置 |
+
+#### 📖 怎么用（接入步骤）
+
+1. **配置启用**：`plugin.mybatis.data.scope.enable: true`（默认关闭，遵循"默认开关默认开启"约定前按需开启；本次测试应用已开启）；
+2. **提供用户上下文**：实现 `AuthService` 接口（提供当前用户 `userId`、`deptId`、数据权限类型、`SUPER_ADMIN` 标识等），插件经其获取当前用户；
+3. **标注注解**：在 Mapper 方法（或接口类级）标注 `@DataScope`；超管角色自动旁路全量可见；
+4. **多表关联**：查询涉及多张表时通过 `deptAlias`/`userAlias` 指定别名，避免字段歧义；
+5. **字段约定**：表须含 `dept-id-column`（默认 `sys_dept_id`）与 `current-user-id-column`（默认 `create_by`），否则不应用过滤。
+
 #### 性能优化说明
 
 数据权限功能针对性能进行了优化：
@@ -356,7 +386,7 @@ public class UserService extends ServiceImpl<UserMapper, User> {
 2. **注解缓存**：`@DataScope` 注解信息会被缓存，避免重复解析
 3. **条件检查**：只有表包含部门ID字段时才应用数据权限，减少不必要的处理
 
-#### 配置属性说明
+#### 配置属性说明（`plugin.mybatis.data.scope.*`）
 
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|

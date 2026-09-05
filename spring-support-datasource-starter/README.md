@@ -59,6 +59,30 @@ plugin:
 
 ### 1. `@DS` 注解 —— 数据源切换
 
+#### 🎯 场景与用途
+
+多个数据源经 `MultiDataSource` **合并**为一个可路由数据源，`@DS` 在方法/类上声明式指定本次访问的目标数据源。典型场景：
+
+- **读写分离**：写操作 `@DS("master")`，读操作 `@DS("slave")`；
+- **多租户/分库**：按租户或业务域分库，`@DS("#tenantId")` 动态路由；
+- **跨库聚合**：`@DS("master,slave")` 逗号分隔跨数据源查询；
+- **报表/只读副本**：类级 `@DS("slave")` 整类走只读库。
+
+支持 方法级 / 类级（方法覆盖类级）/ Mapper 接口级 三种标注位置；无 `@DS` 时走**默认数据源**（`master`，即主数据源 = `spring.datasource`，符合 primary+@DS 标准模式）。
+
+#### 📦 注解属性
+
+| 属性 | 类型 | 说明 | 示例 |
+|---|---|---|---|
+| `value` | `String`（必填） | 目标数据源名称（`plugin.multi-datasource.data-source[].name` 之一）；逗号分隔表示跨数据源聚合；以 `#` 开头为 SpEL 动态路由 | `@DS("slave")` / `@DS("master,slave")` / `@DS("#header.xTenantId")` |
+
+#### 📖 怎么用（接入步骤）
+
+1. **配置数据源**：`plugin.multi-datasource.enable: true` + `data-source` 列表（`name`/`url`/`username`/`password`）；
+2. **标注 `@DS`**：在 Service 方法 / 类、Mapper 接口 / 方法上标注，值为数据源名称；
+3. **默认路由**：不标注即走主数据源（master）；需动态路由时用 SpEL（见下节）；
+4. **事务注意**：跨数据源写操作需 `@DSTransactional` 本地事务（见第 5 节）或 Seata 分布式事务（见第 6 节）。
+
 #### 方法级别
 
 ```java
