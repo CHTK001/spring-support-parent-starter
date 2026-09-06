@@ -1,5 +1,6 @@
 package com.chua.starter.console;
 
+import com.chua.starter.common.support.serviceinfo.ServiceInfoContributor;
 import com.chua.starter.console.controller.ConsolePageController;
 import com.chua.starter.console.scan.AnnotationSwitchScanner;
 import com.chua.starter.console.store.ConsoleOverrideProvider;
@@ -50,5 +51,17 @@ public class ConsoleAutoConfiguration {
     public ConsoleStartupResetter consoleStartupResetter(AnnotationSwitchScanner annotationSwitchScanner,
                                                          ConsoleSqliteStore consoleSqliteStore) {
         return new ConsoleStartupResetter(annotationSwitchScanner, consoleSqliteStore);
+    }
+
+    /**
+     * 管理控制台的 ServiceInfo 贡献者。
+     *
+     * @param properties 控制台配置
+     * @return ServiceInfoContributor
+     */
+    @Bean
+    public ServiceInfoContributor consoleServiceInfoContributor(ConsoleProperties properties) {
+        return registry -> registry.registerFlag("console", "管理控制台", properties.isEnable(),
+                "管理控制台 (运行时开关调整)", null);
     }
 }
