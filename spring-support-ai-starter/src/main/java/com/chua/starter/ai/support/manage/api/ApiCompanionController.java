@@ -474,7 +474,7 @@ public class ApiCompanionController {
         profile.put("learn", c.getLearn() != null ? c.getLearn()
                 : nullableMap("enabled", false, "interval_minutes", 60, "model", null));
         profile.put("evolve", c.getEvolve() != null ? c.getEvolve()
-                : Map.of("enabled", false, "interval_minutes", 720, "model", null,
+                : nullableMap("enabled", false, "interval_minutes", 720, "model", null,
                         "min_pattern_count", 3, "min_distinct_sessions", 2,
                         "auto_activate", true, "auto_threshold", 0.8,
                         "skill_half_life_days", 14, "skill_archive_threshold", 0.1));
