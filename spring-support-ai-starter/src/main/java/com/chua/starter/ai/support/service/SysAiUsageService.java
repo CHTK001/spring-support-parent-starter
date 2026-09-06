@@ -77,5 +77,7 @@ public interface SysAiUsageService {
         public Double standardCost;
         /** 平均耗时(ms) */
         public Double avgLatency;
+        /** 平均首字延迟(ms) */
+        public Double avgFirstTokenLatency;
     }
 }
