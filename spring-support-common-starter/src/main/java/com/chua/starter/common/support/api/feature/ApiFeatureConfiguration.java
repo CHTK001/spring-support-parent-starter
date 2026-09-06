@@ -3,6 +3,8 @@ package com.chua.starter.common.support.api.feature;
 import com.chua.starter.common.support.api.annotations.ApiFeature;
 import com.chua.starter.common.support.api.interceptor.ApiControlInterceptor;
 import com.chua.starter.common.support.api.properties.ApiProperties;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -117,6 +119,9 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer, SmartInitializ
         return new ApiFeatureManager();
     }
 
+    @Autowired
+    private ObjectProvider<ApiSwitchOverrideProvider> overrideProvider;
+
     /**
      * 创建 {@link ApiControlInterceptor} Bean，用于拦截未启用的功能开关。
      *
@@ -125,7 +130,7 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer, SmartInitializ
      */
     @Bean
     public ApiControlInterceptor apiControlInterceptor(ApiFeatureManager featureManager) {
-        return new ApiControlInterceptor(apiProperties, environment, featureManager);
+        return new ApiControlInterceptor(apiProperties, environment, featureManager, overrideProvider);
     }
 
     /**

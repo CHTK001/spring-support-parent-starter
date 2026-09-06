@@ -65,6 +65,12 @@
             <artifactId>spring-support-ueba-starter</artifactId>
         </dependency>
 
+        <!-- 管理控制台：FTL 页面鉴权 + @ApiFeature/@ApiGray/键值覆盖 SQLite 持久化 + 指纹重置 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-console-starter</artifactId>
+        </dependency>
+
         <!-- 测试：spring-boot-starter-test + h2 + webmvc-test（Boot 4 中 MockMvc 测试支持
              模块化为独立构件 spring-boot-webmvc-test） -->
         <dependency>

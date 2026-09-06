@@ -83,6 +83,7 @@
 
         <!-- 认证和安全模块 -->
         <module>spring-support-oauth-client-starter</module>
+        <module>spring-support-console-starter</module>             <!-- 管理控制台：FTL 页面鉴权 + SQLite 持久化覆盖 -->
 
         <!-- 缓存和存储模块 -->
         <module>spring-support-redis-starter</module>           <!-- Redis缓存集成 -->
@@ -231,7 +232,7 @@
         <ssh-shell-spring-boot.version>2.7.0</ssh-shell-spring-boot.version>
         <sshd.version>2.13.2</sshd.version>
         <hutool.version>5.8.29</hutool.version>
-        <freemarker.version>2.3.32</freemarker.version>     <!-- FreeMarker模板引擎版本 -->
+        <freemarker.version>2.3.34</freemarker.version>     <!-- FreeMarker模板引擎版本（对齐 Boot 4.1 BOM：2.3.34 起含 freemarker.ext.jakarta 包，Boot starter 需要） -->
         <jsch.version>0.1.55</jsch.version>                 <!-- JSch SSH 客户端版本 -->
         <influxdb-client.version>3.4.0</influxdb-client.version> <!-- InfluxDB 2.x 客户端版本 -->
         <ip2proxy.version>3.6.0</ip2proxy.version>                 <!-- IP2Proxy Java库版本 -->
@@ -479,6 +480,11 @@
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-oauth-client-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-console-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
             
