@@ -1,5 +1,7 @@
 package com.chua.starter.ai.support.manage.api;
 
+import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+
 import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
 import com.chua.starter.oauth.client.support.execute.AuthClientExecute;
 import com.chua.starter.oauth.client.support.enums.AuthType;
@@ -20,6 +22,7 @@ import java.util.UUID;
  * 对接 OAuth 静态协议，桌面模式单用户认证。
  */
 @Slf4j
+@ApiReturnFormatIgnore
 @RestController
 public class AuthController {
 

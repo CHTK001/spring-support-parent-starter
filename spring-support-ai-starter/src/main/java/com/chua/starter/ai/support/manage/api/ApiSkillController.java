@@ -1,8 +1,17 @@
 package com.chua.starter.ai.support.manage.api;
 
+import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+
 import com.chua.common.support.ai.skill.SkillDefinition;
 import com.chua.common.support.datasearch.skill.spi.SkillOfflineProvider;
 import com.chua.common.support.spi.ServiceProvider;
+import com.chua.starter.ai.support.manage.api.market.ClawHubPluginsSkillMarketSourceProvider;
+import com.chua.starter.ai.support.manage.api.market.ClawHubSkillMarketSourceProvider;
+import com.chua.starter.ai.support.manage.api.market.LoopHubSkillMarketSourceProvider;
+import com.chua.starter.ai.support.manage.api.market.McpWorldSkillMarketSourceProvider;
+import com.chua.starter.ai.support.manage.api.market.SkillHubMcpSkillMarketSourceProvider;
+import com.chua.starter.ai.support.manage.api.market.SkillHubPackagesSkillMarketSourceProvider;
+import com.chua.starter.ai.support.manage.api.market.SkillHubSkillMarketSourceProvider;
 import com.chua.starter.ai.support.manage.api.market.SkillMarketSourceProvider;
 import com.chua.starter.ai.support.manage.common.ApiErrorCode;
 import com.chua.starter.ai.support.manage.common.ApiException;
@@ -57,6 +66,7 @@ import java.util.zip.ZipInputStream;
  * @since 4.0.0.42
  * @author CH
  */
+@ApiReturnFormatIgnore
 @RestController
 @RequestMapping("/api/skills")
 @RequiredArgsConstructor
@@ -658,19 +668,35 @@ public class ApiSkillController {
         List<Map<String, Object>> sources = new ArrayList<>();
         Map<String, SkillMarketSourceProvider> providers =
                 ServiceProvider.of(SkillMarketSourceProvider.class).list();
+        if (providers == null || providers.isEmpty()) {
+            // Spring Boot fat jar 下 BOOT-INF/classes 内嵌的 ServiceProvider 静态发现
+            // 可能失败，回退到显式枚举全部 SkillMarketSourceProvider SPI 实现。
+            providers = new LinkedHashMap<>();
+            for (SkillMarketSourceProvider p : List.of(
+                    new ClawHubSkillMarketSourceProvider(),
+                    new LoopHubSkillMarketSourceProvider(),
+                    new SkillHubSkillMarketSourceProvider(),
+                    new SkillHubMcpSkillMarketSourceProvider(),
+                    new McpWorldSkillMarketSourceProvider(),
+                    new ClawHubPluginsSkillMarketSourceProvider(),
+                    new SkillHubPackagesSkillMarketSourceProvider())) {
+                providers.put(p.source(), p);
+            }
+        }
         if (providers != null) {
             for (Map.Entry<String, SkillMarketSourceProvider> entry : providers.entrySet()) {
                 SkillMarketSourceProvider provider = entry.getValue();
+                String source = provider.source();
                 String type = provider.marketType();
                 if (marketType != null && !marketType.isBlank() && !marketType.equals(type)) {
                     continue;
                 }
                 boolean enabled = sysAiGlobalSettingService.getBoolean(
                         MARKET_SETTING_GROUP,
-                        MARKET_SOURCE_FIELD_PREFIX + entry.getKey() + MARKET_SOURCE_FIELD_SUFFIX,
+                        MARKET_SOURCE_FIELD_PREFIX + source + MARKET_SOURCE_FIELD_SUFFIX,
                         provider.defaultEnabled());
                 Map<String, Object> item = new LinkedHashMap<>();
-                item.put("source", entry.getKey());
+                item.put("source", source);
                 item.put("displayName", provider.displayName());
                 item.put("url", provider.url());
                 item.put("marketType", type);

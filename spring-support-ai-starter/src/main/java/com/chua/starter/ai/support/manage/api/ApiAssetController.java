@@ -1,5 +1,7 @@
 package com.chua.starter.ai.support.manage.api;
 
+import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
@@ -13,6 +15,7 @@ import java.util.LinkedHashMap;
  * 静态资源控制器 - 提供模型/平台 Logo SVG
  */
 @Slf4j
+@ApiReturnFormatIgnore
 @RestController
 @RequestMapping("/api/assets")
 public class ApiAssetController {

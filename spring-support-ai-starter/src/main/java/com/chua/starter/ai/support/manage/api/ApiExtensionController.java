@@ -1,5 +1,7 @@
 package com.chua.starter.ai.support.manage.api;
 
+import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+
 import com.chua.starter.oauth.client.support.annotation.TokenForIgnore;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,6 +13,7 @@ import java.util.Map;
  * 扩展贡献端点 Stub。
  * 前端在启动时会请求这些端点，返回空数组即可。
  */
+@ApiReturnFormatIgnore
 @RestController
 @RequestMapping("/api/extensions")
 public class ApiExtensionController {
@@ -47,8 +50,8 @@ public class ApiExtensionController {
 
     @TokenForIgnore
     @GetMapping("/settings-tabs")
-    public Map<String, Object> getSettingsTabs() {
-        return Map.of("success", true, "data", List.of());
+    public java.util.List<?> getSettingsTabs() {
+        return List.of();
     }
 
     @TokenForIgnore

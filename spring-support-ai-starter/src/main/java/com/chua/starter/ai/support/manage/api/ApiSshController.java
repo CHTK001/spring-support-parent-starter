@@ -1,5 +1,7 @@
 package com.chua.starter.ai.support.manage.api;
 
+import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.ssh.SshConnectionManager;
 import com.chua.starter.ai.support.manage.store.SysAiSshHost;
@@ -33,6 +35,7 @@ import java.util.Map;
  * @since 4.0.0.42
  * @author CH
  */
+@ApiReturnFormatIgnore
 @RestController
 @RequestMapping("/api/ssh-hosts")
 @RequiredArgsConstructor

@@ -1,5 +1,7 @@
 package com.chua.starter.ai.support.manage.api;
 
+import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +19,7 @@ import java.util.*;
  * @author CH
  */
 @Slf4j
+@ApiReturnFormatIgnore
 @RestController
 @RequestMapping("/api/companion")
 @RequiredArgsConstructor
