@@ -297,7 +297,7 @@ public class WorkshopAssetController {
             return ResponseEntity.notFound().build();
         }
 
-        Path fullPath = Path.of(System.getProperty("user.dir"), "data", "workshop-files", filePath);
+        Path fullPath = Path.of(assetService.getStorageDir(), filePath);
         if (!Files.exists(fullPath)) {
             return ResponseEntity.notFound().build();
         }
@@ -306,9 +306,9 @@ public class WorkshopAssetController {
         String rangeHeader = request.getHeader("Range");
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.parseMediaType(
-                "thumb".equals(thumb) && asset.getThumbPath() != null ? "image/jpeg"
-                        : (asset.getMime() != null ? asset.getMime() : "application/octet-stream")));
+        String contentType = (asset.getMime() != null && !asset.getMime().isBlank())
+                ? asset.getMime() : "application/octet-stream";
+        headers.setContentType(MediaType.parseMediaType(contentType));
 
         if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
             String[] parts = rangeHeader.substring(6).split("-");

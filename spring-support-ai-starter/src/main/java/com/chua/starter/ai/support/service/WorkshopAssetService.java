@@ -63,6 +63,11 @@ public class WorkshopAssetService {
         }
     }
 
+    /** 暴露给 controller 使用的存储目录（与 resolveStorageDir 保持一致） */
+    public String getStorageDir() {
+        return resolveStorageDir();
+    }
+
     /**
      * 应用启动时确保存储目录存在。
      */
