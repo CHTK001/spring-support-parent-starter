@@ -72,6 +72,33 @@ public class OsgiAutoConfiguration {
     }
 
     /**
+     * Gogo SSH shell 服务器：SSH 模式远程管理（bundle 安装/卸载等 Gogo 命令）。
+     * 补齐 {@code osgi.shell.ssh.*} 配置无消费方的缺失装配——MINA SSHD 2.x 直连启动，
+     * SSH 通道会话接线到框架内 Gogo CommandProcessor（按名服务查找 + 反射调用，
+     * 规避 bundle/应用类加载器类身份差异）。
+     */
+    @Bean(destroyMethod = "stop")
+    @ConditionalOnProperty(prefix = "plugin.osgi.shell", name = "enabled", havingValue = "true")
+    public com.chua.starter.osgi.shell.GogoSshShellServer gogoSshShellServer(
+            FelixOsgiLauncher osgiLauncher, OsgiProperties properties) {
+        OsgiProperties.Shell shell = properties.getShell();
+        if (!"ssh".equalsIgnoreCase(shell.getProtocol())) {
+            return null;
+        }
+        int port = shell.getPort() > 0 ? shell.getPort() : 8122;
+        com.chua.starter.osgi.shell.GogoSshShellServer server =
+                new com.chua.starter.osgi.shell.GogoSshShellServer(
+                        shell.getHost(), port, shell.getUsername(), shell.getPassword(),
+                        osgiLauncher.getFrameworkBundleContext());
+        try {
+            server.start();
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("[OSGi] SSH shell 启动失败", e);
+        }
+        return server;
+    }
+
+    /**
      * 创建 OsgiBeanDefinitionRegister Bean，并将其挂接到核心 ObjectContext。
      *
      * @param launcher              Felix OSGi 启动器
