@@ -392,6 +392,19 @@ public class AiOpenaiController extends BaseAiController {
     }
 
     /**
+     * 按能力类目返回已注册模型 ID 列表。
+     * <p>供前端设置页（OCR/人脸/图片/布局）的能力筛选下拉框使用——能力由
+     * {@link AiModelCatalogService} 聚合（本地 ModelRegistry + 云端 SPI 客户端），
+     * 返回每个能力类目下已加载的模型 ID 列表。</p>
+     */
+    @Operation(summary = "按能力类目返回模型", description = "返回每个能力类目下已注册的模型 ID 列表")
+    @GetMapping("/v2/ai/models/capabilities")
+    public Map<String, List<String>> modelCapabilities() {
+        return aiModelCatalogService.listModelsByCapability();
+    }
+
+
+    /**
      * 构建 CC Model 存储键。
      *
      * <p>有分组时返回 {@code cc.model.groupId}，无分组时返回 {@code cc.model}。</p>

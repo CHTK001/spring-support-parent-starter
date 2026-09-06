@@ -1068,7 +1068,9 @@ public class ApiSkillController {
                         }
                     }
                 } else {
-                    errors.add("不支持的市场源: " + source);
+                    // 暂不支持的市场源（如 clawhub_plugins、skillhub_mcp、mcpworld），
+                    // 静默跳过，不报错，由前端展示空态或提示用户刷新。
+                    log.info("[market sync] 暂不支持的市场源: {}", source);
                 }
             } catch (Exception e) {
                 log.error("同步市场源 {} 失败", source, e);
