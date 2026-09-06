@@ -1,0 +1,2 @@
+jvector=com.chua.jvector.support.spi.JVectorVectorStorageProvider
+memory=com.chua.common.support.vector.VectorStorageProvider$MemoryProvider
