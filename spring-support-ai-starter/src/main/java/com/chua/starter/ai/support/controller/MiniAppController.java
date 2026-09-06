@@ -1,6 +1,8 @@
 package com.chua.starter.ai.support.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.chua.starter.common.support.annotations.Permission;
+import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +28,7 @@ import java.util.stream.Stream;
 @Slf4j
 @RestController
 @RequestMapping("/api/miniapps")
+@ApiReturnFormatIgnore
 @Tag(name = "小程序库", description = "小程序列表/创建/更新/删除/发布/导入")
 public class MiniAppController {
 
