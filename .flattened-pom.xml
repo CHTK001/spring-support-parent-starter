@@ -58,6 +58,7 @@
     <module>spring-support-cache-starter</module>
     <module>spring-support-mybatis-starter</module>
     <module>spring-support-oauth-client-starter</module>
+    <module>spring-support-console-starter</module>
     <module>spring-support-redis-starter</module>
     <module>spring-support-filesystem-starter</module>
     <module>spring-support-swagger-starter</module>
@@ -127,7 +128,7 @@
     <slf4j.version>2.1.0-alpha1</slf4j.version>
     <jspecify.version>1.0.1</jspecify.version>
     <swagger.annotations.v3.version>2.2.15</swagger.annotations.v3.version>
-    <freemarker.version>2.3.32</freemarker.version>
+    <freemarker.version>2.3.34</freemarker.version>
     <alipay.sdk.version>4.40.483.ALL</alipay.sdk.version>
     <rocketmq.spring.version>2.3.1</rocketmq.spring.version>
     <validation-api.version>2.0.1.Final</validation-api.version>
@@ -358,6 +359,11 @@
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-oauth-client-starter</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-console-starter</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

@@ -1,0 +1,54 @@
+package com.chua.starter.console;
+
+import com.chua.starter.console.controller.ConsolePageController;
+import com.chua.starter.console.scan.AnnotationSwitchScanner;
+import com.chua.starter.console.store.ConsoleOverrideProvider;
+import com.chua.starter.console.store.ConsoleSqliteStore;
+import com.chua.starter.console.store.ConsoleStartupResetter;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
+
+/**
+ * 管理控制台自动配置。
+ *
+ * <p>装配：SQLite 持久层（自包含 sqlite-jdbc）→ 注解扫描与指纹 → {@code ApiSwitchOverrideProvider}
+ * 实现（接入 common 拦截器判定）→ 启动指纹比对重置。FTL 管理页面控制器见
+ * {@code console.controller} 包（随本配置一并注册）。</p>
+ *
+ * @author CH
+ * @since 2026/09/04
+ */
+@Slf4j
+@Configuration(proxyBeanMethods = false)
+@ConditionalOnProperty(prefix = ConsoleProperties.PRE, name = "enable", havingValue = "true", matchIfMissing = true)
+@EnableConfigurationProperties(ConsoleProperties.class)
+@Import(ConsolePageController.class)
+public class ConsoleAutoConfiguration {
+
+    @Bean
+    public AnnotationSwitchScanner annotationSwitchScanner(
+            @org.springframework.context.annotation.Lazy RequestMappingHandlerMapping requestMappingHandlerMapping) {
+        return new AnnotationSwitchScanner(requestMappingHandlerMapping);
+    }
+
+    @Bean(destroyMethod = "close")
+    public ConsoleSqliteStore consoleSqliteStore(ConsoleProperties properties) {
+        return new ConsoleSqliteStore(properties);
+    }
+
+    @Bean
+    public ConsoleOverrideProvider consoleOverrideProvider(ConsoleSqliteStore consoleSqliteStore) {
+        return new ConsoleOverrideProvider(consoleSqliteStore);
+    }
+
+    @Bean
+    public ConsoleStartupResetter consoleStartupResetter(AnnotationSwitchScanner annotationSwitchScanner,
+                                                         ConsoleSqliteStore consoleSqliteStore) {
+        return new ConsoleStartupResetter(annotationSwitchScanner, consoleSqliteStore);
+    }
+}

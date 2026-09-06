@@ -12,12 +12,14 @@ import com.chua.starter.common.support.api.annotations.ApiInternal;
 import com.chua.starter.common.support.api.annotations.ApiMock;
 import com.chua.starter.common.support.annotations.Permission;
 import com.chua.starter.common.support.api.feature.ApiFeatureManager;
+import com.chua.starter.common.support.api.feature.ApiSwitchOverrideProvider;
 import com.chua.starter.common.support.api.gray.ApiGrayEvaluator;
 import com.chua.starter.common.support.api.properties.ApiProperties;
 import com.chua.starter.common.support.utils.IpUtils;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ClassPathResource;
@@ -51,11 +53,14 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
      * @param apiProperties ApiProperties
      * @param environment Environment
      * @param featureManager ApiFeatureManager
+     * @param overrideProvider 运行时覆盖提供者（可空：未注册实现时走默认判定）
      */
-    public ApiControlInterceptor(ApiProperties apiProperties, Environment environment, ApiFeatureManager featureManager) {
+    public ApiControlInterceptor(ApiProperties apiProperties, Environment environment, ApiFeatureManager featureManager,
+                                 ObjectProvider<ApiSwitchOverrideProvider> overrideProvider) {
         this.apiProperties = apiProperties;
         this.environment = environment;
         this.featureManager = featureManager;
+        this.overrideProvider = overrideProvider.getIfAvailable();
     }
 
         /** API属性 */
@@ -64,8 +69,45 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
     private final Environment environment;
     /** Feature管理器 */
     private final ApiFeatureManager featureManager;
+    /** 运行时覆盖提供者（可空） */
+    private final ApiSwitchOverrideProvider overrideProvider;
     /** Grayevaluator */
     private final ApiGrayEvaluator grayEvaluator = new ApiGrayEvaluator();
+
+    /**
+     * 应用灰度运行时覆盖：无覆盖时原样返回注解；有覆盖时经动态代理合并——
+     * percentage/roles/users/headers/rule 取覆盖值（未覆盖字段沿用注解），其余属性委托原注解。
+     *
+     * @param apiGray 原注解
+     * @return 生效的灰度规则
+     */
+    private ApiGray applyGrayOverride(ApiGray apiGray) {
+        if (overrideProvider == null) {
+            return apiGray;
+        }
+        ApiSwitchOverrideProvider.GrayOverride override = overrideProvider.grayOverride(apiGray.value());
+        if (override == null) {
+            return apiGray;
+        }
+        return (ApiGray) java.lang.reflect.Proxy.newProxyInstance(
+                apiGray.getClass().getClassLoader(), new Class<?>[]{ApiGray.class},
+                (proxy, method, args) -> {
+                    switch (method.getName()) {
+                        case "percentage":
+                            return override.percentage() != null ? override.percentage() : apiGray.percentage();
+                        case "roles":
+                            return override.roles() != null ? override.roles() : apiGray.roles();
+                        case "users":
+                            return override.users() != null ? override.users() : apiGray.users();
+                        case "headers":
+                            return override.headers() != null ? override.headers() : apiGray.headers();
+                        case "rule":
+                            return StringUtils.hasText(override.rule()) ? override.rule() : apiGray.rule();
+                        default:
+                            return method.invoke(apiGray, args);
+                    }
+                });
+    }
 
     /**
      * 语义化版本正则（预编译）
@@ -209,10 +251,16 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
         }
 
         String featureId = apiFeature.value();
-        if (!featureManager.isEnabled(featureId)) {
+        ApiSwitchOverrideProvider.FeatureOverride override =
+                overrideProvider != null ? overrideProvider.featureOverride(featureId) : null;
+        boolean enabled = override != null ? override.isEnabled() : featureManager.isEnabled(featureId);
+        if (!enabled) {
             log.debug("功能开关已关闭: {}", featureId);
-            writeResponse(response, apiFeature.disabledStatus(),
-                    ReturnResult.error(apiFeature.disabledMessage()));
+            int status = override != null && override.disabledStatus() > 0
+                    ? override.disabledStatus() : apiFeature.disabledStatus();
+            String message = override != null && StringUtils.hasText(override.disabledMessage())
+                    ? override.disabledMessage() : apiFeature.disabledMessage();
+            writeResponse(response, status, ReturnResult.error(message));
             return false;
         }
 
@@ -364,8 +412,8 @@ public class ApiControlInterceptor implements HandlerInterceptor  {
         // 获取角色信息
         java.util.Collection<String> roles = resolveRoles(request, session);
 
-        // 评估灰度规则
-        boolean hitGray = grayEvaluator.evaluate(apiGray, request, userId, username, roles);
+        // 评估灰度规则（应用运行时覆盖）
+        boolean hitGray = grayEvaluator.evaluate(applyGrayOverride(apiGray), request, userId, username, roles);
 
         if (hitGray) {
             // 命中灰度，添加响应头并继续执行
