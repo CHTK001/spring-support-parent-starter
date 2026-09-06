@@ -24,9 +24,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 创意工坊资产库 REST 控制器。
@@ -155,6 +159,122 @@ public class WorkshopAssetController {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("updated", updated);
         return result;
+    }
+
+    // ─── 画布 CRUD（内存实现，保持前端 /api/workshop/canvases 契约）────────────
+
+    private final Map<String, Map<String, Object>> canvases = new ConcurrentHashMap<>();
+
+    @Operation(summary = "列出画布", description = "返回画布列表，按 updated_at 倒序")
+    @GetMapping("/canvases")
+    public Map<String, Object> listCanvases() {
+        List<Map<String, Object>> items = new ArrayList<>(canvases.values());
+        items.sort(Comparator.comparingLong(
+                (Map<String, Object> m) -> ((Number) m.getOrDefault("updated_at", 0L)).longValue()).reversed());
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("canvases", items);
+        return result;
+    }
+
+    @Operation(summary = "创建画布", description = "创建空白画布，返回其元数据")
+    @PostMapping("/canvases")
+    public Map<String, Object> createCanvas(@RequestBody(required = false) Map<String, Object> body) {
+        String id = UUID.randomUUID().toString();
+        long now = System.currentTimeMillis();
+        String title = body != null && body.get("title") instanceof String t && !t.isBlank()
+                ? t : "未命名画布";
+        Map<String, Object> doc = new LinkedHashMap<>();
+        doc.put("nodes", List.of());
+        doc.put("edges", List.of());
+        Map<String, Object> canvas = new LinkedHashMap<>();
+        canvas.put("canvas_id", id);
+        canvas.put("title", title);
+        canvas.put("thumbnail_url", null);
+        canvas.put("node_count", 0);
+        canvas.put("created_at", now);
+        canvas.put("updated_at", now);
+        canvas.put("doc", doc);
+        canvases.put(id, canvas);
+        return canvasMeta(canvas);
+    }
+
+    @Operation(summary = "获取画布详情", description = "返回画布元数据与完整文档")
+    @GetMapping("/canvases/{canvasId}")
+    public Map<String, Object> getCanvas(@PathVariable String canvasId) {
+        Map<String, Object> canvas = canvases.get(canvasId);
+        if (canvas == null) {
+            Map<String, Object> err = new LinkedHashMap<>();
+            err.put("success", false);
+            err.put("error", "画布不存在: " + canvasId);
+            return err;
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("meta", canvasMeta(canvas));
+        result.put("doc", canvas.get("doc"));
+        return result;
+    }
+
+    @Operation(summary = "保存画布文档", description = "原子写入画布文档，返回最新 updated_at")
+    @PutMapping("/canvases/{canvasId}/doc")
+    public Map<String, Object> putCanvasDoc(@PathVariable String canvasId, @RequestBody Map<String, Object> body) {
+        Map<String, Object> canvas = canvases.get(canvasId);
+        if (canvas == null) {
+            Map<String, Object> err = new LinkedHashMap<>();
+            err.put("success", false);
+            err.put("error", "画布不存在: " + canvasId);
+            return err;
+        }
+        Object docObj = body.get("doc");
+        if (docObj instanceof Map<?, ?> docMap) {
+            canvas.put("doc", new LinkedHashMap<>((Map<?, ?>) docMap));
+        } else {
+            canvas.put("doc", new LinkedHashMap<>());
+        }
+        Object nodes = canvas.get("doc") instanceof Map<?, ?> d ? d.get("nodes") : null;
+        int nodeCount = nodes instanceof List<?> list ? list.size() : 0;
+        canvas.put("node_count", nodeCount);
+        long now = System.currentTimeMillis();
+        canvas.put("updated_at", now);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("updated_at", now);
+        return result;
+    }
+
+    @Operation(summary = "重命名画布", description = "修改画布标题")
+    @PatchMapping("/canvases/{canvasId}")
+    public Map<String, Object> patchCanvas(@PathVariable String canvasId, @RequestBody Map<String, Object> body) {
+        Map<String, Object> canvas = canvases.get(canvasId);
+        if (canvas == null) {
+            Map<String, Object> err = new LinkedHashMap<>();
+            err.put("success", false);
+            err.put("error", "画布不存在: " + canvasId);
+            return err;
+        }
+        if (body.get("title") instanceof String t && !t.isBlank()) {
+            canvas.put("title", t);
+        }
+        canvas.put("updated_at", System.currentTimeMillis());
+        return canvasMeta(canvas);
+    }
+
+    @Operation(summary = "删除画布", description = "删除画布索引记录")
+    @DeleteMapping("/canvases/{canvasId}")
+    public Map<String, Object> deleteCanvas(@PathVariable String canvasId) {
+        canvases.remove(canvasId);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("deleted", true);
+        return result;
+    }
+
+    private Map<String, Object> canvasMeta(Map<String, Object> canvas) {
+        Map<String, Object> meta = new LinkedHashMap<>();
+        meta.put("canvas_id", canvas.get("canvas_id"));
+        meta.put("title", canvas.get("title"));
+        meta.put("thumbnail_url", canvas.get("thumbnail_url"));
+        meta.put("node_count", canvas.get("node_count"));
+        meta.put("created_at", canvas.get("created_at"));
+        meta.put("updated_at", canvas.get("updated_at"));
+        return meta;
     }
 
     // ─── 文件服务 ───────────────────────────────────────────────────────────────
