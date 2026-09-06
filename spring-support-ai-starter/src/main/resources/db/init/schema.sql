@@ -3185,6 +3185,7 @@ PREPARE v14_stmt FROM @v14_sql; EXECUTE v14_stmt; DEALLOCATE PREPARE v14_stmt;
 ALTER TABLE `sys_ai_usage_daily`
     ADD COLUMN `sys_ai_usage_daily_total_cached_tokens` INT DEFAULT 0 COMMENT '缓存读取 Token 合计' AFTER `sys_ai_usage_daily_total_cost`,
     ADD COLUMN `sys_ai_usage_daily_total_latency` BIGINT DEFAULT 0 COMMENT '总耗时(ms)合计' AFTER `sys_ai_usage_daily_total_cached_tokens`,
-    ADD COLUMN `sys_ai_usage_daily_standard_cost` DOUBLE DEFAULT 0 COMMENT '标准费用(官方价格)' AFTER `sys_ai_usage_daily_total_latency`;
+    ADD COLUMN `sys_ai_usage_daily_standard_cost` DOUBLE DEFAULT 0 COMMENT '标准费用(官方价格)' AFTER `sys_ai_usage_daily_total_latency`,
+    ADD COLUMN `sys_ai_usage_daily_total_first_token_latency` BIGINT DEFAULT 0 COMMENT '总首字延迟(ms)合计' AFTER `sys_ai_usage_daily_total_latency`;
 DELETE FROM `workshop_asset`
 WHERE `asset_id` NOT REGEXP '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$';

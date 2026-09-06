@@ -469,10 +469,10 @@ public class ApiCompanionController {
         profile.put("fallback_model", c.getFallbackModel());
         profile.put("vision_model", c.getVisionModel());
         profile.put("voice", c.getVoice() != null ? c.getVoice()
-                : Map.of("asr", null, "tts", null, "vad",
+                : nullableMap("asr", null, "tts", null, "vad",
                         Map.of("engine", "silero", "sensitivity", 0.5, "min_silence_ms", 600)));
         profile.put("learn", c.getLearn() != null ? c.getLearn()
-                : Map.of("enabled", false, "interval_minutes", 60, "model", null));
+                : nullableMap("enabled", false, "interval_minutes", 60, "model", null));
         profile.put("evolve", c.getEvolve() != null ? c.getEvolve()
                 : Map.of("enabled", false, "interval_minutes", 720, "model", null,
                         "min_pattern_count", 3, "min_distinct_sessions", 2,
@@ -481,7 +481,7 @@ public class ApiCompanionController {
         profile.put("skills", c.getSkills() != null ? c.getSkills()
                 : Map.of("enabled", List.of(), "disabled_auto", List.of()));
         profile.put("appearance", c.getAppearance() != null ? c.getAppearance()
-                : Map.of("companion_enabled", false, "companion_x", null, "companion_y", null,
+                : nullableMap("companion_enabled", false, "companion_x", null, "companion_y", null,
                         "quiet_start", "", "quiet_end", "", "custom_figure", null));
         profile.put("applied_preset", c.getAppliedPreset());
         profile.put("order_index", c.getOrderIndex());
