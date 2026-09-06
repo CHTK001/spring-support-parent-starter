@@ -68,6 +68,7 @@ class OsgiSshShellRealTest {
 
     @BeforeEach
     void waitForSshShell() throws Exception {
+        // SSH shell 现为已交付能力（GogoSshShellServer 自动装配）——服务器起不来即为回归，硬失败
         long deadline = System.currentTimeMillis() + 60_000;
         while (System.currentTimeMillis() < deadline) {
             try {
@@ -81,10 +82,7 @@ class OsgiSshShellRealTest {
                 Thread.sleep(500);
             }
         }
-        Assumptions.abort("OSGi Gogo SSH shell 已激活（监听 8122/认证/会话/回显均实证），"
-                + "但 Gogo CommandProcessor 会话 execute(bundle:install) 未返回输出——"
-                + "Gogo 命令执行层集成问题（会话 context 变量/命令注册，经 SSH shell 驱动 bundle 命令待专项）；"
-                + "bundle 安装/启动/卸载生命周期已由 OsgiBundleLifecycleRealTest 框架级 API 实证（1/1 通过）");
+        fail("OSGi Gogo SSH shell 未在 60s 内就绪（127.0.0.1:" + SSH_PORT + "）——SSH shell 装配回归");
     }
 
     private Session openSession() throws Exception {
@@ -111,8 +109,9 @@ class OsgiSshShellRealTest {
             long deadline = System.currentTimeMillis() + 15_000;
             while (System.currentTimeMillis() < deadline) {
                 String text = out.toString(StandardCharsets.UTF_8);
-                // 命令回显出现且其后出现提示符（g!）视为命令执行完成
-                if (text.contains(command) && text.indexOf("g!") > text.indexOf(command)) {
+                // 命令回显出现且命令后有**尾部**提示符（g!）视为命令执行完成
+                // （indexOf 会命中命令前的首个提示符导致永不成立，必须 lastIndexOf）
+                if (text.contains(command) && text.lastIndexOf("g!") > text.indexOf(command)) {
                     break;
                 }
                 Thread.sleep(200);
@@ -129,12 +128,7 @@ class OsgiSshShellRealTest {
     void bundleInstallUninstallViaSshShell() throws Exception {
         // 1) 经 SSH shell 安装真实 bundle
         String installOut = shell("bundle:install file:" + BUNDLE_FILE.getAbsolutePath());
-        if (!installOut.contains("Bundle ID")) {
-            // SSH 服务器已激活（监听/认证/会话/回显实证），但 Gogo 命令执行层未返回命令输出——如实记录
-            Assumptions.abort("SSH 服务器已激活（监听 8122/认证/会话/回显实证），但 Gogo CommandProcessor 会话"
-                    + " execute(bundle:install) 未返回输出——Gogo 命令执行层集成问题（会话 context 变量/命令注册），"
-                    + "bundle 经 SSH shell 驱动待专项；bundle 生命周期已由 OsgiBundleLifecycleRealTest 框架级 API 实证（1/1 通过）");
-        }
+        assertTrue(installOut.contains("Bundle ID"), "bundle:install 应返回 Bundle ID，实际输出: " + installOut);
         long bundleId = parseBundleId(installOut);
         assertTrue(bundleId > 0, "应解析出合法 bundle id: " + installOut);
 
