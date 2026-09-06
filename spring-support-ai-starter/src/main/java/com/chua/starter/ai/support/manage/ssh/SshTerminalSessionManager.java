@@ -141,8 +141,8 @@ public class SshTerminalSessionManager {
             Field channelField = session.operation.getClass().getDeclaredField("channel");
             channelField.setAccessible(true);
             Object channel = channelField.get(session.operation);
-            if (channel instanceof org.apache.sshd.client.channel.ChannelShell shell) {
-                shell.resizePtyWindow(cols, rows);
+            if (channel instanceof org.apache.sshd.client.channel.PtyCapableChannelSession pty) {
+                pty.sendWindowChange(Math.max(cols, 20), Math.max(rows, 5));
             }
             return true;
         } catch (Exception e) {
