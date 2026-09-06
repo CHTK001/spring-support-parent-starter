@@ -1017,3 +1017,86 @@ SET @preparedStatement = (SELECT IF(
 ));
 
 
+
+-- ============================================================================
+-- 桌面伙伴（Companion）模块表结构
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS `sys_ai_companion` (
+    `sys_ai_companion_id`           VARCHAR(36)  NOT NULL COMMENT '伙伴ID（UUIDv7）',
+    `sys_ai_companion_seq`          INT          NOT NULL DEFAULT 0 COMMENT '展示序号',
+    `sys_ai_companion_name`         VARCHAR(128) NULL COMMENT '伙伴名称',
+    `sys_ai_companion_character`    VARCHAR(64)  NULL COMMENT '角色ID（mochi/ink/roux/pixel/bolt/boo）',
+    `sys_ai_companion_persona_text` TEXT         NULL COMMENT 'persona JSON（preset/custom）',
+    `sys_ai_companion_model_text`   TEXT         NULL COMMENT 'model JSON（provider_id/model/use_model）',
+    `sys_ai_companion_voice_text`   TEXT         NULL COMMENT 'voice JSON（asr/tts/vad）',
+    `sys_ai_companion_learn_text`   TEXT         NULL COMMENT 'learn JSON（enabled/interval_minutes/model）',
+    `sys_ai_companion_evolve_text`  TEXT         NULL COMMENT 'evolve JSON',
+    `sys_ai_companion_skills_text`  TEXT         NULL COMMENT 'skills JSON（enabled/disabled_auto）',
+    `sys_ai_companion_appearance_text` TEXT     NULL COMMENT 'appearance JSON（window config）',
+    `sys_ai_companion_applied_preset_text` TEXT NULL COMMENT 'applied preset JSON',
+    `sys_ai_companion_fallback_model_text` TEXT NULL COMMENT 'fallback model JSON',
+    `sys_ai_companion_vision_model_text` TEXT NULL COMMENT 'vision model JSON',
+    `sys_ai_companion_order_index`  INT          NULL COMMENT '用户选择的位置序号',
+    `sys_ai_companion_conversation_id` VARCHAR(36) NULL COMMENT '专属会话ID',
+    `sys_ai_companion_created_at`   BIGINT       NOT NULL COMMENT '创建时间（毫秒）',
+    `sys_ai_companion_updated_at`   BIGINT       NOT NULL COMMENT '更新时间（毫秒）',
+    PRIMARY KEY (`sys_ai_companion_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='桌面伙伴';
+
+CREATE TABLE IF NOT EXISTS `sys_ai_companion_memory` (
+    `sys_ai_companion_memory_id`             VARCHAR(36)  NOT NULL COMMENT '记忆ID（UUIDv7）',
+    `sys_ai_companion_memory_companion_id`   VARCHAR(36)  NULL COMMENT '所属伙伴ID（null=legacy）',
+    `sys_ai_companion_memory_kind`           VARCHAR(32)  NOT NULL DEFAULT 'knowledge' COMMENT '记忆类型',
+    `sys_ai_companion_memory_content`        TEXT         NULL COMMENT '记忆内容',
+    `sys_ai_companion_memory_tags`           TEXT         NULL COMMENT '标签 JSON 数组',
+    `sys_ai_companion_memory_importance`     DOUBLE       NOT NULL DEFAULT 0 COMMENT '重要性',
+    `sys_ai_companion_memory_strength`       DOUBLE       NOT NULL DEFAULT 0 COMMENT '强度',
+    `sys_ai_companion_memory_pinned`         TINYINT      NOT NULL DEFAULT 0 COMMENT '是否置顶',
+    `sys_ai_companion_memory_source`         VARCHAR(64)  NULL COMMENT '来源',
+    `sys_ai_companion_memory_status`         VARCHAR(16)  NOT NULL DEFAULT 'active' COMMENT 'active/archived',
+    `sys_ai_companion_memory_created_at`     BIGINT       NOT NULL COMMENT '创建时间（毫秒）',
+    `sys_ai_companion_memory_updated_at`     BIGINT       NOT NULL COMMENT '更新时间（毫秒）',
+    `sys_ai_companion_memory_last_reinforced_at` BIGINT  NULL COMMENT '最后强化时间（毫秒）',
+    PRIMARY KEY (`sys_ai_companion_memory_id`),
+    KEY `idx_ai_companion_memory_owner` (`sys_ai_companion_memory_companion_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='桌面伙伴记忆';
+
+CREATE TABLE IF NOT EXISTS `sys_ai_companion_skill` (
+    `sys_ai_companion_skill_id`               VARCHAR(36)  NOT NULL COMMENT '技能ID（UUIDv7）',
+    `sys_ai_companion_skill_companion_id`     VARCHAR(36)  NULL COMMENT '所属伙伴ID（null=legacy）',
+    `sys_ai_companion_skill_name`             VARCHAR(128) NULL COMMENT '技能名',
+    `sys_ai_companion_skill_status`           VARCHAR(16)  NOT NULL DEFAULT 'draft' COMMENT 'draft/active/archived',
+    `sys_ai_companion_skill_source`           VARCHAR(64)  NULL COMMENT '来源',
+    `sys_ai_companion_skill_confidence`       DOUBLE       NOT NULL DEFAULT 0 COMMENT '置信度',
+    `sys_ai_companion_skill_provenance_event_ids` TEXT    NULL COMMENT '事件ID JSON 数组',
+    `sys_ai_companion_skill_strength`         DOUBLE       NOT NULL DEFAULT 0 COMMENT '强度',
+    `sys_ai_companion_skill_version`          INT          NOT NULL DEFAULT 1 COMMENT '版本',
+    `sys_ai_companion_skill_skill_pattern_id` VARCHAR(36)  NULL COMMENT '技能模式ID',
+    `sys_ai_companion_skill_usage_count`      INT          NOT NULL DEFAULT 0 COMMENT '使用次数',
+    `sys_ai_companion_skill_last_used_at`     BIGINT       NULL COMMENT '最后使用时间（毫秒）',
+    `sys_ai_companion_skill_created_at`       BIGINT       NOT NULL COMMENT '创建时间（毫秒）',
+    `sys_ai_companion_skill_updated_at`       BIGINT       NOT NULL COMMENT '更新时间（毫秒）',
+    `sys_ai_companion_skill_description`      TEXT         NULL COMMENT 'SKILL.md 描述',
+    `sys_ai_companion_skill_content`          TEXT         NULL COMMENT 'SKILL.md 内容',
+    PRIMARY KEY (`sys_ai_companion_skill_id`),
+    KEY `idx_ai_companion_skill_owner` (`sys_ai_companion_skill_companion_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='桌面伙伴技能';
+
+CREATE TABLE IF NOT EXISTS `sys_ai_companion_figure` (
+    `sys_ai_companion_figure_id`        VARCHAR(36)  NOT NULL COMMENT '形象ID（UUIDv7）',
+    `sys_ai_companion_figure_name`      VARCHAR(128) NULL COMMENT '形象名',
+    `sys_ai_companion_figure_aspect`    DOUBLE       NOT NULL DEFAULT 1 COMMENT '宽高比',
+    `sys_ai_companion_figure_head_box`  TEXT         NULL COMMENT 'head_box JSON（x/y/w/h）',
+    `sys_ai_companion_figure_size_tier` VARCHAR(4)   NOT NULL DEFAULT 'm' COMMENT 's/m/l',
+    `sys_ai_companion_figure_source_path` VARCHAR(512) NULL COMMENT '源图片路径',
+    `sys_ai_companion_figure_created_at` BIGINT       NOT NULL COMMENT '创建时间（毫秒）',
+    PRIMARY KEY (`sys_ai_companion_figure_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='桌面伙伴形象';
+
+CREATE TABLE IF NOT EXISTS `sys_ai_companion_shared_config` (
+    `sys_ai_companion_shared_config_key`   VARCHAR(64)  NOT NULL COMMENT '配置键',
+    `sys_ai_companion_shared_config_value` TEXT         NULL COMMENT '配置值（JSON）',
+    `sys_ai_companion_shared_config_updated_at` BIGINT  NOT NULL COMMENT '更新时间（毫秒）',
+    PRIMARY KEY (`sys_ai_companion_shared_config_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='桌面伙伴共享配置';
