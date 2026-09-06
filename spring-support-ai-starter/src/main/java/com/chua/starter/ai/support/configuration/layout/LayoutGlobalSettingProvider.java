@@ -53,7 +53,9 @@ public class LayoutGlobalSettingProvider implements GlobalSettingProvider {
                 new GlobalSettingProvider.SettingItem("pose_model", "", "STRING", "姿态估计模型（如 yolov8-pose / hrnet，留空关闭）", 5),
                 new GlobalSettingProvider.SettingItem("pose_threshold", "0.5", "NUMBER", "姿态估计置信度阈值（0~1）", 6),
                 new GlobalSettingProvider.SettingItem("ocr_link_enabled", "true", "BOOLEAN", "是否联动 OCR 识别版块文字", 7),
-                new GlobalSettingProvider.SettingItem("device", "cpu", "STRING", "推理设备（cpu / cuda）", 8)
+                new GlobalSettingProvider.SettingItem("super_resolution_model", "", "STRING", "版块图像超分模型（如 real-esrgan / gfpgan，留空关闭）", 8),
+                new GlobalSettingProvider.SettingItem("super_resolution_enabled", "false", "BOOLEAN", "是否启用超分能力", 9),
+                new GlobalSettingProvider.SettingItem("device", "cpu", "STRING", "推理设备（cpu / cuda）", 10)
         );
     }
 }

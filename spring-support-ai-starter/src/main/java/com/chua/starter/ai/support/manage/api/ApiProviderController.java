@@ -1,5 +1,7 @@
 package com.chua.starter.ai.support.manage.api;
 
+import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.chua.common.support.utils.IdUtils;
@@ -56,6 +58,7 @@ import java.util.stream.Collectors;
  * @since 4.0.0.42
  * @author CH
  */
+@ApiReturnFormatIgnore
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor

@@ -1,5 +1,7 @@
 package com.chua.starter.ai.support.manage.api;
 
+import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+
 import com.chua.starter.ai.support.manage.common.ApiResult;
 import com.chua.starter.ai.support.manage.store.SysAiConversationStore;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
@@ -29,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 4.0.0.42
  * @author CH
  */
+@ApiReturnFormatIgnore
 @RestController
 @RequestMapping("/api/idmm")
 @RequiredArgsConstructor

@@ -1,5 +1,7 @@
 package com.chua.starter.ai.support.manage.api;
 
+import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+
 import com.chua.common.support.ai.rag.RagClient;
 import com.chua.common.support.network.client.ClientResponse;
 import com.chua.common.support.network.client.HttpClientFactory;
@@ -56,6 +58,7 @@ import java.util.stream.Stream;
  * @since 4.0.0.42
  * @author CH
  */
+@ApiReturnFormatIgnore
 @RestController
 @RequestMapping("/api/knowledge")
 @RequiredArgsConstructor

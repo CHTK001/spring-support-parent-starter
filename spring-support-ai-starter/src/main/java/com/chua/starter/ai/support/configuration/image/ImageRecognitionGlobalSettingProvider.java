@@ -56,7 +56,9 @@ public class ImageRecognitionGlobalSettingProvider implements GlobalSettingProvi
                 new GlobalSettingProvider.SettingItem("depth_enabled", "false", "BOOLEAN", "是否启用深度估计", 7),
                 new GlobalSettingProvider.SettingItem("pedestrian_enabled", "false", "BOOLEAN", "是否启用行人与异常检测", 8),
                 new GlobalSettingProvider.SettingItem("quality_enabled", "false", "BOOLEAN", "是否启用图像质量评估", 9),
-                new GlobalSettingProvider.SettingItem("device", "cpu", "STRING", "推理设备（cpu / cuda）", 10)
+                new GlobalSettingProvider.SettingItem("super_resolution_model", "", "STRING", "图像超分模型（如 real-esrgan / gfpgan / waifu2x，留空关闭）", 10),
+                new GlobalSettingProvider.SettingItem("super_resolution_enabled", "false", "BOOLEAN", "是否启用超分能力", 11),
+                new GlobalSettingProvider.SettingItem("device", "cpu", "STRING", "推理设备（cpu / cuda）", 12)
         );
     }
 }
