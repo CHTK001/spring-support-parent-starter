@@ -99,7 +99,20 @@ public class ServiceInfoEndpointDetector {
         boolean hasAuth = hasText(password);
         String desc = (hasText(username) ? "用户: " + username + " " : "")
                 + (hasAuth ? " (认证)" : " (无密码)");
-        registry.registerEndpoint("基础设施", "JDBC", url, desc.trim());
+        registry.registerEndpoint("基础设施", "JDBC", compactJdbcUrl(url), desc.trim());
+    }
+
+    /**
+     * 精简 JDBC URL: 保留协议 + 主机:端口/库名, 去掉冗长的连接参数, 便于横幅可读。
+     *
+     * <p>例如 {@code jdbc:mysql://host:3306/db?useSSL=false&...} -> {@code jdbc:mysql://host:3306/db}。</p>
+     */
+    private static String compactJdbcUrl(String url) {
+        int query = url.indexOf('?');
+        if (query >= 0) {
+            url = url.substring(0, query);
+        }
+        return url;
     }
 
     /** 注册 Kafka 连接信息 (spring.kafka.bootstrap-servers) */

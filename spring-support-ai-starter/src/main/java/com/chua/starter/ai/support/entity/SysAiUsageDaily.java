@@ -94,6 +94,12 @@ public class SysAiUsageDaily extends SysBase {
     private Long totalLatency;
 
     /**
+     * 总首字延迟（毫秒）合计，配合调用次数计算平均首字延迟
+     */
+    @TableField("sys_ai_usage_daily_total_first_token_latency")
+    private Long totalFirstTokenLatency;
+
+    /**
      * 标准费用（官方价格计算，未折扣）
      */
     @TableField("sys_ai_usage_daily_standard_cost")
