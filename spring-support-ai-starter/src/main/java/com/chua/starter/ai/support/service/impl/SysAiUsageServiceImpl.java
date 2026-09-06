@@ -223,6 +223,8 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
         stats.standardCost = list.stream().mapToDouble(u -> u.getStandardCost() != null ? u.getStandardCost() : 0).sum();
         long totalLatency = list.stream().mapToLong(u -> u.getTotalLatency() != null ? u.getTotalLatency() : 0L).sum();
         stats.avgLatency = stats.totalCalls > 0 ? (double) totalLatency / stats.totalCalls : 0.0;
+        long totalFirstTokenLatency = list.stream().mapToLong(u -> u.getTotalFirstTokenLatency() != null ? u.getTotalFirstTokenLatency() : 0L).sum();
+        stats.avgFirstTokenLatency = stats.totalCalls > 0 ? (double) totalFirstTokenLatency / stats.totalCalls : 0.0;
         return stats;
     }
 }
