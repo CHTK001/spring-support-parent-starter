@@ -526,6 +526,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             daily.setTotalTokens(row.totalTokens() != null ? row.totalTokens() : 0L);
             daily.setTotalCachedTokens(row.totalCachedTokens() != null ? row.totalCachedTokens() : 0L);
             daily.setTotalLatency(row.totalLatency() != null ? row.totalLatency() : 0L);
+            daily.setTotalFirstTokenLatency(row.totalFirstTokenLatency() != null ? row.totalFirstTokenLatency() : 0L);
             // 实际费用缺失（未记录）时用标准价兜底，保证统计口径一致
             double actualCost = row.totalCost() != null ? row.totalCost() : 0.0;
             daily.setTotalCost(actualCost != 0 ? actualCost : standardCost.doubleValue());
