@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -91,6 +92,32 @@ class ConsoleRealTest {
                 .andExpect(status().is3xxRedirection());
         mockMvc.perform(get("/api/feature/beta").session(sessionWith(Set.of("console:manage"))))
                 .andExpect(status().isServiceUnavailable());
+    }
+
+    /** 灰度覆盖生效（端到端）：users 白名单未命中 -> console 覆盖 percentage=100 -> X-Gray-Hit 命中；清理后恢复 */
+    @Test
+    void grayOverrideTakesEffect() throws Exception {
+        MockHttpSession session = sessionWith(Set.of("console:manage"));
+        // 基线：会话用户非 gray-user -> users 维度未命中（无 X-Gray-Hit 头）
+        mockMvc.perform(get("/api/api-version/preview").session(session))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("X-Gray-Hit"));
+        // 控制台覆盖灰度（演示端点 @ApiGray 注解 value 默认空串）：percentage=100
+        mockMvc.perform(post("/console/api/grays").session(session)
+                        .param("pattern", "")
+                        .param("percentage", "100"))
+                .andExpect(status().is3xxRedirection());
+        // 覆盖生效：拦截器动态代理合并后 percentage=100 恒命中 -> X-Gray-Hit: true
+        mockMvc.perform(get("/api/api-version/preview").session(session))
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Gray-Hit", "true"));
+        // 清理：移除覆盖恢复未命中（避免污染同上下文的其他灰度用例）
+        mockMvc.perform(post("/console/api/grays/delete").session(session)
+                        .param("pattern", ""))
+                .andExpect(status().is3xxRedirection());
+        mockMvc.perform(get("/api/api-version/preview").session(session))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("X-Gray-Hit"));
     }
 
     /** 键值设置 CRUD（HTTP 接口）+ SQLite 持久化 */

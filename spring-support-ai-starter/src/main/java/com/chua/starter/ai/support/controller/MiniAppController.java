@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -53,7 +54,7 @@ public class MiniAppController {
     @Operation(summary = "创建小程序", description = "创建并首次发布，初始化工作目录")
     @PostMapping
     public Map<String, Object> create(@RequestBody Map<String, Object> body) {
-        String id = UUID.randomUUID().toString();
+        String id = generateUuidV7();
         long now = System.currentTimeMillis();
         String name = optStr(body, "name", "未命名小程序");
         String description = optStr(body, "description", "");
@@ -196,22 +197,21 @@ public class MiniAppController {
 
     @Operation(summary = "服务已发布内容", description = "返回已发布的 HTML 内容，供 iframe 加载（无鉴权）")
     @GetMapping(value = "/{id}/serve", produces = MediaType.TEXT_HTML_VALUE)
-    public ResponseEntity<byte[]> serve(@PathVariable String id) {
+    public void serve(@PathVariable String id, HttpServletResponse response) throws IOException {
         Path src = ROOT.resolve(id).resolve("miniapp.html");
         if (!Files.exists(src)) {
-            byte[] html = "<!DOCTYPE html><html><head><title>未发布</title></head><body><p>该小程序尚未发布</p></body></html>".getBytes();
-            return ResponseEntity.ok().header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_HTML_VALUE).body(html);
+            response.setStatus(200);
+            response.setContentType(MediaType.TEXT_HTML_VALUE);
+            response.getWriter().write("<!DOCTYPE html><html><head><title>未发布</title></head><body><p>该小程序尚未发布</p></body></html>");
+            return;
         }
-        try {
-            byte[] bytes = Files.readAllBytes(src);
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_HTML_VALUE)
-                    .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-                    .body(bytes);
-        } catch (IOException e) {
-            log.error("读取 miniapp.html 失败: id={}", id, e);
-            return ResponseEntity.status(500).body(("读取失败: " + e.getMessage()).getBytes());
-        }
+        byte[] bytes = Files.readAllBytes(src);
+        response.setStatus(200);
+        response.setContentType(MediaType.TEXT_HTML_VALUE);
+        response.setHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+        response.setContentLength(bytes.length);
+        response.getOutputStream().write(bytes);
+        response.getOutputStream().flush();
     }
 
     // ─── 导入 ───────────────────────────────────────────────────────────────────
@@ -279,7 +279,7 @@ public class MiniAppController {
         }
         if (name == null || name.isBlank()) name = "导入的小程序";
 
-        String id = UUID.randomUUID().toString();
+        String id = generateUuidV7();
         long now = System.currentTimeMillis();
         Path dir = ROOT.resolve(id);
         try {
@@ -359,6 +359,32 @@ public class MiniAppController {
 
     private static String escHtml(String s) {
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
+    }
+
+    /**
+     * 生成 UUIDv7 格式字符串（时间排序、前端兼容）。
+     */
+    private static String generateUuidV7() {
+        UUID uuid = UUID.randomUUID();
+        long ms = System.currentTimeMillis();
+        byte[] bytes = new byte[16];
+        bytes[0] = (byte) (ms >> 40);
+        bytes[1] = (byte) (ms >> 32);
+        bytes[2] = (byte) (ms >> 24);
+        bytes[3] = (byte) (ms >> 16);
+        bytes[4] = (byte) (ms >> 8);
+        bytes[5] = (byte) ms;
+        byte[] random = uuid.toString().replace("-", "").substring(12).getBytes();
+        System.arraycopy(random, 0, bytes, 6, 10);
+        bytes[6] = (byte) ((bytes[6] & 0x0F) | 0x70);
+        bytes[8] = (byte) ((bytes[8] & 0x3F) | 0x80);
+        return String.format("%08x-%04x-%04x-%04x-%012x",
+                ((bytes[0] & 0xFF) << 24 | (bytes[1] & 0xFF) << 16 | (bytes[2] & 0xFF) << 8 | (bytes[3] & 0xFF)),
+                ((bytes[4] & 0xFF) << 8 | (bytes[5] & 0xFF)),
+                ((bytes[6] & 0xFF) << 8 | (bytes[7] & 0xFF)),
+                ((bytes[8] & 0xFF) << 8 | (bytes[9] & 0xFF)),
+                (((long) (bytes[10] & 0xFF) << 40) | ((long) (bytes[11] & 0xFF) << 32) | ((long) (bytes[12] & 0xFF) << 24) | ((long) (bytes[13] & 0xFF) << 16) | ((long) (bytes[14] & 0xFF) << 8) | (bytes[15] & 0xFF))
+        );
     }
 
     private static void deleteRecursively(Path p) {

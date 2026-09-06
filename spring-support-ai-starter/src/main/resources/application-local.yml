@@ -49,7 +49,7 @@ spring:
       enabled: false
     rag:
       enabled: true
-      vector-storage: memory
+      vector-storage: jvector
       embedding-engine: memory
 
 # 本地联调：关闭外部 OAuth / 协议服务器 / 文件系统；OAuth 全部放行（白名单通配）

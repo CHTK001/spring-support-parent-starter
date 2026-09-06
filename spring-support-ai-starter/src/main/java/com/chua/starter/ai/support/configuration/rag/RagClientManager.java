@@ -48,7 +48,7 @@ public class RagClientManager {
     /**
      * 全局设置键值分组
      */
-    private static final String GROUP = "global";
+    private static final String GROUP = "rag";
 
     /**
      * 全局 RAG 客户端在 Spring 容器中的 Bean 名称
