@@ -197,16 +197,21 @@ public class MiniAppController {
     @Operation(summary = "服务已发布内容", description = "返回已发布的 HTML 内容，供 iframe 加载（无鉴权）")
     @GetMapping(value = "/{id}/serve", produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<byte[]> serve(@PathVariable String id) {
-        Map<String, Object> app = apps.get(id);
-        if (app == null || app.get("published_snapshot") == null) {
+        Path src = ROOT.resolve(id).resolve("miniapp.html");
+        if (!Files.exists(src)) {
             byte[] html = "<!DOCTYPE html><html><head><title>未发布</title></head><body><p>该小程序尚未发布</p></body></html>".getBytes();
             return ResponseEntity.ok().header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_HTML_VALUE).body(html);
         }
-        byte[] snapshot = (byte[]) app.get("published_snapshot");
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_HTML_VALUE)
-                .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-                .body(snapshot);
+        try {
+            byte[] bytes = Files.readAllBytes(src);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_HTML_VALUE)
+                    .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+                    .body(bytes);
+        } catch (IOException e) {
+            log.error("读取 miniapp.html 失败: id={}", id, e);
+            return ResponseEntity.status(500).body(("读取失败: " + e.getMessage()).getBytes());
+        }
     }
 
     // ─── 导入 ───────────────────────────────────────────────────────────────────
