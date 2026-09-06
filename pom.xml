@@ -1223,6 +1223,11 @@
                 <version>${maven-surefire-plugin.version}</version>
                 <configuration>
                     <skipTests>${skipTests}</skipTests>
+                    <!-- 逆字母序执行：RealPortE2ETest（RANDOM_PORT Tomcat）必须先于
+                         Osgi*Test（Felix 框架启动注册 JVM 全局 URLStreamHandlerFactory）
+                         运行——否则 Tomcat 初始化撞 "factory already defined"
+                         （JVM 全局 URL 工厂单例冲突，Felix 链式兼容已有工厂但 Tomcat 不兼容） -->
+                    <runOrder>reversealphabetical</runOrder>
                 </configuration>
             </plugin>
             <!-- JaCoCo 覆盖率插件：prepare-agent 注入探针（test 阶段）、report 生成覆盖率报告（verify 阶段） -->
