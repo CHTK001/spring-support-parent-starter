@@ -409,14 +409,18 @@ public class ApiCompanionController {
 
     @PostMapping("/consent")
     public ApiResult<Map<String, Object>> applyConsent(@RequestBody Map<String, Object> body) {
-        return ApiResult.ok(Map.of("collect", Map.of(), "smart_collaboration", false,
-                "default_companion_id", null, "bridge_to_memory_dir", null, "archive", Map.of()));
+        Map<String, Object> config = sharedConfig();
+        config.putIfAbsent("consent_applied", true);
+        companionStore.setConfigValue("shared", companionStore.toJson(config));
+        return ApiResult.ok(config);
     }
 
     @PostMapping("/disable-all")
     public ApiResult<Map<String, Object>> disableAll(@RequestBody Map<String, Object> body) {
-        return ApiResult.ok(Map.of("collect", Map.of(), "smart_collaboration", false,
-                "default_companion_id", null, "bridge_to_memory_dir", null, "archive", Map.of()));
+        Map<String, Object> config = sharedConfig();
+        config.put("disable_all", true);
+        companionStore.setConfigValue("shared", companionStore.toJson(config));
+        return ApiResult.ok(config);
     }
 
     // ==================== 共享配置 ====================
@@ -597,6 +601,17 @@ public class ApiCompanionController {
         if (value == null) return fallback;
         String s = String.valueOf(value);
         return s.isBlank() ? fallback : s;
+    }
+
+    /**
+     * 构造允许 null 值的 Map（{@link Map#of} 不允许 null，前端契约中大量可空字段需要它）。
+     */
+    private static Map<String, Object> nullableMap(Object... kv) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        for (int i = 0; i + 1 < kv.length; i += 2) {
+            map.put(String.valueOf(kv[i]), kv[i + 1]);
+        }
+        return map;
     }
 
     @SuppressWarnings("unchecked")
