@@ -1230,6 +1230,14 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.13</version>
+                <configuration>
+                    <!-- 排除超大生成解析器类：JaCoCo 0.8.13 的 ASM 无法插桩 jsqlparser 的
+                         CCJSqlParserTokenManager.jjMoveNfa_0（MethodTooLargeException），
+                         该类由 osgi-starter 传递引入，加载时触发探针失败 -->
+                    <excludes>
+                        <exclude>net/sf/jsqlparser/**</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
