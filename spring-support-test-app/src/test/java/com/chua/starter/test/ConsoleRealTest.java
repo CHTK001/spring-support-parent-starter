@@ -11,9 +11,13 @@ import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.env.Environment;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.containsString;
@@ -37,6 +41,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @Import(ApiFeatureConfiguration.class)
 class ConsoleRealTest {
+
+    // 预置键值：验证 ConsoleKvEnvironmentPostProcessor 在上下文启动**前**读取 console_kv 注入
+    // Environment（业务可经 @Value/environment.getProperty 读取"运行设置"；sqlite 路径与 yaml 一致）
+    static {
+        try (Connection connection = DriverManager.getConnection("jdbc:sqlite:target/console-test.sqlite", "", "");
+             Statement statement = connection.createStatement()) {
+            statement.execute("create table if not exists console_kv (k varchar(255) primary key, v varchar(1000), updated_at timestamp default current_timestamp)");
+            statement.execute("delete from console_kv where k='console.e2e.kv'");
+            statement.execute("insert into console_kv(k, v) values('console.e2e.kv', 'from-sqlite')");
+        } catch (Exception e) {
+            throw new IllegalStateException("键值环境注入预置失败", e);
+        }
+    }
+
+    @Autowired
+    private Environment environment;
 
     @Autowired
     private MockMvc mockMvc;
@@ -118,6 +138,13 @@ class ConsoleRealTest {
         mockMvc.perform(get("/api/api-version/preview").session(session))
                 .andExpect(status().isOk())
                 .andExpect(header().doesNotExist("X-Gray-Hit"));
+    }
+
+    /** 键值环境注入（启动 e2e）：预置的 console_kv 行经 EnvironmentPostProcessor 注入 Environment */
+    @Test
+    void kvInjectedIntoEnvironment() {
+        assertEquals("from-sqlite", environment.getProperty("console.e2e.kv"),
+                "启动注入的键值应可经 Environment 读取（@Value/environment.getProperty）");
     }
 
     /** 键值设置 CRUD（HTTP 接口）+ SQLite 持久化 */
