@@ -61,16 +61,20 @@ public class ServiceInfoEndpointDetector {
     }
 
     /**
-     * 注册基础设施连接信息 (Redis / JDBC / Kafka / RabbitMQ)。
+     * 注册基础设施连接信息 (Redis / JDBC / Kafka / RabbitMQ / Spring Cloud / Dubbo)。
      *
-     * <p>从 {@link Environment} 读取 Spring Boot 标准配置, 以端点的形式展示真实连接地址,
-     * 便于联调排查。所有条目均做脱敏: 不输出任何密码/密钥。</p>
+     * <p>从 {@link Environment} 读取 Spring Boot / Spring Cloud / Dubbo 标准配置,
+     * 以端点的形式展示真实连接地址, 便于联调排查。所有条目均做脱敏: 不输出任何密码/密钥。</p>
      */
     private void registerInfrastructure(ServiceInfoRegistry registry) {
         registerRedis(registry);
         registerJdbc(registry);
         registerKafka(registry);
         registerRabbitMq(registry);
+        registerSpringCloud(registry);
+        registerDubbo(registry);
+        registerFrameworkDiscovery(registry);
+        registerFrameworkConfigCenter(registry);
     }
 
     /** 注册 Redis 连接信息 (spring.data.redis.*) */
@@ -151,5 +155,112 @@ public class ServiceInfoEndpointDetector {
     /** 是否非空文本 */
     private static boolean hasText(String text) {
         return text != null && !text.trim().isEmpty();
+    }
+
+    // ------------------------------------------------------------------ Spring Cloud / Dubbo
+
+    /**
+     * 注册 Spring Cloud 体系注册中心/配置中心连接信息。
+     *
+     * <p>覆盖 Nacos / Consul / Eureka / ZooKeeper / Spring Cloud Config Server,
+     * 从 Spring Cloud 标准配置读取。</p>
+     */
+    private void registerSpringCloud(ServiceInfoRegistry registry) {
+        registerNacos(registry);
+        registerConsul(registry);
+        registerEureka(registry);
+        registerZookeeper(registry);
+        registerSpringCloudConfig(registry);
+    }
+
+    /** 注册 Nacos (spring.cloud.nacos.*) */
+    private void registerNacos(ServiceInfoRegistry registry) {
+        String discovery = environment.getProperty("spring.cloud.nacos.discovery.server-addr");
+        String config = environment.getProperty("spring.cloud.nacos.config.server-addr");
+        if (hasText(discovery)) {
+            registry.registerEndpoint("SpringCloud", "Nacos 注册中心", discovery, "服务发现");
+        }
+        if (hasText(config)) {
+            registry.registerEndpoint("SpringCloud", "Nacos 配置中心", config, "配置中心");
+        }
+    }
+
+    /** 注册 Consul (spring.cloud.consul.*) */
+    private void registerConsul(ServiceInfoRegistry registry) {
+        String host = environment.getProperty("spring.cloud.consul.host");
+        if (!hasText(host)) {
+            return;
+        }
+        String port = environment.getProperty("spring.cloud.consul.port", "8500");
+        registry.registerEndpoint("SpringCloud", "Consul", host + ":" + port, "服务注册与配置");
+    }
+
+    /** 注册 Eureka (eureka.client.service-url.*) */
+    private void registerEureka(ServiceInfoRegistry registry) {
+        String zone = environment.getProperty("eureka.client.service-url.defaultZone");
+        if (!hasText(zone)) {
+            return;
+        }
+        registry.registerEndpoint("SpringCloud", "Eureka", zone, "服务注册中心");
+    }
+
+    /** 注册 ZooKeeper (spring.cloud.zookeeper.connect-string) */
+    private void registerZookeeper(ServiceInfoRegistry registry) {
+        String connect = environment.getProperty("spring.cloud.zookeeper.connect-string");
+        if (!hasText(connect)) {
+            return;
+        }
+        registry.registerEndpoint("SpringCloud", "ZooKeeper", connect, "服务注册中心");
+    }
+
+    /** 注册 Spring Cloud Config Server (spring.cloud.config.uri) */
+    private void registerSpringCloudConfig(ServiceInfoRegistry registry) {
+        String uri = environment.getProperty("spring.cloud.config.uri");
+        if (!hasText(uri)) {
+            return;
+        }
+        registry.registerEndpoint("SpringCloud", "Config Server", uri, "集中配置中心");
+    }
+
+    /**
+     * 注册 Dubbo 连接信息。
+     *
+     * <p>读取 {@code dubbo.registry.address} 与 {@code dubbo.protocol.*}。</p>
+     */
+    private void registerDubbo(ServiceInfoRegistry registry) {
+        String registryAddr = environment.getProperty("dubbo.registry.address");
+        if (hasText(registryAddr)) {
+            registry.registerEndpoint("Dubbo", "注册中心", registryAddr,
+                    environment.getProperty("dubbo.registry.group", "dubbo"));
+        }
+        String protocolName = environment.getProperty("dubbo.protocol.name");
+        String protocolPort = environment.getProperty("dubbo.protocol.port");
+        if (hasText(protocolName) || hasText(protocolPort)) {
+            String desc = (hasText(protocolName) ? protocolName : "dubbo")
+                    + (hasText(protocolPort) ? ":" + protocolPort : "");
+            registry.registerEndpoint("Dubbo", "服务协议", desc, "RPC 服务端口");
+        }
+    }
+
+    /** 注册框架自身服务发现配置 (plugin.discovery.*) */
+    private void registerFrameworkDiscovery(ServiceInfoRegistry registry) {
+        String address = environment.getProperty("plugin.discovery.address");
+        if (!hasText(address)) {
+            return;
+        }
+        String protocol = environment.getProperty("plugin.discovery.protocol", "discovery");
+        registry.registerEndpoint("SpringCloud", "Discovery", protocol + "://" + address, "框架服务发现");
+    }
+
+    /** 注册框架自身配置中心 (plugin.config-center.*) */
+    private void registerFrameworkConfigCenter(ServiceInfoRegistry registry) {
+        String address = environment.getProperty("plugin.config-center.address");
+        if (!hasText(address)) {
+            return;
+        }
+        String protocol = environment.getProperty("plugin.config-center.protocol", "config-center");
+        String desc = environment.getProperty("plugin.config-center.namespace-id");
+        registry.registerEndpoint("SpringCloud", "Config Center", protocol + "://" + address,
+                hasText(desc) ? "命名空间: " + desc : "框架配置中心");
     }
 }

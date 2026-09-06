@@ -403,7 +403,7 @@ public class ApiCompanionController {
 
     @GetMapping("/events/storage")
     public ApiResult<Map<String, Object>> eventStorage() {
-        return ApiResult.ok(Map.of("total_bytes", 0, "max_bytes", 0, "file_count", 0,
+        return ApiResult.ok(nullableMap("total_bytes", 0, "max_bytes", 0, "file_count", 0,
                 "oldest_day", null, "newest_day", null, "retention_days", 0, "max_storage_mb", 0));
     }
 

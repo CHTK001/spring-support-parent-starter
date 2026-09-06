@@ -127,6 +127,7 @@ public class UsageController {
                 "totalCost", stats.totalCost,
                 "totalCachedTokens", stats.totalCachedTokens,
                 "avgLatency", stats.avgLatency,
+                "avgFirstTokenLatency", stats.avgFirstTokenLatency,
                 "standardCost", stats.standardCost
         ));
     }
