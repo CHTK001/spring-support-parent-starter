@@ -69,13 +69,15 @@ class OsgiSshShellRealTest {
     void waitForSshShell() throws Exception {
         long deadline = System.currentTimeMillis() + 60_000;
         while (System.currentTimeMillis() < deadline) {
-            Session session = openSession();
             try {
-                return;
+                Session session = openSession();
+                try {
+                    return;
+                } finally {
+                    session.disconnect();
+                }
             } catch (Exception ignored) {
                 Thread.sleep(500);
-            } finally {
-                session.disconnect();
             }
         }
         fail("OSGi Gogo SSH shell 未在 60s 内就绪（127.0.0.1:" + SSH_PORT + "）");

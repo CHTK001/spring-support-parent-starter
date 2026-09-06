@@ -50,7 +50,7 @@ public class OsgiAutoConfiguration {
     /** Gogo shell 类标记 */
     private static final String GOGO_SHELL_CLASS = "org.apache.felix.gogo.shell.Shell";
     /** SSHD osgi 类标记 */
-    private static final String SSHD_OSGI_CLASS = "org.apache.sshd.osgi.SshServerFactory";
+    private static final String SSHD_OSGI_CLASS = "org.apache.sshd.agent.SshAgent";
 
     /**
      * 创建并启动 Felix OSGi 框架。
