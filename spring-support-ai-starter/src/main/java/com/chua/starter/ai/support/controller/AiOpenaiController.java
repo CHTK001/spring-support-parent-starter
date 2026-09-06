@@ -4,6 +4,7 @@ import com.chua.common.support.ai.chat.ModelDefinition;
 import com.chua.common.support.utils.StringUtils;
 import com.chua.starter.ai.support.model.AiChatRequest;
 import com.chua.starter.ai.support.service.AiChatFacadeService;
+import com.chua.starter.ai.support.service.AiModelCatalogService;
 import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -58,12 +59,15 @@ import java.util.concurrent.CompletableFuture;
 public class AiOpenaiController extends BaseAiController {
 
     /**
-     * AI 对话门面服务，负责模型路由与对话执行
+     * AI 对话/补全服务（绑定所有聊天模型）
      */
     private final AiChatFacadeService aiChatFacadeService;
 
-    /** AI 模型指标富集服务 */
+    /** AI 模型指标富化服务 */
     private final com.chua.starter.ai.support.service.AiModelMetricsEnrichmentService modelMetricsEnrichmentService;
+
+    /** AI 模型能力目录（按能力类目返回模型 ID 列表） */
+    private final AiModelCatalogService aiModelCatalogService;
 
     /**
      * SSE 超时时间（毫秒）
