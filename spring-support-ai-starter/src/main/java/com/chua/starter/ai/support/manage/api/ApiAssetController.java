@@ -24,9 +24,11 @@ public class ApiAssetController {
      * Logo 资源。前端（agentLogo.ts）请求带子目录的多段路径（如 brand/nomi.svg、
      * tools/coding/codex.svg），单段 {name} 无法匹配会导致 404 裂图，这里用
      * /logos/** 接住全部层级；classpath 无对应文件时返回首字母兜底 SVG。
+     * 直接写 HttpServletResponse：全局消息转换器不含二进制/SVG 转换器，
+     * 返回 Resource/byte[] 会报 "No converter ... preset Content-Type"。
      */
     @GetMapping("/logos/**")
-    public ResponseEntity<Resource> getLogo(jakarta.servlet.http.HttpServletRequest request) {
+    public void getLogo(jakarta.servlet.http.HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
         String uri = request.getRequestURI();
         String name = uri.substring(uri.indexOf("/logos/") + "/logos/".length());
         try {
@@ -50,9 +52,8 @@ public class ApiAssetController {
             try {
                 Resource resource = new ClassPathResource(candidate);
                 if (resource.exists()) {
-                    return ResponseEntity.ok()
-                        .header(HttpHeaders.CONTENT_TYPE, "image/svg+xml")
-                        .body(resource);
+                    writeSvg(response, resource.getContentAsByteArray());
+                    return;
                 }
             } catch (Exception e) {
                 log.warn("Logo not found: {}", candidate);
@@ -66,13 +67,13 @@ public class ApiAssetController {
         if (displayName.endsWith(".png")) {
             displayName = displayName.substring(0, displayName.length() - 4);
         }
-        String svg = buildDefaultSvg(displayName);
-        byte[] bytes = svg.getBytes();
-        ByteArrayResource resource = new ByteArrayResource(bytes);
-        return ResponseEntity.ok()
-            .header(HttpHeaders.CONTENT_TYPE, "image/svg+xml")
-            .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(bytes.length))
-            .body(resource);
+        writeSvg(response, buildDefaultSvg(displayName).getBytes());
+    }
+
+    private void writeSvg(jakarta.servlet.http.HttpServletResponse response, byte[] bytes) throws java.io.IOException {
+        response.setContentType("image/svg+xml");
+        response.setContentLength(bytes.length);
+        response.getOutputStream().write(bytes);
     }
 
     private String buildDefaultSvg(String name) {
