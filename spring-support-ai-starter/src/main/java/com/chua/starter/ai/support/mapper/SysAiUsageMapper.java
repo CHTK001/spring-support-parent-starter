@@ -29,6 +29,7 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
      * @param totalCachedTokens   缓存读取 Token
      * @param standardCost        标准费用（官方价格计算，未折扣）
      * @param totalLatency        总耗时（ms）
+     * @param totalFirstTokenLatency 总首字延迟（ms）
      */
     record UsageStatsRow(
             Integer totalCalls,
@@ -38,7 +39,8 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
             Double totalCost,
             Integer totalCachedTokens,
             Double standardCost,
-            Long totalLatency
+            Long totalLatency,
+            Long totalFirstTokenLatency
     ) {}
 
     /**
@@ -73,6 +75,7 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
      * @param totalCost 总费用（元）
      * @param totalCachedTokens 缓存读取 Token
      * @param totalLatency 总耗时（ms）
+     * @param totalFirstTokenLatency 总首字延迟（ms）
      */
     record DailyAggregateRow(
             LocalDate statDate,
@@ -85,7 +88,8 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
             Long totalTokens,
             Double totalCost,
             Long totalCachedTokens,
-            Long totalLatency
+            Long totalLatency,
+            Long totalFirstTokenLatency
     ) {}
 
     /**
