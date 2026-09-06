@@ -71,6 +71,18 @@
             <artifactId>spring-support-console-starter</artifactId>
         </dependency>
 
+        <!-- OSGi（Apache Felix + Gogo SSH shell）：真实测试 bundle 安装/卸载（ssh shell 模式） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-osgi-starter</artifactId>
+        </dependency>
+        <!-- jsch：SSH shell 模式测试客户端（osgi-starter 内为 test 作用域不传递，此处显式声明） -->
+        <dependency>
+            <groupId>com.jcraft</groupId>
+            <artifactId>jsch</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- 测试：spring-boot-starter-test + h2 + webmvc-test（Boot 4 中 MockMvc 测试支持
              模块化为独立构件 spring-boot-webmvc-test） -->
         <dependency>

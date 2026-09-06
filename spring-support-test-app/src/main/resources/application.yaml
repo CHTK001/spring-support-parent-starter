@@ -41,6 +41,10 @@ plugin:
       enable: false
     decode:
       enable: false
+  # OSGi（Apache Felix）：共享配置默认关闭——避免全量套件每个上下文启动 Felix 框架（重）
+  # 且 SSH shell 端口冲突；OsgiSshShellRealTest 用测试属性单独开启（enabled+shell）
+  osgi:
+    enabled: false
   mybatis:
     data:
       scope:
