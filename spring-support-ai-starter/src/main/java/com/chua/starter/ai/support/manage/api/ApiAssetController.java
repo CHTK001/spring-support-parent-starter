@@ -20,20 +20,53 @@ import java.util.LinkedHashMap;
 @RequestMapping("/api/assets")
 public class ApiAssetController {
 
-    @GetMapping("/logos/{name}")
-    public ResponseEntity<Resource> getLogo(@PathVariable("name") String name) {
-        String filename = name.toLowerCase().replace(" ", "-") + ".svg";
+    /**
+     * Logo 资源。前端（agentLogo.ts）请求带子目录的多段路径（如 brand/nomi.svg、
+     * tools/coding/codex.svg），单段 {name} 无法匹配会导致 404 裂图，这里用
+     * /logos/** 接住全部层级；classpath 无对应文件时返回首字母兜底 SVG。
+     */
+    @GetMapping("/logos/**")
+    public ResponseEntity<Resource> getLogo(jakarta.servlet.http.HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        String name = uri.substring(uri.indexOf("/logos/") + "/logos/".length());
         try {
-            Resource resource = new ClassPathResource("static/logos/" + filename);
-            if (resource.exists()) {
-                return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_TYPE, "image/svg+xml")
-                    .body(resource);
-            }
-        } catch (Exception e) {
-            log.warn("Logo not found: {}", filename);
+            name = java.net.URLDecoder.decode(name, java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception ignored) {
+            // 保持原始路径
         }
-        String svg = buildDefaultSvg(name);
+        // 去掉可能的查询参数与开头的斜杠
+        name = name.split("\\?")[0];
+        while (name.startsWith("/")) {
+            name = name.substring(1);
+        }
+        String base = name.toLowerCase().replace(" ", "-");
+        // 依次尝试原始多段路径与仅文件名两种 classpath 位置
+        String[] candidates = {
+                "static/logos/" + base,
+                "static/logos/" + base.substring(base.lastIndexOf('/') + 1),
+                "assets/logos/" + base,
+        };
+        for (String candidate : candidates) {
+            try {
+                Resource resource = new ClassPathResource(candidate);
+                if (resource.exists()) {
+                    return ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_TYPE, "image/svg+xml")
+                        .body(resource);
+                }
+            } catch (Exception e) {
+                log.warn("Logo not found: {}", candidate);
+            }
+        }
+        // 兜底 SVG 用文件名（去掉目录与扩展名）生成首字母图标
+        String displayName = base.substring(base.lastIndexOf('/') + 1);
+        if (displayName.endsWith(".svg")) {
+            displayName = displayName.substring(0, displayName.length() - 4);
+        }
+        if (displayName.endsWith(".png")) {
+            displayName = displayName.substring(0, displayName.length() - 4);
+        }
+        String svg = buildDefaultSvg(displayName);
         byte[] bytes = svg.getBytes();
         ByteArrayResource resource = new ByteArrayResource(bytes);
         return ResponseEntity.ok()
