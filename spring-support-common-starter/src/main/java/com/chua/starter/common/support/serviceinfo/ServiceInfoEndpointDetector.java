@@ -56,10 +56,87 @@ public class ServiceInfoEndpointDetector {
                     base + "/actuator", "Spring Boot Actuator");
         }
         registry.registerFlag("actuator", "监控", hasActuator, "Spring Boot Actuator");
+
+        registerInfrastructure(registry);
+    }
+
+    /**
+     * 注册基础设施连接信息 (Redis / JDBC / Kafka / RabbitMQ)。
+     *
+     * <p>从 {@link Environment} 读取 Spring Boot 标准配置, 以端点的形式展示真实连接地址,
+     * 便于联调排查。所有条目均做脱敏: 不输出任何密码/密钥。</p>
+     */
+    private void registerInfrastructure(ServiceInfoRegistry registry) {
+        registerRedis(registry);
+        registerJdbc(registry);
+        registerKafka(registry);
+        registerRabbitMq(registry);
+    }
+
+    /** 注册 Redis 连接信息 (spring.data.redis.*) */
+    private void registerRedis(ServiceInfoRegistry registry) {
+        String host = environment.getProperty("spring.data.redis.host");
+        if (!hasText(host)) {
+            return;
+        }
+        String port = environment.getProperty("spring.data.redis.port", "6379");
+        String db = environment.getProperty("spring.data.redis.database", "0");
+        String password = environment.getProperty("spring.data.redis.password");
+        boolean hasAuth = hasText(password) && !"null".equalsIgnoreCase(password);
+        String url = "redis://" + host + ":" + port + "/" + db;
+        String desc = "Redis" + (hasAuth ? " (认证)" : " (无密码)");
+        registry.registerEndpoint("基础设施", "Redis", url, desc);
+    }
+
+    /** 注册 JDBC 连接信息 (spring.datasource.*) */
+    private void registerJdbc(ServiceInfoRegistry registry) {
+        String url = environment.getProperty("spring.datasource.url");
+        if (!hasText(url)) {
+            return;
+        }
+        String username = environment.getProperty("spring.datasource.username", "");
+        String password = environment.getProperty("spring.datasource.password");
+        boolean hasAuth = hasText(password);
+        String desc = (hasText(username) ? "用户: " + username + " " : "")
+                + (hasAuth ? " (认证)" : " (无密码)");
+        registry.registerEndpoint("基础设施", "JDBC", url, desc.trim());
+    }
+
+    /** 注册 Kafka 连接信息 (spring.kafka.bootstrap-servers) */
+    private void registerKafka(ServiceInfoRegistry registry) {
+        String servers = environment.getProperty("spring.kafka.bootstrap-servers");
+        if (!hasText(servers)) {
+            return;
+        }
+        String clientId = environment.getProperty("spring.kafka.client-id");
+        String desc = hasText(clientId) ? "client-id: " + clientId : "Kafka 集群";
+        registry.registerEndpoint("基础设施", "Kafka", servers, desc);
+    }
+
+    /** 注册 RabbitMQ 连接信息 (spring.rabbitmq.*) */
+    private void registerRabbitMq(ServiceInfoRegistry registry) {
+        String host = environment.getProperty("spring.rabbitmq.host");
+        if (!hasText(host)) {
+            return;
+        }
+        String port = environment.getProperty("spring.rabbitmq.port", "5672");
+        String vhost = environment.getProperty("spring.rabbitmq.virtual-host", "/");
+        String username = environment.getProperty("spring.rabbitmq.username", "");
+        String password = environment.getProperty("spring.rabbitmq.password");
+        boolean hasAuth = hasText(password);
+        String url = "amqp://" + host + ":" + port + (hasText(vhost) ? "/" + vhost : "");
+        String desc = (hasText(username) ? "用户: " + username + " " : "")
+                + (hasAuth ? " (认证)" : " (无密码)");
+        registry.registerEndpoint("基础设施", "RabbitMQ", url, desc.trim());
     }
 
     /** 是否拥有Property */
     private boolean hasProperty(String key) {
         return environment.getProperty(key) != null;
+    }
+
+    /** 是否非空文本 */
+    private static boolean hasText(String text) {
+        return text != null && !text.trim().isEmpty();
     }
 }

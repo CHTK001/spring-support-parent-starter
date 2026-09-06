@@ -15,7 +15,8 @@
             COALESCE(SUM(sys_ai_usage_total_cost), 0) AS totalCost,
             COALESCE(SUM(sys_ai_usage_cached_tokens), 0) AS totalCachedTokens,
             COALESCE(SUM(sys_ai_usage_original_cost), 0) AS standardCost,
-            COALESCE(SUM(sys_ai_usage_total_latency), 0) AS totalLatency
+            COALESCE(SUM(sys_ai_usage_total_latency), 0) AS totalLatency,
+            COALESCE(SUM(sys_ai_usage_first_token_latency), 0) AS totalFirstTokenLatency
         FROM sys_ai_usage
         <where>
             <if test="groupName != null and groupName != ''">
@@ -52,7 +53,8 @@
             COALESCE(SUM(sys_ai_usage_total_tokens), 0) AS totalTokens,
             COALESCE(SUM(sys_ai_usage_total_cost), 0) AS totalCost,
             COALESCE(SUM(sys_ai_usage_cached_tokens), 0) AS totalCachedTokens,
-            COALESCE(SUM(sys_ai_usage_total_latency), 0) AS totalLatency
+            COALESCE(SUM(sys_ai_usage_total_latency), 0) AS totalLatency,
+            COALESCE(SUM(sys_ai_usage_first_token_latency), 0) AS totalFirstTokenLatency
         FROM sys_ai_usage
         WHERE sys_ai_usage_call_time &gt;= #{startTime}
           AND sys_ai_usage_call_time &lt; #{endTime}
