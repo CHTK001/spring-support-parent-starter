@@ -8,9 +8,9 @@
         <artifactId>spring-support-parent-starter</artifactId>
         <version>4.0.0.42</version>
     </parent>
-    <artifactId>spring-support-grok-starter</artifactId>
-    <name>Spring Support Grok Starter</name>
-    <description>Grok/xAI 账号自动注册与管理模块，集成临时邮箱、验证码解析与 OAuth Token 管理</description>
+    <artifactId>spring-support-account-starter</artifactId>
+    <name>Spring Support Account Starter</name>
+    <description>通用账号自动注册与管理模块，支持临时邮箱、验证码解析、账号池管理</description>
     <dependencies>
         <!-- Spring Boot -->
         <dependency>
@@ -47,14 +47,13 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-datasearch-starter</artifactId>
-            <version>${utils.version}</version>
         </dependency>
         <!-- 验证码解析 SPI -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-captcha-starter</artifactId>
         </dependency>
-        <!-- AI 聊天客户端 (可选) -->
+        <!-- AI 能力 (可选) -->
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>spring-support-ai-starter</artifactId>

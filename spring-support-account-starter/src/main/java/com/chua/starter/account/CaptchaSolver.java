@@ -1,4 +1,4 @@
-package com.chua.starter.grok;
+package com.chua.starter.account;
 
 /**
  * Turnstile 验证码求解器接口。
