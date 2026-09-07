@@ -43,7 +43,7 @@ public class LocalTrustAuthFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String uri = request.getRequestURI();
-        if (uri.startsWith("/api/") || uri.startsWith("/ws")) {
+        if (uri.startsWith("/api/") || uri.startsWith("/ws") || uri.startsWith("/v2")) {
             String trust = request.getHeader(LOCAL_TRUST_HEADER);
             if (trust != null && !trust.isBlank()) {
                 request.setAttribute(TRUSTED_ATTR, Boolean.TRUE);
