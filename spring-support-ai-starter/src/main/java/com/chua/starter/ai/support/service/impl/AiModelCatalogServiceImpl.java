@@ -141,6 +141,12 @@ public class AiModelCatalogServiceImpl implements AiModelCatalogService {
         if (containsAny(name, "translate", "nllb", "opus-mt", "opus_alt")) {
             return ModelCapabilities.TRANSLATE;
         }
+        if (containsAny(name, "bsr", "text-bsr", "text-super", "text_super")) {
+            return ModelCapabilities.ENHANCE;
+        }
+        if (containsAny(name, "caption", "vit-gpt2", "blip", "git-base")) {
+            return ModelCapabilities.CLASSIFY;
+        }
         return null;
     }
 
