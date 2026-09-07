@@ -47,6 +47,7 @@
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-datasearch-starter</artifactId>
+            <version>${utils.version}</version>
         </dependency>
         <!-- 验证码解析 SPI -->
         <dependency>
