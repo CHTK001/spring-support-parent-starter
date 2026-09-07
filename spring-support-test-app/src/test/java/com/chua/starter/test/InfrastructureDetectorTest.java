@@ -113,4 +113,19 @@ class InfrastructureDetectorTest {
         assertEquals(0, sc, "无 SpringCloud 配置时不显示");
         assertEquals(0, dubbo, "无 Dubbo 配置时不显示");
     }
+
+    @Test
+    void infrastructureHiddenWhenDisabled() {
+        environment.setProperty("spring.data.redis.host", "10.0.0.1");
+        environment.setProperty("spring.datasource.url", "jdbc:mysql://db:3306/db");
+        detector.infrastructureEnabled(false).detectAndRegister();
+        var endpoints = ((java.util.Map<?, ?>) ServiceInfoRegistry.getInstance()
+                .getInfo().get("endpoints")).values();
+        long infra = endpoints.stream().filter(e -> "基础设施".equals(
+                ((ServiceInfoRegistry.EndpointInfo) e).getGroup())).count();
+        long sc = endpoints.stream().filter(e -> "SpringCloud".equals(
+                ((ServiceInfoRegistry.EndpointInfo) e).getGroup())).count();
+        assertEquals(0, infra, "关闭基础设施开关后即使有配置也不显示");
+        assertEquals(0, sc, "关闭基础设施开关后 SpringCloud 也不显示");
+    }
 }
