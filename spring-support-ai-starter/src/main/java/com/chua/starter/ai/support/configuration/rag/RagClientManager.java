@@ -95,6 +95,18 @@ public class RagClientManager {
                     ragClient = build();
                 }
                 client = ragClient;
+
+    /**
+     * 监听 OCR 设置变更事件，重建 RAG 客户端以使用最新的 OCR 模型配置。
+     */
+    @EventListener
+    public void onOcrSettingsChanged(OcrSettingsChangedEvent event) {
+        if (event == null || !"ocr".equals(event.getGroup())) {
+            return;
+        }
+        log.info("[RagClientManager] 收到 OCR 设置变更事件，重建 RAG 客户端");
+        rebuild();
+    }
             }
         }
         return client;
@@ -303,4 +315,5 @@ public class RagClientManager {
         }
     }
 }
+
 
