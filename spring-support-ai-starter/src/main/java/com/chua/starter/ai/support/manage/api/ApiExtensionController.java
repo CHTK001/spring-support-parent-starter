@@ -19,6 +19,12 @@ import java.util.Map;
 public class ApiExtensionController {
 
     @TokenForIgnore
+    @GetMapping
+    public Map<String, Object> getLoadedExtensions() {
+        return Map.of("success", true, "data", List.of());
+    }
+
+    @TokenForIgnore
     @GetMapping("/themes")
     public Map<String, Object> getThemes() {
         return Map.of("success", true, "data", List.of());
