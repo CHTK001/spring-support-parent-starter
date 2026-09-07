@@ -179,7 +179,7 @@ public class WorkshopAssetController {
     @Operation(summary = "创建画布", description = "创建空白画布，返回其元数据")
     @PostMapping("/canvases")
     public Map<String, Object> createCanvas(@RequestBody(required = false) Map<String, Object> body) {
-        String id = com.chua.starter.ai.support.util.IdUtils.uuidv7();
+        String id = com.chua.common.support.utils.IdUtils.uuidv7();
         long now = System.currentTimeMillis();
         String title = body != null && body.get("title") instanceof String t && !t.isBlank()
                 ? t : "未命名画布";
