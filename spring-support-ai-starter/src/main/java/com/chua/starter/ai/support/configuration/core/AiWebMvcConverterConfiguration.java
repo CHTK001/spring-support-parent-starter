@@ -45,8 +45,7 @@ public class AiWebMvcConverterConfiguration implements WebMvcConfigurer {
                     MediaType.IMAGE_PNG,
                     MediaType.IMAGE_GIF,
                     MediaType.IMAGE_WEBP,
-                    MediaType.APPLICATION_PDF,
-                    new MediaType("image", "svg+xml")
+                    MediaType.APPLICATION_PDF
             ));
             converters.add(byteArray);
         }
