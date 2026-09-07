@@ -400,7 +400,54 @@ public class SysAiCompanionStore {
         memoryMapper.deleteById(memoryId);
     }
 
-    // ==================== 技能 CRUD ====================
+    /**
+     * 查重合并建议：扫描该伙伴的 active 记忆，按归一化内容分组，
+     * 返回包含两条以上疑似重复记忆的分组。
+     *
+     * <p>归一化规则：去除首尾空白、折叠内部空白（含换行/全角空格）、去除
+     * 常见标点后做全文比对；完全一致或仅标点/空白差异视为疑似重复。</p>
+     *
+     * @param companionId 伙伴 ID
+     * @return 疑似重复分组（每组 memories ≥ 2）
+     */
+    public List<List<SysAiCompanionMemory>> suggestMemoryMerges(String companionId) {
+        LambdaQueryWrapper<SysAiCompanionMemory> wrapper = new LambdaQueryWrapper<SysAiCompanionMemory>()
+                .eq(SysAiCompanionMemory::getCompanionId, companionId)
+                .eq(SysAiCompanionMemory::getStatus, "active");
+        List<SysAiCompanionMemory> active = memoryMapper.selectList(wrapper);
+        // key(归一化内容) → 记忆列表
+        Map<String, List<SysAiCompanionMemory>> byNormal = new java.util.LinkedHashMap<>();
+        for (SysAiCompanionMemory memory : active) {
+            String content = memory.getContent() != null ? memory.getContent() : "";
+            if (content.isBlank()) continue;
+            String norm = normalizeMemoryText(content);
+            if (norm.isEmpty()) continue;
+            byNormal.computeIfAbsent(norm, k -> new ArrayList<>()).add(memory);
+        }
+        List<List<SysAiCompanionMemory>> result = new ArrayList<>();
+        for (List<SysAiCompanionMemory> group : byNormal.values()) {
+            if (group.size() >= 2) {
+                result.add(group);
+            }
+        }
+        // 按组内最早时间升序，保证输出稳定
+        result.sort((a, b) -> {
+            long at = a.get(0).getCreatedAt() == null ? 0 : a.get(0).getCreatedAt();
+            long bt = b.get(0).getCreatedAt() == null ? 0 : b.get(0).getCreatedAt();
+            return Long.compare(at, bt);
+        });
+        return result;
+    }
+
+    /**
+     * 归一化记忆文本：折叠空白（含全角空格/换行）→ 转小写 → 去常见标点。
+     */
+    private String normalizeMemoryText(String text) {
+        String collapsed = text.replaceAll("\\s+", "").replace("\u3000", "");
+        String lower = collapsed.toLowerCase();
+        // 去常见中英文标点（保留 CJK 与字母数字）
+        return lower.replaceAll("[\\p{Punct}\\p{P}\\p{S}，。！？；：、“”‘’（）《》【】…—·]", "");
+    }
 
     public SysAiCompanionSkill createSkill(SysAiCompanionSkill skill) {
         long now = System.currentTimeMillis();
