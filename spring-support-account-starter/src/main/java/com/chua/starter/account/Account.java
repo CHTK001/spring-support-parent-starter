@@ -1,5 +1,6 @@
 package com.chua.starter.account;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -13,6 +14,7 @@ import lombok.NoArgsConstructor;
 @Data
 @Builder
 @NoArgsConstructor
+@AllArgsConstructor
 public class Account {
 
     /**
@@ -70,14 +72,19 @@ public class Account {
      */
     private long lastUsedAt;
 
-    public Account(String email, String password, String token, PlatformType platformType) {
-        this.email = email;
-        this.password = password;
-        this.token = token;
-        this.platformType = platformType;
-        this.platform = platformType.name().toLowerCase();
-        this.createdAt = System.currentTimeMillis();
-        this.active = true;
+    /**
+     * 快速构造已注册的账号（用于注册成功后返回）。
+     */
+    public static Account registered(String email, String password, String token, PlatformType platformType) {
+        return Account.builder()
+                .email(email)
+                .password(password)
+                .token(token)
+                .platformType(platformType)
+                .platform(platformType.name().toLowerCase())
+                .createdAt(System.currentTimeMillis())
+                .active(true)
+                .build();
     }
 
     /**
