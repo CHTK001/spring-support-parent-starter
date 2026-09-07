@@ -36,6 +36,14 @@ public class ServiceInfoProperties {
     private boolean authEnable = false;
 
     /**
+     * 是否在横幅中展示基础设施连接信息 (Redis/JDBC/Kafka/RabbitMQ/SpringCloud/Dubbo)。
+     *
+     * <p>默认 true, 但仅展示 {@link Environment} 中真实配置了的条目;
+     * 未配置的中间件不会出现在横幅中。</p>
+     */
+    private boolean infrastructure = true;
+
+    /**
      * Basic Auth 用户名。
      */
     private String authUsername = "admin";
@@ -78,6 +86,16 @@ public class ServiceInfoProperties {
     /** 设置Auth启用 */
     public void setAuthEnable(boolean authEnable) {
         this.authEnable = authEnable;
+    }
+
+    /** 是否展示基础设施连接信息 */
+    public boolean isInfrastructure() {
+        return infrastructure;
+    }
+
+    /** 设置是否展示基础设施连接信息 */
+    public void setInfrastructure(boolean infrastructure) {
+        this.infrastructure = infrastructure;
     }
 
     /** 获取AuthUsername */
