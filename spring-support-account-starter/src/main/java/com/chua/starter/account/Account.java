@@ -39,6 +39,11 @@ public class Account {
     private String extra;
 
     /**
+     * 平台类型：GROK/TWITTER/DISCORD 等
+     */
+    private PlatformType platformType;
+
+    /**
      * 注册平台名称（如 grok/twitter/discord）
      */
     private String platform;
@@ -63,12 +68,29 @@ public class Account {
      */
     private long lastUsedAt;
 
-    public Account(String email, String password, String token, String platform) {
+    public Account(String email, String password, String token, PlatformType platformType) {
         this.email = email;
         this.password = password;
         this.token = token;
-        this.platform = platform;
+        this.platformType = platformType;
+        this.platform = platformType.name().toLowerCase();
         this.createdAt = System.currentTimeMillis();
         this.active = true;
+    }
+
+    /**
+     * 平台类型枚举
+     */
+    public enum PlatformType {
+        /** Grok (xAI) */
+        GROK,
+        /** Twitter/X */
+        TWITTER,
+        /** Discord */
+        DISCORD,
+        /** Reddit */
+        REDDIT,
+        /** 自定义 */
+        CUSTOM
     }
 }
