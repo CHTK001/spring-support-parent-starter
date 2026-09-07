@@ -949,6 +949,11 @@
                 <artifactId>utils-support-common-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>utils-support-captcha-starter</artifactId>
+                <version>${utils.version}</version>
+            </dependency>
 
             <!-- 流程编排引擎（爬虫中心使用） -->
             <dependency>

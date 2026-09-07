@@ -672,6 +672,11 @@
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
+        <artifactId>utils-support-captcha-starter</artifactId>
+        <version>${utils.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.chua</groupId>
         <artifactId>utils-support-flow-starter</artifactId>
         <version>${utils.version}</version>
       </dependency>
