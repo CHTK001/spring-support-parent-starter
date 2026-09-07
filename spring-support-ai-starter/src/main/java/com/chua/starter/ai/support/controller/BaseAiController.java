@@ -90,6 +90,11 @@ public abstract class BaseAiController {
      * @return 校验通过返回 {@code true}，否则返回 {@code false}
      */
     protected boolean authCheck(HttpServletRequest request) {
+        // Tauri / 本地开发模式：LocalTrustAuthFilter 已置位 nomifun.local.trusted=true，直接放行
+        Object trusted = request.getAttribute(LocalTrustAuthFilter.TRUSTED_ATTR);
+        if (Boolean.TRUE.equals(trusted)) {
+            return true;
+        }
         String auth = request.getHeader("Authorization");
         return aiAccessGuardService.verifyBearerToken(auth, request.getRemoteAddr());
     }
