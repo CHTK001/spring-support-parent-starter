@@ -118,7 +118,7 @@ public class AccountPoolService {
         for (Map.Entry<Account.PlatformType, List<Account>> entry : pools.entrySet()) {
             List<Account> pool = entry.getValue();
             long active = pool.stream().filter(Account::isActive).count();
-            stats.put(entry.getKey(), new PoolStats(pool.size(), active, pool.size() - active));
+            stats.put(entry.getKey(), new PoolStats(pool.size(), (int) active, pool.size() - (int) active));
         }
         return stats;
     }
