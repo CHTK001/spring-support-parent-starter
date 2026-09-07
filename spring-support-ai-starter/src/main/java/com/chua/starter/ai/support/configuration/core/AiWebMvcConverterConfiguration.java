@@ -11,25 +11,12 @@ import java.util.List;
 
 /**
  * Web MVC additional configuration for AI starter.
- *
- * <p>Adds the default Spring {@link ResourceHttpMessageConverter} and
- * {@link ByteArrayHttpMessageConverter} back to the converter list. The shared
- * {@code spring-support-common-starter} configurer replaces the default
- * {@code AllEncompassingFormHttpMessageConverter} with Jackson/Xml/Yaml
- * converters but does not register binary converters, so controllers
- * returning {@code byte[]} or {@code Resource} for media types like
- * {@code image/jpeg} would otherwise fail with
- * {@code HttpMessageNotWritableException}.</p>
- *
- * <p>These converters are only added when the existing list does not already
- * contain one of the same type, so we do not duplicate or override the
- * shared starter.</p>
  */
 @Configuration
 public class AiWebMvcConverterConfiguration implements WebMvcConfigurer {
 
     @Override
-    public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
+    public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
         boolean hasResource = converters.stream()
                 .anyMatch(c -> c instanceof ResourceHttpMessageConverter);
         if (!hasResource) {
@@ -44,7 +31,7 @@ public class AiWebMvcConverterConfiguration implements WebMvcConfigurer {
                     MediaType.IMAGE_JPEG,
                     MediaType.IMAGE_PNG,
                     MediaType.IMAGE_GIF,
-                    MediaType.IMAGE_WEBP,
+                    MediaType.parseMediaType("image/webp"),
                     MediaType.APPLICATION_PDF
             ));
             converters.add(byteArray);
