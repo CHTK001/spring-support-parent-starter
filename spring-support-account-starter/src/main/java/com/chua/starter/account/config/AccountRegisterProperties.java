@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Configuration;
  */
 @Data
 @Configuration
-@ConfigurationProperties(prefix = "account.register")
+@ConfigurationProperties(prefix = "plugin.account.register")
 public class AccountRegisterProperties {
 
     /**
