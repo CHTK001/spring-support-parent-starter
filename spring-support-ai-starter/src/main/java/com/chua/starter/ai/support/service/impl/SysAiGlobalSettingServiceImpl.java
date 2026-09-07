@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.chua.starter.ai.support.configuration.face.FaceSettingsChangedEvent;
+import com.chua.starter.ai.support.configuration.ocr.OcrSettingsChangedEvent;
 import com.chua.starter.ai.support.entity.SysAiGlobalSetting;
 import com.chua.starter.ai.support.mapper.SysAiGlobalSettingMapper;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
@@ -174,6 +175,9 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
         // 发布配置变更事件，触发对应能力模块热重建（如人脸识别实时生效）
         try {
             eventPublisher.publishEvent(new FaceSettingsChangedEvent(group));
+            if ("ocr".equals(group)) {
+                eventPublisher.publishEvent(new OcrSettingsChangedEvent(group));
+            }
             if ("ocr".equals(group)) {
                 eventPublisher.publishEvent(new OcrSettingsChangedEvent(group));
             }
