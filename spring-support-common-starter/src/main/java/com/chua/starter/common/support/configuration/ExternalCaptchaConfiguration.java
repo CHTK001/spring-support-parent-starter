@@ -5,6 +5,7 @@ import com.chua.captcha.support.CaptchaRunClient;
 import com.chua.captcha.support.CaptchaSetting;
 import com.chua.captcha.support.YesCaptchaClient;
 import com.chua.common.support.spi.ServiceProvider;
+import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -23,6 +24,7 @@ import org.springframework.context.annotation.Configuration;
  * @author CH
  * @since 2026-09-07
  */
+@Data
 @Configuration
 @ConditionalOnClass(CaptchaParser.class)
 @ConditionalOnProperty(prefix = "plugin.captcha.external", name = "enable", havingValue = "true", matchIfMissing = false)
@@ -31,30 +33,12 @@ public class ExternalCaptchaConfiguration {
 
     private static final Logger log = LoggerFactory.getLogger(ExternalCaptchaConfiguration.class);
 
-    /**
-     * 是否启用
-     */
     private boolean enable;
-
-    /**
-     * API 鉴权令牌（从 yescaptcha.com 或 captcha-run.com 获取）
-     */
     private String apiToken;
-
-    /**
-     * API 服务地址，默认使用 YesCaptcha
-     */
     private String apiUrl = CaptchaSetting.YESCAPTCHA_API_URL;
-
-    /**
-     * 连接超时时间（毫秒）
-     */
     private long connectTimeout = 30000;
-
-    /**
-     * 读取超时时间（毫秒）
-     */
     private long readTimeout = 30000;
+    private String provider = "yescaptcha";
 
     @Bean
     @ConditionalOnProperty(prefix = "plugin.captcha.external", name = "api-token")
@@ -85,11 +69,6 @@ public class ExternalCaptchaConfiguration {
         return new CaptchaRunClient(setting);
     }
 
-    /**
-     * 通过 SPI 获取已配置的验证码解析器
-     *
-     * @return 验证码解析器，未配置时返回 null
-     */
     public static CaptchaParser resolveCaptchaParser() {
         try {
             return ServiceProvider.of(CaptchaParser.class).getDefault();
@@ -97,45 +76,5 @@ public class ExternalCaptchaConfiguration {
             log.warn("[ExternalCaptcha] 无法解析验证码解析器: {}", e.getMessage());
             return null;
         }
-    }
-
-    public boolean isEnable() {
-        return enable;
-    }
-
-    public void setEnable(boolean enable) {
-        this.enable = enable;
-    }
-
-    public String getApiToken() {
-        return apiToken;
-    }
-
-    public void setApiToken(String apiToken) {
-        this.apiToken = apiToken;
-    }
-
-    public String getApiUrl() {
-        return apiUrl;
-    }
-
-    public void setApiUrl(String apiUrl) {
-        this.apiUrl = apiUrl;
-    }
-
-    public long getConnectTimeout() {
-        return connectTimeout;
-    }
-
-    public void setConnectTimeout(long connectTimeout) {
-        this.connectTimeout = connectTimeout;
-    }
-
-    public long getReadTimeout() {
-        return readTimeout;
-    }
-
-    public void setReadTimeout(long readTimeout) {
-        this.readTimeout = readTimeout;
     }
 }
