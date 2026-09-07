@@ -94,7 +94,7 @@ class InfrastructureDetectorTest {
                 ((ServiceInfoRegistry.EndpointInfo) e).getGroup())).count();
         long dubbo = endpoints.stream().filter(e -> "Dubbo".equals(
                 ((ServiceInfoRegistry.EndpointInfo) e).getGroup())).count();
-        assertEquals(5, springCloud, "Nacos*2 + Consul + Eureka + 应有 5 个 SpringCloud 端点");
+        assertEquals(4, springCloud, "Nacos*2 + Consul + Eureka = 4 个 SpringCloud 端点");
         assertEquals(2, dubbo, "Dubbo 注册中心 + 协议 = 2 个端点");
     }
 
