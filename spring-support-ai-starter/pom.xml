@@ -105,8 +105,6 @@
         </dependency>
 
         <!-- ONNX 模型注册器（OCR 识别、文本向量等模型实现） -->
-        <!-- ONNX 模型实现由 models-parent 按需引入；AI Starter 纯在线，不打包离线模型 jar -->
-        <!--
         <dependency>
             <groupId>com.chua</groupId>
             <artifactId>utils-support-deeplearning-onnx-starter</artifactId>
@@ -121,7 +119,6 @@
             <artifactId>utils-support-models-onnx-paddleocrv6-medium</artifactId>
             <version>4.0.0.42</version>
         </dependency>
-        -->
 
         <dependency>
             <groupId>com.chua</groupId>
@@ -295,3 +292,4 @@
         </plugins>
 </build>
 </project>
+
