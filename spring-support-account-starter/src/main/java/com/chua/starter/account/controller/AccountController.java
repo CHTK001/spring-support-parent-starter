@@ -1,15 +1,19 @@
 package com.chua.starter.account.controller;
 
 import com.chua.starter.account.Account;
-import com.chua.starter.account.config.AccountRegisterAutoConfiguration;
+import com.chua.starter.account.service.AccountPoolService;
+import com.chua.starter.account.spi.PlatformRegister;
+import com.chua.common.support.spi.ServiceProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
- * 账号注册管理 API。
+ * 账号管理 API。
  *
  * @author CH
  * @since 4.0.0.42
@@ -20,59 +24,120 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AccountController {
 
-    private final AccountRegisterAutoConfiguration config;
+    private final AccountPoolService poolService;
 
     /**
-     * 手动注册账号
+     * 单账号注册
      */
-    @PostMapping("/register/{platform}")
-    public Account register(@PathVariable String platform,
-                           @RequestParam(required = false) String emailProvider,
-                           @RequestParam(required = false) String proxy) {
-        log.info("[Account] 手动注册: platform={}, emailProvider={}", platform, emailProvider);
-        return config.register(platform, emailProvider, proxy);
+    @PostMapping("/register/{platformType}")
+    public Account register(
+            @PathVariable Account.PlatformType platformType,
+            @RequestParam(required = false) String emailProvider,
+            @RequestParam(required = false) String proxy) {
+        log.info("[Account] 注册账号: type={}, provider={}", platformType, emailProvider);
+        PlatformRegister register = getPlatformRegister(platformType);
+        if (register == null) {
+            return Account.builder().active(false).build();
+        }
+        Account account = register.register(null, emailProvider, proxy);
+        if (account != null) {
+            poolService.addAccount(account);
+        }
+        return account;
     }
 
     /**
      * 批量注册
      */
-    @PostMapping("/register-batch/{platform}")
-    public java.util.List<Account> registerBatch(@PathVariable String platform,
-                                                  @RequestParam int count,
-                                                  @RequestParam(required = false) String emailProvider) {
-        log.info("[Account] 批量注册: platform={}, count={}", platform, count);
-        // 简化实现：逐个注册
-        java.util.List<Account> result = new java.util.ArrayList<>();
-        for (int i = 0; i < count; i++) {
-            Account account = config.register(platform, emailProvider, null);
-            if (account != null) {
-                result.add(account);
-            }
+    @PostMapping("/register-batch/{platformType}")
+    public List<Account> registerBatch(
+            @PathVariable Account.PlatformType platformType,
+            @RequestParam int count,
+            @RequestParam(required = false) String emailProvider) {
+        log.info("[Account] 批量注册: type={}, count={}", platformType, count);
+        PlatformRegister register = getPlatformRegister(platformType);
+        if (register == null) {
+            return List.of();
         }
-        return result;
+        List<Account> accounts = register.registerBatch(count, emailProvider, null);
+        poolService.addAccounts(accounts);
+        return accounts;
     }
 
     /**
      * 获取可用账号
      */
-    @GetMapping("/acquire/{platform}")
-    public Account acquire(@PathVariable String platform) {
-        return config.acquireAccount(platform);
+    @GetMapping("/acquire/{platformType}")
+    public Optional<Account> acquire(@PathVariable Account.PlatformType platformType) {
+        return poolService.getActiveAccount(platformType);
+    }
+
+    /**
+     * 获取账号列表
+     */
+    @GetMapping("/list/{platformType}")
+    public List<Account> list(@PathVariable Account.PlatformType platformType) {
+        return poolService.getAllAccounts(platformType);
     }
 
     /**
      * 释放账号
      */
-    @PostMapping("/release/{platform}")
-    public void release(@PathVariable String platform, @RequestBody Account account) {
-        config.releaseAccount(platform, account);
+    @PostMapping("/release/{platformType}/{accountId}")
+    public void release(@PathVariable Account.PlatformType platformType,
+                        @PathVariable String accountId) {
+        poolService.getAllAccounts(platformType).stream()
+                .filter(a -> accountId.equals(a.getId()))
+                .findFirst()
+                .ifPresent(poolService::releaseAccount);
     }
 
     /**
-     * 获取账号池统计
+     * 删除账号
+     */
+    @DeleteMapping("/{platformType}/{accountId}")
+    public boolean delete(@PathVariable Account.PlatformType platformType,
+                          @PathVariable String accountId) {
+        return poolService.deleteAccount(accountId);
+    }
+
+    /**
+     * 清空账号池
+     */
+    @DeleteMapping("/pool/{platformType}")
+    public void clearPool(@PathVariable Account.PlatformType platformType) {
+        poolService.clearPool(platformType);
+    }
+
+    /**
+     * 获取统计
      */
     @GetMapping("/stats")
-    public Map<String, Integer> stats() {
-        return config.getPoolStats();
+    public Map<Account.PlatformType, AccountPoolService.PoolStats> stats() {
+        return poolService.getStats();
+    }
+
+    /**
+     * 手动触发补号
+     */
+    @PostMapping("/replenish/{platformType}")
+    public List<Account> replenish(
+            @PathVariable Account.PlatformType platformType,
+            @RequestParam(defaultValue = "1") int count) {
+        PlatformRegister register = getPlatformRegister(platformType);
+        if (register == null) return List.of();
+        List<Account> accounts = register.registerBatch(count, null, null);
+        poolService.addAccounts(accounts);
+        return accounts;
+    }
+
+    private PlatformRegister getPlatformRegister(Account.PlatformType type) {
+        try {
+            String name = type.name().toLowerCase();
+            return ServiceProvider.of(PlatformRegister.class).getExtension(name);
+        } catch (Exception e) {
+            log.warn("[Account] 获取平台注册器失败: {}", type);
+            return null;
+        }
     }
 }

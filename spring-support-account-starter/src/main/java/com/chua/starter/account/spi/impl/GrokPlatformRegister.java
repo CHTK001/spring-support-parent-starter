@@ -149,7 +149,8 @@ public class GrokPlatformRegister implements PlatformRegister {
             String resp = HttpClientFactory.of(url)
                     .headers(headers)
                     .proxy(proxyUrl)
-                    .post(data)
+                    .body(data)
+                    .post()
                     .getBodyString();
             return resp != null;
         } catch (Exception e) {
@@ -215,7 +216,8 @@ public class GrokPlatformRegister implements PlatformRegister {
             String resp = HttpClientFactory.of(url)
                     .headers(headers)
                     .proxy(proxyUrl)
-                    .post(payload)
+                    .body(payload)
+                    .post()
                     .getBodyString();
 
             if (resp != null && resp.contains("sso")) {
@@ -223,7 +225,7 @@ public class GrokPlatformRegister implements PlatformRegister {
                     new com.fasterxml.jackson.databind.ObjectMapper().readTree(resp);
                 String ssoToken = extractSsoToken(root);
                 if (ssoToken != null) {
-                    return new Account(email, password, ssoToken, "grok");
+                    return new Account(email, password, ssoToken, Account.PlatformType.GROK);
                 }
             }
             log.warn("[Grok] 注册响应异常: {}", resp);
