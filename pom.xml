@@ -155,7 +155,6 @@
 
         <!-- AI训练平台模块 -->
         <module>spring-support-ai-training-starter</module>
-        <module>spring-support-grok-starter</module>
 
         <!-- UEBA 用户实体行为分析模块 -->
         <module>spring-support-ueba-starter</module>
