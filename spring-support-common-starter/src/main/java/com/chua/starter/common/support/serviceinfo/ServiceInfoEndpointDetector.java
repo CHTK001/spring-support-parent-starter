@@ -16,12 +16,26 @@ public class ServiceInfoEndpointDetector {
     /** 环境 */
     private final Environment environment;
 
+    /** 是否展示基础设施连接信息 (默认 true, 且仅展示真实配置的条目) */
+    private boolean infrastructureEnabled = true;
+
     /**
      * 创建 ServiceInfoEndpointDetector 实例
      * @param environment environment
      */
     public ServiceInfoEndpointDetector(Environment environment) {
         this.environment = environment;
+    }
+
+    /**
+     * 设置是否展示基础设施连接信息。
+     *
+     * @param infrastructureEnabled true 展示已配置的中间件连接信息
+     * @return this
+     */
+    public ServiceInfoEndpointDetector infrastructureEnabled(boolean infrastructureEnabled) {
+        this.infrastructureEnabled = infrastructureEnabled;
+        return this;
     }
 
     /**
