@@ -167,6 +167,12 @@
             <artifactId>easy-captcha</artifactId>
         </dependency>
 
+        <!-- 第三方验证码解析服务 - YesCaptcha/CaptchaRun 客户端 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-captcha-starter</artifactId>
+        </dependency>
+
         <!-- Apache Commons IO - 提供IO工具类 -->
         <dependency>
             <groupId>commons-io</groupId>
