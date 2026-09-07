@@ -280,88 +280,44 @@ public class WorkshopAssetController {
     // ─── 文件服务 ───────────────────────────────────────────────────────────────
 
     @Operation(summary = "获取资产文件", description = "按 asset_id 返回原始文件，支持 ?thumb=1 请求缩略图")
-    @GetMapping(value = "/files/{assetId}", produces = {org.springframework.http.MediaType.ALL_VALUE})
-    public void getAssetFile(
+    @GetMapping("/files/{assetId}")
+    public org.springframework.http.ResponseEntity<byte[]> getAssetFile(
             @PathVariable String assetId,
-            @RequestParam(required = false) String thumb,
-            HttpServletRequest request,
-            jakarta.servlet.http.HttpServletResponse response) throws IOException {
+            @RequestParam(required = false) String thumb) {
 
         var asset = assetService.getAsset(assetId);
         if (asset == null) {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
-            return;
+            return org.springframework.http.ResponseEntity.notFound().build();
         }
 
         String filePath = "thumb".equals(thumb) && asset.getThumbPath() != null
                 ? asset.getThumbPath() : asset.getFilePath();
         if (filePath == null || filePath.isBlank()) {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
-            return;
+            return org.springframework.http.ResponseEntity.notFound().build();
         }
 
         Path fullPath = Path.of(assetService.getStorageDir(), filePath);
         if (!Files.exists(fullPath)) {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
-            return;
+            return org.springframework.http.ResponseEntity.notFound().build();
         }
 
-        long fileLength = Files.size(fullPath);
+        long fileLength;
+        byte[] bytes;
+        try {
+            fileLength = Files.size(fullPath);
+            bytes = Files.readAllBytes(fullPath);
+        } catch (IOException e) {
+            return org.springframework.http.ResponseEntity.status(500).build();
+        }
+
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
         String contentType = (asset.getMime() != null && !asset.getMime().isBlank())
                 ? asset.getMime() : "application/octet-stream";
-        response.setContentType(contentType);
-        response.setHeader("Accept-Ranges", "bytes");
+        headers.setContentType(org.springframework.http.MediaType.parseMediaType(contentType));
+        headers.setContentLength(bytes.length);
+        headers.set("Accept-Ranges", "bytes");
 
-        String rangeHeader = request.getHeader("Range");
-        if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
-            String[] parts = rangeHeader.substring(6).split("-");
-            try {
-                long start, end;
-                if (parts[0].isEmpty()) {
-                    start = fileLength - Long.parseLong(parts[1]);
-                    end = fileLength - 1;
-                } else {
-                    start = Long.parseLong(parts[0]);
-                    end = parts.length > 1 && !parts[1].isEmpty() ? Long.parseLong(parts[1]) : fileLength - 1;
-                }
-                if (start < 0 || start >= fileLength || end < start || end >= fileLength) {
-                    response.setHeader("Content-Range", "bytes */" + fileLength);
-                    response.sendError(HttpServletResponse.SC_REQUESTED_RANGE_NOT_SATISFIABLE);
-                    return;
-                }
-                long contentLength = end - start + 1;
-                response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
-                response.setHeader("Content-Range", "bytes " + start + "-" + end + "/" + fileLength);
-                response.setContentLengthLong(contentLength);
-                try (java.io.InputStream in = Files.newInputStream(fullPath);
-                     java.io.OutputStream out = response.getOutputStream()) {
-                    in.skip(start);
-                    byte[] buf = new byte[8192];
-                    long remaining = contentLength;
-                    while (remaining > 0) {
-                        int read = in.read(buf, 0, (int) Math.min(buf.length, remaining));
-                        if (read < 0) break;
-                        out.write(buf, 0, read);
-                        remaining -= read;
-                    }
-                }
-                return;
-            } catch (NumberFormatException e) {
-                response.sendError(HttpServletResponse.SC_BAD_REQUEST);
-                return;
-            }
-        }
-
-        response.setStatus(HttpServletResponse.SC_OK);
-        response.setContentLengthLong(fileLength);
-        try (java.io.InputStream in = Files.newInputStream(fullPath);
-             java.io.OutputStream out = response.getOutputStream()) {
-            byte[] buf = new byte[8192];
-            int read;
-            while ((read = in.read(buf)) > 0) {
-                out.write(buf, 0, read);
-            }
-        }
+        return org.springframework.http.ResponseEntity.ok().headers(headers).body(bytes);
     }
 
     private Map<String, Object> wrapAsset(Object asset) {
