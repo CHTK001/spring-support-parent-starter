@@ -89,7 +89,7 @@
     <module>spring-support-server-starter</module>
     <module>spring-support-ai-starter</module>
     <module>spring-support-ai-training-starter</module>
-    <module>spring-support-grok-starter</module>
+    <module>spring-support-account-starter</module>
     <module>spring-support-ueba-starter</module>
     <module>spring-support-message-starter</module>
     <module>spring-support-software-starter</module>
