@@ -1,7 +1,0 @@
-# OAuth 白名单配置文件
-# 每行一个URL Pattern，支持Ant风格匹配
-# 示例:
-# /public/**
-# /api/health
-# /static/**
-
