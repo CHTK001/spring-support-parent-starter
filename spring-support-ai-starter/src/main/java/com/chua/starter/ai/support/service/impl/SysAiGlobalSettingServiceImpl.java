@@ -174,6 +174,9 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
         // 发布配置变更事件，触发对应能力模块热重建（如人脸识别实时生效）
         try {
             eventPublisher.publishEvent(new FaceSettingsChangedEvent(group));
+            if ("ocr".equals(group)) {
+                eventPublisher.publishEvent(new OcrSettingsChangedEvent(group));
+            }
         } catch (Exception e) {
             log.warn("[SysAiGlobalSetting] 发布配置变更事件失败: {}", e.getMessage());
         }
