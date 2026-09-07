@@ -170,7 +170,8 @@
         <!-- 第三方验证码解析服务 - YesCaptcha/CaptchaRun 客户端 -->
         <dependency>
             <groupId>com.chua</groupId>
-            <artifactId>utils-support-captcha-starter</artifactId>\n            <version>4.0.0.42</version>
+            <artifactId>utils-support-captcha-starter</artifactId>
+            <version>4.0.0.42</version>
         </dependency>
 
         <!-- Apache Commons IO - 提供IO工具类 -->
