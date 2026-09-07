@@ -281,7 +281,7 @@ public class WorkshopAssetController {
 
     @Operation(summary = "获取资产文件", description = "按 asset_id 返回原始文件，支持 ?thumb=1 请求缩略图")
     @GetMapping("/files/{assetId}")
-    public ResponseEntity<byte[]> getAssetFile(
+    public ResponseEntity<org.springframework.core.io.Resource> getAssetFile(
             @PathVariable String assetId,
             @RequestParam(required = false) String thumb,
             HttpServletRequest request) throws IOException {
@@ -304,11 +304,11 @@ public class WorkshopAssetController {
 
         long fileLength = Files.size(fullPath);
         String rangeHeader = request.getHeader("Range");
-
-        HttpHeaders headers = new HttpHeaders();
         String contentType = (asset.getMime() != null && !asset.getMime().isBlank())
                 ? asset.getMime() : "application/octet-stream";
-        headers.setContentType(MediaType.parseMediaType(contentType));
+
+        org.springframework.core.io.Resource resource =
+                new org.springframework.core.io.FileSystemResource(fullPath);
 
         if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
             String[] parts = rangeHeader.substring(6).split("-");
@@ -322,22 +322,26 @@ public class WorkshopAssetController {
                     end = parts.length > 1 && !parts[1].isEmpty() ? Long.parseLong(parts[1]) : fileLength - 1;
                 }
                 if (start < 0 || start >= fileLength || end < start || end >= fileLength) {
-                    headers.set("Content-Range", "bytes */" + fileLength);
-                    return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE).headers(headers).build();
+                    return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                            .header("Content-Range", "bytes */" + fileLength)
+                            .contentType(MediaType.parseMediaType(contentType))
+                            .build();
                 }
-                byte[] fullBytes = Files.readAllBytes(fullPath);
-                byte[] bytes = Arrays.copyOfRange(fullBytes, (int) start, (int) (end + 1));
-                headers.setContentLength(bytes.length);
-                headers.set("Content-Range", "bytes " + start + "-" + end + "/" + fileLength);
-                return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).headers(headers).body(bytes);
+                long contentLength = end - start + 1;
+                return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+                        .header("Content-Range", "bytes " + start + "-" + end + "/" + fileLength)
+                        .contentType(MediaType.parseMediaType(contentType))
+                        .contentLength(contentLength)
+                        .body(resource);
             } catch (NumberFormatException e) {
                 return ResponseEntity.badRequest().build();
             }
         }
 
-        byte[] bytes = Files.readAllBytes(fullPath);
-        headers.setContentLength(bytes.length);
-        return ResponseEntity.ok().headers(headers).body(bytes);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .contentLength(fileLength)
+                .body(resource);
     }
 
     private Map<String, Object> wrapAsset(Object asset) {
