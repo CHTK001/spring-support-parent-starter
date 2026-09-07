@@ -178,9 +178,6 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
             if ("ocr".equals(group)) {
                 eventPublisher.publishEvent(new OcrSettingsChangedEvent(group));
             }
-            if ("ocr".equals(group)) {
-                eventPublisher.publishEvent(new OcrSettingsChangedEvent(group));
-            }
         } catch (Exception e) {
             log.warn("[SysAiGlobalSetting] 发布配置变更事件失败: {}", e.getMessage());
         }
