@@ -2,6 +2,7 @@ package com.chua.starter.account;
 
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * 账号信息。
@@ -11,6 +12,7 @@ import lombok.Data;
  */
 @Data
 @Builder
+@NoArgsConstructor
 public class Account {
 
     /**
