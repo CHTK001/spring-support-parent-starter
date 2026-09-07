@@ -358,7 +358,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         }
         try {
             usageRecorderInterceptor.record(
-                    null,
+                    "chat",
                     usage.getProvider(),
                     usage.getModel() != null ? usage.getModel() : client.getModel(),
                     callType,
@@ -381,7 +381,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         }
         try {
             usageRecorderInterceptor.record(
-                    null,
+                    "chat",
                     usage.getProvider(),
                     usage.getModel(),
                     callType,

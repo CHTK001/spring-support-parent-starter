@@ -386,7 +386,7 @@ public class AiBotChatService {
             if (recordUsage && response != null && response.getUsage() != null) {
                 try {
                     usageRecorderInterceptor.record(
-                            null,
+                            "bot",
                             provider.getPlatform(),
                             modelName,
                             "bot",
