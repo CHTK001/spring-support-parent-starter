@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.controller;
 
 import com.chua.common.support.utils.StringUtils;
+import com.chua.starter.ai.support.manage.LocalTrustAuthFilter;
 import com.chua.starter.ai.support.service.AiAccessGuardService;
 import com.chua.starter.ai.support.service.SysAiAppKeyService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
