@@ -6,6 +6,7 @@ import com.chua.common.support.network.client.HttpClientFactory;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.account.Account;
+import com.chua.starter.account.CaptchaSolver;
 import com.chua.starter.account.spi.PlatformRegister;
 import lombok.extern.slf4j.Slf4j;
 
