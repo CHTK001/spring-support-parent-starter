@@ -81,6 +81,9 @@ public class ServiceInfoEndpointDetector {
      * 以端点的形式展示真实连接地址, 便于联调排查。所有条目均做脱敏: 不输出任何密码/密钥。</p>
      */
     private void registerInfrastructure(ServiceInfoRegistry registry) {
+        if (!infrastructureEnabled) {
+            return;
+        }
         registerRedis(registry);
         registerJdbc(registry);
         registerKafka(registry);
