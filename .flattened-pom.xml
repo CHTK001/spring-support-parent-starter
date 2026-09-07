@@ -89,6 +89,7 @@
     <module>spring-support-server-starter</module>
     <module>spring-support-ai-starter</module>
     <module>spring-support-ai-training-starter</module>
+    <module>spring-support-grok-starter</module>
     <module>spring-support-ueba-starter</module>
     <module>spring-support-message-starter</module>
     <module>spring-support-software-starter</module>
@@ -673,6 +674,11 @@
       <dependency>
         <groupId>com.chua</groupId>
         <artifactId>utils-support-captcha-starter</artifactId>
+        <version>${utils.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.chua</groupId>
+        <artifactId>utils-support-datasearch-starter</artifactId>
         <version>${utils.version}</version>
       </dependency>
       <dependency>
