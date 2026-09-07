@@ -276,3 +276,4 @@ public class SysAiGlobalSettingServiceImpl implements SysAiGlobalSettingService 
                 group, field, value, valueType, sort);
     }
 }
+

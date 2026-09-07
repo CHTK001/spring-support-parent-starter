@@ -1,6 +1,7 @@
 package com.chua.starter.ai.support.configuration.rag;
 
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
+import com.chua.starter.ai.support.configuration.ocr.OcrSettingsChangedEvent;
 import com.chua.starter.ai.support.configuration.ocr.OcrTextExtractor;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.embedding.EmbeddingClient;
@@ -20,6 +21,7 @@ import com.chua.starter.ai.support.registry.ChatClientRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
@@ -301,3 +303,4 @@ public class RagClientManager {
         }
     }
 }
+
