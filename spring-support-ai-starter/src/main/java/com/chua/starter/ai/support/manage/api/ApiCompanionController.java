@@ -333,7 +333,22 @@ public class ApiCompanionController {
 
     @PostMapping("/memories/merge-suggestions")
     public ApiResult<List<Map<String, Object>>> mergeSuggestions(@RequestBody Map<String, Object> body) {
-        return ApiResult.ok(List.of());
+        String companionId = strOr(body.get("companion_id"), null);
+        if (companionId == null || companionId.isBlank()) {
+            return ApiResult.ok(List.of());
+        }
+        List<List<SysAiCompanionMemory>> groups = companionStore.suggestMemoryMerges(companionId);
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (List<SysAiCompanionMemory> group : groups) {
+            List<Map<String, Object>> memories = new ArrayList<>();
+            for (SysAiCompanionMemory memory : group) {
+                memories.add(toMemory(memory));
+            }
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("memories", memories);
+            result.add(entry);
+        }
+        return ApiResult.ok(result);
     }
 
     @PostMapping("/memories/merge")
