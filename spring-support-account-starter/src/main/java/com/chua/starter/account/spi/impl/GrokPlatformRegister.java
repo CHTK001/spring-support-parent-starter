@@ -147,12 +147,11 @@ public class GrokPlatformRegister implements PlatformRegister {
             headers.put("origin", SITE_URL);
             headers.put("referer", SITE_URL + "/sign-up");
 
-            String resp = HttpClientFactory.of(url)
-                    .headers(headers)
-                    .proxy(proxyUrl)
-                    .body(data)
-                    .post()
-                    .getBodyString();
+             String resp = HttpClientFactory.of(url)
+                     .headers(headers)
+                     .body(data)
+                     .post()
+                     .getBodyString();
             return resp != null;
         } catch (Exception e) {
             log.warn("[Grok] 发送验证码异常: {}", e.getMessage());
@@ -216,7 +215,6 @@ public class GrokPlatformRegister implements PlatformRegister {
 
             String resp = HttpClientFactory.of(url)
                     .headers(headers)
-                    .proxy(proxyUrl)
                     .body(payload)
                     .post()
                     .getBodyString();
