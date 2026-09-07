@@ -59,8 +59,10 @@ public class ServiceInfoAutoConfiguration {
     @Bean
     @Order(Ordered.LOWEST_PRECEDENCE)
     /** ServiceInfoEndpointDetector */
-    public ServiceInfoEndpointDetector serviceInfoEndpointDetector(Environment environment) {
-        return new ServiceInfoEndpointDetector(environment);
+    public ServiceInfoEndpointDetector serviceInfoEndpointDetector(
+            Environment environment, ServiceInfoProperties properties) {
+        return new ServiceInfoEndpointDetector(environment)
+                .infrastructureEnabled(properties.isInfrastructure());
     }
 
     @Bean
