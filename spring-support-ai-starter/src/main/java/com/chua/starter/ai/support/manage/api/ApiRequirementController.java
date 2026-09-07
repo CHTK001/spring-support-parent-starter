@@ -76,6 +76,11 @@ public class ApiRequirementController {
         return ApiResult.ok(requirementStore.tags());
     }
 
+    @GetMapping("/tag-bindings")
+    public ApiResult<List<Map<String, Object>>> tagBindings() {
+        return ApiResult.ok(requirementStore.getTagBindings());
+    }
+
     @GetMapping("/board")
     public ApiResult<Map<String, Object>> board(@RequestParam String tag) {
         return ApiResult.ok(requirementStore.board(tag));

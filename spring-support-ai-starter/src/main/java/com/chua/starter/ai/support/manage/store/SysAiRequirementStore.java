@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -33,6 +34,8 @@ public class SysAiRequirementStore {
     private final SysAiDataSourceMapper dataSourceMapper;
     private final RequirementDataSourceRegistry registry;
     private final AtomicLong displaySeq = new AtomicLong(1);
+    /** In-memory AutoWork target → state map, keyed by "kind:targetId". */
+    private final Map<String, Map<String, Object>> autoworkBindings = new ConcurrentHashMap<>();
 
     public SysAiRequirementStore(SysAiRequirementMapper requirementMapper,
                                  SysAiDataSourceMapper dataSourceMapper,
@@ -322,6 +325,17 @@ public class SysAiRequirementStore {
         state.put("run_state", enabled ? "active" : "off");
         state.put("current_requirement_id", null);
         state.put("completed_count", 0);
+        // Persist binding for tag-bindings aggregation
+        if (kind != null && targetId != null) {
+            String key = kind + ":" + targetId;
+            Map<String, Object> binding = new LinkedHashMap<>();
+            binding.put("kind", kind);
+            binding.put("target_id", targetId);
+            binding.put("tag", tag);
+            binding.put("run_state", enabled ? "active" : "off");
+            binding.put("enabled", enabled);
+            autoworkBindings.put(key, binding);
+        }
         return state;
     }
 
@@ -630,5 +644,26 @@ public class SysAiRequirementStore {
     private Integer getInt(Map<String, Object> map, String key) {
         Object v = map.get(key);
         return v instanceof Number ? ((Number) v).intValue() : null;
+    }
+
+    /**
+     * 获取所有 AutoWork 标签绑定，按 tag 分组。
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> getTagBindings() {
+        Map<String, List<Map<String, Object>>> byTag = new LinkedHashMap<>();
+        for (Map<String, Object> binding : autoworkBindings.values()) {
+            String tag = (String) binding.get("tag");
+            if (tag == null || tag.isBlank()) continue;
+            byTag.computeIfAbsent(tag, k -> new ArrayList<>()).add(binding);
+        }
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map.Entry<String, List<Map<String, Object>>> entry : byTag.entrySet()) {
+            Map<String, Object> group = new LinkedHashMap<>();
+            group.put("tag", entry.getKey());
+            group.put("bindings", entry.getValue());
+            result.add(group);
+        }
+        return result;
     }
 }
