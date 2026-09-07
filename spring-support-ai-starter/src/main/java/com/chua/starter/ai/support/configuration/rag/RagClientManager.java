@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.configuration.rag;
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.configuration.ocr.OcrSettingsChangedEvent;
 import com.chua.starter.ai.support.configuration.ocr.OcrTextExtractor;
+import com.chua.starter.ai.support.configuration.ocr.OcrSettingsChangedEvent;
 import com.chua.common.support.ai.chat.ChatClient;
 import com.chua.common.support.ai.embedding.EmbeddingClient;
 import com.chua.common.support.ai.embedding.MemoryEmbeddingClient;
@@ -95,6 +96,10 @@ public class RagClientManager {
                     ragClient = build();
                 }
                 client = ragClient;
+            }
+        }
+        return client;
+    }
 
     /**
      * 监听 OCR 设置变更事件，重建 RAG 客户端以使用最新的 OCR 模型配置。
@@ -106,10 +111,6 @@ public class RagClientManager {
         }
         log.info("[RagClientManager] 收到 OCR 设置变更事件，重建 RAG 客户端");
         rebuild();
-    }
-            }
-        }
-        return client;
     }
 
     /**
