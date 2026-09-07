@@ -224,7 +224,7 @@ public class GrokPlatformRegister implements PlatformRegister {
                     new com.fasterxml.jackson.databind.ObjectMapper().readTree(resp);
                 String ssoToken = extractSsoToken(root);
                 if (ssoToken != null) {
-                    return new Account(email, password, ssoToken, Account.PlatformType.GROK);
+                    return Account.registered(email, password, ssoToken, Account.PlatformType.GROK);
                 }
             }
             log.warn("[Grok] 注册响应异常: {}", resp);
