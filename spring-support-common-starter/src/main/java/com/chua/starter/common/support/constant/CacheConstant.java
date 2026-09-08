@@ -9,125 +9,128 @@ package com.chua.starter.common.support.constant;
  * @since 2024/03/08
  * @author CH
  */
-public interface CacheConstant {
+public final class CacheConstant {
+
+    private CacheConstant() {
+    }
 
     // ==================== 缓存管理器 Bean 名称 ====================
 
     /**
      * 默认 Caffeine 缓存管理器名称
      */
-    String CAFFEINE_CACHE_MANAGER = "caffeineCacheManager";
+    public static final String CAFFEINE_CACHE_MANAGER = "caffeineCacheManager";
 
     /**
      * 默认 Redis 缓存管理器名称
      */
-    String REDIS_CACHE_MANAGER = "redisCacheManager";
+    public static final String REDIS_CACHE_MANAGER = "redisCacheManager";
 
     /**
      * 默认缓存管理器名称（默认 Caffeine）
      */
-    String CACHE_MANAGER_FOR_DEFAULT = "default";
+    public static final String CACHE_MANAGER_FOR_DEFAULT = "default";
 
     /**
      * 系统缓存管理器名称
      */
-    String CACHE_MANAGER_FOR_SYSTEM = "system";
+    public static final String CACHE_MANAGER_FOR_SYSTEM = "system";
 
     /**
      * 多级缓存管理器名称
      */
-    String CACHE_MANAGER_FOR_MULTI = "multiLevelCacheManager";
+    public static final String CACHE_MANAGER_FOR_MULTI = "multiLevelCacheManager";
 
     // ==================== 缓存层级标识 ====================
 
     /**
      * Caffeine 缓存层级标识
      */
-    String LEVEL_CAFFEINE = "caffeine";
+    public static final String LEVEL_CAFFEINE = "caffeine";
 
     /**
      * Redis 缓存层级标识
      */
-    String LEVEL_REDIS = "redis";
+    public static final String LEVEL_REDIS = "redis";
 
     // ==================== Redis 预置 TTL 缓存名 ====================
 
     /**
      * Redis 缓存一天时间（86400 秒）
      */
-    String REDIS_CACHE_ONE_DAY = "redis-cache-86400";
+    public static final String REDIS_CACHE_ONE_DAY = "redis-cache-86400";
 
     /**
      * Redis 缓存最小时间（600 秒）
      */
-    String REDIS_CACHE_MIN = "redis-cache-600";
+    public static final String REDIS_CACHE_MIN = "redis-cache-600";
 
     /**
      * Redis 缓存一分钟时间（60 秒）
      */
-    String REDIS_CACHE_MINUTES = "redis-cache-60";
+    public static final String REDIS_CACHE_MINUTES = "redis-cache-60";
 
     /**
      * Redis 缓存半小时时间（30 秒）
      */
-    String REDIS_CACHE_HALF_MINUTES = "redis-cache-30";
+    public static final String REDIS_CACHE_HALF_MINUTES = "redis-cache-30";
 
     /**
      * Redis 缓存十秒时间（10 秒）
      */
-    String REDIS_CACHE_TEN_SECOND = "redis-cache-10";
+    public static final String REDIS_CACHE_TEN_SECOND = "redis-cache-10";
 
     /**
      * Redis 缓存一小时时间（3600 秒）
      */
-    String REDIS_CACHE_HOUR = "redis-cache-3600";
+    public static final String REDIS_CACHE_HOUR = "redis-cache-3600";
 
     /**
      * Redis 永久缓存（-1 表示永不过期）
      */
-    String REDIS_CACHE_ALWAYS = "redis-cache--1";
+    public static final String REDIS_CACHE_ALWAYS = "redis-cache--1";
 
     // ==================== 预置缓存名 ====================
 
     /**
      * 用户缓存名
      */
-    String CACHE_USER = "user";
+    public static final String CACHE_USER = "user";
 
     /**
      * 角色缓存名
      */
-    String CACHE_ROLE = "role";
+    public static final String CACHE_ROLE = "role";
 
     /**
      * 权限缓存名
      */
-    String CACHE_PERMISSION = "permission";
+    public static final String CACHE_PERMISSION = "permission";
 
     /**
      * 字典缓存名
      */
-    String CACHE_DICT = "dict";
+    public static final String CACHE_DICT = "dict";
 
     /**
      * 配置缓存名
      */
-    String CACHE_CONFIG = "config";
+    public static final String CACHE_CONFIG = "config";
 
     // ==================== 分隔符与前缀 ====================
 
     /**
      * 缓存键分隔符
      */
-    String KEY_SEPARATOR = ":";
+    public static final String KEY_SEPARATOR = ":";
 
     /**
      * 缓存键默认前缀
      */
-    String KEY_DEFAULT_PREFIX = "cache:";
+    public static final String KEY_DEFAULT_PREFIX = "cache:";
 
     /**
      * 永不过期标识
      */
-    long TTL_NEVER_EXPIRE = -1L;
+    public static final long TTL_NEVER_EXPIRE = -1L;
 }
