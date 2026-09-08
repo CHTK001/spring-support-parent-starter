@@ -57,8 +57,9 @@ public class AuthClientProperties {
             "/api/system/info",
             "/api/auth/status",
             "/api/auth/user",
-            "/api/extensions/**",
-            "/api/terminals",
+              "/api/extensions/**",
+              "/api/workshop/**",
+              "/api/terminals",
             "/api/terminals/**",
             "/api/providers/**/credentials",
             "/api/settings/client"
