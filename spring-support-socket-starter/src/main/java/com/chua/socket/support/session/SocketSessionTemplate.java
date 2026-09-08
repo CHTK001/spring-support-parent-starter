@@ -156,7 +156,7 @@ public interface SocketSessionTemplate {
      * @param msg    要发送的消息内容对象
      */
     default void sendToUserObject(String userId, String event, Object msg) {
-        sendToUser(userId, event, msg instanceof String ? msg.toString() : Json.toJson(msg));
+        sendToUser(userId, event, msg instanceof String ? msg.toString() : toJson(msg));
     }
 
     /**
