@@ -441,6 +441,40 @@ public class AuthClientProperties {
     }
 
     /**
+     * 未登录时用浏览器指纹作为匿名用户配置
+     * <p>
+     * 配置前缀：<code>plugin.oauth.fingerprint-anonymous-user</code>。
+     * </p>
+     */
+    @Data
+    public static class FingerprintAnonymousUser {
+
+        /**
+         * 总开关。默认关闭；仅在本地/单机联调 profile 显式开启。
+         */
+        private boolean enabled = false;
+
+        /**
+         * 指纹请求头名。默认 <code>x-nomi-fingerprint</code>。
+         */
+        private String headerName = "x-nomi-fingerprint";
+
+        /**
+         * 匿名用户角色。默认 <code>SUPER_ADMIN</code>，以放行 {@code @Permission} 角色/管理员校验。
+         */
+        private List<String> roles = List.of("SUPER_ADMIN");
+
+        /**
+         * 是否允许写操作（POST/PUT/PATCH/DELETE）。
+         * <p>
+         * 默认 <code>false</code>：指纹匿名用户仅放行只读请求（GET/HEAD/OPTIONS），写操作仍需真实登录，
+         * 降低误写风险。
+         * </p>
+         */
+        private boolean allowWrite = false;
+    }
+
+    /**
      * 重试配置
      */
     @Data
