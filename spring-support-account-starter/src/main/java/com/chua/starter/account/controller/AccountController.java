@@ -27,6 +27,33 @@ public class AccountController {
 
     private final AccountPoolService poolService;
 
+    /** 简单内存存储的配置 */
+    private final Map<String, Object> settingsStore = new ConcurrentHashMap<>();
+
+    /**
+     * 获取配置
+     */
+    @GetMapping("/settings")
+    public Map<String, Object> getSettings() {
+        if (settingsStore.isEmpty()) {
+            settingsStore.put("enable", false);
+            settingsStore.put("yescaptchaKey", "");
+            settingsStore.put("emailProvider", "fce");
+            settingsStore.put("proxy", "");
+            settingsStore.put("autoRegisterCount", 0);
+        }
+        return Map.copyOf(settingsStore);
+    }
+
+    /**
+     * 保存配置
+     */
+    @PostMapping("/settings")
+    public void saveSettings(@RequestBody Map<String, Object> body) {
+        log.info("[Account] 保存配置: {}", body);
+        settingsStore.putAll(body);
+    }
+
     /**
      * 单账号注册
      */
