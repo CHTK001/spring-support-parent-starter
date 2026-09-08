@@ -582,16 +582,16 @@ public class ApiKnowledgeController {
     // 绑定
     // ─────────────────────────────────────────────────────────────────────────
 
-    @GetMapping("/binding/{kind}/{target_id}")
+    @GetMapping("/binding/{kind}/{target_id:.+}")
     public ApiResult<Map<String, Object>> getBinding(@PathVariable String kind,
                                                      @PathVariable String target_id) {
         return ApiResult.ok(requireBinding(kind, target_id));
     }
 
-    @PostMapping("/binding/{kind}/{target_id}")
+    @PostMapping("/binding/{kind}/{target_id:.+}")
     public ApiResult<Map<String, Object>> setBinding(@PathVariable String kind,
-                                                     @PathVariable String target_id,
-                                                     @RequestBody Map<String, Object> body) {
+                                                      @PathVariable String target_id,
+                                                      @RequestBody Map<String, Object> body) {
         Map<String, Object> binding = new LinkedHashMap<>();
         binding.put("target_kind", kind);
         binding.put("target_id", target_id);
