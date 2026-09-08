@@ -260,6 +260,16 @@ public class AuthClientProperties {
     private Fingerprint fingerprint = new Fingerprint();
 
     /**
+     * 未登录时用浏览器指纹作为匿名用户
+     * <p>
+     * 仅用于本地/单机联调（无远程 OAuth 服务）场景：请求无登录 token 但携带指纹头时，
+     * 由 {@link com.chua.starter.oauth.client.support.filter.AuthFilter} 合成一个匿名用户放行，
+     * 使用户数据可按浏览器指纹归属。生产环境必须保持关闭。
+     * </p>
+     */
+    private FingerprintAnonymousUser fingerprintAnonymousUser = new FingerprintAnonymousUser();
+
+    /**
      * AI AppKey 本地认证配置
      * <p>
      * 启用后，OAuth 过滤器对 Bearer Token 先做本地 AI AppKey 校验
