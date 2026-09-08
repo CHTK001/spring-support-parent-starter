@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.ai.support.mapper.SysAiGroupMapper">
+
+    <!--
+        分组列表查询——按名称模糊搜索、状态过滤、排序。
+        移除旧有的 sys_project_id / sys_user_id / sys_ai_group_default 等不存在的字段引用。
+    -->
+    <select id="group" resultType="java.util.Map" parameterType="java.util.Map">
+        SELECT *
+        FROM sys_ai_group
+        WHERE sys_ai_group_delete = 0
+        <if test="sysAiGroupName != null and sysAiGroupName != ''">
+            AND sys_ai_group_name LIKE CONCAT('%', #{sysAiGroupName}, '%')
+        </if>
+        <if test="sysAiGroupStatus != null">
+            AND sys_ai_group_status = #{sysAiGroupStatus}
+        </if>
+        ORDER BY sys_ai_group_sort ASC, create_time DESC
+    </select>
+
+</mapper>
