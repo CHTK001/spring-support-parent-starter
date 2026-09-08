@@ -260,16 +260,6 @@ public class AuthClientProperties {
     private Fingerprint fingerprint = new Fingerprint();
 
     /**
-     * 未登录时用浏览器指纹作为匿名用户
-     * <p>
-     * 仅用于本地/单机联调（无远程 OAuth 服务）场景：请求无登录 token 但携带指纹头时，
-     * 由 {@link com.chua.starter.oauth.client.support.filter.AuthFilter} 合成一个匿名用户放行，
-     * 使用户数据可按浏览器指纹归属。生产环境必须保持关闭。
-     * </p>
-     */
-    private FingerprintAnonymousUser fingerprintAnonymousUser = new FingerprintAnonymousUser();
-
-    /**
      * AI AppKey 本地认证配置
      * <p>
      * 启用后，OAuth 过滤器对 Bearer Token 先做本地 AI AppKey 校验
@@ -438,40 +428,6 @@ public class AuthClientProperties {
          * 指纹白名单（多个指纹用逗号分隔）
          */
         private String fingerprintWhitelist;
-    }
-
-    /**
-     * 未登录时用浏览器指纹作为匿名用户配置
-     * <p>
-     * 配置前缀：<code>plugin.oauth.fingerprint-anonymous-user</code>。
-     * </p>
-     */
-    @Data
-    public static class FingerprintAnonymousUser {
-
-        /**
-         * 总开关。默认关闭；仅在本地/单机联调 profile 显式开启。
-         */
-        private boolean enabled = false;
-
-        /**
-         * 指纹请求头名。默认 <code>x-nomi-fingerprint</code>。
-         */
-        private String headerName = "x-nomi-fingerprint";
-
-        /**
-         * 匿名用户角色。默认 <code>SUPER_ADMIN</code>，以放行 {@code @Permission} 角色/管理员校验。
-         */
-        private List<String> roles = List.of("SUPER_ADMIN");
-
-        /**
-         * 是否允许写操作（POST/PUT/PATCH/DELETE）。
-         * <p>
-         * 默认 <code>false</code>：指纹匿名用户仅放行只读请求（GET/HEAD/OPTIONS），写操作仍需真实登录，
-         * 降低误写风险。
-         * </p>
-         */
-        private boolean allowWrite = false;
     }
 
     /**
