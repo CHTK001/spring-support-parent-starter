@@ -41,6 +41,7 @@ public class RelationData implements Serializable {
      *
      */
     public static class Node implements Serializable {
+        private static final long serialVersionUID = 1L;
         /** ID */
         private String id;
         /** 名称 */
@@ -73,6 +74,7 @@ public class RelationData implements Serializable {
      *
      */
     public static class Link implements Serializable {
+        private static final long serialVersionUID = 1L;
         /** 来源 */
         private String source;
         /** 目标 */
