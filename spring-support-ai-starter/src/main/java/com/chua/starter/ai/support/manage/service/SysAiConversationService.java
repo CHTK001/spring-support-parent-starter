@@ -1,13 +1,15 @@
 package com.chua.starter.ai.support.manage.service;
 
 import com.chua.starter.ai.support.entity.AIDialog;
+import com.chua.starter.ai.support.entity.SysAiConversationUuid;
+import com.chua.starter.ai.support.mapper.SysAiConversationUuidMapper;
 import com.chua.starter.ai.support.service.AIDialogRecordService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -15,6 +17,8 @@ import java.util.concurrent.ThreadLocalRandom;
  *
  * <p>nomifun 前端以 UUIDv7 作为会话 id，但现有 AI 中台 (AIDialog) 使用自增 Long id。
  * 本服务在网关层维护 UUIDv7 ↔ Long 的映射，委托 AIDialogRecordService 做存储。</p>
+ *
+ * <p>映射关系持久化到 {@code sys_ai_conversation_uuid} 表，确保重启后会话可恢复。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -27,10 +31,8 @@ public class SysAiConversationService {
     /** 现有对话记录服务 */
     private final AIDialogRecordService dialogRecordService;
 
-    /** UUIDv7 -> DialogId(Long) 映射 */
-    private final Map<String, Long> uuidToDialog = new ConcurrentHashMap<>();
-    /** DialogId(Long) -> UUIDv7 映射 */
-    private final Map<Long, String> dialogToUuid = new ConcurrentHashMap<>();
+    /** UUID 映射持久化 */
+    private final SysAiConversationUuidMapper uuidMapper;
 
     /**
      * 生成 canonical lowercase UUIDv7（RFC 9562）。
@@ -92,8 +94,14 @@ public class SysAiConversationService {
     public NomifunConversation createConversation(String name) {
         var dialog = dialogRecordService.createDialog(name == null || name.isBlank() ? "新建会话" : name);
         String uuid = uuidV7();
-        uuidToDialog.put(uuid, dialog.getId());
-        dialogToUuid.put(dialog.getId(), uuid);
+
+        // 持久化映射到数据库
+        SysAiConversationUuid uuidEntity = new SysAiConversationUuid();
+        uuidEntity.setUuid(uuid);
+        uuidEntity.setDialogId(dialog.getId());
+        uuidEntity.setCreateTime(LocalDateTime.now());
+        uuidMapper.insert(uuidEntity);
+
         return toApi(dialog, uuid);
     }
 
@@ -102,11 +110,16 @@ public class SysAiConversationService {
      */
     public List<NomifunConversation> listConversations() {
         var result = new ArrayList<NomifunConversation>();
-        for (var e : uuidToDialog.entrySet()) {
+
+        // 从数据库加载所有映射
+        var allMappings = uuidMapper.selectList(null);
+        for (var mapping : allMappings) {
             var dialog = dialogRecordService.listDialog().stream()
-                    .filter(d -> Objects.equals(d.getId(), e.getValue())).findFirst().orElse(null);
-            if (dialog != null) result.add(toApi(dialog, e.getKey()));
+                    .filter(d -> Objects.equals(d.getId(), mapping.getDialogId()))
+                    .findFirst().orElse(null);
+            if (dialog != null) result.add(toApi(dialog, mapping.getUuid()));
         }
+
         result.sort(Comparator.comparingLong((NomifunConversation c) -> c.updated_at).reversed());
         return result;
     }
@@ -115,7 +128,7 @@ public class SysAiConversationService {
      * 获取会话（nomifun GET /api/conversations/{id}）。
      */
     public NomifunConversation getConversation(String conversationId) {
-        Long dialogId = uuidToDialog.get(conversationId);
+        Long dialogId = uuidMapper.findDialogIdByUuid(conversationId);
         if (dialogId == null) return null;
         return dialogRecordService.listDialog().stream()
                 .filter(d -> Objects.equals(d.getId(), dialogId))
@@ -126,9 +139,11 @@ public class SysAiConversationService {
      * 删除会话。
      */
     public void deleteConversation(String conversationId) {
-        Long dialogId = uuidToDialog.remove(conversationId);
+        Long dialogId = uuidMapper.findDialogIdByUuid(conversationId);
         if (dialogId != null) {
-            dialogToUuid.remove(dialogId);
+            // 删除映射记录
+            uuidMapper.delete(new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<
+                    SysAiConversationUuid>().eq("uuid", conversationId));
             dialogRecordService.deleteDialog(dialogId);
         }
     }
@@ -150,7 +165,7 @@ public class SysAiConversationService {
      * @return send 结果
      */
     public NomifunSendMessageResult sendMessage(String conversationId, String content) {
-        Long dialogId = uuidToDialog.get(conversationId);
+        Long dialogId = uuidMapper.findDialogIdByUuid(conversationId);
         if (dialogId == null) throw new IllegalArgumentException("conversation not found: " + conversationId);
         var msg = new com.chua.starter.ai.support.chat.ChatMessage("user", content == null ? "" : content);
         dialogRecordService.addMessage(dialogId, msg);
@@ -162,7 +177,7 @@ public class SysAiConversationService {
      * 获取会话消息列表（nomifun GET /api/conversations/{id}/messages）。
      */
     public List<Map<String, Object>> getMessages(String conversationId) {
-        Long dialogId = uuidToDialog.get(conversationId);
+        Long dialogId = uuidMapper.findDialogIdByUuid(conversationId);
         if (dialogId == null) return List.of();
         var msgs = dialogRecordService.getDialogMessages(dialogId);
         if (msgs == null) return List.of();
