@@ -29,6 +29,7 @@ public class TreemapData implements Serializable {
      *
      */
     public static class Block implements Serializable {
+        private static final long serialVersionUID = 1L;
         /** 名称 */
         private String name;
         /** 数值 */
