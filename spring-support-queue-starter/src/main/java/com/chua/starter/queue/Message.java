@@ -141,7 +141,7 @@ public class Message {
         } else if (payload instanceof String) {
             bytes = ((String) payload).getBytes(StandardCharsets.UTF_8);
         } else {
-            bytes = Json.toJson(payload).getBytes(StandardCharsets.UTF_8);
+            bytes = toJson(payload).getBytes(StandardCharsets.UTF_8);
         }
 
         var message = new Message();

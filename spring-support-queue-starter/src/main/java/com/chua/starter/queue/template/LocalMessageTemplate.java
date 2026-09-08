@@ -1,6 +1,7 @@
 package com.chua.starter.queue.template;
 
-import com.chua.starter.queue.util.Json;
+import static com.chua.starter.common.support.text.json.Json.toJson;
+
 import com.chua.starter.queue.Acknowledgment;
 import com.chua.starter.queue.Message;
 import com.chua.starter.queue.MessageHandler;
