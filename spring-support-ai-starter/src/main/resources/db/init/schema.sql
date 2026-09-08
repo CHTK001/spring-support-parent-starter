@@ -1602,6 +1602,90 @@ SELECT * FROM (
     5,
     0.0000, 0.0000,
     'Sixthsense LLM - DeepSeek V4 Flash LClaude Code '
+  UNION ALL
+  SELECT 'agnes-3.0-flash', 'agnes-3.0-flash',
+    'CHAT', 'agnes', 1, 51,
+    0, 0,
+    5,
+    0.0000, 0.0000,
+    'Agnes AI - agnes-3.0-flash（最新，支持推理）'
+  UNION ALL
+  SELECT 'agnes-2.5-flash', 'agnes-2.5-flash',
+    'CHAT', 'agnes', 1, 52,
+    0, 0,
+    5,
+    0.0000, 0.0000,
+    'Agnes AI - agnes-2.5-flash（免费）'
+  UNION ALL
+  SELECT 'agnes-2.5-pro', 'agnes-2.5-pro',
+    'CHAT', 'agnes', 1, 53,
+    0, 0,
+    5,
+    0.0000, 0.0000,
+    'Agnes AI - agnes-2.5-pro'
+  UNION ALL
+  SELECT 'agnes-2.5-pro-alpha', 'agnes-2.5-pro-alpha',
+    'CHAT', 'agnes', 1, 54,
+    0, 0,
+    5,
+    0.0000, 0.0000,
+    'Agnes AI - agnes-2.5-pro-alpha'
+  UNION ALL
+  SELECT 'agnes-2.5-pro-beta', 'agnes-2.5-pro-beta',
+    'CHAT', 'agnes', 1, 55,
+    0, 0,
+    5,
+    0.0000, 0.0000,
+    'Agnes AI - agnes-2.5-pro-beta'
+  UNION ALL
+  SELECT 'agnes-2.0-flash', 'agnes-2.0-flash',
+    'CHAT', 'agnes', 1, 56,
+    0, 0,
+    5,
+    0.0000, 0.0000,
+    'Agnes AI - agnes-2.0-flash'
+  UNION ALL
+  SELECT 'agnes-image-2.5-flash', 'agnes-image-2.5-flash',
+    'CHAT', 'agnes', 1, 60,
+    1, 0,
+    5,
+    0.0000, 0.0000,
+    'Agnes AI - agnes-image-2.5-flash（图像生成）'
+  UNION ALL
+  SELECT 'agnes-image-2.1-flash', 'agnes-image-2.1-flash',
+    'CHAT', 'agnes', 1, 61,
+    1, 0,
+    5,
+    0.0000, 0.0000,
+    'Agnes AI - agnes-image-2.1-flash（图像生成）'
+  UNION ALL
+  SELECT 'agnes-image-2.0-flash', 'agnes-image-2.0-flash',
+    'CHAT', 'agnes', 1, 62,
+    1, 0,
+    5,
+    0.0000, 0.0000,
+    'Agnes AI - agnes-image-2.0-flash（图像生成）'
+  UNION ALL
+  SELECT 'agnes-video-2.5-flash', 'agnes-video-2.5-flash',
+    'CHAT', 'agnes', 1, 70,
+    0, 0,
+    5,
+    0.0000, 0.0000,
+    'Agnes AI - agnes-video-2.5-flash（视频生成）'
+  UNION ALL
+  SELECT 'agnes-video-2.5', 'agnes-video-2.5',
+    'CHAT', 'agnes', 1, 71,
+    0, 0,
+    5,
+    0.0000, 0.0000,
+    'Agnes AI - agnes-video-2.5（视频生成）'
+  UNION ALL
+  SELECT 'agnes-video-v2.0', 'agnes-video-v2.0',
+    'CHAT', 'agnes', 1, 72,
+    0, 0,
+    5,
+    0.0000, 0.0000,
+    'Agnes AI - agnes-video-v2.0（视频生成）'
 ) seed
 WHERE NOT EXISTS (
   SELECT 1 FROM `sys_ai_module`
