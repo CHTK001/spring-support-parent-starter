@@ -558,7 +558,7 @@ public class LocalMessageTemplate implements MessageTemplate {
         if (payload instanceof String) {
             return ((String) payload).getBytes(StandardCharsets.UTF_8);
         }
-        return Json.toJson(payload).getBytes(StandardCharsets.UTF_8);
+        return toJson(payload).getBytes(StandardCharsets.UTF_8);
     }
 }
 
