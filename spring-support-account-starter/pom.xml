@@ -53,12 +53,6 @@
             <groupId>com.chua</groupId>
             <artifactId>utils-support-captcha-starter</artifactId>
         </dependency>
-        <!-- AI 能力 (可选) -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-ai-starter</artifactId>
-            <optional>true</optional>
-        </dependency>
         <!-- 测试 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
