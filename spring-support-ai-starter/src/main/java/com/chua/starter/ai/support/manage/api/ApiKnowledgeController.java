@@ -600,10 +600,13 @@ public class ApiKnowledgeController {
         return ApiResult.ok(requireBinding(kind, target_id));
     }
 
-    @PostMapping("/binding/{kind}/{target_id:.+}")
-    public ApiResult<Map<String, Object>> setBinding(@PathVariable String kind,
-                                                      @PathVariable String target_id,
-                                                      @RequestBody Map<String, Object> body) {
+    /**
+     * 设置绑定（通过查询参数，支持 target_id 中包含斜杠的路径）。
+     */
+    @PostMapping("/binding")
+    public ApiResult<Map<String, Object>> setBindingByQuery(@RequestParam String kind,
+                                                             @RequestParam String target_id,
+                                                             @RequestBody Map<String, Object> body) {
         Map<String, Object> binding = new LinkedHashMap<>();
         binding.put("target_kind", kind);
         binding.put("target_id", target_id);
