@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <!--
     Spring Support AI Starter - AI深度学习功能模块
 
@@ -17,292 +17,248 @@
     @author CH
     @version ********
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-
-    <!-- 继承父项目配置 -->
-    <parent>
-        <groupId>com.chua</groupId>
-        <artifactId>spring-support-parent-starter</artifactId>
-        <version>4.0.0.42</version>
-
-    </parent>
-
-    <!-- 项目基本信息 -->
-    <artifactId>spring-support-ai-starter</artifactId>
-    <description>Spring Support框架AI深度学习功能模块，提供人脸检测、特征提取、OCR、版面分析等AI能力</description>
-
-    <!-- 项目属性配置 -->
-    <properties>
-        <!-- 作为内部 starter 被依赖模块使用时默认跳过 fat-jar repackage，保留原始 jar 结构；
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <!-- 继承父项目配置 -->
+  <parent>
+    <groupId>com.chua</groupId>
+    <artifactId>spring-support-parent-starter</artifactId>
+    <version>4.0.0.42</version>
+  </parent>
+  <!-- 项目基本信息 -->
+  <artifactId>spring-support-ai-starter</artifactId>
+  <description>Spring Support框架AI深度学习功能模块，提供人脸检测、特征提取、OCR、版面分析等AI能力</description>
+  <!-- 项目属性配置 -->
+  <properties>
+    <!-- 作为内部 starter 被依赖模块使用时默认跳过 fat-jar repackage，保留原始 jar 结构；
              需要可执行包时构建传 -Dspring-boot.repackage.skip=false -->
-        <spring-boot.repackage.skip>true</spring-boot.repackage.skip>
-    </properties>
-
-<!-- 依赖配置 -->
-    <dependencies>
-        <!-- Lombok -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <!-- AI 核心（ChatClient, Agent 等） -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-common-starter</artifactId>
-        </dependency>
-
-        <!-- OpenAI 兼容协议 ChatClient（OpenAI/SiliconFlow/SenseTime/GitHub/Gitee） -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-openai-starter</artifactId>
-            <version>4.0.0.42</version>
-        </dependency>
-
-        <!-- 智谱 GLM ChatClient（zhipu/glm SPI） -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-zhipu-starter</artifactId>
-            <version>4.0.0.42</version>
-        </dependency>
-
-        <!-- Z.AI ChatClient（zai SPI） -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-zai-starter</artifactId>
-            <version>4.0.0.42</version>
-        </dependency>
-
-        <!-- 深度学习能力（OCR 识别、向量模型等） -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-deeplearning-starter</artifactId>
-        </dependency>
-
-        <!-- Agent 编排运行时（AgentScope：多 Agent 协作、子 Agent 路由/流水线/扇出） -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-deeplearning-agentscope-starter</artifactId>
-            <version>4.0.0.42</version>
-        </dependency>
-
-        <!-- iLink 微信 Bot 扫码登录 SDK -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-ilink-starter</artifactId>
-            <version>4.0.0.42</version>
-        </dependency>
-
-        <!-- 飞书 Bot（凭据配置型：appId/appSecret） -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-feishu-starter</artifactId>
-            <version>4.0.0.42</version>
-        </dependency>
-
-        <!-- ONNX 模型注册器（OCR 识别、文本向量等模型实现） -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-deeplearning-onnx-starter</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-models-onnx-paddleocrv6-tiny</artifactId>
-            <version>4.0.0.42</version>
-        </dependency>
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-models-onnx-paddleocrv6-medium</artifactId>
-            <version>4.0.0.42</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-jvector-starter</artifactId>
-        </dependency>
-
-        <!-- 用量数据同步（datasearch UsageProvider 外部工具用量拉取） -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-datasearch-starter</artifactId>
-            <version>4.0.0.42</version>
-        </dependency>
-
-        <!-- r2dbc-spi 锁定 0.9.1，防止 Spring Boot BOM 升级到 1.0.x（移除了 ConnectionFactoryOptions） -->
-        <dependency>
-            <groupId>io.r2dbc</groupId>
-            <artifactId>r2dbc-spi</artifactId>
-            <version>0.9.1.RELEASE</version>
-        </dependency>
-
-        <!-- 文件系统（服务器目录浏览、分片上传） -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-filesystem-starter</artifactId>
-        </dependency>
-
-        <!-- SSH 客户端（远程主机连接：真实握手、命令执行，基于 Apache MINA SSHD） -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>utils-support-ssh-starter</artifactId>
-        </dependency>
-
-        <!-- Spring Support Common -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-common-starter</artifactId>
-        </dependency>
-
-        <!-- OAuth 客户端鉴权（@Permission 管理端接口鉴权、AuthController/UserAuthController 认证） -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-oauth-client-starter</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-autoconfigure</artifactId>
-        </dependency>
-
-        <!-- MyBatis Plus -->
-        <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
-        </dependency>
-
-        <!-- Spring Support MyBatis（SysBase 审计基类） -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-mybatis-starter</artifactId>
-        </dependency>
-
-        <!-- Swagger Annotations -->
-        <dependency>
-            <groupId>io.swagger.core.v3</groupId>
-            <artifactId>swagger-annotations</artifactId>
-        </dependency>
-
-        <!-- Web support (for HttpServletRequest) -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-        <!-- WebSocket（nomifun 前端 /ws 流式响应与推送契约） -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-websocket</artifactId>
-        </dependency>
-        <!-- MCP（Model Context Protocol）Java SDK - 真实 MCP 服务器连接 / 工具列举 -->
-        <dependency>
-            <groupId>io.modelcontextprotocol.sdk</groupId>
-            <artifactId>mcp</artifactId>
-            <version>1.0.1</version>
-        </dependency>
-        <dependency>
-            <groupId>io.projectreactor</groupId>
-            <artifactId>reactor-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>jakarta.servlet</groupId>
-            <artifactId>jakarta.servlet-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <!-- JWT 认证（nomifun 前端 OAuth 对接） -->
-        <dependency>
-            <groupId>com.nimbusds</groupId>
-            <artifactId>nimbus-jose-jwt</artifactId>
-            <version>9.37.3</version>
-        </dependency>
-
-        <!-- 数据源模块 - 提供 Flyway-like 迁移器（db/init 脚本自动执行） -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-datasource-starter</artifactId>
-        </dependency>
-
-        <!-- 账号自动注册与管理模块 -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-account-starter</artifactId>
-        </dependency>
-
-        <!-- MySQL 驱动 -->
-        <dependency>
-            <groupId>com.mysql</groupId>
-            <artifactId>mysql-connector-j</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
-        <!-- 缓存功能模块 - 提供缓存常量 CacheConstant -->
-        <dependency>
-            <groupId>com.chua</groupId>
-            <artifactId>spring-support-cache-starter</artifactId>
-        </dependency>
-
-        <!-- Caffeine Cache -->
-        <dependency>
-            <groupId>com.github.ben-manes.caffeine</groupId>
-            <artifactId>caffeine</artifactId>
-        </dependency>
-
-        <!-- Redis for cache -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
-        </dependency>
-
-
-    </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-
-                <configuration>
-                    <encoding>UTF-8</encoding>
-                    <proc>full</proc>
-                    <compilerArgs>
-                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
-                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
-                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
-                        <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
-                    </compilerArgs>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-<artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version>
-
-                        </path>
-
-
-
-                    </annotationProcessorPaths>
-                </configuration>
-            </plugin>
-        
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <mainClass>com.chua.starter.ai.support.AiStarterApplication</mainClass>
-                    <skip>${spring-boot.repackage.skip}</skip>
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>repackage</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-</build>
+    <spring-boot.repackage.skip>false</spring-boot.repackage.skip>
+  </properties>
+  <!-- 依赖配置 -->
+  <dependencies>
+    <!-- Lombok -->
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <!-- AI 核心（ChatClient, Agent 等） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-common-starter</artifactId>
+    </dependency>
+    <!-- OpenAI 兼容协议 ChatClient（OpenAI/SiliconFlow/SenseTime/GitHub/Gitee） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-openai-starter</artifactId>
+      <version>4.0.0.42</version>
+    </dependency>
+    <!-- 智谱 GLM ChatClient（zhipu/glm SPI） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-zhipu-starter</artifactId>
+      <version>4.0.0.42</version>
+    </dependency>
+    <!-- Z.AI ChatClient（zai SPI） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-zai-starter</artifactId>
+      <version>4.0.0.42</version>
+    </dependency>
+    <!-- 深度学习能力（OCR 识别、向量模型等） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-deeplearning-starter</artifactId>
+    </dependency>
+    <!-- Agent 编排运行时（AgentScope：多 Agent 协作、子 Agent 路由/流水线/扇出） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-deeplearning-agentscope-starter</artifactId>
+      <version>4.0.0.42</version>
+    </dependency>
+    <!-- iLink 微信 Bot 扫码登录 SDK -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-ilink-starter</artifactId>
+      <version>4.0.0.42</version>
+    </dependency>
+    <!-- 飞书 Bot（凭据配置型：appId/appSecret） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-feishu-starter</artifactId>
+      <version>4.0.0.42</version>
+    </dependency>
+    <!-- ONNX 模型注册器（OCR 识别、文本向量等模型实现） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-deeplearning-onnx-starter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-models-onnx-paddleocrv6-tiny</artifactId>
+      <version>4.0.0.42</version>
+    </dependency>
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-models-onnx-paddleocrv6-medium</artifactId>
+      <version>4.0.0.42</version>
+    </dependency>
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-jvector-starter</artifactId>
+    </dependency>
+    <!-- 用量数据同步（datasearch UsageProvider 外部工具用量拉取） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-datasearch-starter</artifactId>
+      <version>4.0.0.42</version>
+    </dependency>
+    <!-- r2dbc-spi 锁定 0.9.1，防止 Spring Boot BOM 升级到 1.0.x（移除了 ConnectionFactoryOptions） -->
+    <dependency>
+      <groupId>io.r2dbc</groupId>
+      <artifactId>r2dbc-spi</artifactId>
+      <version>0.9.1.RELEASE</version>
+    </dependency>
+    <!-- 文件系统（服务器目录浏览、分片上传） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-filesystem-starter</artifactId>
+    </dependency>
+    <!-- SSH 客户端（远程主机连接：真实握手、命令执行，基于 Apache MINA SSHD） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>utils-support-ssh-starter</artifactId>
+    </dependency>
+    <!-- Spring Support Common -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-common-starter</artifactId>
+    </dependency>
+    <!-- OAuth 客户端鉴权（@Permission 管理端接口鉴权、AuthController/UserAuthController 认证） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-oauth-client-starter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-autoconfigure</artifactId>
+    </dependency>
+    <!-- MyBatis Plus -->
+    <dependency>
+      <groupId>com.baomidou</groupId>
+      <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
+    </dependency>
+    <!-- Spring Support MyBatis（SysBase 审计基类） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-mybatis-starter</artifactId>
+    </dependency>
+    <!-- Swagger Annotations -->
+    <dependency>
+      <groupId>io.swagger.core.v3</groupId>
+      <artifactId>swagger-annotations</artifactId>
+    </dependency>
+    <!-- Web support (for HttpServletRequest) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <!-- WebSocket（nomifun 前端 /ws 流式响应与推送契约） -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-websocket</artifactId>
+    </dependency>
+    <!-- MCP（Model Context Protocol）Java SDK - 真实 MCP 服务器连接 / 工具列举 -->
+    <dependency>
+      <groupId>io.modelcontextprotocol.sdk</groupId>
+      <artifactId>mcp</artifactId>
+      <version>1.0.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.projectreactor</groupId>
+      <artifactId>reactor-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>jakarta.servlet</groupId>
+      <artifactId>jakarta.servlet-api</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <!-- JWT 认证（nomifun 前端 OAuth 对接） -->
+    <dependency>
+      <groupId>com.nimbusds</groupId>
+      <artifactId>nimbus-jose-jwt</artifactId>
+      <version>9.37.3</version>
+    </dependency>
+    <!-- 数据源模块 - 提供 Flyway-like 迁移器（db/init 脚本自动执行） -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-datasource-starter</artifactId>
+    </dependency>
+    <!-- 账号自动注册与管理模块 -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-account-starter</artifactId>
+    </dependency>
+    <!-- MySQL 驱动 -->
+    <dependency>
+      <groupId>com.mysql</groupId>
+      <artifactId>mysql-connector-j</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <!-- 缓存功能模块 - 提供缓存常量 CacheConstant -->
+    <dependency>
+      <groupId>com.chua</groupId>
+      <artifactId>spring-support-cache-starter</artifactId>
+    </dependency>
+    <!-- Caffeine Cache -->
+    <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+    </dependency>
+    <!-- Redis for cache -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-redis</artifactId>
+    </dependency>
+  </dependencies>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <encoding>UTF-8</encoding>
+          <proc>full</proc>
+          <compilerArgs>
+            <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+            <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+            <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+            <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
+          </compilerArgs>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+              <version>${lombok.version}</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <mainClass>com.chua.starter.ai.support.AiStarterApplication</mainClass>
+          <skip>${spring-boot.repackage.skip}</skip>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>repackage</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>
-

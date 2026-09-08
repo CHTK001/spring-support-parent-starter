@@ -52,22 +52,6 @@ spring:
       vector-storage: jvector
       embedding-engine: memory
 
-# 本地联调：覆盖 plugin.oauth（白名单通配放行）
-plugin:
-  oauth:
-    protocol: static
-    temp:
-      open: true
-      user: "admin:admin123"
-    whitelist:
-      - /**
-  filesystem:
-    enable: false
-    dir-list: false
-  datasource:
-    script:
-      validate-checksum: false
-
 # 技能目录指向实际位置（相对 user.dir 的默认值 ./skills 在当前 CWD 下不存在）
 nomifun:
   skills-root: "D:\\ch\\project\\spring-support-parent-starter\\spring-support-ai-starter\\skills"
