@@ -1,1 +1,1 @@
-{"gatewayUrl":"","accessToken":"ctrl-token-1","targetAgentId":"","verifyCode":"0000","wsUrl":""}
+{"gatewayUrl":"tcp://127.0.0.1:9000","targetAgentId":"t-agent"}
