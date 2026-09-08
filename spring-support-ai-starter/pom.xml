@@ -132,6 +132,13 @@
             <version>4.0.0.42</version>
         </dependency>
 
+        <!-- r2dbc-spi 锁定 0.9.1，防止 Spring Boot BOM 升级到 1.0.x（移除了 ConnectionFactoryOptions） -->
+        <dependency>
+            <groupId>io.r2dbc</groupId>
+            <artifactId>r2dbc-spi</artifactId>
+            <version>0.9.1.RELEASE</version>
+        </dependency>
+
         <!-- 文件系统（服务器目录浏览、分片上传） -->
         <dependency>
             <groupId>com.chua</groupId>
