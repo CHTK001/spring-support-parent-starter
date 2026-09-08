@@ -1,6 +1,8 @@
 package com.chua.starter.queue;
 
-import com.chua.starter.queue.util.Json;
+import static com.chua.starter.common.support.text.json.Json.fromJson;
+import static com.chua.starter.common.support.text.json.Json.toJson;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -101,7 +103,7 @@ public class Message {
             return null;
         }
         String json = getPayloadAsString();
-        return Json.fromJson(json, clazz);
+        return fromJson(json, clazz);
     }
 
     /**
