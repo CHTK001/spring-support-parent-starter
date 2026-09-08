@@ -52,24 +52,20 @@ spring:
       vector-storage: jvector
       embedding-engine: memory
 
-# 本地联调：关闭外部 OAuth / 协议服务器 / 文件系统；OAuth 全部放行（白名单通配）
+# 本地联调：覆盖 plugin.oauth（白名单通配放行）
 plugin:
   oauth:
-    enable: true
     protocol: static
     temp:
       open: true
       user: "admin:admin123"
     whitelist:
       - /**
-  protocol:
-    enable: false
   filesystem:
     enable: false
     dir-list: false
   datasource:
     script:
-      enable: true
       validate-checksum: false
 
 # 技能目录指向实际位置（相对 user.dir 的默认值 ./skills 在当前 CWD 下不存在）
