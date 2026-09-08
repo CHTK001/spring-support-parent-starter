@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.ai.support.mapper.SysAiVincentTemplateMapper">
+  <resultMap id="BaseResultMap" type="java.util.Map">
+    <!--@mbg.generated-->
+    <!--@Table sys_ai_vincent_template-->
+    <id column="sys_ai_vincent_template_id" jdbcType="INTEGER" property="sysAiVincentTemplateId" />
+    <result column="sys_ai_vincent_template_name" jdbcType="VARCHAR" property="sysAiVincentTemplateName" />
+    <result column="sys_ai_vincent_template_type" jdbcType="VARCHAR" property="sysAiVincentTemplateType" />
+    <result column="sys_ai_vincent_template_address" jdbcType="VARCHAR" property="sysAiVincentTemplateAddress" />
+    <result column="sys_ai_vincent_template_remark" jdbcType="VARCHAR" property="sysAiVincentTemplateRemark" />
+    <result column="sys_ai_vincent_template_model_id" jdbcType="VARCHAR" property="sysAiVincentTemplateModelId" />
+    <result column="sys_ai_vincent_template_model_name" jdbcType="VARCHAR" property="sysAiVincentTemplateModelName" />
+    <result column="sys_ai_vincent_template_category" jdbcType="VARCHAR" property="sysAiVincentTemplateCategory" />
+    <result column="sys_ai_vincent_template_train_model" jdbcType="VARCHAR" property="sysAiVincentTemplateTrainModel" />
+    <result column="sys_ai_vincent_template_recommend_prompt" jdbcType="VARCHAR" property="sysAiVincentTemplateRecommendPrompt" />
+    <result column="sys_ai_vincent_template_resolutions" jdbcType="VARCHAR" property="sysAiVincentTemplateResolutions" />
+    <result column="sys_ai_vincent_template_word" jdbcType="VARCHAR" property="sysAiVincentTemplateWord" />
+  </resultMap>
+  <sql id="Base_Column_List">
+    <!--@mbg.generated-->
+    sys_ai_vincent_template_id, sys_ai_vincent_template_name, sys_ai_vincent_template_type, 
+    sys_ai_vincent_template_address, sys_ai_vincent_template_remark, sys_ai_vincent_template_model_id, 
+    sys_ai_vincent_template_model_name, sys_ai_vincent_template_category, sys_ai_vincent_template_train_model, 
+    sys_ai_vincent_template_recommend_prompt, sys_ai_vincent_template_resolutions, sys_ai_vincent_template_word
+  </sql>
+</mapper>
