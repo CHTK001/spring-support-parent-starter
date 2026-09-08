@@ -60,6 +60,7 @@ spring:
       on-profile: "local"
 plugin:
   oauth:
+    enable: false
     protocol: static
     temp:
       open: true
