@@ -66,6 +66,8 @@ plugin:
       user: "admin:admin123"
     whitelist:
       - /**
+    skip:
+      enabled: true
   filesystem:
     enable: false
     dir-list: false
