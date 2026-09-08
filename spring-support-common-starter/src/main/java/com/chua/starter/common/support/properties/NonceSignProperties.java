@@ -32,9 +32,12 @@ public class NonceSignProperties {
      */
     public static final String DEFAULT_SECRET = "aP9xL3sV7mQ2zT5kB8nR1cY4wH6eD0fJ";
 
-    /** 签名密钥，需与前端 getConfig().secretKey 一致 */
-    /** Secret密钥 */
-    private String secretKey = DEFAULT_SECRET;
+    /**
+     * 签名密钥，需与前端 getConfig().secretKey 一致。
+     * 优先读取环境变量 PLUGIN_NONCE_SIGN_SECRET_KEY，未设置时使用开发兜底值 DEFAULT_SECRET。
+     */
+    private String secretKey = System.getenv("PLUGIN_NONCE_SIGN_SECRET_KEY") != null
+        ? System.getenv("PLUGIN_NONCE_SIGN_SECRET_KEY") : DEFAULT_SECRET;
 
     /**
      * 从 Environment 重新解析密钥（多路径回退）
