@@ -53,6 +53,31 @@ spring:
 
 # 文件系统：目录浏览接口默认关闭，需显式开启（安全问题）
 # OAuth 客户端鉴权（管理端 @Permission("admin") 接口鉴权，对接外部 oauth 服务端）
+---
+spring:
+  config:
+    activate:
+      on-profile: "local"
+plugin:
+  oauth:
+    protocol: static
+    temp:
+      open: true
+      user: "admin:admin123"
+    whitelist:
+      - /**
+  filesystem:
+    enable: false
+    dir-list: false
+  datasource:
+    script:
+      validate-checksum: false
+
+---
+spring:
+  config:
+    activate:
+      on-profile: "!local"
 plugin:
   filesystem:
     enable: true
