@@ -124,6 +124,11 @@ public class AuthFilter implements Filter {
 
         // Token检查
         if (webRequest.isFailure()) {
+            // 未登录：若启用「浏览器指纹匿名用户」且请求携带指纹头，则合成匿名用户放行（本地/单机联调场景）
+            if (authenticateByFingerprint(httpRequest, (HttpServletResponse) response, chain, requestURI)) {
+                log.debug("[AuthFilter]请求处理完成(指纹匿名) - URI: {}, 耗时: {}ms", requestURI, System.currentTimeMillis() - startTime);
+                return;
+            }
             log.warn("[AuthFilter认证失败]未找到有效Token - URI: {}, 方法: {}", requestURI, method);
             log.debug("[AuthFilter认证失败]Token检查失败，执行失败链");
             webRequest.doFailureChain(chain, (HttpServletResponse) response);
