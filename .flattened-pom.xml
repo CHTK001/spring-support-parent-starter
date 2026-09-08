@@ -469,6 +469,11 @@
       </dependency>
       <dependency>
         <groupId>com.chua</groupId>
+        <artifactId>spring-support-account-starter</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.chua</groupId>
         <artifactId>spring-support-osgi-starter</artifactId>
         <version>${project.version}</version>
       </dependency>
