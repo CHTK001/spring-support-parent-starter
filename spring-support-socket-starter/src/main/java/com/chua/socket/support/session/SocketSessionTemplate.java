@@ -1,6 +1,8 @@
 package com.chua.socket.support.session;
 
-import com.chua.socket.support.util.Json;
+import static com.chua.starter.common.support.text.json.Json.toJson;
+import static com.chua.starter.common.support.text.json.Json.toJSONString;
+
 import com.chua.socket.support.MsgEvent;
 import com.chua.socket.support.MsgStep;
 
