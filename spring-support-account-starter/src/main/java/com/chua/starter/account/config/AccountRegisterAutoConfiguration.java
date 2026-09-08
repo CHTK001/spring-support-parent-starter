@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Configuration
 @EnableScheduling
-@ConditionalOnProperty(prefix = "account.register", name = "enable", havingValue = "true")
+@ConditionalOnProperty(prefix = "plugin.account.register", name = "enable", havingValue = "true")
 public class AccountRegisterAutoConfiguration {
 
     private final AccountRegisterProperties properties;
@@ -61,7 +61,7 @@ public class AccountRegisterAutoConfiguration {
     /**
      * 定期补号
      */
-    @Scheduled(fixedDelayString = "${account.register.replenish-interval-seconds:3600}000")
+    @Scheduled(fixedDelayString = "${plugin.account.register.replenish-interval-seconds:3600}000")
     public void replenish() {
         if (captchaSolver == null) return;
 
