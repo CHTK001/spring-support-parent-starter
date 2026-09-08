@@ -80,7 +80,7 @@ public interface SocketSessionTemplate {
      * @param msg       要发送的消息内容对象
      */
     default void sendObject(String sessionId, String event, Object msg) {
-        send(sessionId, event, msg instanceof String ? msg.toString() : Json.toJson(msg));
+        send(sessionId, event, msg instanceof String ? msg.toString() : toJson(msg));
     }
 
     /**
@@ -106,7 +106,7 @@ public interface SocketSessionTemplate {
             broadcast(event, message);
             return;
         }
-        broadcast(event, msg instanceof String ? msg.toString() : Json.toJson(msg));
+        broadcast(event, msg instanceof String ? msg.toString() : toJson(msg));
     }
 
     /**
@@ -116,7 +116,7 @@ public interface SocketSessionTemplate {
      * @param msgEvent 消息Map
      */
     default void broadcast(String event, Map<String, Object> msgEvent) {
-        broadcast(event, Json.toJSONString(msgEvent));
+        broadcast(event, toJSONString(msgEvent));
     }
 
     /**
