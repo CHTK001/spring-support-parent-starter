@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <!--
     Spring Support AI Starter - AI深度学习功能模块
 
@@ -38,7 +38,7 @@
     <properties>
         <!-- 作为内部 starter 被依赖模块使用时默认跳过 fat-jar repackage，保留原始 jar 结构；
              需要可执行包时构建传 -Dspring-boot.repackage.skip=false -->
-        <spring-boot.repackage.skip>false</spring-boot.repackage.skip>
+        <spring-boot.repackage.skip>true</spring-boot.repackage.skip>
     </properties>
 
 <!-- 依赖配置 -->
