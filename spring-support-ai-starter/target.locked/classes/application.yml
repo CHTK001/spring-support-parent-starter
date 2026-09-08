@@ -1,0 +1,101 @@
+server:
+  # 8787 固定为 ai 前端运行模式时的固定端口，pages/ai index.html 注入 __backendPort
+  port: 8787
+  servlet:
+    context-path: /
+
+ai:
+  skills-market-url: https://skillsmp.com/api/skills
+
+spring:
+  application:
+    name: ai-starter
+  autoconfigure:
+    exclude:
+      - com.chua.starter.datasource.configuration.ShardingSphereAutoConfiguration
+      - com.chua.starter.datasource.configuration.DataSourceScriptConfiguration
+      - com.chua.starter.filesystem.support.config.FileSystemAutoConfiguration
+      - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchClientAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://172.16.0.40:3306/ai_test?useUnicode=true&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+    username: root
+    password: root@
+    hikari:
+        maximum-pool-size: 20
+        minimum-idle: 5
+        connection-timeout: 10000
+  sql:
+    init:
+      mode: never
+  h2:
+    console:
+      enabled: false
+      path: /h2-console
+  data:
+    redis:
+      host: 172.16.0.40
+      port: 6379
+      # 无密码环境留空；有密码取消注释
+      # password:
+      timeout: 5s
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+  profiles:
+    active: dev
+  ai:
+    usage:
+      enabled: true
+
+# 文件系统：目录浏览接口默认关闭，需显式开启（安全问题）
+plugin:
+  filesystem:
+    enable: true
+    dir-list: false
+
+# OAuth 客户端鉴权（管理端 @Permission("admin") 接口鉴权，对接外部 oauth 服务端）
+  oauth:
+    enable: true
+    protocol: http
+    address: http://172.16.0.40:19180/oauth
+    auth-address: http://172.16.0.40:19180/oauth
+    oauth-url: /verify
+    # AI 协议端点（Bearer 为业务 AppKey，非 oauth token）与登录/健康检查放行
+    whitelist:
+      - /api/**
+      - /ws
+      - /v2/v1/**
+      - /provider/**
+      - /v2/manufacturer/factories
+      - /v2/ai/bot-binding/**
+      - /v2/ocr/**
+      - /v2/face/**
+      - /v2/image-recognition/**
+      - /v2/layout/**
+      - /v2/usage/list
+      - /v2/ai/models/**
+
+logging:
+  level:
+    com.chua.starter.oauth.client: debug
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+  global-config:
+    db-config:
+      id-type: ASSIGN_ID
+  mapper-locations: classpath*:mapper/**/*.xml
+
+# 账号自动注册配置
+plugin:
+  account:
+    register:
+      enable: false
+      yescaptcha-key: ""
+      email-provider: fce
+      replenish-interval-seconds: 3600
