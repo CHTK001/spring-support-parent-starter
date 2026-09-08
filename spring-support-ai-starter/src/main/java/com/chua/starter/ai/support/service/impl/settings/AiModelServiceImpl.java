@@ -3,10 +3,8 @@ package com.chua.starter.ai.support.service.impl.settings;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.ai.support.entity.SysAiManufacturer;
 import com.chua.starter.ai.support.entity.settings.SysAiModel;
-import com.chua.starter.ai.support.entity.settings.SysAiProvider;
 import com.chua.starter.ai.support.mapper.SysAiManufacturerMapper;
 import com.chua.starter.ai.support.mapper.settings.AiModelMapper;
-import com.chua.starter.ai.support.mapper.settings.AiProviderMapper;
 import com.chua.starter.ai.support.model.AiModelDTO;
 import com.chua.starter.ai.support.service.settings.AiModelService;
 import com.chua.common.support.converter.Converter;
@@ -38,8 +36,6 @@ public class AiModelServiceImpl implements AiModelService {
 
     /** 模型mapper */
     private final AiModelMapper modelMapper;
-    /** 提供者mapper */
-    private final AiProviderMapper providerMapper;
     /** Manufacturermapper */
     private final SysAiManufacturerMapper manufacturerMapper;
 
@@ -51,8 +47,8 @@ public class AiModelServiceImpl implements AiModelService {
                         .orderByAsc(SysAiModel::getModelSort)
                         .orderByAsc(SysAiModel::getModelCreateTime));
 
-        Map<Long, String> providerNames = providerMapper.selectList(null).stream()
-                .collect(Collectors.toMap(SysAiProvider::getProviderId, SysAiProvider::getProviderName,
+        Map<Long, String> providerNames = manufacturerMapper.selectList(null).stream()
+                .collect(Collectors.toMap(m -> Long.valueOf(m.getId()), m -> m.getName() == null ? "" : m.getName(),
                         (a, b) -> a));
 
         return models.stream()
@@ -116,10 +112,8 @@ public class AiModelServiceImpl implements AiModelService {
                 return name;
             }
         } else {
-            SysAiProvider provider = providerMapper.selectById(providerId);
-            if (provider != null) {
-                return provider.getProviderName();
-            }
+            SysAiManufacturer manufacturer = manufacturerMapper.selectById(providerId.intValue());
+            return manufacturer != null ? manufacturer.getName() : null;
         }
         // 回退厂商表
         SysAiManufacturer manufacturer = manufacturerMapper.selectById(providerId.intValue());
