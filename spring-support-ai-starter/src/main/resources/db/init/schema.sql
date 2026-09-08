@@ -1200,6 +1200,12 @@ SELECT * FROM (
     NULL,
     0, 0, 1, 210,
     'SafeTensors  Python  Qwen2.5 / Llama3.2 / MiniMind2  safetensors '
+  UNION ALL
+  SELECT 'agnes', 'Agnes AI',
+    NULL, 'https://apihub.agnes-ai.cn/v1',
+    'sk-REPLACE_WITH_AGNES_KEY',
+    1, 0, 1, 50,
+    'Agnes AI - agnes-2.0-flash / agnes-2.5-flash / agnes-3.0-flash'
 ) seed
 WHERE NOT EXISTS (
   SELECT 1 FROM `sys_ai_manufacturer`

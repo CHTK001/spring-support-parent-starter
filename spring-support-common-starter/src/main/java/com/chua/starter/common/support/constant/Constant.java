@@ -12,7 +12,6 @@ public final class Constant {
     public static final String DEFAULT_EXECUTOR = "default-executor";
     public static final String DEFAULT_EXECUTOR2 = "default-executor-2";
     public static final String DEFAULT_TASK_EXECUTOR = "default-task-executor";
-    public static final String DEFAULT_SER = "123456";
 
     public static final String ADMIN = "ADMIN";
     public static final String OPS = "OPS";
