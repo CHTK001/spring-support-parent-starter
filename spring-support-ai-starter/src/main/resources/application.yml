@@ -95,12 +95,3 @@ mybatis-plus:
     db-config:
       id-type: ASSIGN_ID
   mapper-locations: classpath*:mapper/**/*.xml
-
-# 账号自动注册配置
-plugin:
-  account:
-    register:
-      enable: false
-      yescaptcha-key: ""
-      email-provider: fce
-      replenish-interval-seconds: 3600
