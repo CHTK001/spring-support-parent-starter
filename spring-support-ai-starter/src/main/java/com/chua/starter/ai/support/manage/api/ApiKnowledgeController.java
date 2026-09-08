@@ -582,9 +582,21 @@ public class ApiKnowledgeController {
     // 绑定
     // ─────────────────────────────────────────────────────────────────────────
 
-    @GetMapping("/binding/{kind}/{target_id:.+}")
+    /**
+     * 获取绑定（通过路径变量，适用于无斜杠的 ID）。
+     */
+    @GetMapping("/binding/{kind}/{target_id}")
     public ApiResult<Map<String, Object>> getBinding(@PathVariable String kind,
-                                                     @PathVariable String target_id) {
+                                                      @PathVariable String target_id) {
+        return ApiResult.ok(requireBinding(kind, target_id));
+    }
+
+    /**
+     * 获取绑定（通过查询参数，支持 target_id 中包含斜杠的路径）。
+     */
+    @GetMapping("/binding")
+    public ApiResult<Map<String, Object>> getBindingByQuery(@RequestParam String kind,
+                                                             @RequestParam String target_id) {
         return ApiResult.ok(requireBinding(kind, target_id));
     }
 
