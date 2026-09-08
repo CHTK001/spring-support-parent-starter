@@ -633,6 +633,13 @@
                 <artifactId>spring-support-ssh-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <!-- 账号自动注册与管理模块 -->
+            <dependency>
+                <groupId>com.chua</groupId>
+                <artifactId>spring-support-account-starter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             
             <dependency>
                 <groupId>com.chua</groupId>
