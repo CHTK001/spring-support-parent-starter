@@ -320,6 +320,15 @@ CREATE TABLE IF NOT EXISTS `sys_ai_session` (
   PRIMARY KEY (`sys_ai_session_id`),
   KEY `idx_ai_session_user_type` (`sys_user_id`, `sys_ai_session_type`)
 ) COMMENT='AI ';
+CREATE TABLE IF NOT EXISTS `sys_ai_conversation_uuid` (
+  `id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `uuid` VARCHAR(36) NOT NULL COMMENT 'UUIDv7（前端会话 ID）',
+  `dialog_id` BIGINT NOT NULL COMMENT '对话 ID（AIDialog 自增 Long）',
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_conversation_uuid` (`uuid`),
+  KEY `idx_conversation_dialog_id` (`dialog_id`)
+) COMMENT='Nomifun 会话 UUID 映射表';
 CREATE TABLE IF NOT EXISTS `sys_ai_message` (
   `sys_ai_message_id` INT NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sys_ai_session_id` INT NOT NULL COMMENT 'ID',
