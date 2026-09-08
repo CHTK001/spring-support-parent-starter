@@ -32,6 +32,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.chua.starter.common.support.api.annotations.ApiReturnFormatIgnore;
+
 /**
  * 创意工坊资产库 REST 控制器。
  *
@@ -45,6 +47,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequestMapping("/api/workshop")
 @RequiredArgsConstructor
 @Tag(name = "创意工坊资产库", description = "资产 CRUD、上传、集合管理")
+@ApiReturnFormatIgnore
 public class WorkshopAssetController {
 
     private final WorkshopAssetService assetService;
