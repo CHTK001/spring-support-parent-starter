@@ -280,7 +280,7 @@ public class UsageAggregationTask implements SchedulingConfigurer {
             } catch (Throwable e) {
                 // 用 Throwable 而非 Exception：单个 Parser 的 Error（如缺依赖 NoClassDefFoundError）
                 // 也会捕获，避免中断后续 parser 的同步
-                log.warn("[UsageAggregation] UsageParser[{}] 同步失败: {}", entry.getKey(), e.getMessage());
+                log.warn("[UsageAggregation] UsageParser[{}] 同步失败: {}", entry.getKey(), e.getMessage(), e);
                 recordLog(LOG_LEVEL_ERROR, String.format("[%s] 同步失败: %s", entry.getKey(), e.getMessage()));
             }
         }
@@ -381,7 +381,8 @@ public class UsageAggregationTask implements SchedulingConfigurer {
         if (totalCost == null || totalCost == 0) {
             SysAiPricing pricing = pricingService.getLatestPricing(
                     record.getSysAiUsageProvider(), record.getSysAiUsageModel());
-            if (pricing != null) {
+            if (pricing != null && pricing.getInputPricePer1k() != null
+                    && pricing.getOutputPricePer1k() != null) {
                 int inputTokens = usage.getInputTokens() != null ? usage.getInputTokens() : 0;
                 int outputTokens = usage.getOutputTokens() != null ? usage.getOutputTokens() : 0;
                 BigDecimal inputPrice = BigDecimal.valueOf(pricing.getInputPricePer1k());
