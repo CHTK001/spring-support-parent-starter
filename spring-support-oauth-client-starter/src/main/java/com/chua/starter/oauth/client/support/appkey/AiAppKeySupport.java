@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import javax.sql.DataSource;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * AI AppKey 本地认证支持。
@@ -30,6 +31,11 @@ public class AiAppKeySupport {
      * 全局静态实例（由 AuthClientConfiguration 注册，供每请求新建的 WebRequest 读取）
      */
     private static volatile AiAppKeySupport INSTANCE;
+
+    /**
+     * 安全 SQL 标识符校验规则（仅字母 / 数字 / 下划线）
+     */
+    private static final Pattern SAFE_IDENTIFIER = Pattern.compile("^[a-zA-Z0-9_]+$");
 
     /**
      * 注册全局实例。
@@ -107,14 +113,18 @@ public class AiAppKeySupport {
                 return null;
             }
             AuthClientProperties.AiAppKey cfg = authProperties.getAiAppKey();
+            String table = safeIdentifier(cfg.getTableName());
+            String appKeyColumn = safeIdentifier(cfg.getAppKeyColumn());
+            String statusColumn = safeIdentifier(cfg.getStatusColumn());
             StringBuilder sql = new StringBuilder("SELECT * FROM ")
-                    .append(cfg.getTableName())
+                    .append(table)
                     .append(" WHERE ")
-                    .append(cfg.getAppKeyColumn()).append(" = ?")
-                    .append(" AND ").append(cfg.getStatusColumn()).append(" = 1");
+                    .append(appKeyColumn).append(" = ?")
+                    .append(" AND ").append(statusColumn).append(" = 1");
             if (cfg.getExpireTimeColumn() != null && !cfg.getExpireTimeColumn().isBlank()) {
-                sql.append(" AND (").append(cfg.getExpireTimeColumn()).append(" IS NULL OR ")
-                        .append(cfg.getExpireTimeColumn()).append(" > CURRENT_TIMESTAMP)");
+                String expireColumn = safeIdentifier(cfg.getExpireTimeColumn());
+                sql.append(" AND (").append(expireColumn).append(" IS NULL OR ")
+                        .append(expireColumn).append(" > CURRENT_TIMESTAMP)");
             }
             List<Map<String, Object>> rows = executor.query(sql.toString(), appKey);
             if (rows == null || rows.isEmpty()) {
@@ -126,6 +136,24 @@ public class AiAppKeySupport {
             log.warn("[AiAppKey] AppKey 校验异常: {}", e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * 校验并返回安全的 SQL 标识符（仅允许字母、数字、下划线）。
+     *
+     * @param id 待校验标识符
+     * @return 去除首尾空白后的标识符
+     * @throws IllegalArgumentException 标识符非法时抛出
+     */
+    private String safeIdentifier(String id) {
+        if (id == null) {
+            throw new IllegalArgumentException("SQL 标识符不能为空");
+        }
+        String trimmed = id.trim();
+        if (!SAFE_IDENTIFIER.matcher(trimmed).matches()) {
+            throw new IllegalArgumentException("非法的 SQL 标识符: " + id);
+        }
+        return trimmed;
     }
 
     /**
