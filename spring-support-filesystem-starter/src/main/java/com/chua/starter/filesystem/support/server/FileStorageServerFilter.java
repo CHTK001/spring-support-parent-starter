@@ -76,6 +76,11 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     private volatile List<FileStoragePreviewProvider> previewProviderCache;
 
     /**
+     * 并发去重：key → 正在进行的 SPI 预览 Future，避免同一文件重复转换
+     */
+    private final ConcurrentHashMap<String, CompletableFuture<byte[]>> inflightMap = new ConcurrentHashMap<>();
+
+    /**
      * 创建 FileStorageServerFilter 实例
      * @param setting setting
      */
@@ -652,11 +657,14 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     }
 
     /**
-     * 尝试通过 SPI 预览提供者转换文件为 HTML 预览页。
+     * 尝试通过 SPI 预览提供者转换文件为 HTML 预览页（带并发去重）。
      *
      * <p>classpath 中存在 utils-support-filestorage-starter 时，可预览
      * xlsx/xls/docx/doc/pptx/ppt（Univer）、odt/ods/odp（OpenDocument）、vsd（Visio）等；
      * 无可用提供者或转换失败时返回 null，回退为原始字节响应。</p>
+     *
+     * <p>并发去重：同一文件的并发请求会共享同一个转换 Future，
+     * 避免重复调用 SPI 提供者浪费 CPU/IO。</p>
      *
      * @param content  文件内容
      * @param fileName 文件名（用于推断扩展名）
@@ -669,21 +677,43 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
         String ext = fileName.contains(".")
                 ? fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase() : "";
-        for (FileStoragePreviewProvider provider : providers) {
-            if (!provider.supports(ext, "")) {
-                continue;
-            }
-            try {
-                PreviewResult result = provider.preview(content, ext, "");
-                if (result == null) {
-                    continue;
+
+        // 构建去重 key：内容首 1KB + 长度 + 扩展名（兼顾性能与唯一性）
+        String dedupKey = buildDedupKey(content, ext);
+
+        CompletableFuture<byte[]> future = inflightMap.computeIfAbsent(dedupKey, k -> {
+            return CompletableFuture.supplyAsync(() -> {
+                try {
+                    for (FileStoragePreviewProvider provider : providers) {
+                        if (!provider.supports(ext, "")) {
+                            continue;
+                        }
+                        try {
+                            PreviewResult result = provider.preview(content, ext, "");
+                            if (result == null) {
+                                continue;
+                            }
+                            return wrapPreviewPage(result).getBytes(StandardCharsets.UTF_8);
+                        } catch (Exception e) {
+                            log.warn("SPI 预览提供者 {} 转换失败: {}",
+                                    provider.getClass().getSimpleName(), e.getMessage());
+                        }
+                    }
+                    return null;
+                } finally {
+                    inflightMap.remove(k);
                 }
-                return wrapPreviewPage(result).getBytes(StandardCharsets.UTF_8);
-            } catch (Exception e) {
-                log.warn("SPI 预览提供者 {} 转换失败: {}", provider.getClass().getSimpleName(), e.getMessage());
-            }
+            });
+        });
+
+        try {
+            return future.get(5, java.util.concurrent.TimeUnit.MINUTES);
+        } catch (Exception e) {
+            log.warn("等待 SPI 预览转换完成超时或失败: fileName={}, error={}", fileName, e.getMessage());
+            future.cancel(true);
+            inflightMap.remove(dedupKey);
+            return null;
         }
-        return null;
     }
 
     /**
@@ -932,5 +962,25 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             return "";
         }
         return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    /**
+     * 构建 SPI 预览去重键。
+     *
+     * <p>取内容首 1KB + 总长度 + 扩展名的组合作为键，
+     * 兼顾性能（避免全量哈希）与唯一性（不同内容大概率不同键）。</p>
+     *
+     * @param content 文件内容
+     * @param ext     文件扩展名
+     * @return 去重键
+     */
+    private static String buildDedupKey(byte[] content, String ext) {
+        int sampleLen = Math.min(content.length, 1024);
+        long hash = 0xcbf29ce484222325L; // FNV-1a 初始值
+        for (int i = 0; i < sampleLen; i++) {
+            hash ^= content[i];
+            hash *= 0x100000001b3L;
+        }
+        return Long.toHexString(hash) + ":" + content.length + ":" + ext;
     }
 }
