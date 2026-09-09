@@ -41,11 +41,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
+import org.springframework.beans.factory.ObjectProvider;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 
 /**
  * 监控模块 REST 接口
@@ -85,9 +87,9 @@ public class MonitorController {
     /** 服务器主机服务 */
     private final ServerHostService serverHostService;
 
-    /** 系统 Redis 连接（当前应用自身连接的 Redis） */
+    /** 系统 Redis 连接（当前应用自身连接的 Redis；未配置 Redis 时为 null，前端据此隐藏菜单） */
     /** SystemRedis */
-    private final StringRedisTemplate redisTemplate;
+    private final ObjectProvider<StringRedisTemplate> redisTemplateProvider;
 
     // ==================== 资产 CRUD ====================
 
@@ -480,6 +482,7 @@ public class MonitorController {
     @GetMapping("/system/redis-info")
     public ReturnResult<Map<String, Object>> getSystemRedisInfo() {
         Map<String, Object> data = new java.util.LinkedHashMap<>();
+        StringRedisTemplate redisTemplate = redisTemplateProvider.getIfAvailable();
         if (redisTemplate == null || redisTemplate.getConnectionFactory() == null) {
             return ReturnResult.ok(data);
         }
