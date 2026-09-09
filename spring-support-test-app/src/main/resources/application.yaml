@@ -50,7 +50,7 @@ plugin:
       scope:
         enable: true
   oauth:
-    enable: true
+    enable: false
     block-address:
       - /__authfilter_off__/**
     whitelist:

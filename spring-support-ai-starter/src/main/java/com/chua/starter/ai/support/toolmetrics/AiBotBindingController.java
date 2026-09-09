@@ -174,6 +174,25 @@ public class AiBotBindingController {
     }
 
     /**
+     * 查询 Bot 运行状态（ILink 会话是否存活）。
+     *
+     * <p>ILink 会话超时后（errcode=-14）客户端停止轮询，前端据此展示
+     * 「会话已过期，请重新扫码绑定」提示与重新扫码入口。</p>
+     *
+     * @param botId Bot 唯一标识
+     * @return status: running=会话存活 / stopped=已停止需重新扫码
+     */
+    @GetMapping("/runtime-status")
+    public ReturnResult<Map<String, Object>> runtimeStatus(@RequestParam String botId) {
+        if (StringUtils.isBlank(botId)) {
+            return ReturnResult.illegal("botId 不能为空");
+        }
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("status", aiBotChatService.runtimeStatus(botId.trim()));
+        return ReturnResult.ok(data);
+    }
+
+    /**
      * 删除单个会话的聊天记录（清理僵尸会话）。
      *
      * <p>绑定记录删除后消息表仍会残留历史，此接口按 botId + fromUser 定向清除。</p>

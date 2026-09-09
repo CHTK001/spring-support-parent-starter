@@ -134,6 +134,20 @@ public class AiBotChatService {
     }
 
     /**
+     * 查询 Bot 运行状态（ILink 会话是否存活）。
+     *
+     * <p>ILink 会话超时（errcode=-14）后客户端停止轮询并从 runningBots 移除，
+     * 前端据此提示「会话已过期，请重新扫码绑定」。</p>
+     *
+     * @param botId Bot 唯一标识
+     * @return running=会话存活；stopped=未在运行（超时/停止），需重新扫码
+     */
+    public String runtimeStatus(String botId) {
+        ILinkBotClient client = runningBots.get(botId);
+        return client != null ? "running" : "stopped";
+    }
+
+    /**
      * 停止指定 Bot 的消息轮询。
      *
      * @param botId Bot 唯一标识
@@ -247,7 +261,7 @@ public class AiBotChatService {
             conv.setLastTime(m.getCreateTime());
         }
         List<BotConversation> result = new ArrayList<>(byKey.values());
-        // 补全昵称与状态（绑定记录按 botId 匹配）
+        // 补全在线状态（按绑定记录与 botId 匹配）
         List<SysAiBotBinding> bindings = botBindingMapper.selectList(Wrappers.lambdaQuery());
         Map<String, SysAiBotBinding> byBotId = bindings.stream()
                 .filter(b -> b.getBotId() != null)
@@ -262,6 +276,30 @@ public class AiBotChatService {
             if (c.getNickname() == null || c.getNickname().isBlank()) {
                 c.setNickname(c.getFromUser());
             }
+        }
+        // 无消息历史的绑定用户也进入会话列表（左侧至少可见，避免空白页）
+        for (SysAiBotBinding binding : bindings) {
+            if (binding.getBotId() == null) {
+                continue;
+            }
+            String convUser = (binding.getNickname() != null && !binding.getNickname().isBlank())
+                    ? binding.getNickname() : binding.getBotId();
+            if (convUser == null || convUser.isBlank()) {
+                continue;
+            }
+            String key = binding.getBotId() + "|" + convUser;
+            if (byKey.containsKey(key)) {
+                continue;
+            }
+            BotConversation c = new BotConversation();
+            c.setBotId(binding.getBotId());
+            c.setFromUser(convUser);
+            c.setNickname(convUser);
+            c.setStatus(binding.getStatus());
+            c.setPlatform(binding.getPlatform());
+            c.setLastTime(binding.getLastActiveTime());
+            result.add(c);
+            byKey.put(key, c);
         }
         result.sort((a, b) -> {
             if (a.getLastTime() == null) return 1;

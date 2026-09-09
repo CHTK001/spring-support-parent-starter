@@ -1,7 +1,7 @@
 package com.chua.starter.account.service;
 
 import com.chua.common.support.datasearch.network.proxy.ProxyFetcherFlow;
-import com.chua.common.support.network.client.HttpClientBuilder;
+import com.chua.common.support.network.client.HttpClientFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -115,12 +115,12 @@ public class ProxyManager {
             return testCache.get(cacheKey);
         }
         try {
-            HttpClientBuilder builder = new HttpClientBuilder(url)
+            var resp = HttpClientFactory.of(url)
                     .proxy(proxyHost, proxyPort)
                     .accept("*/*")
                     .connectTimeout(10000)
-                    .readTimeout(10000);
-            var resp = builder.get();
+                    .readTimeout(10000)
+                    .get();
             int status = resp.getStatusCode();
             testCache.put(cacheKey, status);
             log.info("[ProxyManager] 代理测试 {} -> HTTP {}", url, status);
