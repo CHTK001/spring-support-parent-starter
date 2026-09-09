@@ -141,18 +141,21 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
         LocalDateTime cutoff = LocalDateTime.now().minusDays(config.getMigrateBeforeDays());
         String targetTable = resolvePartitionTable(config, cutoff.toLocalDate());
         ensurePartitionTableExists(config.getSourceTable(), targetTable);
-        String insertSql = "insert into " + targetTable + " select * from " + config.getSourceTable()
-                + " where " + timeCol + " < ? and " + idCol + " not in (select " + idCol + " from " + targetTable + ")";
+        String sourceTable = validateTableName(config.getSourceTable(), "源表名");
+        String safeTimeCol = validateTableName(timeCol, "timeColumn");
+        String safeIdCol = validateTableName(idCol, "idColumn");
+        String insertSql = "insert into " + targetTable + " select * from " + sourceTable
+                + " where " + safeTimeCol + " < ? and " + safeIdCol + " not in (select " + safeIdCol + " from " + targetTable + ")";
         int migrated = jdbcTemplate.update(insertSql, cutoff);
         log.info("[分表] {} 迁移完成: {} 条数据迁移至 {}, 截止时间 {}", businessType, migrated, targetTable, cutoff);
 
         boolean dryRun = Boolean.TRUE.equals(config.getMigrationDryRun());
         if (dryRun) {
-            log.info("[分表] dry-run 模式开启，跳过源数据删除: {} <= {}", config.getSourceTable(), targetTable);
+            log.info("[分表] dry-run 模式开启，跳过源数据删除: {} <= {}", sourceTable, targetTable);
         } else if (!Boolean.TRUE.equals(config.getKeepSourceData())) {
             int verified = verifyPartitionQuery(businessType, cutoff);
             if (verified > 0) {
-                int deleted = jdbcTemplate.update("delete from " + config.getSourceTable() + " where " + timeCol + " < ?", cutoff);
+                int deleted = jdbcTemplate.update("delete from " + sourceTable + " where " + safeTimeCol + " < ?", cutoff);
                 log.info("[分表] {} 源数据清理完成: 删除 {} 条", businessType, deleted);
             } else {
                 log.warn("[分表] {} 分区查询校验未通过，保留源数据避免丢失", businessType);
@@ -175,8 +178,9 @@ public class OrderPartitionConfigServiceImpl implements OrderPartitionConfigServ
                 return 0;
             }
             String targetTable = resolvePartitionTable(config, cutoff.toLocalDate());
+            String safeTimeCol = validateTableName(timeCol, "timeColumn");
             Integer count = jdbcTemplate.queryForObject(
-                    "select count(1) from " + targetTable + " where " + timeCol + " < ?", Integer.class, cutoff);
+                    "select count(1) from " + targetTable + " where " + safeTimeCol + " < ?", Integer.class, cutoff);
             return count != null ? count : 0;
         } catch (Exception e) {
             log.error("[分表] 分区查询校验异常: {}", e.getMessage());
