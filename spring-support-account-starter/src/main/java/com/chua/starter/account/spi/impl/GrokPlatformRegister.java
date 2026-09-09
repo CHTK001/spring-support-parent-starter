@@ -2,11 +2,13 @@ package com.chua.starter.account.spi.impl;
 
 import com.chua.common.support.datasearch.email.model.EmailInfo;
 import com.chua.common.support.datasearch.email.spi.EmailProvider;
+import com.chua.common.support.network.client.HttpClientBuilder;
 import com.chua.common.support.network.client.HttpClientFactory;
 import com.chua.common.support.spi.ServiceProvider;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.starter.account.Account;
 import com.chua.starter.account.CaptchaSolver;
+import com.chua.starter.account.service.ProxyManager;
 import com.chua.starter.account.spi.PlatformRegister;
 import lombok.extern.slf4j.Slf4j;
 
@@ -34,9 +36,11 @@ public class GrokPlatformRegister implements PlatformRegister {
     private static final int EMAIL_POLL_INTERVAL_MS = 5000;
 
     private final CaptchaSolver captchaSolver;
+    private final ProxyManager proxyManager;
 
-    public GrokPlatformRegister(CaptchaSolver captchaSolver) {
+    public GrokPlatformRegister(CaptchaSolver captchaSolver, ProxyManager proxyManager) {
         this.captchaSolver = captchaSolver;
+        this.proxyManager = proxyManager;
     }
 
     @Override
@@ -147,11 +151,12 @@ public class GrokPlatformRegister implements PlatformRegister {
             headers.put("origin", SITE_URL);
             headers.put("referer", SITE_URL + "/sign-up");
 
-             String resp = HttpClientFactory.of(url)
-                     .headers(headers)
-                     .body(data)
-                     .post()
-                     .getBodyString();
+            HttpClientBuilder builder = HttpClientFactory.of(url)
+                    .headers(headers)
+                    .body(data);
+            applyProxy(builder, proxyUrl);
+
+            String resp = builder.post().getBodyString();
             return resp != null;
         } catch (Exception e) {
             log.warn("[Grok] 发送验证码异常: {}", e.getMessage());
@@ -213,12 +218,12 @@ public class GrokPlatformRegister implements PlatformRegister {
                 email, password, turnstileToken, code
             );
 
-            String resp = HttpClientFactory.of(url)
+            HttpClientBuilder builder = HttpClientFactory.of(url)
                     .headers(headers)
-                    .body(payload)
-                    .post()
-                    .getBodyString();
+                    .body(payload);
+            applyProxy(builder, proxyUrl);
 
+            String resp = builder.post().getBodyString();
             if (resp != null && resp.contains("sso")) {
                 com.fasterxml.jackson.databind.JsonNode root =
                     new com.fasterxml.jackson.databind.ObjectMapper().readTree(resp);

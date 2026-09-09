@@ -30,12 +30,13 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AccountRegisterAutoConfiguration {
 
     private final AccountRegisterProperties properties;
-    private final CaptchaSolver captchaSolver;
+    private final org.springframework.beans.factory.ObjectProvider<CaptchaSolver> captchaSolverProvider;
     private final Map<String, List<Account>> accountPools = new ConcurrentHashMap<>();
 
-    public AccountRegisterAutoConfiguration(AccountRegisterProperties properties, CaptchaSolver captchaSolver) {
+    public AccountRegisterAutoConfiguration(AccountRegisterProperties properties,
+                                            org.springframework.beans.factory.ObjectProvider<CaptchaSolver> captchaSolverProvider) {
         this.properties = properties;
-        this.captchaSolver = captchaSolver;
+        this.captchaSolverProvider = captchaSolverProvider;
     }
 
     /**
@@ -43,7 +44,7 @@ public class AccountRegisterAutoConfiguration {
      */
     @PostConstruct
     public void init() {
-        if (properties.getAutoRegisterCount() > 0 && captchaSolver != null) {
+        if (properties.getAutoRegisterCount() > 0 && captchaSolverProvider.getIfAvailable() != null) {
             log.info("[AccountRegister] 启动时预注册 {} 个 Grok 账号", properties.getAutoRegisterCount());
             PlatformRegister grokRegister = getPlatformRegister("grok");
             if (grokRegister != null) {
@@ -63,7 +64,7 @@ public class AccountRegisterAutoConfiguration {
      */
     @Scheduled(fixedDelayString = "${plugin.account.register.replenish-interval-seconds:3600}000")
     public void replenish() {
-        if (captchaSolver == null) return;
+        if (captchaSolverProvider.getIfAvailable() == null) return;
 
         for (Map.Entry<String, List<Account>> entry : accountPools.entrySet()) {
             List<Account> pool = entry.getValue();
@@ -138,7 +139,10 @@ public class AccountRegisterAutoConfiguration {
 
     private PlatformRegister getPlatformRegister(String platformName) {
         try {
-            return ServiceProvider.of(PlatformRegister.class).getExtension(platformName);
+            CaptchaSolver solver = captchaSolverProvider.getIfAvailable();
+            return solver != null
+                    ? ServiceProvider.of(PlatformRegister.class).getNewExtension(platformName, solver)
+                    : ServiceProvider.of(PlatformRegister.class).getNewExtension(platformName);
         } catch (Exception e) {
             log.warn("[AccountRegister] 获取平台注册器失败: {}", platformName);
             return null;

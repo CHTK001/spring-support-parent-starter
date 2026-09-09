@@ -3,6 +3,7 @@ package com.chua.starter.account.config;
 import com.chua.starter.account.CaptchaSolver;
 import com.chua.starter.account.impl.YesCaptchaSolver;
 import lombok.Data;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -49,10 +50,8 @@ public class AccountRegisterProperties {
     private long replenishIntervalSeconds = 3600;
 
     @Bean
+    @ConditionalOnProperty(prefix = "plugin.account.register", name = "enable", havingValue = "true")
     public CaptchaSolver captchaSolver() {
-        if (!enable || yescaptchaKey == null || yescaptchaKey.isBlank()) {
-            return null;
-        }
         return new YesCaptchaSolver(yescaptchaKey);
     }
 }

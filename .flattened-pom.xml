@@ -334,10 +334,6 @@
         <version>${loki4j.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-undertow</artifactId>
-      </dependency>
-      <dependency>
         <groupId>com.chua</groupId>
         <artifactId>spring-support-common-starter</artifactId>
         <version>${project.version}</version>

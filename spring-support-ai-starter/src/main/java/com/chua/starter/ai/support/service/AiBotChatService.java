@@ -381,9 +381,16 @@ public class AiBotChatService {
             }
             // 4. 调用模型并记录用量（token/费用入库，供 usage 页统计）。
             //    受 Bot 绑定上的「记录用量」专属开关控制：关闭时不记录。
+            long start = System.currentTimeMillis();
             ChatSyncResponse response = chatClient.chatSyncWithResponse(userMsg);
+            long end = System.currentTimeMillis();
             boolean recordUsage = !Boolean.FALSE.equals(bot.getRecordUsage());
             if (recordUsage && response != null && response.getUsage() != null) {
+                long duration = Math.max(0L, end - start);
+                response.getUsage().setDurationMillis(duration);
+                if (response.getUsage().getFirstTokenLatencyMillis() == null) {
+                    response.getUsage().setFirstTokenLatencyMillis(duration);
+                }
                 try {
                     usageRecorderInterceptor.record(
                             "bot",

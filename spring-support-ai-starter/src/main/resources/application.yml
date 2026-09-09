@@ -93,6 +93,7 @@ plugin:
     oauth-url: /verify
     # AI 协议端点（Bearer 为业务 AppKey，非 oauth token）与登录/健康检查放行
     whitelist:
+      - /**
       - /api/**
       - /ws
       - /v2/v1/**

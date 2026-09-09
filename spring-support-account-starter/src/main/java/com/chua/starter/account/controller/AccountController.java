@@ -1,6 +1,7 @@
 package com.chua.starter.account.controller;
 
 import com.chua.starter.account.Account;
+import com.chua.starter.account.CaptchaSolver;
 import com.chua.starter.account.service.AccountPoolService;
 import com.chua.starter.account.spi.PlatformRegister;
 import com.chua.common.support.spi.ServiceProvider;
@@ -26,6 +27,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AccountController {
 
     private final AccountPoolService poolService;
+    private final org.springframework.beans.factory.ObjectProvider<CaptchaSolver> captchaSolverProvider;
+    private final com.chua.starter.account.config.AccountRegisterProperties properties;
+    private final com.chua.starter.account.service.ProxyManager proxyManager;
 
     /** 简单内存存储的配置 */
     private final Map<String, Object> settingsStore = new ConcurrentHashMap<>();
@@ -52,6 +56,56 @@ public class AccountController {
     public void saveSettings(@RequestBody Map<String, Object> body) {
         log.info("[Account] 保存配置: {}", body);
         settingsStore.putAll(body);
+        if (body.containsKey("proxy")) {
+            Object proxy = body.get("proxy");
+            proxyManager.setProxy(proxy != null ? proxy.toString() : null);
+        }
+    }
+
+    /**
+     * 获取当前代理配置
+     */
+    @GetMapping("/proxy")
+    public Map<String, Object> getProxy() {
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("enabled", proxyManager.isEnabled());
+        result.put("proxy", proxyManager.getRawProxy());
+        result.put("host", proxyManager.getProxyHost());
+        result.put("port", proxyManager.getProxyPort());
+        return result;
+    }
+
+    /**
+     * 设置代理
+     */
+    @PostMapping("/proxy")
+    public Map<String, Object> setProxy(@RequestBody Map<String, Object> body) {
+        Object proxy = body.get("proxy");
+        proxyManager.setProxy(proxy != null ? proxy.toString() : null);
+        settingsStore.put("proxy", proxyManager.getRawProxy());
+        return getProxy();
+    }
+
+    /**
+     * 测试代理连通性（默认 accounts.x.ai）
+     */
+    @PostMapping("/proxy/test")
+    public Map<String, Object> testProxy(@RequestBody(required = false) Map<String, Object> body) {
+        String target = body != null && body.get("url") != null ? body.get("url").toString() : null;
+        int status = proxyManager.testProxy(target);
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("status", status);
+        result.put("reachable", status > 0 && status < 500);
+        result.put("url", target != null ? target : "https://accounts.x.ai/sign-up");
+        return result;
+    }
+
+    /**
+     * 获取免费代理列表
+     */
+    @GetMapping("/proxy/free")
+    public List<String> freeProxies() {
+        return proxyManager.fetchFreeProxies();
     }
 
     /**
@@ -67,7 +121,10 @@ public class AccountController {
         if (register == null) {
             return Account.builder().active(false).build();
         }
-        Account account = register.register(null, emailProvider, proxy);
+        Account account = register.register(
+                null,
+                emailProvider != null ? emailProvider : properties.getEmailProvider(),
+                proxy != null ? proxy : properties.getProxy());
         if (account != null) {
             poolService.addAccount(account);
         }
@@ -87,7 +144,10 @@ public class AccountController {
         if (register == null) {
             return List.of();
         }
-        List<Account> accounts = register.registerBatch(count, emailProvider, null);
+        List<Account> accounts = register.registerBatch(
+                count,
+                emailProvider != null ? emailProvider : properties.getEmailProvider(),
+                properties.getProxy());
         poolService.addAccounts(accounts);
         return accounts;
     }
@@ -154,7 +214,7 @@ public class AccountController {
             @RequestParam(defaultValue = "1") int count) {
         PlatformRegister register = getPlatformRegister(platformType);
         if (register == null) return List.of();
-        List<Account> accounts = register.registerBatch(count, null, null);
+        List<Account> accounts = register.registerBatch(count, properties.getEmailProvider(), properties.getProxy());
         poolService.addAccounts(accounts);
         return accounts;
     }
@@ -162,7 +222,10 @@ public class AccountController {
     private PlatformRegister getPlatformRegister(Account.PlatformType type) {
         try {
             String name = type.name().toLowerCase();
-            return ServiceProvider.of(PlatformRegister.class).getExtension(name);
+            CaptchaSolver solver = captchaSolverProvider.getIfAvailable();
+            return solver != null
+                    ? ServiceProvider.of(PlatformRegister.class).getNewExtension(name, solver)
+                    : ServiceProvider.of(PlatformRegister.class).getNewExtension(name);
         } catch (Exception e) {
             log.warn("[Account] 获取平台注册器失败: {}", type);
             return null;
