@@ -1,6 +1,7 @@
 package com.chua.starter.monitor.support.controller;
 
 import com.chua.common.support.lang.code.ReturnResult;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import com.chua.starter.monitor.support.entity.MsMonitor;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.service.ServerHostService;
@@ -83,6 +84,10 @@ public class MonitorController {
     /** 服务器台账服务（资产联动 server-hosts 查询） */
     /** 服务器主机服务 */
     private final ServerHostService serverHostService;
+
+    /** 系统 Redis 连接（当前应用自身连接的 Redis） */
+    /** SystemRedis */
+    private final StringRedisTemplate redisTemplate;
 
     // ==================== 资产 CRUD ====================
 
@@ -461,6 +466,75 @@ public class MonitorController {
     }
 
     // ==================== Redis 操作 ====================
+
+    /**
+     * 获取当前系统 Redis 信息（INFO 关键指标）。
+     * <p>
+     * 直接读取应用自身连接的 Redis（spring.data.redis），与监控资产/Agent 无关；
+     * 无 Redis 配置时前端不显示该菜单。
+     * </p>
+     *
+     * @return Redis INFO 关键指标
+     */
+    @Operation(summary = "获取当前系统 Redis 信息")
+    @GetMapping("/system/redis-info")
+    public ReturnResult<Map<String, Object>> getSystemRedisInfo() {
+        Map<String, Object> data = new java.util.LinkedHashMap<>();
+        if (redisTemplate == null || redisTemplate.getConnectionFactory() == null) {
+            return ReturnResult.ok(data);
+        }
+        try (var connection = redisTemplate.getConnectionFactory().getConnection()) {
+            if (connection == null) {
+                return ReturnResult.ok(data);
+            }
+            Properties info = connection.serverCommands().info();
+            if (info != null) {
+                for (Map.Entry<Object, Object> entry : info.entrySet()) {
+                    String key = String.valueOf(entry.getKey());
+                    String value = String.valueOf(entry.getValue());
+                    if (key == null || key.isEmpty() || key.startsWith("db")) {
+                        continue;
+                    }
+                    Double num = parseRedisDouble(value);
+                    data.put(key, num != null ? num : value);
+                }
+            }
+            return ReturnResult.ok(data);
+        } catch (Exception e) {
+            return ReturnResult.error("Redis 连接失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 解析 Redis 数值（兼容 1.5M / 2G 等单位后缀）
+     *
+     * @param raw 原始值
+     * @return 数值或 null
+     */
+    private static Double parseRedisDouble(String raw) {
+        if (raw == null || raw.isEmpty()) {
+            return null;
+        }
+        try {
+            String s = raw.trim().toUpperCase();
+            double factor = 1.0;
+            if (s.endsWith("K")) {
+                factor = 1024.0;
+                s = s.substring(0, s.length() - 1);
+            } else if (s.endsWith("M")) {
+                factor = 1024.0 * 1024.0;
+                s = s.substring(0, s.length() - 1);
+            } else if (s.endsWith("G")) {
+                factor = 1024.0 * 1024.0 * 1024.0;
+                s = s.substring(0, s.length() - 1);
+            } else if (s.endsWith("B")) {
+                s = s.substring(0, s.length() - 1);
+            }
+            return Double.parseDouble(s.trim()) * factor;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
 
     @Operation(summary = "扫描 Redis Keys")
     @GetMapping("/operation/redis/{taskId}/keys")

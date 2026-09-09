@@ -31,12 +31,15 @@ public class AccountRegisterAutoConfiguration {
 
     private final AccountRegisterProperties properties;
     private final org.springframework.beans.factory.ObjectProvider<CaptchaSolver> captchaSolverProvider;
+    private final com.chua.starter.account.service.ProxyManager proxyManager;
     private final Map<String, List<Account>> accountPools = new ConcurrentHashMap<>();
 
     public AccountRegisterAutoConfiguration(AccountRegisterProperties properties,
-                                            org.springframework.beans.factory.ObjectProvider<CaptchaSolver> captchaSolverProvider) {
+                                            org.springframework.beans.factory.ObjectProvider<CaptchaSolver> captchaSolverProvider,
+                                            com.chua.starter.account.service.ProxyManager proxyManager) {
         this.properties = properties;
         this.captchaSolverProvider = captchaSolverProvider;
+        this.proxyManager = proxyManager;
     }
 
     /**
@@ -140,9 +143,10 @@ public class AccountRegisterAutoConfiguration {
     private PlatformRegister getPlatformRegister(String platformName) {
         try {
             CaptchaSolver solver = captchaSolverProvider.getIfAvailable();
-            return solver != null
-                    ? ServiceProvider.of(PlatformRegister.class).getNewExtension(platformName, solver)
-                    : ServiceProvider.of(PlatformRegister.class).getNewExtension(platformName);
+            if (solver != null) {
+                return ServiceProvider.of(PlatformRegister.class).getNewExtension(platformName, solver, proxyManager);
+            }
+            return ServiceProvider.of(PlatformRegister.class).getNewExtension(platformName, proxyManager);
         } catch (Exception e) {
             log.warn("[AccountRegister] 获取平台注册器失败: {}", platformName);
             return null;
