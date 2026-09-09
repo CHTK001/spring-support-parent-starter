@@ -4,10 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.network.server.Server;
 import com.chua.common.support.network.server.ServerBuilder;
 import com.chua.common.support.network.server.ServerSetting;
-import com.chua.common.support.network.server.proxy.HttpProxyServer;
-import com.chua.common.support.network.server.proxy.TcpProxyServer;
 import com.chua.common.support.network.sip.SipConfig;
 import com.chua.common.support.network.sip.SipServer;
+import com.chua.common.support.spi.ServiceProvider;
 import com.chua.starter.monitor.support.entity.MsServerNode;
 import com.chua.starter.monitor.support.enums.ServerNodeProtocol;
 import com.chua.starter.monitor.support.mapper.MsServerNodeMapper;
@@ -224,10 +223,26 @@ public class ServerNodeRegistry {
         List<ServerFilterDescriptor> descriptors = parseFilters(node);
         return switch (protocol) {
             case HTTP -> buildHttpServer(node, setting, descriptors);
-            case HTTP_PROXY -> buildProxyServer(new HttpProxyServer(setting, resolveBackend(config)), node, descriptors);
-            case TCP_PROXY -> buildProxyServer(new TcpProxyServer(setting, resolveBackend(config)), node, descriptors);
+            case HTTP_PROXY -> buildProxyServer(createProxyServer("http-proxy", setting, resolveBackend(config)), node, descriptors);
+            case TCP_PROXY -> buildProxyServer(createProxyServer("tcp-proxy", setting, resolveBackend(config)), node, descriptors);
             case SIP -> buildSipServer(node, config, descriptors);
         };
+    }
+
+    /**
+     * 通过 ServiceProvider SPI 创建代理服务器。
+     *
+     * @param spiName  SPI 扩展名（http-proxy / tcp-proxy）
+     * @param setting 服务器配置
+     * @param backend 后端地址
+     * @return 代理服务器实例
+     */
+    private Server createProxyServer(String spiName, ServerSetting setting, InetSocketAddress backend) {
+        Server server = ServiceProvider.of(Server.class).getNewExtension(spiName, setting, backend);
+        if (server == null) {
+            throw new IllegalStateException("代理服务器 SPI 未注册: " + spiName);
+        }
+        return server;
     }
 
     /**

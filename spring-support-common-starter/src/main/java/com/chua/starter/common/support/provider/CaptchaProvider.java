@@ -1,7 +1,7 @@
 package com.chua.starter.common.support.provider;
 import com.chua.starter.common.support.constant.CaptchaTypeEnum;
 import com.chua.starter.common.support.properties.CaptchaProperties;
-import com.wf.captcha.*;
+import com.chua.common.support.spi.ServiceProvider;
 import com.wf.captcha.base.Captcha;
 import com.chua.common.support.constant.CaptchaConstant;
 import com.chua.common.support.annotation.Ignore;
@@ -58,43 +58,14 @@ public class CaptchaProvider {
 
     /** 创建Captcha */
     private Captcha createCaptcha(CaptchaTypeEnum type, int length) {
-        Captcha captcha;
         int width = captchaProperties.getWidth();
         int height = captchaProperties.getHeight();
-        String fontName = captchaProperties.getFontName();
-
-        switch (type) {
-            case ARITHMETIC:
-                captcha = new ArithmeticCaptcha(width, height);
-                //固定设置为两位，图片为算数运算表达式
-                captcha.setLen(length);
-                break;
-            case CHINESE:
-                captcha = new ChineseCaptcha(width, height);
-                captcha.setLen(length);
-                break;
-            case CHINESE_GIF:
-                captcha = new ChineseGifCaptcha(width, height);
-                captcha.setLen(length);
-                break;
-            case GIF:
-                captcha = new GifCaptcha(width, height);
-                captcha.setLen(length);
-                break;
-            case SPEC:
-                captcha = new SpecCaptcha(width, height);
-                captcha.setCharType(Captcha.TYPE_DEFAULT);
-                captcha.setLen(length);
-                break;
-            default:
-                throw new RuntimeException("验证码配置信息错误！正确配置查看 CaptchaTypeEnum ");
+        String spiName = type.name().toLowerCase();
+        CaptchaGenerator generator = ServiceProvider.of(CaptchaGenerator.class).getExtension(spiName);
+        if (generator == null) {
+            throw new RuntimeException("验证码配置信息错误！正确配置查看 CaptchaTypeEnum , 不支持的类型: " + spiName);
         }
-        try {
-            //captcha.setFont(Captcha.FONT_1, captchaProperties.getFontSize());
-        } catch (Exception ignored) {
-        }
-
-        return captcha;
+        return generator.create(width, height, length);
     }
 
 
