@@ -443,12 +443,6 @@
                 <artifactId>loki-logback-appender</artifactId>
                 <version>${loki4j.version}</version>
             </dependency>
-
-            <!-- Undertow Web容器 - 高性能Web服务器，替代Tomcat -->
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-starter-undertow</artifactId>
-            </dependency>
             
             <!-- ========== Spring Support 模块依赖 ========== -->
             
