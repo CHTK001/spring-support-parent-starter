@@ -224,8 +224,8 @@ public class AccountController {
             String name = type.name().toLowerCase();
             CaptchaSolver solver = captchaSolverProvider.getIfAvailable();
             return solver != null
-                    ? ServiceProvider.of(PlatformRegister.class).getNewExtension(name, solver)
-                    : ServiceProvider.of(PlatformRegister.class).getNewExtension(name);
+                    ? ServiceProvider.of(PlatformRegister.class).getNewExtension(name, solver, proxyManager)
+                    : ServiceProvider.of(PlatformRegister.class).getNewExtension(name, proxyManager);
         } catch (Exception e) {
             log.warn("[Account] 获取平台注册器失败: {}", type);
             return null;

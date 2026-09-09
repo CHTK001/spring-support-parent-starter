@@ -250,6 +250,32 @@ public class GrokPlatformRegister implements PlatformRegister {
         return null;
     }
 
+    /**
+     * 将代理应用到 HTTP 请求。
+     *
+     * <p>优先使用 ProxyManager 中配置的代理，其次使用请求参数中的代理。</p>
+     *
+     * @param builder  HTTP 请求构建器
+     * @param proxyUrl 请求参数代理（可选）
+     */
+    private void applyProxy(HttpClientBuilder builder, String proxyUrl) {
+        String host = null;
+        int port = 0;
+        if (proxyUrl != null && !proxyUrl.isBlank()) {
+            String cleaned = proxyUrl.replace("http://", "").replace("https://", "").replace("socks5://", "");
+            String[] parts = cleaned.split(":");
+            host = parts[0].trim();
+            port = parts.length > 1 ? Integer.parseInt(parts[1].trim()) : 1080;
+        } else if (proxyManager != null && proxyManager.isEnabled()) {
+            host = proxyManager.getProxyHost();
+            port = proxyManager.getProxyPort();
+        }
+        if (host != null && !host.isEmpty() && port > 0) {
+            builder.proxy(host, port);
+            log.debug("[Grok] 使用代理: {}:{}", host, port);
+        }
+    }
+
     private byte[] encodeGrpcMessage(int fieldId, String value) {
         byte[] valueBytes = value.getBytes(StandardCharsets.UTF_8);
         int length = valueBytes.length;
