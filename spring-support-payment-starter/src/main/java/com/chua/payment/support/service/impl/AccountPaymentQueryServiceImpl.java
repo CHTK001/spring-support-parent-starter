@@ -77,7 +77,7 @@ public class AccountPaymentQueryServiceImpl implements AccountPaymentQueryServic
             throw new PaymentException("查询参数不能为空");
         }
         LambdaQueryWrapper<TransactionRecord> wrapper = new LambdaQueryWrapper<>();
-        wrapper.inSql(TransactionRecord::getOrderId, "select pay_order_id from pay_order where pay_order_user_id = " + request.userId() + " and (pay_order_deleted is null or pay_order_deleted = 0)");
+        wrapper.apply("order_id IN (SELECT pay_order_id FROM pay_order WHERE pay_order_user_id = {0} AND (pay_order_deleted IS NULL OR pay_order_deleted = 0))", request.userId());
         if (StringUtils.hasText(request.orderNo())) {
             wrapper.eq(TransactionRecord::getOrderNo, request.orderNo().trim());
         }
