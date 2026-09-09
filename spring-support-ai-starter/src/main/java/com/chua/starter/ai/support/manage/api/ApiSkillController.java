@@ -46,6 +46,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -113,6 +114,11 @@ public class ApiSkillController {
      */
     private static final String MARKET_SOURCE_FIELD_PREFIX = "market_";
     private static final String MARKET_SOURCE_FIELD_SUFFIX = "_enabled";
+
+    /**
+     * 专家包“添加”时单次安装的上限技能数（避免一次下载整仓全部技能）。
+     */
+    private static final int MAX_AUTHOR_PACKAGE_SKILLS = 12;
 
     /**
      * 列出全部可用技能。
@@ -1019,6 +1025,12 @@ public class ApiSkillController {
     /**
      * 同步市场排行数据。前端调用此接口拉取市场数据。
      *
+     * <p>按市场类型分发：扁平技能源（skillsmp/clawhub/skillhub/loophub）共享 SkillsMP 技能榜
+     * （仅拉取一次并按源打标签）；专家包源（skillhub_packages）将 SkillsMP 技能按作者聚合为
+     * “专家包”（一个作者=一个包，含其下技能清单），与扁平技能榜结构区分；MCP/插件源
+     * （skillhub_mcp/mcpworld/clawhub_plugins）暂无可用数据源，标记 {@code unavailable} 并返回
+     * 空列表，不返回伪造数据，也不报错。响应附带 {@code source_status} 供前端展示诚实空态。</p>
+     *
      * @param body 请求体 {@code { sources: ["clawhub", "skillhub", ...] }}
      * @return 同步结果
      */
@@ -1038,43 +1050,50 @@ public class ApiSkillController {
 
         List<Map<String, Object>> allItems = new ArrayList<>();
         List<String> errors = new ArrayList<>();
+        Map<String, String> sourceStatus = new LinkedHashMap<>();
 
-        for (String source : sources) {
-            try {
-                if ("skillsmp".equals(source) || "clawhub".equals(source)
-                        || "skillhub".equals(source) || "loophub".equals(source)
-                        || "skillhub_packages".equals(source)) {
-                    // 所有源都走 SkillsMP API（统一市场）。skillhub_packages（专家包）与
-                    // skillhub 共用该数据流，仅以不同的 source 前缀区分，供前端专家包市场展示。
-                    String url = skillsMarketUrl + "?page=1&limit=30&sortBy=stars";
-                    String bodyText = httpGet(url);
-                    Map<String, Object> raw = parseJson(bodyText);
-                    List<?> rawSkills = (List<?>) raw.get("skills");
-                    if (rawSkills != null) {
-                        int rank = 1;
-                        for (Object obj : rawSkills) {
-                            Map<String, Object> skill = (Map<String, Object>) obj;
-                            Map<String, Object> item = new LinkedHashMap<>();
-                            item.put("id", source + ":" + skill.getOrDefault("id", ""));
-                            item.put("source", source);
-                            item.put("rank", rank++);
-                            item.put("name", skill.getOrDefault("name", ""));
-                            item.put("description", skill.getOrDefault("description", ""));
-                            item.put("url", skill.getOrDefault("githubUrl", ""));
-                            item.put("install_command", "");
-                            item.put("tags", List.of());
-                            item.put("stats", "★ " + skill.getOrDefault("stars", 0));
-                            allItems.add(item);
-                        }
-                    }
-                } else {
-                    // 暂不支持的市场源（如 clawhub_plugins、skillhub_mcp、mcpworld），
-                    // 静默跳过，不报错，由前端展示空态或提示用户刷新。
-                    log.info("[market sync] 暂不支持的市场源: {}", source);
+        // 扁平技能源：共享 SkillsMP 技能榜，仅拉取一次，按请求的源打标签
+        Set<String> flatSources = Set.of("skillsmp", "clawhub", "skillhub", "loophub");
+        List<String> requestedFlat = sources.stream().filter(flatSources::contains).toList();
+        if (!requestedFlat.isEmpty()) {
+            List<Map<String, Object>> skills = fetchSkillsMpPage(1, 30);
+            for (String source : requestedFlat) {
+                int rank = 1;
+                for (Map<String, Object> skill : skills) {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("id", source + ":" + skill.getOrDefault("id", ""));
+                    item.put("source", source);
+                    item.put("rank", rank++);
+                    item.put("name", skill.getOrDefault("name", ""));
+                    item.put("description", skill.getOrDefault("description", ""));
+                    item.put("url", skill.getOrDefault("githubUrl", ""));
+                    item.put("install_command", "");
+                    item.put("tags", List.of());
+                    item.put("stats", "★ " + skill.getOrDefault("stars", 0)
+                            + " · Fork " + skill.getOrDefault("forks", 0));
+                    allItems.add(item);
                 }
-            } catch (Exception e) {
-                log.error("同步市场源 {} 失败", source, e);
-                errors.add(source + ": " + e.getMessage());
+                sourceStatus.put(source, skills.isEmpty() ? "empty" : "ok");
+            }
+        }
+
+        // 专家包源（角色市场）：按作者聚合为专家包，与扁平技能榜结构区分
+        if (sources.contains("skillhub_packages")) {
+            List<Map<String, Object>> skills = new ArrayList<>();
+            for (int page = 1; page <= 3; page++) {
+                skills.addAll(fetchSkillsMpPage(page, 48));
+            }
+            List<Map<String, Object>> packages = aggregateAuthorPackages(skills);
+            allItems.addAll(packages);
+            sourceStatus.put("skillhub_packages", packages.isEmpty() ? "empty" : "ok");
+        }
+
+        // MCP/插件源：暂无可用数据源，标记不可用（不返回伪造数据，也不报错）
+        Set<String> unavailableSources = Set.of("skillhub_mcp", "mcpworld", "clawhub_plugins");
+        for (String source : sources) {
+            if (unavailableSources.contains(source)) {
+                log.info("[market sync] 市场源 {} 暂无可用数据源，标记为不可用", source);
+                sourceStatus.put(source, "unavailable");
             }
         }
 
@@ -1082,7 +1101,106 @@ public class ApiSkillController {
         result.put("items", allItems);
         result.put("fetched_at", System.currentTimeMillis());
         result.put("errors", errors);
+        result.put("source_status", sourceStatus);
         return ApiResult.ok(result);
+    }
+
+    /**
+     * 拉取 SkillsMP 技能榜单页原始技能数据。
+     *
+     * @param page  页码（从 1 开始）
+     * @param limit 每页数量（SkillsMP 上限 48，超出自动截断）
+     * @return 原始技能数据列表（拉取失败返回空列表，不抛异常）
+     */
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> fetchSkillsMpPage(int page, int limit) {
+        int capped = Math.max(1, Math.min(limit, 48));
+        try {
+            String url = skillsMarketUrl + "?page=" + page + "&limit=" + capped + "&sortBy=stars";
+            Map<String, Object> raw = parseJson(httpGet(url));
+            Object skillsObj = raw.get("skills");
+            if (skillsObj instanceof List<?> list) {
+                List<Map<String, Object>> result = new ArrayList<>();
+                for (Object item : list) {
+                    if (item instanceof Map<?, ?> m) {
+                        result.add((Map<String, Object>) m);
+                    }
+                }
+                return result;
+            }
+            return List.of();
+        } catch (Exception e) {
+            log.error("拉取 SkillsMP 技能榜第 {} 页失败: {}", page, e.getMessage());
+            return List.of();
+        }
+    }
+
+    /**
+     * 将技能按作者（owner）聚合为“专家包”市场条目。
+     *
+     * <p>一个作者（GitHub owner）视为一个专家包，包内含其名下技能名清单（去重）。
+     * 包按所含技能数降序排列。用于角色/专家包市场，使其与扁平技能榜区分开。</p>
+     *
+     * @param skills 原始技能列表（多页合并）
+     * @return 专家包市场条目列表
+     */
+    private List<Map<String, Object>> aggregateAuthorPackages(List<Map<String, Object>> skills) {
+        Map<String, List<Map<String, Object>>> byAuthor = new LinkedHashMap<>();
+        for (Map<String, Object> skill : skills) {
+            String author = String.valueOf(skill.getOrDefault("author", ""));
+            if (author.isBlank() || "null".equals(author)) {
+                continue;
+            }
+            byAuthor.computeIfAbsent(author, k -> new ArrayList<>()).add(skill);
+        }
+        List<Map<String, Object>> packages = new ArrayList<>();
+        int rank = 1;
+        for (Map.Entry<String, List<Map<String, Object>>> entry
+                : byAuthor.entrySet().stream()
+                        .sorted((a, b) -> Integer.compare(b.getValue().size(), a.getValue().size()))
+                        .toList()) {
+            String author = entry.getKey();
+            List<Map<String, Object>> authorSkills = entry.getValue();
+            List<String> slugs = authorSkills.stream()
+                    .map(s -> String.valueOf(s.getOrDefault("name", "")))
+                    .filter(n -> !n.isBlank() && !"null".equals(n))
+                    .distinct()
+                    .toList();
+            long stars = authorSkills.stream().mapToLong(s -> asLong(s.get("stars"))).max().orElse(0);
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", "skillhub_packages:" + author);
+            item.put("source", "skillhub_packages");
+            item.put("rank", rank++);
+            item.put("name", author);
+            item.put("description", author + " 专家包 · 含 " + slugs.size() + " 个技能");
+            item.put("url", "https://github.com/" + author);
+            item.put("install_command", "");
+            item.put("tags", List.of());
+            item.put("stats", "含 " + slugs.size() + " 个技能 · ★ " + stars);
+            item.put("skill_slugs", slugs);
+            packages.add(item);
+        }
+        return packages;
+    }
+
+    /**
+     * 宽松地将对象转为 long（用于统计展示）。
+     *
+     * @param v 原始值
+     * @return long 值，无法解析返回 0
+     */
+    private long asLong(Object v) {
+        if (v instanceof Number n) {
+            return n.longValue();
+        }
+        if (v == null) {
+            return 0;
+        }
+        try {
+            return Long.parseLong(String.valueOf(v));
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     /**
@@ -1166,6 +1284,14 @@ public class ApiSkillController {
             return installResult(null, installed, errors);
         }
 
+        // 专家包（按作者）：安装该作者名下聚合的 top 技能；url 为作者主页，非单一技能目录
+        if ("skillhub_packages".equals(source)) {
+            String author = id.startsWith("skillhub_packages:")
+                    ? id.substring("skillhub_packages:".length())
+                    : id;
+            return installAuthorPackage(author, installed, errors);
+        }
+
         GithubRef ref = parseGithubUrl(url);
         if (ref == null) {
             errors.add(errorEntry(id, "仅支持 GitHub 仓库地址: " + url));
@@ -1227,6 +1353,90 @@ public class ApiSkillController {
         Map<String, Object> pkg = new LinkedHashMap<>();
         pkg.put("name", skillName != null ? skillName : "unknown");
         pkg.put("description", installed.isEmpty() ? "" : "从市场安装的技能包");
+        pkg.put("instructions", "");
+        pkg.put("skill_slugs", installed);
+        pkg.put("avatar", "");
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("package", pkg);
+        result.put("installed_skill_names", installed);
+        result.put("errors", errors);
+        return ApiResult.ok(result);
+    }
+
+    /**
+     * 安装“专家包”（按作者）：从 SkillsMP 榜单筛选该作者名下技能，下载并安装其 top 技能，
+     * 返回已安装技能名列表。用于角色/专家包市场“添加”动作；单次安装数量受
+     * {@link #MAX_AUTHOR_PACKAGE_SKILLS} 限制，避免一次下载整仓全部技能。
+     *
+     * @param author   作者（GitHub owner）
+     * @param installed 已安装技能名收集器
+     * @param errors   错误收集器
+     * @return 安装结果
+     */
+    private ApiResult<Map<String, Object>> installAuthorPackage(
+            String author, List<String> installed, List<Map<String, String>> errors) {
+        if (author == null || author.isBlank()) {
+            errors.add(errorEntry("skillhub_packages", "专家包作者不能为空"));
+            return installResult(null, installed, errors);
+        }
+        Path userDir = Paths.get(skillsRoot).resolve("user");
+        try {
+            Files.createDirectories(userDir);
+        } catch (IOException e) {
+            errors.add(errorEntry("skillhub_packages:" + author, "创建用户技能目录失败: " + e.getMessage()));
+            return installResult(author, installed, errors);
+        }
+
+        List<Map<String, Object>> skills = new ArrayList<>();
+        for (int page = 1; page <= 3; page++) {
+            skills.addAll(fetchSkillsMpPage(page, 48));
+        }
+        List<Map<String, Object>> authorSkills = skills.stream()
+                .filter(s -> author.equals(String.valueOf(s.getOrDefault("author", ""))))
+                .limit(MAX_AUTHOR_PACKAGE_SKILLS)
+                .toList();
+        if (authorSkills.isEmpty()) {
+            errors.add(errorEntry("skillhub_packages:" + author, "未找到该专家包下可安装的技能"));
+            return installResult(author, installed, errors);
+        }
+
+        for (Map<String, Object> skill : authorSkills) {
+            String skillName = sanitizeSkillName(String.valueOf(skill.getOrDefault("name", "")));
+            String skillUrl = String.valueOf(skill.getOrDefault("githubUrl", ""));
+            Path targetDir = userDir.resolve(skillName);
+            if (Files.exists(targetDir)) {
+                installed.add(skillName);
+                continue;
+            }
+            GithubRef ref = parseGithubUrl(skillUrl);
+            if (ref == null) {
+                errors.add(errorEntry(skillName, "不支持的技能来源地址: " + skillUrl));
+                continue;
+            }
+            Path tmpDir = null;
+            try {
+                tmpDir = Files.createTempDirectory("skill-market-" + skillName + "-");
+                downloadGithubDir(ref, ref.path(), tmpDir, errors);
+                if (hasSkillMark(tmpDir)) {
+                    copyDirectory(tmpDir, targetDir);
+                    installed.add(skillName);
+                } else {
+                    errors.add(errorEntry(skillName, "下载内容不含 SKILL.md，不是有效技能"));
+                }
+            } catch (IOException | InterruptedException e) {
+                Thread.currentThread().interrupt();
+                errors.add(errorEntry(skillName, "安装失败: " + e.getMessage()));
+            } finally {
+                if (tmpDir != null) {
+                    deleteRecursivelyQuietly(tmpDir);
+                }
+            }
+        }
+
+        Map<String, Object> pkg = new LinkedHashMap<>();
+        pkg.put("name", author);
+        pkg.put("description", author + " 专家包（已安装 " + installed.size() + " 个技能）");
         pkg.put("instructions", "");
         pkg.put("skill_slugs", installed);
         pkg.put("avatar", "");

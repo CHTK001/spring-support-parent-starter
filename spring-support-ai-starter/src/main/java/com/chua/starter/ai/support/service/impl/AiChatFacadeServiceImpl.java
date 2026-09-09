@@ -71,7 +71,10 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         }
         ChatClient configured = configureClient(client, request);
         try {
+            long start = System.currentTimeMillis();
             ChatSyncResponse response = configured.chatSyncWithResponse(promptOf(request));
+            long end = System.currentTimeMillis();
+            enrichLatency(response != null ? response.getUsage() : null, start, end, 0L);
             recordUsage(configured, "chat", response);
             return buildResult(response);
         } catch (Exception e) {
@@ -95,6 +98,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         ChatClient configured = configureClient(client, request);
         StringBuilder fullResponse = new StringBuilder();
         final com.chua.common.support.ai.AiUsage[] lastUsage = new com.chua.common.support.ai.AiUsage[1];
+        final long start = System.currentTimeMillis();
+        final long[] firstTokenAt = new long[] { 0L };
 
         CompletableFuture.runAsync(() -> {
             try {
@@ -106,6 +111,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                             String chunk = response.getContent() != null ? response.getContent() : "";
                             if (chunk.isEmpty()) {
                                 return;
+                            }
+                            if (firstTokenAt[0] == 0L) {
+                                firstTokenAt[0] = System.currentTimeMillis();
                             }
                             fullResponse.append(chunk);
                             try {
@@ -122,6 +130,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                         },
                         () -> {
                             if (lastUsage[0] != null) {
+                                enrichLatency(lastUsage[0], start, System.currentTimeMillis(), firstTokenAt[0]);
                                 recordUsage(lastUsage[0]);
                             }
                             String reply = fullResponse.toString();
@@ -391,6 +400,29 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             );
         } catch (Exception e) {
             log.warn("[UsageRecorder] 记录失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 回填调用时延（总耗时 / 首字时延）到 {@link com.chua.common.support.ai.AiUsage}，
+     * 使持久化的 sys_ai_usage 携带 first_token_latency / total_latency。
+     *
+     * @param usage       待回填的用量（可为 null）
+     * @param start       调用开始时间戳（ms）
+     * @param end         调用结束时间戳（ms）
+     * @param firstTokenAt 首个内容 chunk 到达时间戳（ms）；0 表示未知（同步调用）
+     */
+    private void enrichLatency(com.chua.common.support.ai.AiUsage usage, long start, long end, long firstTokenAt) {
+        if (usage == null) {
+            return;
+        }
+        long duration = Math.max(0L, end - start);
+        usage.setDurationMillis(duration);
+        if (firstTokenAt > 0) {
+            usage.setFirstTokenLatencyMillis(Math.max(0L, firstTokenAt - start));
+        } else if (usage.getFirstTokenLatencyMillis() == null) {
+            // 非流式（同步）无独立首字时刻：以整体耗时近似，避免统计被 null 拉低
+            usage.setFirstTokenLatencyMillis(duration);
         }
     }
 

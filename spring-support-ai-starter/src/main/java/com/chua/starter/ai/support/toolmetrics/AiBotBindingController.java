@@ -221,6 +221,95 @@ public class AiBotBindingController {
     }
 
     /**
+     * 查询 Bot 全局行为配置（contextThinking / contextSize / historySize / commandEnabled / compressionThreshold）。
+     *
+     * <p>统一存储在全局设置表 bot 分组下，未配置时返回内置默认值。</p>
+     *
+     * @return 全局配置键值对
+     */
+    @GetMapping("/global-config")
+    public ReturnResult<Map<String, Object>> getGlobalConfig() {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("contextThinking", readBool("context_thinking", false));
+        data.put("contextSize", readInt("context_size", 10));
+        data.put("historySize", readInt("history_size", 50));
+        data.put("commandEnabled", readBool("command_enabled", false));
+        data.put("compressionThreshold", readInt("compression_threshold", 0));
+        return ReturnResult.ok(data);
+    }
+
+    /**
+     * 更新 Bot 全局行为配置（部分更新，仅写入请求体中出现的字段）。
+     *
+     * @param body 配置键值对（支持 contextThinking / contextSize / historySize / commandEnabled / compressionThreshold）
+     * @return 更新后的完整配置
+     */
+    @PutMapping("/global-config")
+    public ReturnResult<Map<String, Object>> updateGlobalConfig(@RequestBody Map<String, Object> body) {
+        if (body == null || body.isEmpty()) {
+            return ReturnResult.illegal("请求体不能为空");
+        }
+        Object contextThinking = body.get("contextThinking");
+        if (contextThinking instanceof Boolean flag) {
+            sysAiGlobalSettingService.upsertValue("bot", "context_thinking", flag.toString(),
+                    "Bot 深度思考开关（全局）");
+        }
+        Object contextSize = body.get("contextSize");
+        if (contextSize instanceof Number num) {
+            sysAiGlobalSettingService.upsertValue("bot", "context_size", String.valueOf(num.intValue()),
+                    "Bot 上下文携带轮数（全局）");
+        }
+        Object historySize = body.get("historySize");
+        if (historySize instanceof Number num) {
+            sysAiGlobalSettingService.upsertValue("bot", "history_size", String.valueOf(num.intValue()),
+                    "Bot 历史消息加载条数（全局）");
+        }
+        Object commandEnabled = body.get("commandEnabled");
+        if (commandEnabled instanceof Boolean flag) {
+            sysAiGlobalSettingService.upsertValue("bot", "command_enabled", flag.toString(),
+                    "Bot 指令功能开关（全局）");
+        }
+        Object compressionThreshold = body.get("compressionThreshold");
+        if (compressionThreshold instanceof Number num) {
+            sysAiGlobalSettingService.upsertValue("bot", "compression_threshold", String.valueOf(num.intValue()),
+                    "Bot 上下文压缩阈值（全局，0 表示关闭）");
+        }
+        return getGlobalConfig();
+    }
+
+    /**
+     * 读取布尔型全局配置，缺失或解析失败时返回默认值。
+     *
+     * @param field        设置字段名
+     * @param defaultValue 默认值
+     * @return 配置值
+     */
+    private boolean readBool(String field, boolean defaultValue) {
+        return sysAiGlobalSettingService.getValue("bot", field)
+                .map(v -> Boolean.parseBoolean(v))
+                .orElse(defaultValue);
+    }
+
+    /**
+     * 读取整型全局配置，缺失或解析失败时返回默认值。
+     *
+     * @param field        设置字段名
+     * @param defaultValue 默认值
+     * @return 配置值
+     */
+    private int readInt(String field, int defaultValue) {
+        return sysAiGlobalSettingService.getValue("bot", field)
+                .map(v -> {
+                    try {
+                        return Integer.parseInt(v.trim());
+                    } catch (NumberFormatException e) {
+                        return defaultValue;
+                    }
+                })
+                .orElse(defaultValue);
+    }
+
+    /**
      * 当前用户的 Bot 管理元信息：是否为管理员、当前用户 ID。
      *
      * <p>前端据此决定是否展示「全部用户」入口：仅管理员可见。

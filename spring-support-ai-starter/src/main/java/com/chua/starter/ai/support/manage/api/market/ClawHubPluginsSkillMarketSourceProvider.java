@@ -29,4 +29,10 @@ public class ClawHubPluginsSkillMarketSourceProvider implements SkillMarketSourc
     public String marketType() {
         return "plugin";
     }
+
+    @Override
+    public boolean defaultEnabled() {
+        // 暂无可用数据源，默认关闭，避免市场展示空态或伪造数据
+        return false;
+    }
 }

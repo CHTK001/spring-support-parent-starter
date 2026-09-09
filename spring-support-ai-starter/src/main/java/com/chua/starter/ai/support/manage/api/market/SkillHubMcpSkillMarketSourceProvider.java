@@ -29,4 +29,10 @@ public class SkillHubMcpSkillMarketSourceProvider implements SkillMarketSourcePr
     public String marketType() {
         return "mcp";
     }
+
+    @Override
+    public boolean defaultEnabled() {
+        // 暂无可用数据源，默认关闭，避免市场展示空态或伪造数据
+        return false;
+    }
 }
