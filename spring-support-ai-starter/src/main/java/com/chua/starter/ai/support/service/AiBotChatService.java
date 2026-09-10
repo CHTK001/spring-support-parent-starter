@@ -144,7 +144,16 @@ public class AiBotChatService {
      */
     public String runtimeStatus(String botId) {
         ILinkBotClient client = runningBots.get(botId);
-        return client != null ? "running" : "stopped";
+        // 只用对象存在判断不够：会话超时（-14）后 client 仍留在 map 中，
+        // 但内部轮询已停止（isRunning=false）。必须看真实轮询状态。
+        if (client != null && client.isRunning()) {
+            return "running";
+        }
+        // 会话已停止：从 map 移除，避免悬挂引用，并提示需要重新扫码
+        if (client != null) {
+            runningBots.remove(botId);
+        }
+        return "stopped";
     }
 
     /**
@@ -238,6 +247,48 @@ public class AiBotChatService {
     }
 
     /**
+     * 查询 Bot 内置命令清单（供 IM 输入框斜杠命令面板）。
+     *
+     * @return 命令列表（prefix / name / description）
+     */
+    public List<Map<String, Object>> listCommands() {
+        List<Map<String, Object>> commands = new ArrayList<>();
+        addCommand(commands, "/", "reset", "清空当前会话上下文");
+        addCommand(commands, "/", "model", "切换对话模型");
+        addCommand(commands, "/", "help", "查看可用命令");
+        addCommand(commands, "@", "@用户", "主动给指定用户发送消息");
+        addCommand(commands, "#", "#用户", "AI 回复指定用户");
+        return commands;
+    }
+
+    private void addCommand(List<Map<String, Object>> commands, String prefix, String name, String desc) {
+        Map<String, Object> cmd = new LinkedHashMap<>();
+        cmd.put("prefix", prefix);
+        cmd.put("name", name);
+        cmd.put("description", desc);
+        commands.add(cmd);
+    }
+
+    /**
+     * 查询指定 Bot 的最近联系人（去重 by fromUser）。
+     *
+     * @param botId Bot 唯一标识
+     * @return 联系人列表
+     */
+    public List<String> listContacts(String botId) {
+        List<SysAiBotMessage> messages = botMessageMapper.selectList(
+                Wrappers.<SysAiBotMessage>lambdaQuery()
+                        .eq(SysAiBotMessage::getBotId, botId)
+                        .isNotNull(SysAiBotMessage::getFromUser)
+                        .select(SysAiBotMessage::getFromUser));
+        return messages.stream()
+                .map(SysAiBotMessage::getFromUser)
+                .filter(u -> u != null && !u.isBlank())
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    /**
      * 会话列表：按 Bot + 微信用户聚合，取每个会话最后一条消息。
      *
      * <p>供 IM 页左侧会话列表使用；昵称与状态取自绑定记录（按 botId 匹配）。</p>
@@ -307,6 +358,31 @@ public class AiBotChatService {
             return b.getLastTime().compareTo(a.getLastTime());
         });
         return result;
+    }
+
+    /**
+     * 将消息记录从旧 Bot 迁移到新 Bot（重新扫码后 botId 变化时保留历史聊天）。
+     *
+     * <p>微信扫码会话过期重新绑定后，iLink 分配的 botId 可能变化；
+     * 调用此方法把旧 botId 下的聊天记录批量改写到新 botId，保证前端历史不断裂。</p>
+     *
+     * @param oldBotId 原 Bot 唯一标识（允许为 null，为空时跳过）
+     * @param newBotId 新 Bot 唯一标识（不能为空）
+     * @return 迁移的消息条数
+     */
+    public int migrateMessages(String oldBotId, String newBotId) {
+        if (newBotId == null || newBotId.isBlank() || oldBotId == null || oldBotId.isBlank()
+                || oldBotId.equals(newBotId)) {
+            return 0;
+        }
+        int moved = botMessageMapper.update(null,
+                Wrappers.<SysAiBotMessage>lambdaUpdate()
+                        .eq(SysAiBotMessage::getBotId, oldBotId)
+                        .set(SysAiBotMessage::getBotId, newBotId));
+        if (moved > 0) {
+            log.info("[BotChat] 迁移消息 {} → {} 共 {} 条", oldBotId, newBotId, moved);
+        }
+        return moved;
     }
 
     /**

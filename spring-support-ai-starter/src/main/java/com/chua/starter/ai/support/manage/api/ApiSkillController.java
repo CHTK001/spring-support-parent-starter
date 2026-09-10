@@ -312,9 +312,13 @@ public class ApiSkillController {
      * @param body 请求体 {@code { skill_path: string }}
      * @return 导入结果
      */
-    @PostMapping("/import")
-    public ApiResult<Map<String, Object>> importSkill(@RequestBody Map<String, Object> body) {
-        Path skillPath = resolveSkillPath(body);
+     @PostMapping("/import")
+     public ApiResult<Map<String, Object>> importSkill(@RequestBody Map<String, Object> body) {
+         String rawPath = asText(body.get("skill_path"));
+         if (rawPath != null && rawPath.startsWith("agent://")) {
+             return ApiResult.ok(importAgentSkill(rawPath));
+         }
+         Path skillPath = resolveSkillPath(body);
         if (!Files.exists(skillPath)) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "路径不存在: " + skillPath);
         }
@@ -461,9 +465,13 @@ public class ApiSkillController {
      * @param body 请求体 {@code { skill_path: string }}
      * @return 导入结果
      */
-    @PostMapping("/import-symlink")
-    public ApiResult<Map<String, Object>> importSymlink(@RequestBody Map<String, Object> body) {
-        Path skillPath = resolveSkillPath(body);
+     @PostMapping("/import-symlink")
+     public ApiResult<Map<String, Object>> importSymlink(@RequestBody Map<String, Object> body) {
+         String rawPath = asText(body.get("skill_path"));
+         if (rawPath != null && rawPath.startsWith("agent://")) {
+             return ApiResult.ok(importAgentSkill(rawPath));
+         }
+         Path skillPath = resolveSkillPath(body);
         if (!Files.exists(skillPath)) {
             throw new ApiException(ApiErrorCode.NOT_FOUND, "路径不存在: " + skillPath);
         }
@@ -850,12 +858,109 @@ public class ApiSkillController {
      * @param body 请求体
      * @return 技能目录路径
      */
-    private Path resolveSkillPath(Map<String, Object> body) {
-        String skillPath = asText(body.get("skill_path"));
-        if (skillPath == null || skillPath.isBlank()) {
-            throw new ApiException(ApiErrorCode.INVALID_PARAM, "skill_path 不能为空");
+     private Path resolveSkillPath(Map<String, Object> body) {
+         String skillPath = asText(body.get("skill_path"));
+         if (skillPath == null || skillPath.isBlank()) {
+             throw new ApiException(ApiErrorCode.INVALID_PARAM, "skill_path 不能为空");
+         }
+         return Paths.get(skillPath).toAbsolutePath().normalize();
+     }
+
+    /**
+     * 导入 {@code agent://PROVIDER/SKILL} 虚拟地址指向的 Agent 本地技能。
+     *
+     * <p>前端「从 Agent 导入」对 agent 类来源合成 {@code agent://<providerKey>/<skillName>}
+     * 地址。这里通过 {@link SkillOfflineProvider} SPI 将虚拟地址解析为真实落盘位置
+     * （技能目录或单文件规则），再走与文件系统导入相同的符号链接/复制逻辑。</p>
+     *
+     * @param agentUri agent:// 虚拟地址
+     * @return 导入结果（skill_name / skill_names）
+     */
+    private Map<String, Object> importAgentSkill(String agentUri) {
+        String rest = agentUri.substring("agent://".length());
+        int slash = rest.indexOf('/');
+        String providerKey = slash > 0 ? rest.substring(0, slash) : rest;
+        String skillName = slash > 0 ? rest.substring(slash + 1) : "";
+        if (skillName.isBlank()) {
+            throw new ApiException(ApiErrorCode.INVALID_PARAM, "agent 地址不完整: " + agentUri);
         }
-        return Paths.get(skillPath).toAbsolutePath().normalize();
+
+        Map<String, SkillOfflineProvider> providers = ServiceProvider.of(SkillOfflineProvider.class).list();
+        SkillOfflineProvider provider = findProviderByKey(providers, providerKey);
+        if (provider == null) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND,
+                    "未找到 Agent 提供者: " + providerKey + "（请先刷新来源列表）");
+        }
+
+        Path resolved;
+        try {
+            resolved = provider.resolveSkillPath(skillName);
+        } catch (Exception e) {
+            log.warn("[ApiSkill] SkillOfflineProvider[{}] 解析技能 {} 失败: {}", providerKey, skillName, e.getMessage());
+            resolved = null;
+        }
+        if (resolved == null || !Files.exists(resolved)) {
+            throw new ApiException(ApiErrorCode.NOT_FOUND,
+                    "本机未找到 Agent 技能: " + providerKey + "/" + skillName + "（该 Agent 可能已卸载或目录已变动）");
+        }
+
+        Path userDir = Paths.get(skillsRoot).resolve("user");
+        try {
+            Files.createDirectories(userDir);
+        } catch (IOException e) {
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "创建用户技能目录失败: " + e.getMessage());
+        }
+
+        boolean isFile = Files.isRegularFile(resolved);
+        String name = isFile
+                ? resolved.getFileName().toString().replaceAll("\\.(md|mdc)$", "")
+                : resolved.getFileName().toString();
+        name = sanitizeSkillName(name);
+        Path target = userDir.resolve(name);
+        List<String> imported = new ArrayList<>();
+        try {
+            if (Files.exists(target)) {
+                imported.add(name);
+            } else if (isFile) {
+                Files.createDirectories(target);
+                Files.copy(resolved, target.resolve("SKILL.md"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                imported.add(name);
+            } else {
+                symlinkOrCopy(resolved, target);
+                imported.add(name);
+            }
+        } catch (IOException e) {
+            throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "导入 Agent 技能失败: " + e.getMessage());
+        }
+        log.info("[ApiSkill] Agent 技能导入成功: {} <- {} -> {}", name, agentUri, resolved);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("skill_name", name);
+        result.put("skill_names", imported);
+        return result;
+    }
+
+    /**
+     * 按 SPI 注册键查找 provider（大小写不敏感，前端可能以任意大小写合成 agent:// 地址）。
+     *
+     * @param providers SPI 枚举结果
+     * @param key       请求的 provider 键
+     * @return 匹配的 provider；未找到返回 null
+     */
+    private SkillOfflineProvider findProviderByKey(Map<String, SkillOfflineProvider> providers, String key) {
+        if (providers == null || key == null || key.isBlank()) {
+            return null;
+        }
+        SkillOfflineProvider direct = providers.get(key);
+        if (direct != null) {
+            return direct;
+        }
+        for (Map.Entry<String, SkillOfflineProvider> entry : providers.entrySet()) {
+            if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(key)) {
+                return entry.getValue();
+            }
+        }
+        return null;
     }
 
     /**
@@ -1254,6 +1359,112 @@ public class ApiSkillController {
                 ))
         );
         return ApiResult.ok(Map.of("config_json", fallback));
+    }
+
+    /**
+     * 获取市场技能内容（SKILL.md 原文）。
+     *
+     * <p>按市场项的 GitHub 地址尽力拉取 {@code SKILL.md}/{@code skill.md}，供前端「内容预览」。
+     * 拉取失败或地址不可解析时返回 {@code available=false}，前端展示降级态，不报错。</p>
+     *
+     * @param body 请求体 {@code { source, id, url }}
+     * @return {@code { content, available, source_url }}
+     */
+    @PostMapping("/market/content")
+    public ApiResult<Map<String, Object>> marketContent(@RequestBody Map<String, Object> body) {
+        String url = asText(body.get("url"));
+        Map<String, Object> unavailable = new LinkedHashMap<>();
+        unavailable.put("content", "");
+        unavailable.put("available", false);
+        if (url == null || url.isBlank()) {
+            return ApiResult.ok(unavailable);
+        }
+        GithubRef ref = parseGithubUrl(url);
+        if (ref == null) {
+            return ApiResult.ok(unavailable);
+        }
+        String base = ref.path() != null && !ref.path().isBlank() ? ref.path() : "";
+        for (String file : List.of("SKILL.md", "skill.md")) {
+            String filePath = base.isBlank() ? file : base + "/" + file;
+            String rawUrl = "https://raw.githubusercontent.com/" + ref.owner() + "/" + ref.repo()
+                    + "/" + encodePath(ref.branch()) + "/" + encodePath(filePath);
+            try {
+                String content = httpGet(rawUrl);
+                if (content != null && !content.isBlank()) {
+                    Map<String, Object> result = new LinkedHashMap<>();
+                    result.put("content", content);
+                    result.put("available", true);
+                    result.put("source_url", url);
+                    return ApiResult.ok(result);
+                }
+            } catch (Exception e) {
+                log.debug("[skills] 拉取市场技能内容失败 (rawUrl={}): {}", rawUrl, e.getMessage());
+            }
+        }
+        return ApiResult.ok(unavailable);
+    }
+
+    /**
+     * 读取本机 Agent 技能内容（「从 Agent 导入」扫描项的内容预览）。
+     *
+     * <p>通过 {@link SkillOfflineProvider} SPI 将 {@code provider + skill_name} 解析为本机
+     * 落盘位置（技能目录或单文件规则），读取其 SKILL.md 文本。未安装/已删除时
+     * {@code available=false} 并附 error，前端展示降级态。</p>
+     *
+     * @param body 请求体 {@code { provider, skill_name }}
+     * @return {@code { content, location, available, error? }}
+     */
+    @PostMapping("/agent/content")
+    public ApiResult<Map<String, Object>> agentContent(@RequestBody Map<String, Object> body) {
+        String providerKey = asText(body.get("provider"));
+        String skillName = asText(body.get("skill_name"));
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("content", "");
+        result.put("available", false);
+        if (providerKey == null || providerKey.isBlank() || skillName == null || skillName.isBlank()) {
+            result.put("error", "provider 与 skill_name 不能为空");
+            return ApiResult.ok(result);
+        }
+        SkillOfflineProvider provider = findProviderByKey(
+                ServiceProvider.of(SkillOfflineProvider.class).list(), providerKey);
+        if (provider == null) {
+            result.put("error", "未找到 Agent 提供者: " + providerKey);
+            return ApiResult.ok(result);
+        }
+        Path skillPath;
+        try {
+            skillPath = provider.resolveSkillPath(skillName);
+        } catch (Exception e) {
+            result.put("error", "解析技能位置失败: " + e.getMessage());
+            return ApiResult.ok(result);
+        }
+        if (skillPath == null) {
+            result.put("error", "本机未找到该 Agent 技能（该 Agent 可能已卸载或目录已变动）");
+            return ApiResult.ok(result);
+        }
+        Path md;
+        if (Files.isRegularFile(skillPath)) {
+            md = skillPath;
+        } else {
+            md = skillPath.resolve("SKILL.md");
+            if (!Files.exists(md)) {
+                md = skillPath.resolve("skill.md");
+            }
+        }
+        if (!Files.exists(md)) {
+            result.put("error", "未找到 SKILL.md 内容文件");
+            return ApiResult.ok(result);
+        }
+        try {
+            String content = Files.readString(md, StandardCharsets.UTF_8);
+            result.put("content", content);
+            result.put("location", md.toAbsolutePath().toString());
+            result.put("available", true);
+            return ApiResult.ok(result);
+        } catch (IOException e) {
+            result.put("error", "读取内容失败: " + e.getMessage());
+            return ApiResult.ok(result);
+        }
     }
 
     /**
