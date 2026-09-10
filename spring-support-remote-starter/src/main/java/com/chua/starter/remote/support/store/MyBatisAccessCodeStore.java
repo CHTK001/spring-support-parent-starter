@@ -2,12 +2,10 @@ package com.chua.starter.remote.support.store;
 
 import com.chua.remote.gateway.AccessCodeInfo;
 import com.chua.remote.gateway.store.AccessCodeStore;
-import org.apache.ibatis.annotations.Delete;
-import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
 import org.apache.ibatis.datasource.pooled.PooledDataSource;
+import org.apache.ibatis.io.Resources;
 import org.apache.ibatis.mapping.Environment;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.SqlSession;
@@ -48,6 +46,13 @@ public class MyBatisAccessCodeStore implements AccessCodeStore {
                 new PooledDataSource(detectDriver(url), url, user, pass));
         Configuration cfg = new Configuration(env);
         cfg.addMapper(AccessCodeMapper.class);
+        // 显式加载 XML mapper（SQL 定义在 resources/mapper/AccessCodeMapper.xml）
+        try (var in = Resources.getResourceAsStream("mapper/AccessCodeMapper.xml")) {
+            var xmlMapper = new org.apache.ibatis.builder.xml.XMLMapperBuilder(in, cfg, "mapper/AccessCodeMapper.xml", cfg.getSqlFragments());
+            xmlMapper.parse();
+        } catch (Exception e) {
+            throw new IllegalStateException("加载 AccessCodeMapper.xml 失败: " + e.getMessage(), e);
+        }
         this.sqlSessionFactory = new SqlSessionFactoryBuilder().build(cfg);
         initSchema();
     }
@@ -207,56 +212,38 @@ public class MyBatisAccessCodeStore implements AccessCodeStore {
         return o instanceof Number ? ((Number) o).intValue() : 0;
     }
 
-    /** MyBatis 注解 Mapper：access_code 主表 + access_code_agent 接入明细表 */
+    /**
+     * MyBatis Mapper 接口（SQL 定义见 resources/mapper/AccessCodeMapper.xml）。
+     *
+     * <p>本接口仅作方法声明，所有 SQL 统一在 XML mapper 中定义，
+     * 禁止使用 {@code @Select}/{@code @Insert}/{@code @Update}/{@code @Delete} 注解编写 SQL（P3C 规约四）。</p>
+     */
     public interface AccessCodeMapper {
 
-        @Update("CREATE TABLE IF NOT EXISTS access_code (" +
-                "code VARCHAR(64) PRIMARY KEY, " +
-                "type VARCHAR(32), status VARCHAR(16), " +
-                "created_at VARCHAR(32), expires_at VARCHAR(32), ip_whitelist VARCHAR(512), " +
-                "max_agents INT DEFAULT 0, used_agents INT DEFAULT 0)")
         void createCodeTable();
 
-        @Update("ALTER TABLE access_code ADD COLUMN IF NOT EXISTS ip_whitelist VARCHAR(512)")
         void addIpWhitelistColumn();
 
-        @Update("CREATE TABLE IF NOT EXISTS access_code_agent (" +
-                "code VARCHAR(64), agent_id VARCHAR(64), ip VARCHAR(64), time VARCHAR(32), " +
-                "PRIMARY KEY (code, agent_id))")
         void createAgentTable();
 
-        @Select("SELECT code, type, status, created_at, expires_at, ip_whitelist, max_agents, used_agents FROM access_code")
         List<Map<String, Object>> findAllRows();
 
-        @Select("SELECT code, type, status, created_at, expires_at, ip_whitelist, max_agents, used_agents " +
-                "FROM access_code WHERE code = #{code}")
         Map<String, Object> findRow(@Param("code") String code);
 
-        @Select("SELECT agent_id, ip, time FROM access_code_agent WHERE code = #{code}")
         List<Map<String, Object>> findAgents(@Param("code") String code);
 
-        @Select("SELECT COUNT(*) FROM access_code_agent WHERE code = #{code}")
         int countAgents(@Param("code") String code);
 
-        @Insert("INSERT INTO access_code (code, type, status, created_at, expires_at, ip_whitelist, max_agents, used_agents) " +
-                "VALUES (#{info.code}, #{info.type}, #{info.status}, #{info.createdAt}, #{info.expiresAt}, #{info.ipWhitelist}, " +
-                "#{info.maxAgents}, #{info.usedAgents})")
         void insertInfo(@Param("info") AccessCodeInfo info);
 
-        @Delete("DELETE FROM access_code WHERE code = #{code}")
         void deleteInfo(@Param("code") String code);
 
-        @Delete("DELETE FROM access_code_agent WHERE code = #{code}")
         void deleteAgents(@Param("code") String code);
 
-        @Insert("INSERT INTO access_code_agent (code, agent_id, ip, time) " +
-                "VALUES (#{code}, #{stat.agentId}, #{stat.ip}, #{stat.time})")
         void insertAgent(@Param("code") String code, @Param("stat") AccessCodeInfo.AgentAccessStat stat);
 
-        @Delete("DELETE FROM access_code_agent WHERE code = #{code} AND agent_id = #{agentId}")
         void removeAgent(@Param("code") String code, @Param("agentId") String agentId);
 
-        @Update("UPDATE access_code SET used_agents = #{count} WHERE code = #{code}")
         void updateUsedAgents(@Param("code") String code, @Param("count") int count);
     }
 }
