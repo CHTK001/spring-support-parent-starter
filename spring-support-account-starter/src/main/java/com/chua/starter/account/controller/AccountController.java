@@ -100,17 +100,6 @@ public class AccountController {
         return result;
     }
 
-    /**
-     * 获取免费代理列表
-     */
-    @GetMapping("/proxy/free")
-    public List<String> freeProxies() {
-        return proxyManager.fetchFreeProxies();
-    }
-
-    /**
-     * 单账号注册
-     */
     @PostMapping("/register/{platformType}")
     public Account register(
             @PathVariable Account.PlatformType platformType,

@@ -100,6 +100,10 @@ CREATE TABLE IF NOT EXISTS ms_server_host (
     ms_server_host_last_collect_time DATETIME NULL            COMMENT '最近采集时间(主机级)',
     ms_server_host_agent_enabled     INT NULL DEFAULT 0      COMMENT 'Agent上报开关(主机级)',
     ms_server_host_remote_enabled    INT NULL DEFAULT 1      COMMENT '远控开关(主机级)',
+    ms_server_host_delay_enabled     INT NULL DEFAULT 0      COMMENT '延迟检测开关(主机级)',
+    ms_server_host_delay_interval    INT NULL DEFAULT 60     COMMENT '延迟检测间隔秒(主机级)',
+    ms_server_host_delay_ms          BIGINT NULL             COMMENT '最近延迟毫秒(检测结果)',
+    ms_server_host_last_delay_time   DATETIME NULL           COMMENT '最近延迟检测时间(主机级)',
     create_by                   INT          NULL                    COMMENT '创建人',
     create_name                 VARCHAR(64)  NULL                    COMMENT '创建人名称',
     create_time                 DATETIME     NULL                    COMMENT '创建时间',
@@ -237,3 +241,20 @@ CREATE TABLE IF NOT EXISTS ms_server_config (
     PRIMARY KEY (id),
     UNIQUE KEY uk_server_config_key (ms_server_config_key)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '服务器系统配置';
+
+-- 免费代理（每次获取免费代理时清空重录——页面从本表读取）
+CREATE TABLE IF NOT EXISTS ms_proxy (
+    id               BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    host             VARCHAR(64)  NOT NULL COMMENT '代理主机',
+    port             INT          NOT NULL COMMENT '代理端口',
+    protocol         VARCHAR(16)  NULL COMMENT '协议（Http/Https/Socks4/Socks5）',
+    source           VARCHAR(64)  NULL COMMENT '来源',
+    create_by        INT          NULL COMMENT '创建人',
+    create_name      VARCHAR(64)  NULL COMMENT '创建人名称',
+    create_time      DATETIME     NULL COMMENT '创建时间',
+    update_name      VARCHAR(64)  NULL COMMENT '更新人名称',
+    update_by        INT          NULL COMMENT '更新人',
+    update_time      DATETIME     NULL COMMENT '更新时间',
+    PRIMARY KEY (id),
+    KEY idx_proxy_host_port (host, port)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '免费代理';

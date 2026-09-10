@@ -3,6 +3,7 @@ package com.chua.starter.server.support.terminal;
 import com.chua.starter.server.support.config.ServerProperties;
 import com.chua.starter.server.support.enums.ProtocolType;
 import com.chua.starter.server.support.model.SshCredential;
+import com.chua.starter.server.support.service.ServerConfigService;
 import com.chua.starter.server.support.terminal.constant.GuacdConst;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,6 +53,9 @@ public class GuacdConnectionFactory {
     /** 服务属性（guacd 地址） */
     private final ServerProperties properties;
 
+    /** 系统配置服务（guacd 地址动态化——配置表优先） */
+    private final ServerConfigService configService;
+
     /**
      * 创建与 guacd 完成握手的隧道
      *
@@ -65,8 +69,11 @@ public class GuacdConnectionFactory {
     public GuacdTunnel create(ProtocolType protocolType, String address,
                               Integer targetPort, SshCredential credential, String sessionId) {
         var guacd = properties.getGuacd();
+        // guacd 地址动态化：系统配置表优先（运行时可在系统配置页修改），无配置回落 application.yml
+        String host = configService.getString("guacd.host", guacd.getHost());
+        int port = configService.getInt("guacd.port", guacd.getPort());
         GuacdTunnel tunnel = new GuacdTunnel(protocolType.name().toLowerCase(), sessionId,
-                guacd.getHost(), guacd.getPort());
+                host, port);
         switch (protocolType) {
             // SSH 终端：支持密码或私钥两种认证
             case SSH -> buildSshConfig(tunnel, address, targetPort, credential);

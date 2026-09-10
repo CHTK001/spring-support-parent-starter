@@ -3,6 +3,9 @@ package com.chua.starter.osgi.properties;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * OSGi 集成配置属性。
  *
@@ -35,6 +38,19 @@ public class OsgiProperties {
      * Felix 框架初始启动级别。
      */
     private int startLevel = 4;
+
+    /**
+     * Felix 框架附加配置（原样透传给 Felix framework）。
+     *
+     * <p>用于需要自定义框架行为的场景，例如跨 bundle 共享应用侧接口包：</p>
+     * <pre>{@code
+     * plugin:
+     *   osgi:
+     *     framework-properties:
+     *       org.osgi.framework.system.packages.extra: com.example:api
+     * }</pre>
+     */
+    private Map<String, Object> frameworkProperties = new HashMap<>();
 
     /**
      * 远程管理配置（SSH 或 Telnet，二选一）。

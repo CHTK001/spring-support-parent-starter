@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -89,6 +90,11 @@ public class MetricServiceImpl implements MetricService {
      * 告警引擎（写入链路尾部评估）
      */
     private final AlarmEngineService alarmEngineService;
+
+    /**
+     * 实时推送服务（Socket 未启用时静默跳过）
+     */
+    private final MonitorPushService monitorPushService;
 
     /**
      * 默认批量插入大小
@@ -161,6 +167,24 @@ public class MetricServiceImpl implements MetricService {
                 if (monitorId != null && point.getValue() != null) {
                     alarmEngineService.evaluate(monitorId, monitorName, point.getMetricName(), point.getValue());
                 }
+            }
+            // 实时推送最新指标到前端（Socket 未启用时静默跳过）
+            try {
+                List<MetricPoint> points = result.getPoints();
+                Map<String, Object> payload = new HashMap<>(8);
+                payload.put("monitorId", monitorId);
+                payload.put("monitorName", monitorName == null ? "" : monitorName);
+                payload.put("collectTime", collectTime.toString());
+                Map<String, Object> metrics = new HashMap<>();
+                for (MetricPoint point : points) {
+                    if (point.getMetricName() != null && point.getValue() != null) {
+                        metrics.put(point.getMetricName(), point.getValue());
+                    }
+                }
+                payload.put("metrics", metrics);
+                monitorPushService.pushMetric(payload, monitorId);
+            } catch (Exception e) {
+                log.debug("[push] 指标实时推送跳过: {}", e.getMessage());
             }
             return ReturnResult.ok();
         } catch (Exception e) {

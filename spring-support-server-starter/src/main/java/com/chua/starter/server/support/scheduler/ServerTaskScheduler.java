@@ -19,8 +19,7 @@ import java.util.concurrent.TimeUnit;
  * <p>
  * 统一使用 common-starter 的哈希时间轮（{@link Timer}）调度全部周期任务：
  * <ul>
- *   <li>在离线检测（host.online.*）</li>
- *   <li>硬件定时采集（host.collect.*）</li>
+ *   <li>在离线检测 / 硬件定时采集——主机级配置（各主机开关/间隔存于 ms_server_host 字段）</li>
  *   <li>计划任务扫描（ms_exec_job）</li>
  *   <li>终端会话空闲清理</li>
  *   <li>连接缓存健康检查（connection.*）</li>
@@ -82,6 +81,9 @@ public class ServerTaskScheduler {
     /** 连接健康检查定时任务 */
     private volatile TimerTask connectionTask;
 
+    /** 延迟检测定时任务 */
+    private volatile TimerTask delayTask;
+
     /**
      * 启动：初始化时间轮并注册全部周期任务
      */
@@ -90,10 +92,11 @@ public class ServerTaskScheduler {
         timer = Timer.newTimer(WHEEL_SLOTS, TICK_MILLIS, TimeUnit.MILLISECONDS);
         rescheduleOnline();
         rescheduleCollect();
+        rescheduleDelay();
         rescheduleExec();
         rescheduleSession();
         rescheduleConnection();
-        log.info("[task-scheduler] 时间轮调度器已启动: 在离线/采集/计划任务/会话清理/连接健康检查");
+        log.info("[task-scheduler] 时间轮调度器已启动: 在离线/采集/延迟检测/计划任务/会话清理/连接健康检查");
     }
 
     /**
@@ -120,6 +123,7 @@ public class ServerTaskScheduler {
         }
         rescheduleOnline();
         rescheduleCollect();
+        rescheduleDelay();
         log.info("[task-scheduler] 配置变更已重排周期任务: {}", event.getKeys());
     }
 
@@ -138,6 +142,15 @@ public class ServerTaskScheduler {
     private void rescheduleCollect() {
         cancelTask(collectTask);
         collectTask = timer.scheduleAtFixedRate(onlineScheduler::collectTick,
+                HOST_SCAN_INTERVAL_SECONDS, HOST_SCAN_INTERVAL_SECONDS, TimeUnit.SECONDS);
+    }
+
+    /**
+     * 重排延迟检测任务：固定细粒度扫描，各主机按自身开关/间隔测 RTT 延迟
+     */
+    private void rescheduleDelay() {
+        cancelTask(delayTask);
+        delayTask = timer.scheduleAtFixedRate(onlineScheduler::delayTick,
                 HOST_SCAN_INTERVAL_SECONDS, HOST_SCAN_INTERVAL_SECONDS, TimeUnit.SECONDS);
     }
 

@@ -6,7 +6,7 @@ import lombok.Getter;
  * 主机采集方式枚举（Provider）
  * <p>
  * 定义 {@link com.chua.starter.server.support.spi.HostCollectProvider} 的实现分类，
- * 对应系统配置 {@code host.collect.mode} 字段。
+ * 对应主机字段 {@code ms_server_host.server_host_collect_mode}（主机级采集方式）。
  * 新增采集方式时：追加枚举 + 新增 Provider 实现即可，调度与路由零改动。
  * </p>
  *

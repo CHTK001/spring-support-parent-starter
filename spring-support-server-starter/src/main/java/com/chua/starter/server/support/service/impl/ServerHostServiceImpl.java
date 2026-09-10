@@ -123,6 +123,13 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (host.getServerHostRemoteEnabled() == null) {
             host.setServerHostRemoteEnabled(1);
         }
+        // 延迟检测默认值
+        if (host.getServerHostDelayEnabled() == null) {
+            host.setServerHostDelayEnabled(0);
+        }
+        if (host.getServerHostDelayInterval() == null) {
+            host.setServerHostDelayInterval(60);
+        }
         // 探针标识服务端生成，保证全局唯一
         host.setServerHostAgentKey(generateAgentKey());
         hostMapper.insert(host);
@@ -187,6 +194,13 @@ public class ServerHostServiceImpl implements ServerHostService {
         }
         if (host.getServerHostRemoteEnabled() != null) {
             exists.setServerHostRemoteEnabled(host.getServerHostRemoteEnabled());
+        }
+        // 延迟检测配置（开关可为 0/1，间隔需大于 0）
+        if (host.getServerHostDelayEnabled() != null) {
+            exists.setServerHostDelayEnabled(host.getServerHostDelayEnabled());
+        }
+        if (host.getServerHostDelayInterval() != null && host.getServerHostDelayInterval() > 0) {
+            exists.setServerHostDelayInterval(host.getServerHostDelayInterval());
         }
         // 透传前端提交的凭据瞬态字段（账号密码/PEM），供 autoCreateIdentity 创建/更新身份
         exists.setServerHostAccount(host.getServerHostAccount());

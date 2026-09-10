@@ -227,6 +227,34 @@ public class MsServerHost extends SysBase {
     private Integer serverHostRemoteEnabled;
 
     /**
+     * 延迟检测开关（主机级）
+     */
+    @TableField("ms_server_host_delay_enabled")
+    @Schema(description = "延迟检测开关(主机级)", example = "0")
+    private Integer serverHostDelayEnabled;
+
+    /**
+     * 延迟检测间隔(秒)（主机级）
+     */
+    @TableField("ms_server_host_delay_interval")
+    @Schema(description = "延迟检测间隔秒(主机级)", example = "60")
+    private Integer serverHostDelayInterval;
+
+    /**
+     * 最近延迟毫秒（检测结果回写）
+     */
+    @TableField("ms_server_host_delay_ms")
+    @Schema(description = "最近延迟毫秒(检测结果)", example = "23")
+    private Long serverHostDelayMs;
+
+    /**
+     * 最近延迟检测时间
+     */
+    @TableField("ms_server_host_last_delay_time")
+    @Schema(description = "最近延迟检测时间")
+    private java.time.LocalDateTime serverHostLastDelayTime;
+
+    /**
      * 登录账号（瞬态，新增表单直接提交，不落库）
      */
     @TableField(exist = false)

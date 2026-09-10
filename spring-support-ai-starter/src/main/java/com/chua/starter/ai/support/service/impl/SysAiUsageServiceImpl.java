@@ -227,4 +227,24 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
         stats.avgFirstTokenLatency = stats.totalCalls > 0 ? (double) totalFirstTokenLatency / stats.totalCalls : 0.0;
         return stats;
     }
+
+    @Override
+    public List<SysAiUsageDaily> getDailyTrend(String provider, String model,
+                                               LocalDateTime startTime, LocalDateTime endTime) {
+        LambdaQueryWrapper<SysAiUsageDaily> wrapper = new LambdaQueryWrapper<>();
+        if (provider != null && !provider.isBlank()) {
+            wrapper.eq(SysAiUsageDaily::getProvider, provider);
+        }
+        if (model != null && !model.isBlank()) {
+            wrapper.eq(SysAiUsageDaily::getModel, model);
+        }
+        if (startTime != null) {
+            wrapper.ge(SysAiUsageDaily::getStatDate, startTime.toLocalDate());
+        }
+        if (endTime != null) {
+            wrapper.le(SysAiUsageDaily::getStatDate, endTime.toLocalDate());
+        }
+        wrapper.orderByAsc(SysAiUsageDaily::getStatDate);
+        return dailyMapper.selectList(wrapper);
+    }
 }

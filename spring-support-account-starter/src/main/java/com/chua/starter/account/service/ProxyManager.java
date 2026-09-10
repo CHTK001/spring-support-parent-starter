@@ -1,6 +1,5 @@
 package com.chua.starter.account.service;
 
-import com.chua.common.support.datasearch.network.proxy.ProxyFetcherFlow;
 import com.chua.common.support.network.client.HttpClientFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -81,22 +80,6 @@ public class ProxyManager {
 
     public String getRawProxy() {
         return rawProxy;
-    }
-
-    /**
-     * 从 datasearch-starter 的 ProxyFetcherFlow 获取免费代理列表。
-     *
-     * @return 代理列表 "host:port"
-     */
-    public List<String> fetchFreeProxies() {
-        try {
-            List<String> proxies = ProxyFetcherFlow.of().fetchAll();
-            log.info("[ProxyManager] 获取到 {} 个免费代理", proxies.size());
-            return proxies;
-        } catch (Exception e) {
-            log.warn("[ProxyManager] 获取免费代理失败: {}", e.getMessage());
-            return List.of();
-        }
     }
 
     /**
