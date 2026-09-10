@@ -155,7 +155,8 @@ CREATE TABLE IF NOT EXISTS `sys_ai_usage` (
     `update_by`                         INT          NULL COMMENT '',
     `update_time`                       DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '',
     PRIMARY KEY (`sys_ai_usage_id`),
-    KEY `idx_sys_ai_usage_request_id` (`sys_ai_usage_request_id`)
+    KEY `idx_sys_ai_usage_request_id` (`sys_ai_usage_request_id`),
+    KEY `idx_sys_ai_usage_call_time` (`sys_ai_usage_call_time`)
 );
 
 CREATE TABLE IF NOT EXISTS `sys_ai_usage_daily` (

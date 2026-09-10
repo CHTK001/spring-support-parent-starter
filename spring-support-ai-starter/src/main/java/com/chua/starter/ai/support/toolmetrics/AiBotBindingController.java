@@ -174,6 +174,30 @@ public class AiBotBindingController {
     }
 
     /**
+     * Bot 内置命令清单（供 IM 输入框斜杠命令面板）。
+     *
+     * @return 命令列表（prefix / name / description）
+     */
+    @GetMapping("/commands")
+    public ReturnResult<List<Map<String, Object>>> commands() {
+        return ReturnResult.ok(aiBotChatService.listCommands());
+    }
+
+    /**
+     * 指定 Bot 的最近联系人（按 botId 去重 fromUser）。
+     *
+     * @param botId Bot 唯一标识
+     * @return 联系人列表
+     */
+    @GetMapping("/contacts")
+    public ReturnResult<List<String>> contacts(@RequestParam String botId) {
+        if (StringUtils.isBlank(botId)) {
+            return ReturnResult.illegal("botId 不能为空");
+        }
+        return ReturnResult.ok(aiBotChatService.listContacts(botId.trim()));
+    }
+
+    /**
      * 查询 Bot 运行状态（ILink 会话是否存活）。
      *
      * <p>ILink 会话超时后（errcode=-14）客户端停止轮询，前端据此展示
@@ -467,18 +491,21 @@ public class AiBotBindingController {
     /**
      * 生成微信 iLink 扫码会话。
      *
-     * <p>平台仅支持 wechat（iLink 扫码）；企业微信暂不支持，返回错误。</p>
+     * <p>平台仅支持 wechat（iLink 扫码）；企业微信暂不支持，返回错误。
+     * 重新扫码场景可传旧 botId（botId 参数），扫码确认后自动合并到旧绑定并迁移历史消息。</p>
      *
      * @param platform 平台类型，默认 wechat
+     * @param botId    重新扫码场景下需合并的旧 Bot 唯一标识（可选）
      * @return key + qrcodeUrl；qrcodeUrl 即时为空，前端轮询 status=ready 后从 QrStatus 取
      */
     @PostMapping("/qrcode")
     public ReturnResult<AiBotBindingService.QrResult> generateQr(
-            @RequestParam(defaultValue = "wechat") String platform) {
+            @RequestParam(defaultValue = "wechat") String platform,
+            @RequestParam(required = false) String botId) {
         if (!"wechat".equals(platform) && !"wecom".equals(platform)) {
             return ReturnResult.illegal("platform 仅支持 wechat / wecom");
         }
-        return ReturnResult.ok(botBindingService.generateQrCode(platform));
+        return ReturnResult.ok(botBindingService.generateQrCode(platform, botId));
     }
 
     /**

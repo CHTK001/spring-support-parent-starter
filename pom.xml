@@ -80,6 +80,7 @@
         <module>spring-support-common-starter</module>          <!-- 通用功能和工具类 -->
         <module>spring-support-cache-starter</module>           <!-- 缓存功能模块 -->
         <module>spring-support-mybatis-starter</module>         <!-- MyBatis Plus集成 -->
+        <module>spring-support-remote-starter</module>          <!-- Remote 远控集成：接入码存储 MyBatis SPI 实现 -->
 
         <!-- 认证和安全模块 -->
         <module>spring-support-oauth-client-starter</module>

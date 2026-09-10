@@ -232,6 +232,21 @@ public class AiBotBindingService {
      * @return 会话 key（前端传给 /qrcode/status）+ qrcodeUrl（轮询 status=ready 后从 QrStatus 取）
      */
     public QrResult generateQrCode(String platform) {
+        return generateQrCode(platform, null);
+    }
+
+    /**
+     * 生成微信 iLink 扫码会话（支持"重新扫码合并到旧绑定"）。
+     *
+     * <p>当旧绑定过期需重新扫码时，调用方可传入 {@code oldBotId}；
+     * 扫码确认后，系统会把新 botId/botToken 合并写入旧绑定记录，并把旧 botId
+     * 下的历史聊天消息迁移到新 botId，保证前端会话与聊天记录不分裂。</p>
+     *
+     * @param platform wechat / wecom
+     * @param oldBotId 重新扫码场景下需合并的旧 Bot 唯一标识（可为空，表示全新绑定）
+     * @return 会话 key + qrcodeUrl
+     */
+    public QrResult generateQrCode(String platform, String oldBotId) {
         // 企业微信不支持 iLink 扫码，直接返回空 key
         if ("wecom".equals(platform)) {
             log.info("[Bot] wecom 扫码被拒绝，使用手动导入");
@@ -243,6 +258,7 @@ public class AiBotBindingService {
         session.key = key;
         session.platform = "wechat";
         session.status = "pending";
+        session.oldBotId = oldBotId != null && !oldBotId.isBlank() ? oldBotId.trim() : null;
         session.expireAt = System.currentTimeMillis() + 180_000L; // 3 分钟超时
         qrSessions.put(key, session);
 
@@ -359,14 +375,46 @@ public class AiBotBindingService {
      *
      * <p>将 iLink 返回的 botId、botToken 写入 sys_ai_bot_binding，
      * 绑定来源标记为 qrcode_scan，状态设为 online。</p>
+     *
+     * <p>重新扫码合并：若本次扫码携带了 {@code oldBotId}（旧绑定过期重绑），
+     * 则把新 botId/botToken 更新到旧绑定记录上（保持记录 id 不变，不起新行），
+     * 并把旧 botId 下的历史聊天消息迁移到新 botId，前端会话与历史不断裂。</p>
      */
     private void saveBindingFromScan(String key, QrSession session, String userId) {
         try {
+            String newBotId = session.botId;
+            String oldBotId = session.oldBotId;
+            // 1. 存在旧绑定且 botId 变化：合并更新旧记录 + 迁移消息
+            if (oldBotId != null && newBotId != null && !oldBotId.equals(newBotId)) {
+                var existing = findByBotId(oldBotId);
+                if (existing != null) {
+                    // 迁移历史消息到新 botId（保留聊天记录）
+                    aiBotChatService.migrateMessages(oldBotId, newBotId);
+                    // 更新旧绑定记录为新 botId/botToken（记录 id 不变）
+                    existing.setBotId(newBotId);
+                    existing.setBotToken(session.botToken);
+                    existing.setPlatform("wechat");
+                    existing.setStatus("online");
+                    existing.setBindSource("qrcode_scan");
+                    existing.setUpdateTime(LocalDateTime.now());
+                    if (userId != null && !userId.isBlank() && !userId.equals(existing.getNickname())) {
+                        existing.setNickname(userId);
+                    }
+                    botBindingMapper.updateById(existing);
+                    // 启动新 bot 的消息轮询
+                    aiBotChatService.startBot(existing);
+                    log.info("[Bot] 重新扫码已合并到旧绑定 id={} {} → {}", existing.getId(), oldBotId, newBotId);
+                    return;
+                }
+                log.warn("[Bot] 旧绑定 {} 已不存在，按全新绑定处理", oldBotId);
+            }
+
+            // 2. 全新绑定：按 botId 去重写入
             var binding = new SysAiBotBinding();
-            binding.setBotId(session.botId);
+            binding.setBotId(newBotId);
             binding.setBotToken(session.botToken);
             binding.setPlatform("wechat");
-            binding.setNickname(userId != null ? userId : session.botId);
+            binding.setNickname(userId != null ? userId : newBotId);
             binding.setStatus("online");
             binding.setBindSource("qrcode_scan");
             binding.setCreateTime(LocalDateTime.now());
@@ -442,6 +490,8 @@ public class AiBotBindingService {
         String botId;
         String botToken;
         String errorMsg;
+        /** 重新扫码场景：需要合并的旧 Bot 唯一标识（原绑定记录） */
+        String oldBotId;
         /** 会话超时时间戳（毫秒） */
         long expireAt;
     }
