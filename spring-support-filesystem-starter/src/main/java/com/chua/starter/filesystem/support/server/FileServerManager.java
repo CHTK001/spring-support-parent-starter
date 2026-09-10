@@ -139,13 +139,9 @@ public class FileServerManager implements AutoCloseable {
         server.start();
 
         if (server instanceof JdkHttpServer) {
-            HttpServer httpServer = null;
-            try {
-                java.lang.reflect.Field f = JdkHttpServer.class.getDeclaredField("server");
-                f.setAccessible(true);
-                httpServer = (HttpServer) f.get(server);
-            } catch (Exception e) {
-                log.warn("无法访问 JdkHttpServer.server 字段: {}", e.getMessage());
+            HttpServer httpServer = (HttpServer) ReflectUtils.getField(server, "server");
+            if (httpServer == null) {
+                log.warn("无法访问 JdkHttpServer.server 字段");
             }
             if (httpServer != null) {
                 // JDK HttpServer 不允许 context="/" (根路径)，至少需要 /xxx
@@ -186,12 +182,15 @@ public class FileServerManager implements AutoCloseable {
                 return s;
             }
         }
-        try {
-            Class<?> clazz = ReflectUtils.forName(type);
-            return (Server) clazz.getDeclaredConstructor(ServerSetting.class).newInstance(setting);
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Unknown server type: " + type + ", fallback to JDK", e);
+        Class<?> clazz = ReflectUtils.forName(type);
+        if (clazz == null) {
+            throw new IllegalArgumentException("Unknown server type: " + type + ", fallback to JDK");
         }
+        Server created = (Server) ReflectUtils.instantiate(clazz, setting);
+        if (created == null) {
+            throw new IllegalArgumentException("Unknown server type: " + type + ", fallback to JDK");
+        }
+        return created;
     }
 
     /**
@@ -249,13 +248,13 @@ public class FileServerManager implements AutoCloseable {
                 return applicationContext.getBean(filterName, ServerFilter.class);
             } catch (Exception ignored) {}
         }
-        try {
-            Class<?> clazz = ReflectUtils.forName(filterName);
-            return (ServerFilter) clazz.getDeclaredConstructor().newInstance();
-        } catch (Exception e) {
-            log.warn("Failed to instantiate filter: {}", filterName, e);
+        Class<?> clazz = ReflectUtils.forName(filterName);
+        ServerFilter filter = clazz == null ? null : (ServerFilter) ReflectUtils.instantiate(clazz);
+        if (filter == null) {
+            log.warn("Failed to instantiate filter: {}", filterName);
             return null;
         }
+        return filter;
     }
 
     /**
