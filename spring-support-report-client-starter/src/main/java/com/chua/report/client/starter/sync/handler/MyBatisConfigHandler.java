@@ -1,6 +1,7 @@
 package com.chua.report.client.starter.sync.handler;
 
 import com.chua.report.client.starter.sync.MonitorTopics;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.spi.annotations.Spi;
 import com.chua.common.support.utils.MapUtils;
 import com.chua.starter.sync.support.spi.SyncMessageHandler;
@@ -16,7 +17,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 import java.io.InputStream;
-import java.lang.reflect.Field;
 import java.util.*;
 
 /**
@@ -182,14 +182,12 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
      */
     @SuppressWarnings("unchecked")
     private Set<String> getLoadedResources(Configuration configuration) {
-        try {
-            Field loadedResourcesField = Configuration.class.getDeclaredField("loadedResources");
-            loadedResourcesField.setAccessible(true);
-            return (Set<String>) loadedResourcesField.get(configuration);
-        } catch (Exception e) {
-            log.warn("[MyBatisConfig] 获取已加载资源失败: {}", e.getMessage());
+        Set<String> loadedResources = (Set<String>) ReflectUtils.getField(configuration, "loadedResources");
+        if (loadedResources == null) {
+            log.warn("[MyBatisConfig] 获取已加载资源失败");
             return Collections.emptySet();
         }
+        return loadedResources;
     }
 
     /**
@@ -251,10 +249,12 @@ public class MyBatisConfigHandler implements SyncMessageHandler, ApplicationCont
     private void clearMappedStatements(Configuration configuration, String resourcePath) {
         try {
             // 获取 mappedStatements 字段
-            Field mappedStatementsField = Configuration.class.getDeclaredField("mappedStatements");
-            mappedStatementsField.setAccessible(true);
-            Map<String, MappedStatement> mappedStatements = 
-                    (Map<String, MappedStatement>) mappedStatementsField.get(configuration);
+            Map<String, MappedStatement> mappedStatements =
+                    (Map<String, MappedStatement>) ReflectUtils.getField(configuration, "mappedStatements");
+            if (mappedStatements == null) {
+                log.warn("[MyBatisConfig] 清除 MappedStatement 失败: mappedStatements 字段读取失败");
+                return;
+            }
 
             // 移除与该资源相关的 MappedStatement
             List<String> toRemove = new ArrayList<>();

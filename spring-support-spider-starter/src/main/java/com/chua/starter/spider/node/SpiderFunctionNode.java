@@ -1,5 +1,6 @@
 package com.chua.starter.spider.node;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.task.flow.FlowContext;
 import com.chua.common.support.task.flow.FlowNode;
 import com.chua.common.support.task.flow.FlowNodeField;
@@ -9,7 +10,9 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.Resource;
+import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -118,7 +121,7 @@ public class SpiderFunctionNode implements FlowNode {
     }
 
     /**
-     * 通过反射调用方法。
+     * 通过 ReflectUtils 调用方法。
      *
      * <p>按参数类型自动匹配最合适的方法：优先精确匹配参数类型，
      * 若无匹配则尝试按顺序匹配参数类型兼容的方法。若方法抛出异常则直接向上抛出。</p>
@@ -163,10 +166,16 @@ public class SpiderFunctionNode implements FlowNode {
                 converted[i] = arg;
             }
             if (match) {
+                MethodHandle handle = ReflectUtils.findMethodHandle(clazz, methodName, method.getReturnType(), paramTypes);
+                if (handle == null) {
+                    throw new IllegalStateException("spider.function 未找到匹配的方法: " + methodName);
+                }
                 try {
-                    method.setAccessible(true);
-                    return method.invoke(bean, converted);
-                } catch (Exception e) {
+                    if (Modifier.isStatic(method.getModifiers())) {
+                        return handle.invokeWithArguments(converted);
+                    }
+                    return handle.bindTo(bean).invokeWithArguments(converted);
+                } catch (Throwable e) {
                     throw new IllegalStateException("spider.function 调用失败: " + e.getMessage(), e);
                 }
             }

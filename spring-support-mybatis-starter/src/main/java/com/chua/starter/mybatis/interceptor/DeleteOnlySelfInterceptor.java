@@ -2,6 +2,7 @@ package com.chua.starter.mybatis.interceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.common.support.utils.ClassUtils;
 import com.chua.starter.common.support.oauth.AuthService;
 import com.chua.starter.mybatis.annotations.DeleteOnlySelfOnMapper;
@@ -16,7 +17,6 @@ import org.apache.ibatis.plugin.Intercepts;
 import org.apache.ibatis.plugin.Invocation;
 import org.apache.ibatis.plugin.Signature;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
@@ -131,16 +131,12 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
      */
     private void updateBoundSql(MappedStatement ms, BoundSql boundSql, String newSql, String userId) {
         try {
-            // 使用ClassUtils替代直接反射
-            Field sqlField = BoundSql.class.getDeclaredField("sql");
-            ClassUtils.setAccessible(sqlField);
-            sqlField.set(boundSql, newSql);
+            // 通过 ReflectUtils 访问 BoundSql 私有字段
+            ReflectUtils.setField(boundSql, "sql", newSql);
 
             // 更新参数映射列表
-            Field parameterMappingsField = BoundSql.class.getDeclaredField("parameterMappings");
-            ClassUtils.setAccessible(parameterMappingsField);
             @SuppressWarnings("unchecked")
-            List<ParameterMapping> parameterMappings = (List<ParameterMapping>) parameterMappingsField.get(boundSql);
+            List<ParameterMapping> parameterMappings = (List<ParameterMapping>) ReflectUtils.getField(boundSql, "parameterMappings");
             if (parameterMappings == null) {
                 parameterMappings = new ArrayList<>();
             } else {
@@ -154,16 +150,14 @@ public class DeleteOnlySelfInterceptor implements Interceptor {
                     String.class
             ).build();
             parameterMappings.add(newMapping);
-            parameterMappingsField.set(boundSql, parameterMappings);
+            ReflectUtils.setField(boundSql, "parameterMappings", parameterMappings);
 
             // 更新参数对象
-            Field additionalParametersField = BoundSql.class.getDeclaredField("additionalParameters");
-            ClassUtils.setAccessible(additionalParametersField);
             @SuppressWarnings("unchecked")
-            Map<String, Object> additionalParameters = (Map<String, Object>) additionalParametersField.get(boundSql);
+            Map<String, Object> additionalParameters = (Map<String, Object>) ReflectUtils.getField(boundSql, "additionalParameters");
             if (additionalParameters == null) {
                 additionalParameters = new java.util.HashMap<>();
-                additionalParametersField.set(boundSql, additionalParameters);
+                ReflectUtils.setField(boundSql, "additionalParameters", additionalParameters);
             }
             additionalParameters.put("userId", userId);
         } catch (Exception e) {

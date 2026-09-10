@@ -1,5 +1,6 @@
 package com.chua.starter.ai.support.manage.ssh;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.starter.ai.support.manage.ApiWebSocketPushService;
 import com.chua.starter.ai.support.manage.store.SysAiSshHost;
 import com.chua.ssh.support.client.SshClient;
@@ -8,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
@@ -124,7 +124,7 @@ public class SshTerminalSessionManager {
     }
 
     /**
-     * 调整远端 PTY 尺寸（通过反射调用 ChannelShell 的 window-change）。
+     * 调整远端 PTY 尺寸（读取内部 channel 调用 window-change）。
      *
      * @param terminalId 终端 ID
      * @param cols       列数
@@ -137,10 +137,8 @@ public class SshTerminalSessionManager {
             return false;
         }
         try {
-            // TerminalOperation 内部 channel 是私有的，反射取出来调 window-change
-            Field channelField = session.operation.getClass().getDeclaredField("channel");
-            channelField.setAccessible(true);
-            Object channel = channelField.get(session.operation);
+            // TerminalOperation 内部 channel 是私有的，通过 ReflectUtils 取出来调 window-change
+            Object channel = ReflectUtils.getField(session.operation, "channel");
             if (channel instanceof org.apache.sshd.client.channel.PtyCapableChannelSession pty) {
                 pty.sendWindowChange(Math.max(cols, 20), Math.max(rows, 5));
             }
