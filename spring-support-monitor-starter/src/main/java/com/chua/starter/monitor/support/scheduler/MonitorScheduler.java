@@ -7,7 +7,6 @@ import com.chua.starter.monitor.support.entity.MsMonitorMetricConfig;
 import com.chua.starter.monitor.support.entity.MsMonitorTask;
 import com.chua.starter.monitor.support.enums.ProviderType;
 import com.chua.starter.monitor.support.enums.ServiceType;
-import com.chua.starter.monitor.support.event.MetricCollectedEvent;
 import com.chua.starter.monitor.support.registry.ProviderRegistry;
 import com.chua.starter.monitor.support.service.MetricService;
 import com.chua.starter.monitor.support.service.MonitorConfigService;
@@ -85,8 +84,6 @@ public class MonitorScheduler {
     /** JSON 解析器 */
     /** Objectmapper */
     private final ObjectMapper objectMapper;
-    /** Spring 事件发布器（采集完成后解耦通知下游：告警评估 / 实时推送） */
-    private final ApplicationEventPublisher eventPublisher;
 
     /** 上次调度时间(nanoTime), 用于间隔控制 */
     /** 最后tick时间 */
@@ -197,11 +194,10 @@ public class MonitorScheduler {
                 .build();
         return providerOpt.get().collect(context)
                 .doOnSuccess(result -> {
-                    // 成功：标记时间 + 解析规则 + 写入指标 + 发布采集完成事件（告警评估/实时推送解耦）
+                    // 成功：标记时间 + 解析规则 + 写入指标（含 InfluxDB 双写）
                     taskService.markLastRunTime(task.getId());
                     applyParseRules(task.getId(), result);
                     metricService.writeCollectResult(result);
-                    eventPublisher.publishEvent(new MetricCollectedEvent(result));
                 })
                 .doOnError(error -> {
                     log.error("[MonitorScheduler] 采集失败 task={} error={}", task.getId(), error.getMessage());
