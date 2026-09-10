@@ -56,7 +56,12 @@ public class ServerFilterFactory {
      * FileStorageSetting 布尔开关映射的参数名
      */
     private static final List<String> SETTING_BOOLEAN_KEYS = List.of(
-            "openPreview", "openDownload", "openRange", "openWatermark", "openRemoteFile", "openWebjars");
+            "openPreview", "openDownload", "openRange", "openWatermark", "openRemoteFile", "openWebjars", "layout");
+
+    /**
+     * FileStorageSetting 字符串参数映射的参数名
+     */
+    private static final List<String> SETTING_STRING_KEYS = List.of("watermark", "layoutType");
 
     /**
      * 应用上下文
@@ -179,7 +184,7 @@ public class ServerFilterFactory {
                 if (SETTING_BOOLEAN_KEYS.contains(key)) {
                     Method method = storageSetting.getClass().getMethod(setter, boolean.class);
                     method.invoke(storageSetting, parseBoolean(value));
-                } else if ("watermark".equals(key)) {
+                } else if (SETTING_STRING_KEYS.contains(key)) {
                     Method method = storageSetting.getClass().getMethod(setter, String.class);
                     method.invoke(storageSetting, value);
                 } else {

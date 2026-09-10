@@ -10,8 +10,6 @@ import com.chua.starter.monitor.support.entity.MsTsharkPacket;
 import com.chua.starter.monitor.support.entity.MsTsharkSession;
 import com.chua.starter.monitor.support.mapper.MsTsharkPacketMapper;
 import com.chua.starter.monitor.support.mapper.MsTsharkSessionMapper;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -41,15 +39,19 @@ public class TsharkCaptureService {
 
     private static final String TSHARK_BIN = System.getenv().getOrDefault("TSHARK_BIN", "tshark");
     private static final String CAPTURE_DIR = System.getenv().getOrDefault("TSHARK_CAPTURE_DIR", "/opt/spring-support/captures");
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final Map<Long, Process> running = new ConcurrentHashMap<>();
     private final MsTsharkSessionMapper sessionMapper;
     private final MsTsharkPacketMapper packetMapper;
+    /** 实时推送服务（socket 未启用时静默跳过） */
+    private final MonitorPushService pushService;
 
-    public TsharkCaptureService(MsTsharkSessionMapper sessionMapper, MsTsharkPacketMapper packetMapper) {
+    public TsharkCaptureService(MsTsharkSessionMapper sessionMapper,
+                                MsTsharkPacketMapper packetMapper,
+                                MonitorPushService pushService) {
         this.sessionMapper = sessionMapper;
         this.packetMapper = packetMapper;
+        this.pushService = pushService;
     }
 
     public ReturnResult<List<String>> listInterfaces() {
@@ -141,6 +143,7 @@ public class TsharkCaptureService {
             session.setStartTime(LocalDateTime.now());
             this.sessionMapper.insert(session);
             this.running.put(session.getId(), proc);
+            this.pushService.pushTsharkSession(session, session.getId());
             this.asyncFinalize(session.getId(), proc, filePath);
             return ReturnResult.ok(session);
         } catch (Exception e) {
@@ -163,6 +166,7 @@ public class TsharkCaptureService {
                 session.setCaptureStatus(0);
                 session.setEndTime(LocalDateTime.now());
                 this.sessionMapper.updateById(session);
+                this.pushService.pushTsharkSession(session, sessionId);
             }
         } catch (Exception e) {
             log.error("finalize capture failed, session={}", sessionId, e);
@@ -180,6 +184,7 @@ public class TsharkCaptureService {
                 session.setEndTime(LocalDateTime.now());
                 this.sessionMapper.updateById(session);
             }
+            this.pushService.pushTsharkSession(this.sessionMapper.selectById(sessionId), sessionId);
             return ReturnResult.success();
         }
         proc.destroy();
@@ -195,6 +200,7 @@ public class TsharkCaptureService {
             session.setEndTime(LocalDateTime.now());
             this.sessionMapper.updateById(session);
         }
+        this.pushService.pushTsharkSession(session, sessionId);
         return ReturnResult.success();
     }
 
@@ -207,30 +213,33 @@ public class TsharkCaptureService {
                 log.warn("capture file empty, session={}", sessionId);
                 return;
             }
-            ProcessBuilder pb = new ProcessBuilder(TSHARK_BIN, "-r", filePath.toString(), "-T", "json", "-E", "separator=,", "-x", "--no-duplicate-keys");
+            // 逐事件流式输出（-T json 每行一个对象），边解析边入库+实时推送
+            ProcessBuilder pb = new ProcessBuilder(TSHARK_BIN, "-r", filePath.toString(),
+                    "-T", "json", "-E", "separator=,", "-x", "--no-duplicate-keys");
             pb.redirectErrorStream(true);
             Process p = pb.start();
-            StringBuilder sb = new StringBuilder(8192);
+            int batch = 0;
             try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8), 0x100000)) {
                 String line;
                 while ((line = r.readLine()) != null) {
-                    sb.append(line).append('\n');
+                    if (line.isBlank() || line.length() < 2) {
+                        continue;
+                    }
+                    String trimmed = line.trim();
+                    // 兼容数组格式：去掉行首 [ / 行尾 , ] 等包装符
+                    if (trimmed.startsWith("[")) {
+                        trimmed = trimmed.substring(1);
+                    }
+                    while (trimmed.endsWith(",") || trimmed.endsWith("]")) {
+                        trimmed = trimmed.substring(0, trimmed.length() - 1);
+                    }
+                    if (trimmed.isBlank() || !trimmed.startsWith("{")) {
+                        continue;
+                    }
+                    if (this.savePacket(sessionId, trimmed)) {
+                        batch++;
+                    }
                 }
-            }
-            String jsonText = sb.toString();
-            if (jsonText.isBlank()) {
-                return;
-            }
-            JsonNode root = OBJECT_MAPPER.readTree(jsonText);
-            int batch = 0;
-            if (root.isArray()) {
-                for (JsonNode node : root) {
-                    this.savePacket(sessionId, node.toString());
-                    batch++;
-                }
-            } else if (root.isObject()) {
-                this.savePacket(sessionId, root.toString());
-                batch++;
             }
             if (batch > 0) {
                 MsTsharkSession session = this.sessionMapper.selectById(sessionId);
@@ -245,11 +254,11 @@ public class TsharkCaptureService {
         }
     }
 
-    private void savePacket(Long sessionId, String jsonLine) {
+    private boolean savePacket(Long sessionId, String jsonLine) {
         try {
             PacketRecord rec = PacketParserService.parse(jsonLine);
             if (rec == null) {
-                return;
+                return false;
             }
             MsTsharkPacket packet = new MsTsharkPacket();
             packet.setSessionId(sessionId);
@@ -264,8 +273,12 @@ public class TsharkCaptureService {
             packet.setRawData(rec.rawData());
             packet.setRestoredText(rec.restoredText());
             this.packetMapper.insert(packet);
+            // 实时推送：每包广播（dataId=sessionId，前端按当前会话过滤）
+            this.pushService.pushTsharkPacket(packet, sessionId);
+            return true;
         } catch (Exception e) {
             log.debug("skip packet parse error: {}", e.getMessage());
+            return false;
         }
     }
 

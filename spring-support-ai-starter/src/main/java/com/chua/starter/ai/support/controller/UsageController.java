@@ -133,6 +133,29 @@ public class UsageController {
     }
 
     @Permission("admin")
+    @Operation(summary = "用量趋势", description = "按天聚合返回 Token 使用趋势（基于日汇总表）")
+    @GetMapping("/trend")
+    public ReturnResult<List<Map<String, Object>>> trend(
+            @RequestParam(required = false) String provider,
+            @RequestParam(required = false) String model,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
+        List<com.chua.starter.ai.support.entity.SysAiUsageDaily> dailies =
+                usageService.getDailyTrend(provider, model, startTime, endTime);
+        List<Map<String, Object>> result = new ArrayList<>(dailies.size());
+        for (var d : dailies) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("date", d.getStatDate() != null ? d.getStatDate().toString() : null);
+            item.put("totalCalls", d.getTotalCalls() != null ? d.getTotalCalls() : 0L);
+            item.put("promptTokens", d.getTotalPromptTokens() != null ? d.getTotalPromptTokens() : 0L);
+            item.put("completionTokens", d.getTotalCompletionTokens() != null ? d.getTotalCompletionTokens() : 0L);
+            item.put("cachedTokens", d.getTotalCachedTokens() != null ? d.getTotalCachedTokens() : 0L);
+            result.add(item);
+        }
+        return ReturnResult.ok(result);
+    }
+
+    @Permission("admin")
     @Operation(summary = "用量数据源列表", description = "返回已注册的 UsageParser SPI 实现列表")
     @GetMapping("/parsers")
     public ReturnResult<List<Map<String, Object>>> parsers() {

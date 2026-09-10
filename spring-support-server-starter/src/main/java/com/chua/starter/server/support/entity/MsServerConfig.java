@@ -25,7 +25,7 @@ public class MsServerConfig extends SysBase {
     private Long id;
 
     @TableField("ms_server_config_key")
-    @Schema(description = "配置键", example = "host.online.enabled")
+    @Schema(description = "配置键", example = "guacd.host")
     private String configKey;
 
     @TableField("ms_server_config_value")
