@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.chua.starter.remote.support.store.MyBatisAccessCodeStore$AccessCodeMapper">
+
+    <update id="createCodeTable">
+        CREATE TABLE IF NOT EXISTS access_code (
+            code VARCHAR(64) PRIMARY KEY,
+            type VARCHAR(32),
+            status VARCHAR(16),
+            created_at VARCHAR(32),
+            expires_at VARCHAR(32),
+            ip_whitelist VARCHAR(512),
+            max_agents INT DEFAULT 0,
+            used_agents INT DEFAULT 0
+        )
+    </update>
+
+    <update id="addIpWhitelistColumn">
+        ALTER TABLE access_code ADD COLUMN IF NOT EXISTS ip_whitelist VARCHAR(512)
+    </update>
+
+    <update id="createAgentTable">
+        CREATE TABLE IF NOT EXISTS access_code_agent (
+            code VARCHAR(64),
+            agent_id VARCHAR(64),
+            ip VARCHAR(64),
+            time VARCHAR(32),
+            PRIMARY KEY (code, agent_id)
+        )
+    </update>
+
+    <select id="findAllRows" resultType="java.util.Map">
+        SELECT code, type, status, created_at, expires_at, ip_whitelist, max_agents, used_agents FROM access_code
+    </select>
+
+    <select id="findRow" resultType="java.util.Map">
+        SELECT code, type, status, created_at, expires_at, ip_whitelist, max_agents, used_agents
+        FROM access_code WHERE code = #{code}
+    </select>
+
+    <select id="findAgents" resultType="java.util.Map">
+        SELECT agent_id, ip, time FROM access_code_agent WHERE code = #{code}
+    </select>
+
+    <select id="countAgents" resultType="int">
+        SELECT COUNT(*) FROM access_code_agent WHERE code = #{code}
+    </select>
+
+    <insert id="insertInfo">
+        INSERT INTO access_code (code, type, status, created_at, expires_at, ip_whitelist, max_agents, used_agents)
+        VALUES (#{info.code}, #{info.type}, #{info.status}, #{info.createdAt}, #{info.expiresAt},
+                #{info.ipWhitelist}, #{info.maxAgents}, #{info.usedAgents})
+    </insert>
+
+    <delete id="deleteInfo">
+        DELETE FROM access_code WHERE code = #{code}
+    </delete>
+
+    <delete id="deleteAgents">
+        DELETE FROM access_code_agent WHERE code = #{code}
+    </delete>
+
+    <insert id="insertAgent">
+        INSERT INTO access_code_agent (code, agent_id, ip, time)
+        VALUES (#{code}, #{stat.agentId}, #{stat.ip}, #{stat.time})
+    </insert>
+
+    <delete id="removeAgent">
+        DELETE FROM access_code_agent WHERE code = #{code} AND agent_id = #{agentId}
+    </delete>
+
+    <update id="updateUsedAgents">
+        UPDATE access_code SET used_agents = #{count} WHERE code = #{code}
+    </update>
+</mapper>
