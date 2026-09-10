@@ -1,5 +1,6 @@
 package com.chua.starter.console.environment;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;
@@ -36,7 +37,7 @@ public class ConsoleKvEnvironmentPostProcessor implements EnvironmentPostProcess
         String path = environment.getProperty("console.sqlite-path", "console.sqlite");
         Map<String, Object> kv = new LinkedHashMap<>();
         try {
-            Class.forName("org.sqlite.JDBC");
+            ReflectUtils.forName("org.sqlite.JDBC");
             try (Connection connection = DriverManager.getConnection("jdbc:sqlite:" + path);
                  Statement statement = connection.createStatement();
                  ResultSet rs = statement.executeQuery("SELECT k, v FROM console_kv")) {

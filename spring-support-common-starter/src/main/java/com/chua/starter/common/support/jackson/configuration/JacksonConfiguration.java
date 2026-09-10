@@ -6,6 +6,7 @@ import com.chua.starter.common.support.jackson.*;
 import com.chua.starter.common.support.jackson.handler.JacksonProblemHandler;
 import com.chua.starter.common.support.jackson.handler.JsonArray2StringJacksonProblemHandler;
 import com.chua.starter.common.support.jackson.handler.JsonObject2ArrayListJacksonProblemHandler;
+import com.chua.common.support.reflection.ReflectUtils;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.JsonParser;
@@ -213,7 +214,7 @@ public class JacksonConfiguration {
             Class<?> targetRawClass = targetType.getRawClass();
             String name = t.name();
             try {
-                return NULLABLE_FIELDS.get(name, targetRawClass).getDeclaredConstructor().newInstance().handle(ctxt, targetType, t, p, failureMsg);
+                return ReflectUtils.instantiate(NULLABLE_FIELDS.get(name, targetRawClass)).handle(ctxt, targetType, t, p, failureMsg);
             } catch (Exception ignored) {
             }
             return super.handleUnexpectedToken(ctxt, targetType, t, p, failureMsg);

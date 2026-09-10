@@ -2,6 +2,7 @@ package com.chua.starter.mybatis.utils;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.chua.common.support.reflection.ReflectUtils;
 import org.springframework.beans.BeanUtils;
 
 import java.util.function.Supplier;
@@ -55,7 +56,7 @@ public class PageUtils {
     public static <E, R>IPage<R> copyProperties(IPage<E> page, Class<R> type) {
         return copyProperties(page, () -> {
             try {
-                return type.getDeclaredConstructor().newInstance();
+                return ReflectUtils.instantiate(type);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

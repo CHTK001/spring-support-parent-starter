@@ -1,5 +1,6 @@
 package com.chua.starter.console.store;
 
+import com.chua.common.support.reflection.ReflectUtils;
 import com.chua.starter.console.ConsoleProperties;
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,7 +31,7 @@ public class ConsoleSqliteStore implements AutoCloseable {
 
     public ConsoleSqliteStore(ConsoleProperties properties) {
         try {
-            Class.forName("org.sqlite.JDBC");
+            ReflectUtils.forName("org.sqlite.JDBC");
             this.connection = DriverManager.getConnection("jdbc:sqlite:" + properties.getSqlitePath());
             initSchema();
             log.info("[Console] SQLite 持久层就绪: {}", properties.getSqlitePath());
