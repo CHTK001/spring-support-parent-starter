@@ -200,14 +200,6 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
         String bucket = segments.get(0);
 
-        // Vue 静态资源：GET /assets/*
-        if ("assets".equalsIgnoreCase(bucket) && storageMap.get(bucket) == null) {
-            if (request.getMethod() == HttpMethod.GET || request.getMethod() == HttpMethod.HEAD) {
-                return handleFsStatic(path, segments, request, response);
-            }
-            return passthrough(request, response, chain);
-        }
-
         // 一次性访问链接：GET /ot/{token}（消费）/ POST /ot?bucket=&key=（创建）
         if ("ot".equalsIgnoreCase(bucket) && storageMap.get(bucket) == null) {
             return handleOneTime(request, response, segments);
@@ -425,59 +417,6 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     }
 
     // ==================== 一次性访问链接（阅后即焚） ====================
-
-    /**
-     * 处理 Vue 静态资源请求：GET /fs/assets/* 或 /fs/index.html。
-     *
-     * <p>从 classpath {@code static/fs/} 读取构建产物并返回。
-     * 未找到资源时返回 404。</p>
-     */
-    private CompletionStage<Void> handleFsStatic(String fullPath, List<String> segments, ServerRequest request, ServerResponse response) {
-        // 去除 /fs 前缀，拼资源路径
-        String resourceKey = fullPath;
-        if (resourceKey.startsWith("/fs")) {
-            resourceKey = resourceKey.substring("/fs".length());
-        }
-        if (resourceKey.isEmpty() || "/".equals(resourceKey)) {
-            resourceKey = "index.html";
-        } else if (resourceKey.startsWith("/")) {
-            resourceKey = resourceKey.substring(1);
-        }
-        // 禁止目录穿越
-        if (resourceKey.contains("..")) {
-            return error(response, 400, "Bad Request");
-        }
-        String contentType = guessFsContentType(resourceKey);
-        try (InputStream in = FileStorageServerFilter.class.getResourceAsStream("/static/fs/" + resourceKey)) {
-            if (in == null) {
-                return error(response, 404, "Not Found: " + resourceKey);
-            }
-            byte[] data = in.readAllBytes();
-            response.setStatus(200)
-                    .setContentType(contentType)
-                    .setHeader("Cache-Control", resourceKey.contains("/assets/") ? "public, max-age=31536000" : "no-cache")
-                    .setBody(data)
-                    .end();
-            return CompletableFuture.completedFuture(null);
-        } catch (IOException e) {
-            return error(response, 500, "IO Error");
-        }
-    }
-
-    /**
-     * 推断 Vue 静态资源的 Content-Type。
-     */
-    private String guessFsContentType(String name) {
-        if (name.endsWith(".js")) return "application/javascript;charset=UTF-8";
-        if (name.endsWith(".css")) return "text/css;charset=UTF-8";
-        if (name.endsWith(".html")) return "text/html;charset=UTF-8";
-        if (name.endsWith(".json")) return "application/json;charset=UTF-8";
-        if (name.endsWith(".png")) return "image/png";
-        if (name.endsWith(".svg")) return "image/svg+xml";
-        if (name.endsWith(".ico")) return "image/x-icon";
-        if (name.endsWith(".woff2")) return "font/woff2";
-        return "application/octet-stream";
-    }
 
     /**
      * 处理一次性访问链接。

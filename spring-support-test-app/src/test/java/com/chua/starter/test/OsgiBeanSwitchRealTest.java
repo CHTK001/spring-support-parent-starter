@@ -1,5 +1,6 @@
 package com.chua.starter.test;
 
+import com.chua.common.support.objects.ObjectContext;
 import com.chua.common.support.objects.definition.BeanDefinition;
 import com.chua.osgi.support.FelixOsgiLauncher;
 import com.chua.osgi.support.register.impl.OsgiBeanDefinitionRegister;
