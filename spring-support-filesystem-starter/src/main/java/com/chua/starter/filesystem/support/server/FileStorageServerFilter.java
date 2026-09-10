@@ -200,8 +200,8 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
         String bucket = segments.get(0);
 
-        // Vue 静态资源：GET /fs/assets/* 或 /fs/index.html
-        if ("fs".equalsIgnoreCase(bucket) && storageMap.get(bucket) == null) {
+        // Vue 静态资源：GET /assets/*
+        if ("assets".equalsIgnoreCase(bucket) && storageMap.get(bucket) == null) {
             if (request.getMethod() == HttpMethod.GET || request.getMethod() == HttpMethod.HEAD) {
                 return handleFsStatic(path, segments, request, response);
             }
@@ -799,6 +799,9 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     /**
      * 渲染文件列表 HTML 页面。
      *
+     * <p>直接返回 Vue 独立构建的壳页面（classpath {@code static/index.html}），
+     * 由前端通过 REST API（{@code ?format=json}）完成列表/预览/上传等交互。</p>
+     *
      * @param bucket 存储名
      * @param dir    当前目录路径
      * @param items  列表项
@@ -806,15 +809,42 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * @return 异步阶段
      */
     private CompletionStage<Void> renderLayoutPage(String bucket, String dir, List<Metadata> items, ServerResponse response) {
-        FileStorageSetting.LayoutType type = resolveLayoutType();
-        String html = type == FileStorageSetting.LayoutType.SYSTEM
-                ? buildSystemLayoutHtml(bucket, dir, items)
-                : buildSimpleLayoutHtml(bucket, dir, items);
+        String html = readVueShell();
+        if (html == null) {
+            return error(response, 500, "Vue 前端资源缺失（static/index.html）");
+        }
         response.setStatus(200)
                 .setContentType("text/html;charset=UTF-8")
                 .setBody(html.getBytes(StandardCharsets.UTF_8))
                 .end();
         return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * 读取 Vue 前端壳页面（classpath static/index.html），带懒缓存。
+     *
+     * @return HTML 内容，缺失返回 null
+     */
+    private volatile String vueShellCache;
+
+    private String readVueShell() {
+        String cached = vueShellCache;
+        if (cached != null) {
+            return cached;
+        }
+        synchronized (this) {
+            if (vueShellCache == null) {
+                try (InputStream in = FileStorageServerFilter.class.getResourceAsStream("/static/index.html")) {
+                    if (in == null) {
+                        return null;
+                    }
+                    vueShellCache = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+                } catch (IOException e) {
+                    return null;
+                }
+            }
+            return vueShellCache;
+        }
     }
 
     /**

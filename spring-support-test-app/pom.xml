@@ -39,6 +39,13 @@
             <artifactId>spring-support-common-starter</artifactId>
         </dependency>
 
+        <!-- ObjectContext（SpringBootObjectContext bean）：OsgiAutoConfiguration 将
+             OsgiBeanDefinitionRegister 挂接到 ObjectContext，桥接 OSGi 服务查询 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-springboot-starter</artifactId>
+        </dependency>
+
         <!-- 多数据源/@DS、数据源合并与分片 -->
         <dependency>
             <groupId>com.chua</groupId>
