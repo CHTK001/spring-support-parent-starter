@@ -88,6 +88,12 @@ public class WatchPointcutAdvisor extends StaticMethodMatcherPointcutAdvisor imp
                         log.debug("[Watch] {}.{} result={}", method.getDeclaringClass().getSimpleName(),
                                 method.getName(), result);
                     }
+
+                    // 最外层调用清理 ThreadLocal，防止线程池复用导致 Span 栈泄漏
+                    if (null == currentSpan) {
+                        NewTrackManager.clear();
+                        TrackContext.clear();
+                    }
                 }
             }
         });
