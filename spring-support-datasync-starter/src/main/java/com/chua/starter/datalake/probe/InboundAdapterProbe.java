@@ -41,7 +41,7 @@ public class InboundAdapterProbe {
     private static final List<String> failedCases = new CopyOnWriteArrayList<>();
 
     private static PipelineManager pipelineManager;
-    private static Map<String, DataSink> sinkRegistry;
+    private static final Map<String, DataSink> sinkRegistry = new ConcurrentHashMap<>();
     private static PipelineEngine pipelineEngine;
     private static MockSink mockSink;
 
@@ -83,7 +83,6 @@ public class InboundAdapterProbe {
 
         // MockSink — 记录所有写入
         mockSink = new MockSink();
-        sinkRegistry = new ConcurrentHashMap<>();
         sinkRegistry.put("mock", mockSink);
 
         pipelineEngine = new DefaultPipelineEngine(pipelineManager, sinkRegistry, null);
