@@ -1,0 +1,68 @@
+package com.chua.starter.project.support.service;
+
+import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.starter.project.support.entity.MsProjectDeployLog;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+
+/**
+ * 发布操作服务（部署 / 升级 / 启停）
+ * <p>
+ * 基于 SSH/SFTP 对目标服务器执行远程部署、升级、启动、停止与重启，
+ * 并写入 {@code ms_project_deploy_log} 部署日志。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
+public interface DeployService {
+
+    /**
+     * 部署或升级项目
+     * <p>
+     * 根据项目升级策略（是否先删除旧内容/覆盖模式/是否自动解压）执行：
+     * 上传部署包 → 可选清除部署目录 → 可选解压到部署目录 → 记录部署日志。
+     * 多目标服务器并行执行。
+     * </p>
+     *
+     * @param projectId  项目 ID
+     * @param action     操作类型 DEPLOY / UPGRADE
+     * @param file       部署包文件（zip/tar.gz/jar 等）
+     * @return 每台主机的部署日志
+     */
+    ReturnResult<List<MsProjectDeployLog>> deploy(Long projectId, String action, MultipartFile file);
+
+    /**
+     * 启动项目（执行启动脚本）
+     *
+     * @param projectId 项目 ID
+     * @return 每台主机的执行日志
+     */
+    ReturnResult<List<MsProjectDeployLog>> start(Long projectId);
+
+    /**
+     * 停止项目（执行停止脚本）
+     *
+     * @param projectId 项目 ID
+     * @return 每台主机的执行日志
+     */
+    ReturnResult<List<MsProjectDeployLog>> stop(Long projectId);
+
+    /**
+     * 重启项目（执行重启脚本）
+     *
+     * @param projectId 项目 ID
+     * @return 每台主机的执行日志
+     */
+    ReturnResult<List<MsProjectDeployLog>> restart(Long projectId);
+
+    /**
+     * 部署日志列表
+     *
+     * @param projectId 项目 ID，可为空查询全部
+     * @param action    操作类型，可为空
+     * @return 日志列表（最新在前，上限 200）
+     */
+    ReturnResult<List<MsProjectDeployLog>> listLogs(Long projectId, String action);
+}

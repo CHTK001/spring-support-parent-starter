@@ -14,6 +14,7 @@ import com.chua.starter.monitor.support.mapper.MsMonitorAlarmRuleMapper;
 import com.chua.starter.monitor.support.mapper.MsMonitorMapper;
 import com.chua.starter.monitor.support.service.alarm.AlarmEngineService;
 import com.chua.starter.monitor.support.service.alarm.NotifySender;
+import com.chua.starter.monitor.support.service.impl.MonitorPushService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -76,6 +77,9 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
 
     /** 通知渠道集合（Spring 收集全部实现） */
     private final List<NotifySender> notifySenders;
+
+    /** 实时推送服务（Socket 未启用时静默跳过） */
+    private final MonitorPushService monitorPushService;
 
     /** 规则缓存：metricName -> 启用中的规则列表 */
     private volatile Map<String, List<MsMonitorAlarmRule>> ruleCache = Map.of();
@@ -428,6 +432,19 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
             event.setMsMonitorAlarmEventStatus("NEW");
             event.setMsMonitorAlarmEventTriggerTime(LocalDateTime.now());
             eventMapper.insert(event);
+            // 实时推送告警事件到前端（Socket 未启用时静默跳过）
+            try {
+                monitorPushService.pushAlarm(MonitorPushService.buildAlarmPayload(
+                        event.getMsMonitorAlarmEventMonitorId(),
+                        event.getMsMonitorAlarmEventMonitorName(),
+                        event.getMsMonitorAlarmEventMetricName(),
+                        event.getMsMonitorAlarmEventAlarmValue() == null ? 0 : event.getMsMonitorAlarmEventAlarmValue().doubleValue(),
+                        event.getMsMonitorAlarmEventThreshold() == null ? 0 : event.getMsMonitorAlarmEventThreshold().doubleValue(),
+                        event.getMsMonitorAlarmEventLevel(),
+                        event.getMsMonitorAlarmEventStatus()));
+            } catch (Exception e) {
+                log.debug("[alarm] 实时推送跳过: {}", e.getMessage());
+            }
             // 渠道投递（单渠道失败不影响其他）
             String title = String.format("[%s] %s %s=%s", event.getMsMonitorAlarmEventLevel(),
                     resolvedName, metricName, value.toPlainString());

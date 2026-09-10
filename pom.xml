@@ -80,7 +80,6 @@
         <module>spring-support-common-starter</module>          <!-- 通用功能和工具类 -->
         <module>spring-support-cache-starter</module>           <!-- 缓存功能模块 -->
         <module>spring-support-mybatis-starter</module>         <!-- MyBatis Plus集成 -->
-        <module>spring-support-remote-starter</module>          <!-- Remote 远控集成：接入码存储 MyBatis SPI 实现 -->
 
         <!-- 认证和安全模块 -->
         <module>spring-support-oauth-client-starter</module>
@@ -150,6 +149,9 @@
         <!-- 服务器与中间件监控模块 -->
         <module>spring-support-monitor-starter</module>
         <module>spring-support-server-starter</module>
+
+        <!-- 发布项目管理模块（软件部署/升级/启停） -->
+        <module>spring-support-project-starter</module>
 
         <!-- AI深度学习模块 -->
         <module>spring-support-ai-starter</module>
@@ -980,12 +982,6 @@
 
             <dependency>
                 <groupId>com.chua</groupId>
-                <artifactId>utils-support-remote-starter</artifactId>
-                <version>${utils.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.chua</groupId>
                 <artifactId>utils-support-milvus-starter</artifactId>
                 <version>${utils.version}</version>
             </dependency>
@@ -1547,7 +1543,6 @@
         </snapshotRepository>
     </distributionManagement>
 </project>
-
 
 
 

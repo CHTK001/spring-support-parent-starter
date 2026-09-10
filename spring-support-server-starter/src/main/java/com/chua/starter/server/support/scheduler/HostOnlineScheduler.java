@@ -57,6 +57,9 @@ public class HostOnlineScheduler {
     /** 默认采集间隔(秒) */
     private static final int DEFAULT_COLLECT_INTERVAL = 3600;
 
+    /** 默认延迟检测间隔(秒) */
+    private static final int DEFAULT_DELAY_INTERVAL = 60;
+
     /** 最小间隔(秒) */
     private static final int MIN_INTERVAL = 5;
 
@@ -153,6 +156,77 @@ public class HostOnlineScheduler {
                             () -> log.info("[collect] 采集完成: {} 台成功, 共 {} 台", ok[0], dueHosts.size()));
         } catch (Exception e) {
             log.warn("[collect] 定时采集异常: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 延迟检测：扫描启用主机，按各自开关/间隔 TCP 连接测 RTT 毫秒并回写
+     */
+    public void delayTick() {
+        try {
+            List<MsServerHost> hosts = hostMapper.selectList(
+                    new LambdaQueryWrapper<MsServerHost>().eq(MsServerHost::getServerHostStatus, 1));
+            LocalDateTime now = LocalDateTime.now();
+            int probed = 0;
+            for (MsServerHost host : hosts) {
+                if (!isEnabled(host.getServerHostDelayEnabled())) {
+                    continue;
+                }
+                int interval = normalizeInterval(
+                        host.getServerHostDelayInterval() == null ? DEFAULT_DELAY_INTERVAL : host.getServerHostDelayInterval());
+                if (!isDue(host.getServerHostLastDelayTime(), interval, now)) {
+                    continue;
+                }
+                probed++;
+                updateDelay(host.getId());
+            }
+            if (probed > 0) {
+                log.info("[delay] 延迟检测完成: 探测 {} 台", probed);
+            }
+        } catch (Exception e) {
+            log.warn("[delay] 延迟检测异常: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * TCP 连接测 RTT 延迟并回写（连不上则置 -1）
+     *
+     * @param hostId 主机 ID
+     */
+    private void updateDelay(Long hostId) {
+        try {
+            MsServerHost host = hostMapper.selectById(hostId);
+            if (host == null) {
+                return;
+            }
+            long delay = measureDelayMs(host);
+            host.setServerHostDelayMs(delay < 0 ? -1 : delay);
+            host.setServerHostLastDelayTime(LocalDateTime.now());
+            hostMapper.updateById(host);
+        } catch (Exception e) {
+            log.warn("[delay] 更新延迟状态失败 hostId={}", hostId, e);
+        }
+    }
+
+    /**
+     * 测量 TCP 连接延迟（毫秒），不可达返回 -1
+     *
+     * @param host 主机
+     * @return 延迟毫秒或 -1
+     */
+    private long measureDelayMs(MsServerHost host) {
+        String address = host.getServerHostAddress();
+        if (address == null || "127.0.0.1".equals(address.trim()) || "localhost".equalsIgnoreCase(address.trim())) {
+            return 0;
+        }
+        int port = host.getServerHostPort() == null || host.getServerHostPort() <= 0 ? 22 : host.getServerHostPort();
+        try (Socket socket = new Socket()) {
+            long start = System.nanoTime();
+            socket.connect(new InetSocketAddress(address, port), CONNECT_TIMEOUT_MS);
+            long cost = (System.nanoTime() - start) / 1_000_000;
+            return cost;
+        } catch (Exception e) {
+            return -1;
         }
     }
 

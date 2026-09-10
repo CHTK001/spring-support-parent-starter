@@ -79,3 +79,7 @@ replay_pid*.log
 *.log.gz
 stash.diff
 cp_*.txt
+**/backend-args.txt
+**/classpath.txt
+**/start-backend.bat
+effective-pom

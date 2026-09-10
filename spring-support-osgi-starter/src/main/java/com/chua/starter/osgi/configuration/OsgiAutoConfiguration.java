@@ -132,6 +132,13 @@ public class OsgiAutoConfiguration {
         config.put("org.osgi.framework.startlevel.beginning", String.valueOf(properties.getStartLevel()));
         config.put("org.osgi.framework.storage.clean", "onFirstInit");
 
+        // 透传自定义 Felix 框架配置（如 org.osgi.framework.system.packages.extra 导出应用接口包）
+        properties.getFrameworkProperties().forEach((k, v) -> {
+            if (v != null) {
+                config.put(k, String.valueOf(v));
+            }
+        });
+
         OsgiProperties.Shell shell = properties.getShell();
         if (shell != null && shell.isEnabled()) {
             String protocol = shell.getProtocol();

@@ -376,44 +376,85 @@ public class AiBotBindingService {
      * <p>将 iLink 返回的 botId、botToken 写入 sys_ai_bot_binding，
      * 绑定来源标记为 qrcode_scan，状态设为 online。</p>
      *
-     * <p>重新扫码合并：若本次扫码携带了 {@code oldBotId}（旧绑定过期重绑），
-     * 则把新 botId/botToken 更新到旧绑定记录上（保持记录 id 不变，不起新行），
-     * 并把旧 botId 下的历史聊天消息迁移到新 botId，前端会话与历史不断裂。</p>
+     * <p><b>重新扫码自动合并并保留历史：</b>微信用户身份不变（nickname=userId），
+     * 重新扫码后 iLink 可能分配新的 botId。此时自动完成三件事：
+     * <ol>
+     *   <li>把同微信号（nickname）所有旧 botId 下的聊天消息迁移到新 botId</li>
+     *   <li>更新其中一条旧绑定记录为新的 botId/botToken（记录 id 不变，前端会话不分裂）</li>
+     *   <li>删除同微信用户的其他旧绑定记录，避免重复行</li>
+     * </ol></p>
      */
     private void saveBindingFromScan(String key, QrSession session, String userId) {
         try {
             String newBotId = session.botId;
-            String oldBotId = session.oldBotId;
-            // 1. 存在旧绑定且 botId 变化：合并更新旧记录 + 迁移消息
-            if (oldBotId != null && newBotId != null && !oldBotId.equals(newBotId)) {
-                var existing = findByBotId(oldBotId);
-                if (existing != null) {
-                    // 迁移历史消息到新 botId（保留聊天记录）
-                    aiBotChatService.migrateMessages(oldBotId, newBotId);
-                    // 更新旧绑定记录为新 botId/botToken（记录 id 不变）
-                    existing.setBotId(newBotId);
-                    existing.setBotToken(session.botToken);
-                    existing.setPlatform("wechat");
-                    existing.setStatus("online");
-                    existing.setBindSource("qrcode_scan");
-                    existing.setUpdateTime(LocalDateTime.now());
-                    if (userId != null && !userId.isBlank() && !userId.equals(existing.getNickname())) {
-                        existing.setNickname(userId);
-                    }
-                    botBindingMapper.updateById(existing);
-                    // 启动新 bot 的消息轮询
-                    aiBotChatService.startBot(existing);
-                    log.info("[Bot] 重新扫码已合并到旧绑定 id={} {} → {}", existing.getId(), oldBotId, newBotId);
-                    return;
+            if (newBotId == null || newBotId.isBlank()) {
+                log.warn("[Bot] 扫码确认缺少 botId，跳过绑定 key={}", key);
+                return;
+            }
+            String platform = "wechat";
+            // 请求方显式传入的旧 botId（BotIm 重新扫码）也纳入合并范围
+            String explicitOldBotId = session.oldBotId;
+
+            // 1. 找出所有应合并的旧绑定：同一微信用户（nickname=userId）的本平台绑定，
+            //    外加显式指定的旧 botId（即便 nickname 对不上也合并）
+            List<SysAiBotBinding> candidates = new ArrayList<>();
+            if (userId != null && !userId.isBlank()) {
+                candidates.addAll(botBindingMapper.selectList(
+                        Wrappers.<SysAiBotBinding>lambdaQuery()
+                                .eq(SysAiBotBinding::getPlatform, platform)
+                                .eq(SysAiBotBinding::getNickname, userId)));
+            }
+            if (explicitOldBotId != null && !explicitOldBotId.isBlank()) {
+                var byExplicit = findByBotId(explicitOldBotId);
+                if (byExplicit != null && platform.equals(byExplicit.getPlatform())
+                        && candidates.stream().noneMatch(c -> c.getId().equals(byExplicit.getId()))) {
+                    candidates.add(byExplicit);
                 }
-                log.warn("[Bot] 旧绑定 {} 已不存在，按全新绑定处理", oldBotId);
+            }
+            // 移除本身就是新 botId 的行（无需处理），去重
+            candidates = candidates.stream()
+                    .filter(b -> !newBotId.equals(b.getBotId()))
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            if (!candidates.isEmpty()) {
+                // 2. 迁移所有旧 botId 的历史消息到新 botId
+                for (SysAiBotBinding old : candidates) {
+                    if (old.getBotId() != null && !old.getBotId().isBlank()) {
+                        aiBotChatService.migrateMessages(old.getBotId(), newBotId);
+                    }
+                }
+                // 3. 保留第一行作为合并目标：更新为新 botId/botToken/online；其余删除
+                SysAiBotBinding target = candidates.get(0);
+                target.setBotId(newBotId);
+                target.setBotToken(session.botToken);
+                target.setPlatform(platform);
+                target.setStatus("online");
+                target.setBindSource("qrcode_scan");
+                target.setUpdateTime(LocalDateTime.now());
+                if (userId != null && !userId.isBlank() && !userId.equals(target.getNickname())) {
+                    target.setNickname(userId);
+                }
+                botBindingMapper.updateById(target);
+                for (int i = 1; i < candidates.size(); i++) {
+                    SysAiBotBinding dup = candidates.get(i);
+                    if (!dup.getId().equals(target.getId())) {
+                        botBindingMapper.deleteById(dup.getId());
+                        log.info("[Bot] 清理重复旧绑定 id={} {}", dup.getId(), dup.getBotId());
+                    }
+                }
+                // 4. 启动新 bot 的消息轮询
+                aiBotChatService.startBot(target);
+                log.info("[Bot] 重新扫码已合并绑定 id={} {} → {}", target.getId(),
+                        candidates.get(0).getBotId(), newBotId);
+                return;
             }
 
-            // 2. 全新绑定：按 botId 去重写入
+            // 5. 无旧绑定可合并：全新绑定（按 botId 去重写入）
             var binding = new SysAiBotBinding();
             binding.setBotId(newBotId);
             binding.setBotToken(session.botToken);
-            binding.setPlatform("wechat");
+            binding.setPlatform(platform);
             binding.setNickname(userId != null ? userId : newBotId);
             binding.setStatus("online");
             binding.setBindSource("qrcode_scan");

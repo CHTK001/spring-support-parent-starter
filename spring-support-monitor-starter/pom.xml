@@ -25,6 +25,12 @@
             <artifactId>spring-support-server-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- 发布项目管理（软件部署/升级/启停） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-project-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
@@ -94,6 +100,15 @@
             <groupId>com.chua</groupId>
             <artifactId>utils-support-prometheus-starter</artifactId>
             <version>${utils.version}</version>
+        </dependency>
+
+        <!-- 实时推送（可选）：plugin.socket.enable=true 时注入 SocketSessionTemplate，
+             tshark 抓包逐包广播；未启用 socket 的宿主不受影响（ObjectProvider 可选注入） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-socket-starter</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- 时序存储：InfluxDB 引擎(SPI=influxdb)，用于指标明细长期存储与曲线查询 -->

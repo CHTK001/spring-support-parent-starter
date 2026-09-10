@@ -6,7 +6,7 @@ import lombok.Getter;
  * 服务器系统配置变更事件
  * <p>
  * 保存配置后发布，时间轮调度器监听并动态重排周期任务
- * （在离线检测间隔、采集间隔等配置变化即时生效）。
+ * （如连接缓存健康检查间隔变化即时生效；在离线/采集为主机级配置，不在此列）。
  * </p>
  *
  * @author CH
@@ -28,7 +28,7 @@ public class ServerConfigChangedEvent {
     }
 
     /**
-     * 判断是否涉及指定前缀的配置（如 host.online）
+     * 判断是否涉及指定前缀的配置（如 connection）
      *
      * @param prefix 前缀
      * @return 是否命中

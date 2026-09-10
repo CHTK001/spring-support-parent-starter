@@ -35,17 +35,11 @@ public class ServerConfigServiceImpl implements ServerConfigService {
     private static final Map<String, String> DEFAULTS = new HashMap<>();
 
     static {
-        // 在离线检测
-        DEFAULTS.put("host.online.enabled", "true");
-        DEFAULTS.put("host.online.interval", "60");
-        // 采集设置
-        DEFAULTS.put("host.collect.enabled", "false");
-        DEFAULTS.put("host.collect.mode", "scheduled");
-        DEFAULTS.put("host.collect.interval", "3600");
-        // agent 推送
-        DEFAULTS.put("host.agent.enabled", "false");
-        // 远控设置
-        DEFAULTS.put("host.remote.enabled", "true");
+        // guacd（远程控制网关——系统配置页可动态修改）
+        DEFAULTS.put("guacd.host", "127.0.0.1");
+        DEFAULTS.put("guacd.port", "4822");
+        // guacd-client（浏览器侧 guacamole 客户端回连后端 WS 隧道的 host:port，空串=同域 location.host）
+        DEFAULTS.put("guacd.client.host", "127.0.0.1:8082");
         // 连接缓存
         DEFAULTS.put("connection.sweep.interval", "60");
         DEFAULTS.put("connection.idle.timeout", "300");
@@ -199,13 +193,9 @@ public class ServerConfigServiceImpl implements ServerConfigService {
      */
     private String defaultDesc(String key) {
         Map<String, String> desc = new HashMap<>();
-        desc.put("host.online.enabled", "在离线自动检测开关");
-        desc.put("host.online.interval", "在离线检测间隔(秒)");
-        desc.put("host.collect.enabled", "硬件采集开关");
-        desc.put("host.collect.mode", "采集方式: scheduled/agent");
-        desc.put("host.collect.interval", "定时采集间隔(秒)");
-        desc.put("host.agent.enabled", "Agent 推送开关");
-        desc.put("host.remote.enabled", "远控功能开关");
+        desc.put("guacd.host", "guacd 网关地址（远控隧道）");
+        desc.put("guacd.port", "guacd 网关端口（远控隧道）");
+        desc.put("guacd.client.host", "guacd-client 网关地址（浏览器侧 WS 隧道 host:port，空串=同域）");
         desc.put("connection.sweep.interval", "连接健康检查间隔(秒)");
         desc.put("connection.idle.timeout", "连接空闲超时(秒)");
         return desc.getOrDefault(key, "系统配置");

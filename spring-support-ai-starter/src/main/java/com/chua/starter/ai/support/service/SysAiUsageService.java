@@ -3,6 +3,7 @@ package com.chua.starter.ai.support.service;
 import com.chua.common.support.ai.AiUsage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.chua.starter.ai.support.entity.SysAiUsage;
+import com.chua.starter.ai.support.entity.SysAiUsageDaily;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -56,6 +57,21 @@ public interface SysAiUsageService {
      */
     UsageStatistics getStatistics(String groupName, String provider, String model,
                                   LocalDateTime startTime, LocalDateTime endTime);
+
+    /**
+     * 查询按天趋势（Token 使用趋势）。
+     *
+     * <p>直接聚合日汇总表 {@code sys_ai_usage_daily}，按统计日期返回每天输入/输出/缓存 Token
+     * 合计，保证时间窗口内每天都有数据点（不受明细分页/条数限制）。</p>
+     *
+     * @param provider 服务商（可为空）
+     * @param model    模型（可为空）
+     * @param startTime 开始时间（可为空）
+     * @param endTime   结束时间（可为空）
+     * @return 按天排序的趋势点列表（statDate 升序）
+     */
+    List<SysAiUsageDaily> getDailyTrend(String provider, String model,
+                                        LocalDateTime startTime, LocalDateTime endTime);
 
     /**
      * 用量统计摘要
