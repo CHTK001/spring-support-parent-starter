@@ -2,6 +2,7 @@ package com.chua.starter.filesystem.support.server;
 
 import com.chua.common.support.network.server.Server;
 import com.chua.common.support.network.server.ServerBuilder;
+import com.chua.common.support.network.server.filter.StaticResourceServerFilter;
 import com.chua.common.support.storage.FileStorage;
 import com.chua.common.support.storage.setting.BucketSetting;
 import com.chua.starter.filesystem.support.local.LocalFileStorage;

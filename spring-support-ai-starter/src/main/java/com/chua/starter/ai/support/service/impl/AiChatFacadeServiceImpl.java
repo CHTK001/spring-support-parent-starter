@@ -7,11 +7,15 @@ import com.chua.common.support.ai.chat.ChatMessage;
 import com.chua.common.support.ai.chat.ChatResponse;
 import com.chua.common.support.ai.chat.ChatSyncResponse;
 import com.chua.common.support.ai.chat.ModelDefinition;
+import com.chua.common.support.ai.chat.aggregate.AggregateChatClient;
+import com.chua.common.support.ai.chat.aggregate.AggregateChatClientSetting;
 import com.chua.starter.ai.support.entity.SysAiGroup;
 import com.chua.starter.ai.support.entity.SysAiGroupModel;
+import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.store.SysAiProvider;
+import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.mapper.SysAiGroupMapper;
 import com.chua.starter.ai.support.mapper.SysAiGroupModelMapper;
@@ -27,6 +31,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -59,7 +64,21 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     private final SysAiPricingService sysAiPricingService;
     private final SysAiProviderMapper sysAiProviderMapper;
     private final SysAiProviderModelMapper sysAiProviderModelMapper;
+    private final SysAiProviderConnectionMapper sysAiProviderConnectionMapper;
     private final UsageRecorderInterceptor usageRecorderInterceptor;
+
+    /**
+     * DB Provider 多 AppKey 聚合客户端缓存（providerId::model → client，5 分钟 TTL）。
+     * 避免每次对话都重建多客户端聚合实例；凭证变更后最多延迟 5 分钟生效。
+     */
+    private static final long DB_CLIENT_CACHE_TTL_MILLIS = 5 * 60 * 1000L;
+    private final Map<String, CachedDbClient> dbClientCache = new ConcurrentHashMap<>();
+
+    /**
+     * DB Provider 客户端缓存项。
+     */
+    private record CachedDbClient(ChatClient client, long builtAt) {
+    }
 
     // ==================== 同步对话 ====================
 
@@ -219,7 +238,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         if (model != null && !model.isBlank()) {
             SysAiProvider dbProvider = resolveDbProviderByModel(model);
             if (dbProvider != null) {
-                ChatClient dbClient = buildProviderChatClient(dbProvider, model);
+                ChatClient dbClient = getCachedDbClient(dbProvider, model);
                 if (dbClient != null) {
                     return dbClient;
                 }
@@ -271,31 +290,118 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     /**
      * 从 DB provider 动态构建带代理的 ChatClient。
      *
+     * <p>支持多 AppKey：聚合 provider 级凭证（{@code api_keys} 数组 / {@code apiKey}）
+     * 与其所有 connection 级凭证中的全部可用密钥。单密钥时直接构建普通客户端；
+     * 多密钥时每个密钥构建一个客户端并以 {@link AggregateChatClient}（failover 策略）
+     * 聚合，某密钥 401/429/额度耗尽时自动切换下一密钥。</p>
+     *
      * @param provider DB provider 配置
      * @param model    模型名称
      * @return 底层 ChatClient，构建失败返回 null
      */
     private ChatClient buildProviderChatClient(SysAiProvider provider, String model) {
         try {
-            String apiKey = extractApiKey(provider.getCredentials());
+            List<String> keys = collectAllApiKeys(provider);
             Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
-            ChatClientSetting setting = ChatClientSetting.builder()
-                    .provider(provider.getPlatform())
-                    .appKey(apiKey)
-                    .baseUrl(provider.getBaseUrl())
-                    .extraHeaders(extraHeaders)
-                    .proxy(provider.getProxy())
-                    .build();
-            ChatClient raw = ChatClient.create(setting);
-            if (raw == null) {
-                return null;
+            if (keys.isEmpty()) {
+                // 无任何可用密钥：保留原行为（appKey 为 null），由下游/兜底处理
+                ChatClientSetting setting = ChatClientSetting.builder()
+                        .provider(provider.getPlatform())
+                        .baseUrl(provider.getBaseUrl())
+                        .extraHeaders(extraHeaders)
+                        .proxy(provider.getProxy())
+                        .build();
+                ChatClient raw = ChatClient.create(setting);
+                return raw == null ? null : raw.model(model);
             }
-            return raw.model(model);
+            if (keys.size() == 1) {
+                ChatClientSetting setting = ChatClientSetting.builder()
+                        .provider(provider.getPlatform())
+                        .appKey(keys.get(0))
+                        .baseUrl(provider.getBaseUrl())
+                        .extraHeaders(extraHeaders)
+                        .proxy(provider.getProxy())
+                        .build();
+                ChatClient raw = ChatClient.create(setting);
+                if (raw == null) {
+                    return null;
+                }
+                return raw.model(model);
+            }
+            // 多 AppKey：逐密钥构建客户端，failover 聚合
+            AggregateChatClientSetting agg = new AggregateChatClientSetting();
+            agg.setStrategy("failover");
+            List<AggregateChatClientSetting.ClientConfig> clients = new ArrayList<>();
+            for (String key : keys) {
+                AggregateChatClientSetting.ClientConfig cc = new AggregateChatClientSetting.ClientConfig();
+                cc.setProvider(provider.getPlatform());
+                cc.setApiKey(key);
+                cc.setBaseUrl(provider.getBaseUrl());
+                cc.setModel(model);
+                cc.setProxy(provider.getProxy());
+                clients.add(cc);
+            }
+            agg.setClients(clients);
+            log.info("[AiChat] 构建多 AppKey failover 聚合客户端: provider={} model={} keys={}",
+                    provider.getProviderId(), model, keys.size());
+            return new AggregateChatClient(agg).model(model);
         } catch (Exception e) {
             log.warn("[AiChat] 构建 DB ChatClient 失败 provider={} model={}: {}",
                     provider.getProviderId(), model, e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * 收集 provider 全部可用 AppKey（去重、保序）：
+     * provider 级凭证（{@code api_keys} 数组 + {@code apiKey} 标量）+ 各 connection 级凭证。
+     *
+     * @param provider DB provider
+     * @return 全部可用密钥列表（可能为空）
+     */
+    private List<String> collectAllApiKeys(SysAiProvider provider) {
+        LinkedHashSet<String> keys = new LinkedHashSet<>();
+        for (String k : extractApiKeys(provider.getCredentials())) {
+            keys.add(k);
+        }
+        List<SysAiProviderConnection> connections;
+        try {
+            connections = sysAiProviderConnectionMapper.selectList(
+                    new LambdaQueryWrapper<SysAiProviderConnection>()
+                            .eq(SysAiProviderConnection::getProviderId, provider.getProviderId()));
+        } catch (Exception e) {
+            log.debug("[AiChat] 查询 provider connections 失败: {}", e.getMessage());
+            connections = new ArrayList<>();
+        }
+        for (SysAiProviderConnection conn : connections) {
+            for (String k : extractApiKeys(conn.getCredentials())) {
+                keys.add(k);
+            }
+        }
+        return new ArrayList<>(keys);
+    }
+
+    /**
+     * 从凭证中提取全部 API Key（兼容 {@code api_keys} 数组与 {@code apiKey} 键）。
+     */
+    private static List<String> extractApiKeys(Map<String, Object> credentials) {
+        if (credentials == null) {
+            return new ArrayList<>();
+        }
+        List<String> result = new ArrayList<>();
+        Object keys = credentials.get("api_keys");
+        if (keys instanceof List<?> list) {
+            for (Object o : list) {
+                if (o != null && !o.toString().isBlank()) {
+                    result.add(o.toString());
+                }
+            }
+        }
+        Object key = credentials.get("apiKey");
+        if (key != null && !key.toString().isBlank() && !result.contains(key.toString())) {
+            result.add(key.toString());
+        }
+        return result;
     }
 
     /**
