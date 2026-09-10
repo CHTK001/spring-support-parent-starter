@@ -5,6 +5,7 @@ import com.chua.common.support.lang.code.ReturnResult;
 import com.chua.common.support.utils.IdUtils;
 import com.chua.common.support.utils.NumberUtils;
 import com.chua.starter.monitor.support.entity.*;
+import com.chua.starter.monitor.support.event.MetricCollectedEvent;
 import com.chua.starter.monitor.support.mapper.*;
 import com.chua.starter.monitor.support.service.MetricService;
 import com.chua.starter.monitor.support.service.alarm.AlarmEngineService;
@@ -15,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -92,9 +93,9 @@ public class MetricServiceImpl implements MetricService {
     private final AlarmEngineService alarmEngineService;
 
     /**
-     * 实时推送服务（Socket 未启用时静默跳过）
+     * Spring 事件发布器（采集入库后发布，解耦告警评估与实时推送）
      */
-    private final MonitorPushService monitorPushService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 默认批量插入大小
@@ -161,30 +162,13 @@ public class MetricServiceImpl implements MetricService {
             if (writer != null) {
                 writer.write(result);
             }
-            // 写入链路尾部：逐点评估告警规则
-            String monitorName = result.getMonitor() != null ? result.getMonitor().getMonitorName() : null;
-            for (MetricPoint point : result.getPoints()) {
-                if (monitorId != null && point.getValue() != null) {
-                    alarmEngineService.evaluate(monitorId, monitorName, point.getMetricName(), point.getValue());
+            // 写入链路尾部：发布采集完成事件，解耦告警评估 / 实时推送（见 MetricCollectedEventListener）
+            if (monitorId != null) {
+                try {
+                    eventPublisher.publishEvent(new MetricCollectedEvent(result));
+                } catch (Exception e) {
+                    log.debug("[event] 采集事件发布跳过: {}", e.getMessage());
                 }
-            }
-            // 实时推送最新指标到前端（Socket 未启用时静默跳过）
-            try {
-                List<MetricPoint> points = result.getPoints();
-                Map<String, Object> payload = new HashMap<>(8);
-                payload.put("monitorId", monitorId);
-                payload.put("monitorName", monitorName == null ? "" : monitorName);
-                payload.put("collectTime", collectTime.toString());
-                Map<String, Object> metrics = new HashMap<>();
-                for (MetricPoint point : points) {
-                    if (point.getMetricName() != null && point.getValue() != null) {
-                        metrics.put(point.getMetricName(), point.getValue());
-                    }
-                }
-                payload.put("metrics", metrics);
-                monitorPushService.pushMetric(payload, monitorId);
-            } catch (Exception e) {
-                log.debug("[push] 指标实时推送跳过: {}", e.getMessage());
             }
             return ReturnResult.ok();
         } catch (Exception e) {
