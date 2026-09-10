@@ -37,7 +37,7 @@ public class DatalakeAdvancedProbe {
     private static final List<String> failedCases = new CopyOnWriteArrayList<>();
 
     private static PipelineManager pipelineManager;
-    private static Map<String, DataSink> sinkRegistry;
+    private static final Map<String, DataSink> sinkRegistry = new ConcurrentHashMap<>();
     private static PipelineEngine pipelineEngine;
     private static CapturingSink logSink;
     private static CapturingSink statSink;
@@ -79,7 +79,6 @@ public class DatalakeAdvancedProbe {
         jdbcSink = new CapturingSink("jdbc");
         failingSink = new FailingSink();
 
-        sinkRegistry = new ConcurrentHashMap<>();
         sinkRegistry.put("log", logSink);
         sinkRegistry.put("statistic", statSink);
         sinkRegistry.put("jdbc", jdbcSink);

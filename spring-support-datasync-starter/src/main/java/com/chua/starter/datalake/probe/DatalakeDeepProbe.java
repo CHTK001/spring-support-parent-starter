@@ -52,7 +52,7 @@ public class DatalakeDeepProbe {
     private static final List<String> failedCases = new CopyOnWriteArrayList<>();
 
     private static PipelineManager pipelineManager;
-    private static Map<String, DataSink> sinkRegistry;
+    private static final Map<String, DataSink> sinkRegistry = new ConcurrentHashMap<>();
     private static PipelineEngine pipelineEngine;
     private static OffsetFlow offsetFlow;
     private static CapturingSink logSink;
@@ -91,7 +91,6 @@ public class DatalakeDeepProbe {
         pipelineManager = new DefaultPipelineManager();
         logSink = new CapturingSink("log");
         rtSink = new CapturingSink("realtime");
-        sinkRegistry = new ConcurrentHashMap<>();
         sinkRegistry.put("log", logSink);
         sinkRegistry.put("realtime", rtSink);
         sinkRegistry.values().forEach(DataSink::start);
