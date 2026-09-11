@@ -15,6 +15,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Primary;
 
 import java.util.LinkedHashMap;
@@ -32,6 +33,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @EnableConfigurationProperties(SocketProperties.class)
+@ComponentScan(basePackages = "com.chua.socket.support.bridge")
 public class SocketConfiguration {
 
     /**
