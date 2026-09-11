@@ -48,7 +48,7 @@ public class MsServerIdentity extends SysBase {
      * 认证类型
      */
     @TableField("ms_server_identity_auth_type")
-    @Schema(description = "认证类型: PASSWORD / PUBLIC_KEY", example = "PASSWORD")
+    @Schema(description = "认证类型: PASSWORD / PUBLIC_KEY / MAILBOX", example = "PASSWORD")
     private String msServerIdentityAuthType;
 
     /**
@@ -71,6 +71,20 @@ public class MsServerIdentity extends SysBase {
     @TableField("ms_server_identity_key_id")
     @Schema(description = "引用密钥ID", example = "1")
     private Long msServerIdentityKeyId;
+
+    /**
+     * 邮箱 IMAP 服务器（仅 MAILBOX 类型，空则按邮箱域名推断 imap.<域名>）
+     */
+    @TableField("ms_server_identity_imap_host")
+    @Schema(description = "邮箱IMAP服务器", example = "imap.qq.com")
+    private String msServerIdentityImapHost;
+
+    /**
+     * 邮箱 IMAP 端口（仅 MAILBOX 类型，默认 993）
+     */
+    @TableField("ms_server_identity_imap_port")
+    @Schema(description = "邮箱IMAP端口", example = "993")
+    private Integer msServerIdentityImapPort;
 
     /**
      * 备注

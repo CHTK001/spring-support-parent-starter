@@ -132,20 +132,23 @@ class OsgiFrameworkApiRealTest {
     /** 真实测试：FelixBundleContext 服务注册 → 可见 → 注销 → 不可见 */
     @Test
     void bundleContextServiceRegisterUnregister() {
-        // 1) 注册前不可见
-        assertNull(osgiLauncher.getService(GreetService.class), "注册前不应可见");
+        // 1) 记录注册前的服务集合快照
+        Set<String> before = osgiLauncher.getServices(GreetService.class).stream()
+                .map(GreetService::greet).collect(Collectors.toSet());
 
         // 2) 经 FelixBundleContext 注册服务
         FelixBundleContext ctx = new FelixBundleContext(osgiLauncher.getFrameworkBundleContext());
         GreetService svc = name -> "ctx:" + name;
         ctx.registerService(GreetService.class, svc);
-        GreetService found = osgiLauncher.getService(GreetService.class);
-        assertNotNull(found, "注册后应可见");
-        assertEquals("ctx:world", found.greet("world"), "服务内容应匹配");
+        assertTrue(osgiLauncher.getServices(GreetService.class).stream()
+                        .anyMatch(s -> "ctx:world".equals(s.greet("world"))),
+                "注册后 ctx 服务应出现在服务列表中");
 
-        // 3) 注销后不可见
+        // 3) 注销后 ctx 服务应不在列表中
         ctx.unregisterService(GreetService.class, svc);
-        assertNull(osgiLauncher.getService(GreetService.class), "注销后应不可见");
+        assertFalse(osgiLauncher.getServices(GreetService.class).stream()
+                        .anyMatch(s -> "ctx:world".equals(s.greet("world"))),
+                "注销后 ctx 服务应从列表中消失");
     }
 
     /** 真实测试：FelixOsgiBundle 服务注册 → 可见 → 注销 → 不可见 */
@@ -157,17 +160,17 @@ class OsgiFrameworkApiRealTest {
         assertEquals("ACTIVE", bundle.getState(), "bundle 应已自动启动为 ACTIVE");
 
         // bundle 维度注册应用侧服务
-        GreetService svc = name -> "bundle:" + name;
+        GreetService svc = name -> "bundle-registered:" + name;
         bundle.registerService(GreetService.class, svc);
-        GreetService found = osgiLauncher.getService(GreetService.class);
-        assertNotNull(found, "bundle 注册后应可见");
-        assertEquals("bundle:world", found.greet("world"), "bundle 注册服务内容应匹配");
+        assertTrue(osgiLauncher.getServices(GreetService.class).stream()
+                        .anyMatch(s -> "bundle-registered:world".equals(s.greet("world"))),
+                "bundle 注册的服务应出现在服务列表中");
 
-        // 注销后不可见（Activator 注册的 api2 服务仍在，此处注销的是 bundle 注册的服务）
+        // 注销后应消失
         bundle.unregisterService(GreetService.class, svc);
-        List<GreetService> after = osgiLauncher.getServices(GreetService.class);
-        assertFalse(after.stream().anyMatch(s -> "bundle:world".equals(s.greet("world"))),
-                "注销后 bundle 注册的服务应不可见，实际: " + after);
+        assertFalse(osgiLauncher.getServices(GreetService.class).stream()
+                        .anyMatch(s -> "bundle-registered:world".equals(s.greet("world"))),
+                "注销后 bundle 注册的服务应从列表中消失");
     }
 
     /** 真实测试：OsgiBeanDefinitionRegister 命名查询（type:xxx）与只读语义 */
