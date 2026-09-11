@@ -214,6 +214,52 @@ public class ProjectController {
     }
 
     /**
+     * 部署包归档列表（资产维度历史版本）
+     *
+     * @param id     项目 ID
+     * @param hostId 主机 ID，可为空
+     * @return 归档列表
+     */
+    @Operation(summary = "部署包归档列表")
+    @GetMapping("/{id}/archives")
+    public ReturnResult<List<MsProjectUploadArchive>> archives(@PathVariable Long id,
+                                                               @RequestParam(required = false) Long hostId) {
+        return deployService.listArchives(id, hostId);
+    }
+
+    /**
+     * 回滚到指定历史版本
+     *
+     * @param id        项目 ID
+     * @param archiveId 归档记录 ID
+     * @return 每台主机的部署日志
+     */
+    @Operation(summary = "回滚到历史版本")
+    @PostMapping("/{id}/rollback")
+    public ReturnResult<List<MsProjectDeployLog>> rollback(@PathVariable Long id,
+                                                           @RequestParam Long archiveId) {
+        return deployService.rollback(id, archiveId);
+    }
+
+    /**
+     * 实时查看项目日志（tail）
+     *
+     * @param id     项目 ID
+     * @param hostId 目标主机 ID
+     * @param cursor 上次读取字节偏移，可为空
+     * @param lines  拉取行数，默认 500
+     * @return 日志内容
+     */
+    @Operation(summary = "实时查看项目日志")
+    @GetMapping("/{id}/log")
+    public ReturnResult<Map<String, Object>> tailLog(@PathVariable Long id,
+                                                     @RequestParam Long hostId,
+                                                     @RequestParam(required = false) Long cursor,
+                                                     @RequestParam(required = false) Integer lines) {
+        return deployService.tailLog(id, hostId, cursor, lines);
+    }
+
+    /**
      * 安全转换字符串
      *
      * @param value 原始值

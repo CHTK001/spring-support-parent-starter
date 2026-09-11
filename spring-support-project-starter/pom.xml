@@ -21,6 +21,14 @@
             <artifactId>spring-support-server-starter</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- 实时推送（可选 bean）：plugin.socket.enable=true 时注入 SocketSessionTemplate，
+             部署/回滚进度广播；未启用 socket 的宿主不受影响（ObjectProvider 可选注入） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-socket-starter</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
         <!-- Spring 与基础 -->
         <dependency>
             <groupId>com.chua</groupId>
