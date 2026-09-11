@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
@@ -15,16 +16,18 @@ import java.util.Map;
 /**
  * Queue → Socket 桥接监听器
  * <p>
- * 监听消息队列中约定前缀（{@code socket:}）的 topic，将消息内容解析后
- * 通过 {@link SocketSessionTemplate} 广播到前端。业务模块（如监控）无需
- * 直接依赖 Socket，只向 queue 发送 {@code socket:<module>:<event>} 消息即可。
+ * 监听固定 topic {@code socket:push}（业务方统一向此 topic 发送），
+ * 从消息 payload 解析 {@code {module, event, data, dataId}} 后，
+ * 通过 {@link SocketSessionTemplate} 广播到前端。
+ * 业务模块（如监控）无需直接依赖 Socket，只向 queue 发消息即可。
  * </p>
  *
  * <h3>协议</h3>
  * <pre>
- * topic:   socket:monitor:alarm        （socket:{module}:{event}）
- * payload: { "module":"monitor", "event":"alarm", "data":{...}, "dataId": "...", "timestamp": 123 }
- * 广播格式对齐前端 WsMessage（socket.io "message" 事件），前端 socket.subscribe(module, event) 按 module_event 分发。
+ * topic:   socket:push
+ * payload: { "module":"monitor", "event":"alarm", "data":{...}, "dataId": "..." }
+ * 广播格式对齐前端 WsMessage（socket.io "message" 事件，载荷含 module/event/data），
+ * 前端 socket.subscribe(module, event) 按 module_event 分发。
  * </pre>
  *
  * @author CH
@@ -35,8 +38,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SocketQueueBridge {
 
-    /** topic 前缀：socket:{module}:{event} */
-    private static final String TOPIC_PREFIX = "socket:";
+    /** 固定订阅 topic：业务方统一向此 topic 发送 socket 广播消息 */
+    public static final String TOPIC = "socket:push";
 
     /** Socket 会话模板（socket 未启用时为空实现） */
     private final ObjectProvider<SocketSessionTemplate> socketTemplateProvider;
@@ -45,12 +48,11 @@ public class SocketQueueBridge {
     private final ObjectMapper objectMapper;
 
     /**
-     * 监听 socket:* 前缀 topic，收到后广播到所有前端会话。
-     * 依赖 queue-starter 的 {@link QueueListener} 注册（plugin.queue.enable=true 时生效）。
+     * 监听 socket:push topic，解析 payload 后广播到所有前端会话
      *
      * @param message 队列消息（payload 为 JSON 字符串）
      */
-    @QueueListener("socket:*")
+    @QueueListener(TOPIC)
     public void onSocketMessage(Message message) {
         SocketSessionTemplate template = socketTemplateProvider.getIfAvailable();
         if (template == null) {
@@ -58,34 +60,18 @@ public class SocketQueueBridge {
             return;
         }
         try {
-            String topic = message.getDestination();
-            String rest = topic.startsWith(TOPIC_PREFIX) ? topic.substring(TOPIC_PREFIX.length()) : topic;
-            int sep = rest.indexOf(':');
-            String module = sep > 0 ? rest.substring(0, sep) : rest;
-            String event = sep > 0 ? rest.substring(sep + 1) : "message";
-
-            Object payload = new String(message.getPayload(), java.nio.charset.StandardCharsets.UTF_8);
-            Map<String, Object> dataMap = parsePayload(payload);
+            Map<String, Object> dataMap = parsePayload(message.getPayloadAsString());
             if (dataMap == null) {
-                dataMap = new LinkedHashMap<>(4);
-                dataMap.put("module", module);
-                dataMap.put("event", event);
-                dataMap.put("data", payload);
+                dataMap = new LinkedHashMap<>(3);
+                dataMap.put("module", "system");
+                dataMap.put("event", "message");
+                dataMap.put("data", message.getPayloadAsString());
             }
-            // 若 payload 内带 event/模块 覆盖 topic 推导的默认值
-            Object innerEvent = dataMap.get("event");
-            if (innerEvent != null) {
-                event = String.valueOf(innerEvent);
-            }
-            Object innerModule = dataMap.get("module");
-            if (innerModule != null) {
-                module = String.valueOf(innerModule);
-            }
-            dataMap.putIfAbsent("module", module);
-            dataMap.putIfAbsent("event", event);
             dataMap.putIfAbsent("timestamp", System.currentTimeMillis());
+            String module = String.valueOf(dataMap.getOrDefault("module", "system"));
+            String event = String.valueOf(dataMap.getOrDefault("event", "message"));
             template.broadcast("message", objectMapper.writeValueAsString(dataMap));
-            log.debug("[socket-bridge] 广播 topic={} module={} event={}", topic, module, event);
+            log.debug("[socket-bridge] 广播 module={} event={}", module, event);
         } catch (Exception e) {
             log.warn("[socket-bridge] 广播失败 topic={}: {}", message.getDestination(), e.getMessage());
         }
@@ -98,9 +84,12 @@ public class SocketQueueBridge {
      * @return Map 或 null
      */
     @SuppressWarnings("unchecked")
-    private Map<String, Object> parsePayload(Object payload) {
+    private Map<String, Object> parsePayload(String payload) {
+        if (payload == null || payload.isBlank()) {
+            return null;
+        }
         try {
-            Object parsed = objectMapper.readValue((String) payload, Object.class);
+            Object parsed = objectMapper.readValue(payload, Object.class);
             return parsed instanceof Map<?, ?> map ? (Map<String, Object>) map : null;
         } catch (Exception e) {
             return null;
