@@ -72,24 +72,13 @@ plugin:
         context-path: /socket.io
         port: 29181
 
-# InfluxDB 时序存储（启用后指标明细同步写入并支持 series 曲线查询）
-  # 时序引擎统一由 monitor.timeseries.engine 选择:
-  #   influxdb / redis / none（默认 influxdb，向后兼容；redis 走 ZSET 简化时序）
-  datasource:
-    redis:
-      host: 172.16.0.40
-      port: 6379
-      # password: xxx
-
+# 时序存储引擎：influxdb / redis / none（默认 influxdb，向后兼容）
+# influxdb：需 InfluxDB 服务；redis：走 ZSET 简化时序（需上方 spring.data.redis 可达）
 monitor:
   timeseries:
     engine: influxdb
     url: http://172.16.0.40:8086
     database: monitor
-monitor.influx:
-  enabled: false
-  url: http://127.0.0.1:8086
-  database: monitor
 
 logging:
   level:
