@@ -89,4 +89,5 @@ effective-pom
 **/start-be.cmd
 **/start-be.ps1
 **/cp.argfile
+**/cp.args
 **/backend-new.log

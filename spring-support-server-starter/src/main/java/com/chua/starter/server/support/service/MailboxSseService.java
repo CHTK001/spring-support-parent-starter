@@ -133,7 +133,12 @@ public class MailboxSseService {
             return;
         }
         String payload = serializeEmails(newEmails);
-        sseSocketSessionTemplate.send(clientId, "mailbox", payload);
+        SseSocketSessionTemplate sseTemplate = sseSocketSessionTemplateProvider.getIfAvailable();
+        if (sseTemplate == null) {
+            log.debug("[mailbox-sse] SSE 未启用，跳过邮件推送到 clientId={}", clientId);
+            return;
+        }
+        sseTemplate.send(clientId, "mailbox", payload);
         log.debug("[mailbox-sse] 推送 {} 封新邮件到 clientId={}", newEmails.size(), clientId);
     }
 
