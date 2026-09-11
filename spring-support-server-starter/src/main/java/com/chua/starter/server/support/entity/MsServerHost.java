@@ -248,6 +248,20 @@ public class MsServerHost extends SysBase {
     private Long serverHostDelayMs;
 
     /**
+     * 端口扫描结果（JSON 数组字符串：[{"port":22,"protocol":"tcp","service":"ssh","state":"open"}]）
+     */
+    @TableField("ms_server_host_ports")
+    @Schema(description = "端口扫描结果(JSON数组)", example = "[{\"port\":22,\"protocol\":\"tcp\",\"service\":\"ssh\"}]")
+    private String serverHostPorts;
+
+    /**
+     * 最近端口扫描时间
+     */
+    @TableField("ms_server_host_last_port_scan_time")
+    @Schema(description = "最近端口扫描时间")
+    private java.time.LocalDateTime serverHostLastPortScanTime;
+
+    /**
      * 最近延迟检测时间
      */
     @TableField("ms_server_host_last_delay_time")

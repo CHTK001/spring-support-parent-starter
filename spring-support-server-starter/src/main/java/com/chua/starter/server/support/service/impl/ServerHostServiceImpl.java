@@ -401,6 +401,55 @@ public class ServerHostServiceImpl implements ServerHostService {
     }
 
     @Override
+    public ReturnResult<MsServerHost> scanPorts(Long hostId) {
+        MsServerHost host = hostMapper.selectById(hostId);
+        if (host == null) {
+            return ReturnResult.error("主机不存在: " + hostId);
+        }
+        String address = host.getServerHostAddress();
+        if (isBlank(address)) {
+            return ReturnResult.error("主机地址为空，无法扫描端口");
+        }
+        NmapTool nmap = new NmapTool();
+        if (!nmap.isAvailable()) {
+            return ReturnResult.error("未检测到 nmap 模块，请先安装 nmap 或配置 NMAP_BIN 环境变量");
+        }
+        try {
+            CmdResult result = nmap.tcpConnectScan(address.trim());
+            if (!result.isSuccess()) {
+                return ReturnResult.error("nmap 扫描失败: " + result.getStderr());
+            }
+            List<Map<String, String>> ports = nmap.parseOpenPorts(result.getStdout());
+            host.setServerHostPorts(toPortsJson(ports));
+            host.setServerHostLastPortScanTime(LocalDateTime.now());
+            hostMapper.updateById(host);
+            return ReturnResult.ok(hostMapper.selectById(hostId),
+                    String.format("端口扫描完成，发现 %d 个开放端口/端口范围", ports.size()));
+        } catch (Exception e) {
+            log.warn("[server] 端口扫描异常 hostId={} address={}: {}", hostId, address, e.getMessage());
+            return ReturnResult.error("端口扫描异常: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 端口扫描结果列表序列化为 JSON 数组字符串
+     *
+     * @param ports 端口列表
+     * @return JSON 字符串
+     */
+    private String toPortsJson(List<Map<String, String>> ports) {
+        if (ports == null || ports.isEmpty()) {
+            return "[]";
+        }
+        try {
+            return MAPPER.writeValueAsString(ports);
+        } catch (Exception e) {
+            log.warn("[server] 端口结果序列化失败: {}", e.getMessage());
+            return "[]";
+        }
+    }
+
+    @Override
     public ReturnResult<MsServerHost> detectHardware(Long hostId) {
         MsServerHost host = hostMapper.selectById(hostId);
         if (host == null) {

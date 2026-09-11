@@ -4,8 +4,10 @@ import com.chua.starter.server.support.config.ServerProperties;
 import com.chua.starter.server.support.constants.ServerConstants;
 import com.chua.starter.server.support.service.ServerConfigService;
 import lombok.RequiredArgsConstructor;
+import jakarta.servlet.http.HttpServletResponse;
+
+import java.io.IOException;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -37,8 +39,8 @@ public class RemoteControlPageController {
     /**
      * 远程控制页面（返回内嵌 HTML——浏览器/iframe 直接渲染）。
      * <p>
-     * 用 {@link ResponseEntity} 显式携带 Content-Type：@RestController 下裸 String
-     * 返回值会走全局响应包装/内容协商，Spring 7 下无 String 转换器导致 500。
+     * 直接写 {@link HttpServletResponse}：本项目定制了消息转换器（无 StringHttpMessageConverter），
+     * 任何 String 返回值（裸返回/ResponseEntity）都会 500 "No converter for [class java.lang.String]"。
      * </p>
      *
      * @param hostId     主机 id（凭据由后端按主机解析）
@@ -48,13 +50,13 @@ public class RemoteControlPageController {
      * @return 远程控制页面 HTML
      */
     @GetMapping("/connect")
-    public ResponseEntity<String> connect(@RequestParam Long hostId,
-                                          @RequestParam String protocol,
-                                          @RequestParam(required = false) Long identityId,
-                                          @RequestParam(required = false) Integer targetPort) {
-        return ResponseEntity.ok()
-                .contentType(MediaType.TEXT_HTML)
-                .body(renderPage(hostId, protocol, identityId, targetPort));
+    public void connect(@RequestParam Long hostId,
+                        @RequestParam String protocol,
+                        @RequestParam(required = false) Long identityId,
+                        @RequestParam(required = false) Integer targetPort,
+                        HttpServletResponse response) throws IOException {
+        response.setContentType("text/html;charset=UTF-8");
+        response.getWriter().write(renderPage(hostId, protocol, identityId, targetPort));
     }
 
     /**
