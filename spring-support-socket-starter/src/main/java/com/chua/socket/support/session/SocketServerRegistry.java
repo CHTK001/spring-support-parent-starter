@@ -163,8 +163,12 @@ public class SocketServerRegistry {
     }
 
     private int getActualPort() {
-        int port = properties.getPort();
-        return port > 0 ? port : 8080;
+        if (properties.getRoom() != null && !properties.getRoom().isEmpty()) {
+            SocketProperties.Room room = properties.getRoom().get(0);
+            int port = room.getPort();
+            return port > 0 ? port : 9000;
+        }
+        return 9000;
     }
 
     private String getPath() {
