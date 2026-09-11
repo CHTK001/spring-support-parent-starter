@@ -39,6 +39,15 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- 消息队列：提供 queue→socket 桥接（订阅业务消息后广播到前端），
+             plugin.queue.type 可选 local/kafka/rabbitmq/mqtt 等 -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-queue-starter</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
+
         
     </dependencies>
 
