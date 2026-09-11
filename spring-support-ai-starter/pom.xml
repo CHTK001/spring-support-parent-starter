@@ -194,11 +194,6 @@
       <groupId>com.chua</groupId>
       <artifactId>spring-support-datasource-starter</artifactId>
     </dependency>
-    <!-- 账号自动注册与管理模块 -->
-    <dependency>
-      <groupId>com.chua</groupId>
-      <artifactId>spring-support-account-starter</artifactId>
-    </dependency>
     <!-- MySQL 驱动 -->
     <dependency>
       <groupId>com.mysql</groupId>

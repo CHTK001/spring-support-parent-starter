@@ -98,6 +98,20 @@ public class MsProject extends SysBase {
     private String msProjectRestartScript;
 
     /**
+     * 日志目录（实时日志跟踪）
+     */
+    @TableField("ms_project_log_dir")
+    @Schema(description = "日志目录", example = "/opt/apps/user-service/logs")
+    private String msProjectLogDir;
+
+    /**
+     * 日志文件名（如 app.log）
+     */
+    @TableField("ms_project_log_file")
+    @Schema(description = "日志文件名", example = "app.log")
+    private String msProjectLogFile;
+
+    /**
      * 升级前是否先删除旧内容：0=否 1=是
      */
     @TableField("ms_project_delete_before")
@@ -117,6 +131,13 @@ public class MsProject extends SysBase {
     @TableField("ms_project_auto_extract")
     @Schema(description = "是否自动解压", example = "1")
     private Integer msProjectAutoExtract;
+
+    /**
+     * 部署成功后是否自动执行启动脚本：0=否 1=是
+     */
+    @TableField("ms_project_auto_start")
+    @Schema(description = "部署成功后自动启动", example = "0")
+    private Integer msProjectAutoStart;
 
     /**
      * 当前版本（最近一次部署包文件名/版本号，升级时更新）
