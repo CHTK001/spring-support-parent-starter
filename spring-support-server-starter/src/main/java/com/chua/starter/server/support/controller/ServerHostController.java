@@ -214,6 +214,18 @@ public class ServerHostController {
     }
 
     /**
+     * 端口扫描：依赖本机 nmap 对目标主机做 TCP 连接扫描，解析开放端口并回写资产表
+     *
+     * @param id 主机 ID
+     * @return 更新后的主机（含端口扫描结果）
+     */
+    @Operation(summary = "端口扫描")
+    @PostMapping("/{id}/scan-ports")
+    public ReturnResult<MsServerHost> scanPorts(@PathVariable Long id) {
+        return serverHostService.scanPorts(id);
+    }
+
+    /**
      * 导出主机列表（CSV 下载）
      *
      * @param keyword 关键词，可为空
