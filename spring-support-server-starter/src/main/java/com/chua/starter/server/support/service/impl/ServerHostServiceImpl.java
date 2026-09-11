@@ -2,6 +2,8 @@ package com.chua.starter.server.support.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.common.support.lang.code.ReturnResult;
+import com.chua.common.support.lang.cmd.CmdResult;
+import com.chua.common.support.lang.cmd.tools.NmapTool;
 import com.chua.starter.server.support.connection.ConnectionManager;
 import com.chua.starter.server.support.entity.MsServerHost;
 import com.chua.starter.server.support.entity.MsServerHostIdentity;
@@ -16,6 +18,7 @@ import com.chua.starter.server.support.model.SshCredential;
 import com.chua.starter.server.support.service.ServerHostService;
 import com.chua.starter.server.support.util.CredentialCipher;
 import com.chua.starter.server.support.util.SshClients;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +29,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 服务器主机服务实现
@@ -54,6 +58,9 @@ public class ServerHostServiceImpl implements ServerHostService {
 
     /** 默认 SSH 端口 */
     private static final int DEFAULT_SSH_PORT = 22;
+
+    /** JSON 序列化器 */
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /** 探针标识字节长度（32 个十六进制字符） */
     private static final int AGENT_KEY_BYTES = 16;
