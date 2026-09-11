@@ -135,6 +135,15 @@ public interface ServerHostService {
     ReturnResult<String> refreshPublicIp(Long hostId);
 
     /**
+     * 端口扫描：依赖本机 nmap 对目标主机做 TCP 连接扫描，解析开放端口并回写
+     * 主机资产表的 {@code serverHostPorts}（JSON 数组）与扫描时间。
+     *
+     * @param hostId 主机 ID
+     * @return 更新后的主机（含端口扫描结果）
+     */
+    ReturnResult<MsServerHost> scanPorts(Long hostId);
+
+    /**
      * 新增主机时自动创建登录身份并绑定
      * <p>
      * 优先使用主机上直接携带的账号密码 / 私钥（pem），
