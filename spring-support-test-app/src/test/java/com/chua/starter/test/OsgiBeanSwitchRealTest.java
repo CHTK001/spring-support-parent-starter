@@ -72,6 +72,9 @@ class OsgiBeanSwitchRealTest {
     @Autowired
     private OsgiBeanDefinitionRegister osgiBeanDefinitionRegister;
 
+    @Autowired
+    private ObjectContext objectContext;
+
     /** 真实测试：安装 → Bean 出现；卸载 → Bean 消失；换版本 → Bean 切换 */
     @Test
     void greetBeanSwitchesWithBundleLifecycle() throws Exception {
@@ -79,6 +82,7 @@ class OsgiBeanSwitchRealTest {
         assertNull(osgiLauncher.getService(GreetService.class), "初始不应存在 OSGi 服务");
         assertTrue(osgiBeanDefinitionRegister.getBeanDefinitionOfType(GREET_SERVICE_INTERFACE).isEmpty(),
                 "初始不应存在 GreetService Bean");
+        assertNull(objectContext.getBeanOfTypeSafely(GreetService.class), "初始 ObjectContext 不应查到 GreetService");
 
         // 2) 编译并安装 v1 bundle → 服务注册，Bean 出现
         File v1Jar = buildBundleJar("GreetServiceV1", "v1", "1.0.0");
@@ -92,11 +96,17 @@ class OsgiBeanSwitchRealTest {
         GreetService v1Bean = (GreetService) defs1.iterator().next().getBean();
         assertEquals("v1:world", v1Bean.greet("world"), "v1 Bean 应返回 v1 结果");
 
+        // 一致性：ObjectContext 与 osgiLauncher 均返回 v1
+        GreetService fromContextV1 = objectContext.getBeanOfTypeSafely(GreetService.class);
+        assertNotNull(fromContextV1, "安装 v1 后 ObjectContext 应能查到 GreetService");
+        assertEquals("v1:world", fromContextV1.greet("world"), "ObjectContext 查询结果应等于 osgiLauncher 的 v1 结果");
+
         // 3) 卸载 v1 bundle → 服务注销，Bean 消失
         osgiLauncher.uninstallBundle(BUNDLE_SYMBOLIC_NAME);
         assertNull(osgiLauncher.getService(GreetService.class), "卸载 v1 后 OSGi 服务应消失");
         assertTrue(osgiBeanDefinitionRegister.getBeanDefinitionOfType(GREET_SERVICE_INTERFACE).isEmpty(),
                 "卸载 v1 后 GreetService Bean 应消失");
+        assertNull(objectContext.getBeanOfTypeSafely(GreetService.class), "卸载 v1 后 ObjectContext 应查不到 GreetService");
 
         // 4) 编译并安装 v2 bundle（同 symbolicName 不同版本）→ Bean 切换为新实现
         File v2Jar = buildBundleJar("GreetServiceV2", "v2", "2.0.0");
@@ -110,9 +120,15 @@ class OsgiBeanSwitchRealTest {
         GreetService v2Bean = (GreetService) defs2.iterator().next().getBean();
         assertEquals("v2:world", v2Bean.greet("world"), "v2 Bean 应返回 v2 结果（Bean 切换）");
 
+        // 一致性：ObjectContext 与 osgiLauncher 均返回 v2
+        GreetService fromContextV2 = objectContext.getBeanOfTypeSafely(GreetService.class);
+        assertNotNull(fromContextV2, "安装 v2 后 ObjectContext 应能查到 GreetService");
+        assertEquals("v2:world", fromContextV2.greet("world"), "ObjectContext 查询结果应等于 osgiLauncher 的 v2 结果");
+
         // 5) 清理：卸载 v2
         osgiLauncher.uninstallBundle(BUNDLE_SYMBOLIC_NAME);
         assertNull(osgiLauncher.getService(GreetService.class), "卸载 v2 后 OSGi 服务应消失");
+        assertNull(objectContext.getBeanOfTypeSafely(GreetService.class), "卸载 v2 后 ObjectContext 应查不到 GreetService");
     }
 
     /** 真实测试：同一 symbolicName 的两个不同版本 bundle 可共存，服务/Bean 均为双份，卸载按版本精确处理 */
@@ -142,11 +158,19 @@ class OsgiBeanSwitchRealTest {
         Collection<BeanDefinition> defs = osgiBeanDefinitionRegister.getBeanDefinitionOfType(GREET_SERVICE_INTERFACE);
         assertEquals(2, defs.size(), "两版本共存时 Bean 应为双份，实际: " + defs.size());
 
-        // 5) 精确卸载 v1（1.0.0）→ 仅 v1 消失，v2 保留
+        // ObjectContext 一致性：两版本共存时 ObjectContext 也应查到相同的 2 个服务（与 osgiLauncher 一致）
+        Collection<GreetService> fromContext = objectContext.getBeanOfTypeCollection(GreetService.class);
+        assertEquals(2, fromContext.size(), "ObjectContext 双版本共存时也应查到 2 个 GreetService，实际: " + fromContext.size());
+        Set<String> contextOutputs = fromContext.stream().map(s -> s.greet("world")).collect(Collectors.toSet());
+        assertEquals(Set.of("v1:world", "v2:world"), contextOutputs,
+                "ObjectContext 查询结果应与 osgiLauncher 一致（v1+v2）");
+
+        // 5) 主动基于 bundle 对象精确卸载 v1（1.0.0）→ 仅 v1 消失，v2 保留
         bundles.stream()
                 .filter(b -> "1.0.0".equals(b.getVersion()))
                 .findFirst()
-                .ifPresent(b -> osgiLauncher.uninstallBundle(b.getSymbolicName()));
+                .orElseThrow(() -> new IllegalStateException("应存在 v1 bundle"))
+                .uninstall();
         List<com.chua.common.support.osgi.OsgiBundle> remaining = osgiLauncher.getBundles().stream()
                 .filter(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName()))
                 .toList();
@@ -157,11 +181,19 @@ class OsgiBeanSwitchRealTest {
         assertEquals(1, after.size(), "卸载 v1 后服务应仅剩 v2，实际: " + after.size());
         assertEquals("v2:world", after.get(0).greet("world"), "剩余服务应返回 v2 结果");
 
-        // 6) 清理：卸载 v2
-        osgiLauncher.uninstallBundle(BUNDLE_SYMBOLIC_NAME);
+        // 一致性：卸载 v1 后 ObjectContext 也只应查到 v2
+        Collection<GreetService> afterContext = objectContext.getBeanOfTypeCollection(GreetService.class);
+        assertEquals(1, afterContext.size(), "卸载 v1 后 ObjectContext 应仅剩 1 个 GreetService，实际: " + afterContext.size());
+        assertEquals("v2:world", afterContext.iterator().next().greet("world"),
+                "卸载 v1 后 ObjectContext 剩余服务应返回 v2 结果");
+
+        // 6) 清理：主动基于 bundle 对象卸载 v2
+        remaining.get(0).uninstall();
         assertNull(osgiLauncher.getService(GreetService.class), "全部卸载后 OSGi 服务应消失");
         assertTrue(osgiBeanDefinitionRegister.getBeanDefinitionOfType(GREET_SERVICE_INTERFACE).isEmpty(),
                 "全部卸载后 GreetService Bean 应消失");
+        assertNull(objectContext.getBeanOfTypeSafely(GreetService.class),
+                "全部卸载后 ObjectContext 应查不到 GreetService");
     }
 
     // ==================== 真实 bundle jar 生成 ====================
