@@ -1,0 +1,76 @@
+package com.chua.starter.project.support.service;
+
+import com.chua.socket.support.session.SocketSessionTemplate;
+import com.chua.starter.project.support.constants.ProjectConstants;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * 发布项目管理实时推送服务
+ * <p>
+ * 复用 spring-support-socket-* 的 {@link SocketSessionTemplate}（socketio 协议），
+ * 广播项目部署/回滚进度。宿主未装配 socket 时静默降级（ObjectProvider 为空）。
+ * </p>
+ *
+ * @author CH
+ * @since 4.0.0.42
+ */
+@Slf4j
+@Service
+public class ProjectPushService {
+
+    /** Socket 模板（可空） */
+    private final ObjectProvider<SocketSessionTemplate> socketTemplates;
+
+    /**
+     * 构造器注入
+     *
+     * @param socketTemplates Socket 模板
+     */
+    public ProjectPushService(ObjectProvider<SocketSessionTemplate> socketTemplates) {
+        this.socketTemplates = socketTemplates;
+    }
+
+    /**
+     * 广播部署进度
+     *
+     * @param projectId 项目 ID
+     * @param hostId    主机 ID，可为空（表示整体阶段）
+     * @param action    操作类型 DEPLOY/UPGRADE/ROLLBACK
+     * @param stage     阶段：VALIDATE/CLEAN/UPLOAD/EXTRACT/EXEC/START/FINISH
+     * @param status    状态 RUNNING/SUCCESS/FAIL
+     * @param message   描述
+     * @param version   版本标识，可为空
+     */
+    public void pushProgress(Long projectId, Long hostId, String action, String stage,
+                             String status, String message, String version) {
+        SocketSessionTemplate template = socketTemplates.getIfAvailable();
+        if (template == null) {
+            return;
+        }
+        Map<String, Object> data = new HashMap<>(8);
+        data.put("projectId", projectId);
+        data.put("hostId", hostId);
+        data.put("action", action);
+        data.put("stage", stage);
+        data.put("status", status);
+        data.put("message", message);
+        data.put("version", version);
+        data.put("timestamp", System.currentTimeMillis());
+        Map<String, Object> payload = new HashMap<>(4);
+        payload.put("module", ProjectConstants.PUSH_MODULE);
+        payload.put("event", ProjectConstants.PUSH_EVENT_DEPLOY_PROGRESS);
+        payload.put("data", data);
+        payload.put("dataId", projectId == null ? "" : String.valueOf(projectId));
+        payload.put("timestamp", System.currentTimeMillis());
+        try {
+            template.broadcastObject("message", payload);
+        } catch (Exception e) {
+            log.warn("[project] 推送部署进度失败: {}", e.getMessage());
+        }
+    }
+}

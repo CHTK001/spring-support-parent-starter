@@ -26,6 +26,9 @@ public final class ProjectConstants {
     /** 部署操作类型：重启 */
     public static final String ACTION_RESTART = "RESTART";
 
+    /** 部署操作类型：回滚 */
+    public static final String ACTION_ROLLBACK = "ROLLBACK";
+
     /** 日志状态：成功 */
     public static final String LOG_STATUS_SUCCESS = "SUCCESS";
 
@@ -52,6 +55,15 @@ public final class ProjectConstants {
 
     /** 运行时状态：重启中 */
     public static final String RUNTIME_RESTARTING = "RESTARTING";
+
+    /** 运行时状态：回滚中 */
+    public static final String RUNTIME_ROLLING_BACK = "ROLLING_BACK";
+
+    /** 推送模块名：project */
+    public static final String PUSH_MODULE = "project";
+
+    /** 推送事件：部署进度 */
+    public static final String PUSH_EVENT_DEPLOY_PROGRESS = "deploy-progress";
 
     /** 覆盖模式：直接覆盖（同名覆盖，保留其余文件） */
     public static final String OVERWRITE_MODE_OVERWRITE = "OVERWRITE";
