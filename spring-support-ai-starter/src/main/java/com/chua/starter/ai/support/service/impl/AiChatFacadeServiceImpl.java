@@ -533,18 +533,24 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-     * 从 provider 凭证中提取 API Key（兼容 {@code api_keys} 数组与 {@code apiKey} 键）。
+     * 获取（带缓存的）DB Provider ChatClient。
+     *
+     * @param provider DB provider
+     * @param model    模型名称
+     * @return 底层 ChatClient，构建失败返回 null
      */
-    private static String extractApiKey(Map<String, Object> credentials) {
-        if (credentials == null) {
-            return null;
+    private ChatClient getCachedDbClient(SysAiProvider provider, String model) {
+        String cacheKey = provider.getProviderId() + "::" + model;
+        long now = System.currentTimeMillis();
+        CachedDbClient cached = dbClientCache.get(cacheKey);
+        if (cached != null && now - cached.builtAt() < DB_CLIENT_CACHE_TTL_MILLIS) {
+            return cached.client();
         }
-        Object keys = credentials.get("api_keys");
-        if (keys instanceof List<?> list && !list.isEmpty() && list.get(0) != null) {
-            return list.get(0).toString();
+        ChatClient built = buildProviderChatClient(provider, model);
+        if (built != null) {
+            dbClientCache.put(cacheKey, new CachedDbClient(built, now));
         }
-        Object key = credentials.get("apiKey");
-        return key != null ? key.toString() : null;
+        return built;
     }
 
     /**
