@@ -53,10 +53,12 @@ CREATE TABLE IF NOT EXISTS ms_server_key (
 CREATE TABLE IF NOT EXISTS ms_server_identity (
     id                          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
     ms_server_identity_name     VARCHAR(64)  NOT NULL                COMMENT '身份名称',
-    ms_server_identity_auth_type VARCHAR(16) NOT NULL DEFAULT 'PASSWORD' COMMENT '认证类型: PASSWORD/PUBLIC_KEY',
+    ms_server_identity_auth_type VARCHAR(16) NOT NULL DEFAULT 'PASSWORD' COMMENT '认证类型: PASSWORD/PUBLIC_KEY/MAILBOX',
     ms_server_identity_username VARCHAR(64)  NOT NULL                COMMENT '登录用户名',
     ms_server_identity_password VARCHAR(512) NULL                    COMMENT '登录密码(AES加密)',
     ms_server_identity_key_id   BIGINT       NULL                    COMMENT '引用密钥ID(PUBLIC_KEY类型)',
+    ms_server_identity_imap_host VARCHAR(128) NULL                    COMMENT '邮箱IMAP服务器(MAILBOX类型)',
+    ms_server_identity_imap_port INT          NULL                    COMMENT '邮箱IMAP端口(MAILBOX类型,默认993)',
     ms_server_identity_remark   VARCHAR(255) NULL                    COMMENT '备注',
     create_by                   INT          NULL                    COMMENT '创建人',
     create_name                 VARCHAR(64)  NULL                    COMMENT '创建人名称',

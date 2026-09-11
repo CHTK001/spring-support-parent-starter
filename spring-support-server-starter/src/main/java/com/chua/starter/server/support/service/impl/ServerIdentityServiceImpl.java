@@ -38,11 +38,20 @@ public class ServerIdentityServiceImpl implements ServerIdentityService {
             return ReturnResult.error("身份名称不能为空");
         }
         String authType = identity.getMsServerIdentityAuthType();
-        if (!"PASSWORD".equals(authType) && !"PUBLIC_KEY".equals(authType)) {
-            return ReturnResult.error("认证类型仅支持 PASSWORD / PUBLIC_KEY");
+        if (!"PASSWORD".equals(authType) && !"PUBLIC_KEY".equals(authType) && !"MAILBOX".equals(authType)) {
+            return ReturnResult.error("认证类型仅支持 PASSWORD / PUBLIC_KEY / MAILBOX");
         }
         if ("PUBLIC_KEY".equals(authType) && identity.getMsServerIdentityKeyId() == null) {
             return ReturnResult.error("公钥认证必须引用密钥库条目");
+        }
+        if ("MAILBOX".equals(authType)) {
+            String email = identity.getMsServerIdentityUsername();
+            if (email == null || !email.contains("@")) {
+                return ReturnResult.error("邮箱账号必须提供邮箱地址(用户名)");
+            }
+            if (identity.getMsServerIdentityPassword() == null || identity.getMsServerIdentityPassword().isEmpty()) {
+                return ReturnResult.error("邮箱账号必须提供 IMAP 授权码(密码)");
+            }
         }
         if (identity.getMsServerIdentityPassword() != null && !identity.getMsServerIdentityPassword().isEmpty()) {
             identity.setMsServerIdentityPassword(cipher.encrypt(identity.getMsServerIdentityPassword()));
@@ -70,6 +79,10 @@ public class ServerIdentityServiceImpl implements ServerIdentityService {
                 ? exists.getMsServerIdentityUsername() : identity.getMsServerIdentityUsername());
         exists.setMsServerIdentityKeyId(identity.getMsServerIdentityKeyId() == null
                 ? exists.getMsServerIdentityKeyId() : identity.getMsServerIdentityKeyId());
+        exists.setMsServerIdentityImapHost(identity.getMsServerIdentityImapHost() == null
+                ? exists.getMsServerIdentityImapHost() : identity.getMsServerIdentityImapHost());
+        exists.setMsServerIdentityImapPort(identity.getMsServerIdentityImapPort() == null
+                ? exists.getMsServerIdentityImapPort() : identity.getMsServerIdentityImapPort());
         exists.setMsServerIdentityRemark(identity.getMsServerIdentityRemark() == null
                 ? exists.getMsServerIdentityRemark() : identity.getMsServerIdentityRemark());
         identityMapper.updateById(exists);

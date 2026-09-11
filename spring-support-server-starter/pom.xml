@@ -73,6 +73,10 @@
             <groupId>com.chua</groupId>
             <artifactId>utils-support-ssh-starter</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-email-starter</artifactId>
+        </dependency>
 
         <!-- 远控协议网关：Apache Guacamole 客户端库（对接 guacd 守护进程） -->
         <dependency>
