@@ -419,13 +419,15 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     // ==================== 一次性访问链接（阅后即焚） ====================
 
     /**
-     * 处理一次性访问链接。
+     * 处理访问链接。
      *
+     * <p>创建参数：{@code POST /ot?bucket=xxx&key=yyy&type=once|expiry&expires=600}</p>
      * <ul>
-     *   <li>{@code POST /ot?bucket=xxx&key=yyy&expires=600} — 创建一次性链接（expires 为秒数，可选），
-     *       返回 JSON {@code {"url":"/ot/{token}"}}</li>
-     *   <li>{@code GET /ot/{token}} — 消费一次性链接，返回对象内容并立即销毁（仅可访问一次）</li>
+     *   <li>{@code type=once}（默认）— 一次性，访问即销毁，无论过期时间</li>
+     *   <li>{@code type=expiry} — 限时链接，有效期内可多次访问，到期失效</li>
+     *   <li>{@code expires} — 有效期（秒），默认 {@link #ONE_TIME_TTL_MILLIS}</li>
      * </ul>
+     * <p>消费：{@code GET /ot/{token}} — 返回文件内容（一次性模式同时销毁）</p>
      *
      * @param request  请求
      * @param response 响应
@@ -436,7 +438,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         HttpMethod method = request.getMethod();
         try {
             if (method == HttpMethod.POST) {
-                // 创建一次性链接
+                // 创建链接
                 Map<String, String> params = request.getParams();
                 String bucket = params == null ? null : params.get("bucket");
                 String key = params == null ? null : params.get("key");
@@ -447,7 +449,6 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 if (storage == null) {
                     return error(response, 404, "Storage not found: " + bucket);
                 }
-                // 校验对象存在
                 ExistObjectRequest existReq = ExistObjectRequest.builder()
                         .fileName(key.contains("/") ? key.substring(key.lastIndexOf('/') + 1) : key)
                         .filePath(key.contains("/") ? key.substring(0, key.lastIndexOf('/')) : "")
@@ -456,14 +457,17 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 if (!exist.isExists()) {
                     return error(response, 404, "Object not found: " + key);
                 }
-
+                // 读取 type 和 expires
+                String type = params == null ? "once" : params.getOrDefault("type", "once");
+                boolean once = !"expiry".equalsIgnoreCase(type);
                 long ttl = parseOneTimeExpiry(params == null ? null : params.get("expires"));
                 String token = generateOneTimeToken();
-                oneTimeMap.put(token, new OneTimeEntry(bucket, key, System.currentTimeMillis(), ttl));
+                oneTimeMap.put(token, new OneTimeEntry(bucket, key, System.currentTimeMillis(), ttl, once));
                 maybeCleanOneTime();
 
-                String json = "{\"token\":\"" + token + "\",\"url\":\"/ot/" + token + "\",\"expires\":\""
-                        + ttl + "ms\"}";
+                String json = "{\"token\":\"" + token + "\",\"url\":\"/ot/" + token + "\""
+                        + ",\"type\":\"" + (once ? "once" : "expiry") + "\""
+                        + ",\"expires\":\"" + ttl + "ms\"}";
                 response.setStatus(200)
                         .setContentType("application/json;charset=UTF-8")
                         .setBody(json)
@@ -471,15 +475,23 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 return CompletableFuture.completedFuture(null);
             }
             if (method == HttpMethod.GET && segments.size() == 2) {
-                // 消费一次性链接（原子移除，阅后即焚）
+                // 消费链接
                 String token = segments.get(1);
-                OneTimeEntry entry = oneTimeMap.remove(token);
+                OneTimeEntry entry = oneTimeMap.get(token);
                 if (entry == null) {
                     return error(response, 410, "Link expired or already consumed");
                 }
+                // 检查过期
                 if (System.currentTimeMillis() - entry.createTime > entry.ttlMillis) {
+                    oneTimeMap.remove(token);
                     return error(response, 410, "Link expired");
                 }
+                // 一次性模式：访问后立即销毁
+                if (entry.once) {
+                    oneTimeMap.remove(token);
+                }
+                // 限时模式：不移除，保持 map 中供多次访问
+
                 FileStorage storage = storageMap.get(entry.bucket);
                 if (storage == null) {
                     return error(response, 404, "Storage not found: " + entry.bucket);
@@ -497,7 +509,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 String fileName = entry.key.contains("/")
                         ? entry.key.substring(entry.key.lastIndexOf('/') + 1) : entry.key;
                 response.setStatus(200)
-                        .setHeader("X-OneTime", "true")
+                        .setHeader("X-OneTime", entry.once ? "once" : "expiry")
                         .setHeader("Cache-Control", "no-store, no-cache, must-revalidate")
                         .setContentType(resolveContentType(fileName))
                         .setBody(data)
@@ -506,7 +518,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
             }
             return error(response, 405, "Method Not Allowed");
         } catch (Exception e) {
-            log.error("一次性链接处理失败: {}", e.getMessage(), e);
+            log.error("链接处理失败: {}", e.getMessage(), e);
             return error(response, 500, "Internal Error: " + e.getMessage());
         }
     }

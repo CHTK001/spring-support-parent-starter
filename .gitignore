@@ -87,4 +87,6 @@ cp-*.txt
 **/*-resp.json
 effective-pom
 **/start-be.cmd
+**/start-be.ps1
+**/cp.argfile
 **/backend-new.log
