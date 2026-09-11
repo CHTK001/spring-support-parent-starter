@@ -9,13 +9,12 @@ import com.chua.starter.monitor.support.event.MetricCollectedEvent;
 import com.chua.starter.monitor.support.mapper.*;
 import com.chua.starter.monitor.support.service.MetricService;
 import com.chua.starter.monitor.support.service.alarm.AlarmEngineService;
-import com.chua.starter.monitor.support.service.alarm.InfluxMetricWriter;
 import com.chua.starter.monitor.support.spi.CollectResult;
 import com.chua.starter.monitor.support.spi.MetricPoint;
+import com.chua.starter.monitor.support.spi.impl.MetricTimeSeriesWriter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -84,9 +83,9 @@ public class MetricServiceImpl implements MetricService {
      */
     private final ObjectMapper objectMapper;
     /**
-     * InfluxDB 写入器（monitor.influx.enabled=true 时装配，否则为空）
+     * 时序存储门面（influxdb / redis / none，按配置选择）
      */
-    private final ObjectProvider<InfluxMetricWriter> influxWriterProvider;
+    private final MetricTimeSeriesWriter timeSeriesWriter;
     /**
      * 告警引擎（写入链路尾部评估）
      */
@@ -101,16 +100,6 @@ public class MetricServiceImpl implements MetricService {
      * 默认批量插入大小
      */
     private static final int BATCH_SIZE = 200;
-
-    /**
-     * 获取可用的 InfluxDB 写入器
-     *
-     * @return 可用实例或 null（未启用/引擎缺失）
-     */
-    private InfluxMetricWriter influxWriter() {
-        InfluxMetricWriter writer = influxWriterProvider.getIfAvailable();
-        return writer != null && writer.isAvailable() ? writer : null;
-    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -157,11 +146,8 @@ public class MetricServiceImpl implements MetricService {
             batchInsertNetwork(netBatch);
             batchInsertJvm(jvmBatch);
             batchInsertRedis(redisBatch);
-            // 时序明细同步写 InfluxDB（未启用时跳过），失败不阻断主链路
-            InfluxMetricWriter writer = influxWriter();
-            if (writer != null) {
-                writer.write(result);
-            }
+            // 时序明细同步写入（按 monitor.timeseries.engine 选择 influxdb/redis，未配置时跳过），失败不阻断主链路
+            timeSeriesWriter.write(result);
             // 写入链路尾部：发布采集完成事件，解耦告警评估 / 实时推送（见 MetricCollectedEventListener）
             if (monitorId != null) {
                 try {

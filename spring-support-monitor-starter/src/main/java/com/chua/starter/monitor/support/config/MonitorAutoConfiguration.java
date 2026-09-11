@@ -21,7 +21,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
  */
 @AutoConfiguration
 @ComponentScan(basePackages = "com.chua.starter.monitor.support")
-@EnableConfigurationProperties(MonitorInfluxProperties.class)
+@EnableConfigurationProperties({MonitorInfluxProperties.class, MonitorTimeseriesProperties.class})
 @EnableScheduling
 @EnableTransactionManagement
 public class MonitorAutoConfiguration {
