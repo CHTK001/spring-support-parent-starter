@@ -66,7 +66,7 @@ public class StartFileStorageServer {
                 .port(port)
                 .build();
         // Vue 静态资源（classpath static/assets/ → /assets/）
-        server.addFilter(new StaticResourceServerFilter("/assets", "static/assets"));
+        server.addFilter(new StaticResourceServerFilter("/fs", "static"));
         server.addFilter(filter);
         server.start();
 

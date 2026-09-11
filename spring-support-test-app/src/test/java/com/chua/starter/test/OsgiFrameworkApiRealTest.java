@@ -337,6 +337,108 @@ class OsgiFrameworkApiRealTest {
         assertNull(osgiLauncher.getService(GreetService.class), "卸载后 osgiLauncher 应查不到");
     }
 
+    /** 真实测试：框架停止链路 —— isActive=false + Holder 清理（独立 launcher，不影响共享实例） */
+    @Test
+    void frameworkStopChain() throws Exception {
+        StopChainBundleApplication.STARTED = false;
+        StopChainBundleApplication.STOPPED = false;
+        // 编程式注册 SPI 应用（静态类，可被 SPI 实例化），随后启动独立 launcher 验证框架生命周期
+        com.chua.common.support.spi.ServiceProvider.of(com.chua.common.support.osgi.BundleApplication.class)
+                .register("test-stop-app", StopChainBundleApplication.class);
+        try {
+            FelixOsgiLauncher isolated = new FelixOsgiLauncher();
+            isolated.start(java.util.Map.of(
+                    "org.osgi.framework.storage", "target/osgi-cache-stop-test",
+                    "org.osgi.framework.storage.clean", "onFirstInit"));
+            assertTrue(isolated.isActive(), "独立框架应激活");
+            assertEquals(isolated, com.chua.common.support.osgi.OsgiLauncherHolder.getInstance(),
+                    "框架启动后 Holder 应指向该 launcher");
+
+            // SPI 注册的 BundleApplication 应可被 SPI 发现（collect 能实例化）
+            assertEquals(1, com.chua.common.support.spi.ServiceProvider
+                            .of(com.chua.common.support.osgi.BundleApplication.class).collect().size(),
+                    "SPI 应能发现注册的 BundleApplication");
+
+            isolated.stop();
+            assertFalse(isolated.isActive(), "框架停止后应非激活");
+            assertNull(com.chua.common.support.osgi.OsgiLauncherHolder.getInstance(),
+                    "框架停止后 Holder 应被清理为 null");
+        } finally {
+            // 恢复 Holder 为共享实例，避免污染其他用例
+            if (com.chua.common.support.osgi.OsgiLauncherHolder.getInstance() == null
+                    || !com.chua.common.support.osgi.OsgiLauncherHolder.getInstance().isActive()) {
+                com.chua.common.support.osgi.OsgiLauncherHolder.setInstance(osgiLauncher);
+            }
+        }
+    }
+
+    /** BundleApplication SPI 测试辅助：静态类（可被 SPI newInstance），静态标志捕获回调 */
+    public static class StopChainBundleApplication implements com.chua.common.support.osgi.BundleApplication {
+
+        /** 是否已回调 onBundleStart */
+        public static volatile boolean STARTED;
+        /** 是否已回调 onBundleStop */
+        public static volatile boolean STOPPED;
+
+        @Override
+        public void onBundleStart(com.chua.common.support.osgi.BundleContext context) {
+            STARTED = true;
+        }
+
+        @Override
+        public void onBundleStop(com.chua.common.support.osgi.BundleContext context) {
+            STOPPED = true;
+        }
+    }
+
+    /** 真实测试：重复安装同一 location should be idempotent — 返回同一 bundle，总数不变（OSGi 规范） */
+    @Test
+    void reinstallSameVersionBundle() throws Exception {
+        File jar = buildBundleJar("ApiGreetV9", "api9", "9.0.0");
+        OsgiBundle first = osgiLauncher.installBundle("file:" + jar.getAbsolutePath());
+        long afterFirst = osgiLauncher.getBundles().stream()
+                .filter(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName()))
+                .count();
+
+        // 重复安装相同 location：OSGi 规范本次幂等，返回同一 bundle，不新增副本
+        OsgiBundle second = osgiLauncher.installBundle("file:" + jar.getAbsolutePath());
+        assertEquals(first.getVersion(), second.getVersion(), "重复安装应返回同版本 bundle");
+        assertEquals(second.getState(), first.getState(), "重复安装返回的 bundle 状态应一致");
+        assertEquals(afterFirst, osgiLauncher.getBundles().stream()
+                        .filter(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName()))
+                        .count(),
+                "相同 location 重复安装不应新增 bundle");
+
+        // 卸载清理
+        osgiLauncher.getBundles().stream()
+                .filter(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName()))
+                .forEach(OsgiBundle::uninstall);
+        assertEquals(0, osgiLauncher.getBundles().stream()
+                        .filter(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName()))
+                        .count(),
+                "清理后应无同名 bundle");
+    }
+
+    /** 真实测试：OsgiBeanDefinitionRegister 双参 getBeanDefinitionOfType(name, typeName) 重载 */
+    @Test
+    void beanDefinitionByNameAndType() throws Exception {
+        File jar = buildBundleJar("ApiGreetV10", "api10", "10.0.0");
+        osgiLauncher.installBundle("file:" + jar.getAbsolutePath());
+
+        // name 匹配路径：用 getBeanDefinitionOfType 拿到的名字反查
+        Collection<BeanDefinition> defs = osgiBeanDefinitionRegister.getBeanDefinitionOfType(GREET_SERVICE_INTERFACE);
+        assertEquals(1, defs.size(), "应查询到 1 个 GreetService Bean");
+        String name = defs.iterator().next().getName();
+        Collection<BeanDefinition> byNameAndType =
+                osgiBeanDefinitionRegister.getBeanDefinitionOfType(name, GREET_SERVICE_INTERFACE);
+        assertEquals(1, byNameAndType.size(), "双参查询（name 匹配）应命中 1 个");
+        assertEquals(name, byNameAndType.iterator().next().getName(), "双参查询返回的 BeanDefinition 名称应一致");
+
+        // name 不匹配路径：返回空
+        assertTrue(osgiBeanDefinitionRegister.getBeanDefinitionOfType("not-exists", GREET_SERVICE_INTERFACE).isEmpty(),
+                "name 不匹配时双参查询应返回空");
+    }
+
     // ==================== 真实 bundle jar 生成 ====================
 
     /** 动态编译 bundle 实现类并打包为合法 OSGi bundle jar */
