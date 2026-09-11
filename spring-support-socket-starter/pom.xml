@@ -48,6 +48,13 @@
             <optional>true</optional>
         </dependency>
 
+
+        <!-- Redis 支持 - 用于 socket 服务器动态注册 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <optional>true</optional>
+        </dependency>
         
     </dependencies>
 
