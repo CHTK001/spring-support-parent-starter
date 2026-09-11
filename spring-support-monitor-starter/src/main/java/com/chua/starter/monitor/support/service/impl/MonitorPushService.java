@@ -1,7 +1,7 @@
 package com.chua.starter.monitor.support.service.impl;
 
-import com.chua.socket.support.session.SocketSessionTemplate;
 import com.chua.common.support.lang.json.Json;
+import com.chua.starter.queue.MessageTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -14,9 +14,10 @@ import java.util.Map;
 /**
  * 监控实时推送服务
  * <p>
- * 统一封装 Socket 广播能力，供告警引擎、指标采集链路实时推送事件到前端。
- * 依赖 {@link SocketSessionTemplate}（spring-support-socket-starter，plugin.socket.enable=true 时装配），
- * Socket 未启用时推送静默跳过，不影响主链路。
+ * 通过消息队列统一封装 Socket 广播能力（plugin.queue.type 可选
+ * local/kafka/rabbitmq/mqtt），由 socket-starter 的
+ * {@code SocketQueueBridge} 订阅 socket:push topic 后广播到前端。
+ * queue 未启用时推送静默跳过，不影响主链路。
  * </p>
  *
  * <h3>事件协议（前端 socket.subscribe(module, event, handler) 接收）</h3>
@@ -57,8 +58,11 @@ public class MonitorPushService {
     /** tshark 会话状态变更事件名（启动/停止/结束） */
     public static final String EVENT_TSHARK_SESSION = "tshark-session";
 
-    /** Socket 会话模板（socket 未启用时为空实现，推送静默跳过） */
-    private final ObjectProvider<SocketSessionTemplate> socketTemplateProvider;
+    /** SocketQueueBridge 订阅的统一 topic */
+    public static final String SOCKET_PUSH_TOPIC = "socket:push";
+
+    /** 消息模板（queue 未启用时为空实现，推送静默跳过） */
+    private final ObjectProvider<MessageTemplate> messageTemplateProvider;
 
     /**
      * 广播告警事件
@@ -72,7 +76,7 @@ public class MonitorPushService {
     /**
      * 广播指标更新
      *
-     * @param payload  事件数据
+     * @param payload   事件数据
      * @param monitorId 监控 ID（用于前端按目标过滤）
      */
     public void pushMetric(Map<String, Object> payload, Long monitorId) {
@@ -109,10 +113,10 @@ public class MonitorPushService {
     }
 
     /**
-     * 统一广播（socket 未启用或广播异常时静默跳过）
+     * 统一广播：经 queue 发送到 socket:push topic（queue 未启用或发送异常时静默跳过）
      * <p>
      * 事件协议对齐前端 WsMessage（packages/core socketTemplate）：
-     * 以 socket.io 事件 "message" 广播，载荷含 {module, event, data, dataId, timestamp}，
+     * SocketQueueBridge 收到后以 socket.io 事件 "message" 广播，载荷含 {module, event, data, dataId, timestamp}，
      * 前端 socket.subscribe(module, event) 按 "module_event" 分发。
      * </p>
      *
@@ -122,7 +126,7 @@ public class MonitorPushService {
      */
     private void broadcast(String event, Object data, String dataId) {
         try {
-            SocketSessionTemplate template = socketTemplateProvider.getIfAvailable();
+            MessageTemplate template = messageTemplateProvider.getIfAvailable();
             if (template == null) {
                 return;
             }
@@ -134,7 +138,7 @@ public class MonitorPushService {
                 payload.put("dataId", dataId);
             }
             payload.put("timestamp", System.currentTimeMillis());
-            template.broadcast("message", Json.toJson(payload));
+            template.send(SOCKET_PUSH_TOPIC, Json.toJson(payload));
         } catch (Exception e) {
             log.debug("[push] 实时推送跳过 {}: {}", event, e.getMessage());
         }
@@ -143,13 +147,13 @@ public class MonitorPushService {
     /**
      * 构造告警事件载荷
      *
-     * @param monitorId    监控 ID
-     * @param monitorName  监控名称
-     * @param metricName   指标名
-     * @param alarmValue   实际值
-     * @param threshold    阈值
-     * @param level        级别
-     * @param status       状态
+     * @param monitorId   监控 ID
+     * @param monitorName 监控名称
+     * @param metricName  指标名
+     * @param alarmValue  实际值
+     * @param threshold   阈值
+     * @param level       级别
+     * @param status      状态
      * @return 载荷
      */
     public static Map<String, Object> buildAlarmPayload(Long monitorId, String monitorName, String metricName,

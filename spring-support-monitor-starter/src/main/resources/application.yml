@@ -71,6 +71,11 @@ plugin:
       - client-id: default
         context-path: /socket.io
         port: 29181
+  # 消息队列：socket 推送经 queue 解耦（MonitorPushService → queue: socket:push → SocketQueueBridge → 前端）
+  # 单机用 local（Guava EventBus），多实例用 kafka/rabbitmq/mqtt 实现分布式广播
+  queue:
+    enable: true
+    type: local
 
 # 时序存储引擎：influxdb / redis / none（默认 influxdb，向后兼容）
 # influxdb：需 InfluxDB 服务；redis：走 ZSET 简化时序（需上方 spring.data.redis 可达）
