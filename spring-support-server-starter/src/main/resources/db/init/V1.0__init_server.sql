@@ -1,9 +1,10 @@
 -- =====================================================================
--- 服务器资产模块 DDL 初始化脚本 (spring-support-server-starter)
+-- 服务器资产模块 DDL 初始化脚本 (spring-support-server-starter) 合并版
 -- 目标库: MySQL 8.0+ / 兼容 H2 MySQL 模式
 -- 说明: 表名与列名均以 ms_server_* 前缀组织, 与监控模块(ms_monitor_*)风格一致
--- 本文件为唯一 DDL: 全部建表(含主机扩展字段与主机级配置字段)与系统配置表
--- 初始化数据见 V1.0__initdata_server.sql
+-- 本文件为唯一 DDL: 全部建表 + 主机延迟检测补列 + 系统配置初始化数据
+-- 来源: 原 V1.0__init_server + V1.1__add_host_delay_detect + V1.0__initdata_server
+-- 幂等: 建表 IF NOT EXISTS, 补列 IF NOT EXISTS, INSERT IGNORE
 -- @author CH
 -- @since 4.0.0.42
 -- =====================================================================
