@@ -5,6 +5,7 @@ import com.chua.starter.server.support.constants.ServerConstants;
 import com.chua.starter.server.support.service.ServerConfigService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -35,6 +36,10 @@ public class RemoteControlPageController {
 
     /**
      * 远程控制页面（返回内嵌 HTML——浏览器/iframe 直接渲染）。
+     * <p>
+     * 用 {@link ResponseEntity} 显式携带 Content-Type：@RestController 下裸 String
+     * 返回值会走全局响应包装/内容协商，Spring 7 下无 String 转换器导致 500。
+     * </p>
      *
      * @param hostId     主机 id（凭据由后端按主机解析）
      * @param protocol   ssh/vnc/rdp
@@ -42,12 +47,14 @@ public class RemoteControlPageController {
      * @param targetPort 目标端口（可选——null 按协议默认）
      * @return 远程控制页面 HTML
      */
-    @GetMapping(value = "/connect", produces = MediaType.TEXT_HTML_VALUE)
-    public String connect(@RequestParam Long hostId,
-                          @RequestParam String protocol,
-                          @RequestParam(required = false) Long identityId,
-                          @RequestParam(required = false) Integer targetPort) {
-        return renderPage(hostId, protocol, identityId, targetPort);
+    @GetMapping("/connect")
+    public ResponseEntity<String> connect(@RequestParam Long hostId,
+                                          @RequestParam String protocol,
+                                          @RequestParam(required = false) Long identityId,
+                                          @RequestParam(required = false) Integer targetPort) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.TEXT_HTML)
+                .body(renderPage(hostId, protocol, identityId, targetPort));
     }
 
     /**
