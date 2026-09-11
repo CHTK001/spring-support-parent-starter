@@ -49,12 +49,27 @@ public class MonitorServiceImpl implements MonitorService {
             if (monitor.getMonitorEnabled() == null) {
                 monitor.setMonitorEnabled(1);
             }
+            // Agent 探针标识：未显式提供时自动生成，供 Agent 上报（/ms/monitor/agent/metrics）鉴权
+            if (StringUtils.isEmpty(monitor.getMonitorAgentKey())) {
+                monitor.setMonitorAgentKey(generateAgentKey());
+            }
             monitorMapper.insert(monitor);
             return ReturnResult.ok(monitor);
         } catch (Exception e) {
             log.error("创建资产失败", e);
             return ReturnResult.error(e.getMessage());
         }
+    }
+
+    /**
+     * 生成探针标识（32 位十六进制，与 server-starter 风格一致）
+     *
+     * @return 探针标识
+     */
+    private String generateAgentKey() {
+        byte[] bytes = new byte[16];
+        new java.security.SecureRandom().nextBytes(bytes);
+        return java.util.HexFormat.of().formatHex(bytes);
     }
 
     @Override
