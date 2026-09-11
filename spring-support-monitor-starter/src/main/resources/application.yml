@@ -14,16 +14,15 @@ spring:
     generate:
       enabled: false
 
-  # 独立联调模式: 启动时执行建表脚本(幂等, IF NOT EXISTS)
-  # 含 server-starter 的资产台账 DDL(V1.0__init_server.sql),
-  # 使 monitor 独立 H2 下也具备 ms_server_host 等表, 供资产联动查询
-  # V1.3 补充 ms_monitor.ms_server_host_id 列, 打通资产→监控项联动
-  # 注意: spring.sql.init 仅加载本模块 classpath 下的脚本; filesystem-starter
-  # 自带的 data-locations(*.sql) 通过其 auto-config 生效, 已被 exclude 排除
+  # 建表脚本迁移：启用项目自带 FlywayLike（plugin.datasource.script），
+  # 自动扫描 classpath 内所有模块 db/init|migration|sync 下的 V*__*.sql 并执行。
+  # 覆盖：monitor 自身 + 依赖 server-starter/project-starter 的资产台账/项目表，
+  # 使独立 H2/MySQL 启动即具备完整表结构（版本记录表 flyway_schema_history 追踪）。
+  # 注意：filesystem-starter 自带 db/init 含 MySQL-only 语法（SET @x=IF(...)），
+  # H2 下会失败；continue-on-error=true 保证单脚本失败不阻断启动。
   sql:
     init:
-      mode: always
-      schema-locations: classpath:db/init/V1.0__init_monitor.sql,classpath:db/init/V1.1__alarm_and_agent.sql,classpath:db/init/V1.0__init_server.sql,classpath:db/init/V1.1__add_host_delay_detect.sql,classpath:db/init/V1.2__server_node.sql,classpath:db/init/V1.3__monitor_host_link.sql,classpath:db/init/V1.0__init_project.sql,classpath:db/init/V1.1__project_extend.sql
+      mode: never
 
   datasource:
     url: jdbc:h2:mem:monitordb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false
@@ -55,28 +54,29 @@ plugin:
   api:
     request-decode:
       enable: false
-  # FlywayLike 脚本迁移（DataSourceScriptConfiguration）：禁用。
-  # 文件系统 jar 中的 db/init 脚本含 MySQL-only 语法（SET @x=IF(...)），H2 下会阻断启动。
-  # 必要 DDL 由 spring.sql.init.schema-locations 独立加载（纯 H2 兼容语句）
+  # FlywayLike 脚本迁移（DataSourceScriptConfiguration）：启用。
+  # DataSource 就绪后自动扫描 classpath*:db/init|migration|sync 下 V*__*.sql，
+  # monitor 独立启动即建全部表（monitor/server/project 模块的资产台账与监控表均在 SQL 文件）。
   datasource:
     script:
-      enable: false
-  # 实时推送通道（多协议）：
+      enable: true
+      scan-mode: ONCE
+      migration-scan-mode: ALWAYS
+      continue-on-error: true
+      ignore-failed-drops: true
+      verbose: true
+  # 实时推送通道：
   #  - socketio(29181)：tshark 抓包逐包/会话状态广播（前端 subscribe("monitor","tshark-packet"/"tshark-session")）
-  #  - sse(走 web 容器)：server-starter MailboxSseService 邮箱推送依赖 SseSocketSessionTemplate bean
-  #    若缺少 sse 协议，MailboxSseService 构造注入失败 → 整个应用启动失败
+  #  - MailboxSseService(server-starter) 注入的 SseSocketSessionTemplate 由
+  #    MonitorSseTelemetryConfiguration 条件化补 bean（邮箱推送在 monitor 中未使用，仅保证容器可启动）
   socket:
     enable: true
+    protocol: socketio
     host: 0.0.0.0
-    protocols:
-      - protocol: socketio
-        room:
-          - client-id: default
-            context-path: /socket.io
-            port: 29181
-      - protocol: sse
-        room:
-          - client-id: default
+    room:
+      - client-id: default
+        context-path: /socket.io
+        port: 29181
   # 消息队列：socket 推送经 queue 解耦（MonitorPushService → queue: socket:push → SocketQueueBridge → 前端）
   # 单机用 local（Guava EventBus），多实例用 kafka/rabbitmq/mqtt 实现分布式广播
   queue:
