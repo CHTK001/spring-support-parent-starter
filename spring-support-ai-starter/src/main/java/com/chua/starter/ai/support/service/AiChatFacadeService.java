@@ -55,9 +55,26 @@ public interface AiChatFacadeService {
      * @param onComplete 完成后回调（携带完整回复文本，可能为 null），可为 null
      * @return SSE 发射器
      */
+    default SseEmitter stream(AiChatRequest request,
+                              Consumer<String> onChunk,
+                              Consumer<String> onComplete) {
+        return stream(request, onChunk, onComplete, null);
+    }
+
+    /**
+     * 流式对话调用（含失败回调）。上游全链路失败时通过 {@code onError} 通知调用方，
+     * 调用方据此推送带错误语义的 {@code turn.completed}，避免前端会话卡在生成态。
+     *
+     * @param request    对话请求
+     * @param onChunk    每段增量文本回调（可为 null）
+     * @param onComplete 完成后回调（携带完整回复文本，可能为 null），可为 null
+     * @param onError    失败回调（携带异常，仅在全链路失败时触发，与 onComplete 互斥），可为 null
+     * @return SSE 发射器
+     */
     SseEmitter stream(AiChatRequest request,
                       Consumer<String> onChunk,
-                      Consumer<String> onComplete);
+                      Consumer<String> onComplete,
+                      Consumer<Throwable> onError);
 
     /**
      * 获取分组可用模型列表。

@@ -55,12 +55,12 @@ plugin:
   api:
     request-decode:
       enable: false
-  # FlywayLike 脚本迁移（DataSourceScriptConfiguration）：限定仅扫描本模块 db/init，
-  # 排除 classpath 上 filesystem-starter 等 jar 内置的 MySQL 专用脚本（H2 下语法不兼容导致启动失败）
+  # FlywayLike 脚本迁移（DataSourceScriptConfiguration）：禁用。
+  # 文件系统 jar 中的 db/init 脚本含 MySQL-only 语法（SET @x=IF(...)），H2 下会阻断启动。
+  # 必要 DDL 由 spring.sql.init.schema-locations 独立加载（纯 H2 兼容语句）
   datasource:
     script:
-      continue-on-error: true
-      script-path: classpath:db/init/*.sql
+      enable: false
   # 实时推送通道：tshark 抓包逐包/会话状态广播（前端 subscribe("monitor", "tshark-packet"/"tshark-session")）
   # 关闭 enable 后 MonitorPushService 推送静默跳过，不影响抓包本身
   socket:
