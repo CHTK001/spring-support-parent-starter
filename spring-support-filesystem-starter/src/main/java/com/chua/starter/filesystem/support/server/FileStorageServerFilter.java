@@ -585,7 +585,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     }
 
     /**
-     * 一次性访问条目。
+     * 链接条目（支持一次性 / 限时两种模式）。
      */
     private static final class OneTimeEntry {
         /** 存储桶 */
@@ -596,16 +596,23 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         final long createTime;
         /** 自定义过期时长（毫秒） */
         final long ttlMillis;
+        /** true=一次性（访问即销毁），false=限时（到期失效，可多次访问） */
+        final boolean once;
 
         OneTimeEntry(String bucket, String key, long createTime) {
-            this(bucket, key, createTime, ONE_TIME_TTL_MILLIS);
+            this(bucket, key, createTime, ONE_TIME_TTL_MILLIS, true);
         }
 
         OneTimeEntry(String bucket, String key, long createTime, long ttlMillis) {
+            this(bucket, key, createTime, ttlMillis, true);
+        }
+
+        OneTimeEntry(String bucket, String key, long createTime, long ttlMillis, boolean once) {
             this.bucket = bucket;
             this.key = key;
             this.createTime = createTime;
             this.ttlMillis = ttlMillis;
+            this.once = once;
         }
     }
 
