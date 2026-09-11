@@ -34,6 +34,17 @@ public class DataSourceEnvironmentPostProcessor implements EnvironmentPostProces
         properties.setProperty("spring.jpa.hibernate.ddl-auto", "update");
         properties.setProperty("spring.jpa.show-db", "true");
 
+        // 数据库脚本迁移默认全部交给自研 FlywayLike（plugin.datasource.script）：
+        // 关闭 spring.sql.init（schema-locations 手工清单），由 DataSourceScriptConfiguration
+        // 启动时自动扫描 classpath*:db/init|migration|sync 下 V*__*.sql 执行。
+        // 仅在用户未显式设置时写入默认值，避免覆盖应用自定义配置。
+        if (!environment.containsProperty("spring.sql.init.mode")) {
+            properties.setProperty("spring.sql.init.mode", "never");
+        }
+        if (!environment.containsProperty("plugin.datasource.script.enable")) {
+            properties.setProperty("plugin.datasource.script.enable", "true");
+        }
+
         PropertiesPropertySource propertiesPropertySource = new PropertiesPropertySource("datasource", properties);
         MutablePropertySources propertySources = environment.getPropertySources();
         propertySources.addLast(propertiesPropertySource);

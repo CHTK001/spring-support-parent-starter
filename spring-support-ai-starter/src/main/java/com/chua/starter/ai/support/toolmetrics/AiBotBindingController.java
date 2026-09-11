@@ -7,7 +7,6 @@ import com.chua.starter.ai.support.model.BotBindingCreateRequest;
 import com.chua.starter.ai.support.model.BotBindingListResponse;
 import com.chua.starter.ai.support.model.BotConversation;
 import com.chua.starter.ai.support.entity.SysAiBotBinding;
-import com.chua.starter.ai.support.entity.SysAiBotMessage;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
 import com.chua.starter.ai.support.manage.store.BotUserSummary;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
@@ -151,16 +150,60 @@ public class AiBotBindingController {
     }
 
     /**
-     * 查询 Bot 与某用户的聊天记录（按时间升序）。
+     * 查询 Bot 与某用户的聊天记录（按时间升序，支持滚动分页）。
+     *
+     * <p>第 0 页为最近 pageSize 条；页码越大越早。响应体：
+     * {@code {messages: [...], hasMore, page, pageSize}}。</p>
      *
      * @param botId    Bot ID
      * @param fromUser 微信用户 ID（可空，空则查全部）
-     * @return 聊天记录列表
+     * @param page     页码（从 0 开始，默认 0）
+     * @param pageSize 每页条数（默认 50）
+     * @return 分页聊天记录
      */
     @GetMapping("/messages")
-    public ReturnResult<List<SysAiBotMessage>> messages(@RequestParam String botId,
-                                                        @RequestParam(required = false) String fromUser) {
-        return ReturnResult.ok(aiBotChatService.listMessages(botId, fromUser));
+    public ReturnResult<Map<String, Object>> messages(@RequestParam String botId,
+                                                      @RequestParam(required = false) String fromUser,
+                                                      @RequestParam(required = false, defaultValue = "0") Integer page,
+                                                      @RequestParam(required = false, defaultValue = "50") Integer pageSize) {
+        return ReturnResult.ok(aiBotChatService.listMessagesPaged(botId, fromUser,
+                page != null ? page : 0, pageSize != null ? pageSize : 50));
+    }
+
+    /**
+     * 润色一段文本（IM 输入框「润色」按钮）。
+     *
+     * @param body 请求体：botId / text
+     * @return 润色结果（{@code result} 字段）
+     */
+    @PostMapping("/polish")
+    public ReturnResult<Map<String, Object>> polish(@RequestBody Map<String, String> body) {
+        String botId = body.get("botId");
+        String text = body.get("text");
+        if (StringUtils.isBlank(botId) || StringUtils.isBlank(text)) {
+            return ReturnResult.illegal("botId / text 不能为空");
+        }
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("result", aiBotChatService.polishText(botId.trim(), text));
+        return ReturnResult.ok(data);
+    }
+
+    /**
+     * 总结指定会话的聊天记录（IM 页「上下文总结」按钮）。
+     *
+     * @param body 请求体：botId / fromUser
+     * @return 会话摘要（{@code summary} 字段）
+     */
+    @PostMapping("/summarize")
+    public ReturnResult<Map<String, Object>> summarize(@RequestBody Map<String, String> body) {
+        String botId = body.get("botId");
+        String fromUser = body.get("fromUser");
+        if (StringUtils.isBlank(botId)) {
+            return ReturnResult.illegal("botId 不能为空");
+        }
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("summary", aiBotChatService.summarizeConversation(botId.trim(), fromUser));
+        return ReturnResult.ok(data);
     }
 
     /**

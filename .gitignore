@@ -88,6 +88,7 @@ cp-*.txt
 effective-pom
 **/start-be.cmd
 **/start-be.ps1
+**/start-bg.cmd
 **/cp.argfile
 **/cp.args
 **/backend-new.log
