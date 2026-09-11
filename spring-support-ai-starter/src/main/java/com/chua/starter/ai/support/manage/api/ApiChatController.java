@@ -272,6 +272,42 @@ public class ApiChatController {
             ));
             pushService.push("conversation.listChanged",
                     Map.of("conversation_id", conversationId, "action", "updated"));
+        }, (error) -> {
+            // 9. 失败分支：保存错误 assistant 消息并推送带错误语义的 turn.completed，避免前端卡死
+            String errText = error != null && error.getMessage() != null
+                    ? "对话失败: " + error.getMessage() : "对话失败";
+            SysAiConversationMessage errMsg = newSysAiConversationMessage(conversationId, "text",
+                    errText, "assistant", "left");
+            errMsg.setMessageId(assistantMsgId);
+            errMsg.setMsgId(assistantMsgId);
+            conversationStore.addMessage(conversationId, errMsg);
+
+            java.util.Map<String, Object> errRuntime = new LinkedHashMap<>();
+            errRuntime.put("state", "error");
+            errRuntime.put("can_send_message", true);
+            errRuntime.put("has_runtime", false);
+            errRuntime.put("is_processing", false);
+            errRuntime.put("pending_confirmations", 0);
+            errRuntime.put("active_turn_id", (Object) null);
+            pushService.push("turn.completed", Map.of(
+                    "conversation_id", conversationId,
+                    "turn_id", turnId,
+                    "status", "error",
+                    "state", "error",
+                    "can_send_message", true,
+                    "runtime", errRuntime,
+                    "workspace", "",
+                    "model", Map.of("platform", "", "name", modelName != null ? modelName : "",
+                            "use_model", modelName != null ? modelName : ""),
+                    "last_message", Map.of(
+                            "message_id", assistantMsgId,
+                            "type", "text",
+                            "content", errText,
+                            "status", "error"
+                    )
+            ));
+            pushService.push("conversation.listChanged",
+                    Map.of("conversation_id", conversationId, "action", "updated"));
         });
 
         // 8. 返回发送结果（前端据此校正乐观气泡）
@@ -667,6 +703,42 @@ public class ApiChatController {
                             "type", "text",
                             "content", fullReply != null ? fullReply : "",
                             "status", "finish"
+                    )
+            ));
+            pushService.push("conversation.listChanged",
+                    Map.of("conversation_id", conversationId, "action", "updated"));
+        }, (error) -> {
+            // 失败分支：保存错误 assistant 消息并推送带错误语义的 turn.completed，避免前端卡死
+            String errText = error != null && error.getMessage() != null
+                    ? "对话失败: " + error.getMessage() : "对话失败";
+            SysAiConversationMessage errMsg = newSysAiConversationMessage(conversationId, "text",
+                    errText, "assistant", "left");
+            errMsg.setMessageId(assistantMsgId);
+            errMsg.setMsgId(assistantMsgId);
+            conversationStore.addMessage(conversationId, errMsg);
+
+            java.util.Map<String, Object> errRuntime = new LinkedHashMap<>();
+            errRuntime.put("state", "error");
+            errRuntime.put("can_send_message", true);
+            errRuntime.put("has_runtime", false);
+            errRuntime.put("is_processing", false);
+            errRuntime.put("pending_confirmations", 0);
+            errRuntime.put("active_turn_id", (Object) null);
+            pushService.push("turn.completed", Map.of(
+                    "conversation_id", conversationId,
+                    "turn_id", turnId,
+                    "status", "error",
+                    "state", "error",
+                    "can_send_message", true,
+                    "runtime", errRuntime,
+                    "workspace", "",
+                    "model", Map.of("platform", "", "name", modelName != null ? modelName : "",
+                            "use_model", modelName != null ? modelName : ""),
+                    "last_message", Map.of(
+                            "message_id", assistantMsgId,
+                            "type", "text",
+                            "content", errText,
+                            "status", "error"
                     )
             ));
             pushService.push("conversation.listChanged",
