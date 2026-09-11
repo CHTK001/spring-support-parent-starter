@@ -21,7 +21,7 @@ spring:
   sql:
     init:
       mode: always
-      schema-locations: classpath:db/init/V1.0__init_monitor.sql,classpath:db/init/V1.1__alarm_and_agent.sql,classpath:db/init/V1.0__init_server.sql,classpath:db/init/V1.3__monitor_host_link.sql,classpath:db/init/V1.0__init_project.sql
+      schema-locations: classpath:db/init/V1.0__init_monitor.sql,classpath:db/init/V1.1__alarm_and_agent.sql,classpath:db/init/V1.0__init_server.sql,classpath:db/init/V1.3__monitor_host_link.sql,classpath:db/init/V1.0__init_project.sql,classpath:db/init/V1.1__project_extend.sql
 
   datasource:
     url: jdbc:h2:mem:monitordb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false
