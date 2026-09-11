@@ -65,10 +65,8 @@ plugin:
       continue-on-error: true
       ignore-failed-drops: true
       verbose: true
-  # 实时推送通道：
-  #  - socketio(29181)：tshark 抓包逐包/会话状态广播（前端 subscribe("monitor","tshark-packet"/"tshark-session")）
-  #  - MailboxSseService(server-starter) 注入的 SseSocketSessionTemplate 由
-  #    MonitorSseTelemetryConfiguration 条件化补 bean（邮箱推送在 monitor 中未使用，仅保证容器可启动）
+# 实时推送通道：socketio(29181)
+  # tshark 抓包逐包/会话状态广播（前端 subscribe("monitor","tshark-packet"/"tshark-session")）
   socket:
     enable: true
     protocol: socketio
@@ -77,8 +75,7 @@ plugin:
       - client-id: default
         context-path: /socket.io
         port: 29181
-  # 消息队列：socket 推送经 queue 解耦（MonitorPushService → queue: socket:push → SocketQueueBridge → 前端）
-  # 单机用 local（Guava EventBus），多实例用 kafka/rabbitmq/mqtt 实现分布式广播
+  # 队列模块
   queue:
     enable: true
     type: local
