@@ -36,6 +36,7 @@ import java.util.Map;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "plugin.queue", name = "enable", havingValue = "true")
 public class SocketQueueBridge {
 
     /** 固定订阅 topic：业务方统一向此 topic 发送 socket 广播消息 */

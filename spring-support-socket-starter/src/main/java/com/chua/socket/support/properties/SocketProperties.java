@@ -66,7 +66,7 @@ public class SocketProperties {
      * 协议类型，默认 sse
      * 可选值：socketio, rsocket, sse
      */
-    private SocketProtocol protocol = SocketProtocol.SOCKETIO;
+    private SocketProtocol protocol = SocketProtocol.SSE;
 
     /**
      * 多协议配置列表（可选）

@@ -86,3 +86,5 @@ cp-*.txt
 **/test-deploy.bin
 **/*-resp.json
 effective-pom
+**/start-be.cmd
+**/backend-new.log
