@@ -61,16 +61,22 @@ plugin:
   datasource:
     script:
       enable: false
-  # 实时推送通道：tshark 抓包逐包/会话状态广播（前端 subscribe("monitor", "tshark-packet"/"tshark-session")）
-  # 关闭 enable 后 MonitorPushService 推送静默跳过，不影响抓包本身
+  # 实时推送通道（多协议）：
+  #  - socketio(29181)：tshark 抓包逐包/会话状态广播（前端 subscribe("monitor","tshark-packet"/"tshark-session")）
+  #  - sse(走 web 容器)：server-starter MailboxSseService 邮箱推送依赖 SseSocketSessionTemplate bean
+  #    若缺少 sse 协议，MailboxSseService 构造注入失败 → 整个应用启动失败
   socket:
     enable: true
-    protocol: socketio
     host: 0.0.0.0
-    room:
-      - client-id: default
-        context-path: /socket.io
-        port: 29181
+    protocols:
+      - protocol: socketio
+        room:
+          - client-id: default
+            context-path: /socket.io
+            port: 29181
+      - protocol: sse
+        room:
+          - client-id: default
   # 消息队列：socket 推送经 queue 解耦（MonitorPushService → queue: socket:push → SocketQueueBridge → 前端）
   # 单机用 local（Guava EventBus），多实例用 kafka/rabbitmq/mqtt 实现分布式广播
   queue:
