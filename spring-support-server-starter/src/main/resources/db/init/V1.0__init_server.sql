@@ -57,6 +57,8 @@ CREATE TABLE IF NOT EXISTS ms_server_identity (
     ms_server_identity_username VARCHAR(64)  NOT NULL                COMMENT '登录用户名',
     ms_server_identity_password VARCHAR(512) NULL                    COMMENT '登录密码(AES加密)',
     ms_server_identity_key_id   BIGINT       NULL                    COMMENT '引用密钥ID(PUBLIC_KEY类型)',
+    ms_server_identity_email_source VARCHAR(16) NULL DEFAULT 'IMAP' COMMENT '邮箱来源(MAILBOX类型): IMAP(真实邮箱)/TEMP(临时邮箱API)',
+    ms_server_identity_provider VARCHAR(32)  NULL                    COMMENT '临时邮箱服务商(TEMP来源): fce/luckmail/mailnest/mailtm',
     ms_server_identity_imap_host VARCHAR(128) NULL                    COMMENT '邮箱IMAP服务器(MAILBOX类型)',
     ms_server_identity_imap_port INT          NULL                    COMMENT '邮箱IMAP端口(MAILBOX类型,默认993)',
     ms_server_identity_remark   VARCHAR(255) NULL                    COMMENT '备注',

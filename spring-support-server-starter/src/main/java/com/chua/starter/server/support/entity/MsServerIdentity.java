@@ -73,6 +73,20 @@ public class MsServerIdentity extends SysBase {
     private Long msServerIdentityKeyId;
 
     /**
+     * 邮箱来源（仅 MAILBOX 类型）：IMAP(真实邮箱) / TEMP(临时邮箱API)
+     */
+    @TableField("ms_server_identity_email_source")
+    @Schema(description = "邮箱来源: IMAP(真实邮箱)/TEMP(临时邮箱API)", example = "IMAP")
+    private String msServerIdentityEmailSource;
+
+    /**
+     * 临时邮箱服务商（仅 TEMP 来源）：fce/luckmail/mailnest/mailtm
+     */
+    @TableField("ms_server_identity_provider")
+    @Schema(description = "临时邮箱服务商(fce/luckmail/mailnest/mailtm)", example = "fce")
+    private String msServerIdentityProvider;
+
+    /**
      * 邮箱 IMAP 服务器（仅 MAILBOX 类型，空则按邮箱域名推断 imap.<域名>）
      */
     @TableField("ms_server_identity_imap_host")
