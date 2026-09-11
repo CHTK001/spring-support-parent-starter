@@ -23,8 +23,7 @@ spring:
   sql:
     init:
       mode: always
-      schema-locations: classpath:db/init/V1.0__init_monitor.sql,classpath:db/init/V1.1__alarm_and_agent.sql,classpath:db/init/V1.0__init_server.sql,classpath:db/init/V1.3__monitor_host_link.sql,classpath:db/init/V1.0__init_project.sql,classpath:db/init/V1.1__project_extend.sql
-      data-locations: optional:classpath*:db/migration/*.sql
+      schema-locations: classpath:db/init/V1.0__init_monitor.sql,classpath:db/init/V1.1__alarm_and_agent.sql,classpath:db/init/V1.0__init_server.sql,classpath:db/init/V1.1__add_host_delay_detect.sql,classpath:db/init/V1.3__monitor_host_link.sql,classpath:db/init/V1.0__init_project.sql,classpath:db/init/V1.1__project_extend.sql
 
   datasource:
     url: jdbc:h2:mem:monitordb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false
@@ -48,6 +47,12 @@ plugin:
   api:
     request-decode:
       enable: false
+  # FlywayLike 脚本迁移（DataSourceScriptConfiguration）：限定仅扫描本模块 db/init，
+  # 排除 classpath 上 filesystem-starter 等 jar 内置的 MySQL 专用脚本（H2 下语法不兼容导致启动失败）
+  datasource:
+    script:
+      continue-on-error: true
+      script-path: classpath:db/init/*.sql
   # 实时推送通道：tshark 抓包逐包/会话状态广播（前端 subscribe("monitor", "tshark-packet"/"tshark-session")）
   # 关闭 enable 后 MonitorPushService 推送静默跳过，不影响抓包本身
   socket:

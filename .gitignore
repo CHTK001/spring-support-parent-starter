@@ -79,7 +79,9 @@ replay_pid*.log
 *.log.gz
 stash.diff
 cp_*.txt
+cp-*.txt
 **/backend-args.txt
 **/classpath.txt
 **/start-backend.bat
+**/test-deploy.bin
 effective-pom

@@ -19,6 +19,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -152,5 +153,35 @@ class OsgiSshShellRealTest {
     private static long parseBundleId(String output) {
         Matcher matcher = Pattern.compile("Bundle ID[:\\s]+(\\d+)").matcher(output);
         return matcher.find() ? Long.parseLong(matcher.group(1)) : -1;
+    }
+
+    /** 真实测试：SSH 认证失败（错误密码）应被拒绝 */
+    @Test
+    void authFailureRejected() {
+        JSch jsch = new JSch();
+        assertThrows(Exception.class, () -> {
+            Session session = jsch.getSession(SSH_USER, "127.0.0.1", SSH_PORT);
+            session.setPassword("wrong-password");
+            session.setConfig("StrictHostKeyChecking", "no");
+            try {
+                session.connect(5000);
+            } finally {
+                try {
+                    session.disconnect();
+                } catch (Exception ignored) {
+                }
+            }
+        }, "错误密码的 SSH 连接应被拒绝");
+    }
+
+    /** 真实测试：Gogo 非 bundle: 命令经 SSH shell 执行（executeViaGogo 反射路径） */
+    @Test
+    void gogoNonBundleCommandExecuted() throws Exception {
+        // help 为 Gogo runtime 内置命令，不以 bundle: 开头，需走 CommandProcessor 反射执行
+        String helpOut = shell("help");
+        assertFalse(helpOut.contains("命令执行失败"), "help 不应报命令执行失败，实际输出: " + helpOut);
+        // 命令回显后的尾部提示符 g! 表示会话正常结束且命令已被处理
+        assertTrue(helpOut.contains("help") && helpOut.lastIndexOf("g!") > helpOut.indexOf("help"),
+                "help 输出应包含命令回显与尾部提示符，实际输出: " + helpOut);
     }
 }

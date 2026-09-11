@@ -18,6 +18,8 @@ import com.chua.starter.monitor.support.service.impl.MonitorPushService;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -177,6 +179,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     // ==================== 策略 CRUD ====================
 
     @Override
+    @CacheEvict(cacheNames = {"monitor:alarm:policies", "monitor:alarm:rules"}, allEntries = true)
     public ReturnResult<MsMonitorAlarmPolicy> createPolicy(MsMonitorAlarmPolicy policy) {
         if (policy == null || isBlank(policy.getMsMonitorAlarmPolicyName())) {
             return ReturnResult.error("策略名称不能为空");
@@ -188,6 +191,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(cacheNames = {"monitor:alarm:policies", "monitor:alarm:rules"}, allEntries = true)
     public ReturnResult<MsMonitorAlarmPolicy> updatePolicy(Long id, MsMonitorAlarmPolicy policy) {
         MsMonitorAlarmPolicy exists = policyMapper.selectById(id);
         if (exists == null) {
@@ -209,6 +213,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(cacheNames = {"monitor:alarm:policies", "monitor:alarm:rules"}, allEntries = true)
     public ReturnResult<Void> deletePolicy(Long id) {
         ruleMapper.delete(new LambdaQueryWrapper<MsMonitorAlarmRule>()
                 .eq(MsMonitorAlarmRule::getMsMonitorAlarmRulePolicyId, id));
@@ -218,6 +223,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     }
 
     @Override
+    @Cacheable(cacheNames = "monitor:alarm:policies", key = "'policies'")
     public ReturnResult<List<MsMonitorAlarmPolicy>> listPolicies() {
         return ReturnResult.list(policyMapper.selectList(
                 new LambdaQueryWrapper<MsMonitorAlarmPolicy>().orderByDesc(MsMonitorAlarmPolicy::getId)));
@@ -226,6 +232,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     // ==================== 规则 CRUD ====================
 
     @Override
+    @CacheEvict(cacheNames = {"monitor:alarm:rules", "monitor:alarm:events"}, allEntries = true)
     public ReturnResult<MsMonitorAlarmRule> createRule(MsMonitorAlarmRule rule) {
         var error = validateRule(rule);
         if (error != null) {
@@ -240,6 +247,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"monitor:alarm:rules", "monitor:alarm:events"}, allEntries = true)
     public ReturnResult<MsMonitorAlarmRule> updateRule(Long id, MsMonitorAlarmRule rule) {
         MsMonitorAlarmRule exists = ruleMapper.selectById(id);
         if (exists == null) {
@@ -272,6 +280,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"monitor:alarm:rules", "monitor:alarm:events"}, allEntries = true)
     public ReturnResult<Void> deleteRule(Long id) {
         ruleMapper.deleteById(id);
         reload();
@@ -279,6 +288,7 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
     }
 
     @Override
+    @Cacheable(cacheNames = "monitor:alarm:rules", key = "#policyId != null ? 'rules:' + #policyId : 'rules:all'")
     public ReturnResult<List<MsMonitorAlarmRule>> listRules(Long policyId) {
         LambdaQueryWrapper<MsMonitorAlarmRule> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(policyId != null, MsMonitorAlarmRule::getMsMonitorAlarmRulePolicyId, policyId);
@@ -420,7 +430,7 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
                 MsMonitor monitor = monitorMapper.selectById(monitorId);
                 resolvedName = monitor != null ? monitor.getMonitorName() : String.valueOf(monitorId);
             }
-            // 落事件
+            // 落事件（含触发时规则配置快照，规则后续修改可追溯）
             var event = new MsMonitorAlarmEvent();
             event.setMsMonitorAlarmEventMonitorId(monitorId);
             event.setMsMonitorAlarmEventMonitorName(resolvedName);
@@ -431,6 +441,7 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
             event.setMsMonitorAlarmEventLevel(isBlank(rule.getMsMonitorAlarmRuleLevel()) ? "P2" : rule.getMsMonitorAlarmRuleLevel());
             event.setMsMonitorAlarmEventStatus("NEW");
             event.setMsMonitorAlarmEventTriggerTime(LocalDateTime.now());
+            event.setMsMonitorAlarmEventRuleSnapshot(buildRuleSnapshot(rule));
             eventMapper.insert(event);
             // 实时推送告警事件到前端（Socket 未启用时静默跳过）
             try {
@@ -460,6 +471,31 @@ private void fireIfNotSilent(MsMonitorAlarmRule rule, Long monitorId, String mon
             }
             log.info("[alarm] 告警触发 rule={} monitor={} metric={} value={}",
                     rule.getId(), monitorId, metricName, value);
+    }
+
+    /**
+     * 构建触发时的规则配置快照（JSON，仅保留判定所需的核心配置）
+     *
+     * @param rule 规则
+     * @return 快照 JSON，异常时返回 null
+     */
+    private String buildRuleSnapshot(MsMonitorAlarmRule rule) {
+        try {
+            var map = new java.util.LinkedHashMap<String, Object>();
+            map.put("policyId", rule.getMsMonitorAlarmRulePolicyId());
+            map.put("monitorId", rule.getMsMonitorAlarmRuleMonitorId());
+            map.put("metricName", rule.getMsMonitorAlarmRuleMetricName());
+            map.put("condition", rule.getMsMonitorAlarmRuleCondition());
+            map.put("threshold", rule.getMsMonitorAlarmRuleThreshold() == null ? null : rule.getMsMonitorAlarmRuleThreshold().toPlainString());
+            map.put("consecutiveCount", rule.getMsMonitorAlarmRuleConsecutiveCount());
+            map.put("silenceMinutes", rule.getMsMonitorAlarmRuleSilenceMinutes());
+            map.put("level", rule.getMsMonitorAlarmRuleLevel());
+            map.put("enabled", rule.getMsMonitorAlarmRuleEnabled());
+            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(map);
+        } catch (Exception e) {
+            log.debug("[alarm] 规则快照序列化失败 rule={}: {}", rule != null ? rule.getId() : null, e.getMessage());
+            return null;
+        }
     }
 
     /**

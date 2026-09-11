@@ -109,6 +109,13 @@ public class MsMonitorAlarmEvent implements Serializable {
     private LocalDateTime msMonitorAlarmEventTriggerTime;
 
     /**
+     * 触发时规则配置快照（JSON：条件/阈值/连续次数/静默期/级别，规则后续修改可追溯）
+     */
+    @TableField("ms_monitor_alarm_event_rule_snapshot")
+    @Schema(description = "触发时规则配置快照(JSON)")
+    private String msMonitorAlarmEventRuleSnapshot;
+
+    /**
      * 处理时间
      */
     @TableField("ms_monitor_alarm_event_handle_time")
