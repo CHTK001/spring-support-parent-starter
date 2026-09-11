@@ -109,6 +109,8 @@ CREATE TABLE IF NOT EXISTS ms_server_host (
     ms_server_host_delay_interval    INT NULL DEFAULT 60     COMMENT '延迟检测间隔秒(主机级)',
     ms_server_host_delay_ms          BIGINT NULL             COMMENT '最近延迟毫秒(检测结果)',
     ms_server_host_last_delay_time   DATETIME NULL           COMMENT '最近延迟检测时间(主机级)',
+    ms_server_host_ports             TEXT NULL               COMMENT '端口扫描结果(JSON数组)',
+    ms_server_host_last_port_scan_time DATETIME NULL         COMMENT '最近端口扫描时间',
     create_by                   INT          NULL                    COMMENT '创建人',
     create_name                 VARCHAR(64)  NULL                    COMMENT '创建人名称',
     create_time                 DATETIME     NULL                    COMMENT '创建时间',
@@ -272,6 +274,8 @@ ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_delay_enabled
 ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_delay_interval INT NULL DEFAULT 60 COMMENT '延迟检测间隔秒(主机级)';
 ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_delay_ms BIGINT NULL COMMENT '最近延迟毫秒(检测结果)';
 ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_last_delay_time DATETIME NULL COMMENT '最近延迟检测时间(主机级)';
+ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_ports TEXT NULL COMMENT '端口扫描结果(JSON数组)';
+ALTER TABLE ms_server_host ADD COLUMN IF NOT EXISTS ms_server_host_last_port_scan_time DATETIME NULL COMMENT '最近端口扫描时间';
 
 -- ---------------------------------------------------------------------
 -- 系统配置初始化数据（原 V1.0__initdata_server.sql，INSERT IGNORE 幂等）
