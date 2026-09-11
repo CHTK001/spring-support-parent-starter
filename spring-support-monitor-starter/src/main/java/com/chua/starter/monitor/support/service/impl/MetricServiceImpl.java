@@ -15,6 +15,7 @@ import com.chua.starter.monitor.support.spi.impl.MetricTimeSeriesWriter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -103,6 +104,13 @@ public class MetricServiceImpl implements MetricService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @org.springframework.cache.annotation.Caching(evict = {
+            @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'cpu:' + #result.monitor.id", condition = "#result != null && #result.monitor != null && #result.monitor.id != null"),
+            @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'memory:' + #result.monitor.id", condition = "#result != null && #result.monitor != null && #result.monitor.id != null"),
+            @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'disk:' + #result.monitor.id", condition = "#result != null && #result.monitor != null && #result.monitor.id != null"),
+            @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'network:' + #result.monitor.id", condition = "#result != null && #result.monitor != null && #result.monitor.id != null"),
+            @org.springframework.cache.annotation.CacheEvict(cacheNames = "monitor:metric:latest", key = "'jvm:' + #result.monitor.id", condition = "#result != null && #result.monitor != null && #result.monitor.id != null")
+    })
     /** 写入CollectResult */
     public ReturnResult<Void> writeCollectResult(CollectResult result) {
         try {
@@ -321,6 +329,7 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
+    @Cacheable(cacheNames = "monitor:metric:latest", key = "'cpu:' + #monitorId", unless = "#result == null || #result.data == null")
     /** 获取LatestCpu */
     public ReturnResult<MsMonitorMetricCpu> getLatestCpu(Long monitorId) {
         return ReturnResult.ok(cpuMapper.selectOne(
@@ -331,6 +340,7 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
+    @Cacheable(cacheNames = "monitor:metric:latest", key = "'memory:' + #monitorId", unless = "#result == null || #result.data == null")
     /** 获取LatestMemory */
     public ReturnResult<MsMonitorMetricMemory> getLatestMemory(Long monitorId) {
         return ReturnResult.ok(memoryMapper.selectOne(
@@ -341,6 +351,7 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
+    @Cacheable(cacheNames = "monitor:metric:latest", key = "'disk:' + #monitorId", unless = "#result == null || #result.data == null || #result.data.isEmpty()")
     /** 获取LatestDisk */
     public ReturnResult<List<MsMonitorMetricDisk>> getLatestDisk(Long monitorId) {
         return ReturnResult.ok(diskMapper.selectList(
@@ -351,6 +362,7 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
+    @Cacheable(cacheNames = "monitor:metric:latest", key = "'network:' + #monitorId", unless = "#result == null || #result.data == null")
     /** 获取LatestNetwork */
     public ReturnResult<MsMonitorMetricNetwork> getLatestNetwork(Long monitorId) {
         return ReturnResult.ok(networkMapper.selectOne(
@@ -361,6 +373,7 @@ public class MetricServiceImpl implements MetricService {
     }
 
     @Override
+    @Cacheable(cacheNames = "monitor:metric:latest", key = "'jvm:' + #monitorId", unless = "#result == null || #result.data == null")
     /** 获取LatestJvm */
     public ReturnResult<MsMonitorMetricJvm> getLatestJvm(Long monitorId) {
         return ReturnResult.ok(jvmMapper.selectOne(

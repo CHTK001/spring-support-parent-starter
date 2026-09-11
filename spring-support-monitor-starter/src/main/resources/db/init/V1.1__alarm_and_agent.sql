@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS ms_monitor_alarm_event (
     ms_monitor_alarm_event_handle_remark VARCHAR(512)  NULL                  COMMENT '处理备注',
     ms_monitor_alarm_event_trigger_time  DATETIME      NULL                  COMMENT '触发时间',
     ms_monitor_alarm_event_handle_time   DATETIME      NULL                  COMMENT '处理时间',
+    ms_monitor_alarm_event_rule_snapshot VARCHAR(1024) NULL                  COMMENT '触发时规则配置快照(JSON)',
     PRIMARY KEY (id),
     KEY idx_alarm_event_monitor (ms_monitor_alarm_event_monitor_id),
     KEY idx_alarm_event_status (ms_monitor_alarm_event_status)
@@ -60,3 +61,8 @@ CREATE TABLE IF NOT EXISTS ms_monitor_alarm_event (
 -- 4. MsMonitor 追加探针标识列(Agent 推送鉴权)
 -- ---------------------------------------------------------------------
 ALTER TABLE ms_monitor ADD COLUMN IF NOT EXISTS ms_monitor_agent_key VARCHAR(64) NULL COMMENT '探针标识(Agent推送鉴权)';
+
+-- ---------------------------------------------------------------------
+-- 5. MsMonitorAlarmEvent 追加触发时规则配置快照列(存量库补列, 新库已包含)
+-- ---------------------------------------------------------------------
+ALTER TABLE ms_monitor_alarm_event ADD COLUMN IF NOT EXISTS ms_monitor_alarm_event_rule_snapshot VARCHAR(1024) NULL COMMENT '触发时规则配置快照(JSON)';
