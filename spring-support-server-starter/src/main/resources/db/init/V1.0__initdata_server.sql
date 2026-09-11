@@ -10,13 +10,13 @@
 
 -- Guacd 远控网关配置（guacd = 守护进程地址；guacd-client = 浏览器侧 WS 隧道网关，空串=同域 location.host）
 INSERT IGNORE INTO ms_server_config (ms_server_config_key, ms_server_config_value, ms_server_config_desc)
-VALUES ('guacd.host', '"172.16.0.40"', 'guacd 网关地址（远控隧道）');
+VALUES ('guacd.host', '"124.221.230.112"', 'guacd 网关地址（远控隧道）');
 
 INSERT IGNORE INTO ms_server_config (ms_server_config_key, ms_server_config_value, ms_server_config_desc)
-VALUES ('guacd.port', '"14822"', 'guacd 网关端口（远控隧道）');
+VALUES ('guacd.port', '"4822"', 'guacd 网关端口（远控隧道）');
 
 INSERT IGNORE INTO ms_server_config (ms_server_config_key, ms_server_config_value, ms_server_config_desc)
-VALUES ('guacd.client.host', '"127.0.0.1:8082"', 'guacd-client 网关地址（浏览器侧 WS 隧道 host:port，空串=同域）');
+VALUES ('guacd.client.host', '""', 'guacd-client 网关地址（浏览器侧 WS 隧道 host:port，空串=同域）');
 
 -- 全局连接缓存配置
 INSERT IGNORE INTO ms_server_config (ms_server_config_key, ms_server_config_value, ms_server_config_desc)
