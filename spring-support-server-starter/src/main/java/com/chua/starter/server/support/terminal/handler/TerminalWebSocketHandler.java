@@ -195,7 +195,8 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
      */
     @Override
     public void handleTransportError(WebSocketSession wsSession, Throwable exception) {
-        log.warn("[terminal] WS 传输异常 sessionId={}: {}", wsSession.getId(), exception.getMessage());
+        log.warn("[terminal] WS 传输异常 sessionId={} {}",
+                wsSession.getId(), exception.toString(), exception);
         GuacdSession session = sessionRegistry.findByWsSessionId(wsSession.getId());
         if (session != null) {
             sessionRegistry.close(session, "传输异常");
