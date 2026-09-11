@@ -132,11 +132,7 @@ class OsgiFrameworkApiRealTest {
     /** 真实测试：FelixBundleContext 服务注册 → 可见 → 注销 → 不可见 */
     @Test
     void bundleContextServiceRegisterUnregister() {
-        // 1) 记录注册前的服务集合快照
-        Set<String> before = osgiLauncher.getServices(GreetService.class).stream()
-                .map(GreetService::greet).collect(Collectors.toSet());
-
-        // 2) 经 FelixBundleContext 注册服务
+        // 1) 经 FelixBundleContext 注册服务
         FelixBundleContext ctx = new FelixBundleContext(osgiLauncher.getFrameworkBundleContext());
         GreetService svc = name -> "ctx:" + name;
         ctx.registerService(GreetService.class, svc);
