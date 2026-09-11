@@ -314,8 +314,7 @@ class OsgiFrameworkApiRealTest {
         assertDoesNotThrow(() -> inactive.uninstallBundle("any"), "未激活时 uninstallBundle 不应抛异常");
     }
 
-    /** 真实测试：ObjectContext 与 osgiLauncher 全流程结果一致（复用注入的 ObjectContext） */
-    @Test
+    /** 真实测试：ObjectContext 与 osgiLauncher 全流程结果一致（复用注入的 ObjectContext） */    @Test
     void objectContextAndLauncherConsistent() throws Exception {
         // 初始一致
         assertNull(objectContext.getBeanOfTypeSafely(GreetService.class), "初始 ObjectContext 应查不到");
@@ -329,6 +328,14 @@ class OsgiFrameworkApiRealTest {
         assertNotNull(fromContext, "ObjectContext 应查到");
         assertEquals(fromLauncher.greet("world"), fromContext.greet("world"),
                 "ObjectContext 与 osgiLauncher 查询结果应一致");
+
+        // 按名查询桥接：经 register 查到 BeanDefinition 的完整名称，再由 ObjectContext 按名获取
+        Collection<BeanDefinition> defs = osgiBeanDefinitionRegister.getBeanDefinitionOfType(GREET_SERVICE_INTERFACE);
+        assertEquals(1, defs.size(), "应查询到 1 个 GreetService Bean");
+        String beanName = defs.iterator().next().getName();
+        GreetService byName = objectContext.getBean(beanName, GreetService.class);
+        assertNotNull(byName, "ObjectContext 按名 (" + beanName + ") 应查到 GreetService");
+        assertEquals("api8:world", byName.greet("world"), "按名查询结果应与服务一致");
 
         osgiLauncher.getBundles().stream()
                 .filter(b -> BUNDLE_SYMBOLIC_NAME.equals(b.getSymbolicName()))

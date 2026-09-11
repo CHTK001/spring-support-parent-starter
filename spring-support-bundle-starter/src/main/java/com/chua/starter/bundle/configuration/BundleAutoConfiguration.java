@@ -47,6 +47,41 @@ public class BundleAutoConfiguration {
     }
 
     /**
+     * 启动时按配置自动安装/卸载 bundle。
+     *
+     * <p>执行顺序：Spring 容器初始化完成后（SmartInitializingSingleton），
+     * 先卸载 {@code uninstall-at-startup} 列表，再安装 {@code install-at-startup} 列表。</p>
+     *
+     * @param bundleManager  Bundle 管理器
+     * @param properties Bundle 配置
+     * @return 启动时 Bundle 处理器
+     */
+    @Bean
+    public org.springframework.beans.factory.SmartInitializingSingleton bundleStartupProcessor(
+            BundleManagerService bundleManager,
+            BundleProperties properties) {
+        return () -> {
+            for (String symbolicName : properties.getUninstallAtStartup()) {
+                if (symbolicName == null || symbolicName.isBlank()) {
+                    continue;
+                }
+                try {
+                    bundleManager.uninstall(symbolicName.trim());
+                } catch (Exception e) {
+                    log.warn("[Bundle] 启动卸载失败 [{}]: {}", symbolicName, e.getMessage());
+                }
+            }
+            if (!properties.getInstallAtStartup().isEmpty()) {
+                try {
+                    bundleManager.installAll(properties.getInstallAtStartup());
+                } catch (Exception e) {
+                    log.warn("[Bundle] 启动安装失败: {}", e.getMessage());
+                }
+            }
+        };
+    }
+
+    /**
      * 注册 Bundle 模块服务信息。
      */
     @Bean

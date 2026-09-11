@@ -676,10 +676,49 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         if (!setting.isLayout()) {
             return error(response, 404, "Not Found");
         }
+        // 非 HTML 请求 → JSON：format=json(目录列表) 或 format=config(bucket 配置)
+        Map<String, String> params = request.getParams();
+        if (params != null && "config".equalsIgnoreCase(params.get("format"))) {
+            return writeBucketConfig(bucket, request, response);
+        }
         if (wantsJson(request)) {
             return writeJsonList(bucket, dir, result, response);
         }
         return renderLayoutPage(bucket, dir, result.getMetadata(), response);
+    }
+
+    /**
+     * 返回 bucket 公开配置 JSON（供 Vue 前端渲染用，无需 token）。
+     *
+     * <p>包含存储类型、功能开关、布局类型等，不含敏感字段（如完整 token）。
+     * 用法：{@code GET /{bucket}?format=config}</p>
+     */
+    private CompletionStage<Void> writeBucketConfig(String bucket, ServerRequest request, ServerResponse response) {
+        FileStorage storage = storageMap.get(bucket);
+        if (storage == null) {
+            return error(response, 404, "Storage not found: " + bucket);
+        }
+        String storageType = storage.getClass().getSimpleName();
+        String wm = setting.getWatermark();
+
+        String json = "{\"bucket\":\"" + escapeJson(bucket) + "\""
+                + ",\"storage\":\"" + escapeJson(storageType) + "\""
+                + ",\"openPreview\":" + setting.isOpenPreview()
+                + ",\"openDownload\":" + setting.isOpenDownload()
+                + ",\"openRange\":" + setting.isOpenRange()
+                + ",\"openWatermark\":" + setting.isOpenWatermark()
+                + ",\"openWebjars\":" + setting.isOpenWebjars()
+                + ",\"openRemoteFile\":" + setting.isOpenRemoteFile()
+                + ",\"watermark\":" + (wm == null ? "null" : "\"" + escapeJson(wm) + "\"")
+                + ",\"layout\":" + setting.isLayout()
+                + ",\"layoutType\":\"" + escapeJson(setting.getLayoutType() == null ? "" : setting.getLayoutType()) + "\""
+                + ",\"oneTimeTtlMs\":" + ONE_TIME_TTL_MILLIS
+                + "}";
+        response.setStatus(200)
+                .setContentType("application/json;charset=UTF-8")
+                .setBody(json)
+                .end();
+        return CompletableFuture.completedFuture(null);
     }
 
     /**
@@ -692,7 +731,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         Map<String, String> params = request.getParams();
         if (params != null) {
             String format = params.get("format");
-            if ("json".equalsIgnoreCase(format)) {
+            if ("json".equalsIgnoreCase(format) || "config".equalsIgnoreCase(format)) {
                 return true;
             }
         }
@@ -702,6 +741,71 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         }
         String xrw = request.getHeader("X-Requested-With");
         return xrw != null && xrw.contains("XMLHttpRequest");
+    }
+
+    /**
+     * 返回文件级公开配置 JSON（`?config=true`，与 preview/download 平级）。
+     *
+     * <p>包含文件名、大小、内容类型、预览类型、功能开关等，不读文件体。
+     * 用法：{@code GET /{bucket}/{key}?config=true}</p>
+     */
+    private CompletionStage<Void> writeObjectConfig(String bucket, String key, GetObjectResult result, ServerResponse response) {
+        String fileName = key.contains("/") ? key.substring(key.lastIndexOf('/') + 1) : key;
+        String filePath = key.contains("/") ? key.substring(0, key.lastIndexOf('/')) : "";
+        String ext = "";
+        int dot = fileName.lastIndexOf('.');
+        if (dot >= 0 && dot < fileName.length() - 1) {
+            ext = fileName.substring(dot + 1).toLowerCase();
+        }
+        String kind = resolvePreviewKind(ext);
+        long size = -1;
+        long lastModified = -1;
+        Metadata meta = result.getMetadata();
+        if (meta != null) {
+            size = meta.getSize();
+            lastModified = meta.getLastModified();
+        }
+        if (size < 0 && result.getInputStream() != null) {
+            try {
+                size = result.getInputStream().available();
+            } catch (Exception ignored) {
+            }
+        }
+
+        String json = "{\"bucket\":\"" + escapeJson(bucket) + "\""
+                + ",\"key\":\"" + escapeJson(key) + "\""
+                + ",\"fileName\":\"" + escapeJson(fileName) + "\""
+                + ",\"filePath\":\"" + escapeJson(filePath) + "\""
+                + ",\"extension\":\"" + escapeJson(ext) + "\""
+                + ",\"contentType\":\"" + escapeJson(resolveContentType(fileName)) + "\""
+                + ",\"kind\":\"" + kind + "\""
+                + ",\"size\":" + size
+                + ",\"lastModified\":" + lastModified
+                + ",\"openPreview\":" + setting.isOpenPreview()
+                + ",\"openDownload\":" + setting.isOpenDownload()
+                + ",\"openRange\":" + setting.isOpenRange()
+                + "}";
+        response.setStatus(200)
+                .setContentType("application/json;charset=UTF-8")
+                .setBody(json)
+                .end();
+        return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * 根据扩展名推断预览类型（与前端 kindOf 保持一致）。
+     */
+    private static String resolvePreviewKind(String ext) {
+        String e = ext == null ? "" : ext.toLowerCase();
+        if (e.matches("png|jpg|jpeg|gif|svg|webp|bmp|ico")) return "image";
+        if (e.matches("txt|log|json|xml|html|css|js|ts|md|yaml|yml|csv")) return "text";
+        if ("pdf".equals(e)) return "pdf";
+        if (e.matches("xlsx|xls|docx|doc|pptx|ppt|odt|ods|odp|vsd|dwg|dgn|step|stp|iges|igs|brep|xlsb|xlt|xltx|xltm|xlam|xlsxml|dotx|dotm|potx|potm|xmind|rtf|epub")) return "office";
+        if (e.matches("mp4|webm|ogg|mov|avi|mkv|flv|wmv|m4v|3gp")) return "video";
+        if (e.matches("mp3|wav|flac|m4a")) return "audio";
+        if (e.matches("ttf|otf|woff|woff2|eot")) return "font";
+        if (e.matches("epub|rtf|eml|ics|vcf|fbx|blend|shp")) return "text";
+        return "unknown";
     }
 
     /**
@@ -736,10 +840,12 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     }
 
     /**
-     * 渲染文件列表 HTML 页面。
+     * 渲染文件列表页面。
      *
-     * <p>直接返回 Vue 独立构建的壳页面（classpath {@code static/index.html}），
-     * 由前端通过 REST API（{@code ?format=json}）完成列表/预览/上传等交互。</p>
+     * <p>统一返回 Vue 独立构建壳页面（classpath {@code static/index.html}），
+     * SYSTEM/SIMPLE 布局均由前端渲染，通过 REST API（{@code ?format=json/config}）完成交互。
+     * {@link FileStorageSetting#getLayoutType()} 保留作为前端展示的布局偏好，
+     * 由 Vue 在渲染时决定网格/列表等呈现方式。</p>
      *
      * @param bucket 存储名
      * @param dir    当前目录路径
@@ -1382,6 +1488,11 @@ if(search){search.addEventListener('input',function(){var q=search.value.toLower
                 return writeList(bucket, key, list, request, response);
             }
             return error(response, 404, "Directory Not Found: " + key);
+        }
+
+        // config 访问模式（与 preview/download 平级）：返回文件级配置 JSON
+        if (boolParam(request, "config")) {
+            return writeObjectConfig(bucket, key, result, response);
         }
 
         byte[] data;

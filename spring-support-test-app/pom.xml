@@ -83,6 +83,11 @@
             <groupId>com.chua</groupId>
             <artifactId>spring-support-osgi-starter</artifactId>
         </dependency>
+        <!-- Bundle 生命周期管理（Maven 坐标驱动）：真实测试 install/upgrade/uninstall -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-bundle-starter</artifactId>
+        </dependency>
         <!-- jsch：SSH shell 模式测试客户端（osgi-starter 内为 test 作用域不传递，此处显式声明） -->
         <dependency>
             <groupId>com.jcraft</groupId>
