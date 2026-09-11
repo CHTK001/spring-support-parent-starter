@@ -2,22 +2,32 @@ package com.chua.socket.support.session;
 
 import com.chua.socket.support.properties.SocketProperties;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 
 import java.net.InetAddress;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Socket 鏈嶅姟鍣ㄥ姩鎬佹敞鍐屾湇鍔? * <p>
- * 鏈嶅姟鍣ㄥ惎鍔ㄦ椂鍚?Redis 娉ㄥ唽鏈疄渚嬬殑 socket 閰嶇疆锛堝崗璁?鍦板潃/绔彛/path/context 绛夛級锛? * 骞跺惎鍔ㄥ績璺冲畾鏃朵换鍔′繚鎸佸湪绾裤€傛敮鎸佸涓湇鍔″櫒瀹炰緥鍚屾椂杩愯锛屽苟鎸夊崗璁?鍦板潃姹囪仛渚涘墠绔幏鍙栥€? * </p>
+ * Socket 服务器动态注册服务
  * <p>
- * 鍓嶇浠庢帴鍙ｈ幏鍙栨墍鏈夊湪绾?socket 鏈嶅姟鍣ㄥ湴鍧€鏃讹紝鑷姩鍚堝苟鏁版嵁搴撻厤缃紙榛樿涓虹┖锛夛紝
- * 鍓嶇鏍规嵁 URL scheme 鍐冲畾鍗忚锛屼笉鍐嶅浐瀹氭 protocol銆? * </p>
+ * 服务器启动时向 Redis 注册本实例的 socket 配置（协议/地址/端口/path/context 等），
+ * 并启动心跳定时任务保持在线。支持多个服务器实例同时运行，并按协议/地址汇聚供前端获取。
+ * </p>
+ * <p>
+ * 前端从接口获取所有在线 socket 服务器地址时，自动合并数据库配置（默认为空），
+ * 前端根据 URL scheme 决定协议，不再固定死 protocol。
+ * </p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -26,7 +36,7 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class SocketServerRegistry {
 
-    /** 娉ㄥ唽鏈湇鍔″櫒鍒?Redis */
+    /** 注册本服务器到 Redis */
     public void registerSelf() {
         Map<String, Object> info = new HashMap<>();
         info.put("id", serverId);
@@ -44,10 +54,8 @@ public class SocketServerRegistry {
         redisTemplate.opsForHash().putAll(key, info);
         redisTemplate.expire(key, 3600, TimeUnit.SECONDS);
 
-        log.info("[SocketServerRegistry] 鏈嶅姟鍣ㄦ敞鍐屽畬鎴? serverId={}, protocol={}", serverId, properties.getProtocol().getValue());
+        log.info("[SocketServerRegistry] 服务器注册完成: serverId={}, protocol={}", serverId, properties.getProtocol().getValue());
     }
-
-
 
     private static final String KEY_PREFIX = "socket:servers:";
     private static final long HEARTBEAT_INTERVAL_MS = 30_000;
@@ -65,7 +73,7 @@ public class SocketServerRegistry {
         this.enable = properties.isEnable();
         this.serverId = generateServerId();
         if (enable) {
-            log.info("[SocketServerRegistry] 鏈嶅姟鍣ㄦ帹閫佹敞鍐屽凡鍚敤锛宻erverId={}", serverId);
+            log.info("[SocketServerRegistry] 服务器推送注册已启用，serverId={}", serverId);
         }
     }
 
@@ -76,14 +84,13 @@ public class SocketServerRegistry {
         }
         try {
             registerSelf();
-            log.info("[SocketServerRegistry] 鏈嶅姟鍣ㄦ敞鍐屽埌 Redis: serverId={}", serverId);
+            log.info("[SocketServerRegistry] 服务器注册到 Redis: serverId={}", serverId);
         } catch (Exception e) {
-            log.error("[SocketServerRegistry] 鏈嶅姟鍣ㄦ敞鍐屽け璐?, e);
+            log.error("[SocketServerRegistry] 服务器注册失败", e);
         }
     }
 
-
-    /** 鑾峰彇鎵€鏈夊湪绾?socket 鏈嶅姟鍣ㄥ湴鍧€锛堝悎骞舵暟鎹簱閰嶇疆锛?*/
+    /** 获取所有在线 socket 服务器地址（合并数据库配置） */
     public List<SocketServerInfo> getAllOnlineServers() {
         List<SocketServerInfo> result = new ArrayList<>();
 
@@ -110,19 +117,35 @@ public class SocketServerRegistry {
             }
         }
 
-        log.info("[SocketServerRegistry] 鑾峰彇鍦ㄧ嚎鏈嶅姟鍣ㄥ垪琛? {} 涓湇鍔″櫒", result.size());
+        log.info("[SocketServerRegistry] 获取在线服务器列表: {} 个服务器", result.size());
         return result;
     }
 
-    /** 鏈嶅姟鍣ㄥ叧闂椂涓嶅垹闄?Redis 娉ㄥ唽淇℃伅 */
+    /** 服务器关闭时不删除 Redis 注册信息 */
     public void onShutdown() {
         if (!enable) {
             return;
         }
-        log.warn("[SocketServerRegistry] 鏈嶅姟鍣?{} 涓嬬嚎锛屼笉鍒犻櫎 Redis 娉ㄥ唽淇℃伅", serverId);
+        log.warn("[SocketServerRegistry] 服务器 {} 下线，不删除 Redis 注册信息", serverId);
     }
 
-    // ======================== 杈呭姪鏂规硶 ========================
+    /** 心跳定时任务：刷新心跳时间并续期 */
+    @Scheduled(fixedDelay = HEARTBEAT_INTERVAL_MS)
+    public void heartbeat() {
+        if (!enable) {
+            return;
+        }
+        try {
+            lastHeartbeat = System.currentTimeMillis();
+            String key = KEY_PREFIX + serverId;
+            redisTemplate.opsForHash().put(key, "heartbeat", lastHeartbeat);
+            redisTemplate.expire(key, 3600, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.warn("[SocketServerRegistry] 心跳刷新失败 serverId={}: {}", serverId, e.getMessage());
+        }
+    }
+
+    // ======================== 辅助方法 ========================
 
     private String generateServerId() {
         String host = getLocalHost();
@@ -134,7 +157,7 @@ public class SocketServerRegistry {
         try {
             return InetAddress.getLocalHost().getHostAddress();
         } catch (Exception e) {
-            log.warn("[SocketServerRegistry] 鑾峰彇鏈湴鍦板潃澶辫触锛屼娇鐢ㄩ粯璁ゅ湴鍧€");
+            log.warn("[SocketServerRegistry] 获取本地地址失败，使用默认地址");
             return "127.0.0.1";
         }
     }
@@ -178,46 +201,8 @@ public class SocketServerRegistry {
             server.setTtl(parseInt(info.get("ttl")));
             server.setName(String.valueOf(info.get("name")));
             return server;
-
-    // ======================== SocketServerInfo ========================
-
-    public static class SocketServerInfo {
-        private String id;
-        private String protocol;
-        private String host;
-        private int port;
-        private String path;
-        private String context;
-        private boolean enable;
-        private long heartbeat;
-        private int ttl;
-        private String name;
-
-        public String getId() { return id; }
-        public void setId(String id) { this.id = id; }
-        public String getProtocol() { return protocol; }
-        public void setProtocol(String protocol) { this.protocol = protocol; }
-        public String getHost() { return host; }
-        public void setHost(String host) { this.host = host; }
-        public int getPort() { return port; }
-        public void setPort(int port) { this.port = port; }
-        public String getPath() { return path; }
-        public void setPath(String path) { this.path = path; }
-        public String getContext() { return context; }
-        public void setContext(String context) { this.context = context; }
-        public boolean isEnable() { return enable; }
-        public void setEnable(boolean enable) { this.enable = enable; }
-        public long getHeartbeat() { return heartbeat; }
-        public void setHeartbeat(long heartbeat) { this.heartbeat = heartbeat; }
-        public int getTtl() { return ttl; }
-        public void setTtl(int ttl) { this.ttl = ttl; }
-        public String getName() { return name; }
-        public void setName(String name) { this.name = name; }
-    }
-}
-
         } catch (Exception e) {
-            log.warn("[SocketServerRegistry] 瑙ｆ瀽鏈嶅姟鍣ㄤ俊鎭け璐? {}", e.getMessage());
+            log.warn("[SocketServerRegistry] 解析服务器信息失败: {}", e.getMessage());
             return null;
         }
     }
@@ -225,21 +210,31 @@ public class SocketServerRegistry {
     private int parseInt(Object value) {
         if (value == null) return 0;
         if (value instanceof Number) return ((Number) value).intValue();
-        try { return Integer.parseInt(value.toString()); } catch (Exception e) { return 0; }
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     private long parseLong(Object value) {
         if (value == null) return 0L;
         if (value instanceof Number) return ((Number) value).longValue();
-        try { return Long.parseLong(value.toString()); } catch (Exception e) { return 0L; }
+        try {
+            return Long.parseLong(value.toString());
+        } catch (Exception e) {
+            return 0L;
+        }
     }
 
     private boolean isOnline(SocketServerInfo server) {
-        if (server.getHeartbeat() == 0) return false;
+        if (server.getHeartbeat() == 0) {
+            return false;
+        }
         return (System.currentTimeMillis() - server.getHeartbeat()) <= OFFLINE_THRESHOLD_MS;
     }
 
-    /** 鑾峰彇鏁版嵁搴撲腑鐨?socket 鏈嶅姟鍣ㄩ厤缃紙榛樿涓虹┖锛?*/
+    /** 获取数据库中的 socket 服务器配置（默认为空） */
     protected List<SocketServerInfo> getDatabaseServers() {
         return Collections.emptyList();
     }
@@ -252,5 +247,99 @@ public class SocketServerRegistry {
         return serverId;
     }
 
+    // ======================== SocketServerInfo ========================
 
+    /** Socket 服务器在线信息 */
+    public static class SocketServerInfo {
+        private String id;
+        private String protocol;
+        private String host;
+        private int port;
+        private String path;
+        private String context;
+        private boolean enable;
+        private long heartbeat;
+        private int ttl;
+        private String name;
+
+        public String getId() {
+            return id;
+        }
+
+        public void setId(String id) {
+            this.id = id;
+        }
+
+        public String getProtocol() {
+            return protocol;
+        }
+
+        public void setProtocol(String protocol) {
+            this.protocol = protocol;
+        }
+
+        public String getHost() {
+            return host;
+        }
+
+        public void setHost(String host) {
+            this.host = host;
+        }
+
+        public int getPort() {
+            return port;
+        }
+
+        public void setPort(int port) {
+            this.port = port;
+        }
+
+        public String getPath() {
+            return path;
+        }
+
+        public void setPath(String path) {
+            this.path = path;
+        }
+
+        public String getContext() {
+            return context;
+        }
+
+        public void setContext(String context) {
+            this.context = context;
+        }
+
+        public boolean isEnable() {
+            return enable;
+        }
+
+        public void setEnable(boolean enable) {
+            this.enable = enable;
+        }
+
+        public long getHeartbeat() {
+            return heartbeat;
+        }
+
+        public void setHeartbeat(long heartbeat) {
+            this.heartbeat = heartbeat;
+        }
+
+        public int getTtl() {
+            return ttl;
+        }
+
+        public void setTtl(int ttl) {
+            this.ttl = ttl;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+    }
 }
