@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
 
 /**
  * 远程终端 WebSocket 配置
@@ -35,12 +36,21 @@ public class TerminalWebSocketConfig implements WebSocketConfigurer {
 
     /**
      * 注册终端 WebSocket 端点
+     * <p>
+     * 握手处理器声明支持 guacamole 子协议（guacamole-common-js 的 WebSocketTunnel
+     * 以 {@code new WebSocket(url, "guacamole")} 连接，缺省握手不回显子协议会被浏览器拒绝）。
+     * </p>
      *
      * @param registry 注册器
      */
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        // 回显 guacamole 子协议：guacamole-common-js 的 WebSocketTunnel 以
+        // new WebSocket(url, "guacamole") 连接，缺省握手不回显子协议会被浏览器拒绝。
+        DefaultHandshakeHandler handshakeHandler = new DefaultHandshakeHandler();
+        handshakeHandler.setSupportedProtocols("guacamole");
         registry.addHandler(terminalWebSocketHandler, ServerConstants.WEBSOCKET_TERMINAL_PATH)
+                .setHandshakeHandler(handshakeHandler)
                 .setAllowedOriginPatterns("*");
     }
 }
