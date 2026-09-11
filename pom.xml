@@ -158,7 +158,6 @@
 
         <!-- AI训练平台模块 -->
         <module>spring-support-ai-training-starter</module>
-        <module>spring-support-account-starter</module>
 
         <!-- UEBA 用户实体行为分析模块 -->
         <module>spring-support-ueba-starter</module>
@@ -631,13 +630,6 @@
                 <version>${project.version}</version>
             </dependency>
 
-            <!-- 账号自动注册与管理模块 -->
-            <dependency>
-                <groupId>com.chua</groupId>
-                <artifactId>spring-support-account-starter</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            
             <dependency>
                 <groupId>com.chua</groupId>
                 <artifactId>spring-support-osgi-starter</artifactId>
