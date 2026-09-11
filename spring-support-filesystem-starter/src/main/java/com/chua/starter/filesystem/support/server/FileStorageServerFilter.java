@@ -676,14 +676,16 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         if (!setting.isLayout()) {
             return error(response, 404, "Not Found");
         }
-        // 非 HTML 请求 → JSON：format=json(目录列表) 或 format=config(bucket 配置)
         Map<String, String> params = request.getParams();
-        if (params != null && "config".equalsIgnoreCase(params.get("format"))) {
-            return writeBucketConfig(bucket, request, response);
+        // ?config（标志式）→ 返回 bucket 公开配置 JSON
+        if (params != null && params.containsKey("config") && !"false".equalsIgnoreCase(params.get("config"))) {
+            return writeBucketConfig(bucket, response);
         }
-        if (wantsJson(request)) {
+        // ?format=json（Vue API 目录列表）
+        if (params != null && "json".equalsIgnoreCase(params.get("format"))) {
             return writeJsonList(bucket, dir, result, response);
         }
+        // 浏览器导航 → 按布局类型分流：SYSTEM=Vue 独立构建；SIMPLE=服务端简单列表
         return renderLayoutPage(bucket, dir, result.getMetadata(), response);
     }
 
@@ -693,7 +695,7 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * <p>包含存储类型、功能开关、布局类型等，不含敏感字段（如完整 token）。
      * 用法：{@code GET /{bucket}?format=config}</p>
      */
-    private CompletionStage<Void> writeBucketConfig(String bucket, ServerRequest request, ServerResponse response) {
+    private CompletionStage<Void> writeBucketConfig(String bucket, ServerResponse response) {
         FileStorage storage = storageMap.get(bucket);
         if (storage == null) {
             return error(response, 404, "Storage not found: " + bucket);
@@ -719,28 +721,6 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
                 .setBody(json)
                 .end();
         return CompletableFuture.completedFuture(null);
-    }
-
-    /**
-     * 判断请求是否期望 JSON 响应（Vue API 调用 vs 浏览器导航）。
-     *
-     * @param request 请求
-     * @return true 表示返回 JSON
-     */
-    private boolean wantsJson(ServerRequest request) {
-        Map<String, String> params = request.getParams();
-        if (params != null) {
-            String format = params.get("format");
-            if ("json".equalsIgnoreCase(format) || "config".equalsIgnoreCase(format)) {
-                return true;
-            }
-        }
-        String accept = request.getHeader("Accept");
-        if (accept != null && accept.contains("application/json")) {
-            return true;
-        }
-        String xrw = request.getHeader("X-Requested-With");
-        return xrw != null && xrw.contains("XMLHttpRequest");
     }
 
     /**
@@ -842,10 +822,12 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
     /**
      * 渲染文件列表页面。
      *
-     * <p>统一返回 Vue 独立构建壳页面（classpath {@code static/index.html}），
-     * SYSTEM/SIMPLE 布局均由前端渲染，通过 REST API（{@code ?format=json/config}）完成交互。
-     * {@link FileStorageSetting#getLayoutType()} 保留作为前端展示的布局偏好，
-     * 由 Vue 在渲染时决定网格/列表等呈现方式。</p>
+     * <p>按 {@link FileStorageSetting#getLayoutType()} 分流：</p>
+     * <ul>
+     *   <li>SYSTEM — 返回 Vue 独立构建壳页面（classpath {@code static/index.html}），
+     *       交互由前端通过 REST API 完成（{@code ?format=json} / {@code ?config}）</li>
+     *   <li>SIMPLE — 服务端渲染的简单文件列表树</li>
+     * </ul>
      *
      * @param bucket 存储名
      * @param dir    当前目录路径
@@ -854,10 +836,19 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
      * @return 异步阶段
      */
     private CompletionStage<Void> renderLayoutPage(String bucket, String dir, List<Metadata> items, ServerResponse response) {
-        String html = readVueShell();
-        if (html == null) {
-            return error(response, 500, "Vue 前端资源缺失（static/index.html）");
+        if (resolveLayoutType() == FileStorageSetting.LayoutType.SYSTEM) {
+            String html = readVueShell();
+            if (html == null) {
+                return error(response, 500, "Vue 前端资源缺失（static/index.html）");
+            }
+            response.setStatus(200)
+                    .setContentType("text/html;charset=UTF-8")
+                    .setBody(html.getBytes(StandardCharsets.UTF_8))
+                    .end();
+            return CompletableFuture.completedFuture(null);
         }
+        // SIMPLE：服务端渲染简单列表
+        String html = buildSimpleLayoutHtml(bucket, dir, items);
         response.setStatus(200)
                 .setContentType("text/html;charset=UTF-8")
                 .setBody(html.getBytes(StandardCharsets.UTF_8))

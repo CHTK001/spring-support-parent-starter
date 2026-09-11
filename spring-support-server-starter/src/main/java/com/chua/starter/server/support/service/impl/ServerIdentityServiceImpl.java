@@ -52,6 +52,13 @@ public class ServerIdentityServiceImpl implements ServerIdentityService {
             if (identity.getMsServerIdentityPassword() == null || identity.getMsServerIdentityPassword().isEmpty()) {
                 return ReturnResult.error("邮箱账号必须提供 IMAP 授权码(密码)");
             }
+            String source = identity.getMsServerIdentityEmailSource();
+            if ("TEMP".equals(source)) {
+                String provider = identity.getMsServerIdentityProvider();
+                if (provider == null || provider.isBlank()) {
+                    return ReturnResult.error("临时邮箱必须指定服务商(provider)");
+                }
+            }
         }
         if (identity.getMsServerIdentityPassword() != null && !identity.getMsServerIdentityPassword().isEmpty()) {
             identity.setMsServerIdentityPassword(cipher.encrypt(identity.getMsServerIdentityPassword()));
@@ -79,6 +86,10 @@ public class ServerIdentityServiceImpl implements ServerIdentityService {
                 ? exists.getMsServerIdentityUsername() : identity.getMsServerIdentityUsername());
         exists.setMsServerIdentityKeyId(identity.getMsServerIdentityKeyId() == null
                 ? exists.getMsServerIdentityKeyId() : identity.getMsServerIdentityKeyId());
+        exists.setMsServerIdentityEmailSource(identity.getMsServerIdentityEmailSource() == null
+                ? exists.getMsServerIdentityEmailSource() : identity.getMsServerIdentityEmailSource());
+        exists.setMsServerIdentityProvider(identity.getMsServerIdentityProvider() == null
+                ? exists.getMsServerIdentityProvider() : identity.getMsServerIdentityProvider());
         exists.setMsServerIdentityImapHost(identity.getMsServerIdentityImapHost() == null
                 ? exists.getMsServerIdentityImapHost() : identity.getMsServerIdentityImapHost());
         exists.setMsServerIdentityImapPort(identity.getMsServerIdentityImapPort() == null
