@@ -63,7 +63,7 @@ public class SocketProperties {
     private List<Room> room = new ArrayList<>();
 
     /**
-     * 协议类型，默认 socketio
+     * 协议类型，默认 sse
      * 可选值：socketio, rsocket, sse
      */
     private SocketProtocol protocol = SocketProtocol.SOCKETIO;

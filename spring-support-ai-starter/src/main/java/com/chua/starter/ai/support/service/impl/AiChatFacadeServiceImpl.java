@@ -105,7 +105,8 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     // ==================== 流式对话 ====================
 
     @Override
-    public SseEmitter stream(AiChatRequest request, Consumer<String> onChunk, Consumer<String> onComplete) {
+    public SseEmitter stream(AiChatRequest request, Consumer<String> onChunk, Consumer<String> onComplete,
+                             Consumer<Throwable> onError) {
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MILLIS);
 
         ChatClient client = resolveChatClient(request);
@@ -163,11 +164,23 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                         },
                         error -> {
                             log.error("[AiChat] stream error: model={}", request.getModel(), error);
+                            if (onError != null) {
+                                try {
+                                    onError.accept(error);
+                                } catch (Exception ignored) {
+                                }
+                            }
                             emitter.completeWithError(error);
                         }
                 );
             } catch (Exception e) {
                 log.error("[AiChat] stream failed: model={}", request.getModel(), e);
+                if (onError != null) {
+                    try {
+                        onError.accept(e);
+                    } catch (Exception ignored) {
+                    }
+                }
                 emitter.completeWithError(e);
             }
         });

@@ -38,13 +38,15 @@ public class ServerIdentityServiceImpl implements ServerIdentityService {
             return ReturnResult.error("身份名称不能为空");
         }
         String authType = identity.getMsServerIdentityAuthType();
-        if (!"PASSWORD".equals(authType) && !"PUBLIC_KEY".equals(authType) && !"MAILBOX".equals(authType)) {
-            return ReturnResult.error("认证类型仅支持 PASSWORD / PUBLIC_KEY / MAILBOX");
+        if (authType == null || authType.isBlank()) {
+            return ReturnResult.error("认证类型不能为空");
         }
-        if ("PUBLIC_KEY".equals(authType) && identity.getMsServerIdentityKeyId() == null) {
-            return ReturnResult.error("公钥认证必须引用密钥库条目");
-        }
-        if ("MAILBOX".equals(authType)) {
+        // 特定类型保留额外校验；其他类型（TOKEN/API_KEY/OAUTH2/COOKIE/ACCOUNT/自定义）自由入库
+        if ("PUBLIC_KEY".equals(authType)) {
+            if (identity.getMsServerIdentityKeyId() == null) {
+                return ReturnResult.error("公钥认证必须引用密钥库条目");
+            }
+        } else if ("MAILBOX".equals(authType)) {
             String email = identity.getMsServerIdentityUsername();
             if (email == null || !email.contains("@")) {
                 return ReturnResult.error("邮箱账号必须提供邮箱地址(用户名)");
