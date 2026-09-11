@@ -17,11 +17,14 @@ spring:
   # 独立联调模式: 启动时执行建表脚本(幂等, IF NOT EXISTS)
   # 含 server-starter 的资产台账 DDL(V1.0__init_server.sql),
   # 使 monitor 独立 H2 下也具备 ms_server_host 等表, 供资产联动查询
-  # V1.3 补充 ms_monitor.ms_server_host_id 列, 打通资产→监控项
+  # V1.3 补充 ms_monitor.ms_server_host_id 列, 打通资产→监控项联动
+  # 注意: spring.sql.init 仅加载本模块 classpath 下的脚本; filesystem-starter
+  # 自带的 data-locations(*.sql) 通过其 auto-config 生效, 已被 exclude 排除
   sql:
     init:
       mode: always
       schema-locations: classpath:db/init/V1.0__init_monitor.sql,classpath:db/init/V1.1__alarm_and_agent.sql,classpath:db/init/V1.0__init_server.sql,classpath:db/init/V1.3__monitor_host_link.sql,classpath:db/init/V1.0__init_project.sql,classpath:db/init/V1.1__project_extend.sql
+      data-locations: optional:classpath*:db/migration/*.sql
 
   datasource:
     url: jdbc:h2:mem:monitordb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false
@@ -45,15 +48,16 @@ plugin:
   api:
     request-decode:
       enable: false
-  # 实时推送通道：tshark 抓包逐包/会话状态广播（前端 subscribe("tshark", ...)）
-  # 关闭 enable 后 TsharkCaptureService 推送静默跳过，不影响抓包本身
+  # 实时推送通道：tshark 抓包逐包/会话状态广播（前端 subscribe("monitor", "tshark-packet"/"tshark-session")）
+  # 关闭 enable 后 MonitorPushService 推送静默跳过，不影响抓包本身
   socket:
     enable: true
     protocol: socketio
+    host: 0.0.0.0
     room:
       - client-id: default
         context-path: /socket.io
-        port: 9000
+        port: 29181
 
 # InfluxDB 时序存储（启用后指标明细同步写入并支持 series 曲线查询）
 monitor.influx:

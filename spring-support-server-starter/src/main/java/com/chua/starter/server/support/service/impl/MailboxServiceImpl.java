@@ -77,8 +77,7 @@ public class MailboxServiceImpl implements MailboxService {
             return ReturnResult.error("读取收件箱失败: " + safeMsg(e));
         }
     }
-}
-@Override
+    @Override
     public ReturnResult<Map<String, Object>> detail(Long identityId, String folder, String subject) {
         ResolvedMail cred = resolve(identityId);
         if (cred == null) {
