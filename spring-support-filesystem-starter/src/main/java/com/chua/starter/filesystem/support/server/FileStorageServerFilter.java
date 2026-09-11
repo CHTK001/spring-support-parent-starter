@@ -700,12 +700,66 @@ public class FileStorageServerFilter implements ServerFilter, ReactiveServerFilt
         if (params != null && params.containsKey("config") && !"false".equalsIgnoreCase(params.get("config"))) {
             return writeBucketConfig(bucket, response);
         }
+        // ?tree=true → 目录树 JSON（KodExplorer 式左侧文件树）
+        if (params != null && ("true".equalsIgnoreCase(params.get("tree")))) {
+            FileStorage storage = storageMap.get(bucket);
+            if (storage == null) {
+                return error(response, 404, "Storage not found: " + bucket);
+            }
+            return writeTree(storage, bucket, response);
+        }
         // ?format=json（Vue API 目录列表）
         if (params != null && "json".equalsIgnoreCase(params.get("format"))) {
             return writeJsonList(bucket, dir, result, response);
         }
         // 浏览器导航 → 按布局类型分流：SYSTEM=Vue 独立构建；SIMPLE=服务端简单列表
         return renderLayoutPage(bucket, dir, result.getMetadata(), response);
+    }
+
+    /**
+     * 递归构建目录树 JSON（深度受限，避免超大桶卡死）。
+     *
+     * <p>{@code GET /{bucket}?tree=true} — 返回全量目录树：
+     * {@code [{name,path,children:[...]}]}，仅含目录。</p>
+     */
+    private CompletionStage<Void> writeTree(FileStorage storage, String bucket, ServerResponse response) {
+        StringBuilder root = new StringBuilder();
+        root.append("[");
+        buildTreeBranch(storage, bucket, "", root, 0);
+        root.append("]");
+        response.setStatus(200)
+                .setContentType("application/json;charset=UTF-8")
+                .setBody(root.toString())
+                .end();
+        return CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * 递归构建树的一个分支（追加到 sb）。
+     */
+    private void buildTreeBranch(FileStorage storage, String bucket, String parentPath, StringBuilder sb, int depth) {
+        if (depth > 12) return; // 防深目录栈溢出
+        ListObjectRequest req = ListObjectRequest.builder()
+                .filePath(parentPath)
+                .limit(500)
+                .build();
+        ListObjectResult list = storage.listObject(req);
+        if (list.getResultCode() != ObjectResult.ResultCode.SUCCESS || list.getMetadata() == null) {
+            return;
+        }
+        boolean first = true;
+        for (Metadata m : list.getMetadata()) {
+            if (!m.isDirectory()) continue;
+            if (!first) sb.append(",");
+            first = false;
+            String childPath = parentPath == null || parentPath.isEmpty()
+                    ? m.getName() : parentPath + "/" + m.getName();
+            sb.append("{\"name\":\"").append(escapeJson(m.getName())).append("\"")
+                    .append(",\"path\":\"").append(escapeJson(childPath)).append("\"")
+                    .append(",\"children\":[");
+            buildTreeBranch(storage, bucket, childPath, sb, depth + 1);
+            sb.append("]}");
+        }
     }
 
     /**

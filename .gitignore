@@ -91,3 +91,5 @@ effective-pom
 **/cp.argfile
 **/cp.args
 **/backend-new.log
+**/monitor-run.bat
+**/start-*.bat
