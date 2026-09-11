@@ -84,4 +84,5 @@ cp-*.txt
 **/classpath.txt
 **/start-backend.bat
 **/test-deploy.bin
+**/*-resp.json
 effective-pom
