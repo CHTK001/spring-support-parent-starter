@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -244,6 +245,182 @@ public class AiBotChatService {
                         .eq(SysAiBotMessage::getBotId, botId)
                         .eq(fromUser != null && !fromUser.isBlank(), SysAiBotMessage::getFromUser, fromUser)
                         .orderByAsc(SysAiBotMessage::getCreateTime));
+    }
+
+    /**
+     * 分页查询指定 Bot 与某用户的聊天记录（供 IM 页滚动加载历史）。
+     *
+     * <p>第 0 页为最近 {@code pageSize} 条；页码越大越早（按时间倒序取窗口后反转升序），
+     * 保证前端「先显示最新、向上滚动加载更早」的展示语义。</p>
+     *
+     * @param botId    Bot 唯一标识
+     * @param fromUser 目标微信用户 ID（可空，空则查询该 Bot 全部消息）
+     * @param page     页码（从 0 开始，非法值按 0 处理）
+     * @param pageSize 每页条数（非法值按 50 处理）
+     * @return 分页结果：messages（升序）、hasMore、page、pageSize
+     */
+    public Map<String, Object> listMessagesPaged(String botId, String fromUser, int page, int pageSize) {
+        int safePage = Math.max(0, page);
+        int safeSize = pageSize > 0 ? pageSize : 50;
+        int offset = safePage * safeSize;
+        // 倒序取窗口（最近的在最前），再反转回升序
+        List<SysAiBotMessage> window = botMessageMapper.selectList(
+                Wrappers.<SysAiBotMessage>lambdaQuery()
+                        .eq(SysAiBotMessage::getBotId, botId)
+                        .eq(fromUser != null && !fromUser.isBlank(), SysAiBotMessage::getFromUser, fromUser)
+                        .orderByDesc(SysAiBotMessage::getCreateTime)
+                        .last("LIMIT " + offset + ", " + safeSize));
+        Collections.reverse(window);
+        Long total = botMessageMapper.selectCount(
+                Wrappers.<SysAiBotMessage>lambdaQuery()
+                        .eq(SysAiBotMessage::getBotId, botId)
+                        .eq(fromUser != null && !fromUser.isBlank(), SysAiBotMessage::getFromUser, fromUser));
+        boolean hasMore = offset + window.size() < (total != null ? total : 0L);
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("messages", window);
+        data.put("hasMore", hasMore);
+        data.put("page", safePage);
+        data.put("pageSize", safeSize);
+        return data;
+    }
+
+    /**
+     * 用 Bot 配置（或全局默认）的 AI 模型润色一段文本。
+     *
+     * <p>用于 IM 输入框的「润色」按钮：不落库、不回发，仅返回润色后的文本。</p>
+     *
+     * @param botId Bot 唯一标识
+     * @param text  待润色文本
+     * @return 润色结果，模型未配置/调用失败时返回空字符串
+     */
+    public String polishText(String botId, String text) {
+        if (botId == null || botId.isBlank() || text == null || text.isBlank()) {
+            return "";
+        }
+        SysAiBotBinding bot = findBinding(botId);
+        ChatClient client = buildModelChatClient(resolveModelName(bot));
+        if (client == null) {
+            log.warn("[BotChat] 润色失败：Bot {} 未解析到可用模型", botId);
+            return "";
+        }
+        try {
+            return client
+                    .system("你是一名专业的文本润色助手。请在不改变原意的前提下，将用户输入润色为更得体、流畅、自然的中文表达，直接输出润色后的文本，不要添加任何解释或前后缀。")
+                    .chatSync(text);
+        } catch (Exception e) {
+            log.error("[BotChat] 润色失败 bot={}", botId, e);
+            return "";
+        }
+    }
+
+    /**
+     * 用 Bot 配置（或全局默认）的 AI 模型总结指定会话的聊天记录。
+     *
+     * <p>供 IM 页「上下文总结」按钮使用：将历史消息拼接后交给模型生成要点摘要，
+     * 便于用户将摘要粘贴回输入框继续对话。最多取最近 200 条消息。</p>
+     *
+     * @param botId    Bot 唯一标识
+     * @param fromUser 目标微信用户 ID（可空，空则总结该 Bot 全部消息）
+     * @return 会话摘要，无消息/模型未配置/调用失败时返回空字符串
+     */
+    public String summarizeConversation(String botId, String fromUser) {
+        if (botId == null || botId.isBlank()) {
+            return "";
+        }
+        List<SysAiBotMessage> messages = listMessages(botId, fromUser);
+        if (messages.isEmpty()) {
+            return "";
+        }
+        // 只取最近 200 条，避免摘要输入过长
+        int from = Math.max(0, messages.size() - 200);
+        StringBuilder transcript = new StringBuilder();
+        for (SysAiBotMessage m : messages.subList(from, messages.size())) {
+            String role = "IN".equals(m.getDirection()) ? "用户" : "Bot";
+            transcript.append("[").append(role).append("] ").append(m.getContent()).append("\n");
+        }
+        ChatClient client = buildModelChatClient(resolveModelName(findBinding(botId)));
+        if (client == null) {
+            log.warn("[BotChat] 总结失败：Bot {} 未解析到可用模型", botId);
+            return "";
+        }
+        try {
+            return client
+                    .system("你是一名对话摘要助手。请将用户提供的聊天记录提炼为简明扼要的中文要点摘要，覆盖主要话题与结论，直接输出摘要内容，不要添加任何解释。")
+                    .chatSync(transcript.toString());
+        } catch (Exception e) {
+            log.error("[BotChat] 总结失败 bot={}", botId, e);
+            return "";
+        }
+    }
+
+    /**
+     * 按 botId 查询 Bot 绑定记录。
+     *
+     * @param botId Bot 唯一标识
+     * @return 绑定记录，未找到返回 null
+     */
+    private SysAiBotBinding findBinding(String botId) {
+        if (botId == null || botId.isBlank()) {
+            return null;
+        }
+        return botBindingMapper.selectOne(
+                Wrappers.<SysAiBotBinding>lambdaQuery()
+                        .eq(SysAiBotBinding::getBotId, botId)
+                        .last("LIMIT 1"));
+    }
+
+    /**
+     * 解析 Bot 使用的模型名：优先 Bot 单独配置，其次全局默认模型。
+     *
+     * @param bot Bot 绑定记录（可为 null）
+     * @return 模型名，无法解析时返回 null
+     */
+    private String resolveModelName(SysAiBotBinding bot) {
+        if (bot != null && bot.getModel() != null && !bot.getModel().isBlank()) {
+            return bot.getModel();
+        }
+        return globalSettingReader.getStr("bot", "default_model");
+    }
+
+    /**
+     * 按模型名从模型管理配置（provider_model → provider）构建不带 system prompt 的 ChatClient。
+     *
+     * <p>供润色/摘要等辅助场景复用：只负责「模型→供应商→凭证」的解析与客户端构建，
+     * 系统提示词由调用方按场景注入。</p>
+     *
+     * @param modelName 模型名称
+     * @return ChatClient，模型未配置/供应商不存在时返回 null
+     */
+    private ChatClient buildModelChatClient(String modelName) {
+        if (modelName == null || modelName.isBlank()) {
+            return null;
+        }
+        try {
+            SysAiProviderModel pm = providerModelMapper.selectOne(
+                    Wrappers.<SysAiProviderModel>lambdaQuery()
+                            .eq(SysAiProviderModel::getModel, modelName)
+                            .eq(SysAiProviderModel::getEnabled, true));
+            if (pm == null) {
+                return null;
+            }
+            SysAiProvider provider = providerMapper.selectById(pm.getProviderId());
+            if (provider == null || provider.getBaseUrl() == null) {
+                return null;
+            }
+            String apiKey = extractApiKey(provider.getCredentials());
+            Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
+            return ChatClient.create(ChatClientSetting.builder()
+                    .provider(provider.getPlatform())
+                    .appKey(apiKey)
+                    .baseUrl(provider.getBaseUrl())
+                    .extraHeaders(extraHeaders)
+                    .proxy(provider.getProxy())
+                    .build())
+                    .model(modelName);
+        } catch (Exception e) {
+            log.warn("[BotChat] 构建模型 ChatClient 失败 model={}: {}", modelName, e.getMessage());
+            return null;
+        }
     }
 
     /**
