@@ -7,8 +7,8 @@ import com.chua.starter.server.support.entity.MsServerIdentity;
 import com.chua.starter.server.support.mapper.MsServerIdentityMapper;
 import com.chua.starter.server.support.util.CredentialCipher;
 import com.chua.starter.sse.support.socket.SseSocketSessionTemplate;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
  * <p>
  * 管理邮箱身份的 SSE 连接：前端通过 /sse/connect 建立连接后，注册到本服务；
  * 服务定时轮询邮箱(IMAP 真实邮箱 / 临时邮箱 API)检测新邮件，通过 SseSocketSessionTemplate 推送到前端。
+ * SSE 未启用（无 SseSocketSessionTemplate Bean）时推送静默跳过。
  * </p>
  *
  * @author CH
@@ -32,15 +33,29 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class MailboxSseService {
 
-    /** SSE 会话模板(全局 socket 基础设施) */
-    private final SseSocketSessionTemplate sseSocketSessionTemplate;
+    /** SSE 会话模板(全局 socket 基础设施；未启用 SSE 时为空) */
+    private final ObjectProvider<SseSocketSessionTemplate> sseSocketSessionTemplateProvider;
     /** 身份 Mapper */
     private final MsServerIdentityMapper identityMapper;
     /** 凭据加解密器 */
     private final CredentialCipher cipher;
+
+    /**
+     * 构造
+     *
+     * @param sseSocketSessionTemplateProvider SSE 会话模板提供器
+     * @param identityMapper                  身份 Mapper
+     * @param cipher                          凭据加解密器
+     */
+    public MailboxSseService(ObjectProvider<SseSocketSessionTemplate> sseSocketSessionTemplateProvider,
+                             MsServerIdentityMapper identityMapper,
+                             CredentialCipher cipher) {
+        this.sseSocketSessionTemplateProvider = sseSocketSessionTemplateProvider;
+        this.identityMapper = identityMapper;
+        this.cipher = cipher;
+    }
 
     /** 轮询间隔(毫秒) */
     private static final long POLL_INTERVAL_MS = 10_000;
