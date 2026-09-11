@@ -1,8 +1,10 @@
 -- ============================================================
--- 监控模块初始化 SQL
+-- 监控模块初始化 SQL（合并版）
 -- 模块: spring-support-monitor-starter
+-- 来源: 原 V1.0__init_monitor + V1.1__alarm_and_agent + V1.2__server_node + V1.3__monitor_host_link
 -- 命名规范: 列名使用完整表名作为前缀，如 ms_monitor_name
 -- 数据库: MySQL 8.x / H2 (MySQL 模式) / 达梦 / Oracle 通过方言转换
+-- 幂等: 建表 IF NOT EXISTS，补列 IF NOT EXISTS，重复执行安全
 -- ============================================================
 
 SET NAMES utf8mb4;
@@ -265,10 +267,116 @@ CREATE TABLE IF NOT EXISTS `ms_monitor_redis_metric_statistics` (
     UNIQUE KEY `uk_ms_monitor_redis_metric_statistics_bucket` (`ms_monitor_redis_metric_statistics_monitor_id`, `ms_monitor_redis_metric_statistics_metric_name`, `ms_monitor_redis_metric_statistics_hour_bucket`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='监控 Redis 小时聚合';
 
+-- ----------------------------------------------------------
+-- 15. 告警策略
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ms_monitor_alarm_policy (
+    id                               BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    ms_monitor_alarm_policy_name     VARCHAR(64)  NOT NULL                COMMENT '策略名称',
+    ms_monitor_alarm_policy_enabled  TINYINT      NOT NULL DEFAULT 1      COMMENT '启用状态 1启用 0停用',
+    ms_monitor_alarm_policy_remark   VARCHAR(255) NULL                    COMMENT '备注',
+    PRIMARY KEY (id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '告警策略';
+
+-- ----------------------------------------------------------
+-- 16. 告警规则
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ms_monitor_alarm_rule (
+    id                                      BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键',
+    ms_monitor_alarm_rule_policy_id         BIGINT        NOT NULL              COMMENT '所属策略ID',
+    ms_monitor_alarm_rule_monitor_id        BIGINT        NULL                  COMMENT '限定目标ID,空为全部目标',
+    ms_monitor_alarm_rule_metric_name       VARCHAR(64)   NOT NULL              COMMENT '指标名',
+    ms_monitor_alarm_rule_condition         VARCHAR(4)    NOT NULL DEFAULT 'GT' COMMENT '条件: GT/GE/EQ/LE/LT',
+    ms_monitor_alarm_rule_threshold         DECIMAL(19,4) NOT NULL DEFAULT 0    COMMENT '阈值',
+    ms_monitor_alarm_rule_consecutive_count INT           NOT NULL DEFAULT 1    COMMENT '连续触发次数',
+    ms_monitor_alarm_rule_silence_minutes   INT           NOT NULL DEFAULT 10   COMMENT '静默期(分钟)',
+    ms_monitor_alarm_rule_level             CHAR(2)       NULL DEFAULT 'P2'     COMMENT '级别: P0~P4',
+    ms_monitor_alarm_rule_enabled           TINYINT       NOT NULL DEFAULT 1    COMMENT '启用状态 1启用 0停用',
+    PRIMARY KEY (id),
+    KEY idx_alarm_rule_policy (ms_monitor_alarm_rule_policy_id),
+    KEY idx_alarm_rule_metric (ms_monitor_alarm_rule_metric_name)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '告警规则';
+
+-- ----------------------------------------------------------
+-- 17. 告警事件
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ms_monitor_alarm_event (
+    id                                   BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键',
+    ms_monitor_alarm_event_monitor_id    BIGINT        NULL                  COMMENT '监控目标ID',
+    ms_monitor_alarm_event_monitor_name  VARCHAR(64)   NULL                  COMMENT '目标名称(冗余)',
+    ms_monitor_alarm_event_rule_id       BIGINT        NULL                  COMMENT '命中规则ID',
+    ms_monitor_alarm_event_metric_name   VARCHAR(64)   NOT NULL              COMMENT '指标名',
+    ms_monitor_alarm_event_alarm_value   DECIMAL(19,4) NULL                  COMMENT '实际值',
+    ms_monitor_alarm_event_threshold     DECIMAL(19,4) NULL                  COMMENT '阈值',
+    ms_monitor_alarm_event_level         CHAR(2)       NULL DEFAULT 'P2'     COMMENT '级别: P0~P4',
+    ms_monitor_alarm_event_status        VARCHAR(12)   NOT NULL DEFAULT 'NEW' COMMENT '状态: NEW/PROCESSED/FALSE_ALARM',
+    ms_monitor_alarm_event_handle_remark VARCHAR(512)  NULL                  COMMENT '处理备注',
+    ms_monitor_alarm_event_trigger_time  DATETIME      NULL                  COMMENT '触发时间',
+    ms_monitor_alarm_event_handle_time   DATETIME      NULL                  COMMENT '处理时间',
+    ms_monitor_alarm_event_rule_snapshot VARCHAR(1024) NULL                  COMMENT '触发时规则配置快照(JSON)',
+    PRIMARY KEY (id),
+    KEY idx_alarm_event_monitor (ms_monitor_alarm_event_monitor_id),
+    KEY idx_alarm_event_status (ms_monitor_alarm_event_status)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '告警事件';
+
+-- ----------------------------------------------------------
+-- 18. 告警维护窗口
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ms_monitor_alarm_maintenance_window (
+    id                                           BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键',
+    ms_monitor_alarm_maintenance_window_policy_id BIGINT        NULL                  COMMENT '策略ID, 空为全局',
+    ms_monitor_alarm_maintenance_window_name     VARCHAR(64)   NULL                  COMMENT '窗口名称',
+    ms_monitor_alarm_maintenance_window_level    CHAR(2)       NULL                  COMMENT '级别: P0~P4/空为全局',
+    ms_monitor_alarm_maintenance_window_start_time VARCHAR(8)  NULL                  COMMENT '开始时间 HH:mm',
+    ms_monitor_alarm_maintenance_window_end_time   VARCHAR(8)  NULL                  COMMENT '结束时间 HH:mm',
+    ms_monitor_alarm_maintenance_window_weekdays VARCHAR(32)   NULL                  COMMENT '生效星期, 逗号分隔, 空为每天',
+    ms_monitor_alarm_maintenance_window_enabled  TINYINT       NOT NULL DEFAULT 1    COMMENT '启用 1启用 0停用',
+    ms_monitor_alarm_maintenance_window_remark   VARCHAR(255)  NULL                  COMMENT '备注',
+    ms_monitor_alarm_maintenance_window_create_time DATETIME    NULL                  COMMENT '创建时间',
+    ms_monitor_alarm_maintenance_window_update_time DATETIME    NULL                  COMMENT '更新时间',
+    PRIMARY KEY (id),
+    KEY idx_alarm_mw_enabled (ms_monitor_alarm_maintenance_window_enabled)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '告警维护窗口';
+
+-- ----------------------------------------------------------
+-- 19. 协议服务器节点(服务管理)
+-- ----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ms_server_node (
+    id                               BIGINT        NOT NULL AUTO_INCREMENT COMMENT '主键',
+    ms_server_node_name              VARCHAR(64)   NOT NULL              COMMENT '节点名称(唯一)',
+    ms_server_node_protocol          VARCHAR(32)   NOT NULL              COMMENT '协议类型: HTTP / HTTP_PROXY / TCP_PROXY / SIP',
+    ms_server_node_engine            VARCHAR(32)   DEFAULT 'jdk'         COMMENT '传输引擎: http= jdk/nio/aio, 代理= jdk, sip= sip',
+    ms_server_node_host              VARCHAR(128)  DEFAULT '0.0.0.0'     COMMENT '监听地址',
+    ms_server_node_port              INT           NOT NULL              COMMENT '监听端口',
+    ms_server_node_enabled           TINYINT       NOT NULL DEFAULT 1    COMMENT '是否启用: 1 启用(随应用自动拉起), 0 停用',
+    ms_server_node_remark            VARCHAR(255)  NULL                  COMMENT '备注',
+    ms_server_node_config            TEXT          NULL                  COMMENT '协议专属配置(JSON): sip.token, proxy.backendHost/backendPort 等',
+    ms_server_node_filters           TEXT          NULL                  COMMENT 'ServerFilter 插件配置(JSON 数组)',
+    create_name                      VARCHAR(64)   DEFAULT NULL          COMMENT '创建人姓名',
+    create_by                        INT           DEFAULT NULL          COMMENT '创建人',
+    create_time                      DATETIME      DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_name                      VARCHAR(64)   DEFAULT NULL          COMMENT '更新人姓名',
+    update_by                        INT           DEFAULT NULL          COMMENT '更新人',
+    update_time                      DATETIME      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_ms_server_node_name (ms_server_node_name)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '服务管理-协议服务器节点';
+
 -- ============================================================
--- 数据库指标表 / 网关 / 任务, 暂无锁, 后续模块再补
--- 预留: ms_monitor_database_metric / ms_monitor_database_metric_statistics
+-- 补列/索引（建表之后统一执行，幂等 IF NOT EXISTS）
 -- ============================================================
+
+-- MsMonitor 追加探针标识列(Agent 推送鉴权)
+ALTER TABLE ms_monitor ADD COLUMN IF NOT EXISTS ms_monitor_agent_key VARCHAR(64) NULL COMMENT '探针标识(Agent推送鉴权)';
+
+-- ms_monitor 追加关联服务器主机 ID 列(ms_server_host.id, 资产联动)
+ALTER TABLE ms_monitor ADD COLUMN IF NOT EXISTS ms_server_host_id BIGINT NULL COMMENT '关联服务器主机 ID(ms_server_host.id, 资产联动)';
+
+-- 便于按资产查询监控项
+CREATE INDEX IF NOT EXISTS idx_ms_monitor_server_host ON ms_monitor (ms_server_host_id);
+
+-- MsMonitorAlarmEvent 追加触发时规则配置快照列
+ALTER TABLE ms_monitor_alarm_event ADD COLUMN IF NOT EXISTS ms_monitor_alarm_event_rule_snapshot VARCHAR(1024) NULL COMMENT '触发时规则配置快照(JSON)';
 
 SET FOREIGN_KEY_CHECKS = 1;
 
