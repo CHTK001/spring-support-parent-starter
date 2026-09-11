@@ -54,6 +54,12 @@ plugin:
   api:
     request-decode:
       enable: false
+  # 异步线程池（common-starter AsyncThreadPoolConfiguration 实现 AsyncConfigurer）：
+  # 与 Spring Boot 4.1 自动装配的 TaskExecutionAutoConfiguration 存在 AsyncConfigurer 二选一冲突
+  # （queue-starter ApplicationEventToQueueListener @Async 触发时 "Only one AsyncConfigurer may exist"）。
+  # 关闭自建配置，由 Spring Boot 默认 executor 接管 @Async。
+  async:
+    enable: false
   # FlywayLike 脚本迁移（DataSourceScriptConfiguration）：启用。
   # DataSource 就绪后自动扫描 classpath*:db/init|migration|sync 下 V*__*.sql，
   # monitor 独立启动即建全部表（monitor/server/project 模块的资产台账与监控表均在 SQL 文件）。
