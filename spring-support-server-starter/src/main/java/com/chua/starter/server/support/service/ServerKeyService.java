@@ -38,10 +38,21 @@ public interface ServerKeyService {
      */
     ReturnResult<Void> delete(Long id);
 
-    /**
-    * 查询密钥列表（脱敏：不返回私钥与口令）
+/**
+    * ѯԿб˽Կ
     *
-    * @return 密钥列表
+    * @return Կб
      */
     ReturnResult<List<MsServerKey>> list();
+
+    /**
+    * ɲ濢浽Կ⣺ RSA/ED25519/ECDSA ԿԣԿ汾洢Կ
+    *
+    * @param name     Կ
+    * @param type     ԿͣRSA / ED25519 / ECDSA
+    * @param password Կڣɿ
+    * @param remark   עɿ
+    * @return ԿϢֻԿ
+     */
+    ReturnResult<MsServerKey> generate(String name, String type, String password, String remark);
 }
