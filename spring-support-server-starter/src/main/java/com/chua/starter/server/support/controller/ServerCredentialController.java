@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -87,6 +88,25 @@ public class ServerCredentialController {
     @GetMapping("/key")
     public ReturnResult<List<MsServerKey>> listKeys() {
         return keyService.list();
+    }
+
+    /**
+     * 生成密钥对并保存到密钥库
+     *
+     * @param name     密钥名称
+     * @param type     密钥类型（RSA / ED25519 / ECDSA，默认 RSA）
+     * @param password 私钥口令（可空）
+     * @param remark   备注（可空）
+     * @return 生成结果（脱敏：不含私钥明文）
+     */
+    @Operation(summary = "生成密钥对")
+    @PostMapping("/key/generate")
+    public ReturnResult<MsServerKey> generateKey(
+            @RequestParam String name,
+            @RequestParam(defaultValue = "RSA") String type,
+            @RequestParam(required = false) String password,
+            @RequestParam(required = false) String remark) {
+        return keyService.generate(name, type, password, remark);
     }
 
     /**

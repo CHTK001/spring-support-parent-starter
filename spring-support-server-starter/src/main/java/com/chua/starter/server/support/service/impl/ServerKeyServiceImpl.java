@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Base64;
 import java.util.List;
 
 /**
@@ -105,6 +106,44 @@ public class ServerKeyServiceImpl implements ServerKeyService {
                 new LambdaQueryWrapper<MsServerKey>().orderByDesc(MsServerKey::getId));
         keys.forEach(this::mask);
         return ReturnResult.list(keys);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ReturnResult<MsServerKey> generate(String name, String type, String password, String remark) {
+        if (name == null || name.isBlank()) {
+            return ReturnResult.error("密钥名称不能为空");
+        }
+        String keyType = type == null || type.isBlank() ? "RSA" : type.trim().toUpperCase();
+        try {
+            java.security.KeyPairGenerator generator;
+            switch (keyType) {
+                case "ED25519" -> generator = java.security.KeyPairGenerator.getInstance("Ed25519");
+                case "ECDSA" -> generator = java.security.KeyPairGenerator.getInstance("EC");
+                default -> {
+                    keyType = "RSA";
+                    generator = java.security.KeyPairGenerator.getInstance("RSA");
+                    generator.initialize(4096);
+                }
+            }
+            java.security.KeyPair pair = generator.generateKeyPair();
+            String publicKey = Base64.getEncoder().encodeToString(pair.getPublic().getEncoded());
+            String privateKey = Base64.getEncoder().encodeToString(pair.getPrivate().getEncoded());
+
+            MsServerKey key = new MsServerKey();
+            key.setMsServerKeyName(name.trim());
+            key.setMsServerKeyType(keyType);
+            key.setMsServerKeyPublicKey(publicKey);
+            key.setMsServerKeyPrivateKey(cipher.encrypt(privateKey));
+            if (password != null && !password.isBlank()) {
+                key.setMsServerKeyPassword(cipher.encrypt(password));
+            }
+            key.setMsServerKeyRemark(remark);
+            keyMapper.insert(key);
+            return ReturnResult.ok(mask(keyMapper.selectById(key.getId())));
+        } catch (Exception e) {
+            return ReturnResult.error("生成密钥失败: " + e.getMessage());
+        }
     }
 
     /**
