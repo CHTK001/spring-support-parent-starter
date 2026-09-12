@@ -170,6 +170,9 @@
 
         <!-- 任务分发模块 -->
         <module>spring-support-taskdistribution-starter</module>       <!-- 任务分发框架 -->
+
+        <!-- APM 热点观测模块（REST 暴露 APM 数据 + 自注入 Agent + 前端静态托管） -->
+        <module>spring-support-hotsport-starter</module>
     </modules>
 
     <!-- 项目属性配置 -->
