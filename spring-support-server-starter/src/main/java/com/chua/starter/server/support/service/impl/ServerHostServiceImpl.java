@@ -533,30 +533,35 @@ public class ServerHostServiceImpl implements ServerHostService {
         if (!resolved.isOk()) {
             return ReturnResult.error(resolved.getMsg());
         }
-        // Windows 主机走 WinRM（PowerShell）采集，其余走 SSH
+        // Windows 主机走 WinRM（PowerShell）采集，其余走 SSH（按系统类型选命令）
         if ("WINDOWS".equalsIgnoreCase(host.getServerHostOsType())) {
             return detectHardwareViaWinrm(host, resolved.getData());
         }
         SshClients.Handle handle = null;
         try {
             handle = connectionManager.borrow(host, resolved.getData());
-            // 采集 CPU 核心
-            String cpu = execQuiet(handle, "nproc");
+            boolean macos = "MACOS".equalsIgnoreCase(host.getServerHostOsType());
+            // 采集 CPU 核心（macOS 用 sysctl，Linux 用 nproc）
+            String cpu = execQuiet(handle, macos ? "sysctl -n hw.ncpu" : "nproc");
             if (isNumeric(cpu)) {
                 host.setServerHostCpuCores(Integer.valueOf(cpu.trim()));
             }
-            // 采集内存(MB)
-            String mem = execQuiet(handle, "free -m | awk '/^Mem:/{print $2}'");
+            // 采集内存(MB)：macOS 用 sysctl hw.memsize 字节/1MB；Linux 用 free -m
+            String mem = execQuiet(handle, macos
+                    ? "echo $(( $(sysctl -n hw.memsize) / 1024 / 1024 ))"
+                    : "free -m | awk '/^Mem:/{print $2}'");
             if (isNumeric(mem)) {
                 host.setServerHostMemoryMb(Long.valueOf(mem.trim()));
             }
-            // 采集磁盘(GB, 根分区)
+            // 采集磁盘(GB, 根分区)：macOS df 无 % 前列，统一 df -k /
             String disk = execQuiet(handle, "df -k / | awk 'NR==2{printf \"%.0f\", $2/1024/1024}'");
             if (isNumeric(disk)) {
                 host.setServerHostDiskGb(Long.valueOf(disk.trim()));
             }
-            // 采集系统版本
-            String os = execQuiet(handle, "cat /etc/os-release 2>/dev/null | grep -m1 PRETTY_NAME | cut -d'=' -f2 | tr -d '\"'");
+            // 采集系统版本：macOS 无 /etc/os-release，走 sw_vers / uname -sr
+            String os = execQuiet(handle, macos
+                    ? "sw_vers -productVersion 2>/dev/null"
+                    : "cat /etc/os-release 2>/dev/null | grep -m1 PRETTY_NAME | cut -d'=' -f2 | tr -d '\"'");
             if (isBlank(os)) {
                 os = execQuiet(handle, "uname -sr");
             }
@@ -577,8 +582,10 @@ public class ServerHostServiceImpl implements ServerHostService {
             if (!isBlank(arch)) {
                 host.setServerHostOsArch(arch.trim());
             }
-            // 采集内网 IP
-            String ip = execQuiet(handle, "hostname -I 2>/dev/null | awk '{print $1}'");
+            // 采集内网 IP：macOS 无 hostname -I，用 ipconfig getifaddr；Linux 用 hostname -I
+            String ip = execQuiet(handle, macos
+                    ? "ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null"
+                    : "hostname -I 2>/dev/null | awk '{print $1}'");
             if (!isBlank(ip)) {
                 host.setServerHostPrivateIp(ip.trim());
             }
@@ -590,9 +597,9 @@ public class ServerHostServiceImpl implements ServerHostService {
             hostMapper.updateById(host);
             /**
               * markonline。
-             * @param hostId 主机标识
-             * @param true true
-             */
+              * @param hostId 主机标识
+              * @param true true
+              */
             markOnline(hostId, true);
             return ReturnResult.ok(hostMapper.selectById(hostId), "硬件探测成功");
         } catch (Exception e) {
