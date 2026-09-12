@@ -5,8 +5,8 @@ import java.lang.annotation.*;
 /**
  * 队列事件监听注解
  * <p>
- * 标注在方法上，用于监听队列消息并自动转换为Spring ApplicationEvent。
- * 与@QueueListener不同，此注解会将消息反序列化为ApplicationEvent并发布到Spring事件总线。
+   * 标注在方法上，用于监听队列消息并自动转换为Spring application事件。
+   * 与@队列监听器不同，此注解会将消息反序列化为application事件并发布到Spring事件总线。
  * </p>
  *
  * <pre>
@@ -20,9 +20,15 @@ import java.lang.annotation.*;
  *     }
  * }
  * }
+ * </pre>erCreated(OrderCreatedEvent event) {
+ *         // 处理事件
+ *     }
+ * }
+ * }
  * </pre>
  *
  * @since 2025-03-20
+ * @author CH
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
@@ -30,7 +36,7 @@ import java.lang.annotation.*;
 public @interface QueueEventListener {
 
     /**
-     * 目标地址（topic/queue）
+      * 目标地址（topic/队列）
      *
      * @return 目标地址
      */
@@ -39,7 +45,7 @@ public @interface QueueEventListener {
     /**
      * 事件类型
      * <p>
-     * 消息将被反序列化为此类型的ApplicationEvent
+      * 消息将被反序列化为此类型的application事件
      * </p>
      *
      * @return 事件类型
@@ -47,7 +53,7 @@ public @interface QueueEventListener {
     Class<? extends org.springframework.context.ApplicationEvent> eventType();
 
     /**
-     * 消费组（Kafka/RocketMQ使用）
+       * 消费组（Kafka/RocketMQ使用）
      *
      * @return 消费组名称
      */
@@ -80,8 +86,8 @@ public @interface QueueEventListener {
     /**
      * 是否重新发布到Spring事件总线
      * <p>
-     * 如果为true，将消息反序列化为ApplicationEvent后重新发布到Spring事件总线，
-     * 这样其他@EventListener也能接收到该事件
+      * 如果为true，将消息反序列化为application事件后重新发布到Spring事件总线，
+      * 这样其他@事件监听器也能接收到该事件
      * </p>
      *
      * @return 是否重新发布

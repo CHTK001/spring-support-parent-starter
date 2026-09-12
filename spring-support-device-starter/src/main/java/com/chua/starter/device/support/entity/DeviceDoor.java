@@ -18,24 +18,24 @@ import lombok.Data;
 public class DeviceDoor {
 
     /**
-     * 主键 ID
+      * 主键 标识
      */
     @TableId(value = "device_door_id", type = IdType.ASSIGN_UUID)
-    /** DevicedoorID */
+    /** devicedoorid */
     private String deviceDoorId;
 
     /**
-     * 所属设备 ID
+      * 所属设备 标识
      */
     @TableField("device_door_device_id")
-    /** DevicedoordeviceID */
+    /** devicedoordeviceid */
     private String deviceDoorDeviceId;
 
     /**
      * 门编号
      */
     @TableField("device_door_no")
-    /** DevicedoorNO */
+    /** devicedoorno */
     private Integer deviceDoorNo;
 
     /**
@@ -46,7 +46,7 @@ public class DeviceDoor {
     private String deviceDoorName;
 
     /**
-     * 门状态，例如 locked、unlocked
+      * 门状态，例如 锁、unlocked
      */
     @TableField("device_door_status")
     /** Devicedoor状态 */

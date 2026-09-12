@@ -19,16 +19,21 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 /**
- * 四种派发提供者压测对比：InMemory / WAL / Chronicle。
+   * 四种派发提供者压测对比：入内存 / WAL / Chronicle。
  *
  * @since 4.0.0.42
+ * @author CH
  */
 public final class DataSyncDispatcherBenchProbe {
 
-    static final int ROWS = 100_000;
-    static final int BATCH = 1000;
+    static final int ROWS = 100_000; // ROWS
+    static final int BATCH = 1000; // 批量
 
-    /** Main */
+    /**
+     * Main
+     *
+     * @param args 参数
+     */
     public static void main(String[] args) throws Exception {
         Path tmp = Files.createTempDirectory("dispatch-bench");
         tmp.toFile().deleteOnExit();
@@ -41,7 +46,7 @@ public final class DataSyncDispatcherBenchProbe {
 
         List<Map<String, Object>> data = makeData(BATCH);
 
-        // InMemory
+ // 入内存
         bench("InMemory", new InMemoryDispatcherProvider(DispatcherConfig.builder().build()), data);
 
         // WAL (默认 Jackson)
@@ -70,7 +75,12 @@ public final class DataSyncDispatcherBenchProbe {
         System.err.println("========================================================================");
     }
 
-    /** MakeData */
+    /**
+     * make数据
+     *
+     * @param n n
+     * @return make数据的结果
+     */
     static List<Map<String, Object>> makeData(int n) {
         List<Map<String, Object>> data = new ArrayList<>(n);
         for (int i = 0; i < n; i++) {
@@ -86,13 +96,21 @@ public final class DataSyncDispatcherBenchProbe {
         return data;
     }
 
-    /** Bench */
+    /**
+     * Bench
+     *
+     * @param label 标签
+     * @param provider 提供者
+     * @param data 数据
+     */
     static void bench(String label, DispatcherProvider provider, List<Map<String, Object>> data) throws Exception {
         AtomicLong count = new AtomicLong();
         CountDownLatch done = new CountDownLatch(1);
         Consumer<List<Map<String, Object>>> consumer = rows -> {
             long c = count.addAndGet(rows.size());
-            if (c >= ROWS) done.countDown();
+            if (c >= ROWS) {
+                done.countDown();
+            }
         };
         provider.subscribe(new ConsumerDispatcherDefinition<>(consumer, List.class, List.of("bench")));
 

@@ -130,6 +130,8 @@ public class CacheProperties {
 
     /**
      * Caffeine 本地缓存配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class CaffeineProperties {
@@ -159,18 +161,20 @@ public class CacheProperties {
         private boolean recordStats = true;
 
         /**
-         * 弱引用 key
+          * 弱引用 钥匙
          */
         private boolean weakKeys = false;
 
         /**
-         * 弱引用 value
+          * 弱引用 价值观
          */
         private boolean weakValues = false;
     }
 
     /**
      * Redis 缓存配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class RedisProperties {
@@ -180,7 +184,7 @@ public class CacheProperties {
         private long ttl = 600;
 
         /**
-         * key 前缀
+          * 钥匙 前缀
          */
         private String keyPrefix = "cache:";
 
@@ -195,18 +199,20 @@ public class CacheProperties {
         private boolean cacheNullValues = false;
 
         /**
-         * key 与 value 是否使用相同分隔符
+          * 钥匙 与 价值观 是否使用相同分隔符
          */
         private String separator = ":";
 
         /**
-         * 是否在 key 中携带应用名前缀
+          * 是否在 钥匙 中携带应用名前缀
          */
         private boolean useKeyPrefix = true;
     }
 
     /**
      * 缓存键策略
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class KeyProperties {
@@ -221,17 +227,17 @@ public class CacheProperties {
         private String separator = ":";
 
         /**
-         * 是否在 key 中追加租户标识
+          * 是否在 钥匙 中追加租户标识
          */
         private boolean withTenant = true;
 
         /**
-         * 是否在 key 中追加应用名
+          * 是否在 钥匙 中追加应用名
          */
         private boolean withApplication = true;
 
         /**
-         * 是否在 key 中追加平台标识
+          * 是否在 钥匙 中追加平台标识
          */
         private boolean withPlatform = true;
     }

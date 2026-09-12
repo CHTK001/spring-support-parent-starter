@@ -27,10 +27,10 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * Swagger / OpenAPI 3.x → 通用 {@link OpenApiDocumentData} 转换器。
+   * Swagger / 打开api 3.x → 通用 {@link OpenApiDocumentData} 转换器。
  *
  * <p>作为通用 OpenApiDocumentProvider 体系的入参适配层,
- * 与具体协议栈（SpringDoc / native spec / Knife4j）解耦。</p>
+   * 与具体协议栈（springdoc / NAT spec / 刀4j）解耦。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -41,7 +41,9 @@ public class OpenApiConverter {
     private static final ObjectMapper JSON = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
     /**
-     * 将 SpringDoc 收集的 {@link OpenAPI} 转换为通用文档模型。
+      * 将 springdoc 收集的 {@link OpenAPI} 转换为通用文档模型。
+     * @param openAPI 打开api
+     * @return 从打开api的结果
      */
     public static OpenApiDocumentData fromOpenApi(OpenAPI openAPI) {
         if (openAPI == null) {
@@ -54,7 +56,7 @@ public class OpenApiConverter {
             data.setDescription(openAPI.getInfo().getDescription());
         }
 
-        // tags
+ // 标签
         if (openAPI.getTags() != null) {
             for (Tag t : openAPI.getTags()) {
                 OpenApiTag tag = new OpenApiTag();
@@ -64,12 +66,14 @@ public class OpenApiConverter {
             }
         }
 
-        // endpoints
+ // 端点
         if (openAPI.getPaths() != null) {
             for (Map.Entry<String, PathItem> e : openAPI.getPaths().entrySet()) {
                 String path = e.getKey();
                 PathItem item = e.getValue();
-                if (item == null) continue;
+                if (item == null) {
+                    continue;
+                }
                 eachHttpMethod(path, item.getGet(), "GET", data);
                 eachHttpMethod(path, item.getPost(), "POST", data);
                 eachHttpMethod(path, item.getPut(), "PUT", data);
@@ -82,9 +86,18 @@ public class OpenApiConverter {
         return data;
     }
 
-    /** EachHttpMethod */
+    /**
+     * eachhttp方法
+     *
+     * @param path 路径
+     * @param op op
+     * @param method 方法
+     * @param data 数据
+     */
     private static void eachHttpMethod(String path, Operation op, String method, OpenApiDocumentData data) {
-        if (op == null) return;
+        if (op == null) {
+            return;
+        }
         OpenApiEndpoint ep = new OpenApiEndpoint();
         ep.setPath(path);
         ep.setMethod(method);
@@ -166,14 +179,26 @@ public class OpenApiConverter {
         data.getEndpoints().add(ep);
     }
 
-    /** Prefix */
+    /**
+     * 前缀
+     *
+     * @param s s
+     * @return 前缀的结果
+     */
     private static String prefix(String s) {
         return s == null ? "" : s;
     }
 
-    /** SchemaType */
+    /**
+     * 模式类型
+     *
+     * @param schema 模式
+     * @return 模式类型的结果
+     */
     private static String schemaType(Schema<?> schema) {
-        if (schema == null) return "";
+        if (schema == null) {
+            return "";
+        }
         String t = schema.getType();
         if ("array".equals(t) && schema.getItems() != null) {
             return "Array[" + schemaType(schema.getItems()) + "]";
@@ -181,9 +206,17 @@ public class OpenApiConverter {
         return t == null ? "" : t;
     }
 
-    /** ExampleForSchema */
+    /**
+     * examplefor模式
+     *
+     * @param schema 模式
+     * @param out 出
+     * @return examplefor模式的结果
+     */
     private static Map<String, Object> exampleForSchema(Schema<?> schema, Map<String, Object> out) {
-        if (schema == null) return out;
+        if (schema == null) {
+            return out;
+        }
         if (schema.getExample() != null) {
             out.put("_example", schema.getExample());
             return out;
@@ -197,12 +230,23 @@ public class OpenApiConverter {
         return out;
     }
 
-    /** ExampleFor */
+    /**
+     * examplefor
+     *
+     * @param schema 模式
+     * @return exampleFor的结果
+     */
     private static Object exampleFor(Schema<?> schema) {
-        if (schema == null) return null;
-        if (schema.getExample() != null) return schema.getExample();
+        if (schema == null) {
+            return null;
+        }
+        if (schema.getExample() != null) {
+            return schema.getExample();
+        }
         String t = schema.getType();
-        if (t == null) return null;
+        if (t == null) {
+            return null;
+        }
         return switch (t) {
             case "string" -> "string";
             case "integer", "number" -> 0;
@@ -213,9 +257,18 @@ public class OpenApiConverter {
         };
     }
 
-    /** 扁平化Schema */
+    /**
+     * 扁平化模式
+     *
+     * @param prefix 前缀
+     * @param schema 模式
+     * @param out 出
+     * @return flatten模式的结果
+     */
     private static Map<String, Object> flattenSchema(String prefix, Schema<?> schema, Map<String, Object> out) {
-        if (schema == null) return out;
+        if (schema == null) {
+            return out;
+        }
         if (schema.getProperties() != null) {
             for (Map.Entry<String, Schema> e : schema.getProperties().entrySet()) {
                 String name = prefix.isEmpty() ? e.getKey() : prefix + "." + e.getKey();

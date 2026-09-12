@@ -20,13 +20,13 @@ import javax.sql.DataSource;
 import java.io.File;
 
 /**
- * 数据库模式探针 (H2 代替外网 MySQL, 验证 DatabaseMappingLoader 加载链路)。
+   * 数据库模式探针 (H2 代替外网 MySQL, 验证 databasemapping加载 加载链路)。
  *
  * <p>与 {@link com.chua.starter.datasync.support.DataSyncApplication} 的区别:
- * DataSyncApplication 的 database 模式
- * 硬编码外网 MySQL (172.16.0.40), 探针改用嵌入式 H2 + {@code schema.sql}
- * (预置 db-user-sync 映射 + user-sink 字段映射), 使数据库加载链路可在无外网环境
- * 真实验证: H2 建表 → DatabaseMappingLoader 查 datasync_mapping → 加载到 manager →
+   * 数据同步application 的 database 模式
+   * 硬编码外网 MySQL (172.16.0.40), 探针改用嵌入式 H2 + {@code schema.sql}
+   * (预置 db-用户-同步 映射 + 用户-sink 字段映射), 使数据库加载链路可在无外网环境
+   * 真实验证: H2 建表 → databasemapping加载 查 datasync_mapping → 加载到 管理器 →
  * 定时调度真实执行。</p>
  *
  * @since 4.0.0.42
@@ -61,7 +61,7 @@ public class DataSyncDatabaseProbe {
         mappingManager.getMappings().forEach(m -> log.info("[DB-PROBE] 映射: id={}, source={}, sink={}, batch={}, cron={}, params={}, mappings={}",
                 m.mappingId(), m.sourceId(), m.sinkId(), m.batch(), m.cron(), m.params(), m.mappings()));
 
-        // 启动 DataSyncServer + 注册 CSV source/sink, 使 db-user-sync 定时真实执行
+ // 启动 数据同步服务端 + 注册 CSV 源/sink, 使 db-用户-同步 定时真实执行
         DefaultDataSyncServer server = context.getBean(DefaultDataSyncServer.class);
         File outDir = new File("target/datasync-out-db");
         if (!outDir.exists() && !outDir.mkdirs()) {
@@ -82,12 +82,16 @@ public class DataSyncDatabaseProbe {
     }
 
     /**
-     * 配置嵌入式 H2 数据源 (schema.sql 建 datasync_mapping / datasync_field_mapping 两表并预置数据)。
+       * 配置嵌入式 H2 数据源 (模式.SQL 建 datasync_mapping / datasync_字段_mapping 两表并预置数据)。
      *
      * @return 数据源
      */
     @Bean
     public DataSource dataSource() {
+        /**
+         * embeddeddatabase构建器。
+         * @return embeddeddatabase构建器的结果
+         */
         return new EmbeddedDatabaseBuilder()
                 .setType(EmbeddedDatabaseType.H2)
                 .setName("datasync-db-probe")

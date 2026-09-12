@@ -102,7 +102,7 @@ public class VtProbe {
      * @param args 忽略
      */
     public static void main(String[] args) throws InterruptedException {
-        // 平台线程池: 与 JobAutoConfiguration.buildExecutor() 同构
+ // 平台线程池: 与 作业auto配置.构建执行器() 同构
         ThreadPoolExecutor platform = new ThreadPoolExecutor(
                 PLATFORM_MAX, PLATFORM_MAX, 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(QUEUE),

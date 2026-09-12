@@ -35,6 +35,7 @@ public class EduKnowledgePointController {
      * @param gradeLevel 学段
      * @param grade      年级
      * @return 知识点树
+     * @param false false
      */
     @Operation(summary = "查询知识点树")
     @GetMapping("/tree")
@@ -59,7 +60,7 @@ public class EduKnowledgePointController {
     /**
      * 删除知识点（含子节点）
      *
-     * @param id 知识点ID
+     * @param id 知识点标识
      * @return 是否成功
      */
     @Operation(summary = "删除知识点")

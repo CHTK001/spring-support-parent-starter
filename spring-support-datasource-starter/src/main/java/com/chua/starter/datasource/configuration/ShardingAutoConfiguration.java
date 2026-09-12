@@ -20,10 +20,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * ShardingSphere 分库分表自动配置。
+   * 分库分表sphere 分库分表自动配置。
  * <p>
  * 当 {@code spring.datasource.sharding.enabled=true} 时，
- * 自动基于配置创建 ShardingSphere 分片数据源。
+   * 自动基于配置创建 分库分表sphere 分片数据源。
  * </p>
  *
  * <p>
@@ -42,16 +42,21 @@ import java.util.Map;
 public class ShardingAutoConfiguration {
 
     /**
-     * 注册 ShardingV5 数据源转换器 Bean
+      * 注册 分库分表v5 数据源转换器 Bean
+     * @return 分库分表v5转换的结果
      */
     @Bean
     @ConditionalOnMissingBean(name = "shardingV5Conversion")
     public DataSourceConversion shardingV5Conversion() {
+        /**
+         * 分库分表v5转换。
+         * @return 分库分表v5转换的结果
+         */
         return new ShardingV5Conversion();
     }
 
     /**
-     * 创建 ShardingSphere 分片数据源 Bean
+      * 创建 分库分表sphere 分片数据源 Bean
      */
     @Bean
     @ConditionalOnMissingBean(name = "shardingDataSource")
@@ -80,11 +85,18 @@ public class ShardingAutoConfiguration {
     }
 
     /**
-     * 根据配置构建 ShardingV5Conversion
+      * 根据配置构建 分库分表v5转换
+     * @param conversion 转换
+     * @param properties 属性
+     * @return configure分库分表的结果
      */
     private ShardingV5Conversion configureSharding(DataSourceConversion conversion, ShardingDataSourceProperties properties) {
         if (!(conversion instanceof ShardingV5Conversion)) {
             log.warn("[Sharding] 转换器不是 ShardingV5Conversion 类型，使用默认配置");
+            /**
+             * 分库分表v5转换。
+             * @return 分库分表v5转换的结果
+             */
             return new ShardingV5Conversion();
         }
 
@@ -100,7 +112,7 @@ public class ShardingAutoConfiguration {
                 String strategy = tableConfig.getStrategy();
 
                 if (timeUnit != null && !timeUnit.isEmpty()) {
-                    // 时间分片：使用 INTERVAL 算法
+ // 时间分片：使用 间隔 算法
                     String algoName = "interval_" + logicTable;
                     Map<String, String> algoProps = new HashMap<>();
                     algoProps.put("datetime-pattern", "yyyy-MM-dd");
@@ -122,8 +134,8 @@ public class ShardingAutoConfiguration {
             }
         }
 
-        // 配置分库规则：分库与分表同前缀/同分片列对齐（原固定前缀 "db"/"user_id" 与表前缀不匹配，
-        // 导致 findDbConfig 永远找不到分库配置、分库+分表分支从不激活——修正为按表逐表注册）
+ // 配置分库规则：分库与分表同前缀/同分片列对齐（原固定前缀 "db"/"用户_id" 与表前缀不匹配，
+ // 导致 finddb配置 永远找不到分库配置、分库+分表分支从不激活——修正为按表逐表注册）
         boolean dbShardingEnabled = properties.getDatabases() != null && properties.getDatabases().size() > 1;
         if (dbShardingEnabled) {
             String algoName = "db_mod";
@@ -143,6 +155,8 @@ public class ShardingAutoConfiguration {
 
     /**
      * 根据时间单位返回分片模式
+     * @param timeUnit 时间unit
+     * @return 获取时间分区模式的结果
      */
     private String getTimePartitionPattern(String timeUnit) {
         switch (timeUnit.toUpperCase()) {
@@ -165,6 +179,7 @@ public class ShardingAutoConfiguration {
 
     /**
      * 收集所有已注册的数据源（过滤动态路由数据源和分片数据源）
+     * @return collect数据源的结果
      */
     private List<DataSource> collectDataSources() {
         Map<String, DataSource> allDataSources = DataSourceContextSupport.getAllDataSources();

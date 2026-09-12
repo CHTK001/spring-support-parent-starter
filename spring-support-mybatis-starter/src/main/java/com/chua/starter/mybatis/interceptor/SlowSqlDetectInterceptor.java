@@ -34,6 +34,7 @@ import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
  * <p>注意：事件中是否携带 SQL/参数由 {@link MybatisSlowSqlProperties} 控制，避免敏感信息泄露。</p>
  *
  * @since 2026/4/27
+ * @author CH
  */
 @Intercepts({
         @Signature(type = Executor.class, method = "update", args = {MappedStatement.class, Object.class}),
@@ -88,6 +89,12 @@ public class SlowSqlDetectInterceptor implements Interceptor {
         }
     }
 
+    /**
+     * 发布slowsql事件。
+     * @param invocation invocation
+     * @param elapsedMs elapsedms
+     * @param error 错误
+     */
     private void publishSlowSqlEvent(Invocation invocation, long elapsedMs, Throwable error) {
         Object[] args = invocation.getArgs();
         if (args == null || args.length == 0 || !(args[0] instanceof MappedStatement ms)) {
@@ -138,8 +145,21 @@ public class SlowSqlDetectInterceptor implements Interceptor {
         }
     }
 
+    /**
+      * resolveboundsql。
+     * @param ms ms
+     * @param args 参数
+     * @param parameter 参数
+     * @return resolveBoundSql的结果
+     */
     private BoundSql resolveBoundSql(MappedStatement ms, Object[] args, Object parameter) {
-        // MyBatis 的 query 重载中，BoundSql 可能已在参数中传入
+ // MyBatis 的 查询 重载中，boundsql 可能已在参数中传入
+    /**
+     * sqlresolve结果类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
         if (args.length >= 6 && args[5] instanceof BoundSql bs) {
             return bs;
         }
@@ -149,12 +169,44 @@ public class SlowSqlDetectInterceptor implements Interceptor {
     private static class SqlResolveResult {
         /** SQL */
         private final String sql;
-        /** Parameters */
+        /**
+         * 参数
+         *
+         /**
+          * sqlresolve结果。
+          * @param sql SQL
+          * @param parameters 参数
+          */
+         * @param obj obj
+         * @return 获取参数值的结果
+         * @param value 值
+         * @param maxLen 最大len
+         */
         private final List<String> parameters;
+/**
+   * resolvesql。
+ * @param configuration 配置
+ * @param boundSql boundsql
+ * @return resolveSql的结果
+ * @param obj obj
+ * @param value 值
+ /**
+   * sqlresolve结果。
+   * @param sql sql
+   * @param parameters 参数
+  */
+ * @param maxLen 最大len
+ */
 
         private SqlResolveResult(String sql, List<String> parameters) {
             this.sql = sql;
             this.parameters = parameters;
+        /**
+         * resolveSql。
+         * @param configuration 配置
+         * @param boundSql boundSql
+         * @return resolveSql的结果
+         */
         }
     }
 
@@ -193,15 +245,23 @@ public class SlowSqlDetectInterceptor implements Interceptor {
     }
 
     private String truncate(String value, int maxLen) {
-        if (value == null) return null;
+        if (value == null) {
+            return null;
+        }
         int safeMax = Math.max(0, maxLen);
-        if (safeMax == 0) return "";
-        if (value.length() <= safeMax) return value;
+        if (safeMax == 0) {
+            return "";
+        }
+        if (value.length() <= safeMax) {
+            return value;
+        }
         return value.substring(0, safeMax) + "...(truncated)";
     }
 
     private String getParameterValue(Object obj) {
-        if (obj == null) return "null";
+        if (obj == null) {
+            return "null";
+        }
         if (obj instanceof String) {
             return "'" + obj + "'";
         }

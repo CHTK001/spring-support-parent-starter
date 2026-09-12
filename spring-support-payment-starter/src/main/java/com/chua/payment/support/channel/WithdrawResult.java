@@ -7,14 +7,15 @@ import java.math.BigDecimal;
 /**
  * 提现结果
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class WithdrawResult {
-    /** Success */
+    /** 成功 */
     private boolean success;
-    /** WithdrawNO */
+    /** withdrawno */
     private String withdrawNo;
-    /** TradeNO */
+    /** 贸易no */
     private String tradeNo;
     /** Amount */
     private BigDecimal amount;

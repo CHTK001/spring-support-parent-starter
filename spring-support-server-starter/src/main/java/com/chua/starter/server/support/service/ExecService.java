@@ -21,10 +21,10 @@ public interface ExecService {
     /**
      * 批量执行命令（同步等待全部主机完成）
      *
-     * @param hostIds        目标主机 ID 集合
+     * @param hostIds        目标主机 标识 集合
      * @param command        命令内容
      * @param timeoutSeconds 单机命令超时（秒），空取默认值
-     * @param jobId          关联的计划任务 ID（可为空，非空时日志自动绑定 jobId）
+     * @param jobId          关联的计划任务 标识（可为空，非空时日志自动绑定 作业标识）
      * @return 每台主机的执行日志
      */
     ReturnResult<List<MsExecLog>> runCommand(List<Long> hostIds, String command, Integer timeoutSeconds, Long jobId);
@@ -32,7 +32,7 @@ public interface ExecService {
     /**
      * 文件分发：上传到每台主机的指定目录
      *
-     * @param hostIds   目标主机 ID 集合
+     * @param hostIds   目标主机 标识 集合
      * @param directory 目标目录
      * @param file      分发文件
      * @return 每台主机的分发日志
@@ -82,7 +82,7 @@ public interface ExecService {
     /**
      * 查询执行日志
      *
-     * @param type   日志类型 COMMAND / FILE / JOB，可为空
+     * @param type   日志类型 命令 / 文件 / 作业，可为空
      * @param hostId 主机过滤，可为空
      * @return 日志列表（最新在前，上限 200）
      */

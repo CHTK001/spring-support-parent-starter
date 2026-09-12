@@ -17,7 +17,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class TaskDistributionProperties {
 
     /**
-     * 节点 ID（默认自动生成，建议显式配置）
+      * 节点 标识（默认自动生成，建议显式配置）
      */
     private String nodeId;
 
@@ -42,12 +42,12 @@ public class TaskDistributionProperties {
     private int consumerThreads = 1;
 
     /**
-     * 持久化存储类型：memory / file / db（默认 memory）
+      * 持久化存储类型：内存 / 文件 / db（默认 内存）
      */
     private String storeType = "memory";
 
     /**
-     * 文件存储数据目录（storeType = file 时生效）
+      * 文件存储数据目录（存储类型 = 文件 时生效）
      */
     private String storePath = "./data/taskstore/";
 
@@ -65,6 +65,7 @@ public class TaskDistributionProperties {
      * 服务端配置。
      *
      * @since 4.0.0.42
+     * @author CH
      */
     @Data
     public static class ServerConfig {
@@ -94,6 +95,7 @@ public class TaskDistributionProperties {
      * 任务默认配置。
      *
      * @since 4.0.0.42
+     * @author CH
      */
     @Data
     public static class TaskConfig {

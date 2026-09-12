@@ -19,11 +19,11 @@ import org.apache.sshd.server.command.Command;
 import org.apache.sshd.server.shell.ShellFactory;
 
 /**
- * Gogo SSH shell 服务器：补齐 {@code plugin.osgi.shell.protocol=ssh} 的缺失装配——
+   * Gogo SSH Shell 服务器：补齐 {@code plugin.osgi.shell.protocol=ssh} 的缺失装配——
  * 以 MINA SSHD 2.x API 直连启动 SSH 服务器，将 SSH 通道会话接线到 Felix 框架内的
- * Gogo {@code CommandProcessor}（经框架 BundleContext 按名查找服务 + 反射调用——
- * bundle 与应用类加载器的类身份不同，不能用 Class 对象直查），实现 bundle 管理命令
- * （bundle:install/list/start/uninstall 等）的 SSH 远程操作。
+   * Gogo {@code CommandProcessor}（经框架 bundle上下文 按名查找服务 + 反射调用——
+   * bundle 与应用类加载器的类身份不同，不能用 类 对象直查），实现 bundle 管理命令
+   * （bundle:install/列表/启动/uninstall 等）的 SSH 远程操作。
  *
  * @author CH
  * @since 2026/09/04
@@ -31,17 +31,25 @@ import org.apache.sshd.server.shell.ShellFactory;
 @Slf4j
 public class GogoSshShellServer {
 
-    private static final String COMMAND_PROCESSOR_NAME = "org.apache.felix.service.command.CommandProcessor";
+    private static final String COMMAND_PROCESSOR_NAME = "org.apache.felix.service.command.CommandProcessor"; // 命令处理器名称
 
-    private final String host;
-    private final int port;
-    private final String username;
-    private final String password;
-    private final BundleContext bundleContext;
-    private SshServer sshServer;
-    /** 缓存 Gogo CommandProcessor（启动时一次性查找——避免每连接查找的抖动） */
+    private final String host; // 主机
+    private final int port; // 端口
+    private final String username; // 用户名
+    private final String password; // 密码
+    private final BundleContext bundleContext; // bundle上下文
+    private SshServer sshServer; // ssh服务端
+    /** 缓存 Gogo 命令处理器（启动时一次性查找——避免每连接查找的抖动） */
     private volatile Object commandProcessor;
 
+    /**
+     * gogosshshell服务端。
+     * @param host 主机
+     * @param port 端口
+     * @param username 用户名
+     * @param password 密码
+     * @param bundleContext bundle上下文
+     */
     public GogoSshShellServer(String host, int port, String username, String password, BundleContext bundleContext) {
         this.host = host == null ? "127.0.0.1" : host;
         this.port = port;
@@ -80,13 +88,17 @@ public class GogoSshShellServer {
         }
     }
 
-    /** 按名查找 Gogo CommandProcessor 服务（规避 bundle/应用类加载器类身份差异） */
+    /**
+     * 按名查找 Gogo 命令处理器 服务（规避 bundle/应用类加载器类身份差异）
+     *
+     * @return lookup命令处理器的结果
+     */
     private Object lookupCommandProcessor() {
         if (bundleContext == null) {
             return null;
         }
-        // 注：getAllServiceReferences(null,null) 可见该服务，而单数 getServiceReference(name)
-        // 在 Felix 7 下偶发不匹配——统一用全量 API + objectClass 手动匹配（实证可靠）
+ // 注：获取全部服务引用(空,空) 可见该服务，而单数 获取服务引用(名称)
+ // 在 Felix 7 下偶发不匹配——统一用全量 API + 对象类 手动匹配（实证可靠）
         try {
             org.osgi.framework.ServiceReference<?>[] all =
                     bundleContext.getAllServiceReferences(null, null);
@@ -107,13 +119,13 @@ public class GogoSshShellServer {
         return null;
     }
 
-    /** SSH 通道会话 -> Gogo CommandProcessor 会话接线 */
+    /** SSH 通道会话 -> Gogo 命令处理器 会话接线 */
     private class GogoShellCommand implements Command {
 
-        private InputStream in;
-        private OutputStream out;
-        private OutputStream err;
-        private ExitCallback callback;
+        private InputStream in; // 入
+        private OutputStream out; // 出
+        private OutputStream err; // err
+        private ExitCallback callback; // callback
 
         @Override
         public void setInputStream(InputStream in) {
@@ -138,7 +150,7 @@ public class GogoSshShellServer {
         @Override
         public void start(ChannelSession channel, Environment env) throws IOException {
             // bundle: 命令不依赖 Gogo 会话（框架 API 直通）——直接用通道输出流启动会话循环，
-            // 规避二次 createSession 在 gogo 运行时下的阻塞/抖动
+ // 规避二次 创建会话 在 gogo 运行时下的阻塞/抖动
             PrintStream console = new PrintStream(out, true);
             Thread thread = new Thread(() -> runLoop(console), "gogo-ssh-shell");
             thread.setDaemon(true);
@@ -149,7 +161,11 @@ public class GogoSshShellServer {
         public void destroy(ChannelSession channel) {
         }
 
-        /** 读取行 -> 回显 -> bundle: 命令直通框架 API（其他命令按需走 Gogo），输出提示符 */
+        /**
+         * 读取行 -> 回显 -> bundle: 命令直通框架 API（其他命令按需走 Gogo），输出提示符
+         *
+         * @param console 控制台
+         */
         private void runLoop(PrintStream console) {
             try {
                 StringBuilder line = new StringBuilder();
@@ -164,6 +180,11 @@ public class GogoSshShellServer {
                             console.println(raw);
                             console.flush();
                             if (!handleBundleCommand(command, console)) {
+                                /**
+                                 * 执行viagogo。
+                                 * @param command 命令
+                                 * @param console 控制台
+                                 */
                                 executeViaGogo(command, console);
                             }
                             console.print("g! ");
@@ -187,7 +208,12 @@ public class GogoSshShellServer {
             }
         }
 
-        /** 非 bundle: 命令按需走 Gogo CommandProcessor（会话按命令创建，失败输出提示不中断） */
+        /**
+         * 非 bundle: 命令按需走 Gogo 命令处理器（会话按命令创建，失败输出提示不中断）
+         *
+         * @param command 命令
+         * @param console 控制台
+         */
         private void executeViaGogo(String command, PrintStream console) {
             try {
                 Object processor = commandProcessor != null ? commandProcessor : lookupCommandProcessor();
@@ -208,10 +234,12 @@ public class GogoSshShellServer {
         }
 
         /**
-         * 直接处理 {@code bundle:} 命令（框架 API——gogo.command 1.1.2 不提供 bundle: 命令
-         * （CommandNotFoundException 实证），且外部命令注册存在类加载器身份差异，故在会话层直通 BundleContext）。
+          * 直接处理 {@code bundle:} 命令（框架 API——gogo.命令 1.1.2 不提供 bundle: 命令
+          * （命令notfound异常 实证），且外部命令注册存在类加载器身份差异，故在会话层直通 bundle上下文）。
          *
          * @return true 表示已处理（无需走 Gogo）
+         * @param command 命令
+         * @param console 控制台
          */
         private boolean handleBundleCommand(String command, PrintStream console) {
             try {
@@ -261,7 +289,12 @@ public class GogoSshShellServer {
             return false;
         }
 
-        /** Bundle 状态常量 -> 名称 */
+        /**
+         * Bundle 状态常量 -> 名称
+         *
+         * @param state 状态
+         * @return 状态名称的结果
+         */
         private static String stateName(int state) {
             switch (state) {
                 case Bundle.INSTALLED: return "INSTALLED";

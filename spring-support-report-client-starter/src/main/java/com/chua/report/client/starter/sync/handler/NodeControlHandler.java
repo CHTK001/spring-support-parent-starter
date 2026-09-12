@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
  * 包含重启保全机制：生成守护脚本检测应用启动状态
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2025/01/17
  * @author CH
  */
@@ -64,19 +64,19 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     });
 
     @Override
-    /** 设置ApplicationContext */
+    /** 设置application上下文 */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
 
     @Override
-    /** 获取Name */
+    /** 获取名称 */
     public String getName() {
         return "nodeControlHandler";
     }
 
     @Override
-    /** Supports */
+    /** 支持 */
     public boolean supports(String topic) {
         return MonitorTopics.NODE_RESTART.equals(topic) 
                 || MonitorTopics.NODE_SHUTDOWN.equals(topic);
@@ -185,8 +185,8 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
      */
     private void restartApplication() {
         if (applicationContext instanceof ConfigurableApplicationContext ctx) {
-            // 使用退出码 0 触发重启（需要配合外部进程管理器如 systemd、docker 等）
-            // 或者使用 Spring Boot DevTools 的重启机制
+ // 使用退出码 0 触发重启（需要配合外部进程管理器如 systemd、Docker 等）
+ // 或者使用 Spring Boot devtools 的重启机制
             try {
                 // 尝试使用 Spring Boot Actuator 的重启功能
                 Class<?> restartEndpointClass = ReflectUtils.forName(
@@ -286,7 +286,7 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
     }
 
     /**
-     * 生成 Windows 守护脚本
+      * 生成 窗口 守护脚本
      *
      * @param healthUrl      健康检查 URL
      * @param timeoutSeconds 超时时间
@@ -403,7 +403,7 @@ public class NodeControlHandler implements SyncMessageHandler, ApplicationContex
             ProcessBuilder pb;
 
             if (isWindows) {
-                // Windows: 使用 start 命令在新窗口中运行
+ // 窗口: 使用 启动 命令在新窗口中运行
                 pb = new ProcessBuilder("cmd", "/c", "start", "/min", "重启守护", "cmd", "/c", scriptPath.toString());
             } else {
                 // Linux: 使用 nohup 后台运行

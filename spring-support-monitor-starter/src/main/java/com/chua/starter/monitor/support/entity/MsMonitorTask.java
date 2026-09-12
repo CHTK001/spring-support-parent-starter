@@ -23,7 +23,7 @@ import java.time.LocalDateTime;
 @TableName("ms_monitor_task")
 public class MsMonitorTask extends SysBase {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -31,15 +31,15 @@ public class MsMonitorTask extends SysBase {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
-    /** ID */
+    /** 标识 */
     private Long id;
 
     /**
-     * 关联监控资产 id
+      * 关联监控资产 标识
      */
     @TableField("ms_monitor_task_monitor_id")
     @Schema(description = "关联监控资产 id", example = "1")
-    /** MonitorID */
+    /** 监控标识 */
     private Long monitorId;
 
     /**
@@ -47,7 +47,7 @@ public class MsMonitorTask extends SysBase {
      */
     @TableField("ms_monitor_task_name")
     @Schema(description = "任务名称", example = "Redis INFO 采集")
-    /** Monitor任务名称 */
+    /** 监控任务名称 */
     private String monitorTaskName;
 
     /**
@@ -81,7 +81,7 @@ public class MsMonitorTask extends SysBase {
      */
     @TableField("ms_monitor_task_cron")
     @Schema(description = "cron 表达式", example = "0/10 * * * * ?")
-    /** Monitor任务cron */
+    /** 监控任务cron */
     private String monitorTaskCron;
 
     /**
@@ -89,7 +89,7 @@ public class MsMonitorTask extends SysBase {
      */
     @TableField("ms_monitor_task_timeout")
     @Schema(description = "超时(毫秒)", example = "5000")
-    /** Monitor任务超时 */
+    /** 监控任务超时 */
     private Integer monitorTaskTimeout;
 
     /**
@@ -97,7 +97,7 @@ public class MsMonitorTask extends SysBase {
      */
     @TableField("ms_monitor_task_enabled")
     @Schema(description = "是否启用 1启用 0禁用", example = "1")
-    /** Monitor任务是否启用 */
+    /** 监控任务是否启用 */
     private Integer monitorTaskEnabled;
 
     /**
@@ -105,7 +105,7 @@ public class MsMonitorTask extends SysBase {
      */
     @TableField("ms_monitor_task_remark")
     @Schema(description = "备注", example = "Redis INFO 关键指标 10 秒一采")
-    /** Monitor任务remark */
+    /** 监控任务评论 */
     private String monitorTaskRemark;
 
     /**
@@ -113,6 +113,6 @@ public class MsMonitorTask extends SysBase {
      */
     @TableField("ms_monitor_task_last_run_time")
     @Schema(description = "最近一次触发时间", example = "2026-08-04T10:00:00")
-    /** 最后RUN时间 */
+    /** 最后运行时间 */
     private LocalDateTime lastRunTime;
 }

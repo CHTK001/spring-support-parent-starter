@@ -6,6 +6,8 @@ import java.util.List;
 
 /**
  * 免费代理服务：自研抓取（databay 可用源）→ 清空代理表 → 录入；页面从表读取
+ * @author CH
+ * @since 4.0.0
  */
 public interface ProxyService {
 
@@ -26,7 +28,7 @@ public interface ProxyService {
     /**
      * 当前代理（自动——表内第一个——业务无需手动指定）
      *
-     * @return "host:port"，无则 null
+     * @return "host:port"，无则 空
      */
     String currentProxy();
 }

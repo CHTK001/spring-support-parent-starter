@@ -12,7 +12,7 @@ import java.io.IOException;
  *
  * <p>此入口接受 SpringDoc 的 {@link io.swagger.v3.oas.models.OpenAPI},
  * 通过 {@link OpenApiConverter} 适配到通用 {@link OpenApiDocumentData},
- * 再委托给 {@link OpenApiDocumentProvider} SPI 实现 (html / markdown / word)。</p>
+   * 再委托给 {@link OpenApiDocumentProvider} SPI 实现 (HTML / markdown / word)。</p>
  *
  * <p>整个流程不耦合具体 SPI 实现, 升级或替换实现 (例如自定义主题) 只需替换 SPI。</p>
  *
@@ -23,9 +23,9 @@ import java.io.IOException;
 public class SwaggerOpenApiExporter {
 
     /**
-     * 导出 SpringDoc OpenAPI 到指定文件。
+      * 导出 springdoc 打开api 到指定文件。
      *
-     * @param openAPI    SpringDoc OpenAPI
+     * @param openAPI    springdoc 打开api
      * @param props      导出配置
      * @throws IOException 写文件失败
      */
@@ -55,15 +55,25 @@ public class SwaggerOpenApiExporter {
     }
 
     /**
-     * 解析要使用的 Provider 类型: 默认从 output 后缀推断 (html / md / docx)。
+      * 解析要使用的 提供者 类型: 默认从 输出 后缀推断 (HTML / md / docx)。
+     * @param props props
+     * @return resolve类型的结果
      */
     private String resolveType(SwaggerExportProperties props) {
         String output = props.getOutput();
-        if (output == null) return "html";
+        if (output == null) {
+            return "html";
+        }
         String lower = output.toLowerCase();
-        if (lower.endsWith(".html") || lower.endsWith(".htm")) return "html";
-        if (lower.endsWith(".md") || lower.endsWith(".markdown")) return "markdown";
-        if (lower.endsWith(".docx") || lower.endsWith(".doc")) return "word";
+        if (lower.endsWith(".html") || lower.endsWith(".htm")) {
+            return "html";
+        }
+        if (lower.endsWith(".md") || lower.endsWith(".markdown")) {
+            return "markdown";
+        }
+        if (lower.endsWith(".docx") || lower.endsWith(".doc")) {
+            return "word";
+        }
         return "html";
     }
 }

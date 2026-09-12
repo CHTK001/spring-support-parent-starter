@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "知识库文档管理")
 public class EduKnowledgeDocController {
 
-    /** KnowledgeDOC服务 */
+    /** 知识doc服务 */
     private final IEduKnowledgeDocService knowledgeDocService;
 
     /**
@@ -75,7 +75,7 @@ public class EduKnowledgeDocController {
     /**
      * 删除文档
      *
-     * @param id 文档ID
+     * @param id 文档标识
      * @return 是否成功
      */
     @Operation(summary = "删除文档")

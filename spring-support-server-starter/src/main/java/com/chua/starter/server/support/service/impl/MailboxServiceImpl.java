@@ -20,7 +20,7 @@ import java.util.Map;
  * <p>
  * 邮箱身份约定：{@code msServerIdentityUsername}=邮箱地址、{@code msServerIdentityPassword}=IMAP 授权码(加密存储)、
  * {@code msServerIdentityImapHost/Port}=IMAP 服务器(可空，空则按邮箱域名推断 imap.<域名>，端口默认 993)。
- * 通过 {@code utils-support-email-starter} 的 EmailClient 建立 IMAP 连接拉取收件箱。
+   * 通过 {@code utils-support-email-starter} 的 email客户端 建立 IMAP 连接拉取收件箱。
  * </p>
  *
  * @author CH
@@ -31,7 +31,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MailboxServiceImpl implements MailboxService {
 
-    /** 身份 Mapper */
+    /** 身份 映射器 */
     private final MsServerIdentityMapper identityMapper;
     /** 凭据加解密器 */
     private final CredentialCipher cipher;
@@ -126,6 +126,8 @@ public class MailboxServiceImpl implements MailboxService {
 
     /**
      * 解析邮箱身份 → IMAP 连接信息。
+     * @param identityId identityid
+     * @return resolve的结果
      */
     private ResolvedMail resolve(Long identityId) {
         if (identityId == null) {
@@ -146,6 +148,14 @@ public class MailboxServiceImpl implements MailboxService {
         }
         int port = identity.getMsServerIdentityImapPort() == null
                 ? DEFAULT_IMAP_PORT : identity.getMsServerIdentityImapPort();
+        /**
+          * resolvedmail。
+         * @param email email
+         * @param authCode 认证编码
+         * @param imapHost imap主机
+         * @param port 端口
+         * @return ResolvedMail的结果
+         */
         return new ResolvedMail(email, authCode, imapHost, port);
     }
 
@@ -166,6 +176,11 @@ public class MailboxServiceImpl implements MailboxService {
 
     /**
      * 解析后的邮箱连接信息
+     * @param email email
+     * @param authCode 认证编码
+     * @param imapHost imap主机
+     * @param imapPort imap端口
+     * @return ResolvedMail的结果
      */
     private record ResolvedMail(String email, String authCode, String imapHost, int imapPort) {
     }

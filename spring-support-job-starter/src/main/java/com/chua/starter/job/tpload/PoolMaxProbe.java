@@ -10,12 +10,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 线程池上限探针: 验证 ThreadPoolExecutor 从 core 弹性扩容到 max 的真实上限,
- * 以及打满 max + 队列满之后 AbortPolicy 的拒绝行为。
+   * 线程池上限探针: 验证 thread游泳池执行器 从 核心 弹性扩容到 最大 的真实上限,
+   * 以及打满 最大 + 队列满之后 abortpolicy 的拒绝行为。
  *
  * <p>复刻 {@link JobAutoConfiguration#buildExecutor()} 的构造参数
- * (core/max/queue + namedThreadFactory + AbortPolicy), 故意把队列容量调小
- * (queue=10), 一次性突发提交远超处理能力的任务, 观察:</p>
+   * (核心/最大/队列 + 名称thread工厂 + abortpolicy), 故意把队列容量调小
+   * (队列=10), 一次性突发提交远超处理能力的任务, 观察:</p>
  * <ul>
  *   <li>{@code largestPoolSize} 是否精确等于 max (弹性扩容上限);</li>
  *   <li>thread 峰值、active 峰值;</li>
@@ -39,7 +39,7 @@ public class PoolMaxProbe {
     private static final int MAX = 32;
 
     /**
-     * 故意缩小队列容量, 使任务量快速压满 core + queue, 推动线程扩到 max
+      * 故意缩小队列容量, 使任务量快速压满 核心 + 队列, 推动线程扩到 最大
      */
     private static final int QUEUE = 10;
 
@@ -49,7 +49,7 @@ public class PoolMaxProbe {
     private static final long WORK_MS = 300L;
 
     /**
-     * 突发提交任务总数 (远超 core+queue+ (max-core) 的总在途容量, 必触发拒绝)
+      * 突发提交任务总数 (远超 核心+队列+ (最大-核心) 的总在途容量, 必触发拒绝)
      */
     private static final int TASKS = 300;
 

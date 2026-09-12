@@ -21,7 +21,7 @@ import java.lang.reflect.Proxy;
 
 /**
  * 令牌类型拦截器
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/01/18
  * @author CH
  */
@@ -38,7 +38,7 @@ public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor 
     }
 
     @Override
-    /** AfterProperties设置 */
+    /** 之后属性设置 */
     public void afterPropertiesSet() throws Exception {
         this.setAdvice(new MethodInterceptor() {
             @Nullable
@@ -48,6 +48,12 @@ public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor 
                 TokenForType tokenForType = getAnnotation(invocation);
                 UserResume userResume = com.chua.starter.oauth.client.support.execute.AuthSessionUtils.getUserInfo(UserResume.class);
                 if (null == userResume) {
+                    /**
+                      * OAuth异常。
+                     * @param "您的账号没有权限 "您的账号没有权限
+                     * @param 请联系管理员分配!" 请联系管理员分配!"
+                     * @return oauth异常的结果
+                     */
                     throw new OauthException("您的账号没有权限, 请联系管理员分配!");
                 }
 
@@ -67,7 +73,13 @@ public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor 
         });
     }
 
-    /** 是否判断相等 */
+    /**
+     * 是否判断相等
+     *
+     * @param authTypes 认证类型
+     * @param loginType login类型
+     * @return 是否equals的结果
+     */
     private boolean isEquals(AuthType[] authTypes, String loginType) {
         if(null == authTypes) {
             return true;
@@ -95,7 +107,7 @@ public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor 
     /**
      * 获取注解
      * @param invocation 方法调用
-     * @return {@link TokenForType}
+     * @return {@link 令牌for类型}
      */
     private TokenForType getAnnotation(MethodInvocation invocation) {
         Method method = invocation.getMethod();
@@ -107,7 +119,7 @@ public class TokenForTypeInterceptor extends StaticMethodMatcherPointcutAdvisor 
     }
 
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
         return Ordered.HIGHEST_PRECEDENCE;
     }

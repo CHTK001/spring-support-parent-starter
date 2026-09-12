@@ -8,12 +8,12 @@ import java.util.Set;
  * @author CH
  */
 public class RoleJudge {
-    /** Roles */
+    /** 角色 */
     private final Set<String> roles;
 
     /**
-     * 创建 RoleJudge 实例
-     * @param roles roles
+      * 创建 角色judge 实例
+     * @param roles 角色
      */
     public RoleJudge(Set<String> roles) {
         this.roles = roles;

@@ -40,12 +40,13 @@ import java.util.Map;
  * webrequest
  *
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class WebRequest {
 
     @Getter
-    /** Auth属性 */
+    /** 认证属性 */
     private final AuthClientProperties authProperties;
     /** 上下文路径 */
     private final String contextPath;
@@ -53,17 +54,19 @@ public class WebRequest {
     private final HttpServletRequest request;
     /** 请求mapping处理器mapping */
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
-    /** Path_matcher */
+    /** 路径_匹配 */
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
     /** 协议 */
     private final String protocol;
 
 
     /**
-     * 创建 WebRequest 实例
-     * @param authProperties authProperties
-     * @param HttpServletRequest HttpServletRequest
-     * @param RequestMappingHandlerMapping RequestMappingHandlerMapping
+      * 创建 web请求 实例
+     * @param authProperties 认证属性
+     * @param request httpservlet请求
+     * @param requestMappingHandlerMapping 请求mapping处理器mapping
+     * @param request 请求
+     * @param requestMappingHandlerMapping 请求mapping处理器mapping
      */
     public WebRequest(AuthClientProperties authProperties, HttpServletRequest request, RequestMappingHandlerMapping requestMappingHandlerMapping) {
         this.authProperties = authProperties;
@@ -80,14 +83,20 @@ public class WebRequest {
     }
 
     /**
-     * 创建 WebRequest 实例
-     * @param authProperties authProperties
+      * 创建 web请求 实例
+     * @param authProperties 认证属性
      */
     public WebRequest(AuthClientProperties authProperties) {
+        /**
+         * this。
+         * @param authProperties 认证属性
+         * @param null 空
+         * @param null 空
+         */
         this(authProperties, null, null);
     }
 
-    private static final ConcurrentReferenceHashMap<HandlerMethod, HandlerMethod> PASS = new ConcurrentReferenceHashMap<>(1024);
+    private static final ConcurrentReferenceHashMap<HandlerMethod, HandlerMethod> PASS = new ConcurrentReferenceHashMap<>(1024); // 通过
 
     /**
      * 协议实例缓存（协议名+配置摘要 -> 协议实例），避免每次请求重复 SPI 查找与构造
@@ -148,6 +157,11 @@ public class WebRequest {
                 try {
                     throw exception;
                 } catch (HttpRequestMethodNotSupportedException e) {
+                    /**
+                     * runtime异常。
+                     * @param e.getMessage( e.获取消息(
+                     * @return runtime异常的结果
+                     */
                     throw new RuntimeException(e.getMessage());
                 }
             } catch (Exception ignored) {
@@ -192,7 +206,12 @@ public class WebRequest {
         return false;
     }
 
-    /** 是否Resource */
+    /**
+     * 是否Resource
+     *
+     * @param uri uri
+     * @return 是否resource的结果
+     */
     private boolean isResource(String uri) {
         return uri.endsWith(".js") ||
                 uri.endsWith(".css") ||
@@ -213,7 +232,7 @@ public class WebRequest {
             return true;
         }
         
-        //判断cookie
+ // 判断Cookie
         Cookie[] tokenCookie = getCookie();
         String token = getToken();
         
@@ -236,7 +255,7 @@ public class WebRequest {
     }
 
     /**
-     * 鉴权token
+      * 鉴权令牌
      *
      * @return token
      */
@@ -258,7 +277,7 @@ public class WebRequest {
     }
 
     /**
-     * 鉴权token
+      * 鉴权令牌
      *
      * @return token
      */
@@ -318,7 +337,7 @@ public class WebRequest {
             log.debug("[WebRequest鉴权]请求头指定协议: {}", oauthProtocol);
         }
         
-        // 从Header读取认证类型（x-oauth-type用于认证类型：oauth2、appkey、jwt等）
+ // 从头部读取认证类型（x-OAuth-类型用于认证类型：OAuth2、appkey、JWT等）
         String authType = request.getHeader("x-oauth-type");
         if (authType != null) {
             log.debug("[WebRequest鉴权]请求头指定认证类型: {}", authType);
@@ -328,7 +347,7 @@ public class WebRequest {
             return AuthenticationInformation.passAuthenticationInformation();
         }
 
-        // AI AppKey 本地认证：Bearer Token 命中动态表则直接放行（单机/外部 OAuth 不可达场景）
+ // AI app钥匙 本地认证：Bearer 令牌 命中动态表则直接放行（单机/外部 o认证 不可达场景）
         AuthenticationInformation aiAppKeyResult = tryAuthenticateAiAppKey();
         if (aiAppKeyResult != null) {
             return aiAppKeyResult;
@@ -388,10 +407,10 @@ public class WebRequest {
     }
 
     /**
-     * 尝试使用 AI AppKey 本地认证。
+      * 尝试使用 AI app钥匙 本地认证。
      * <p>
-     * 启用 {@code plugin.oauth.ai-app-key.enabled} 时，对 Bearer Token 做本地动态表校验。
-     * 命中则返回已认证信息；未命中或未启用返回 {@code null}，由调用方走原 OAuth 协议。
+      * 启用 {@code plugin.oauth.ai-app-key.enabled} 时，对 Bearer 令牌 做本地动态表校验。
+      * 命中则返回已认证信息；未命中或未启用返回 {@code null}，由调用方走原 o认证 协议。
      * </p>
      *
      * @return 认证信息，未命中返回 {@code null}
@@ -416,6 +435,12 @@ public class WebRequest {
                 .setNickName(username)
                 .setLoginType("ai-appkey");
         log.debug("[WebRequest鉴权]AI AppKey 认证通过: user={}", username);
+        /**
+         * 认证信息。
+         * @param Information.OK 信息.OK
+         * @param userResume 用户resume
+         * @return 认证信息的结果
+         */
         return new AuthenticationInformation(Information.OK, userResume);
     }
 
@@ -434,7 +459,7 @@ public class WebRequest {
      * 解析认证协议扩展
      * <p>通过 SPI 加载配置的协议实现，协议未注册时返回 null，由调用方降级处理</p>
      *
-     * @return 协议实例，未注册返回 null
+     * @return 协议实例，未注册返回 空
      */
     private Protocol resolveProtocol() {
         return getProtocolExtension(authProperties);
@@ -445,7 +470,7 @@ public class WebRequest {
      * <p>协议配置全局唯一，实例无每请求状态，按协议名缓存单例避免每次请求重复 SPI 查找与构造</p>
      *
      * @param authProperties 认证配置
-     * @return 协议实例，未注册返回 null
+     * @return 协议实例，未注册返回 空
      */
     public static Protocol getProtocolExtension(AuthClientProperties authProperties) {
         if (null == authProperties) {
@@ -468,9 +493,9 @@ public class WebRequest {
     }
 
     /**
-     * 构建协议缓存key
+      * 构建协议缓存钥匙
      * <p>以协议名 + 影响协议运行行为的关键配置摘要作为 key，
-     * 保证不同配置的协议实例互不串用，同时避免敏感配置（如 SecretKey）明文进 key</p>
+      * 保证不同配置的协议实例互不串用，同时避免敏感配置（如 secret钥匙）明文进 钥匙</p>
      *
      * @param authProperties 认证配置
      * @return 缓存key
@@ -498,6 +523,7 @@ public class WebRequest {
      * 是嵌入
      *
      * @return boolean
+     * @param authProperties 认证属性
      */
     public static boolean isEmbed(AuthClientProperties authProperties) {
         String oauthUrl = authProperties.getAddress();
@@ -515,7 +541,7 @@ public class WebRequest {
     }
 
     /**
-     * 刷新token（支持指定协议）- 高性能版本
+      * 刷新令牌（支持指定协议）- 高性能版本
      *
      * @param upgradeType   升级类型
      * @param refreshToken  刷新令牌
@@ -533,7 +559,7 @@ public class WebRequest {
             return null;
         }
 
-        // REFRESH 类型只需要 refreshToken，不需要现有的 accessToken
+ // REFRESH 类型只需要 refresh令牌，不需要现有的 access令牌
         if (upgradeType == UpgradeType.REFRESH && refreshToken != null && !refreshToken.isEmpty()) {
             return protocolExtension.upgrade(cookie, token,
                     upgradeType, refreshToken);
@@ -552,6 +578,7 @@ public class WebRequest {
      * 获取用户信息
      *
      * @return 用户信息
+     * @param throwOnFailure 抛出on失败
      */
     public UserResult getUserResult(boolean throwOnFailure) {
         AuthenticationInformation authentication = authentication();
@@ -562,6 +589,11 @@ public class WebRequest {
                 return UserResult.emptyUserResult();
             }
             if (throwOnFailure) {
+                /**
+                 * runtime异常。
+                 * @param "请重新登录" "请重新登录"
+                 * @return runtime异常的结果
+                 */
                 throw new RuntimeException("请重新登录");
             }
             return null;

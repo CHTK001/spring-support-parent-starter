@@ -9,11 +9,11 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * 作业处理程序工厂
  * <p>
- * 采用单例模式，负责管理所有已注册的JobHandler实例。
- * 使用ConcurrentHashMap保证线程安全。
+   * 采用单例模式，负责管理所有已注册的作业处理器实例。
+   * 使用并发哈希映射保证线程安全。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/03/11
  * @author CH
  */
@@ -27,9 +27,9 @@ public class JobHandlerFactory {
     private static final JobHandlerFactory INSTANCE = new JobHandlerFactory();
 
     /**
-     * JobHandler存储仓库
-     * key: 处理器名称
-     * value: JobHandler实例
+      * 作业处理器存储仓库
+      * 钥匙: 处理器名称
+      * 价值观: 作业处理器实例
      */
     private static final ConcurrentMap<String, JobHandler> JOB_HANDLER_REPOSITORY = new ConcurrentHashMap<>();
 

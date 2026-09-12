@@ -18,6 +18,9 @@ public class Validator {
     private static final Pattern ID_CARD_PATTERN = Pattern.compile("^[1-9]\\d{5}(19|20)\\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\\d|3[01])\\d{3}[\\dXx]$");
     private static final Pattern IP_PATTERN = Pattern.compile("^(25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.(25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.(25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.(25[0-5]|2[0-4]\\d|[01]?\\d\\d?)$");
 
+    /**
+     * Validator。
+     */
     private Validator() {
     }
 
@@ -61,7 +64,7 @@ public class Validator {
     }
 
     /**
-     * 验证 IPv4 地址格式
+      * 验证 ipv4 地址格式
      *
      * @param ip IP 地址
      * @return 格式正确返回 true，否则返回 false

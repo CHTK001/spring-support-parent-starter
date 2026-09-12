@@ -13,6 +13,8 @@ import java.time.LocalDateTime;
 
 /**
  * 网络抓包会话
+ * @author CH
+ * @since 4.0.0
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -20,45 +22,45 @@ import java.time.LocalDateTime;
 @TableName("ms_tshark_session")
 public class MsTsharkSession extends SysBase {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
-    private Long id;
+    private Long id; // 标识
 
     @TableField("ms_tshark_session_name")
     @Schema(description = "会话名称", example = "eth0 临时抓包")
-    private String sessionName;
+    private String sessionName; // 会话名称
 
     @TableField("ms_tshark_session_interface")
     @Schema(description = "抓包网卡", example = "eth0")
-    private String captureInterface;
+    private String captureInterface; // capture接口
 
     @TableField("ms_tshark_session_filter")
     @Schema(description = "抓包过滤表达式(BPF)", example = "tcp port 8080")
-    private String captureFilter;
+    private String captureFilter; // capture过滤器
 
     @TableField("ms_tshark_session_status")
     @Schema(description = "状态: 0已停止 1抓包中", example = "1")
-    private Integer captureStatus;
+    private Integer captureStatus; // capture状态
 
     @TableField("ms_tshark_session_packet_count")
     @Schema(description = "抓取数据包总数", example = "1024")
-    private Integer packetCount;
+    private Integer packetCount; // 数据包数量
 
     @TableField("ms_tshark_session_file_path")
     @Schema(description = "pcap 文件路径")
-    private String filePath;
+    private String filePath; // 文件路径
 
     @TableField("ms_tshark_session_duration")
     @Schema(description = "抓包时长(秒)", example = "30")
-    private Integer captureDuration;
+    private Integer captureDuration; // capture持续时间
 
     @TableField("ms_tshark_session_start_time")
     @Schema(description = "开始时间", example = "2026-08-30T10:00:00")
-    private LocalDateTime startTime;
+    private LocalDateTime startTime; // 启动时间
 
     @TableField("ms_tshark_session_end_time")
     @Schema(description = "结束时间", example = "2026-08-30T10:00:30")
-    private LocalDateTime endTime;
+    private LocalDateTime endTime; // 结束时间
 }

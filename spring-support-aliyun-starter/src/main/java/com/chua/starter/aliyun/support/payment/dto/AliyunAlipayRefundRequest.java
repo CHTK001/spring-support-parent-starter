@@ -7,16 +7,17 @@ import java.math.BigDecimal;
 /**
  * 支付宝退款请求
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class AliyunAlipayRefundRequest {
     /** 排序NO */
     private String orderNo;
-    /** RefundNO */
+    /** 退税no */
     private String refundNo;
     /** Refundamount */
     private BigDecimal refundAmount;
-    /** Reason */
+    /** ReasonMLmlml */
     private String reason;
 }
 

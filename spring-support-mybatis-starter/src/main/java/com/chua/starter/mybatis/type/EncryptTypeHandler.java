@@ -15,52 +15,58 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 /**
- * 字段字段的 TypeHandler 实现类，基于 实现
- * 可通过 jasypt.encryptor.password 配置项，设置密钥
+   * 字段字段的 类型处理器 实现类，基于 实现
+   * 可通过 jasypt.encryptor.密码 配置项，设置密钥
  *
  * @author 芋道源码
  * @author CH
+ * @since 4.0.0
  */
 public class EncryptTypeHandler extends BaseTypeHandler<String> {
 
-    /** Encryptor_property_name */
+    /** Encryptor_财产_名称 */
     private static final String ENCRYPTOR_PROPERTY_NAME = "mybatis-plus.encryptor.password";
-    /** Encryptor_mode_property_name */
+    /** Encryptor_mode_财产_名称 */
     private static final String ENCRYPTOR_MODE_PROPERTY_NAME = "mybatis-plus.encryptor.mode";
 
-    /** AEScodec */
+    /** aescodec */
     private static AesCipher aesCodec;
     /** 密码 */
     private static String password;
 
     @Override
-    /** 设置NonNullParameter */
+    /** 设置non空参数 */
     public void setNonNullParameter(PreparedStatement ps, int i, String parameter, JdbcType jdbcType) throws SQLException {
         ps.setString(i, encrypt(parameter));
     }
 
     @Override
-    /** 获取NullableResult */
+    /** 获取空结果 */
     public String getNullableResult(ResultSet rs, String columnName) throws SQLException {
         String value = rs.getString(columnName);
         return decrypt(value);
     }
 
     @Override
-    /** 获取NullableResult */
+    /** 获取空结果 */
     public String getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
         String value = rs.getString(columnIndex);
         return decrypt(value);
     }
 
     @Override
-    /** 获取NullableResult */
+    /** 获取空结果 */
     public String getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
         String value = cs.getString(columnIndex);
         return decrypt(value);
     }
 
-    /** Decrypt */
+    /**
+     * Decrypt
+     *
+     * @param value 价值观
+     * @return decrypt的结果
+     */
     private static String decrypt(String value) {
         if (value == null) {
             return null;
@@ -71,6 +77,12 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
         }
         try {
             byte[] decoded = com.chua.common.support.lang.algorithm.crypto.Hex.decodeHex(value);
+            /**
+             * 字符串。
+             * @param decoded decoded
+             * @param java.nio.charset.StandardCharsets.UTF_8 Java.nio.字符集.标准字符集.UTF_8
+             * @return 字符串的结果
+             */
             return new String(decoded, java.nio.charset.StandardCharsets.UTF_8);
         } catch (RuntimeException ex) {
             if (encryptMode == EncryptMode.AUTO) {
@@ -80,7 +92,12 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
         }
     }
 
-    /** Encrypt */
+    /**
+     * Encrypt
+     *
+     * @param rawValue raw价值观
+     * @return encrypt的结果
+     */
     public static String encrypt(String rawValue) {
         if (rawValue == null) {
             return null;
@@ -93,11 +110,21 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
             byte[] encrypted = getEncryptor().encrypt(key, rawValue.getBytes(StandardCharsets.UTF_8));
             return Hex.encodeHexString(encrypted);
         } catch (Exception e) {
+            /**
+             * runtime异常。
+             * @param "加密失败" "加密失败"
+             * @param e e
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("加密失败", e);
         }
     }
 
-    /** 获取Encryptor */
+    /**
+     * 获取Encryptor
+     *
+     * @return 获取encryptor的结果
+     */
     private static AesCipher getEncryptor() {
         if (aesCodec != null) {
             return aesCodec;
@@ -109,7 +136,11 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
         return aesCodec;
     }
 
-    /** 解析EncryptMode */
+    /**
+     * 解析encryptmode
+     *
+     * @return resolveEncryptMode的结果
+     */
     private static EncryptMode resolveEncryptMode() {
         String mode = System.getProperty(ENCRYPTOR_MODE_PROPERTY_NAME);
         if (!StringUtils.hasText(mode)) {
@@ -122,6 +153,12 @@ public class EncryptTypeHandler extends BaseTypeHandler<String> {
         }
     }
 
+    /**
+      * encryptmode枚举。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     private enum EncryptMode {
         ENCRYPT,
         PLAIN,

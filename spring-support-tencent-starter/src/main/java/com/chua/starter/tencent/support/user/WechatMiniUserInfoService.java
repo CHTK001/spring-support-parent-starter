@@ -21,6 +21,11 @@ public class WechatMiniUserInfoService implements UserInfoService {
     public UserResume checkLogin(String principal, String credential, String address, Object ext) {
         String openid = principal;
         if (!StringUtils.hasText(openid)) {
+            /**
+             * 用户resume。
+             * @param 不能为空" 不能为空"
+             * @return 用户resume的结果
+             */
             return new UserResume("openid 不能为空");
         }
 

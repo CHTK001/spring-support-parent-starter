@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * 消息去重过滤器
  * <p>
- * 基于消息ID进行去重，防止重复消息处理
+   * 基于消息标识进行去重，防止重复消息处理
  * </p>
  *
  * @since 2025-03-20
@@ -20,8 +20,8 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class DuplicateMessageFilter implements MessageFilter {
 
-    private final ConcurrentHashMap<String, Long> processedMessages = new ConcurrentHashMap<>();
-    /** Default_ttl */
+    private final ConcurrentHashMap<String, Long> processedMessages = new ConcurrentHashMap<>(); // 处理消息
+    /** 默认_ttl */
     private static final long DEFAULT_TTL = TimeUnit.MINUTES.toMillis(5);
 
     @Override
@@ -29,7 +29,7 @@ public class DuplicateMessageFilter implements MessageFilter {
     public boolean filter(Message message) {
         String messageId = message.getId();
         if (messageId == null || messageId.isEmpty()) {
-            return true; // 没有ID的消息直接通过
+            return true; // 没有标识的消息直接通过
         }
 
         long now = System.currentTimeMillis();
@@ -49,6 +49,10 @@ public class DuplicateMessageFilter implements MessageFilter {
         }
 
         // 清理过期记录
+        /**
+          * cleanupexpiredrecords。
+         * @param now now
+         */
         cleanupExpiredRecords(now);
 
         return true;
@@ -56,6 +60,7 @@ public class DuplicateMessageFilter implements MessageFilter {
 
     /**
      * 清理过期记录
+     * @param now now
      */
     private void cleanupExpiredRecords(long now) {
         if (processedMessages.size() > 10000) {
@@ -72,7 +77,7 @@ public class DuplicateMessageFilter implements MessageFilter {
     }
 
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
         return -1000; // 最高优先级，最先执行
     }

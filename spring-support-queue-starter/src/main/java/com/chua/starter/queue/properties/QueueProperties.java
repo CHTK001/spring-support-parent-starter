@@ -13,7 +13,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = QueueProperties.PREFIX)
 public class QueueProperties {
 
-    /** Prefix */
+    /** 前缀 */
     public static final String PREFIX = "plugin.queue";
 
     /**
@@ -22,7 +22,7 @@ public class QueueProperties {
     private boolean enable = false;
 
     /**
-     * 消息队列类型（chronicle-queue/local/mqtt/kafka/rabbitmq/rocketmq/nats）
+       * 消息队列类型（chronicle-队列/本地/MQTT/Kafka/RabbitMQ/RocketMQ/NATS）
      */
     private String type = "chronicle-queue";
 
@@ -32,7 +32,7 @@ public class QueueProperties {
     private String defaultDestination;
 
     /**
-     * 本地队列配置（基于Guava EventBus）
+      * 本地队列配置（基于Guava 事件bus）
      */
     private LocalConfig local = new LocalConfig();
 
@@ -47,7 +47,7 @@ public class QueueProperties {
     private KafkaConfig kafka = new KafkaConfig();
 
     /**
-     * RabbitMQ配置
+       * RabbitMQ配置
      */
     private RabbitMQConfig rabbitmq = new RabbitMQConfig();
 
@@ -57,12 +57,14 @@ public class QueueProperties {
     private NatsConfig nats = new NatsConfig();
 
     /**
-     * RocketMQ配置
+       * RocketMQ配置
      */
     private RocketMQConfig rocketmq = new RocketMQConfig();
 
     /**
-     * 本地队列配置（基于Guava EventBus）
+      * 本地队列配置（基于Guava 事件bus）
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class LocalConfig {
@@ -72,12 +74,20 @@ public class QueueProperties {
         private int delayThreads = 2;
 
         // Lombok 注解处理器未运行时的手动 getter/setter 方法
-        /** 获取DelayThreads */
+        /**
+         * 获取延迟threads
+         *
+         * @return 获取延迟threads的结果
+         */
         public int getDelayThreads() {
             return delayThreads;
         }
 
-        /** 设置DelayThreads */
+        /**
+         * 设置延迟threads
+         *
+         * @param delayThreads 延迟threads
+         */
         public void setDelayThreads(int delayThreads) {
             this.delayThreads = delayThreads;
         }
@@ -85,6 +95,8 @@ public class QueueProperties {
 
     /**
      * MQTT配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class MqttConfig {
@@ -94,7 +106,7 @@ public class QueueProperties {
         private String address = "tcp://localhost:1883";
 
         /**
-         * 客户端ID
+          * 客户端标识
          */
         private String clientId;
 
@@ -109,7 +121,7 @@ public class QueueProperties {
         private String password;
 
         /**
-         * QoS级别
+          * qos级别
          */
         private int qos = 1;
 
@@ -124,72 +136,128 @@ public class QueueProperties {
         private int keepAliveInterval = 60;
 
         // Lombok 注解处理器未运行时的手动 getter 方法
-        /** 获取Address */
+        /**
+         * 获取地址
+         *
+         * @return 获取地址的结果
+         */
         public String getAddress() {
             return address;
         }
 
-        /** 设置Address */
+        /**
+         * 设置地址
+         *
+         * @param address 地址
+         */
         public void setAddress(String address) {
             this.address = address;
         }
 
-        /** 获取ClientId */
+        /**
+          * 获取客户端标识
+         *
+         * @return 获取客户端id的结果
+         */
         public String getClientId() {
             return clientId;
         }
 
-        /** 设置ClientId */
+        /**
+          * 设置客户端标识
+         *
+         * @param clientId 客户端标识
+         */
         public void setClientId(String clientId) {
             this.clientId = clientId;
         }
 
-        /** 获取Username */
+        /**
+         * 获取用户名
+         *
+         * @return 获取用户名的结果
+         */
         public String getUsername() {
             return username;
         }
 
-        /** 设置Username */
+        /**
+         * 设置用户名
+         *
+         * @param username 用户名
+         */
         public void setUsername(String username) {
             this.username = username;
         }
 
-        /** 获取Password */
+        /**
+         * 获取密码
+         *
+         * @return 获取密码的结果
+         */
         public String getPassword() {
             return password;
         }
 
-        /** 设置Password */
+        /**
+         * 设置密码
+         *
+         * @param password 密码
+         */
         public void setPassword(String password) {
             this.password = password;
         }
 
-        /** 获取Qos */
+        /**
+         * 获取Qos
+         *
+         * @return 获取qos的结果
+         */
         public int getQos() {
             return qos;
         }
 
-        /** 设置Qos */
+        /**
+         * 设置Qos
+         *
+         * @param qos qos
+         */
         public void setQos(int qos) {
             this.qos = qos;
         }
 
-        /** 获取ConnectionTimeout */
+        /**
+         * 获取connection超时
+         *
+         * @return 获取connection超时的结果
+         */
         public int getConnectionTimeout() {
             return connectionTimeout;
         }
 
-        /** 设置ConnectionTimeout */
+        /**
+         * 设置connection超时
+         *
+         * @param connectionTimeout connection超时
+         */
         public void setConnectionTimeout(int connectionTimeout) {
             this.connectionTimeout = connectionTimeout;
         }
 
-        /** 获取KeepAliveInterval */
+        /**
+         * 获取keepalive间隔
+         *
+         * @return 获取keepalive间隔的结果
+         */
         public int getKeepAliveInterval() {
             return keepAliveInterval;
         }
 
-        /** 设置KeepAliveInterval */
+        /**
+         * 设置keepalive间隔
+         *
+         * @param keepAliveInterval keepalive间隔
+         */
         public void setKeepAliveInterval(int keepAliveInterval) {
             this.keepAliveInterval = keepAliveInterval;
         }
@@ -197,6 +265,8 @@ public class QueueProperties {
 
     /**
      * Kafka配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class KafkaConfig {
@@ -206,7 +276,7 @@ public class QueueProperties {
         private String bootstrapServers = "localhost:9092";
 
         /**
-         * 消费者组ID
+          * 消费者组标识
          */
         private String groupId = "default-group";
 
@@ -231,69 +301,119 @@ public class QueueProperties {
         private String acks = "all";
 
         // Lombok 注解处理器未运行时的手动 getter 方法
-        /** 获取BootstrapServers */
+        /**
+         * 获取bootstrap服务端
+         *
+         * @return 获取bootstrap服务端的结果
+         */
         public String getBootstrapServers() {
             return bootstrapServers;
         }
 
-        /** 设置BootstrapServers */
+        /**
+         * 设置bootstrap服务端
+         *
+         * @param bootstrapServers bootstrap服务端
+         */
         public void setBootstrapServers(String bootstrapServers) {
             this.bootstrapServers = bootstrapServers;
         }
 
-        /** 获取分组Id */
+        /**
+          * 获取分组标识
+         *
+         * @return 获取群体id的结果
+         */
         public String getGroupId() {
             return groupId;
         }
 
-        /** 设置分组Id */
+        /**
+          * 设置分组标识
+         *
+         * @param groupId 群体标识
+         */
         public void setGroupId(String groupId) {
             this.groupId = groupId;
         }
 
-        /** 获取AutoOffset重置 */
+        /**
+         * 获取auto偏移量重置
+         *
+         * @return 获取auto偏移量reset的结果
+         */
         public String getAutoOffsetReset() {
             return autoOffsetReset;
         }
 
-        /** 设置AutoOffset重置 */
+        /**
+         * 设置auto偏移量重置
+         *
+         * @param autoOffsetReset auto偏移量reset
+         */
         public void setAutoOffsetReset(String autoOffsetReset) {
             this.autoOffsetReset = autoOffsetReset;
         }
 
-        /** 是否启用Auto提交 */
+        /**
+         * 是否启用Auto提交
+         *
+         * @return 是否enableautocommit的结果
+         */
         public boolean isEnableAutoCommit() {
             return enableAutoCommit;
         }
 
-        /** 设置启用Auto提交 */
+        /**
+         * 设置启用Auto提交
+         *
+         * @param enableAutoCommit enableautocommit
+         */
         public void setEnableAutoCommit(boolean enableAutoCommit) {
             this.enableAutoCommit = enableAutoCommit;
         }
 
-        /** 获取Auto提交IntervalMs */
+        /**
+         * 获取Auto提交间隔ms
+         *
+         * @return 获取autocommit间隔ms的结果
+         */
         public int getAutoCommitIntervalMs() {
             return autoCommitIntervalMs;
         }
 
-        /** 设置Auto提交IntervalMs */
+        /**
+         * 设置Auto提交间隔ms
+         *
+         * @param autoCommitIntervalMs autocommit间隔ms
+         */
         public void setAutoCommitIntervalMs(int autoCommitIntervalMs) {
             this.autoCommitIntervalMs = autoCommitIntervalMs;
         }
 
-        /** 获取Acks */
+        /**
+         * 获取ACK
+         *
+         * @return 获取ACK的结果
+         */
         public String getAcks() {
             return acks;
         }
 
-        /** 设置Acks */
+        /**
+         * 设置ACK
+         *
+         * @param acks ACK
+         */
         public void setAcks(String acks) {
             this.acks = acks;
         }
     }
 
     /**
-     * RabbitMQ配置
+       * RabbitMQ配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class RabbitMQConfig {
@@ -328,62 +448,110 @@ public class QueueProperties {
         private int connectionTimeout = 60000;
 
         // Lombok 注解处理器未运行时的手动 getter/setter 方法
-        /** 获取Host */
+        /**
+         * 获取主机
+         *
+         * @return 获取主机的结果
+         */
         public String getHost() {
             return host;
         }
 
-        /** 设置Host */
+        /**
+         * 设置主机
+         *
+         * @param host 主机
+         */
         public void setHost(String host) {
             this.host = host;
         }
 
-        /** 获取Port */
+        /**
+         * 获取端口
+         *
+         * @return 获取端口的结果
+         */
         public int getPort() {
             return port;
         }
 
-        /** 设置Port */
+        /**
+         * 设置端口
+         *
+         * @param port 端口
+         */
         public void setPort(int port) {
             this.port = port;
         }
 
-        /** 获取Username */
+        /**
+         * 获取用户名
+         *
+         * @return 获取用户名的结果
+         */
         public String getUsername() {
             return username;
         }
 
-        /** 设置Username */
+        /**
+         * 设置用户名
+         *
+         * @param username 用户名
+         */
         public void setUsername(String username) {
             this.username = username;
         }
 
-        /** 获取Password */
+        /**
+         * 获取密码
+         *
+         * @return 获取密码的结果
+         */
         public String getPassword() {
             return password;
         }
 
-        /** 设置Password */
+        /**
+         * 设置密码
+         *
+         * @param password 密码
+         */
         public void setPassword(String password) {
             this.password = password;
         }
 
-        /** 获取VirtualHost */
+        /**
+         * 获取虚拟主机
+         *
+         * @return 获取虚拟主机的结果
+         */
         public String getVirtualHost() {
             return virtualHost;
         }
 
-        /** 设置VirtualHost */
+        /**
+         * 设置虚拟主机
+         *
+         * @param virtualHost 虚拟主机
+         */
         public void setVirtualHost(String virtualHost) {
             this.virtualHost = virtualHost;
         }
 
-        /** 获取ConnectionTimeout */
+        /**
+         * 获取connection超时
+         *
+         * @return 获取connection超时的结果
+         */
         public int getConnectionTimeout() {
             return connectionTimeout;
         }
 
-        /** 设置ConnectionTimeout */
+        /**
+         * 设置connection超时
+         *
+         * @param connectionTimeout connection超时
+         */
         public void setConnectionTimeout(int connectionTimeout) {
             this.connectionTimeout = connectionTimeout;
         }
@@ -391,6 +559,8 @@ public class QueueProperties {
 
     /**
      * NATS配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class NatsConfig {
@@ -410,7 +580,7 @@ public class QueueProperties {
         private String password;
 
         /**
-         * Token认证
+          * 令牌认证
          */
         private String token;
 
@@ -436,94 +606,160 @@ public class QueueProperties {
 
         // ==================== 手动 Getter/Setter ====================
 
-        /** 获取Url */
+        /**
+         * 获取Url
+         *
+         * @return 获取url的结果
+         */
         public String getUrl() {
             return url;
         }
 
-        /** 设置Url */
+        /**
+         * 设置Url
+         *
+         * @param url url
+         */
         public void setUrl(String url) {
             this.url = url;
         }
 
-        /** 获取Username */
+        /**
+         * 获取用户名
+         *
+         * @return 获取用户名的结果
+         */
         public String getUsername() {
             return username;
         }
 
-        /** 设置Username */
+        /**
+         * 设置用户名
+         *
+         * @param username 用户名
+         */
         public void setUsername(String username) {
             this.username = username;
         }
 
-        /** 获取Password */
+        /**
+         * 获取密码
+         *
+         * @return 获取密码的结果
+         */
         public String getPassword() {
             return password;
         }
 
-        /** 设置Password */
+        /**
+         * 设置密码
+         *
+         * @param password 密码
+         */
         public void setPassword(String password) {
             this.password = password;
         }
 
-        /** 获取Token */
+        /**
+         * 获取令牌
+         *
+         * @return 获取令牌的结果
+         */
         public String getToken() {
             return token;
         }
 
-        /** 设置Token */
+        /**
+         * 设置令牌
+         *
+         * @param token 令牌
+         */
         public void setToken(String token) {
             this.token = token;
         }
 
-        /** 获取Consumer分组 */
+        /**
+         * 获取Consumer分组
+         *
+         * @return 获取consumer群体的结果
+         */
         public String getConsumerGroup() {
             return consumerGroup;
         }
 
-        /** 设置Consumer分组 */
+        /**
+         * 设置Consumer分组
+         *
+         * @param consumerGroup consumer群体
+         */
         public void setConsumerGroup(String consumerGroup) {
             this.consumerGroup = consumerGroup;
         }
 
-        /** 获取ConnectionTimeout */
+        /**
+         * 获取connection超时
+         *
+         * @return 获取connection超时的结果
+         */
         public long getConnectionTimeout() {
             return connectionTimeout;
         }
 
-        /** 设置ConnectionTimeout */
+        /**
+         * 设置connection超时
+         *
+         * @param connectionTimeout connection超时
+         */
         public void setConnectionTimeout(long connectionTimeout) {
             this.connectionTimeout = connectionTimeout;
         }
 
-        /** 获取ReconnectWait */
+        /**
+         * 获取reconnectwait
+         *
+         * @return 获取reconnectwait的结果
+         */
         public long getReconnectWait() {
             return reconnectWait;
         }
 
-        /** 设置ReconnectWait */
+        /**
+         * 设置reconnectwait
+         *
+         * @param reconnectWait reconnectwait
+         */
         public void setReconnectWait(long reconnectWait) {
             this.reconnectWait = reconnectWait;
         }
 
-        /** 获取最大值Reconnects */
+        /**
+         * 获取最大值Reconnects
+         *
+         * @return 获取最大reconnects的结果
+         */
         public int getMaxReconnects() {
             return maxReconnects;
         }
 
-        /** 设置最大值Reconnects */
+        /**
+         * 设置最大值Reconnects
+         *
+         * @param maxReconnects 最大reconnects
+         */
         public void setMaxReconnects(int maxReconnects) {
             this.maxReconnects = maxReconnects;
         }
     }
 
     /**
-     * RocketMQ配置
+       * RocketMQ配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class RocketMQConfig {
         /**
-         * NameServer地址
+          * 名称服务端地址
          */
         private String nameServer = "localhost:9876";
 
@@ -548,114 +784,202 @@ public class QueueProperties {
         private int maxMessageSize = 4194304;
 
         // Lombok 注解处理器未运行时的手动 getter/setter 方法
-        /** 获取NameServer */
+        /**
+         * 获取名称服务端
+         *
+         * @return 获取名称服务端的结果
+         */
         public String getNameServer() {
             return nameServer;
         }
 
-        /** 设置NameServer */
+        /**
+         * 设置名称服务端
+         *
+         * @param nameServer 名称服务端
+         */
         public void setNameServer(String nameServer) {
             this.nameServer = nameServer;
         }
 
-        /** 获取Producer分组 */
+        /**
+         * 获取Producer分组
+         *
+         * @return 获取producer群体的结果
+         */
         public String getProducerGroup() {
             return producerGroup;
         }
 
-        /** 设置Producer分组 */
+        /**
+         * 设置Producer分组
+         *
+         * @param producerGroup producer群体
+         */
         public void setProducerGroup(String producerGroup) {
             this.producerGroup = producerGroup;
         }
 
-        /** 获取Consumer分组 */
+        /**
+         * 获取Consumer分组
+         *
+         * @return 获取consumer群体的结果
+         */
         public String getConsumerGroup() {
             return consumerGroup;
         }
 
-        /** 设置Consumer分组 */
+        /**
+         * 设置Consumer分组
+         *
+         * @param consumerGroup consumer群体
+         */
         public void setConsumerGroup(String consumerGroup) {
             this.consumerGroup = consumerGroup;
         }
 
-        /** 获取发送MsgTimeout */
+        /**
+         * 获取发送msg超时
+         *
+         * @return 获取发送msg超时的结果
+         */
         public int getSendMsgTimeout() {
             return sendMsgTimeout;
         }
 
-        /** 设置发送MsgTimeout */
+        /**
+         * 设置发送msg超时
+         *
+         * @param sendMsgTimeout 发送msg超时
+         */
         public void setSendMsgTimeout(int sendMsgTimeout) {
             this.sendMsgTimeout = sendMsgTimeout;
         }
 
-        /** 获取最大值Message获取大小 */
+        /**
+         * 获取最大值消息获取大小
+         *
+         * @return 获取最大消息大小的结果
+         */
         public int getMaxMessageSize() {
             return maxMessageSize;
         }
 
-        /** 设置最大值Message获取大小 */
+        /**
+         * 设置最大值消息获取大小
+         *
+         * @param maxMessageSize 最大消息大小
+         */
         public void setMaxMessageSize(int maxMessageSize) {
             this.maxMessageSize = maxMessageSize;
         }
     }
 
     // Lombok 注解处理器未运行时的手动 getter 方法
-    /** 获取Type */
+    /**
+     * 获取类型
+     *
+     * @return 获取类型的结果
+     */
     public String getType() {
         return type;
     }
 
-    /** 获取Mqtt */
+    /**
+      * 获取MQTT
+     *
+     * @return 获取mqtt的结果
+     */
     public MqttConfig getMqtt() {
         return mqtt;
     }
 
-    /** 设置Mqtt */
+    /**
+      * 设置MQTT
+     *
+     * @param mqtt MQTT
+     */
     public void setMqtt(MqttConfig mqtt) {
         this.mqtt = mqtt;
     }
 
-    /** 获取Kafka */
+    /**
+     * 获取Kafka
+     *
+     * @return 获取kafka的结果
+     */
     public KafkaConfig getKafka() {
         return kafka;
     }
 
-    /** 设置Kafka */
+    /**
+     * 设置Kafka
+     *
+     * @param kafka Kafka
+     */
     public void setKafka(KafkaConfig kafka) {
         this.kafka = kafka;
     }
 
-    /** 获取Rabbitmq */
+    /**
+      * 获取RabbitMQ
+     *
+     * @return 获取rabbitmq的结果
+     */
     public RabbitMQConfig getRabbitmq() {
         return rabbitmq;
     }
 
-    /** 设置Rabbitmq */
+    /**
+      * 设置RabbitMQ
+     *
+     * @param rabbitmq RabbitMQ
+     */
     public void setRabbitmq(RabbitMQConfig rabbitmq) {
         this.rabbitmq = rabbitmq;
     }
 
-    /** 获取Rocketmq */
+    /**
+      * 获取RocketMQ
+     *
+     * @return 获取rocketmq的结果
+     */
     public RocketMQConfig getRocketmq() {
         return rocketmq;
     }
 
-    /** 设置Rocketmq */
+    /**
+      * 设置RocketMQ
+     *
+     * @param rocketmq RocketMQ
+     */
     public void setRocketmq(RocketMQConfig rocketmq) {
         this.rocketmq = rocketmq;
     }
 
-    /** 获取Local */
+    /**
+     * 获取本地
+     *
+     * @return 获取本地的结果
+     */
     public LocalConfig getLocal() {
         return local;
     }
 
-    /** 获取Nats */
+    /**
+     * 获取NATS
+     *
+     * @return 获取NATS的结果
+     */
     public NatsConfig getNats() {
         return nats;
     }
 
-    /** 设置Nats */
+    /**
+     * 设置NATS
+     *
+     * @param nats NATS
+     */
     public void setNats(NatsConfig nats) {
         this.nats = nats;
     }

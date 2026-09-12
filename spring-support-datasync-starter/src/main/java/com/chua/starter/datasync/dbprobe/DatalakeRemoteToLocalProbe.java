@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Datalake 远程→本地全链路探针：CSV源 → DataSync调度 → Chronicle → PipelineEngine → 多Sink + Subscriber。
+   * 数据湖 远程→本地全链路探针：CSV源 → 数据同步调度 → Chronicle → pipelineengine → 多Sink + Subscriber。
  *
  * <p>验证项（10 项）：
  * <ol>
@@ -59,17 +59,17 @@ public final class DatalakeRemoteToLocalProbe {
     /** Work dir */
     private static final Path WORK_DIR = Path.of("target/datalake-remote");
 
-    /** Pass count */
+    /** 通过 数量 */
     private static final AtomicInteger PASS = new AtomicInteger(0);
 
-    /** Fail count */
+    /** 失败 数量 */
     private static final AtomicInteger FAIL = new AtomicInteger(0);
 
     /** 各 Sink 写入记录 */
     private static final CopyOnWriteArrayList<String> LOG_WRITES = new CopyOnWriteArrayList<>();
-    private static final CopyOnWriteArrayList<String> STATS_WRITES = new CopyOnWriteArrayList<>();
-    private static final CopyOnWriteArrayList<String> RT_WRITES = new CopyOnWriteArrayList<>();
-    private static final CopyOnWriteArrayList<String> JDBC_WRITES = new CopyOnWriteArrayList<>();
+    private static final CopyOnWriteArrayList<String> STATS_WRITES = new CopyOnWriteArrayList<>(); // stats写入
+    private static final CopyOnWriteArrayList<String> RT_WRITES = new CopyOnWriteArrayList<>(); // rt写入
+    private static final CopyOnWriteArrayList<String> JDBC_WRITES = new CopyOnWriteArrayList<>(); // JDBC写入
 
     /**
      * 入口。
@@ -100,7 +100,7 @@ public final class DatalakeRemoteToLocalProbe {
             return Files.exists(csvPath);
         });
 
-        // ━━━━━━━━ 初始化 Datalake 组件 ━━━━━━━━
+ // ━━━━━━━━ 初始化 数据湖 组件 ━━━━━━━━
         PipelineManager pm = new DefaultPipelineManager();
         Map<String, DataSink> sinkRegistry = new ConcurrentHashMap<>();
         LogSink logSink = new LogSink();
@@ -141,21 +141,21 @@ public final class DatalakeRemoteToLocalProbe {
                 + "]}}}";
         pm.savePipeline("remote-output", pipelineDsl);
 
-        // Dispatcher（Chronicle Queue）
+ // Dispatcher（Chronicle 队列）
         String dispatchPath = WORK_DIR.resolve("dispatch").toString();
         DispatcherConfig dcfg = DispatcherConfig.builder().dataPath(dispatchPath).build();
         DispatcherProvider dispatcher = new ChronicleDispatcherProvider(dcfg);
         dispatcher.start();
 
-        // PipelineEngine
+ // pipelineengine
         DefaultPipelineEngine engine = new DefaultPipelineEngine(pm, sinkRegistry, dispatcher);
 
-        // DatalakeExecutorManager（注入 PipelineEngine + Sink）
+ // 数据湖执行器管理器（注入 pipelineengine + Sink）
         DatalakeExecutorManager execMgr = new DatalakeExecutorManager();
         execMgr.setPipelineEngine(null, engine, sinkRegistry);
         execMgr.setDispatcherProvider(dispatcher);
 
-        // ━━━━━━━━ 2. 构建 DataSyncServer（Datalake 模式）━━━━━━━━
+ // ━━━━━━━━ 2. 构建 数据同步服务端（数据湖 模式）━━━━━━━━
         DefaultDataSyncServer dataSyncServer = new DefaultDataSyncServer(
                 new DataSyncAgentServer(null, null, "datalake-remote"),
                 DefaultSyncDataSchedulerManager.SchedulerConfig.builder()
@@ -163,7 +163,7 @@ public final class DatalakeRemoteToLocalProbe {
         dataSyncServer.setMappingManager(new DefaultDataSyncMappingManager());
         dataSyncServer.setExecutorManager(execMgr);
 
-        // 注册 CSV Source（模拟远程数据源）
+ // 注册 CSV 源（模拟远程数据源）
         dataSyncServer.registerSource(new DelimitedDataSyncAgentSource(
                 "remote-csv", "remote-input", csvPath.toString(), ","));
 
@@ -179,13 +179,13 @@ public final class DatalakeRemoteToLocalProbe {
                 Map.of(), new com.chua.common.support.task.scheduler.CronTrigger("0/5 * * * * ?", LocalDateTime.now()));
         dataSyncServer.addMapping(mapping);
 
-        // 启动 DataSync Server（触发调度 → Chronicle → PipelineEngine）
+ // 启动 数据同步 服务端（触发调度 → Chronicle → pipelineengine）
         dataSyncServer.start();
         check("DataSyncServer 启动", () -> true);
 
         // ━━━━━━━━ 5. 手动触发一次同步（立即验证）━━━━━━━━
         check("手动触发同步 → PipelineEngine → 4 Sink", () -> {
-            // 直接通过 DatalakeReactorExecutor 发布数据模拟 DataSync 调度结果
+ // 直接通过 数据湖reactor执行器 发布数据模拟 数据同步 调度结果
             var executor = execMgr.getExecutor("remote-output");
             java.util.List<Map<String, Object>> rows = new java.util.ArrayList<>();
             for (int i = 1; i <= 50; i++) {
@@ -212,7 +212,9 @@ public final class DatalakeRemoteToLocalProbe {
 
         // ━━━━━━━━ 6. 验证数据内容正确性 ━━━━━━━━
         check("数据内容验证（首条 + 末条）", () -> {
-            if (LOG_WRITES.isEmpty()) return false;
+            if (LOG_WRITES.isEmpty()) {
+                return false;
+            }
             String first = LOG_WRITES.get(0);
             String last = LOG_WRITES.get(LOG_WRITES.size() - 1);
             boolean firstOk = first.contains("user_1") || first.contains("id=1");
@@ -246,6 +248,8 @@ public final class DatalakeRemoteToLocalProbe {
 
     /**
      * 断言检查。
+     * @param name 名称
+     * @param check 检查
      */
     private static void check(String name, java.util.function.BooleanSupplier check) {
         try {

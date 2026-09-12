@@ -41,13 +41,13 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import java.util.List;
 
 /**
- * OAuth客户端自动配置类
+   * o认证客户端自动配置类
  *
- * 提供OAuth客户端的完整配置，包括：
+   * 提供o认证客户端的完整配置，包括：
  * 1. 认证服务配置
  * 2. 过滤器配置
  * 3. Principal支持
- * 4. HttpServletRequest增强
+   * 4. httpservlet请求增强
  * 5. 权限拦截器配置
  *
  * @since 2022/7/23 8:51
@@ -61,8 +61,8 @@ public class AuthClientConfiguration
         implements ApplicationContextAware, BeanDefinitionRegistryPostProcessor, WebMvcConfigurer {
 
     /**
-     * Spring 管理的 AuthClientProperties Bean
-     * 确保与 WhitelistFileWatcher 使用同一个实例
+      * Spring 管理的 认证客户端属性 Bean
+      * 确保与 whitelist文件watcher 使用同一个实例
      */
     private AuthClientProperties authProperties;
     
@@ -70,9 +70,9 @@ public class AuthClientConfiguration
     private ApplicationContext applicationContext;
 
     /**
-     * OAuth认证服务
+      * o认证认证服务
      *
-     * 提供用户认证和权限管理功能，集成OAuth用户信息。
+      * 提供用户认证和权限管理功能，集成o认证用户信息。
      * 支持获取当前用户信息、角色验证、权限检查等功能。
      *
      * @return OAuth认证服务实例
@@ -80,6 +80,10 @@ public class AuthClientConfiguration
     @Bean(name = "authService")
     @Primary
     public AuthService authService() {
+        /**
+          * OAuth认证服务。
+         * @return oauth认证服务的结果
+         */
         return new OauthAuthService();
     }
 
@@ -87,27 +91,35 @@ public class AuthClientConfiguration
      * 权限拦截器
      *
      * 提供基于注解的权限控制功能，支持方法级别的权限验证。
-     * 集成OAuth用户信息进行权限检查。
+      * 集成o认证用户信息进行权限检查。
      *
      * @return 权限拦截器实例
      */
     @Bean
     @ConditionalOnMissingBean
     public PermissionInterceptor permissionProxyFactoryBean() {
+        /**
+         * 权限拦截器。
+         * @return 权限拦截器的结果
+         */
         return new PermissionInterceptor();
     }
 
     /**
-     * Token类型拦截器
+      * 令牌类型拦截器
      *
-     * 提供基于Token类型的拦截功能，支持不同类型Token的处理。
-     * 根据@TokenForType注解自动处理Token类型转换和验证。
+      * 提供基于令牌类型的拦截功能，支持不同类型令牌的处理。
+      * 根据@令牌for类型注解自动处理令牌类型转换和验证。
      *
      * @return Token类型拦截器实例
      */
     @Bean
     @ConditionalOnMissingBean
     public TokenForTypeInterceptor tokenForTypeInterceptor() {
+        /**
+         * 令牌for类型拦截器。
+         * @return 令牌for类型拦截器的结果
+         */
         return new TokenForTypeInterceptor();
     }
 
@@ -122,20 +134,24 @@ public class AuthClientConfiguration
     @ConditionalOnProperty(name = "plugin.oauth.temp.open", havingValue = "true", matchIfMissing = false)
     public UserStatisticProvider tempProvider() {
         OauthClientRuntimeContext.setAuthClientProperties(getSpringBean());
+        /**
+         * 用户statistic提供者。
+         * @return 用户statistic提供者的结果
+         */
         return new UserStatisticProvider();
     }
 
     /**
-     * OAuth认证过滤器注册
+      * o认证认证过滤器注册
      *
-     * 注册OAuth认证过滤器，提供以下功能：
+      * 注册o认证认证过滤器，提供以下功能：
      * 1. 用户身份验证
-     * 2. Principal支持（java.security.Principal）
-     * 3. HttpServletRequest增强（isUserInRole、getAuthType、logout、login）
-     * 4. Session管理
+       * 2. Principal支持（Java.安全性.Principal）
+      * 3. httpservlet请求增强（是否用户入角色、获取认证类型、logout、login）
+      * 4. 会话管理
      * 5. 用户信息存储
      *
-     * 过滤器会创建OAuthHttpServletRequestWrapper来增强HttpServletRequest，
+      * 过滤器会创建o认证httpservlet请求包装器来增强httpservlet请求，
      * 使其支持标准的Java EE安全API。
      *
      * @param requestMappingHandlerMapping Spring MVC请求映射处理器
@@ -152,7 +168,7 @@ public class AuthClientConfiguration
                 authClientProperties.getAddress(),
                 authClientProperties.isEnable());
         OauthClientRuntimeContext.setAuthClientProperties(authClientProperties);
-        // 使用注入的 AuthClientProperties Bean，确保与 WhitelistFileWatcher 同一实例
+ // 使用注入的 认证客户端属性 Bean，确保与 whitelist文件watcher 同一实例
         FilterRegistrationBean<AuthFilter> authFilterFilterRegistrationBean = new FilterRegistrationBean<>();
         authFilterFilterRegistrationBean.setOrder(Ordered.LOWEST_PRECEDENCE);
         authFilterFilterRegistrationBean.setUrlPatterns(authClientProperties.getBlockAddress());
@@ -165,7 +181,7 @@ public class AuthClientConfiguration
     }
 
     /**
-     * OAuth 认证过滤器 Bean
+      * o认证 认证过滤器 Bean
      * <p>
      * 作为 Spring Bean 暴露，支持注入后动态添加/删除白名单规则：
      * <ul>
@@ -182,11 +198,16 @@ public class AuthClientConfiguration
     @ConditionalOnMissingClass("com.chua.starter.oauth.server.support.SsoServer")
     @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     public AuthFilter authFilter(RequestMappingHandlerMapping requestMappingHandlerMapping) {
+        /**
+         * 认证过滤器。
+         * @param WebRequest(getSpringBean( web请求(获取springBean(
+         * @return 认证过滤器的结果
+         */
         return new AuthFilter(new WebRequest(getSpringBean()), requestMappingHandlerMapping);
     }
 
     /**
-     * OAuth 限流过滤器注册
+      * o认证 限流过滤器注册
      * <p>
      * 置于最高优先级，在认证过滤器之前对包括未认证流量在内的所有请求执行限流检查。
      * </p>
@@ -216,7 +237,7 @@ public class AuthClientConfiguration
     }
 
     @Override
-    /** 设置ApplicationContext */
+    /** 设置application上下文 */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
         OauthClientRuntimeContext.setApplicationContext(applicationContext);
@@ -230,11 +251,12 @@ public class AuthClientConfiguration
     }
     
     /**
-     * 获取 OAuth 客户端配置实例
+      * 获取 o认证 客户端配置实例
      * <p>
      * 优先使用 Spring 管理的 {@link AuthClientProperties} Bean，若该 Bean 因过早实例化未完成
-     * 配置绑定，则回退到 Binder 绑定成功的实例，确保 protocol/address/whitelist 等配置有效。
+      * 配置绑定，则回退到 Binder 绑定成功的实例，确保 协议/地址/whitelist 等配置有效。
      * </p>
+     * @return 获取springBean的结果
      */
     private AuthClientProperties getSpringBean() {
         try {
@@ -251,7 +273,7 @@ public class AuthClientConfiguration
     }
 
     @Override
-    /** 添加ArgumentResolvers */
+    /** 添加参数解析器 */
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         // 使用 Spring Bean 确保白名单更新能被感知
         AuthClientProperties props = getSpringBean();
@@ -266,7 +288,7 @@ public class AuthClientConfiguration
     }
 
     @Override
-    /** Post处理BeanDefinitionRegistry */
+    /** Post处理Beandefinitionregistry */
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         BeanDefinitionBuilder definitionBuilder1 = BeanDefinitionBuilder.genericBeanDefinition(WebRequest.class);
         definitionBuilder1.addConstructorArgValue(authProperties);
@@ -274,10 +296,10 @@ public class AuthClientConfiguration
     }
 
     @Override
-    /** Post处理BeanFactory */
+    /** Post处理Bean工厂 */
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         OauthClientRuntimeContext.setBeanFactory(beanFactory);
-        // BDRPP 阶段 @ConfigurationProperties Bean 可能尚未完成绑定，优先使用 Binder 绑定成功的实例
+ // BDRPP 阶段 @配置属性 Bean 可能尚未完成绑定，优先使用 Binder 绑定成功的实例
         AuthClientProperties bean = (null != this.authProperties && null != this.authProperties.getAddress())
                 ? this.authProperties : getSpringBean();
         log.info("[AuthClientConfiguration] postProcessBeanFactory - 协议: {}, 地址: {}", bean.getProtocol(), bean.getAddress());
@@ -286,22 +308,32 @@ public class AuthClientConfiguration
 
     @Bean
     @ConditionalOnMissingBean
-    /** WhitelistFileWatcher */
+    /**
+     * whitelist文件watcher
+     *
+     * @param authClientProperties 认证客户端属性
+     * @return whitelist文件watcher的结果
+     */
     public WhitelistFileWatcher whitelistFileWatcher(AuthClientProperties authClientProperties) {
+        /**
+         * whitelist文件watcher。
+         * @param authClientProperties 认证客户端属性
+         * @return whitelist文件watcher的结果
+         */
         return new WhitelistFileWatcher(authClientProperties);
     }
 
     /**
-     * AI AppKey 本地认证支持
+      * AI app钥匙 本地认证支持
      * <p>
-     * 基于 {@link com.chua.datasource.support.engine.JdbcEngine} 动态查询 AppKey 表，
-     * 无需编写 Mapper，用于单机部署或外部 OAuth 服务不可达时的 AI AppKey 认证。
-     * 仅在 {@code plugin.oauth.ai-app-key.enabled=true} 且存在 DataSource 时装配。
+      * 基于 {@link com.chua.datasource.support.engine.JdbcEngine} 动态查询 app钥匙 表，
+      * 无需编写 映射器，用于单机部署或外部 o认证 服务不可达时的 AI app钥匙 认证。
+      * 仅在 {@code plugin.oauth.ai-app-key.enabled=true} 且存在 数据源 时装配。
      * </p>
      *
-     * @param authClientProperties OAuth 客户端配置
+     * @param authClientProperties o认证 客户端配置
      * @param dataSource           应用数据源
-     * @return AI AppKey 认证支持实例
+     * @return AI app钥匙 认证支持实例
      */
     @Bean
     @ConditionalOnProperty(prefix = "plugin.oauth.ai-app-key", name = "enabled", havingValue = "true")
@@ -316,7 +348,11 @@ public class AuthClientConfiguration
     }
 
     @Bean
-    /** AuthClientServiceInfoContributor */
+    /**
+     * 认证客户端服务信息contributor
+     *
+     * @return 认证客户端服务信息contributor的结果
+     */
     public ServiceInfoContributor authClientServiceInfoContributor() {
         return registry -> {
             registry.registerEndpoint("认证授权", "认证接口", "/auth/**", "认证接口");

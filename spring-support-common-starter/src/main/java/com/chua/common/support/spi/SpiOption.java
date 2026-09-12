@@ -4,6 +4,7 @@ package com.chua.common.support.spi;
  * SPI 选项接口，定义 SPI 扩展点的元信息契约
  *
  * @author CH
+ * @since 4.0.0
  */
 public interface SpiOption {
     /**

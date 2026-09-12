@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * 海康设备真实会话（基于 HCNetSDK JNA）
+   * 海康设备真实会话（基于 hcnetsdk JNA）
  * <p>通过 JNA 加载本机 HCNetSDK.dll 与真实设备通信。</p>
  *
  * <p>若未安装 SDK 动态库或设备不可达，构造函数会抛出异常，</p>
@@ -93,7 +93,7 @@ public class HikvisionRealSession implements DeviceSession {
     private volatile boolean online = true;
 
     /**
-     * 登录用户 ID
+      * 登录用户 标识
      */
     private int userId = -1;
 
@@ -133,8 +133,16 @@ public class HikvisionRealSession implements DeviceSession {
         try {
             this.sdk = Native.load(SDK_LIBRARY_NAME, HCNetSDK.class);
         } catch (UnsatisfiedLinkError e) {
+            /**
+             * illegal状态异常。
+             * @param e.getMessage( e.获取消息(
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("HCNetSDK 动态库加载失败，请将 SDK 的 dll 放入系统库路径: " + e.getMessage(), e);
         }
+        /**
+         * login。
+         */
         login();
     }
 
@@ -143,6 +151,11 @@ public class HikvisionRealSession implements DeviceSession {
      */
     private void login() {
         if (!sdk.NET_DVR_Init()) {
+            /**
+             * illegal状态异常。
+             * @param sdk.NET_DVR_GetLastError( sdk.netdvr获取最后一个错误(
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("HCNetSDK 初始化失败，错误码: " + sdk.NET_DVR_GetLastError());
         }
         NET_DVR_USER_LOGIN_INFO loginInfo = new NET_DVR_USER_LOGIN_INFO();
@@ -151,6 +164,11 @@ public class HikvisionRealSession implements DeviceSession {
         userId = sdk.NET_DVR_Login_V40(loginInfo, deviceInfo);
         if (userId < 0) {
             sdk.NET_DVR_Cleanup();
+            /**
+             * illegal状态异常。
+             * @param info.getIp( 信息.获取ip(
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("海康设备登录失败: " + info.getIp()
                     + "，错误码: " + sdk.NET_DVR_GetLastError());
         }
@@ -158,6 +176,9 @@ public class HikvisionRealSession implements DeviceSession {
         this.channelCount = deviceInfo.byChanNum;
         log.info("海康设备登录成功: ip={}, serial={}, channels={}",
                 info.getIp(), serial, channelCount);
+        /**
+         * setup事件callback。
+         */
         setupEventCallback();
     }
 
@@ -202,7 +223,7 @@ public class HikvisionRealSession implements DeviceSession {
     }
 
     @Override
-    /** 获取DeviceId */
+    /** 获取deviceid */
     public String getDeviceId() {
         return info.getIp();
     }
@@ -249,32 +270,37 @@ public class HikvisionRealSession implements DeviceSession {
                     + "，错误码: " + sdk.NET_DVR_GetLastError());
         }
         previewBuffers.put(handle, buffer);
+        /**
+         * bytearray输入流。
+         * @param buffer.toByteArray( 缓冲.转为bytearray(
+         * @return bytearray输入流的结果
+         */
         return new ByteArrayInputStream(buffer.toByteArray());
     }
 
     @Override
     /** 查询Records */
     public List<RecordFile> queryRecords(int channel, TimeRange range) {
-        // 海康按时间检索录像，此处返回空列表，真实场景需结合 NET_DVR_FindRecord API
+ // 海康按时间检索录像，此处返回空列表，真实场景需结合 NET_DVR_findrecord API
         return Collections.emptyList();
     }
 
     @Override
-    /** 获取PlaybackUrl */
+    /** 获取playbackurl */
     public String getPlaybackUrl(int channel, TimeRange range) {
-        // JNA 直连模式不返回 URL，由前端调用 /video/playback 拿到 SDK 拉流字节流
+ // JNA 直连模式不返回 URL，由前端调用 /视频/playback 拿到 SDK 拉流字节流
         return null;
     }
 
     @Override
-    /** 获取LiveUrl */
+    /** 获取liveurl */
     public String getLiveUrl(int channel, String protocol) {
-        // JNA 直连模式不返回 URL，由前端调用 /video/stream 拿到 SDK 拉流字节流
+ // JNA 直连模式不返回 URL，由前端调用 /视频/流 拿到 SDK 拉流字节流
         return null;
     }
 
     @Override
-    /** TestConnection */
+    /** 测试connection */
     public boolean testConnection() {
         return isOnline();
     }
@@ -317,11 +343,16 @@ public class HikvisionRealSession implements DeviceSession {
             throw new IllegalStateException("海康回放失败: channel=" + channel
                     + "，错误码: " + sdk.NET_DVR_GetLastError());
         }
+        /**
+         * bytearray输入流。
+         * @param buffer.toByteArray( 缓冲.转为bytearray(
+         * @return bytearray输入流的结果
+         */
         return new ByteArrayInputStream(buffer.toByteArray());
     }
 
     @Override
-    /** PtzControl */
+    /** ptzcontrol */
     public void ptzControl(PtzCommand cmd, double speed) {
         Integer command = PTZ_COMMANDS.get(cmd);
         if (command == null) {
@@ -370,14 +401,14 @@ public class HikvisionRealSession implements DeviceSession {
     }
 
     @Override
-    /** ListPresets */
+    /** 列表presets */
     public List<PresetInfo> listPresets() {
         // 海康按通道枚举预置位，此处简化返回空列表
         return Collections.emptyList();
     }
 
     @Override
-    /** Remote解锁 */
+    /** 远程解锁 */
     public void remoteUnlock(int doorId) {
         boolean ok = sdk.NET_DVR_RemoteControl(userId, NET_DVR_CMD_OPEN_DOOR, Pointer.NULL, 0, Pointer.NULL, 0);
         if (!ok) {
@@ -388,26 +419,26 @@ public class HikvisionRealSession implements DeviceSession {
     }
 
     @Override
-    /** 查询AccessRecords */
+    /** 查询accessrecords */
     public List<AccessRecord> queryAccessRecords(TimeRange range) {
-        // 海康门禁记录需通过 GET_DOOR_STATE 等命令查询，此处简化返回空列表
+ // 海康门禁记录需通过 获取_门_状态 等命令查询，此处简化返回空列表
         return Collections.emptyList();
     }
 
     @Override
-    /** 订阅Event */
+    /** 订阅事件 */
     public void subscribeEvent(EventType type, EventListener listener) {
         listeners.computeIfAbsent(type, k -> new CopyOnWriteArrayList<>()).add(listener);
     }
 
     @Override
-    /** 取消订阅Event */
+    /** 取消订阅事件 */
     public void unsubscribeEvent(EventType type) {
         listeners.remove(type);
     }
 
     @Override
-    /** 取出Events */
+    /** 取出事件 */
     public List<DeviceEvent> pollEvents(TimeRange range) {
         if (eventQueue.isEmpty()) {
             return Collections.emptyList();

@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 服务器 HTTP 采集 Provider
+   * 服务器 HTTP 采集 提供者
  * <p>
  * 请求目标服务器暴露的 HTTP 接口(actuator/exporter 等),
  * 支持 JSON 响应按指标名取值, 原始文本返回可给终端/解析规则二次解析。
@@ -43,13 +43,13 @@ public class ServerHttpProvider implements MetricProvider {
     private static final int DEFAULT_TIMEOUT_MS = 5_000;
 
     @Override
-    /** ProviderType */
+    /** 提供者类型 */
     public ProviderType providerType() {
         return ProviderType.HTTP;
     }
 
     @Override
-    /** SupportServiceTypes */
+    /** 支持服务类型 */
     public Set<ServiceType> supportServiceTypes() {
         return Set.of(ServiceType.SERVER);
     }
@@ -120,6 +120,11 @@ public class ServerHttpProvider implements MetricProvider {
 
             // JSON 响应自动取值
             if (isJson(responseBody)) {
+                /**
+                 * 解析json字段。
+                 * @param responseBody 响应主体
+                 * @param result 结果
+                 */
                 parseJsonFields(responseBody, result);
             }
             result.setSuccess(true);
@@ -183,7 +188,7 @@ public class ServerHttpProvider implements MetricProvider {
      * 对象转 Integer
      *
      * @param o 对象
-     * @return Integer, 转换失败返回 null
+     * @return Integer, 转换失败返回 空
      */
     private static Integer intOrNull(Object o) {
         if (o == null) {

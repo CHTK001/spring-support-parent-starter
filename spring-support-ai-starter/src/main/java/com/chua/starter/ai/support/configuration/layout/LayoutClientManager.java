@@ -66,6 +66,11 @@ public class LayoutClientManager {
             }
         }
         if (detector == null) {
+            /**
+             * illegal状态异常。
+             * @param layout_model" layout_模型"
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("版面分析模型未配置：请在设置中配置 layout 分组的 layout_model");
         }
         return detector;
@@ -94,7 +99,7 @@ public class LayoutClientManager {
     /**
      * 枚举可用版面模型清单。
      *
-     * @return 模型 ID 列表
+     * @return 模型 标识 列表
      */
     public List<String> listModels() {
         return LayoutDetector.listModels();
@@ -115,7 +120,7 @@ public class LayoutClientManager {
     /**
      * 按最新配置构建检测器。
      *
-     * @return 版面检测器，模型未配置时返回 null
+     * @return 版面检测器，模型未配置时返回 空
      */
     private LayoutDetector build() {
         String model = settingReader.getStr(GROUP, "layout_model");

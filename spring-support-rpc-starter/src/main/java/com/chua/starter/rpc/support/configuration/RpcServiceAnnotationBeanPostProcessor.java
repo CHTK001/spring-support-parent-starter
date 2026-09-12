@@ -52,7 +52,7 @@ import static org.springframework.util.ClassUtils.resolveClassName;
 /**
  * rpc资源注释配置
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/04/07
  * @author CH
  */
@@ -67,11 +67,11 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     private ResourceLoader resourceLoader;
     /** 环境 */
     private Environment environment;
-    /** PackagesTOscan */
+    /** 包toscan */
     private Set<String> packagesToScan;
     /** 注册表 */
     private BeanDefinitionRegistry registry;
-    /** ResolvedpackagesTOscan */
+    /** resolvedpackagestoscan */
     private Set<String> resolvedPackagesToScan;
     /** Scanned */
     private boolean scanned;
@@ -92,7 +92,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
 
     @Override
-    /** AfterProperties设置 */
+    /** 之后属性设置 */
     public void afterPropertiesSet() throws Exception {
         rpcProperties = Binder.get(this.environment).bindOrCreate(RpcProperties.PRE, RpcProperties.class);
         if(!rpcProperties.isEnable()) {
@@ -107,17 +107,17 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     }
 
     @Override
-    /** Post处理BeanFactory */
+    /** Post处理Bean工厂 */
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         if(!rpcProperties.isEnable()) {
             return;
         }
         if (this.registry == null) {
-            // In spring 3.x, may be not call postProcessBeanDefinitionRegistry()
+ // 入 spring 3.x, may be not call post处理Beandefinitionregistry()
             this.registry = (BeanDefinitionRegistry) beanFactory;
         }
 
-        // scan bean definitions
+ // 扫描 Bean definitions
         String[] beanNames = beanFactory.getBeanDefinitionNames();
         for (String beanName : beanNames) {
             BeanDefinition beanDefinition = beanFactory.getBeanDefinition(beanName);
@@ -125,40 +125,55 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
             if (annotationAttributes != null) {
                 Object bean = beanFactory.getBean(beanName);
                 //
+                /**
+                  * 处理annotatedbeandefinition。
+                 * @param beanName Bean名称
+                 * @param (AnnotatedBeanDefinition (annotatedbeandefinition
+                 */
                 processAnnotatedBeanDefinition(beanName, (AnnotatedBeanDefinition) beanDefinition, annotationAttributes);
             }
         }
 
         if (!scanned) {
-            // In spring 3.x, may be not call postProcessBeanDefinitionRegistry(), so scan service class here
+ // 入 spring 3.x, may be not call post处理Beandefinitionregistry(), so 扫描 服务 类 here
+            /**
+             * 扫描服务Bean。
+             * @param resolvedPackagesToScan resolved包转为扫描
+             * @param registry registry
+             */
             scanServiceBeans(resolvedPackagesToScan, registry);
         }
 
-        // 启动 RPC 服务端（Dubbo/SOFA 在 register() 时已导出，此处为 JSON 等
-        // 需要显式 afterPropertiesSet() 才能启动监听服务的实现提供兜底）
+ // 启动 RPC 服务端（Dubbo/SOFA 在 注册() 时已导出，此处为 JSON 等
+ // 需要显式 之后属性设置() 才能启动监听服务的实现提供兜底）
         if (rpcServer != null) {
             rpcServer.afterPropertiesSet();
         }
     }
 
     @Override
-    /** Post处理BeanDefinitionRegistry */
+    /** Post处理Beandefinitionregistry */
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         if(!rpcProperties.isEnable()) {
             return;
         }
         this.registry = registry;
+        /**
+         * 扫描服务Bean。
+         * @param resolvedPackagesToScan resolved包转为扫描
+         * @param registry registry
+         */
         scanServiceBeans(resolvedPackagesToScan, registry);
     }
 
 
     @Override
-    /** 设置ResourceLoader */
+    /** 设置resource加载 */
     public void setResourceLoader(ResourceLoader resourceLoader) {
         this.resourceLoader = resourceLoader;
     }
     @Override
-    /** 设置Environment */
+    /** 设置环境 */
     public void setEnvironment(Environment environment) {
         this.environment = environment;
         this.rpcProperties = Binder.get(environment).bindOrCreate(RpcProperties.PRE, RpcProperties.class);
@@ -172,6 +187,9 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
         String appName = environment.resolvePlaceholders(rpcProperties.getApplicationName());
         this.rpcServer = RpcServer.createService(rpcProperties.getType().name(), registryConfigs, protocolConfig, appName);
         RpcServerHolder.setRpcServer(this.rpcServer);
+        /**
+         * printstartup信息。
+         */
         printStartupInfo();
     }
     
@@ -208,42 +226,59 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
 
     @Override
-    /** 设置BeanClassLoader */
+    /** 设置Bean类加载 */
     public void setBeanClassLoader(ClassLoader classLoader) {
         this.classLoader = classLoader;
     }
 
-    /** 处理AnnotatedBeanDefinition */
+    /**
+      * 处理annotatedbeandefinition
+     *
+     * @param refServiceBeanName ref服务Bean名称
+     * @param refServiceBeanDefinition ref服务Beandefinition
+     * @param attributes attributes
+     */
     private void processAnnotatedBeanDefinition(String refServiceBeanName, AnnotatedBeanDefinition refServiceBeanDefinition, Map<String, Object> attributes) {
 
         Map<String, Object> serviceAnnotationAttributes = new LinkedHashMap<>(attributes);
 
-        // get bean class from return type
+ // 获取 Bean 类 从 申报 类型
         String returnTypeName = SpringCompatUtils.getFactoryMethodReturnType(refServiceBeanDefinition);
         Class<?> beanClass = ClassUtils.resolveClassName(returnTypeName, classLoader);
 
         String serviceInterface = resolveServiceInterfaceName(serviceAnnotationAttributes, beanClass);
 
-        // ServiceBean Bean name
+ // 服务Bean Bean 名称
         String serviceBeanName = generateServiceBeanName(serviceAnnotationAttributes, serviceInterface);
 
         AbstractBeanDefinition serviceBeanDefinition = buildServiceBeanDefinition(serviceAnnotationAttributes, serviceInterface, refServiceBeanName);
 
-        // set id
+ // 设置 标识
         serviceBeanDefinition.getPropertyValues().add(RpcAttribute.ID, serviceBeanName);
 
+        /**
+         * 注册服务Beandefinition。
+         * @param serviceBeanName 服务Bean名称
+         * @param serviceBeanDefinition 服务Beandefinition
+         * @param serviceInterface 服务接口
+         */
         registerServiceBeanDefinition(serviceBeanName, serviceBeanDefinition, serviceInterface);
     }
-    /** 获取ServiceAnnotationAttributes */
+    /**
+     * 获取服务注解attributes
+     *
+     * @param beanDefinition Beandefinition
+     * @return 获取服务注解attributes的结果
+     */
     private Map<String, Object> getServiceAnnotationAttributes(BeanDefinition beanDefinition) {
         if (beanDefinition instanceof AnnotatedBeanDefinition annotatedBeanDefinition) {
             MethodMetadata factoryMethodMetadata = SpringCompatUtils.getFactoryMethodMetadata(annotatedBeanDefinition);
             if (factoryMethodMetadata != null) {
-                // try all dubbo service annotation types
+ // 尝试 全部 Dubbo 服务 注解 类型
                 for (Class<? extends Annotation> annotationType : SERVICE_ANNOTATION_TYPES) {
                     if (factoryMethodMetadata.isAnnotated(annotationType.getName())) {
-                        // Since Spring 5.2
-                        // return factoryMethodMetadata.getAnnotations().get(annotationType).filterDefaultValues().asMap();
+ // 自 Spring 5.2
+ // 申报 工厂方法metadata.获取注解().获取(注解类型).过滤器默认价值观().as映射();
                         // Compatible with Spring 4.x
                         return factoryMethodMetadata.getAnnotationAttributes(annotationType.getName());
                     }
@@ -252,7 +287,12 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
         }
         return null;
     }
-    /** 解析PackagesTo扫描 */
+    /**
+     * 解析包转为扫描
+     *
+     * @param packagesToScan 包转为扫描
+     * @return resolve包转为扫描的结果
+     */
     private Set<String> resolvePackagesToScan(Set<String> packagesToScan) {
         Set<String> resolvedPackagesToScan = new LinkedHashSet<>(packagesToScan.size());
         for (String packageToScan : packagesToScan) {
@@ -264,7 +304,12 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
         return resolvedPackagesToScan;
     }
 
-    /** 扫描ServiceBeans */
+    /**
+     * 扫描服务Bean
+     *
+     * @param packagesToScan 包转为扫描
+     * @param registry registry
+     */
     private void scanServiceBeans(Set<String> packagesToScan, BeanDefinitionRegistry registry) {
 
         scanned = true;
@@ -289,11 +334,18 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
         for (String packageToScan : packagesToScan) {
 
-            // Registers @Service Bean first
+ // 注册 @服务 Bean 第一个
             scanner.scan(packageToScan);
 
-            // Finds all BeanDefinitionHolders of @Service whether @ComponentScan scans or not.
+ // 查找 全部 Beandefinitionholders 的 @服务 whether @组件扫描 扫描 或 not.
             Set<BeanDefinitionHolder> beanDefinitionHolders =
+                    /**
+                      * 查找服务Beandefinitionholders。
+                     * @param scanner scanner
+                     * @param packageToScan 包转为扫描
+                     * @param registry registry
+                     * @param beanNameGenerator Bean名称生成器
+                     */
                     findServiceBeanDefinitionHolders(scanner, packageToScan, registry, beanNameGenerator);
 
             if (beanDefinitionHolders != null && !beanDefinitionHolders.isEmpty()) {
@@ -306,6 +358,10 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
                 }
 
                 for (BeanDefinitionHolder beanDefinitionHolder : beanDefinitionHolders) {
+                    /**
+                      * 处理scannedbeandefinition。
+                     * @param beanDefinitionHolder Beandefinitionholder
+                     */
                     processScannedBeanDefinition(beanDefinitionHolder);
                     servicePackagesHolder.addScannedClass(beanDefinitionHolder.getBeanDefinition().getBeanClassName());
                 }
@@ -319,10 +375,10 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
         }
     }
     /**
-     * 建议使用BeanNameGenerator实例，因为它可能引用了 bean 名称生成，这可能成为一个潜在的问题。
+      * 建议使用Bean名称生成器实例，因为它可能引用了 Bean 名称生成，这可能成为一个潜在的问题。
      *
-     * @param registry {@link BeanDefinitionRegistry}， Bean定义注册表，用于注册bean定义。
-     * @return {@link BeanNameGenerator} 实例，这是一个用于生成bean名称的实例。
+     * @param registry {@link BeanDefinitionRegistry}， Bean定义注册表，用于注册Bean定义。
+     * @return {@link Bean名称生成器} 实例，这是一个用于生成Bean名称的实例。
      * @see SingletonBeanRegistry 单例Bean注册表。
      * @since 2.5.8 从此版本开始可用。
      */
@@ -346,7 +402,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     /**
      * 查找类型上注解了指定注解的{@link BeanDefinitionHolder BeanDefinitionHolders}集合。
      *
-     * @param scanner       用于扫描classpath中Bean定义的{@link ClassPathBeanDefinitionScanner}
+     * @param scanner       用于扫描类路径中Bean定义的{@link ClassPathBeanDefinitionScanner}
      * @param packageToScan 需要扫描的包
      * @param registry      Bean定义注册表{@link BeanDefinitionRegistry}
      * @return 非空的BeanDefinitionHolder集合，包含所有匹配的Bean定义
@@ -373,41 +429,68 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
     }
 
-    /** 处理ScannedBeanDefinition */
+    /**
+      * 处理scannedbeandefinition
+     *
+     * @param beanDefinitionHolder Beandefinitionholder
+     */
     private void processScannedBeanDefinition(BeanDefinitionHolder beanDefinitionHolder) {
 
         Class<?> beanClass = resolveClass(beanDefinitionHolder);
 
         Annotation service = findServiceAnnotation(beanClass);
 
-        // The attributes of @Service annotation
+ // The attributes 的 @服务 注解
         Map<String, Object> serviceAnnotationAttributes = AnnotationUtils.getAnnotationAttributes(service, true);
 
         String serviceInterface = resolveServiceInterfaceName(serviceAnnotationAttributes, beanClass);
 
         String annotatedServiceBeanName = beanDefinitionHolder.getBeanName();
 
-        // ServiceBean Bean name
+ // 服务Bean Bean 名称
         String beanName = generateServiceBeanName(serviceAnnotationAttributes, serviceInterface);
 
         AbstractBeanDefinition serviceBeanDefinition =
+                /**
+                 * 构建服务Beandefinition。
+                 * @param serviceAnnotationAttributes 服务注解attributes
+                 * @param serviceInterface 服务接口
+                 * @param annotatedServiceBeanName annotated服务Bean名称
+                 */
                 buildServiceBeanDefinition(serviceAnnotationAttributes, serviceInterface, annotatedServiceBeanName);
 
+        /**
+         * 注册服务Beandefinition。
+         * @param beanName Bean名称
+         * @param serviceBeanDefinition 服务Beandefinition
+         * @param serviceInterface 服务接口
+         */
         registerServiceBeanDefinition(beanName, serviceBeanDefinition, serviceInterface);
 
     }
-    /** 注册ServiceBeanDefinition */
+    /**
+     * 注册服务Beandefinition
+     *
+     * @param serviceBeanName 服务Bean名称
+     * @param serviceBeanDefinition 服务Beandefinition
+     * @param serviceInterface 服务接口
+     */
     private void registerServiceBeanDefinition(String serviceBeanName, AbstractBeanDefinition serviceBeanDefinition, String serviceInterface) {
-        // check service bean
+ // 检查 服务 Bean
         if (registry.containsBeanDefinition(serviceBeanName)) {
             BeanDefinition existingDefinition = registry.getBeanDefinition(serviceBeanName);
             if (existingDefinition.equals(serviceBeanDefinition)) {
-                // exist equipment bean definition
+ // exist equipment Bean definition
                 return;
             }
 
             String msg = "[RPC] 发现重复的服务定义: " + serviceInterface + " -> " + serviceBeanName;
             log.error(msg);
+            /**
+             * Beandefinition存储异常。
+             * @param serviceBeanDefinition.getResourceDescription( 服务Beandefinition.getresourcedescription(
+             * @return Beandefinition存储异常的结果
+             */
             throw new BeanDefinitionStoreException(serviceBeanDefinition.getResourceDescription(), serviceBeanName, msg);
         }
 
@@ -417,9 +500,9 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
         }
     }
     /**
-     * Find the {@link Annotation annotation} of @Service
+       * 查找 the {@link Annotation annotation} 的 @服务
      *
-     * @param beanClass the {@link Class class} of Bean
+     * @param beanClass the {@link Class class} 的 Bean
      * @return <code>null</code> if not found
      * @since 2.7.3
      */
@@ -433,7 +516,13 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     }
 
 
-    /** GenerateServiceBeanName */
+    /**
+     * generate服务Bean名称
+     *
+     * @param serviceAnnotationAttributes 服务注解attributes
+     * @param serviceInterface 服务接口
+     * @return generate服务Bean名称的结果
+     */
     private String generateServiceBeanName(Map<String, Object> serviceAnnotationAttributes, String serviceInterface) {
         String sb = "RpcServiceBean" + serviceInterface +
                 serviceAnnotationAttributes.get("version") +
@@ -441,6 +530,11 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
         return environment.resolvePlaceholders(sb);
     }
 
+    /**
+     * resolve类。
+     * @param beanDefinitionHolder Beandefinitionholder
+     * @return resolve类的结果
+     */
     private Class<?> resolveClass(BeanDefinitionHolder beanDefinitionHolder) {
 
         BeanDefinition beanDefinition = beanDefinitionHolder.getBeanDefinition();
@@ -449,6 +543,11 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
     }
 
+    /**
+     * resolve类。
+     * @param beanDefinition Beandefinition
+     * @return resolve类的结果
+     */
     private Class<?> resolveClass(BeanDefinition beanDefinition) {
 
         String beanClassName = beanDefinition.getBeanClassName();
@@ -458,12 +557,12 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
     }
 
     /**
-     * Build the {@link AbstractBeanDefinition Bean Definition}
+      * 构建 the {@link AbstractBeanDefinition Bean Definition}
      *
      * @param serviceAnnotationAttributes 服务注释属性
      * @param serviceInterface            服务接口
-     * @param refServiceBeanName          ref服务bean名称
-     * @return {@link AbstractBeanDefinition}
+     * @param refServiceBeanName          ref服务Bean名称
+     * @return {@link 抽象Beandefinition}
      * @since 2.7.3
      */
     private AbstractBeanDefinition buildServiceBeanDefinition(Map<String, Object> serviceAnnotationAttributes,
@@ -476,9 +575,15 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
         MutablePropertyValues propertyValues = rootBeanDefinition.getPropertyValues();
 
         propertyValues.addPropertyValues(new AnnotationPropertyValuesAdapter(serviceAnnotationAttributes, environment));
+        /**
+         * 添加财产引用。
+         * @param builder 构建器
+         * @param "ref" "ref"
+         * @param refServiceBeanName ref服务Bean名称
+         */
         addPropertyReference(builder, "ref", refServiceBeanName);
         propertyValues.addPropertyValue("id", refServiceBeanName);
-        // Set interface
+ // 设置 接口
         try {
             Class<?> aClass = ClassUtils.forName(serviceInterface, classLoader);
             propertyValues.addPropertyValue("interfaceName", serviceInterface);
@@ -489,6 +594,11 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
             constructorArgumentValues.addGenericArgumentValue(rpcServer);
 
         } catch (ClassNotFoundException e) {
+            /**
+             * runtime异常。
+             * @param e e
+             * @return runtime异常的结果
+             */
             throw new RuntimeException(e);
         }
 
@@ -496,7 +606,12 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
 
     }
 
-    /** 解析StringArray */
+    /**
+     * 解析字符串array
+     *
+     * @param strs strs
+     * @return resolve字符串array的结果
+     */
     private String[] resolveStringArray(String[] strs) {
         if (strs == null) {
             return null;
@@ -507,20 +622,32 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
         return strs;
     }
 
-    /** 添加PropertyReference */
+    /**
+     * 添加财产引用
+     *
+     * @param builder 构建器
+     * @param propertyName 财产名称
+     * @param beanName Bean名称
+     */
     private void addPropertyReference(BeanDefinitionBuilder builder, String propertyName, String beanName) {
         String resolvedBeanName = environment.resolvePlaceholders(beanName);
         builder.addPropertyReference(propertyName, resolvedBeanName);
     }
 
-    /** 添加PropertyValue */
+    /**
+     * 添加财产价值观
+     *
+     * @param builder 构建器
+     * @param propertyName 财产名称
+     * @param value 价值观
+     */
     private void addPropertyValue(BeanDefinitionBuilder builder, String propertyName, String value) {
         String resolvedBeanName = environment.resolvePlaceholders(value);
         builder.addPropertyValue(propertyName, resolvedBeanName);
     }
 
     @Override
-    /** 设置ApplicationContext */
+    /** 设置application上下文 */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
@@ -529,7 +656,7 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
      * 从服务注解属性与默认接口类解析出实际服务接口的全限定名。
      *
      * @param attributes              服务注解属性映射
-     * @param defaultInterfaceClass   默认接口类（bean 实现类）
+     * @param defaultInterfaceClass   默认接口类（Bean 实现类）
      * @return 解析得到的接口全限定名
      */
     private static String resolveServiceInterfaceName(Map<String, Object> attributes, Class<?> defaultInterfaceClass) {
@@ -538,6 +665,11 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
             if (interfaceClassName != null && !interfaceClassName.isEmpty()) {
                 if ("org.apache.dubbo.rpc.service.GenericService".equals(interfaceClassName)
                         || "com.alibaba.dubbo.rpc.service.GenericService".equals(interfaceClassName)) {
+                    /**
+                     * illegal状态异常。
+                     * @param interfaceName( 接口名称(
+                     * @return illegal状态异常的结果
+                     */
                     throw new IllegalStateException("@RpcService interfaceName() cannot be GenericService: " + interfaceClassName);
                 }
                 return interfaceClassName;
@@ -569,6 +701,11 @@ public class RpcServiceAnnotationBeanPostProcessor implements BeanDefinitionRegi
             }
         }
 
+        /**
+         * illegal状态异常。
+         * @param interfaceClass( 接口类(
+         * @return illegal状态异常的结果
+         */
         throw new IllegalStateException("@RpcService interfaceClass() or interfaceName() or interface class must be present!");
     }
 }

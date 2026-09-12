@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 微信 iLink Bot 多绑定管理控制器。
+   * 微信 i链接 机器人 多绑定管理控制器。
  *
  * <p>支持多 Bot 绑定的增删改查。</p>
  *
@@ -44,27 +44,27 @@ import java.util.stream.Collectors;
 public class AiBotBindingController {
 
     /**
-     * Bot 绑定服务
+      * 机器人 绑定服务
      */
     private final AiBotBindingService botBindingService;
 
     /**
-     * Bot 聊天引擎（主动发消息 / 聊天记录）
+      * 机器人 聊天引擎（主动发消息 / 聊天记录）
      */
     private final AiBotChatService aiBotChatService;
 
     /**
-     * 全局设置服务（Bot 默认模型等键值配置）
+      * 全局设置服务（机器人 默认模型等键值配置）
      */
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
 
     /**
-     * 模型表 Mapper（Bot 可选的对话模型来自模型管理配置的 provider_model）
+      * 模型表 映射器（机器人 可选的对话模型来自模型管理配置的 提供者_模型）
      */
     private final SysAiProviderModelMapper providerModelMapper;
 
     /**
-     * 获取可用于 Bot 的对话模型列表（供前端设置 Bot 的聊天模型）。
+      * 获取可用于 机器人 的对话模型列表（供前端设置 机器人 的聊天模型）。
      *
      * <p>数据源为模型管理配置的 provider_model 表（capability 含 chat 的模型），
      * 与前端模型管理页面的数据一致。</p>
@@ -86,7 +86,10 @@ public class AiBotBindingController {
     }
 
     /**
-     * 判断模型是否具备指定任务能力（capabilities 为 [{task:...}]）。
+      * 判断模型是否具备指定任务能力（capabilities 为 [{任务:...}]）。
+     * @param m m
+     * @param task 任务
+     * @return 是否包含capability的结果
      */
     private static boolean hasCapability(SysAiProviderModel m, String task) {
         if (m.getCapabilities() == null) {
@@ -107,9 +110,10 @@ public class AiBotBindingController {
      *   <li>无任何身份标识：仅返回未归属（历史遗留）记录</li>
      * </ul>
      *
-     * @param userId      可选，管理员按用户 ID 过滤绑定列表
+     * @param userId      可选，管理员按用户 标识 过滤绑定列表
      * @param httpRequest HTTP 请求（用于解析当前身份）
      * @return 绑定列表（按创建时间降序）
+     * @param false false
      */
     @GetMapping("/list")
     public ReturnResult<List<BotBindingListResponse>> list(@RequestParam(required = false) Long userId,
@@ -131,7 +135,7 @@ public class AiBotBindingController {
     }
 
     /**
-     * 管理员视角的用户聚合列表（每个用户绑定了多少 Bot、多少在线）。
+      * 管理员视角的用户聚合列表（每个用户绑定了多少 机器人、多少在线）。
      *
      * @return 用户摘要列表
      */
@@ -143,8 +147,8 @@ public class AiBotBindingController {
     /**
      * 主动向指定微信用户发送一条消息（聊天框输入发送 / 主动触达）。
      *
-     * @param body 请求体：botId / fromUser / content
-     * @return 发送结果（含 message_id）
+     * @param body 请求体：机器人标识 / 从用户 / 内容
+     * @return 发送结果（含 消息_标识）
      */
     @PostMapping("/send")
     public ReturnResult<Map<String, Object>> send(@RequestBody Map<String, String> body) {
@@ -182,13 +186,13 @@ public class AiBotBindingController {
     }
 
     /**
-     * 查询 Bot 与某用户的聊天记录（按时间升序，支持滚动分页）。
+      * 查询 机器人 与某用户的聊天记录（按时间升序，支持滚动分页）。
      *
      * <p>第 0 页为最近 pageSize 条；页码越大越早。响应体：
      * {@code {messages: [...], hasMore, page, pageSize}}。</p>
      *
-     * @param botId    Bot ID
-     * @param fromUser 微信用户 ID（可空，空则查全部）
+     * @param botId    机器人 标识
+     * @param fromUser 微信用户 标识（可空，空则查全部）
      * @param page     页码（从 0 开始，默认 0）
      * @param pageSize 每页条数（默认 50）
      * @return 分页聊天记录
@@ -205,7 +209,7 @@ public class AiBotBindingController {
     /**
      * 润色一段文本（IM 输入框「润色」按钮）。
      *
-     * @param body 请求体：botId / text
+     * @param body 请求体：机器人标识 / 文本
      * @return 润色结果（{@code result} 字段）
      */
     @PostMapping("/polish")
@@ -223,7 +227,7 @@ public class AiBotBindingController {
     /**
      * 总结指定会话的聊天记录（IM 页「上下文总结」按钮）。
      *
-     * @param body 请求体：botId / fromUser
+     * @param body 请求体：机器人标识 / 从用户
      * @return 会话摘要（{@code summary} 字段）
      */
     @PostMapping("/summarize")
@@ -239,7 +243,7 @@ public class AiBotBindingController {
     }
 
     /**
-     * 会话列表（IM 左侧）：按 Bot + 微信用户聚合，取最后一条消息。
+      * 会话列表（IM 左侧）：按 机器人 + 微信用户聚合，取最后一条消息。
      *
      * @return 会话列表（按最后消息时间降序）
      */
@@ -249,9 +253,9 @@ public class AiBotBindingController {
     }
 
     /**
-     * Bot 内置命令清单（供 IM 输入框斜杠命令面板）。
+      * 机器人 内置命令清单（供 IM 输入框斜杠命令面板）。
      *
-     * @return 命令列表（prefix / name / description）
+     * @return 命令列表（prefix / 名称 / description）
      */
     @GetMapping("/commands")
     public ReturnResult<List<Map<String, Object>>> commands() {
@@ -259,9 +263,9 @@ public class AiBotBindingController {
     }
 
     /**
-     * 指定 Bot 的最近联系人（按 botId 去重 fromUser）。
+       * 指定 机器人 的最近联系人（按 机器人标识 去重 从用户）。
      *
-     * @param botId Bot 唯一标识
+     * @param botId 机器人 唯一标识
      * @return 联系人列表
      */
     @GetMapping("/contacts")
@@ -273,12 +277,12 @@ public class AiBotBindingController {
     }
 
     /**
-     * 查询 Bot 运行状态（ILink 会话是否存活）。
+      * 查询 机器人 运行状态（i链接 会话是否存活）。
      *
      * <p>ILink 会话超时后（errcode=-14）客户端停止轮询，前端据此展示
      * 「会话已过期，请重新扫码绑定」提示与重新扫码入口。</p>
      *
-     * @param botId Bot 唯一标识
+     * @param botId 机器人 唯一标识
      * @return status: running=会话存活 / stopped=已停止需重新扫码
      */
     @GetMapping("/runtime-status")
@@ -296,8 +300,8 @@ public class AiBotBindingController {
      *
      * <p>绑定记录删除后消息表仍会残留历史，此接口按 botId + fromUser 定向清除。</p>
      *
-     * @param botId    Bot 唯一标识
-     * @param fromUser 微信用户 ID（可空，空则删除该 Bot 全部会话）
+     * @param botId    机器人 唯一标识
+     * @param fromUser 微信用户 标识（可空，空则删除该 机器人 全部会话）
      * @return 删除的消息条数
      */
     @DeleteMapping("/conversations")
@@ -307,7 +311,7 @@ public class AiBotBindingController {
     }
 
     /**
-     * 查询 Bot 默认 AI 模型（全局设置 bot.default_model，Bot 未单独配置时兜底）。
+      * 查询 机器人 默认 AI 模型（全局设置 机器人.默认_模型，机器人 未单独配置时兜底）。
      *
      * @return 默认模型名（可能为空）
      */
@@ -320,9 +324,9 @@ public class AiBotBindingController {
     }
 
     /**
-     * 设置 Bot 默认 AI 模型（全局兜底，避免每个用户单独配置模型）。
+      * 设置 机器人 默认 AI 模型（全局兜底，避免每个用户单独配置模型）。
      *
-     * @param body 请求体：model
+     * @param body 请求体：模型
      * @return 更新后的默认模型名
      */
     @PutMapping("/default-model")
@@ -339,7 +343,7 @@ public class AiBotBindingController {
     }
 
     /**
-     * 查询 Bot 全局行为配置（contextThinking / contextSize / historySize / commandEnabled / compressionThreshold）。
+      * 查询 机器人 全局行为配置（上下文thinking / 上下文大小 / 历史大小 / 命令已启用 / compression阈值）。
      *
      * <p>统一存储在全局设置表 bot 分组下，未配置时返回内置默认值。</p>
      *
@@ -357,9 +361,9 @@ public class AiBotBindingController {
     }
 
     /**
-     * 更新 Bot 全局行为配置（部分更新，仅写入请求体中出现的字段）。
+      * 更新 机器人 全局行为配置（部分更新，仅写入请求体中出现的字段）。
      *
-     * @param body 配置键值对（支持 contextThinking / contextSize / historySize / commandEnabled / compressionThreshold）
+     * @param body 配置键值对（支持 上下文thinking / 上下文大小 / 历史大小 / 命令已启用 / compression阈值）
      * @return 更新后的完整配置
      */
     @PutMapping("/global-config")
@@ -428,13 +432,13 @@ public class AiBotBindingController {
     }
 
     /**
-     * 当前用户的 Bot 管理元信息：是否为管理员、当前用户 ID。
+       * 当前用户的 机器人 管理元信息：是否为管理员、当前用户 标识。
      *
      * <p>前端据此决定是否展示「全部用户」入口：仅管理员可见。
      * 由后端统一判定，前端不依赖具体权限框架。</p>
      *
      * @param request HTTP 请求
-     * @return hasAdmin / roles / userId
+     * @return hasAdmin / 角色 / 用户标识
      */
     @GetMapping("/meta")
     public ReturnResult<Map<String, Object>> meta(HttpServletRequest request) {
@@ -467,10 +471,10 @@ public class AiBotBindingController {
     }
 
     /**
-     * 从请求中解析 Bearer Token。
+      * 从请求中解析 Bearer 令牌。
      *
      * @param request HTTP 请求
-     * @return Token 字符串，无则返回 null
+     * @return Token 字符串，无则返回 空
      */
     private String resolveToken(HttpServletRequest request) {
         String auth = request.getHeader("Authorization");
@@ -484,9 +488,9 @@ public class AiBotBindingController {
     }
 
     /**
-     * 按 ID 获取绑定详情。
+      * 按 标识 获取绑定详情。
      *
-     * @param id 绑定 ID
+     * @param id 绑定 标识
      * @return 绑定信息
      */
     @GetMapping("/{id}")
@@ -499,7 +503,7 @@ public class AiBotBindingController {
      * 创建绑定。
      *
      * @param request 绑定请求
-     * @return 数据库 ID
+     * @return 数据库 标识
      */
     @PostMapping("/create")
     public ReturnResult<Long> create(@RequestBody BotBindingCreateRequest body,
@@ -514,8 +518,8 @@ public class AiBotBindingController {
     /**
      * 更新绑定。
      *
-     * @param request 绑定请求（含 ID）
-     * @return 数据库 ID
+     * @param request 绑定请求（含 标识）
+     * @return 数据库 标识
      */
     @PutMapping("/update")
     public ReturnResult<Long> update(@RequestBody BotBindingCreateRequest request) {
@@ -527,7 +531,7 @@ public class AiBotBindingController {
     /**
      * 删除绑定。
      *
-     * @param id 数据库 ID
+     * @param id 数据库 标识
      * @return 操作结果
      */
     @DeleteMapping("/{id}")
@@ -564,17 +568,17 @@ public class AiBotBindingController {
         return resp;
     }
 
-    // ==================== iLink 扫码绑定 ====================
+ // ==================== i链接 扫码绑定 ====================
 
     /**
-     * 生成微信 iLink 扫码会话。
+      * 生成微信 i链接 扫码会话。
      *
      * <p>平台仅支持 wechat（iLink 扫码）；企业微信暂不支持，返回错误。
-     * 重新扫码场景可传旧 botId（botId 参数），扫码确认后自动合并到旧绑定并迁移历史消息。</p>
+       * 重新扫码场景可传旧 机器人标识（机器人标识 参数），扫码确认后自动合并到旧绑定并迁移历史消息。</p>
      *
      * @param platform 平台类型，默认 wechat
-     * @param botId    重新扫码场景下需合并的旧 Bot 唯一标识（可选）
-     * @return key + qrcodeUrl；qrcodeUrl 即时为空，前端轮询 status=ready 后从 QrStatus 取
+     * @param botId    重新扫码场景下需合并的旧 机器人 唯一标识（可选）
+     * @return key + qrcodeurl；qrcodeurl 即时为空，前端轮询 状态=就绪 后从 qr状态 取
      */
     @PostMapping("/qrcode")
     public ReturnResult<AiBotBindingService.QrResult> generateQr(
@@ -594,8 +598,8 @@ public class AiBotBindingController {
      *
      * <p>前端每 3 秒调用一次；status 变为 confirmed 时表示绑定已完成，可刷新列表。</p>
      *
-     * @param key 会话 key
-     * @return status + botId（confirmed 时回填）
+     * @param key 会话 钥匙
+     * @return status + 机器人标识（confirmed 时回填）
      */
     @GetMapping("/qrcode/status")
     public ReturnResult<AiBotBindingService.QrStatus> checkQrStatus(@RequestParam String key) {
@@ -605,13 +609,13 @@ public class AiBotBindingController {
     // ==================== 飞书（凭据配置型） ====================
 
     /**
-     * 绑定飞书 Bot。
+      * 绑定飞书 机器人。
      *
      * <p>凭据配置型：传入飞书开放平台的 appId / appSecret。</p>
      *
-     * @param appId     飞书应用 ID
+     * @param appId     飞书应用 标识
      * @param appSecret 飞书应用密钥
-     * @return 数据库 ID
+     * @return 数据库 标识
      */
     @PostMapping("/feishu")
     public ReturnResult<Long> bindFeishu(@RequestParam String appId,
@@ -635,6 +639,12 @@ public class AiBotBindingController {
         // 本地信任（Tauri / 本地开发）：视为管理员，保持原有全量可见行为
         Object trusted = request.getAttribute(LocalTrustAuthFilter.TRUSTED_ATTR);
         if (Boolean.TRUE.equals(trusted)) {
+            /**
+             * Identity。
+             * @param null 空
+             * @param true true
+             * @return Identity的结果
+             */
             return new Identity(null, true);
         }
         // 登录态：以 u:<userId> 归属，管理员放行全部
@@ -646,9 +656,20 @@ public class AiBotBindingController {
                     boolean admin = user.getRoles() != null && user.getRoles().stream()
                             .anyMatch(r -> "admin".equalsIgnoreCase(r) || "superadmin".equalsIgnoreCase(r));
                     if (StringUtils.isNotBlank(user.getUserId())) {
+                        /**
+                         * Identity。
+                         * @param user.getUserId( 用户.获取用户标识(
+                         * @return Identity的结果
+                         */
                         return new Identity("u:" + user.getUserId().trim(), admin);
                     }
                     if (admin) {
+                        /**
+                         * Identity。
+                         * @param null 空
+                         * @param true true
+                         * @return Identity的结果
+                         */
                         return new Identity(null, true);
                     }
                 }
@@ -662,16 +683,28 @@ public class AiBotBindingController {
             fingerprint = request.getHeader("X-Request-Fingerprint");
         }
         if (StringUtils.isNotBlank(fingerprint)) {
+            /**
+             * Identity。
+             * @param fingerprint.trim( fingerprint.修剪(
+             * @return Identity的结果
+             */
             return new Identity("fp:" + fingerprint.trim(), false);
         }
+        /**
+         * Identity。
+         * @param null 空
+         * @param false false
+         * @return Identity的结果
+         */
         return new Identity(null, false);
     }
 
     /**
      * 请求归属身份。
      *
-     * @param ownerKey 归属标识（{@code u:<userId>} / {@code fp:<fingerprint>}），无身份时为 null
+     * @param ownerKey 归属标识（{@code u:<userId>} / {@code fp:<fingerprint>}），无身份时为 空
      * @param admin    是否管理员（或本地信任）
+     * @return Identity的结果
      */
     private record Identity(String ownerKey, boolean admin) {
     }

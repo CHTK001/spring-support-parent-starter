@@ -30,7 +30,7 @@ public class AiUsageServiceImpl implements AiUsageService {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
-     * 用量 Mapper
+      * 用量 映射器
      */
     private final AiUsageMapper usageMapper;
 

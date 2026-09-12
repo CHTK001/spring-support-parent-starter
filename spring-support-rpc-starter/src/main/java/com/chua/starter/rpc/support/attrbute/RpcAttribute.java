@@ -5,7 +5,7 @@ import lombok.Data;
 /**
  * rpc属性
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/04/07
  * @author CH
  */
@@ -13,7 +13,7 @@ import lombok.Data;
 public class RpcAttribute {
 
     /**
-     * RPC服务ID
+      * RPC服务标识
      * <p>示例: "userService"</p>
      */
     public static final String ID = "id";

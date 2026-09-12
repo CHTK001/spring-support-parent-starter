@@ -71,7 +71,7 @@ import org.slf4j.LoggerFactory;
  * </p>
  *
  * @since 2023-08-01
- * @version 1.0.0
+   * @版本 1.0.0
  * @author CH
  */
 @RestControllerAdvice
@@ -79,15 +79,15 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionAdvice.class);
     /** 是否为生产环境（生产环境隐藏技术细节） */
-    /** ISproduction */
+    /** isproduction */
     private boolean isProduction = false;
 
     /** 是否在响应中返回详细错误信息（字段级别错误） */
     /** 返回值detailederrors */
     private boolean returnDetailedErrors = true;
 
-    /** 请求追踪ID的Header名称 */
-    /** Trace_id_header */
+    /** 请求追踪标识的头部名称 */
+    /** 追踪_标识_头部 */
     private static final String TRACE_ID_HEADER = "X-Trace-Id";
 
     @Override
@@ -96,23 +96,28 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
         this.returnDetailedErrors = environment.getProperty("plugin.api.exception.detailed-errors", Boolean.class, true);
     }
 
-    /** Data_too_long_pattern */
+    /** 数据_too_long_模式 */
     private static final Pattern DATA_TOO_LONG_PATTERN = Pattern.compile("Data too long for column '([^']*)' at row");
-    /** Duplicate_entry_pattern */
+    /** 重复_entry_模式 */
     private static final Pattern DUPLICATE_ENTRY_PATTERN = Pattern.compile("Duplicate entry '([^']*)' for key '([^']*)'");
-    /** Foreign_key_pattern */
+    /** 国外_键_模式 */
     private static final Pattern FOREIGN_KEY_PATTERN = Pattern.compile("FOREIGN KEY \\(`([^`]*)`\\)");
-    /** Column_pattern */
+    /** Column_模式 */
     private static final Pattern COLUMN_PATTERN = Pattern.compile("Column '([^']*)'");
-    /** Converter_pattern */
+    /** 转换器_模式 */
     private static final Pattern CONVERTER_PATTERN = Pattern.compile("\\[\"(.*?)\"]+");
-    /** Decimal_format */
+    /** Decimal_格式化 */
     private static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("0.##");
 
     // ==================== 参数校验异常 ====================
 
     @ExceptionHandler(BindException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
+    /**
+     * 处理bind异常。
+     * @param e e
+     * @return 处理bind异常的结果
+     */
     public <T> ReturnResult<T> handleBindException(BindException e) {
         logWarn("表单参数验证失败", e);
         
@@ -131,6 +136,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
+    /**
+     * 处理方法参数notvalid异常。
+     * @param e e
+     * @return 处理方法参数notvalid异常的结果
+     */
     public <T> ReturnResult<T> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
         logWarn("JSON参数验证失败", e);
         
@@ -149,6 +159,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(ConstraintViolationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
+    /**
+     * 处理constraintviolation异常。
+     * @param e e
+     * @return 处理constraintviolation异常的结果
+     */
     public <T> ReturnResult<T> handleConstraintViolationException(ConstraintViolationException e) {
         logWarn("数据验证约束违反", e);
         
@@ -173,6 +188,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
+    /**
+     * 处理missingservlet请求参数异常。
+     * @param e e
+     * @return 处理missingservlet请求参数异常的结果
+     */
     public <T> ReturnResult<T> handleMissingServletRequestParameterException(MissingServletRequestParameterException e) {
         logWarn("缺少必需参数: " + e.getParameterName(), e);
         String typeName = getSimpleTypeName(e.getParameterType());
@@ -182,6 +202,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
+    /**
+     * 处理方法参数类型mismatch异常。
+     * @param e e
+     * @return 处理方法参数类型mismatch异常的结果
+     */
     public <T> ReturnResult<T> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e) {
         logWarn("参数类型转换失败", e);
         String expectedType = getSimpleTypeName(e.getRequiredType());
@@ -197,6 +222,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(TypeMismatchException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
+    /**
+     * 处理类型mismatch异常。
+     * @param e e
+     * @return 处理类型mismatch异常的结果
+     */
     public <T> ReturnResult<T> handleTypeMismatchException(TypeMismatchException e) {
         logWarn("类型转换异常", e);
         String propertyName = e.getPropertyName();
@@ -208,7 +238,9 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     /**
      * 未映射资源（含编码/路径遍历变体等无对应处理器的请求）：
-     * 返回 404 而非 500（NoResourceFoundException 由 DispatcherServlet 对静态资源探测抛出）
+      * 返回 404 而非 500（noresourcefound异常 由 dispatcherservlet 对静态资源探测抛出）
+     * @param e e
+     * @return 处理noresourcefound异常的结果
      */
     @ExceptionHandler(NoResourceFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
@@ -221,6 +253,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
+    /**
+     * 处理http消息not读取异常。
+     * @param e e
+     * @return 处理http消息not读取异常的结果
+     */
     public <T> ReturnResult<T> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
         logWarn("HTTP消息不可读", e);
         Throwable cause = e.getCause();
@@ -243,6 +280,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(JsonProcessingException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
+    /**
+     * 处理json处理异常。
+     * @param e e
+     * @return 处理json处理异常的结果
+     */
     public <T> ReturnResult<T> handleJsonProcessingException(JsonProcessingException e) {
         log.warn("JSON处理异常: {}", e.getMessage());
         if (e instanceof JsonParseException) {
@@ -262,6 +304,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
+    /**
+     * 处理http请求方法not支持异常。
+     * @param e e
+     * @return 处理http请求方法not支持异常的结果
+     */
     public <T> ReturnResult<T> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e) {
         logWarn("HTTP请求方法不支持: " + e.getMethod(), e);
         String[] supported = e.getSupportedMethods();
@@ -272,6 +319,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     @ResponseStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+    /**
+     * 处理httpmedia类型not支持异常。
+     * @param e e
+     * @return 处理httpmedia类型not支持异常的结果
+     */
     public <T> ReturnResult<T> handleHttpMediaTypeNotSupportedException(HttpMediaTypeNotSupportedException e) {
         logWarn("HTTP媒体类型不支持: " + e.getContentType(), e);
         return ReturnResult.error(REQUEST_PARAM_FORMAT_ERROR.getCode(), 
@@ -280,6 +332,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(NoHandlerFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
+    /**
+     * 处理no处理器found异常。
+     * @param e e
+     * @return 处理no处理器found异常的结果
+     */
     public <T> ReturnResult<T> handleNoHandlerFoundException(NoHandlerFoundException e) {
         logWarn("找不到请求处理器", e);
         return ReturnResult.error(RESOURCE_NOT_FOUND.getCode(), "请求的接口不存在，请检查URL是否正确");
@@ -287,6 +344,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     @ResponseStatus(HttpStatus.PAYLOAD_TOO_LARGE)
+    /**
+     * 处理最大upload大小exceeded异常。
+     * @param e e
+     * @return 处理最大upload大小exceeded异常的结果
+     */
     public <T> ReturnResult<T> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e) {
         logWarn("文件上传超出大小限制", e);
         if (e.getMaxUploadSize() > 0) {
@@ -300,6 +362,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(SQLException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    /**
+      * 处理SQL异常。
+     * @param e e
+     * @return 处理sql异常的结果
+     */
     public <T> ReturnResult<T> handleSQLException(SQLException e) {
         logError("SQL执行异常", e);
         
@@ -324,6 +391,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(SQLSyntaxErrorException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    /**
+     * 处理sqlsyntax错误异常。
+     * @param e e
+     * @return 处理sqlsyntax错误异常的结果
+     */
     public <T> ReturnResult<T> handleSQLSyntaxErrorException(SQLSyntaxErrorException e) {
         logError("SQL语法错误", e);
         return ReturnResult.error(DATABASE_ERROR.getCode(), "数据查询失败，请稍后重试");
@@ -331,6 +403,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(SQLIntegrityConstraintViolationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
+    /**
+      * 处理SQL完整性constraintviolation异常。
+     * @param e e
+     * @return 处理sql完整性constraintviolation异常的结果
+     */
     public <T> ReturnResult<T> handleSQLIntegrityConstraintViolationException(SQLIntegrityConstraintViolationException e) {
         logWarn("SQL完整性约束违反", e);
         return ReturnResult.error(DATA_CONFLICT.getCode(), extractConstraintMessage(e.getMessage()));
@@ -338,6 +415,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(DataAccessException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    /**
+     * 处理数据access异常。
+     * @param e e
+     * @return 处理数据access异常的结果
+     */
     public <T> ReturnResult<T> handleDataAccessException(DataAccessException e) {
         logError("数据库访问异常", e);
         if (e instanceof DuplicateKeyException dke) {
@@ -353,6 +435,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler({UnknownHostException.class, ConnectException.class, SocketTimeoutException.class, TimeoutException.class})
     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    /**
+     * 处理network异常。
+     * @param e e
+     * @return 处理network异常的结果
+     */
     public <T> ReturnResult<T> handleNetworkException(Exception e) {
         logError("网络异常", e);
         if (e instanceof UnknownHostException) {
@@ -369,6 +456,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(CompletionException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    /**
+     * 处理完成异常。
+     * @param e e
+     * @return 处理完成异常的结果
+     */
     public <T> ReturnResult<T> handleCompletionException(CompletionException e) {
         Throwable cause = e.getCause();
         logError("异步任务执行异常", cause != null ? cause : e);
@@ -381,6 +473,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(ExecutionException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    /**
+     * 处理执行异常。
+     * @param e e
+     * @return 处理执行异常的结果
+     */
     public <T> ReturnResult<T> handleExecutionException(ExecutionException e) {
         Throwable cause = e.getCause();
         logError("任务执行异常", cause != null ? cause : e);
@@ -393,6 +490,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(CancellationException.class)
     @ResponseStatus(HttpStatus.GONE)
+    /**
+     * 处理cancellation异常。
+     * @param e e
+     * @return 处理cancellation异常的结果
+     */
     public <T> ReturnResult<T> handleCancellationException(CancellationException e) {
         logWarn("任务已取消", e);
         return ReturnResult.error(OPERATION_NOT_ALLOWED.getCode(), "操作已取消");
@@ -400,6 +502,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(RejectedExecutionException.class)
     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    /**
+     * 处理rejected执行异常。
+     * @param e e
+     * @return 处理rejected执行异常的结果
+     */
     public <T> ReturnResult<T> handleRejectedExecutionException(RejectedExecutionException e) {
         logError("任务被拒绝执行", e);
         return ReturnResult.error(SERVICE_UNAVAILABLE.getCode(), "系统繁忙，请稍后重试");
@@ -407,6 +514,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(InterruptedException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    /**
+     * 处理interrupted异常。
+     * @param e e
+     * @return 处理interrupted异常的结果
+     */
     public <T> ReturnResult<T> handleInterruptedException(InterruptedException e) {
         logWarn("任务被中断", e);
         Thread.currentThread().interrupt();
@@ -415,6 +527,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(RemoteExecutionException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
+    /**
+     * 处理远程执行异常。
+     * @param e e
+     * @return 处理远程执行异常的结果
+     */
     public <T> ReturnResult<T> handleRemoteExecutionException(RemoteExecutionException e) {
         logError("远程服务调用异常", e);
         String message = e.getMessage();
@@ -434,6 +551,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(AuthenticationException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    /**
+     * 处理认证异常。
+     * @param e e
+     * @return 处理认证异常的结果
+     */
     public <T> ReturnResult<T> handleAuthenticationException(AuthenticationException e) {
         logWarn("认证异常", e);
         return ReturnResult.error(USER_NOT_LOGIN.getCode(), "登录已过期，请重新登录");
@@ -443,6 +565,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(BusinessException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
+    /**
+     * 处理业务异常。
+     * @param e e
+     * @return 处理业务异常的结果
+     */
     public <T> ReturnResult<T> handleBusinessException(BusinessException e) {
         logWarn("业务异常", e);
         String message = e.getLocalizedMessage();
@@ -458,6 +585,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
+    /**
+     * 处理illegal参数异常。
+     * @param e e
+     * @return 处理illegal参数异常的结果
+     */
     public <T> ReturnResult<T> handleIllegalArgumentException(IllegalArgumentException e) {
         logWarn("非法参数异常", e);
         String message = e.getMessage();
@@ -483,6 +615,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(IllegalStateException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
+    /**
+     * 处理illegal状态异常。
+     * @param e e
+     * @return 处理illegal状态异常的结果
+     */
     public <T> ReturnResult<T> handleIllegalStateException(IllegalStateException e) {
         logWarn("非法状态异常", e);
         String message = e.getMessage();
@@ -494,6 +631,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(UnsupportedOperationException.class)
     @ResponseStatus(HttpStatus.NOT_IMPLEMENTED)
+    /**
+     * 处理unsupportedoperation异常。
+     * @param e e
+     * @return 处理unsupportedoperation异常的结果
+     */
     public <T> ReturnResult<T> handleUnsupportedOperationException(UnsupportedOperationException e) {
         logWarn("不支持的操作", e);
         return ReturnResult.error(OPERATION_NOT_ALLOWED.getCode(), "当前操作暂不支持");
@@ -501,6 +643,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(ClassCastException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    /**
+     * 处理类cast异常。
+     * @param e e
+     * @return 处理类cast异常的结果
+     */
     public <T> ReturnResult<T> handleClassCastException(ClassCastException e) {
         logError("类型转换异常", e);
         return ReturnResult.error(SYSTEM_EXECUTION_ERROR.getCode(), "数据处理异常，请稍后重试");
@@ -508,6 +655,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(NullPointerException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    /**
+     * 处理空pointer异常。
+     * @param e e
+     * @return 处理空pointer异常的结果
+     */
     public <T> ReturnResult<T> handleNullPointerException(NullPointerException e) {
         logError("空指针异常", e);
         return ReturnResult.error(SYSTEM_EXECUTION_ERROR.getCode(), "系统处理异常，请稍后重试");
@@ -515,6 +667,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(ArrayIndexOutOfBoundsException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    /**
+     * 处理array索引出的bounds异常。
+     * @param e e
+     * @return 处理array索引出的bounds异常的结果
+     */
     public <T> ReturnResult<T> handleArrayIndexOutOfBoundsException(ArrayIndexOutOfBoundsException e) {
         logError("数组越界异常", e);
         return ReturnResult.error(SYSTEM_EXECUTION_ERROR.getCode(), "数据处理异常，请稍后重试");
@@ -522,6 +679,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(NumberFormatException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
+    /**
+     * 处理数字格式化异常。
+     * @param e e
+     * @return 处理数字格式化异常的结果
+     */
     public <T> ReturnResult<T> handleNumberFormatException(NumberFormatException e) {
         logWarn("数字格式异常", e);
         return ReturnResult.error(REQUEST_PARAM_FORMAT_ERROR.getCode(), "数字格式不正确");
@@ -529,6 +691,12 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    /**
+     * 处理runtime异常。
+     * @param e e
+     * @param response 响应
+     * @return 处理runtime异常的结果
+     */
     public <T> ReturnResult<T> handleRuntimeException(RuntimeException e, HttpServletResponse response) {
         logError("运行时异常", e);
         response.setContentType("application/json;charset=UTF-8");
@@ -567,6 +735,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    /**
+     * 处理异常。
+     * @param e e
+     * @return 处理异常的结果
+     */
     public <T> ReturnResult<T> handleException(Exception e) {
         logError("系统异常", e);
         return ReturnResult.error(SYSTEM_SERVER_OTHER_ERROR.getCode(), "系统繁忙，请稍后重试");
@@ -576,6 +749,8 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     /**
      * 构建字段错误映射
+     * @param fieldErrors 字段错误
+     * @return 构建字段错误映射的结果
      */
     private Map<String, String> buildFieldErrorMap(List<FieldError> fieldErrors) {
         Map<String, String> errors = new LinkedHashMap<>();
@@ -586,7 +761,11 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
     }
 
     /**
-     * 构建参数校验错误结果（带字段详情）
+     * 构建校验错误。
+     * @param title 标题
+     * @param firstError 第一个错误
+     * @param errors 错误映射
+     * @return 校验错误结果
      */
     @SuppressWarnings("unchecked")
     private <T> ReturnResult<T> buildValidationError(String title, String firstError, Map<String, String> errors) {
@@ -594,6 +773,12 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
         result.setData(errors);
         return (ReturnResult<T>) result;
     }
+
+    /**
+     * 处理jsonmapping异常。
+     * @param e JsonMapping异常
+     * @return 处理jsonmapping异常的结果
+     */
 
     private <T> ReturnResult<T> handleJsonMappingException(JsonMappingException e) {
         if (e instanceof InvalidFormatException ife) {
@@ -625,9 +810,13 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     /**
      * 获取类型的友好名称
+     * @param type 类型
+     * @return 获取简单类型名称的结果
      */
     private String getSimpleTypeName(Class<?> type) {
-        if (type == null) return "有效值";
+        if (type == null) {
+            return "有效值";
+        }
         return switch (type.getSimpleName()) {
             case "Integer", "int" -> "整数";
             case "Long", "long" -> "整数";
@@ -646,9 +835,13 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     /**
      * 获取参数类型的友好名称
+     * @param typeName 类型名称
+     * @return 获取简单类型名称的结果
      */
     private String getSimpleTypeName(String typeName) {
-        if (typeName == null) return "有效值";
+        if (typeName == null) {
+            return "有效值";
+        }
         return switch (typeName) {
             case "int", "Integer" -> "整数";
             case "long", "Long" -> "整数";
@@ -661,9 +854,13 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     /**
      * 提取用户友好的错误信息
+     * @param message 消息
+     * @return extract用户friendly消息的结果
      */
     private String extractUserFriendlyMessage(String message) {
-        if (StringUtils.isBlank(message)) return "操作失败";
+        if (StringUtils.isBlank(message)) {
+            return "操作失败";
+        }
         // 如果包含中文，认为是开发者设置的友好消息
         if (Validator.hasChinese(message)) {
             return message;
@@ -687,9 +884,13 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     /**
      * 提取数据库约束错误的友好信息
+     * @param message 消息
+     * @return extractconstraint消息的结果
      */
     private String extractConstraintMessage(String message) {
-        if (StringUtils.isBlank(message)) return "数据校验失败";
+        if (StringUtils.isBlank(message)) {
+            return "数据校验失败";
+        }
         
         // 唯一约束冲突 - 提取重复的值
         Matcher duplicateMatcher = DUPLICATE_ENTRY_PATTERN.matcher(message);
@@ -732,6 +933,8 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     /**
      * 处理异步任务内部异常
+     * @param cause cause
+     * @return 处理异步cause的结果
      */
     @SuppressWarnings("unchecked")
     private <T> ReturnResult<T> handleAsyncCause(Throwable cause) {
@@ -761,6 +964,8 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     /**
      * 记录警告日志（带请求信息）
+     * @param message 消息
+     * @param e e
      */
     private void logWarn(String message, Throwable e) {
         String uri = getRequestUri();
@@ -770,6 +975,8 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     /**
      * 记录错误日志（带请求信息和堆栈）
+     * @param message 消息
+     * @param e e
      */
     private void logError(String message, Throwable e) {
         String uri = getRequestUri();
@@ -779,6 +986,7 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
 
     /**
      * 获取当前请求URI
+     * @return 获取请求uri的结果
      */
     private String getRequestUri() {
         try {
@@ -794,7 +1002,8 @@ public class ApiExceptionAdvice implements org.springframework.context.Environme
     }
 
     /**
-     * 获取或创建请求追踪ID
+      * 获取或创建请求追踪标识
+     * @return 获取或创建追踪id的结果
      */
     private String getOrCreateTraceId() {
         try {

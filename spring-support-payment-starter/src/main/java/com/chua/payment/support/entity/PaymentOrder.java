@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @TableName("pay_order")
 public class PaymentOrder {
     @TableId(value = "pay_order_id", type = IdType.AUTO)
-    /** ID */
+    /** 标识 */
     private Long id;
 
     @TableField("pay_order_order_no")
@@ -24,19 +24,19 @@ public class PaymentOrder {
     private String orderNo;
 
     @TableField("pay_order_business_order_no")
-    /** Business排序NO */
+    /** 业务排序NO */
     private String businessOrderNo;
 
     @TableField("pay_order_merchant_id")
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
 
     @TableField("pay_order_channel_id")
-    /** 通道ID */
+    /** 通道标识 */
     private Long channelId;
 
     @TableField("pay_order_user_id")
-    /** 用户ID */
+    /** 用户标识 */
     private Long userId;
 
     @TableField("pay_order_channel_type")
@@ -64,7 +64,7 @@ public class PaymentOrder {
     private BigDecimal discountAmount;
 
     @TableField("pay_order_currency")
-    /** Currency */
+    /** 货币 */
     private String currency;
 
     @TableField("pay_order_status")
@@ -72,7 +72,7 @@ public class PaymentOrder {
     private String status;
 
     @TableField("pay_order_subject")
-    /** Subject */
+    /** 主题 */
     private String subject;
 
     @TableField("pay_order_body")
@@ -80,7 +80,7 @@ public class PaymentOrder {
     private String body;
 
     @TableField("pay_order_notify_url")
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
 
     @TableField("pay_order_return_url")
@@ -92,15 +92,15 @@ public class PaymentOrder {
     private LocalDateTime expireTime;
 
     @TableField("pay_order_pay_time")
-    /** PAY时间 */
+    /** 薪酬时间 */
     private LocalDateTime payTime;
 
     @TableField("pay_order_complete_time")
-    /** Complete时间 */
+    /** 完成时间 */
     private LocalDateTime completeTime;
 
     @TableField("pay_order_refund_time")
-    /** Refund时间 */
+    /** 退税时间 */
     private LocalDateTime refundTime;
 
     @TableField("pay_order_third_party_order_no")
@@ -108,7 +108,7 @@ public class PaymentOrder {
     private String thirdPartyOrderNo;
 
     @TableField("pay_order_remark")
-    /** Remark */
+    /** 评论 */
     private String remark;
 
     @TableField("pay_order_deleted")

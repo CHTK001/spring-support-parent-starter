@@ -37,12 +37,12 @@ import java.util.List;
 public class SysAiUsageServiceImpl implements SysAiUsageService {
 
     /**
-     * 用量 Mapper
+      * 用量 映射器
      */
     private final SysAiUsageMapper usageMapper;
 
     /**
-     * 日汇总 Mapper
+      * 日汇总 映射器
      */
     private final SysAiUsageDailyMapper dailyMapper;
 
@@ -52,7 +52,7 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
     private final SysAiPricingService pricingService;
 
     /**
-     * IP 地址转物理地址服务（spring-support-common，带 Redis 缓存）
+      * IP 地址转物理地址服务（spring-支持-通用，带 Redis 缓存）
      */
     private final IptablesService iptablesService;
 
@@ -60,13 +60,13 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
     @Transactional
     /**
      * Record
-     * @param groupName groupName
-     * @param provider provider
-     * @param model model
-     * @param callType callType
+     * @param groupName 群体名称
+     * @param provider 提供者
+     * @param model 模型
+     * @param callType call类型
      * @param usage usage
-     * @param requestId requestId
-     * @param userId userId
+     * @param requestId 请求标识
+     * @param userId 用户标识
      */
     public void record(String groupName, String provider, String model, String callType,
                        AiUsage usage, String requestId, String userId) {
@@ -92,10 +92,10 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
         entity.setSysAiUsageType("chat");
         entity.setSysAiUsageBillingMode("pay_as_you_go");
 
-        // 本机请求兜底：默认本机 IPv4；非本机部署可由拦截器回填真实客户端 IP
+ // 本机请求兜底：默认本机 ipv4；非本机部署可由拦截器回填真实客户端 IP
         String clientIp = IpUtils.getLocalIpv4();
         entity.setSysAiUsageIp(clientIp);
-        // IP 转物理地址（复用 spring-support-common IptablesService，带 Redis 缓存）
+ // IP 转物理地址（复用 spring-支持-通用 iptables服务，带 Redis 缓存）
         try {
             ReturnResult<GeoCity> geo = iptablesService.transferAddress(clientIp);
             if (geo != null && geo.isOk() && geo.getData() != null) {
@@ -150,13 +150,13 @@ public class SysAiUsageServiceImpl implements SysAiUsageService {
     @Override
     /**
      * 列表
-     * @param groupName groupName
-     * @param provider provider
-     * @param model model
-     * @param startTime startTime
-     * @param endTime endTime
+     * @param groupName 群体名称
+     * @param provider 提供者
+     * @param model 模型
+     * @param startTime 启动时间
+     * @param endTime 结束时间
      * @param page page
-     * @param size size
+     * @param size 大小
      */
     public Page<SysAiUsage> list(String groupName, String provider, String model,
                                  LocalDateTime startTime, LocalDateTime endTime, int page, int size) {

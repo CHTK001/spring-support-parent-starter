@@ -32,7 +32,7 @@ import org.springframework.context.annotation.Bean;
  * </pre>
  * <p>MDC 链路追踪默认永久开启，无需配置</p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/06/21
  * @author CH
  */
@@ -47,7 +47,7 @@ public class LogConfiguration {
     /**
      * 构造函数
      *
-     * @param logProperties LogProperties
+     * @param logProperties 日志属性
      */
     public LogConfiguration(LogProperties logProperties) {
         this.logProperties = logProperties;
@@ -97,11 +97,11 @@ public class LogConfiguration {
     }
 
     /**
-     * 日志/MDC 模块的 ServiceInfo 贡献者: 输出 MDC 链路追踪、参数日志过滤器等开关状态。
+      * 日志/MDC 模块的 服务信息 贡献者: 输出 MDC 链路追踪、参数日志过滤器等开关状态。
      *
      * <p>MDC 链路追踪由 {@link MdcHandlerFilter} 实现, 通过
      * {@link com.chua.starter.common.support.configuration.MessageConverterWebMvcConfigurer}
-     * 注册为全局过滤器, order 为 {@link Integer#MIN_VALUE} (过滤链最前), 永久开启无需配置。</p>
+      * 注册为全局过滤器, 订单 为 {@link Integer#MIN_VALUE} (过滤链最前), 永久开启无需配置。</p>
      *
      * @return ServiceInfoContributor
      */

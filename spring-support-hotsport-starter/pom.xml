@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Spring Support Hotsport Starter - APM 热点观测模块
+
+    基于 utils-support-runtime-apm 的运行时 APM 数据源（StorageManager SPI），
+    以 REST API 暴露 传输记录 / 依赖图 / 资源泄漏 / 日志 等观测数据，
+    并自注入 Java Agent（RuntimeBoot.attachSelf）对当前 JVM 做字节码插桩。
+
+    前端：vue-support-parent-starter/apps/vue-support-hotspot-starter
+    （构建产物拷贝至本模块 src/main/resources/static/ 单 jar 交付）
+
+    @author CH
+    @version 4.0.0.42
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.chua</groupId>
+        <artifactId>spring-support-parent-starter</artifactId>
+        <version>4.0.0.42</version>
+    </parent>
+
+    <artifactId>spring-support-hotsport-starter</artifactId>
+    <description>APM 热点观测：REST 暴露 APM 数据 + 自注入 Agent + 前端静态托管</description>
+
+    <properties>
+        <utils.version>4.0.0.42</utils.version>
+    </properties>
+
+    <dependencies>
+        <!-- Web -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- 通用：ReturnResult / 拦截器（common-starter 的 ApiConfiguration 异常处理器引用
+             spring-jdbc 的 DataAccessException，JDBC 依赖须保留；DataSource 由
+             application.yml 的嵌入式 H2 兜底提供，不依赖外部数据库） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>spring-support-common-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- 嵌入式 H2（内存兜底 DataSource，common-starter 的异常处理器依赖 spring-jdbc） -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- 运行时 APM：StorageManager / Query / ApmStorage SPI -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-runtime-apm</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+
+        <!-- 运行时协议值对象（DependencyEdge / Endpoint） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-runtime-protocol</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+
+        <!-- 运行时 Starter（RuntimeBoot.attachSelf 自注入） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-runtime-starter</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+
+        <!-- 运行时 Agent（自 attach 的目标 jar，由 classpath 探测） -->
+        <dependency>
+            <groupId>com.chua</groupId>
+            <artifactId>utils-support-runtime-agent</artifactId>
+            <version>${utils.version}</version>
+        </dependency>
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 打可执行 jar -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

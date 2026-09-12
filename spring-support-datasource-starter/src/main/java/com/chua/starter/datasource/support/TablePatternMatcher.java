@@ -9,6 +9,7 @@ import java.util.List;
  * 不支持 {@code ?} 与 {@code [...]}。空字符串视为通配全部。</p>
  *
  * @since 2026/8/5
+ * @author CH
  */
 public final class TablePatternMatcher {
 
@@ -17,6 +18,10 @@ public final class TablePatternMatcher {
      */
     private final String regex;
 
+    /**
+     * table模式匹配。
+     * @param regex regex
+     */
     private TablePatternMatcher(String regex) {
         this.regex = regex;
     }
@@ -45,6 +50,9 @@ public final class TablePatternMatcher {
 
     /**
      * 任意一个匹配器命中即返回 true
+     * @param matchers matchers
+     * @param name 名称
+     * @return 任意匹配的结果
      */
     public static boolean anyMatch(List<TablePatternMatcher.Matcher> matchers, String name) {
         for (Matcher m : matchers) {
@@ -57,6 +65,8 @@ public final class TablePatternMatcher {
 
     /**
      * 将通配符模式转为正则
+     * @param pattern 模式
+     * @return 转为regex的结果
      */
     private static String toRegex(String pattern) {
         StringBuilder sb = new StringBuilder(pattern.length() + 4);
@@ -75,9 +85,16 @@ public final class TablePatternMatcher {
 
     /**
      * 简单函数式匹配器
+     * @author CH
+     * @since 4.0.0
      */
     @FunctionalInterface
     public interface Matcher {
+        /**
+         * 测试。
+         * @param name 名称
+         * @return 测试的结果
+         */
         boolean test(String name);
     }
 }

@@ -6,7 +6,7 @@ import com.chua.starter.monitor.support.entity.MsMonitorTask;
 import java.util.List;
 
 /**
- * 监控任务 Service
+   * 监控任务 服务
  *
  * @since 2026/8/4
  * @author CH
@@ -38,7 +38,7 @@ public interface MonitorTaskService {
     ReturnResult<Void> delete(Long id);
 
     /**
-     * 按 ID 查询
+      * 按 标识 查询
      *
      * @param id 主键
      * @return 查询结果
@@ -55,7 +55,7 @@ public interface MonitorTaskService {
     /**
      * 按监控主机查询任务
      *
-     * @param monitorId 主机 id
+     * @param monitorId 主机 标识
      * @return 任务列表
      */
     ReturnResult<List<MsMonitorTask>> listByMonitor(Long monitorId);

@@ -20,9 +20,11 @@ import java.util.Map;
  * <p>桌面模式下终端由 Electron 管理；WebUI 模式：
  * <ul>
  *   <li>创建请求携带 {@code ssh_host_id} 时，开启真实 SSH 交互式终端
- *       （MINA SSHD PTY），输出经 {@code terminal.output} WS 事件推给前端 XtermView；</li>
+   * （MINA SSHD 伪终端），输出经 {@code terminal.output} WS 事件推给前端 xtermview；</li>
  *   <li>未携带时保持占位（本地 PTY 由宿主进程管理，此端点仅回执）。</li>
  * </ul>
+ * @author CH
+ * @since 4.0.0
  */
 @ApiReturnFormatIgnore
 @Slf4j
@@ -43,18 +45,31 @@ public class ApiTerminalController {
 
     @TokenForIgnore
     @GetMapping
+    /**
+     * 列表。
+     * @return 列表的结果
+     */
     public Map<String, Object> list() {
         return Map.of("success", true, "data", List.of());
     }
 
     @TokenForIgnore
     @GetMapping("/list-ssh")
+    /**
+     * 列表ssh。
+     * @return 列表ssh的结果
+     */
     public Map<String, Object> listSsh() {
         return Map.of("success", true, "data", List.of());
     }
 
     @TokenForIgnore
     @PostMapping
+    /**
+     * 创建。
+     * @param body 主体
+     * @return 创建的结果
+     */
     public Map<String, Object> create(@RequestBody Map<String, Object> body) {
         Object sshHostId = body.get("ssh_host_id");
         if (sshHostId != null && !String.valueOf(sshHostId).isBlank()) {
@@ -73,7 +88,7 @@ public class ApiTerminalController {
                 return Map.of("success", false, "error", "SSH 终端创建失败: " + sanitize(e.getMessage()));
             }
         }
-        // 无 ssh_host_id：本地 PTY 占位回执（与旧行为一致）
+ // 无 ssh_主机_标识：本地 伪终端 占位回执（与旧行为一致）
         return Map.of("success", true, "data", Map.of(
                 "terminal_id", "term-" + System.currentTimeMillis(),
                 "status", "running"
@@ -82,6 +97,11 @@ public class ApiTerminalController {
 
     @TokenForIgnore
     @GetMapping("/{terminalId}")
+    /**
+     * 获取。
+     * @param terminalId terminalid
+     * @return 获取的结果
+     */
     public Map<String, Object> get(@PathVariable String terminalId) {
         SshTerminalSessionManager.SshTerminalSession session = sshTerminalManager.get(terminalId);
         if (session == null) {
@@ -95,6 +115,12 @@ public class ApiTerminalController {
 
     @TokenForIgnore
     @PostMapping("/{terminalId}/input")
+    /**
+     * 输入。
+     * @param terminalId terminalid
+     * @param body 主体
+     * @return 输入的结果
+     */
     public Map<String, Object> input(@PathVariable String terminalId, @RequestBody Map<String, String> body) {
         String dataB64 = body.get("data_b64");
         boolean ok = dataB64 != null && sshTerminalManager.input(terminalId, dataB64);
@@ -103,6 +129,12 @@ public class ApiTerminalController {
 
     @TokenForIgnore
     @PostMapping("/{terminalId}/resize")
+    /**
+     * resize。
+     * @param terminalId terminalid
+     * @param body 主体
+     * @return resize的结果
+     */
     public Map<String, Object> resize(@PathVariable String terminalId, @RequestBody Map<String, Object> body) {
         int cols = body.get("cols") instanceof Number n ? n.intValue() : 80;
         int rows = body.get("rows") instanceof Number m ? m.intValue() : 24;
@@ -112,6 +144,11 @@ public class ApiTerminalController {
 
     @TokenForIgnore
     @PostMapping("/{terminalId}/kill")
+    /**
+     * kill。
+     * @param terminalId terminalid
+     * @return kill的结果
+     */
     public Map<String, Object> kill(@PathVariable String terminalId) {
         sshTerminalManager.close(terminalId);
         return Map.of("success", true, "data", true);
@@ -119,18 +156,33 @@ public class ApiTerminalController {
 
     @TokenForIgnore
     @PostMapping("/{terminalId}/relaunch")
+    /**
+     * relaunch。
+     * @param terminalId terminalid
+     * @return relaunch的结果
+     */
     public Map<String, Object> relaunch(@PathVariable String terminalId) {
         return Map.of("success", true, "data", true);
     }
 
     @TokenForIgnore
     @PostMapping("/{terminalId}/relaunch-shell")
+    /**
+      * relaunchshell。
+     * @param terminalId terminalid
+     * @return relaunchShell的结果
+     */
     public Map<String, Object> relaunchShell(@PathVariable String terminalId) {
         return Map.of("success", true, "data", true);
     }
 
     @TokenForIgnore
     @DeleteMapping("/{terminalId}")
+    /**
+     * 删除。
+     * @param terminalId terminalid
+     * @return 删除的结果
+     */
     public Map<String, Object> delete(@PathVariable String terminalId) {
         sshTerminalManager.close(terminalId);
         return Map.of("success", true, "data", true);
@@ -138,30 +190,53 @@ public class ApiTerminalController {
 
     @TokenForIgnore
     @GetMapping("/mcp-register-template")
+    /**
+     * mcp注册template。
+     * @return mcp注册template的结果
+     */
     public Map<String, Object> mcpRegisterTemplate() {
         return Map.of("success", true, "data", Map.of());
     }
 
     @TokenForIgnore
     @PostMapping("/register-knowledge")
+    /**
+     * 注册知识。
+     * @param body 主体
+     * @return 注册知识的结果
+     */
     public Map<String, Object> registerKnowledge(@RequestBody Map<String, Object> body) {
         return Map.of("success", true, "data", true);
     }
 
     @TokenForIgnore
     @PostMapping("/register-knowledge-global")
+    /**
+     * 注册知识全局。
+     * @param body 主体
+     * @return 注册知识全局的结果
+     */
     public Map<String, Object> registerKnowledgeGlobal(@RequestBody Map<String, Object> body) {
         return Map.of("success", true, "data", true);
     }
 
     @TokenForIgnore
     @PostMapping("/unregister-knowledge-global")
+    /**
+     * 注销知识全局。
+     * @param body 主体
+     * @return 注销知识全局的结果
+     */
     public Map<String, Object> unregisterKnowledgeGlobal(@RequestBody Map<String, Object> body) {
         return Map.of("success", true, "data", true);
     }
 
     @TokenForIgnore
     @GetMapping("/knowledge-global-status")
+    /**
+     * 知识全局状态。
+     * @return 知识全局状态的结果
+     */
     public Map<String, Object> knowledgeGlobalStatus() {
         return Map.of("success", true, "data", Map.of("registered", false));
     }
@@ -177,7 +252,9 @@ public class ApiTerminalController {
     // ==================== 响应构建 ====================
 
     /**
-     * 将 SSH 会话包装为前端 ITerminalSession 契约的响应 Map。
+      * 将 SSH 会话包装为前端 iterminal会话 契约的响应 映射。
+     * @param session 会话
+     * @return 转为ssh响应的结果
      */
     private Map<String, Object> toSshResponse(SshTerminalSessionManager.SshTerminalSession session) {
         Map<String, Object> m = new LinkedHashMap<>();
@@ -201,6 +278,8 @@ public class ApiTerminalController {
 
     /**
      * 脱敏错误信息（截断 + 压缩空白）。
+     * @param message 消息
+     * @return sanitize的结果
      */
     private static String sanitize(String message) {
         if (message == null || message.isBlank()) {

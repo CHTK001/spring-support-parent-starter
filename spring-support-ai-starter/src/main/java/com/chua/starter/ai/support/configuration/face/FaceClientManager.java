@@ -48,7 +48,7 @@ public class FaceClientManager {
     private static final String GROUP = "face";
 
     /**
-     * 默认特征向量维度（R50/face-feature 输出，与 {@code dimension(512)} 对齐）
+      * 默认特征向量维度（R50/face-特征 输出，与 {@code dimension(512)} 对齐）
      */
     private static final int DEFAULT_FEATURE_DIMENSION = 512;
 
@@ -58,7 +58,7 @@ public class FaceClientManager {
     private final GlobalSettingReader settingReader;
 
     /**
-     * Spring BeanFactory（预留动态注册 Bean）
+      * Spring Bean工厂（预留动态注册 Bean）
      */
     private final DefaultListableBeanFactory beanFactory;
 
@@ -78,12 +78,12 @@ public class FaceClientManager {
     private volatile VectorStorage vectorStorage;
 
     /**
-     * 当前生效的活体检测器（懒构建，可为 null）
+      * 当前生效的活体检测器（懒构建，可为 空）
      */
     private volatile LivenessDetector liveness;
 
     /**
-     * 当前生效的质量评估器（懒构建，可为 null）
+      * 当前生效的质量评估器（懒构建，可为 空）
      */
     private volatile FaceQualityAssessor qualityAssessor;
 
@@ -182,9 +182,9 @@ public class FaceClientManager {
     }
 
     /**
-     * 获取当前活体检测器（可为 null）。
+      * 获取当前活体检测器（可为 空）。
      *
-     * @return 活体检测器或 null
+     * @return 活体检测器或 空
      */
     public LivenessDetector currentLiveness() {
         if (liveness == null) {
@@ -198,9 +198,9 @@ public class FaceClientManager {
     }
 
     /**
-     * 获取当前质量评估器（可为 null）。
+      * 获取当前质量评估器（可为 空）。
      *
-     * @return 质量评估器或 null
+     * @return 质量评估器或 空
      */
     public FaceQualityAssessor currentQualityAssessor() {
         if (qualityAssessor == null) {
@@ -232,7 +232,9 @@ public class FaceClientManager {
     }
 
     /**
-     * 构建带阈值的 FaceDetector（置信度阈值 + NMS + 最小人脸尺寸）。
+      * 构建带阈值的 facedetector（置信度阈值 + NMS + 最小人脸尺寸）。
+     * @param modelId 模型标识
+     * @return 构建detector的结果
      */
     private FaceDetector buildDetector(String modelId) {
         FaceDetector d = FaceDetector.create(modelId);
@@ -278,7 +280,7 @@ public class FaceClientManager {
             synchronized (this) {
                 if (superResolution == null) {
                     String model = settingReader.getStr(GROUP, "super_resolution_model");
-                    // 未配置时回退默认（与 FaceGlobalSettingProvider 默认一致）
+ // 未配置时回退默认（与 face全局setting提供者 默认一致）
                     if (model == null || model.isBlank()) {
                         model = "gfpgan-face-super-resolution";
                     }
@@ -394,6 +396,9 @@ public class FaceClientManager {
             return;
         }
         log.info("[FaceClientManager] 收到 face 分组配置变更，开始热重建");
+        /**
+         * rebuild。
+         */
         rebuild();
     }
 
@@ -427,12 +432,16 @@ public class FaceClientManager {
         this.deepfakeClassifier = ImageClassifier.create(settingReader.getStr(GROUP, "deepfake_model"));
         this.landmarkExtractor = FeatureExtractor.create(settingReader.getStr(GROUP, "landmark_model"));
 
+        /**
+         * 关闭quietly。
+         * @param oldVectorStorage 旧向量storage
+         */
         closeQuietly(oldVectorStorage);
         log.info("[FaceClientManager] 人脸识别实例热更新完成");
     }
 
     /**
-     * 构建检测管线（detect + crop + liveness + feature + 检索 + 辅助能力）。
+      * 构建检测管线（detect + crop + liveness + 特征 + 检索 + 辅助能力）。
      *
      * @return 检测管线
      */
@@ -445,14 +454,14 @@ public class FaceClientManager {
             builder.requireLive(settingReader.getBool(GROUP, "liveness_enabled", false));
             builder.livenessThreshold(readFloat("liveness_threshold", 0.5f));
         }
-        // 识别链路（feature + 向量库）
+ // 识别链路（特征 + 向量库）
         String featureModel = settingReader.getStr(GROUP, "feature_model");
         if (StringUtils.isNotBlank(featureModel)) {
             builder.feature(featureModel);
         }
         builder.vectorStorage(currentVectorStorage());
         builder.topK(settingReader.getInt(GROUP, "top_k", 5));
-        // 辅助能力（enabled 开关 + 配置模型均满足才注入，保持懒加载）
+ // 辅助能力（已启用 开关 + 配置模型均满足才注入，保持懒加载）
         injectOptional(builder, "anime_enabled", "anime_detector_model", (m) -> builder.anime(m));
         injectOptional(builder, "super_resolution_enabled", "super_resolution_model", (m) -> builder.superResolution(m));
         injectOptional(builder, "restore_enabled", "restore_model", (m) -> builder.restore(m));
@@ -464,7 +473,7 @@ public class FaceClientManager {
     }
 
     /**
-     * 可选模型注入：启用开关为 true（未配置时默认开启）且配置了模型 ID 才注入构建器。
+      * 可选模型注入：启用开关为 true（未配置时默认开启）且配置了模型 标识 才注入构建器。
      *
      * @param builder      构建器
      * @param enabledField 启用开关字段
@@ -499,9 +508,9 @@ public class FaceClientManager {
     }
 
     /**
-     * 构建活体检测器（未配置时返回 null）。
+      * 构建活体检测器（未配置时返回 空）。
      *
-     * @return 活体检测器或 null
+     * @return 活体检测器或 空
      */
     private LivenessDetector buildLiveness() {
         String model = settingReader.getStr(GROUP, "liveness_model");
@@ -512,9 +521,9 @@ public class FaceClientManager {
     }
 
     /**
-     * 构建质量评估器（未配置时返回 null）。
+      * 构建质量评估器（未配置时返回 空）。
      *
-     * @return 质量评估器或 null
+     * @return 质量评估器或 空
      */
     private FaceQualityAssessor buildQualityAssessor() {
         boolean enabled = settingReader.getBool(GROUP, "quality_enabled", false);

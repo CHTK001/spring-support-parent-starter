@@ -38,6 +38,7 @@ import java.sql.DriverManager;
  * plugin.h2.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
  * plugin.h2.script-path=classpath:db/migration/h2
  * plugin.h2.cleanup-after-test=true
+ * }</pre>est=true
  * }</pre>
  * </p>
  *
@@ -51,14 +52,19 @@ import java.sql.DriverManager;
 @EnableConfigurationProperties(H2DataSourceProperties.class)
 public class H2EngineAutoConfiguration {
 
-    private final H2DataSourceProperties properties;
+    private final H2DataSourceProperties properties; // 属性
 
+    /**
+     * h2engineauto配置。
+     * @param properties 属性
+     */
     public H2EngineAutoConfiguration(H2DataSourceProperties properties) {
         this.properties = properties;
     }
 
     /**
      * 注册 H2 Engine Bean，通过 SPI "h2" 获取。
+     * @return h2Engine的结果
      */
     @Bean
     @ConditionalOnMissingBean
@@ -71,7 +77,8 @@ public class H2EngineAutoConfiguration {
     }
 
     /**
-     * 注册 H2 DataSource Bean（供 Spring JdbcTemplate /@Transactional 使用）。
+      * 注册 H2 数据源 Bean（供 Spring jdbctemplate /@Transactional 使用）。
+     * @return h2数据源的结果
      */
     @Bean
     @ConditionalOnMissingBean(DataSource.class)
@@ -87,6 +94,11 @@ public class H2EngineAutoConfiguration {
             log.info("[h2] H2 DataSource 已注册，URL={}", properties.getUrl());
             return ds;
         } catch (Exception e) {
+            /**
+             * runtime异常。
+             * @param e.getMessage( e.获取消息(
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("[h2] H2 DataSource 创建失败: " + e.getMessage(), e);
         }
     }
@@ -96,6 +108,8 @@ public class H2EngineAutoConfiguration {
      * <p>
      * 如果配置了 {@code script-path}，则在 Bean 初始化时自动执行迁移。
      * </p>
+     * @param h2Engine h2Engine
+     * @return h2Flyway的结果
      */
     @Bean
     @ConditionalOnMissingBean
@@ -112,10 +126,17 @@ public class H2EngineAutoConfiguration {
 
     /**
      * 注册 H2 清理插件（可选）。
+     * @param engine engine
+     * @return h2CleanupPlugin的结果
      */
     @Bean
     @ConditionalOnMissingBean
     public H2CleanupPlugin h2CleanupPlugin(H2Engine engine) {
+        /**
+          * H2cleanupplugin。
+         * @param engine engine
+         * @return H2CleanupPlugin的结果
+         */
         return new H2CleanupPlugin(engine);
     }
 }

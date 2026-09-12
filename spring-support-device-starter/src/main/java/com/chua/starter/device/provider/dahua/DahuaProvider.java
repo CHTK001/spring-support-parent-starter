@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * 大华设备 Provider
+   * 大华设备 提供者
  * <p>支持两大平台对接 + 局域网 SDK 直连：</p>
  * <ul>
  *   <li>大华云睿（{@code platformType=dahua-cloud}）—— 纯 Java HTTP OpenAPI</li>
@@ -64,8 +64,8 @@ public class DahuaProvider implements DeviceProvider {
     private final boolean fallbackMock;
 
     /**
-     * 创建 DahuaProvider 实例
-     * @param environment environment
+      * 创建 dahua提供者 实例
+     * @param environment 环境
      */
     public DahuaProvider(Environment environment) {
         this.fallbackMock = environment.getProperty("plugin.device.provider.fallback-mock", boolean.class, false);
@@ -75,13 +75,13 @@ public class DahuaProvider implements DeviceProvider {
     }
 
     @Override
-    /** 获取Vendor */
+    /** 获取供应商 */
     public String getVendor() {
         return VENDOR;
     }
 
     @Override
-    /** Support */
+    /** 支持 */
     public boolean support(DeviceConnectInfo info) {
         return VENDOR.equalsIgnoreCase(info.getVendor());
     }
@@ -96,9 +96,19 @@ public class DahuaProvider implements DeviceProvider {
             String platform = info.getPlatformType();
             try {
                 if (PLATFORM_DAHUA_CLOUD.equalsIgnoreCase(platform)) {
+                    /**
+                     * dahuacloud会话。
+                     * @param info 信息
+                     * @return dahuacloud会话的结果
+                     */
                     return new DahuaCloudSession(info);
                 }
                 if (PLATFORM_LECHANGE.equalsIgnoreCase(platform)) {
+                    /**
+                     * dahuale改变会话。
+                     * @param info 信息
+                     * @return dahuale改变会话的结果
+                     */
                     return new DahuaLeChangeSession(info);
                 }
                 throw new IllegalArgumentException("大华平台类型不支持: " + platform
@@ -106,31 +116,61 @@ public class DahuaProvider implements DeviceProvider {
             } catch (Exception e) {
                 if (fallbackMock) {
                     log.warn("大华平台连接失败，回退模拟会话: {}", e.getMessage());
+                    /**
+                     * dahua会话。
+                     * @param info 信息
+                     * @return dahua会话的结果
+                     */
                     return new DahuaSession(info);
                 }
+                /**
+                 * illegal状态异常。
+                 * @param e.getMessage( e.获取消息(
+                 * @return illegal状态异常的结果
+                 */
                 throw new IllegalStateException("大华平台连接失败 [" + platform + "]: " + e.getMessage(), e);
             }
         }
 
         if (AUTH_SDK.equalsIgnoreCase(info.getAuthType()) || info.getAuthType() == null) {
             try {
+                /**
+                 * dahuareal会话。
+                 * @param info 信息
+                 * @return dahuareal会话的结果
+                 */
                 return new DahuaRealSession(info);
             } catch (Exception e) {
                 if (fallbackMock) {
                     log.warn("大华 SDK 直连失败，回退模拟会话: {}", e.getMessage());
+                    /**
+                     * dahua会话。
+                     * @param info 信息
+                     * @return dahua会话的结果
+                     */
                     return new DahuaSession(info);
                 }
+                /**
+                 * illegal状态异常。
+                 * @param e.getMessage( e.获取消息(
+                 * @return illegal状态异常的结果
+                 */
                 throw new IllegalStateException("大华 SDK 直连失败: " + e.getMessage(), e);
             }
         }
 
+        /**
+         * illegal参数异常。
+         * @param info.getAuthType( 信息.获取认证类型(
+         * @return illegal参数异常的结果
+         */
         throw new IllegalArgumentException("不支持的大华认证类型: " + info.getAuthType());
     }
 
     @Override
-    /** FetchOrganizations */
+    /** 获取组织 */
     public List<OrganizationNode> fetchOrganizations() {
-        // 组织同步需在已连接的 OpenAPI 会话上下文中执行，由业务层处理。
+ // 组织同步需在已连接的 打开api 会话上下文中执行，由业务层处理。
         return List.of();
     }
 }

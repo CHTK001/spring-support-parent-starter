@@ -39,7 +39,7 @@ public interface AiChatFacadeService {
      * 流式对话调用，并在流结束后通过 {@code onComplete} 回调返回完整回复内容。
      *
      * @param request    对话请求
-     * @param onComplete 完成后回调（携带完整回复文本，可能为 null），可为 null
+     * @param onComplete 完成后回调（携带完整回复文本，可能为 空），可为 空
      * @return SSE 发射器
      */
     default SseEmitter stream(AiChatRequest request, Consumer<String> onComplete) {
@@ -51,8 +51,8 @@ public interface AiChatFacadeService {
      * 流结束后通过 {@code onComplete} 回调返回完整回复内容。
      *
      * @param request    对话请求
-     * @param onChunk    每段增量文本回调（可为 null）
-     * @param onComplete 完成后回调（携带完整回复文本，可能为 null），可为 null
+     * @param onChunk    每段增量文本回调（可为 空）
+     * @param onComplete 完成后回调（携带完整回复文本，可能为 空），可为 空
      * @return SSE 发射器
      */
     default SseEmitter stream(AiChatRequest request,
@@ -66,9 +66,9 @@ public interface AiChatFacadeService {
      * 调用方据此推送带错误语义的 {@code turn.completed}，避免前端会话卡在生成态。
      *
      * @param request    对话请求
-     * @param onChunk    每段增量文本回调（可为 null）
-     * @param onComplete 完成后回调（携带完整回复文本，可能为 null），可为 null
-     * @param onError    失败回调（携带异常，仅在全链路失败时触发，与 onComplete 互斥），可为 null
+     * @param onChunk    每段增量文本回调（可为 空）
+     * @param onComplete 完成后回调（携带完整回复文本，可能为 空），可为 空
+     * @param onError    失败回调（携带异常，仅在全链路失败时触发，与 on完成 互斥），可为 空
      * @return SSE 发射器
      */
     SseEmitter stream(AiChatRequest request,
@@ -79,7 +79,7 @@ public interface AiChatFacadeService {
     /**
      * 获取分组可用模型列表。
      *
-     * @param groupId 分组 ID
+     * @param groupId 分组 标识
      * @return 模型列表
      */
     default List<String> models(Integer groupId) {
@@ -93,7 +93,7 @@ public interface AiChatFacadeService {
      * 返回结构通过 {@link ModelDefinition#getCapabilities()} 携带能力信息，
      * 能力标签约定：{@code think}（深度思考）、{@code search}（智能搜索）、{@code vision}（多模态）等。</p>
      *
-     * @param groupId 分组 ID（可为 null，表示系统内部调用）
+     * @param groupId 分组 标识（可为 空，表示系统内部调用）
      * @return 模型定义列表
      */
     default List<ModelDefinition> modelDefinitions(Integer groupId) {

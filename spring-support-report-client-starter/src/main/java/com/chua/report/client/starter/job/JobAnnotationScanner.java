@@ -16,9 +16,9 @@ import java.lang.reflect.Method;
 import java.util.Map;
 
 /**
- * Job注解自动扫描器
+   * 作业注解自动扫描器
  * <p>
- * 自动扫描标注了 @Job 注解的方法，并将其注册为 xxl-job 的任务处理器。
+   * 自动扫描标注了 @作业 注解的方法，并将其注册为 xxl-作业 的任务处理器。
  * </p>
  *
  * <h3>使用场景：</h3>
@@ -53,7 +53,7 @@ import java.util.Map;
  * }
  * </pre>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/12/07
  * @see Job
  * @see JobHandlerFactory
@@ -68,9 +68,9 @@ public class JobAnnotationScanner implements BeanPostProcessor {
     private final JobHandlerFactory jobHandlerFactory = JobHandlerFactory.getInstance();
 
     @Override
-    /** Post处理AfterInitialization */
+    /** Post处理之后initialization */
     public Object postProcessAfterInitialization(@NonNull Object bean, @NonNull String beanName) throws BeansException {
-        // 扫描带有 @Job 注解的方法
+ // 扫描带有 @作业 注解的方法
         Map<Method, Job> annotatedMethods = null;
         try {
             annotatedMethods = MethodIntrospector.selectMethods(
@@ -86,10 +86,17 @@ public class JobAnnotationScanner implements BeanPostProcessor {
             return bean;
         }
 
-        // 注册 Job 处理器
+ // 注册 作业 处理器
         for (Map.Entry<Method, Job> entry : annotatedMethods.entrySet()) {
             Method method = entry.getKey();
             Job job = entry.getValue();
+            /**
+             * 注册作业处理器。
+             * @param bean Bean
+             * @param beanName Bean名称
+             * @param method 方法
+             * @param job 作业
+             */
             registerJobHandler(bean, beanName, method, job);
         }
 
@@ -97,12 +104,12 @@ public class JobAnnotationScanner implements BeanPostProcessor {
     }
 
     /**
-     * 注册 Job 处理器
+      * 注册 作业 处理器
      *
      * @param bean     Bean 实例
      * @param beanName Bean 名称
      * @param method   方法
-     * @param job      Job 注解
+     * @param job      作业 注解
      */
     private void registerJobHandler(Object bean, String beanName, Method method, Job job) {
         String jobName = job.value();

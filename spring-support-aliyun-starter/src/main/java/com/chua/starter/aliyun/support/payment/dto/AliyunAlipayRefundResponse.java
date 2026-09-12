@@ -7,18 +7,19 @@ import java.math.BigDecimal;
 /**
  * 支付宝退款响应
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class AliyunAlipayRefundResponse {
-    /** Success */
+    /** 成功 */
     private boolean success;
-    /** RefundNO */
+    /** 退税no */
     private String refundNo;
-    /** TradeNO */
+    /** 贸易no */
     private String tradeNo;
     /** Refundamount */
     private BigDecimal refundAmount;
-    /** Refund状态 */
+    /** 退税状态 */
     private String refundStatus;
     /** 消息 */
     private String message;

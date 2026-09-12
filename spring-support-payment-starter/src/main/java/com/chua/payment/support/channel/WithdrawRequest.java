@@ -7,16 +7,17 @@ import java.math.BigDecimal;
 /**
  * 提现请求
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class WithdrawRequest {
-    /** WithdrawNO */
+    /** withdrawno */
     private String withdrawNo;
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
-    /** 用户ID */
+    /** 用户标识 */
     private Long userId;
     /** Amount */
     private BigDecimal amount;
@@ -24,11 +25,11 @@ public class WithdrawRequest {
     private String bankAccount;
     /** Bank名称 */
     private String bankName;
-    /** Account名称 */
+    /** 账户名称 */
     private String accountName;
-    /** Operator */
+    /** 操作符 */
     private String operator;
-    /** Remark */
+    /** 评论 */
     private String remark;
 }
 

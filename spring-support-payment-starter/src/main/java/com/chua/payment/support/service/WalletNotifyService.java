@@ -10,6 +10,10 @@ import com.chua.payment.support.dto.WalletNotifyDTO;
  */
 public interface WalletNotifyService {
 
+    /**
+     * 把手通知。
+     * @param dto dto
+     */
     void handleNotify(WalletNotifyDTO dto);
 }
 

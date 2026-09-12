@@ -26,7 +26,7 @@ public class RoundRobinLoadBalancer implements RpcLoadBalancer {
     }
 
     @Override
-    /** 获取Name */
+    /** 获取名称 */
     public String getName() {
         return "round-robin";
     }

@@ -35,13 +35,13 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class ProjectServiceImpl implements ProjectService {
 
-    /** 项目 Mapper */
+    /** 项目 映射器 */
     private final MsProjectMapper projectMapper;
 
-    /** 部署日志 Mapper（删除项目时级联清理） */
+    /** 部署日志 映射器（删除项目时级联清理） */
     private final MsProjectDeployLogMapper deployLogMapper;
 
-    /** 服务器主机 Mapper（来自 spring-support-server-starter） */
+    /** 服务器主机 映射器（来自 spring-支持-服务端-启动） */
     private final MsServerHostMapper serverHostMapper;
 
     /** Jackson */
@@ -49,6 +49,11 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 创建。
+     * @param project project
+     * @return 创建的结果
+     */
     public ReturnResult<MsProject> create(MsProject project) {
         ReturnResult<MsProject> validated = validate(project);
         if (validated != null) {
@@ -63,6 +68,12 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 更新。
+     * @param id 标识
+     * @param project project
+     * @return 更新的结果
+     */
     public ReturnResult<MsProject> update(Long id, MsProject project) {
         if (id == null || projectMapper.selectById(id) == null) {
             return ReturnResult.error("项目不存在: " + id);
@@ -78,6 +89,11 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 删除。
+     * @param id 标识
+     * @return 删除的结果
+     */
     public ReturnResult<Boolean> delete(Long id) {
         if (id == null || projectMapper.selectById(id) == null) {
             return ReturnResult.error("项目不存在: " + id);
@@ -113,6 +129,12 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 更新已启用。
+     * @param id 标识
+     * @param enabled 已启用
+     * @return 更新已启用的结果
+     */
     public ReturnResult<Boolean> updateEnabled(Long id, Boolean enabled) {
         MsProject project = id == null ? null : projectMapper.selectById(id);
         if (project == null) {
@@ -147,7 +169,7 @@ public class ProjectServiceImpl implements ProjectService {
      * 校验项目参数并回填主机 OS 类型
      *
      * @param project 项目
-     * @return 校验失败的错误结果，合法返回 null
+     * @return 校验失败的错误结果，合法返回 空
      */
     private ReturnResult<MsProject> validate(MsProject project) {
         if (project == null) {
@@ -185,7 +207,7 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     /**
-     * 解析 hostIds JSON 数组
+      * 解析 主机标识 JSON 数组
      *
      * @param json JSON 字符串
      * @return ID 列表，解析失败返回空列表

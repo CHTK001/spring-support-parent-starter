@@ -181,9 +181,9 @@ public class SpiderDefinitionController {
     }
 
     /**
-     * 按 ID 查询爬虫定义。
+      * 按 标识 查询爬虫定义。
      *
-     * @param id 主键 ID
+     * @param id 主键 标识
      * @return 爬虫定义
      */
     @GetMapping("/{id}")
@@ -219,7 +219,7 @@ public class SpiderDefinitionController {
     /**
      * 删除爬虫定义。
      *
-     * @param id 主键 ID
+     * @param id 主键 标识
      * @return 是否成功
      */
     @DeleteMapping("/{id}")

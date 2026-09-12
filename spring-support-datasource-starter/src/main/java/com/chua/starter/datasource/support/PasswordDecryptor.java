@@ -11,7 +11,7 @@ package com.chua.starter.datasource.support;
  * <pre>{@code
  * # 配置文件中的加密密码
  * spring.datasource.password: ENC(uX5z1H+z5f3k8L9mW2qR4w==)
- * }</pre>
+ * }</pre>pre>
  *
  * <h3>扩展</h3>
  * <pre>{@code
@@ -22,6 +22,10 @@ package com.chua.starter.datasource.support;
  *     }
  *     \@Override
  *     public String decrypt(String encryptedValue) {
+ *         // 自定义解密逻辑
+ *     }
+ * }
+ * }</pre> {
  *         // 自定义解密逻辑
  *     }
  * }

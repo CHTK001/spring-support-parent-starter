@@ -22,11 +22,11 @@ import java.time.LocalDateTime;
 public class EduTeacher {
 
     @TableId(type = IdType.AUTO)
-    /** TeacherID */
+    /** teacherid */
     private Long teacherId;
 
     /**
-     * 系统用户 userId
+       * 系统用户 用户标识
      */
     private Long teacherUserId;
 
@@ -41,7 +41,7 @@ public class EduTeacher {
     private String teacherName;
 
     /**
-     * 任教学科编码（关联 edu_subject.subject_code）
+      * 任教学科编码（关联 edu_主题.主题_编码）
      */
     private String teacherSubjectCode;
 
@@ -51,10 +51,10 @@ public class EduTeacher {
     private Integer teacherStatus;
 
     @TableField(value = "create_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT)
-    /** Create时间 */
+    /** 创建时间 */
     private LocalDateTime createTime;
 
     @TableField(value = "update_time", fill = com.baomidou.mybatisplus.annotation.FieldFill.INSERT_UPDATE)
-    /** Update时间 */
+    /** 更新时间 */
     private LocalDateTime updateTime;
 }

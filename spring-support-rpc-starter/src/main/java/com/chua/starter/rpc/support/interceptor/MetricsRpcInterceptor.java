@@ -48,11 +48,11 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
     private final ConcurrentHashMap<String, AtomicLong> lastDurations = new ConcurrentHashMap<>();
     /** 方法最近一次调用时间戳（毫秒） */
     private final ConcurrentHashMap<String, AtomicLong> lastCallTimes = new ConcurrentHashMap<>();
-    /** 方法最近一次调用结果（SUCCESS / FAILURE / NONE） */
+    /** 方法最近一次调用结果（成功 / 失败 / 无） */
     private final ConcurrentHashMap<String, String> lastResults = new ConcurrentHashMap<>();
     /** 方法最近一次失败的错误信息 */
     private final ConcurrentHashMap<String, String> lastErrors = new ConcurrentHashMap<>();
-    /** 开始times */
+    /** 开始时间 */
     private final ThreadLocal<Long> startTimes = new ThreadLocal<>();
 
     @Override
@@ -70,18 +70,26 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
         String methodKey = getMethodKey(method);
         successCounters.computeIfAbsent(methodKey, k -> new AtomicLong()).incrementAndGet();
         lastResults.put(methodKey, RESULT_SUCCESS);
+        /**
+         * record持续时间。
+         * @param methodKey 方法钥匙
+         */
         recordDuration(methodKey);
         return result;
     }
 
     @Override
-    /** 处理Exception */
+    /** 处理异常 */
     public void handleException(Method method, Object[] args, Throwable error) throws Throwable {
         String methodKey = getMethodKey(method);
         failureCounters.computeIfAbsent(methodKey, k -> new AtomicLong()).incrementAndGet();
         lastResults.put(methodKey, RESULT_FAILURE);
         lastErrors.put(methodKey, error != null
                 ? (error.getMessage() != null ? error.getMessage() : error.getClass().getSimpleName()) : "null");
+        /**
+         * record持续时间。
+         * @param methodKey 方法钥匙
+         */
         recordDuration(methodKey);
         throw error;
     }
@@ -201,8 +209,20 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
             }
             result.add(new RpcMetrics.MethodStat(methodKey,
                     total,
+                    /**
+                     * 获取成功数量。
+                     * @param methodKey 方法钥匙
+                     */
                     getSuccessCount(methodKey),
+                    /**
+                     * 获取失败数量。
+                     * @param methodKey 方法钥匙
+                     */
                     getFailureCount(methodKey),
+                    /**
+                     * 获取average持续时间。
+                     * @param methodKey 方法钥匙
+                     */
                     getAverageDuration(methodKey),
                     maxDurations.getOrDefault(methodKey, new AtomicLong()).get(),
                     minDuration,
@@ -216,7 +236,7 @@ public class MetricsRpcInterceptor implements RpcInterceptor {
     }
 
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
         return -100; // 高优先级
     }

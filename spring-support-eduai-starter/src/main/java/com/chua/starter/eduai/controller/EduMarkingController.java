@@ -42,7 +42,7 @@ public class EduMarkingController {
     /**
      * 轮询阅卷结果
      *
-     * @param taskId 任务ID
+     * @param taskId 任务标识
      * @return 阅卷结果
      */
     @Operation(summary = "轮询阅卷结果")

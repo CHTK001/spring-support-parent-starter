@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /**
- * 监控网关 Service 实现
+   * 监控网关 服务 实现
  *
  * @since 2026/8/4
  * @author CH
@@ -26,13 +26,18 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MonitorGatewayServiceImpl implements MonitorGatewayService {
 
-    /** 网关 Mapper */
+    /** 网关 映射器 */
     /** Gatewaymapper */
     private final MsMonitorGatewayMapper gatewayMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorGateway")
+    /**
+     * 创建。
+     * @param entity 实体
+     * @return 创建的结果
+     */
     public ReturnResult<MsMonitorGateway> create(MsMonitorGateway entity) {
         try {
             if (entity.getId() == null) {
@@ -55,6 +60,11 @@ public class MonitorGatewayServiceImpl implements MonitorGatewayService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorGateway")
+    /**
+     * 更新。
+     * @param entity 实体
+     * @return 更新的结果
+     */
     public ReturnResult<MsMonitorGateway> update(MsMonitorGateway entity) {
         try {
             gatewayMapper.updateById(entity);
@@ -68,6 +78,11 @@ public class MonitorGatewayServiceImpl implements MonitorGatewayService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(allEntries = true, cacheNames = "monitorGateway")
+    /**
+     * 删除。
+     * @param id 标识
+     * @return 删除的结果
+     */
     public ReturnResult<Void> delete(Long id) {
         try {
             gatewayMapper.deleteById(id);
@@ -80,6 +95,11 @@ public class MonitorGatewayServiceImpl implements MonitorGatewayService {
 
     @Override
     @Cacheable(cacheNames = "monitorGateway", key = "'monitor.gateway:monitor:' + #monitorId")
+    /**
+     * 列表by监控。
+     * @param monitorId 监控标识
+     * @return 列表by监控的结果
+     */
     public ReturnResult<List<MsMonitorGateway>> listByMonitor(Long monitorId) {
         try {
             LambdaQueryWrapper<MsMonitorGateway> wrapper = new LambdaQueryWrapper<>();

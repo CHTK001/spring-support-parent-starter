@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 将支付异步通知接口加入 OAuth 客户端白名单的配置类。
+   * 将支付异步通知接口加入 o认证 客户端白名单的配置类。
  *
  * @author CH
  * @since 4.0.0.50
@@ -23,13 +23,18 @@ import java.util.List;
 @ConditionalOnClass(name = "com.chua.starter.oauth.client.support.properties.AuthClientProperties")
 public class PaymentOauthWhitelistConfiguration {
 
-    /** Payment_notify_whitelist_patterns */
+    /** 薪酬_通知_whitelist_模式 */
     private static final List<String> PAYMENT_NOTIFY_WHITELIST_PATTERNS = List.of(
             "/api/notify/**"
     );
 
     @Bean
-    /** PaymentOauthWhitelistInitializer */
+    /**
+     * 薪酬oauthwhitelistinitializer
+     *
+     * @param applicationContext application上下文
+     * @return 薪酬oauthwhitelistinitializer的结果
+     */
     public SmartInitializingSingleton paymentOauthWhitelistInitializer(ApplicationContext applicationContext) {
         return () -> {
             try {

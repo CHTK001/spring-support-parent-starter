@@ -132,6 +132,11 @@ public class SpiderSubLoopNode implements FlowNode {
             }
             return result;
         }
+        /**
+         * illegal参数异常。
+         * @param source 源
+         * @return illegal参数异常的结果
+         */
         throw new IllegalArgumentException("spider.subLoop 数据来源不是数组: " + source);
     }
 }

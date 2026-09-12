@@ -8,7 +8,7 @@ import java.util.Set;
 /**
  * Actuator配置属性
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/6/21
  * @author CH
  */
@@ -73,7 +73,7 @@ public class ActuatorProperties {
     }
 
     /**
-     * 获取 enableAuth
+      * 获取 enable认证
      *
      * @return enableAuth
      */
@@ -91,16 +91,16 @@ public class ActuatorProperties {
     }
 
     /**
-     * 设置 enableAuth
+      * 设置 enable认证
      *
-     * @param enableAuth enableAuth
+     * @param enableAuth enable认证
      */
     public void setEnableAuth(boolean enableAuth) {
         this.enableAuth = enableAuth;
     }
 
     /**
-     * 获取 username
+      * 获取 用户名
      *
      * @return username
      */
@@ -109,16 +109,16 @@ public class ActuatorProperties {
     }
 
     /**
-     * 设置 username
+      * 设置 用户名
      *
-     * @param username username
+     * @param username 用户名
      */
     public void setUsername(String username) {
         this.username = username;
     }
 
     /**
-     * 获取 password
+      * 获取 密码
      *
      * @return password
      */
@@ -127,16 +127,16 @@ public class ActuatorProperties {
     }
 
     /**
-     * 设置 password
+      * 设置 密码
      *
-     * @param password password
+     * @param password 密码
      */
     public void setPassword(String password) {
         this.password = password;
     }
 
     /**
-     * 获取 ipWhitelist
+      * 获取 ipwhitelist
      *
      * @return ipWhitelist
      */
@@ -145,16 +145,16 @@ public class ActuatorProperties {
     }
 
     /**
-     * 设置 ipWhitelist
+      * 设置 ipwhitelist
      *
-     * @param ipWhitelist ipWhitelist
+     * @param ipWhitelist ipwhitelist
      */
     public void setIpWhitelist(Set<String> ipWhitelist) {
         this.ipWhitelist = ipWhitelist;
     }
 
     /**
-     * 获取 excludePaths
+      * 获取 exclude路径
      *
      * @return excludePaths
      */
@@ -163,9 +163,9 @@ public class ActuatorProperties {
     }
 
     /**
-     * 设置 excludePaths
+      * 设置 exclude路径
      *
-     * @param excludePaths excludePaths
+     * @param excludePaths exclude路径
      */
     public void setExcludePaths(Set<String> excludePaths) {
         this.excludePaths = excludePaths;

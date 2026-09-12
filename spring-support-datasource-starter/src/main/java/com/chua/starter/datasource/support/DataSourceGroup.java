@@ -25,11 +25,11 @@ public class DataSourceGroup {
     private final String groupName;
 
     /** 组内数据源列表 */
-    /** 数据sources */
+    /** 数据源 */
     private final List<DataSource> dataSources = new ArrayList<>();
 
     /** 数据源名称列表（用于日志） */
-    /** 数据来源names */
+    /** 数据来源名称 */
     private final List<String> dataSourceNames = new ArrayList<>();
 
     /** 轮询计数器 */
@@ -39,6 +39,10 @@ public class DataSourceGroup {
     /** 负载均衡策略 */
     private volatile LoadBalanceStrategy strategy = LoadBalanceStrategy.ROUND_ROBIN;
 
+    /**
+     * 数据源群体。
+     * @param groupName 群体名称
+     */
     public DataSourceGroup(String groupName) {
         this.groupName = groupName;
     }
@@ -71,6 +75,11 @@ public class DataSourceGroup {
      */
     public DataSource select() {
         if (dataSources.isEmpty()) {
+            /**
+             * illegal状态异常。
+             * @param 中没有可用的数据源" 中没有可用的数据源"
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("数据源分组 '" + groupName + "' 中没有可用的数据源");
         }
         if (dataSources.size() == 1) {
@@ -114,6 +123,8 @@ public class DataSourceGroup {
 
     /**
      * 负载均衡策略
+     * @author CH
+     * @since 4.0.0
      */
     public enum LoadBalanceStrategy {
         /** 轮询 */

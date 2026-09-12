@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
  * 编解码器。
  *
  * @author CH
+ * @since 4.0.0
  */
 public class Codec {
 
@@ -30,6 +31,11 @@ public class Codec {
      * @return 编解码器
      */
     public static Codec build(String type, String key) {
+        /**
+         * Codec。
+         * @param type 类型
+         * @param key 钥匙
+         */
         return new Codec(type, key);
     }
 
@@ -55,6 +61,11 @@ public class Codec {
             return null;
         }
         if (isAes()) {
+            /**
+              * aescodec。
+             * @param key.getBytes(StandardCharsets.UTF_8 键.获取bytes(标准字符集.UTF_8
+             * @return AesCodec的结果
+             */
             return new AesCodec(key.getBytes(StandardCharsets.UTF_8)).encodeHex(data);
         }
         byte[] bytes = data.getBytes(StandardCharsets.UTF_8);
@@ -72,9 +83,20 @@ public class Codec {
             return null;
         }
         if (isAes()) {
+            /**
+              * aescodec。
+             * @param key.getBytes(StandardCharsets.UTF_8 键.获取bytes(标准字符集.UTF_8
+             * @return AesCodec的结果
+             */
             return new AesCodec(key.getBytes(StandardCharsets.UTF_8)).decodeHex(hex);
         }
         byte[] bytes = Hex.decodeHex(hex);
+        /**
+         * 字符串。
+         * @param bytes bytes
+         * @param StandardCharsets.UTF_8 标准字符集.utf8
+         * @return 字符串的结果
+         */
         return new String(bytes, StandardCharsets.UTF_8);
     }
 

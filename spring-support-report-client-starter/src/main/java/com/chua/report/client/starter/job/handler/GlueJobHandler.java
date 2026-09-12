@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
  * 每次代码更新会生成新的版本号，确保执行的是最新代码。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/03/11
  * @author CH
  */
@@ -20,22 +20,22 @@ public class GlueJobHandler implements JobHandler {
 
 
     /**
-     * GLUE代码更新时间戳
+      * 胶水代码更新时间戳
      */
     @Getter
     /** Glueupdatetime */
     private final long glueUpdatetime;
 
     /**
-     * 实际执行的JobHandler
+      * 实际执行的作业处理器
      */
     private final JobHandler jobHandler;
 
     /**
      * 构造函数
      *
-     * @param jobHandler     实际执行的JobHandler实例
-     * @param glueUpdatetime GLUE代码更新时间戳
+     * @param jobHandler     实际执行的作业处理器实例
+     * @param glueUpdatetime 胶水代码更新时间戳
      */
     public GlueJobHandler(JobHandler jobHandler, long glueUpdatetime) {
         this.jobHandler = jobHandler;
@@ -45,7 +45,7 @@ public class GlueJobHandler implements JobHandler {
     @Override
     /** 执行 */
     public void execute() throws Exception {
-        // 记录GLUE版本信息
+ // 记录胶水版本信息
         DefaultJobLog.log("----------- GLUE任务执行, 版本:" + glueUpdatetime + " -----------");
         log.debug("开始执行GLUE任务, 版本: {}", glueUpdatetime);
         jobHandler.execute();

@@ -40,7 +40,12 @@ import java.util.List;
 public class FileSystemAutoConfiguration {
 
     @Bean
-    /** FileStorageTemplate */
+    /**
+     * 文件storagetemplate
+     *
+     * @param properties 属性
+     * @return 文件storagetemplate的结果
+     */
     public FileStorageTemplate fileStorageTemplate(FileStorageProperties properties) {
         FileStorageTemplate template = new FileStorageTemplate(properties);
         template.initialize();
@@ -49,7 +54,12 @@ public class FileSystemAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    /** SysFileSystemUploadService */
+    /**
+     * sys文件系统upload服务
+     *
+     * @param uploadMapper upload映射器
+     * @return sys文件系统upload服务的结果
+     */
     public SysFileSystemUploadService sysFileSystemUploadService(SysFileSystemUploadMapper uploadMapper) {
         return new com.chua.starter.filesystem.support.service.impl.SysFileSystemUploadServiceImpl();
     }
@@ -57,25 +67,25 @@ public class FileSystemAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     /**
-     * FileChunkUploadController
-     * @param uploadService uploadService
-     * @param chunkService chunkService
-     * @param fileStorageTemplate fileStorageTemplate
-     * @param fileStorageProperties fileStorageProperties
-     * @param uploadProperties uploadProperties
-     * @param fileServerManager fileServerManager
-     * @param chunkService chunkService
-     * @param fileStorageTemplate fileStorageTemplate
-     * @param fileStorageProperties fileStorageProperties
-     * @param uploadProperties uploadProperties
-     * @param fileServerManager fileServerManager
-     * @param properties properties
+      * 文件chunkupload控制器
+     * @param uploadService upload服务
+     * @param chunkService chunk服务
+     * @param fileStorageTemplate 文件storagetemplate
+     * @param fileStorageProperties 文件storage属性
+     * @param uploadProperties upload属性
+     * @param fileServerManager 文件服务端管理器
+     * @param chunkService chunk服务
+     * @param fileStorageTemplate 文件storagetemplate
+     * @param fileStorageProperties 文件storage属性
+     * @param uploadProperties upload属性
+     * @param fileServerManager 文件服务端管理器
+     * @param properties 属性
      * @param true true
-     * @param properties properties
+     * @param properties 属性
      * @param template template
-     * @param applicationContext applicationContext
+     * @param applicationContext application上下文
      * @param template template
-     * @param applicationContext applicationContext
+     * @param applicationContext application上下文
      */
     public FileChunkUploadController fileChunkUploadController(
             SysFileSystemUploadService uploadService,
@@ -90,13 +100,27 @@ public class FileSystemAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    /** FileDirController */
+    /**
+     * 文件dir控制器
+     *
+     * @param properties 属性
+     * @return 文件dir控制器的结果
+     */
     public FileDirController fileDirController(FileStorageProperties properties) {
+        /**
+         * 文件dir控制器。
+         * @param properties 属性
+         * @return 文件dir控制器的结果
+         */
         return new FileDirController(properties);
     }
 
     @Bean
-    /** FileSystemServiceInfoContributor */
+    /**
+     * 文件系统服务信息contributor
+     *
+     * @return 文件系统服务信息contributor的结果
+     */
     public ServiceInfoContributor fileSystemServiceInfoContributor() {
         return registry -> {
             registry.registerEndpoint("文件系统", "分片上传", "/chunk/create,upload,complete", "分片上传");
@@ -107,7 +131,14 @@ public class FileSystemAutoConfiguration {
     }
 
     @Bean
-    /** FileServerManager */
+    /**
+     * 文件服务端管理器
+     *
+     * @param properties 属性
+     * @param template template
+     * @param applicationContext application上下文
+     * @return 文件服务端管理器的结果
+     */
     public FileServerManager fileServerManager(FileStorageProperties properties, FileStorageTemplate template, ApplicationContext applicationContext) {
         FileServerManager manager = new FileServerManager(properties, template, applicationContext);
         manager.startAll();

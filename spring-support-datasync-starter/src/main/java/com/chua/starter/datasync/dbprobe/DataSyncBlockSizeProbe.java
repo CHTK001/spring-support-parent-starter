@@ -18,16 +18,21 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 /**
- * Chronicle mmap blockSize 压测：不同块大小下的 pub/sub 吞吐。
+   * Chronicle mmap block大小 压测：不同块大小下的 pub/sub 吞吐。
  *
  * @since 4.0.0.42
+ * @author CH
  */
 public final class DataSyncBlockSizeProbe {
 
-    static final int ROWS = 100_000;
-    static final int BATCH = 1000;
+    static final int ROWS = 100_000; // ROWS
+    static final int BATCH = 1000; // 批量
 
-    /** Main */
+    /**
+     * Main
+     *
+     * @param args 参数
+     */
     public static void main(String[] args) throws Exception {
         Path tmp = Files.createTempDirectory("chronicle-blocksize");
         tmp.toFile().deleteOnExit();
@@ -59,7 +64,13 @@ public final class DataSyncBlockSizeProbe {
         System.err.println("=========================================================================");
     }
 
-    /** Bench */
+    /**
+     * Bench
+     *
+     * @param tmp tmp
+     * @param blockSize block大小
+     * @param data 数据
+     */
     static void bench(Path tmp, long blockSize, List<Map<String, Object>> data) throws Exception {
         Path dataPath = tmp.resolve("queue-" + blockSize);
         ChronicleDispatcherProvider provider = null;
@@ -89,7 +100,9 @@ public final class DataSyncBlockSizeProbe {
                     label, (blockSize >> 20) + "MB", ms,
                     tp == 0 ? "?" : String.format("%,d", tp), ok ? "PASS" : "FAIL(" + count.get() + ")");
         } finally {
-            if (provider != null) provider.close();
+            if (provider != null) {
+                provider.close();
+            }
         }
     }
 }

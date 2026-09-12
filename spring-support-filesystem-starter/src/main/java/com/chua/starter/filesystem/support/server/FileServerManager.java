@@ -47,7 +47,7 @@ public class FileServerManager implements AutoCloseable {
      * 启动成功的服务器映射
      */
     @Getter
-    private final Map<String, Server> serverMap = new ConcurrentHashMap<>();
+    private final Map<String, Server> serverMap = new ConcurrentHashMap<>(); // 服务端映射
 
     /**
      * 文件存储配置
@@ -65,10 +65,10 @@ public class FileServerManager implements AutoCloseable {
     private final ApplicationContext applicationContext;
 
     /**
-     * 创建 FileServerManager 实例
-     * @param properties properties
-     * @param storageTemplate storageTemplate
-     * @param applicationContext applicationContext
+      * 创建 文件服务端管理器 实例
+     * @param properties 属性
+     * @param storageTemplate storagetemplate
+     * @param applicationContext application上下文
      */
     public FileServerManager(FileStorageProperties properties,
                              FileStorageTemplate storageTemplate,
@@ -98,6 +98,10 @@ public class FileServerManager implements AutoCloseable {
                 continue;
             }
             try {
+                /**
+                 * 启动服务端。
+                 * @param serverConfig 服务端配置
+                 */
                 startServer(serverConfig);
             } catch (Exception e) {
                 log.error("启动服务器失败: {} - {}", serverConfig.getName(), e.getMessage(), e);
@@ -123,7 +127,7 @@ public class FileServerManager implements AutoCloseable {
         ServerSetting setting = ServerSetting.defaults();
         setting.setHost(host);
         setting.setPort(port);
-        // 映射挑选的 ServerSetting 配置项
+ // 映射挑选的 服务端setting 配置项
         setting.setContextPath(contextPath);
         setting.setMaxRequestSize(config.getMaxRequestSize());
         setting.setMaxConnections(config.getMaxConnections());
@@ -144,9 +148,9 @@ public class FileServerManager implements AutoCloseable {
                 log.warn("无法访问 JdkHttpServer.server 字段");
             }
             if (httpServer != null) {
-                // JDK HttpServer 不允许 context="/" (根路径)，至少需要 /xxx
+ // JDK http服务端 不允许 上下文="/" (根路径)，至少需要 /xxx
                 String effectiveContext = "/".equals(contextPath) ? "/files" : contextPath;
-                // 先移除 JdkHttpServer 内部注册的同路径 context，避免冲突
+ // 先移除 jdkhttp服务端 内部注册的同路径 上下文，避免冲突
                 try {
                     httpServer.removeContext(effectiveContext);
                 } catch (Exception e) {
@@ -160,21 +164,30 @@ public class FileServerManager implements AutoCloseable {
 
         serverMap.put(serverName, server);
         log.info("├─ 启动服务器: {} -> {}:{} [{}]",
+                /**
+                 * highlight。
+                 * @param serverName 服务端名称
+                 */
                 highlight(serverName),
                 host, port,
                 success());
     }
 
     /**
-     * 创建 Server 实例。
+      * 创建 服务端 实例。
      *
-     * @param type    server 类型（jdk 或 SPI 名称）
+     * @param type    服务端 类型（jdk 或 SPI 名称）
      * @param setting 服务配置
      * @return Server 实例
      * @throws Exception 创建失败时抛出
      */
     private Server createServer(String type, ServerSetting setting) throws Exception {
         if (type == null || type.isEmpty() || "jdk".equalsIgnoreCase(type)) {
+            /**
+             * jdkhttp服务端。
+             * @param setting setting
+             * @return jdkhttp服务端的结果
+             */
             return new JdkHttpServer(setting);
         }
         for (Server s : ServiceLoader.load(Server.class)) {
@@ -184,20 +197,32 @@ public class FileServerManager implements AutoCloseable {
         }
         Class<?> clazz = ReflectUtils.forName(type);
         if (clazz == null) {
+            /**
+             * illegal参数异常。
+             * @param " "
+             * @param JDK" JDK"
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("Unknown server type: " + type + ", fallback to JDK");
         }
         Server created = (Server) ReflectUtils.instantiate(clazz, setting);
         if (created == null) {
+            /**
+             * illegal参数异常。
+             * @param " "
+             * @param JDK" JDK"
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("Unknown server type: " + type + ", fallback to JDK");
         }
         return created;
     }
 
     /**
-     * 创建文件访问 HttpHandler。
+      * 创建文件访问 http处理器。
      *
      * @param config      服务器配置
-     * @param contextPath context 前缀
+     * @param contextPath 上下文 前缀
      * @return HttpHandler
      */
     private HttpHandler createFileHandler(FileStorageProperties.ServerConfig config, String contextPath) {
@@ -261,16 +286,16 @@ public class FileServerManager implements AutoCloseable {
      * 处理文件访问请求。
      *
      * <p>路径格式: {context}/{bucket}/{key} 或 {context}/view/{bucket}/{key} 或 {context}/download/{bucket}/{key}。
-     * 访问模式由 properties 的 mode 配置决定：前端请求意图与 mode 取交集，冲突时降级到 mode 允许的行为。</p>
+      * 访问模式由 属性 的 mode 配置决定：前端请求意图与 mode 取交集，冲突时降级到 mode 允许的行为。</p>
      *
-     * @param exchange    HttpExchange
-     * @param contextPath context 前缀
+     * @param exchange    httpexchange
+     * @param contextPath 上下文 前缀
      * @throws IOException IO 异常
      */
     private void handleFileRequest(HttpExchange exchange, String contextPath) throws IOException {
         String fullPath = exchange.getRequestURI().getPath();
         log.info("[FileServer] 收到请求: {} (context={})", fullPath, contextPath);
-        // 去掉 context 前缀
+ // 去掉 上下文 前缀
         String path = fullPath;
         if (contextPath != null && !"/".equals(contextPath) && fullPath.startsWith(contextPath)) {
             path = fullPath.substring(contextPath.length());
@@ -298,13 +323,13 @@ public class FileServerManager implements AutoCloseable {
             forceDownload = true;
             parts.remove(1);
         }
-        // parts[0] 为空（前导斜杠），真实段从 index=1 开始: [bucket, key...]
+ // parts[0] 为空（前导斜杠），真实段从 索引=1 开始: [bucket, 钥匙...]
         if (parts.size() < 3) {
             exchange.sendResponseHeaders(HttpURLConnection.HTTP_BAD_REQUEST, -1);
             return;
         }
         String bucket = URLDecoder.decode(parts.get(1), StandardCharsets.UTF_8.name());
-        // key = 去掉 bucket 段后的路径
+ // 钥匙 = 去掉 bucket 段后的路径
         String key = String.join("/", parts.subList(2, parts.size()));
         // 规范化，防目录穿越
         key = FilenameUtils.normalize(key, true);
@@ -322,7 +347,7 @@ public class FileServerManager implements AutoCloseable {
         log.info("[FileServer] bucket={}, key={}, forceDownload={}, mode={}, download={}",
                 bucket, key, forceDownload, mode, download);
         try {
-            // 优先按 bucket 查找对应 FileStorage，找不到再回退到默认存储
+ // 优先按 bucket 查找对应 文件storage，找不到再回退到默认存储
             FileStorage storage = storageTemplate.getStorage(bucket);
             if (storage == null) {
                 storage = storageTemplate.getDefaultStorage();
@@ -337,6 +362,10 @@ public class FileServerManager implements AutoCloseable {
             log.info("[FileServer] getObject result: {}", getResult == null ? "null" : getResult.getResultCode());
             byte[] data = null;
             if (getResult != null && getResult.getInputStream() != null) {
+                /**
+                 * 尝试。
+                 * @param getResult.getInputStream( 获取结果.获取输入流(
+                 */
                 try (java.io.InputStream in = getResult.getInputStream()) {
                     data = in.readAllBytes();
                 }
@@ -347,13 +376,17 @@ public class FileServerManager implements AutoCloseable {
                 return;
             }
             log.info("[FileServer] 返回文件: {} size={}", key, data.length);
-            // 按最终收敛的 download 状态设置 Content-Disposition 头
+ // 按最终收敛的 download 状态设置 内容-Disposition 头
             if (download) {
                 String fileName = key.contains("/") ? key.substring(key.lastIndexOf('/') + 1) : key;
                 exchange.getResponseHeaders().set("Content-Disposition",
                         "attachment; filename=\"" + fileName + "\"");
             }
             exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, data.length);
+            /**
+             * 尝试。
+             * @param exchange.getResponseBody( exchange.获取响应主体(
+             */
             try (OutputStream os = exchange.getResponseBody()) {
                 os.write(data);
             }
@@ -402,6 +435,9 @@ public class FileServerManager implements AutoCloseable {
     @Override
     /** 关闭 */
     public void close() {
+        /**
+         * 停止全部。
+         */
         stopAll();
     }
 }

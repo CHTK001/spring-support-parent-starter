@@ -1,11 +1,11 @@
 package com.chua.payment.support.dto;
 
 import lombok.Data;
-/** @author CH */
+/** @作者 CH */
 
 @Data
 public class OrderPartitionConfigDTO {
-    /** Business类型 */
+    /** 业务类型 */
     private String businessType;
     /** 来源表 */
     private String sourceTable;
@@ -25,13 +25,13 @@ public class OrderPartitionConfigDTO {
     private Boolean autoMigrateEnabled;
     /** Keep来源数据 */
     private Boolean keepSourceData;
-    /** MigrationDRYRUN */
+    /** migrationdryrun */
     private Boolean migrationDryRun;
     /** 表时间列 */
     private String tableTimeColumn;
-    /** 表ID列 */
+    /** 表标识列 */
     private String tableIdColumn;
-    /** Remark */
+    /** 评论 */
     private String remark;
 }
 

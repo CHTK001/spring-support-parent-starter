@@ -21,18 +21,20 @@ import java.util.List;
 /**
  * 免费代理服务实现：自研抓取可用源（databay——JSON）→ 清空代理表 → 录入。
  * 每次获取均为全量刷新（每次获取清空录入）；页面从表读取（快）。
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProxyServiceImpl implements ProxyService {
 
-    /** 免费代理源（databay——JSON：data[].ip/port/protocol） */
+    /** 免费代理源（databay——JSON：数据[].ip/端口/协议） */
     private static final String SOURCE_URL = "https://databay.com/api/v1/proxy-list";
-    private static final String SOURCE_NAME = "databay";
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final String SOURCE_NAME = "databay"; // 源名称
+    private static final ObjectMapper MAPPER = new ObjectMapper(); // 映射器
 
-    private final MsProxyMapper proxyMapper;
+    private final MsProxyMapper proxyMapper; // 代理映射器
 
     @Override
     public List<MsProxy> fetchFreeProxies() {
@@ -61,7 +63,11 @@ public class ProxyServiceImpl implements ProxyService {
                 .orElse(null);
     }
 
-    /** 自研抓取（databay JSON——data[].ip/port/protocol） */
+    /**
+     * 自研抓取（databay JSON——数据[].ip/端口/协议）
+     *
+     * @return 获取从源的结果
+     */
     private List<MsProxy> fetchFromSource() {
         List<MsProxy> result = new ArrayList<>();
         try {

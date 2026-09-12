@@ -8,11 +8,12 @@ import java.util.Map;
  * 更新行事件数据
  *
  * @author CH
+ * @since 4.0.0
  */
 public class UpdateRowsEventData implements EventData {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
-    private final List<Map.Entry<Serializable[], Serializable[]>> rows;
+    private final List<Map.Entry<Serializable[], Serializable[]>> rows; // rows
 
     /**
      * 创建更新行事件数据

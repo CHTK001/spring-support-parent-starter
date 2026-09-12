@@ -20,9 +20,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Redis 操作 Provider
+   * Redis 操作 提供者
  * <p>
- * 支持 Redis key 的扫描、读取、写入、删除、过期设置等操作。
+   * 支持 Redis 钥匙 的扫描、读取、写入、删除、过期设置等操作。
  * 连接参数从任务配置 {@code collect_config} 中获取。
  * </p>
  *
@@ -40,27 +40,31 @@ public class RedisOperationProvider implements OperationProvider {
     private static final String CONFIG_KEY_ALLOW_DELETE = "monitor.redis.allowDelete";
 
     /**
-     * 全局配置 Service
+      * 全局配置 服务
      */
     private final MonitorConfigService configService;
 
     @Override
-    /** ServiceType */
+    /** 服务类型 */
     public ServiceType serviceType() {
         return ServiceType.REDIS;
     }
 
     @Override
-    /** 扫描Keys */
+    /** 扫描钥匙 */
     public Mono<ScanResult> scanKeys(CollectContext ctx, String pattern, String cursor, int count) {
         return Mono.fromCallable(() -> doScanKeys(ctx, pattern, cursor, count))
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
     @Override
-    /** 获取Value */
+    /** 获取价值观 */
     public Mono<String> getValue(CollectContext ctx, String key) {
         return Mono.fromCallable(() -> {
+            /**
+             * 尝试。
+             * @param buildClient(ctx 构建客户端(ctx
+             */
             try (RedisClient client = buildClient(ctx)) {
                 return client.get(key);
             }
@@ -68,9 +72,13 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     @Override
-    /** 设置Value */
+    /** 设置价值观 */
     public Mono<Boolean> setValue(CollectContext ctx, String key, String value, Duration ttl) {
         return Mono.fromCallable(() -> {
+            /**
+             * 尝试。
+             * @param buildClient(ctx 构建客户端(ctx
+             */
             try (RedisClient client = buildClient(ctx)) {
                 if (ttl != null) {
                     client.put(key, value, Duration.ofSeconds(ttl.getSeconds()));
@@ -83,12 +91,21 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     @Override
-    /** 删除Keys */
+    /** 删除钥匙 */
     public Mono<Long> deleteKeys(CollectContext ctx, List<String> keys) {
         return Mono.fromCallable(() -> {
             if (!configService.getBoolean(CONFIG_KEY_ALLOW_DELETE, false)) {
+                /**
+                 * illegal状态异常。
+                 * @param monitor.redis.allowDelete=true" 监控.Redis.allow删除=true"
+                 * @return illegal状态异常的结果
+                 */
                 throw new IllegalStateException("Redis 删除操作已禁用，请设置 monitor.redis.allowDelete=true");
             }
+            /**
+             * 尝试。
+             * @param buildClient(ctx 构建客户端(ctx
+             */
             try (RedisClient client = buildClient(ctx)) {
                 long count = 0;
                 for (String key : keys) {
@@ -105,6 +122,10 @@ public class RedisOperationProvider implements OperationProvider {
     /** Expire */
     public Mono<Boolean> expire(CollectContext ctx, String key, Duration ttl) {
         return Mono.fromCallable(() -> {
+            /**
+             * 尝试。
+             * @param buildClient(ctx 构建客户端(ctx
+             */
             try (RedisClient client = buildClient(ctx)) {
                 client.expire(key, ttl.getSeconds());
                 return true;
@@ -116,6 +137,10 @@ public class RedisOperationProvider implements OperationProvider {
     /** Ttl */
     public Mono<Long> ttl(CollectContext ctx, String key) {
         return Mono.fromCallable(() -> {
+            /**
+             * 尝试。
+             * @param buildClient(ctx 构建客户端(ctx
+             */
             try (RedisClient client = buildClient(ctx)) {
                 return client.ttl(key);
             }
@@ -123,9 +148,13 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     @Override
-    /** Type */
+    /** 类型 */
     public Mono<String> type(CollectContext ctx, String key) {
         return Mono.fromCallable(() -> {
+            /**
+             * 尝试。
+             * @param buildClient(ctx 构建客户端(ctx
+             */
             try (RedisClient client = buildClient(ctx)) {
                 Object result = client.reactiveExecCommand("TYPE " + key).block();
                 return result != null ? result.toString() : "none";
@@ -134,7 +163,7 @@ public class RedisOperationProvider implements OperationProvider {
     }
 
     /**
-     * 同步执行 key 扫描 (使用 Jedis SCAN 游标迭代, 避免 KEYS 阻塞)
+      * 同步执行 钥匙 扫描 (使用 Jedis 扫描 游标迭代, 避免 钥匙 阻塞)
      *
      * @param ctx     操作上下文
      * @param pattern 匹配模式
@@ -143,6 +172,10 @@ public class RedisOperationProvider implements OperationProvider {
      * @return 扫描结果
      */
     private OperationProvider.ScanResult doScanKeys(CollectContext ctx, String pattern, String cursor, int count) {
+        /**
+         * 尝试。
+         * @param buildClient(ctx 构建客户端(ctx
+         */
         try (RedisClient client = buildClient(ctx)) {
             String match = pattern != null ? pattern : "*";
             List<String> keys = new ArrayList<>();

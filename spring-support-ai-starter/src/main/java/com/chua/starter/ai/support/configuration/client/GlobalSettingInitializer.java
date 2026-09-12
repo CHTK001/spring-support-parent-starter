@@ -17,6 +17,7 @@ import java.util.Map;
  * 自动将各模块的默认配置项注册到 {@code sys_ai_global_setting} 表（仅首次）。
  *
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @RequiredArgsConstructor

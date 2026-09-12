@@ -57,7 +57,7 @@ public class EduWrongQuestionController {
     /**
      * 更新掌握度
      *
-     * @param wrongId      错题记录ID
+     * @param wrongId      错题记录标识
      * @param masteryLevel 掌握度
      * @return 是否成功
      */

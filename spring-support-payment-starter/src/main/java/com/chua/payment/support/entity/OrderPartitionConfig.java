@@ -8,17 +8,17 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-/** @author CH */
+/** @作者 CH */
 
 @Data
 @TableName("pay_partition_config")
 public class OrderPartitionConfig {
     @TableId(value = "pay_partition_config_id", type = IdType.AUTO)
-    /** ID */
+    /** 标识 */
     private Long id;
 
     @TableField("pay_partition_config_business_type")
-    /** Business类型 */
+    /** 业务类型 */
     private String businessType;
 
     @TableField("pay_partition_config_source_table")
@@ -58,7 +58,7 @@ public class OrderPartitionConfig {
     private Boolean keepSourceData;
 
     @TableField("pay_partition_config_migration_dry_run")
-    /** MigrationDRYRUN */
+    /** migrationdryrun */
     private Boolean migrationDryRun;
 
     @TableField("pay_partition_config_time_column")
@@ -66,11 +66,11 @@ public class OrderPartitionConfig {
     private String tableTimeColumn;
 
     @TableField("pay_partition_config_id_column")
-    /** 表ID列 */
+    /** 表标识列 */
     private String tableIdColumn;
 
     @TableField("pay_partition_config_create_task_key")
-    /** Create任务密钥 */
+    /** 创建任务密钥 */
     private String createTaskKey;
 
     @TableField("pay_partition_config_migrate_task_key")
@@ -78,19 +78,19 @@ public class OrderPartitionConfig {
     private String migrateTaskKey;
 
     @TableField("pay_partition_config_last_partition_table")
-    /** 最后partition表 */
+    /** 最后分区表 */
     private String lastPartitionTable;
 
     @TableField("pay_partition_config_last_partition_at")
-    /** 最后partitionAT */
+    /** 最后分区at */
     private LocalDateTime lastPartitionAt;
 
     @TableField("pay_partition_config_last_migrate_at")
-    /** 最后migrateAT */
+    /** 最后migrateat */
     private LocalDateTime lastMigrateAt;
 
     @TableField("pay_partition_config_remark")
-    /** Remark */
+    /** 评论 */
     private String remark;
 
     @TableField(value = "pay_partition_config_created_at", fill = FieldFill.INSERT)

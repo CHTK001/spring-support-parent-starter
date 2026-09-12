@@ -8,8 +8,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * 用于配置系统中的可选功能开关。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @author CH
+ * @since 4.0.0
  */
 @ConfigurationProperties(prefix = OptionalProperties.PRE, ignoreInvalidFields = true)
 public class OptionalProperties {

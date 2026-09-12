@@ -11,7 +11,7 @@ import java.io.Serializable;
 /**
  * 消息事件
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */
@@ -21,7 +21,7 @@ import java.io.Serializable;
 @Builder
 public class MsgEvent implements Serializable {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -50,12 +50,12 @@ public class MsgEvent implements Serializable {
     private String module;
 
     /**
-     * 事件ID
+      * 事件标识
      */
     private String eventId;
 
     /**
-     * 数据ID（用于前端过滤）
+      * 数据标识（用于前端过滤）
      */
     private String dataId;
 
@@ -80,7 +80,7 @@ public class MsgEvent implements Serializable {
     private long timestamp;
 
     @Override
-    /** ToString */
+    /** 转为字符串 */
     public String toString() {
         return Json.toJSONString(this);
     }

@@ -12,11 +12,11 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 /**
  * 服务器资产模块自动配置
  * <p>
- * 扫描资产/远控/批量执行全部组件与 MyBatis-Plus Mapper，
+   * 扫描资产/远控/批量执行全部组件与 MyBatis-Plus 映射器，
  * 开启事务管理。周期任务由 {@code ServerTaskScheduler} 基于
- * common-starter 哈希时间轮统一调度（在离线检测/定时采集/计划任务/会话清理）。
- * WebSocket 端点由 {@link TerminalWebSocketConfig} 单独注册；
- * 凭据加解密器与会话注册表以 @Component 形式随包扫描装配。
+   * common-starter 哈希时间轮统一调度（在离线检测/定时采集/计划任务/会话清理）。
+   * web套接字 端点由 {@link TerminalWebSocketConfig} 单独注册；
+   * 凭据加解密器与会话注册表以 @组件 形式随包扫描装配。
  * </p>
  *
  * @author CH
@@ -31,7 +31,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 public class ServerAutoConfiguration {
 
     /**
-     * 服务器资产模块的 ServiceInfo 贡献者。
+      * 服务器资产模块的 服务信息 贡献者。
      *
      * @param properties 配置属性
      * @return ServiceInfoContributor

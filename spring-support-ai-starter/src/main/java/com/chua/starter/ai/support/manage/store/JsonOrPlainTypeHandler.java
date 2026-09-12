@@ -15,7 +15,7 @@ import java.sql.SQLException;
  * <p>用于 {@link SysAiConversationMessage#getContent()} 等 {@code Object} 类型字段：
  * <ul>
  *   <li>写入时：若值为 {@link String}，直接以纯文本存储（不额外加 JSON 引号，避免前端展示出现双引号）；
- *       其他对象（Map/List/POJO 等）序列化为 JSON 字符串存储。</li>
+   * 其他对象（映射/列表/POJO 等）序列化为 JSON 字符串存储。</li>
  *   <li>读取时：若列值以 {@code { } 或 [ } 开头，尝试按 JSON 反序列化为结构化对象；
  *       否则原样返回字符串。</li>
  * </ul>
@@ -27,12 +27,12 @@ import java.sql.SQLException;
 public class JsonOrPlainTypeHandler extends BaseTypeHandler<Object> {
 
     /**
-     * Jackson ObjectMapper：负责结构化对象与 JSON 字符串的互转
+      * Jackson 对象映射器：负责结构化对象与 JSON 字符串的互转
      */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     /**
-     * 写入参数：String 原样存储，其余对象 JSON 序列化。
+      * 写入参数：字符串 原样存储，其余对象 JSON 序列化。
      *
      * @param ps        预处理语句
      * @param i         参数下标
@@ -50,6 +50,11 @@ public class JsonOrPlainTypeHandler extends BaseTypeHandler<Object> {
         try {
             ps.setString(i, OBJECT_MAPPER.writeValueAsString(parameter));
         } catch (Exception e) {
+            /**
+              * SQL异常。
+             * @param e.getMessage( e.获取消息(
+             * @return sql异常的结果
+             */
             throw new SQLException("无法序列化字段为 JSON: " + e.getMessage(), e);
         }
     }
@@ -69,7 +74,7 @@ public class JsonOrPlainTypeHandler extends BaseTypeHandler<Object> {
     }
 
     /**
-     * 按下标读取（无 columnLabel 场景）。
+      * 按下标读取（无 column标签 场景）。
      *
      * @param rs          结果集
      * @param columnIndex 列下标

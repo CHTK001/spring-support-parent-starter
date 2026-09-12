@@ -18,10 +18,10 @@ import java.time.LocalDateTime;
 public class EduKnowledgePoint {
 
     /**
-     * 知识点ID
+      * 知识点标识
      */
     @TableId(type = IdType.AUTO)
-    /** KnowledgepointID */
+    /** knowledgepointid */
     private Long knowledgePointId;
 
     /**
@@ -35,7 +35,7 @@ public class EduKnowledgePoint {
     private String knowledgePointCode;
 
     /**
-     * 父知识点ID
+      * 父知识点标识
      */
     private Long knowledgePointParentId;
 

@@ -7,7 +7,7 @@ package com.chua.starter.common.support.configuration.resolver;
  * </p>
  *
  * @since 2024/8/26
- * @version 1.0.0
+   * @版本 1.0.0
  * @author CH
  */
 public interface VersionArgumentResolver {

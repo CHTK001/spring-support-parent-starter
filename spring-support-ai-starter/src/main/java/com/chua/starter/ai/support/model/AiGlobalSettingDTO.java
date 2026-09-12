@@ -18,13 +18,13 @@ import java.math.BigDecimal;
 @Data
 @Schema(name = "全局设置 DTO")
 public class AiGlobalSettingDTO implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
-     * 是否启用 ChatClient 聚合
+      * 是否启用 对话客户端 聚合
      */
     @Schema(description = "是否启用 ChatClient 聚合")
-    /** Chat客户端是否启用 */
+    /** 对话客户端是否启用 */
     private Boolean chatClientEnabled;
 
     /**
@@ -56,10 +56,10 @@ public class AiGlobalSettingDTO implements Serializable {
     private BigDecimal temperature;
 
     /**
-     * 默认最大 tokens
+      * 默认最大 令牌
      */
     @Schema(description = "默认最大 tokens")
-    /** 最大值tokens */
+    /** 最大值令牌 */
     private Integer maxTokens;
 
     /**
@@ -84,7 +84,7 @@ public class AiGlobalSettingDTO implements Serializable {
     private Boolean stream;
 
     /**
-     * 全局 ChatClient 默认系统提示词
+      * 全局 对话客户端 默认系统提示词
      */
     @Schema(description = "全局 ChatClient 默认系统提示词")
     /** Systemprompt */
@@ -94,7 +94,7 @@ public class AiGlobalSettingDTO implements Serializable {
      * RAG 向量模型
      */
     @Schema(description = "RAG 向量模型")
-    /** RAGembedding模型 */
+    /** ragembedding模型 */
     private String ragEmbeddingModel;
 
     /**
@@ -122,35 +122,35 @@ public class AiGlobalSettingDTO implements Serializable {
      * RAG 向量数据库
      */
     @Schema(description = "RAG 向量数据库")
-    /** RAGvector存储 */
+    /** ragvector存储 */
     private String ragVectorStorage;
 
     /**
      * RAG 问答系统提示词
      */
     @Schema(description = "RAG 问答系统提示词")
-    /** RAGsystemprompt */
+    /** ragsystemprompt */
     private String ragSystemPrompt;
 
     /**
      * RAG 文本切片大小（字符）
      */
     @Schema(description = "RAG 文本切片大小(字符)")
-    /** RAGchunk尺寸 */
+    /** ragchunk尺寸 */
     private Integer ragChunkSize;
 
     /**
      * RAG 文本切片重叠（字符）
      */
     @Schema(description = "RAG 文本切片重叠(字符)")
-    /** RAGchunkoverlap */
+    /** ragchunkoverlap */
     private Integer ragChunkOverlap;
 
     /**
-     * RAG �ı���Ƭ���ԣ�TextSplitter SPI ���ƣ�Ĭ�� sentence��
+      * RAG �ı���Ƭ���ԣ�文本splitter SPI ���ƣ�Ĭ�� sentence��
      */
     @Schema(description = "RAG �ı���Ƭ����")
-    /** RAGsplitter */
+    /** ragsplitter */
     private String ragSplitter;
 
     /**
@@ -161,28 +161,28 @@ public class AiGlobalSettingDTO implements Serializable {
     private String workshopStorageDir;
 
     /**
-     * ���⹤�������ϴ���С���ޣ�MB����ӳ�䵽 workshop.max_upload_size_mb��
+      * ���⹤�������ϴ���С���ޣ�MB����ӳ�䵽 workshop.最大_upload_大小_mb��
      */
     @Schema(description = "���⹤�������ϴ���С����(MB)")
     /** �����ϴ���С���� */
     private Integer workshopMaxUploadSizeMb;
 
     /**
-     * ���⹤�������ϴ��ļ���չ����Ȩ�б���Ӣ�Ķ��ŷָ����� jpg,png,webp,mp4 ������ӳ�䵽 workshop.allowed_extensions��
+      * ���⹤�������ϴ��ļ���չ����Ȩ�б���Ӣ�Ķ��ŷָ����� jpg,png,webp,mp4 ������ӳ�䵽 workshop.allowed_延伸��
      */
     @Schema(description = "���⹤�������ϴ��ļ���չ��(��ŷָ�, �� jpg,png,webp,mp4)")
     /** �ϴ��ļ���չ�� */
     private String workshopAllowedExtensions;
 
     /**
-     * �Ƿ���������Э������ OpenAIClient/Claude/Gemini ��Ӧ�˵㣩��ӳ�䵽 runtime.protocol_server_enabled��
+      * �Ƿ���������Э������ 打开AI客户端/Claude/Gemini ��Ӧ�˵㣩��ӳ�䵽 runtime.协议_服务端_已启用��
      */
     @Schema(description = "�Ƿ���������Э������")
     /** Э��������Ƿ����� */
     private Boolean protocolServerEnabled;
 
     /**
-     * ����Э������˿ڣ�ӳ�䵽 runtime.protocol_server_port��
+      * ����Э������˿ڣ�ӳ�䵽 runtime.协议_服务端_端口��
      */
     @Schema(description = "����Э������˿�")
     /** Э��������˿� */

@@ -8,11 +8,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Swagger Knife4j 配置
+   * Swagger 刀4j 配置
  *
  * <p>用于统一管理 Swagger / Knife4j 的基础配置和分组信息。</p>
  *
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @ConfigurationProperties(prefix = "plugin.swagger")
@@ -25,7 +26,7 @@ public class Knife4jProperties {
     private boolean enable = false;
 
     /**
-     * knife4j
+      * 刀4j
      */
     private List<Knife4j> knife4j;
 
@@ -43,7 +44,7 @@ public class Knife4jProperties {
      */
     private String password = "";
     /**
-     * 是否开启swagger注解记录用户操作日志
+      * 是否开启Swagger注解记录用户操作日志
      */
     private boolean log;
 
@@ -78,7 +79,7 @@ public class Knife4jProperties {
             "  ⚠\uFE0F用户一旦使用API服务，即视为用户已接受本条款的全部内容。";
 
     /**
-     * 获取 Knife4j 分组配置
+      * 获取 刀4j 分组配置
      *
      * @return Knife4j 分组配置列表
      */
@@ -124,6 +125,12 @@ public class Knife4jProperties {
 
     @Data
     @Accessors(chain = true)
+    /**
+      * 刀4j类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     public static class Knife4j {
 
         /**
@@ -140,7 +147,7 @@ public class Knife4jProperties {
          */
         private String[] pathsToMatch;
         /**
-         * basePackage
+           * 基础包
          */
         private String[] basePackage;
         /**

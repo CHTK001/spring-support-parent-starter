@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * Jackson配置属性
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/12/3
  * @author CH
  */
@@ -21,7 +21,7 @@ public class JacksonProperties {
     public static final String PRE = "plugin.jackson";
 
     /**
-     * 是否包含null值
+      * 是否包含空值
      */
     private boolean includeNull = false;
 
@@ -44,7 +44,7 @@ public class JacksonProperties {
     }
 
     /**
-     * 获取 includeNull
+      * 获取 include空
      *
      * @return includeNull
      */
@@ -53,7 +53,7 @@ public class JacksonProperties {
     }
 
     /**
-     * 判断是否包含null值
+      * 判断是否包含空值
      *
      * @return includeNull
      */
@@ -62,9 +62,9 @@ public class JacksonProperties {
     }
 
     /**
-     * 设置 includeNull
+      * 设置 include空
      *
-     * @param includeNull includeNull
+     * @param includeNull include空
      */
     public void setIncludeNull(boolean includeNull) {
         this.includeNull = includeNull;

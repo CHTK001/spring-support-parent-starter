@@ -3,7 +3,7 @@ package com.chua.starter.common.support.constant;
 /**
  * 位置
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/03/01
  * @author CH
  */
@@ -12,11 +12,15 @@ public enum Position {
 
     /**
      * 绝对值
+     * @param 0 0
+     * @return ABSOLUTE的结果
      */
     ABSOLUTE(0),
 
     /**
      * 相对值
+     * @param 1 1
+     * @return RELATIVE的结果
      */
     RELATIVE(1),
     ;
@@ -36,7 +40,7 @@ public enum Position {
     }
 
     /**
-     * 获取 value
+      * 获取 价值观
      *
      * @return value
      */

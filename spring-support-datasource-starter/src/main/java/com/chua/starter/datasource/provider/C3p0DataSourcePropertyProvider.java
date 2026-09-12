@@ -23,13 +23,13 @@ public class C3p0DataSourcePropertyProvider implements DataSourcePropertyProvide
     );
 
     @Override
-    /** 获取DataSourceType */
+    /** 获取数据源类型 */
     public Class<ComboPooledDataSource> getDataSourceType() {
         return ComboPooledDataSource.class;
     }
 
     @Override
-    /** 获取Properties */
+    /** 获取属性 */
     public Map<String, Object> getProperties(ComboPooledDataSource dataSource) {
         Map<String, Object> properties = new HashMap<>();
         
@@ -63,13 +63,13 @@ public class C3p0DataSourcePropertyProvider implements DataSourcePropertyProvide
     }
 
     @Override
-    /** 设置Properties */
+    /** 设置属性 */
     public void setProperties(ComboPooledDataSource dataSource, Map<String, Object> properties) {
         properties.forEach((name, value) -> setProperty(dataSource, name, value));
     }
 
     @Override
-    /** 设置Property */
+    /** 设置财产 */
     public void setProperty(ComboPooledDataSource dataSource, String name, Object value) {
         if (value == null) {
             return;
@@ -113,18 +113,23 @@ public class C3p0DataSourcePropertyProvider implements DataSourcePropertyProvide
     }
 
     @Override
-    /** 获取PropertyNameMapping */
+    /** 获取财产名称mapping */
     public Map<String, String> getPropertyNameMapping() {
         return PROPERTY_MAPPING;
     }
 
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
         return 40;
     }
 
-    /** ToInt */
+    /**
+     * 转为int
+     *
+     * @param value 价值观
+     * @return 转为int的结果
+     */
     private int toInt(Object value) {
         if (value instanceof Number) {
             return ((Number) value).intValue();
@@ -132,7 +137,12 @@ public class C3p0DataSourcePropertyProvider implements DataSourcePropertyProvide
         return Integer.parseInt(String.valueOf(value));
     }
 
-    /** ToBoolean */
+    /**
+     * 转为布尔值
+     *
+     * @param value 价值观
+     * @return 转为布尔值的结果
+     */
     private boolean toBoolean(Object value) {
         if (value instanceof Boolean) {
             return (Boolean) value;

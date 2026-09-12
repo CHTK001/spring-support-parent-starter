@@ -13,21 +13,22 @@ import java.time.LocalDateTime;
 /**
  * 退款单实体
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @TableName("pay_refund_order")
 public class PaymentRefundOrder {
 
     @TableId(value = "pay_refund_order_id", type = IdType.AUTO)
-    /** ID */
+    /** 标识 */
     private Long id;
 
     @TableField("pay_refund_order_refund_no")
-    /** RefundNO */
+    /** 退税no */
     private String refundNo;
 
     @TableField("pay_refund_order_order_id")
-    /** 排序ID */
+    /** 排序标识 */
     private Long orderId;
 
     @TableField("pay_refund_order_order_no")
@@ -35,11 +36,11 @@ public class PaymentRefundOrder {
     private String orderNo;
 
     @TableField("pay_refund_order_merchant_id")
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
 
     @TableField("pay_refund_order_channel_id")
-    /** 通道ID */
+    /** 通道标识 */
     private Long channelId;
 
     @TableField("pay_refund_order_source_order_status")
@@ -47,7 +48,7 @@ public class PaymentRefundOrder {
     private String sourceOrderStatus;
 
     @TableField("pay_refund_order_third_party_refund_no")
-    /** ThirdpartyrefundNO */
+    /** thirdpartyrefundno */
     private String thirdPartyRefundNo;
 
     @TableField("pay_refund_order_refund_amount")
@@ -59,11 +60,11 @@ public class PaymentRefundOrder {
     private String status;
 
     @TableField("pay_refund_order_reason")
-    /** Reason */
+    /** ReasonMLmlml */
     private String reason;
 
     @TableField("pay_refund_order_notify_status")
-    /** Notify状态 */
+    /** 通知状态 */
     private Integer notifyStatus;
 
     @TableField("pay_refund_order_request_payload")
@@ -75,11 +76,11 @@ public class PaymentRefundOrder {
     private String responsePayload;
 
     @TableField("pay_refund_order_operator")
-    /** Operator */
+    /** 操作符 */
     private String operator;
 
     @TableField("pay_refund_order_remark")
-    /** Remark */
+    /** 评论 */
     private String remark;
 
     @TableField(value = "pay_refund_order_created_at", fill = FieldFill.INSERT)

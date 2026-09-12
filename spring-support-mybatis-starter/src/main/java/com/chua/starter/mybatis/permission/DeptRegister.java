@@ -5,9 +5,10 @@ import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import net.sf.jsqlparser.expression.Expression;
 
 /**
- * 注入机构ID
+   * 注入机构标识
  *
  * @author CH
+ * @since 4.0.0
  */
 public interface DeptRegister {
 

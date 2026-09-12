@@ -22,7 +22,7 @@ public class ProcedureInfo {
     private String type;
 
     /**
-     * 所属 Schema/Catalog
+      * 所属 模式/Catalog
      */
     private String schema;
 
@@ -32,7 +32,7 @@ public class ProcedureInfo {
     private String remark;
 
     /**
-     * 关联的表名（如能从定义中识别，未知时为 null）
+      * 关联的表名（如能从定义中识别，未知时为 空）
      */
     private String tableName;
 }

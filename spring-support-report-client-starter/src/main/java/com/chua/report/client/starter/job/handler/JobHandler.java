@@ -12,7 +12,7 @@ package com.chua.report.client.starter.job.handler;
  * </ul>
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/03/11
  * @author CH
  */

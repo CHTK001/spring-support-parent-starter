@@ -30,11 +30,12 @@ import java.util.stream.Collectors;
 /**
  * page 查询
  * @author CH
+ * @since 4.0.0
  */
 @EqualsAndHashCode(callSuper = true)
 @Schema(description ="分页信息")
 @Data
 public class SearchPageQuery<T> extends Query<T> {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
 }

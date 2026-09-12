@@ -82,13 +82,18 @@ public class RetryPolicy {
 
     /**
      * 创建默认重试策略
+     * @return 默认policy的结果
      */
     public static RetryPolicy defaultPolicy() {
+        /**
+         * 重试policy。
+         */
         return new RetryPolicy();
     }
 
     /**
      * 创建快速重试策略（适用于临时性错误）
+     * @return fast重试的结果
      */
     public static RetryPolicy fastRetry() {
         RetryPolicy policy = new RetryPolicy();
@@ -101,6 +106,7 @@ public class RetryPolicy {
 
     /**
      * 创建慢速重试策略（适用于外部服务不可用）
+     * @return slow重试的结果
      */
     public static RetryPolicy slowRetry() {
         RetryPolicy policy = new RetryPolicy();
@@ -113,6 +119,7 @@ public class RetryPolicy {
 
     /**
      * 创建无重试策略
+     * @return no重试的结果
      */
     public static RetryPolicy noRetry() {
         RetryPolicy policy = new RetryPolicy();

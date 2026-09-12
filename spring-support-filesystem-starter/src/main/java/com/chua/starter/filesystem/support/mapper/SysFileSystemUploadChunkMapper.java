@@ -5,7 +5,7 @@ import com.chua.starter.filesystem.support.entity.SysFileSystemUploadChunk;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 文件系统分片上传详情Mapper。
+   * 文件系统分片上传详情映射器。
  *
  * @since 4.0.0.42
  * @author CH

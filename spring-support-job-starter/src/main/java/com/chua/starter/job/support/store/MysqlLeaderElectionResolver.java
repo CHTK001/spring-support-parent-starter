@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * MyBatis-Plus 行级抢占版 Leader 选举实现, 基于 {@code sys_job_cluster} 表。
+   * MyBatis-Plus 行级抢占版 铅 选举实现, 基于 {@code sys_job_cluster} 表。
  *
  * <h3>抢占策略</h3>
  * <pre>
@@ -30,12 +30,12 @@ import lombok.extern.slf4j.Slf4j;
 public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
 
     /**
-     * sys_job_cluster Mapper
+      * sys_作业_cluster 映射器
      */
     private final ClusterMapper clusterMapper;
 
     @Override
-    /** Try获取 */
+    /** 尝试获取 */
     public boolean tryAcquire(String group, String nodeId, int leaseSeconds) {
         long now = System.currentTimeMillis();
         long leaseUntil = now + leaseSeconds * 1000L;
@@ -51,7 +51,7 @@ public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
                     clusterMapper.insert(seed);
                     log.info("[job] 初始化集群命名空间 group={}", group);
                 } catch (Exception dupOrOther) {
-                    // 其他节点可能并发初始化同一 group, 主键冲突为预期竞态, 忽略后落到下方 UPDATE 抢占
+ // 其他节点可能并发初始化同一 群体, 主键冲突为预期竞态, 忽略后落到下方 更新 抢占
                     log.debug("[job] 初始化集群命名空间跳过 group={} cause={}", group, dupOrOther.getMessage());
                 }
             }
@@ -83,7 +83,7 @@ public class MysqlLeaderElectionResolver implements LeaderElectionResolver {
      * 续约。
      *
      * @param group        命名空间
-     * @param nodeId       节点 ID
+     * @param nodeId       节点 标识
      * @param leaseSeconds 租约时长
      * @return 续约成功返回 true
      */

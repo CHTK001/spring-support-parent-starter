@@ -16,11 +16,11 @@ import java.util.Map;
  * AI 人脸识别服务接口。
  *
  * <p>提供人脸识别的单独能力与链式管线能力，全部配置读取自 {@code face} 分组
- * 全局设置（sys_ai_global_setting），配置变更通过
+   * 全局设置（sys_AI_全局_setting），配置变更通过
  * {@link com.chua.starter.ai.support.configuration.face.FaceClientManager#rebuild()} 热更新，实时生效。</p>
  *
  * <p>单独功能：检测、特征提取、登记、1:N 识别、1:1 比对；
- * 管线功能：识别管线（detect→crop→liveness→feature→检索）、登记管线、核验管线；
+   * 管线功能：识别管线（detect→crop→liveness→特征→检索）、登记管线、核验管线；
  * 辅助能力：活体、动漫检测、超分、修复、属性、表情、关键点、质量、换脸检测。</p>
  *
  * @since 4.0.0.42
@@ -40,7 +40,7 @@ public interface AiFaceService {
      * 检测最大人脸（单独能力）。
      *
      * @param imageData 图片字节
-     * @return 最大人脸命中，无则 null
+     * @return 最大人脸命中，无则 空
      */
     FaceDetectionHit detectLargest(byte[] imageData);
 
@@ -61,10 +61,10 @@ public interface AiFaceService {
     float[] extractFeature(byte[] imageData);
 
     /**
-     * 特征提取完整管线（detect→crop→liveness→align→feature）。
+      * 特征提取完整管线（detect→crop→liveness→align→特征）。
      *
      * @param imageData 图片字节
-     * @return 特征管线结果（检测框/裁剪/对齐/活体/特征/耗时），无人脸返回 null
+     * @return 特征管线结果（检测框/裁剪/对齐/活体/特征/耗时），无人脸返回 空
      */
     com.chua.deeplearning.support.face.FaceFeaturePipelineResult extractFeaturePipeline(byte[] imageData);
 
@@ -72,7 +72,7 @@ public interface AiFaceService {
      * 人脸对齐管线（detect→crop→liveness→align）。
      *
      * @param imageData 图片字节
-     * @return 对齐结果（检测框/裁剪/对齐/活体/耗时），无人脸返回 null
+     * @return 对齐结果（检测框/裁剪/对齐/活体/耗时），无人脸返回 空
      */
     com.chua.deeplearning.support.face.FaceAlignResult align(byte[] imageData);
 
@@ -86,7 +86,7 @@ public interface AiFaceService {
     double compare(byte[] imageA, byte[] imageB);
 
     /**
-     * 1:1 比对完整管线：两侧都跑 detect→crop→liveness→align→feature，再余弦比对。
+      * 1:1 比对完整管线：两侧都跑 detect→crop→liveness→align→特征，再余弦比对。
      *
      * <p>返回两侧的特征提取元数据 + 余弦相似度，便于可观测与调试。</p>
      *
@@ -108,7 +108,7 @@ public interface AiFaceService {
     /**
      * 登记人脸入库（单独能力，取最大人脸）。
      *
-     * @param id        人脸 ID
+     * @param id        人脸 标识
      * @param imageData 图片字节
      * @param metadata  附加元数据
      * @return 是否登记成功
@@ -116,9 +116,9 @@ public interface AiFaceService {
     boolean enroll(String id, byte[] imageData, Map<String, Object> metadata);
 
     /**
-     * 登记管线（detect → crop → liveness → align → feature → 入库，取最大人脸）。
+      * 登记管线（detect → crop → liveness → align → 特征 → 入库，取最大人脸）。
      *
-     * @param id        人脸 ID
+     * @param id        人脸 标识
      * @param imageData 图片字节
      * @param metadata  元数据
      * @return 是否登记成功
@@ -131,8 +131,8 @@ public interface AiFaceService {
      * <p>适用场景：前端先调 {@link #extractFeature(byte[])} 取特征，再调用本接口入库，
      * 或从外部系统导入预计算特征向量。</p>
      *
-     * @param id        人脸 ID
-     * @param feature   特征向量（维度需与 vectorStorage 一致）
+     * @param id        人脸 标识
+     * @param feature   特征向量（维度需与 向量storage 一致）
      * @param metadata  元数据
      * @return 是否成功
      */
@@ -147,7 +147,7 @@ public interface AiFaceService {
     FaceIdentifyHit identify(byte[] imageData);
 
     /**
-     * 识别管线（detect → crop → liveness → feature → 检索，取最大人脸）。
+      * 识别管线（detect → crop → liveness → 特征 → 检索，取最大人脸）。
      *
      * @param imageData 图片字节
      * @return 识别命中（TopK）
@@ -164,9 +164,9 @@ public interface AiFaceService {
     List<FaceSearchHit> search(float[] feature, int topK);
 
     /**
-     * 核验管线（detect → feature → 与指定库中检索比对，取最大人脸）。
+      * 核验管线（detect → 特征 → 与指定库中检索比对，取最大人脸）。
      *
-     * @param id       人脸 ID
+     * @param id       人脸 标识
      * @param imageData 图片字节
      * @return 是否匹配
      */
@@ -205,7 +205,7 @@ public interface AiFaceService {
     byte[] superResolution(byte[] imageData);
 
     /**
-     * 人脸修复（辅助能力，CodeFormer）。
+      * 人脸修复（辅助能力，编码former）。
      *
      * @param imageData 图片字节
      * @return 修复后图片字节
@@ -263,7 +263,7 @@ public interface AiFaceService {
     /**
      * 枚举可用人脸模型。
      *
-     * @return 模型清单（模型 ID + 说明）
+     * @return 模型清单（模型 标识 + 说明）
      */
     Map<String, List<String>> listModels();
 }

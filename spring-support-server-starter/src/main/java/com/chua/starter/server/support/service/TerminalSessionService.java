@@ -19,12 +19,12 @@ public interface TerminalSessionService {
     /**
      * 写入会话打开记录
      *
-     * @param hostId     主机 ID
+     * @param hostId     主机 标识
      * @param hostName   主机名称（冗余）
      * @param protocol   协议名
      * @param userName   发起用户
      * @param clientIp   客户端 IP
-     * @return 已持久化的记录，写入失败时返回 null（不阻断连接）
+     * @return 已持久化的记录，写入失败时返回 空（不阻断连接）
      */
     MsTerminalSession openRecord(Long hostId, String hostName, String protocol,
                                  String userName, String clientIp);
@@ -32,7 +32,7 @@ public interface TerminalSessionService {
     /**
      * 闭环会话记录
      *
-     * @param recordId 记录 ID
+     * @param recordId 记录 标识
      * @param reason   关闭原因
      */
     void closeRecord(Long recordId, String reason);
@@ -47,7 +47,7 @@ public interface TerminalSessionService {
     /**
      * 按状态过滤会话记录
      *
-     * @param status OPEN / CLOSED
+     * @param status 打开 / 关闭
      * @return 会话列表
      */
     ReturnResult<List<MsTerminalSession>> listByStatus(String status);

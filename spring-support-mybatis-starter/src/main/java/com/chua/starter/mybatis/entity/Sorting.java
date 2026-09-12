@@ -7,6 +7,7 @@ import lombok.Data;
  * 用于指定排序字段和排序方向
  *
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class Sorting {

@@ -14,10 +14,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * 全局 ChatClient 注册中心。
+   * 全局 对话客户端 注册中心。
  *
  * <p>作为 Spring Boot 容器的单例 Bean，管理所有 AI 大模型 ChatClient 实例。
- * 支持按 provider、model、capability 等多种维度索引和查找。
+   * 支持按 提供者、模型、capability 等多种维度索引和查找。
  *
  * <h2>注册体系</h2>
  * <pre>
@@ -47,6 +47,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *   // 获取聚合客户端进行多模型路由
  *   AggregateChatClient aggregate = registry.getAggregate();
  *   aggregate.withTokenGroup("vip").chatSync("复杂问题");
+ * }</pre>*   aggregate.withTokenGroup("vip").chatSync("复杂问题");
  * }</pre>
  *
  * @since 4.0.0.42
@@ -56,27 +57,27 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class ChatClientRegistry {
 
     /**
-     * 按 provider 名称索引的 ChatClient
+      * 按 提供者 名称索引的 对话客户端
      */
     private final Map<String, ChatClient> providerIndex = new ConcurrentHashMap<>();
 
     /**
-     * 按模型名称索引的 ChatClient
+      * 按模型名称索引的 对话客户端
      */
     private final Map<String, ChatClient> modelIndex = new ConcurrentHashMap<>();
 
     /**
-     * 按能力索引的 ChatClient 列表
+      * 按能力索引的 对话客户端 列表
      */
     private final Map<String, List<ChatClient>> capabilityIndex = new ConcurrentHashMap<>();
 
     /**
-     * 默认 ChatClient（聚合客户端）
+      * 默认 对话客户端（聚合客户端）
      */
     private volatile ChatClient defaultClient;
 
     /**
-     * 聚合 ChatClient（多模型路由）
+      * 聚合 对话客户端（多模型路由）
      */
     private volatile AggregateChatClient aggregateClient;
 
@@ -86,22 +87,22 @@ public class ChatClientRegistry {
     private final List<ModelDefinition> modelDefinitions = new CopyOnWriteArrayList<>();
 
     /**
-     * 所有已注册的 ChatClient 列表
+      * 所有已注册的 对话客户端 列表
      */
     private final List<ChatClient> allClients = new CopyOnWriteArrayList<>();
 
     /**
-     * 已注册为 Agent 模型的名称集合（provider="agent" 时的专用追踪）
+      * 已注册为 智能体 模型的名称集合（提供者="智能体" 时的专用追踪）
      */
     private final Set<String> registeredAgentModelNames = ConcurrentHashMap.newKeySet();
 
     /**
-     * 注册 ChatClient。
+      * 注册 对话客户端。
      *
      * @param provider   提供者标识（如 "openai", "zhipu", "hunyuan"）
      * @param modelName  模型名称（如 "gpt-4o", "glm-4"）
-     * @param client     ChatClient 实例
-     * @param capabilities 能力标签（如 "chat", "vision", "code"）
+     * @param client     对话客户端 实例
+     * @param capabilities 能力标签（如 "对话", "vision", "编码"）
      */
     public void register(String provider, String modelName, ChatClient client, String... capabilities) {
         if (provider == null || client == null) {
@@ -109,11 +110,11 @@ public class ChatClientRegistry {
             return;
         }
 
-        // 幂等：同一 provider（热更新/重复注册）时先注销旧 client，避免 allClients 无限膨胀
+ // 幂等：同一 提供者（热更新/重复注册）时先注销旧 客户端，避免 全部客户端 无限膨胀
         ChatClient previous = providerIndex.put(provider.toLowerCase(), client);
         if (previous != null && previous != client) {
             allClients.remove(previous);
-            // 同时清理旧 client 的模型索引（该模型现在指向新 client）
+ // 同时清理旧 客户端 的模型索引（该模型现在指向新 客户端）
             modelIndex.entrySet().removeIf(e -> e.getValue() == previous);
             capabilityIndex.values().forEach(list -> list.remove(previous));
         }
@@ -135,20 +136,20 @@ public class ChatClientRegistry {
     }
 
     /**
-     * 注册 ChatClient（简化版）。
+      * 注册 对话客户端（简化版）。
      *
      * @param provider 提供者标识
-     * @param client   ChatClient 实例
+     * @param client   对话客户端 实例
      */
     public void register(String provider, ChatClient client) {
         register(provider, null, client);
     }
 
     /**
-     * 注册 Agent 模型（provider="agent"），同时追踪到 registeredAgentModelNames。
+      * 注册 智能体 模型（提供者="智能体"），同时追踪到 注册智能体模型名称。
      *
      * @param modelName    模型名称
-     * @param client       ChatClient 实例
+     * @param client       对话客户端 实例
      * @param capabilities 能力标签
      */
     public void registerAgentModel(String modelName, ChatClient client, String... capabilities) {
@@ -160,21 +161,23 @@ public class ChatClientRegistry {
         unregisterAgentModel(modelName);
         // 注册到通用索引
         register("agent", modelName, client, capabilities);
-        // 追踪 Agent 模型名称
+ // 追踪 智能体 模型名称
         registeredAgentModelNames.add(modelName);
         log.info("[ChatClientRegistry] 注册 Agent 模型: {}", modelName);
     }
 
     /**
-     * 注销 Agent 模型（从所有索引 + 追踪集合中移除）。
+      * 注销 智能体 模型（从所有索引 + 追踪集合中移除）。
      *
      * @param modelName 模型名称
      */
     public void unregisterAgentModel(String modelName) {
-        if (modelName == null) return;
+        if (modelName == null) {
+            return;
+        }
         String key = modelName.toLowerCase();
         registeredAgentModelNames.remove(modelName);
-        // 通过 modelIndex 找到要移除的 client
+ // 通过 模型索引 找到要移除的 客户端
         ChatClient target = modelIndex.get(key);
         if (target != null) {
             // 从所有索引中移除
@@ -187,24 +190,29 @@ public class ChatClientRegistry {
     }
 
     /**
-     * 判断某个模型名称是否已注册为 Agent 模型。
+      * 判断某个模型名称是否已注册为 智能体 模型。
+     * @param modelName 模型名称
+     * @return 是否智能体模型注册的结果
      */
     public boolean isAgentModelRegistered(String modelName) {
-        if (modelName == null) return false;
+        if (modelName == null) {
+            return false;
+        }
         return registeredAgentModelNames.contains(modelName);
     }
 
     /**
-     * 获取所有已注册的 Agent 模型名称。
+      * 获取所有已注册的 智能体 模型名称。
+     * @return 获取注册智能体模型的结果
      */
     public Set<String> getRegisteredAgentModels() {
         return Collections.unmodifiableSet(registeredAgentModelNames);
     }
 
     /**
-     * 注册模型定义（带能力标签，供 /v1/models 与前端能力开关使用）。
+      * 注册模型定义（带能力标签，供 /v1/模型 与前端能力开关使用）。
      *
-     * @param definition 模型定义，id 重复时覆盖
+     * @param definition 模型定义，标识 重复时覆盖
      */
     public void registerModel(ModelDefinition definition) {
         if (definition == null || definition.getId() == null) {
@@ -227,9 +235,9 @@ public class ChatClientRegistry {
     }
 
     /**
-     * 设置默认 ChatClient。
+      * 设置默认 对话客户端。
      *
-     * @param client 默认 ChatClient
+     * @param client 默认 对话客户端
      */
     public void setDefault(ChatClient client) {
         this.defaultClient = client;
@@ -237,9 +245,9 @@ public class ChatClientRegistry {
     }
 
     /**
-     * 设置聚合 ChatClient。
+      * 设置聚合 对话客户端。
      *
-     * @param client 聚合 ChatClient
+     * @param client 聚合 对话客户端
      */
     public void setAggregate(AggregateChatClient client) {
         this.aggregateClient = client;
@@ -249,45 +257,45 @@ public class ChatClientRegistry {
     // ==================== 查询方法 ====================
 
     /**
-     * 获取默认 ChatClient。
+      * 获取默认 对话客户端。
      *
-     * @return 默认 ChatClient，未设置时返回 null
+     * @return 默认 对话客户端，未设置时返回 空
      */
     public ChatClient getDefault() {
         return defaultClient;
     }
 
     /**
-     * 获取聚合 ChatClient。
+      * 获取聚合 对话客户端。
      *
-     * @return 聚合 ChatClient，未设置时返回 null
+     * @return 聚合 对话客户端，未设置时返回 空
      */
     public AggregateChatClient getAggregate() {
         return aggregateClient;
     }
 
     /**
-     * 按 provider 查找 ChatClient。
+      * 按 提供者 查找 对话客户端。
      *
      * @param provider 提供者标识
-     * @return ChatClient，未找到返回 null
+     * @return ChatClient，未找到返回 空
      */
     public ChatClient getByProvider(String provider) {
         return providerIndex.get(provider.toLowerCase());
     }
 
     /**
-     * 按模型名称查找 ChatClient。
+      * 按模型名称查找 对话客户端。
      *
      * @param modelName 模型名称
-     * @return ChatClient，未找到返回 null
+     * @return ChatClient，未找到返回 空
      */
     public ChatClient getByModel(String modelName) {
         return modelIndex.get(modelName.toLowerCase());
     }
 
     /**
-     * 按能力查找 ChatClient 列表。
+      * 按能力查找 对话客户端 列表。
      *
      * @param capability 能力标签
      * @return ChatClient 列表，未找到返回空列表
@@ -297,7 +305,7 @@ public class ChatClientRegistry {
     }
 
     /**
-     * 获取所有已注册的 ChatClient。
+      * 获取所有已注册的 对话客户端。
      *
      * @return ChatClient 列表
      */
@@ -306,7 +314,7 @@ public class ChatClientRegistry {
     }
 
     /**
-     * 获取所有已注册的 provider 名称。
+      * 获取所有已注册的 提供者 名称。
      *
      * @return provider 名称集合
      */
@@ -324,7 +332,7 @@ public class ChatClientRegistry {
     }
 
     /**
-     * 判断某个 provider 是否已注册。
+      * 判断某个 提供者 是否已注册。
      *
      * @param provider 提供者标识
      * @return true 表示已注册
@@ -334,7 +342,7 @@ public class ChatClientRegistry {
     }
 
     /**
-     * 获取已注册的 ChatClient 数量。
+      * 获取已注册的 对话客户端 数量。
      *
      * @return 数量
      */
@@ -345,7 +353,7 @@ public class ChatClientRegistry {
     // ==================== 生命周期 ====================
 
     /**
-     * 关闭所有 ChatClient，释放资源。
+      * 关闭所有 对话客户端，释放资源。
      */
     public void closeAll() {
         for (ChatClient client : allClients) {

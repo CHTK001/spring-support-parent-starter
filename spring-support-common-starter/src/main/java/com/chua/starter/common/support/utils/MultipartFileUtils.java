@@ -8,7 +8,9 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 /**
- * 处理多部分文件（MultipartFile）工具类，提供文件上传和转换功能。
+   * 处理多部分文件（multipart文件）工具类，提供文件上传和转换功能。
+ * @author CH
+ * @since 4.0.0
  */
 public class MultipartFileUtils {
 
@@ -31,6 +33,11 @@ public class MultipartFileUtils {
         try {
             return transferTo(multipartFile.getInputStream(), multipartFile.getOriginalFilename(), parent, folder, clearFolder);
         } catch (IOException e) {
+            /**
+             * runtime异常。
+             * @param e e
+             * @return runtime异常的结果
+             */
             throw new RuntimeException(e);
         }
     }
@@ -47,6 +54,11 @@ public class MultipartFileUtils {
         try {
             return transferTo(multipartFile.getInputStream(), multipartFile.getOriginalFilename(), parent, clearFolder);
         } catch (IOException e) {
+            /**
+             * runtime异常。
+             * @param e e
+             * @return runtime异常的结果
+             */
             throw new RuntimeException(e);
         }
     }
@@ -78,6 +90,10 @@ public class MultipartFileUtils {
     public static ReturnResult<String> transferTo(InputStream inputStream, String name, File parent, String folder, boolean clearFolder) {
         if(clearFolder) {
             try {
+                /**
+                 * 删除recursively。
+                 * @param folder 文件夹
+                 */
                 deleteRecursively(new File(parent, folder));
             } catch (IOException e) {
                 return ReturnResult.illegal("保存驱动清除失败");
@@ -101,12 +117,17 @@ public class MultipartFileUtils {
 
     /**
      * 递归删除文件或目录
+     * @param file 文件
      */
     private static void deleteRecursively(File file) throws IOException {
         if (file.isDirectory()) {
             File[] files = file.listFiles();
             if (files != null) {
                 for (File f : files) {
+                    /**
+                     * 删除recursively。
+                     * @param f f
+                     */
                     deleteRecursively(f);
                 }
             }
@@ -126,9 +147,13 @@ public class MultipartFileUtils {
     public static ReturnResult<String> transferTo(InputStream inputStream, String name, File parent, boolean clearFolder) {
         if(clearFolder) {
             try {
+                /**
+                 * 删除recursively。
+                 * @param parent 父
+                 */
                 deleteRecursively(parent);
             } catch (IOException e) {
-//                return ReturnResult.illegal("保存驱动清除失败, " + StringUtils.subAfter(e.getCause().getMessage(), ":", true));
+ // 申报 申报结果.illegal("保存驱动清除失败, " + 字符串工具.sub之后(e.获取cause().获取消息(), ":", true));
 
             }
         }
@@ -148,7 +173,7 @@ public class MultipartFileUtils {
     }
 
     /**
-     * 将多部分文件转换为File对象。
+      * 将多部分文件转换为文件对象。
      *
      * @param file 多部分文件
      * @return 转换后的File对象，如果文件为null，则返回null
@@ -172,6 +197,10 @@ public class MultipartFileUtils {
      * @throws IOException 如果转移过程中出现I/O错误
      */
     public static void transferTo(MultipartFile multipartFile, File patchFile) throws IOException{
+        /**
+         * 尝试。
+         * @param multipartFile.getInputStream( multipartfile.获取输入流(
+         */
         try (InputStream inputStream = multipartFile.getInputStream();
              FileOutputStream fileOutputStream = new FileOutputStream(patchFile)
         ) {

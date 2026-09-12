@@ -5,7 +5,7 @@ import com.chua.starter.ai.support.entity.SysAiPricing;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * AI 定价 Mapper
+   * AI 定价 映射器
  *
  * @since 4.0.0.42
  * @author CH

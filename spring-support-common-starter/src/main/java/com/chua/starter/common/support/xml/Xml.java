@@ -25,7 +25,7 @@ public class Xml {
     }
 
     /**
-     * 将 JsonObject 转换为 XML 字节数组。
+      * 将 json对象 转换为 XML 字节数组。
      *
      * @param jsonObject JSON 对象
      * @return XML 字节数组
@@ -42,6 +42,11 @@ public class Xml {
         return xml.getBytes(java.nio.charset.StandardCharsets.UTF_8);
     }
 
+    /**
+     * json转为xml。
+     * @param json json
+     * @return json转为xml的结果
+     */
     private static String jsonToXml(String json) {
         try {
             StringBuilder xml = new StringBuilder();
@@ -60,10 +65,20 @@ public class Xml {
         }
     }
 
+    /**
+     * 转换json对象。
+     * @param json json
+     * @return 转换json对象的结果
+     */
     private static String convertJsonObject(String json) {
         StringBuilder xml = new StringBuilder();
         int i = 0;
         while (i < json.length()) {
+            /**
+             * 跳过whitespace。
+             * @param json json
+             * @param i i
+             */
             skipWhitespace(json, i);
             int colon = findNextColon(json, i);
             if (colon < 0) {
@@ -95,10 +110,20 @@ public class Xml {
         return xml.toString();
     }
 
+    /**
+     * 转换jsonarray。
+     * @param array array
+     * @return 转换jsonarray的结果
+     */
     private static String convertJsonArray(String array) {
         StringBuilder xml = new StringBuilder();
         int i = 1;
         while (i < array.length() - 1) {
+            /**
+             * 跳过whitespace。
+             * @param array array
+             * @param i i
+             */
             skipWhitespace(array, i);
             char c = array.charAt(i);
             if (c == ']') {
@@ -120,6 +145,11 @@ public class Xml {
                 }
                 i = end + 1;
             }
+            /**
+             * 跳过whitespace。
+             * @param array array
+             * @param i i
+             */
             skipWhitespace(array, i);
             if (i < array.length() && array.charAt(i) == ',') {
                 i++;
@@ -128,6 +158,12 @@ public class Xml {
         return xml.toString();
     }
 
+    /**
+      * 查找下一个colon。
+     * @param json json
+     * @param start 启动
+     * @return find下一个colon的结果
+     */
     private static int findNextColon(String json, int start) {
         int i = start;
         while (i < json.length()) {
@@ -143,12 +179,23 @@ public class Xml {
         return -1;
     }
 
+    /**
+      * 查找价值观结束。
+     * @param json json
+     * @param start 启动
+     * @return find价值观结束的结果
+     */
     private static int findValueEnd(String json, int start) {
         int i = start;
         while (i < json.length()) {
             char c = json.charAt(i);
             if (c == ',') {
                 int[] j = {i - 1};
+                /**
+                 * 跳过whitespacebackward。
+                 * @param json json
+                 * @param j j
+                 */
                 skipWhitespaceBackward(json, j);
                 if (j[0] >= start && json.charAt(j[0]) == '}') {
                     return i;
@@ -165,6 +212,13 @@ public class Xml {
         return json.length();
     }
 
+    /**
+     * 解析字符串价值观。
+     * @param json json
+     * @param start 启动
+     * @param end 结束
+     * @return 解析字符串价值观的结果
+     */
     private static String parseStringValue(String json, int start, int end) {
         String sub = json.substring(start, end).trim();
         if (sub.startsWith("\"") && sub.endsWith("\"") && sub.length() >= 2) {
@@ -173,6 +227,12 @@ public class Xml {
         return null;
     }
 
+    /**
+     * 跳过字符串。
+     * @param json json
+     * @param start 启动
+     * @return 跳过字符串的结果
+     */
     private static int skipString(String json, int start) {
         int i = start + 1;
         while (i < json.length()) {
@@ -188,6 +248,12 @@ public class Xml {
         return json.length();
     }
 
+    /**
+     * 跳过whitespace。
+     * @param s s
+     * @param i i
+     * @return 跳过whitespace的结果
+     */
     private static int skipWhitespace(String s, int i) {
         while (i < s.length() && Character.isWhitespace(s.charAt(i))) {
             i++;
@@ -195,12 +261,23 @@ public class Xml {
         return i;
     }
 
+    /**
+     * 跳过whitespacebackward。
+     * @param s s
+     * @param i i
+     */
     private static void skipWhitespaceBackward(String s, int[] i) {
         while (i[0] >= 0 && Character.isWhitespace(s.charAt(i[0]))) {
             i[0]--;
         }
     }
 
+    /**
+      * 查找匹配brace。
+     * @param s s
+     * @param start 启动
+     * @return find匹配brace的结果
+     */
     private static int findMatchingBrace(String s, int start) {
         int depth = 0;
         for (int i = start; i < s.length(); i++) {
@@ -219,6 +296,11 @@ public class Xml {
         return s.length() - 1;
     }
 
+    /**
+      * escapexml。
+     * @param s s
+     * @return escapeXml的结果
+     */
     private static String escapeXml(String s) {
         if (s == null) {
             return "";
@@ -230,6 +312,11 @@ public class Xml {
                 .replace("'", "&apos;");
     }
 
+    /**
+     * unescapejson字符串。
+     * @param s s
+     * @return unescapejson字符串的结果
+     */
     private static String unescapeJsonString(String s) {
         if (s == null) {
             return "";

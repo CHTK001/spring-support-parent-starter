@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 public class AiServiceStatusServiceImpl implements AiServiceStatusService {
 
     /**
-     * 服务状态 Mapper
+      * 服务状态 映射器
      */
     private final AiServiceStatusMapper statusMapper;
 
@@ -94,6 +94,10 @@ public class AiServiceStatusServiceImpl implements AiServiceStatusService {
             log.warn("[SysAiServiceStatus] 服务 {} 不存在，忽略停止", serviceName);
             return;
         }
+        /**
+          * refreshuptime。
+         * @param exist exist
+         */
         refreshUptime(exist);
         LambdaUpdateWrapper<SysAiServiceStatus> wrapper = new LambdaUpdateWrapper<SysAiServiceStatus>()
                 .eq(SysAiServiceStatus::getStatusServiceName, serviceName)

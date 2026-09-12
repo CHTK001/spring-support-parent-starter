@@ -5,7 +5,7 @@ import com.chua.starter.ai.support.entity.SysAiBotMessage;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 微信 Bot 聊天消息记录 Mapper。
+   * 微信 机器人 聊天消息记录 映射器。
  *
  * @author CH
  * @since 4.0.0.42

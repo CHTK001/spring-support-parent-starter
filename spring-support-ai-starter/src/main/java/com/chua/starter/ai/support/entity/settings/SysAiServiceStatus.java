@@ -21,17 +21,17 @@ import java.time.LocalDateTime;
 @TableName("sys_ai_service_status")
 @Schema(name = "服务运行状态")
 public class SysAiServiceStatus implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
-     * 状态记录 ID
+      * 状态记录 标识
      */
     /**
-     * 状态记录 ID
+      * 状态记录 标识
      */
     @TableId(value = "sys_ai_service_status_id", type = IdType.AUTO)
     @Schema(description = "状态记录 ID")
-    /** 状态ID */
+    /** 状态标识 */
     private Long statusId;
 
     /**
@@ -86,7 +86,7 @@ public class SysAiServiceStatus implements Serializable {
      */
     @TableField("sys_ai_service_status_uptime_sec")
     @Schema(description = "运行时长(秒)")
-    /** 状态uptimeSEC */
+    /** 状态uptimesec */
     private Long statusUptimeSec;
 
     /**
@@ -97,6 +97,6 @@ public class SysAiServiceStatus implements Serializable {
      */
     @TableField(value = "sys_ai_service_status_update_time", fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
-    /** 状态update时间 */
+    /** 状态更新时间 */
     private LocalDateTime statusUpdateTime;
 }

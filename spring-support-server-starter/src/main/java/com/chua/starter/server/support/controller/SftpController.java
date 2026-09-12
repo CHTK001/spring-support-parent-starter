@@ -46,8 +46,8 @@ public class SftpController {
     /**
      * 列出目录
      *
-     * @param hostId     主机 ID
-     * @param identityId 身份 ID，可为空
+     * @param hostId     主机 标识
+     * @param identityId 身份 标识，可为空
      * @param path       目录路径，可为空取主目录
      * @return 条目列表
      */
@@ -62,8 +62,8 @@ public class SftpController {
     /**
      * 读取文本内容
      *
-     * @param hostId     主机 ID
-     * @param identityId 身份 ID，可为空
+     * @param hostId     主机 标识
+     * @param identityId 身份 标识，可为空
      * @param path       文件路径
      * @return 内容结果
      */
@@ -78,9 +78,9 @@ public class SftpController {
     /**
      * 写入文本内容（整文件覆盖）
      *
-     * @param hostId     主机 ID
-     * @param identityId 身份 ID，可为空
-     * @param path       文件路径（query 参数）
+     * @param hostId     主机 标识
+     * @param identityId 身份 标识，可为空
+     * @param path       文件路径（查询 参数）
      * @param content    新内容
      * @return 结果
      */
@@ -96,10 +96,10 @@ public class SftpController {
     /**
      * 上传文件
      *
-     * @param hostId     主机 ID
-     * @param identityId 身份 ID，可为空
+     * @param hostId     主机 标识
+     * @param identityId 身份 标识，可为空
      * @param directory  目标目录，可为空取根（兼容旧参数名）
-     * @param path       目标目录，可为空取根（前端实际使用的参数名，优先于 directory）
+     * @param path       目标目录，可为空取根（前端实际使用的参数名，优先于 目录）
      * @param file       文件
      * @return 远端路径
      */
@@ -117,12 +117,12 @@ public class SftpController {
     /**
      * 下载文件
      * <p>
-     * 内容一次性读入内存后随响应输出，临时文件由 TempFile 关闭时删除；
+      * 内容一次性读入内存后随响应输出，临时文件由 temp文件 关闭时删除；
      * 超大文件下载场景建议后续迭代改造为流式管道。
      * </p>
      *
-     * @param hostId     主机 ID
-     * @param identityId 身份 ID，可为空
+     * @param hostId     主机 标识
+     * @param identityId 身份 标识，可为空
      * @param path       远端路径
      * @return 文件字节响应
      */
@@ -136,6 +136,10 @@ public class SftpController {
             // 业务失败以 404 表达，前端依据消息提示
             return ResponseEntity.notFound().build();
         }
+        /**
+         * 尝试。
+         * @param result.getData( 结果.获取数据(
+         */
         try (TempFile temp = result.getData()) {
             var headers = new HttpHeaders();
             headers.set(HttpHeaders.CONTENT_DISPOSITION,
@@ -153,8 +157,8 @@ public class SftpController {
     /**
      * 创建目录
      *
-     * @param hostId     主机 ID
-     * @param identityId 身份 ID，可为空
+     * @param hostId     主机 标识
+     * @param identityId 身份 标识，可为空
      * @param path       新目录
      * @return 结果
      */
@@ -169,8 +173,8 @@ public class SftpController {
     /**
      * 删除文件或目录
      *
-     * @param hostId     主机 ID
-     * @param identityId 身份 ID，可为空
+     * @param hostId     主机 标识
+     * @param identityId 身份 标识，可为空
      * @param path       目标路径
      * @param recursive  目录递归删除
      * @return 结果
@@ -187,9 +191,9 @@ public class SftpController {
     /**
      * 重命名/移动
      *
-     * @param hostId     主机 ID
-     * @param identityId 身份 ID，可为空
-     * @param body       fromPath + toPath
+     * @param hostId     主机 标识
+     * @param identityId 身份 标识，可为空
+     * @param body       从路径 + 转为路径
      * @return 结果
      */
     @Operation(summary = "重命名或移动")

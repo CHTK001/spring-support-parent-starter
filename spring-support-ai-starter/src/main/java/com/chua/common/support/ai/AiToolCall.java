@@ -11,10 +11,10 @@ import java.util.Map;
  */
 public class AiToolCall implements Serializable {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
-     * 工具调用唯一 ID
+      * 工具调用唯一 标识
      */
     private String id;
 
@@ -29,16 +29,16 @@ public class AiToolCall implements Serializable {
     private Map<String, Object> arguments;
 
     /**
-     * @return 工具调用唯一 ID
+     * @return 工具调用唯一 标识
      */
     public String getId() {
         return id;
     }
 
     /**
-     * 设置工具调用唯一 ID。
+      * 设置工具调用唯一 标识。
      *
-     * @param id 调用 ID
+     * @param id 调用 标识
      */
     public void setId(String id) {
         this.id = id;

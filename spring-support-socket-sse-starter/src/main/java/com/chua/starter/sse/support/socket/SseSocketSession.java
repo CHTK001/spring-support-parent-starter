@@ -10,10 +10,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * SSE Socket 会话实现
- * 封装 SseEmitter 为统一的 SocketSession 接口
+   * SSE 套接字 会话实现
+   * 封装 sseemitter 为统一的 套接字会话 接口
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024-12-24
  * @author CH
  */
@@ -21,21 +21,22 @@ public class SseSocketSession implements SocketSession {
 
     /** Objectmapper */
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    /** ID */
+    /** 标识 */
     private final String id;
-    /** 客户端ID */
+    /** 客户端标识 */
     private String clientId;
     /** 用户 */
     private SocketUser user;
     /** Emitter */
     private final SseEmitter emitter;
-    private final Map<String, Object> attributes = new ConcurrentHashMap<>();
-    private volatile boolean connected = true;
+    private final Map<String, Object> attributes = new ConcurrentHashMap<>(); // attributes
+    private volatile boolean connected = true; // 连接
 
     /**
-     * 创建 SseSocketSession 实例
-     * @param id id
-     * @param SseEmitter SseEmitter
+      * 创建 sse套接字会话 实例
+     * @param id 标识
+     * @param emitter sseemitter
+     * @param emitter emitter
      */
     public SseSocketSession(String id, SseEmitter emitter) {
         this.id = id;
@@ -49,31 +50,31 @@ public class SseSocketSession implements SocketSession {
     }
 
     @Override
-    /** 获取Id */
+    /** 获取标识 */
     public String getId() {
         return id;
     }
 
     @Override
-    /** 获取ClientId */
+    /** 获取客户端标识 */
     public String getClientId() {
         return clientId;
     }
 
     @Override
-    /** 设置ClientId */
+    /** 设置客户端标识 */
     public void setClientId(String clientId) {
         this.clientId = clientId;
     }
 
     @Override
-    /** 获取User */
+    /** 获取用户 */
     public SocketUser getUser() {
         return user;
     }
 
     @Override
-    /** 设置User */
+    /** 设置用户 */
     public void setUser(SocketUser user) {
         this.user = user;
     }
@@ -86,7 +87,12 @@ public class SseSocketSession implements SocketSession {
 
     @Override
     @SuppressWarnings("unchecked")
-    /** 获取Attribute */
+    /**
+     * 获取Attribute
+     *
+     * @param key 钥匙
+     * @return 获取attribute的结果
+     */
     public <T> T getAttribute(String key) {
         return (T) attributes.get(key);
     }
@@ -104,7 +110,7 @@ public class SseSocketSession implements SocketSession {
     }
 
     @Override
-    /** 是否Connected */
+    /** 是否连接 */
     public boolean isConnected() {
         return connected;
     }
@@ -136,13 +142,17 @@ public class SseSocketSession implements SocketSession {
 
     @Override
     @SuppressWarnings("unchecked")
-    /** 获取Connection */
+    /**
+     * 获取Connection
+     *
+     * @return 获取connection的结果
+     */
     public <T> T getConnection() {
         return (T) emitter;
     }
 
     /**
-     * 获取 SseEmitter
+      * 获取 sseemitter
      *
      * @return SseEmitter
      */

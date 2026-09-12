@@ -42,7 +42,7 @@ import java.util.concurrent.Executors;
  * </p>
  *
  * @since 2024/12/07
- * @version 1.0.0
+   * @版本 1.0.0
  * @author CH
  */
 @EnableConfigurationProperties(ApiProperties.class)
@@ -59,7 +59,7 @@ public class ApiConfiguration implements EnvironmentAware  {
 
     // ==================== 版本控制配置 ====================
 
-    /** 记录日志ControlStatus */
+    /** 记录日志control状态 */
     private void logControlStatus() {
         ServiceInfoRegistry registry = ServiceInfoRegistry.getInstance();
 
@@ -116,6 +116,11 @@ public class ApiConfiguration implements EnvironmentAware  {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "plugin.api.encode.enable", havingValue = "true", matchIfMissing = true)
     public ApiResponseEncodeResponseBodyAdvice responseEncodeResponseBodyAdvice(@Lazy ApiResponseEncodeRegister apiResponseEncodeRegister) {
+        /**
+         * api响应encode响应主体advice。
+         * @param apiResponseEncodeRegister api响应encode注册
+         * @return api响应encode响应主体advice的结果
+         */
         return new ApiResponseEncodeResponseBodyAdvice(apiResponseEncodeRegister);
     }
 
@@ -129,6 +134,11 @@ public class ApiConfiguration implements EnvironmentAware  {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "plugin.api.encode.enable", havingValue = "true", matchIfMissing = true)
     public ApiResponseEncodeRegister apiResponseEncodeRegister() {
+        /**
+         * api响应encode注册。
+         * @param apiProperties.getEncode( api属性.获取encode(
+         * @return api响应encode注册的结果
+         */
         return new ApiResponseEncodeRegister(apiProperties.getEncode());
     }
 
@@ -144,6 +154,11 @@ public class ApiConfiguration implements EnvironmentAware  {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "plugin.api.decode.enable", havingValue = "true", matchIfMissing = true)
     public ApiRequestDecodeBodyAdvice apiRequestDecodeBodyAdvice(ApiRequestDecodeRegister apiRequestDecodeRegister) {
+        /**
+         * api请求decode主体advice。
+         * @param apiRequestDecodeRegister api请求decode注册
+         * @return api请求decode主体advice的结果
+         */
         return new ApiRequestDecodeBodyAdvice(apiRequestDecodeRegister);
     }
 
@@ -157,15 +172,20 @@ public class ApiConfiguration implements EnvironmentAware  {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "plugin.api.decode.enable", havingValue = "true", matchIfMissing = true)
     public ApiRequestDecodeRegister apiRequestDecodeRegister() {
+        /**
+         * api请求decode注册。
+         * @param apiProperties.getDecode( api属性.获取decode(
+         * @return api请求decode注册的结果
+         */
         return new ApiRequestDecodeRegister(apiProperties.getDecode());
     }
 
     /**
-     * 版本路由映射：{@code @ApiVersion} 同路径多版本路由（查询参数 apiVersion / 请求头 X-Api-Version）。
+      * 版本路由映射：{@code @ApiVersion} 同路径多版本路由（查询参数 api版本 / 请求头 X-Api-版本）。
      *
      * <p>经 {@link WebMvcRegistrations#getRequestMappingHandlerMapping()} 交由 Boot 4.x
      * 的 {@code DelegatingWebMvcConfiguration} 装配——Boot 4 的默认映射为继承 Bean，
-     * 竞争式 {@code @Bean} 无法令其退避（Ambiguous mapping），WebMvcRegistrations 是官方扩展点。</p>
+      * 竞争式 {@code @Bean} 无法令其退避（Ambiguous mapping），webmvcregistrations 是官方扩展点。</p>
      *
      * <p>开关 {@code plugin.api.version.enable} 默认开启（非实验性功能，遵循"默认开关默认开启"约定）；
      * 无版本参数/头部的请求匹配所有版本，非版本化接口不受影响。</p>
@@ -178,9 +198,19 @@ public class ApiConfiguration implements EnvironmentAware  {
     @ConditionalOnMissingBean(WebMvcRegistrations.class)
     @ConditionalOnProperty(name = "plugin.api.version.enable", havingValue = "true", matchIfMissing = true)
     public WebMvcRegistrations webMvcRegistrations(ApiProperties apiProperties, Environment environment) {
+        /**
+          * webmvcregistrations。
+         * @return WebMvcRegistrations的结果
+         */
         return new WebMvcRegistrations() {
             @Override
             public RequestMappingHandlerMapping getRequestMappingHandlerMapping() {
+                /**
+                 * api版本请求mapping处理器mapping。
+                 * @param apiProperties api属性
+                 * @param environment 环境
+                 * @return api版本请求mapping处理器mapping的结果
+                 */
                 return new ApiVersionRequestMappingHandlerMapping(apiProperties, environment);
             }
         };
@@ -189,9 +219,9 @@ public class ApiConfiguration implements EnvironmentAware  {
 
     /**
      * 创建统一响应体建议实例。
-     * 当容器中没有提供UniformResponseBodyAdvice实例且plugin.parameter.enable为true时，使用此实现。
+      * 当容器中没有提供uniform响应主体advice实例且plugin.参数.enable为true时，使用此实现。
      *
-     * @return {@link ApiUniformResponseBodyAdvice} 统一响应体建议实例
+     * @return {@link apiuniform响应主体advice} 统一响应体建议实例
      * @example
      * <pre>
      * // 使用示例
@@ -203,13 +233,17 @@ public class ApiConfiguration implements EnvironmentAware  {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(name = "plugin.api.uniform", havingValue = "true", matchIfMissing = true)
     public ApiUniformResponseBodyAdvice uniformResponseBodyAdvice() {
+        /**
+         * apiuniform响应主体advice。
+         * @return apiuniform响应主体advice的结果
+         */
         return new ApiUniformResponseBodyAdvice();
     }
     /**
      * 创建执行器服务实例。
      * 用于处理异步任务的线程池。
      *
-     * @return {@link ExecutorService} 执行器服务实例
+     * @return {@link 执行器服务} 执行器服务实例
      * @example
      * <pre>
      * // 使用示例
@@ -233,11 +267,15 @@ public class ApiConfiguration implements EnvironmentAware  {
     @Bean
     @ConditionalOnMissingBean
     public ApiExceptionAdvice apiExceptionAdvice() {
+        /**
+         * api异常advice。
+         * @return api异常advice的结果
+         */
         return new ApiExceptionAdvice();
     }
 
     @Override
-    /** 设置Environment */
+    /** 设置环境 */
     public void setEnvironment(Environment environment) {
         this.environment = environment;
         this.apiProperties = Binder.get(environment).bindOrCreate(ApiProperties.PRE, ApiProperties.class);
@@ -249,7 +287,7 @@ public class ApiConfiguration implements EnvironmentAware  {
     }
 
     /**
-     * API 控制的 ServiceInfo 贡献者: 注册 @ApiXXX 系列开关。
+      * API 控制的 服务信息 贡献者: 注册 @apixxx 系列开关。
      *
      * <p>原先在 {@code WebMvcRegistrations#getRequestMappingHandlerMapping()} 中触发,
      * 重构为 {@code @Bean WebMvcRegistrations} 后丢失, 这里改为标准贡献者方式补齐,

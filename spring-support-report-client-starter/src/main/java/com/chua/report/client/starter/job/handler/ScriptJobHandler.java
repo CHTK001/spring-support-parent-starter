@@ -12,11 +12,11 @@ import java.io.File;
 /**
  * 脚本方式的作业处理程序
  * <p>
- * 支持执行Shell、Python、PHP、NodeJS、PowerShell等脚本文件。
+   * 支持执行Shell、Python、PHP、节点js、PowerShell等脚本文件。
  * 脚本内容存储在数据库中，执行时会生成临时脚本文件并调用系统命令执行。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/03/11
  * @author CH
  */
@@ -25,12 +25,12 @@ public class ScriptJobHandler implements JobHandler {
 
 
     /**
-     * 任务ID
+      * 任务标识
      */
     private final int jobId;
 
     /**
-     * GLUE更新时间戳
+      * 胶水更新时间戳
      */
     @Getter
     /** Glueupdatetime */
@@ -49,8 +49,8 @@ public class ScriptJobHandler implements JobHandler {
     /**
      * 构造函数
      *
-     * @param jobId          任务ID
-     * @param glueUpdatetime GLUE更新时间戳
+     * @param jobId          任务标识
+     * @param glueUpdatetime 胶水更新时间戳
      * @param gluesource     脚本源码
      * @param glueType       脚本类型
      */
@@ -61,6 +61,9 @@ public class ScriptJobHandler implements JobHandler {
         this.glueType = glueType;
 
         // 清理旧版本的脚本文件
+        /**
+         * clean旧script文件。
+         */
         cleanOldScriptFiles();
     }
 
@@ -118,7 +121,7 @@ public class ScriptJobHandler implements JobHandler {
         // 日志文件路径
         String logFileName = jobId + ".log";
 
-        // 脚本参数：0=param、1=分片序号、2=分片总数
+ // 脚本参数：0=参数、1=分片序号、2=分片总数
         String[] scriptParams = new String[3];
 
         // 执行脚本

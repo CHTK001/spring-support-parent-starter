@@ -5,7 +5,7 @@ import com.chua.starter.ai.support.manage.store.SysAiCompanionFigure;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 桌面伙伴形象库表 Mapper（MyBatis-Plus 标准 CRUD）。
+   * 桌面伙伴形象库表 映射器（MyBatis-Plus 标准 CRUD）。
  *
  * @since 4.0.0.42
  * @author CH

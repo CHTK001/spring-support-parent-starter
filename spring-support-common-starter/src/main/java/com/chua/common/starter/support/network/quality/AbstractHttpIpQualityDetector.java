@@ -23,10 +23,11 @@ import java.util.List;
  * 基于 HTTP API 的 IP 质量检测器抽象基类
  *
  * @since 4.0.0.42
+ * @author CH
  */
 public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector {
 
-    /** Logger */
+    /** 日志记录器 */
     private static final Logger logger = LoggerFactory.getLogger(AbstractHttpIpQualityDetector.class);
 
     /** Objectmapper */
@@ -34,14 +35,18 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
     /** HTTP客户端 */
     protected final OkHttpClient httpClient;
 
-    /** 创建 AbstractHttpIpQualityDetector 实例 */
+    /** 创建 抽象httpipqualitydetector 实例 */
     protected AbstractHttpIpQualityDetector() {
+        /**
+         * this。
+         * @param Duration.ofSeconds(10 持续时间.的seconds(10
+         */
         this(Duration.ofSeconds(10));
     }
 
     /**
-     * 创建 AbstractHttpIpQualityDetector 实例
-     * @param timeout timeout
+      * 创建 抽象httpipqualitydetector 实例
+     * @param timeout 超时
      */
     protected AbstractHttpIpQualityDetector(Duration timeout) {
         this.objectMapper = new ObjectMapper();
@@ -64,12 +69,26 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
                 logger.debug("IP 质量检测: ip={}, url={}", ip, url);
             }
             Request request = buildRequest(url, ip);
+            /**
+             * 尝试。
+             * @param httpClient.newCall(request HTTP客户端.新call(请求
+             */
             try (Response response = httpClient.newCall(request).execute()) {
                 if (!response.isSuccessful()) {
+                    /**
+                     * io异常。
+                     * @param response 响应
+                     * @return io异常的结果
+                     */
                     throw new IOException("Unexpected response: " + response);
                 }
                 ResponseBody body = response.body();
                 if (body == null) {
+                    /**
+                     * io异常。
+                     * @param body" 主体"
+                     * @return io异常的结果
+                     */
                     throw new IOException("Empty response body");
                 }
                 String json = body.string();
@@ -130,6 +149,9 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
 
     /**
      * 安全获取字符串
+     * @param node 节点
+     * @param field 字段
+     * @return opt字符串的结果
      */
     protected String optString(JsonNode node, String field) {
         if (node == null) {

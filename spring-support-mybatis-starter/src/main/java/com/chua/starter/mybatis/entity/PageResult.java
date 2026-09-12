@@ -18,6 +18,7 @@ import java.util.List;
  * 分页结果
  *
  * @author CH
+ * @since 4.0.0
  */
 @Schema(description = "分页信息")
 @Data
@@ -25,44 +26,47 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PageResult<T> implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
      * 每页显示条数，默认 10
      */
     @Schema(description = "每页显示条数，默认 10")
     @Builder.Default
-    private long pageSize = 10;
+    private long pageSize = 10; // page大小
 
     /**
      * 总数
      */
     @Schema(description = "总数")
     @Builder.Default
-    private long total = 10;
+    private long total = 10; // total
 
     /**
      * 当前页
      */
     @Schema(description = "当前页")
     @Builder.Default
-    private long pageNo = 1;
+    private long pageNo = 1; // pageno
 
     /**
      * 总页数
      */
     @Schema(description = "总页数")
-    private long totalPage;
+    private long totalPage; // totalpage
 
     /**
      * 查询数据列表
      */
     @Schema(description = "查询数据列表")
     @Builder.Default
-    private List<T> records = Collections.emptyList();
+    private List<T> records = Collections.emptyList(); // records
 
     /**
      * 复制分页数据
+     * @param tiPage tipage
+     * @param oClass o类
+     * @return 副本列表的结果
      */
     public static <T, O> PageResult<O> copyList(IPage<T> tiPage, Class<O> oClass) {
         var result = new PageResult<O>();
@@ -78,6 +82,8 @@ public class PageResult<T> implements Serializable {
 
     /**
      * 复制分页数据
+     * @param tiPage tipage
+     * @return 副本的结果
      */
     public static <T> PageResult<T> copy(IPage<T> tiPage) {
         var result = new PageResult<T>();
@@ -92,6 +98,7 @@ public class PageResult<T> implements Serializable {
 
     /**
      * 空分页
+     * @return 空的结果
      */
     public static <T> PageDTO<T> empty() {
         PageDTO<T> tPageDTO = new PageDTO<>();

@@ -30,12 +30,18 @@ import java.util.List;
 })
 @MapperScan("com.chua.starter.device.support.mapper")
 @EnableScheduling
+/**
+ * deviceauto配置类。
+ *
+ * @author CH
+ * @since 4.0.0
+ */
 public class DeviceAutoConfiguration {
 
     /**
-     * 注入所有设备 Provider Bean（@Component 自动注册）。
+      * 注入所有设备 提供者 Bean（@组件 自动注册）。
      *
-     * @param providers Spring 容器中所有 DeviceProvider 实现
+     * @param providers Spring 容器中所有 device提供者 实现
      * @return Provider 列表
      */
     @Bean
@@ -46,6 +52,7 @@ public class DeviceAutoConfiguration {
 
     /**
      * 注册设备模块服务信息。
+     * @return device服务信息contributor的结果
      */
     @Bean
     public ServiceInfoContributor deviceServiceInfoContributor() {

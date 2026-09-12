@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * 用量记录拦截器
- * 用于异步记录 ChatClient 调用用量
+   * 用于异步记录 对话客户端 调用用量
  *
  * @since 4.0.0.42
  * @author CH
@@ -32,8 +32,8 @@ public class UsageRecorderInterceptor {
      * @param model 模型
      * @param callType 调用类型
      * @param usage 用量信息
-     * @param requestId 请求ID
-     * @param userId 用户ID
+     * @param requestId 请求标识
+     * @param userId 用户标识
      */
     @Async
     public void record(String groupName, String provider, String model, String callType,

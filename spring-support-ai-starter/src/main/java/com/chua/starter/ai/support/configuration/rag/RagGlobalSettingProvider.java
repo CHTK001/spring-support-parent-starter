@@ -9,6 +9,7 @@ import java.util.List;
  * RAG 模块全局设置提供者 SPI。
  *
  * @author CH
+ * @since 4.0.0
  */
 @Spi("rag")
 public class RagGlobalSettingProvider implements GlobalSettingProvider {
@@ -20,7 +21,7 @@ public class RagGlobalSettingProvider implements GlobalSettingProvider {
     }
 
     @Override
-    /** 分组Name */
+    /** 分组名称 */
     public String groupName() {
         return "RAG 知识库";
     }

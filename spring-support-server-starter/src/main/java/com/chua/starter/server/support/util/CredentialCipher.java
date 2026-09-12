@@ -58,6 +58,12 @@ public class CredentialCipher {
         try {
             return codec.decodeHex(hex);
         } catch (Exception e) {
+            /**
+             * illegal状态异常。
+             * @param 配置是否与加密时一致" 配置是否与加密时一致"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("凭据解密失败，请检查 server.support.credential-key 配置是否与加密时一致", e);
         }
     }

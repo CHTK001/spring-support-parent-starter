@@ -15,6 +15,7 @@ import java.util.Set;
  * 配置
  *
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @ConfigurationProperties(prefix = RpcProperties.PRE, ignoreInvalidFields = true, ignoreUnknownFields = true)
@@ -22,7 +23,7 @@ public class RpcProperties {
 
     /** PRE */
     public static final String PRE = "plugin.rpc";
-    /** Default_serialization */
+    /** 默认_serialization */
     public static final String DEFAULT_SERIALIZATION = "hessian";
 
     /**
@@ -34,11 +35,11 @@ public class RpcProperties {
      */
     private Set<String> scan;
     /**
-     * ak，从配置项 rpc.access-key 注入，严禁硬编码
+      * ak，从配置项 rpc.access-钥匙 注入，严禁硬编码
      */
     private String accessKey = "";
     /**
-     * sk，从配置项 rpc.secret-key 注入，严禁硬编码
+      * sk，从配置项 rpc.secret-钥匙 注入，严禁硬编码
      */
     private String secretKey = "";
     /**
@@ -46,7 +47,7 @@ public class RpcProperties {
      */
     private String serviceKey = "98bb5008c946bdce065af13070241e10";
     /**
-     * crypto
+      * 加密货币
      */
     private String crypto = "aes";
     /**
@@ -70,7 +71,11 @@ public class RpcProperties {
      */
     private List<RpcRegistryConfig> registry;
 
-    /** 获取Registry */
+    /**
+     * 获取Registry
+     *
+     * @return 获取registry的结果
+     */
     public List<RpcRegistryConfig> getRegistry() {
         if(null == registry) {
             return Collections.emptyList();
@@ -78,7 +83,11 @@ public class RpcProperties {
         return registry;
     }
 
-    /** 获取Protocols */
+    /**
+     * 获取协议
+     *
+     * @return 获取协议的结果
+     */
     public List<RpcProtocolConfig> getProtocols() {
         if(null == protocols) {
             return Collections.emptyList();

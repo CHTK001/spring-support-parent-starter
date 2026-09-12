@@ -18,7 +18,7 @@ import reactor.core.scheduler.Schedulers;
 import java.util.Set;
 
 /**
- * 服务器终端采集 Provider(SSH)
+   * 服务器终端采集 提供者(SSH)
  * <p>
  * 通过 SSH 在目标服务器执行自定义命令, 原始输出存于 {@link CollectResult#getRawOutput()},
  * 由调度器结合任务关联的解析规则生成指标点。
@@ -42,13 +42,13 @@ public class ServerTerminalProvider implements MetricProvider {
     private static final int DEFAULT_TIMEOUT_MS = 5_000;
 
     @Override
-    /** ProviderType */
+    /** 提供者类型 */
     public ProviderType providerType() {
         return ProviderType.TERMINAL;
     }
 
     @Override
-    /** SupportServiceTypes */
+    /** 支持服务类型 */
     public Set<ServiceType> supportServiceTypes() {
         return Set.of(ServiceType.SERVER, ServiceType.REDIS, ServiceType.MYSQL,
                 ServiceType.PG, ServiceType.ORACLE, ServiceType.MSSQL, ServiceType.MQ);
@@ -91,6 +91,10 @@ public class ServerTerminalProvider implements MetricProvider {
         int timeout = context.getTask().getMonitorTaskTimeout() == null
                 ? DEFAULT_TIMEOUT_MS : context.getTask().getMonitorTaskTimeout();
 
+        /**
+         * 尝试。
+         * @param password 密码
+         */
         try (LinuxExecClient client = buildClient(host, port, username, password)) {
             client.connect();
             SshClient.ExecResult exec = client.executeCommand(command, timeout);
@@ -108,7 +112,7 @@ public class ServerTerminalProvider implements MetricProvider {
     }
 
     /**
-     * 构造 LinuxExecClient
+      * 构造 Linux执行客户端
      *
      * @param host     主机
      * @param port     端口
@@ -126,6 +130,11 @@ public class ServerTerminalProvider implements MetricProvider {
                 .readTimeout(30_000L)
                 .writeTimeout(30_000L)
                 .build();
+        /**
+         * Linux执行客户端。
+         * @param setting setting
+         * @return Linux执行客户端的结果
+         */
         return new LinuxExecClient(setting);
     }
 
@@ -133,7 +142,7 @@ public class ServerTerminalProvider implements MetricProvider {
      * 对象转字符串
      *
      * @param o 对象
-     * @return 字符串, null 时返回 null
+     * @return 字符串, 空 时返回 空
      */
     private static String str(Object o) {
         return o == null ? null : String.valueOf(o);
@@ -143,7 +152,7 @@ public class ServerTerminalProvider implements MetricProvider {
      * 对象转 Integer
      *
      * @param o 对象
-     * @return Integer, 转换失败返回 null
+     * @return Integer, 转换失败返回 空
      */
     private static Integer intOrNull(Object o) {
         if (o == null) {

@@ -3,33 +3,33 @@ package com.chua.socket.support.session;
 import java.util.Map;
 
 /**
- * Socket 会话接口
+   * 套接字 会话接口
  * 定义统一的会话操作方法
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */
 public interface SocketSession {
 
     /**
-     * 获取会话ID
+      * 获取会话标识
      *
      * @return 会话ID
      */
     String getId();
 
     /**
-     * 获取客户端ID
+      * 获取客户端标识
      *
      * @return 客户端ID
      */
     String getClientId();
 
     /**
-     * 设置客户端ID
+      * 设置客户端标识
      *
-     * @param clientId 客户端ID
+     * @param clientId 客户端标识
      */
     void setClientId(String clientId);
 
@@ -105,7 +105,12 @@ public interface SocketSession {
      * @param data  二进制数据
      */
     default void sendBinary(String event, byte[] data) {
-        // 默认实现: 转换为 Base64 发送
+ // 默认实现: 转换为 基础64 发送
+        /**
+         * 发送。
+         * @param event 事件
+         * @param java.util.Base64.getEncoder( Java.util.基础64.获取编码器(
+         */
         send(event, java.util.Base64.getEncoder().encodeToString(data));
     }
 

@@ -4,6 +4,7 @@ package com.chua.mysql.support.binlog.event;
  * 表映射事件数据
  *
  * @author CH
+ * @since 4.0.0
  */
 public class TableMapEventData implements EventData {
 

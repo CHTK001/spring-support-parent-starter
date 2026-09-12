@@ -14,6 +14,7 @@ import java.util.Set;
  * 当前用户
  *
  * @author CH
+ * @since 4.0.0
  */
 @Accessors(chain = true)
 public class CurrentUser {
@@ -24,14 +25,14 @@ public class CurrentUser {
     }
 
 
-    /** ANY */
+    /** 任意 */
     private static final String ANY = "*";
     /**
-     * unionId
+      * unionid
      */
     private String unionId;
     /**
-     * openId
+       * 打开标识
      */
     private String openId;
     /**
@@ -39,11 +40,11 @@ public class CurrentUser {
      */
     private String uid;
     /**
-     * 用户id
+      * 用户标识
      */
     private String userId;
     /**
-     * 租户id
+      * 租户标识
      */
     private String tenantId;
     /**
@@ -51,7 +52,7 @@ public class CurrentUser {
      */
     private String username;
     /**
-     * 机构id
+      * 机构标识
      */
     private String deptId;
     /**
@@ -90,7 +91,7 @@ public class CurrentUser {
      */
     private Set<String> roles;
 
-    private Map<String, Object> ext;
+    private Map<String, Object> ext; // ext
     /**
      * 最后一次登录地址
      */
@@ -181,7 +182,12 @@ public class CurrentUser {
         return false;
     }
 
-    /** 是否拥有Permission */
+    /**
+     * 是否拥有权限
+     *
+     * @param value 价值观
+     * @return 是否包含权限的结果
+     */
     public boolean hasPermission(String[] value) {
         if (value.length == 0) {
             return true;
@@ -219,7 +225,7 @@ public class CurrentUser {
     }
 
     /**
-     * 是否部门权限（保留兼容性，建议使用 isNeedDataPermission）
+      * 是否部门权限（保留兼容性，建议使用 是否need数据权限）
      *
      * @return 是否需要应用数据权限
      * @deprecated 使用 {@link #isNeedDataPermission()} 代替
@@ -229,7 +235,7 @@ public class CurrentUser {
         return isNeedDataPermission();
     }
     /**
-     * 获取 unionId
+      * 获取 unionid
      *
      * @return unionId
      */
@@ -238,16 +244,16 @@ public class CurrentUser {
     }
 
     /**
-     * 设置 unionId
+      * 设置 unionid
      *
-     * @param unionId unionId
+     * @param unionId unionid
      */
     public void setUnionId(String unionId) {
         this.unionId = unionId;
     }
 
     /**
-     * 获取 openId
+       * 获取 打开标识
      *
      * @return openId
      */
@@ -256,9 +262,9 @@ public class CurrentUser {
     }
 
     /**
-     * 设置 openId
+       * 设置 打开标识
      *
-     * @param openId openId
+     * @param openId 打开标识
      */
     public void setOpenId(String openId) {
         this.openId = openId;
@@ -283,7 +289,7 @@ public class CurrentUser {
     }
 
     /**
-     * 获取 userId
+       * 获取 用户标识
      *
      * @return userId
      */
@@ -292,16 +298,16 @@ public class CurrentUser {
     }
 
     /**
-     * 设置 userId
+       * 设置 用户标识
      *
-     * @param userId userId
+     * @param userId 用户标识
      */
     public void setUserId(String userId) {
         this.userId = userId;
     }
 
     /**
-     * 获取 tenantId
+      * 获取 tenantid
      *
      * @return tenantId
      */
@@ -310,16 +316,16 @@ public class CurrentUser {
     }
 
     /**
-     * 设置 tenantId
+      * 设置 tenantid
      *
-     * @param tenantId tenantId
+     * @param tenantId tenantid
      */
     public void setTenantId(String tenantId) {
         this.tenantId = tenantId;
     }
 
     /**
-     * 获取 username
+      * 获取 用户名
      *
      * @return username
      */
@@ -328,16 +334,16 @@ public class CurrentUser {
     }
 
     /**
-     * 设置 username
+      * 设置 用户名
      *
-     * @param username username
+     * @param username 用户名
      */
     public void setUsername(String username) {
         this.username = username;
     }
 
     /**
-     * 获取 deptId
+      * 获取 deptid
      *
      * @return deptId
      */
@@ -346,9 +352,9 @@ public class CurrentUser {
     }
 
     /**
-     * 设置 deptId
+      * 设置 deptid
      *
-     * @param deptId deptId
+     * @param deptId deptid
      */
     public void setDeptId(String deptId) {
         this.deptId = deptId;
@@ -373,7 +379,7 @@ public class CurrentUser {
     }
 
     /**
-     * 获取 card
+      * 获取 卡片
      *
      * @return card
      */
@@ -382,16 +388,16 @@ public class CurrentUser {
     }
 
     /**
-     * 设置 card
+      * 设置 卡片
      *
-     * @param card card
+     * @param card 卡片
      */
     public void setCard(String card) {
         this.card = card;
     }
 
     /**
-     * 获取 name
+      * 获取 名称
      *
      * @return name
      */
@@ -400,9 +406,9 @@ public class CurrentUser {
     }
 
     /**
-     * 设置 name
+      * 设置 名称
      *
-     * @param name name
+     * @param name 名称
      */
     public void setName(String name) {
         this.name = name;
@@ -427,7 +433,7 @@ public class CurrentUser {
     }
 
     /**
-     * 获取 permission
+      * 获取 权限
      *
      * @return permission
      */
@@ -436,16 +442,16 @@ public class CurrentUser {
     }
 
     /**
-     * 设置 permission
+      * 设置 权限
      *
-     * @param permission permission
+     * @param permission 权限
      */
     public void setPermission(Set<String> permission) {
         this.permission = permission;
     }
 
     /**
-     * 获取 dataPermission
+      * 获取 数据权限
      *
      * @return dataPermission
      */
@@ -454,16 +460,16 @@ public class CurrentUser {
     }
 
     /**
-     * 设置 dataPermission
+      * 设置 数据权限
      *
-     * @param dataPermission dataPermission
+     * @param dataPermission 数据权限
      */
     public void setDataPermission(DataFilterTypeEnum dataPermission) {
         this.dataPermission = dataPermission;
     }
 
     /**
-     * 获取 dataPermissionRule
+      * 获取 数据权限rule
      *
      * @return dataPermissionRule
      */
@@ -472,16 +478,16 @@ public class CurrentUser {
     }
 
     /**
-     * 设置 dataPermissionRule
+      * 设置 数据权限rule
      *
-     * @param dataPermissionRule dataPermissionRule
+     * @param dataPermissionRule 数据权限rule
      */
     public void setDataPermissionRule(String dataPermissionRule) {
         this.dataPermissionRule = dataPermissionRule;
     }
 
     /**
-     * 获取 roles
+      * 获取 角色
      *
      * @return roles
      */
@@ -490,9 +496,9 @@ public class CurrentUser {
     }
 
     /**
-     * 设置 roles
+      * 设置 角色
      *
-     * @param roles roles
+     * @param roles 角色
      */
     public void setRoles(Set<String> roles) {
         this.roles = roles;
@@ -517,7 +523,7 @@ public class CurrentUser {
     }
 
     /**
-     * 获取 lastIp
+      * 获取 最后一个ip
      *
      * @return lastIp
      */
@@ -526,9 +532,9 @@ public class CurrentUser {
     }
 
     /**
-     * 设置 lastIp
+      * 设置 最后一个ip
      *
-     * @param lastIp lastIp
+     * @param lastIp 最后一个ip
      */
     public void setLastIp(String lastIp) {
         this.lastIp = lastIp;

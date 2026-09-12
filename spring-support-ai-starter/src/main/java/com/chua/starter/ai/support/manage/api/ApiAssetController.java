@@ -13,6 +13,8 @@ import java.util.LinkedHashMap;
 
 /**
  * 静态资源控制器 - 提供模型/平台 Logo SVG
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @ApiReturnFormatIgnore
@@ -21,11 +23,13 @@ import java.util.LinkedHashMap;
 public class ApiAssetController {
 
     /**
-     * Logo 资源。前端（agentLogo.ts）请求带子目录的多段路径（如 brand/nomi.svg、
-     * tools/coding/codex.svg），单段 {name} 无法匹配会导致 404 裂图，这里用
-     * /logos/** 接住全部层级；classpath 无对应文件时返回首字母兜底 SVG。
-     * 直接写 HttpServletResponse：全局消息转换器不含二进制/SVG 转换器，
-     * 返回 Resource/byte[] 会报 "No converter ... preset Content-Type"。
+      * Logo 资源。前端（智能体logo.ts）请求带子目录的多段路径（如 brand/nomi.SVG、
+      * tools/coding/codex.SVG），单段 {名称} 无法匹配会导致 404 裂图，这里用
+      * /logos/** 接住全部层级；类路径 无对应文件时返回首字母兜底 SVG。
+      * 直接写 httpservlet响应：全局消息转换器不含二进制/SVG 转换器，
+      * 返回 Resource/byte[] 会报 "No 转换器 ... preset 内容-类型"。
+       * @param request 请求
+       * @param response 响应
      */
     @GetMapping("/logos/**")
     public void getLogo(jakarta.servlet.http.HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
@@ -42,7 +46,7 @@ public class ApiAssetController {
             name = name.substring(1);
         }
         String base = name.toLowerCase().replace(" ", "-");
-        // 依次尝试原始多段路径与仅文件名两种 classpath 位置
+ // 依次尝试原始多段路径与仅文件名两种 类路径 位置
         String[] candidates = {
                 "static/logos/" + base,
                 "static/logos/" + base.substring(base.lastIndexOf('/') + 1),
@@ -52,6 +56,11 @@ public class ApiAssetController {
             try {
                 Resource resource = new ClassPathResource(candidate);
                 if (resource.exists()) {
+                    /**
+                     * 写入SVG。
+                     * @param response 响应
+                     * @param resource.getContentAsByteArray( resource.获取内容asbytearray(
+                     */
                     writeSvg(response, resource.getContentAsByteArray());
                     return;
                 }
@@ -67,15 +76,30 @@ public class ApiAssetController {
         if (displayName.endsWith(".png")) {
             displayName = displayName.substring(0, displayName.length() - 4);
         }
+        /**
+         * 写入SVG。
+         * @param response 响应
+         * @param buildDefaultSvg(displayName 构建默认SVG(display名称
+         */
         writeSvg(response, buildDefaultSvg(displayName).getBytes());
     }
 
+    /**
+     * 写入SVG。
+     * @param response 响应
+     * @param bytes bytes
+     */
     private void writeSvg(jakarta.servlet.http.HttpServletResponse response, byte[] bytes) throws java.io.IOException {
         response.setContentType("image/svg+xml");
         response.setContentLength(bytes.length);
         response.getOutputStream().write(bytes);
     }
 
+    /**
+     * 构建默认SVG。
+     * @param name 名称
+     * @return 构建默认SVG的结果
+     */
     private String buildDefaultSvg(String name) {
         String initial = name.substring(0, Math.min(2, name.length())).toUpperCase();
         // 按名称稳定取色，兜底图标也有可区分的品牌感

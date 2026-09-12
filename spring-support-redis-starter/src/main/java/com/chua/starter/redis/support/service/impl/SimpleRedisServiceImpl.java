@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit;
  * 简单的 Redis 服务实现，基于 {@link StringRedisTemplate} 提供指标计数与 QPS 统计能力。
  *
  * <p>支持对指标进行自增/自减，并能在自增/自减时设置过期时间。
- * QPS 统计基于 Hash 结构存储的指标值汇总后除以一天的秒数得到。</p>
+   * QPS 统计基于 哈希 结构存储的指标值汇总后除以一天的秒数得到。</p>
  *
  * @since 2024/12/24
  * @author CH

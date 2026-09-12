@@ -45,10 +45,10 @@ public class TerminalController {
     /** guacd 会话注册表 */
     private final GuacdSessionRegistry sessionRegistry;
 
-    /** 命令片段 Mapper（简单 CRUD 直连） */
+    /** 命令片段 映射器（简单 CRUD 直连） */
     private final MsTerminalSnippetMapper snippetMapper;
 
-    /** 路径书签 Mapper（简单 CRUD 直连） */
+    /** 路径书签 映射器（简单 CRUD 直连） */
     private final MsTerminalBookmarkMapper bookmarkMapper;
 
     /**
@@ -76,7 +76,7 @@ public class TerminalController {
     /**
      * 强制关闭会话
      *
-     * @param recordId 审计记录 ID
+     * @param recordId 审计记录 标识
      * @return 结果
      */
     @Operation(summary = "强制关闭会话")
@@ -206,7 +206,7 @@ public class TerminalController {
     /**
      * 指定主机的书签列表
      *
-     * @param hostId 主机 ID
+     * @param hostId 主机 标识
      * @return 书签列表
      */
     @Operation(summary = "主机书签列表")

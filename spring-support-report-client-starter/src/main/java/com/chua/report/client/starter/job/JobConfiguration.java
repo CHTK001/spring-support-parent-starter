@@ -7,9 +7,9 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 
 /**
- * JOB配置
+   * 作业配置
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/03/05
  * @author CH
  */
@@ -31,7 +31,7 @@ public class JobConfiguration implements SchedulingConfigurer {
     }
 
     @Override
-    /** ConfigureTasks */
+    /** configure任务 */
     public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
         this.taskRegistrar = taskRegistrar;
         ThreadPoolTaskScheduler threadPool = threadPoolTaskScheduler();

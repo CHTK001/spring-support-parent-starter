@@ -8,8 +8,8 @@ import java.util.List;
  * 数据库文件提供者接口
  * <p>
  * 用于各模块提供数据库初始化脚本的SPI接口。
- * 模块可通过实现此接口并在 META-INF/services 中注册，
- * 使FlywayLikePopulator自动发现并加载模块的数据库脚本。
+   * 模块可通过实现此接口并在 META-INF/服务 中注册，
+   * 使flywaylikepopulator自动发现并加载模块的数据库脚本。
  * </p>
  *
  * <h3>使用方式:</h3>
@@ -42,7 +42,7 @@ import java.util.List;
  * </pre>
  *
  * @since 2025/12/20
- * @version 1.0
+   * @版本 1.0
  * @author CH
  */
 public interface DatabaseFileProvider {
@@ -61,7 +61,7 @@ public interface DatabaseFileProvider {
      * 获取数据库脚本资源列表
      * <p>
      * 返回模块需要执行的数据库初始化/迁移脚本资源。
-     * 脚本应遵循命名规范: V版本号__描述.sql
+      * 脚本应遵循命名规范: V版本号__描述.SQL
      * </p>
      *
      * @return 脚本资源列表，不能为null（可返回空列表）

@@ -32,7 +32,7 @@ public class ChatScope {
     private Double temperature;
 
     /**
-     * 最大生成 tokens
+      * 最大生成 令牌
      */
     private Integer maxTokens;
 
@@ -98,7 +98,7 @@ public class ChatScope {
      * @param systemPrompt                    系统提示词
      * @param model                           模型名称
      * @param temperature                     采样温度
-     * @param maxTokens                       最大生成 tokens
+     * @param maxTokens                       最大生成 令牌
      * @param timeoutMillis                   请求超时时间（毫秒）
      * @param inputOptimizationEnabled        是否启用输入优化
      * @param contextCompressionEnabled       是否启用上下文压缩
@@ -132,16 +132,20 @@ public class ChatScope {
     }
 
     /**
-     * 创建 Builder。
+      * 创建 构建器。
      *
      * @return Builder 实例
      */
     public static ChatScopeBuilder builder() {
+        /**
+         * 对话scope构建器。
+         * @return 对话scope构建器的结果
+         */
         return new ChatScopeBuilder();
     }
 
     /**
-     * 基于当前实例创建 Builder。
+      * 基于当前实例创建 构建器。
      *
      * @return Builder 实例
      */
@@ -164,9 +168,10 @@ public class ChatScope {
     }
 
     /**
-     * ChatScope Builder。
+      * 对话scope 构建器。
      *
      * @since 4.0.0.42
+     * @author CH
      */
     public static class ChatScopeBuilder {
 
@@ -186,7 +191,7 @@ public class ChatScope {
         private Double temperature;
 
         /**
-         * 最大生成 tokens
+          * 最大生成 令牌
          */
         private Integer maxTokens;
 
@@ -244,7 +249,7 @@ public class ChatScope {
          * 设置系统提示词。
          *
          * @param systemPrompt 系统提示词
-         * @return 当前 Builder
+         * @return 当前 构建器
          */
         public ChatScopeBuilder systemPrompt(String systemPrompt) {
             this.systemPrompt = systemPrompt;
@@ -255,7 +260,7 @@ public class ChatScope {
          * 设置模型名称。
          *
          * @param model 模型名称
-         * @return 当前 Builder
+         * @return 当前 构建器
          */
         public ChatScopeBuilder model(String model) {
             this.model = model;
@@ -266,7 +271,7 @@ public class ChatScope {
          * 设置采样温度。
          *
          * @param temperature 采样温度
-         * @return 当前 Builder
+         * @return 当前 构建器
          */
         public ChatScopeBuilder temperature(Double temperature) {
             this.temperature = temperature;
@@ -274,10 +279,10 @@ public class ChatScope {
         }
 
         /**
-         * 设置最大生成 tokens。
+          * 设置最大生成 令牌。
          *
-         * @param maxTokens 最大生成 tokens
-         * @return 当前 Builder
+         * @param maxTokens 最大生成 令牌
+         * @return 当前 构建器
          */
         public ChatScopeBuilder maxTokens(Integer maxTokens) {
             this.maxTokens = maxTokens;
@@ -288,7 +293,7 @@ public class ChatScope {
          * 设置请求超时时间。
          *
          * @param timeoutMillis 请求超时时间（毫秒）
-         * @return 当前 Builder
+         * @return 当前 构建器
          */
         public ChatScopeBuilder timeoutMillis(Long timeoutMillis) {
             this.timeoutMillis = timeoutMillis;
@@ -299,7 +304,7 @@ public class ChatScope {
          * 设置是否启用输入优化。
          *
          * @param inputOptimizationEnabled 是否启用输入优化
-         * @return 当前 Builder
+         * @return 当前 构建器
          */
         public ChatScopeBuilder inputOptimizationEnabled(boolean inputOptimizationEnabled) {
             this.inputOptimizationEnabled = inputOptimizationEnabled;
@@ -310,7 +315,7 @@ public class ChatScope {
          * 设置是否启用上下文压缩。
          *
          * @param contextCompressionEnabled 是否启用上下文压缩
-         * @return 当前 Builder
+         * @return 当前 构建器
          */
         public ChatScopeBuilder contextCompressionEnabled(boolean contextCompressionEnabled) {
             this.contextCompressionEnabled = contextCompressionEnabled;
@@ -321,7 +326,7 @@ public class ChatScope {
          * 设置上下文压缩触发阈值。
          *
          * @param contextCompressionThreshold 上下文压缩触发阈值
-         * @return 当前 Builder
+         * @return 当前 构建器
          */
         public ChatScopeBuilder contextCompressionThreshold(int contextCompressionThreshold) {
             this.contextCompressionThreshold = contextCompressionThreshold;
@@ -332,7 +337,7 @@ public class ChatScope {
          * 设置上下文压缩保留消息条数。
          *
          * @param contextCompressionRetainMessages 上下文压缩保留消息条数
-         * @return 当前 Builder
+         * @return 当前 构建器
          */
         public ChatScopeBuilder contextCompressionRetainMessages(int contextCompressionRetainMessages) {
             this.contextCompressionRetainMessages = contextCompressionRetainMessages;
@@ -343,7 +348,7 @@ public class ChatScope {
          * 设置是否启用 MCP 工具。
          *
          * @param mcpEnabled 是否启用 MCP 工具
-         * @return 当前 Builder
+         * @return 当前 构建器
          */
         public ChatScopeBuilder mcpEnabled(boolean mcpEnabled) {
             this.mcpEnabled = mcpEnabled;
@@ -354,7 +359,7 @@ public class ChatScope {
          * 设置图片地址列表。
          *
          * @param imageUrls 图片地址列表
-         * @return 当前 Builder
+         * @return 当前 构建器
          */
         public ChatScopeBuilder imageUrls(List<String> imageUrls) {
             this.imageUrls = imageUrls;
@@ -365,7 +370,7 @@ public class ChatScope {
          * 设置用户输入。
          *
          * @param input 用户输入
-         * @return 当前 Builder
+         * @return 当前 构建器
          */
         public ChatScopeBuilder input(String input) {
             this.input = input;
@@ -376,7 +381,7 @@ public class ChatScope {
          * 设置对话上下文。
          *
          * @param context 对话上下文
-         * @return 当前 Builder
+         * @return 当前 构建器
          */
         public ChatScopeBuilder context(ChatContext context) {
             this.context = context;
@@ -387,7 +392,7 @@ public class ChatScope {
          * 设置扩展参数。
          *
          * @param parameters 扩展参数
-         * @return 当前 Builder
+         * @return 当前 构建器
          */
         public ChatScopeBuilder parameters(Map<String, Object> parameters) {
             this.parameters = parameters;
@@ -395,7 +400,7 @@ public class ChatScope {
         }
 
         /**
-         * 构建 ChatScope 实例。
+          * 构建 对话scope 实例。
          *
          * @return ChatScope 实例
          */

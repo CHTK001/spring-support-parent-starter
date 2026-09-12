@@ -4,6 +4,7 @@ package com.chua.common.support.network.net;
  * 版本号解析与比较类，支持语义化版本号的解析和排序
  *
  * @author CH
+ * @since 4.0.0
  */
 public class Version implements Comparable<Version> {
     /**
@@ -42,17 +43,21 @@ public class Version implements Comparable<Version> {
     }
 
     /**
-     * 解析版本号字符串为 Version 对象
+      * 解析版本号字符串为 版本 对象
      * <p>支持以 "v" 或 "V" 开头的版本号，自动过滤非数字后缀。
      * 格式为 "主版本号.次版本号.修订号"，例如 "v1.2.3"、"2.0.1-beta"。</p>
      *
-     * @param version 版本号字符串，允许为 null 或空
+     * @param version 版本号字符串，允许为 空 或空
      * @return Version 对象，无法解析时各分量默认为 0
      */
     public static Version parse(String version) {
-        if (version == null || version.isEmpty()) return new Version(0, 0, 0, "0");
+        if (version == null || version.isEmpty()) {
+            return new Version(0, 0, 0, "0");
+        }
         String v = version;
-        if (v.startsWith("v") || v.startsWith("V")) v = v.substring(1);
+        if (v.startsWith("v") || v.startsWith("V")) {
+            v = v.substring(1);
+        }
         String[] parts = v.split("[^0-9]", 2);
         String[] nums = parts[0].split("\\.");
         int major = 0, minor = 0, patch = 0;
@@ -69,16 +74,22 @@ public class Version implements Comparable<Version> {
      * 比较两个版本号的大小
      * <p>依次比较主版本号、次版本号、修订号，按字典序比较整数值。</p>
      *
-     * @param o 要比较的另一个版本对象，为 null 时返回 1（当前版本较大）
+     * @param o 要比较的另一个版本对象，为 空 时返回 1（当前版本较大）
      * @return 负数表示小于、零表示等于、正数表示大于
      */
     @Override
     public int compareTo(Version o) {
-        if (o == null) return 1;
+        if (o == null) {
+            return 1;
+        }
         int result = Integer.compare(this.major, o.major);
-        if (result != 0) return result;
+        if (result != 0) {
+            return result;
+        }
         result = Integer.compare(this.minor, o.minor);
-        if (result != 0) return result;
+        if (result != 0) {
+            return result;
+        }
         return Integer.compare(this.patch, o.patch);
     }
 

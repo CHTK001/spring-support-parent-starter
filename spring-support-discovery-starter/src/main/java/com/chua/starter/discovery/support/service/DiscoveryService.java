@@ -36,7 +36,7 @@ public class DiscoveryService {
     private final ServiceDiscovery defaultServiceDiscovery;
 
     /**
-     * 所有服务发现实现，key 为 BeanName
+      * 所有服务发现实现，钥匙 为 Bean名称
      */
     private final Map<String, ServiceDiscovery> serviceDiscoveryMap;
 
@@ -54,7 +54,7 @@ public class DiscoveryService {
      * 注入默认及全部 {@link ServiceDiscovery} 实现的构造方法。
      *
      * @param defaultServiceDiscovery 默认服务发现实现（primary）
-     * @param serviceDiscoveryMap     所有服务发现实现，key 为 BeanName
+     * @param serviceDiscoveryMap     所有服务发现实现，钥匙 为 Bean名称
      */
     public DiscoveryService(ServiceDiscovery defaultServiceDiscovery,
                             Map<String, ServiceDiscovery> serviceDiscoveryMap) {
@@ -85,7 +85,7 @@ public class DiscoveryService {
     /**
      * 按指定协议获取单个服务。
      *
-     * @param protocol 协议名称，对应配置中的 protocol
+     * @param protocol 协议名称，对应配置中的 协议
      * @param uriSpec  服务标识
      * @return 匹配到的服务实例
      */
@@ -97,7 +97,7 @@ public class DiscoveryService {
     /**
      * 按指定协议获取全部服务实例。
      *
-     * @param protocol 协议名称，对应配置中的 protocol
+     * @param protocol 协议名称，对应配置中的 协议
      * @param uriSpec  服务标识
      * @return 匹配到的服务实例集合
      */

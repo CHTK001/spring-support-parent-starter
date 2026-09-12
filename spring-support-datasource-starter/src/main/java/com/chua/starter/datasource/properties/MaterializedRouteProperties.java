@@ -48,7 +48,12 @@ public class MaterializedRouteProperties {
      */
     private String cacheDataSourcePrefix = "materialized#";
 
-    /** 绑定 */
+    /**
+     * 绑定
+     *
+     * @param environment 环境
+     * @return bind的结果
+     */
     public static MaterializedRouteProperties bind(Environment environment) {
         MaterializedRouteProperties current = Binder.get(environment).bindOrCreate(PRE, MaterializedRouteProperties.class);
         MaterializedRouteProperties legacy = Binder.get(environment).bindOrCreate(LEGACY_PRE, MaterializedRouteProperties.class);
@@ -68,12 +73,12 @@ public class MaterializedRouteProperties {
     }
 
     /**
-     * 读取Boolean
-     * @param environment environment
-     * @param currentKey currentKey
-     * @param legacyKey legacyKey
-     * @param currentValue currentValue
-     * @param legacyValue legacyValue
+      * 读取布尔值
+     * @param environment 环境
+     * @param currentKey 当前钥匙
+     * @param legacyKey legacy钥匙
+     * @param currentValue 当前价值观
+     * @param legacyValue legacy价值观
      */
     private static boolean readBoolean(Environment environment,
                                        String currentKey,
@@ -91,11 +96,11 @@ public class MaterializedRouteProperties {
 
     /**
      * 读取Long
-     * @param environment environment
-     * @param currentKey currentKey
-     * @param legacyKey legacyKey
-     * @param currentValue currentValue
-     * @param legacyValue legacyValue
+     * @param environment 环境
+     * @param currentKey 当前钥匙
+     * @param legacyKey legacy钥匙
+     * @param currentValue 当前价值观
+     * @param legacyValue legacy价值观
      */
     private static long readLong(Environment environment,
                                  String currentKey,
@@ -112,12 +117,12 @@ public class MaterializedRouteProperties {
     }
 
     /**
-     * 读取String
-     * @param environment environment
-     * @param currentKey currentKey
-     * @param legacyKey legacyKey
-     * @param currentValue currentValue
-     * @param legacyValue legacyValue
+      * 读取字符串
+     * @param environment 环境
+     * @param currentKey 当前钥匙
+     * @param legacyKey legacy钥匙
+     * @param currentValue 当前价值观
+     * @param legacyValue legacy价值观
      */
     private static String readString(Environment environment,
                                      String currentKey,
@@ -133,7 +138,11 @@ public class MaterializedRouteProperties {
         return currentValue;
     }
 
-    /** ToOptions */
+    /**
+     * 转为期权
+     *
+     * @return 转为期权的结果
+     */
     public MaterializedSqlOptions toOptions() {
         MaterializedSqlOptions options = new MaterializedSqlOptions();
         options.setDefaultThreshold(defaultThreshold);

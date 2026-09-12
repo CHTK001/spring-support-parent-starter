@@ -13,7 +13,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = TencentWechatPayProperties.PREFIX, ignoreInvalidFields = true)
 public class TencentWechatPayProperties {
 
-    /** Prefix */
+    /** 前缀 */
     public static final String PREFIX = "plugin.tencent.wechat-pay";
 
     /** Enable */
@@ -25,7 +25,7 @@ public class TencentWechatPayProperties {
     /** APPID */
     private String appId;
 
-    /** MerchantID */
+    /** merchantid */
     private String merchantId;
 
     /** 私有密钥 */
@@ -34,10 +34,10 @@ public class TencentWechatPayProperties {
     /** Merchantserial数字 */
     private String merchantSerialNumber;
 
-    /** APIv3key */
+    /** apiv3钥匙 */
     private String apiV3Key;
 
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
 
     /**
@@ -47,7 +47,7 @@ public class TencentWechatPayProperties {
     private boolean sandbox = false;
 
     /**
-     * 沙箱环境 APIv3 密钥
+      * 沙箱环境 apiv3 密钥
      * <p>沙箱环境需要使用 sandbox_signkey 替代生产环境的 apiV3Key。
      * 可通过 {@code https://api.mch.weixin.qq.com/sandboxnew/pay/getsignkey} 获取。</p>
      */

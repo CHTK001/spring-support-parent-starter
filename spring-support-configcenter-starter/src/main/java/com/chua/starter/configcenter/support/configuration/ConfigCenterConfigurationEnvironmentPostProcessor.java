@@ -48,7 +48,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
     private static volatile ConfigurableEnvironment environmentRef;
 
     @Override
-    /** Post处理Environment */
+    /** Post处理环境 */
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         log.info("[配置中心]开始处理配置中心");
         environmentRef = environment;
@@ -68,7 +68,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         String active = environment.getProperty("spring.profiles.active");
         log.info("[配置中心]当前环境: {}", active);
         
-        // 创建 ConfigCenter 实例
+ // 创建 配置center 实例
         ConfigCenter configCenter = ServiceProvider.of(ConfigCenter.class)
                 .getNewExtension(configCenterProperties.getProtocol(), ConfigCenterSetting.builder()
                         .address(configCenterProperties.getAddress())
@@ -90,10 +90,21 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         ConfigCenterHolder.setInstance(configCenter);
 
         // 加载配置
+        /**
+         * 加载配置。
+         * @param environment 环境
+         * @param configCenter 配置center
+         * @param active 活跃
+         */
         loadConfigurations(environment, configCenter, active);
         
         // 注册配置变更监听（根据配置决定是否启用）
         if (configCenterProperties.getHotReload().isEnabled()) {
+            /**
+             * 注册配置监听器。
+             * @param configCenter 配置center
+             * @param configCenterProperties 配置center属性
+             */
             registerConfigListener(configCenter, configCenterProperties);
             log.info("[配置中心]热更新已启用");
             ServiceInfoRegistry.getInstance().registerFlag(
@@ -111,10 +122,10 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
      * 加载配置文件
      * <p>
      * 配置加载优先级（从高到低）：
-     * 1. 远程配置中心：Application-{appName}-{profile}（如：Application-xxx-dev）
-     * 2. 远程配置中心：Application-{appName}（如：Application-xxx）
-     * 3. spring.profiles.include 指定的配置（带环境后缀）：application-{name}-{profile}.yml
-     * 4. spring.profiles.include 指定的配置（不带环境后缀）：application-{name}.yml
+      * 1. 远程配置中心：Application-{app名称}-{配置文件}（如：Application-xxx-dev）
+      * 2. 远程配置中心：Application-{app名称}（如：Application-xxx）
+      * 3. spring.配置文件.include 指定的配置（带环境后缀）：application-{名称}-{配置文件}.yml
+      * 4. spring.配置文件.include 指定的配置（不带环境后缀）：application-{名称}.yml
      * </p>
      *
      * @param environment 环境对象
@@ -122,19 +133,31 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
      * @param active 激活的环境
      */
     private void loadConfigurations(ConfigurableEnvironment environment, ConfigCenter configCenter, String active) {
-        // 1. 优先加载默认的 Application 配置（基于 spring.application.name）
+ // 1. 优先加载默认的 Application 配置（基于 spring.application.名称）
         String applicationName = environment.getProperty("spring.application.name");
         if (StringUtils.isNotEmpty(applicationName) && StringUtils.isNotEmpty(active)) {
-            // 1.1 优先加载 Application-{appName}-{profile}（远程配置中心，带环境后缀）
+ // 1.1 优先加载 Application-{app名称}-{配置文件}（远程配置中心，带环境后缀）
             String appConfigWithProfile = "Application-%s-%s".formatted(applicationName, active);
+            /**
+             * 加载配置ifexists。
+             * @param environment 环境
+             * @param configCenter 配置center
+             * @param appConfigWithProfile app配置with配置文件
+             */
             loadConfigIfExists(environment, configCenter, appConfigWithProfile);
             
-            // 1.2 加载 Application-{appName}（远程配置中心，不带环境后缀）
+ // 1.2 加载 Application-{app名称}（远程配置中心，不带环境后缀）
             String appConfig = "Application-%s".formatted(applicationName);
+            /**
+             * 加载配置ifexists。
+             * @param environment 环境
+             * @param configCenter 配置center
+             * @param appConfig app配置
+             */
             loadConfigIfExists(environment, configCenter, appConfig);
         }
         
-        // 2. 加载 spring.profiles.include 指定的配置
+ // 2. 加载 spring.配置文件.include 指定的配置
         String include = environment.getProperty("spring.profiles.include");
         if (StringUtils.isEmpty(include)) {
             return;
@@ -230,19 +253,27 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
     /**
      * 环境配置监听器
      * <p>
-     * 当配置中心的配置发生变化时，更新 Spring Environment
+      * 当配置中心的配置发生变化时，更新 Spring 环境
      * </p>
+     * @author CH
+     * @since 4.0.0
      */
     private static class EnvironmentConfigListener implements ConfigListener {
         
         /** 配置名称 */
         private final String configName;
-        /** RefreshdelayMS */
+        /** refreshdelayms */
         private final long refreshDelayMs;
-        /** 日志ONchange */
+        /** 日志onchange */
         private final boolean logOnChange;
-        private volatile long lastRefreshTime = 0;
+        private volatile long lastRefreshTime = 0; // 最后一个refresh时间
 
+        /**
+         * 环境配置监听器。
+         * @param configName 配置名称
+         * @param refreshDelayMs refresh延迟ms
+         * @param logOnChange 日志on改变
+         */
         EnvironmentConfigListener(String configName, long refreshDelayMs, boolean logOnChange) {
             this.configName = configName;
             this.refreshDelayMs = refreshDelayMs;
@@ -250,7 +281,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
         }
 
         @Override
-        /** OnChange */
+        /** on改变 */
         public void onChange(String key, String oldValue, String newValue) {
             if (logOnChange) {
                 log.info("[配置中心]配置变更: configName={}, key={}, oldValue={}, newValue={}", 
@@ -288,7 +319,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
                 return;
             }
             
-            // 更新 PropertySource
+ // 更新 财产源
             MutablePropertySources propertySources = environmentRef.getPropertySources();
             if (propertySources.contains(configName)) {
                 propertySources.replace(configName, new OriginTrackedMapPropertySource(configName, newConfig));
@@ -311,7 +342,7 @@ public class ConfigCenterConfigurationEnvironmentPostProcessor implements Enviro
     }
 
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
         return Ordered.LOWEST_PRECEDENCE - 100;
     }

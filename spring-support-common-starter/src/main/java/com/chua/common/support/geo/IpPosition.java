@@ -4,6 +4,7 @@ package com.chua.common.support.geo;
  * IP 定位信息
  *
  * @author CH
+ * @since 4.0.0
  */
 public class IpPosition {
 
@@ -76,7 +77,7 @@ public class IpPosition {
      * 根据指定 IP 地址查询对应的城市地理信息
      *
      * @param ip 要查询的 IP 地址
-     * @return GeoCity 对象，当前实现返回 null
+     * @return GeoCity 对象，当前实现返回 空
      */
     public GeoCity getCity(String ip) {
         return null;

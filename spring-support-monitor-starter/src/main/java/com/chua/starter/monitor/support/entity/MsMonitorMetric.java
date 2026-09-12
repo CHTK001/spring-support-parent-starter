@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 @TableName("ms_monitor_metric")
 public class MsMonitorMetric implements Serializable {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -30,15 +30,15 @@ public class MsMonitorMetric implements Serializable {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
-    /** ID */
+    /** 标识 */
     private Long id;
 
     /**
-     * 监控主机 id
+      * 监控主机 标识
      */
     @TableField("ms_monitor_metric_monitor_id")
     @Schema(description = "监控主机 id", example = "1")
-    /** MonitorID */
+    /** 监控标识 */
     private Long monitorId;
 
     /**
@@ -62,7 +62,7 @@ public class MsMonitorMetric implements Serializable {
      */
     @TableField("ms_monitor_metric_metric_tags")
     @Schema(description = "标签 JSON", example = "{\"core\":\"0\"}")
-    /** 指标tags */
+    /** 指标标签 */
     private String metricTags;
 
     /**

@@ -32,7 +32,7 @@ public class InMemorySyncClient implements SyncClient {
     private volatile boolean connected = false;
 
     /**
-     * 各 topic 的订阅 handler
+      * 各 topic 的订阅 处理器
      */
     private final Map<String, CopyOnWriteArrayList<SyncMessageHandler>> handlers = new ConcurrentHashMap<>();
 
@@ -54,13 +54,13 @@ public class InMemorySyncClient implements SyncClient {
     }
 
     @Override
-    /** 是否Connected */
+    /** 是否连接 */
     public boolean isConnected() {
         return connected;
     }
 
     @Override
-    /** 获取ClientId */
+    /** 获取客户端标识 */
     public String getClientId() {
         return clientId;
     }
@@ -84,12 +84,12 @@ public class InMemorySyncClient implements SyncClient {
     }
 
     @Override
-    /** 添加Listener */
+    /** 添加监听器 */
     public void addListener(SyncFlowListener listener) {
     }
 
     @Override
-    /** 移除Listener */
+    /** 移除监听器 */
     public void removeListener(SyncFlowListener listener) {
     }
 

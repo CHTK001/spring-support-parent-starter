@@ -4,6 +4,7 @@ package com.chua.common.support.data.materialized;
  * 物化视图路由定义
  *
  * @author CH
+ * @since 4.0.0
  */
 public class MaterializedRouteDefinition {
 

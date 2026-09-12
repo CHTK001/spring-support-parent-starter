@@ -18,7 +18,7 @@ import java.lang.reflect.Method;
 /**
  * API 版本控制请求映射处理器
  * <p>
- * 支持 @ApiVersion、@ApiProfile、@ApiPlatform 注解的版本和平台控制。
+   * 支持 @api版本、@api配置文件、@apiplatform 注解的版本和平台控制。
  * </p>
  *
  * @since 2020-11-15
@@ -30,17 +30,18 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
     private final ApiProperties apiProperties;
     /** Platformopen */
     private final boolean platformOpen;
-    /** 版本open */
+    /** 版本打开 */
     private final boolean versionOpen;
     /** Platform */
     private final String platform;
-    /** 是否激活profiles */
+    /** 是否激活配置文件 */
     private final String[] activeProfiles;
 
     /**
-     * 创建 ApiVersionRequestMappingHandlerMapping 实例
-     * @param apiProperties apiProperties
-     * @param Environment Environment
+      * 创建 api版本请求mapping处理器mapping 实例
+     * @param apiProperties api属性
+     * @param environment 环境
+     * @param environment 环境
      */
     public ApiVersionRequestMappingHandlerMapping(ApiProperties apiProperties, Environment environment) {
         this.apiProperties = apiProperties;
@@ -62,6 +63,11 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
         if (!versionOpen) {
             return super.getCustomTypeCondition(handlerType);
         }
+        /**
+         * api版本条件。
+         * @param ApiVersion.class api版本.类
+         * @return api版本条件的结果
+         */
         return new ApiVersionCondition(AnnotationUtils.findAnnotation(handlerType, ApiVersion.class));
     }
 
@@ -139,6 +145,11 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
         if (!versionOpen) {
             return super.getCustomMethodCondition(method);
         }
+        /**
+         * api版本条件。
+         * @param ApiVersion.class api版本.类
+         * @return api版本条件的结果
+         */
         return new ApiVersionCondition(AnnotationUtils.findAnnotation(method, ApiVersion.class));
     }
 }

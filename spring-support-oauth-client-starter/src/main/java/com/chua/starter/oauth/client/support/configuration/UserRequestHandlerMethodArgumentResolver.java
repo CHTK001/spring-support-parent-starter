@@ -44,18 +44,22 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     private ConfigurableBeanFactory configurableBeanFactory;
     /** 表达式上下文 */
     private BeanExpressionContext expressionContext;
-    /** Conversion服务 */
+    /** 转换服务 */
     private ConversionService conversionService;
 
     /**
-     * 创建 UserRequestHandlerMethodArgumentResolver 实例
-     * @param webRequest webRequest
+      * 创建 用户请求处理器方法参数解析器 实例
+     * @param webRequest web请求
      */
     public UserRequestHandlerMethodArgumentResolver(WebRequest webRequest) {
         this.webRequest = webRequest;
     }
 
-    /** 设置ConfigurableBeanFactory */
+    /**
+     * 设置configurableBean工厂
+     *
+     * @param configurableBeanFactory configurableBean工厂
+     */
     public void setConfigurableBeanFactory(ConfigurableBeanFactory configurableBeanFactory) {
         this.configurableBeanFactory = configurableBeanFactory;
         if (configurableBeanFactory == null) {
@@ -66,7 +70,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     }
 
     @Override
-    /** SupportsParameter */
+    /** 支持参数 */
     public boolean supportsParameter(MethodParameter parameter) {
         return this.supportsParameter(parameter, UserValue.class);
     }
@@ -74,11 +78,11 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     @Override
     @SuppressWarnings("ALL")
     /**
-     * 解析Argument
-     * @param methodParameter methodParameter
-     * @param mavContainer mavContainer
-     * @param webRequest webRequest
-     * @param binderFactory binderFactory
+      * 解析参数
+     * @param methodParameter 方法参数
+     * @param mavContainer mav容器
+     * @param webRequest web请求
+     * @param binderFactory binder工厂
      */
     public Object resolveArgument(MethodParameter methodParameter,
                                   ModelAndViewContainer mavContainer,
@@ -124,6 +128,11 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         Class<?> parameterType = parameter.getType();
 
         if (RoleJudge.class.isAssignableFrom(parameterType)) {
+            /**
+             * 角色judge。
+             * @param userResume.getRoles( 用户resume.getroles(
+             * @return 角色judge的结果
+             */
             return new RoleJudge(userResume.getRoles());
         }
 
@@ -145,7 +154,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         Object o = cacheValue.get(paramName);
 
         if (null == o) {
-            // ext 为扩展信息 Map，直接按键取值；兼容 ext 为 POJO 的情况走 BeanMap
+ // ext 为扩展信息 映射，直接按键取值；兼容 ext 为 POJO 的情况走 Bean映射
             Object extValue = cacheValue.get("ext");
             if (extValue instanceof Map<?, ?> extMap) {
                 o = extMap.get(paramName);
@@ -199,7 +208,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
     }
 
     /**
-     * 转为map
+      * 转为映射
      *
      * @param returnResult 结果
      * @param webRequest
@@ -217,7 +226,12 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
         return rs;
     }
 
-    /** 解析EmbeddedValuesAndExpressions */
+    /**
+     * 解析embedded价值观andexpressions
+     *
+     * @param value 价值观
+     * @return resolveembedded价值观andexpressions的结果
+     */
     protected Object resolveEmbeddedValuesAndExpressions(String value) {
         if (this.configurableBeanFactory == null || this.expressionContext == null) {
             return value;
@@ -247,6 +261,7 @@ public class UserRequestHandlerMethodArgumentResolver implements HandlerMethodAr
      *
      * @param annotationType 注解类型
      * @return 结果
+     * @param methodParameter 方法参数
      */
     protected boolean supportsParameter(MethodParameter methodParameter, Class<? extends Annotation> annotationType) {
         if (null == configurableBeanFactory) {

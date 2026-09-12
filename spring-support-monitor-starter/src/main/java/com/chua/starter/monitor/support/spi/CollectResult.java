@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * 采集结果模型
  * <p>
- * Provider 输出的统一结构, 包含原始输出与解析后的指标点列表, 调度器据此写入数据库。
+   * 提供者 输出的统一结构, 包含原始输出与解析后的指标点列表, 调度器据此写入数据库。
  * </p>
  *
  * @since 2026/8/4
@@ -59,7 +59,7 @@ public class CollectResult {
      * 添加一个指标点
      *
      * @param point 指标点
-     * @return 当前 CollectResult
+     * @return 当前 collect结果
      */
     public CollectResult addPoint(MetricPoint point) {
         if (this.points == null) {
@@ -73,7 +73,7 @@ public class CollectResult {
      * 标记失败
      *
      * @param errorMessage 错误信息
-     * @return 当前 CollectResult
+     * @return 当前 collect结果
      */
     public CollectResult fail(String errorMessage) {
         this.success = false;

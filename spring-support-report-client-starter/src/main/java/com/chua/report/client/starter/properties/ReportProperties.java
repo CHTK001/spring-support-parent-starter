@@ -51,6 +51,8 @@ public class ReportProperties {
     private int port = 29170;
     /**
      * 应用信息上报配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class AppReport {
@@ -68,6 +70,8 @@ public class ReportProperties {
 
     /**
      * 设备指标上报配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class Metrics {
@@ -85,7 +89,7 @@ public class ReportProperties {
         /**
          * 要上报的指标类型列表
          * <p>
-         * 可选值: CPU, MEMORY, DISK, NETWORK, LOAD, PROCESS, TEMPERATURE
+          * 可选值: CPU, 内存, DISK, NETWORK, 加载, 处理, TEMPERATURE
          * 默认为空表示全部上报
          * </p>
          */
@@ -121,6 +125,8 @@ public class ReportProperties {
 
     /**
      * 客户端信息配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class ClientInfo {
@@ -137,6 +143,8 @@ public class ReportProperties {
 
     /**
      * URL QPS 统计配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class UrlQps {
@@ -154,7 +162,7 @@ public class ReportProperties {
         /**
          * 排除的 URL 前缀
          * <p>
-         * 如: /actuator, /health
+          * 如: /actuator, /健康
          * </p>
          */
         private Set<String> excludePatterns = new HashSet<>(Arrays.asList(

@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  *         - /api/**
  * </pre>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/12/07
  * @author CH
  */
@@ -50,15 +50,15 @@ import org.slf4j.LoggerFactory;
 public class ApiCorsConfiguration  {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiCorsConfiguration.class);
-        /** X_header_version */
+        /** X_头部_版本 */
         private static final String X_HEADER_VERSION = "x-response-version";
 
-    /** Cors属性 */
+    /** 跨域资源共享属性 */
     private final ApiCorsProperties corsProperties;
 
     /**
-     * 创建 ApiCorsConfiguration 实例
-     * @param corsProperties corsProperties
+      * 创建 apicors配置 实例
+     * @param corsProperties 跨域资源共享属性
      */
     public ApiCorsConfiguration(ApiCorsProperties corsProperties) {
         this.corsProperties = corsProperties;
@@ -71,7 +71,7 @@ public class ApiCorsConfiguration  {
      */
     @Bean("apiCorsFilterRegistrationBean")
     public FilterRegistrationBean<CorsFilter> corsFilterFilterRegistrationBean() {
-        // 1. 添加 CORS 配置信息
+ // 1. 添加 跨域资源共享 配置信息
         CorsConfiguration config = new CorsConfiguration();
         List<String> exposedHeaders = Arrays.asList(
                 X_HEADER_VERSION,
@@ -102,7 +102,7 @@ public class ApiCorsConfiguration  {
             }
         }
 
-        // 3. 返回新的 CorsFilter
+ // 3. 返回新的 跨域资源共享过滤器
         ServiceInfoRegistry.getInstance().registerFlag(
                 "cors", "API控制", true, "跨域处理", null);
         CorsFilter corsFilter = new CorsFilter(corsConfigurationSource);

@@ -65,6 +65,21 @@ public final class ProjectConstants {
     /** 推送事件：部署进度 */
     public static final String PUSH_EVENT_DEPLOY_PROGRESS = "deploy-progress";
 
+    /** 健康检查类型：端口 */
+    public static final String HEALTH_TYPE_PORT = "PORT";
+
+    /** 健康检查类型：HTTP */
+    public static final String HEALTH_TYPE_HTTP = "HTTP";
+
+    /** 健康检查类型：进程 */
+    public static final String HEALTH_TYPE_PROCESS = "PROCESS";
+
+    /** 运行时状态：健康 */
+    public static final String RUNTIME_HEALTHY = "HEALTHY";
+
+    /** 运行时状态：不健康 */
+    public static final String RUNTIME_UNHEALTHY = "UNHEALTHY";
+
     /** 覆盖模式：直接覆盖（同名覆盖，保留其余文件） */
     public static final String OVERWRITE_MODE_OVERWRITE = "OVERWRITE";
 

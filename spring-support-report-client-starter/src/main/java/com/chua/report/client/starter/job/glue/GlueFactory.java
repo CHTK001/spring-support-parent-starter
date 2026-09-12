@@ -12,20 +12,28 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * 胶水厂
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/03/11
  * @author CH
  */
 public class GlueFactory {
 
 
-    /** Glue工厂（volatile 保证多线程可见性，refreshInstance 会重新赋值） */
+    /** 胶水工厂（volatile 保证多线程可见性，refreshinstance 会重新赋值） */
     private static volatile GlueFactory glueFactory = new GlueFactory();
-    /** 获取Instance */
+    /**
+     * 获取Instance
+     *
+     * @return 获取instance的结果
+     */
     public static GlueFactory getInstance(){
         return glueFactory;
     }
-    /** RefreshInstance */
+    /**
+     * refreshinstance
+     *
+     * @param type 类型
+     */
     public static void refreshInstance(int type){
         if (type == 0) {
             glueFactory = new GlueFactory();
@@ -36,13 +44,13 @@ public class GlueFactory {
 
 
     /**
-     * groovy class loader
+       * Groovy 类 加载
      */
     private final GroovyClassLoader groovyClassLoader = new GroovyClassLoader();
-    private final ConcurrentMap<String, Class<?>> CLASS_CACHE = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, Class<?>> CLASS_CACHE = new ConcurrentHashMap<>(); // 类缓存
 
     /**
-     * load new instance, prototype
+      * 加载 新 instance, 原型
      *
      * @param codeSource
      * @return
@@ -64,8 +72,18 @@ public class GlueFactory {
                 }
             }
         }
+        /**
+         * illegal参数异常。
+         * @param null" 空"
+         * @return illegal参数异常的结果
+         */
         throw new IllegalArgumentException(">>>>>>>>>>> xxl-glue, loadNewInstance error, instance is null");
     }
+    /**
+     * 获取编码源类。
+     * @param codeSource 编码源
+     * @return 获取编码源类的结果
+     */
     private Class<?> getCodeSourceClass(String codeSource){
         try {
             // md5
@@ -84,12 +102,12 @@ public class GlueFactory {
     }
 
     /**
-     * inject service of bean field
+      * inject 服务 的 Bean 字段
      *
      * @param instance
      */
     public void injectService(Object instance) {
-        // do something
+ // 执行 something
     }
 
 }

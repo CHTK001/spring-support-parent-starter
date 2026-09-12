@@ -12,7 +12,7 @@ import lombok.Data;
 public class QuestionSaveDTO {
 
     /**
-     * 题目ID（更新时必填）
+      * 题目标识（更新时必填）
      */
     private Long id;
 
@@ -47,7 +47,7 @@ public class QuestionSaveDTO {
     private Integer difficulty;
 
     /**
-     * 知识点ID列表（逗号分隔）
+      * 知识点标识列表（逗号分隔）
      */
     private String knowledgePointIds;
 
@@ -82,7 +82,7 @@ public class QuestionSaveDTO {
     private String source;
 
     /**
-     * 来源类型（MANUAL/IMPORT/CRAWL）
+      * 来源类型（MANUAL/导入/CRAWL）
      */
     private String sourceType;
 

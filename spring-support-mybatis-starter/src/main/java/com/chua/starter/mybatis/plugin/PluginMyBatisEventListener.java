@@ -18,9 +18,9 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 插件 MyBatis Mapper 事件监听器
+   * 插件 MyBatis 映射器 事件监听器
  * <p>
- * 监听插件 Bean 注册/卸载事件，自动处理 MyBatis Mapper 的注册和卸载
+   * 监听插件 Bean 注册/卸载事件，自动处理 MyBatis 映射器 的注册和卸载
  * </p>
  *
  * @author CH
@@ -32,16 +32,19 @@ import java.util.Set;
 public class PluginMyBatisEventListener {
 
     /**
-     * SqlSessionFactory 列表
+       * SQL会话工厂 列表
      */
     @Autowired(required = false)
-    private List<SqlSessionFactory> sqlSessionFactories;
+    private List<SqlSessionFactory> sqlSessionFactories; // SQL会话工厂
 
     /**
-     * MyBatis Mapper 注册器
+       * MyBatis 映射器 注册器
      */
     private final PluginMyBatisMapperRegistry mapperRegistry;
 
+    /**
+     * pluginmybatis事件监听器。
+     */
     public PluginMyBatisEventListener() {
         this.mapperRegistry = ServiceProvider.of(PluginMyBatisMapperRegistry.class).getExtension();
     }
@@ -49,7 +52,7 @@ public class PluginMyBatisEventListener {
     /**
      * 处理插件 Bean 注册事件
      * <p>
-     * 当插件 Bean 注册到 Spring 容器时，检查是否为 Mapper 接口，如果是则注册到 MyBatis
+       * 当插件 Bean 注册到 Spring 容器时，检查是否为 映射器 接口，如果是则注册到 MyBatis
      * </p>
      *
      * @param event 插件 Bean 注册事件
@@ -71,13 +74,13 @@ public class PluginMyBatisEventListener {
                 return;
             }
 
-            // 检查是否为 Mapper 接口
+ // 检查是否为 映射器 接口
             if (!isMapperInterface(beanType)) {
                 log.debug("[PluginMyBatis][事件]Bean 不是 Mapper 接口，跳过注册: {}", beanName);
                 return;
             }
 
-            // 注册到所有 SqlSessionFactory
+ // 注册到所有 SQL会话工厂
             for (SqlSessionFactory sqlSessionFactory : sqlSessionFactories) {
                 try {
                     mapperRegistry.registerMappers(sqlSessionFactory, beanType);
@@ -94,7 +97,7 @@ public class PluginMyBatisEventListener {
     /**
      * 处理插件 Bean 卸载事件
      * <p>
-     * 当插件 Bean 从 Spring 容器卸载时，从 MyBatis 配置中移除对应的 Mapper
+       * 当插件 Bean 从 Spring 容器卸载时，从 MyBatis 配置中移除对应的 映射器
      * </p>
      *
      * @param event 插件 Bean 卸载事件
@@ -121,14 +124,19 @@ public class PluginMyBatisEventListener {
                     continue;
                 }
 
-                // 检查是否为 Mapper 接口
+ // 检查是否为 映射器 接口
                 if (!isMapperInterface(beanType)) {
                     continue;
                 }
 
-                // 从所有 SqlSessionFactory 中移除
+ // 从所有 SQL会话工厂 中移除
                 for (SqlSessionFactory sqlSessionFactory : sqlSessionFactories) {
                     try {
+                        /**
+                         * 注销映射器。
+                         * @param sqlSessionFactory SQL会话工厂
+                         * @param beanType Bean类型
+                         */
                         unregisterMapper(sqlSessionFactory, beanType);
                         log.info("[PluginMyBatis][事件]插件 Mapper 接口卸载成功: {} 插件: {}", beanName, pluginFilePath);
                     } catch (Exception e) {
@@ -167,13 +175,13 @@ public class PluginMyBatisEventListener {
     }
 
     /**
-     * 检查是否为 Mapper 接口
+      * 检查是否为 映射器 接口
      * <p>
-     * 简单判断：是否为接口且名称包含 Mapper
+      * 简单判断：是否为接口且名称包含 映射器
      * </p>
      *
      * @param beanType Bean 类型
-     * @return 是否为 Mapper 接口
+     * @return 是否为 映射器 接口
      */
     private boolean isMapperInterface(Class<?> beanType) {
         if (beanType == null) {
@@ -183,10 +191,10 @@ public class PluginMyBatisEventListener {
     }
 
     /**
-     * 从 MyBatis 配置中移除 Mapper
+       * 从 MyBatis 配置中移除 映射器
      *
-     * @param sqlSessionFactory SqlSessionFactory 实例
-     * @param mapperClass       Mapper 接口类
+     * @param sqlSessionFactory SQL会话工厂 实例
+     * @param mapperClass       映射器 接口类
      */
     private void unregisterMapper(SqlSessionFactory sqlSessionFactory, Class<?> mapperClass) {
         if (sqlSessionFactory == null || mapperClass == null) {
@@ -196,8 +204,8 @@ public class PluginMyBatisEventListener {
         try {
             var configuration = sqlSessionFactory.getConfiguration();
             if (configuration.hasMapper(mapperClass)) {
-                // MyBatis 不提供直接移除 Mapper 的 API，这里记录日志
-                // 实际卸载时，MyBatis 会在下次使用时重新加载，或者需要重启应用
+ // MyBatis 不提供直接移除 映射器 的 API，这里记录日志
+ // 实际卸载时，MyBatis 会在下次使用时重新加载，或者需要重启应用
                 log.debug("[PluginMyBatis][事件]Mapper 已从配置中标记移除: {}", mapperClass.getName());
             }
         } catch (Exception e) {

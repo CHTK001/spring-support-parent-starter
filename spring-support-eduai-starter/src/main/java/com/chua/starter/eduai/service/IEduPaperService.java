@@ -26,7 +26,7 @@ public interface IEduPaperService extends IService<EduPaper> {
     /**
      * 获取试卷详情（含题目列表）
      *
-     * @param paperId 试卷ID
+     * @param paperId 试卷标识
      * @return 试卷详情
      */
     PaperVO getPaperDetail(Long paperId);
@@ -42,9 +42,9 @@ public interface IEduPaperService extends IService<EduPaper> {
     /**
      * 替换试卷中的某道题
      *
-     * @param paperId       试卷ID
-     * @param oldQuestionId 旧题目ID
-     * @param newQuestionId 新题目ID
+     * @param paperId       试卷标识
+     * @param oldQuestionId 旧题目标识
+     * @param newQuestionId 新题目标识
      * @return 是否成功
      */
     boolean replaceQuestion(Long paperId, Long oldQuestionId, Long newQuestionId);

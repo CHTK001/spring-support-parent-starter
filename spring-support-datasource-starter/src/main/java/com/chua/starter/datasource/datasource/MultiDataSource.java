@@ -36,26 +36,27 @@ import java.util.logging.Logger;
  * 多数据源
  *
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class MultiDataSource implements DataSource {
-    /** 数据sources */
+    /** 数据源 */
     private final List<DataSource> dataSources;
     /** Dynamic数据来源 */
     private final DynamicDataSource dynamicDataSource;
     /** Application上下文 */
     private ApplicationContext applicationContext;
 
-    /** Thread_local */
+    /** Thread_本地 */
     private static final ThreadLocal<GenericObjectPool<Connection>> THREAD_LOCAL = new InheritableThreadLocal<>();
-    private final Multimap<String, String> tables = HashMultimap.create();
+    private final Multimap<String, String> tables = HashMultimap.create(); // tables
 
-    private final Map<SchemaPlus, SchemaPlus> cache = new ConcurrentHashMap<>();
+    private final Map<SchemaPlus, SchemaPlus> cache = new ConcurrentHashMap<>(); // 缓存
 
     /** Print写入器 */
     private PrintWriter printWriter = new PrintWriter(System.out);
 
-    final Properties info = new Properties();
+    final Properties info = new Properties(); // 信息
     /** 池 */
     private GenericObjectPool<Connection> pool;
     /** 秒 */
@@ -67,19 +68,27 @@ public class MultiDataSource implements DataSource {
     }
 
     /**
-     * 创建 MultiDataSource 实例
-     * @param dataSources dataSources
-     * @param ApplicationContext ApplicationContext
+      * 创建 multi数据源 实例
+     * @param dataSources 数据源
+     * @param applicationContext application上下文
+     * @param applicationContext application上下文
      */
     public MultiDataSource(List<DataSource> dataSources, ApplicationContext applicationContext) {
         this.dataSources = dataSources;
         this.applicationContext = applicationContext;
         this.dynamicDataSource = applicationContext.getBean(DynamicDataSource.class);
+        /**
+         * initial数据源。
+         */
         initialDataSource();
     }
 
 
-    /** ReturnObject */
+    /**
+     * 申报对象
+     *
+     * @param connection connection
+     */
     public static void returnObject(Connection connection) {
         if (null == connection) {
             return;
@@ -94,13 +103,23 @@ public class MultiDataSource implements DataSource {
 
     /**
      * 创建连接池
+     * @param schemaPlus 模式plus
      */
     private void refreshDataSource(SchemaPlus schemaPlus) {
         for (DataSource dataSource : dataSources) {
             String catalog;
+            /**
+             * 尝试。
+             * @param dataSource.getConnection( 数据源.getconnection(
+             */
             try (Connection connection = dataSource.getConnection()) {
                 catalog = connection.getCatalog();
             } catch (SQLException e) {
+                /**
+                 * runtime异常。
+                 * @param e e
+                 * @return runtime异常的结果
+                 */
                 throw new RuntimeException(e);
             }
             JdbcSchema jdbcSchema = JdbcSchema.create(schemaPlus, catalog, dataSource, catalog, null);
@@ -108,11 +127,16 @@ public class MultiDataSource implements DataSource {
         }
 
         // 注册分区感知路由表，使 Calcite 查询自动跨源表 + 分区表
+        /**
+         * 注册分区routingtables。
+         * @param schemaPlus 模式plus
+         */
         registerPartitionRoutingTables(schemaPlus);
     }
 
     /**
      * 注册分区感知路由表，使 Calcite 查询自动跨源表 + 分区表。
+     * @param schemaPlus 模式plus
      */
     private void registerPartitionRoutingTables(SchemaPlus schemaPlus) {
         try {
@@ -145,10 +169,18 @@ public class MultiDataSource implements DataSource {
         }
     }
 
-    /** 获取Catalogs */
+    /**
+     * 获取Catalogs
+     *
+     * @return 获取catalogs的结果
+     */
     private List<String> getCatalogs() {
         List<String> catalogs = new ArrayList<>(dataSources.size());
         for (DataSource ds : dataSources) {
+            /**
+             * 尝试。
+             * @param ds.getConnection( ds.获取connection(
+             */
             try (Connection conn = ds.getConnection()) {
                 catalogs.add(conn.getCatalog());
             } catch (SQLException ignored) {
@@ -204,9 +236,18 @@ public class MultiDataSource implements DataSource {
                 try {
                     Connection connection = DriverManager.getConnection("jdbc:calcite:", info).unwrap(CalciteConnection.class);
                     CalciteConnection calciteConnection = connection.unwrap(CalciteConnection.class);
+                    /**
+                     * refresh数据源。
+                     * @param calciteConnection.getRootSchema( calciteconnection.获取根模式(
+                     */
                     refreshDataSource(calciteConnection.getRootSchema());
                     return calciteConnection;
                 } catch (SQLException e) {
+                    /**
+                     * runtime异常。
+                     * @param e e
+                     * @return runtime异常的结果
+                     */
                     throw new RuntimeException(e);
                 }
             }
@@ -230,6 +271,12 @@ public class MultiDataSource implements DataSource {
             dynamicDataSource.bindResource(connection);
             return connection;
         } catch (Exception e) {
+            /**
+              * SQL异常。
+             * @param "获取连接失败" "获取连接失败"
+             * @param e e
+             * @return sql异常的结果
+             */
             throw new SQLException("获取连接失败", e);
         }
     }
@@ -247,7 +294,7 @@ public class MultiDataSource implements DataSource {
     }
 
     @Override
-    /** 是否WrapperFor */
+    /** 是否包装器for */
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
         return false;
     }
@@ -265,22 +312,22 @@ public class MultiDataSource implements DataSource {
     }
 
     @Override
-    /** 设置LoginTimeout */
+    /** 设置login超时 */
     public void setLoginTimeout(int seconds) throws SQLException {
         this.seconds = seconds;
     }
 
     @Override
-    /** 获取LoginTimeout */
+    /** 获取login超时 */
     public int getLoginTimeout() throws SQLException {
         return seconds;
     }
 
     @Override
-    /** 获取ParentLogger */
+    /** 获取父日志记录器 */
     public Logger getParentLogger() throws SQLFeatureNotSupportedException {
-        // DataSource接口要求返回java.util.logging.Logger，但实际使用SLF4J
-        // 返回null表示不支持，由SLF4J桥接处理
+ // 数据源接口要求返回Java.util.日志.日志记录器，但实际使用SLF4J
+ // 返回空表示不支持，由SLF4J桥接处理
         return null;
     }
 

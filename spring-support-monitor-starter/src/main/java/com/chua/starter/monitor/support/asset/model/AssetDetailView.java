@@ -20,7 +20,7 @@ import java.util.Map;
 @Accessors(chain = true)
 public class AssetDetailView {
 
-    /** 资产 ID（对应主机台账 MsServerHost.id） */
+    /** 资产 标识（对应主机台账 ms服务端主机.标识） */
     private Long hostId;
     /** 资产名称 */
     private String name;
@@ -37,7 +37,7 @@ public class AssetDetailView {
 
     /** 采集通道：是否开启采集 */
     private Boolean collectEnabled;
-    /** Agent 通道：是否开启 agent */
+    /** 智能体 通道：是否开启 智能体 */
     private Boolean agentEnabled;
     /** 远控通道：是否开启 guacd 远控 */
     private Boolean remoteEnabled;
@@ -58,11 +58,13 @@ public class AssetDetailView {
 
     /**
      * 单个服务节点 / 通道摘要。
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     @Accessors(chain = true)
     public static class NodeChannel {
-        /** 节点 ID */
+        /** 节点 标识 */
         private Long nodeId;
         /** 节点名称 */
         private String name;
@@ -70,7 +72,7 @@ public class AssetDetailView {
         private String protocol;
         /** 监听端口 */
         private Integer port;
-        /** 运行状态：RUNNING / STOPPED / ERROR */
+        /** 运行状态：RUNNING / STOPPED / 错误 */
         private String status;
         /** 访问地址 */
         private String url;
@@ -80,11 +82,13 @@ public class AssetDetailView {
 
     /**
      * 资产关联的监控项及告警摘要。
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     @Accessors(chain = true)
     public static class MonitorItem {
-        /** 监控项 ID */
+        /** 监控项 标识 */
         private Long monitorId;
         /** 监控项名称 */
         private String name;

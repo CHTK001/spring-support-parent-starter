@@ -24,8 +24,10 @@ import java.util.stream.Collectors;
 import static com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler.NO_DATA;
 
 /**
- * 注入机构ID
+   * 注入机构标识
  *
+ * @author CH
+ * @since 4.0.0
  */
 public abstract class AbstractDeptRegister implements DeptRegister {
     /** Plainselect */
@@ -34,32 +36,32 @@ public abstract class AbstractDeptRegister implements DeptRegister {
     protected final Expression where;
     /** 用户 */
     protected final CurrentUser user;
-    /** 数据permission */
+    /** 数据权限 */
     protected final DataFilterTypeEnum dataPermission;
     /** 表名称 */
     protected final String tableName;
-    /** DeptID列 */
+    /** deptid列 */
     protected final String deptIdColumn;
-    /** DepttreeID列 */
+    /** depttreeid列 */
     protected final String deptTreeIdColumn;
-    /** CreateBY列 */
+    /** 创建by列 */
     protected final String createByColumn;
     /** 表别名 */
     protected final String tableAlias;
-    /** HASdeptID表别名 */
+    /** hasdeptid表别名 */
     protected String hasDeptIdTableAlias;
-    /** HASdeptID表表 */
+    /** hasdeptid表表 */
     protected Table hasDeptIdTableTable;
     /** Dept表 */
     protected Table deptTable;
 
     /**
-     * 创建 AbstractDeptRegister 实例
-     * @param plainSelect plainSelect
+      * 创建 抽象dept注册 实例
+     * @param plainSelect plain选择
      * @param where where
-     * @param user user
-     * @param dataPermission dataPermission
-     * @param scopeProperties scopeProperties
+     * @param user 用户
+     * @param dataPermission 数据权限
+     * @param scopeProperties scope属性
      */
     public AbstractDeptRegister(PlainSelect plainSelect,
                                 Expression where,
@@ -77,7 +79,11 @@ public abstract class AbstractDeptRegister implements DeptRegister {
         this.createByColumn = scopeProperties.getCurrentUserIdColumn();
     }
 
-    /** 注册DataScope */
+    /**
+     * 注册数据scope
+     *
+     * @return 注册数据scope的结果
+     */
     protected Expression registerDataScope() {
         if (DataFilterTypeEnum.DEPT_SETS == dataPermission) {
             if (StringUtils.isEmpty(user.getDataPermissionRule())) {
@@ -121,15 +127,15 @@ public abstract class AbstractDeptRegister implements DeptRegister {
             ParenthesedSelect subSelect = new ParenthesedSelect();
             PlainSelect select = new PlainSelect();
 
-            // 设置 SELECT 部分
+ // 设置 选择 部分
             select.addSelectItems(new SelectItem<>(new Column(deptIdColumn)));
 
-            // 设置 FROM 部分
+ // 设置 从 部分
             select.setFromItem(deptTable);
 
-            // 创建函数表达式 - find_in_set
-            // 性能警告：find_in_set 函数无法使用索引，性能较差
-            // 建议：使用 TableDeptRegister，它使用 LIKE 前缀查询，可以利用索引
+ // 创建函数表达式 - 查找_入_设置
+ // 性能警告：查找_入_设置 函数无法使用索引，性能较差
+ // 建议：使用 tabledept注册，它使用 LIKE 前缀查询，可以利用索引
             Function function = new Function();
             function.setName("find_in_set");
             ExpressionList params = new ExpressionList<>();
@@ -139,7 +145,7 @@ public abstract class AbstractDeptRegister implements DeptRegister {
             // 设置 WHERE 条件
             select.setWhere(function);
 
-            // 将子查询设置为 IN 表达式的右侧
+ // 将子查询设置为 入 表达式的右侧
             subSelect.setSelect(select);
             inExpression.setRightExpression(subSelect);
 
@@ -148,7 +154,7 @@ public abstract class AbstractDeptRegister implements DeptRegister {
                 return inExpression;
             }
 
-            // 创建 AND 表达式
+ // 创建 和 表达式
             AndExpression expression = new AndExpression(where, inExpression);
             plainSelect.setWhere(expression);
             return expression;
@@ -174,7 +180,7 @@ public abstract class AbstractDeptRegister implements DeptRegister {
     }
 
     /**
-     * 创建in表达式
+      * 创建入表达式
      *
      * @return
      */

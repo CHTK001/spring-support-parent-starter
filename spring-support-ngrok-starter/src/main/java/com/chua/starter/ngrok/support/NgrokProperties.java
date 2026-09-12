@@ -9,7 +9,7 @@ import java.time.Duration;
  * Ngrok 客户端配置。
  *
  * <p>通过 {@code plugin.ngrok.*} 前缀配置。模块<strong>默认开启</strong>，
- * 只要在 classpath 上 + 配置了 {@code plugin.ngrok.authtoken}（或环境变量
+   * 只要在 类路径 上 + 配置了 {@code plugin.ngrok.authtoken}（或环境变量
  * {@code NGROK_AUTHTOKEN}），Spring Boot 启动后会自动建立 ngrok 隧道，
  * 将本机服务（{@code server.port}）暴露到公网。</p>
  *
@@ -94,7 +94,7 @@ public class NgrokProperties {
     private String serverAddr;
 
     /**
-     * 私有部署 CA 证书路径。【选填】默认无；classpath 资源路径，
+      * 私有部署 CA 证书路径。【选填】默认无；类路径 资源路径，
      * 例如 {@code classpath:ngrok-ca.crt}。
      */
     private String caCert;
@@ -149,19 +149,19 @@ public class NgrokProperties {
     private boolean compression = false;
 
     /**
-     * HTTP BasicAuth 凭据。【选填】默认无；格式 {@code user:password}；
+       * HTTP 基础认证 凭据。【选填】默认无；格式 {@code user:password}；
      * 与 {@link #basicAuthUsername}/{@link #basicAuthPassword} 二选一，
      * 同时配置时优先使用本字段。
      */
     private String basicAuth;
 
     /**
-     * BasicAuth 用户名。【选填】默认无；与 {@link #basicAuthPassword} 配合使用。
+       * 基础认证 用户名。【选填】默认无；与 {@link #basicAuthPassword} 配合使用。
      */
     private String basicAuthUsername;
 
     /**
-     * BasicAuth 密码。【选填】默认无；与 {@link #basicAuthUsername} 配合使用。
+       * 基础认证 密码。【选填】默认无；与 {@link #basicAuthUsername} 配合使用。
      */
     private String basicAuthPassword;
 
@@ -171,8 +171,8 @@ public class NgrokProperties {
      *   <li>{@code false} — 打印 ERROR 日志后继续启动 Spring（不阻塞业务）</li>
      *   <li>{@code true} — 抛出异常中断启动（fail-fast 模式）</li>
      * </ul>
-     * 注意：仅 ngrok Session 连接失败 / 启动失败时生效；
-     * authtoken 为空导致的硬错误无论 failFast 设置如何都会中断启动（必填项）。
+      * 注意：仅 ngrok 会话 连接失败 / 启动失败时生效；
+      * authtoken 为空导致的硬错误无论 失败fast 设置如何都会中断启动（必填项）。
      */
     private boolean failFast = false;
 

@@ -17,6 +17,7 @@ import java.util.*;
  * 自定义json日期反序列化程序
  *
  * @author CH
+ * @since 4.0.0
  */
 public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> {
 
@@ -37,7 +38,7 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
      * 树节点到值
      *
      * @param treeNode 树节点
-     * @return {@link Object}
+     * @return {@link 对象}
      */
     private Object treeNodeToValue(TreeNode treeNode) {
         return treeNodeToValueValue(treeNode);
@@ -46,7 +47,7 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
      * 树节点到值
      *
      * @param treeNode 树节点
-     * @return {@link Object}
+     * @return {@link 对象}
      */
     private Object treeNodeToValueValue(TreeNode treeNode) {
         if (treeNode.isArray()) {
@@ -67,7 +68,12 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
         return null;
     }
 
-    /** TreeNodeToNewValue */
+    /**
+     * 树节点转为新价值观
+     *
+     * @param treeNode 树节点
+     * @return 树节点转为新价值观的结果
+     */
     private Object treeNodeToNewValue(TreeNode treeNode) {
         JsonToken token = treeNode.asToken();
         if(token.isBoolean()) {
@@ -94,10 +100,20 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
             }
 
             if(numberType == JsonParser.NumberType.BIG_DECIMAL) {
+                /**
+                  * bigdecimal。
+                 * @param treeNode.toString( 树节点.tostring(
+                 * @return BigDecimal的结果
+                 */
                 return new BigDecimal(treeNode.toString());
             }
 
             if(numberType == JsonParser.NumberType.BIG_INTEGER) {
+                /**
+                  * biginteger。
+                 * @param treeNode.toString( 树节点.tostring(
+                 * @return BigInteger的结果
+                 */
                 return new BigInteger(treeNode.toString());
             }
         }
@@ -106,7 +122,12 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
 
     }
 
-    /** TreeNodeToObjectValue */
+    /**
+     * 树节点转为对象价值观
+     *
+     * @param treeNode 树节点
+     * @return 树节点转为对象价值观的结果
+     */
     private Object treeNodeToObjectValue(TreeNode treeNode) {
         Iterator<String> stringIterator = treeNode.fieldNames();
         Map<String, Object> rs = new LinkedHashMap<>();
@@ -116,7 +137,12 @@ public class ArrayToJsonStringJsonDeserializer extends JsonDeserializer<Object> 
         return rs;
     }
 
-    /** TreeNodeToArrayValue */
+    /**
+     * 树节点转为array价值观
+     *
+     * @param treeNode 树节点
+     * @return 树节点转为array价值观的结果
+     */
     private Object treeNodeToArrayValue(TreeNode treeNode) {
         int size = treeNode.size();
         List<Object> rs = new LinkedList<>();

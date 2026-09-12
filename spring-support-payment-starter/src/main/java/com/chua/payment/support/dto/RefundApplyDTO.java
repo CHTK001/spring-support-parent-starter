@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 /**
  * 退款申请 DTO
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class RefundApplyDTO {
@@ -17,7 +18,7 @@ public class RefundApplyDTO {
     /** Refundreason */
     private String refundReason;
 
-    /** Operator */
+    /** 操作符 */
     private String operator;
 }
 

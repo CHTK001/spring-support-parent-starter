@@ -16,7 +16,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * 云台控制 Controller
+   * 云台控制 控制器
  *
  * @since 4.0.0.42
  * @author CH
@@ -34,7 +34,7 @@ public class PtzController {
     /**
      * 云台控制
      *
-     * @param deviceId 设备 ID
+     * @param deviceId 设备 标识
      * @param cmd      控制指令
      * @param speed    速度（0-1）
      */
@@ -53,6 +53,10 @@ public class PtzController {
     public void setPreset(@RequestParam String deviceId,
                           @RequestParam int presetId,
                           @RequestParam String name) {
+        /**
+          * requireonline。
+         * @param deviceId deviceid
+         */
         requireOnline(deviceId).setPreset(presetId, name);
     }
 
@@ -62,6 +66,10 @@ public class PtzController {
     @PostMapping("/preset/call")
     public void callPreset(@RequestParam String deviceId,
                            @RequestParam int presetId) {
+        /**
+          * requireonline。
+         * @param deviceId deviceid
+         */
         requireOnline(deviceId).callPreset(presetId);
     }
 
@@ -71,11 +79,17 @@ public class PtzController {
     @DeleteMapping("/preset")
     public void deletePreset(@RequestParam String deviceId,
                              @RequestParam int presetId) {
+        /**
+          * requireonline。
+         * @param deviceId deviceid
+         */
         requireOnline(deviceId).deletePreset(presetId);
     }
 
     /**
      * 获取预置位列表
+     * @param deviceId deviceid
+     * @return 列表presets的结果
      */
     @GetMapping("/preset/list")
     public List<PresetInfo> listPresets(@RequestParam String deviceId) {
@@ -86,10 +100,20 @@ public class PtzController {
         return session.listPresets();
     }
 
-    /** RequireOnline */
+    /**
+     * requireonline
+     *
+     * @param deviceId deviceid
+     * @return requireOnline的结果
+     */
     private DeviceSession requireOnline(String deviceId) {
         DeviceSession session = sessionManager.getSession(deviceId);
         if (session == null || !session.isOnline()) {
+            /**
+             * runtime异常。
+             * @param deviceId deviceid
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("设备不在线: " + deviceId);
         }
         return session;

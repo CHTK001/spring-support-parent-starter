@@ -25,8 +25,8 @@ import java.util.List;
  * 配置前缀 {@code plugin.datasource.monitor}。</p>
  *
  * <p><b>启用策略</b>：显式配置 {@code enabled} 时以配置为准；未配置时根据 Spring 环境
- * 自动切换——匹配 {@code autoEnableEnvironments}（默认 dev/test/uat/local）任一激活
- * profile 则启用，否则关闭。</p>
+   * 自动切换——匹配 {@code autoEnableEnvironments}（默认 dev/测试/uat/本地）任一激活
+   * 配置文件 则启用，否则关闭。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -91,6 +91,11 @@ public class SqlMonitorAutoConfiguration implements EnvironmentAware {
     @ConditionalOnMissingBean
     @ConditionalOnClass(name = "org.springframework.boot.actuate.endpoint.annotation.Endpoint")
     public SqlMonitorEndpoint sqlMonitorEndpoint(DataSourceSqlMonitor monitor) {
+        /**
+          * SQL监控端点。
+         * @param monitor 监控
+         * @return sql监控端点的结果
+         */
         return new SqlMonitorEndpoint(monitor);
     }
 }

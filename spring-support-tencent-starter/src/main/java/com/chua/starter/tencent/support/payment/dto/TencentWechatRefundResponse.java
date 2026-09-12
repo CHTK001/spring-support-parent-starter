@@ -5,18 +5,19 @@ import lombok.Data;
 /**
  * 微信退款响应
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class TencentWechatRefundResponse {
-    /** Success */
+    /** 成功 */
     private boolean success;
-    /** RefundNO */
+    /** 退税no */
     private String refundNo;
-    /** RefundID */
+    /** 退税标识 */
     private String refundId;
-    /** RefundamountFEN */
+    /** refundamountfen */
     private Long refundAmountFen;
-    /** Refund状态 */
+    /** 退税状态 */
     private String refundStatus;
     /** 消息 */
     private String message;

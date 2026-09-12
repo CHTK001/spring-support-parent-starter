@@ -28,8 +28,8 @@ import java.util.concurrent.ScheduledFuture;
 /**
  * 支付动态调度任务管理器，基于内部线程池执行支付订单超时取消、通知重试等定时任务。
  * <p>
- * 该实现仅在 {@code engine=internal} 时生效，负责 payment 模块内部的本地调度。
- * 切换到 {@code engine=job} 后，统一由 job-starter 轮询任务表并触发业务 Job。
+   * 该实现仅在 {@code engine=internal} 时生效，负责 薪酬 模块内部的本地调度。
+   * 切换到 {@code engine=job} 后，统一由 作业-启动 轮询任务表并触发业务 作业。
  * </p>
  *
  * @author CH
@@ -41,18 +41,18 @@ import java.util.concurrent.ScheduledFuture;
 @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "engine", havingValue = "internal", matchIfMissing = true)
 public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
 
-    /** Payment调度器配置mapper */
+    /** 薪酬调度器配置映射器 */
     private final PaymentSchedulerConfigMapper paymentSchedulerConfigMapper;
     /** 任务调度器 */
     private final ThreadPoolTaskScheduler taskScheduler;
-    private final Map<String, PaymentManagedTask> taskRegistry = new LinkedHashMap<>();
-    private final Map<String, ScheduledFuture<?>> scheduledFutures = new ConcurrentHashMap<>();
+    private final Map<String, PaymentManagedTask> taskRegistry = new LinkedHashMap<>(); // 任务registry
+    private final Map<String, ScheduledFuture<?>> scheduledFutures = new ConcurrentHashMap<>(); // 调度期货
 
     /**
-     * 创建 PaymentTaskSchedulerManager 实例
-     * @param paymentSchedulerConfigMapper paymentSchedulerConfigMapper
-     * @param taskScheduler taskScheduler
-     * @param managedTasks managedTasks
+      * 创建 薪酬任务调度器管理器 实例
+     * @param paymentSchedulerConfigMapper 薪酬调度器配置映射器
+     * @param taskScheduler 任务调度器
+     * @param managedTasks managed任务
      */
     public PaymentTaskSchedulerManager(PaymentSchedulerConfigMapper paymentSchedulerConfigMapper,
                                        @Qualifier("paymentThreadPoolTaskScheduler") ThreadPoolTaskScheduler taskScheduler,
@@ -65,14 +65,27 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
     }
 
     @Override
-    /** AfterSingletonsInstantiated */
+    /** 之后单例instantiated */
     public void afterSingletonsInstantiated() {
+        /**
+         * 同步默认。
+         */
         syncDefaults();
+        /**
+         * refresh全部。
+         */
         refreshAll();
     }
 
-    /** ListTasks */
+    /**
+     * 列表任务
+     *
+     * @return 列表任务的结果
+     */
     public synchronized List<PaymentSchedulerTaskVO> listTasks() {
+        /**
+         * 同步默认。
+         */
         syncDefaults();
         Map<String, PaymentSchedulerConfig> configMap = loadConfigMap();
         return taskRegistry.values().stream()
@@ -80,15 +93,30 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
                 .toList();
     }
 
-    /** 更新Task */
+    /**
+     * 更新任务
+     *
+     * @param taskKey 任务钥匙
+     * @param dto dto
+     * @return 更新任务的结果
+     */
     public synchronized PaymentSchedulerTaskVO updateTask(String taskKey, PaymentSchedulerTaskUpdateDTO dto) {
         PaymentManagedTask task = requireTask(taskKey);
         PaymentSchedulerConfig config = requireConfig(taskKey);
 
         if (dto == null) {
+            /**
+             * 薪酬异常。
+             * @param "任务更新内容不能为空" "任务更新内容不能为空"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("任务更新内容不能为空");
         }
         if (StringUtils.hasText(dto.getCronExpression())) {
+            /**
+             * 校验cron。
+             * @param dto.getCronExpression( dto.获取cronexpression(
+             */
             validateCron(dto.getCronExpression());
             config.setCronExpression(dto.getCronExpression().trim());
         }
@@ -96,30 +124,56 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
             config.setEnabled(dto.getEnabled());
         }
         paymentSchedulerConfigMapper.updateById(config);
+        /**
+         * refresh任务。
+         * @param taskKey 任务钥匙
+         */
         refreshTask(taskKey);
         return toTaskVO(task, requireConfig(taskKey));
     }
 
-    /** TriggerTask */
+    /**
+     * trigger任务
+     *
+     * @param taskKey 任务钥匙
+     * @return trigger任务的结果
+     */
     public synchronized PaymentSchedulerTaskVO triggerTask(String taskKey) {
         PaymentManagedTask task = requireTask(taskKey);
+        /**
+         * 执行任务。
+         * @param task 任务
+         * @param requireConfig(taskKey requireconfig(任务钥匙
+         */
         executeTask(task, requireConfig(taskKey));
         return toTaskVO(task, requireConfig(taskKey));
     }
 
-    /** RefreshAll */
+    /** refresh全部 */
     public synchronized void refreshAll() {
         taskRegistry.keySet().forEach(this::refreshTask);
     }
 
-    /** RefreshTask */
+    /**
+     * refresh任务
+     *
+     * @param taskKey 任务钥匙
+     */
     public synchronized void refreshTask(String taskKey) {
         PaymentManagedTask task = requireTask(taskKey);
         PaymentSchedulerConfig config = requireConfig(taskKey);
+        /**
+         * cancel任务。
+         * @param taskKey 任务钥匙
+         */
         cancelTask(taskKey);
         if (!Boolean.TRUE.equals(config.getEnabled())) {
             return;
         }
+        /**
+         * 校验cron。
+         * @param config.getCronExpression( 配置.获取cronexpression(
+         */
         validateCron(config.getCronExpression());
         ScheduledFuture<?> future = taskScheduler.schedule(
                 () -> executeTask(task, requireConfig(taskKey)),
@@ -129,7 +183,12 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         }
     }
 
-    /** 执行Task */
+    /**
+     * 执行任务
+     *
+     * @param task 任务
+     * @param config 配置
+     */
     private void executeTask(PaymentManagedTask task, PaymentSchedulerConfig config) {
         LocalDateTime startedAt = LocalDateTime.now();
         config.setLastStartedAt(startedAt);
@@ -152,7 +211,7 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         }
     }
 
-    /** SyncDefaults */
+    /** 同步默认 */
     private synchronized void syncDefaults() {
         Map<String, PaymentSchedulerConfig> configMap = loadConfigMap();
         for (PaymentManagedTask task : taskRegistry.values()) {
@@ -193,7 +252,11 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         }
     }
 
-    /** 加载ConfigMap */
+    /**
+     * 加载配置映射
+     *
+     * @return 加载配置映射的结果
+     */
     private Map<String, PaymentSchedulerConfig> loadConfigMap() {
         return paymentSchedulerConfigMapper.selectList(new LambdaQueryWrapper<PaymentSchedulerConfig>()
                         .orderByAsc(PaymentSchedulerConfig::getId))
@@ -201,7 +264,13 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
                 .collect(LinkedHashMap::new, (map, item) -> map.put(item.getTaskKey(), item), LinkedHashMap::putAll);
     }
 
-    /** ToTaskVO */
+    /**
+     * 转为任务vo
+     *
+     * @param task 任务
+     * @param config 配置
+     * @return 转为任务vo的结果
+     */
     private PaymentSchedulerTaskVO toTaskVO(PaymentManagedTask task, PaymentSchedulerConfig config) {
         PaymentSchedulerTaskVO vo = new PaymentSchedulerTaskVO();
         vo.setTaskKey(task.taskKey());
@@ -220,7 +289,13 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         return vo;
     }
 
-    /** 解析NextExecutionTime */
+    /**
+     * 解析下一个执行时间
+     *
+     * @param cronExpression cronexpression
+     * @param enabled 已启用
+     * @return resolve下一个执行时间的结果
+     */
     private LocalDateTime resolveNextExecutionTime(String cronExpression, Boolean enabled) {
         if (!Boolean.TRUE.equals(enabled) || !StringUtils.hasText(cronExpression) || !CronExpression.isValidExpression(cronExpression)) {
             return null;
@@ -228,13 +303,22 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         return CronExpression.parse(cronExpression).next(LocalDateTime.now());
     }
 
-    /** 是否Scheduled */
+    /**
+     * 是否Scheduled
+     *
+     * @param taskKey 任务钥匙
+     * @return 是否调度的结果
+     */
     private boolean isScheduled(String taskKey) {
         ScheduledFuture<?> future = scheduledFutures.get(taskKey);
         return future != null && !future.isCancelled();
     }
 
-    /** CancelTask */
+    /**
+     * cancel任务
+     *
+     * @param taskKey 任务钥匙
+     */
     private void cancelTask(String taskKey) {
         ScheduledFuture<?> future = scheduledFutures.remove(taskKey);
         if (future != null) {
@@ -242,34 +326,69 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         }
     }
 
-    /** RequireTask */
+    /**
+     * require任务
+     *
+     * @param taskKey 任务钥匙
+     * @return require任务的结果
+     */
     private PaymentManagedTask requireTask(String taskKey) {
         PaymentManagedTask task = taskRegistry.get(taskKey);
         if (task == null) {
+            /**
+             * 薪酬异常。
+             * @param taskKey 任务钥匙
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("未知调度任务: " + taskKey);
         }
         return task;
     }
 
-    /** RequireConfig */
+    /**
+     * require配置
+     *
+     * @param taskKey 任务钥匙
+     * @return require配置的结果
+     */
     private PaymentSchedulerConfig requireConfig(String taskKey) {
         PaymentSchedulerConfig config = paymentSchedulerConfigMapper.selectOne(new LambdaQueryWrapper<PaymentSchedulerConfig>()
                 .eq(PaymentSchedulerConfig::getTaskKey, taskKey)
                 .last("limit 1"));
         if (config == null) {
+            /**
+             * 薪酬异常。
+             * @param taskKey 任务钥匙
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("调度任务配置不存在: " + taskKey);
         }
         return config;
     }
 
-    /** 校验Cron */
+    /**
+     * 校验Cron
+     *
+     * @param cronExpression cronexpression
+     */
     private void validateCron(String cronExpression) {
         if (!StringUtils.hasText(cronExpression) || !CronExpression.isValidExpression(cronExpression.trim())) {
+            /**
+             * 薪酬异常。
+             * @param cronExpression cronexpression
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("无效的 Cron 表达式: " + cronExpression);
         }
     }
 
-    /** Abbreviate */
+    /**
+     * Abbreviate
+     *
+     * @param text 文本
+     * @param maxLength 最大长度
+     * @return abbreviate的结果
+     */
     private String abbreviate(String text, int maxLength) {
         if (text == null || text.length() <= maxLength) {
             return text;
@@ -277,7 +396,12 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         return text.substring(0, maxLength);
     }
 
-    /** 解析记录错误Message */
+    /**
+     * 解析记录错误消息
+     *
+     * @param throwable 抛出
+     * @return resolve错误消息的结果
+     */
     private String resolveErrorMessage(Throwable throwable) {
         if (throwable == null) {
             return null;
@@ -288,7 +412,13 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         return throwable.getClass().getSimpleName();
     }
 
-    /** Rethrow */
+    /**
+     * Rethrow
+     *
+     * @param throwable 抛出
+     * @param taskKey 任务钥匙
+     * @return rethrow的结果
+     */
     private RuntimeException rethrow(Throwable throwable, String taskKey) {
         if (throwable instanceof RuntimeException runtimeException) {
             return runtimeException;
@@ -296,6 +426,12 @@ public class PaymentTaskSchedulerManager implements SmartInitializingSingleton {
         if (throwable instanceof Error error) {
             throw error;
         }
+        /**
+         * 薪酬异常。
+         * @param taskKey 任务钥匙
+         * @param throwable 抛出
+         * @return 薪酬异常的结果
+         */
         return new PaymentException("支付调度任务执行失败: " + taskKey, throwable);
     }
 }

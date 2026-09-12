@@ -10,10 +10,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Socket 会话操作模板接口
+   * 套接字 会话操作模板接口
  * 定义了会话管理与消息发送的方法
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */
@@ -37,7 +37,7 @@ public interface SocketSessionTemplate {
     void remove(String clientId, SocketSession session);
 
     /**
-     * 根据会话ID获取对应的会话实例
+      * 根据会话标识获取对应的会话实例
      *
      * @param sessionId 会话唯一标识符
      * @return 对应的会话实例，如果不存在则返回null
@@ -45,9 +45,9 @@ public interface SocketSessionTemplate {
     SocketSession getSession(String sessionId);
 
     /**
-     * 向指定会话ID的客户端发送消息
+      * 向指定会话标识的客户端发送消息
      *
-     * @param sessionId 目标客户端的会话ID
+     * @param sessionId 目标客户端的会话标识
      * @param event     触发的事件名称
      * @param msg       要发送的消息内容
      */
@@ -60,6 +60,11 @@ public interface SocketSessionTemplate {
      * @param msg       要发送的消息内容
      */
     default void send(String event, Object msg) {
+        /**
+         * broadcast对象。
+         * @param event 事件
+         * @param msg msg
+         */
         broadcastObject(event, msg);
     }
 
@@ -70,16 +75,27 @@ public interface SocketSessionTemplate {
      * @param msg       要发送的消息内容
      */
     default void sendObject(String event, Object msg) {
+        /**
+         * broadcast对象。
+         * @param event 事件
+         * @param msg msg
+         */
         broadcastObject(event, msg);
     }
     /**
-     * 向指定会话ID的客户端发送对象消息
+      * 向指定会话标识的客户端发送对象消息
      *
-     * @param sessionId 目标客户端的会话ID
+     * @param sessionId 目标客户端的会话标识
      * @param event     触发的事件名称
      * @param msg       要发送的消息内容对象
      */
     default void sendObject(String sessionId, String event, Object msg) {
+        /**
+         * 发送。
+         * @param sessionId 会话标识
+         * @param event 事件
+         * @param msg.toString( msg.转为字符串(
+         */
         send(sessionId, event, msg instanceof String ? msg.toString() : toJson(msg));
     }
 
@@ -99,50 +115,80 @@ public interface SocketSessionTemplate {
      */
     default void broadcastObject(String event, Object msg) {
         if (msg instanceof MsgEvent message) {
+            /**
+             * broadcast。
+             * @param event 事件
+             * @param message 消息
+             */
             broadcast(event, message);
             return;
         }
         if (msg instanceof MsgStep message) {
+            /**
+             * broadcast。
+             * @param event 事件
+             * @param message 消息
+             */
             broadcast(event, message);
             return;
         }
+        /**
+         * broadcast。
+         * @param event 事件
+         * @param msg.toString( msg.转为字符串(
+         */
         broadcast(event, msg instanceof String ? msg.toString() : toJson(msg));
     }
 
     /**
-     * 广播Map消息到所有客户端
+      * 广播映射消息到所有客户端
      *
      * @param event    触发的事件名称
-     * @param msgEvent 消息Map
+     * @param msgEvent 消息映射
      */
     default void broadcast(String event, Map<String, Object> msgEvent) {
+        /**
+         * broadcast。
+         * @param event 事件
+         * @param toJSONString(msgEvent 转为jsonstring(msg事件
+         */
         broadcast(event, toJSONString(msgEvent));
     }
 
     /**
-     * 广播MsgEvent消息到所有客户端
+      * 广播msg事件消息到所有客户端
      *
      * @param event    触发的事件名称
      * @param msgEvent 消息事件对象
      */
     default void broadcast(String event, MsgEvent msgEvent) {
+        /**
+         * broadcast。
+         * @param event 事件
+         * @param msgEvent.toString( msg事件.转为字符串(
+         */
         broadcast(event, msgEvent.toString());
     }
 
     /**
-     * 广播MsgStep消息到所有客户端
+      * 广播msgstep消息到所有客户端
      *
      * @param event   触发的事件名称
      * @param msgStep 消息步骤对象
      */
     default void broadcast(String event, MsgStep msgStep) {
+        /**
+         * broadcast。
+         * @param event 事件
+         * @param msgStep.toString( msgstep.转为字符串(
+         */
         broadcast(event, msgStep.toString());
     }
 
     /**
      * 向指定用户发送消息
      *
-     * @param userId 目标用户ID
+     * @param userId 目标用户标识
      * @param event  触发的事件名称
      * @param msg    要发送的消息内容
      */
@@ -151,11 +197,17 @@ public interface SocketSessionTemplate {
     /**
      * 向指定用户发送对象消息
      *
-     * @param userId 目标用户ID
+     * @param userId 目标用户标识
      * @param event  触发的事件名称
      * @param msg    要发送的消息内容对象
      */
     default void sendToUserObject(String userId, String event, Object msg) {
+        /**
+         * 发送转为用户。
+         * @param userId 用户标识
+         * @param event 事件
+         * @param msg.toString( msg.转为字符串(
+         */
         sendToUser(userId, event, msg instanceof String ? msg.toString() : toJson(msg));
     }
 
@@ -167,10 +219,10 @@ public interface SocketSessionTemplate {
     List<SocketSession> getOnlineSessions();
 
     /**
-     * 获取指定类型和房间ID的在线会话列表
+      * 获取指定类型和房间标识的在线会话列表
      *
-     * @param type   类型（如 webrtc、chat 等）
-     * @param roomId 房间ID
+     * @param type   类型（如 WebRTC、对话 等）
+     * @param roomId 房间标识
      * @return 在线会话列表
      */
     List<SocketSession> getOnlineSession(String type, String roomId);
@@ -191,9 +243,9 @@ public interface SocketSessionTemplate {
     int getOnlineCount();
 
     /**
-     * 向指定会话ID的客户端发送二进制数据
+      * 向指定会话标识的客户端发送二进制数据
      *
-     * @param sessionId 目标客户端的会话ID
+     * @param sessionId 目标客户端的会话标识
      * @param event     触发的事件名称
      * @param data      二进制数据
      */
@@ -224,7 +276,7 @@ public interface SocketSessionTemplate {
     /**
      * 向指定用户发送二进制数据
      *
-     * @param userId 目标用户ID
+     * @param userId 目标用户标识
      * @param event  触发的事件名称
      * @param data   二进制数据
      */

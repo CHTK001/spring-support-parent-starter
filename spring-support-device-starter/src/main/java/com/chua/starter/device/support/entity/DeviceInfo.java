@@ -29,14 +29,14 @@ import java.time.LocalDateTime;
 public class DeviceInfo {
 
     /**
-     * 主键 ID
+      * 主键 标识
      */
     @TableId(value = "device_info_id", type = IdType.ASSIGN_UUID)
-    /** Device信息ID */
+    /** Device信息标识 */
     private String deviceInfoId;
 
     /**
-     * 所属组织 ID
+      * 所属组织 标识
      */
     @TableField("device_info_org_id")
     /** Device信息ORGID */
@@ -53,7 +53,7 @@ public class DeviceInfo {
      * 厂商标识，例如 hikvision、dahua
      */
     @TableField("device_info_vendor")
-    /** Device信息vendor */
+    /** Device信息供应商 */
     private String deviceInfoVendor;
 
     /**
@@ -97,7 +97,7 @@ public class DeviceInfo {
      * 用户名
      */
     @TableField("device_info_username")
-    /** Device信息username */
+    /** Device信息用户名 */
     private String deviceInfoUsername;
 
     /**
@@ -118,7 +118,7 @@ public class DeviceInfo {
      * 设备序列号
      */
     @TableField("device_info_serial")
-    /** Device信息serial */
+    /** Device信息串行 */
     private String deviceInfoSerial;
 
     /**

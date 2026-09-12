@@ -32,12 +32,13 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Agent 配置管理控制器 —— Agent 编排、Agent-as-Model 转换。
+   * 智能体 配置管理控制器 —— 智能体 编排、智能体-as-模型 转换。
  * <p>
  * 编排配置持久化通过 {@link SysAiGlobalSettingService} 以 "orchestration" 分组存储，
- * 每个 Agent 的配置序列化为 JSON 保存在对应字段。
+   * 每个 智能体 的配置序列化为 JSON 保存在对应字段。
  *
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @RestController
@@ -46,19 +47,24 @@ import java.util.Set;
 @Tag(name = "Agent 配置管理", description = "Agent 编排与 Agent-as-Model 接口")
 public class AgentConfigController {
 
-    /** Agent注册表 */
+    /** 智能体注册表 */
     private final AgentRegistry agentRegistry;
-    /** Chat客户端注册表 */
+    /** 对话客户端注册表 */
     private final ChatClientRegistry chatClientRegistry;
     /** SYSAI全局设置服务 */
     private final SysAiGlobalSettingService sysAiGlobalSettingService;
 
-    // ==================== Agent-as-Model ====================
+ // ==================== 智能体-as-模型 ====================
 
     @Permission("admin")
     @Operation(summary = "注册 Agent 为模型", description = "将指定 Agent 包装为 AgentModelDefinition 并注册到 ChatClientRegistry，使其作为模型对外暴露")
     @PostMapping("/register-as-model")
-    /** 注册AgentAsModel */
+    /**
+     * 注册智能体as模型
+     *
+     * @param body 主体
+     * @return 注册智能体as模型的结果
+     */
     public ReturnResult<Map<String, Object>> registerAgentAsModel(@RequestBody Map<String, Object> body) {
         String agentName = (String) body.get("agentName");
         String modelName = (String) body.get("modelName");
@@ -109,7 +115,12 @@ public class AgentConfigController {
     @Permission("admin")
     @Operation(summary = "注销 Agent 模型", description = "从 ChatClientRegistry 移除 Agent 模型注册")
     @DeleteMapping("/unregister-model/{modelName}")
-    /** 注销AgentModel */
+    /**
+     * 注销智能体模型
+     *
+     * @param modelName 模型名称
+     * @return 注销智能体模型的结果
+     */
     public ReturnResult<Map<String, Object>> unregisterAgentModel(@PathVariable String modelName) {
         log.info("[AgentConfig] 注销 Agent 模型: modelName={}", modelName);
         // 从持久化配置中移除
@@ -127,11 +138,16 @@ public class AgentConfigController {
         return ReturnResult.ok(result, "Agent 模型已注销（需重启生效）");
     }
 
-    // ==================== Agent 编排 ====================
+ // ==================== 智能体 编排 ====================
 
     @Operation(summary = "获取 Agent 编排结构", description = "返回用于 RelationGraph 可视化的节点和边数据")
     @GetMapping("/orchestration/{agentName}")
-    /** 获取Orchestration */
+    /**
+     * 获取Orchestration
+     *
+     * @param agentName 智能体名称
+     * @return 获取orchestration的结果
+     */
     public ReturnResult<Map<String, Object>> getOrchestration(@PathVariable String agentName) {
         var agent = agentRegistry.getByName(agentName);
         if (agent == null) {
@@ -166,7 +182,7 @@ public class AgentConfigController {
             idx++;
         }
 
-        // 构建边（主Agent → 子Agent），合并持久化配置
+ // 构建边（主智能体 → 子智能体），合并持久化配置
         List<Map<String, Object>> edges = new ArrayList<>();
         for (AgentDefinition sub : subAgents) {
             Map<String, Object> edge = new LinkedHashMap<>();
@@ -188,7 +204,12 @@ public class AgentConfigController {
     @Permission("admin")
     @Operation(summary = "保存 Agent 编排", description = "持久化 Agent 的编排配置（子Agent关联、模式等）")
     @PostMapping("/orchestration/save")
-    /** 保存Orchestration */
+    /**
+     * 保存Orchestration
+     *
+     * @param body 主体
+     * @return 保存orchestration的结果
+     */
     public ReturnResult<Map<String, Object>> saveOrchestration(@RequestBody Map<String, Object> body) {
         String agentName = (String) body.get("agentName");
         if (agentName == null || agentName.isBlank()) {
@@ -249,11 +270,15 @@ public class AgentConfigController {
         return ReturnResult.ok(result, "编排配置已保存到数据库");
     }
 
-    // ==================== Agent 模型列表 ====================
+ // ==================== 智能体 模型列表 ====================
 
     @Operation(summary = "Agent 模型列表", description = "返回所有已注册为模型的 Agent 列表")
     @GetMapping("/agent-models")
-    /** ListAgentModels */
+    /**
+     * 列表智能体模型
+     *
+     * @return 列表智能体模型的结果
+     */
     public ReturnResult<List<Map<String, Object>>> listAgentModels() {
         List<Map<String, Object>> result = new ArrayList<>();
         Set<String> models = chatClientRegistry.getModels();
@@ -275,10 +300,10 @@ public class AgentConfigController {
     // ==================== 辅助方法 ====================
 
     /**
-     * 从全局配置加载指定 Agent 的编排边数据。
+      * 从全局配置加载指定 智能体 的编排边数据。
      *
-     * @param agentName Agent 名称
-     * @return target → label 映射
+     * @param agentName 智能体 名称
+     * @return target → 标签 映射
      */
     private Map<String, String> loadOrchestrationEdges(String agentName) {
         Map<String, String> edges = new LinkedHashMap<>();
@@ -291,13 +316,13 @@ public class AgentConfigController {
                     continue;
                 }
                 String suffix = field.substring(prefix.length());
-                // 跳过 node kind 配置
+ // 跳过 节点 种类 配置
                 if (suffix.endsWith(":kind")) {
                     continue;
                 }
                 String value = (String) setting.get("value");
                 if (value != null && value.contains("|")) {
-                    // 格式: source|label
+ // 格式: 源|标签
                     edges.put(suffix, value.substring(value.indexOf("|") + 1));
                 } else if (value != null) {
                     edges.put(suffix, value);

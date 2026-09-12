@@ -21,35 +21,40 @@ import java.util.Set;
 /**
  * 自定义缓存注解解析器
  * <p>
- * 解除了原有 Spring Cache 中 key 和 keyGenerator 不能同时使用的限制。
- * 默认使用 tenantedKeyGenerator 作为 keyGenerator。
+   * 解除了原有 Spring 缓存 中 钥匙 和 钥匙生成器 不能同时使用的限制。
+   * 默认使用 tenanted钥匙生成器 作为 钥匙生成器。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2025/6/6
  * @author CH
  */
 public class CacheCustomAnnotationParser implements CacheAnnotationParser, Serializable {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     private static final Set<Class<? extends Annotation>> CACHE_OPERATION_ANNOTATIONS =
             Set.of(Cacheable.class, CacheEvict.class, CachePut.class, Caching.class);
 
     /**
-     * 默认的 keyGenerator
+      * 默认的 钥匙生成器
      */
     private static final String DEFAULT_KEY_GENERATOR = "tenantedKeyGenerator";
 
     @Override
-    /** 是否CandidateClass */
+    /** 是否candidate类 */
     public boolean isCandidateClass(Class<?> targetClass) {
         return AnnotationUtils.isCandidateClass(targetClass, CACHE_OPERATION_ANNOTATIONS);
     }
 
     @Override
     @Nullable
-    /** 解析CacheAnnotations */
+    /**
+     * 解析缓存注解
+     *
+     * @param type 类型
+     * @return 解析缓存注解的结果
+     */
     public Collection<CacheOperation> parseCacheAnnotations(Class<?> type) {
         DefaultCacheConfig defaultConfig = new DefaultCacheConfig(type);
         return parseCacheAnnotations(defaultConfig, type);
@@ -57,14 +62,25 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
 
     @Override
     @Nullable
-    /** 解析CacheAnnotations */
+    /**
+     * 解析缓存注解
+     *
+     * @param method 方法
+     * @return 解析缓存注解的结果
+     */
     public Collection<CacheOperation> parseCacheAnnotations(Method method) {
         DefaultCacheConfig defaultConfig = new DefaultCacheConfig(method.getDeclaringClass());
         return parseCacheAnnotations(defaultConfig, method);
     }
 
     @Nullable
-    /** 解析CacheAnnotations */
+    /**
+     * 解析缓存注解
+     *
+     * @param cachingConfig 缓存配置
+     * @param ae ae
+     * @return 解析缓存注解的结果
+     */
     private Collection<CacheOperation> parseCacheAnnotations(DefaultCacheConfig cachingConfig, AnnotatedElement ae) {
         Collection<CacheOperation> ops = parseCacheAnnotations(cachingConfig, ae, false);
         if (ops != null && ops.size() > 1) {
@@ -78,42 +94,42 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
 
     @Nullable
     /**
-     * 解析CacheAnnotations
-     * @param cachingConfig cachingConfig
+      * 解析缓存注解
+     * @param cachingConfig 缓存配置
      * @param ae ae
-     * @param localOnly localOnly
-     * @param CACHE_OPERATION_ANNOTATIONS CACHE_OPERATION_ANNOTATIONS
-     * @param CACHE_OPERATION_ANNOTATIONS CACHE_OPERATION_ANNOTATIONS
-     * @param cachingConfig cachingConfig
+     * @param localOnly 本地only
+     * @param CACHE_OPERATION_ANNOTATIONS 缓存_OPERATION_注解
+     * @param CACHE_OPERATION_ANNOTATIONS 缓存_OPERATION_注解
+     * @param cachingConfig 缓存配置
      * @param cacheable cacheable
-     * @param cachingConfig cachingConfig
-     * @param cacheEvict cacheEvict
-     * @param cachingConfig cachingConfig
-     * @param cachePut cachePut
-     * @param cachingConfig cachingConfig
+     * @param cachingConfig 缓存配置
+     * @param cacheEvict 缓存evict
+     * @param cachingConfig 缓存配置
+     * @param cachePut 缓存放入
+     * @param cachingConfig 缓存配置
      * @param caching caching
      * @param ops ops
      * @param ae ae
-     * @param defaultConfig defaultConfig
+     * @param defaultConfig 默认配置
      * @param cacheable cacheable
      * @param ae ae
-     * @param defaultConfig defaultConfig
-     * @param cacheEvict cacheEvict
+     * @param defaultConfig 默认配置
+     * @param cacheEvict 缓存evict
      * @param ae ae
-     * @param defaultConfig defaultConfig
-     * @param cachePut cachePut
+     * @param defaultConfig 默认配置
+     * @param cachePut 缓存放入
      * @param ae ae
-     * @param defaultConfig defaultConfig
+     * @param defaultConfig 默认配置
      * @param caching caching
      * @param ops ops
-     * @param defaultConfig defaultConfig
+     * @param defaultConfig 默认配置
      * @param cacheable cacheable
-     * @param defaultConfig defaultConfig
-     * @param cacheEvict cacheEvict
-     * @param defaultConfig defaultConfig
-     * @param cachePut cachePut
-     * @param target target
-     * @param builder builder
+     * @param defaultConfig 默认配置
+     * @param cacheEvict 缓存evict
+     * @param defaultConfig 默认配置
+     * @param cachePut 缓存放入
+     * @param target Target
+     * @param builder 构建器
      */
     private Collection<CacheOperation> parseCacheAnnotations(
             DefaultCacheConfig cachingConfig, AnnotatedElement ae, boolean localOnly) {
@@ -138,28 +154,28 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     }
 
     /**
-     * 解析CacheableAnnotation
+      * 解析缓存注解
      * @param ae ae
-     * @param defaultConfig defaultConfig
+     * @param defaultConfig 默认配置
      * @param cacheable cacheable
      * @param ae ae
-     * @param defaultConfig defaultConfig
-     * @param cacheEvict cacheEvict
+     * @param defaultConfig 默认配置
+     * @param cacheEvict 缓存evict
      * @param ae ae
-     * @param defaultConfig defaultConfig
-     * @param cachePut cachePut
+     * @param defaultConfig 默认配置
+     * @param cachePut 缓存放入
      * @param ae ae
-     * @param defaultConfig defaultConfig
+     * @param defaultConfig 默认配置
      * @param caching caching
      * @param ops ops
-     * @param defaultConfig defaultConfig
+     * @param defaultConfig 默认配置
      * @param cacheable cacheable
-     * @param defaultConfig defaultConfig
-     * @param cacheEvict cacheEvict
-     * @param defaultConfig defaultConfig
-     * @param cachePut cachePut
-     * @param target target
-     * @param builder builder
+     * @param defaultConfig 默认配置
+     * @param cacheEvict 缓存evict
+     * @param defaultConfig 默认配置
+     * @param cachePut 缓存放入
+     * @param target Target
+     * @param builder 构建器
      */
     private CacheableOperation parseCacheableAnnotation(
             AnnotatedElement ae, DefaultCacheConfig defaultConfig, Cacheable cacheable) {
@@ -180,25 +196,25 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     }
 
     /**
-     * 解析EvictAnnotation
+      * 解析evict注解
      * @param ae ae
-     * @param defaultConfig defaultConfig
-     * @param cacheEvict cacheEvict
+     * @param defaultConfig 默认配置
+     * @param cacheEvict 缓存evict
      * @param ae ae
-     * @param defaultConfig defaultConfig
-     * @param cachePut cachePut
+     * @param defaultConfig 默认配置
+     * @param cachePut 缓存放入
      * @param ae ae
-     * @param defaultConfig defaultConfig
+     * @param defaultConfig 默认配置
      * @param caching caching
      * @param ops ops
-     * @param defaultConfig defaultConfig
+     * @param defaultConfig 默认配置
      * @param cacheable cacheable
-     * @param defaultConfig defaultConfig
-     * @param cacheEvict cacheEvict
-     * @param defaultConfig defaultConfig
-     * @param cachePut cachePut
-     * @param target target
-     * @param builder builder
+     * @param defaultConfig 默认配置
+     * @param cacheEvict 缓存evict
+     * @param defaultConfig 默认配置
+     * @param cachePut 缓存放入
+     * @param target Target
+     * @param builder 构建器
      */
     private CacheEvictOperation parseEvictAnnotation(
             AnnotatedElement ae, DefaultCacheConfig defaultConfig, CacheEvict cacheEvict) {
@@ -219,22 +235,22 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     }
 
     /**
-     * 解析PutAnnotation
+      * 解析放入注解
      * @param ae ae
-     * @param defaultConfig defaultConfig
-     * @param cachePut cachePut
+     * @param defaultConfig 默认配置
+     * @param cachePut 缓存放入
      * @param ae ae
-     * @param defaultConfig defaultConfig
+     * @param defaultConfig 默认配置
      * @param caching caching
      * @param ops ops
-     * @param defaultConfig defaultConfig
+     * @param defaultConfig 默认配置
      * @param cacheable cacheable
-     * @param defaultConfig defaultConfig
-     * @param cacheEvict cacheEvict
-     * @param defaultConfig defaultConfig
-     * @param cachePut cachePut
-     * @param target target
-     * @param builder builder
+     * @param defaultConfig 默认配置
+     * @param cacheEvict 缓存evict
+     * @param defaultConfig 默认配置
+     * @param cachePut 缓存放入
+     * @param target Target
+     * @param builder 构建器
      */
     private CacheOperation parsePutAnnotation(
             AnnotatedElement ae, DefaultCacheConfig defaultConfig, CachePut cachePut) {
@@ -254,19 +270,19 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
     }
 
     /**
-     * 解析CachingAnnotation
+      * 解析缓存注解
      * @param ae ae
-     * @param defaultConfig defaultConfig
+     * @param defaultConfig 默认配置
      * @param caching caching
      * @param ops ops
-     * @param defaultConfig defaultConfig
+     * @param defaultConfig 默认配置
      * @param cacheable cacheable
-     * @param defaultConfig defaultConfig
-     * @param cacheEvict cacheEvict
-     * @param defaultConfig defaultConfig
-     * @param cachePut cachePut
-     * @param target target
-     * @param builder builder
+     * @param defaultConfig 默认配置
+     * @param cacheEvict 缓存evict
+     * @param defaultConfig 默认配置
+     * @param cachePut 缓存放入
+     * @param target Target
+     * @param builder 构建器
      */
     private void parseCachingAnnotation(
             AnnotatedElement ae, DefaultCacheConfig defaultConfig, Caching caching, Collection<CacheOperation> ops) {
@@ -284,17 +300,19 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
 
     /**
      * 默认缓存配置
+     * @author CH
+     * @since 4.0.0
      */
     private static class DefaultCacheConfig {
 
-        private final Class<?> target;
+        private final Class<?> target; // Target
 
         @Nullable
-        /** 缓存names */
+        /** 缓存名称 */
         private String[] cacheNames;
 
         @Nullable
-        /** 密钥generator */
+        /** 密钥生成器 */
         private String keyGenerator;
 
         @Nullable
@@ -309,14 +327,18 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
         private boolean initialized = false;
 
         /**
-         * 创建 DefaultCacheConfig 实例
-         * @param target target
+          * 创建 默认缓存配置 实例
+         * @param target Target
          */
         public DefaultCacheConfig(Class<?> target) {
             this.target = target;
         }
 
-        /** 应用Default */
+        /**
+         * 应用默认
+         *
+         * @param builder 构建器
+         */
         public void applyDefault(CacheOperation.Builder builder) {
             if (!this.initialized) {
                 CacheConfig annotation = AnnotatedElementUtils.findMergedAnnotation(this.target, CacheConfig.class);
@@ -333,7 +355,7 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
                 builder.setCacheNames(this.cacheNames);
             }
 
-            // 设置 keyGenerator，默认使用 tenantedKeyGenerator
+ // 设置 钥匙生成器，默认使用 tenanted钥匙生成器
             if (!StringUtils.hasText(builder.getKeyGenerator())) {
                 if (StringUtils.hasText(this.keyGenerator)) {
                     builder.setKeyGenerator(this.keyGenerator);
@@ -343,7 +365,7 @@ public class CacheCustomAnnotationParser implements CacheAnnotationParser, Seria
             }
 
             if (StringUtils.hasText(builder.getCacheManager()) || StringUtils.hasText(builder.getCacheResolver())) {
-                // One of these is set so we should not inherit anything
+ // One 的 these 是否 设置 so we should not inherit anything
             } else if (StringUtils.hasText(this.cacheResolver)) {
                 builder.setCacheResolver(this.cacheResolver);
             } else if (StringUtils.hasText(this.cacheManager)) {

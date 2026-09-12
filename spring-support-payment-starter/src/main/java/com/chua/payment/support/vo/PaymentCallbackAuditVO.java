@@ -5,6 +5,7 @@ import lombok.Data;
 /**
  * 回调策略审计视图
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class PaymentCallbackAuditVO {
@@ -20,7 +21,7 @@ public class PaymentCallbackAuditVO {
     private Boolean strictScoped;
     /** Effective优先级 */
     private String effectivePriority;
-    /** Notes */
+    /** 笔记 */
     private String notes;
 }
 

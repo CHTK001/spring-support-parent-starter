@@ -8,10 +8,11 @@ import com.chua.common.support.storage.FileStorage;
  * 文件存储工具类。
  *
  * @since 1.0
+ * @author CH
  */
 public final class FileStorageSupport {
 
-    /** 创建 FileStorageSupport 实例 */
+    /** 创建 文件storage支持 实例 */
     private FileStorageSupport() {
     }
 

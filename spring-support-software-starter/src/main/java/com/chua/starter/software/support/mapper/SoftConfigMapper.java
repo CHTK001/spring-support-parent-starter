@@ -8,7 +8,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * 软件配置表 Mapper
+   * 软件配置表 映射器
  *
  * @since 2026/7/25
  * @author CH

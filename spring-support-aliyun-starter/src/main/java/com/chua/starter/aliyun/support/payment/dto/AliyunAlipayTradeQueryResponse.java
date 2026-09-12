@@ -7,16 +7,17 @@ import java.math.BigDecimal;
 /**
  * 支付宝交易查询响应
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class AliyunAlipayTradeQueryResponse {
-    /** Success */
+    /** 成功 */
     private boolean success;
-    /** TradeNO */
+    /** 贸易no */
     private String tradeNo;
     /** 总数amount */
     private BigDecimal totalAmount;
-    /** Trade状态 */
+    /** 贸易状态 */
     private String tradeStatus;
     /** 消息 */
     private String message;

@@ -24,8 +24,8 @@ public interface SysAiUsageService {
      * @param model 模型
      * @param callType 调用类型
      * @param usage 用量信息
-     * @param requestId 请求ID
-     * @param userId 用户ID
+     * @param requestId 请求标识
+     * @param userId 用户标识
      */
     void record(String groupName, String provider, String model, String callType,
                 AiUsage usage, String requestId, String userId);
@@ -59,7 +59,7 @@ public interface SysAiUsageService {
                                   LocalDateTime startTime, LocalDateTime endTime);
 
     /**
-     * 查询按天趋势（Token 使用趋势）。
+      * 查询按天趋势（令牌 使用趋势）。
      *
      * <p>直接聚合日汇总表 {@code sys_ai_usage_daily}，按统计日期返回每天输入/输出/缓存 Token
      * 合计，保证时间窗口内每天都有数据点（不受明细分页/条数限制）。</p>
@@ -75,6 +75,8 @@ public interface SysAiUsageService {
 
     /**
      * 用量统计摘要
+     * @author CH
+     * @since 4.0.0
      */
     class UsageStatistics {
         /** 总数calls */
@@ -83,11 +85,11 @@ public interface SysAiUsageService {
         public Long totalPromptTokens;
         /** 总数completiontokens */
         public Long totalCompletionTokens;
-        /** 总数tokens */
+        /** 总数令牌 */
         public Long totalTokens;
         /** 总数cost */
         public Double totalCost;
-        /** 缓存读取Token */
+        /** 缓存读取令牌 */
         public Long totalCachedTokens;
         /** 原始费用(未折扣) */
         public Double standardCost;

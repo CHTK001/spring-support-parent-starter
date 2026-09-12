@@ -129,6 +129,7 @@ public class AlarmController {
      *
      * @param policyId 策略过滤，可为空
      * @return 规则列表
+     * @param false false
      */
     @Operation(summary = "规则列表")
     @GetMapping("/rule")
@@ -141,6 +142,7 @@ public class AlarmController {
      *
      * @param status 状态过滤，可为空
      * @return 事件列表
+     * @param false false
      */
     @Operation(summary = "事件列表")
     @GetMapping("/event")
@@ -151,7 +153,7 @@ public class AlarmController {
     /**
      * 处理事件
      *
-     * @param id         事件 ID
+     * @param id         事件 标识
      * @param remark     处理备注
      * @param falseAlarm 是否误报
      * @return 结果
@@ -167,8 +169,8 @@ public class AlarmController {
     /**
      * 测试告警规则
      *
-     * @param ruleId    规则 ID
-     * @param monitorId 监控 ID（可选，为空则测试全局规则）
+     * @param ruleId    规则 标识
+     * @param monitorId 监控 标识（可选，为空则测试全局规则）
      * @param metricName 指标名
      * @param value     指标值
      * @return 是否触发
@@ -226,7 +228,7 @@ public class AlarmController {
     /**
      * 维护窗口列表
      *
-     * @param policyId 策略 ID 过滤（可选）
+     * @param policyId 策略 标识 过滤（可选）
      * @return 列表
      */
     @Operation(summary = "维护窗口列表")

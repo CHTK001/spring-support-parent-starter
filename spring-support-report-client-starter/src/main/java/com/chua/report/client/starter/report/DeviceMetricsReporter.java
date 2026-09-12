@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * <p>采集能力通过 {@link OshiSystemMonitor} 统一封装，本类只负责调度与上报。</p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/12/05
  * @author CH
  */
@@ -65,7 +65,7 @@ public class DeviceMetricsReporter {
     private static final long INITIAL_DELAY_CPU_SECONDS = 5L;
 
     /**
-     * SyncClient 实例
+      * 同步客户端 实例
      */
     @Setter
     /** 同步客户端 */
@@ -111,7 +111,7 @@ public class DeviceMetricsReporter {
      * 要上报的指标类型（默认全部）
      */
     @Setter
-    /** 是否启用metrics */
+    /** 是否启用指标 */
     private Set<MetricType> enabledMetrics = Set.of(MetricType.values());
 
     /**
@@ -124,7 +124,7 @@ public class DeviceMetricsReporter {
      */
     private final AtomicReference<Map<String, Object>> cpuCache = new AtomicReference<>(new HashMap<>());
 
-    /** 创建 DeviceMetricsReporter 实例 */
+    /** 创建 device指标reporter 实例 */
     private DeviceMetricsReporter() {
     }
 

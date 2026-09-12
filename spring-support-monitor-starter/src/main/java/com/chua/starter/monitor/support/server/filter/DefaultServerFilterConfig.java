@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
- * 服务管理 —— 默认 ServerFilter 初始化配置实现。
+   * 服务管理 —— 默认 服务端过滤器 初始化配置实现。
  *
  * <p>承载插件描述中的 {@code params}，在 {@code ServerFilter#init(ServerFilterConfig)}
  * 阶段注入给过滤器实现。</p>

@@ -7,6 +7,7 @@ import java.util.List;
  * 树形节点
  *
  * @author CH
+ * @since 4.0.0
  */
 public class TreeNode<T> {
 
@@ -15,51 +16,89 @@ public class TreeNode<T> {
     private T data;
 
     /** 节点标识 */
-    /** ID */
+    /** 标识 */
     private Object id;
 
     /** 父节点标识 */
-    /** 父级ID */
+    /** 父级标识 */
     private Object parentId;
 
     /** 子节点集合 */
     /** Children */
     private List<TreeNode<T>> children = new ArrayList<>();
 
+    /**
+     * 树节点。
+     * @param data 数据
+     * @param id 标识
+     * @param parentId 父标识
+     */
     public TreeNode(T data, Object id, Object parentId) {
         this.data = data;
         this.id = id;
         this.parentId = parentId;
     }
 
+    /**
+     * 获取数据。
+     * @return 获取数据的结果
+     */
     public T getData() {
         return data;
     }
 
+    /**
+     * 设置数据。
+     * @param data 数据
+     */
     public void setData(T data) {
         this.data = data;
     }
 
+    /**
+      * 获取标识。
+     * @return 获取id的结果
+     */
     public Object getId() {
         return id;
     }
 
+    /**
+      * 设置标识。
+     * @param id 标识
+     */
     public void setId(Object id) {
         this.id = id;
     }
 
+    /**
+      * 获取父标识。
+     * @return 获取父id的结果
+     */
     public Object getParentId() {
         return parentId;
     }
 
+    /**
+      * 设置父标识。
+     * @param parentId 父标识
+     */
     public void setParentId(Object parentId) {
         this.parentId = parentId;
     }
 
+    /**
+     * 获取children。
+     * @return 获取children的结果
+     */
     public List<TreeNode<T>> getChildren() {
         return children;
     }
 
+    /**
+     * 设置children。
+     * @param children children
+     */
     public void setChildren(List<TreeNode<T>> children) {
         this.children = children;
     }

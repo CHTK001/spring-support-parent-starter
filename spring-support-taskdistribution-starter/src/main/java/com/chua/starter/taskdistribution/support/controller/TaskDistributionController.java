@@ -88,7 +88,7 @@ public class TaskDistributionController {
     /**
      * 查询单个任务详情。
      *
-     * @param taskId 任务 ID
+     * @param taskId 任务 标识
      * @return 任务详情
      */
     @GetMapping("/task/{taskId}")
@@ -110,7 +110,7 @@ public class TaskDistributionController {
     /**
      * 取消任务。
      *
-     * @param taskId 任务 ID
+     * @param taskId 任务 标识
      * @return 操作结果
      */
     @PostMapping("/task/{taskId}/cancel")
@@ -128,7 +128,7 @@ public class TaskDistributionController {
     /**
      * 暂停任务。
      *
-     * @param taskId 任务 ID
+     * @param taskId 任务 标识
      * @return 操作结果
      */
     @PostMapping("/task/{taskId}/pause")
@@ -146,7 +146,7 @@ public class TaskDistributionController {
     /**
      * 恢复暂停的任务。
      *
-     * @param taskId 任务 ID
+     * @param taskId 任务 标识
      * @return 操作结果
      */
     @PostMapping("/task/{taskId}/resume")
@@ -164,7 +164,7 @@ public class TaskDistributionController {
     /**
      * 删除任务记录。
      *
-     * @param taskId 任务 ID
+     * @param taskId 任务 标识
      * @return 操作结果
      */
     @DeleteMapping("/task/{taskId}")
@@ -207,7 +207,7 @@ public class TaskDistributionController {
     /**
      * 注销节点。
      *
-     * @param nodeId 节点 ID
+     * @param nodeId 节点 标识
      * @return 操作结果
      */
     @DeleteMapping("/node/{nodeId}")

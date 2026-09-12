@@ -21,7 +21,7 @@ import java.util.Map;
 /**
  * 站内消息推送实现
  * <p>
- * 作为消息推送的站内渠道（SPI 标识 {@code station}），通过 Socket 将消息推送到
+   * 作为消息推送的站内渠道（SPI 标识 {@code station}），通过 套接字 将消息推送到
  * 目标用户已登录的前端页面。推送执行器由 Spring 环境注入（见
  * {@code MessageAutoConfiguration}），未接入 Socket 服务时推送返回失败，不影响其他渠道。
  * </p>
@@ -45,6 +45,12 @@ import java.util.Map;
         }
 )
 @Slf4j
+/**
+ * 状态消息push类。
+ *
+ * @author CH
+ * @since 4.0.0
+ */
 public class StationMessagePush implements MessagePush {
 
     /**
@@ -53,7 +59,7 @@ public class StationMessagePush implements MessagePush {
     private static final String PROVIDER = "station";
 
     /**
-     * Socket 事件名（与前端监听保持一致）
+      * 套接字 事件名（与前端监听保持一致）
      */
     private static final String SOCKET_EVENT = "message";
 
@@ -88,6 +94,8 @@ public class StationMessagePush implements MessagePush {
 
     /**
      * 站内推送执行器
+     * @author CH
+     * @since 4.0.0
      */
     @FunctionalInterface
     public interface StationPusher {
@@ -95,7 +103,7 @@ public class StationMessagePush implements MessagePush {
         /**
          * 向指定用户推送消息
          *
-         * @param userId  目标用户 ID
+         * @param userId  目标用户 标识
          * @param payload 消息体（JSON 字符串）
          */
         void push(String userId, String payload);

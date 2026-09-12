@@ -22,18 +22,19 @@ import org.slf4j.LoggerFactory;
  * @author CH
  */
 public class ServiceInfoBannerListener implements SmartApplicationListener {
-    private static final Logger log = LoggerFactory.getLogger(ServiceInfoBannerListener.class);
+    private static final Logger log = LoggerFactory.getLogger(ServiceInfoBannerListener.class); // 日志
 
     /** Detector */
     private final ServiceInfoEndpointDetector detector;
     /** 属性 */
     private final ServiceInfoProperties properties;
-    private volatile boolean bannerPrinted = false;
+    private volatile boolean bannerPrinted = false; // bannerprinted
 
     /**
-     * 创建 ServiceInfoBannerListener 实例
+      * 创建 服务信息banner监听器 实例
      * @param detector detector
-     * @param ServiceInfoProperties ServiceInfoProperties
+     * @param properties 服务信息属性
+     * @param properties 属性
      */
     public ServiceInfoBannerListener(ServiceInfoEndpointDetector detector, ServiceInfoProperties properties) {
         this.detector = detector;
@@ -41,23 +42,35 @@ public class ServiceInfoBannerListener implements SmartApplicationListener {
     }
 
     @Override
-    /** SupportsEventType */
+    /** 支持事件类型 */
     public boolean supportsEventType(Class<? extends ApplicationEvent> eventType) {
         return ApplicationReadyEvent.class.isAssignableFrom(eventType)
                 || ApplicationFailedEvent.class.isAssignableFrom(eventType);
     }
 
     @Override
-    /** OnApplicationEvent */
+    /** onapplication事件 */
     public void onApplicationEvent(ApplicationEvent event) {
         if (event instanceof ApplicationReadyEvent) {
+            /**
+             * on就绪。
+             * @param (ApplicationReadyEvent (application就绪事件
+             */
             onReady((ApplicationReadyEvent) event);
         } else if (event instanceof ApplicationFailedEvent) {
+            /**
+             * on失败。
+             * @param (ApplicationFailedEvent (application失败事件
+             */
             onFailed((ApplicationFailedEvent) event);
         }
     }
 
-    /** OnReady */
+    /**
+     * on就绪
+     *
+     * @param event 事件
+     */
     private void onReady(ApplicationReadyEvent event) {
         if (!properties.isBanner()) {
             return;
@@ -71,7 +84,11 @@ public class ServiceInfoBannerListener implements SmartApplicationListener {
         }
     }
 
-    /** OnFailed */
+    /**
+     * on失败
+     *
+     * @param event 事件
+     */
     private void onFailed(ApplicationFailedEvent event) {
         if (bannerPrinted) {
             return;
@@ -88,9 +105,9 @@ public class ServiceInfoBannerListener implements SmartApplicationListener {
         }
     }
 
-    // SmartApplicationListener requires these methods
+ // smartapplication监听器 requires these 方法
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
         return Ordered.LOWEST_PRECEDENCE;
     }

@@ -14,7 +14,7 @@ import java.time.Instant;
  * 训练任务领域对象（充血模型）。
  *
  * <p>封装训练任务完整生命周期状态机：PENDING → RUNNING → SUCCESS / FAILED / CANCELLED，
- * 以及超参数合并、进度观测等业务行为，Service 层只编排领域方法，不直接 setter 拼装状态。</p>
+   * 以及超参数合并、进度观测等业务行为，服务 层只编排领域方法，不直接 setter 拼装状态。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -23,12 +23,12 @@ import java.time.Instant;
 public class TrainTask {
 
     /**
-     * 任务 ID（UUID）。
+      * 任务 标识（UUID）。
      */
     private final String id;
 
     /**
-     * 上传的 ZIP 原始文件名。
+      * 上传的 压缩 原始文件名。
      */
     private final String originalFileName;
 
@@ -99,6 +99,13 @@ public class TrainTask {
         return task;
     }
 
+    /**
+     * train任务。
+     * @param id 标识
+     * @param originalFileName 原始文件名称
+     * @param dataPath 数据路径
+     * @param createdAt 创建at
+     */
     private TrainTask(String id, String originalFileName, String dataPath, Instant createdAt) {
         this.id = id;
         this.originalFileName = originalFileName;
@@ -114,6 +121,11 @@ public class TrainTask {
      */
     public synchronized void start() {
         if (status != TrainStatus.PENDING) {
+            /**
+             * illegal状态异常。
+             * @param 可启动）" 可启动）"
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("任务状态为 " + status + "，不可启动（仅 PENDING 可启动）");
         }
         this.status = TrainStatus.RUNNING;
@@ -124,14 +136,19 @@ public class TrainTask {
     }
 
     /**
-     * 指定训练类型（引擎路由键）。null/空串回退默认类型，仅 PENDING 可改。
+      * 指定训练类型（引擎路由键）。空/空串回退默认类型，仅 PENDING 可改。
      *
-     * @param type 训练类型（resnet50 / yolo ...）；null 视为未指定
+     * @param type 训练类型（resnet50 / yolo ...）；空 视为未指定
      * @return 本次实际生效的类型
      * @throws IllegalStateException 已启动后不可再改类型
      */
     public synchronized String selectType(String type) {
         if (status != TrainStatus.PENDING) {
+            /**
+             * illegal状态异常。
+             * @param 可指定）" 可指定）"
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("任务状态为 " + status + "，不可再改训练类型（仅 PENDING 可指定）");
         }
         this.type = (type == null || type.isBlank()) ? TrainProviders.DEFAULT_TYPE : type;
@@ -141,7 +158,7 @@ public class TrainTask {
     /**
      * 标记训练成功。
      *
-     * @param result 训练结果（含 bestScore、elapsedMs、labels）
+     * @param result 训练结果（含 bestscore、elapsedms、标签）
      */
     public synchronized void succeed(TrainResult result) {
         this.status = TrainStatus.SUCCESS;
@@ -207,6 +224,10 @@ public class TrainTask {
      * @return TrainListener
      */
     public TrainListener createListener() {
+        /**
+         * train监听器。
+         * @return train监听器的结果
+         */
         return new TrainListener() {
             @Override
             public void onStarted(TrainProgress p) {

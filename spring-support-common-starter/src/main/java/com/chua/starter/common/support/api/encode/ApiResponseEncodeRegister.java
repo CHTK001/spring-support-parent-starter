@@ -18,7 +18,7 @@ import java.util.List;
  * 提供响应数据加密功能。
  * </p>
  *
- * @version 2.0.0
+   * @版本 2.0.0
  * @since 2024/01/22
  * @author CH
  */
@@ -34,6 +34,8 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
 
     /**
      * 编解码器类型
+     * @param codecType codec类型
+     * @param whiteList white列表
      */
     private ApiResponseEncodeRegister(String codecType, List<String> whiteList) {
         this.codecType = codecType;
@@ -57,8 +59,15 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
         this.apiResponseEncodeConfiguration = configuration;
     }
 
-    /** 是否Pass */
+    /**
+     * 是否通过
+     *
+     * @return 是否通过的结果
+     */
     public boolean isPass() {
+        /**
+         * 检查。
+         */
         check();
         return !apiResponseEncodeConfiguration.isCodecResponseOpen();
     }
@@ -83,14 +92,33 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
                 return sm2Encode(data);
             }
             String encryptedData = Codec.build("sm4", codecType).encodeHex(data);
+            /**
+             * codec结果。
+             * @param codecType codec类型
+             * @param encryptedData encrypted数据
+             * @param String.valueOf(codecType.length( 字符串.值的(codec类型.长度(
+             * @return codec结果的结果
+             */
             return new CodecResult(codecType, encryptedData, String.valueOf(codecType.length()));
         } catch (Exception e) {
             log.error("[CodecFactory] 数据加密失败", e);
+            /**
+             * codec结果。
+             * @param "" ""
+             * @param data 数据
+             * @param String.valueOf(0 字符串.值的(0
+             * @return codec结果的结果
+             */
             return new CodecResult("", data, String.valueOf(0));
         }
     }
 
-    /** Sm编码 */
+    /**
+     * Sm编码
+     *
+     * @param data 数据
+     * @return sm2Encode的结果
+     */
     private CodecResult sm2Encode(String data) {
         try {
             Sm2Cipher sm2Cipher = Sm2Cipher.create("bc");
@@ -98,14 +126,33 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
             byte[] encrypted = sm2Cipher.encrypt(keyPair.getPublic().getEncoded(), data.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             String encryptedData = bytesToHex(encrypted);
             String privateKeyHex = bytesToHex(keyPair.getPrivate().getEncoded());
+            /**
+             * codec结果。
+             * @param privateKeyHex 私募钥匙hex
+             * @param encryptedData encrypted数据
+             * @param String.valueOf(privateKeyHex.length( 字符串.valueof(私募钥匙hex.长度(
+             * @return codec结果的结果
+             */
             return new CodecResult(privateKeyHex, encryptedData, String.valueOf(privateKeyHex.length()));
         } catch (Exception e) {
             log.error("[CodecFactory] SM2 数据加密失败", e);
+            /**
+             * codec结果。
+             * @param "" ""
+             * @param data 数据
+             * @param String.valueOf(0 字符串.值的(0
+             * @return codec结果的结果
+             */
             return new CodecResult("", data, String.valueOf(0));
         }
     }
 
-    /** BytesToHex */
+    /**
+     * bytes转为hex
+     *
+     * @param bytes bytes
+     * @return bytes转为hex的结果
+     */
     private static String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder(bytes.length * 2);
         for (byte b : bytes) {
@@ -120,6 +167,9 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
      * @param parseBoolean 是否启用
      */
     public void setEnable(boolean parseBoolean) {
+        /**
+         * 检查。
+         */
         check();
         apiResponseEncodeConfiguration.setCodecResponseOpen(parseBoolean);
     }
@@ -149,12 +199,20 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
     }
 
     @Override
-    /** OnApplicationEvent */
+    /** onapplication事件 */
     public void onApplicationEvent(ApiResponseEncodeConfiguration event) {
+        /**
+         * upgrade。
+         * @param event 事件
+         */
         upgrade(event);
     }
 
-    /** 获取Or创建Configuration */
+    /**
+      * 获取或创建配置
+     *
+     * @return 获取or创建配置的结果
+     */
     private ApiResponseEncodeConfiguration getOrCreateConfiguration() {
         ApiResponseEncodeConfiguration configuration = GlobalSettingFactory.getInstance().get("config", ApiResponseEncodeConfiguration.class);
         if (configuration == null) {
@@ -166,6 +224,8 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
 
     /**
      * 编码结果
+     * @author CH
+     * @since 4.0.0
      */
     public static class CodecResult {
         /**
@@ -194,17 +254,29 @@ public class ApiResponseEncodeRegister implements Upgrade<ApiResponseEncodeConfi
             this.timestamp = timestamp;
         }
 
-        /** 获取Key */
+        /**
+         * 获取钥匙
+         *
+         * @return 获取钥匙的结果
+         */
         public String getKey() {
             return key;
         }
 
-        /** 获取Data */
+        /**
+         * 获取数据
+         *
+         * @return 获取数据的结果
+         */
         public String getData() {
             return data;
         }
 
-        /** 获取Timestamp */
+        /**
+         * 获取时间戳
+         *
+         * @return 获取时间戳的结果
+         */
         public String getTimestamp() {
             return timestamp;
         }

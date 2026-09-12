@@ -12,7 +12,7 @@ import lombok.Data;
 public class AIDialog {
 
     /**
-     * 会话 ID
+      * 会话 标识
      */
     private Long id;
 
@@ -35,7 +35,7 @@ public class AIDialog {
     /**
      * 简易构造，时间戳取当前系统时间。
      *
-     * @param id   会话 ID
+     * @param id   会话 标识
      * @param name 会话名称
      */
     public AIDialog(Long id, String name) {

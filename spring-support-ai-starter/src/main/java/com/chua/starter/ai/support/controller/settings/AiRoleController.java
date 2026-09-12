@@ -61,10 +61,13 @@ public class AiRoleController {
     }
 
     /**
-     * 按 ID 查询角色。
+      * 按 标识 查询角色。
      *
      * @param id 角色主键
      * @return 角色实体
+     * @param "角色主键" "角色主键"
+     * @param "角色主键" "角色主键"
+     * @param "角色主键" "角色主键"
      */
     @Operation(summary = "查询单个角色")
     @GetMapping("/{id}")
@@ -91,6 +94,7 @@ public class AiRoleController {
      * @param id   角色主键
      * @param role 角色实体
      * @return 是否成功
+     * @param "角色主键" "角色主键"
      */
     @Permission("admin")
     @Operation(summary = "更新角色")
@@ -106,6 +110,9 @@ public class AiRoleController {
      *
      * @param id 角色主键
      * @return 是否成功
+     * @param "角色主键" "角色主键"
+     * @param "角色主键" "角色主键"
+     * @param "角色主键" "角色主键"
      */
     @Permission("admin")
     @Operation(summary = "删除角色")

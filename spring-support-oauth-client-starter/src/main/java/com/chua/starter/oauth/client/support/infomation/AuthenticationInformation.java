@@ -26,17 +26,17 @@ public class AuthenticationInformation {
      */
     private final UserResume returnResult;
     /**
-     * token信息
+      * 令牌信息
      */
     private String token;
 
     /**
-     * 刷新token
+      * 刷新令牌
      */
     private String refreshToken;
 
     /**
-     * 服务端透传的错误消息（业务错误时使用，优先级高于 Information.message）
+      * 服务端透传的错误消息（业务错误时使用，优先级高于 信息.消息）
      */
     private String errorMessage;
     /**
@@ -45,6 +45,11 @@ public class AuthenticationInformation {
      * @return 信息
      */
     public static AuthenticationInformation noEncryptKey() {
+        /**
+         * 认证信息。
+         * @param KEY_NO_EXIST 钥匙noexist
+         * @param null 空
+         */
         return new AuthenticationInformation(KEY_NO_EXIST, null);
     }
 
@@ -54,6 +59,11 @@ public class AuthenticationInformation {
      * @return 信息
      */
     public static AuthenticationInformation passAuthenticationInformation() {
+        /**
+         * 认证信息。
+         * @param OK OK
+         * @param null 空
+         */
         return new AuthenticationInformation(OK, null);
     }
 
@@ -63,6 +73,11 @@ public class AuthenticationInformation {
      * @return 信息
      */
     public static AuthenticationInformation authServerError() {
+        /**
+         * 认证信息。
+         * @param AUTHENTICATION_SERVER_EXCEPTION 认证服务端异常
+         * @param null 空
+         */
         return new AuthenticationInformation(AUTHENTICATION_SERVER_EXCEPTION, null);
     }
 
@@ -72,6 +87,11 @@ public class AuthenticationInformation {
      * @return 信息
      */
     public static AuthenticationInformation authServerNotFound() {
+        /**
+         * 认证信息。
+         * @param AUTHENTICATION_SERVER_NO_EXIST 认证服务端noexist
+         * @param null 空
+         */
         return new AuthenticationInformation(AUTHENTICATION_SERVER_NO_EXIST, null);
     }
 
@@ -81,6 +101,11 @@ public class AuthenticationInformation {
      * @return 信息
      */
     public static AuthenticationInformation noAuth() {
+        /**
+         * 认证信息。
+         * @param AUTHENTICATION_FAILURE 认证失败
+         * @param null 空
+         */
         return new AuthenticationInformation(AUTHENTICATION_FAILURE, null);
     }
 }

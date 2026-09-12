@@ -13,11 +13,12 @@ import java.util.Properties;
  * spring环境后处理器
  *
  * @author CH
+ * @since 4.0.0
  */
 @SuppressWarnings("removal")
 public class SpringEnvironmentPostProcessor implements EnvironmentPostProcessor {
     @Override
-    /** Post处理Environment */
+    /** Post处理环境 */
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         Properties properties = new Properties();
 

@@ -3,7 +3,7 @@ package com.chua.starter.datasource.support.graph;
 import lombok.Data;
 
 /**
- * relation-graph 边：单向外键关系
+   * relation-图计算 边：单向外键关系
  *
  * @since 2026/8/5
  * @author CH
@@ -12,17 +12,17 @@ import lombok.Data;
 public class GraphEdge {
 
     /**
-     * 边 id（from + to + 列名 hash）
+       * 边 标识（从 + 转为 + 列名 哈希）
      */
     private String id;
 
     /**
-     * 源表 id（持有外键的表）
+      * 源表 标识（持有外键的表）
      */
     private String from;
 
     /**
-     * 目标表 id（被引用的表）
+      * 目标表 标识（被引用的表）
      */
     private String to;
 

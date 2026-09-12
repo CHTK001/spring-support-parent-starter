@@ -10,10 +10,10 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 基于 Spring Data Redis {@link StringRedisTemplate} 的 {@link KvEngine} 实现。
+   * 基于 Spring 数据 Redis {@link StringRedisTemplate} 的 {@link KvEngine} 实现。
  *
  * <p>通过 Spring Boot 自动配置注入，作为默认 KV 引擎在应用中使用。
- * 利用 Redis SCAN 命令实现高效前缀查询，避免 KEYS 命令阻塞 Redis 实例。</p>
+   * 利用 Redis 扫描 命令实现高效前缀查询，避免 钥匙 命令阻塞 Redis 实例。</p>
  *
  * <h2>使用方式</h2>
  * <pre>{@code
@@ -41,6 +41,9 @@ import java.util.concurrent.TimeUnit;
  *         return kvEngine.findAllByPrefix("user:" + userId + ":");
  *     }
  * }
+ * }</pre>"用户:" + 用户标识 + ":");
+ *     }
+ * }
  * }</pre>
  *
  * @since 4.0.0.42
@@ -49,19 +52,19 @@ import java.util.concurrent.TimeUnit;
 public class RedisKvEngine implements KvEngine {
 
     /**
-     * 底层 Spring Data Redis 字符串操作模板
+      * 底层 Spring 数据 Redis 字符串操作模板
      */
     private final StringRedisTemplate redisTemplate;
 
     /**
-     * SCAN 命令每次扫描的批次大小
+      * 扫描 命令每次扫描的批次大小
      */
     private static final int SCAN_BATCH_SIZE = 1000;
 
     /**
      * 构造基于指定 {@link StringRedisTemplate} 的 KV 引擎。
      *
-     * @param redisTemplate 不可为 null
+     * @param redisTemplate 不可为 空
      */
     public RedisKvEngine(StringRedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
@@ -74,19 +77,19 @@ public class RedisKvEngine implements KvEngine {
     }
 
     @Override
-    /** Put */
+    /** 放入 */
     public void put(String key, String value) {
         redisTemplate.opsForValue().set(key, value);
     }
 
     @Override
-    /** Put */
+    /** 放入 */
     public void put(String key, String value, Duration ttl) {
         redisTemplate.opsForValue().set(key, value, ttl);
     }
 
     @Override
-    /** ContainsKey */
+    /** contains钥匙 */
     public boolean containsKey(String key) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(key));
     }
@@ -116,11 +119,11 @@ public class RedisKvEngine implements KvEngine {
     }
 
     /**
-     * 使用 SCAN 命令查找所有以指定前缀开头的键值对。
+      * 使用 扫描 命令查找所有以指定前缀开头的键值对。
      * <p>SCAN 不会阻塞 Redis 实例，适合生产环境使用。每批次扫描 1000 个键。</p>
      *
-     * @param prefix 键前缀，不可为 null
-     * @return 匹配前缀的键值对映射；无匹配时返回空 Map
+     * @param prefix 键前缀，不可为 空
+     * @return 匹配前缀的键值对映射；无匹配时返回空 映射
      */
     @Override
     public Map<String, String> findAllByPrefix(String prefix) {
@@ -133,6 +136,10 @@ public class RedisKvEngine implements KvEngine {
                         .match(prefix + "*")
                         .count(SCAN_BATCH_SIZE)
                         .build();
+        /**
+         * 尝试。
+         * @param redisTemplate.scan(options redistemplate.扫描(期权
+         */
         try (var cursor = redisTemplate.scan(options)) {
             while (cursor.hasNext()) {
                 String key = cursor.next();

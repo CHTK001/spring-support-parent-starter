@@ -7,8 +7,8 @@ import java.nio.file.Path;
 /**
  * 临时文件句柄
  * <p>
- * 聚合下载/编辑场景产生的本地临时文件，实现 AutoCloseable：
- * 使用方以 try-with-resources 持有，关闭即删除磁盘文件，
+   * 聚合下载/编辑场景产生的本地临时文件，实现 auto关闭：
+   * 使用方以 尝试-with-resources 持有，关闭即删除磁盘文件，
  * 防止敏感内容残留。
  * </p>
  *
@@ -16,6 +16,7 @@ import java.nio.file.Path;
  * @param fileName 建议的展示文件名（通常为远端原始文件名）
  * @author CH
  * @since 4.0.0.42
+ * @return temp文件的结果
  */
 public record TempFile(Path path, String fileName) implements AutoCloseable {
 

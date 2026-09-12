@@ -9,7 +9,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import java.util.List;
 
 /**
- * 软件配置表 Service 接口
+   * 软件配置表 服务 接口
  *
  * @since 2026/7/25
  * @author CH
@@ -44,42 +44,42 @@ public interface SoftConfigService extends IService<SoftConfig> {
     /**
      * 删除配置
      *
-     * @param configId 配置ID
+     * @param configId 配置标识
      * @return 返回删除结果
      */
     ReturnResult<Boolean> deleteConfig(String configId);
 
     /**
-     * 根据软件ID和配置键获取配置
+      * 根据软件标识和配置键获取配置
      *
-     * @param softwareId 软件ID
+     * @param softwareId 软件标识
      * @param key 配置键
      * @return 配置信息
      */
     SoftConfig getBySoftwareAndKey(String softwareId, String key);
 
     /**
-     * 根据软件ID获取配置列表
+      * 根据软件标识获取配置列表
      *
-     * @param softwareId 软件ID
+     * @param softwareId 软件标识
      * @return 配置列表
      */
     List<SoftConfig> listBySoftwareId(String softwareId);
 
     /**
-     * 根据软件ID和用户ID获取配置列表
+      * 根据软件标识和用户标识获取配置列表
      *
-     * @param softwareId 软件ID
-     * @param userId 用户ID
+     * @param softwareId 软件标识
+     * @param userId 用户标识
      * @return 配置列表
      */
     List<SoftConfig> listBySoftwareIdAndUserId(String softwareId, String userId);
 
     /**
-     * 根据软件ID和设备ID获取配置列表
+      * 根据软件标识和设备标识获取配置列表
      *
-     * @param softwareId 软件ID
-     * @param deviceId 设备ID
+     * @param softwareId 软件标识
+     * @param deviceId 设备标识
      * @return 配置列表
      */
     List<SoftConfig> listBySoftwareIdAndDeviceId(String softwareId, String deviceId);

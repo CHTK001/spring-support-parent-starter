@@ -16,6 +16,10 @@ public interface PaymentNotifyLogService {
                            String requestHeaders,
                            String requestBody);
 
+    /**
+     * 饰面。
+     * @param dto dto
+     */
     void finish(FinishNotifyLogDTO dto);
 }
 

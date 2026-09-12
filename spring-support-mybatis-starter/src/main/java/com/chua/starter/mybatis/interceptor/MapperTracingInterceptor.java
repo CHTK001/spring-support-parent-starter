@@ -24,6 +24,12 @@ import java.sql.Statement;
         @Signature(type = StatementHandler.class, method = "parameterize", args = {Statement.class}),
         @Signature(type = ResultSetHandler.class, method = "handleResultSets", args = {Statement.class})
 })
+/**
+ * 映射器追踪拦截器类。
+ *
+ * @author CH
+ * @since 4.0.0
+ */
 public class MapperTracingInterceptor implements Interceptor {
 
     @Override
@@ -31,6 +37,10 @@ public class MapperTracingInterceptor implements Interceptor {
         Object arg = invocation.getArgs()[0];
         if (arg instanceof MappedStatement ms) {
             String mapperMethod = ms.getId();
+            /**
+             * 尝试。
+             * @param mapperMethod 映射器方法
+             */
             try (MDC.MDCCloseable closeable = MDC.putCloseable("mapper", mapperMethod)) {
                 return invocation.proceed();
             }

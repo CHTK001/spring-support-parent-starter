@@ -12,6 +12,8 @@ import java.lang.annotation.Target;
 /**
  * 加密
  *
+ * @author CH
+ * @since 4.0.0
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
@@ -21,14 +23,22 @@ public @interface Crypto {
 
     /**
      * 密钥
+     * @return 钥匙的结果
      */
     String key();
 
     /**
      * 密钥类型
+     * @return 钥匙类型的结果
      */
     KeyType keyType() default KeyType.NONE;
 
+    /**
+     * 钥匙类型枚举。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     public static enum KeyType {
         /**
          * 不使用

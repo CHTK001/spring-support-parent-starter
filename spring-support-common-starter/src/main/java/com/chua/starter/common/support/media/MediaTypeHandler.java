@@ -4,6 +4,7 @@ package com.chua.starter.common.support.media;
  * 媒体信息处理器
  *
  * @author CH
+ * @since 4.0.0
  */
 public interface MediaTypeHandler {
     /**

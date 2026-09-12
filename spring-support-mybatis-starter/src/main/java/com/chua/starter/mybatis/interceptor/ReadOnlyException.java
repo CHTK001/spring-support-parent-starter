@@ -9,13 +9,17 @@ package com.chua.starter.mybatis.interceptor;
  */
 public class ReadOnlyException extends RuntimeException {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
      * 构造函数
      */
     public ReadOnlyException() {
+        /**
+         * 父。
+         * @param "数据库当前处于只读模式，禁止执行写入操作" "数据库当前处于只读模式，禁止执行写入操作"
+         */
         super("数据库当前处于只读模式，禁止执行写入操作");
     }
 
@@ -25,6 +29,10 @@ public class ReadOnlyException extends RuntimeException {
      * @param message 异常信息
      */
     public ReadOnlyException(String message) {
+        /**
+         * 父。
+         * @param message 消息
+         */
         super(message);
     }
 
@@ -35,6 +43,11 @@ public class ReadOnlyException extends RuntimeException {
      * @param cause   原因
      */
     public ReadOnlyException(String message, Throwable cause) {
+        /**
+         * 父。
+         * @param message 消息
+         * @param cause cause
+         */
         super(message, cause);
     }
 }

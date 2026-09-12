@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 /**
  * 回调异常清理任务
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @Component
@@ -21,10 +22,10 @@ import java.time.LocalDateTime;
 @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class PaymentNotifyCleanupTask implements PaymentManagedTask {
 
-    /** Notify错误mapper */
+    /** 通知错误映射器 */
     private final PaymentNotifyErrorMapper notifyErrorMapper;
 
-    /** CleanResolvedErrors */
+    /** cleanresolved错误 */
     public void cleanResolvedErrors() {
         log.info("开始清理已解决的回调异常记录");
 
@@ -41,19 +42,19 @@ public class PaymentNotifyCleanupTask implements PaymentManagedTask {
     }
 
     @Override
-    /** TaskKey */
+    /** 任务钥匙 */
     public String taskKey() {
         return "payment-notify-cleanup";
     }
 
     @Override
-    /** TaskName */
+    /** 任务名称 */
     public String taskName() {
         return "回调异常清理";
     }
 
     @Override
-    /** DefaultCron */
+    /** 默认cron */
     public String defaultCron() {
         return "0 0 2 * * ?";
     }
@@ -72,6 +73,9 @@ public class PaymentNotifyCleanupTask implements PaymentManagedTask {
     )
     /** 执行 */
     public void execute() {
+        /**
+         * cleanresolved错误。
+         */
         cleanResolvedErrors();
     }
 }

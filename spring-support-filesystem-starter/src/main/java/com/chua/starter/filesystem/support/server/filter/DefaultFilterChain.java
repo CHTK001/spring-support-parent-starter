@@ -25,7 +25,7 @@ public class DefaultFilterChain implements FilterChain {
      * 创建过滤器链。
      *
      * @param filters       过滤器列表，可为空
-     * @param finalHandler  终态处理器，不能为 null
+     * @param finalHandler  终态处理器，不能为 空
      */
     public DefaultFilterChain(List<ServerFilter> filters, ServerFilter finalHandler) {
         this.filters = filters;

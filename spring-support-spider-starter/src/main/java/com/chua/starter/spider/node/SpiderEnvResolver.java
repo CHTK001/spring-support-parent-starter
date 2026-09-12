@@ -37,7 +37,7 @@ public class SpiderEnvResolver {
     private static final String ENV_SUFFIX = "}}";
 
     /**
-     * 环境变量占位符正则，分组 1 为变量 KEY
+      * 环境变量占位符正则，分组 1 为变量 钥匙
      */
     private static final String ENV_PATTERN = "\\{\\{env\\.([^}]+)\\}\\}";
 
@@ -61,7 +61,7 @@ public class SpiderEnvResolver {
      * <p>一次性加载当前启用的环境变量映射，逐个替换模板中的占位符。</p>
      *
      * @param template 原始模板字符串
-     * @return 替换后的字符串，模板为 null 时返回空字符串
+     * @return 替换后的字符串，模板为 空 时返回空字符串
      */
     public String resolve(String template) {
         if (template == null || template.isEmpty()) {

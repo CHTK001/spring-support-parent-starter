@@ -21,19 +21,19 @@ import java.util.List;
 public class DefaultSoftwareSource implements SoftwareSource {
 
     @Override
-    /** Support */
+    /** 支持 */
     public boolean support(SoftSource source) {
         return false;
     }
 
     @Override
-    /** FetchSoftwareList */
+    /** 获取software列表 */
     public List<SoftSoftware> fetchSoftwareList(SoftSource source) {
         return Collections.emptyList();
     }
 
     @Override
-    /** FetchSoftwareDetail */
+    /** 获取softwaredetail */
     public SoftSoftware fetchSoftwareDetail(SoftSource source, String softwareCode) {
         return null;
     }
@@ -57,7 +57,7 @@ public class DefaultSoftwareSource implements SoftwareSource {
     }
 
     @Override
-    /** 获取LatestVersion */
+    /** 获取latest版本 */
     public String getLatestVersion(SoftSource source, String softwareCode) {
         return null;
     }

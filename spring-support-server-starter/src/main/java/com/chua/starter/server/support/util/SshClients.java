@@ -33,17 +33,19 @@ public final class SshClients {
     /**
      * 打开已配置（未连接）的 SSH 客户端句柄
      * <p>
-     * 使用方必须以 try-with-resources 持有返回值，保证临时私钥文件被清理：
+      * 使用方必须以 尝试-with-resources 持有返回值，保证临时私钥文件被清理：
      * <pre>{@code
      * try (var handle = SshClients.open(address, port, credential)) {
      *     handle.client().connect();
      *     // ... 执行命令
      * }
+     * }</pre>... 执行命令
+     * }
      * }</pre>
      * </p>
      *
      * @param address    主机地址
-     * @param port       SSH 端口，null 时取 22
+     * @param port       SSH 端口，空 时取 22
      * @param credential 解密后的凭据
      * @return 客户端句柄
      * @throws IOException 私钥临时文件写入失败时抛出
@@ -61,12 +63,17 @@ public final class SshClients {
             Files.writeString(tempKeyPath, credential.privateKey());
             builder.privateKey(tempKeyPath.toString());
             if (notBlank(credential.password())) {
-                // 私钥场景下 password 字段承载口令（passphrase）
+ // 私钥场景下 密码 字段承载口令（passphrase）
                 builder.password(credential.password());
             }
         } else {
             builder.password(credential.password() == null ? "" : credential.password());
         }
+        /**
+         * 把手。
+         * @param builder.build( 构建器.构建(
+         * @return 把手的结果
+         */
         return new Handle(builder.build(), tempKeyPath);
     }
 
@@ -84,7 +91,8 @@ public final class SshClients {
      * SSH 客户端句柄：聚合客户端与临时私钥文件的生命周期
      *
      * @param client      SSH 客户端
-     * @param tempKeyPath 私钥临时文件路径，密码认证时为 null
+     * @param tempKeyPath 私钥临时文件路径，密码认证时为 空
+     * @return 把手的结果
      */
     public record Handle(SshClient client, Path tempKeyPath) implements AutoCloseable {
 

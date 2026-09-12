@@ -7,6 +7,7 @@ import static com.chua.starter.common.support.properties.AsyncThreadPoolProperti
 /**
  * 线程池配置
  * @author CH
+ * @since 4.0.0
  */
 @ConfigurationProperties(prefix = PRE, ignoreInvalidFields = true)
 public class AsyncThreadPoolProperties {
@@ -75,7 +76,7 @@ public class AsyncThreadPoolProperties {
     }
 
     /**
-     * 获取 corePoolSize
+      * 获取 核心游泳池大小
      *
      * @return corePoolSize
      */
@@ -84,16 +85,16 @@ public class AsyncThreadPoolProperties {
     }
 
     /**
-     * 设置 corePoolSize
+      * 设置 核心游泳池大小
      *
-     * @param corePoolSize corePoolSize
+     * @param corePoolSize 核心游泳池大小
      */
     public void setCorePoolSize(int corePoolSize) {
         this.corePoolSize = corePoolSize;
     }
 
     /**
-     * 获取 maxPoolSize
+      * 获取 最大游泳池大小
      *
      * @return maxPoolSize
      */
@@ -102,16 +103,16 @@ public class AsyncThreadPoolProperties {
     }
 
     /**
-     * 设置 maxPoolSize
+      * 设置 最大游泳池大小
      *
-     * @param maxPoolSize maxPoolSize
+     * @param maxPoolSize 最大游泳池大小
      */
     public void setMaxPoolSize(int maxPoolSize) {
         this.maxPoolSize = maxPoolSize;
     }
 
     /**
-     * 获取 queueCapacity
+      * 获取 队列容量
      *
      * @return queueCapacity
      */
@@ -120,16 +121,16 @@ public class AsyncThreadPoolProperties {
     }
 
     /**
-     * 设置 queueCapacity
+      * 设置 队列容量
      *
-     * @param queueCapacity queueCapacity
+     * @param queueCapacity 队列容量
      */
     public void setQueueCapacity(int queueCapacity) {
         this.queueCapacity = queueCapacity;
     }
 
     /**
-     * 获取 waitForTasksToCompleteOnShutdown
+      * 获取 waitfor任务转为完成on关闭
      *
      * @return waitForTasksToCompleteOnShutdown
      */
@@ -147,16 +148,16 @@ public class AsyncThreadPoolProperties {
     }
 
     /**
-     * 设置 waitForTasksToCompleteOnShutdown
+      * 设置 waitfor任务转为完成on关闭
      *
-     * @param waitForTasksToCompleteOnShutdown waitForTasksToCompleteOnShutdown
+     * @param waitForTasksToCompleteOnShutdown waitfor任务转为完成on关闭
      */
     public void setWaitForTasksToCompleteOnShutdown(boolean waitForTasksToCompleteOnShutdown) {
         this.waitForTasksToCompleteOnShutdown = waitForTasksToCompleteOnShutdown;
     }
 
     /**
-     * 获取 awaitTerminationSeconds
+      * 获取 await终止seconds
      *
      * @return awaitTerminationSeconds
      */
@@ -165,16 +166,16 @@ public class AsyncThreadPoolProperties {
     }
 
     /**
-     * 设置 awaitTerminationSeconds
+      * 设置 await终止seconds
      *
-     * @param awaitTerminationSeconds awaitTerminationSeconds
+     * @param awaitTerminationSeconds await终止seconds
      */
     public void setAwaitTerminationSeconds(int awaitTerminationSeconds) {
         this.awaitTerminationSeconds = awaitTerminationSeconds;
     }
 
     /**
-     * 获取 keepAliveSeconds
+      * 获取 keepaliveseconds
      *
      * @return keepAliveSeconds
      */
@@ -183,16 +184,16 @@ public class AsyncThreadPoolProperties {
     }
 
     /**
-     * 设置 keepAliveSeconds
+      * 设置 keepaliveseconds
      *
-     * @param keepAliveSeconds keepAliveSeconds
+     * @param keepAliveSeconds keepaliveseconds
      */
     public void setKeepAliveSeconds(int keepAliveSeconds) {
         this.keepAliveSeconds = keepAliveSeconds;
     }
 
     /**
-     * 获取 threadNamePrefix
+      * 获取 thread名称前缀
      *
      * @return threadNamePrefix
      */
@@ -201,9 +202,9 @@ public class AsyncThreadPoolProperties {
     }
 
     /**
-     * 设置 threadNamePrefix
+      * 设置 thread名称前缀
      *
-     * @param threadNamePrefix threadNamePrefix
+     * @param threadNamePrefix thread名称前缀
      */
     public void setThreadNamePrefix(String threadNamePrefix) {
         this.threadNamePrefix = threadNamePrefix;

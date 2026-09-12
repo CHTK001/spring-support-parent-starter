@@ -40,7 +40,7 @@ public interface MessageInterceptor {
      *
      * @param message 已发送的消息
      * @param success 是否发送成功
-     * @param error   发送失败时的异常（成功时为null）
+     * @param error   发送失败时的异常（成功时为空）
      */
     default void afterSend(Message message, boolean success, Throwable error) {
         // 默认不处理
@@ -67,7 +67,7 @@ public interface MessageInterceptor {
      *
      * @param message 已处理的消息
      * @param success 是否处理成功
-     * @param error   处理失败时的异常（成功时为null）
+     * @param error   处理失败时的异常（成功时为空）
      */
     default void afterReceive(Message message, boolean success, Throwable error) {
         // 默认不处理

@@ -13,18 +13,30 @@ public enum ServerType {
 
     /**
      * Linux
+     * @param "LINUX" "Linux"
+     * @param "Linux" "Linux"
+     * @return Linux的结果
      */
     LINUX("LINUX", "Linux"),
     /**
-     * Windows
+      * 窗口
+     * @param "WINDOWS" "窗口"
+     * @param "Windows" "窗口"
+     * @return 窗口的结果
      */
     WINDOWS("WINDOWS", "Windows"),
     /**
-     * macOS(本地采集跳过)
+       * macOS(本地采集跳过)
+     * @param "MACOS" "macOS"
+     * @param "macOS" "macOS"
+     * @return macOS的结果
      */
     MACOS("MACOS", "macOS"),
     /**
      * JVM 本地(以 Java 进程视角采集)
+     * @param "JVM" "JVM"
+     * @param "JVM" "JVM"
+     * @return JVM的结果
      */
     JVM("JVM", "JVM");
 

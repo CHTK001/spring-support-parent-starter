@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 数据源分组注册表
  * <p>
  * 管理所有数据源分组，自动根据数据源名称前缀进行分组。
- * 命名规则：group_member → 组名为 group，成员名为 group_member
+   * 命名规则：群体_member → 组名为 群体，成员名为 群体_member
  * 例如：slave_1、slave_2 → 组名为 slave，包含两个成员
  * </p>
  *
@@ -21,10 +21,10 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class DataSourceGroupRegistry {
 
-    /** 分组映射：groupName → DataSourceGroup */
+    /** 分组映射：群体名称 → 数据源群体 */
     private static final Map<String, DataSourceGroup> GROUP_MAP = new ConcurrentHashMap<>();
 
-    /** 数据源到组的反向映射：dsName → groupName */
+    /** 数据源到组的反向映射：ds名称 → 群体名称 */
     private static final Map<String, String> DS_TO_GROUP = new ConcurrentHashMap<>();
 
     /** 分隔符 */
@@ -35,6 +35,9 @@ public class DataSourceGroupRegistry {
     /** 默认策略 */
     private static DataSourceGroup.LoadBalanceStrategy defaultStrategy;
 
+    /**
+     * 数据源群体registry。
+     */
     private DataSourceGroupRegistry() {}
 
     /**
@@ -71,7 +74,7 @@ public class DataSourceGroupRegistry {
      * 根据名称获取数据源（优先从分组获取，支持负载均衡）
      *
      * @param name 数据源名称或组名
-     * @return 数据源实例，不存在时返回 null
+     * @return 数据源实例，不存在时返回 空
      */
     public static DataSource getDataSource(String name) {
         if (name == null) {
@@ -98,7 +101,7 @@ public class DataSourceGroupRegistry {
      * 获取分组
      *
      * @param groupName 组名
-     * @return 分组，不存在时返回 null
+     * @return 分组，不存在时返回 空
      */
     public static DataSourceGroup getGroup(String groupName) {
         return GROUP_MAP.get(groupName);
@@ -126,7 +129,7 @@ public class DataSourceGroupRegistry {
      * 获取数据源所属的组名
      *
      * @param dsName 数据源名称
-     * @return 组名，不在任何组时返回 null
+     * @return 组名，不在任何组时返回 空
      */
     public static String getGroupNameByDs(String dsName) {
         return DS_TO_GROUP.get(dsName);
@@ -136,7 +139,7 @@ public class DataSourceGroupRegistry {
      * 设置分组负载均衡策略
      *
      * @param groupName 组名
-     * @param strategy  策略名称：round_robin 或 random
+     * @param strategy  策略名称：round_robin 或 随机
      */
     public static void setLoadBalanceStrategy(String groupName, String strategy) {
         DataSourceGroup group = GROUP_MAP.get(groupName);
@@ -148,7 +151,7 @@ public class DataSourceGroupRegistry {
     /**
      * 设置全局默认负载均衡策略（对所有已存在的分组生效，新分组也会继承）
      *
-     * @param strategy 策略名称：round_robin 或 random
+     * @param strategy 策略名称：round_robin 或 随机
      */
     public static void setGlobalLoadBalanceStrategy(String strategy) {
         defaultStrategy = parseStrategy(strategy);
@@ -160,6 +163,8 @@ public class DataSourceGroupRegistry {
 
     /**
      * 解析策略名称
+     * @param strategy strategy
+     * @return 解析strategy的结果
      */
     private static DataSourceGroup.LoadBalanceStrategy parseStrategy(String strategy) {
         return "random".equalsIgnoreCase(strategy)
@@ -176,7 +181,7 @@ public class DataSourceGroupRegistry {
      * </p>
      *
      * @param dsName 数据源名称
-     * @return 组名，不适用时返回 null
+     * @return 组名，不适用时返回 空
      */
     static String extractGroupName(String dsName) {
         if (dsName == null || dsName.isEmpty()) {

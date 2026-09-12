@@ -12,14 +12,14 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
- * sys_job 任务主表实体 (MyBatis-Plus 持久化模型)。
+   * sys_作业 任务主表实体 (MyBatis-Plus 持久化模型)。
  *
  * <p>所有字段以表名 {@code sys_job} 作为前缀 ({@code sys_job_*});
- * 通用审计字段来自 {@link SysBase} (create_time / update_time / create_by / update_by / create_name / update_name)。
+   * 通用审计字段来自 {@link SysBase} (创建_时间 / 更新_时间 / 创建_by / 更新_by / 创建_名称 / 更新_名称)。
  * 本表额外包含 {@link #sysJobIsDeleted} 与 {@link #sysJobVersion} 用于逻辑删除与乐观锁。</p>
  *
  * <p>跨数据库导入要求见同目录 {@code V1.0__init_job.sql},字段命名仅使用 ASCII,
- * 不使用方言专属语法,目标库: MySQL 8+ / PostgreSQL 12+ / Oracle 12c+。</p>
+   * 不使用方言专属语法,目标库: MySQL 8+ / PostgreSQL 12+ / Oracle 12C+。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -33,14 +33,14 @@ public class JobEntity extends SysBase implements Serializable {
      * 序列化版本
      */
     @Serial
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
-     * 任务 ID (主键)
+      * 任务 标识 (主键)
      */
     @TableId(value = "sys_job_id", type = IdType.ASSIGN_ID)
-    /** SYS作业ID */
+    /** SYS作业标识 */
     private Long sysJobId;
 
     /**
@@ -61,7 +61,7 @@ public class JobEntity extends SysBase implements Serializable {
      * 任务负责人
      */
     @TableField("sys_job_author")
-    /** SYS作业author */
+    /** SYS作业作者 */
     private String sysJobAuthor;
 
     /**
@@ -79,17 +79,17 @@ public class JobEntity extends SysBase implements Serializable {
     private String sysJobGroup;
 
     /**
-     * 调度类型 (CRON / FIXED / FIXED_MS / DELAY / AT / NONE)
+      * 调度类型 (CRON / FIXED / FIXED_MS / 延迟 / AT / 无)
      */
     @TableField("sys_job_schedule_type")
-    /** SYS作业schedule类型 */
+    /** SYS作业调度类型 */
     private String sysJobScheduleType;
 
     /**
      * 调度配置 (cron 表达式或毫秒间隔)
      */
     @TableField("sys_job_schedule_time")
-    /** SYS作业schedule时间 */
+    /** SYS作业调度时间 */
     private String sysJobScheduleTime;
 
     /**
@@ -107,28 +107,28 @@ public class JobEntity extends SysBase implements Serializable {
     private String sysJobDesc;
 
     /**
-     * Glue 最后更新时间 (留扩展)
+      * 胶水 最后更新时间 (留扩展)
      */
     @TableField("sys_job_glue_updatetime")
     /** SYS作业glueupdatetime */
     private java.util.Date sysJobGlueUpdatetime;
 
     /**
-     * Glue 源码 (留扩展)
+      * 胶水 源码 (留扩展)
      */
     @TableField("sys_job_glue_source")
-    /** SYS作业glue来源 */
+    /** SYS作业胶水来源 */
     private String sysJobGlueSource;
 
     /**
-     * Glue 类型 (BEAN / GLUE_xxx)
+      * 胶水 类型 (Bean / 胶水_xxx)
      */
     @TableField("sys_job_glue_type")
-    /** SYS作业glue类型 */
+    /** SYS作业胶水类型 */
     private String sysJobGlueType;
 
     /**
-     * 分发模式 (LOCAL / REMOTE)
+      * 分发模式 (本地 / 远程)
      */
     @TableField("sys_job_dispatch_mode")
     /** SYS作业dispatch模式 */
@@ -142,7 +142,7 @@ public class JobEntity extends SysBase implements Serializable {
     private String sysJobRemoteExecutorAddress;
 
     /**
-     * 日志存储模式 (DATABASE / FILE)
+      * 日志存储模式 (DATABASE / 文件)
      */
     @TableField("sys_job_storage_mode")
     /** SYS作业存储模式 */
@@ -152,7 +152,7 @@ public class JobEntity extends SysBase implements Serializable {
      * 失败重试次数
      */
     @TableField("sys_job_fail_retry")
-    /** SYS作业fail重试 */
+    /** SYS作业失败重试 */
     private Integer sysJobFailRetry;
 
     /**
@@ -166,11 +166,11 @@ public class JobEntity extends SysBase implements Serializable {
      * 执行超时 (秒)
      */
     @TableField("sys_job_execute_timeout")
-    /** SYS作业execute超时 */
+    /** SYS作业执行超时 */
     private Integer sysJobExecuteTimeout;
 
     /**
-     * 执行器 Handler 名称
+      * 执行器 处理器 名称
      */
     @TableField("sys_job_execute_bean")
     /** SYS作业executebean */
@@ -180,18 +180,18 @@ public class JobEntity extends SysBase implements Serializable {
      * 执行参数
      */
     @TableField("sys_job_execute_param")
-    /** SYS作业execute参数 */
+    /** SYS作业执行参数 */
     private String sysJobExecuteParam;
 
     /**
-     * 异常回调 Handler
+      * 异常回调 处理器
      */
     @TableField("sys_job_exception_callback_bean")
     /** SYS作业异常callbackbean */
     private String sysJobExceptionCallbackBean;
 
     /**
-     * 重试前回调 Handler
+      * 重试前回调 处理器
      */
     @TableField("sys_job_retry_callback_bean")
     /** SYS作业重试callbackbean */
@@ -222,7 +222,7 @@ public class JobEntity extends SysBase implements Serializable {
      * 逻辑删除标记 0=未删 1=已删
      */
     @TableField("sys_job_is_deleted")
-    /** SYS作业IS删除标记 */
+    /** SYS作业是否删除标记 */
     private Integer sysJobIsDeleted;
 
     /**

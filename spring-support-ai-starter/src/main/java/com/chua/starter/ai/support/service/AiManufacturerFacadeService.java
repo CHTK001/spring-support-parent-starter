@@ -38,15 +38,15 @@ public interface AiManufacturerFacadeService {
     /**
      * 删除厂商。
      *
-     * @param id 厂商 ID
+     * @param id 厂商 标识
      * @return 是否成功
      */
     boolean delete(Integer id);
 
     /**
-     * 按 ID 删除厂商。
+      * 按 标识 删除厂商。
      *
-     * @param id 厂商 ID
+     * @param id 厂商 标识
      * @return 是否成功
      */
     boolean deleteById(Integer id);

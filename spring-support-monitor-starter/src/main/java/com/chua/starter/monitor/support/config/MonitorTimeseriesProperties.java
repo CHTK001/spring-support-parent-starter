@@ -22,12 +22,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class MonitorTimeseriesProperties {
 
     /**
-     * 时序引擎（influxdb / redis / none），默认 influxdb（向后兼容）
+       * 时序引擎（influxdb / Redis / 无），默认 influxdb（向后兼容）
      */
     private String engine = "influxdb";
 
     /**
-     * InfluxDB 地址（v1 兼容端点，如 http://127.0.0.1:8086）
+      * influxdb 地址（v1 兼容端点，如 http://127.0.0.1:8086）
      */
     private String url = "http://127.0.0.1:8086";
 

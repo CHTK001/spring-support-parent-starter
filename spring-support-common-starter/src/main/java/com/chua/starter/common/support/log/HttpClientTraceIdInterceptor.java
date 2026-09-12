@@ -6,14 +6,15 @@ import org.apache.hc.core5.http.protocol.HttpContext;
 import org.slf4j.MDC;
 
 /**
- * HttpClient TraceId拦截器（兼容 HttpClient 5.x）。
+   * http客户端 追踪标识拦截器（兼容 http客户端 5.x）。
  * @author CH
+ * @since 4.0.0
  */
 public class HttpClientTraceIdInterceptor implements HttpRequestInterceptor {
 
-    /** Trace_id */
+    /** 追踪_标识 */
     private static final String TRACE_ID = "traceId";
-    /** X_trace_id */
+    /** X_追踪_标识 */
     private static final String X_TRACE_ID = "X-Trace-Id";
 
     @Override

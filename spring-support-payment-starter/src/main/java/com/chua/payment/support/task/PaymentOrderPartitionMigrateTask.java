@@ -3,12 +3,12 @@ package com.chua.payment.support.task;
 import com.chua.payment.support.service.OrderPartitionConfigService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-/** @author CH */
+/** @作者 CH */
 
 @Component
 @RequiredArgsConstructor
 public class PaymentOrderPartitionMigrateTask implements PaymentManagedTask {
-    /** 排序partition配置服务 */
+    /** 排序分区配置服务 */
     private final OrderPartitionConfigService orderPartitionConfigService;
     @Override public String taskKey() { return "payment.order.partition.migrate"; }
     @Override public String taskName() { return "订单主表迁移"; }

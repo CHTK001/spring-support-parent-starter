@@ -8,32 +8,33 @@ import java.time.LocalDateTime;
 /**
  * 微信支付分订单视图
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class WechatPayScoreOrderVO {
-    /** ID */
+    /** 标识 */
     private Long id;
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
-    /** 通道ID */
+    /** 通道标识 */
     private Long channelId;
-    /** 用户ID */
+    /** 用户标识 */
     private Long userId;
-    /** OUT排序NO */
+    /** 出排序NO */
     private String outOrderNo;
     /** 服务排序NO */
     private String serviceOrderNo;
     /** APPID */
     private String appId;
-    /** 服务ID */
+    /** 服务标识 */
     private String serviceId;
-    /** OpenID */
+    /** 打开标识 */
     private String openId;
     /** 状态 */
     private String state;
     /** 总数amount */
     private BigDecimal totalAmount;
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
     /** 服务introduction */
     private String serviceIntroduction;
@@ -41,13 +42,13 @@ public class WechatPayScoreOrderVO {
     private String startTime;
     /** 结束时间 */
     private String endTime;
-    /** Finish类型 */
+    /** 饰面类型 */
     private String finishType;
-    /** Reason */
+    /** ReasonMLmlml */
     private String reason;
     /** Finishreason */
     private String finishReason;
-    /** Package信息 */
+    /** 包信息 */
     private String packageInfo;
     /** Attach */
     private String attach;
@@ -55,15 +56,15 @@ public class WechatPayScoreOrderVO {
     private String requestPayload;
     /** 响应payload */
     private String responsePayload;
-    /** Remark */
+    /** 评论 */
     private String remark;
-    /** CompletedAT */
+    /** 完成at */
     private LocalDateTime completedAt;
-    /** CancelledAT */
+    /** cancelledat */
     private LocalDateTime cancelledAt;
-    /** Create时间 */
+    /** 创建时间 */
     private LocalDateTime createTime;
-    /** Update时间 */
+    /** 更新时间 */
     private LocalDateTime updateTime;
 }
 

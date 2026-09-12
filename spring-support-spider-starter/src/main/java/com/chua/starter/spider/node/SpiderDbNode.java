@@ -86,14 +86,30 @@ public class SpiderDbNode implements FlowNode {
         String sql = props.getString("sql");
         String saveAs = props.getString("saveAs");
         if (sql == null || sql.trim().isEmpty()) {
+            /**
+             * illegal参数异常。
+             * @param 参数" 参数"
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("spider.db 节点缺少 sql 参数");
         }
         if (saveAs == null || saveAs.isEmpty()) {
+            /**
+             * illegal参数异常。
+             * @param 参数" 参数"
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("spider.db 节点缺少 saveAs 参数");
         }
         List<Object> params = resolveParams(props.getString("params"), context);
         String trimmed = sql.trim().toLowerCase();
         Object result = trimmed.startsWith(SQL_SELECT)
+                /**
+                 * 查询for列表。
+                 * @param sql SQL
+                 * @param params 参数
+                 * @return 查询for列表的结果
+                 */
                 ? queryForList(sql, params) : executeUpdate(sql, params);
         context.setAttribute(saveAs, result);
         log.info("spider.db 执行完成: saveAs={} rows={}", saveAs,
@@ -133,13 +149,31 @@ public class SpiderDbNode implements FlowNode {
      * @return 结果行列表（每行为列名到值的映射）
      */
     private List<Map<String, Object>> queryForList(String sql, List<Object> params) {
+        /**
+         * 尝试。
+         * @param dataSource.getConnection( 数据源.getconnection(
+         */
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
+            /**
+             * bind参数。
+             * @param statement 对账单
+             * @param params 参数
+             */
             bindParams(statement, params);
+            /**
+             * 尝试。
+             * @param statement.executeQuery( 对账单.执行查询(
+             */
             try (ResultSet resultSet = statement.executeQuery()) {
                 return toRows(resultSet);
             }
         } catch (Exception e) {
+            /**
+             * illegal状态异常。
+             * @param e.getMessage( e.获取消息(
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("spider.db 查询失败: " + e.getMessage(), e);
         }
     }
@@ -152,11 +186,25 @@ public class SpiderDbNode implements FlowNode {
      * @return 受影响行数
      */
     private int executeUpdate(String sql, List<Object> params) {
+        /**
+         * 尝试。
+         * @param dataSource.getConnection( 数据源.getconnection(
+         */
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
+            /**
+             * bind参数。
+             * @param statement 对账单
+             * @param params 参数
+             */
             bindParams(statement, params);
             return statement.executeUpdate();
         } catch (Exception e) {
+            /**
+             * illegal状态异常。
+             * @param e.getMessage( e.获取消息(
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("spider.db 更新失败: " + e.getMessage(), e);
         }
     }

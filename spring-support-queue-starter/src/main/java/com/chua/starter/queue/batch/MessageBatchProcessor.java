@@ -55,12 +55,16 @@ public class MessageBatchProcessor {
         lastAddTime = System.currentTimeMillis();
 
         if (shouldFlush()) {
+            /**
+             * flush。
+             */
             flush();
         }
     }
 
     /**
      * 是否应该刷新批次
+     * @return shouldFlush的结果
      */
     private boolean shouldFlush() {
         if (currentBatch.size() >= batchSize) {
@@ -89,6 +93,7 @@ public class MessageBatchProcessor {
 
     /**
      * 获取当前批次大小
+     * @return 获取当前batch大小的结果
      */
     public synchronized int getCurrentBatchSize() {
         return currentBatch.size();

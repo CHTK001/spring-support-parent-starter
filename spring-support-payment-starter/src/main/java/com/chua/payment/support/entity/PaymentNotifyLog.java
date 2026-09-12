@@ -11,29 +11,30 @@ import java.time.LocalDateTime;
 /**
  * 支付回调日志
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @TableName("pay_notify_log")
 public class PaymentNotifyLog {
 
     @TableId(value = "pay_notify_log_id", type = IdType.AUTO)
-    /** ID */
+    /** 标识 */
     private Long id;
 
     @TableField("pay_notify_log_notify_type")
-    /** Notify类型 */
+    /** 通知类型 */
     private String notifyType;
 
     @TableField("pay_notify_log_tenant_id")
-    /** TenantID */
+    /** tenantid */
     private Long tenantId;
 
     @TableField("pay_notify_log_merchant_id")
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
 
     @TableField("pay_notify_log_channel_id")
-    /** 通道ID */
+    /** 通道标识 */
     private Long channelId;
 
     @TableField("pay_notify_log_channel_type")
@@ -45,7 +46,7 @@ public class PaymentNotifyLog {
     private String channelSubType;
 
     @TableField("pay_notify_log_order_id")
-    /** 排序ID */
+    /** 排序标识 */
     private Long orderId;
 
     @TableField("pay_notify_log_order_no")
@@ -53,19 +54,19 @@ public class PaymentNotifyLog {
     private String orderNo;
 
     @TableField("pay_notify_log_refund_id")
-    /** RefundID */
+    /** 退税标识 */
     private Long refundId;
 
     @TableField("pay_notify_log_refund_no")
-    /** RefundNO */
+    /** 退税no */
     private String refundNo;
 
     @TableField("pay_notify_log_third_party_trade_no")
-    /** ThirdpartytradeNO */
+    /** thirdpartytradeno */
     private String thirdPartyTradeNo;
 
     @TableField("pay_notify_log_request_headers")
-    /** 请求headers */
+    /** 请求头部 */
     private String requestHeaders;
 
     @TableField("pay_notify_log_request_body")
@@ -81,11 +82,11 @@ public class PaymentNotifyLog {
     private Integer signVerified;
 
     @TableField("pay_notify_log_process_status")
-    /** Process状态 */
+    /** 处理状态 */
     private String processStatus;
 
     @TableField("pay_notify_log_process_result")
-    /** Process结果 */
+    /** 处理结果 */
     private String processResult;
 
     @TableField("pay_notify_log_error_message")
@@ -97,27 +98,27 @@ public class PaymentNotifyLog {
     private Integer retryCount;
 
     @TableField("pay_notify_log_received_at")
-    /** ReceivedAT */
+    /** 接收at */
     private LocalDateTime receivedAt;
 
     @TableField("pay_notify_log_processed_at")
-    /** ProcessedAT */
+    /** 处理at */
     private LocalDateTime processedAt;
 
     @TableField("pay_notify_log_create_time")
-    /** Create时间 */
+    /** 创建时间 */
     private LocalDateTime createTime;
 
     @TableField("pay_notify_log_update_time")
-    /** Update时间 */
+    /** 更新时间 */
     private LocalDateTime updateTime;
 
     @TableField("pay_notify_log_related_order_id")
-    /** Related排序ID */
+    /** Related排序标识 */
     private Long relatedOrderId;
 
     @TableField("pay_notify_log_related_refund_id")
-    /** RelatedrefundID */
+    /** relatedrefundid */
     private Long relatedRefundId;
 
     @TableField("pay_notify_log_received_time")
@@ -125,7 +126,7 @@ public class PaymentNotifyLog {
     private LocalDateTime receivedTime;
 
     @TableField("pay_notify_log_processed_time")
-    /** Processed时间 */
+    /** 处理时间 */
     private LocalDateTime processedTime;
 }
 

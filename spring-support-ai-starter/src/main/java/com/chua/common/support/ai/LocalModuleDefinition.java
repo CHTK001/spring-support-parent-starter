@@ -41,6 +41,11 @@ public class LocalModuleDefinition {
 
     /**
      * 全参构造。
+     * @param code 编码
+     * @param name 名称
+     * @param description description
+     * @param type 类型
+     * @param enabled 已启用
      */
     public LocalModuleDefinition(String code, String name, String description, String type, boolean enabled) {
         this.code = code;
@@ -50,36 +55,82 @@ public class LocalModuleDefinition {
         this.enabled = enabled;
     }
 
-    /** 获取Code */
+    /**
+     * 获取编码
+     *
+     * @return 获取编码的结果
+     */
     public String getCode() { return code; }
-    /** 设置Code */
+    /**
+     * 设置编码
+     *
+     * @param code 编码
+     */
     public void setCode(String code) { this.code = code; }
-    /** 获取Name */
+    /**
+     * 获取名称
+     *
+     * @return 获取名称的结果
+     */
     public String getName() { return name; }
-    /** 设置Name */
+    /**
+     * 设置名称
+     *
+     * @param name 名称
+     */
     public void setName(String name) { this.name = name; }
-    /** 获取Description */
+    /**
+     * 获取Description
+     *
+     * @return 获取description的结果
+     */
     public String getDescription() { return description; }
-    /** 设置Description */
+    /**
+     * 设置Description
+     *
+     * @param description description
+     */
     public void setDescription(String description) { this.description = description; }
-    /** 获取Type */
+    /**
+     * 获取类型
+     *
+     * @return 获取类型的结果
+     */
     public String getType() { return type; }
-    /** 设置Type */
+    /**
+     * 设置类型
+     *
+     * @param type 类型
+     */
     public void setType(String type) { this.type = type; }
-    /** 是否Enabled */
+    /**
+     * 是否已启用
+     *
+     * @return 是否已启用的结果
+     */
     public boolean isEnabled() { return enabled; }
-    /** 设置Enabled */
+    /**
+     * 设置已启用
+     *
+     * @param enabled 已启用
+     */
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
     /**
      * @return 建造器实例
      */
     public static LocalModuleDefinitionBuilder builder() {
+        /**
+         * 本地moduledefinition构建器。
+         * @return 本地moduledefinition构建器的结果
+         */
         return new LocalModuleDefinitionBuilder();
     }
 
     /**
-     * LocalModuleDefinition 建造器。
+      * 本地moduledefinition 建造器。
+     * @author CH
+     * @since 4.0.0
      */
     public static class LocalModuleDefinitionBuilder {
 
@@ -108,23 +159,57 @@ public class LocalModuleDefinition {
          */
         private boolean enabled;
 
-        /** Code */
+        /**
+         * 编码
+         *
+         * @param code 编码
+         * @return 编码的结果
+         */
         public LocalModuleDefinitionBuilder code(String code) { this.code = code; return this; }
-        /** Name */
+        /**
+         * 名称
+         *
+         * @param name 名称
+         * @return 名称的结果
+         */
         public LocalModuleDefinitionBuilder name(String name) { this.name = name; return this; }
-        /** Description */
+        /**
+         * Description
+         *
+         * @param description description
+         * @return description的结果
+         */
         public LocalModuleDefinitionBuilder description(String description) { this.description = description; return this; }
-        /** Type */
+        /**
+         * 类型
+         *
+         * @param type 类型
+         * @return 类型的结果
+         */
         public LocalModuleDefinitionBuilder type(String type) { this.type = type; return this; }
-        /** Enabled */
+        /**
+         * 已启用
+         *
+         * @param enabled 已启用
+         * @return 已启用的结果
+         */
         public LocalModuleDefinitionBuilder enabled(boolean enabled) { this.enabled = enabled; return this; }
 
         /**
-         * 构造 LocalModuleDefinition 实例。
+          * 构造 本地moduledefinition 实例。
          *
          * @return LocalModuleDefinition 实例
          */
         public LocalModuleDefinition build() {
+            /**
+             * 本地moduledefinition。
+             * @param code 编码
+             * @param name 名称
+             * @param description description
+             * @param type 类型
+             * @param enabled 已启用
+             * @return 本地moduledefinition的结果
+             */
             return new LocalModuleDefinition(code, name, description, type, enabled);
         }
     }

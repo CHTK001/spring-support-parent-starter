@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 基于Spring的RPC服务器实现
  * <p>
- * 使用Spring的ApplicationContext来注册和管理服务
+   * 使用Spring的application上下文来注册和管理服务
  * </p>
  *
  * @since 2025-03-20
@@ -27,20 +27,20 @@ public class SpringRpcServer implements RpcServer, ApplicationContextAware {
 
     /** Application上下文 */
     private ApplicationContext applicationContext;
-    /** 注册表configs */
+    /** 注册表配置 */
     private final List<RpcRegistryConfig> registryConfigs;
     /** 协议配置 */
     private final RpcProtocolConfig protocolConfig;
     /** APP名称 */
     private final String appName;
-    private final Map<String, Object> serviceRegistry = new ConcurrentHashMap<>();
-    private volatile boolean initialized = false;
+    private final Map<String, Object> serviceRegistry = new ConcurrentHashMap<>(); // 服务registry
+    private volatile boolean initialized = false; // 初始化
 
     /**
-     * 创建 SpringRpcServer 实例
-     * @param registryConfigs registryConfigs
-     * @param protocolConfig protocolConfig
-     * @param appName appName
+      * 创建 springrpc服务端 实例
+     * @param registryConfigs registry配置
+     * @param protocolConfig 协议配置
+     * @param appName app名称
      */
     public SpringRpcServer(List<RpcRegistryConfig> registryConfigs,
                           RpcProtocolConfig protocolConfig,
@@ -51,7 +51,7 @@ public class SpringRpcServer implements RpcServer, ApplicationContextAware {
     }
 
     @Override
-    /** 设置ApplicationContext */
+    /** 设置application上下文 */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
@@ -71,7 +71,7 @@ public class SpringRpcServer implements RpcServer, ApplicationContextAware {
     }
 
     @Override
-    /** AfterProperties设置 */
+    /** 之后属性设置 */
     public void afterPropertiesSet() {
         if (initialized) {
             return;
@@ -105,6 +105,8 @@ public class SpringRpcServer implements RpcServer, ApplicationContextAware {
 
     /**
      * 获取已注册的服务
+     * @param name 名称
+     * @return 获取服务的结果
      */
     public Object getService(String name) {
         return serviceRegistry.get(name);
@@ -112,6 +114,7 @@ public class SpringRpcServer implements RpcServer, ApplicationContextAware {
 
     /**
      * 获取所有已注册的服务
+     * @return 获取全部服务的结果
      */
     public Map<String, Object> getAllServices() {
         return new ConcurrentHashMap<>(serviceRegistry);

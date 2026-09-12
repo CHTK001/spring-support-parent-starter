@@ -14,11 +14,11 @@ import org.slf4j.LoggerFactory;
 /**
  * API 功能开关管理器
  * <p>
- * 管理所有 @ApiFeature 注解标记的功能开关状态，支持运行时动态切换。
+   * 管理所有 @api特征 注解标记的功能开关状态，支持运行时动态切换。
  * </p>
  *
  * @since 2024/12/08
- * @version 1.0.0
+   * @版本 1.0.0
  * @author CH
  */
 @Component
@@ -27,15 +27,15 @@ public class ApiFeatureManager {
     private static final Logger log = LoggerFactory.getLogger(ApiFeatureManager.class);
         /**
      * 功能开关状态缓存
-     * key: 功能标识
-     * value: 是否启用
+      * 钥匙: 功能标识
+      * 价值观: 是否启用
      */
     private final Map<String, Boolean> featureStates = new ConcurrentHashMap<>();
 
     /**
      * 功能信息缓存
-     * key: 功能标识
-     * value: 功能信息
+      * 钥匙: 功能标识
+      * 价值观: 功能信息
      */
     private final Map<String, ApiFeatureInfo> featureInfoMap = new ConcurrentHashMap<>();
 
@@ -163,6 +163,11 @@ public class ApiFeatureManager {
     public void resetToDefault(String featureId) {
         var info = featureInfoMap.get(featureId);
         if (info != null) {
+            /**
+             * 设置已启用。
+             * @param featureId 特征标识
+             * @param info.isDefaultEnabled( 信息.是否默认已启用(
+             */
             setEnabled(featureId, info.isDefaultEnabled());
         }
     }

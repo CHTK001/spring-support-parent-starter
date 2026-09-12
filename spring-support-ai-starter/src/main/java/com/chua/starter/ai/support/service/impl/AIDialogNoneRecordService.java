@@ -13,12 +13,19 @@ import java.util.List;
  * 当未配置持久化存储时使用此实现，所有查询返回空结果。
  *
  * @author CH
+ * @since 4.0.0
  */
 public class AIDialogNoneRecordService implements AIDialogRecordService {
 
     @Override
     /** 创建Dialog */
     public AIDialog createDialog(String name) {
+        /**
+          * aidialog。
+         * @param 0L 0L
+         * @param name 名称
+         * @return AIdialog的结果
+         */
         return new AIDialog(0L, name);
     }
 
@@ -29,19 +36,19 @@ public class AIDialogNoneRecordService implements AIDialogRecordService {
     }
 
     @Override
-    /** ListDialog */
+    /** 列表dialog */
     public List<AIDialog> listDialog() {
         return Collections.emptyList();
     }
 
     @Override
-    /** 获取DialogMessages */
+    /** 获取dialog消息 */
     public List<ChatMessage> getDialogMessages(Long dialogId) {
         return Collections.emptyList();
     }
 
     @Override
-    /** 添加Message */
+    /** 添加消息 */
     public void addMessage(Long dialogId, ChatMessage message) {
         // no-op
     }

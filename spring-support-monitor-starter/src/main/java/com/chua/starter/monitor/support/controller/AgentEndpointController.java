@@ -25,10 +25,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Agent 上报端点（开放 API，不走登录态）
+   * 智能体 上报端点（开放 API，不走登录态）
  * <p>
- * 外部探针以 {@code X-Agent-Key} 头鉴权，key 与 MsMonitor.monitorAgentKey 匹配。
- * 推送数据与 Provider 轮询共用同一条写入管道（MySQL + InfluxDB + 告警评估）；
+   * 外部探针以 {@code X-Agent-Key} 头鉴权，钥匙 与 ms监控.监控智能体钥匙 匹配。
+   * 推送数据与 提供者 轮询共用同一条写入管道（MySQL + influxdb + 告警评估）；
  * 心跳与推送均会刷新在线状态上下文。
  * </p>
  *
@@ -42,10 +42,10 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AgentEndpointController {
 
-    /** Agent 鉴权请求头 */
+    /** 智能体 鉴权请求头 */
     private static final String AGENT_KEY_HEADER = "X-Agent-Key";
 
-    /** 监控目标 Mapper */
+    /** 监控目标 映射器 */
     private final MsMonitorMapper monitorMapper;
 
     /** 指标服务 */
@@ -103,8 +103,9 @@ public class AgentEndpointController {
      *       "tags": {"model":"x86"}, "targetTable": "ms_monitor_metric_cpu" }
      *   ]
      * }
+     * }</pre>   * }
      * }</pre>
-     * targetTable 缺省时落通用表 ms_monitor_metric。
+      * Targettable 缺省时落通用表 ms_监控_指标。
      * </p>
      *
      * @param agentKey 探针标识
@@ -140,7 +141,7 @@ public class AgentEndpointController {
      * 按探针标识加载启用的监控目标
      *
      * @param agentKey 探针标识
-     * @return 目标实体，未命中返回 null
+     * @return 目标实体，未命中返回 空
      */
     private MsMonitor requireByAgentKey(String agentKey) {
         if (agentKey == null || agentKey.isBlank()) {

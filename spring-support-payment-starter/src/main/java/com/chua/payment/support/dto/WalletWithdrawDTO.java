@@ -10,19 +10,20 @@ import java.math.BigDecimal;
 /**
  * 钱包提现DTO
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class WalletWithdrawDTO {
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
-    /** 用户ID */
+    /** 用户标识 */
     private Long userId;
-    /** WithdrawNO */
+    /** withdrawno */
     private String withdrawNo;
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
     /** Amount */
     private BigDecimal amount;
@@ -30,11 +31,11 @@ public class WalletWithdrawDTO {
     private String bankAccount;
     /** Bank名称 */
     private String bankName;
-    /** Account名称 */
+    /** 账户名称 */
     private String accountName;
-    /** Operator */
+    /** 操作符 */
     private String operator;
-    /** Remark */
+    /** 评论 */
     private String remark;
 }
 

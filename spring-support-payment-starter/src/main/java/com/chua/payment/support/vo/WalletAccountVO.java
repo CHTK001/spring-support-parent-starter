@@ -8,14 +8,15 @@ import java.time.LocalDateTime;
 /**
  * 钱包账户 VO
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class WalletAccountVO {
-    /** ID */
+    /** 标识 */
     private Long id;
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
-    /** 用户ID */
+    /** 用户标识 */
     private Long userId;
     /** 可用balance */
     private BigDecimal availableBalance;

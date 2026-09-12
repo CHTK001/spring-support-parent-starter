@@ -8,21 +8,22 @@ import java.util.Map;
 /**
  * 支付宝支付通知解析结果
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class AliyunAlipayPayNotifyPayload {
     /** 排序NO */
     private String orderNo;
-    /** TradeNO */
+    /** 贸易no */
     private String tradeNo;
     /** APPID */
     private String appId;
-    /** SellerID */
+    /** sellerid */
     private String sellerId;
     /** 总数amount */
     private BigDecimal totalAmount;
-    /** Trade状态 */
+    /** 贸易状态 */
     private String tradeStatus;
-    private Map<String, String> rawParams;
+    private Map<String, String> rawParams; // raw参数
 }
 

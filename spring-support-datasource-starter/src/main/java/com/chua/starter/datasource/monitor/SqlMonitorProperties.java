@@ -31,7 +31,7 @@ public class SqlMonitorProperties {
     /**
      * 是否启用 SQL 监听
      * <p>未设置（null）时根据 Spring 环境自动切换：匹配 {@link #autoEnableEnvironments}
-     * 中任一环境（dev/test/uat/local）则启用，否则关闭。显式设置后以设置为准。</p>
+      * 中任一环境（dev/测试/uat/本地）则启用，否则关闭。显式设置后以设置为准。</p>
      */
     private Boolean enabled = null;
 

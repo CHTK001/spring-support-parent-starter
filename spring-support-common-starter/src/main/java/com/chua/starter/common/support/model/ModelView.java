@@ -6,6 +6,7 @@ import org.springframework.http.MediaType;
  * 模型视图
  *
  * @author CH
+ * @since 4.0.0
  */
 public class ModelView<T> {
     /**
@@ -29,7 +30,7 @@ public class ModelView<T> {
     }
 
     /**
-     * 创建ModelView实例
+      * 创建模型view实例
      *
      * @param data 数据内容
      * @param <T>  数据类型
@@ -39,7 +40,7 @@ public class ModelView<T> {
         return new ModelView<>(data, MediaType.APPLICATION_JSON);
     }
     /**
-     * 获取 data
+      * 获取 数据
      *
      * @return data
      */
@@ -48,16 +49,16 @@ public class ModelView<T> {
     }
 
     /**
-     * 设置 data
+      * 设置 数据
      *
-     * @param data data
+     * @param data 数据
      */
     public void setData(T data) {
         this.data = data;
     }
 
     /**
-     * 获取 mediaType
+      * 获取 media类型
      *
      * @return mediaType
      */
@@ -66,9 +67,9 @@ public class ModelView<T> {
     }
 
     /**
-     * 设置 mediaType
+      * 设置 media类型
      *
-     * @param mediaType mediaType
+     * @param mediaType media类型
      */
     public void setMediaType(MediaType mediaType) {
         this.mediaType = mediaType;

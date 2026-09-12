@@ -24,7 +24,7 @@ import lombok.EqualsAndHashCode;
 @TableName("ms_monitor_metric_config")
 public class MsMonitorMetricConfig extends SysBase {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -32,15 +32,15 @@ public class MsMonitorMetricConfig extends SysBase {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
-    /** ID */
+    /** 标识 */
     private Long id;
 
     /**
-     * 关联任务 id
+      * 关联任务 标识
      */
     @TableField("ms_monitor_metric_config_task_id")
     @Schema(description = "关联任务 id", example = "1")
-    /** 任务ID */
+    /** 任务标识 */
     private Long taskId;
 
     /**
@@ -81,6 +81,6 @@ public class MsMonitorMetricConfig extends SysBase {
      */
     @TableField("ms_monitor_metric_config_remark")
     @Schema(description = "备注", example = "top 命令输出的整体 CPU 使用率")
-    /** Remark */
+    /** 评论 */
     private String remark;
 }

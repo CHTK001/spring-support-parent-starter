@@ -14,31 +14,42 @@ import java.util.Map;
 /**
  * 支付宝 App 支付
  * @author CH
+ * @since 4.0.0
  */
 public class AlipayAppPaymentChannel extends AlipayWebPaymentChannel implements PaymentChannel {
 
     /**
-     * 创建 AlipayAppPaymentChannel 实例
-     * @param merchantChannelService merchantChannelService
-     * @param objectMapper objectMapper
-     * @param providerGatewayRegistry providerGatewayRegistry
+      * 创建 alipayapp薪酬通道 实例
+     * @param merchantChannelService merchant通道服务
+     * @param objectMapper 对象映射器
+     * @param providerGatewayRegistry 提供者gatewayregistry
      */
     public AlipayAppPaymentChannel(MerchantChannelService merchantChannelService,
                                    ObjectMapper objectMapper,
                                    PaymentProviderGatewayRegistry providerGatewayRegistry) {
+        /**
+         * 父。
+         * @param merchantChannelService merchant通道服务
+         * @param objectMapper 对象映射器
+         * @param providerGatewayRegistry 提供者gatewayregistry
+         */
         super(merchantChannelService, objectMapper, providerGatewayRegistry);
     }
 
     @Override
-    /** Supports */
+    /** 支持 */
     public boolean supports(String channelType, String channelSubType) {
         return "ALIPAY".equalsIgnoreCase(channelType) && "APP".equalsIgnoreCase(channelSubType);
     }
 
     @Override
-    /** Pay */
+    /** 薪酬 */
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         AliyunAlipayPayResponse response = gateway(providerSpi(channel, null)).appPay(
+                /**
+                 * 构建客户端属性。
+                 * @param channel 通道
+                 */
                 buildClientProperties(channel),
                 buildPayRequest(request, "QUICK_MSECURITY_PAY"));
 

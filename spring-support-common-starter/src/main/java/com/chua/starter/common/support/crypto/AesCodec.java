@@ -10,6 +10,7 @@ import java.util.Arrays;
  * AES 编解码器
  *
  * @author CH
+ * @since 4.0.0
  */
 public class AesCodec {
 
@@ -17,16 +18,23 @@ public class AesCodec {
     private final byte[] keyBytes;
 
     /**
-     * 创建 AesCodec 实例
-     * @param keyBytes keyBytes
+      * 创建 aescodec 实例
+     * @param keyBytes 键bytes
      */
     public AesCodec(byte[] keyBytes) {
         this.keyBytes = keyBytes;
     }
 
-    /** 编码Hex */
+    /**
+     * 编码Hex
+     *
+     * @param data 数据
+     * @return encodeHex的结果
+     */
     public String encodeHex(String data) {
-        if (data == null) return null;
+        if (data == null) {
+            return null;
+        }
         try {
             byte[] bytes = data.getBytes("UTF-8");
             return bytesToHex(encrypt(bytes));
@@ -35,9 +43,16 @@ public class AesCodec {
         }
     }
 
-    /** 解码Hex */
+    /**
+     * 解码Hex
+     *
+     * @param hex hex
+     * @return decodeHex的结果
+     */
     public String decodeHex(String hex) {
-        if (hex == null) return null;
+        if (hex == null) {
+            return null;
+        }
         try {
             return new String(decrypt(hexToBytes(hex)), "UTF-8");
         } catch (Exception e) {
@@ -45,7 +60,12 @@ public class AesCodec {
         }
     }
 
-    /** Encrypt */
+    /**
+     * Encrypt
+     *
+     * @param plain plain
+     * @return encrypt的结果
+     */
     private byte[] encrypt(byte[] plain) throws Exception {
         SecretKeySpec keySpec = generateKey();
         IvParameterSpec iv = generateIv();
@@ -54,7 +74,12 @@ public class AesCodec {
         return cipher.doFinal(plain);
     }
 
-    /** Decrypt */
+    /**
+     * Decrypt
+     *
+     * @param encrypted encrypted
+     * @return decrypt的结果
+     */
     private byte[] decrypt(byte[] encrypted) throws Exception {
         SecretKeySpec keySpec = generateKey();
         IvParameterSpec iv = generateIv();
@@ -63,14 +88,22 @@ public class AesCodec {
         return cipher.doFinal(encrypted);
     }
 
-    /** GenerateKey */
+    /**
+     * generate键
+     *
+     * @return generate键的结果
+     */
     private SecretKeySpec generateKey() throws Exception {
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         md.update(keyBytes);
         return new SecretKeySpec(md.digest(), "AES");
     }
 
-    /** GenerateIv */
+    /**
+     * generateiv
+     *
+     * @return generateIv的结果
+     */
     private IvParameterSpec generateIv() throws Exception {
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         md.update(keyBytes);
@@ -78,7 +111,12 @@ public class AesCodec {
         return new IvParameterSpec(Arrays.copyOf(md.digest(), 16));
     }
 
-    /** BytesToHex */
+    /**
+     * bytes转为hex
+     *
+     * @param bytes bytes
+     * @return bytes转为hex的结果
+     */
     private String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) {
@@ -87,7 +125,12 @@ public class AesCodec {
         return sb.toString();
     }
 
-    /** HexToBytes */
+    /**
+     * hex转为bytes
+     *
+     * @param hex hex
+     * @return hex转为bytes的结果
+     */
     private byte[] hexToBytes(String hex) {
         int len = hex.length();
         byte[] data = new byte[len / 2];

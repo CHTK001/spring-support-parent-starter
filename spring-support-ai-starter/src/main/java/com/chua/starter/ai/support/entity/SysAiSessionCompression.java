@@ -22,65 +22,65 @@ import java.time.LocalDateTime;
 public class SysAiSessionCompression {
 
     /**
-     * 压缩上下文主键 ID
+      * 压缩上下文主键 标识
      */
     @TableId(value = "sys_ai_session_compression_id", type = IdType.AUTO)
-    /** SYSAI会话compressionID */
+    /** SYSAI会话compressionid */
     private Integer id;
 
     /**
-     * 会话 ID
+      * 会话 标识
      */
     @TableField("sys_ai_session_id")
-    /** SYSAI会话ID */
+    /** SYSAI会话标识 */
     private Long sysAiSessionId;
 
     /**
      * 厂家编码
      */
     @TableField("sys_ai_manufacturer_code")
-    /** SYSAImanufacturer代码 */
+    /** sysaimanufacturer代码 */
     private String sysAiManufacturerCode;
 
     /**
      * 模型编码
      */
     @TableField("sys_ai_module_code")
-    /** SYSAImodule代码 */
+    /** sysaimodule代码 */
     private String sysAiModuleCode;
 
     /**
      * 压缩时消息数量
      */
     @TableField("sys_ai_compression_message_count")
-    /** SYSAIcompression消息数量 */
+    /** sysaicompression消息数量 */
     private Long sysAiCompressionMessageCount;
 
     /**
-     * 压缩基准消息 ID
+      * 压缩基准消息 标识
      */
     @TableField("sys_ai_compression_from_message_id")
-    /** SYSAIcompressionfrom消息ID */
+    /** sysaicompressionfrom消息标识 */
     private Integer sysAiCompressionFromMessageId;
 
     /**
      * 压缩后的上下文（摘要文本或 JSON）
      */
     @TableField("sys_ai_compression_context")
-    /** SYSAIcompression上下文 */
+    /** sysaicompression上下文 */
     private String sysAiCompressionContext;
 
     /**
      * 创建时间
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)
-    /** Create时间 */
+    /** 创建时间 */
     private LocalDateTime createTime;
 
     /**
      * 更新时间
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
-    /** Update时间 */
+    /** 更新时间 */
     private LocalDateTime updateTime;
 }

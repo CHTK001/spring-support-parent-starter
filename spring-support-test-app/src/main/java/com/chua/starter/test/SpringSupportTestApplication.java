@@ -24,6 +24,10 @@ import org.springframework.context.annotation.Import;
 @Import(ApiConfiguration.class)
 public class SpringSupportTestApplication {
 
+    /**
+     * main。
+     * @param args 参数
+     */
     public static void main(String[] args) {
         SpringApplication.run(SpringSupportTestApplication.class, args);
     }

@@ -9,12 +9,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * 用于小程序openid到公众号openid的转换等功能。
  *
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @ConfigurationProperties(prefix = TencentWechatOpenPlatformProperties.PREFIX, ignoreInvalidFields = true)
 public class TencentWechatOpenPlatformProperties {
 
-    /** Prefix */
+    /** 前缀 */
     public static final String PREFIX = "plugin.tencent.open-platform";
 
     /**
@@ -23,17 +24,17 @@ public class TencentWechatOpenPlatformProperties {
     private boolean enable = false;
 
     /**
-     * 第三方平台appId
+      * 第三方平台appid
      */
     private String componentAppId;
 
     /**
-     * 第三方平台appSecret
+      * 第三方平台appsecret
      */
     private String componentAppSecret;
 
     /**
-     * 默认小程序appId（可选，调用转换接口时可省略miniAppId参数）
+      * 默认小程序appid（可选，调用转换接口时可省略miniappid参数）
      */
     private String defaultMiniAppId;
 

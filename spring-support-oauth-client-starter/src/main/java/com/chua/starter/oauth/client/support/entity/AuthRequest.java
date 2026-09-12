@@ -13,7 +13,7 @@ public class AuthRequest {
 
     /** 数据 */
     private String data;
-    /** Username */
+    /** 用户名 */
     private String username;
     /** 类型 */
     private String type;
@@ -27,6 +27,6 @@ public class AuthRequest {
     private String mode;
     /** Encipher */
     private boolean encipher = true;
-    /** IFremember */
+    /** ifremember */
     private String ifRemember;
 }

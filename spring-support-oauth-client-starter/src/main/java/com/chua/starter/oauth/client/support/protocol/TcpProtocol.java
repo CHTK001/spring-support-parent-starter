@@ -32,12 +32,12 @@ import java.util.Map;
 /**
  * TCP 协议实现
  * <p>
- * 使用 JDK NIO SocketChannel 发送长度帧（4 字节大端长度头 + 消息体）与 OAuth 认证服务端通信。
- * 帧格式为 {@code topic:body}，topic 对应服务端路由路径（如 login、oauth、upgrade、logout、temporary-token），
- * body 为加密后的 JSON 请求体；服务端响应同样走长度帧，客户端解帧后解析 JSON。
+   * 使用 JDK NIO 套接字通道 发送长度帧（4 字节大端长度头 + 消息体）与 o认证 认证服务端通信。
+   * 帧格式为 {@code topic:body}，topic 对应服务端路由路径（如 login、OAuth、upgrade、logout、temporary-令牌），
+   * 主体 为加密后的 JSON 请求体；服务端响应同样走长度帧，客户端解帧后解析 JSON。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2026-09-05
  * @author CH
  */
@@ -45,7 +45,7 @@ import java.util.Map;
 @Slf4j
 public class TcpProtocol extends AbstractProtocol {
 
-    /** TCP 短连接客户端（每次请求新建连接，用完关闭，由 JdkTcpClient 内部虚拟线程池管理） */
+    /** TCP 短连接客户端（每次请求新建连接，用完关闭，由 jdktcp客户端 内部虚拟线程池管理） */
     private final TcpClient tcpClient = new JdkTcpClient();
 
     /** 弹性处理器（熔断+重试） */
@@ -57,6 +57,10 @@ public class TcpProtocol extends AbstractProtocol {
      * @param authClientProperties 认证客户端配置
      */
     public TcpProtocol(AuthClientProperties authClientProperties) {
+        /**
+         * 父。
+         * @param authClientProperties 认证客户端属性
+         */
         super(authClientProperties);
         this.resilience = new OAuthClientResilience(authClientProperties);
     }
@@ -111,13 +115,25 @@ public class TcpProtocol extends AbstractProtocol {
                 com.chua.starter.oauth.client.support.execute.AuthSessionUtils.removeUserInfo();
                 String cacheKey = getCacheKey(new Cookie[]{cookie}, token);
                 if (hasCache(cacheKey)) {
+                    /**
+                     * clear认证信息。
+                     * @param cacheKey 缓存钥匙
+                     */
                     clearAuthenticationInformation(cacheKey);
                 }
             } else if (upgradeType == UpgradeType.REFRESH) {
                 String cacheKey = getCacheKey(new Cookie[]{cookie}, token);
                 if (hasCache(cacheKey)) {
+                    /**
+                     * clear认证信息。
+                     * @param cacheKey 缓存钥匙
+                     */
                     clearAuthenticationInformation(cacheKey);
                 }
+                /**
+                 * invalidate缓存。
+                 * @param token 令牌
+                 */
                 invalidateCache(token);
             }
         }
@@ -166,6 +182,11 @@ public class TcpProtocol extends AbstractProtocol {
         if (information.getInformation() == Information.OK) {
             return LoginAuthResult.OK;
         }
+        /**
+         * 认证异常。
+         * @param information.getInformation( 信息.获取信息(
+         * @return 认证异常的结果
+         */
         throw new AuthException(information.getInformation().getMessage());
     }
 
@@ -283,6 +304,10 @@ public class TcpProtocol extends AbstractProtocol {
     /**
      * 发送 TCP 请求并解析响应
      * <p>帧格式：{@code topic:body}，body 为加密 JSON；响应为长度帧包裹的 JSON。</p>
+     * @param route route
+     * @param jsonObject json对象
+     * @param upgradeType upgrade类型
+     * @return 发送请求的结果
      */
     protected AuthenticationInformation sendRequest(String route, JsonObject jsonObject, UpgradeType upgradeType) {
         return resilience.executeWithResilience(
@@ -294,6 +319,10 @@ public class TcpProtocol extends AbstractProtocol {
 
     /**
      * 执行 TCP 短连接请求-响应
+     * @param route route
+     * @param jsonObject json对象
+     * @param upgradeType upgrade类型
+     * @return 执行请求的结果
      */
     private AuthenticationInformation doRequest(String route, JsonObject jsonObject, UpgradeType upgradeType) {
         String selectedUrl = selectUrl();
@@ -330,7 +359,7 @@ public class TcpProtocol extends AbstractProtocol {
         String payload = requestJson.toJSONString();
         String encryptedPayload = createData(payload, key);
 
-        // 构建 TCP 帧：topic:body（与服务端 OauthProtocolServerManager 解析逻辑对称）
+ // 构建 TCP 帧：topic:主体（与服务端 OAuth协议服务端管理器 解析逻辑对称）
         String frame = route + ":" + encryptedPayload;
         byte[] frameBytes = frame.getBytes(StandardCharsets.UTF_8);
 
@@ -359,6 +388,8 @@ public class TcpProtocol extends AbstractProtocol {
 
     /**
      * 从 URL 提取主机名
+     * @param url url
+     * @return extract主机的结果
      */
     private String extractHost(String url) {
         if (url.startsWith("tcp://")) {
@@ -381,6 +412,9 @@ public class TcpProtocol extends AbstractProtocol {
 
     /**
      * 从 URL 提取端口
+     * @param url url
+     * @param defaultPort 默认端口
+     * @return extract端口的结果
      */
     private int extractPort(String url, int defaultPort) {
         if (url.startsWith("tcp://")) {
@@ -403,7 +437,12 @@ public class TcpProtocol extends AbstractProtocol {
         return defaultPort;
     }
 
-    /** 解析在线用户结果 */
+    /**
+     * 解析在线用户结果
+     *
+     * @param resultMap 结果映射
+     * @return 解析online用户结果的结果
+     */
     private OnlineUserResult parseOnlineUserResult(Map<String, Object> resultMap) {
         OnlineUserResult result = new OnlineUserResult();
         result.setTotal(getIntValue(resultMap, "total", 0));
@@ -439,6 +478,13 @@ public class TcpProtocol extends AbstractProtocol {
         return result;
     }
 
+    /**
+     * 获取int价值观。
+     * @param map 映射
+     * @param key 钥匙
+     * @param defaultValue 默认价值观
+     * @return 获取int价值观的结果
+     */
     private int getIntValue(Map<String, Object> map, String key, int defaultValue) {
         Object value = map.get(key);
         if (value instanceof Number) {
@@ -447,6 +493,13 @@ public class TcpProtocol extends AbstractProtocol {
         return defaultValue;
     }
 
+    /**
+     * 获取字符串价值观。
+     * @param map 映射
+     * @param key 钥匙
+     * @param defaultValue 默认价值观
+     * @return 获取字符串价值观的结果
+     */
     private String getStringValue(Map<String, Object> map, String key, String defaultValue) {
         Object value = map.get(key);
         return value != null ? value.toString() : defaultValue;

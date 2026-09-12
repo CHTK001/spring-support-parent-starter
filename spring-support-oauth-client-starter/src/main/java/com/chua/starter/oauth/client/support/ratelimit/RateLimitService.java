@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
- * OAuth 客户端限流服务
+   * o认证 客户端限流服务
  * <p>
  * 提供接口 QPS 限流（按 IP 滑动窗口）与登录防暴力破解限流（IP 维度 + 账号失败锁定）。
  * 采用进程内内存实现，配置来自 {@link AuthClientProperties.RateLimit}（前缀
@@ -46,17 +46,17 @@ public class RateLimitService {
     private static final RateLimitService INSTANCE = new RateLimitService();
 
     /**
-     * IP 滑动窗口计数：key = "ip:类型"，value = 时间戳队列
+      * IP 滑动窗口计数：钥匙 = "ip:类型"，价值观 = 时间戳队列
      */
     private final Map<String, Deque<Long>> ipWindows = new ConcurrentHashMap<>();
 
     /**
-     * 账号失败计数：key = 账号，value = 连续失败次数
+      * 账号失败计数：钥匙 = 账号，价值观 = 连续失败次数
      */
     private final Map<String, Integer> failCounts = new ConcurrentHashMap<>();
 
     /**
-     * 账号锁定截止时间：key = 账号，value = 解锁时间戳
+      * 账号锁定截止时间：钥匙 = 账号，价值观 = 解锁时间戳
      */
     private final Map<String, Long> lockedUntil = new ConcurrentHashMap<>();
 
@@ -113,6 +113,9 @@ public class RateLimitService {
         if (StringUtils.isBlank(username)) {
             return false;
         }
+        /**
+         * cleanup账户ifneeded。
+         */
         cleanupAccountIfNeeded();
         Long until = lockedUntil.get(username);
         if (until == null) {
@@ -174,6 +177,9 @@ public class RateLimitService {
         if (limit <= 0) {
             return false;
         }
+        /**
+          * cleanupifneeded。
+         */
         cleanupIfNeeded();
         long now = System.currentTimeMillis();
         Deque<Long> queue = ipWindows.computeIfAbsent(key, k -> new ConcurrentLinkedDeque<>());
@@ -222,7 +228,7 @@ public class RateLimitService {
     /**
      * 获取全局接口限流配置
      *
-     * @return 配置，未启用或未初始化返回 null
+     * @return 配置，未启用或未初始化返回 空
      */
     private AuthClientProperties.RateLimit.ApiLimit getApiLimitConfig() {
         AuthClientProperties.RateLimit rateLimit = getRateLimitConfig();
@@ -232,7 +238,7 @@ public class RateLimitService {
     /**
      * 获取登录限流配置
      *
-     * @return 配置，未启用或未初始化返回 null
+     * @return 配置，未启用或未初始化返回 空
      */
     private AuthClientProperties.RateLimit.LoginLimit getLoginLimitConfig() {
         AuthClientProperties.RateLimit rateLimit = getRateLimitConfig();
@@ -242,7 +248,7 @@ public class RateLimitService {
     /**
      * 获取限流总配置
      *
-     * @return 总配置，未启用返回 null
+     * @return 总配置，未启用返回 空
      */
     private AuthClientProperties.RateLimit getRateLimitConfig() {
         AuthClientProperties properties = OauthClientRuntimeContext.getAuthClientProperties();

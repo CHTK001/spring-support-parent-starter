@@ -12,16 +12,20 @@ import org.springframework.core.annotation.AnnotationUtils;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
-/** @author CH */
+/** @作者 CH */
 public class SpringGlueFactory extends GlueFactory{
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SpringGlueFactory.class);
 
-    /** 创建 SpringGlueFactory 实例 */
+    /** 创建 spring胶水工厂 实例 */
     public SpringGlueFactory() {
     }
 
-    /** InjectService */
+    /**
+     * inject服务
+     *
+     * @param instance instance
+     */
     public void injectService(Object instance) {
         if (instance != null) {
             ApplicationContext applicationContext = SpringBeanUtils.getApplicationContext();

@@ -5,7 +5,7 @@ import com.chua.payment.support.entity.PaymentOrder;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 支付订单Mapper接口
+   * 支付订单映射器接口
  *
  * @since 2026-03-18
  * @author CH

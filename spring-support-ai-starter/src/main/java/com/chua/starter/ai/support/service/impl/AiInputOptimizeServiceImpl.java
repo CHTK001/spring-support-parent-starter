@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
  *   <li>optimizer_temperature：优化温度；</li>
  *   <li>optimizer_enabled：优化开关。</li>
  * </ul>
- * 通过 {@link ChatClientRegistry} 获取 ChatClient 后，以系统提示词 + 用户输入的方式执行一次同步对话，
+   * 通过 {@link ChatClientRegistry} 获取 对话客户端 后，以系统提示词 + 用户输入的方式执行一次同步对话，
  * 返回改写后的文本。</p>
  *
  * @since 4.0.0.42
@@ -65,7 +65,7 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
     private final GlobalSettingReader globalSettingReader;
 
     /**
-     * 全局 ChatClient 注册中心
+      * 全局 对话客户端 注册中心
      */
     private final ChatClientRegistry chatClientRegistry;
 
@@ -133,13 +133,13 @@ public class AiInputOptimizeServiceImpl implements AiInputOptimizeService {
     }
 
     /**
-     * 解析优化用 ChatClient。
+      * 解析优化用 对话客户端。
      *
      * <p>指定模型时优先按模型查找注册实例；否则使用全局聚合 ChatClient。
      * 全局配置未配置模型时，从 {@code runtime} 分组读取默认模型名。</p>
      *
      * @param model 配置的模型名（可能为空）
-     * @return ChatClient 实例；不可用时返回 null
+     * @return ChatClient 实例；不可用时返回 空
      */
     private ChatClient resolveChatClient(String model) {
         String effectiveModel = model;

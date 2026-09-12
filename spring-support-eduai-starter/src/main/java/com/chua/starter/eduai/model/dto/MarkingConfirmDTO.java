@@ -14,7 +14,7 @@ import java.util.List;
 public class MarkingConfirmDTO {
 
     /**
-     * 任务ID
+      * 任务标识
      */
     private String taskId;
 
@@ -24,12 +24,18 @@ public class MarkingConfirmDTO {
     private List<ScoreAdjustment> adjustments;
 
     @Data
+    /**
+      * scoreadjustment类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     public static class ScoreAdjustment {
-        /** 结果ID */
+        /** 结果标识 */
         private Long resultId;
         /** 分数 */
         private Integer score;
-        /** Comment */
+        /** 评论 */
         private String comment;
     }
 }

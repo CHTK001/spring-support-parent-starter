@@ -10,7 +10,7 @@ import org.slf4j.MDC;
  * 注意：此类在数据源初始化时被 P6Spy 加载，不能依赖任何可能延迟加载的类
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/12/10
  * @author CH
  */
@@ -20,7 +20,7 @@ public class SimpleAppender implements MessageFormattingStrategy {
     /**
      * 日志格式化方式（打印SQL日志会进入此方法，耗时操作，生产环境不建议使用）
      *
-     * @param connectionId 连接ID
+     * @param connectionId 连接标识
      * @param now          当前时间
      * @param elapsed      花费时间
      * @param category     类别
@@ -32,7 +32,7 @@ public class SimpleAppender implements MessageFormattingStrategy {
      */
     @Override
     public String formatMessage(int connectionId, String now, long elapsed, String category, String prepared, String sql, String url) {
-        // 使用内联判空，避免依赖外部 StringUtils（P6Spy 加载时外部类可能未加载）
+ // 使用内联判空，避免依赖外部 字符串工具（P6Spy 加载时外部类可能未加载）
         if (sql == null || sql.trim().isEmpty()) {
             return "";
         }

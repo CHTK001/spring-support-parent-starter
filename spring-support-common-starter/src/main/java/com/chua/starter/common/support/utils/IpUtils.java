@@ -11,19 +11,20 @@ import java.util.regex.Pattern;
  * IP 工具类
  * <p>
  * 统一提供客户端 IP 获取、内网 IP 判断、IP 匹配（通配符/CIDR）等能力，
- * 避免在 ApiControlInterceptor、ApiGrayEvaluator 等多处重复实现。
+   * 避免在 apicontrol拦截器、apigrayevaluator 等多处重复实现。
  * </p>
  *
  * @since 2025/3/16
+ * @author CH
  */
 public final class IpUtils {
 
-    /** 创建 IpUtils 实例 */
+    /** 创建 ip工具 实例 */
     private IpUtils() {}
 
     /**
      * 内网 IP 正则（预编译）
-     * 覆盖范围：127.x、10.x、172.16-31.x、192.168.x、IPv6 回环/本地
+      * 覆盖范围：127.x、10.x、172.16-31.x、192.168.x、ipv6 回环/本地
      */
     private static final Pattern PRIVATE_IP_PATTERN = Pattern.compile(
             "^(127\\.)|(10\\.)|(172\\.(1[6-9]|2[0-9]|3[0-1])\\.)|(192\\.168\\.)|(::1$)|(fc00:)|(fe80:)"
@@ -32,6 +33,8 @@ public final class IpUtils {
     /**
      * 从请求中获取客户端真实 IP
      * <p>支持多层代理，优先取 X-Forwarded-For 第一个非 unknown 地址</p>
+     * @param request 请求
+     * @return 获取客户端ip的结果
      */
     public static String getClientIp(HttpServletRequest request) {
         String ip = request.getHeader("X-Forwarded-For");
@@ -56,6 +59,8 @@ public final class IpUtils {
 
     /**
      * 判断是否为内网 IP
+     * @param ip ip
+     * @return 是否私募ip的结果
      */
     public static boolean isPrivateIp(String ip) {
         if (StringUtils.isBlank(ip)) {
@@ -69,6 +74,9 @@ public final class IpUtils {
 
     /**
      * IP 匹配，支持精确、通配符（192.168.1.*）、CIDR（192.168.1.0/24）三种格式
+     * @param clientIp 客户端ip
+     * @param pattern 模式
+     * @return 匹配ip的结果
      */
     public static boolean matchIp(String clientIp, String pattern) {
         if (StringUtils.isBlank(clientIp) || StringUtils.isBlank(pattern)) {
@@ -88,14 +96,14 @@ public final class IpUtils {
     }
 
     /**
-     * 根据 User-Agent 字符串生成浏览器指纹（SHA-256 前 32 位十六进制）
+      * 根据 用户-智能体 字符串生成浏览器指纹（SHA-256 前 32 位十六进制）
      * <p>
-     * 当客户端未上报真实指纹时，可用 UA 作为 fallback 生成一个稳定的伪指纹。
+      * 当客户端未上报真实指纹时，可用 UA 作为 降级 生成一个稳定的伪指纹。
      * 同一 UA 每次生成结果相同，可用于日志关联，但安全性低于真实指纹。
      * </p>
      *
-     * @param userAgent User-Agent 字符串
-     * @return 32 位十六进制指纹，UA 为空时返回 null
+     * @param userAgent 用户-智能体 字符串
+     * @return 32 位十六进制指纹，UA 为空时返回 空
      */
     public static String fingerprintFromUserAgent(String userAgent) {
         if (StringUtils.isBlank(userAgent)) {
@@ -115,9 +123,9 @@ public final class IpUtils {
     }
 
     /**
-     * 获取本机 IPv4 地址
+      * 获取本机 ipv4 地址
      *
-     * @return 本机 IPv4 地址，获取失败返回 127.0.0.1
+     * @return 本机 ipv4 地址，获取失败返回 127.0.0.1
      */
     public static String getLocalIpv4() {
         try {
@@ -140,14 +148,25 @@ public final class IpUtils {
         return "127.0.0.1";
     }
 
-    // ---- private helpers ----
+ // ---- 私募 助手 ----
 
-    /** 是否BlankOrUnknown */
+    /**
+     * 是否blankorunknown
+     *
+     * @param ip ip
+     * @return 是否blankorunknown的结果
+     */
     private static boolean isBlankOrUnknown(String ip) {
         return StringUtils.isBlank(ip) || "unknown".equalsIgnoreCase(ip);
     }
 
-    /** MatchCidr */
+    /**
+     * 匹配cidr
+     *
+     * @param ip ip
+     * @param cidr cidr
+     * @return 匹配cidr的结果
+     */
     private static boolean matchCidr(String ip, String cidr) {
         try {
             String[] parts = cidr.split("/");
@@ -164,7 +183,12 @@ public final class IpUtils {
         }
     }
 
-    /** IpToLong */
+    /**
+     * ip转为long
+     *
+     * @param ip ip
+     * @return ip转为long的结果
+     */
     private static long ipToLong(String ip) {
         String[] parts = ip.split("\\.");
         if (parts.length != 4) {

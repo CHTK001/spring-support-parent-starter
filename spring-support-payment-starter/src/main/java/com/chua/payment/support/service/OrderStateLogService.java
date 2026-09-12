@@ -13,8 +13,17 @@ import java.util.List;
  */
 public interface OrderStateLogService {
 
+    /**
+     * 日志。
+     * @param request 请求
+     */
     void log(OrderStateLogRequest request);
 
+    /**
+      * 列表by订单标识。
+     * @param orderId 订单标识
+     * @return 列表by订单id的结果
+     */
     List<OrderStateLog> listByOrderId(Long orderId);
 }
 

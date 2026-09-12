@@ -14,8 +14,8 @@ import java.util.List;
  * 时序存储统一门面
  * <p>
  * 对外就一个写入器：内部按 {@code monitor.timeseries.engine} 选择
- * 可用 Provider（influxdb / redis），均不可用时静默跳过。
- * 采集主链路（MetricServiceImpl）与查询控制层只依赖本类，
+   * 可用 提供者（influxdb / Redis），均不可用时静默跳过。
+   * 采集主链路（指标服务impl）与查询控制层只依赖本类，
  * 无需感知具体引擎，实现"后续方便切换"。
  * </p>
  *
@@ -27,16 +27,16 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MetricTimeSeriesWriter {
 
-    /** 已装配的时序 Provider（通常只有一个） */
+    /** 已装配的时序 提供者（通常只有一个） */
     private final List<MetricTimeSeriesProvider> providers;
 
     /** 时序配置 */
     private final MonitorTimeseriesProperties properties;
 
     /**
-     * 按配置选择可用 Provider
+      * 按配置选择可用 提供者
      *
-     * @return 可用的实现或 null
+     * @return 可用的实现或 空
      */
     private MetricTimeSeriesProvider resolve() {
         String engine = properties.getEngine() == null ? "" : properties.getEngine().trim().toLowerCase();
@@ -82,7 +82,7 @@ public class MetricTimeSeriesWriter {
      * 均值曲线查询
      *
      * @param target    目标表
-     * @param monitorId 监控 ID
+     * @param monitorId 监控 标识
      * @param hours     回溯小时数
      * @param window    聚合窗口
      * @return [[ts,value],...] 升序

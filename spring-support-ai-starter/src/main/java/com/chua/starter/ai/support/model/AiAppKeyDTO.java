@@ -6,7 +6,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * AppKey DTO，字段命名与前端面板对齐。
+   * app钥匙 DTO，字段命名与前端面板对齐。
  *
  * @since 2026-08-03
  * @author CH
@@ -14,31 +14,31 @@ import java.io.Serializable;
 @Data
 @Schema(name = "AppKey DTO")
 public class AiAppKeyDTO implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
-     * AppKey 主键 ID
+       * app钥匙 主键 标识
      */
     @Schema(description = "AppKey 主键 ID")
-    /** ID */
+    /** 标识 */
     private Long id;
 
     /**
-     * AppKey 名称
+      * app钥匙 名称
      */
     @Schema(description = "AppKey 名称")
     /** 名称 */
     private String name;
 
     /**
-     * AppKey 密钥值
+      * app钥匙 密钥值
      */
     @Schema(description = "AppKey 密钥值")
     /** 密钥 */
     private String key;
 
     /**
-     * 关联供应商 ID
+      * 关联供应商 标识
      */
     @Schema(description = "关联供应商 ID")
     /** 提供者 */
@@ -59,10 +59,10 @@ public class AiAppKeyDTO implements Serializable {
     private String model;
 
     /**
-     * 绑定分组 ID
+      * 绑定分组 标识
      */
     @Schema(description = "绑定分组 ID")
-    /** 分组ID */
+    /** 分组标识 */
     private Long groupId;
 
     /**

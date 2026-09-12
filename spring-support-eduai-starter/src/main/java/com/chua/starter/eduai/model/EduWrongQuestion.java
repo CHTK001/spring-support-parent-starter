@@ -18,24 +18,24 @@ import java.time.LocalDateTime;
 public class EduWrongQuestion {
 
     /**
-     * 错题记录ID
+      * 错题记录标识
      */
     @TableId(type = IdType.AUTO)
-    /** WrongquestionID */
+    /** wrongquestionid */
     private Long wrongQuestionId;
 
     /**
-     * 学生ID
+      * 学生标识
      */
     private String wrongQuestionStudentId;
 
     /**
-     * 题目ID
+      * 题目标识
      */
     private Long wrongQuestionQuestionId;
 
     /**
-     * 考试ID
+      * 考试标识
      */
     private Long wrongQuestionExamId;
 

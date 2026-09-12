@@ -12,7 +12,7 @@ import java.io.Serializable;
  */
 @Data
 public class MerchantDTO implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
     /** Merchant名称 */
     private String merchantName;
 
@@ -31,7 +31,7 @@ public class MerchantDTO implements Serializable {
     /** Legalperson */
     private String legalPerson;
 
-    /** 默认notifyURL */
+    /** 默认通知url */
     private String defaultNotifyUrl;
 
     /** 默认返回值URL */
@@ -55,6 +55,6 @@ public class MerchantDTO implements Serializable {
     /** Paymentcoupon是否启用 */
     private Boolean paymentCouponEnabled;
 
-    /** Remark */
+    /** 评论 */
     private String remark;
 }

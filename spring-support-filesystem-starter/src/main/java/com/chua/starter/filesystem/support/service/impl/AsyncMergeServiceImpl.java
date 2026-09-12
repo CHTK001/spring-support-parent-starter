@@ -92,14 +92,23 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
 
     @Override
     @Scheduled(fixedDelayString = "${plugin.filesystem.upload.merge-interval-ms:10000}")
-    /** 合并PendingTasks */
+    /** 合并pending任务 */
     public void mergePendingTasks() {
         List<SysFileSystemUpload> tasks = uploadService.listPendingMerge();
         for (SysFileSystemUpload task : tasks) {
             try {
+                /**
+                 * 合并任务。
+                 * @param task 任务
+                 */
                 mergeTask(task);
             } catch (Exception e) {
                 log.error("异步合并失败: {}", task.getFilesystemUploadTaskUploadId(), e);
+                /**
+                 * mark合并失败。
+                 * @param task 任务
+                 * @param e.getMessage( e.获取消息(
+                 */
                 markMergeFailed(task, "合并异常: " + e.getMessage());
             }
         }
@@ -107,14 +116,23 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
 
     @Override
     @Scheduled(fixedDelayString = "${plugin.filesystem.upload.upload-interval-ms:10000}")
-    /** UploadPendingTasks */
+    /** uploadpending任务 */
     public void uploadPendingTasks() {
         List<SysFileSystemUpload> tasks = uploadService.listPendingUpload();
         for (SysFileSystemUpload task : tasks) {
             try {
+                /**
+                 * upload任务。
+                 * @param task 任务
+                 */
                 uploadTask(task);
             } catch (Exception e) {
                 log.error("异步上传OSS失败: {}", task.getFilesystemUploadTaskUploadId(), e);
+                /**
+                 * markupload失败。
+                 * @param task 任务
+                 * @param e.getMessage( e.获取消息(
+                 */
                 markUploadFailed(task, "上传OSS异常: " + e.getMessage());
             }
         }
@@ -122,15 +140,23 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
 
     @Override
     @Scheduled(fixedDelayString = "${plugin.filesystem.upload.retry-interval-ms:60000}")
-    /** RetryFailedTasks */
+    /** 重试失败任务 */
     public void retryFailedTasks() {
         List<SysFileSystemUpload> tasks = uploadService.listFailedRetryable();
         for (SysFileSystemUpload task : tasks) {
             try {
                 Integer stage = task.getFilesystemUploadTaskStage();
                 if (stage != null && stage == SysFileSystemUpload.Stage.MERGE) {
+                    /**
+                     * 合并任务。
+                     * @param task 任务
+                     */
                     mergeTask(task);
                 } else if (stage != null && stage == SysFileSystemUpload.Stage.UPLOAD_TO_OSS) {
+                    /**
+                     * upload任务。
+                     * @param task 任务
+                     */
                     uploadTask(task);
                 } else {
                     log.warn("未知阶段的任务不可重试: {} stage={}",
@@ -166,6 +192,11 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
         if (chunks.size() < task.getFilesystemUploadTaskTotalChunks()) {
             String msg = "分片不完整: " + chunks.size() + "/" + task.getFilesystemUploadTaskTotalChunks();
             mergeLogService.record(uploadId, false, msg, retry);
+            /**
+             * mark合并失败。
+             * @param task 任务
+             * @param msg msg
+             */
             markMergeFailed(task, msg);
             return;
         }
@@ -175,6 +206,11 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
         if (merged == null) {
             String msg = "合并分片数据失败";
             mergeLogService.record(uploadId, false, msg, retry);
+            /**
+             * mark合并失败。
+             * @param task 任务
+             * @param msg msg
+             */
             markMergeFailed(task, msg);
             return;
         }
@@ -183,16 +219,21 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
         if (!writeMergedFile(uploadId, merged)) {
             String msg = "写入合并文件失败";
             mergeLogService.record(uploadId, false, msg, retry);
+            /**
+             * mark合并失败。
+             * @param task 任务
+             * @param msg msg
+             */
             markMergeFailed(task, msg);
             return;
         }
 
-        // 合并成功：标记分片已合并、任务进入待上传 OSS 阶段
+ // 合并成功：标记分片已合并、任务进入待上传 对象存储 阶段
         chunkService.markMerged(uploadId);
         mergeLogService.record(uploadId, true, "合并成功", retry);
         uploadService.updateStage(uploadId, SysFileSystemUpload.Stage.UPLOAD_TO_OSS);
         uploadService.updateStatus(uploadId, SysFileSystemUpload.Status.PENDING_UPLOAD);
-        // 重置失败次数，保证上传阶段独立重试（用独立字段更新，避免覆盖 status/stage）
+ // 重置失败次数，保证上传阶段独立重试（用独立字段更新，避免覆盖 状态/Stage）
         uploadService.resetRetryCount(uploadId);
         log.info("异步合并成功: {} (第{}次)", uploadId, retry);
     }
@@ -223,6 +264,11 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
         if (storage == null) {
             String msg = "存储不存在: " + storageType;
             uploadLogService.record(uploadId, false, msg, retry);
+            /**
+             * markupload失败。
+             * @param task 任务
+             * @param msg msg
+             */
             markUploadFailed(task, msg);
             return;
         }
@@ -235,6 +281,11 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
         if (content == null) {
             String msg = "读取合并文件失败";
             uploadLogService.record(uploadId, false, msg, retry);
+            /**
+             * markupload失败。
+             * @param task 任务
+             * @param msg msg
+             */
             markUploadFailed(task, msg);
             return;
         }
@@ -249,11 +300,20 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
         if (result.getResultCode() != com.chua.common.support.storage.result.ObjectResult.ResultCode.SUCCESS) {
             String msg = "上传到bucket失败: " + result.getMessage();
             uploadLogService.record(uploadId, false, msg, retry);
+            /**
+             * markupload失败。
+             * @param task 任务
+             * @param msg msg
+             */
             markUploadFailed(task, msg);
             return;
         }
 
         // 上传成功：删除合并临时文件、写入文件主体表并标记完成
+        /**
+         * 删除合并文件。
+         * @param uploadId uploadid
+         */
         deleteMergedFile(uploadId);
         fileService.createFromTask(uploadId, result.getUrl(), null);
         uploadLogService.record(uploadId, true, "上传OSS成功", retry);
@@ -284,7 +344,7 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
     }
 
     /**
-     * 标记上传失败（未超重试则回退到待上传 OSS 继续重试）。
+      * 标记上传失败（未超重试则回退到待上传 对象存储 继续重试）。
      *
      * @param task        上传任务
      * @param errorMessage 错误信息
@@ -308,8 +368,8 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
     /**
      * 将分片按序合并为完整字节数组。
      *
-     * @param chunks 已上传的分片列表（已按 partNumber 升序）
-     * @return 合并后的字节数组；任一分片缺失或读取失败返回 null
+     * @param chunks 已上传的分片列表（已按 part数字 升序）
+     * @return 合并后的字节数组；任一分片缺失或读取失败返回 空
      */
     private byte[] mergeChunks(List<SysFileSystemUploadChunk> chunks) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -332,8 +392,8 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
     /**
      * 从临时目录读取合并文件字节。
      *
-     * @param uploadId 上传任务 ID
-     * @return 合并文件字节；不存在返回 null
+     * @param uploadId 上传任务 标识
+     * @return 合并文件字节；不存在返回 空
      */
     private byte[] readMergedFile(String uploadId) {
         try {
@@ -351,7 +411,7 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
     /**
      * 写入合并文件到临时目录。
      *
-     * @param uploadId 上传任务 ID
+     * @param uploadId 上传任务 标识
      * @param content  合并字节
      * @return 是否写入成功
      */
@@ -370,7 +430,7 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
     /**
      * 删除合并临时文件。
      *
-     * @param uploadId 上传任务 ID
+     * @param uploadId 上传任务 标识
      */
     private void deleteMergedFile(String uploadId) {
         try {
@@ -383,8 +443,8 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
     /**
      * 合并临时文件路径。
      *
-     * @param uploadId 上传任务 ID
-     * @return 合并临时文件 Path
+     * @param uploadId 上传任务 标识
+     * @return 合并临时文件 路径
      */
     private java.nio.file.Path mergedFilePath(String uploadId) {
         String baseDir = System.getProperty("filesystem.temp.path");
@@ -395,10 +455,10 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
     }
 
     /**
-     * 从 Key 中提取文件名（最后一段）。
+      * 从 钥匙 中提取文件名（最后一段）。
      *
-     * @param key 对象 Key
-     * @return 文件名；若 key 为 null/空 返回 null
+     * @param key 对象 钥匙
+     * @return 文件名；若 钥匙 为 空/空 返回 空
      */
     private String extractFileName(String key) {
         if (key == null || key.isEmpty()) {
@@ -409,10 +469,10 @@ public class AsyncMergeServiceImpl implements AsyncMergeService {
     }
 
     /**
-     * 从 Key 中提取目录前缀（不含文件名）。
+      * 从 钥匙 中提取目录前缀（不含文件名）。
      *
-     * @param key 对象 Key
-     * @return 目录前缀；若不含 "/" 返回 null
+     * @param key 对象 钥匙
+     * @return 目录前缀；若不含 "/" 返回 空
      */
     private String extractFilePath(String key) {
         if (key == null || key.isEmpty()) {

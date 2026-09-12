@@ -15,11 +15,11 @@ import java.io.Serializable;
 @Data
 @Accessors(chain = true)
 public class AppKeySecret implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
      * 用户编码
-     * 示例: "user_1234567890"
+      * 示例: "用户_1234567890"
      */
     private String userCode;
     /**
@@ -41,14 +41,14 @@ public class AppKeySecret implements Serializable {
     private String xSign;
     
     /**
-     * 应用ID
+      * 应用标识
      * 示例: "app_1234567890"
      */
     private String appId;
     
     /**
      * 请求体内容
-     * 示例: "{\"username\":\"test\",\"password\":\"123456\"}"
+      * 示例: "{\"用户名\":\"测试\",\"密码\":\"123456\"}"
      */
     private String body;
 }

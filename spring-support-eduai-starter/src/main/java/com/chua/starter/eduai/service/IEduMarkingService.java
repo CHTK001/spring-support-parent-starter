@@ -23,7 +23,7 @@ public interface IEduMarkingService {
     /**
      * 轮询阅卷结果
      *
-     * @param taskId 任务ID
+     * @param taskId 任务标识
      * @return 阅卷结果
      */
     MarkingResultVO getResult(String taskId);

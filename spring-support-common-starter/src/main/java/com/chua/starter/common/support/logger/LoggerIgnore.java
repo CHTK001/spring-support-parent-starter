@@ -8,6 +8,8 @@ import java.lang.annotation.Target;
 /**
  * 日志
  *
+ * @author CH
+ * @since 4.0.0
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)

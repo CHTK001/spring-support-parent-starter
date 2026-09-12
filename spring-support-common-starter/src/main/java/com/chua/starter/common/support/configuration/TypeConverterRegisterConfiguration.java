@@ -18,26 +18,43 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * converter
+   * 转换器
  *
  * @author CH
+ * @since 4.0.0
  */
 public class TypeConverterRegisterConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnBean(ConfigurableConversionService.class)
-    /** TypeConverterRegistry */
+    /**
+     * 类型转换器registry
+     *
+     * @param conversionService 转换服务
+     * @return 类型转换器registry的结果
+     */
     public TypeConverterRegistry typeConverterRegistry(ConfigurableConversionService conversionService) {
+        /**
+         * 类型转换器registry。
+         * @param conversionService 转换服务
+         * @return 类型转换器registry的结果
+         */
         return new TypeConverterRegistry(conversionService);
     }
 
+    /**
+     * 类型转换器registry类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     public static class TypeConverterRegistry {
 
         @SuppressWarnings({"unchecked", "rawtypes"})
         /**
-         * 创建 TypeConverterRegistry 实例
-         * @param conversionService conversionService
+          * 创建 类型转换器registry 实例
+         * @param conversionService 转换服务
          */
         public TypeConverterRegistry(ConfigurableConversionService conversionService) {
             conversionService.addConverter(new StringToLongTypeConverter());
@@ -66,7 +83,7 @@ public class TypeConverterRegisterConfiguration {
                             }
 
                             @Override
-                            /** 获取ConvertibleTypes */
+                            /** 获取转换类型 */
                             public Set<GenericConverter.ConvertiblePair> getConvertibleTypes() {
                                 return Collections.singleton(new GenericConverter.ConvertiblePair(String.class, Enum.class));
                             }

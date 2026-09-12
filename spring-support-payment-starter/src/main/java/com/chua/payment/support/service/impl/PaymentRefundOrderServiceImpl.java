@@ -36,29 +36,41 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService {
 
-    /** Paymentrefund排序mapper */
+    /** Paymentrefund排序映射器 */
     private final PaymentRefundOrderMapper paymentRefundOrderMapper;
     /** Merchantmapper */
     private final MerchantMapper merchantMapper;
-    /** Merchant通道mapper */
+    /** Merchant通道映射器 */
     private final MerchantChannelMapper merchantChannelMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 创建RefundOrder
-     * @param order order
-     * @param refundNo refundNo
-     * @param refundAmount refundAmount
-     * @param reason reason
-     * @param operator operator
-     * @param requestPayload requestPayload
+      * 创建退税订单
+     * @param order 订单
+     * @param refundNo 退税no
+     * @param refundAmount 退税amount
+     * @param reason ReasonMLmlml
+     * @param operator 操作符
+     * @param requestPayload 请求payload
+     * @param dto dto
+     * @return 创建退税订单的结果
      */
     public PaymentRefundOrder createRefundOrder(CreateRefundOrderDTO dto) {
         if (dto.order() == null || dto.order().getId() == null) {
+            /**
+             * 薪酬异常。
+             * @param "退款订单不存在" "退款订单不存在"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("退款订单不存在");
         }
         if (!StringUtils.hasText(dto.refundNo())) {
+            /**
+             * 薪酬异常。
+             * @param "退款单号不能为空" "退款单号不能为空"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("退款单号不能为空");
         }
         PaymentRefundOrder entity = new PaymentRefundOrder();
@@ -80,17 +92,22 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     }
 
     @Override
-    /** 获取ById */
+    /** 获取byid */
     public PaymentRefundOrder getById(Long id) {
         PaymentRefundOrder entity = paymentRefundOrderMapper.selectById(id);
         if (entity == null) {
+            /**
+             * 薪酬异常。
+             * @param "退款单不存在" "退款单不存在"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("退款单不存在");
         }
         return entity;
     }
 
     @Override
-    /** 获取ByRefundNo */
+    /** 获取by退税no */
     public PaymentRefundOrder getByRefundNo(String refundNo) {
         if (!StringUtils.hasText(refundNo)) {
             return null;
@@ -101,7 +118,7 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     }
 
     @Override
-    /** 获取ByThirdPartyRefundNo */
+    /** 获取bythirdparty退税no */
     public PaymentRefundOrder getByThirdPartyRefundNo(String thirdPartyRefundNo) {
         if (!StringUtils.hasText(thirdPartyRefundNo)) {
             return null;
@@ -120,6 +137,11 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     @Override
     public Page<RefundOrderVO> page(RefundOrderQueryRequest request) {
         if (request == null) {
+            /**
+             * 薪酬异常。
+             * @param "查询参数不能为空" "查询参数不能为空"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("查询参数不能为空");
         }
         Page<PaymentRefundOrder> page = new Page<>(request.pageNum(), request.pageSize());
@@ -144,7 +166,7 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     }
 
     @Override
-    /** 获取LatestByOrderId */
+    /** 获取latestby订单标识 */
     public PaymentRefundOrder getLatestByOrderId(Long orderId) {
         if (orderId == null) {
             return null;
@@ -156,7 +178,7 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     }
 
     @Override
-    /** 获取ProcessingByOrderId */
+    /** 获取处理by订单标识 */
     public PaymentRefundOrder getProcessingByOrderId(Long orderId) {
         if (orderId == null) {
             return null;
@@ -169,7 +191,7 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     }
 
     @Override
-    /** ListByOrderId */
+    /** 列表by订单标识 */
     public List<PaymentRefundOrder> listByOrderId(Long orderId) {
         return paymentRefundOrderMapper.selectList(new LambdaQueryWrapper<PaymentRefundOrder>()
                 .eq(PaymentRefundOrder::getOrderId, orderId)
@@ -177,19 +199,19 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     }
 
     @Override
-    /** ListVoByOrderId */
+    /** 列表voby订单标识 */
     public List<RefundOrderVO> listVoByOrderId(Long orderId) {
         return listByOrderId(orderId).stream().map(this::convertToVO).toList();
     }
 
     @Override
-    /** 是否拥有ProcessingRefund */
+    /** 是否拥有处理退税 */
     public boolean hasProcessingRefund(Long orderId) {
         return getProcessingByOrderId(orderId) != null;
     }
 
     @Override
-    /** 求和RefundedAmount */
+    /** 求和退税amount */
     public BigDecimal sumRefundedAmount(Long orderId) {
         return listByOrderId(orderId).stream()
                 .filter(item -> RefundOrderStatus.REFUNDED.name().equals(item.getStatus()))
@@ -201,11 +223,11 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * MarkProcessing
-     * @param refundNo refundNo
-     * @param thirdPartyRefundNo thirdPartyRefundNo
-     * @param responsePayload responsePayload
-     * @param remark remark
+      * mark处理
+     * @param refundNo 退税no
+     * @param thirdPartyRefundNo thirdparty退税no
+     * @param responsePayload 响应payload
+     * @param remark 评论
      */
     public PaymentRefundOrder markProcessing(String refundNo,
                                              String thirdPartyRefundNo,
@@ -229,13 +251,15 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * MarkRefunded
-     * @param refundNo refundNo
-     * @param refundAmount refundAmount
-     * @param thirdPartyRefundNo thirdPartyRefundNo
-     * @param responsePayload responsePayload
-     * @param operator operator
-     * @param remark remark
+      * mark退税
+     * @param refundNo 退税no
+     * @param refundAmount 退税amount
+     * @param thirdPartyRefundNo thirdparty退税no
+     * @param responsePayload 响应payload
+     * @param operator 操作符
+     * @param remark 评论
+     * @param dto dto
+     * @return mark退税的结果
      */
     public PaymentRefundOrder markRefunded(MarkRefundedDTO dto) {
         PaymentRefundOrder entity = requireRefundOrder(dto.refundNo());
@@ -263,11 +287,11 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * MarkFailed
-     * @param refundNo refundNo
-     * @param responsePayload responsePayload
-     * @param operator operator
-     * @param remark remark
+      * mark失败
+     * @param refundNo 退税no
+     * @param responsePayload 响应payload
+     * @param operator 操作符
+     * @param remark 评论
      */
     public PaymentRefundOrder markFailed(String refundNo,
                                          String responsePayload,
@@ -288,16 +312,31 @@ public class PaymentRefundOrderServiceImpl implements PaymentRefundOrderService 
         return entity;
     }
 
-    /** RequireRefundOrder */
+    /**
+     * require退税订单
+     *
+     * @param refundNo 退税no
+     * @return require退税订单的结果
+     */
     private PaymentRefundOrder requireRefundOrder(String refundNo) {
         PaymentRefundOrder entity = getByRefundNo(refundNo);
         if (entity == null) {
+            /**
+             * 薪酬异常。
+             * @param refundNo 退税no
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("退款单不存在: " + refundNo);
         }
         return entity;
     }
 
-    /** 转换ToVO */
+    /**
+     * 转换转为vo
+     *
+     * @param entity 实体
+     * @return 转换转为vo的结果
+     */
     private RefundOrderVO convertToVO(PaymentRefundOrder entity) {
         RefundOrderVO vo = new RefundOrderVO();
         BeanUtils.copyProperties(entity, vo);

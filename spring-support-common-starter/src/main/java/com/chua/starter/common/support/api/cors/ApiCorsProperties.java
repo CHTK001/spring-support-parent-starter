@@ -22,7 +22,7 @@ import java.util.Set;
  *         - /v2/**
  * </pre>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/12/07
  * @author CH
  */
@@ -61,7 +61,7 @@ public class ApiCorsProperties {
     }
 
     /**
-     * 获取 pattern
+      * 获取 模式
      *
      * @return pattern
      */
@@ -70,9 +70,9 @@ public class ApiCorsProperties {
     }
 
     /**
-     * 设置 pattern
+      * 设置 模式
      *
-     * @param pattern pattern
+     * @param pattern 模式
      */
     public void setPattern(Set<String> pattern) {
         this.pattern = pattern;

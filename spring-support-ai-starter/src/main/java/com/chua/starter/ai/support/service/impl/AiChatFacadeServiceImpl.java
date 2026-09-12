@@ -7,10 +7,12 @@ import com.chua.common.support.ai.chat.ChatMessage;
 import com.chua.common.support.ai.chat.ChatResponse;
 import com.chua.common.support.ai.chat.ChatSyncResponse;
 import com.chua.common.support.ai.chat.ModelDefinition;
+import com.chua.common.support.converter.Converter;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClient;
 import com.chua.common.support.ai.chat.aggregate.AggregateChatClientSetting;
 import com.chua.starter.ai.support.entity.SysAiGroup;
 import com.chua.starter.ai.support.entity.SysAiGroupModel;
+import com.chua.starter.ai.support.entity.settings.SysAiModel;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderConnectionMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderMapper;
 import com.chua.starter.ai.support.manage.mapper.SysAiProviderModelMapper;
@@ -18,6 +20,7 @@ import com.chua.starter.ai.support.manage.store.SysAiProvider;
 import com.chua.starter.ai.support.manage.store.SysAiProviderConnection;
 import com.chua.starter.ai.support.manage.store.SysAiProviderModel;
 import com.chua.starter.ai.support.mapper.SysAiGroupMapper;
+import com.chua.starter.ai.support.mapper.settings.AiModelMapper;
 import com.chua.starter.ai.support.mapper.SysAiGroupModelMapper;
 import com.chua.starter.ai.support.interceptor.UsageRecorderInterceptor;
 import com.chua.starter.ai.support.model.AiChatRequest;
@@ -42,7 +45,7 @@ import java.util.stream.Collectors;
  * 完成同步/流式对话、模型列表查询与模型定义查询。</p>
  *
  * <p>当请求指定的模型/提供商在模型管理（DB provider）中配置时，优先按 DB
- * 中的平台/地址/凭证/代理动态构建 ChatClient，使每个提供商可独立配置代理
+   * 中的平台/地址/凭证/代理动态构建 对话客户端，使每个提供商可独立配置代理
  * （如 Google 需要单独走代理）。DB 未命中时回退全局注册中心。</p>
  *
  * <p>对话统一走底层 {@link com.chua.common.support.ai.chat.ChatClient} 的
@@ -56,26 +59,36 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AiChatFacadeServiceImpl implements AiChatFacadeService {
 
-    private static final long SSE_TIMEOUT_MILLIS = 60_000L;
+    private static final long SSE_TIMEOUT_MILLIS = 60_000L; // sse超时millis
 
-    private final ChatClientRegistry chatClientRegistry;
-    private final SysAiGroupMapper sysAiGroupMapper;
-    private final SysAiGroupModelMapper sysAiGroupModelMapper;
-    private final SysAiPricingService sysAiPricingService;
-    private final SysAiProviderMapper sysAiProviderMapper;
-    private final SysAiProviderModelMapper sysAiProviderModelMapper;
-    private final SysAiProviderConnectionMapper sysAiProviderConnectionMapper;
-    private final UsageRecorderInterceptor usageRecorderInterceptor;
+    private final ChatClientRegistry chatClientRegistry; // 对话客户端registry
+    private final SysAiGroupMapper sysAiGroupMapper; // sysAI群体映射器
+    private final SysAiGroupModelMapper sysAiGroupModelMapper; // sysAI群体模型映射器
+    private final SysAiPricingService sysAiPricingService; // sysaipricing服务
+    private final SysAiProviderMapper sysAiProviderMapper; // sysAI提供者映射器
+    private final SysAiProviderModelMapper sysAiProviderModelMapper; // sysAI提供者模型映射器
+    private final SysAiProviderConnectionMapper sysAiProviderConnectionMapper; // sysAI提供者connection映射器
+    private final UsageRecorderInterceptor usageRecorderInterceptor; // usagerecorder拦截器
+    private final AiModelMapper aiModelMapper; // 模型定义映射器（加载别名→主模型映射）
 
     /**
-     * DB Provider 多 AppKey 聚合客户端缓存（providerId::model → client，5 分钟 TTL）。
+       * DB 提供者 多 app钥匙 聚合客户端缓存（提供者标识::模型 → 客户端，5 分钟 TTL）。
      * 避免每次对话都重建多客户端聚合实例；凭证变更后最多延迟 5 分钟生效。
      */
     private static final long DB_CLIENT_CACHE_TTL_MILLIS = 5 * 60 * 1000L;
-    private final Map<String, CachedDbClient> dbClientCache = new ConcurrentHashMap<>();
+    /**
+     * 别名映射缓存 TTL（5 分钟）：别名 → 主模型 code，从 sys_ai_model.sys_ai_model_aliases 加载。
+     */
+    private static final long ALIAS_CACHE_TTL_MILLIS = 5 * 60 * 1000L;
+    private volatile Map<String, String> aliasToModelCache;
+    private volatile long aliasCacheLoadedAt;
+    private final Map<String, CachedDbClient> dbClientCache = new ConcurrentHashMap<>(); // db客户端缓存
 
     /**
-     * DB Provider 客户端缓存项。
+      * DB 提供者 客户端缓存项。
+     * @param client 客户端
+     * @param builtAt builtat
+     * @return 缓存db客户端的结果
      */
     private record CachedDbClient(ChatClient client, long builtAt) {
     }
@@ -86,6 +99,11 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     public Map<String, Object> call(AiChatRequest request) {
         ChatClient client = resolveChatClient(request);
         if (client == null) {
+            /**
+             * illegal状态异常。
+             * @param request.getModel( 请求.获取模型(
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("No available ChatClient for model: " + request.getModel());
         }
         ChatClient configured = configureClient(client, request);
@@ -93,7 +111,17 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
             long start = System.currentTimeMillis();
             ChatSyncResponse response = configured.chatSyncWithResponse(promptOf(request));
             long end = System.currentTimeMillis();
+            /**
+             * enrich延迟。
+             * @param response.getUsage( 响应.获取usage(
+             */
             enrichLatency(response != null ? response.getUsage() : null, start, end, 0L);
+            /**
+              * recordusage。
+             * @param configured configured
+             * @param "chat" "对话"
+             * @param response 响应
+             */
             recordUsage(configured, "chat", response);
             return buildResult(response);
         } catch (Exception e) {
@@ -150,7 +178,17 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                         },
                         () -> {
                             if (lastUsage[0] != null) {
+                                /**
+                                 * enrich延迟。
+                                 * @param lastUsage[0] 最后一个usage[0]
+                                 * @param start 启动
+                                 * @param System.currentTimeMillis( 系统.当前时间millis(
+                                 */
                                 enrichLatency(lastUsage[0], start, System.currentTimeMillis(), firstTokenAt[0]);
+                                /**
+                                  * recordusage。
+                                 * @param lastUsage[0] 最后一个usage[0]
+                                 */
                                 recordUsage(lastUsage[0]);
                             }
                             String reply = fullResponse.toString();
@@ -236,16 +274,20 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     // ==================== 内部方法 ====================
 
     /**
-     * 解析对话 ChatClient。
+      * 解析对话 对话客户端。
      *
      * <p>优先按请求模型名从 DB 动态构建（支持每个提供商独立代理），
      * DB 未命中时回退注册中心按模型/提供商/默认顺序查找。</p>
      *
      * @param request 对话请求
-     * @return 底层 ChatClient，找不到返回 null
+     * @return 底层 对话客户端，找不到返回 空
      */
     private ChatClient resolveChatClient(AiChatRequest request) {
-        String model = request.getModel();
+        String model = resolveModelAlias(request.getModel());
+        if (model != null && !model.equals(request.getModel())) {
+            log.info("[AiChat] 模型别名映射: {} -> {}", request.getModel(), model);
+            request.setModel(model);
+        }
         String provider = request.getProvider();
 
         if (model != null && !model.isBlank()) {
@@ -274,11 +316,73 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-     * 按模型名查询 DB 中启用的 provider 配置。
+      * 按模型名查询 DB 中启用的 提供者 配置。
      *
      * @param model 模型名称
-     * @return DB 中启用的 provider，未命中返回 null
+     * @return DB 中启用的 提供者，未命中返回 空
      */
+    /**
+      * 解析模型别名：若请求模型名命中 sys_ai_model.sys_ai_model_aliases 中的某个别名，
+     * 则返回其对应的主模型 code；否则原样返回。
+     *
+     * <p>映射表带 5 分钟 TTL 缓存，避免每次对话都全表扫描模型定义。</p>
+     * @param model 请求模型名（可为空）
+     * @return 主模型 code 或原模型名
+     */
+    private String resolveModelAlias(String model) {
+        if (model == null || model.isBlank()) {
+            return model;
+        }
+        Map<String, String> map = loadAliasMap();
+        String resolved = map.get(model);
+        return resolved != null && !resolved.isBlank() ? resolved : model;
+    }
+
+    /**
+      * 加载别名→主模型映射（带 TTL 缓存）。
+     * @return 只读映射，永不返回空
+     */
+    private Map<String, String> loadAliasMap() {
+        long now = System.currentTimeMillis();
+        Map<String, String> cached = aliasToModelCache;
+        if (cached != null && (now - aliasCacheLoadedAt) < ALIAS_CACHE_TTL_MILLIS) {
+            return cached;
+        }
+        synchronized (this) {
+            if (aliasToModelCache != null && (System.currentTimeMillis() - aliasCacheLoadedAt) < ALIAS_CACHE_TTL_MILLIS) {
+                return aliasToModelCache;
+            }
+            Map<String, String> map = new HashMap<>();
+            try {
+                List<SysAiModel> models = aiModelMapper.selectList(
+                        new LambdaQueryWrapper<SysAiModel>().eq(SysAiModel::getModelEnabled, true));
+                for (SysAiModel m : models) {
+                    String code = m.getModelCode();
+                    if (code == null || code.isBlank()) {
+                        continue;
+                    }
+                    List<String> aliases = Converter.convertIfListNecessary(m.getModelAliases(), String.class);
+                    if (aliases != null) {
+                        for (String alias : aliases) {
+                            if (alias != null && !alias.isBlank()) {
+                                map.putIfAbsent(alias.trim(), code.trim());
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[AiChat] 加载模型别名映射失败: {}", e.getMessage());
+                if (aliasToModelCache != null) {
+                    return aliasToModelCache;
+                }
+            }
+            aliasToModelCache = map;
+            aliasCacheLoadedAt = now;
+            log.info("[AiChat] 已加载模型别名映射 {} 条", map.size());
+            return map;
+        }
+    }
+
     private SysAiProvider resolveDbProviderByModel(String model) {
         if (model == null || model.isBlank()) {
             return null;
@@ -301,23 +405,23 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-     * 从 DB provider 动态构建带代理的 ChatClient。
+      * 从 DB 提供者 动态构建带代理的 对话客户端。
      *
      * <p>支持多 AppKey：聚合 provider 级凭证（{@code api_keys} 数组 / {@code apiKey}）
      * 与其所有 connection 级凭证中的全部可用密钥。单密钥时直接构建普通客户端；
      * 多密钥时每个密钥构建一个客户端并以 {@link AggregateChatClient}（failover 策略）
      * 聚合，某密钥 401/429/额度耗尽时自动切换下一密钥。</p>
      *
-     * @param provider DB provider 配置
+     * @param provider DB 提供者 配置
      * @param model    模型名称
-     * @return 底层 ChatClient，构建失败返回 null
+     * @return 底层 对话客户端，构建失败返回 空
      */
     private ChatClient buildProviderChatClient(SysAiProvider provider, String model) {
         try {
             List<String> keys = collectAllApiKeys(provider);
             Map<String, String> extraHeaders = extractExtraHeaders(provider.getExtra());
             if (keys.isEmpty()) {
-                // 无任何可用密钥：保留原行为（appKey 为 null），由下游/兜底处理
+ // 无任何可用密钥：保留原行为（app钥匙 为 空），由下游/兜底处理
                 ChatClientSetting setting = ChatClientSetting.builder()
                         .provider(provider.getPlatform())
                         .baseUrl(provider.getBaseUrl())
@@ -341,9 +445,10 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 }
                 return raw.model(model);
             }
-            // 多 AppKey：逐密钥构建客户端，failover 聚合
+ // 多 app钥匙：逐密钥构建客户端，按 提供者 负载均衡算法聚合（默认 failover = 首个 钥匙 优先）
             AggregateChatClientSetting agg = new AggregateChatClientSetting();
-            agg.setStrategy("failover");
+            String strategy = resolveLoadStrategy(provider);
+            agg.setStrategy(strategy);
             List<AggregateChatClientSetting.ClientConfig> clients = new ArrayList<>();
             for (String key : keys) {
                 AggregateChatClientSetting.ClientConfig cc = new AggregateChatClientSetting.ClientConfig();
@@ -355,8 +460,13 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
                 clients.add(cc);
             }
             agg.setClients(clients);
-            log.info("[AiChat] 构建多 AppKey failover 聚合客户端: provider={} model={} keys={}",
-                    provider.getProviderId(), model, keys.size());
+            log.info("[AiChat] 构建多 AppKey 聚合客户端: provider={} model={} keys={} strategy={}",
+                    provider.getProviderId(), model, keys.size(), strategy);
+            /**
+             * aggregate对话客户端。
+             * @param agg agg
+             * @return aggregate对话客户端的结果
+             */
             return new AggregateChatClient(agg).model(model);
         } catch (Exception e) {
             log.warn("[AiChat] 构建 DB ChatClient 失败 provider={} model={}: {}",
@@ -366,10 +476,37 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-     * 收集 provider 全部可用 AppKey（去重、保序）：
-     * provider 级凭证（{@code api_keys} 数组 + {@code apiKey} 标量）+ 各 connection 级凭证。
+      * 解析 提供者 的多 钥匙 负载均衡算法。
      *
-     * @param provider DB provider
+     * <p>读 {@code extra.load_strategy}，缺省或非法时回退 {@code failover}（按序取第一个可用 key）。
+     * 可选值：{@code failover} / {@code round_robin} / {@code weighted} / {@code latency} / {@code cost} / {@code hybrid}。</p>
+     * @param provider 提供者
+     * @return resolve加载strategy的结果
+     */
+    private String resolveLoadStrategy(SysAiProvider provider) {
+        String s = null;
+        try {
+            Map<String, Object> extra = provider.getExtra();
+            if (extra != null && extra.get("load_strategy") != null) {
+                s = String.valueOf(extra.get("load_strategy")).trim().toLowerCase();
+            }
+        } catch (Exception ignored) {
+        }
+        if (s == null || s.isEmpty()) {
+            return "failover";
+        }
+        // 归一化别名：roundrobin → round_robin
+        if (s.equals("roundrobin") || s.equals("round-robin")) {
+            return "round_robin";
+        }
+        return s;
+    }
+
+    /**
+      * 收集 提供者 全部可用 app钥匙（去重、保序）：
+      * 提供者 级凭证（{@code api_keys} 数组 + {@code apiKey} 标量）+ 各 connection 级凭证。
+     *
+     * @param provider DB 提供者
      * @return 全部可用密钥列表（可能为空）
      */
     private List<String> collectAllApiKeys(SysAiProvider provider) {
@@ -395,7 +532,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-     * 从凭证中提取全部 API Key（兼容 {@code api_keys} 数组与 {@code apiKey} 键）。
+      * 从凭证中提取全部 API 钥匙（兼容 {@code api_keys} 数组与 {@code apiKey} 键）。
+     * @param credentials 凭证
+     * @return extractapi钥匙的结果
      */
     private static List<String> extractApiKeys(Map<String, Object> credentials) {
         if (credentials == null) {
@@ -418,7 +557,7 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-     * 应用请求级参数（模型/系统提示词/温度/最大 tokens/历史/思考/搜索）到客户端。
+      * 应用请求级参数（模型/系统提示词/温度/最大 令牌/历史/思考/搜索）到客户端。
      *
      * @param client  客户端
      * @param request 对话请求
@@ -476,10 +615,28 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         return request.getPrompt() != null ? request.getPrompt() : "";
     }
 
+    /**
+      * recordusage。
+     * @param client 客户端
+     * @param callType call类型
+     * @param response 响应
+     */
     private void recordUsage(ChatClient client, String callType, ChatSyncResponse response) {
+        /**
+          * recordusage。
+         * @param client 客户端
+         * @param callType call类型
+         * @param response.getUsage( 响应.获取usage(
+         */
         recordUsage(client, callType, response != null ? response.getUsage() : null);
     }
 
+    /**
+      * recordusage。
+     * @param client 客户端
+     * @param callType call类型
+     * @param usage usage
+     */
     private void recordUsage(ChatClient client, String callType, com.chua.common.support.ai.AiUsage usage) {
         if (usage == null) {
             return;
@@ -499,10 +656,24 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         }
     }
 
+    /**
+      * recordusage。
+     * @param usage usage
+     */
     private void recordUsage(com.chua.common.support.ai.AiUsage usage) {
+        /**
+          * recordusage。
+         * @param usage usage
+         * @param "chat_stream" "对话_流"
+         */
         recordUsage(usage, "chat_stream");
     }
 
+    /**
+      * recordusage。
+     * @param usage usage
+     * @param callType call类型
+     */
     private void recordUsage(com.chua.common.support.ai.AiUsage usage, String callType) {
         if (usage == null) {
             return;
@@ -524,9 +695,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
 
     /**
      * 回填调用时延（总耗时 / 首字时延）到 {@link com.chua.common.support.ai.AiUsage}，
-     * 使持久化的 sys_ai_usage 携带 first_token_latency / total_latency。
+      * 使持久化的 sys_AI_usage 携带 第一个_令牌_延迟 / total_延迟。
      *
-     * @param usage       待回填的用量（可为 null）
+     * @param usage       待回填的用量（可为 空）
      * @param start       调用开始时间戳（ms）
      * @param end         调用结束时间戳（ms）
      * @param firstTokenAt 首个内容 chunk 到达时间戳（ms）；0 表示未知（同步调用）
@@ -540,17 +711,17 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         if (firstTokenAt > 0) {
             usage.setFirstTokenLatencyMillis(Math.max(0L, firstTokenAt - start));
         } else if (usage.getFirstTokenLatencyMillis() == null) {
-            // 非流式（同步）无独立首字时刻：以整体耗时近似，避免统计被 null 拉低
+ // 非流式（同步）无独立首字时刻：以整体耗时近似，避免统计被 空 拉低
             usage.setFirstTokenLatencyMillis(duration);
         }
     }
 
     /**
-     * 获取（带缓存的）DB Provider ChatClient。
+      * 获取（带缓存的）DB 提供者 对话客户端。
      *
-     * @param provider DB provider
+     * @param provider DB 提供者
      * @param model    模型名称
-     * @return 底层 ChatClient，构建失败返回 null
+     * @return 底层 对话客户端，构建失败返回 空
      */
     private ChatClient getCachedDbClient(SysAiProvider provider, String model) {
         String cacheKey = provider.getProviderId() + "::" + model;
@@ -567,7 +738,9 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
     }
 
     /**
-     * 从 provider extra 中提取 {@code custom_headers}。
+      * 从 提供者 extra 中提取 {@code custom_headers}。
+     * @param extra extra
+     * @return extractextra头部的结果
      */
     @SuppressWarnings("unchecked")
     private static Map<String, String> extractExtraHeaders(Map<String, Object> extra) {
@@ -587,6 +760,11 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         return null;
     }
 
+    /**
+     * 构建结果。
+     * @param response 响应
+     * @return 构建结果的结果
+     */
     private Map<String, Object> buildResult(ChatSyncResponse response) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("text", response.getText() != null ? response.getText() : "");
@@ -602,6 +780,11 @@ public class AiChatFacadeServiceImpl implements AiChatFacadeService {
         return result;
     }
 
+    /**
+     * 构建错误结果。
+     * @param e e
+     * @return 构建错误结果的结果
+     */
     private Map<String, Object> buildErrorResult(Exception e) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("text", "");

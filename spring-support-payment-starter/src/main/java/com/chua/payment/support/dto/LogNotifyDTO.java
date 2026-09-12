@@ -5,9 +5,9 @@ import jakarta.servlet.http.HttpServletRequest;
 /**
  * 支付回调日志记录请求参数对象。
  *
- * @param notifyType     通知类型（如 WECHAT_PAY、ALIPAY_PAY、WECHAT_REFUND 等）
- * @param merchantId     商户ID
- * @param channelId      渠道ID
+ * @param notifyType     通知类型（如 WECHAT_薪酬、ALIPAY_薪酬、WECHAT_退税 等）
+ * @param merchantId     商户标识
+ * @param channelId      渠道标识
  * @param channelType    渠道类型
  * @param channelSubType 渠道子类型
  * @param orderNo        支付订单号

@@ -15,9 +15,13 @@ import java.util.Collections;
  * </p>
  *
  * @author CH
+ * @since 4.0.0
  */
 public class SpringBeanUtils {
 
+    /**
+     * springBean工具。
+     */
     private SpringBeanUtils() {
     }
 
@@ -25,9 +29,9 @@ public class SpringBeanUtils {
     private static ApplicationContext applicationContext;
 
     /**
-     * 设置 ApplicationContext
+      * 设置 application上下文
      *
-     * @param ctx ApplicationContext 实例
+     * @param ctx application上下文 实例
      */
     public static void setApplicationContext(ApplicationContext ctx) {
         applicationContext = ctx;
@@ -63,7 +67,7 @@ public class SpringBeanUtils {
     }
 
     /**
-     * 获取 ApplicationContext（允许返回 null）
+      * 获取 application上下文（允许返回 空）
      *
      * @return ApplicationContext 实例
      */
@@ -72,7 +76,7 @@ public class SpringBeanUtils {
     }
 
     /**
-     * 获取 ApplicationContext
+      * 获取 application上下文
      *
      * @return ApplicationContext 实例
      */
@@ -81,7 +85,7 @@ public class SpringBeanUtils {
     }
 
     /**
-     * 获取 Environment
+      * 获取 环境
      *
      * @return Environment 实例
      */
@@ -90,7 +94,7 @@ public class SpringBeanUtils {
     }
 
     /**
-     * 获取 RequestMappingHandlerMapping
+      * 获取 请求mapping处理器mapping
      *
      * @return HandlerMapping 实例
      */

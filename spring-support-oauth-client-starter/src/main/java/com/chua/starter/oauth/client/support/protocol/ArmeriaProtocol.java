@@ -38,7 +38,7 @@ import java.util.Map;
 /**
  * Armeria 协议实现
  * <p>
- * 使用 Armeria WebClient 进行 OAuth 认证，基于 Netty 的高性能异步框架。
+   * 使用 Armeria web客户端 进行 o认证 认证，基于 Netty 的高性能异步框架。
  * 相比 HTTP 协议具有以下优势：
  * <ul>
  * <li>支持 HTTP/2 多路复用，减少连接开销</li>
@@ -48,7 +48,7 @@ import java.util.Map;
  * </ul>
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2025-12-02
  * @author CH
  */
@@ -56,8 +56,8 @@ import java.util.Map;
 @Slf4j
 public class ArmeriaProtocol extends AbstractProtocol {
 
-    private volatile WebClient webClient;
-    /** Client_lock */
+    private volatile WebClient webClient; // web客户端
+    /** 客户端_锁 */
     private static final Object CLIENT_LOCK = new Object();
     
     /**
@@ -71,12 +71,16 @@ public class ArmeriaProtocol extends AbstractProtocol {
      * @param authClientProperties 认证客户端配置
      */
     public ArmeriaProtocol(AuthClientProperties authClientProperties) {
+        /**
+         * 父。
+         * @param authClientProperties 认证客户端属性
+         */
         super(authClientProperties);
         this.resilience = new OAuthClientResilience(authClientProperties);
     }
 
     /**
-     * 初始化 Armeria WebClient（配置超时和连接池）
+      * 初始化 Armeria web客户端（配置超时和连接池）
      */
     private void initializeClient() {
         if (webClient == null) {
@@ -84,12 +88,17 @@ public class ArmeriaProtocol extends AbstractProtocol {
                 if (webClient == null) {
                     String selectedUrl = selectUrl();
                     if (selectedUrl == null) {
+                        /**
+                         * illegal状态异常。
+                         * @param 服务器地址不存在" 服务器地址不存在"
+                         * @return illegal状态异常的结果
+                         */
                         throw new IllegalStateException("OAuth 服务器地址不存在");
                     }
                     
                     String baseUrl = StringUtils.startWithAppend(selectedUrl, "http://");
                     
-                    // 创建带超时配置的 ClientFactory
+ // 创建带超时配置的 客户端工厂
                     ClientFactory clientFactory = ClientFactory.builder()
                             .connectTimeoutMillis(authClientProperties.getConnectTimeout())
                             .idleTimeoutMillis(authClientProperties.getReadTimeout())
@@ -97,7 +106,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
                             .maxNumEventLoopsPerHttp1Endpoint(2)
                             .build();
                     
-                    // 创建 WebClient
+ // 创建 web客户端
                     this.webClient = WebClient.builder(baseUrl)
                             .factory(clientFactory)
                             .responseTimeoutMillis(authClientProperties.getRequestTimeout())
@@ -115,7 +124,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
     @Override
     /** Approve */
     protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
-        // 如果传入的subProtocol（认证类型）为空，尝试从Header读取 x-oauth-type
+ // 如果传入的sub协议（认证类型）为空，尝试从头部读取 x-OAuth-类型
         if (StringUtils.isBlank(subProtocol)) {
             jakarta.servlet.http.HttpServletRequest request = RequestUtils.getRequest();
             if (request != null) {
@@ -138,11 +147,11 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** AuthenticationUserCode */
+    /** 认证用户编码 */
     protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
-        // 注意：指纹校验应该在Filter层进行，因为需要比对用户信息里的指纹
+ // 注意：指纹校验应该在过滤器层进行，因为需要比对用户信息里的指纹
         // 协议层此时还没有用户信息，无法进行真正的指纹比对
-        // 指纹比对逻辑在 AuthFilter.verifyFingerprint() 中实现
+ // 指纹比对逻辑在 认证过滤器.验证fingerprint() 中实现
         
         JsonObject jsonObject = createAppKeyAuthenticationData(appKeySecret);
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
@@ -154,7 +163,9 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
     
     /**
-     * 脱敏 AppKey
+      * 脱敏 app钥匙
+     * @param appKey app钥匙
+     * @return maskapp钥匙的结果
      */
     private String maskAppKey(String appKey) {
         if (appKey == null || appKey.length() < 8) {
@@ -165,6 +176,8 @@ public class ArmeriaProtocol extends AbstractProtocol {
     
     /**
      * 脱敏指纹
+     * @param fingerprint fingerprint
+     * @return maskFingerprint的结果
      */
     private String maskFingerprint(String fingerprint) {
         if (fingerprint == null || fingerprint.length() < 8) {
@@ -174,7 +187,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** UpgradeInformation */
+    /** upgrade信息 */
     protected AuthenticationInformation upgradeInformation(Cookie cookie, String token, UpgradeType upgradeType, String refreshToken) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("x-oauth-cookie", null == cookie ? null : cookie.getValue());
@@ -190,14 +203,26 @@ public class ArmeriaProtocol extends AbstractProtocol {
                 com.chua.starter.oauth.client.support.execute.AuthSessionUtils.removeUserInfo();
                 String cacheKey = getCacheKey(new Cookie[]{cookie}, token);
                 if (hasCache(cacheKey)) {
+                    /**
+                     * clear认证信息。
+                     * @param cacheKey 缓存钥匙
+                     */
                     clearAuthenticationInformation(cacheKey);
                 }
             } else if (upgradeType == UpgradeType.REFRESH) {
                 // REFRESH: 旧 AT 已失效，必须清除客户端缓存，防止旧 AT 仍能命中缓存
                 String cacheKey = getCacheKey(new Cookie[]{cookie}, token);
                 if (hasCache(cacheKey)) {
+                    /**
+                     * clear认证信息。
+                     * @param cacheKey 缓存钥匙
+                     */
                     clearAuthenticationInformation(cacheKey);
                 }
+                /**
+                 * invalidate缓存。
+                 * @param token 令牌
+                 */
                 invalidateCache(token);
             }
         }
@@ -205,14 +230,14 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** 获取AccessToken */
+    /** 获取access令牌 */
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
         jsonObject.put("x-oauth-secret-key", authClientProperties.getKey().getSecretKey());
         jsonObject.put("x-oauth-username", username);
         jsonObject.put("x-oauth-password", password);
-        // 传 code（如 "WEB"）而非枚举名，NONE 时 fallback 到 WEB
+ // 传 编码（如 "WEB"）而非枚举名，无 时 降级 到 WEB
         String authTypeCode = (authType == null || authType == com.chua.starter.oauth.client.support.enums.AuthType.NONE)
                 ? "WEB" : authType.getCode().toUpperCase();
         jsonObject.put("x-oauth-auth-type", authTypeCode);
@@ -225,7 +250,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
         
         LoginAuthResult loginAuthResult = new LoginAuthResult();
         loginAuthResult.setCode(information.getInformation().getCode());
-        // 优先使用服务端透传的真实错误消息，fallback 到 Information 枚举的固定消息
+ // 优先使用服务端透传的真实错误消息，降级 到 信息 枚举的固定消息
         String msg = information.getErrorMessage() != null ? information.getErrorMessage() : information.getInformation().getMessage();
         loginAuthResult.setMessage(msg);
         loginAuthResult.setUserResume(information.getReturnResult());
@@ -250,17 +275,29 @@ public class ArmeriaProtocol extends AbstractProtocol {
         if (information.getInformation() == Information.OK) {
             // 清除本地缓存，防止登出后仍命中缓存
             if (logoutType == LogoutType.LOGOUT_ALL || logoutType == LogoutType.UN_REGISTER) {
+                /**
+                 * invalidate全部缓存。
+                 */
                 invalidateAllCache();
             } else {
+                /**
+                 * invalidate缓存。
+                 * @param uid uid
+                 */
                 invalidateCache(uid);
             }
             return LoginAuthResult.OK;
         }
+        /**
+         * 认证异常。
+         * @param information.getInformation( 信息.获取信息(
+         * @return 认证异常的结果
+         */
         throw new AuthException(information.getInformation().getMessage());
     }
 
     @Override
-    /** 创建TemporaryToken */
+    /** 创建temporary令牌 */
     public LoginAuthResult createTemporaryToken(String sourceToken, Map<String, Object> ext) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
@@ -284,7 +321,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** 获取OnlineUsers */
+    /** 获取online用户 */
     public OnlineUserResult getOnlineUsers(OnlineUserQuery query) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
@@ -313,7 +350,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** 获取OnlineStatus */
+    /** 获取online状态 */
     public OnlineStatus getOnlineStatus(String uid) {
         JsonObject jsonObject = new JsonObject();
         jsonObject.put("x-oauth-access-key", authClientProperties.getKey().getAccessKey());
@@ -340,7 +377,12 @@ public class ArmeriaProtocol extends AbstractProtocol {
         return OnlineStatus.defaultStatus();
     }
 
-    /** 解析OnlineUserResult */
+    /**
+     * 解析online用户结果
+     *
+     * @param resultMap 结果映射
+     * @return 解析online用户结果的结果
+     */
     private OnlineUserResult parseOnlineUserResult(java.util.Map<String, Object> resultMap) {
         OnlineUserResult result = new OnlineUserResult();
         result.setTotal(getIntValue(resultMap, "total", 0));
@@ -376,7 +418,14 @@ public class ArmeriaProtocol extends AbstractProtocol {
         return result;
     }
 
-    /** 获取IntValue */
+    /**
+     * 获取int价值观
+     *
+     * @param map 映射
+     * @param key 钥匙
+     * @param defaultValue 默认价值观
+     * @return 获取int价值观的结果
+     */
     private int getIntValue(java.util.Map<String, Object> map, String key, int defaultValue) {
         Object value = map.get(key);
         if (value instanceof Number) {
@@ -385,7 +434,14 @@ public class ArmeriaProtocol extends AbstractProtocol {
         return defaultValue;
     }
 
-    /** 获取StringValue */
+    /**
+     * 获取字符串价值观
+     *
+     * @param map 映射
+     * @param key 钥匙
+     * @param defaultValue 默认价值观
+     * @return 获取字符串价值观的结果
+     */
     private String getStringValue(java.util.Map<String, Object> map, String key, String defaultValue) {
         Object value = map.get(key);
         return value != null ? value.toString() : defaultValue;
@@ -393,7 +449,7 @@ public class ArmeriaProtocol extends AbstractProtocol {
 
     /**
      * 创建认证信息
-     * 使用 Armeria WebClient 向远程认证服务器发送请求
+      * 使用 Armeria web客户端 向远程认证服务器发送请求
      *
      * @param jsonObject  包含认证所需参数的JSON对象
      * @param upgradeType 升级类型
@@ -411,8 +467,15 @@ public class ArmeriaProtocol extends AbstractProtocol {
 
     /**
      * 执行实际的 Armeria 请求
+     * @param jsonObject json对象
+     * @param upgradeType upgrade类型
+     * @param path 路径
+     * @return 执行请求的结果
      */
     private AuthenticationInformation doRequest(JsonObject jsonObject, UpgradeType upgradeType, String path) {
+        /**
+         * 初始化客户端。
+         */
         initializeClient();
         
         String selectedUrl = selectUrl();
@@ -434,14 +497,14 @@ public class ArmeriaProtocol extends AbstractProtocol {
                     .fluentPut("data", createData(jsonObject, key))
                     .toJSONString();
             
-            // 添加认证类型请求头（x-oauth-type）
+ // 添加认证类型请求头（x-OAuth-类型）
             jakarta.servlet.http.HttpServletRequest currentRequest = RequestUtils.getRequest();
             String authType = null;
             if (currentRequest != null) {
                 authType = currentRequest.getHeader("x-oauth-type");
             }
             
-            // 使用 Armeria WebClient 发送请求
+ // 使用 Armeria web客户端 发送请求
             var preparation = webClient.prepare()
                     .post(requestPath)
                     .header(HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8.toString())

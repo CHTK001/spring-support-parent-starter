@@ -17,6 +17,8 @@ import java.util.List;
 /**
  * 超类
  *
+ * @author CH
+ * @since 4.0.0
  */
 public abstract class AbstractSwaggerQueryController<S extends IService<T>, T> extends AbstractSwaggerUpdateController<S, T>{
 
@@ -25,6 +27,7 @@ public abstract class AbstractSwaggerQueryController<S extends IService<T>, T> e
      *
      * @param entity 结果
      * @return 分页结果
+     * @param page page
      */
     @ResponseBody
     @Operation(summary = "分页查询基础数据")
@@ -48,7 +51,7 @@ public abstract class AbstractSwaggerQueryController<S extends IService<T>, T> e
     }
     /**
      * 查询详细信息
-     * @param id id
+     * @param id 标识
      * @return 结果
      */
     @Operation(summary = "查询详细信息")
@@ -62,7 +65,7 @@ public abstract class AbstractSwaggerQueryController<S extends IService<T>, T> e
     /**
      * 查询详细信息
      *
-     * @param entity entity
+     * @param entity 实体
      * @return 详细信息
      */
 

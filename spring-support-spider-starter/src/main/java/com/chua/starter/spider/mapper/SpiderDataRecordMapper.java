@@ -4,7 +4,7 @@ import com.chua.starter.mybatis.mapper.BaseMapperX;
 import com.chua.starter.spider.entity.SpiderDataRecord;
 
 /**
- * 采集数据记录 Mapper。
+   * 采集数据记录 映射器。
  *
  * <p>继承 {@link BaseMapperX} 获得 MyBatis-Plus 通用 CRUD 与分页能力。</p>
  *

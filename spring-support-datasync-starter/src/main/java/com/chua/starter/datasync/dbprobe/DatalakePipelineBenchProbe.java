@@ -21,7 +21,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Datalake PipelineEngine 吞吐基准：测量 PipelineEngine.execute 在不同数据量下的吞吐。
+   * 数据湖 pipelineengine 吞吐基准：测量 pipelineengine.执行 在不同数据量下的吞吐。
  *
  * <p>测试矩阵：
  * <ul>
@@ -79,6 +79,13 @@ public final class DatalakePipelineBenchProbe {
 
         for (int i = 0; i < pipelines.length; i++) {
             for (int count : counts) {
+                /**
+                 * 运行bench。
+                 * @param engine engine
+                 * @param pipelines[i] pipelines[i]
+                 * @param pipelineLabels[i] pipeline标签[i]
+                 * @param count 数量
+                 */
                 runBench(engine, pipelines[i], pipelineLabels[i], count);
             }
         }
@@ -94,7 +101,7 @@ public final class DatalakePipelineBenchProbe {
      * 运行单次基准测试。
      *
      * @param engine  管线引擎
-     * @param pipeId  管线 ID
+     * @param pipeId  管线 标识
      * @param label   管线标签
      * @param count   数据条数
      * @throws Exception 异常

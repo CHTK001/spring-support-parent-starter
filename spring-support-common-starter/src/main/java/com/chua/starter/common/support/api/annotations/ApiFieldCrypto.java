@@ -48,9 +48,10 @@ import java.lang.annotation.Target;
  * </ul>
  *
  * @since 2023-01-01
- * @version 1.0.0
+   * @版本 1.0.0
  * @see ApiFieldCryptoKey
  * @see ApiCryptoSerializer
+ * @author CH
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
@@ -81,6 +82,8 @@ public @interface ApiFieldCrypto {
 
     /**
      * 加密算法类型枚举
+     * @author CH
+     * @since 4.0.0
      */
         enum ApiCryptoType {
         /**

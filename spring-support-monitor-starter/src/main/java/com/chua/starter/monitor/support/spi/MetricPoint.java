@@ -11,7 +11,7 @@ import java.util.Map;
 /**
  * 单个指标点
  * <p>
- * Provider 解析一次采集输出得到的最小数据单元, 用于入库或聚合。
+   * 提供者 解析一次采集输出得到的最小数据单元, 用于入库或聚合。
  * </p>
  *
  * @since 2026/8/4
@@ -39,13 +39,13 @@ public class MetricPoint {
     private String unit;
 
     /**
-     * 标签维度(如 core=0, mount=/)
+      * 标签维度(如 核心=0, mount=/)
      */
     @Builder.Default
-    private Map<String, String> tags = new HashMap<>();
+    private Map<String, String> tags = new HashMap<>(); // 标签
 
     /**
-     * 目标子表(可选): ms_monitor_metric_cpu / ms_monitor_metric_memory / ...
+      * 目标子表(可选): ms_监控_指标_cpu / ms_监控_指标_内存 / ...
      * <p>为空时写入通用 ms_monitor_metric</p>
      */
     private String targetTable;

@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * <p>当前进程内维护"本地是否为 Leader"的状态, 实际抢占由
  * {@link LeaderElectionResolver} SPI 实现 (默认 CAS 占位,
- * classpath 含 MyBatis-Plus 时切换为 {@code MysqlLeaderElectionResolver})。</p>
+   * 类路径 含 MyBatis-Plus 时切换为 {@code MysqlLeaderElectionResolver})。</p>
  *
  * <h3>使用</h3>
  * <pre>{@code
@@ -19,6 +19,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * boolean ok = resolver.tryAcquire("payment", "node-1", 15);
  * if (ok) {
  *     elector.markLeader("payment");
+ *     // 启动单秒循环
+ * }
+ * }</pre>kLeader("payment");
  *     // 启动单秒循环
  * }
  * }</pre>
@@ -36,7 +39,7 @@ public class LeaderElector {
     private final String nodeId;
 
     /**
-     * Leader 状态标记 (CAS)
+      * 铅 状态标记 (CAS)
      */
     private final AtomicBoolean leader = new AtomicBoolean(false);
 
@@ -101,7 +104,7 @@ public class LeaderElector {
     /**
      * 节点标识。
      *
-     * @return 节点 ID
+     * @return 节点 标识
      */
     public String nodeId() {
         return nodeId;

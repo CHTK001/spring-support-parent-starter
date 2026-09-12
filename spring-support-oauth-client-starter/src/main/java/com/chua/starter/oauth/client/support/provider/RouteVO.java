@@ -59,7 +59,9 @@ public class RouteVO {
     private Meta meta;
 
     /**
-     * 路由参数类，继承自HashMap，用于存储路由的额外参数。
+      * 路由参数类，继承自哈希映射，用于存储路由的额外参数。
+     * @author CH
+     * @since 4.0.0
      */
     @EqualsAndHashCode(callSuper = true)
     @Data
@@ -69,6 +71,8 @@ public class RouteVO {
 
     /**
      * 元信息类，包含路由的标题、图标、隐藏、标签、固定标签、类型、颜色、角色、缓存和参数信息。
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class Meta {

@@ -16,11 +16,11 @@ import java.time.LocalDateTime;
 public class MerchantChannel {
 
     @TableId(value = "pay_merchant_channel_id", type = IdType.AUTO)
-    /** ID */
+    /** 标识 */
     private Long id;
 
     @TableField("pay_merchant_id")
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
 
     @TableField("pay_merchant_channel_channel_type")
@@ -40,7 +40,7 @@ public class MerchantChannel {
     private String appId;
 
     @TableField("pay_merchant_channel_merchant_no")
-    /** MerchantNO */
+    /** merchantno */
     private String merchantNo;
 
     @TableField("pay_merchant_channel_api_key")
@@ -64,7 +64,7 @@ public class MerchantChannel {
     private Integer sandboxMode;
 
     @TableField("pay_merchant_channel_notify_url")
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
 
     @TableField("pay_merchant_channel_return_url")

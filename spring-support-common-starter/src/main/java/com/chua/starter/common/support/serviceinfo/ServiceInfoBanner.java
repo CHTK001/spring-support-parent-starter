@@ -70,21 +70,21 @@ final class ServiceInfoBanner {
 
     // ------------------------------------------------------------------ 框线字符
 
-    private static final String H_LINE = "═";
-    private static final String V_LINE = "║";
-    private static final String T_LEFT = "╔";
-    private static final String T_RIGHT = "╗";
-    private static final String B_LEFT = "╚";
-    private static final String B_RIGHT = "╝";
-    private static final String SEC_LEFT = "╠";
-    private static final String SEC_RIGHT = "╣";
-    private static final String DIV_LEFT = "╟";
-    private static final String DIV_RIGHT = "╢";
-    private static final String DIV_LINE = "─";
+    private static final String H_LINE = "═"; // h线
+    private static final String V_LINE = "║"; // v线
+    private static final String T_LEFT = "╔"; // T_LEFT
+    private static final String T_RIGHT = "╗"; // T_RIGHT
+    private static final String B_LEFT = "╚"; // B_LEFT
+    private static final String B_RIGHT = "╝"; // B_RIGHT
+    private static final String SEC_LEFT = "╠"; // SEC_LEFT
+    private static final String SEC_RIGHT = "╣"; // SEC_RIGHT
+    private static final String DIV_LEFT = "╟"; // DIV_LEFT
+    private static final String DIV_RIGHT = "╢"; // DIV_RIGHT
+    private static final String DIV_LINE = "─"; // div线
     /** 分组分隔线前缀: "── " */
     private static final String DIV_PREFIX = DIV_LINE + DIV_LINE + " ";
 
-    /** 创建 ServiceInfoBanner 实例 */
+    /** 创建 服务信息banner 实例 */
     private ServiceInfoBanner() {}
 
     /**
@@ -120,7 +120,7 @@ final class ServiceInfoBanner {
 
     /**
      * 端点去重: 同一路径只保留一条, 重复时保留 URL 更完整的那条
-     * (例如 {@code /doc.html} 与 {@code http://host/doc.html} 由不同 starter 重复注册, 视为同一端点)。
+      * (例如 {@code /doc.html} 与 {@code http://host/doc.html} 由不同 启动 重复注册, 视为同一端点)。
      */
     private static List<ServiceInfoRegistry.EndpointInfo> dedupeEndpoints(
             Collection<ServiceInfoRegistry.EndpointInfo> source) {
@@ -138,7 +138,7 @@ final class ServiceInfoBanner {
 
     /**
      * 开关去重并按分组聚合: 同一分组下"显示名去掉空白后相同且取值相同"的开关只保留第一条
-     * (例如 {@code Knife4j接口文档} 与 {@code Knife4j 接口文档} 由不同 starter 重复注册)。
+      * (例如 {@code Knife4j接口文档} 与 {@code Knife4j 接口文档} 由不同 启动 重复注册)。
      *
      * <p>取值不同的同名开关不会被合并, 以便暴露配置冲突。</p>
      */
@@ -157,18 +157,33 @@ final class ServiceInfoBanner {
         return byGroup;
     }
 
-    /** 端点显示名: 分组/名称 */
+    /**
+     * 端点显示名: 分组/名称
+     *
+     * @param endpoint 端点
+     * @return 端点标签的结果
+     */
     private static String endpointLabel(ServiceInfoRegistry.EndpointInfo endpoint) {
         String group = nullToEmpty(endpoint.getGroup());
         return group.isEmpty() ? nullToEmpty(endpoint.getName()) : group + "/" + nullToEmpty(endpoint.getName());
     }
 
-    /** 开关显示名: 优先描述, 描述为空时退化为开关名 */
+    /**
+     * 开关显示名: 优先描述, 描述为空时退化为开关名
+     *
+     * @param flag flag
+     * @return flag标签的结果
+     */
     private static String flagLabel(ServiceInfoRegistry.FlagInfo flag) {
         return hasText(flag.getDescription()) ? flag.getDescription() : nullToEmpty(flag.getName());
     }
 
-    /** 开关行右侧的"状态块": 可选的附加上下文 + 三态标签 */
+    /**
+     * 开关行右侧的"状态块": 可选的附加上下文 + 三态标签
+     *
+     * @param flag flag
+     * @return 状态block的结果
+     */
     private static String statusBlock(ServiceInfoRegistry.FlagInfo flag) {
         if (!hasText(flag.getSuffix())) {
             return AnsiStyle.cnLabel(flag.getValue());
@@ -215,7 +230,11 @@ final class ServiceInfoBanner {
             this.maxStatus = status;
         }
 
-        /** 框体内容宽度: 所有行自然宽度的最大值 + 右边距, 夹在上下限之间 */
+        /**
+         * 框体内容宽度: 所有行自然宽度的最大值 + 右边距, 夹在上下限之间
+         *
+         * @return 内部width的结果
+         */
         int innerWidth() {
             int inner = MIN_INNER;
             if (!endpoints.isEmpty()) {
@@ -230,7 +249,12 @@ final class ServiceInfoBanner {
             return Math.min(inner, MAX_INNER);
         }
 
-        /** 第二遍: 按 inner 反推列宽并生成行 */
+        /**
+         * 第二遍: 按 内部 反推列宽并生成行
+         *
+         * @param inner 内部
+         * @return 构建rows的结果
+         */
         List<Row> buildRows(int inner) {
             List<Row> rows = new ArrayList<>();
             if (!endpoints.isEmpty()) {
@@ -274,7 +298,12 @@ final class ServiceInfoBanner {
 
     /** 横幅中的一行 (渲染结果已包含左右边框) */
     private interface Row {
-        /** 按指定内容宽度渲染整行, 可见宽度恒为 inner + 2 */
+        /**
+         * 按指定内容宽度渲染整行, 可见宽度恒为 内部 + 2
+         *
+         * @param inner 内部
+         * @return render的结果
+         */
         String render(int inner);
     }
 
@@ -282,13 +311,17 @@ final class ServiceInfoBanner {
     private static final class TextRow implements Row {
         private final Line line;
 
+        /**
+         * 文本row。
+         * @param line 线
+         */
         TextRow(Line line) {
             this.line = line;
         }
 
         @Override
         public String render(int inner) {
-            // 可伸缩间隙最多撑到 inner - RIGHT_MARGIN, 右侧始终保留留白, 不贴边框
+ // 可伸缩间隙最多撑到 内部 - RIGHT_MARGIN, 右侧始终保留留白, 不贴边框
             String body = clip(line.render(inner - RIGHT_MARGIN, inner), inner);
             return color(AnsiStyle.CYAN) + V_LINE + reset() + body + color(AnsiStyle.CYAN) + V_LINE + reset();
         }
@@ -298,6 +331,10 @@ final class ServiceInfoBanner {
     private static final class DividerRow implements Row {
         private final String label;
 
+        /**
+          * dividerrow。
+         * @param label 标签
+         */
         DividerRow(String label) {
             this.label = label;
         }
@@ -322,7 +359,12 @@ final class ServiceInfoBanner {
         private int width;
         private int fills;
 
-        /** 追加文本片段 (自动累加可见宽度) */
+        /**
+         * 追加文本片段 (自动累加可见宽度)
+         *
+         * @param text 文本
+         * @return 添加的结果
+         */
         Line add(String text) {
             if (text == null || text.isEmpty()) {
                 return this;
@@ -332,21 +374,43 @@ final class ServiceInfoBanner {
             return this;
         }
 
-        /** 追加文本并按列宽对齐: 不足补空格, 超出按可见宽度截断 */
+        /**
+         * 追加文本并按列宽对齐: 不足补空格, 超出按可见宽度截断
+         *
+         * @param text 文本
+         * @param columnWidth columnwidth
+         * @return 添加padded的结果
+         */
         Line addPadded(String text, int columnWidth) {
             int textWidth = visibleWidth(text);
             if (textWidth > columnWidth) {
+                /**
+                 * 添加。
+                 * @param columnWidth columnwidth
+                 */
                 add(clip(text, columnWidth));
                 return this;
             }
+            /**
+             * 添加。
+             * @param text 文本
+             */
             add(text);
             if (textWidth < columnWidth) {
+                /**
+                 * 添加。
+                 * @param textWidth 文本width
+                 */
                 add(" ".repeat(columnWidth - textWidth));
             }
             return this;
         }
 
-        /** 追加一个可伸缩间隙 (渲染时独占剩余空间) */
+        /**
+         * 追加一个可伸缩间隙 (渲染时独占剩余空间)
+         *
+         * @return fill的结果
+         */
         Line fill() {
             segments.add(FILL);
             fills++;
@@ -358,6 +422,7 @@ final class ServiceInfoBanner {
          *
          * @param fillTarget 可伸缩间隙的展开目标列宽 (内容区宽度)
          * @param total      行内容总列宽 (含右侧留白)
+         * @return render的结果
          */
         String render(int fillTarget, int total) {
             int each = 0;
@@ -387,12 +452,26 @@ final class ServiceInfoBanner {
 
     // ------------------------------------------------------------------ 工具方法
 
-    /** 生成一条框线 */
+    /**
+     * 生成一条框线
+     *
+     * @param left left
+     * @param line 线
+     * @param right right
+     * @param inner 内部
+     * @return 帧的结果
+     */
     private static String frame(String left, String line, String right, int inner) {
         return color(AnsiStyle.CYAN) + left + line.repeat(inner) + right + reset();
     }
 
-    /** 居中 (按可见宽度) */
+    /**
+     * 居中 (按可见宽度)
+     *
+     * @param text 文本
+     * @param inner 内部
+     * @return center的结果
+     */
     private static String center(String text, int inner) {
         int pad = inner - visibleWidth(text);
         if (pad <= 0) {
@@ -402,7 +481,13 @@ final class ServiceInfoBanner {
         return " ".repeat(left) + text + " ".repeat(pad - left);
     }
 
-    /** 按可见宽度截断并以 {@code ...} 收尾 (ANSI 序列原样保留) */
+    /**
+     * 按可见宽度截断并以 {@code ...} 收尾 (ANSI 序列原样保留)
+     *
+     * @param text 文本
+     * @param maxVisible 最大visible
+     * @return clip的结果
+     */
     private static String clip(String text, int maxVisible) {
         if (visibleWidth(text) <= maxVisible) {
             return text;
@@ -433,7 +518,12 @@ final class ServiceInfoBanner {
         return sb.toString() + reset() + ELLIPSIS;
     }
 
-    /** 终端可见列宽: ANSI 转义序列计 0, 全角字符计 2, 其余计 1 */
+    /**
+     * 终端可见列宽: ANSI 转义序列计 0, 全角字符计 2, 其余计 1
+     *
+     * @param text 文本
+     * @return visibleWidth的结果
+     */
     private static int visibleWidth(String text) {
         if (text == null) {
             return 0;
@@ -452,12 +542,24 @@ final class ServiceInfoBanner {
         return width;
     }
 
-    /** 是否 ANSI 转义序列起始 ({@code ESC[}) */
+    /**
+     * 是否 ANSI 转义序列起始 ({@code ESC[})
+     *
+     * @param text 文本
+     * @param index 索引
+     * @return 是否ansi启动的结果
+     */
     private static boolean isAnsiStart(String text, int index) {
         return text.charAt(index) == '\u001B' && index + 1 < text.length() && text.charAt(index + 1) == '[';
     }
 
-    /** 跳过一条 ANSI 转义序列, 返回结束位置 (兼容 {@code ESC[1;36m} 这类多参数序列) */
+    /**
+     * 跳过一条 ANSI 转义序列, 返回结束位置 (兼容 {@code ESC[1;36m} 这类多参数序列)
+     *
+     * @param text 文本
+     * @param index 索引
+     * @return 跳过ansi的结果
+     */
     private static int skipAnsi(String text, int index) {
         int i = index + 2;
         while (i < text.length() && !Character.isLetter(text.charAt(i))) {
@@ -466,17 +568,31 @@ final class ServiceInfoBanner {
         return Math.min(i + 1, text.length());
     }
 
-    /** 是否输出 ANSI 颜色码 (遵循 {@link AnsiStyle#isEnabled()}) */
+    /**
+     * 是否输出 ANSI 颜色码 (遵循 {@link AnsiStyle#isEnabled()})
+     *
+     * @param code 编码
+     * @return color的结果
+     */
     private static String color(String code) {
         return AnsiStyle.isEnabled() ? code : "";
     }
 
-    /** 颜色复位码 (遵循 {@link AnsiStyle#isEnabled()}) */
+    /**
+     * 颜色复位码 (遵循 {@link AnsiStyle#isEnabled()})
+     *
+     * @return reset的结果
+     */
     private static String reset() {
         return AnsiStyle.isEnabled() ? AnsiStyle.RESET : "";
     }
 
-    /** 是否为全角 (终端占 2 列) 码点 */
+    /**
+     * 是否为全角 (终端占 2 列) 码点
+     *
+     * @param codePoint 编码point
+     * @return 是否wide的结果
+     */
     private static boolean isWide(int codePoint) {
         return (codePoint >= 0x1100 && codePoint <= 0x115F)
                 || (codePoint >= 0x2E80 && codePoint <= 0xA4CF)
@@ -488,12 +604,22 @@ final class ServiceInfoBanner {
                 || (codePoint >= 0x20000 && codePoint <= 0x3FFFD);
     }
 
-    /** 去掉全部空白字符, 用于去重比对 */
+    /**
+     * 去掉全部空白字符, 用于去重比对
+     *
+     * @param text 文本
+     * @return squash的结果
+     */
     private static String squash(String text) {
         return text == null ? "" : text.replaceAll("\\s+", "");
     }
 
-    /** 提取 URL 的路径部分 (去掉协议/主机/查询串), 用于端点去重 */
+    /**
+     * 提取 URL 的路径部分 (去掉协议/主机/查询串), 用于端点去重
+     *
+     * @param url url
+     * @return 路径的的结果
+     */
     private static String pathOf(String url) {
         String path = nullToEmpty(url).trim();
         int scheme = path.indexOf("://");
@@ -508,12 +634,22 @@ final class ServiceInfoBanner {
         return path;
     }
 
-    /** 是否非空文本 */
+    /**
+     * 是否非空文本
+     *
+     * @param text 文本
+     * @return 是否包含文本的结果
+     */
     private static boolean hasText(String text) {
         return text != null && !text.trim().isEmpty();
     }
 
-    /** NullToEmpty */
+    /**
+     * 空转为空
+     *
+     * @param text 文本
+     * @return 空转为空的结果
+     */
     private static String nullToEmpty(String text) {
         return text == null ? "" : text;
     }

@@ -5,6 +5,7 @@ import lombok.Data;
 /**
  * 支付调度任务更新请求
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class PaymentSchedulerTaskUpdateDTO {

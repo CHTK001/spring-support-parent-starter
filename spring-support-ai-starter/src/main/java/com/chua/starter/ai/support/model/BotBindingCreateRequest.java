@@ -3,7 +3,7 @@ package com.chua.starter.ai.support.model;
 import lombok.Data;
 
 /**
- * Bot 绑定创建请求。
+   * 机器人 绑定创建请求。
  *
  * @author CH
  * @since 4.0.0.42
@@ -12,12 +12,12 @@ import lombok.Data;
 public class BotBindingCreateRequest {
 
     /**
-     * Bot 唯一标识
+      * 机器人 唯一标识
      */
     private String botId;
 
     /**
-     * 登录凭证 Token
+      * 登录凭证 令牌
      */
     private String botToken;
 
@@ -27,7 +27,7 @@ public class BotBindingCreateRequest {
     private String platform;
 
     /**
-     * Bot 昵称
+      * 机器人 昵称
      */
     private String nickname;
 
@@ -62,12 +62,12 @@ public class BotBindingCreateRequest {
     private String thinkingEffort;
 
     /**
-     * 系统提示词（AI 回复时注入的 system prompt）
+      * 系统提示词（AI 回复时注入的 系统 提示符）
      */
     private String systemPrompt;
 
     /**
-     * 是否记录 AI 用量（token/费用），bot 专属开关，默认开启
+      * 是否记录 AI 用量（令牌/费用），机器人 专属开关，默认开启
      */
     private Boolean recordUsage;
 }

@@ -27,11 +27,12 @@ import java.util.Map;
 @Slf4j
 public class McpServerStore {
 
-    private final SysAiMcpServerMapper mcpServerMapper;
-    private final ObjectMapper objectMapper;
+    private final SysAiMcpServerMapper mcpServerMapper; // mcp服务端映射器
+    private final ObjectMapper objectMapper; // 对象映射器
 
     /**
      * 列出全部 MCP 服务器（按创建时间升序）
+     * @return 列表全部的结果
      */
     public List<Map<String, Object>> listAll() {
         List<SysAiMcpServer> entities = mcpServerMapper.selectList(
@@ -45,7 +46,9 @@ public class McpServerStore {
     }
 
     /**
-     * 按 id 查询
+      * 按 标识 查询
+     * @param serverId 服务端标识
+     * @return 获取的结果
      */
     public Map<String, Object> get(String serverId) {
         SysAiMcpServer entity = mcpServerMapper.selectById(serverId);
@@ -53,7 +56,9 @@ public class McpServerStore {
     }
 
     /**
-     * 新增（由调用方预先填充 id 与时间戳）
+      * 新增（由调用方预先填充 标识 与时间戳）
+     * @param contract contract
+     * @return 插入的结果
      */
     public Map<String, Object> insert(Map<String, Object> contract) {
         SysAiMcpServer entity = fromContract(contract);
@@ -62,7 +67,9 @@ public class McpServerStore {
     }
 
     /**
-     * 更新（按 id，非 null 字段覆盖）
+      * 更新（按 标识，非 空 字段覆盖）
+     * @param contract contract
+     * @return 更新的结果
      */
     public Map<String, Object> update(Map<String, Object> contract) {
         SysAiMcpServer entity = fromContract(contract);
@@ -72,13 +79,16 @@ public class McpServerStore {
 
     /**
      * 删除
+     * @param serverId 服务端标识
      */
     public void delete(String serverId) {
         mcpServerMapper.deleteById(serverId);
     }
 
     /**
-     * 契约 Map → 实体
+      * 契约 映射 → 实体
+     * @param c c
+     * @return 从contract的结果
      */
     private SysAiMcpServer fromContract(Map<String, Object> c) {
         SysAiMcpServer e = new SysAiMcpServer();
@@ -97,35 +107,62 @@ public class McpServerStore {
     }
 
     /**
-     * 实体 → 契约 Map（前端 IMcpServer 结构）
+     * 实体 → 契约 映射（前端 mcp 服务端 结构）
+     *
+     * @param e 实体
+     * @return 契约 Map
      */
     private Map<String, Object> toContract(SysAiMcpServer e) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("mcp_server_id", e.getMcpServerId());
         m.put("name", e.getName());
-        if (e.getDescription() != null) m.put("description", e.getDescription());
+        if (e.getDescription() != null) {
+            m.put("description", e.getDescription());
+        }
         m.put("transport", parseJson(e.getTransportJson()));
         m.put("original_json", e.getOriginalJson() == null ? "{}" : e.getOriginalJson());
         m.put("builtin", Boolean.TRUE.equals(e.getBuiltin()));
         m.put("enabled", !Boolean.FALSE.equals(e.getEnabled()));
         m.put("last_test_status", e.getLastTestStatus() == null ? "disconnected" : e.getLastTestStatus());
-        if (e.getLastConnectedAt() != null) m.put("last_connected", e.getLastConnectedAt());
+        if (e.getLastConnectedAt() != null) {
+            m.put("last_connected", e.getLastConnectedAt());
+        }
         m.put("created_at", e.getCreatedAt());
         m.put("updated_at", e.getUpdatedAt());
+        /**
+         * str。
+         * @param v v
+         * @return str的结果
+         */
         return m;
     }
 
     private String str(Object v) {
+        /**
+         * bool。
+         * @param v v
+         * @return bool的结果
+         */
         return v == null ? null : String.valueOf(v);
     }
 
     private Boolean bool(Object v) {
+        /**
+          * longval。
+         * @param v v
+         * @return longVal的结果
+         * @param json json
+         */
         return v instanceof Boolean ? (Boolean) v : (v == null ? null : Boolean.parseBoolean(String.valueOf(v)));
     }
 
     private Long longVal(Object v) {
-        if (v == null) return null;
-        if (v instanceof Number n) return n.longValue();
+        if (v == null) {
+            return null;
+        }
+        if (v instanceof Number n) {
+            return n.longValue();
+        }
         try {
             return Long.parseLong(String.valueOf(v));
         } catch (NumberFormatException e) {
@@ -134,7 +171,9 @@ public class McpServerStore {
     }
 
     private String writeJson(Object v) {
-        if (v == null) return "{}";
+        if (v == null) {
+            return "{}";
+        }
         try {
             return objectMapper.writeValueAsString(v);
         } catch (Exception e) {

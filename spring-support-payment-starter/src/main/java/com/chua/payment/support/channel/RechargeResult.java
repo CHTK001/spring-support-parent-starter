@@ -7,14 +7,15 @@ import java.math.BigDecimal;
 /**
  * 充值结果
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class RechargeResult {
-    /** Success */
+    /** 成功 */
     private boolean success;
-    /** RechargeNO */
+    /** rechargeno */
     private String rechargeNo;
-    /** TradeNO */
+    /** 贸易no */
     private String tradeNo;
     /** Amount */
     private BigDecimal amount;

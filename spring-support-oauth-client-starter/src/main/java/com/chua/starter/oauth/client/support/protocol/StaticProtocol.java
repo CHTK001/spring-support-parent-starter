@@ -31,8 +31,9 @@ import static com.chua.starter.oauth.client.support.contants.AuthConstant.SUPER_
 
 /**
  * 静态协议实现类，用于处理静态认证逻辑。
- * 该类通过 TokenCipher（SM4加密）解析token或cookie中的用户信息，并构建认证信息。
+   * 该类通过 令牌cipher（SM4加密）解析令牌或Cookie中的用户信息，并构建认证信息。
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @Spi({"Static"})
@@ -44,14 +45,18 @@ public class StaticProtocol extends AbstractProtocol {
      * @param authClientProperties 认证客户端配置属性
      */
     public StaticProtocol(AuthClientProperties authClientProperties) {
+        /**
+         * 父。
+         * @param authClientProperties 认证客户端属性
+         */
         super(authClientProperties);
     }
 
     /**
-     * 认证方法，根据cookie和token进行用户认证
+      * 认证方法，根据Cookie和令牌进行用户认证
      *
      * @param cookie      Cookie对象
-     * @param token       认证token
+     * @param token       认证令牌
      * @param subProtocol 子协议
      * @return 认证信息对象
      */
@@ -66,7 +71,7 @@ public class StaticProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** AuthenticationUserCode */
+    /** 认证用户编码 */
     protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
         log.warn("[StaticProtocol]静态协议不支持AppKey认证 - appId: {}",
                 appKeySecret != null ? appKeySecret.getAppId() : null);
@@ -74,12 +79,12 @@ public class StaticProtocol extends AbstractProtocol {
     }
 
     /**
-     * 升级认证信息方法，根据cookie、token和升级类型进行认证信息升级
+      * 升级认证信息方法，根据Cookie、令牌和升级类型进行认证信息升级
      *
      * @param cookie       Cookie对象
-     * @param token        认证token
+     * @param token        认证令牌
      * @param upgradeType  升级类型
-     * @param refreshToken 刷新token
+     * @param refreshToken 刷新令牌
      * @return 认证信息对象
      */
     @Override
@@ -90,14 +95,14 @@ public class StaticProtocol extends AbstractProtocol {
     /**
      * 创建新的认证信息对象
      *
-     * @param token  认证token
+     * @param token  认证令牌
      * @param cookie Cookie数组
      * @return 认证信息对象
      */
     private AuthenticationInformation newAuthenticationInformation(String token, Cookie[] cookie) {
         UserResume userResume = new UserResume();
         UserResult userResult = null;
-        // 如果token不为空且不为"null"，则尝试解析token
+ // 如果令牌不为空且不为"空"，则尝试解析令牌
         if (StringUtils.isNotBlank(token) && !NULL.equals(token)) {
             userResult = TokenCipher.decryptToUser(token);
             if (null == userResult) {
@@ -105,7 +110,7 @@ public class StaticProtocol extends AbstractProtocol {
             }
         }
 
-        // 如果通过token未能获取到用户信息，则尝试从cookie中解析
+ // 如果通过令牌未能获取到用户信息，则尝试从Cookie中解析
         if (null == userResult && null != cookie) {
             for (Cookie cookie1 : cookie) {
                 if (null == cookie1) {
@@ -155,6 +160,12 @@ public class StaticProtocol extends AbstractProtocol {
         // 将用户信息保存到请求上下文
         com.chua.starter.oauth.client.support.execute.AuthSessionUtils.setUserInfo(userResume);
         // 返回认证成功的信息
+        /**
+         * 认证信息。
+         * @param Information.OK 信息.OK
+         * @param userResume 用户resume
+         * @return 认证信息的结果
+         */
         return new AuthenticationInformation(Information.OK, userResume);
     }
 
@@ -162,9 +173,9 @@ public class StaticProtocol extends AbstractProtocol {
      * 升级认证信息
      *
      * @param cookie        Cookie数组
-     * @param token         认证token
+     * @param token         认证令牌
      * @param upgradeType   升级类型
-     * @param refreshToken  刷新token
+     * @param refreshToken  刷新令牌
      * @return 登录结果对象
      */
     @Override
@@ -210,6 +221,13 @@ public class StaticProtocol extends AbstractProtocol {
 
         userResult.setToken(refreshedToken);
         userResult.setRefreshToken(refreshedToken);
+        /**
+         * login结果。
+         * @param refreshedToken refreshed令牌
+         * @param refreshedToken refreshed令牌
+         * @param userResume.getFingerprint( 用户resume.getfingerprint(
+         * @return login结果的结果
+         */
         return new LoginResult(refreshedToken, refreshedToken, userResume.getFingerprint(), userResult);
     }
 
@@ -217,7 +235,7 @@ public class StaticProtocol extends AbstractProtocol {
      * 获取访问令牌
      *
      * <p>静态协议下基于 {@code plugin.oauth.temp.user} 验证账号密码，
-     * 命中后通过 {@link TokenCipher} 签发 token，role/userId 与
+       * 命中后通过 {@link TokenCipher} 签发 令牌，角色/用户标识 与
      * {@link #newAuthenticationInformation} 保持一致（admin → SUPER_ADMIN + ADMIN）。</p>
      *
      * @param username  用户名
@@ -296,7 +314,7 @@ public class StaticProtocol extends AbstractProtocol {
     /**
      * 用户登出
      *
-     * @param uid          用户ID
+     * @param uid          用户标识
      * @param logoutType   登出类型
      * @param userResult   用户结果对象
      * @return 登录认证结果对象

@@ -5,7 +5,7 @@ import com.chua.starter.ai.support.entity.SysAiTemplate;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * AI 模板 Mapper。
+   * AI 模板 映射器。
  *
  * @since 4.0.0.42
  * @author CH

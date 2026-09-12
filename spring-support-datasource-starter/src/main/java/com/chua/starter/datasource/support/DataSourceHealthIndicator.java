@@ -33,6 +33,11 @@ import java.util.Map;
  *     }
  *   }
  * }
+ * }</pre>时" }
+ *       }
+ *     }
+ *   }
+ * }
  * }</pre>
  *
  * @since 2026/07/14
@@ -42,16 +47,23 @@ import java.util.Map;
 public class DataSourceHealthIndicator extends AbstractHealthIndicator {
 
     /** 连接验证超时（秒） */
-    /** Validation_timeout_seconds */
+    /** 校验_超时_seconds */
     private static final int VALIDATION_TIMEOUT_SECONDS = 5;
 
     /** 运行时异常白名单（不标记为 DOWN，避免循环） */
-    /** Transient_error_prefixes */
+    /** Transient_错误_前缀 */
     private static final String[] TRANSIENT_ERROR_PREFIXES = {
             "CommunicationsException", "SocketException", "InterruptedException"
     };
 
+    /**
+     * 数据源健康indicator。
+     */
     public DataSourceHealthIndicator() {
+        /**
+         * 父。
+         * @param "数据源健康检查失败" "数据源健康检查失败"
+         */
         super("数据源健康检查失败");
     }
 
@@ -110,11 +122,18 @@ public class DataSourceHealthIndicator extends AbstractHealthIndicator {
 
     /**
      * 检查单个数据源的健康状态
+     * @param name 名称
+     * @param dataSource 数据源
+     * @return 检查单个数据源的结果
      */
     private Map<String, Object> checkSingleDataSource(String name, DataSource dataSource) {
         Map<String, Object> result = new LinkedHashMap<>();
         long start = System.currentTimeMillis();
 
+        /**
+         * 尝试。
+         * @param dataSource.getConnection( 数据源.getconnection(
+         */
         try (Connection conn = dataSource.getConnection()) {
             boolean valid = conn.isValid(VALIDATION_TIMEOUT_SECONDS);
             long elapsed = System.currentTimeMillis() - start;
@@ -150,6 +169,8 @@ public class DataSourceHealthIndicator extends AbstractHealthIndicator {
 
     /**
      * 判断是否为暂时性错误（网络抖动、超时等）
+     * @param errorMsg 错误msg
+     * @return 是否transient错误的结果
      */
     private boolean isTransientError(String errorMsg) {
         if (errorMsg == null) {

@@ -25,7 +25,7 @@ import java.util.function.BiConsumer;
 public class JobSyncBus {
 
     /**
-     * 按 topic 的本地监听器, key 为 topic
+      * 按 topic 的本地监听器, 钥匙 为 topic
      */
     private final Map<String, CopyOnWriteArrayList<BiConsumer<String, Object>>> listeners = new ConcurrentHashMap<>();
 
@@ -33,7 +33,7 @@ public class JobSyncBus {
      * 投递事件到指定 topic。
      *
      * @param topic   topic 名
-     * @param source  来源标识 (本地为 local, 远端为节点 id)
+     * @param source  来源标识 (本地为 本地, 远端为节点 标识)
      * @param payload 业务负载
      */
     public void publish(String topic, String source, Object payload) {

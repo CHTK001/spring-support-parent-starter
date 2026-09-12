@@ -35,15 +35,16 @@ import java.util.concurrent.atomic.AtomicReference;
  * </ol>
  *
  * <p>使用 {@link TcpSyncServer}（真实 TCP 长连接）+ {@link TcpSyncClient}，
- * 覆盖 {@link DataSyncAgentServer} 网络模式所依赖的 SyncServer 链路。</p>
+   * 覆盖 {@link DataSyncAgentServer} 网络模式所依赖的 同步服务端 链路。</p>
  *
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public final class DataSyncReconnectProbe {
 
     /**
-     * 固定测试端口（避免与 ssh 2222 / shell 6666 冲突）
+      * 固定测试端口（避免与 ssh 2222 / Shell 6666 冲突）
      */
     private static final int PORT = 28979;
 
@@ -53,12 +54,12 @@ public final class DataSyncReconnectProbe {
      * @param args 命令行参数
      */
     public static void main(String[] args) throws Exception {
-        // 先构造 DataSyncServer（本地 AgentServerManager，无 Spring）
+ // 先构造 数据同步服务端（本地 智能体服务端管理器，无 Spring）
         AgentServerManager agentServerManager = new DataSyncAgentServer(null, null, "reconnect-probe");
         DefaultDataSyncServer dataSyncServer = new DefaultDataSyncServer(agentServerManager);
         dataSyncServer.setMappingManager(new DefaultDataSyncMappingManager());
 
-        // 构造 TCP SyncServer（DataSyncAgentServer 网络模式依赖）
+ // 构造 TCP 同步服务端（数据同步智能体服务端 网络模式依赖）
         ServerSetting setting = new ServerSetting();
         setting.setPort(PORT);
         SyncServer syncServer = new TcpSyncServer(setting);
@@ -71,7 +72,7 @@ public final class DataSyncReconnectProbe {
         final CopyOnWriteArrayList<String> eventLog = new CopyOnWriteArrayList<>();
         syncServer.addListener(new SyncServerListener() {
             @Override
-            /** OnClientConnected */
+            /** on客户端连接 */
             public void onClientConnected(java.lang.String clientId, Map<String, Object> metadata) {
                 connected.incrementAndGet();
                 eventLog.add("CONNECT:" + clientId);
@@ -79,7 +80,7 @@ public final class DataSyncReconnectProbe {
             }
 
             @Override
-            /** OnClientDisconnected */
+            /** on客户端断开连接 */
             public void onClientDisconnected(String clientId) {
                 disconnected.incrementAndGet();
                 eventLog.add("DISCONNECT:" + clientId);
@@ -87,7 +88,7 @@ public final class DataSyncReconnectProbe {
             }
 
             @Override
-            /** OnMessage */
+            /** on消息 */
             public void onMessage(String clientId, String topic, Object data) {
                 received.incrementAndGet();
                 eventLog.add("MESSAGE:" + topic + "=" + data);
@@ -106,6 +107,10 @@ public final class DataSyncReconnectProbe {
         // 1. 正常连接
         log.info("[RECONNECT-PROBE] 步骤1: 启动 SyncServer 端口={}", PORT);
         syncServer.start();
+        /**
+         * sleep。
+         * @param 1200 1200
+         */
         sleep(1200);
 
         SyncClient client = new TcpSyncClient("client-A", "tcp://127.0.0.1:" + PORT);
@@ -125,9 +130,9 @@ public final class DataSyncReconnectProbe {
         client.connect();
         log.info("[RECONNECT-PROBE] 客户端#1 已连接, isConnected={}", client.isConnected());
 
-        // 监听掉线事件：证明"突然掉线"被 TcpSyncClient 检测到（onError 回调）。
-        // 注意：TcpSyncClient 掉线后仅回调 onError，不会自动复位 connected 标志，
-        // 重连须显式 disconnect() + connect()（短线重连由上层策略驱动）。
+ // 监听掉线事件：证明"突然掉线"被 tcp同步客户端 检测到（on错误 回调）。
+ // 注意：tcp同步客户端 掉线后仅回调 on错误，不会自动复位 连接 标志，
+ // 重连须显式 断开连接() + 连接()（短线重连由上层策略驱动）。
         final AtomicInteger errorCallbacks = new AtomicInteger();
         client.addListener(new com.chua.common.support.network.sync.SyncFlowListener() {
             @Override
@@ -142,6 +147,10 @@ public final class DataSyncReconnectProbe {
         log.info("[RECONNECT-PROBE] 步骤2: 客户端#1 向服务端发送数据");
         client.send("sink:data:user-sink", "batch-1:张三,30");
         client.send("sink:data:user-sink", "batch-1:李四,25");
+        /**
+         * sleep。
+         * @param 1200 1200
+         */
         sleep(1200);
 
         // 服务端向客户端发布数据（模拟 datasync topic 广播）
@@ -150,13 +159,17 @@ public final class DataSyncReconnectProbe {
         syncServer.publish("source:data:user-source", "server-push-2");
         subscribed.await(5, TimeUnit.SECONDS);
 
-        // 3. 突然掉线：服务端停止（客户端 read 线程将收到 Socket closed -> onError -> 自动重连）
+ // 3. 突然掉线：服务端停止（客户端 读取 线程将收到 套接字 关闭 -> on错误 -> 自动重连）
         log.info("[RECONNECT-PROBE] 步骤3: 服务端 stop() 模拟突然掉线");
         try {
             syncServer.stop();
         } catch (Exception e) {
             log.info("[RECONNECT-PROBE] 服务端停止异常(可忽略): {}", e.getMessage());
         }
+        /**
+         * sleep。
+         * @param 1500 1500
+         */
         sleep(1500);
 
         // 掉线瞬间到重连完成前客户端短暂不可用（真实短断窗口）
@@ -168,12 +181,16 @@ public final class DataSyncReconnectProbe {
             log.info("[RECONNECT-PROBE] 掉线窗口内发送失败(符合预期): {}", e.getClass().getSimpleName());
         }
 
-        // 4. 短线重连：服务端重新启动 + 客户端显式重连（disconnect + connect 清理旧 Socket 重建链路）
+ // 4. 短线重连：服务端重新启动 + 客户端显式重连（断开连接 + 连接 清理旧 套接字 重建链路）
         log.info("[RECONNECT-PROBE] 步骤4: 服务端重新 start() + 客户端 disconnect+connect 短线重连");
         syncServer.start();
+        /**
+         * sleep。
+         * @param 1500 1500
+         */
         sleep(1500);
 
-        // 重连（先断开清理 connected/socket 状态，再重建新连接）
+ // 重连（先断开清理 连接/套接字 状态，再重建新连接）
         try {
             client.disconnect();
         } catch (Exception ignored) {
@@ -185,8 +202,16 @@ public final class DataSyncReconnectProbe {
         // 重连后再次发送数据，验证链路完全恢复
         client.send("sink:data:user-sink", "batch-3:赵六,32");
         log.info("[RECONNECT-PROBE] 重连后发送数据成功, isConnected={}", client.isConnected());
+        /**
+         * sleep。
+         * @param 1200 1200
+         */
         sleep(1200);
         syncServer.publish("sink:data:user-sink", "server-push-after-reconnect");
+        /**
+         * sleep。
+         * @param 1200 1200
+         */
         sleep(1200);
 
         // 汇总

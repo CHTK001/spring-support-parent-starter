@@ -20,9 +20,9 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 
 /**
- * 服务器资产 Agent 上报接口
+   * 服务器资产 智能体 上报接口
  * <p>
- * 目标主机上的 Agent 按 agentKey 主动推送硬件/状态数据，
+   * 目标主机上的 智能体 按 智能体钥匙 主动推送硬件/状态数据，
  * 由 {@link AgentHostCollectProvider} 处理回写。用于 NAT / 防火墙下
  * 服务端无法直连的主机采集。
  * </p>
@@ -36,17 +36,17 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class HostAgentController {
 
-    /** Agent 采集 Provider */
+    /** 智能体 采集 提供者 */
     private final AgentHostCollectProvider agentProvider;
 
-    /** 主机 Mapper */
+    /** 主机 映射器 */
     private final MsServerHostMapper hostMapper;
 
     /**
-     * Agent 推送数据（按 agentKey 定位主机）
+      * 智能体 推送数据（按 智能体钥匙 定位主机）
      *
      * @param agentKey 探针标识
-     * @param payload  上报数据（cpuCores/memoryMb/diskGb/osVersion/publicIp/privateIp 等）
+     * @param payload  上报数据（cpu核心/内存mb/diskgb/os版本/公共ip/私募ip 等）
      * @return 处理结果
      */
     @Operation(summary = "Agent推送采集数据")
@@ -63,6 +63,11 @@ public class HostAgentController {
         }
         try {
             if (payload != null) {
+                /**
+                  * applypayload。
+                 * @param host 主机
+                 * @param payload payload
+                 */
                 applyPayload(host, payload);
             }
             HostCollectContext context = HostCollectContext.builder()
@@ -113,10 +118,10 @@ public class HostAgentController {
     }
 
     /**
-     * 安全转为 Integer（null/非数字返回 null）
+      * 安全转为 Integer（空/非数字返回 空）
      *
      * @param value 原始值
-     * @return Integer 或 null
+     * @return Integer 或 空
      */
     private Integer toInteger(Object value) {
         if (value == null) {
@@ -134,10 +139,10 @@ public class HostAgentController {
     }
 
     /**
-     * 安全转为 Long（null/非数字返回 null）
+      * 安全转为 Long（空/非数字返回 空）
      *
      * @param value 原始值
-     * @return Long 或 null
+     * @return Long 或 空
      */
     private Long toLong(Object value) {
         if (value == null) {

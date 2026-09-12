@@ -10,9 +10,10 @@ import org.slf4j.LoggerFactory;
  * 也方便统一关闭颜色 (例如 no-TTY / 日志文件输出)。</p>
  *
  * <p>ANSI 渲染唯一实现位置: 本类 + 唯一调用点 {@link ServiceInfoAutoConfiguration},
- * 业务 starter 只通过 {@link ServiceInfoRegistry} 注册数据。</p>
+   * 业务 启动 只通过 {@link ServiceInfoRegistry} 注册数据。</p>
  *
  * @since 4.0.0.42
+ * @author CH
  */
 public final class AnsiStyle {
 
@@ -50,14 +51,15 @@ public final class AnsiStyle {
     public static final String CYAN = "\u001B[36m";
     /** Gray */
     public static final String GRAY = "\u001B[90m";
-    /** Bg_red */
+    /** Bg_R */
     public static final String BG_RED = "\u001B[41m";
 
-    /** 创建 AnsiStyle 实例 */
+    /** 创建 ansistyle 实例 */
     private AnsiStyle() {}
 
     /**
      * 当前是否启用 ANSI 颜色。
+     * @return 是否已启用的结果
      */
     public static boolean isEnabled() {
         Boolean cached = ENABLED_CACHE.get();
@@ -69,10 +71,16 @@ public final class AnsiStyle {
         return enabled;
     }
 
-    /** ComputeEnabled */
+    /**
+     * compute已启用
+     *
+     * @return compute已启用的结果
+     */
     private static boolean computeEnabled() {
         try {
-            if (System.getenv("NO_COLOR") != null) return false;
+            if (System.getenv("NO_COLOR") != null) {
+                return false;
+            }
             String term = System.getenv("TERM");
             return term == null || !"dumb".equalsIgnoreCase(term);
         } catch (Throwable t) {
@@ -82,7 +90,7 @@ public final class AnsiStyle {
     }
 
     /**
-     * 清空当前线程的 enabled 缓存。
+      * 清空当前线程的 已启用 缓存。
      *
      * <p>主要用于单元测试, 在修改 {@code NO_COLOR} 等环境变量后调用。
      * 生产代码不应调用此方法。</p>
@@ -91,29 +99,75 @@ public final class AnsiStyle {
         ENABLED_CACHE.remove();
     }
 
-    /** Wrap */
+    /**
+     * Wrap
+     *
+     * @param code 编码
+     * @return wrap的结果
+     */
     private static String wrap(String code) {
         return isEnabled() ? code : "";
     }
 
-    /** Color */
+    /**
+     * Color
+     *
+     * @param code 编码
+     * @param text 文本
+     * @return color的结果
+     */
     public static String color(String code, String text) {
         return isEnabled() ? code + text + RESET : text;
     }
 
-    /** Red */
+    /**
+     * R
+     *
+     * @param s s
+     * @return R的结果
+     */
     public static String red(String s) { return color(RED, s); }
-    /** Green */
+    /**
+     * Green
+     *
+     * @param s s
+     * @return green的结果
+     */
     public static String green(String s) { return color(GREEN, s); }
-    /** Yellow */
+    /**
+     * Yellow
+     *
+     * @param s s
+     * @return yellow的结果
+     */
     public static String yellow(String s) { return color(YELLOW, s); }
-    /** Cyan */
+    /**
+     * Cyan
+     *
+     * @param s s
+     * @return cyan的结果
+     */
     public static String cyan(String s) { return color(CYAN, s); }
-    /** Blue */
+    /**
+     * Blue
+     *
+     * @param s s
+     * @return blue的结果
+     */
     public static String blue(String s) { return color(BLUE, s); }
-    /** Gray */
+    /**
+     * Gray
+     *
+     * @param s s
+     * @return gray的结果
+     */
     public static String gray(String s) { return color(GRAY, s); }
-    /** Bold */
+    /**
+     * Bold
+     *
+     * @param s s
+     * @return bold的结果
+     */
     public static String bold(String s) { return color(BOLD, s); }
 
     /**
@@ -123,6 +177,8 @@ public final class AnsiStyle {
      *     <li>{@code false} -> 红色叉</li>
      *     <li>{@code null} -> 灰色问号</li>
      * </ul>
+     * @param value 值
+     * @return triFlag的结果
      */
     public static String triFlag(Boolean value) {
         if (value == null) {
@@ -144,6 +200,8 @@ public final class AnsiStyle {
      *
      * <p>用于 {@link ServiceInfoAutoConfiguration} 渲染类似
      * {@code [API控制] [@ApiVersion] [版本控制] [开启]} 的横幅行。</p>
+     * @param value 值
+     * @return cn标签的结果
      */
     public static String cnLabel(Boolean value) {
         if (value == null) {
@@ -157,6 +215,9 @@ public final class AnsiStyle {
 
     /**
      * 包裹一段文本, 用指定 ANSI 代码染色。
+     * @param ansiCode ansi编码
+     * @param text 文本
+     * @return wrap的结果
      */
     public static String wrap(String ansiCode, String text) {
         return color(ansiCode, text);
@@ -164,10 +225,15 @@ public final class AnsiStyle {
 
     /**
      * 水平分隔线。
+     * @param width width
+     * @param ch ch
+     * @return separator的结果
      */
     public static String separator(int width, char ch) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < width; i++) sb.append(ch);
+        for (int i = 0; i < width; i++) {
+            sb.append(ch);
+        }
         return isEnabled() ? CYAN + sb.toString() + RESET : sb.toString();
     }
 }

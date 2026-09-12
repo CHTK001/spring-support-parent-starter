@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * 日志配置属性
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/01/01
  * @author CH
  */
@@ -55,7 +55,7 @@ public class LogProperties {
     }
 
     /**
-     * 获取 openInterfaceLog
+      * 获取 打开接口日志
      *
      * @return openInterfaceLog
      */
@@ -73,9 +73,9 @@ public class LogProperties {
     }
 
     /**
-     * 设置 openInterfaceLog
+      * 设置 打开接口日志
      *
-     * @param openInterfaceLog openInterfaceLog
+     * @param openInterfaceLog 打开接口日志
      */
     public void setOpenInterfaceLog(boolean openInterfaceLog) {
         this.openInterfaceLog = openInterfaceLog;

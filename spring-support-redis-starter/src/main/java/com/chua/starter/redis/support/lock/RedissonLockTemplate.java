@@ -16,7 +16,7 @@ import java.util.function.Supplier;
  * 使用 Redis 实现分布式锁，适用于分布式环境。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2025-12-25
  * @author CH
  */
@@ -24,18 +24,18 @@ import java.util.function.Supplier;
 @RequiredArgsConstructor
 public class RedissonLockTemplate implements LockTemplate {
 
-    /** Lock_prefix */
+    /** 锁_前缀 */
     private static final String LOCK_PREFIX = "lock:";
-    /** Default_wait_time */
+    /** 默认_wait_时间 */
     private static final Duration DEFAULT_WAIT_TIME = Duration.ofSeconds(10);
-    /** Default_lease_time */
+    /** 默认_lease_时间 */
     private static final Duration DEFAULT_LEASE_TIME = Duration.ofSeconds(30);
 
     /** Redisson客户端 */
     private final RedissonClient redissonClient;
 
     /**
-     * 获取锁的完整key
+      * 获取锁的完整钥匙
      *
      * @param lockKey 锁的唯一标识
      * @return 完整的锁key
@@ -77,13 +77,13 @@ public class RedissonLockTemplate implements LockTemplate {
     }
 
     @Override
-    /** Try锁 */
+    /** 尝试锁 */
     public <T> T tryLock(String lockKey, Duration waitTime, Supplier<T> supplier) {
         return tryLock(lockKey, waitTime, DEFAULT_LEASE_TIME, supplier);
     }
 
     @Override
-    /** Try锁 */
+    /** 尝试锁 */
     public <T> T tryLock(String lockKey, Duration waitTime, Duration leaseTime, Supplier<T> supplier) {
         RLock lock = getLock(lockKey);
         boolean acquired = false;
@@ -109,13 +109,13 @@ public class RedissonLockTemplate implements LockTemplate {
     }
 
     @Override
-    /** Try锁 */
+    /** 尝试锁 */
     public <T> T tryLock(String lockKey, Duration waitTime, Supplier<T> supplier, Supplier<T> fallback) {
         return tryLock(lockKey, waitTime, DEFAULT_LEASE_TIME, supplier, fallback);
     }
 
     @Override
-    /** Try锁 */
+    /** 尝试锁 */
     public <T> T tryLock(String lockKey, Duration waitTime, Duration leaseTime, Supplier<T> supplier, Supplier<T> fallback) {
         RLock lock = getLock(lockKey);
         boolean acquired = false;
@@ -143,6 +143,12 @@ public class RedissonLockTemplate implements LockTemplate {
     @Override
     /** 锁 */
     public void lock(String lockKey, Runnable action) {
+        /**
+         * 锁。
+         * @param lockKey 锁钥匙
+         * @param DEFAULT_LEASE_TIME 默认lease时间
+         * @param action 动作
+         */
         lock(lockKey, DEFAULT_LEASE_TIME, action);
     }
 
@@ -163,13 +169,13 @@ public class RedissonLockTemplate implements LockTemplate {
     }
 
     @Override
-    /** Try锁 */
+    /** 尝试锁 */
     public boolean tryLock(String lockKey, Duration waitTime, Runnable action) {
         return tryLock(lockKey, waitTime, DEFAULT_LEASE_TIME, action);
     }
 
     @Override
-    /** Try锁 */
+    /** 尝试锁 */
     public boolean tryLock(String lockKey, Duration waitTime, Duration leaseTime, Runnable action) {
         RLock lock = getLock(lockKey);
         boolean acquired = false;
@@ -231,14 +237,14 @@ public class RedissonLockTemplate implements LockTemplate {
     }
 
     @Override
-    /** 是否Locked */
+    /** 是否锁 */
     public boolean isLocked(String lockKey) {
         RLock lock = getLock(lockKey);
         return lock.isLocked();
     }
 
     @Override
-    /** 是否HeldByCurrentThread */
+    /** 是否heldby当前thread */
     public boolean isHeldByCurrentThread(String lockKey) {
         RLock lock = getLock(lockKey);
         return lock.isHeldByCurrentThread();

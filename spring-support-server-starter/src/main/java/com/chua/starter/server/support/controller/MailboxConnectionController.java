@@ -37,8 +37,8 @@ public class MailboxConnectionController {
     /**
      * 注册邮箱推送(前端打开邮件箱时调用)。
      *
-     * @param identityId 邮箱身份 ID
-     * @param clientId  前端 SSE 连接 clientId
+     * @param identityId 邮箱身份 标识
+     * @param clientId  前端 SSE 连接 客户端标识
      * @return 结果
      */
     @Operation(summary = "注册邮箱推送连接")
@@ -51,7 +51,7 @@ public class MailboxConnectionController {
     /**
      * 注销邮箱推送(前端关闭邮件箱时调用)。
      *
-     * @param clientId 前端 SSE 连接 clientId
+     * @param clientId 前端 SSE 连接 客户端标识
      * @return 结果
      */
     @Operation(summary = "注销邮箱推送连接")

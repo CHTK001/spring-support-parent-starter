@@ -38,7 +38,7 @@ import org.springframework.core.env.Environment;
 /**
  * 上报客户端配置
  * <p>
- * 依赖 spring-support-sync-starter 提供的 SyncClient
+   * 依赖 spring-支持-同步-启动 提供的 同步客户端
  * </p>
  *
  * @since 2024/12/05
@@ -59,17 +59,17 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     private final Environment environment;
     /** Report属性 */
     private final ReportProperties reportProperties;
-    /** Feature管理器提供者 */
+    /** 特征管理器提供者 */
     private final ObjectProvider<ApiFeatureManager> featureManagerProvider;
     /** Application上下文 */
     private ApplicationContext applicationContext;
 
     /**
-     * 创建 ReportClientConfiguration 实例
-     * @param syncClient syncClient
-     * @param environment environment
-     * @param reportProperties reportProperties
-     * @param featureManagerProvider featureManagerProvider
+      * 创建 report客户端配置 实例
+     * @param syncClient 同步客户端
+     * @param environment 环境
+     * @param reportProperties report属性
+     * @param featureManagerProvider 特征管理器提供者
      */
     public ReportClientConfiguration(SyncClient syncClient, Environment environment,
                                       ReportProperties reportProperties,
@@ -81,7 +81,7 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     }
 
     @Override
-    /** 设置ApplicationContext */
+    /** 设置application上下文 */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
@@ -103,7 +103,7 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     public void init() {
         log.info("[ReportClient] 初始化");
 
-        // 注入到 JobReporter
+ // 注入到 作业reporter
         JobReporter.getInstance().setSyncClient(syncClient);
 
         log.info("[ReportClient] 已向服务端注册");
@@ -116,21 +116,21 @@ public class ReportClientConfiguration implements ApplicationContextAware {
                 MonitorTopics.LOGGING_CONFIG
         );
 
-        // 注册 Job 处理器（配置类中 new 合法，由 Spring 管理这些 Handler Bean）
+ // 注册 作业 处理器（配置类中 新 合法，由 Spring 管理这些 处理器 Bean）
         JobDispatchHandler jobHandler = new JobDispatchHandler();
         syncClient.registerHandler(MonitorTopics.JOB_DISPATCH, jobHandler);
         syncClient.registerHandler(MonitorTopics.JOB_CANCEL, jobHandler);
 
-        // 注册 File 处理器（配置类中 new 合法，由 Spring 管理这些 Handler Bean）
+ // 注册 文件 处理器（配置类中 新 合法，由 Spring 管理这些 处理器 Bean）
         FileHandler fileHandler = new FileHandler();
         syncClient.registerHandler(MonitorTopics.FILE_REQUEST, fileHandler);
 
-        // 注册 Logging 处理器
+ // 注册 日志 处理器
         LoggingConfigHandler loggingHandler = new LoggingConfigHandler();
         syncClient.registerHandler(MonitorTopics.LOGGING_CONFIG, loggingHandler);
         log.info("[ReportClient] 已注册日志配置处理器");
 
-        // 注册 API Feature 处理器（如果可用）
+ // 注册 API 特征 处理器（如果可用）
         ApiFeatureManager featureManager = featureManagerProvider.getIfAvailable();
         if (featureManager != null) {
             syncClient.subscribe(MonitorTopics.API_FEATURE_CONTROL);
@@ -162,7 +162,7 @@ public class ReportClientConfiguration implements ApplicationContextAware {
             reporter.start();
         }
 
-        // 注册 MyBatis 处理器
+ // 注册 MyBatis 处理器
         if (ReflectUtils.forName("org.apache.ibatis.session.SqlSessionFactory") != null) {
             syncClient.subscribe(MonitorTopics.MYBATIS_CONFIG);
             MyBatisConfigHandler myBatisHandler = new MyBatisConfigHandler();
@@ -200,9 +200,9 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     }
 
     /**
-     * 注册 Job 注解扫描器
+      * 注册 作业 注解扫描器
      * <p>
-     * 自动扫描 @Job 注解并注册为任务处理器
+      * 自动扫描 @作业 注解并注册为任务处理器
      * </p>
      *
      * @return JobAnnotationScanner
@@ -210,11 +210,19 @@ public class ReportClientConfiguration implements ApplicationContextAware {
     @Bean
     @ConditionalOnMissingBean
     public JobAnnotationScanner jobAnnotationScanner() {
+        /**
+         * 作业注解scanner。
+         * @return 作业注解scanner的结果
+         */
         return new JobAnnotationScanner();
     }
 
     @Bean
-    /** ReportClientServiceInfoContributor */
+    /**
+     * report客户端服务信息contributor
+     *
+     * @return report客户端服务信息contributor的结果
+     */
     public ServiceInfoContributor reportClientServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("report-client", "上报客户端",

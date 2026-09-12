@@ -13,23 +13,61 @@ import lombok.Getter;
 @Getter
 public enum GlueTypeEnum {
 
+    /**
+     * Bean。
+     * @param "BEAN" "Bean"
+     * @param false false
+     * @param null 空
+     * @param null 空
+     */
     BEAN("BEAN", false, null, null),
+    /**
+      * 胶水Groovy。
+     * @param "GLUE(Java "胶水(Java
+     */
     GLUE_GROOVY("GLUE(Java)", false, null, null),
+    /**
+      * 胶水Shell。
+     * @param "GLUE(Shell "胶水(Shell
+     */
     GLUE_SHELL("GLUE(Shell)", true, "bash", ".sh"),
+    /**
+      * 胶水Python。
+     * @param "GLUE(Python "胶水(Python
+     */
     GLUE_PYTHON("GLUE(Python)", true, "python", ".py"),
+    /**
+      * 胶水PHP。
+     * @param "GLUE(PHP "胶水(PHP
+     */
     GLUE_PHP("GLUE(PHP)", true, "php", ".php"),
+    /**
+     * 胶水nodejs。
+     * @param "GLUE(Nodejs "胶水(Nodejs
+     */
     GLUE_NODEJS("GLUE(Nodejs)", true, "node", ".js"),
+    /**
+      * 胶水PowerShell。
+     * @param "GLUE(PowerShell "胶水(PowerShell
+     */
     GLUE_POWERSHELL("GLUE(PowerShell)", true, "powershell", ".ps1");
 
     /** Desc */
     private final String desc;
-    /** ISscript */
+    /** isscript */
     private final boolean isScript;
     /** CMD */
     private final String cmd;
-    /** Suffix */
+    /** 后缀 */
     private final String suffix;
 
+    /**
+     * 胶水类型enum。
+     * @param desc desc
+     * @param isScript 是否script
+     * @param cmd CMD
+     * @param suffix 后缀
+     */
     GlueTypeEnum(String desc, boolean isScript, String cmd, String suffix) {
         this.desc = desc;
         this.isScript = isScript;
@@ -37,7 +75,12 @@ public enum GlueTypeEnum {
         this.suffix = suffix;
     }
 
-    /** Match */
+    /**
+     * 匹配
+     *
+     * @param name 名称
+     * @return 匹配的结果
+     */
     public static GlueTypeEnum match(String name){
         for (GlueTypeEnum item: GlueTypeEnum.values()) {
             if (item.name().equals(name)) {

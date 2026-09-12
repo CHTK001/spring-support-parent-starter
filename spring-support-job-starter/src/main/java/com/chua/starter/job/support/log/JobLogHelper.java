@@ -5,24 +5,25 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 /**
- * 任务日志收集器 (Executor 端)。
+   * 任务日志收集器 (执行器 端)。
  *
  * <p>在 handler 执行期间通过 {@link #log(String)} 收集日志文本,
- * 执行完成后由 {@link JobExecutor} 提取并随 {@link JobLogEvent} 上行到 SCHEDULER。</p>
+   * 执行完成后由 {@link JobExecutor} 提取并随 {@link JobLogEvent} 上行到 调度器。</p>
  *
  * @since 4.0.0.42
+ * @author CH
  */
 public final class JobLogHelper {
 
-    /** Time_fmt */
+    /** 时间_fmt */
     private static final DateTimeFormatter TIME_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
                     .withZone(ZoneId.systemDefault());
 
-    /** Log_buffer */
+    /** 日志_缓冲 */
     private static final ThreadLocal<StringBuilder> LOG_BUFFER = new ThreadLocal<>();
 
-    /** 创建 JobLogHelper 实例 */
+    /** 创建 作业日志助手 实例 */
     private JobLogHelper() {
     }
 
@@ -43,7 +44,7 @@ public final class JobLogHelper {
     /**
      * 获取并清空当前线程的日志缓冲区。
      *
-     * @return 日志文本; 无日志时返回 null
+     * @return 日志文本; 无日志时返回 空
      */
     public static String getAndClear() {
         StringBuilder sb = LOG_BUFFER.get();

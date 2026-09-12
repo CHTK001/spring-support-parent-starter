@@ -41,7 +41,7 @@ public class DeviceProviderConfigServiceImpl implements DeviceProviderConfigServ
     }
 
     /**
-     * 设备 Mapper
+      * 设备 映射器
      */
     private final DeviceInfoMapper deviceInfoMapper;
 
@@ -51,19 +51,19 @@ public class DeviceProviderConfigServiceImpl implements DeviceProviderConfigServ
     private final DeviceSessionManager sessionManager;
 
     @Override
-    /** 获取DefaultOfflineThreshold */
+    /** 获取默认offline阈值 */
     public int getDefaultOfflineThreshold(String vendor) {
         return VENDOR_THRESHOLDS.getOrDefault(vendor, 60);
     }
 
     @Override
-    /** 获取Thresholds */
+    /** 获取阈值 */
     public Map<String, Integer> getThresholds() {
         return new HashMap<>(VENDOR_THRESHOLDS);
     }
 
     @Override
-    /** 更新Threshold */
+    /** 更新阈值 */
     public void updateThreshold(String vendor, int threshold) {
         VENDOR_THRESHOLDS.put(vendor, threshold);
         log.info("厂商离线检测阈值更新: vendor={}, threshold={}秒", vendor, threshold);
@@ -80,7 +80,7 @@ public class DeviceProviderConfigServiceImpl implements DeviceProviderConfigServ
     }
 
     @Override
-    /** ListCheckableDevices */
+    /** 列表检查devices */
     public List<DeviceInfo> listCheckableDevices() {
         LambdaQueryWrapper<DeviceInfo> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(DeviceInfo::getDeviceInfoOnline, true);

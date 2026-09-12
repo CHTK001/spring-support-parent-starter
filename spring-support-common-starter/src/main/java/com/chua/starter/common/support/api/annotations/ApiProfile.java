@@ -6,12 +6,12 @@ import java.lang.annotation.*;
 /**
  * API 环境配置注解
  * <p>
- * 用于控制 API 接口在不同 Spring Profile 环境下的可用性。
+   * 用于控制 API 接口在不同 Spring 配置文件 环境下的可用性。
  * </p>
  *
  * <h3>处理优先级：6（映射注册阶段）</h3>
  * <p>
- * 映射注册阶段优先级顺序：@ApiProfile(6) &gt; @ApiPlatform(7) &gt; @ApiVersion(8)
+   * 映射注册阶段优先级顺序：@api配置文件(6) &gt; @apiplatform(7) &gt; @api版本(8)
  * </p>
  * <p>
  * 处理阶段：映射注册阶段（应用启动时），决定接口是否注册到路由表。
@@ -56,7 +56,8 @@ import java.lang.annotation.*;
  * </pre>
  *
  * @since 2020-09-23
- * @version 1.0.0
+   * @版本 1.0.0
+ * @author CH
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
@@ -66,7 +67,7 @@ public @interface ApiProfile {
     /**
      * 环境名称列表
      * <p>
-     * 支持配置多个环境名称，如 dev、test、prod 等。
+      * 支持配置多个环境名称，如 dev、测试、prod 等。
      * 接口将在指定的所有环境中可用。
      * </p>
      *

@@ -20,7 +20,7 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
     /**
      * 创建上传任务。
      *
-     * @param uploadId     上传任务 ID
+     * @param uploadId     上传任务 标识
      * @param fileName     文件名
      * @param originalName 原始文件名
      * @param fileSize     文件大小（字节）
@@ -28,7 +28,7 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
      * @param totalChunks  总分片数
      * @param storageType  存储类型
      * @param bucket       存储桶
-     * @param key          对象 Key
+     * @param key          对象 钥匙
      * @param contentType  内容类型
      * @return 创建后的任务实体
      */
@@ -39,7 +39,7 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
     /**
      * 更新已上传分片数。
      *
-     * @param uploadId       上传任务 ID
+     * @param uploadId       上传任务 标识
      * @param uploadedChunks 已上传分片数
      * @return 是否更新成功
      */
@@ -48,7 +48,7 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
     /**
      * 更新任务状态。
      *
-     * @param uploadId 上传任务 ID
+     * @param uploadId 上传任务 标识
      * @param status   目标状态
      * @return 是否更新成功
      */
@@ -57,7 +57,7 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
     /**
      * 更新任务阶段。
      *
-     * @param uploadId 上传任务 ID
+     * @param uploadId 上传任务 标识
      * @param stage    目标阶段
      * @return 是否更新成功
      */
@@ -66,15 +66,15 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
     /**
      * 重置重试次数（阶段切换时调用，保证各阶段独立重试）。
      *
-     * @param uploadId 上传任务 ID
+     * @param uploadId 上传任务 标识
      * @return 是否更新成功
      */
     boolean resetRetryCount(String uploadId);
 
     /**
-     * 递增重试次数（独立字段更新，避免覆盖 status/stage）。
+      * 递增重试次数（独立字段更新，避免覆盖 状态/Stage）。
      *
-     * @param uploadId 上传任务 ID
+     * @param uploadId 上传任务 标识
      * @param retry    新的重试次数
      * @return 是否更新成功
      */
@@ -83,7 +83,7 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
     /**
      * 标记任务完成。
      *
-     * @param uploadId 上传任务 ID
+     * @param uploadId 上传任务 标识
      * @param fileUrl  最终文件 URL
      * @return 是否更新成功
      */
@@ -92,17 +92,17 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
     /**
      * 标记任务失败。
      *
-     * @param uploadId     上传任务 ID
+     * @param uploadId     上传任务 标识
      * @param errorMessage 错误信息
      * @return 是否更新成功
      */
     boolean markFailed(String uploadId, String errorMessage);
 
     /**
-     * 根据 uploadId 查询任务。
+      * 根据 uploadid 查询任务。
      *
-     * @param uploadId 上传任务 ID
-     * @return 任务实体；不存在返回 null
+     * @param uploadId 上传任务 标识
+     * @return 任务实体；不存在返回 空
      */
     SysFileSystemUpload getByUploadId(String uploadId);
 
@@ -122,9 +122,9 @@ public interface SysFileSystemUploadService extends IService<SysFileSystemUpload
     List<SysFileSystemUpload> listPendingMerge();
 
     /**
-     * 查询待上传 OSS 任务列表。
+      * 查询待上传 对象存储 任务列表。
      *
-     * @return 待上传 OSS 任务列表
+     * @return 待上传 对象存储 任务列表
      */
     List<SysFileSystemUpload> listPendingUpload();
 

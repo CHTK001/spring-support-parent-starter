@@ -92,7 +92,7 @@ public class OcrTextExtractor implements TextExtractor {
     private String detectorModel;
     /** Recognizer模型 */
     private String recognizerModel;
-    /** 最小值confidence */
+    /** 最小值信心 */
     private float minConfidence = 0f;
     /** Sortreading排序 */
     private boolean sortReadingOrder = true;
@@ -110,6 +110,11 @@ public class OcrTextExtractor implements TextExtractor {
     @Override
     public List<TextExtractResult> extractText(File file) {
         if (!isImage(file)) {
+            /**
+             * illegal参数异常。
+             * @param file.getName( 文件.获取名称(
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("非图片文件，交由降级读取: " + file.getName());
         }
         try {
@@ -134,6 +139,12 @@ public class OcrTextExtractor implements TextExtractor {
         } catch (Exception e) {
             log.warn("[OcrTextExtractor] OCR 识别失败: file={}, model={}, error={}",
                     file.getName(), modelName, e.getMessage());
+            /**
+             * illegal参数异常。
+             * @param 识别失败，交由降级读取" 识别失败，交由降级读取"
+             * @param e e
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("OCR 识别失败，交由降级读取", e);
         }
     }

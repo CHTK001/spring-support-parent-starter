@@ -10,12 +10,13 @@ import java.util.List;
  * </p>
  *
  * @author CH
+ * @since 4.0.0
  */
 public class Joiner {
 
     /** Separator */
     private final String separator;
-    /** Omit是否为空strings */
+    /** Omit是否为空字符串 */
     private boolean omitEmptyStrings;
     /** Trimresults */
     private boolean trimResults;
@@ -36,6 +37,10 @@ public class Joiner {
      * @return Joiner 实例
      */
     public static Joiner on(String separator) {
+        /**
+         * 连接。
+         * @param separator separator
+         */
         return new Joiner(separator);
     }
 
@@ -88,7 +93,12 @@ public class Joiner {
         return sb.toString();
     }
 
-    /** WithType */
+    /**
+     * with类型
+     *
+     * @param type 类型
+     * @return with类型的结果
+     */
     public <T> Joiner withType(Class<T> type) {
         return this;
     }

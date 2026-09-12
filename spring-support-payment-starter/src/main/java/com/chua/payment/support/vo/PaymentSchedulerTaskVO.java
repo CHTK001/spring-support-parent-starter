@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 /**
  * 支付调度任务视图
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class PaymentSchedulerTaskVO {
@@ -24,13 +25,13 @@ public class PaymentSchedulerTaskVO {
     private Boolean scheduled;
     /** 下一个execution时间 */
     private LocalDateTime nextExecutionTime;
-    /** 最后startedAT */
+    /** 最后启动at */
     private LocalDateTime lastStartedAt;
-    /** 最后finishedAT */
+    /** 最后饰面at */
     private LocalDateTime lastFinishedAt;
-    /** 最后RUN状态 */
+    /** 最后运行状态 */
     private String lastRunStatus;
-    /** 最后RUN消息 */
+    /** 最后运行消息 */
     private String lastRunMessage;
 }
 

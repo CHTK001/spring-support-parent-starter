@@ -1,7 +1,7 @@
 package com.chua.socket.support.codec;
 
 /**
- * Socket 消息加密模式
+   * 套接字 消息加密模式
  *
  * @since 2026-04-08
  * @author CH

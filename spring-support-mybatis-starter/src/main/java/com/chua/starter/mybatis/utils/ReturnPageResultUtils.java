@@ -12,6 +12,7 @@ import java.util.List;
  * 高级分页工具类，继承 {@link PageResultUtils} 并扩展静态分页功能。
  *
  * @author CH
+ * @since 4.0.0
  */
 public class ReturnPageResultUtils {
 
@@ -20,7 +21,7 @@ public class ReturnPageResultUtils {
      */
     private static final IPage<?> EMPTY = new Page<>();
 
-    /** 创建 ReturnPageResultUtils 实例 */
+    /** 创建 申报page结果工具 实例 */
     private ReturnPageResultUtils() {
     }
 
@@ -47,7 +48,7 @@ public class ReturnPageResultUtils {
     }
 
     /**
-     * 创建静态分页结果（将 List 数据及分页参数封装为 ReturnPageResult）
+      * 创建静态分页结果（将 列表 数据及分页参数封装为 申报page结果）
      *
      * @param data  数据列表
      * @param page 页码
@@ -74,7 +75,7 @@ public class ReturnPageResultUtils {
      * @param page 页码
      * @param size  页大小
      * @param <T>   数据类型
-     * @return 填充数据的 IPage
+     * @return 填充数据的 ipage
      */
     public static <T> IPage<T> page(List<T> list, int page, int size) {
         return com.chua.common.support.utils.PageUtils.page(list, page, size);

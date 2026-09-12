@@ -8,7 +8,7 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 
 /**
- * Knife4j枚举模型属性插件
+   * 刀4j枚举模型属性插件
  * 用于自定义枚举类型的属性显示
  *
  * @since 2025/9/30 13:38
@@ -19,7 +19,7 @@ public class Knife4jEnumModelPropertyPlugin implements PropertyCustomizer {
     /**
      * 定制属性
      *
-     * @param property 属性Schema
+     * @param property 属性模式
      * @param type 注解类型
      * @return 定制后的属性Schema
      */

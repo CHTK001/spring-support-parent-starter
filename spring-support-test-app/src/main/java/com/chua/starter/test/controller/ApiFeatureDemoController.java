@@ -20,14 +20,22 @@ import java.util.Map;
 @RequestMapping("/api/feature")
 public class ApiFeatureDemoController {
 
-    /** 实验性功能：默认关闭 -> 拦截返回 503 */
+    /**
+     * 实验性功能：默认关闭 -> 拦截返回 503
+     *
+     * @return beta的结果
+     */
     @GetMapping("/beta")
     @ApiFeature(value = "beta-feature", defaultEnabled = false)
     public Map<String, Object> beta() {
         return Map.of("result", "beta-ok");
     }
 
-    /** 常规功能：默认开放 -> 正常放行 */
+    /**
+     * 常规功能：默认开放 -> 正常放行
+     *
+     * @return 打开的结果
+     */
     @GetMapping("/open")
     @ApiFeature(value = "open-feature", defaultEnabled = true)
     public Map<String, Object> open() {

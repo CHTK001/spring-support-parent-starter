@@ -30,7 +30,7 @@ public class TerminalSessionServiceImpl implements TerminalSessionService {
     /** 最近查询条数上限 */
     private static final int RECENT_LIMIT = 200;
 
-    /** 会话 Mapper */
+    /** 会话 映射器 */
     private final MsTerminalSessionMapper sessionMapper;
 
     @Override

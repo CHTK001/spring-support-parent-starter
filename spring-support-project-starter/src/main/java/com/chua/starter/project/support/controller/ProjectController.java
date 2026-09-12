@@ -100,6 +100,7 @@ public class ProjectController {
      * @param keyword 关键字（名称/编码）
      * @param type    项目类型
      * @return 结果
+     * @param false false
      */
     @Operation(summary = "项目列表")
     @GetMapping
@@ -111,8 +112,9 @@ public class ProjectController {
     /**
      * 项目列表（POST 兼容）
      *
-     * @param body keyword / type
+     * @param body keyword / 类型
      * @return 结果
+     * @param false false
      */
     @Operation(summary = "项目列表(条件查询)")
     @PostMapping("/query")
@@ -139,8 +141,9 @@ public class ProjectController {
     /**
      * 可选服务器列表（按 OS 过滤）
      *
-     * @param os 操作系统类型 LINUX/WINDOWS
+     * @param os 操作系统类型 Linux/窗口
      * @return 结果
+     * @param false false
      */
     @Operation(summary = "可选服务器列表")
     @GetMapping("/host-options")
@@ -151,7 +154,7 @@ public class ProjectController {
     /**
      * 部署/升级项目
      *
-     * @param id     项目 ID
+     * @param id     项目 标识
      * @param action 操作类型 DEPLOY/UPGRADE
      * @param file   部署包
      * @return 每台主机的部署日志
@@ -167,7 +170,7 @@ public class ProjectController {
     /**
      * 启动项目
      *
-     * @param id 项目 ID
+     * @param id 项目 标识
      * @return 每台主机的执行日志
      */
     @Operation(summary = "启动项目")
@@ -179,7 +182,7 @@ public class ProjectController {
     /**
      * 停止项目
      *
-     * @param id 项目 ID
+     * @param id 项目 标识
      * @return 每台主机的执行日志
      */
     @Operation(summary = "停止项目")
@@ -191,7 +194,7 @@ public class ProjectController {
     /**
      * 重启项目
      *
-     * @param id 项目 ID
+     * @param id 项目 标识
      * @return 每台主机的执行日志
      */
     @Operation(summary = "重启项目")
@@ -203,7 +206,7 @@ public class ProjectController {
     /**
      * 部署日志列表
      *
-     * @param id     项目 ID
+     * @param id     项目 标识
      * @param action 操作类型过滤
      * @return 日志列表
      */
@@ -217,8 +220,8 @@ public class ProjectController {
     /**
      * 部署包归档列表（资产维度历史版本）
      *
-     * @param id     项目 ID
-     * @param hostId 主机 ID，可为空
+     * @param id     项目 标识
+     * @param hostId 主机 标识，可为空
      * @return 归档列表
      */
     @Operation(summary = "部署包归档列表")
@@ -231,8 +234,8 @@ public class ProjectController {
     /**
      * 回滚到指定历史版本
      *
-     * @param id        项目 ID
-     * @param archiveId 归档记录 ID
+     * @param id        项目 标识
+     * @param archiveId 归档记录 标识
      * @return 每台主机的部署日志
      */
     @Operation(summary = "回滚到历史版本")
@@ -245,8 +248,8 @@ public class ProjectController {
     /**
      * 实时查看项目日志（tail）
      *
-     * @param id     项目 ID
-     * @param hostId 目标主机 ID
+     * @param id     项目 标识
+     * @param hostId 目标主机 标识
      * @param cursor 上次读取字节偏移，可为空
      * @param lines  拉取行数，默认 500
      * @return 日志内容
@@ -264,7 +267,7 @@ public class ProjectController {
      * 安全转换字符串
      *
      * @param value 原始值
-     * @return 字符串或 null
+     * @return 字符串或 空
      */
     private String asString(Object value) {
         if (value == null) {

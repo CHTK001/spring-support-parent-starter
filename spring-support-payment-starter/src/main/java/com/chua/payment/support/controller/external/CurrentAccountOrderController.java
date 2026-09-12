@@ -16,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-/** @author CH */
+/** @作者 CH */
 
 @RestController
 @RequestMapping("/account")
@@ -32,12 +32,12 @@ public class CurrentAccountOrderController {
 
     @GetMapping("/orders")
     /**
-     * 列表Orders
-     * @param request request
+      * 列表订单
+     * @param request 请求
      * @param page page
-     * @param size size
-     * @param orderNo orderNo
-     * @param status status
+     * @param size 大小
+     * @param orderNo 订单no
+     * @param status 状态
      */
     public Result<PageResult<OrderVO>> listOrders(HttpServletRequest request,
                                                   @RequestParam(defaultValue = "1") int page,
@@ -52,7 +52,13 @@ public class CurrentAccountOrderController {
     }
 
     @GetMapping("/orders/{id}")
-    /** 获取Order */
+    /**
+     * 获取订单
+     *
+     * @param request 请求
+     * @param id 标识
+     * @return 获取订单的结果
+     */
     public Result<OrderVO> getOrder(HttpServletRequest request, @PathVariable Long id) {
         Long userId = principalResolver.resolveUserId(request);
         if (userId == null) {
@@ -62,7 +68,13 @@ public class CurrentAccountOrderController {
     }
 
     @GetMapping("/orders/{id}/logs")
-    /** ListOrderLogs */
+    /**
+     * 列表订单日志
+     *
+     * @param request 请求
+     * @param id 标识
+     * @return 列表订单日志的结果
+     */
     public Result<List<OrderStateLogVO>> listOrderLogs(HttpServletRequest request, @PathVariable Long id) {
         Long userId = principalResolver.resolveUserId(request);
         if (userId == null) {
@@ -74,12 +86,12 @@ public class CurrentAccountOrderController {
     @GetMapping("/transactions")
     /**
      * 列表Transactions
-     * @param request request
-     * @param pageNum pageNum
-     * @param pageSize pageSize
-     * @param orderNo orderNo
-     * @param transactionType transactionType
-     * @param status status
+     * @param request 请求
+     * @param pageNum pagenum
+     * @param pageSize page大小
+     * @param orderNo 订单no
+     * @param transactionType transaction类型
+     * @param status 状态
      */
     public Result<PageResult<TransactionRecord>> listTransactions(HttpServletRequest request,
                                                                   @RequestParam(defaultValue = "1") int pageNum,
@@ -97,10 +109,10 @@ public class CurrentAccountOrderController {
 
     @PutMapping("/orders/{id}/cancel")
     /**
-     * CancelOrder
-     * @param request request
-     * @param id id
-     * @param reason reason
+      * cancel订单
+     * @param request 请求
+     * @param id 标识
+     * @param reason ReasonMLmlml
      */
     public Result<Boolean> cancelOrder(HttpServletRequest request,
                                        @PathVariable Long id,

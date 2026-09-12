@@ -32,7 +32,7 @@ public class DelegatingServerFilter implements ServerFilter, ReactiveServerFilte
      */
     private final String filterName;
     /**
-     * 覆盖顺序(null 则沿用底层实现)
+      * 覆盖顺序(空 则沿用底层实现)
      */
     private final Integer order;
     /**
@@ -45,7 +45,7 @@ public class DelegatingServerFilter implements ServerFilter, ReactiveServerFilte
      *
      * @param delegate   底层过滤器
      * @param filterName 描述名
-     * @param order      覆盖顺序(null 则沿用底层实现)
+     * @param order      覆盖顺序(空 则沿用底层实现)
      * @param enabled    描述级启用开关
      */
     public DelegatingServerFilter(ServerFilter delegate, String filterName, Integer order, boolean enabled) {

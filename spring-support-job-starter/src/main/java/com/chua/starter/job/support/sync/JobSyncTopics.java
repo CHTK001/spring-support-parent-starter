@@ -4,16 +4,17 @@ package com.chua.starter.job.support.sync;
  * 自研同步通道使用的 topic 常量。
  *
  * @since 4.0.0.42
+ * @author CH
  */
 public final class JobSyncTopics {
 
     /**
-     * 调度命令 topic (Scheduler → Executor)
+      * 调度命令 topic (调度器 → 执行器)
      */
     public static final String TASK_COMMAND = "job-cmd";
 
     /**
-     * 执行结果 topic (Executor → Scheduler)
+      * 执行结果 topic (执行器 → 调度器)
      */
     public static final String TASK_LOG = "job-log";
 
@@ -22,7 +23,7 @@ public final class JobSyncTopics {
      */
     public static final String REGISTER = "job-reg";
 
-    /** 创建 JobSyncTopics 实例 */
+    /** 创建 作业同步topics 实例 */
     private JobSyncTopics() {
     }
 }

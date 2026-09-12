@@ -15,9 +15,9 @@ import java.lang.reflect.Field;
 import java.util.*;
 
 /**
- * MyBatis Actuator 端点
+   * MyBatis Actuator 端点
  * <p>
- * 通过 actuator 暴露 MyBatis 配置信息，包括 Mapper 数量、SQL 语句统计、
+   * 通过 actuator 暴露 MyBatis 配置信息，包括 映射器 数量、SQL 语句统计、
  * 已加载资源列表等，便于运行时诊断和运维排查。
  * </p>
  *
@@ -32,16 +32,16 @@ public class MyBatisEndpoint {
 
 
     /**
-     * SQL会话工厂，可为 null（MyBatis 未启用时）
+       * SQL会话工厂，可为 空（MyBatis 未启用时）
      */
     @Autowired(required = false)
-    private SqlSessionFactory sqlSessionFactory;
+    private SqlSessionFactory sqlSessionFactory; // SQL会话工厂
 
     /**
-     * 获取 MyBatis 概览信息，包括 Mapper 数量、SQL 语句统计、已加载资源等。
+       * 获取 MyBatis 概览信息，包括 映射器 数量、SQL 语句统计、已加载资源等。
      *
-     * @return MyBatis 概览信息 Map，包含 enabled、mapperCount、mappedStatementCount 等字段
-     * @throws Exception 获取信息失败时记录错误日志并返回 error 字段
+     * @return MyBatis 概览信息 映射，包含 已启用、映射器数量、mapped对账单数量 等字段
+     * @throws Exception 获取信息失败时记录错误日志并返回 错误 字段
      */
     @ReadOperation
     public Map<String, Object> overview() {
@@ -75,7 +75,7 @@ public class MyBatisEndpoint {
             }
             result.put("sqlTypeCount", sqlTypeCount);
 
-            // Mapper 列表
+ // 映射器 列表
             result.put("mappers", getMapperList(configuration));
 
         } catch (Exception e) {
@@ -87,11 +87,11 @@ public class MyBatisEndpoint {
     }
 
     /**
-     * 获取指定 Mapper 的详情，包括方法列表和 SQL 类型统计。
+      * 获取指定 映射器 的详情，包括方法列表和 SQL 类型统计。
      *
-     * @param mapperName Mapper 全限定类名（URL 编码）
-     * @return Mapper 详情 Map，包含 statements、methodCount 等字段
-     * @throws Exception 获取详情失败时记录错误日志并返回 error 字段
+     * @param mapperName 映射器 全限定类名（URL 编码）
+     * @return Mapper 详情 映射，包含 对账单、方法数量 等字段
+     * @throws Exception 获取详情失败时记录错误日志并返回 错误 字段
      */
     @ReadOperation
     public Map<String, Object> mapper(@Selector String mapperName) {
@@ -139,12 +139,14 @@ public class MyBatisEndpoint {
     }
 
     /**
-     * 获取 Mapper 列表
+      * 获取 映射器 列表
+     * @param configuration 配置
+     * @return 获取映射器列表的结果
      */
     private List<Map<String, Object>> getMapperList(Configuration configuration) {
         Collection<String> mappedStatementNames = configuration.getMappedStatementNames();
 
-        // 提取唯一的 Mapper 接口名称
+ // 提取唯一的 映射器 接口名称
         Set<String> mapperSet = new HashSet<>();
         for (String statementId : mappedStatementNames) {
             int lastDot = statementId.lastIndexOf('.');
@@ -154,14 +156,14 @@ public class MyBatisEndpoint {
             }
         }
 
-        // 构建 Mapper 列表
+ // 构建 映射器 列表
         List<Map<String, Object>> mappers = new ArrayList<>();
         for (String name : mapperSet) {
             Map<String, Object> mapper = new HashMap<>();
             mapper.put("name", name);
             mapper.put("simpleName", name.substring(name.lastIndexOf('.') + 1));
 
-            // 计算该 Mapper 下的方法数量
+ // 计算该 映射器 下的方法数量
             long methodCount = mappedStatementNames.stream()
                     .filter(s -> s.startsWith(name + "."))
                     .count();
@@ -187,6 +189,8 @@ public class MyBatisEndpoint {
 
     /**
      * 获取已加载的资源列表
+     * @param configuration 配置
+     * @return 获取加载resources的结果
      */
     @SuppressWarnings("unchecked")
     private Set<String> getLoadedResources(Configuration configuration) {

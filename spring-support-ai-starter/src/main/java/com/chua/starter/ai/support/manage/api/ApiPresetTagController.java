@@ -38,19 +38,28 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class ApiPresetTagController {
 
-    private final SysAiConversationStore conversationStore;
+    private final SysAiConversationStore conversationStore; // conversation存储
 
     /**
-     * 内存标签存储：preset_tag_id -> 标签数据
+       * 内存标签存储：preset_标签_标识 -> 标签数据
      */
     private final Map<String, Map<String, Object>> tags = new ConcurrentHashMap<>();
 
     @GetMapping
+    /**
+     * 列表。
+     * @return 列表的结果
+     */
     public ApiResult<List<Map<String, Object>>> list() {
         return ApiResult.ok(new ArrayList<>(tags.values()));
     }
 
     @PostMapping
+    /**
+     * 创建。
+     * @param body 主体
+     * @return 创建的结果
+     */
     public ApiResult<Map<String, Object>> create(@RequestBody Map<String, Object> body) {
         String tagId = String.valueOf(body.getOrDefault("preset_tag_id", conversationStore.newId()));
         body.put("preset_tag_id", tagId);
@@ -66,6 +75,12 @@ public class ApiPresetTagController {
                                                   @RequestBody Map<String, Object> body) {
         Map<String, Object> tag = tags.get(tagId);
         if (tag == null) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+             * @param tagId 标签标识
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "预设标签不存在: " + tagId);
         }
         body.forEach((k, v) -> {
@@ -77,9 +92,20 @@ public class ApiPresetTagController {
     }
 
     @DeleteMapping("/{tagId}")
+    /**
+     * 删除。
+     * @param tagId 标签标识
+     * @return 删除的结果
+     */
     public ApiResult<Void> delete(@PathVariable String tagId) {
         Map<String, Object> removed = tags.remove(tagId);
         if (removed == null) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+             * @param tagId 标签标识
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "预设标签不存在: " + tagId);
         }
         return ApiResult.ok();

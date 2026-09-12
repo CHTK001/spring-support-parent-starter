@@ -53,6 +53,9 @@ public class FaceController {
      *
      * @param file 图片文件
      * @return 人脸检测结果
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "人脸检测", description = "检测图片中的人脸位置、数量与活体状态")
@@ -78,6 +81,9 @@ public class FaceController {
      *
      * @param file 图片文件
      * @return 特征向量
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "人脸特征提取", description = "提取图片中人脸的特征向量")
@@ -100,6 +106,9 @@ public class FaceController {
      *
      * @param file 图片文件
      * @return 对齐结果（含对齐后的人脸图 + 活体 + 耗时）
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "人脸对齐", description = "detect→crop→liveness→align，返回 5 点仿射旋转后的对齐人脸图")
@@ -132,6 +141,7 @@ public class FaceController {
      * @param fileA 图片 A
      * @param fileB 图片 B
      * @return 相似度与判定
+     * @param @RequestParam("fileA" @请求参数("文件a"
      */
     @Permission("admin")
     @Operation(summary = "人脸比对", description = "1:1 人脸比对（detect→crop→liveness→align→feature→cosine），返回相似度与是否同一人")
@@ -172,10 +182,11 @@ public class FaceController {
     /**
      * 人脸登记入库（1:N）。
      *
-     * @param id       人脸 ID
+     * @param id       人脸 标识
      * @param file     图片文件
      * @param metadata 附加元数据（JSON）
      * @return 登记结果
+     * @param @RequestParam("id" @请求参数("标识"
      */
     @Permission("admin")
     @Operation(summary = "人脸登记（图像）", description = "登记管线：detect→crop→liveness→align→feature→入库，取最大人脸")
@@ -202,10 +213,11 @@ public class FaceController {
     /**
      * 直接特征入库（不跑管线，调用方自行提取特征后入库）。
      *
-     * @param id        人脸 ID
+     * @param id        人脸 标识
      * @param feature   特征向量 JSON 数组
      * @param metadata  元数据 JSON
      * @return 登记结果
+     * @param @RequestParam("id" @请求参数("标识"
      */
     @Permission("admin")
     @Operation(summary = "人脸登记（特征向量）", description = "直接用特征向量入库，不跑管线；适用已提取特征或外部导入场景")
@@ -232,6 +244,9 @@ public class FaceController {
      *
      * @param file 图片文件
      * @return 识别结果（TopK 命中）
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "人脸识别", description = "1:N 人脸识别，返回 TopK 命中")
@@ -261,8 +276,9 @@ public class FaceController {
      * 1:N 特征检索。
      *
      * @param feature 特征向量（JSON 数组）
-     * @param topK    TopK
+     * @param topK    topk
      * @return 检索结果
+     * @param @RequestParam("feature" @请求参数("特征"
      */
     @Permission("admin")
     @Operation(summary = "人脸检索", description = "按特征向量检索人脸库")
@@ -280,11 +296,12 @@ public class FaceController {
     }
 
     /**
-     * 核验（人脸 ID + 图片是否匹配）。
+      * 核验（人脸 标识 + 图片是否匹配）。
      *
-     * @param id   人脸 ID
+     * @param id   人脸 标识
      * @param file 图片文件
      * @return 核验结果
+     * @param @RequestParam("id" @请求参数("标识"
      */
     @Permission("admin")
     @Operation(summary = "人脸核验", description = "核验指定人脸 ID 与图片是否匹配")
@@ -308,6 +325,9 @@ public class FaceController {
      *
      * @param file 裁剪后人脸图片
      * @return 活体判定
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "活体检测", description = "检测人脸是否为活体")
@@ -331,6 +351,9 @@ public class FaceController {
      *
      * @param file 图片文件
      * @return 动漫人脸检测结果
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "动漫人脸检测", description = "检测动漫/二次元图片中的人脸")
@@ -353,6 +376,9 @@ public class FaceController {
      *
      * @param file 图片文件
      * @return 超分后图片
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "人脸超分", description = "GFPGAN/ESRGAN 人脸超分辨率")
@@ -374,6 +400,9 @@ public class FaceController {
      *
      * @param file 图片文件
      * @return 修复后图片
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "人脸修复", description = "CodeFormer 人脸修复（老照片/模糊人脸）")
@@ -395,6 +424,9 @@ public class FaceController {
      *
      * @param file 图片文件
      * @return 年龄/性别/种族
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "人脸属性分析", description = "年龄/性别/种族属性识别")
@@ -417,6 +449,9 @@ public class FaceController {
      *
      * @param file 图片文件
      * @return 表情标签
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "人脸表情识别", description = "识别图片中的人脸表情")
@@ -439,6 +474,9 @@ public class FaceController {
      *
      * @param file 图片文件
      * @return 关键点坐标（106 点）
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "人脸关键点", description = "人脸 106 点关键点定位")
@@ -461,6 +499,9 @@ public class FaceController {
      *
      * @param file 图片文件
      * @return 质量评估结果
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "人脸质量评估", description = "评估人脸图片质量（模糊/亮度/人脸占比）")
@@ -493,6 +534,9 @@ public class FaceController {
      *
      * @param file 图片文件
      * @return 是否疑似换脸
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "换脸检测", description = "检测图片是否疑似 AI 换脸")
@@ -538,14 +582,19 @@ public class FaceController {
             }
             return result;
         }
+        /**
+         * illegal参数异常。
+         * @param 数组" 数组"
+         * @return illegal参数异常的结果
+         */
         throw new IllegalArgumentException("特征向量格式错误，应为 JSON 数组");
     }
 
     /**
      * 解析可选的 metadata JSON。
      *
-     * @param json JSON 对象字符串，空或非法时返回空 Map
-     * @return 元数据 Map
+     * @param json JSON 对象字符串，空或非法时返回空 映射
+     * @return 元数据 映射
      */
     private static Map<String, Object> parseMetadata(String json) {
         if (null == json || json.isBlank()) {

@@ -5,24 +5,25 @@ import lombok.Data;
 /**
  * 微信支付通知解析结果
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class TencentWechatPayNotifyPayload {
     /** 排序NO */
     private String orderNo;
-    /** TransactionID */
+    /** transactionid */
     private String transactionId;
     /** APPID */
     private String appId;
-    /** MerchantID */
+    /** merchantid */
     private String merchantId;
-    /** 总数amountFEN */
+    /** 总数amountfen */
     private Long totalAmountFen;
-    /** Payer总数amountFEN */
+    /** 薪酬总数amountfen */
     private Long payerTotalAmountFen;
-    /** Trade状态 */
+    /** 贸易状态 */
     private String tradeState;
-    /** Trade状态desc */
+    /** 贸易状态desc */
     private String tradeStateDesc;
 }
 

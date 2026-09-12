@@ -5,30 +5,31 @@ import lombok.Data;
 /**
  * 微信下单请求
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class TencentWechatPayRequest {
     /** 排序NO */
     private String orderNo;
-    /** AmountFEN */
+    /** amountfen */
     private Long amountFen;
-    /** Currency */
+    /** 货币 */
     private String currency;
     /** 描述 */
     private String description;
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
     /** Expire时间 */
     private String expireTime;
-    /** PayeropenID */
+    /** payeropenid */
     private String payerOpenId;
     /** 客户端IP */
     private String clientIp;
-    /** DeviceID */
+    /** deviceid */
     private String deviceId;
     /** Attach */
     private String attach;
-    /** H5type */
+    /** H5类型 */
     private String h5Type;
     /** APP名称 */
     private String appName;

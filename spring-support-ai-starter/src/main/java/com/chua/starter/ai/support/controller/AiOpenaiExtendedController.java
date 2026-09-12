@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * OpenAI 标准协议扩展控制器，提供 Images / Audio / Files / Fine-tuning 等扩展接口。
+   * 打开AI 标准协议扩展控制器，提供 镜像 / 音频 / 文件 / 罚金-tuning 等扩展接口。
  *
  * <p>继承 {@link BaseAiController} 统一使用 Bearer Token 鉴权。
  * 所有接口均需通过 {@link #authCheck(HttpServletRequest)} 校验后才可访问。</p>
@@ -74,14 +74,14 @@ public class AiOpenaiExtendedController extends BaseAiController {
         this.aiChatFacadeService = aiChatFacadeService;
     }
 
-    // ==================== OpenAI Image Generation ====================
+ // ==================== 打开AI 镜像 Generation ====================
 
     /**
-     * OpenAI Image Generation 图像生成接口。
+      * 打开AI 镜像 Generation 图像生成接口。
      *
      * <p>接收图像生成请求，调用对话门面服务处理后返回结果。</p>
      *
-     * @param request         请求体（包含 prompt、model 等）
+     * @param request         请求体（包含 提示符、模型 等）
      * @param servletRequest  HTTP 请求
      * @return 图像生成响应
      */
@@ -114,10 +114,10 @@ public class AiOpenaiExtendedController extends BaseAiController {
         }
     }
 
-    // ==================== OpenAI Image Edits ====================
+ // ==================== 打开AI 镜像 Edits ====================
 
     /**
-     * OpenAI Image Edits 图像编辑接口。
+      * 打开AI 镜像 Edits 图像编辑接口。
      *
      * <p>上传原始图像与编辑描述，返回编辑后的图像。</p>
      *
@@ -127,6 +127,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
      * @param n               生成数量
      * @param servletRequest  HTTP 请求
      * @return 图像编辑响应
+     * @param @RequestParam("image" @请求参数("镜像"
      */
     @Operation(summary = "OpenAI Image Edits", description = "OpenAI 标准协议图像编辑接口")
     @PostMapping(value = "/v1/images/edits", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -156,10 +157,10 @@ public class AiOpenaiExtendedController extends BaseAiController {
         }
     }
 
-    // ==================== OpenAI Image Variations ====================
+ // ==================== 打开AI 镜像 Variations ====================
 
     /**
-     * OpenAI Image Variations 图像变体接口。
+      * 打开AI 镜像 Variations 图像变体接口。
      *
      * <p>上传原始图像，生成风格相似的变体图像。</p>
      *
@@ -168,6 +169,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
      * @param n               生成数量
      * @param servletRequest  HTTP 请求
      * @return 图像变体响应
+     * @param @RequestParam("image" @请求参数("镜像"
      */
     @Operation(summary = "OpenAI Image Variations", description = "OpenAI 标准协议图像变体接口")
     @PostMapping(value = "/v1/images/variations", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -196,10 +198,10 @@ public class AiOpenaiExtendedController extends BaseAiController {
         }
     }
 
-    // ==================== OpenAI Audio Transcription ====================
+ // ==================== 打开AI 音频 转写 ====================
 
     /**
-     * OpenAI Audio Transcription 音频转录接口。
+      * 打开AI 音频 转写 音频转录接口。
      *
      * <p>上传音频文件，返回文本转录结果。</p>
      *
@@ -208,6 +210,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
      * @param prompt          提示词
      * @param servletRequest  HTTP 请求
      * @return 转录文本
+     * @param @RequestParam("file" @请求参数("文件"
      */
     @Operation(summary = "OpenAI Audio Transcription", description = "OpenAI 标准协议音频转录接口")
     @PostMapping(value = "/v1/audio/transcriptions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -237,10 +240,10 @@ public class AiOpenaiExtendedController extends BaseAiController {
         }
     }
 
-    // ==================== OpenAI Audio Translation ====================
+ // ==================== 打开AI 音频 翻译 ====================
 
     /**
-     * OpenAI Audio Translation 音频翻译接口。
+      * 打开AI 音频 翻译 音频翻译接口。
      *
      * <p>上传非英语音频文件，返回英语翻译文本。</p>
      *
@@ -249,6 +252,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
      * @param prompt          提示词
      * @param servletRequest  HTTP 请求
      * @return 翻译文本
+     * @param @RequestParam("file" @请求参数("文件"
      */
     @Operation(summary = "OpenAI Audio Translation", description = "OpenAI 标准协议音频翻译接口")
     @PostMapping(value = "/v1/audio/translations", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -278,14 +282,14 @@ public class AiOpenaiExtendedController extends BaseAiController {
         }
     }
 
-    // ==================== OpenAI Moderations ====================
+ // ==================== 打开AI Moderations ====================
 
     /**
-     * OpenAI Moderations 内容审核接口。
+      * 打开AI Moderations 内容审核接口。
      *
      * <p>对输入文本进行内容安全审核，返回各类别的违规评分。</p>
      *
-     * @param request         请求体（包含 input 文本）
+     * @param request         请求体（包含 输入 文本）
      * @param servletRequest  HTTP 请求
      * @return 审核结果
      */
@@ -310,17 +314,18 @@ public class AiOpenaiExtendedController extends BaseAiController {
         }
     }
 
-    // ==================== OpenAI Files ====================
+ // ==================== 打开AI 文件 ====================
 
     /**
-     * OpenAI Upload File 文件上传接口。
+      * 打开AI Upload 文件 文件上传接口。
      *
      * <p>上传文件到 OpenAI 兼容存储，返回文件元信息。</p>
      *
      * @param file            文件
-     * @param purpose         用途（如 fine-tune）
+     * @param purpose         用途（如 罚金-tune）
      * @param servletRequest  HTTP 请求
      * @return 文件元信息
+     * @param @RequestParam("file" @请求参数("文件"
      */
     @Operation(summary = "OpenAI Upload File", description = "OpenAI 标准协议文件上传接口")
     @PostMapping(value = "/v1/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -340,11 +345,12 @@ public class AiOpenaiExtendedController extends BaseAiController {
     }
 
     /**
-     * OpenAI List Files 文件列表接口。
+      * 打开AI 列表 文件 文件列表接口。
      *
      * @param purpose         用途过滤
      * @param servletRequest  HTTP 请求
      * @return 文件列表
+     * @param false false
      */
     @Operation(summary = "OpenAI List Files", description = "OpenAI 标准协议文件列表接口")
     @GetMapping("/v1/files")
@@ -358,11 +364,12 @@ public class AiOpenaiExtendedController extends BaseAiController {
     }
 
     /**
-     * OpenAI Retrieve File 文件检索接口。
+      * 打开AI Retrieve 文件 文件检索接口。
      *
-     * @param fileId          文件 ID
+     * @param fileId          文件 标识
      * @param servletRequest  HTTP 请求
      * @return 文件元信息
+     * @param @PathVariable("file_id" @路径变量("文件_标识"
      */
     @Operation(summary = "OpenAI Retrieve File", description = "OpenAI 标准协议文件检索接口")
     @GetMapping("/v1/files/{file_id}")
@@ -376,11 +383,12 @@ public class AiOpenaiExtendedController extends BaseAiController {
     }
 
     /**
-     * OpenAI Delete File 文件删除接口。
+      * 打开AI 删除 文件 文件删除接口。
      *
-     * @param fileId          文件 ID
+     * @param fileId          文件 标识
      * @param servletRequest  HTTP 请求
      * @return 删除结果
+     * @param @PathVariable("file_id" @路径变量("文件_标识"
      */
     @Operation(summary = "OpenAI Delete File", description = "OpenAI 标准协议文件删除接口")
     @DeleteMapping("/v1/files/{file_id}")
@@ -394,11 +402,12 @@ public class AiOpenaiExtendedController extends BaseAiController {
     }
 
     /**
-     * OpenAI Retrieve File Content 文件内容检索接口。
+      * 打开AI Retrieve 文件 内容 文件内容检索接口。
      *
-     * @param fileId          文件 ID
+     * @param fileId          文件 标识
      * @param servletRequest  HTTP 请求
      * @return 文件内容（当前实现返回不可用提示）
+     * @param @PathVariable("file_id" @路径变量("文件_标识"
      */
     @Operation(summary = "OpenAI Retrieve File Content", description = "OpenAI 标准协议文件内容检索接口")
     @GetMapping("/v1/files/{file_id}/content")
@@ -413,10 +422,10 @@ public class AiOpenaiExtendedController extends BaseAiController {
         ));
     }
 
-    // ==================== OpenAI Fine-tuning Jobs ====================
+ // ==================== 打开AI 罚金-tuning 作业 ====================
 
     /**
-     * OpenAI Create Fine-tuning Job 创建微调任务接口。
+      * 打开AI 创建 罚金-tuning 作业 创建微调任务接口。
      *
      * @param request         请求体
      * @param servletRequest  HTTP 请求
@@ -434,12 +443,13 @@ public class AiOpenaiExtendedController extends BaseAiController {
     }
 
     /**
-     * OpenAI List Fine-tuning Jobs 微调任务列表接口。
+      * 打开AI 列表 罚金-tuning 作业 微调任务列表接口。
      *
      * @param after           分页游标
      * @param limit           每页数量
      * @param servletRequest  HTTP 请求
      * @return 微调任务列表
+     * @param false false
      */
     @Operation(summary = "OpenAI List Fine-tuning Jobs", description = "OpenAI 标准协议微调任务列表接口")
     @GetMapping("/v1/fine_tuning/jobs")
@@ -454,11 +464,12 @@ public class AiOpenaiExtendedController extends BaseAiController {
     }
 
     /**
-     * OpenAI Retrieve Fine-tuning Job 微调任务详情接口。
+      * 打开AI Retrieve 罚金-tuning 作业 微调任务详情接口。
      *
-     * @param jobId           任务 ID
+     * @param jobId           任务 标识
      * @param servletRequest  HTTP 请求
      * @return 微调任务详情
+     * @param @PathVariable("job_id" @路径变量("作业_标识"
      */
     @Operation(summary = "OpenAI Retrieve Fine-tuning Job", description = "OpenAI 标准协议微调任务详情接口")
     @GetMapping("/v1/fine_tuning/jobs/{job_id}")
@@ -472,11 +483,12 @@ public class AiOpenaiExtendedController extends BaseAiController {
     }
 
     /**
-     * OpenAI Cancel Fine-tuning Job 取消微调任务接口。
+      * 打开AI Cancel 罚金-tuning 作业 取消微调任务接口。
      *
-     * @param jobId           任务 ID
+     * @param jobId           任务 标识
      * @param servletRequest  HTTP 请求
      * @return 取消结果
+     * @param @PathVariable("job_id" @路径变量("作业_标识"
      */
     @Operation(summary = "OpenAI Cancel Fine-tuning Job", description = "OpenAI 标准协议取消微调任务接口")
     @PostMapping("/v1/fine_tuning/jobs/{job_id}/cancel")
@@ -563,7 +575,7 @@ public class AiOpenaiExtendedController extends BaseAiController {
     /**
      * 构建文件元信息响应。
      *
-     * @param fileId 文件 ID
+     * @param fileId 文件 标识
      * @param status 状态
      * @return 文件元信息
      */

@@ -19,12 +19,12 @@ import java.util.Map;
 public class MessageAuditLog {
 
     /**
-     * 日志ID
+      * 日志标识
      */
     private String id;
 
     /**
-     * 消息ID
+      * 消息标识
      */
     private String messageId;
 
@@ -39,7 +39,7 @@ public class MessageAuditLog {
     private String messageType;
 
     /**
-     * 操作类型（SEND/RECEIVE/PROCESS/RETRY/DEAD_LETTER）
+      * 操作类型（发送/接收/处理/重试/DEAD_LETTER）
      */
     private String operation;
 
@@ -49,17 +49,17 @@ public class MessageAuditLog {
     private LocalDateTime operationTime;
 
     /**
-     * 操作状态（SUCCESS/FAILURE）
+      * 操作状态（成功/失败）
      */
     private String status;
 
     /**
-     * 租户ID
+      * 租户标识
      */
     private Long tenantId;
 
     /**
-     * 用户ID
+      * 用户标识
      */
     private Long userId;
 
@@ -105,6 +105,8 @@ public class MessageAuditLog {
 
     /**
      * 添加扩展信息
+     * @param key 钥匙
+     * @param value 价值观
      */
     public void addExtra(String key, Object value) {
         extras.put(key, value);

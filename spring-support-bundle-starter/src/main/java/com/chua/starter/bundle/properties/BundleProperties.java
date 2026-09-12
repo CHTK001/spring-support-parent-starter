@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * OSGi Bundle 管理配置属性。
+   * osgi Bundle 管理配置属性。
  *
  * <p>支持通过 Maven 坐标批量安装/卸载 OSGi bundle，自动处理依赖顺序。</p>
  *

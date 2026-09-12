@@ -13,7 +13,7 @@ import java.util.List;
  * 告警引擎服务
  * <p>
  * 职责：规则缓存管理 + 指标评估（连续触发/静默期去噪）+ 事件落库与通知分发。
- * 评估挂在指标写入链路尾部，拉取式采集与 Agent 推送共用同一条管道。
+   * 评估挂在指标写入链路尾部，拉取式采集与 智能体 推送共用同一条管道。
  * </p>
  *
  * @author CH
@@ -24,7 +24,7 @@ public interface AlarmEngineService {
     /**
      * 评估单个指标点是否触发告警
      *
-     * @param monitorId   监控目标 ID
+     * @param monitorId   监控目标 标识
      * @param monitorName 目标名称（冗余入事件）
      * @param metricName  指标名
      * @param value       指标值
@@ -39,8 +39,8 @@ public interface AlarmEngineService {
     /**
      * 测试告警规则
      *
-     * @param ruleId    规则 ID
-     * @param monitorId 监控 ID（可选，为空则测试全局规则）
+     * @param ruleId    规则 标识
+     * @param monitorId 监控 标识（可选，为空则测试全局规则）
      * @param metricName 指标名
      * @param value     指标值
      * @return 是否触发告警
@@ -79,7 +79,7 @@ public interface AlarmEngineService {
     /**
      * 维护窗口列表
      *
-     * @param policyId 策略 ID 过滤（可选）
+     * @param policyId 策略 标识 过滤（可选）
      * @return 列表
      */
     ReturnResult<List<MsMonitorAlarmMaintenanceWindow>> listMaintenanceWindows(Long policyId);
@@ -148,7 +148,7 @@ public interface AlarmEngineService {
     /**
      * 规则列表（可按策略过滤）
      *
-     * @param policyId 策略 ID，可为空
+     * @param policyId 策略 标识，可为空
      * @return 规则列表
      */
     ReturnResult<List<MsMonitorAlarmRule>> listRules(Long policyId);
@@ -166,7 +166,7 @@ public interface AlarmEngineService {
     /**
      * 处理事件
      *
-     * @param id      事件 ID
+     * @param id      事件 标识
      * @param remark  处理备注
      * @param falseAlarm 是否标记为误报
      * @return 结果

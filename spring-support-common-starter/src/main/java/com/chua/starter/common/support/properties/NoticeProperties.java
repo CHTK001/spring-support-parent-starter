@@ -24,6 +24,12 @@ public class NoticeProperties {
     private Email email;
 
     @Data
+    /**
+     * Email类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     public static class Email {
         /**
          * 发送者

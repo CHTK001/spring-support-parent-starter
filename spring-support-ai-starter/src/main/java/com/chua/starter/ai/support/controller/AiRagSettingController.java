@@ -72,14 +72,14 @@ public class AiRagSettingController {
     }
 
     /**
-     * 向量模型列表：EmbeddingClient SPI 提供商 + deeplearning 向量模型。
+      * 向量模型列表：嵌入客户端 SPI 提供商 + deeplearning 向量模型。
      *
      * @return 模型名列表
      */
     private List<String> listEmbeddingModels() {
         TreeSet<String> names = new TreeSet<>();
 
-        // 1. EmbeddingClient SPI 提供商（openai/siliconflow/sensetime/github/gitee/memory）
+ // 1. 嵌入客户端 SPI 提供商（openai/siliconflow/sensetime/GitHub/gitee/内存）
         try {
             ServiceProvider.of(EmbeddingClient.class).getExtensions()
                     .forEach(name -> names.add(name.toLowerCase()));
@@ -87,7 +87,7 @@ public class AiRagSettingController {
             log.warn("[RagSetting] 枚举 EmbeddingClient SPI 失败: {}", e.getMessage());
         }
 
-        // 2. deeplearning 向量模型（modelId 含 embedding，或输出 float[] 的文本特征模型）
+ // 2. deeplearning 向量模型（模型标识 含 嵌入，或输出 float[] 的文本特征模型）
         try {
             ModelRegistry.discoverAll();
             Collection<ModelRegistry.Entry> entries = ModelRegistry.getAll();
@@ -112,7 +112,7 @@ public class AiRagSettingController {
     }
 
     /**
-     * OCR 模型列表：deeplearning ModelRegistry 中文字识别类模型。
+      * OCR 模型列表：deeplearning 模型registry 中文字识别类模型。
      *
      * @return 模型名列表
      */
@@ -137,7 +137,7 @@ public class AiRagSettingController {
     }
 
     /**
-     * LLM 模型列表：ai_model 表，能力含 chat。
+      * LLM 模型列表：AI_模型 表，能力含 对话。
      *
      * @return 模型名列表
      */
@@ -158,7 +158,7 @@ public class AiRagSettingController {
     }
 
     /**
-     * 向量数据库列表：VectorStorageProvider SPI。
+      * 向量数据库列表：向量storage提供者 SPI。
      *
      * @return 提供者名称列表
      */
@@ -174,7 +174,7 @@ public class AiRagSettingController {
     }
 
     /**
-     * 文本切片策略列表：TextSplitterProvider SPI。
+      * 文本切片策略列表：文本splitter提供者 SPI。
      *
      * @return 提供者名称列表
      */

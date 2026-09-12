@@ -40,7 +40,7 @@ public class DemoJobs {
     private final AtomicInteger helloCount = new AtomicInteger(0);
 
     /**
-     * fail 任务触发计数
+      * 失败 任务触发计数
      */
     private final AtomicInteger failCount = new AtomicInteger(0);
 
@@ -74,6 +74,11 @@ public class DemoJobs {
     @Job(value = "example.fail", desc = "示例失败任务", cron = "0/1 * * * * ?")
     public void fail() {
         failCount.incrementAndGet();
+        /**
+         * illegal状态异常。
+         * @param 故意失败" 故意失败"
+         * @return illegal状态异常的结果
+         */
         throw new IllegalStateException("example 故意失败");
     }
 
@@ -89,7 +94,7 @@ public class DemoJobs {
     }
 
     /**
-     * 固定频率触发 (fixedRate=2000ms), 验证调度引擎 FIXED 支持。
+      * 固定频率触发 (fixedrate=2000ms), 验证调度引擎 FIXED 支持。
      */
     @Job(value = "example.fixedRate", desc = "示例 fixedRate 任务", fixedRate = 2000L)
     public void fixedRateTick() {
@@ -98,7 +103,7 @@ public class DemoJobs {
     }
 
     /**
-     * 固定延迟触发 (fixedDelay=2000ms), 验证调度引擎 DELAY 支持。
+      * 固定延迟触发 (fixed延迟=2000ms), 验证调度引擎 延迟 支持。
      */
     @Job(value = "example.fixedDelay", desc = "示例 fixedDelay 任务", fixedDelay = 2000L)
     public void fixedDelayTick() {
@@ -107,24 +112,24 @@ public class DemoJobs {
     }
 
     /**
-     * 生命周期示例: init 在首次执行前回调, destroy 在关闭时回调。
+      * 生命周期示例: 初始化 在首次执行前回调, 销毁 在关闭时回调。
      */
     @Job(value = "example.lifecycle", desc = "示例生命周期任务",
             cron = "0/3 * * * * ?", init = "lifecycleInit", destroy = "lifecycleDestroy")
-    /** LifecycleTick */
+    /** lifecycletick */
     public void lifecycleTick() {
         log.info("[example] lifecycle 执行");
     }
 
     /**
-     * 生命周期 init 钩子 (无参)。
+      * 生命周期 初始化 钩子 (无参)。
      */
     public void lifecycleInit() {
         log.info("[example] lifecycle init 钩子被调用");
     }
 
     /**
-     * 生命周期 destroy 钩子 (无参)。
+      * 生命周期 销毁 钩子 (无参)。
      */
     public void lifecycleDestroy() {
         log.info("[example] lifecycle destroy 钩子被调用");
@@ -139,6 +144,10 @@ public class DemoJobs {
      */
     @Job(value = "example.cc.01", desc = "并发压测任务 01", cron = CC_CRON)
     public void cc01() {
+        /**
+         * 并发tick。
+         * @param 1 1
+         */
         concurrentTick(1);
     }
 
@@ -147,6 +156,10 @@ public class DemoJobs {
      */
     @Job(value = "example.cc.02", desc = "并发压测任务 02", cron = CC_CRON)
     public void cc02() {
+        /**
+         * 并发tick。
+         * @param 2 2
+         */
         concurrentTick(2);
     }
 
@@ -155,6 +168,10 @@ public class DemoJobs {
      */
     @Job(value = "example.cc.03", desc = "并发压测任务 03", cron = CC_CRON)
     public void cc03() {
+        /**
+         * 并发tick。
+         * @param 3 3
+         */
         concurrentTick(3);
     }
 
@@ -163,6 +180,10 @@ public class DemoJobs {
      */
     @Job(value = "example.cc.04", desc = "并发压测任务 04", cron = CC_CRON)
     public void cc04() {
+        /**
+         * 并发tick。
+         * @param 4 4
+         */
         concurrentTick(4);
     }
 
@@ -171,6 +192,10 @@ public class DemoJobs {
      */
     @Job(value = "example.cc.05", desc = "并发压测任务 05", cron = CC_CRON)
     public void cc05() {
+        /**
+         * 并发tick。
+         * @param 5 5
+         */
         concurrentTick(5);
     }
 
@@ -179,6 +204,10 @@ public class DemoJobs {
      */
     @Job(value = "example.cc.06", desc = "并发压测任务 06", cron = CC_CRON)
     public void cc06() {
+        /**
+         * 并发tick。
+         * @param 6 6
+         */
         concurrentTick(6);
     }
 
@@ -187,6 +216,10 @@ public class DemoJobs {
      */
     @Job(value = "example.cc.07", desc = "并发压测任务 07", cron = CC_CRON)
     public void cc07() {
+        /**
+         * 并发tick。
+         * @param 7 7
+         */
         concurrentTick(7);
     }
 
@@ -195,6 +228,10 @@ public class DemoJobs {
      */
     @Job(value = "example.cc.08", desc = "并发压测任务 08", cron = CC_CRON)
     public void cc08() {
+        /**
+         * 并发tick。
+         * @param 8 8
+         */
         concurrentTick(8);
     }
 
@@ -203,6 +240,10 @@ public class DemoJobs {
      */
     @Job(value = "example.cc.09", desc = "并发压测任务 09", cron = CC_CRON)
     public void cc09() {
+        /**
+         * 并发tick。
+         * @param 9 9
+         */
         concurrentTick(9);
     }
 
@@ -211,6 +252,10 @@ public class DemoJobs {
      */
     @Job(value = "example.cc.10", desc = "并发压测任务 10", cron = CC_CRON)
     public void cc10() {
+        /**
+         * 并发tick。
+         * @param 10 10
+         */
         concurrentTick(10);
     }
 
@@ -219,6 +264,10 @@ public class DemoJobs {
      */
     @Job(value = "example.cc.11", desc = "并发压测任务 11", cron = CC_CRON)
     public void cc11() {
+        /**
+         * 并发tick。
+         * @param 11 11
+         */
         concurrentTick(11);
     }
 
@@ -227,6 +276,10 @@ public class DemoJobs {
      */
     @Job(value = "example.cc.12", desc = "并发压测任务 12", cron = CC_CRON)
     public void cc12() {
+        /**
+         * 并发tick。
+         * @param 12 12
+         */
         concurrentTick(12);
     }
 
@@ -250,7 +303,7 @@ public class DemoJobs {
     }
 
     /**
-     * Spring 原生定时任务示例 (由本模块 {@code @Scheduled} 扫描器注册到 TaskScheduler)。
+      * Spring 原生定时任务示例 (由本模块 {@code @Scheduled} 扫描器注册到 任务调度器)。
      */
     @Scheduled(cron = "0/1 * * * * ?")
     public void scheduledTick() {

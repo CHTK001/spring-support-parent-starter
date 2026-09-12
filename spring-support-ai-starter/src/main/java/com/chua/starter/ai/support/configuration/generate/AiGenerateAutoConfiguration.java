@@ -11,6 +11,7 @@ import org.springframework.context.annotation.ComponentScan;
  * AI 生成模块自动装配
  *
  * @author CH
+ * @since 4.0.0
  */
 @AutoConfiguration
 @ConditionalOnClass(name = "com.chua.common.support.ai.image.ImageClient")

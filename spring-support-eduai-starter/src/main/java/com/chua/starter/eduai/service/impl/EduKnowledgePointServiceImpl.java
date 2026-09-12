@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointMapper, EduKnowledgePoint> implements IEduKnowledgePointService {
 
     @Override
-    /** ListTree */
+    /** 列表树 */
     public List<KnowledgePointVO> listTree(String subject, String gradeLevel, String grade) {
         LambdaQueryWrapper<EduKnowledgePoint> wrapper = new LambdaQueryWrapper<>();
         // 按学科筛选
@@ -58,7 +58,13 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
                 .collect(Collectors.groupingBy(vo -> vo.getParentId() == null ? 0L : vo.getParentId()));
 
         List<KnowledgePointVO> tree = new ArrayList<>();
-        // 构建树形结构，根节点 parentId 为 0
+ // 构建树形结构，根节点 父标识 为 0
+        /**
+         * 构建children。
+         * @param 0L 0L
+         * @param groupMap 群体映射
+         * @param tree 树
+         */
         buildChildren(0L, groupMap, tree);
         return tree;
     }
@@ -66,7 +72,7 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
     /**
      * 递归构建子节点
      *
-     * @param parentId 父节点ID
+     * @param parentId 父节点标识
      * @param groupMap 按父节点分组的集合
      * @param target   目标集合
      */
@@ -77,6 +83,10 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
         }
         for (KnowledgePointVO vo : children) {
             List<KnowledgePointVO> subChildren = new ArrayList<>();
+            /**
+             * 构建children。
+             * @param vo.getId( vo.获取标识(
+             */
             buildChildren(vo.getId(), groupMap, subChildren);
             vo.setChildren(subChildren);
             target.add(vo);
@@ -85,7 +95,12 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /** 保存KnowledgePoint */
+    /**
+     * 保存知识point
+     *
+     * @param dto dto
+     * @return 保存知识point的结果
+     */
     public Long saveKnowledgePoint(KnowledgePointSaveDTO dto) {
         EduKnowledgePoint entity = new EduKnowledgePoint();
         entity.setKnowledgePointName(dto.getName());
@@ -118,10 +133,20 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /** 删除KnowledgePoint */
+    /**
+     * 删除知识point
+     *
+     * @param id 标识
+     * @return 删除知识point的结果
+     */
     public boolean deleteKnowledgePoint(Long id) {
         EduKnowledgePoint exists = baseMapper.selectById(id);
         if (exists == null) {
+            /**
+             * 业务异常。
+             * @param "知识点不存在" "知识点不存在"
+             * @return 业务异常的结果
+             */
             throw new BusinessException("知识点不存在");
         }
         // 逻辑删除：状态置为停用
@@ -135,6 +160,10 @@ public class EduKnowledgePointServiceImpl extends ServiceImpl<EduKnowledgePointM
                 .eq(EduKnowledgePoint::getKnowledgePointStatus, 1);
         List<EduKnowledgePoint> children = baseMapper.selectList(childWrapper);
         for (EduKnowledgePoint child : children) {
+            /**
+             * 删除知识point。
+             * @param child.getKnowledgePointId( 子.获取知识pointid(
+             */
             deleteKnowledgePoint(child.getKnowledgePointId());
         }
         log.info("删除知识点，ID: {}", id);

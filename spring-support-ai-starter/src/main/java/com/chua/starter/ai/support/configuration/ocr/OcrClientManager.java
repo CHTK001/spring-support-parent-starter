@@ -94,7 +94,7 @@ public class OcrClientManager {
     /**
      * 枚举可用 OCR 模型清单（按能力分组）。
      *
-     * @return 能力分组 → 模型 ID 列表
+     * @return 能力分组 → 模型 标识 列表
      */
     public Map<String, List<String>> listModels() {
         OcrPipeline probe = new OcrPipeline(
@@ -115,6 +115,9 @@ public class OcrClientManager {
             return;
         }
         log.info("[OcrClientManager] 收到 ocr 分组配置变更，开始热重建");
+        /**
+         * rebuild。
+         */
         rebuild();
     }
 
@@ -135,6 +138,11 @@ public class OcrClientManager {
         String detector = settingReader.getStr(GROUP, "detector_model");
         String recognizer = settingReader.getStr(GROUP, "recognizer_model");
         if (StringUtils.isBlank(detector) && StringUtils.isBlank(recognizer)) {
+            /**
+             * illegal状态异常。
+             * @param recognizer_model" recognizer_模型"
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("OCR 模型未配置：请在设置中配置 ocr 分组的 detector_model / recognizer_model");
         }
         OcrPipeline.Builder builder = OcrPipeline.builder();

@@ -24,15 +24,20 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ServerIdentityServiceImpl implements ServerIdentityService {
 
-    /** 身份 Mapper */
+    /** 身份 映射器 */
     private final MsServerIdentityMapper identityMapper;
-    /** 主机身份关联 Mapper */
+    /** 主机身份关联 映射器 */
     private final MsServerHostIdentityMapper hostIdentityMapper;
     /** 凭据加解密器 */
     private final CredentialCipher cipher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 创建。
+     * @param identity identity
+     * @return 创建的结果
+     */
     public ReturnResult<MsServerIdentity> create(MsServerIdentity identity) {
         if (identity.getMsServerIdentityName() == null || identity.getMsServerIdentityName().isEmpty()) {
             return ReturnResult.error("身份名称不能为空");
@@ -41,7 +46,7 @@ public class ServerIdentityServiceImpl implements ServerIdentityService {
         if (authType == null || authType.isBlank()) {
             return ReturnResult.error("认证类型不能为空");
         }
-        // 特定类型保留额外校验；其他类型（TOKEN/API_KEY/OAUTH2/COOKIE/ACCOUNT/自定义）自由入库
+ // 特定类型保留额外校验；其他类型（令牌/API_钥匙/OAuth2/Cookie/账户/自定义）自由入库
         if ("PUBLIC_KEY".equals(authType)) {
             if (identity.getMsServerIdentityKeyId() == null) {
                 return ReturnResult.error("公钥认证必须引用密钥库条目");
@@ -71,6 +76,12 @@ public class ServerIdentityServiceImpl implements ServerIdentityService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 更新。
+     * @param id 标识
+     * @param identity identity
+     * @return 更新的结果
+     */
     public ReturnResult<MsServerIdentity> update(Long id, MsServerIdentity identity) {
         MsServerIdentity exists = identityMapper.selectById(id);
         if (exists == null) {
@@ -104,6 +115,11 @@ public class ServerIdentityServiceImpl implements ServerIdentityService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 删除。
+     * @param id 标识
+     * @return 删除的结果
+     */
     public ReturnResult<Void> delete(Long id) {
         hostIdentityMapper.delete(new LambdaQueryWrapper<MsServerHostIdentity>()
                 .eq(MsServerHostIdentity::getMsServerHostIdentityIdentityId, id));

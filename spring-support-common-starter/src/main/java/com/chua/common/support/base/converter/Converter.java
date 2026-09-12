@@ -9,6 +9,7 @@ package com.chua.common.support.base.converter;
  * @param <T> 源类型
  * @param <R> 目标类型
  * @author CH
+ * @since 4.0.0
  */
 public interface Converter<T, R> {
 

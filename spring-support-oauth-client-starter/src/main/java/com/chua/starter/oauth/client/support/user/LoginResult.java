@@ -7,6 +7,7 @@ import lombok.*;
  * 登录结果
  *
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @NoArgsConstructor
@@ -14,12 +15,12 @@ import lombok.*;
 public class LoginResult {
 
     /**
-     * token信息
+      * 令牌信息
      */
     private String token;
 
     /**
-     * 刷新token
+      * 刷新令牌
      */
     private String refreshToken;
 

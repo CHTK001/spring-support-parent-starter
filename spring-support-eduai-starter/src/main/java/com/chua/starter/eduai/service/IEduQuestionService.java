@@ -41,7 +41,7 @@ public interface IEduQuestionService extends IService<EduQuestion> {
     /**
      * 删除题目
      *
-     * @param id 题目ID
+     * @param id 题目标识
      * @return 是否成功
      */
     boolean deleteQuestion(Long id);

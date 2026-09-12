@@ -26,10 +26,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * RSocket 会话模板实现
- * 基于 Spring WebSocket 实现，支持多房间配置
+   * r套接字 会话模板实现
+   * 基于 Spring web套接字 实现，支持多房间配置
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */
@@ -42,31 +42,31 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     private static final ObjectMapper objectMapper = new ObjectMapper();
     /** 属性 */
     private final SocketProperties properties;
-    /** Listeners */
+    /** 监听器 */
     private final List<SocketListener> listeners;
 
     /**
-     * 事件监听器处理器（扫描 @OnEvent 注解并分发事件）
+      * 事件监听器处理器（扫描 @on事件 注解并分发事件）
      */
     private final EventListenerProcessor eventListenerProcessor;
     
     /**
-     * 会话缓存：clientId -> sessions
+       * 会话缓存：客户端标识 -> 会话
      */
     private final Map<String, List<RSocketSessionImpl>> sessionCache = new ConcurrentHashMap<>();
     
     /**
-     * 会话ID到clientId的映射
+       * 会话标识到客户端标识的映射
      */
     private final Map<String, String> sessionClientMap = new ConcurrentHashMap<>();
     
-    private volatile boolean running = false;
+    private volatile boolean running = false; // running
 
     /**
-     * 创建 RSocketSessionTemplateImpl 实例
-     * @param properties properties
-     * @param List List
-     * @param listeners listeners
+      * 创建 r套接字会话templateimpl 实例
+     * @param properties 属性
+     * @param listeners 列表
+     * @param listeners 监听器
      */
     public RSocketSessionTemplateImpl(SocketProperties properties, List<SocketListener> listeners) {
         this.properties = properties;
@@ -75,9 +75,9 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     }
 
     @Override
-    /** AfterConnectionEstablished */
+    /** 之后connectionestablished */
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        // 从 URI 中解析 clientId（如 /ws/webrtc -> webrtc）
+ // 从 URI 中解析 客户端id（如 /ws/webrtc -> webrtc）
         String path = session.getUri() != null ? session.getUri().getPath() : "/";
         String clientId = extractClientId(path);
         
@@ -91,7 +91,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     }
 
     @Override
-    /** AfterConnectionClosed */
+    /** 之后connection关闭 */
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         String sessionId = session.getId();
         String clientId = sessionClientMap.remove(sessionId);
@@ -107,10 +107,12 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     }
 
     /**
-     * 从路径中提取 clientId
+       * 从路径中提取 客户端标识
      * <p>
-     * 例如：/ws/webrtc -> webrtc, /ws -> default, / -> default
+       * 例如：/ws/WebRTC -> WebRTC, /ws -> 默认, / -> 默认
      * </p>
+     * @param path 路径
+     * @return extract客户端id的结果
      */
     private String extractClientId(String path) {
         if (path == null || path.isEmpty() || "/".equals(path)) {
@@ -123,13 +125,13 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
             return "default";
         }
         
-        // 取第一段作为 clientId
+ // 取第一段作为 客户端标识
         int slashIndex = cleanPath.indexOf('/');
         return slashIndex > 0 ? cleanPath.substring(0, slashIndex) : cleanPath;
     }
 
     @Override
-    /** 处理TextMessage */
+    /** 处理文本消息 */
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
         log.debug("[RSocket] 收到消息: {}", payload);
@@ -140,7 +142,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
             String event = (String) msg.get("event");
             Object data = msg.get("data");
             
-            // 通过 EventListenerProcessor 调用 @OnEvent 注解对应的事件处理方法
+ // 通过 事件监听器处理器 调用 @on事件 注解对应的事件处理方法
             RSocketSessionImpl socketSession = (RSocketSessionImpl) getSession(session.getId());
             if (socketSession != null && event != null) {
                 eventListenerProcessor.fireEvent(event, socketSession, data);
@@ -178,7 +180,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     }
 
     @Override
-    /** 获取Session */
+    /** 获取会话 */
     public SocketSession getSession(String sessionId) {
         for (List<RSocketSessionImpl> sessions : sessionCache.values()) {
             for (RSocketSessionImpl session : sessions) {
@@ -215,7 +217,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     }
 
     @Override
-    /** 发送ToUser */
+    /** 发送转为用户 */
     public void sendToUser(String userId, String event, String msg) {
         for (List<RSocketSessionImpl> sessions : sessionCache.values()) {
             for (RSocketSessionImpl session : sessions) {
@@ -233,7 +235,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     }
 
     @Override
-    /** 获取OnlineSessions */
+    /** 获取online会话 */
     public List<SocketSession> getOnlineSessions() {
         List<SocketSession> result = new java.util.ArrayList<>();
         for (List<RSocketSessionImpl> sessions : sessionCache.values()) {
@@ -243,7 +245,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     }
 
     @Override
-    /** 获取OnlineSession */
+    /** 获取online会话 */
     public List<SocketSession> getOnlineSession(String type, String roomId) {
         List<RSocketSessionImpl> sessions = sessionCache.get(type);
         if (sessions == null) {
@@ -254,7 +256,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
             return new java.util.ArrayList<>(sessions);
         }
 
-        // 根据 roomId 过滤会话
+ // 根据 roomid 过滤会话
         List<SocketSession> result = new java.util.ArrayList<>();
         for (RSocketSessionImpl session : sessions) {
             Object sessionRoomId = session.getAttribute("roomId");
@@ -266,7 +268,7 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     }
 
     @Override
-    /** 获取OnlineUsers */
+    /** 获取online用户 */
     public List<SocketUser> getOnlineUsers(String type) {
         List<SocketUser> result = new java.util.ArrayList<>();
         java.util.Set<String> userIds = new java.util.HashSet<>();
@@ -333,6 +335,9 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
 
     /**
      * 创建消息
+     * @param event 事件
+     * @param data 数据
+     * @return 创建消息的结果
      */
     private String createMessage(String event, Object data) {
         try {

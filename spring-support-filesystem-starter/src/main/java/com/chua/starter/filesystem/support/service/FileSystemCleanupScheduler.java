@@ -94,6 +94,10 @@ public class FileSystemCleanupScheduler
                 mergeLogService.deleteByUploadId(uploadId);
                 uploadLogService.deleteByUploadId(uploadId);
                 // 清理磁盘临时文件（分片 + 合并文件）
+                /**
+                 * cleanupdisk文件。
+                 * @param uploadId uploadid
+                 */
                 cleanupDiskFiles(uploadId);
                 uploadService.removeById(task.getFilesystemUploadTaskId());
                 count++;
@@ -107,7 +111,7 @@ public class FileSystemCleanupScheduler
     /**
      * 清理磁盘临时文件（分片与合并文件）。
      *
-     * @param uploadId 上传任务 ID
+     * @param uploadId 上传任务 标识
      */
     private void cleanupDiskFiles(String uploadId) {
         String baseDir = Optional.ofNullable(System.getProperty("filesystem.temp.path"))
@@ -129,9 +133,9 @@ public class FileSystemCleanupScheduler
     }
 
     /**
-     * 按 uploadId 查询任务（供清理分片文件时读取分片总数）。
+      * 按 uploadid 查询任务（供清理分片文件时读取分片总数）。
      *
-     * @param uploadId 上传任务 ID
+     * @param uploadId 上传任务 标识
      * @return 任务实体
      */
     private SysFileSystemUpload getByUploadId(String uploadId) {

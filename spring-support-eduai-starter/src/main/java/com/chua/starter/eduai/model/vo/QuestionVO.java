@@ -11,13 +11,13 @@ import lombok.Data;
 @Data
 public class QuestionVO {
 
-    /** ID */
+    /** 标识 */
     private Long id;
     /** 类型 */
     private String type;
     /** Stem */
     private String stem;
-    /** Options */
+    /** 期权 */
     private String options;
     /** Answer */
     private String answer;

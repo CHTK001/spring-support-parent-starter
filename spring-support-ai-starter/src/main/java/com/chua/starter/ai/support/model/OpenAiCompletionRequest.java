@@ -3,7 +3,7 @@ package com.chua.starter.ai.support.model;
 import lombok.Data;
 
 /**
- * OpenAI 兼容补全请求模型。
+   * 打开AI 兼容补全请求模型。
  *
  * @since 4.0.0.42
  * @author CH
@@ -27,7 +27,7 @@ public class OpenAiCompletionRequest {
     private Double temperature;
 
     /**
-     * 最大生成 tokens
+      * 最大生成 令牌
      */
     private Integer maxTokens;
 

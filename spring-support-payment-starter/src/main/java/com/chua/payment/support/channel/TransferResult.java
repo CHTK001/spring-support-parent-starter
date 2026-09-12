@@ -7,14 +7,15 @@ import java.math.BigDecimal;
 /**
  * 转账结果
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class TransferResult {
-    /** Success */
+    /** 成功 */
     private boolean success;
-    /** TransferNO */
+    /** 调动no */
     private String transferNo;
-    /** TradeNO */
+    /** 贸易no */
     private String tradeNo;
     /** Amount */
     private BigDecimal amount;

@@ -9,7 +9,7 @@ import com.chua.deeplearning.support.dl4j.TrainResult;
  *
  * <p>不同模型架构/训练后端的接入统一走该接口，由
  * {@link com.chua.common.support.spi.ServiceProvider} + {@code META-INF/services} 注册发现，
- * 按 {@link #type()} 分发（参考仓库 vector / datasearch 的 provider 惯例）。</p>
+   * 按 {@link #type()} 分发（参考仓库 向量 / datasearch 的 提供者 惯例）。</p>
  *
  * <p>已接入类型：</p>
  * <ul>
@@ -24,14 +24,14 @@ import com.chua.deeplearning.support.dl4j.TrainResult;
 public interface TrainProvider {
 
     /**
-     * 训练类型标识（与前端传入的 type 对齐，如 resnet50 / yolo）。
+      * 训练类型标识（与前端传入的 类型 对齐，如 resnet50 / yolo）。
      *
      * @return 训练类型
      */
     String type();
 
     /**
-     * 承载引擎标识（如 dl4j / python-http），仅作描述与监控用途。
+      * 承载引擎标识（如 dl4j / Python-http），仅作描述与监控用途。
      *
      * @return 引擎标识
      */

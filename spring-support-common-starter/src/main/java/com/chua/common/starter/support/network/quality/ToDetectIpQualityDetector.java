@@ -4,26 +4,33 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 
 /**
- * ToDetect IP 质量检测器实现
+   * 转为detect IP 质量检测器实现
  *
  * @since 4.0.0.42
  * @author CH
  */
 public class ToDetectIpQualityDetector extends AbstractHttpIpQualityDetector {
 
-    /** BaseURL */
+    /** baseurl */
     private final String baseUrl;
 
-    /** 创建 ToDetectIpQualityDetector 实例 */
+    /** 创建 转为detectipqualitydetector 实例 */
     public ToDetectIpQualityDetector() {
+        /**
+         * this。
+         * @param "https://www.todetect.cn/ip" "https://www.todetect.cn/ip"
+         */
         this("https://www.todetect.cn/ip");
     }
 
     /**
-     * 创建 ToDetectIpQualityDetector 实例
-     * @param baseUrl baseUrl
+      * 创建 转为detectipqualitydetector 实例
+     * @param baseUrl baseurl
      */
     public ToDetectIpQualityDetector(String baseUrl) {
+        /**
+         * 父。
+         */
         super();
         this.baseUrl = baseUrl;
     }
@@ -35,7 +42,7 @@ public class ToDetectIpQualityDetector extends AbstractHttpIpQualityDetector {
     }
 
     @Override
-    /** 解析Result */
+    /** 解析结果 */
     protected IpQuality parseResult(String json) throws IOException {
         JsonNode root = objectMapper.readTree(json);
         IpQuality q = new IpQuality();
@@ -60,7 +67,13 @@ public class ToDetectIpQualityDetector extends AbstractHttpIpQualityDetector {
         return q;
     }
 
-    /** 获取Bool */
+    /**
+     * 获取Bool
+     *
+     * @param node 节点
+     * @param field 字段
+     * @return 获取bool的结果
+     */
     private boolean getBool(JsonNode node, String field) {
         JsonNode v = node.get(field);
         if (v == null || v.isNull()) {
@@ -69,7 +82,13 @@ public class ToDetectIpQualityDetector extends AbstractHttpIpQualityDetector {
         return v.booleanValue();
     }
 
-    /** 获取Int */
+    /**
+     * 获取Int
+     *
+     * @param node 节点
+     * @param field 字段
+     * @return 获取int的结果
+     */
     private int getInt(JsonNode node, String field) {
         JsonNode v = node.get(field);
         if (v == null || v.isNull()) {
@@ -78,7 +97,13 @@ public class ToDetectIpQualityDetector extends AbstractHttpIpQualityDetector {
         return v.intValue();
     }
 
-    /** 获取Double */
+    /**
+     * 获取Double
+     *
+     * @param node 节点
+     * @param field 字段
+     * @return 获取double的结果
+     */
     private double getDouble(JsonNode node, String field) {
         JsonNode v = node.get(field);
         if (v == null || v.isNull()) {

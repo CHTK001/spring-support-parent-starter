@@ -11,14 +11,14 @@ import org.springframework.core.annotation.Order;
 import java.util.Map;
 
 /**
- * 自动发现并注册各 starter 的 ServiceInfo。
+   * 自动发现并注册各 启动 的 服务信息。
  *
  * <p>通过 Spring 容器中的 {@link ServiceInfoContributor} Bean 收集
- * 各 starter 的端点和开关信息，自动注册到 {@link ServiceInfoRegistry}。</p>
+   * 各 启动 的端点和开关信息，自动注册到 {@link ServiceInfoRegistry}。</p>
  *
  * <h3>收集时机</h3>
  * <p>使用 {@link ContextRefreshedEvent} 事件而非 Bean 构造时机收集,
- * 保证所有 starter 的 {@code @Bean ServiceInfoContributor} 都已经注册到容器。</p>
+   * 保证所有 启动 的 {@code @Bean ServiceInfoContributor} 都已经注册到容器。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -34,19 +34,22 @@ public class ServiceInfoContributorAutoConfiguration implements ApplicationListe
     private final ApplicationContext applicationContext;
 
     /**
-     * 创建 ServiceInfoContributorAutoConfiguration 实例
-     * @param applicationContext applicationContext
+      * 创建 服务信息contributorauto配置 实例
+     * @param applicationContext application上下文
      */
     public ServiceInfoContributorAutoConfiguration(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
     }
 
     @Override
-    /** OnApplicationEvent */
+    /** onapplication事件 */
     public void onApplicationEvent(ContextRefreshedEvent event) {
         if (event.getApplicationContext() != this.applicationContext) {
             return;
         }
+        /**
+         * collect。
+         */
         collect();
     }
 

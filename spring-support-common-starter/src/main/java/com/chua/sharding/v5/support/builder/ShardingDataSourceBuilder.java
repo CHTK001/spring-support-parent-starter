@@ -4,18 +4,19 @@ import javax.sql.DataSource;
 import java.util.Map;
 
 /**
- * ShardingSphere 5.x 分片数据源构建器
+   * 分库分表sphere 5.x 分片数据源构建器
  * <p>
  * 提供构建分片数据源的链式 API，支持分库、分表、显示 SQL 等配置。
- * 当 classpath 中不存在 ShardingSphere 依赖时，相关配置不会生效。
+   * 当 类路径 中不存在 分库分表sphere 依赖时，相关配置不会生效。
  * </p>
  *
  * @author CH
+ * @since 4.0.0
  */
 public class ShardingDataSourceBuilder {
 
-    private Map<String, DataSource> dataSources;
-    /** ShowSQL */
+    private Map<String, DataSource> dataSources; // 数据源
+    /** showsql */
     private boolean showSql;
 
     /**
@@ -24,6 +25,9 @@ public class ShardingDataSourceBuilder {
      * @return 构建器实例
      */
     public static ShardingDataSourceBuilder newBuilder() {
+        /**
+         * 分库分表数据源构建器。
+         */
         return new ShardingDataSourceBuilder();
     }
 
@@ -66,6 +70,10 @@ public class ShardingDataSourceBuilder {
      * @return 分表规则构建器
      */
     public TableShardingBuilder shardingTable(String logicTable) {
+        /**
+         * table分库分表构建器。
+         * @return table分库分表构建器的结果
+         */
         return new TableShardingBuilder();
     }
 
@@ -80,6 +88,8 @@ public class ShardingDataSourceBuilder {
 
     /**
      * 分表规则构建器
+     * @author CH
+     * @since 4.0.0
      */
     public static class TableShardingBuilder {
 

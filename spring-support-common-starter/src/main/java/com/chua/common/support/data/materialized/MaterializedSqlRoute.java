@@ -4,6 +4,7 @@ package com.chua.common.support.data.materialized;
  * 物化视图 SQL 路由类
  *
  * @author CH
+ * @since 4.0.0
  */
 public class MaterializedSqlRoute {
 
@@ -40,7 +41,7 @@ public class MaterializedSqlRoute {
     }
 
     /**
-     * 获取数据源名称（与 getDataSource 相同）
+      * 获取数据源名称（与 获取数据源 相同）
      *
      * @return 数据源名称
      */

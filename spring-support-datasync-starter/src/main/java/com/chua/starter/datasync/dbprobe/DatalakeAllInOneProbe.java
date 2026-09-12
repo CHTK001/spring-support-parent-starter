@@ -28,7 +28,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Datalake 全链路探针：Server 生命周期 + Pipeline CRUD + 4 Sink 写入 + Envelope 追踪。
+   * 数据湖 全链路探针：服务端 生命周期 + Pipeline CRUD + 4 Sink 写入 + Envelope 追踪。
  *
  * <p>验证项（12 项）：
  * <ol>
@@ -54,10 +54,10 @@ public final class DatalakeAllInOneProbe {
     /** Work dir */
     private static final Path WORK_DIR = Path.of("target/datalake-probe");
 
-    /** Pass count */
+    /** 通过 数量 */
     private static final AtomicInteger PASS = new AtomicInteger(0);
 
-    /** Fail count */
+    /** 失败 数量 */
     private static final AtomicInteger FAIL = new AtomicInteger(0);
 
     /** 写入记录（线程安全） */
@@ -76,7 +76,7 @@ public final class DatalakeAllInOneProbe {
         System.err.println("Datalake 全链路探针 (12 项验证)");
         System.err.println("========================================================================");
 
-        // ━━━━━━━━ 1. PipelineManager CRUD ━━━━━━━━
+ // ━━━━━━━━ 1. pipeline管理器 CRUD ━━━━━━━━
         PipelineManager pm = new DefaultPipelineManager();
         check("PipelineManager.savePipeline", () -> {
             pm.savePipeline("p1", "{\"id\":\"p1\",\"stages\":{\"default\":{\"sink\":[{\"type\":\"log\"}]}}}");
@@ -86,7 +86,9 @@ public final class DatalakeAllInOneProbe {
         check("PipelineManager.pipelineIds", () -> {
             pm.savePipeline("p2", "{}");
             int count = 0;
-            for (String id : pm.pipelineIds()) count++;
+            for (String id : pm.pipelineIds()) {
+                count++;
+            }
             return count == 2;
         });
         check("PipelineManager.deletePipeline", () -> {
@@ -104,7 +106,7 @@ public final class DatalakeAllInOneProbe {
         // 启动所有 Sink
         sinkRegistry.values().forEach(DataSink::start);
 
-        // ━━━━━━━━ 5. LogSink 写入 ━━━━━━━━
+ // ━━━━━━━━ 5. 日志sink 写入 ━━━━━━━━
         check("LogSink.write", () -> {
             DataEnvelope env = DataEnvelope.builder()
                     .parsed(Map.of("msg", "hello-log"))
@@ -118,7 +120,7 @@ public final class DatalakeAllInOneProbe {
             return ok;
         });
 
-        // ━━━━━━━━ 6. StatisticSink 写入 ━━━━━━━━
+ // ━━━━━━━━ 6. statisticsink 写入 ━━━━━━━━
         check("StatisticSink.write", () -> {
             DataEnvelope env = DataEnvelope.builder()
                     .parsed(Map.of("metric", "cpu_usage", "value", 72.5))
@@ -130,7 +132,7 @@ public final class DatalakeAllInOneProbe {
             return sinkRegistry.get("statistic").write(env, Map.of());
         });
 
-        // ━━━━━━━━ 7. RealTimeSink 写入 ━━━━━━━━
+ // ━━━━━━━━ 7. real时间sink 写入 ━━━━━━━━
         check("RealTimeSink.write", () -> {
             DataEnvelope env = DataEnvelope.builder()
                     .parsed(Map.of("event", "user_login", "userId", "u-123"))
@@ -143,7 +145,7 @@ public final class DatalakeAllInOneProbe {
             return sinkRegistry.get("realtime").write(env, Map.of());
         });
 
-        // ━━━━━━━━ 8. JdbcSink 写入 ━━━━━━━━
+ // ━━━━━━━━ 8. jdbcsink 写入 ━━━━━━━━
         check("JdbcSink.write", () -> {
             DataEnvelope env = DataEnvelope.builder()
                     .parsed(Map.of("table", "users", "action", "insert"))
@@ -155,7 +157,7 @@ public final class DatalakeAllInOneProbe {
             return sinkRegistry.get("jdbc").write(env, Map.of());
         });
 
-        // ━━━━━━━━ 9. SinkManager start/stop ━━━━━━━━
+ // ━━━━━━━━ 9. sink管理器 启动/停止 ━━━━━━━━
         check("SinkManager.start/stop", () -> {
             com.chua.datalake.support.manager.SinkManager sm =
                     new com.chua.datalake.support.manager.SinkManager(sinkRegistry);
@@ -164,7 +166,7 @@ public final class DatalakeAllInOneProbe {
             return true;
         });
 
-        // ━━━━━━━━ 10. DispatcherProvider + PipelineEngine ━━━━━━━━
+ // ━━━━━━━━ 10. dispatcher提供者 + pipelineengine ━━━━━━━━
         String dispatchPath = WORK_DIR.resolve("dispatch").toString();
         DispatcherConfig cfg = DispatcherConfig.builder().dataPath(dispatchPath).build();
         DispatcherProvider dispatcher = new ChronicleDispatcherProvider(cfg);
@@ -200,7 +202,7 @@ public final class DatalakeAllInOneProbe {
             return env.getState() == PipelineState.SINK_OK;
         });
 
-        // ━━━━━━━━ 11. DataEnvelope trace 追踪 ━━━━━━━━
+ // ━━━━━━━━ 11. 数据envelope 追踪 追踪 ━━━━━━━━
         check("DataEnvelope.addTrace", () -> {
             DataEnvelope env = new DataEnvelope(Map.of("x", 1));
             env.addTrace("step-1");
@@ -209,7 +211,7 @@ public final class DatalakeAllInOneProbe {
                     && env.getTrace().get(0).equals("step-1");
         });
 
-        // ━━━━━━━━ 12. DataEnvelope isLog 判定 ━━━━━━━━
+ // ━━━━━━━━ 12. 数据envelope 是否日志 判定 ━━━━━━━━
         check("DataEnvelope.isLog", () -> {
             DataEnvelope logEnv = DataEnvelope.builder()
                     .parsed(Map.of())

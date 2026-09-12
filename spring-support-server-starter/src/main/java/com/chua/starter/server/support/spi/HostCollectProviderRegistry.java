@@ -11,10 +11,10 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * 主机采集 Provider 注册中心
+   * 主机采集 提供者 注册中心
  * <p>
  * 启动时扫描全部 {@link HostCollectProvider} Bean，按 {@link HostCollectType} 建索引，
- * 调度器 / Agent 上报端点据此路由到具体采集实现。
+   * 调度器 / 智能体 上报端点据此路由到具体采集实现。
  * </p>
  *
  * @author CH
@@ -28,9 +28,9 @@ public class HostCollectProviderRegistry {
     private final Map<HostCollectType, HostCollectProvider> index = new EnumMap<>(HostCollectType.class);
 
     /**
-     * 构造：注册全部 Provider
+      * 构造：注册全部 提供者
      *
-     * @param providers Provider 列表
+     * @param providers 提供者 列表
      */
     @Autowired
     public HostCollectProviderRegistry(List<HostCollectProvider> providers) {
@@ -49,7 +49,7 @@ public class HostCollectProviderRegistry {
     }
 
     /**
-     * 解析指定采集方式的 Provider
+      * 解析指定采集方式的 提供者
      *
      * @param type 采集方式
      * @return Optional，可能为空

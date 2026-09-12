@@ -21,11 +21,11 @@ import java.util.List;
  *       用 {@link CronExpression} 计算下次执行时间，上次执行之后的下一次触发时间
  *       已到达或超过当前时刻时触发执行一次；</li>
  *   <li>执行类型为 {@code ONCE}（一次）且从未执行过的定义，直接触发一次，执行后
- *       回写 lastRunAt，此后不再重复触发。</li>
+   * 回写 最后一个运行at，此后不再重复触发。</li>
  * </ul>
  *
  * <p>避免"无脑死循环"——每次 tick 都基于 lastRunAt 推算，触发后立即回写
- * last_run_at，防止同一秒重复触发。</p>
+   * 最后一个_运行_at，防止同一秒重复触发。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -85,6 +85,10 @@ public class SpiderScheduler {
                 continue;
             }
             if (isDue(definition)) {
+                /**
+                 * trigger。
+                 * @param definition definition
+                 */
                 trigger(definition);
             }
         }
@@ -135,7 +139,7 @@ public class SpiderScheduler {
     }
 
     /**
-     * 触发执行一次，成功或失败均回写 last_run_at，防止同一 cron 周期内重复触发。
+      * 触发执行一次，成功或失败均回写 最后一个_运行_at，防止同一 cron 周期内重复触发。
      *
      * @param definition 爬虫定义
      */
@@ -146,12 +150,16 @@ public class SpiderScheduler {
         } catch (Exception e) {
             log.error("爬虫 [{}] 定时执行失败: {}", definition.getCode(), e.getMessage());
         } finally {
+            /**
+             * mark运行at。
+             * @param definition definition
+             */
             markRunAt(definition);
         }
     }
 
     /**
-     * 回写 last_run_at，确保该 cron 周期不再重复触发。
+      * 回写 最后一个_运行_at，确保该 cron 周期不再重复触发。
      *
      * @param definition 爬虫定义
      */
@@ -171,6 +179,11 @@ public class SpiderScheduler {
      */
     private Date toDate(LocalDateTime value) {
         if (value == null) {
+            /**
+             * 日期。
+             * @param 0 0
+             * @return 日期的结果
+             */
             return new Date(0);
         }
         Date date = Date.from(value.atZone(java.time.ZoneId.systemDefault()).toInstant());

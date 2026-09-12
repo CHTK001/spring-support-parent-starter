@@ -13,10 +13,10 @@ import java.util.List;
 import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 
 /**
- * SSE Socket 服务提供者
- * 实现 SocketProvider SPI，提供 SSE 协议支持
+   * SSE 套接字 服务提供者
+   * 实现 套接字提供者 SPI，提供 SSE 协议支持
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024-12-24
  * @author CH
  */
@@ -25,21 +25,21 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 public class SseSocketProvider implements SocketProvider {
 
     @Override
-    /** 获取Protocol */
+    /** 获取协议 */
     public SocketProtocol getProtocol() {
         return SocketProtocol.SSE;
     }
 
     @Override
     /**
-     * 创建SessionTemplate
-     * @param properties properties
-     * @param listeners listeners
+      * 创建会话template
+     * @param properties 属性
+     * @param listeners 监听器
      * @param 0 0
-     * @param SseSocketSessionTemplate SseSocketSessionTemplate
+     * @param SseSocketSessionTemplate sse套接字会话template
      * @param template template
      * @param template template
-     * @param protocol protocol
+     * @param protocol 协议
      */
     public SocketSessionTemplate createSessionTemplate(
             SocketProperties properties,
@@ -76,7 +76,7 @@ public class SseSocketProvider implements SocketProvider {
     }
 
     @Override
-    /** Supports */
+    /** 支持 */
     public boolean supports(SocketProtocol protocol) {
         return protocol == SocketProtocol.SSE;
     }

@@ -22,11 +22,14 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class ClassUtils {
 
+    /**
+     * 类工具。
+     */
     private ClassUtils() {
     }
 
-    protected static final Map<Class<?>, Type[]> ACTUAL = new ConcurrentHashMap<>();
-    /** Empty_string_array */
+    protected static final Map<Class<?>, Type[]> ACTUAL = new ConcurrentHashMap<>(); // ACTUAL
+    /** 空_字符串_array */
     private static final String[] EMPTY_STRING_ARRAY = new String[0];
 
     /**
@@ -99,6 +102,7 @@ public class ClassUtils {
      *
      * @param value 类
      * @return 泛型类型
+     * @param includes includes
      */
     public static Type[] getActualTypeArguments(final Class<?> value, final Class<?>... includes) {
         return ACTUAL.computeIfAbsent(value, it -> {

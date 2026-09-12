@@ -27,7 +27,7 @@ import java.util.Map;
 public class GracefulShutdownListener implements ApplicationListener<ContextClosedEvent> {
 
     /** 关闭超时（秒） */
-    /** Shutdown_timeout_seconds */
+    /** 关闭_超时_seconds */
     private static final int SHUTDOWN_TIMEOUT_SECONDS = 30;
 
     @Override
@@ -49,6 +49,11 @@ public class GracefulShutdownListener implements ApplicationListener<ContextClos
             DataSource ds = entry.getValue();
 
             try {
+                /**
+                 * 关闭数据源。
+                 * @param dsName ds名称
+                 * @param ds ds
+                 */
                 closeDataSource(dsName, ds);
                 closed++;
             } catch (Exception e) {
@@ -66,20 +71,22 @@ public class GracefulShutdownListener implements ApplicationListener<ContextClos
 
     /**
      * 尝试以多种方式关闭数据源
+     * @param name 名称
+     * @param dataSource 数据源
      */
     private void closeDataSource(String name, DataSource dataSource) throws Exception {
         if (dataSource == null) {
             return;
         }
 
-        // 1. 尝试 DisposableBean 方式
+ // 1. 尝试 disposableBean 方式
         if (dataSource instanceof org.springframework.beans.factory.DisposableBean disposable) {
             log.debug("[数据源] 关闭 '{}' (DisposableBean)", name);
             disposable.destroy();
             return;
         }
 
-        // 2. 尝试 AutoCloseable 方式
+ // 2. 尝试 auto关闭 方式
         if (dataSource instanceof AutoCloseable autoCloseable) {
             log.debug("[数据源] 关闭 '{}' (AutoCloseable)", name);
             autoCloseable.close();
@@ -95,6 +102,11 @@ public class GracefulShutdownListener implements ApplicationListener<ContextClos
 
         // 4. 针对特定连接池的反射关闭
         try {
+            /**
+             * 关闭by反射。
+             * @param name 名称
+             * @param dataSource 数据源
+             */
             closeByReflection(name, dataSource);
         } catch (Exception e) {
             log.debug("[数据源] '{}' 不支持关闭操作 (类型: {})", name, dataSource.getClass().getName());
@@ -103,12 +115,14 @@ public class GracefulShutdownListener implements ApplicationListener<ContextClos
 
     /**
      * 通过反射尝试关闭特定连接池
+     * @param name 名称
+     * @param dataSource 数据源
      */
     @SuppressWarnings("JavaReflectionMemberAccess")
     private void closeByReflection(String name, DataSource dataSource) throws Exception {
         Class<?> clazz = dataSource.getClass();
 
-        // HikariCP
+ // hikaricp
         if (clazz.getName().contains("HikariDataSource")) {
             ReflectUtils.invoke(dataSource, "close", void.class);
             log.debug("[数据源] 关闭 '{}' (HikariCP 反射)", name);

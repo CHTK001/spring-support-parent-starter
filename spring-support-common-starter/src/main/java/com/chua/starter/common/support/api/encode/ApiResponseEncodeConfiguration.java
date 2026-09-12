@@ -22,6 +22,10 @@ public class ApiResponseEncodeConfiguration extends ApplicationEvent implements 
      * 无参构造方法
      */
     public ApiResponseEncodeConfiguration() {
+        /**
+         * this。
+         * @param true true
+         */
         this(true);
     }
 
@@ -31,6 +35,10 @@ public class ApiResponseEncodeConfiguration extends ApplicationEvent implements 
      * @param source 事件源对象
      */
     public ApiResponseEncodeConfiguration(Object source) {
+        /**
+         * 父。
+         * @param source 源
+         */
         super(source);
     }
 
@@ -44,7 +52,7 @@ public class ApiResponseEncodeConfiguration extends ApplicationEvent implements 
         this.codecResponseOpen = apiResponseEncodeConfiguration.isCodecResponseOpen();
     }
     /**
-     * 获取 codecResponseOpen
+      * 获取 codec响应打开
      *
      * @return codecResponseOpen
      */
@@ -62,9 +70,9 @@ public class ApiResponseEncodeConfiguration extends ApplicationEvent implements 
     }
 
     /**
-     * 设置 codecResponseOpen
+      * 设置 codec响应打开
      *
-     * @param codecResponseOpen codecResponseOpen
+     * @param codecResponseOpen codec响应打开
      */
     public void setCodecResponseOpen(boolean codecResponseOpen) {
         this.codecResponseOpen = codecResponseOpen;

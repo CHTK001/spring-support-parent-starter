@@ -32,16 +32,19 @@ public class SoftwareSourceResult {
      */
     private File downloadedFile;
 
-    /** 创建 SoftwareSourceResult 实例 */
+    /** 创建 software源结果 实例 */
     public SoftwareSourceResult() {
     }
 
     /**
-     * 创建 SoftwareSourceResult 实例
-     * @param success success
-     * @param String String
-     * @param String String
-     * @param File File
+      * 创建 software源结果 实例
+     * @param success 成功
+     * @param message 字符串
+     * @param message 字符串
+     * @param downloadedFile 文件
+     * @param message 消息
+     * @param installPath install路径
+     * @param downloadedFile downloaded文件
      */
     public SoftwareSourceResult(boolean success, String message, String installPath, File downloadedFile) {
         this.success = success;
@@ -50,42 +53,74 @@ public class SoftwareSourceResult {
         this.downloadedFile = downloadedFile;
     }
 
-    /** 是否Success */
+    /**
+     * 是否成功
+     *
+     * @return 是否成功的结果
+     */
     public boolean isSuccess() {
         return success;
     }
 
-    /** 设置Success */
+    /**
+     * 设置成功
+     *
+     * @param success 成功
+     */
     public void setSuccess(boolean success) {
         this.success = success;
     }
 
-    /** 获取Message */
+    /**
+     * 获取消息
+     *
+     * @return 获取消息的结果
+     */
     public String getMessage() {
         return message;
     }
 
-    /** 设置Message */
+    /**
+     * 设置消息
+     *
+     * @param message 消息
+     */
     public void setMessage(String message) {
         this.message = message;
     }
 
-    /** 获取InstallPath */
+    /**
+     * 获取install路径
+     *
+     * @return 获取install路径的结果
+     */
     public String getInstallPath() {
         return installPath;
     }
 
-    /** 设置InstallPath */
+    /**
+     * 设置install路径
+     *
+     * @param installPath install路径
+     */
     public void setInstallPath(String installPath) {
         this.installPath = installPath;
     }
 
-    /** 获取DownloadedFile */
+    /**
+     * 获取downloaded文件
+     *
+     * @return 获取downloaded文件的结果
+     */
     public File getDownloadedFile() {
         return downloadedFile;
     }
 
-    /** 设置DownloadedFile */
+    /**
+     * 设置downloaded文件
+     *
+     * @param downloadedFile downloaded文件
+     */
     public void setDownloadedFile(File downloadedFile) {
         this.downloadedFile = downloadedFile;
     }
@@ -98,6 +133,13 @@ public class SoftwareSourceResult {
      * @return 成功结果
      */
     public static SoftwareSourceResult success(String message, String installPath) {
+        /**
+         * software源结果。
+         * @param true true
+         * @param message 消息
+         * @param installPath install路径
+         * @param null 空
+         */
         return new SoftwareSourceResult(true, message, installPath, null);
     }
 
@@ -110,6 +152,13 @@ public class SoftwareSourceResult {
      * @return 成功结果
      */
     public static SoftwareSourceResult success(String message, String installPath, File downloadedFile) {
+        /**
+         * software源结果。
+         * @param true true
+         * @param message 消息
+         * @param installPath install路径
+         * @param downloadedFile downloaded文件
+         */
         return new SoftwareSourceResult(true, message, installPath, downloadedFile);
     }
 
@@ -120,6 +169,13 @@ public class SoftwareSourceResult {
      * @return 失败结果
      */
     public static SoftwareSourceResult fail(String message) {
+        /**
+         * software源结果。
+         * @param false false
+         * @param message 消息
+         * @param null 空
+         * @param null 空
+         */
         return new SoftwareSourceResult(false, message, null, null);
     }
 }

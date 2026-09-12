@@ -37,7 +37,7 @@ public class AiGatewayController {
     /**
      * 启动独立 AI 端口。
      *
-     * @param body 包含 port 字段
+     * @param body 包含 端口 字段
      * @return 操作结果
      */
     @PostMapping("/start")
@@ -90,7 +90,7 @@ public class AiGatewayController {
     /**
      * 查询网关状态。
      *
-     * @return running 与 port 字段
+     * @return running 与 端口 字段
      */
     @GetMapping("/status")
     public ReturnResult<Map<String, Object>> status() {

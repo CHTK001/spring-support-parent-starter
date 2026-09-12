@@ -32,6 +32,12 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+/**
+ * dynamic数据源aspect类。
+ *
+ * @author CH
+ * @since 4.0.0
+ */
 public class DynamicDataSourceAspect {
     /**
      * 上下文
@@ -56,16 +62,30 @@ public class DynamicDataSourceAspect {
     public void beforeSwitchDS(MethodInvocation methodInvocation, MultiDataSourceSettingProperties multiDataSourceSettingProperties) {
         //默认数据源
         String dataSource = getDataSourceType(methodInvocation, multiDataSourceSettingProperties);
+        /**
+         * switch转为。
+         * @param dataSource 数据源
+         * @param multiDataSourceSettingProperties multi数据源setting属性
+         */
         switchTo(dataSource, multiDataSourceSettingProperties);
     }
 
+    /**
+     * switch转为。
+     * @param dataSource 数据源
+     * @param multiDataSourceSettingProperties multi数据源setting属性
+     */
     public void switchTo(String dataSource, MultiDataSourceSettingProperties multiDataSourceSettingProperties) {
         dataSource = createDataSource(dataSource, multiDataSourceSettingProperties);
         //分析处理多数据源
+        /**
+         * 执行analysis数据源。
+         * @param dataSource 数据源
+         */
         doAnalysisDataSource(dataSource);
         // 切换数据源
         DataSourceContextSupport.setDbType(dataSource);
-        // 如果处于 @DSTransactional 上下文中，额外推入栈用于嵌套恢复
+ // 如果处于 @dstransactional 上下文中，额外推入栈用于嵌套恢复
         if (MultiDSTransactionContext.isInTransaction()) {
             DataSourceContextSupport.pushDbType(dataSource);
         }
@@ -177,7 +197,7 @@ public class DynamicDataSourceAspect {
                 if (!StringUtils.hasLength(value)) {
                     return dsName;
                 }
-                // SpEL 表达式支持：以 # 开头的值进行 SpEL 解析
+ // spel 表达式支持：以 # 开头的值进行 spel 解析
                 if (value.startsWith("#")) {
                     return resolveSpelExpression(value, methodInvocation);
                 }
@@ -205,7 +225,7 @@ public class DynamicDataSourceAspect {
         if (!StringUtils.hasLength(value)) {
             return dsName;
         }
-        // SpEL 表达式支持
+ // spel 表达式支持
         if (value.startsWith("#")) {
             return resolveSpelExpression(value, methodInvocation);
         }
@@ -213,7 +233,7 @@ public class DynamicDataSourceAspect {
     }
 
     /**
-     * 解析 SpEL 表达式
+      * 解析 spel 表达式
      * <p>
      * 支持以下上下文变量：
      * <ul>
@@ -223,7 +243,7 @@ public class DynamicDataSourceAspect {
      * </ul>
      * </p>
      *
-     * @param expression SpEL 表达式
+     * @param expression spel 表达式
      * @param invocation 方法调用
      * @return 解析后的字符串值
      */
@@ -240,7 +260,7 @@ public class DynamicDataSourceAspect {
                 context.setVariable(params[i].getName(), args[i]);
             }
 
-            // 注入 header/session 上下文
+ // 注入 头部/会话 上下文
             ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             if (attrs != null) {
                 HttpServletRequest request = attrs.getRequest();
@@ -258,31 +278,53 @@ public class DynamicDataSourceAspect {
     }
 
     /**
-     * HttpServletRequest 请求头包装器（使用 Map，支持 SpEL #header['key'] 和 #header.key 两种语法）
+      * httpservlet请求 请求头包装器（使用 映射，支持 spel #头部['钥匙'] 和 #头部.钥匙 两种语法）
+     * @author CH
+     * @since 4.0.0
      */
     public static class HeaderWrapper extends java.util.HashMap<String, String> {
         /** 请求 */
         private final HttpServletRequest request;
+        /**
+         * 头部包装器。
+         * @param request 请求
+         */
         public HeaderWrapper(HttpServletRequest request) {
             this.request = request;
             var names = request.getHeaderNames();
             while (names != null && names.hasMoreElements()) {
                 String name = names.nextElement();
+                /**
+                 * 放入。
+                 * @param name 名称
+                 * @param request.getHeader(name 请求.获取头部(名称
+                 */
                 put(name, request.getHeader(name));
             }
         }
     }
 
     /**
-     * HttpSession 属性包装器（使用 Map，支持 SpEL #session['key'] 和 #session.key 两种语法）
+      * http会话 属性包装器（使用 映射，支持 spel #会话['钥匙'] 和 #会话.钥匙 两种语法）
+     * @author CH
+     * @since 4.0.0
      */
     public static class SessionWrapper extends java.util.HashMap<String, Object> {
+        /**
+         * 会话包装器。
+         * @param request 请求
+         */
         public SessionWrapper(HttpServletRequest request) {
             var session = request.getSession(false);
             if (session != null) {
                 var names = session.getAttributeNames();
                 while (names != null && names.hasMoreElements()) {
                     String name = names.nextElement();
+                    /**
+                     * 放入。
+                     * @param name 名称
+                     * @param session.getAttribute(name 会话.获取attribute(名称
+                     */
                     put(name, session.getAttribute(name));
                 }
             }
@@ -293,7 +335,7 @@ public class DynamicDataSourceAspect {
      * 重置
      */
     public synchronized void afterSwitchDS() {
-        // 如果处于 @DSTransactional 上下文中，从栈恢复上一级数据源
+ // 如果处于 @dstransactional 上下文中，从栈恢复上一级数据源
         if (MultiDSTransactionContext.isInTransaction()) {
             String previous = DataSourceContextSupport.popDbType();
             if (previous != null) {

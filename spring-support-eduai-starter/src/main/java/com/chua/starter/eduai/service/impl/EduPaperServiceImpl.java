@@ -87,10 +87,15 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
     }
 
     @Override
-    /** 获取PaperDetail */
+    /** 获取paperdetail */
     public PaperVO getPaperDetail(Long paperId) {
         EduPaper paper = baseMapper.selectById(paperId);
         if (paper == null) {
+            /**
+             * 业务异常。
+             * @param "试卷不存在" "试卷不存在"
+             * @return 业务异常的结果
+             */
             throw new BusinessException("试卷不存在");
         }
         PaperVO vo = toVO(paper);
@@ -126,7 +131,12 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /** GeneratePaper */
+    /**
+     * generatepaper
+     *
+     * @param dto dto
+     * @return generatePaper的结果
+     */
     public Long generatePaper(PaperGenerateDTO dto) {
         log.info("[EduAi] AI 组卷: subject={}, knowledgePoints={}", dto.getSubject(), dto.getKnowledgePointIds());
 
@@ -222,7 +232,14 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /** ReplaceQuestion */
+    /**
+     * 替换question
+     *
+     * @param paperId paperid
+     * @param oldQuestionId 旧questionid
+     * @param newQuestionId 新questionid
+     * @return 替换question的结果
+     */
     public boolean replaceQuestion(Long paperId, Long oldQuestionId, Long newQuestionId) {
         LambdaQueryWrapper<EduPaperQuestion> delWrapper = new LambdaQueryWrapper<>();
         delWrapper.eq(EduPaperQuestion::getPaperQuestionPaperId, paperId)
@@ -241,7 +258,12 @@ public class EduPaperServiceImpl extends ServiceImpl<EduPaperMapper, EduPaper> i
         return true;
     }
 
-    /** ToVO */
+    /**
+     * 转为vo
+     *
+     * @param paper paper
+     * @return 转为vo的结果
+     */
     private PaperVO toVO(EduPaper paper) {
         PaperVO vo = new PaperVO();
         vo.setId(paper.getPaperId());

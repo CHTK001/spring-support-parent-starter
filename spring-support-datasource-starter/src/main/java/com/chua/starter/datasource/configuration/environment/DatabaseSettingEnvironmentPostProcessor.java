@@ -37,21 +37,22 @@ import java.util.Map;
  * <p>这里只负责数据库配置中心能力，不替代 {@link com.chua.starter.common.support.configuration.environment.ProfileEnvironmentPostProcessor}。</p>
  *
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
-    /** Enabled_key */
+    /** 已启用_钥匙 */
     private static final String ENABLED_KEY = "plugin.ops-config.database.enabled";
     /** Setting_table */
     private static final String SETTING_TABLE = "sys_setting";
-    /** Group_table */
+    /** 群体_table */
     private static final String GROUP_TABLE = "sys_setting_group";
-    /** Property_source_name */
+    /** 财产_源_名称 */
     private static final String PROPERTY_SOURCE_NAME = "database-startup-config";
-    /** Ops_source_prefix */
+    /** Ops_源_前缀 */
     private static final String OPS_SOURCE_PREFIX = "ops-config-";
 
-    /** Default_groups */
+    /** 默认_群体 */
     private static final List<GroupDefinition> DEFAULT_GROUPS = List.of(
             new GroupDefinition("startup-api", "API基础配置", "ri:code-box-line", "启动期 API 通用配置", 10),
             new GroupDefinition("startup-actuator", "Actuator配置", "ri:pulse-line", "启动期 Actuator 通用配置", 20),
@@ -61,7 +62,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
             new GroupDefinition("startup-swagger", "Swagger配置", "ri:book-open-line", "启动期 Swagger 通用配置", 60)
     );
 
-    /** Default_settings */
+    /** 默认_settings */
     private static final List<SettingDefinition> DEFAULT_SETTINGS = List.of(
             new SettingDefinition("plugin.api.encode.enable", "true", "BOOL", "startup-api", 10, "ops-default/application-api.yml", "开启接口请求体编码"),
             new SettingDefinition("plugin.api.decode.enable", "true", "BOOL", "startup-api", 20, "ops-default/application-api.yml", "开启接口响应体解码"),
@@ -101,7 +102,7 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     );
 
     @Override
-    /** Post处理Environment */
+    /** Post处理环境 */
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         if (!Boolean.parseBoolean(environment.getProperty(ENABLED_KEY, "true"))) {
             log.debug("[数据库配置]已禁用: {}=false", ENABLED_KEY);
@@ -114,18 +115,47 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
             return;
         }
 
+        /**
+         * 尝试。
+         * @param openConnection(connectionInfo 打开connection(connection信息
+         */
         try (Connection connection = openConnection(connectionInfo)) {
+            /**
+             * ensure群体table。
+             * @param connection connection
+             */
             ensureGroupTable(connection);
+            /**
+              * ensuresettingtable。
+             * @param connection connection
+             */
             ensureSettingTable(connection);
+            /**
+             * 参见默认群体。
+             * @param connection connection
+             */
             seedDefaultGroups(connection);
+            /**
+             * 参见默认settings。
+             * @param connection connection
+             */
             seedDefaultSettings(connection);
+            /**
+             * 注册财产源。
+             * @param environment.getPropertySources( 环境.获取财产源(
+             */
             registerPropertySource(environment.getPropertySources(), loadStartupSettings(connection));
         } catch (Exception e) {
             log.warn("[数据库配置]初始化失败: {}", e.getMessage(), e);
         }
     }
 
-    /** 解析ConnectionInfo */
+    /**
+     * 解析connection信息
+     *
+     * @param environment 环境
+     * @return resolveconnection信息的结果
+     */
     private ConnectionInfo resolveConnectionInfo(ConfigurableEnvironment environment) {
         String url = environment.getProperty("spring.datasource.url");
         if (!StringUtils.hasText(url)) {
@@ -138,7 +168,12 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
                 environment.getProperty("spring.datasource.driver-class-name"));
     }
 
-    /** 打开Connection */
+    /**
+     * 打开Connection
+     *
+     * @param connectionInfo connection信息
+     * @return 打开connection的结果
+     */
     private Connection openConnection(ConnectionInfo connectionInfo) throws Exception {
         if (StringUtils.hasText(connectionInfo.driverClassName())) {
             ReflectUtils.forName(connectionInfo.driverClassName());
@@ -152,34 +187,60 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
                 connectionInfo.password() == null ? "" : connectionInfo.password());
     }
 
-    /** Ensure分组Table */
+    /**
+     * Ensure分组Table
+     *
+     * @param connection connection
+     */
     private void ensureGroupTable(Connection connection) throws SQLException {
         if (tableExists(connection, GROUP_TABLE)) {
             return;
         }
+        /**
+         * 尝试。
+         * @param connection.createStatement( connection.创建对账单(
+         */
         try (Statement statement = connection.createStatement()) {
             statement.execute(createGroupTableSql(connection));
         }
         log.info("[数据库配置]已创建配置分组表 {}", GROUP_TABLE);
     }
 
-    /** EnsureSettingTable */
+    /**
+     * ensuresettingtable
+     *
+     * @param connection connection
+     */
     private void ensureSettingTable(Connection connection) throws SQLException {
         if (tableExists(connection, SETTING_TABLE)) {
             return;
         }
+        /**
+         * 尝试。
+         * @param connection.createStatement( connection.创建对账单(
+         */
         try (Statement statement = connection.createStatement()) {
             statement.execute(createSettingTableSql(connection));
         }
         log.info("[数据库配置]已创建配置表 {}", SETTING_TABLE);
     }
 
-    /** Table是否存在 */
+    /**
+     * Table是否存在
+     *
+     * @param connection connection
+     * @param tableName table名称
+     * @return tableExists的结果
+     */
     private boolean tableExists(Connection connection, String tableName) throws SQLException {
         DatabaseMetaData metaData = connection.getMetaData();
         String catalog = connection.getCatalog();
         String schema = connection.getSchema();
         for (String candidate : List.of(tableName, tableName.toUpperCase(Locale.ROOT), tableName.toLowerCase(Locale.ROOT))) {
+            /**
+             * 尝试。
+             * @param String[]{"TABLE"} 字符串[]{"TABLE"}
+             */
             try (ResultSet resultSet = metaData.getTables(catalog, schema, candidate, new String[]{"TABLE"})) {
                 while (resultSet.next()) {
                     String current = resultSet.getString("TABLE_NAME");
@@ -192,7 +253,11 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
         return false;
     }
 
-    /** SeedDefaultGroups */
+    /**
+     * 参见默认群体
+     *
+     * @param connection connection
+     */
     private void seedDefaultGroups(Connection connection) throws SQLException {
         String sql = """
                 INSERT INTO sys_setting_group (
@@ -216,6 +281,10 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
              PreparedStatement insert = connection.prepareStatement(sql)) {
             for (GroupDefinition definition : DEFAULT_GROUPS) {
                 exists.setString(1, definition.code());
+                /**
+                 * 尝试。
+                 * @param exists.executeQuery( exists.执行查询(
+                 */
                 try (ResultSet resultSet = exists.executeQuery()) {
                     if (resultSet.next() && resultSet.getInt(1) > 0) {
                         continue;
@@ -244,7 +313,11 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
         }
     }
 
-    /** SeedDefaultSettings */
+    /**
+     * 参见默认settings
+     *
+     * @param connection connection
+     */
     private void seedDefaultSettings(Connection connection) throws SQLException {
         String sql = """
                 INSERT INTO sys_setting (
@@ -275,6 +348,10 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
             for (SettingDefinition definition : DEFAULT_SETTINGS) {
                 exists.setString(1, definition.groupCode());
                 exists.setString(2, definition.name());
+                /**
+                 * 尝试。
+                 * @param exists.executeQuery( exists.执行查询(
+                 */
                 try (ResultSet resultSet = exists.executeQuery()) {
                     if (resultSet.next() && resultSet.getInt(1) > 0) {
                         continue;
@@ -309,7 +386,12 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
         }
     }
 
-    /** 加载StartupSettings */
+    /**
+     * 加载startupsettings
+     *
+     * @param connection connection
+     * @return 加载startupsettings的结果
+     */
     private Map<String, Object> loadStartupSettings(Connection connection) throws SQLException {
         String sql = """
                 SELECT sys_setting_name, sys_setting_value
@@ -320,6 +402,10 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
                 """;
 
         Map<String, Object> settings = new java.util.LinkedHashMap<>();
+        /**
+         * 尝试。
+         * @param connection.prepareStatement(sql connection.prepare对账单(SQL
+         */
         try (PreparedStatement statement = connection.prepareStatement(sql);
              ResultSet resultSet = statement.executeQuery()) {
             while (resultSet.next()) {
@@ -329,7 +415,12 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
         return settings;
     }
 
-    /** 注册PropertySource */
+    /**
+     * 注册财产源
+     *
+     * @param propertySources 财产源
+     * @param settings settings
+     */
     private void registerPropertySource(MutablePropertySources propertySources, Map<String, Object> settings) {
         if (settings.isEmpty() || propertySources.contains(PROPERTY_SOURCE_NAME)) {
             return;
@@ -344,7 +435,12 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
         propertySources.addLast(propertySource);
     }
 
-    /** 查找FirstOpsSource */
+    /**
+     * 查找第一个ops源
+     *
+     * @param propertySources 财产源
+     * @return find第一个ops源的结果
+     */
     private String findFirstOpsSource(MutablePropertySources propertySources) {
         for (PropertySource<?> propertySource : propertySources) {
             if (propertySource.getName().startsWith(OPS_SOURCE_PREFIX)) {
@@ -354,61 +450,158 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
         return null;
     }
 
-    /** 创建分组TableSql */
+    /**
+     * 创建分组tablesql
+     *
+     * @param connection connection
+     * @return 创建群体tablesql的结果
+     */
     private String createGroupTableSql(Connection connection) throws SQLException {
         String idColumn = autoIncrementColumn(connection, "sys_setting_group_id");
         return """
                 CREATE TABLE IF NOT EXISTS sys_setting_group (
                     %s,
+                    /**
+                     * VARCHAR。
+                     * @param 255 255
+                     * @return VARCHAR的结果
+                     */
                     sys_setting_group_name VARCHAR(255),
+                    /**
+                     * VARCHAR。
+                     * @param 255 255
+                     * @return VARCHAR的结果
+                     */
                     sys_setting_group_code VARCHAR(255),
+                    /**
+                     * VARCHAR。
+                     * @param 255 255
+                     * @return VARCHAR的结果
+                     */
                     sys_setting_group_icon VARCHAR(255),
                     sys_setting_group_enable BOOLEAN,
+                    /**
+                     * VARCHAR。
+                     * @param 1000 1000
+                     * @return VARCHAR的结果
+                     */
                     sys_setting_group_remark VARCHAR(1000),
                     sys_setting_group_sort INT,
                     sys_setting_group_use_project_interface BOOLEAN,
+                    /**
+                     * VARCHAR。
+                     * @param 255 255
+                     * @return VARCHAR的结果
+                     */
                     create_name VARCHAR(255),
                     create_by INT,
                     create_time TIMESTAMP,
+                    /**
+                     * VARCHAR。
+                     * @param 255 255
+                     * @return VARCHAR的结果
+                     */
                     update_name VARCHAR(255),
                     update_by INT,
                     update_time TIMESTAMP,
+                    /**
+                     * UNIQUE。
+                     * @param sys_setting_group_code syssetting群体编码
+                     * @return UNIQUE的结果
+                     */
                     CONSTRAINT uk_sys_setting_group_code UNIQUE (sys_setting_group_code)
                 )
                 """.formatted(idColumn);
     }
 
-    /** 创建SettingTableSql */
+    /**
+     * 创建settingtablesql
+     *
+     * @param connection connection
+     * @return 创建settingtablesql的结果
+     */
     private String createSettingTableSql(Connection connection) throws SQLException {
         String idColumn = autoIncrementColumn(connection, "sys_setting_id");
         return """
                 CREATE TABLE IF NOT EXISTS sys_setting (
                     %s,
+                    /**
+                     * VARCHAR。
+                     * @param 255 255
+                     * @return VARCHAR的结果
+                     */
                     sys_setting_name VARCHAR(255),
+                    /**
+                     * VARCHAR。
+                     * @param 255 255
+                     * @return VARCHAR的结果
+                     */
                     sys_setting_value VARCHAR(255),
+                    /**
+                     * VARCHAR。
+                     * @param 255 255
+                     * @return VARCHAR的结果
+                     */
                     sys_setting_config VARCHAR(255),
+                    /**
+                     * VARCHAR。
+                     * @param 255 255
+                     * @return VARCHAR的结果
+                     */
                     sys_setting_remark VARCHAR(255),
                     sys_setting_sort INT,
                     sys_setting_version INT,
                     sys_setting_status INT,
                     sys_setting_admin INT,
+                    /**
+                     * VARCHAR。
+                     * @param 255 255
+                     * @return VARCHAR的结果
+                     */
                     sys_setting_value_type VARCHAR(255),
+                    /**
+                     * VARCHAR。
+                     * @param 255 255
+                     * @return VARCHAR的结果
+                     */
                     sys_setting_group VARCHAR(255),
                     sys_setting_collect INT,
                     sys_setting_in_system INT,
                     sys_setting_app_inner INT,
+                    /**
+                     * VARCHAR。
+                     * @param 255 255
+                     * @return VARCHAR的结果
+                     */
                     create_name VARCHAR(255),
                     create_by INT,
                     create_time TIMESTAMP,
+                    /**
+                     * VARCHAR。
+                     * @param 255 255
+                     * @return VARCHAR的结果
+                     */
                     update_name VARCHAR(255),
                     update_by INT,
                     update_time TIMESTAMP,
+                    /**
+                     * UNIQUE。
+                     * @param sys_setting_name syssetting名称
+                     * @param sys_setting_group syssetting群体
+                     * @return UNIQUE的结果
+                     */
                     CONSTRAINT uk_sys_setting_name_group UNIQUE (sys_setting_name, sys_setting_group)
                 )
                 """.formatted(idColumn);
     }
 
-    /** AutoIncrementColumn */
+    /**
+     * autoincrementcolumn
+     *
+     * @param connection connection
+     * @param columnName column名称
+     * @return autoIncrementColumn的结果
+     */
     private String autoIncrementColumn(Connection connection, String columnName) throws SQLException {
         String database = connection.getMetaData().getDatabaseProductName().toLowerCase(Locale.ROOT);
         if (database.contains("sqlite")) {
@@ -421,28 +614,45 @@ public class DatabaseSettingEnvironmentPostProcessor implements EnvironmentPostP
     }
 
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
         return ConfigDataEnvironmentPostProcessor.ORDER + 110;
     }
 
-    /** ConnectionInfo */
+    /**
+     * connection信息
+     *
+     * @param url url
+     * @param username 用户名
+     * @param password 密码
+     * @param driverClassName driver类名称
+     * @return connection信息的结果
+     */
     private record ConnectionInfo(String url, String username, String password, String driverClassName) {
     }
 
-    /** 分组Definition */
+    /**
+     * 分组Definition
+     *
+     * @param code 编码
+     * @param name 名称
+     * @param icon icon
+     * @param remark 评论
+     * @param sort 排序
+     * @return 群体definition的结果
+     */
     private record GroupDefinition(String code, String name, String icon, String remark, int sort) {
     }
 
     /**
-     * SettingDefinition
-     * @param name name
-     * @param defaultValue defaultValue
-     * @param valueType valueType
-     * @param groupCode groupCode
-     * @param sort sort
-     * @param config config
-     * @param remark remark
+      * settingdefinition
+     * @param name 名称
+     * @param defaultValue 默认价值观
+     * @param valueType 价值观类型
+     * @param groupCode 群体编码
+     * @param sort 排序
+     * @param config 配置
+     * @param remark 评论
      */
     private record SettingDefinition(
             String name,

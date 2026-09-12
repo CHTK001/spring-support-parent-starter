@@ -28,21 +28,28 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class OrderStateMachineServiceImpl implements OrderStateMachineService {
 
-    private final StateMachineFactory<OrderState, OrderEvent> stateMachineFactory;
-    /** Payment排序mapper */
+    private final StateMachineFactory<OrderState, OrderEvent> stateMachineFactory; // 状态machine工厂
+    /** 薪酬排序映射器 */
     private final PaymentOrderMapper paymentOrderMapper;
     /** 排序状态日志服务 */
     private final OrderStateLogService orderStateLogService;
 
     @Override
-    /** 创建StateMachine */
+    /** 创建状态machine */
     public void createStateMachine(Long orderId) {
         log.debug("订单状态机初始化完成: orderId={}", orderId);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /** 发送Event */
+    /**
+     * 发送事件
+     *
+     * @param orderId 订单标识
+     * @param event 事件
+     * @param operator 操作符
+     * @return 发送事件的结果
+     */
     public OrderTransitionResult sendEvent(Long orderId, OrderEvent event, String operator) {
         PaymentOrder order = paymentOrderMapper.selectById(orderId);
         if (order == null) {
@@ -101,13 +108,19 @@ public class OrderStateMachineServiceImpl implements OrderStateMachineService {
     }
 
     @Override
-    /** 获取CurrentState */
+    /** 获取当前状态 */
     public OrderState getCurrentState(Long orderId) {
         PaymentOrder order = paymentOrderMapper.selectById(orderId);
         return order != null ? OrderState.valueOf(order.getStatus()) : null;
     }
 
-    /** 是否DuplicateTargetState */
+    /**
+     * 是否重复Target状态
+     *
+     * @param event 事件
+     * @param order 订单
+     * @return 是否重复Target状态的结果
+     */
     private boolean isDuplicateTargetState(OrderEvent event, PaymentOrder order) {
         if (order == null) {
             return false;

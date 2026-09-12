@@ -122,7 +122,13 @@ public class VtLimitProbe {
      */
     public static void main(String[] args) throws InterruptedException {
         log.info("[probe] 本机可用处理器 = {} 个", Runtime.getRuntime().availableProcessors());
+        /**
+         * 运行block。
+         */
         runBlock();
+        /**
+         * 运行cpu。
+         */
         runCpu();
     }
 }

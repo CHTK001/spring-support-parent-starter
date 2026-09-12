@@ -20,6 +20,11 @@ public class ConnectionException extends IOException {
      * @param cause   根因
      */
     public ConnectionException(String message, Throwable cause) {
+        /**
+         * 父。
+         * @param message 消息
+         * @param cause cause
+         */
         super(message, cause);
     }
 
@@ -29,6 +34,10 @@ public class ConnectionException extends IOException {
      * @param message 异常消息
      */
     public ConnectionException(String message) {
+        /**
+         * 父。
+         * @param message 消息
+         */
         super(message);
     }
 }

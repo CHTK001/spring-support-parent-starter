@@ -12,13 +12,14 @@ import java.time.LocalDateTime;
 /**
  * 支付全局配置
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @TableName("pay_global_config")
 public class PaymentGlobalConfig {
 
     @TableId(value = "pay_global_config_id", type = IdType.AUTO)
-    /** ID */
+    /** 标识 */
     private Long id;
 
     @TableField("pay_global_config_config_key")
@@ -26,7 +27,7 @@ public class PaymentGlobalConfig {
     private String configKey;
 
     @TableField("pay_global_config_notify_base_url")
-    /** PaymentnotifybaseURL */
+    /** paymentnotifybaseurl */
     private String paymentNotifyBaseUrl;
 
     @TableField("pay_global_config_return_url")
@@ -42,7 +43,7 @@ public class PaymentGlobalConfig {
     private Integer paymentAutoRefreshSeconds;
 
     @TableField("pay_global_config_remark")
-    /** Remark */
+    /** 评论 */
     private String remark;
 
     @TableField(value = "pay_global_config_created_at", fill = FieldFill.INSERT)

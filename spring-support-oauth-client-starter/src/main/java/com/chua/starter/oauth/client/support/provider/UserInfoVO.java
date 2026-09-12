@@ -14,13 +14,13 @@ import java.util.Set;
 @Data
 public class UserInfoVO {
 
-    /** 用户ID */
+    /** 用户标识 */
     private String userId;
 
     /** 用户SEX */
     private Integer userSex;
 
-    /** 用户marker */
+    /** 用户记号笔 */
     private String userMarker;
 
     /** 用户名称 */
@@ -42,7 +42,7 @@ public class UserInfoVO {
     /** Avatar */
     private String avatar;
 
-    /** Roles */
+    /** 角色 */
     private Set<String> roles;
 
     /** Perms */

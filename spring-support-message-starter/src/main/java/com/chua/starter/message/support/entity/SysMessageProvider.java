@@ -10,7 +10,7 @@ import lombok.EqualsAndHashCode;
 /**
  * 消息提供商实体
  * <p>
- * 对应表 sys_message_provider，管理短信、邮件、微信、钉钉等消息服务商配置。
+   * 对应表 sys_消息_提供者，管理短信、邮件、微信、钉钉等消息服务商配置。
  * </p>
  *
  * @since 2026/08/03
@@ -22,14 +22,14 @@ import lombok.EqualsAndHashCode;
 public class SysMessageProvider extends SysBase {
 
     /**
-     * 提供商ID - 主键自增
+      * 提供商标识 - 主键自增
      */
     @TableId(value = "sys_message_provider_id", type = IdType.AUTO)
-    /** SYS消息提供者ID */
+    /** SYS消息提供者标识 */
     private Integer sysMessageProviderId;
 
     /**
-     * 提供商编码 - 唯一标识，如 aliyun/tencent/smtp
+      * 提供商编码 - 唯一标识，如 阿里云/腾讯云/smtp
      */
     private String sysMessageProviderCode;
 
@@ -49,7 +49,7 @@ public class SysMessageProvider extends SysBase {
     private String sysMessageProviderVender;
 
     /**
-     * 应用ID - 用于API认证
+      * 应用标识 - 用于API认证
      */
     private String sysMessageProviderAppId;
 

@@ -15,7 +15,7 @@ public interface AiTemplateFacadeService {
     /**
      * 按条件查询模板列表。
      *
-     * @param moduleId     模块 ID
+     * @param moduleId     模块 标识
      * @param templateType 模板类型
      * @param category     分类
      * @param name         名称
@@ -41,9 +41,9 @@ public interface AiTemplateFacadeService {
     boolean update(SysAiTemplate template);
 
     /**
-     * 按 ID 删除模板。
+      * 按 标识 删除模板。
      *
-     * @param id 模板 ID
+     * @param id 模板 标识
      * @return 是否成功
      */
     boolean deleteById(Integer id);

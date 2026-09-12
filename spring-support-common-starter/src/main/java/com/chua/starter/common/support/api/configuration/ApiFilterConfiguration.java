@@ -68,9 +68,10 @@ public class ApiFilterConfiguration  {
     /**
      * XHR Nonce 防重放过滤器
      * <p>
-     * 仅对携带 x-nonce、x-sign、x-timestamp、x-req-fingerprint 的请求做校验，
+      * 仅对携带 x-nonce、x-标志、x-时间戳、x-req-fingerprint 的请求做校验，
      * 校验失败返回 403。
      * </p>
+     * @return noncexhr过滤器registration的结果
      */
     @Bean("nonceXhrFilterRegistration")
     @ConditionalOnMissingBean(name = "nonceXhrFilterRegistration")
@@ -89,22 +90,24 @@ public class ApiFilterConfiguration  {
      * <p>
      * 在响应头中添加版本信息。
      * </p>
+     * @author CH
+     * @since 4.0.0
      */
     public static class ApiVersionFilter implements Filter {
 
-        /** 版本argument解析器 */
+        /** 版本参数解析器 */
         private final VersionArgumentResolver versionArgumentResolver;
 
         /**
-         * 创建 ApiVersionFilter 实例
-         * @param versionArgumentResolver versionArgumentResolver
+          * 创建 api版本过滤器 实例
+         * @param versionArgumentResolver 版本参数解析器
          */
         public ApiVersionFilter(VersionArgumentResolver versionArgumentResolver) {
             this.versionArgumentResolver = versionArgumentResolver;
         }
 
         @Override
-        /** Do过滤 */
+        /** 执行过滤 */
         public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
                 throws IOException, ServletException {
             if (versionArgumentResolver != null && response instanceof HttpServletResponse httpServletResponse) {
@@ -120,6 +123,8 @@ public class ApiFilterConfiguration  {
     /**
      * XHR Nonce 防重放过滤器
      * 对携带完整签名头的请求做 x-nonce 重放校验及签名校验
+     * @author CH
+     * @since 4.0.0
      */
     public static class NonceXhrFilter implements Filter {
         /** 日志 */
@@ -129,7 +134,7 @@ public class ApiFilterConfiguration  {
         private static final String REJECT_MSG = "{\"code\":400,\"msg\":\"请求校验失败，请勿重放请求\"}";
 
         @Override
-        /** Do过滤 */
+        /** 执行过滤 */
         public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
                 throws IOException, ServletException {
             if (!(request instanceof HttpServletRequest req) || !(response instanceof HttpServletResponse resp)) {

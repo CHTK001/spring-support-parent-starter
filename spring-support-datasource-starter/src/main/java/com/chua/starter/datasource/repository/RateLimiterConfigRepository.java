@@ -9,10 +9,10 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 限流器配置的 SQLite 持久化仓库。
+   * 限流器配置的 sqlite 持久化仓库。
  * <p>
  * 负责将限流器配置（名称、QPS、预热时间、超时时间、启用状态）读写到
- * SQLite 数据库的 concurrent_rate_limiter 表，供 {@link com.chua.springboot.support.endpoint.ConcurrentEndpoint}
+   * sqlite 数据库的 并发_rate_限制 表，供 {@link com.chua.springboot.support.endpoint.ConcurrentEndpoint}
  * 端点通过 actuator API 进行增删查改。
  * </p>
  *
@@ -27,9 +27,9 @@ public class RateLimiterConfigRepository {
     private final JdbcTemplate jdbcTemplate;
 
     /**
-     * 构造方法，注入 JdbcTemplate。
+      * 构造方法，注入 jdbctemplate。
      *
-     * @param jdbcTemplate Spring 容器提供的 JdbcTemplate Bean
+     * @param jdbcTemplate Spring 容器提供的 jdbctemplate Bean
      */
     public RateLimiterConfigRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -51,7 +51,7 @@ public class RateLimiterConfigRepository {
      * 按名称查询单个限流器配置。
      *
      * @param name 限流器名称
-     * @return 配置对象，不存在时返回 Optional.empty()
+     * @return 配置对象，不存在时返回 期权.空()
      */
     public Optional<ConcurrentRateLimiterConfig> findByName(String name) {
         List<ConcurrentRateLimiterConfig> list = jdbcTemplate.query(
@@ -65,10 +65,10 @@ public class RateLimiterConfigRepository {
     /**
      * 保存或更新限流器配置（UPSERT）。
      * <p>
-     * SQLite 使用 INSERT OR REPLACE 语义：名称相同时覆盖旧记录，不存在时插入新记录。
+       * sqlite 使用 插入 或 替换 语义：名称相同时覆盖旧记录，不存在时插入新记录。
      * </p>
      *
-     * @param config 限流器配置对象，name 不能为 null 或空
+     * @param config 限流器配置对象，名称 不能为 空 或空
      * @return 影响的行数（1 = 插入，2 = 先删后插）
      */
     public int save(ConcurrentRateLimiterConfig config) {
@@ -101,7 +101,7 @@ public class RateLimiterConfigRepository {
     }
 
     /**
-     * 将 ResultSet 当前行映射为限流器配置对象。
+      * 将 结果设置 当前行映射为限流器配置对象。
      *
      * @param rs JDBC 结果集，已定位到当前行
      * @return 映射后的配置对象

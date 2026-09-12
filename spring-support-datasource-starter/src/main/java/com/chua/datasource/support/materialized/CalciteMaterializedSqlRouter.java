@@ -20,17 +20,17 @@ import java.util.function.Function;
  */
 public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRouter {
 
-    /** Options */
+    /** 期权 */
     private final MaterializedSqlOptions options;
     /** 默认数据来源 */
     private final DataSource defaultDataSource;
-    private final Function<String, DataSource> dataSourceResolver;
+    private final Function<String, DataSource> dataSourceResolver; // 数据源解析器
 
     /**
-     * 创建 CalciteMaterializedSqlRouter 实例
-     * @param options options
-     * @param defaultDataSource defaultDataSource
-     * @param dataSourceResolver dataSourceResolver
+      * 创建 calcite物化sqlrouter 实例
+     * @param options 期权
+     * @param defaultDataSource 默认数据源
+     * @param dataSourceResolver 数据源解析器
      */
     public CalciteMaterializedSqlRouter(MaterializedSqlOptions options,
                                         DataSource defaultDataSource,
@@ -59,7 +59,7 @@ public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRo
     }
 
     @Override
-    /** 解析DataSource */
+    /** 解析数据源 */
     public DataSource resolveDataSource(MaterializedSqlRoute route) {
         if (route == null || !route.isRouted()) {
             return defaultDataSource;
@@ -72,12 +72,18 @@ public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRo
     }
 
     @Override
-    /** On写入Success */
+    /** On写入成功 */
     public void onWriteSuccess(MaterializedSqlRequest request) {
         // 当前仓库缺失完整物理化实现，先保持 no-op，确保路由链可编译和可安全降级。
     }
 
-    /** 构建CacheDataSourceName */
+    /**
+     * 构建缓存数据源名称
+     *
+     * @param definition definition
+     * @param tableName table名称
+     * @return 构建缓存数据源名称的结果
+     */
     private String buildCacheDataSourceName(MaterializedRouteDefinition definition, String tableName) {
         String prefix = options == null || options.getCacheDataSourcePrefix() == null
                 ? "materialized#"
@@ -88,7 +94,12 @@ public class CalciteMaterializedSqlRouter implements MaterializedSqlDataSourceRo
         return prefix + tableName;
     }
 
-    /** 解析ByName */
+    /**
+     * 解析by名称
+     *
+     * @param dataSourceName 数据源名称
+     * @return resolveby名称的结果
+     */
     private DataSource resolveByName(String dataSourceName) {
         if (dataSourceName == null || dataSourceResolver == null) {
             return null;

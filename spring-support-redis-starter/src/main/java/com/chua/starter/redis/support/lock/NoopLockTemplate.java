@@ -9,6 +9,7 @@ import java.util.function.Supplier;
 /**
  * 无 Redis 环境下的本地锁模板兜底实现。
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class NoopLockTemplate implements LockTemplate {
@@ -26,25 +27,25 @@ public class NoopLockTemplate implements LockTemplate {
     }
 
     @Override
-    /** Try锁 */
+    /** 尝试锁 */
     public <T> T tryLock(String lockKey, Duration waitTime, Supplier<T> supplier) {
         return supplier.get();
     }
 
     @Override
-    /** Try锁 */
+    /** 尝试锁 */
     public <T> T tryLock(String lockKey, Duration waitTime, Duration leaseTime, Supplier<T> supplier) {
         return supplier.get();
     }
 
     @Override
-    /** Try锁 */
+    /** 尝试锁 */
     public <T> T tryLock(String lockKey, Duration waitTime, Supplier<T> supplier, Supplier<T> fallback) {
         return supplier.get();
     }
 
     @Override
-    /** Try锁 */
+    /** 尝试锁 */
     public <T> T tryLock(String lockKey, Duration waitTime, Duration leaseTime, Supplier<T> supplier, Supplier<T> fallback) {
         return supplier.get();
     }
@@ -62,14 +63,14 @@ public class NoopLockTemplate implements LockTemplate {
     }
 
     @Override
-    /** Try锁 */
+    /** 尝试锁 */
     public boolean tryLock(String lockKey, Duration waitTime, Runnable action) {
         action.run();
         return true;
     }
 
     @Override
-    /** Try锁 */
+    /** 尝试锁 */
     public boolean tryLock(String lockKey, Duration waitTime, Duration leaseTime, Runnable action) {
         action.run();
         return true;
@@ -94,13 +95,13 @@ public class NoopLockTemplate implements LockTemplate {
     }
 
     @Override
-    /** 是否Locked */
+    /** 是否锁 */
     public boolean isLocked(String lockKey) {
         return false;
     }
 
     @Override
-    /** 是否HeldByCurrentThread */
+    /** 是否heldby当前thread */
     public boolean isHeldByCurrentThread(String lockKey) {
         return false;
     }

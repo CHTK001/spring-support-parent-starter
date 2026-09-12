@@ -43,14 +43,14 @@ import java.util.Map;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class SysAiJwtAuthFilter extends OncePerRequestFilter {
 
-    private static final String SECRET_PROP = "nomifun.auth.jwt-secret";
-    private static final String USER_ID_ATTR = "nomifun.user.id";
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final String SECRET_PROP = "nomifun.auth.jwt-secret"; // SECRET_PROP
+    private static final String USER_ID_ATTR = "nomifun.user.id"; // 用户idattr
+    private static final ObjectMapper MAPPER = new ObjectMapper(); // 映射器
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
-        // local-trust 模式（开发/本地部署）
+ // 本地-信任 模式（开发/本地部署）
         if (StringUtils.hasText(request.getHeader("x-nomi-local-trust"))) {
             request.setAttribute("nomifun.auth.mode", "local-trust");
             chain.doFilter(request, response);
@@ -67,12 +67,24 @@ public class SysAiJwtAuthFilter extends OncePerRequestFilter {
                 if (StringUtils.hasText(secret)) {
                     JWSVerifier verifier = new MACVerifier(secret);
                     if (!signedJWT.verify(verifier)) {
+                        /**
+                         * 发送json错误。
+                         * @param response 响应
+                         * @param 401 401
+                         * @param invalid" invalid"
+                         */
                         sendJsonError(response, 401, "JWT signature invalid");
                         return;
                     }
                 }
                 JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
                 if (claims.getExpirationTime() != null && claims.getExpirationTime().before(new Date())) {
+                    /**
+                     * 发送json错误。
+                     * @param response 响应
+                     * @param 401 401
+                     * @param expired" expired"
+                     */
                     sendJsonError(response, 401, "JWT expired");
                     return;
                 }
@@ -83,6 +95,12 @@ public class SysAiJwtAuthFilter extends OncePerRequestFilter {
                 request.setAttribute("nomifun.auth.mode", "jwt");
                 log.debug("[nomifun-auth] JWT ok user={} path={}", userId, request.getRequestURI());
             } catch (ParseException | JOSEException e) {
+                /**
+                 * 发送json错误。
+                 * @param response 响应
+                 * @param 401 401
+                 * @param e.getMessage( e.获取消息(
+                 */
                 sendJsonError(response, 401, "JWT invalid: " + e.getMessage());
                 return;
             }
@@ -93,6 +111,12 @@ public class SysAiJwtAuthFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
+    /**
+     * 发送json错误。
+     * @param response 响应
+     * @param status 状态
+     * @param message 消息
+     */
     private void sendJsonError(HttpServletResponse response, int status, String message) throws IOException {
         response.setStatus(status);
         response.setContentType("application/json;charset=UTF-8");

@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 /**
  * 基于租户的消息路由器
  * <p>
- * 根据消息中的租户ID路由到不同的队列
+   * 根据消息中的租户标识路由到不同的队列
  * </p>
  *
  * @since 2025-03-20
@@ -33,13 +33,13 @@ public class TenantBasedMessageRouter implements MessageRouter {
     }
 
     @Override
-    /** Supports */
+    /** 支持 */
     public boolean supports(Message message) {
         return message.getHeader("tenantId") != null;
     }
 
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
         return -100;
     }

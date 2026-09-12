@@ -89,21 +89,24 @@ public class TransactionalMessageTemplate {
 
     /**
      * 消息发送同步器
+     * @author CH
+     * @since 4.0.0
      */
     private class MessageSendSynchronization implements TransactionSynchronization {
         /** 目的地 */
         private final String destination;
         /** Payload */
         private final Object payload;
-        private final Map<String, Object> headers;
+        private final Map<String, Object> headers; // 头部
 
         /**
-         * 创建 MessageSendSynchronization 实例
-         * @param destination destination
-         * @param Object Object
-         * @param Map Map
-         * @param Object Object
-         * @param headers headers
+          * 创建 消息发送synchronization 实例
+         * @param destination 目标
+         * @param payload 对象
+         * @param headers 映射
+         * @param payload 对象
+         * @param headers 头部
+         * @param payload payload
          */
         public MessageSendSynchronization(String destination, Object payload, Map<String, Object> headers) {
             this.destination = destination;
@@ -112,7 +115,7 @@ public class TransactionalMessageTemplate {
         }
 
         @Override
-        /** After提交 */
+        /** 之后提交 */
         public void afterCommit() {
             try {
                 SendResult result = messageTemplate.send(destination, payload, headers);
@@ -130,21 +133,23 @@ public class TransactionalMessageTemplate {
 
     /**
      * 批量消息发送同步器
+     * @author CH
+     * @since 4.0.0
      */
     private class BatchMessageSendSynchronization implements TransactionSynchronization {
-        /** Messages */
+        /** 消息 */
         private final List<TransactionalMessage> messages;
 
         /**
-         * 创建 BatchMessageSendSynchronization 实例
-         * @param messages messages
+           * 创建 批量消息发送synchronization 实例
+         * @param messages 消息
          */
         public BatchMessageSendSynchronization(List<TransactionalMessage> messages) {
             this.messages = new ArrayList<>(messages);
         }
 
         @Override
-        /** After提交 */
+        /** 之后提交 */
         public void afterCommit() {
             int successCount = 0;
             int failureCount = 0;
@@ -172,30 +177,40 @@ public class TransactionalMessageTemplate {
 
     /**
      * 事务消息
+     * @author CH
+     * @since 4.0.0
      */
     public static class TransactionalMessage {
         /** 目的地 */
         private final String destination;
         /** Payload */
         private final Object payload;
-        private final Map<String, Object> headers;
+        private final Map<String, Object> headers; // 头部
 
         /**
-         * 创建 TransactionalMessage 实例
-         * @param destination destination
-         * @param Object Object
+          * 创建 transactional消息 实例
+         * @param destination 目标
+         * @param payload 对象
+         * @param payload payload
          */
         public TransactionalMessage(String destination, Object payload) {
+            /**
+             * this。
+             * @param destination 目标
+             * @param payload payload
+             * @param null 空
+             */
             this(destination, payload, null);
         }
 
         /**
-         * 创建 TransactionalMessage 实例
-         * @param destination destination
-         * @param Object Object
-         * @param Map Map
-         * @param Object Object
-         * @param headers headers
+          * 创建 transactional消息 实例
+         * @param destination 目标
+         * @param payload 对象
+         * @param headers 映射
+         * @param payload 对象
+         * @param headers 头部
+         * @param payload payload
          */
         public TransactionalMessage(String destination, Object payload, Map<String, Object> headers) {
             this.destination = destination;
@@ -203,17 +218,29 @@ public class TransactionalMessageTemplate {
             this.headers = headers;
         }
 
-        /** 获取Destination */
+        /**
+         * 获取目标
+         *
+         * @return 获取目标的结果
+         */
         public String getDestination() {
             return destination;
         }
 
-        /** 获取Payload */
+        /**
+         * 获取Payload
+         *
+         * @return 获取payload的结果
+         */
         public Object getPayload() {
             return payload;
         }
 
-        /** 获取Headers */
+        /**
+         * 获取头部
+         *
+         * @return 获取头部的结果
+         */
         public Map<String, Object> getHeaders() {
             return headers;
         }

@@ -18,11 +18,11 @@ import org.springframework.core.env.Environment;
 import java.util.function.Function;
 
 /**
- * DataSync 数据同步桥接自动配置
+   * 数据同步 数据同步桥接自动配置
  * <p>
- * 将 Spring Sync 的消息能力桥接到 DataSync 框架：
- * - Spring Sync 网络消息通过 {@link DataSyncMessageBridge} 转换为 DataSync 可识别的数据
- * - DataSync 处理后的结果通过 {@link DataSyncMessagePublisher} 回传到 Spring Sync 网络层
+   * 将 Spring 同步 的消息能力桥接到 数据同步 框架：
+   * - Spring 同步 网络消息通过 {@link DataSyncMessageBridge} 转换为 数据同步 可识别的数据
+   * - 数据同步 处理后的结果通过 {@link DataSyncMessagePublisher} 回传到 Spring 同步 网络层
  * </p>
  *
  * @since 2026/01/15
@@ -32,7 +32,7 @@ import java.util.function.Function;
 @ConditionalOnProperty(prefix = "plugin.sync.datasync", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class SyncDataSyncConfiguration {
 
-    /** Prefix */
+    /** 前缀 */
     private static final String PREFIX = "plugin.sync.datasync";
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SyncDataSyncConfiguration.class);
@@ -43,38 +43,38 @@ public class SyncDataSyncConfiguration {
     private final Environment environment;
 
     /**
-     * SyncClient 提供器
+      * 同步客户端 提供器
      */
     private final ObjectProvider<SyncClient> syncClientProvider;
 
     /**
-     * SyncServer 提供器
+      * 同步服务端 提供器
      */
     private final ObjectProvider<SyncServer> syncServerProvider;
 
     /**
-     * SyncProperties 提供器
+      * 同步属性 提供器
      */
     private final ObjectProvider<SyncProperties> syncPropertiesProvider;
 
     /**
-     * DataSyncServer 提供器
+      * 数据同步服务端 提供器
      */
     private final ObjectProvider<com.chua.starter.datasync.DataSyncServer> dataSyncServerProvider;
 
     /**
-     * DataSyncAgentServer 提供器
+      * 数据同步智能体服务端 提供器
      */
     private final ObjectProvider<com.chua.starter.datasync.agent.DataSyncAgentServer> dataSyncAgentServerProvider;
 
     /**
-     * 创建 SyncDataSyncConfiguration 实例
-     * @param environment environment
-     * @param syncClientProvider syncClientProvider
-     * @param syncServerProvider syncServerProvider
-     * @param syncPropertiesProvider syncPropertiesProvider
-     * @param dataSyncServerProvider dataSyncServerProvider
-     * @param dataSyncAgentServerProvider dataSyncAgentServerProvider
+      * 创建 同步数据同步配置 实例
+     * @param environment 环境
+     * @param syncClientProvider 同步客户端提供者
+     * @param syncServerProvider 同步服务端提供者
+     * @param syncPropertiesProvider 同步属性提供者
+     * @param dataSyncServerProvider 数据同步服务端提供者
+     * @param dataSyncAgentServerProvider 数据同步智能体服务端提供者
      */
     public SyncDataSyncConfiguration(Environment environment,
                                      ObjectProvider<SyncClient> syncClientProvider,
@@ -105,18 +105,22 @@ public class SyncDataSyncConfiguration {
     }
 
     /**
-     * 创建 Spring Sync -> DataSync 数据桥接
+      * 创建 Spring 同步 -> 数据同步 数据桥接
      *
      * @return 数据桥接函数
      */
     @Bean
     @ConditionalOnProperty(prefix = "plugin.sync.datasync", name = "enabled", havingValue = "true", matchIfMissing = true)
     public DataSyncMessageBridge dataSyncMessageBridge() {
+        /**
+         * 数据同步消息bridge。
+         * @return 数据同步消息bridge的结果
+         */
         return new DataSyncMessageBridge();
     }
 
     /**
-     * 创建 DataSync -> Spring Sync 消息发布器
+      * 创建 数据同步 -> Spring 同步 消息发布器
      *
      * @return 消息发布器
      */
@@ -133,19 +137,20 @@ public class SyncDataSyncConfiguration {
     // ==================== 内部类 ====================
 
     /**
-     * DataSync 消息桥接函数
+      * 数据同步 消息桥接函数
      * <p>
-     * 负责将 Spring Sync 网络消息转换为 DataSync 框架可处理的数据格式
+      * 负责将 Spring 同步 网络消息转换为 数据同步 框架可处理的数据格式
      * </p>
      *
      * @since 2026/01/15
+     * @author CH
      */
     public static class DataSyncMessageBridge implements Function<Object, Object> {
 
         /**
-         * 将输入数据转换为 DataSync 可识别的格式
+          * 将输入数据转换为 数据同步 可识别的格式
          *
-         * @param input 输入数据（通常为 Map 结构）
+         * @param input 输入数据（通常为 映射 结构）
          * @return 转换后的数据
          */
         @Override
@@ -165,36 +170,37 @@ public class SyncDataSyncConfiguration {
     }
 
     /**
-     * DataSync 消息发布器
+      * 数据同步 消息发布器
      * <p>
-     * 负责将 DataSync 处理后的结果通过 Spring Sync 网络层发布出去
+      * 负责将 数据同步 处理后的结果通过 Spring 同步 网络层发布出去
      * </p>
      *
      * @since 2026/01/15
+     * @author CH
      */
     public static class DataSyncMessagePublisher {
 
         /**
-         * SyncClient 提供器
+          * 同步客户端 提供器
          */
         private final ObjectProvider<SyncClient> syncClientProvider;
 
         /**
-         * SyncServer 提供器
+          * 同步服务端 提供器
          */
         private final ObjectProvider<SyncServer> syncServerProvider;
 
         /**
-         * SyncProperties 提供器
+          * 同步属性 提供器
          */
         private final ObjectProvider<SyncProperties> syncPropertiesProvider;
 
         /**
-         * 构造 DataSync 消息发布器
+          * 构造 数据同步 消息发布器
          *
-         * @param syncClientProvider    SyncClient 提供器
-         * @param syncServerProvider    SyncServer 提供器
-         * @param syncPropertiesProvider SyncProperties 提供器
+         * @param syncClientProvider    同步客户端 提供器
+         * @param syncServerProvider    同步服务端 提供器
+         * @param syncPropertiesProvider 同步属性 提供器
          */
         public DataSyncMessagePublisher(ObjectProvider<SyncClient> syncClientProvider,
                                         ObjectProvider<SyncServer> syncServerProvider,

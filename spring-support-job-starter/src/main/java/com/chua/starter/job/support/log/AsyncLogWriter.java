@@ -21,9 +21,9 @@ public class AsyncLogWriter implements JobLogSink {
     private final LinkedBlockingQueue<JobLogEvent> queue;
     /** Sinks */
     private final List<JobLogSink> sinks;
-    /** Worker */
+    /** 工人 */
     private final Thread worker;
-    private volatile boolean running = true;
+    private volatile boolean running = true; // running
 
     /**
      * 构造异步日志写入器。
@@ -65,16 +65,26 @@ public class AsyncLogWriter implements JobLogSink {
             Thread.currentThread().interrupt();
         }
         // 消费剩余
+        /**
+         * drain。
+         */
         drain();
     }
 
-    /** DrainLoop */
+    /** drain循环 */
     private void drainLoop() {
         while (running) {
             try {
                 JobLogEvent event = queue.poll(1, TimeUnit.SECONDS);
                 if (event != null) {
+                    /**
+                     * 写入转为sinks。
+                     * @param event 事件
+                     */
                     writeToSinks(event);
+                    /**
+                     * drain。
+                     */
                     drain();
                 }
             } catch (InterruptedException e) {
@@ -82,6 +92,9 @@ public class AsyncLogWriter implements JobLogSink {
                 break;
             }
         }
+        /**
+         * drain。
+         */
         drain();
     }
 
@@ -89,11 +102,19 @@ public class AsyncLogWriter implements JobLogSink {
     private void drain() {
         JobLogEvent event;
         while ((event = queue.poll()) != null) {
+            /**
+             * 写入转为sinks。
+             * @param event 事件
+             */
             writeToSinks(event);
         }
     }
 
-    /** 写入ToSinks */
+    /**
+     * 写入转为sinks
+     *
+     * @param event 事件
+     */
     private void writeToSinks(JobLogEvent event) {
         for (JobLogSink sink : sinks) {
             try {

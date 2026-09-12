@@ -12,7 +12,7 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
- * sys_job_cluster 集群选主表实体。
+   * sys_作业_cluster 集群选主表实体。
  *
  * <p>字段以表名 {@code sys_job_cluster} 作为前缀;
  * 审计字段来自 {@link SysBase}。</p>
@@ -29,18 +29,18 @@ public class ClusterEntity extends SysBase implements Serializable {
      * 序列化版本
      */
     @Serial
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
      * 集群命名空间 (主键, 字符串)
      */
     @TableId(value = "sys_job_cluster_id", type = IdType.INPUT)
-    /** SYS作业clusterID */
+    /** SYS作业clusterid */
     private String sysJobClusterId;
 
     /**
-     * 当前 Leader 节点 ID
+       * 当前 铅 节点 标识
      */
     @TableField("sys_job_cluster_leader_node")
     /** SYS作业clusterleader节点 */
@@ -50,7 +50,7 @@ public class ClusterEntity extends SysBase implements Serializable {
      * 租约到期时间戳 (毫秒)
      */
     @TableField("sys_job_cluster_lease_until_ms")
-    /** SYS作业clusterleaseuntilMS */
+    /** SYS作业clusterleaseuntilms */
     private Long sysJobClusterLeaseUntilMs;
 
     /**

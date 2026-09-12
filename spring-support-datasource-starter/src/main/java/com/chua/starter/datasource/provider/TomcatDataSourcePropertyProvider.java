@@ -22,13 +22,13 @@ public class TomcatDataSourcePropertyProvider implements DataSourcePropertyProvi
     );
 
     @Override
-    /** 获取DataSourceType */
+    /** 获取数据源类型 */
     public Class<DataSource> getDataSourceType() {
         return DataSource.class;
     }
 
     @Override
-    /** 获取Properties */
+    /** 获取属性 */
     public Map<String, Object> getProperties(DataSource dataSource) {
         Map<String, Object> properties = new HashMap<>();
         
@@ -63,13 +63,13 @@ public class TomcatDataSourcePropertyProvider implements DataSourcePropertyProvi
     }
 
     @Override
-    /** 设置Properties */
+    /** 设置属性 */
     public void setProperties(DataSource dataSource, Map<String, Object> properties) {
         properties.forEach((name, value) -> setProperty(dataSource, name, value));
     }
 
     @Override
-    /** 设置Property */
+    /** 设置财产 */
     public void setProperty(DataSource dataSource, String name, Object value) {
         if (value == null) {
             return;
@@ -116,18 +116,23 @@ public class TomcatDataSourcePropertyProvider implements DataSourcePropertyProvi
     }
 
     @Override
-    /** 获取PropertyNameMapping */
+    /** 获取财产名称mapping */
     public Map<String, String> getPropertyNameMapping() {
         return PROPERTY_MAPPING;
     }
 
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
         return 30;
     }
 
-    /** ToInt */
+    /**
+     * 转为int
+     *
+     * @param value 价值观
+     * @return 转为int的结果
+     */
     private int toInt(Object value) {
         if (value instanceof Number) {
             return ((Number) value).intValue();
@@ -135,7 +140,12 @@ public class TomcatDataSourcePropertyProvider implements DataSourcePropertyProvi
         return Integer.parseInt(String.valueOf(value));
     }
 
-    /** ToLong */
+    /**
+     * 转为long
+     *
+     * @param value 价值观
+     * @return 转为long的结果
+     */
     private long toLong(Object value) {
         if (value instanceof Number) {
             return ((Number) value).longValue();
@@ -143,7 +153,12 @@ public class TomcatDataSourcePropertyProvider implements DataSourcePropertyProvi
         return Long.parseLong(String.valueOf(value));
     }
 
-    /** ToBoolean */
+    /**
+     * 转为布尔值
+     *
+     * @param value 价值观
+     * @return 转为布尔值的结果
+     */
     private boolean toBoolean(Object value) {
         if (value instanceof Boolean) {
             return (Boolean) value;

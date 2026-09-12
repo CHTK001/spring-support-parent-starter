@@ -19,7 +19,7 @@ import java.util.*;
  * </p>
  *
  * <h3>线程安全</h3>
- * 每个线程通过 ThreadLocal 持有自己的上下文实例。
+   * 每个线程通过 thread本地 持有自己的上下文实例。
  *
  * @since 2026/07/14
  * @author CH
@@ -27,20 +27,20 @@ import java.util.*;
 @Slf4j
 public class MultiDSTransactionContext {
 
-    // ========== ThreadLocal 管理 ==========
+ // ========== thread本地 管理 ==========
 
-    /** 当前线程的 DSTransactional 上下文 */
-    /** Current_context */
+    /** 当前线程的 dstransactional 上下文 */
+    /** 当前_上下文 */
     private static final ThreadLocal<MultiDSTransactionContext> CURRENT_CONTEXT = new ThreadLocal<>();
 
-    /** 当前线程的嵌套深度（支持 @DSTransactional 嵌套） */
-    /** Nested_depth */
+    /** 当前线程的嵌套深度（支持 @dstransactional 嵌套） */
+    /** 嵌套_深度 */
     private static final ThreadLocal<Integer> NESTED_DEPTH = ThreadLocal.withInitial(() -> 0);
 
     /**
      * 获取当前线程的事务上下文
      *
-     * @return 当前上下文，无事务时返回 null
+     * @return 当前上下文，无事务时返回 空
      */
     public static MultiDSTransactionContext getCurrent() {
         return CURRENT_CONTEXT.get();
@@ -60,7 +60,7 @@ public class MultiDSTransactionContext {
     }
 
     /**
-     * 当前线程是否处于 @DSTransactional 事务中
+      * 当前线程是否处于 @dstransactional 事务中
      *
      * @return 是否在事务中
      */
@@ -110,10 +110,10 @@ public class MultiDSTransactionContext {
     private final Deque<String> dataSourceStack = new ArrayDeque<>();
 
     /** 事务中已使用的数据源名称（去重） */
-    /** Used数据sources */
+    /** Used数据源 */
     private final Set<String> usedDataSources = new LinkedHashSet<>();
 
-    /** 事务中已获取的连接（dataSourceName → Connection） */
+    /** 事务中已获取的连接（数据源名称 → Connection） */
     private final Map<String, Connection> connections = new LinkedHashMap<>();
 
     /** 事务名称 */
@@ -127,6 +127,10 @@ public class MultiDSTransactionContext {
     /** 开始时间 */
     private final long startTime;
 
+    /**
+     * multidstransaction上下文。
+     * @param transactionName transaction名称
+     */
     public MultiDSTransactionContext(String transactionName) {
         this.transactionName = transactionName;
         this.startTime = System.currentTimeMillis();
@@ -148,7 +152,7 @@ public class MultiDSTransactionContext {
     /**
      * 弹出数据源上下文
      *
-     * @return 上一级数据源名称，栈空时返回 null
+     * @return 上一级数据源名称，栈空时返回 空
      */
     public String popDataSource() {
         String popped = dataSourceStack.poll();
@@ -179,7 +183,7 @@ public class MultiDSTransactionContext {
     // ========== 连接管理 ==========
 
     /**
-     * 获取或创建某个数据源的连接（设置 autoCommit=false）
+      * 获取或创建某个数据源的连接（设置 autocommit=false）
      *
      * @param dsName     数据源名称
      * @param dataSource 数据源实例
@@ -201,7 +205,7 @@ public class MultiDSTransactionContext {
      * 获取已跟踪的连接
      *
      * @param dsName 数据源名称
-     * @return 连接，不存在时返回 null
+     * @return 连接，不存在时返回 空
      */
     public Connection getConnection(String dsName) {
         return connections.get(dsName);

@@ -35,7 +35,7 @@ public class AiGroupServiceImpl implements AiGroupService {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
-     * 分组 Mapper
+      * 分组 映射器
      */
     private final AiGroupMapper groupMapper;
 

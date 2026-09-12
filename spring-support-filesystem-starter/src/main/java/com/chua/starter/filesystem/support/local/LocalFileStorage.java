@@ -48,15 +48,19 @@ public class LocalFileStorage extends AbstractFileStorage {
     private final Path rootPath;
 
     /**
-     * uploadId → 分片路径 映射
+      * uploadid → 分片路径 映射
      */
     private final Map<String, Map<Integer, Path>> multipartMap = new ConcurrentHashMap<>();
 
     /**
-     * 创建 LocalFileStorage 实例
+      * 创建 本地文件storage 实例
      * @param setting setting
      */
     public LocalFileStorage(BucketSetting setting) {
+        /**
+         * 父。
+         * @param setting setting
+         */
         super(setting);
         String baseDir = Optional.ofNullable(System.getProperty("filesystem.temp.path"))
                 .orElse(System.getProperty("java.io.tmpdir"))
@@ -66,23 +70,43 @@ public class LocalFileStorage extends AbstractFileStorage {
         try {
             Files.createDirectories(rootPath);
         } catch (IOException e) {
+            /**
+             * runtime异常。
+             * @param baseDir basedir
+             * @param e e
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("创建本地存储根目录失败: " + baseDir, e);
         }
     }
 
     @Override
-    /** 创建MultipartStorage */
+    /** 创建multipartstorage */
     public MultipartStorage createMultipartStorage() {
+        /**
+         * 本地multipartstorage。
+         * @return 本地multipartstorage的结果
+         */
         return new LocalMultipartStorage();
     }
 
     @Override
-    /** PutObject */
+    /** 放入对象 */
     public PutObjectResult putObject(PutObjectRequest request) {
         try {
             String key = resolveKey(request.getFilePath(), request.getFileName());
             Path target = rootPath.resolve(key);
             Files.createDirectories(target.getParent());
+            // 键以路径分隔符结尾时语义为"创建目录"（与 S3 零字节目录占位对象的约定对齐），
+            // 本地落盘为真实目录，不产生占位文件
+            if (key.endsWith("/") || key.endsWith("\\")) {
+                Files.createDirectories(target);
+                return PutObjectResult.builder()
+                        .resultCode(ObjectResult.ResultCode.SUCCESS)
+                        .url(target.toUri().toString())
+                        .message("OK")
+                        .build();
+            }
             if (request.getContent() != null) {
                 Files.write(target, request.getContent());
             } else if (request.getInputStream() != null) {
@@ -107,7 +131,7 @@ public class LocalFileStorage extends AbstractFileStorage {
     }
 
     @Override
-    /** 获取Object */
+    /** 获取对象 */
     public GetObjectResult getObject(String key) {
         Path target = rootPath.resolve(key);
         if (!Files.exists(target)) {
@@ -130,13 +154,13 @@ public class LocalFileStorage extends AbstractFileStorage {
     }
 
     @Override
-    /** 获取Object */
+    /** 获取对象 */
     public GetObjectResult getObject(GetObjectRequest request) {
         return getObject(request.getKey());
     }
 
     @Override
-    /** 删除Object */
+    /** 删除对象 */
     public DeleteObjectResult deleteObject(String key) {
         try {
             Files.deleteIfExists(rootPath.resolve(key));
@@ -152,7 +176,7 @@ public class LocalFileStorage extends AbstractFileStorage {
     }
 
     @Override
-    /** ExistObject */
+    /** exist对象 */
     public ExistObjectResult existObject(ExistObjectRequest request) {
         String key = request.getKey();
         boolean exists = key != null && Files.exists(rootPath.resolve(key));
@@ -163,7 +187,7 @@ public class LocalFileStorage extends AbstractFileStorage {
     }
 
     @Override
-    /** ListObject */
+    /** 列表对象 */
     public ListObjectResult listObject(ListObjectRequest request) {
         try {
             List<Metadata> metadataList = new java.util.ArrayList<>();
@@ -176,6 +200,10 @@ public class LocalFileStorage extends AbstractFileStorage {
                         .build();
             }
             int limit = request.getLimit() > 0 ? request.getLimit() : 10;
+            /**
+             * 尝试。
+             * @param Files.list(targetDir 文件.列表(Targetdir
+             */
             try (java.util.stream.Stream<Path> stream = Files.list(targetDir)) {
                 stream.sorted(java.util.Comparator.comparing(p -> p.getFileName().toString()))
                         .limit(limit)
@@ -206,7 +234,13 @@ public class LocalFileStorage extends AbstractFileStorage {
         }
     }
 
-    /** 解析Key */
+    /**
+     * 解析钥匙
+     *
+     * @param filePath 文件路径
+     * @param fileName 文件名称
+     * @return resolve钥匙的结果
+     */
     private String resolveKey(String filePath, String fileName) {
         if (filePath == null || filePath.isEmpty()) {
             return fileName;
@@ -216,6 +250,8 @@ public class LocalFileStorage extends AbstractFileStorage {
 
     /**
      * 本地分片上传会话。
+     * @author CH
+     * @since 4.0.0
      */
     private class LocalMultipartStorage implements MultipartStorage {
 
@@ -231,7 +267,7 @@ public class LocalFileStorage extends AbstractFileStorage {
         }
 
         @Override
-        /** UploadPart */
+        /** uploadpart */
         public MultipartPartResult uploadPart(MultipartUploadPartRequest request) {
             String uploadId = request.getUploadId();
             Map<Integer, Path> parts = multipartMap.get(uploadId);
@@ -259,7 +295,7 @@ public class LocalFileStorage extends AbstractFileStorage {
         }
 
         @Override
-        /** Complete */
+        /** 完成 */
         public PutObjectResult complete(String uploadId, List<PartETag> parts) {
             Map<Integer, Path> partMap = multipartMap.remove(uploadId);
             if (partMap == null) {
@@ -269,6 +305,10 @@ public class LocalFileStorage extends AbstractFileStorage {
                         .build();
             }
             Path finalFile = rootPath.resolve(uploadId + "_final");
+            /**
+             * 尝试。
+             * @param Files.newOutputStream(finalFile 文件.新输出流(最终文件
+             */
             try (OutputStream out = Files.newOutputStream(finalFile)) {
                 for (int i = 1; i <= parts.size(); i++) {
                     Path p = partMap.get(i);

@@ -6,6 +6,7 @@ import java.lang.annotation.*;
  * 扩展注解，用于标识扩展点类型
  *
  * @since 2023-08-01
+ * @author CH
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)

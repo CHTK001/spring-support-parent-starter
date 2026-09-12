@@ -21,12 +21,12 @@ public class DeviceSessionManager {
      * 设备会话映射表
      */
     @Getter
-    private final Map<String, DeviceSession> sessions = new ConcurrentHashMap<>();
+    private final Map<String, DeviceSession> sessions = new ConcurrentHashMap<>(); // 会话
 
     /**
      * 注册会话
      *
-     * @param deviceId 设备 ID
+     * @param deviceId 设备 标识
      * @param session  设备会话
      */
     public void register(String deviceId, DeviceSession session) {
@@ -36,7 +36,7 @@ public class DeviceSessionManager {
     /**
      * 注销会话并关闭连接
      *
-     * @param deviceId 设备 ID
+     * @param deviceId 设备 标识
      */
     public void unregister(String deviceId) {
         DeviceSession session = sessions.remove(deviceId);
@@ -48,8 +48,8 @@ public class DeviceSessionManager {
     /**
      * 获取会话
      *
-     * @param deviceId 设备 ID
-     * @return 设备会话，可能为 null
+     * @param deviceId 设备 标识
+     * @return 设备会话，可能为 空
      */
     public DeviceSession getSession(String deviceId) {
         return sessions.get(deviceId);

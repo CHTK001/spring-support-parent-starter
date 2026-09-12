@@ -9,6 +9,7 @@ import java.util.List;
  * 方法构建器
  *
  * @author CH
+ * @since 4.0.0
  */
 public class MapperSqlMethodMarker implements SqlMethodMarker {
 
@@ -16,9 +17,10 @@ public class MapperSqlMethodMarker implements SqlMethodMarker {
     private int timeout;
 
     /**
-     * 创建 MapperSqlMethodMarker 实例
-     * @param timeout timeout
-     * @param boolean boolean
+       * 创建 映射器SQL方法记号笔 实例
+     * @param timeout 超时
+     * @param watchdog 布尔值
+     * @param watchdog watchdog
      */
     public MapperSqlMethodMarker(int timeout, boolean watchdog) {
         this.timeout = timeout;
@@ -27,17 +29,17 @@ public class MapperSqlMethodMarker implements SqlMethodMarker {
     @Override
     /** Analysis */
     public List<AbstractMethod> analysis(String source) {
-//        File file = new File(source);
-//        if(!file.exists())  {
-//            return Collections.emptyList();
+ // 文件 文件 = 新 文件(源);
+ // if(!文件.exists())  {
+ // 申报 集合.空列表();
 //        }
-//        FileSystemResource fileSystemResource = new FileSystemResource(file);
-//        try {
-//            XMLMapperBuilder xmlMapperBuilder = new XMLMapperBuilder(fileSystemResource.getInputStream(),
-//                    targetConfiguration, resource.toString(), targetConfiguration.getSqlFragments());
-//            xmlMapperBuilder.parse();
-//        } catch (Exception e) {
-//            log.error(e.getMessage(), e);
+ // 文件系统resource 文件系统resource = 新 文件系统resource(文件);
+ // 尝试 {
+ // xml映射器构建器 xml映射器构建器 = 新 xml映射器构建器(文件系统resource.获取输入流(),
+ // Target配置, resource.转为字符串(), Target配置.获取sqlfragments());
+ // xml映射器构建器.解析();
+ // } 卡扣 (异常 e) {
+ // 日志.错误(e.获取消息(), e);
 //        }
         return Collections.emptyList();
     }
@@ -55,7 +57,7 @@ public class MapperSqlMethodMarker implements SqlMethodMarker {
     }
 
     @Override
-    /** RefreshAll */
+    /** refresh全部 */
     public void refreshAll() {
 
     }

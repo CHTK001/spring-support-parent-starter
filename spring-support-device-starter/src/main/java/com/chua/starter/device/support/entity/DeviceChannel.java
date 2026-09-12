@@ -18,17 +18,17 @@ import lombok.Data;
 public class DeviceChannel {
 
     /**
-     * 主键 ID
+      * 主键 标识
      */
     @TableId(value = "device_channel_id", type = IdType.ASSIGN_UUID)
-    /** Device通道ID */
+    /** Device通道标识 */
     private String deviceChannelId;
 
     /**
-     * 所属设备 ID
+      * 所属设备 标识
      */
     @TableField("device_channel_device_id")
-    /** Device通道deviceID */
+    /** Device通道deviceid */
     private String deviceChannelDeviceId;
 
     /**
@@ -46,14 +46,14 @@ public class DeviceChannel {
     private String deviceChannelName;
 
     /**
-     * 通道类型，例如 video、door
+      * 通道类型，例如 视频、门
      */
     @TableField("device_channel_type")
     /** Device通道类型 */
     private String deviceChannelType;
 
     /**
-     * 通道状态：enabled 启用、disabled 禁用
+      * 通道状态：已启用 启用、已禁用 禁用
      */
     @TableField("device_channel_status")
     /** Device通道状态 */
@@ -63,6 +63,6 @@ public class DeviceChannel {
      * 排序字段
      */
     @TableField("device_channel_sort")
-    /** Device通道sort */
+    /** Device通道排序 */
     private Integer deviceChannelSort;
 }

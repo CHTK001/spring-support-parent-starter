@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.annotation.DbType;
  *
  * @author 芋道源码
  * @author CH
+ * @since 4.0.0
  */
 public class SqlConstants {
 

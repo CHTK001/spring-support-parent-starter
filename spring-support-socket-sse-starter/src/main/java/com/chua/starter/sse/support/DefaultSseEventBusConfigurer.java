@@ -21,7 +21,7 @@ public class DefaultSseEventBusConfigurer {
 
     /**
      * 客户端连接缓存
-     * key: clientId, value: Emitter列表
+       * 钥匙: 客户端标识, 价值观: Emitter列表
      */
     private static final Map<String, List<Emitter>> SSE_CACHE = new ConcurrentHashMap<>();
 
@@ -38,7 +38,7 @@ public class DefaultSseEventBusConfigurer {
     /**
      * 注销 Emitter
      *
-     * @param clientId 客户端ID
+     * @param clientId 客户端标识
      */
     public void unregister(String clientId) {
         var emitters = SSE_CACHE.remove(clientId);
@@ -56,10 +56,10 @@ public class DefaultSseEventBusConfigurer {
     }
 
     /**
-     * 根据客户端ID获取 Emitter
+      * 根据客户端标识获取 Emitter
      *
-     * @param clientId 客户端ID
-     * @return 第一个匹配的 Emitter，不存在返回 null
+     * @param clientId 客户端标识
+     * @return 第一个匹配的 Emitter，不存在返回 空
      */
     public Emitter getEmitterByClientId(String clientId) {
         var emitters = SSE_CACHE.get(clientId);
@@ -90,7 +90,7 @@ public class DefaultSseEventBusConfigurer {
     /**
      * 关闭指定客户端的连接
      *
-     * @param clientIds 客户端ID列表
+     * @param clientIds 客户端标识列表
      */
     public void closeEmitter(List<String> clientIds) {
         for (var clientId : clientIds) {

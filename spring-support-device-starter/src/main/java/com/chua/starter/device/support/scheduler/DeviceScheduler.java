@@ -62,7 +62,7 @@ public class DeviceScheduler {
     private final DeviceProviderConfigService providerConfigService;
 
     /**
-     * 设备信息 Mapper
+      * 设备信息 映射器
      */
     private final DeviceInfoMapper deviceInfoMapper;
 
@@ -120,6 +120,9 @@ public class DeviceScheduler {
             return;
         }
         try {
+            /**
+             * 执行offline检查。
+             */
             doOfflineCheck();
         } finally {
             taskStateService.markFinished(TASK_OFFLINE_CHECK);

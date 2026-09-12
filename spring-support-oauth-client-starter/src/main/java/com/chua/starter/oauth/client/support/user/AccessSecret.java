@@ -10,6 +10,7 @@ import java.util.Map;
  * ak/sk
  *
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @NoArgsConstructor
@@ -26,14 +27,14 @@ public class AccessSecret {
      */
     private String secretKey;
     /**
-     * key
+      * 钥匙
      */
     private String uKey;
 
     /** 密码 */
     private String password;
 
-    private Map<String, Object> ext;
+    private Map<String, Object> ext; // ext
 
     /**
      * 缓存时间（用于性能优化）

@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * 死信队列配置属性
  * <p>
- * 与 plugin.queue 同级的独立配置。
+   * 与 plugin.队列 同级的独立配置。
  * </p>
  *
  * @since 2025-12-25
@@ -16,7 +16,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = DeadLetterProperties.PREFIX)
 public class DeadLetterProperties {
 
-    /** Prefix */
+    /** 前缀 */
     public static final String PREFIX = "plugin.dead-letter";
 
     /**
@@ -25,7 +25,7 @@ public class DeadLetterProperties {
     private boolean enable = false;
 
     /**
-     * 队列类型（chronicle-queue/local/mqtt/kafka/rabbitmq/rocketmq）
+       * 队列类型（chronicle-队列/本地/MQTT/Kafka/RabbitMQ/RocketMQ）
      */
     private String type = "chronicle-queue";
 
@@ -60,37 +60,65 @@ public class DeadLetterProperties {
     private double backoffMultiplier = 2.0;
 
     // Lombok 注解处理器未运行时的手动 getter 方法
-    /** 获取最大值Retries */
+    /**
+     * 获取最大值Retries
+     *
+     * @return 获取最大重试的结果
+     */
     public int getMaxRetries() {
         return maxRetries;
     }
 
-    /** 获取RetryDelaySeconds */
+    /**
+     * 获取重试延迟seconds
+     *
+     * @return 获取重试延迟seconds的结果
+     */
     public long getRetryDelaySeconds() {
         return retryDelaySeconds;
     }
 
-    /** 获取最大值RetryDelaySeconds */
+    /**
+     * 获取最大值重试延迟seconds
+     *
+     * @return 获取最大重试延迟seconds的结果
+     */
     public long getMaxRetryDelaySeconds() {
         return maxRetryDelaySeconds;
     }
 
-    /** 是否ExponentialBackoff */
+    /**
+     * 是否exponential退避
+     *
+     * @return 是否exponential退避的结果
+     */
     public boolean isExponentialBackoff() {
         return exponentialBackoff;
     }
 
-    /** 获取BackoffMultiplier */
+    /**
+     * 获取退避multiplier
+     *
+     * @return 获取退避multiplier的结果
+     */
     public double getBackoffMultiplier() {
         return backoffMultiplier;
     }
 
-    /** 获取Type */
+    /**
+     * 获取类型
+     *
+     * @return 获取类型的结果
+     */
     public String getType() {
         return type;
     }
 
-    /** 获取DelayThreads */
+    /**
+     * 获取延迟threads
+     *
+     * @return 获取延迟threads的结果
+     */
     public int getDelayThreads() {
         return delayThreads;
     }

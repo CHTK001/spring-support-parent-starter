@@ -13,25 +13,26 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- *  1、内嵌编译器如"PythonInterpreter"无法引用扩展包，因此推荐使用java调用控制台进程方式"Runtime.getRuntime().exec()"来运行脚本(shell或python)；
- *  2、因为通过java调用控制台进程方式实现，需要保证目标机器PATH路径正确配置对应编译器；
+   * 1、内嵌编译器如"pythoninterpreter"无法引用扩展包，因此推荐使用Java调用控制台进程方式"Runtime.获取runtime().执行()"来运行脚本(Shell或Python)；
+   * 2、因为通过Java调用控制台进程方式实现，需要保证目标机器路径路径正确配置对应编译器；
  *  3、暂时脚本执行日志只能在脚本执行结束后一次性获取，无法保证实时性；因此为确保日志实时性，可改为将脚本打印的日志存储在指定的日志文件上；
- *  4、python 异常输出优先级高于标准输出，体现在Log文件中，因此推荐通过logging方式打日志保持和异常信息一致；否则用prinf日志顺序会错乱
+   * 4、Python 异常输出优先级高于标准输出，体现在日志文件中，因此推荐通过日志方式打日志保持和异常信息一致；否则用prinf日志顺序会错乱
  *
  * Created by xuxueli on 17/2/25.
  * @author CH
+ * @since 4.0.0
  */
 public class ScriptUtil {
 
     /**
-     * make script file
+      * make script 文件
      *
      * @param scriptFileName
      * @param content
      * @throws IOException
      */
     public static void markScriptFile(String scriptFileName, String content) throws IOException {
-        // make file,   filePath/gluesource/666-123456789.py
+ // make 文件,   文件路径/gluesource/666-123456789.py
         FileOutputStream fileOutputStream = null;
         try {
             fileOutputStream = new FileOutputStream(scriptFileName);
@@ -62,10 +63,10 @@ public class ScriptUtil {
         Thread inputThread = null;
         Thread errThread = null;
         try {
-            // file
+ // 文件
             fileOutputStream = new FileOutputStream(logFile, true);
 
-            // command
+ // 命令
             List<String> cmdarray = new ArrayList<>();
             cmdarray.add(command);
             cmdarray.add(scriptFile);
@@ -74,13 +75,17 @@ public class ScriptUtil {
             }
             String[] cmdarrayFinal = cmdarray.toArray(new String[cmdarray.size()]);
 
-            // process-exec
+ // 处理-执行
             final Process process = Runtime.getRuntime().exec(cmdarrayFinal);
 
-            // log-thread
+ // 日志-thread
             final FileOutputStream finalFileOutputStream = fileOutputStream;
             inputThread = new Thread(() -> {
                 try {
+                    /**
+                     * 副本。
+                     * @param process.getInputStream( 处理.获取输入流(
+                     */
                     copy(process.getInputStream(), finalFileOutputStream, new byte[1024]);
                 } catch (IOException e) {
                     DefaultJobLog.log(e.getMessage());
@@ -88,6 +93,10 @@ public class ScriptUtil {
             });
             errThread = new Thread(() -> {
                 try {
+                    /**
+                     * 副本。
+                     * @param process.getErrorStream( 处理.获取错误流(
+                     */
                     copy(process.getErrorStream(), finalFileOutputStream, new byte[1024]);
                 } catch (IOException e) {
                     DefaultJobLog.log(e.getMessage());
@@ -96,10 +105,10 @@ public class ScriptUtil {
             inputThread.start();
             errThread.start();
 
-            // process-wait
-            int exitValue = process.waitFor();      // exit code: 0=success, 1=error
+ // 处理-wait
+            int exitValue = process.waitFor(); // exit 编码: 0=成功, 1=错误
 
-            // log-thread join
+ // 日志-thread 连接
             inputThread.join();
             errThread.join();
 
@@ -126,7 +135,7 @@ public class ScriptUtil {
     }
 
     /**
-     * 数据流Copy（Input自动关闭，Output不处理）
+      * 数据流副本（输入自动关闭，输出不处理）
      *
      * @param inputStream
      * @param outputStream
@@ -150,7 +159,7 @@ public class ScriptUtil {
                 }
             }
             outputStream.flush();
-            //out = null;
+ // 出 = 空;
             inputStream.close();
             inputStream = null;
             return total;

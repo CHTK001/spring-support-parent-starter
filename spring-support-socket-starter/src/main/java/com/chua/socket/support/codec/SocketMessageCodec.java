@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Socket 消息编解码包装
+   * 套接字 消息编解码包装
  *
  * @since 2026-04-08
  * @author CH
@@ -16,13 +16,13 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SocketMessageCodec {
 
-    /** Object_mapper */
+    /** 对象_映射器 */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    /** Encrypted_prefix */
+    /** Encrypted_前缀 */
     private static final String ENCRYPTED_PREFIX = "02";
-    /** Status_segment */
+    /** 状态_segment */
     private static final String STATUS_SEGMENT = "200";
-    /** Suffix */
+    /** 后缀 */
     private static final String SUFFIX = "ffff";
 
     /** Encrypt模式 */
@@ -33,8 +33,8 @@ public class SocketMessageCodec {
     private final String publicKeyHex;
 
     /**
-     * 创建 SocketMessageCodec 实例
-     * @param properties properties
+      * 创建 套接字消息codec 实例
+     * @param properties 属性
      */
     public SocketMessageCodec(SocketProperties properties) {
         String codecType = properties == null || properties.getCodecType() == null
@@ -63,12 +63,23 @@ public class SocketMessageCodec {
         this.publicKeyHex = publicKey;
     }
 
-    /** 编码 */
+    /**
+     * 编码
+     *
+     * @param payload payload
+     * @return encode的结果
+     */
     public Object encode(String payload) {
         return encode(payload, null);
     }
 
-    /** 编码 */
+    /**
+     * 编码
+     *
+     * @param payload payload
+     * @param encryptRequested encrypt请求
+     * @return encode的结果
+     */
     public Object encode(String payload, Boolean encryptRequested) {
         if (!shouldEncrypt(payload, encryptRequested)) {
             return payload;
@@ -91,7 +102,13 @@ public class SocketMessageCodec {
         }
     }
 
-    /** 是否应该Encrypt */
+    /**
+     * 是否应该Encrypt
+     *
+     * @param payload payload
+     * @param encryptRequested encrypt请求
+     * @return shouldEncrypt的结果
+     */
     private boolean shouldEncrypt(String payload, Boolean encryptRequested) {
         return shouldEncryptForCurrentSession(encryptRequested)
                 && payload != null
@@ -100,7 +117,12 @@ public class SocketMessageCodec {
                 && !publicKeyHex.isBlank();
     }
 
-    /** 是否应该EncryptForCurrentSession */
+    /**
+     * 是否应该encryptfor当前会话
+     *
+     * @param encryptRequested encrypt请求
+     * @return shouldencryptfor当前会话的结果
+     */
     private boolean shouldEncryptForCurrentSession(Boolean encryptRequested) {
         return switch (encryptMode) {
             case ENCRYPTED -> true;
@@ -109,7 +131,12 @@ public class SocketMessageCodec {
         };
     }
 
-    /** 解析DataId */
+    /**
+      * 解析数据标识
+     *
+     * @param payload payload
+     * @return resolve数据id的结果
+     */
     private String resolveDataId(String payload) {
         try {
             JsonNode root = OBJECT_MAPPER.readTree(payload);

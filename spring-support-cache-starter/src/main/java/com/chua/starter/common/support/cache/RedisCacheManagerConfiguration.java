@@ -39,7 +39,7 @@ public class RedisCacheManagerConfiguration {
     /**
      * Redis 缓存管理器
      * <p>
-     * 当未显式定义 redisCacheManager Bean 时，根据 CacheProperties 创建。
+       * 当未显式定义 Redis缓存管理器 Bean 时，根据 缓存属性 创建。
      * </p>
      *
      * @param properties       缓存配置

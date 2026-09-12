@@ -3,6 +3,7 @@ package com.chua.payment.support.enums;
 /**
  * 订单状态转换结果
  * @author CH
+ * @since 4.0.0
  */
 public enum OrderTransitionResult {
 

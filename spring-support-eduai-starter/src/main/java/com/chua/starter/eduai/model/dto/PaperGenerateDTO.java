@@ -34,7 +34,7 @@ public class PaperGenerateDTO {
     private String grade;
 
     /**
-     * 知识点ID列表
+      * 知识点标识列表
      */
     private List<Long> knowledgePointIds;
 
@@ -70,6 +70,8 @@ public class PaperGenerateDTO {
 
     /**
      * 题型配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class QuestionTypeConfig {
@@ -77,7 +79,7 @@ public class PaperGenerateDTO {
         private String type;
         /** 数量 */
         private Integer count;
-        /** 分数PERquestion */
+        /** 分数perquestion */
         private Integer scorePerQuestion;
     }
 }
