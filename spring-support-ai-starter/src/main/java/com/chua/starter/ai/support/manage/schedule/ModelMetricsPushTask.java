@@ -2,6 +2,7 @@ package com.chua.starter.ai.support.manage.schedule;
 
 import com.chua.starter.ai.support.configuration.client.GlobalSettingReader;
 import com.chua.starter.ai.support.manage.service.ModelMetricsSnapshotService;
+import com.chua.starter.ai.support.service.SysAiPricingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
@@ -23,14 +24,20 @@ import java.util.concurrent.TimeUnit;
  *   <li>间隔：{@code model_metrics_push_interval_sec}（秒，最小 30s，默认 300s）</li>
  * </ul>
  *
- * <p>每次执行调用 {@link ModelMetricsSnapshotService#buildAndPushSnapshot()}：
-   * 聚合全量配置模型的价格/速度/延迟快照 → 写 Redis → 经 web套接字 推送
- * {@code model.metrics.push} 主题。</p>
+ * <p>每次执行：</p>
+ * <ol>
+ *   <li>调用 {@link ModelMetricsSnapshotService#buildAndPushSnapshot()}：
+ *       聚合全量配置模型的价格/速度/延迟快照 → 写 Redis</li>
+ *   <li>调用 {@link SysAiPricingService#syncOfficialPricing()}：
+ *       从 datasearch-starter 加载全量官方定价 → 清空旧数据 → 全量插入 sys_ai_pricing 表，
+ *       供用量统计在无金额时回退使用官方金额</li>
+ * </ol>
  *
  * @since 4.0.0.42
  * @author CH
  */
 @Slf4j
+@Component
 @RequiredArgsConstructor
 public class ModelMetricsPushTask implements SchedulingConfigurer {
 
@@ -60,6 +67,11 @@ public class ModelMetricsPushTask implements SchedulingConfigurer {
     private final ModelMetricsSnapshotService snapshotService;
 
     /**
+     * 官方定价同步服务（datasearch-starter 模型指标采集）
+     */
+    private final SysAiPricingService pricingService;
+
+    /**
      * 注册动态调度任务，每次执行后按配置间隔计算下次执行时间。
      *
      * @param taskRegistrar 调度任务注册器
@@ -72,6 +84,7 @@ public class ModelMetricsPushTask implements SchedulingConfigurer {
 
     /**
      * 调度入口：先校验开关，关闭时跳过。
+     * 执行顺序：1) 指标快照推送 Redis  2) 官方定价同步到表（每次清空）
      */
     public void run() {
         if (!isEnabled()) {
@@ -79,10 +92,18 @@ public class ModelMetricsPushTask implements SchedulingConfigurer {
             return;
         }
         try {
+            // 1. 指标快照推送 Redis
             snapshotService.buildAndPushSnapshot();
             log.info("[ModelMetrics] 价格/指标快照已推送完成");
         } catch (Exception e) {
             log.warn("[ModelMetrics] 快照推送失败: {}", e.getMessage());
+        }
+        try {
+            // 2. 官方定价同步到表（datasearch-starter 模型指标采集，每次清空旧数据）
+            pricingService.syncOfficialPricing();
+            log.info("[ModelMetrics] 官方定价同步完成（datasearch-starter）");
+        } catch (Exception e) {
+            log.warn("[ModelMetrics] 官方定价同步失败: {}", e.getMessage());
         }
     }
 
@@ -105,7 +126,7 @@ public class ModelMetricsPushTask implements SchedulingConfigurer {
     }
 
     /**
-      * 判断模型指标推送是否启用（全局 分组 enable_模型_指标_push，默认启用）。
+     * 判断模型指标推送是否启用（全局 分组 enable_model_metrics_push，默认启用）。
      *
      * @return true 表示启用
      */
