@@ -13,12 +13,12 @@ import java.io.IOException;
 import static com.chua.starter.common.support.constant.MdcConstant.X_TRACE_ID;
 
 /**
- * RestTemplate TraceId拦截器
+   * RestTemplate 追踪标识拦截器
  * <p>
- * 在RestTemplate请求中添加traceId头。
+   * 在RestTemplate请求中添加追踪标识头。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/01/01
  * @author CH
  */
@@ -29,8 +29,8 @@ public class RestTemplateTraceIdInterceptor implements ClientHttpRequestIntercep
     @NonNull
     /**
      * Intercept
-     * @param request request
-     * @param body body
+     * @param request 请求
+     * @param body 主体
      * @param execution execution
      */
     public ClientHttpResponse intercept(@NonNull HttpRequest request, @NonNull byte[] body,

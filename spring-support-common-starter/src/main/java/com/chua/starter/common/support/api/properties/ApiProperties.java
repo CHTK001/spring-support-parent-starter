@@ -21,7 +21,7 @@ import java.util.Map;
  * </p>
  *
  * @since 2025/6/3
- * @version 2.0.0
+   * @版本 2.0.0
  * @author CH
  */
     @Validated
@@ -29,12 +29,20 @@ import java.util.Map;
     @Getter
     @Setter
     public class ApiProperties {
-        /** 获取Version */
+        /**
+         * 获取版本
+         *
+         * @return 获取版本的结果
+         */
         public Version getVersion() {
             return version;
         }
 
-        /** 获取Ignore格式化Packages */
+        /**
+         * 获取Ignore格式化包
+         *
+         * @return 获取ignore格式化包的结果
+         */
         public String[] getIgnoreFormatPackages() {
             return ignoreFormatPackages;
         }
@@ -85,7 +93,11 @@ import java.util.Map;
     /** Encode */
     private ResponseEncodeProperties encode = new ResponseEncodeProperties();
 
-    /** 获取编码 */
+    /**
+     * 获取编码
+     *
+     * @return 获取encode的结果
+     */
     public ResponseEncodeProperties getEncode() {
         return encode;
     }
@@ -98,7 +110,11 @@ import java.util.Map;
     /** Decode */
     private RequestDecodeProperties decode = new RequestDecodeProperties();
 
-    /** 获取解码 */
+    /**
+     * 获取解码
+     *
+     * @return 获取decode的结果
+     */
     public RequestDecodeProperties getDecode() {
         return decode;
     }
@@ -127,7 +143,11 @@ import java.util.Map;
     /** 模拟 */
     private MockConfig mock = new MockConfig();
 
-    /** 获取Mock */
+    /**
+     * 获取Mock
+     *
+     * @return 获取mock的结果
+     */
     public MockConfig getMock() {
         return mock;
     }
@@ -137,7 +157,11 @@ import java.util.Map;
      */
     private DeprecatedConfig deprecated = new DeprecatedConfig();
 
-    /** 获取Deprecated */
+    /**
+     * 获取已弃用
+     *
+     * @return 获取已弃用的结果
+     */
     public DeprecatedConfig getDeprecated() {
         return deprecated;
     }
@@ -147,7 +171,11 @@ import java.util.Map;
      */
     private InternalConfig internal = new InternalConfig();
 
-    /** 获取Internal */
+    /**
+     * 获取内部
+     *
+     * @return 获取内部的结果
+     */
     public InternalConfig getInternal() {
         return internal;
     }
@@ -157,10 +185,14 @@ import java.util.Map;
      */
     @Valid
     @NotNull(message = "功能开关配置不能为空")
-    /** Feature */
+    /** 特征 */
     private FeatureConfig feature = new FeatureConfig();
 
-    /** 获取Feature */
+    /**
+     * 获取特征
+     *
+     * @return 获取特征的结果
+     */
     public FeatureConfig getFeature() {
         return feature;
     }
@@ -194,6 +226,8 @@ import java.util.Map;
 
     /**
      * 版本控制配置
+     * @author CH
+     * @since 4.0.0
      */
     @Getter
     @Setter
@@ -204,12 +238,20 @@ import java.util.Map;
          */
         private boolean enable = true;
 
-        /** 是否启用 */
+        /**
+         * 是否启用
+         *
+         * @return 是否enable的结果
+         */
         public boolean isEnable() {
             return enable;
         }
 
-        /** 设置启用 */
+        /**
+         * 设置启用
+         *
+         * @param enable enable
+         */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
@@ -217,38 +259,58 @@ import java.util.Map;
 
     /**
      * 平台类型枚举
+     * @author CH
+     * @since 4.0.0
      */
     @Getter
     public enum PlatformType {
         /**
          * 系统平台
+         * @param "system" "系统"
+         * @return 系统的结果
          */
         SYSTEM("system"),
         /**
          * 租户平台
+         * @param "tenant" "tenant"
+         * @return TENANT的结果
          */
         TENANT("tenant"),
         /**
          * 监控平台
+         * @param "monitor" "监控"
+         * @return 监控的结果
          */
         MONITOR("monitor"),
         /**
          * 调度平台
+         * @param "scheduler" "调度器"
+         * @return 调度器的结果
          */
         SCHEDULER("scheduler"),
         /**
-         * OAuth平台
+          * o认证平台
+         * @param "oauth" "OAuth"
+         * @return OAUTH的结果
          */
         OAUTH("oauth");
 
         /** 值 */
         private final String value;
 
+        /**
+         * platform类型。
+         * @param value 价值观
+         */
         PlatformType(String value) {
             this.value = value;
         }
 
-        /** 获取Value */
+        /**
+         * 获取价值观
+         *
+         * @return 获取价值观的结果
+         */
         public String getValue() {
             return value;
         }
@@ -257,6 +319,8 @@ import java.util.Map;
 
     /**
      * 平台配置
+     * @author CH
+     * @since 4.0.0
      */
     public static class Platform {
 
@@ -266,41 +330,65 @@ import java.util.Map;
         private boolean enable = true;
 
         /**
-         * 平台类型（枚举，优先级高于 aliasName）
+          * 平台类型（枚举，优先级高于 别名名称）
          */
         private PlatformType name = PlatformType.SYSTEM;
 
         /**
-         * 平台别名（当 name 无法满足需求时使用自定义名称）
+          * 平台别名（当 名称 无法满足需求时使用自定义名称）
          */
         private String aliasName;
 
-        /** 是否启用 */
+        /**
+         * 是否启用
+         *
+         * @return 是否enable的结果
+         */
         public boolean isEnable() {
             return enable;
         }
 
-        /** 设置启用 */
+        /**
+         * 设置启用
+         *
+         * @param enable enable
+         */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
 
-        /** 获取Name */
+        /**
+         * 获取名称
+         *
+         * @return 获取名称的结果
+         */
         public PlatformType getName() {
             return name;
         }
 
-        /** 设置Name */
+        /**
+         * 设置名称
+         *
+         * @param name 名称
+         */
         public void setName(PlatformType name) {
             this.name = name;
         }
 
-        /** 获取AliasName */
+        /**
+         * 获取别名名称
+         *
+         * @return 获取别名名称的结果
+         */
         public String getAliasName() {
             return aliasName;
         }
 
-        /** 设置AliasName */
+        /**
+         * 设置别名名称
+         *
+         * @param aliasName 别名名称
+         */
         public void setAliasName(String aliasName) {
             this.aliasName = aliasName;
         }
@@ -308,7 +396,7 @@ import java.util.Map;
         /**
          * 获取实际平台名称
          * <p>
-         * 优先级：name > aliasName
+          * 优先级：名称 > 别名名称
          * </p>
          *
          * @return 平台名称
@@ -323,6 +411,8 @@ import java.util.Map;
 
     /**
      * 编解码配置
+     * @author CH
+     * @since 4.0.0
      */
     public static class ResponseEncodeProperties {
 
@@ -356,52 +446,92 @@ import java.util.Map;
         /** White列表 */
         private List<String> whiteList = Collections.emptyList();
 
-        /** 是否启用 */
+        /**
+         * 是否启用
+         *
+         * @return 是否enable的结果
+         */
         public boolean isEnable() {
             return enable;
         }
 
-        /** 设置启用 */
+        /**
+         * 设置启用
+         *
+         * @param enable enable
+         */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
 
-        /** 是否Response启用 */
+        /**
+         * 是否响应启用
+         *
+         * @return 是否响应enable的结果
+         */
         public boolean isResponseEnable() {
             return responseEnable;
         }
 
-        /** 设置Response启用 */
+        /**
+         * 设置响应启用
+         *
+         * @param responseEnable 响应enable
+         */
         public void setResponseEnable(boolean responseEnable) {
             this.responseEnable = responseEnable;
         }
 
-        /** 是否ExtInject */
+        /**
+         * 是否extinject
+         *
+         * @return 是否extinject的结果
+         */
         public boolean isExtInject() {
             return extInject;
         }
 
-        /** 设置ExtInject */
+        /**
+         * 设置extinject
+         *
+         * @param extInject extinject
+         */
         public void setExtInject(boolean extInject) {
             this.extInject = extInject;
         }
 
-        /** 获取CodecType */
+        /**
+         * 获取codec类型
+         *
+         * @return 获取codec类型的结果
+         */
         public String getCodecType() {
             return codecType;
         }
 
-        /** 设置CodecType */
+        /**
+         * 设置codec类型
+         *
+         * @param codecType codec类型
+         */
         public void setCodecType(String codecType) {
             this.codecType = codecType;
         }
 
-        /** 获取WhiteList */
+        /**
+         * 获取white列表
+         *
+         * @return 获取white列表的结果
+         */
         public List<String> getWhiteList() {
             return whiteList;
         }
 
-        /** 设置WhiteList */
+        /**
+         * 设置white列表
+         *
+         * @param whiteList white列表
+         */
         public void setWhiteList(List<String> whiteList) {
             this.whiteList = whiteList;
         }
@@ -409,6 +539,8 @@ import java.util.Map;
 
     /**
      * 请求解码配置
+     * @author CH
+     * @since 4.0.0
      */
     @Getter
     @Setter
@@ -437,62 +569,110 @@ import java.util.Map;
         /** Codec类型 */
         private String codecType = "sm4";
 
-        /** 获取CodecType */
+        /**
+         * 获取codec类型
+         *
+         * @return 获取codec类型的结果
+         */
         public String getCodecType() {
             return codecType;
         }
 
-        /** 设置CodecType */
+        /**
+         * 设置codec类型
+         *
+         * @param codecType codec类型
+         */
         public void setCodecType(String codecType) {
             this.codecType = codecType;
         }
 
-        /** 获取WhiteList */
+        /**
+         * 获取white列表
+         *
+         * @return 获取white列表的结果
+         */
         public List<String> getWhiteList() {
             return whiteList;
         }
 
-        /** 设置WhiteList */
+        /**
+         * 设置white列表
+         *
+         * @param whiteList white列表
+         */
         public void setWhiteList(List<String> whiteList) {
             this.whiteList = whiteList;
         }
 
-        /** 是否启用 */
+        /**
+         * 是否启用
+         *
+         * @return 是否enable的结果
+         */
         public boolean isEnable() {
             return enable;
         }
 
-        /** 设置启用 */
+        /**
+         * 设置启用
+         *
+         * @param enable enable
+         */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
 
-        /** 获取CodecRequestKey */
+        /**
+         * 获取codec请求钥匙
+         *
+         * @return 获取codec请求钥匙的结果
+         */
         public String getCodecRequestKey() {
             return codecRequestKey;
         }
 
-        /** 设置CodecRequestKey */
+        /**
+         * 设置codec请求钥匙
+         *
+         * @param codecRequestKey codec请求钥匙
+         */
         public void setCodecRequestKey(String codecRequestKey) {
             this.codecRequestKey = codecRequestKey;
         }
 
-        /** 是否ExtInject */
+        /**
+         * 是否extinject
+         *
+         * @return 是否extinject的结果
+         */
         public boolean isExtInject() {
             return extInject;
         }
 
-        /** 设置ExtInject */
+        /**
+         * 设置extinject
+         *
+         * @param extInject extinject
+         */
         public void setExtInject(boolean extInject) {
             this.extInject = extInject;
         }
 
-        /** 是否RejectOn解码Failure */
+        /**
+         * 是否rejecton解码失败
+         *
+         * @return 是否rejectondecode失败的结果
+         */
         public boolean isRejectOnDecodeFailure() {
             return rejectOnDecodeFailure;
         }
 
-        /** 设置RejectOn解码Failure */
+        /**
+         * 设置rejecton解码失败
+         *
+         * @param rejectOnDecodeFailure rejectondecode失败
+         */
         public void setRejectOnDecodeFailure(boolean rejectOnDecodeFailure) {
             this.rejectOnDecodeFailure = rejectOnDecodeFailure;
         }
@@ -509,7 +689,7 @@ import java.util.Map;
         /**
          * 不需要解密的路径白名单
          * <p>
-         * 支持Ant风格路径匹配，如: /api/public/**, /health
+          * 支持Ant风格路径匹配，如: /api/公共/**, /健康
          * </p>
          */
         @NotNull(message = "白名单不能为null，可以为空列表")
@@ -519,6 +699,8 @@ import java.util.Map;
 
     /**
      * SPI 配置
+     * @author CH
+     * @since 4.0.0
      */
     public static class SpiConfig {
 
@@ -531,22 +713,34 @@ import java.util.Map;
          * 虚拟映射
          * <p>
          * 用于将简短的类型名称映射到完整的类名。
-         * 例如：{"captcha": "com.chua.common.support.captcha.Captcha"}
+          * 例如：{"captcha": "com.chua.通用.支持.captcha.Captcha"}
          * </p>
          */
         private Map<String, String> mapping;
 
-        /** 是否启用 */
+        /**
+         * 是否启用
+         *
+         * @return 是否enable的结果
+         */
         public boolean isEnable() {
             return enable;
         }
 
-    /** 获取Mapping */
+    /**
+     * 获取Mapping
+     *
+     * @return 获取mapping的结果
+     */
     public Map<String, String> getMapping() {
         return mapping;
     }
 
-    /** 设置Mapping */
+    /**
+     * 设置Mapping
+     *
+     * @param mapping mapping
+     */
     public void setMapping(Map<String, String> mapping) {
         this.mapping = mapping;
     }
@@ -554,6 +748,8 @@ import java.util.Map;
 
     /**
      * Mock 配置
+     * @author CH
+     * @since 4.0.0
      */
     public static class MockConfig {
 
@@ -566,25 +762,41 @@ import java.util.Map;
          * Mock 生效的环境（逗号分隔）
          */
         @NotNull(message = "Mock生效环境不能为空")
-        /** Profiles */
+        /** 配置文件 */
         private String profiles = "dev,test";
 
-        /** 是否启用 */
+        /**
+         * 是否启用
+         *
+         * @return 是否enable的结果
+         */
         public boolean isEnable() {
             return enable;
         }
 
-        /** 设置启用 */
+        /**
+         * 设置启用
+         *
+         * @param enable enable
+         */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
 
-        /** 获取Profiles */
+        /**
+         * 获取配置文件
+         *
+         * @return 获取配置文件的结果
+         */
         public String getProfiles() {
             return profiles;
         }
 
-        /** 设置Profiles */
+        /**
+         * 设置配置文件
+         *
+         * @param profiles 配置文件
+         */
         public void setProfiles(String profiles) {
             this.profiles = profiles;
         }
@@ -592,6 +804,8 @@ import java.util.Map;
 
     /**
      * 功能开关配置
+     * @author CH
+     * @since 4.0.0
      */
     public static class FeatureConfig {
 
@@ -608,22 +822,38 @@ import java.util.Map;
         /** 路径 */
         private String path = "/api/features";
 
-        /** 是否启用 */
+        /**
+         * 是否启用
+         *
+         * @return 是否enable的结果
+         */
         public boolean isEnable() {
             return enable;
         }
 
-        /** 设置启用 */
+        /**
+         * 设置启用
+         *
+         * @param enable enable
+         */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
 
-        /** 获取Path */
+        /**
+         * 获取路径
+         *
+         * @return 获取路径的结果
+         */
         public String getPath() {
             return path;
         }
 
-        /** 设置Path */
+        /**
+         * 设置路径
+         *
+         * @param path 路径
+         */
         public void setPath(String path) {
             this.path = path;
         }
@@ -631,6 +861,8 @@ import java.util.Map;
 
     /**
      * 内部接口配置
+     * @author CH
+     * @since 4.0.0
      */
     public static class InternalConfig {
 
@@ -649,32 +881,56 @@ import java.util.Map;
          */
         private List<String> globalAllowedServices = Collections.emptyList();
 
-        /** 是否启用 */
+        /**
+         * 是否启用
+         *
+         * @return 是否enable的结果
+         */
         public boolean isEnable() {
             return enable;
         }
 
-        /** 设置启用 */
+        /**
+         * 设置启用
+         *
+         * @param enable enable
+         */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
 
-        /** 获取GlobalAllowedIps */
+        /**
+         * 获取全局allowedips
+         *
+         * @return 获取全局allowedips的结果
+         */
         public List<String> getGlobalAllowedIps() {
             return globalAllowedIps;
         }
 
-        /** 设置GlobalAllowedIps */
+        /**
+         * 设置全局allowedips
+         *
+         * @param globalAllowedIps 全局allowedips
+         */
         public void setGlobalAllowedIps(List<String> globalAllowedIps) {
             this.globalAllowedIps = globalAllowedIps;
         }
 
-        /** 获取GlobalAllowedServices */
+        /**
+         * 获取全局allowed服务
+         *
+         * @return 获取全局allowed服务的结果
+         */
         public List<String> getGlobalAllowedServices() {
             return globalAllowedServices;
         }
 
-        /** 设置GlobalAllowedServices */
+        /**
+         * 设置全局allowed服务
+         *
+         * @param globalAllowedServices 全局allowed服务
+         */
         public void setGlobalAllowedServices(List<String> globalAllowedServices) {
             this.globalAllowedServices = globalAllowedServices;
         }
@@ -682,6 +938,8 @@ import java.util.Map;
 
     /**
      * 废弃接口配置
+     * @author CH
+     * @since 4.0.0
      */
     public static class DeprecatedConfig {
 
@@ -695,22 +953,38 @@ import java.util.Map;
          */
         private boolean addWarningHeader = true;
 
-        /** 是否启用 */
+        /**
+         * 是否启用
+         *
+         * @return 是否enable的结果
+         */
         public boolean isEnable() {
             return enable;
         }
 
-        /** 设置启用 */
+        /**
+         * 设置启用
+         *
+         * @param enable enable
+         */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
 
-        /** 是否添加WarningHeader */
+        /**
+         * 是否添加警告头部
+         *
+         * @return 是否添加警告头部的结果
+         */
         public boolean isAddWarningHeader() {
             return addWarningHeader;
         }
 
-        /** 设置添加WarningHeader */
+        /**
+         * 设置添加警告头部
+         *
+         * @param addWarningHeader 添加警告头部
+         */
         public void setAddWarningHeader(boolean addWarningHeader) {
             this.addWarningHeader = addWarningHeader;
         }
@@ -718,6 +992,8 @@ import java.util.Map;
 
     /**
      * 灰度发布配置
+     * @author CH
+     * @since 4.0.0
      */
     public static class GrayConfig {
 
@@ -744,7 +1020,7 @@ import java.util.Map;
          * </p>
          */
         @NotNull(message = "全局灰度用户白名单不能为null，可以为空列表")
-        /** 全局users */
+        /** 全局用户 */
         private List<String> globalUsers = Collections.emptyList();
 
         /**
@@ -764,7 +1040,7 @@ import java.util.Map;
          * </p>
          */
         @NotNull(message = "全局灰度角色白名单不能为null，可以为空列表")
-        /** 全局roles */
+        /** 全局角色 */
         private List<String> globalRoles = Collections.emptyList();
 
         /**
@@ -778,37 +1054,65 @@ import java.util.Map;
         /** 默认percentage */
         private int defaultPercentage = 0;
 
-        /** 是否启用 */
+        /**
+         * 是否启用
+         *
+         * @return 是否enable的结果
+         */
         public boolean isEnable() {
             return enable;
         }
 
-        /** 设置是否启用 */
+        /**
+         * 设置是否启用
+         *
+         * @param enable enable
+         */
         public void setEnable(boolean enable) {
             this.enable = enable;
         }
 
-        /** 获取HeaderName */
+        /**
+         * 获取头部名称
+         *
+         * @return 获取头部名称的结果
+         */
         public String getHeaderName() {
             return headerName;
         }
 
-        /** 获取GlobalUsers */
+        /**
+         * 获取全局用户
+         *
+         * @return 获取全局用户的结果
+         */
         public List<String> getGlobalUsers() {
             return globalUsers;
         }
 
-        /** 获取GlobalIps */
+        /**
+         * 获取全局ips
+         *
+         * @return 获取全局ips的结果
+         */
         public List<String> getGlobalIps() {
             return globalIps;
         }
 
-        /** 获取GlobalRoles */
+        /**
+         * 获取全局角色
+         *
+         * @return 获取全局角色的结果
+         */
         public List<String> getGlobalRoles() {
             return globalRoles;
         }
 
-        /** 获取DefaultPercentage */
+        /**
+         * 获取默认percentage
+         *
+         * @return 获取默认percentage的结果
+         */
         public int getDefaultPercentage() {
             return defaultPercentage;
         }

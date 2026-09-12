@@ -9,16 +9,20 @@ import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 /**
- * 本地Utils
+   * 本地工具
  *
  * @author CH
+ * @since 4.0.0
  */
 public class LocaleUtils {
 
+    /**
+     * 区域工具。
+     */
     private LocaleUtils() {
     }
 
-    // final 确保不可变引用，静态初始化块完成一次性配置；ResourceBundleMessageSource 本身线程安全
+ // 最终 确保不可变引用，静态初始化块完成一次性配置；resourcebundle消息源 本身线程安全
     static final ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
     static{
         messageSource.setDefaultEncoding(StandardCharsets.UTF_8.toString());
@@ -27,7 +31,7 @@ public class LocaleUtils {
     /**
      * 获取 国际化后内容信息
      *
-     * @param code 国际化key
+     * @param code 国际化钥匙
      * @return 国际化后内容信息
      */
     public static String getMessage(String code) {
@@ -39,7 +43,11 @@ public class LocaleUtils {
         }
     }
 
-    /** 获取Locate */
+    /**
+     * 获取Locate
+     *
+     * @return 获取locate的结果
+     */
     public static Locale getLocate() {
         HttpServletRequest request = RequestUtils.getRequest();
         if(null == request) {

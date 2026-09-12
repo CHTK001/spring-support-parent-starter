@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * 大华设备真实会话（基于 NetSDK JNA）
+   * 大华设备真实会话（基于 netsdk JNA）
  * <p>通过 JNA 加载本机 dhnetsdk.dll 与真实设备通信。</p>
  *
  * <p>若未安装 SDK 动态库或设备不可达，构造函数会抛出异常，</p>
@@ -120,8 +120,16 @@ public class DahuaRealSession implements DeviceSession {
         try {
             this.sdk = Native.load(SDK_LIBRARY_NAME, DahuaNetSDK.class);
         } catch (UnsatisfiedLinkError e) {
+            /**
+             * illegal状态异常。
+             * @param e.getMessage( e.获取消息(
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("dhnetsdk 动态库加载失败，请将 SDK 的 dll 放入系统库路径: " + e.getMessage(), e);
         }
+        /**
+         * login。
+         */
         login();
     }
 
@@ -130,6 +138,11 @@ public class DahuaRealSession implements DeviceSession {
      */
     private void login() {
         if (!sdk.CLIENT_Init((handle, user) -> log.info("大华设备连接状态变化: handle={}", handle), Pointer.NULL)) {
+            /**
+             * illegal状态异常。
+             * @param 初始化失败" 初始化失败"
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("大华 NetSDK 初始化失败");
         }
         LOGIN_INFO loginInfo = new LOGIN_INFO();
@@ -138,6 +151,11 @@ public class DahuaRealSession implements DeviceSession {
         loginHandle = sdk.CLIENT_LoginWithHighLevelSecurity(loginInfo, deviceInfo, Pointer.NULL);
         if (loginHandle == 0) {
             sdk.CLIENT_Cleanup();
+            /**
+             * illegal状态异常。
+             * @param info.getIp( 信息.获取ip(
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("大华设备登录失败: " + info.getIp()
                     + "，错误码: " + sdk.CLIENT_GetLastError());
         }
@@ -148,7 +166,7 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
-    /** 获取DeviceId */
+    /** 获取deviceid */
     public String getDeviceId() {
         return info.getIp();
     }
@@ -191,6 +209,11 @@ public class DahuaRealSession implements DeviceSession {
             throw new IllegalStateException("大华预览失败: channel=" + channel
                     + "，错误码: " + sdk.CLIENT_GetLastError());
         }
+        /**
+         * bytearray输入流。
+         * @param buffer.toByteArray( 缓冲.转为bytearray(
+         * @return bytearray输入流的结果
+         */
         return new ByteArrayInputStream(buffer.toByteArray());
     }
 
@@ -201,21 +224,21 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
-    /** 获取PlaybackUrl */
+    /** 获取playbackurl */
     public String getPlaybackUrl(int channel, TimeRange range) {
         // JNA 直连模式不返回 URL
         return null;
     }
 
     @Override
-    /** 获取LiveUrl */
+    /** 获取liveurl */
     public String getLiveUrl(int channel, String protocol) {
         // JNA 直连模式不返回 URL
         return null;
     }
 
     @Override
-    /** TestConnection */
+    /** 测试connection */
     public boolean testConnection() {
         return isOnline();
     }
@@ -223,12 +246,17 @@ public class DahuaRealSession implements DeviceSession {
     @Override
     /** Playback */
     public InputStream playback(int channel, TimeRange range) {
-        // 大华回放需配合 CLIENT_FindRecord / CLIENT_PlayBackByRecord API，此处简化
+ // 大华回放需配合 客户端_findrecord / 客户端_playbackbyrecord API，此处简化
+        /**
+         * bytearray输入流。
+         * @param byte[0] byte[0]
+         * @return bytearray输入流的结果
+         */
         return new ByteArrayInputStream(new byte[0]);
     }
 
     @Override
-    /** PtzControl */
+    /** ptzcontrol */
     public void ptzControl(PtzCommand cmd, double speed) {
         Integer command = PTZ_COMMANDS.get(cmd);
         if (command == null) {
@@ -277,13 +305,13 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
-    /** ListPresets */
+    /** 列表presets */
     public List<PresetInfo> listPresets() {
         return Collections.emptyList();
     }
 
     @Override
-    /** Remote解锁 */
+    /** 远程解锁 */
     public void remoteUnlock(int doorId) {
         boolean ok = sdk.CLIENT_RemoteDoorOpen(loginHandle, doorId, 1);
         if (!ok) {
@@ -294,25 +322,25 @@ public class DahuaRealSession implements DeviceSession {
     }
 
     @Override
-    /** 查询AccessRecords */
+    /** 查询accessrecords */
     public List<AccessRecord> queryAccessRecords(TimeRange range) {
         return Collections.emptyList();
     }
 
     @Override
-    /** 订阅Event */
+    /** 订阅事件 */
     public void subscribeEvent(EventType type, EventListener listener) {
         listeners.computeIfAbsent(type, k -> new CopyOnWriteArrayList<>()).add(listener);
     }
 
     @Override
-    /** 取消订阅Event */
+    /** 取消订阅事件 */
     public void unsubscribeEvent(EventType type) {
         listeners.remove(type);
     }
 
     @Override
-    /** 取出Events */
+    /** 取出事件 */
     public List<DeviceEvent> pollEvents(TimeRange range) {
         if (eventQueue.isEmpty()) {
             return Collections.emptyList();

@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 /**
  * 消息推送日志实体
  * <p>
- * 对应表 sys_message_log，记录消息推送历史，包含发送内容、结果、耗时等。
+   * 对应表 sys_消息_日志，记录消息推送历史，包含发送内容、结果、耗时等。
  * </p>
  *
  * @since 2026/08/03
@@ -24,24 +24,24 @@ import java.math.BigDecimal;
 public class SysMessageLog extends SysBase {
 
     /**
-     * 日志ID - 主键自增
+      * 日志标识 - 主键自增
      */
     @TableId(value = "sys_message_log_id", type = IdType.AUTO)
-    /** SYS消息日志ID */
+    /** SYS消息日志标识 */
     private Integer sysMessageLogId;
 
     /**
-     * 接收人 - 手机号/邮箱/用户ID等
+      * 接收人 - 手机号/邮箱/用户标识等
      */
     private String sysMessageLogTarget;
 
     /**
-     * 模板ID - 使用的模板
+      * 模板标识 - 使用的模板
      */
     private Integer sysMessageTemplateId;
 
     /**
-     * 提供商ID - 使用的消息提供商
+      * 提供商标识 - 使用的消息提供商
      */
     private Integer sysMessageProviderId;
 
@@ -66,7 +66,7 @@ public class SysMessageLog extends SysBase {
     private BigDecimal sysMessageCost;
 
     /**
-     * 返回码 - SUCCESS/FAILURE
+      * 返回码 - 成功/失败
      */
     private String sysMessageCode;
 
@@ -81,7 +81,7 @@ public class SysMessageLog extends SysBase {
     private String sysMessageLogSubject;
 
     /**
-     * 消息ID - 服务商返回的消息标识
+      * 消息标识 - 服务商返回的消息标识
      */
     private String sysMessageLogMessageId;
 
@@ -91,7 +91,7 @@ public class SysMessageLog extends SysBase {
     private String sysMessageBatchId;
 
     /**
-     * 追踪标识 - 邮件阅读追踪 token，用于回写已读状态
+      * 追踪标识 - 邮件阅读追踪 令牌，用于回写已读状态
      */
     private String sysMessageTrackToken;
 

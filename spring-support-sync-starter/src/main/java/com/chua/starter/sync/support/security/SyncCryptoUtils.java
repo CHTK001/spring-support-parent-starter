@@ -16,12 +16,13 @@ import java.util.Map;
 /**
  * 同步消息传输加密工具。
  * <p>
- * 基于 AES-GCM 认证加密，密钥由配置的 crypto-secret 经 SHA-256 派生。
+   * 基于 AES-GCM 认证加密，密钥由配置的 加密货币-secret 经 SHA-256 派生。
  * 仅加密消息 payload（topic 不加密），使用方无感知。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 4.0.0.42
+ * @author CH
  */
 public final class SyncCryptoUtils {
 
@@ -41,11 +42,14 @@ public final class SyncCryptoUtils {
     private static final String AES_ALGORITHM = "AES";
     /** Sha_256 */
     private static final String SHA_256 = "SHA-256";
-    /** Gcm_iv_length */
+    /** Gcm_iv_长度 */
     private static final int GCM_IV_LENGTH = 12;
-    /** Gcm_tag_length */
+    /** Gcm_标签_长度 */
     private static final int GCM_TAG_LENGTH = 128;
 
+    /**
+     * 同步加密货币工具。
+     */
     private SyncCryptoUtils() {
     }
 
@@ -62,9 +66,9 @@ public final class SyncCryptoUtils {
     /**
      * 加密消息 payload。未启用加密或加密失败时原样返回。
      *
-     * @param payload    明文消息（Map 或其它可 JSON 序列化对象）
+     * @param payload    明文消息（映射 或其它可 JSON 序列化对象）
      * @param properties 同步配置
-     * @return 加密后的包装 Map，未启用时返回原对象
+     * @return 加密后的包装 映射，未启用时返回原对象
      */
     public static Object encrypt(Object payload, SyncProperties properties) {
         if (!isEnabled(properties) || payload == null) {
@@ -95,7 +99,7 @@ public final class SyncCryptoUtils {
      *
      * @param message    收到的消息对象
      * @param properties 同步配置
-     * @return 解密后的 Map，未启用或不匹配时返回原对象
+     * @return 解密后的 映射，未启用或不匹配时返回原对象
      */
     public static Object decrypt(Object message, SyncProperties properties) {
         if (!isEnabled(properties) || message == null || !(message instanceof Map<?, ?> map)) {
@@ -123,10 +127,20 @@ public final class SyncCryptoUtils {
         }
     }
 
+    /**
+     * derive钥匙。
+     * @param secret secret
+     * @return derive钥匙的结果
+     */
     private static byte[] deriveKey(String secret) throws Exception {
         return MessageDigest.getInstance(SHA_256).digest(secret.getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+     * 是否包含文本。
+     * @param value 价值观
+     * @return 是否包含文本的结果
+     */
     private static boolean hasText(String value) {
         return value != null && !value.isBlank();
     }

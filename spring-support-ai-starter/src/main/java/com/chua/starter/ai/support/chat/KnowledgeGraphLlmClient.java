@@ -10,7 +10,15 @@ import java.io.Closeable;
  */
 public interface KnowledgeGraphLlmClient extends Closeable {
 
+    /**
+     * 对话。
+     * @param input 输入
+     * @return 对话的结果
+     */
     String chat(String input);
 
+    /**
+     * 关闭。
+     */
     void close();
 }

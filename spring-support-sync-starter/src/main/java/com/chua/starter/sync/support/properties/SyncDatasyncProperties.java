@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.util.Map;
 
 /**
- * DataSync 桥接配置。
+   * 数据同步 桥接配置。
  * <p>
  * 对应配置前缀：{@code plugin.sync.datasync}
  * </p>
@@ -22,16 +22,24 @@ public class SyncDatasyncProperties {
     public static final String PRE = "plugin.sync.datasync";
 
     /**
-     * 是否启用 DataSync 桥接
+      * 是否启用 数据同步 桥接
      */
     private boolean enabled = true;
 
-    /** 是否Enabled */
+    /**
+     * 是否已启用
+     *
+     * @return 是否已启用的结果
+     */
     public boolean isEnabled() {
         return enabled;
     }
 
-    /** 设置Enabled */
+    /**
+     * 设置已启用
+     *
+     * @param enabled 已启用
+     */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }

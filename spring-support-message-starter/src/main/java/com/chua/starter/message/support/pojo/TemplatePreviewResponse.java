@@ -33,6 +33,6 @@ public class TemplatePreviewResponse {
      * 模板内容是否完整（所有占位符均被填充）
      */
     @Schema(description = "模板内容是否完整（所有占位符均被填充）")
-    /** Complete */
+    /** 完成 */
     private boolean complete;
 }

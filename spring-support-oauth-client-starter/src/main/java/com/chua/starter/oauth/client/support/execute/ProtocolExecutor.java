@@ -9,7 +9,7 @@ import com.chua.starter.oauth.client.support.user.UserResult;
 import java.util.Map;
 
 /**
- * ProtocolExecutor接口定义了协议执行器的行为。
+   * 协议执行器接口定义了协议执行器的行为。
  * 它旨在提供一种标准化的方式，来执行特定的协议操作。
  *
  * @since 2024/6/12
@@ -22,7 +22,7 @@ public interface ProtocolExecutor {
      * 获取访问令牌
      * <p>
      * 本函数旨在通过用户提供的认证信息（用户名、密码）和认证类型，从认证服务器获取访问令牌。
-     * 认证信息的详细处理方式依赖于认证类型（例如，OAuth2.0、LDAP等）。
+      * 认证信息的详细处理方式依赖于认证类型（例如，o认证2.0、LDAP等）。
      * 此外，函数还允许传递额外的参数，以支持不同认证类型的特定需求。
      *
      * @param username 用户名，用于身份验证

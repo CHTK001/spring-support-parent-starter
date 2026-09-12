@@ -15,8 +15,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * UEBA 控制器真实集成测试。
  * <p>
- * 启动真实 Spring 上下文（含 UebaAutoConfiguration），通过 MockMvc 打真实 HTTP 请求
- * 验证 /api/ueba/analyze 端点能正常分析正常流量与滥用流量。</p>
+   * 启动真实 Spring 上下文（含 uebaauto配置），通过 mockmvc 打真实 HTTP 请求
+   * 验证 /api/ueba/分析 端点能正常分析正常流量与滥用流量。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -25,12 +25,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class UebaControllerRealTest {
 
-    /** Mock MVC 客户端（注入真实 DispatcherServlet） */
+    /** Mock MVC 客户端（注入真实 dispatcherservlet） */
     @Autowired
-    private MockMvc mockMvc;
+    private MockMvc mockMvc; // mockmvc
 
     /**
-     * 正常 GET /index 请求应返回 NORMAL 或低风险等级。
+      * 正常 获取 /索引 请求应返回 NORMAL 或低风险等级。
      */
     @Test
     void analyzeNormalEvent() throws Exception {

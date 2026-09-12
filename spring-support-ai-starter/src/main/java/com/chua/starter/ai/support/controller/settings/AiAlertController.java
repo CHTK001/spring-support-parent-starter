@@ -69,6 +69,7 @@ public class AiAlertController {
      * @param alertId 告警主键
      * @param alert   告警 DTO
      * @return 更新后的告警 DTO
+     * @param ID" 标识"
      */
     @Permission("admin")
     @Operation(summary = "更新告警规则")
@@ -82,6 +83,9 @@ public class AiAlertController {
      * 删除告警规则（逻辑删除）。
      *
      * @param alertId 告警主键
+     * @param ID" 标识"
+     * @param ID" 标识"
+     * @param ID" ID"
      */
     @Permission("admin")
     @Operation(summary = "删除告警规则")
@@ -96,6 +100,7 @@ public class AiAlertController {
      * @param alertId 告警主键
      * @param enabled 是否启用
      * @return 更新后的告警 DTO
+     * @param ID" 标识"
      */
     @Permission("admin")
     @Operation(summary = "切换告警启用状态")

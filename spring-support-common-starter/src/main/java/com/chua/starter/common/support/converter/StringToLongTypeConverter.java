@@ -8,7 +8,7 @@ import java.text.ParseException;
 import java.util.Date;
 
 /**
- * 字符串到长整型（java.lang.Long）的类型转换器。
+   * 字符串到长整型（Java.lang.Long）的类型转换器。
  *
  * <p>转换优先级如下：
  * <ol>
@@ -19,7 +19,7 @@ import java.util.Date;
  * </ol>
  *
  * <p>日期解析过程中可能抛出受检异常 {@link ParseException}，
- * 此处捕获后忽略，使 converter 能够安全降级到 {@code null} 返回。</p>
+   * 此处捕获后忽略，使 转换器 能够安全降级到 {@code null} 返回。</p>
  *
  * @since 2024/9/24
  * @author CH
@@ -30,10 +30,10 @@ public class StringToLongTypeConverter implements Converter<String, Long> {
      * 执行字符串到 Long 的转换。
      *
      * @param source 待转换的字符串
-     * @return 转换后的 Long 值；无法转换时返回 null
+     * @return 转换后的 Long 值；无法转换时返回 空
      */
     @Override
-    /** 转换：字符串 -> java.lang.Long */
+    /** 转换：字符串 -> Java.lang.Long */
     public Long convert(String source) {
         // 优先尝试作为数字解析
         if (NumberUtils.isNumber(source)) {
@@ -47,7 +47,7 @@ public class StringToLongTypeConverter implements Converter<String, Long> {
                 return date.getTime();
             }
         } catch (ParseException e) {
-            // 日期解析失败，忽略并继续返回 null
+ // 日期解析失败，忽略并继续返回 空
         }
 
         // 所有解析策略均失败

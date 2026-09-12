@@ -21,7 +21,7 @@ import lombok.EqualsAndHashCode;
 @TableName("ms_monitor_gateway")
 public class MsMonitorGateway extends SysBase {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -29,15 +29,15 @@ public class MsMonitorGateway extends SysBase {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
-    /** ID */
+    /** 标识 */
     private Long id;
 
     /**
-     * 关联监控资产 id
+      * 关联监控资产 标识
      */
     @TableField("ms_monitor_gateway_monitor_id")
     @Schema(description = "关联监控资产 id", example = "1")
-    /** MonitorID */
+    /** 监控标识 */
     private Long monitorId;
 
     /**
@@ -110,6 +110,6 @@ public class MsMonitorGateway extends SysBase {
      */
     @TableField("ms_monitor_gateway_remark")
     @Schema(description = "备注", example = "主机默认 Guacamole 网关")
-    /** Remark */
+    /** 评论 */
     private String remark;
 }

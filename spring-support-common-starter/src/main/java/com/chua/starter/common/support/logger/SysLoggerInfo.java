@@ -48,7 +48,7 @@ public class SysLoggerInfo extends ApplicationEvent {
     private String system;
 
     /**
-     * User-Agent信息
+      * 用户-智能体信息
      * <p>示例: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"</p>
      */
     private String ua;
@@ -84,7 +84,7 @@ public class SysLoggerInfo extends ApplicationEvent {
     private String createName;
 
     /**
-     * 操作人ID
+      * 操作人标识
      * <p>示例: "12345", "admin"</p>
      */
     private String createBy;
@@ -114,7 +114,7 @@ public class SysLoggerInfo extends ApplicationEvent {
     private Long logCost;
 
     /**
-     * 部门ID
+      * 部门标识
      * <p>示例: "DEPT_001", "1001"</p>
      */
     private String sysDeptId;
@@ -144,10 +144,14 @@ public class SysLoggerInfo extends ApplicationEvent {
      *               <p>示例: this, userService, request</p>
      */
     public SysLoggerInfo(Object source) {
+        /**
+         * 父。
+         * @param source 源
+         */
         super(source);
     }
     /**
-     * 获取 methodName
+      * 获取 方法名称
      *
      * @return methodName
      */
@@ -156,16 +160,16 @@ public class SysLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 methodName
+      * 设置 方法名称
      *
-     * @param methodName methodName
+     * @param methodName 方法名称
      */
     public void setMethodName(String methodName) {
         this.methodName = methodName;
     }
 
     /**
-     * 获取 createTime
+      * 获取 创建时间
      *
      * @return createTime
      */
@@ -174,16 +178,16 @@ public class SysLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 createTime
+      * 设置 创建时间
      *
-     * @param createTime createTime
+     * @param createTime 创建时间
      */
     public void setCreateTime(Date createTime) {
         this.createTime = createTime;
     }
 
     /**
-     * 获取 logName
+      * 获取 日志名称
      *
      * @return logName
      */
@@ -192,9 +196,9 @@ public class SysLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 logName
+      * 设置 日志名称
      *
-     * @param logName logName
+     * @param logName 日志名称
      */
     public void setLogName(String logName) {
         this.logName = logName;
@@ -219,7 +223,7 @@ public class SysLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 获取 loginType
+      * 获取 login类型
      *
      * @return loginType
      */
@@ -228,16 +232,16 @@ public class SysLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 loginType
+      * 设置 login类型
      *
-     * @param loginType loginType
+     * @param loginType login类型
      */
     public void setLoginType(String loginType) {
         this.loginType = loginType;
     }
 
     /**
-     * 获取 system
+      * 获取 系统
      *
      * @return system
      */
@@ -246,9 +250,9 @@ public class SysLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 system
+      * 设置 系统
      *
-     * @param system system
+     * @param system 系统
      */
     public void setSystem(String system) {
         this.system = system;
@@ -291,7 +295,7 @@ public class SysLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 获取 logMapping
+      * 获取 日志mapping
      *
      * @return logMapping
      */
@@ -300,16 +304,16 @@ public class SysLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 logMapping
+      * 设置 日志mapping
      *
-     * @param logMapping logMapping
+     * @param logMapping 日志mapping
      */
     public void setLogMapping(String logMapping) {
         this.logMapping = logMapping;
     }
 
     /**
-     * 获取 logCode
+      * 获取 日志编码
      *
      * @return logCode
      */
@@ -318,16 +322,16 @@ public class SysLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 logCode
+      * 设置 日志编码
      *
-     * @param logCode logCode
+     * @param logCode 日志编码
      */
     public void setLogCode(String logCode) {
         this.logCode = logCode;
     }
 
     /**
-     * 获取 logParam
+      * 获取 日志参数
      *
      * @return logParam
      */
@@ -336,16 +340,16 @@ public class SysLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 logParam
+      * 设置 日志参数
      *
-     * @param logParam logParam
+     * @param logParam 日志参数
      */
     public void setLogParam(String logParam) {
         this.logParam = logParam;
     }
 
     /**
-     * 获取 createName
+      * 获取 创建名称
      *
      * @return createName
      */
@@ -354,16 +358,16 @@ public class SysLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 createName
+      * 设置 创建名称
      *
-     * @param createName createName
+     * @param createName 创建名称
      */
     public void setCreateName(String createName) {
         this.createName = createName;
     }
 
     /**
-     * 获取 createBy
+      * 获取 创建by
      *
      * @return createBy
      */
@@ -372,16 +376,16 @@ public class SysLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 createBy
+      * 设置 创建by
      *
-     * @param createBy createBy
+     * @param createBy 创建by
      */
     public void setCreateBy(String createBy) {
         this.createBy = createBy;
     }
 
     /**
-     * 获取 result
+      * 获取 结果
      *
      * @return result
      */
@@ -390,16 +394,16 @@ public class SysLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 result
+      * 设置 结果
      *
-     * @param result result
+     * @param result 结果
      */
     public void setResult(Object result) {
         this.result = result;
     }
 
     /**
-     * 获取 logContent
+      * 获取 日志内容
      *
      * @return logContent
      */
@@ -408,16 +412,16 @@ public class SysLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 logContent
+      * 设置 日志内容
      *
-     * @param logContent logContent
+     * @param logContent 日志内容
      */
     public void setLogContent(String logContent) {
         this.logContent = logContent;
     }
 
     /**
-     * 获取 logWatch
+      * 获取 日志watch
      *
      * @return logWatch
      */
@@ -426,16 +430,16 @@ public class SysLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 logWatch
+      * 设置 日志watch
      *
-     * @param logWatch logWatch
+     * @param logWatch 日志watch
      */
     public void setLogWatch(String logWatch) {
         this.logWatch = logWatch;
     }
 
     /**
-     * 获取 logCost
+      * 获取 日志cost
      *
      * @return logCost
      */
@@ -444,16 +448,16 @@ public class SysLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 logCost
+      * 设置 日志cost
      *
-     * @param logCost logCost
+     * @param logCost 日志cost
      */
     public void setLogCost(Long logCost) {
         this.logCost = logCost;
     }
 
     /**
-     * 获取 sysDeptId
+      * 获取 sysdeptid
      *
      * @return sysDeptId
      */
@@ -462,16 +466,16 @@ public class SysLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 sysDeptId
+      * 设置 sysdeptid
      *
-     * @param sysDeptId sysDeptId
+     * @param sysDeptId sysdeptid
      */
     public void setSysDeptId(String sysDeptId) {
         this.sysDeptId = sysDeptId;
     }
 
     /**
-     * 获取 clientIp
+      * 获取 客户端ip
      *
      * @return clientIp
      */
@@ -480,16 +484,16 @@ public class SysLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 clientIp
+      * 设置 客户端ip
      *
-     * @param clientIp clientIp
+     * @param clientIp 客户端ip
      */
     public void setClientIp(String clientIp) {
         this.clientIp = clientIp;
     }
 
     /**
-     * 获取 logModule
+      * 获取 日志module
      *
      * @return logModule
      */
@@ -498,16 +502,16 @@ public class SysLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 logModule
+      * 设置 日志module
      *
-     * @param logModule logModule
+     * @param logModule 日志module
      */
     public void setLogModule(String logModule) {
         this.logModule = logModule;
     }
 
     /**
-     * 获取 logStatus
+      * 获取 日志状态
      *
      * @return logStatus
      */
@@ -516,9 +520,9 @@ public class SysLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 logStatus
+      * 设置 日志状态
      *
-     * @param logStatus logStatus
+     * @param logStatus 日志状态
      */
     public void setLogStatus(Integer logStatus) {
         this.logStatus = logStatus;

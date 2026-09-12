@@ -23,7 +23,7 @@ public class SendResult {
     private boolean success;
 
     /**
-     * 消息ID
+      * 消息标识
      */
     private String messageId;
 
@@ -50,7 +50,7 @@ public class SendResult {
     /**
      * 创建成功结果
      *
-     * @param messageId   消息ID
+     * @param messageId   消息标识
      * @param destination 目标地址
      * @return 发送结果
      */
@@ -80,12 +80,20 @@ public class SendResult {
     }
 
     // Lombok 注解处理器未运行时的手动 getter 方法
-    /** 是否Success */
+    /**
+     * 是否成功
+     *
+     * @return 是否成功的结果
+     */
     public boolean isSuccess() {
         return success;
     }
 
-    /** 获取记录错误 */
+    /**
+     * 获取记录错误
+     *
+     * @return 获取错误的结果
+     */
     public Throwable getError() {
         return error;
     }

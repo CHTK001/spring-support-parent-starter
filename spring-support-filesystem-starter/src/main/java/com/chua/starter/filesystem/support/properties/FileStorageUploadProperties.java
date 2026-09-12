@@ -13,7 +13,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = FileStorageUploadProperties.PREFIX)
 public class FileStorageUploadProperties {
 
-    /** Prefix */
+    /** 前缀 */
     public static final String PREFIX = "plugin.filesystem.upload";
 
     /**
@@ -37,7 +37,7 @@ public class FileStorageUploadProperties {
     private long mergeIntervalMs = 10_000L;
 
     /**
-     * 上传 OSS 调度间隔（毫秒），默认 10 秒
+      * 上传 对象存储 调度间隔（毫秒），默认 10 秒
      */
     private long uploadIntervalMs = 10_000L;
 

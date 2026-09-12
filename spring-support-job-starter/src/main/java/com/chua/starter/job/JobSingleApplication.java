@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
 
 /**
- * 单机 (SINGLE) 模式可执行应用, 用于「启动服务测接口」全业务验证。
+   * 单机 (单个) 模式可执行应用, 用于「启动服务测接口」全业务验证。
  *
  * <p>运行方式 (模块目录下):</p>
  * <pre>
@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Import;
  * </pre>
  *
  * <p>效果: 装配 {@link JobAutoConfiguration} 并以 SINGLE 角色启动,
- * Leader 自选 + 单秒扫描 + 本地执行, 观察 {@code DemoJobs} 的成功/失败/原生定时日志。</p>
+   * 铅 自选 + 单秒扫描 + 本地执行, 观察 {@code DemoJobs} 的成功/失败/原生定时日志。</p>
  *
  * @since 4.0.0.42
  * @author CH

@@ -14,12 +14,19 @@ spring:
     generate:
       enabled: false
 
-  # 建表脚本迁移：默认由 spring-support-datasource-starter 的 EnvironmentPostProcessor
-  # 强制 spring.sql.init.mode=never + plugin.datasource.script.enable=true（全局默认），
-  # 启动时自动扫描 classpath*:db/init|migration|sync 下 V*__*.sql 执行（FlywayLike）。
-  # 覆盖 monitor 自身 + 依赖 server-starter/project-starter 的资产台账/项目表。
-  # filesystem-starter 自带 db/init 含 MySQL-only 语法（SET @x=IF(...)），H2 下会失败；
-  # continue-on-error=true（见下方 plugin.datasource.script）保证单脚本失败不阻断启动。
+  # 建表脚本（独立联调）：FlywayLike 禁用后，由 spring.sql.init 加载各模块 DDL
+  #  - monitor 自身：classpath:db/init/V1.0__init_monitor.sql
+  #  - server-starter（依赖 jar 内）：V1.0__init_server.sql（资产台账表）
+  #  - project-starter（依赖 jar 内）：V1.0__init_project.sql / V1.1__project_extend.sql
+  # 均纯 H2 兼容（IF NOT EXISTS 幂等），MODE=MySQL 下自动建表
+  sql:
+    init:
+      mode: always
+      continue-on-error: true
+      schema-locations:
+        - classpath:db/init/V1.0__init_monitor.sql
+        - classpath:db/init/V1.0__init_server.sql
+        - classpath:db/init/V1.0__init_project.sql
 
   datasource:
     url: jdbc:h2:mem:monitordb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false
@@ -35,10 +42,10 @@ spring:
   # Redis（告警静默期 + 可选时序引擎 monitor.timeseries.engine=redis）
   data:
     redis:
-      host: 172.16.0.40
+      host: 127.0.0.1
       port: 6379
       # password: xxx
-      timeout: 5s
+      timeout: 3s
 
 mybatis-plus:
   mapper-locations: classpath:/mapper/**/*.xml
@@ -57,16 +64,13 @@ plugin:
   # 关闭自建配置，由 Spring Boot 默认 executor 接管 @Async。
   async:
     enable: false
-  # FlywayLike 脚本迁移（DataSourceScriptConfiguration）：默认已由 datasource-starter 全局开启。
-  # 这里仅做行为调优：表结构扫描 ONCE，补丁 ALWAYS，单脚本失败继续。
+  # FlywayLike 脚本迁移（DataSourceScriptConfiguration）：monitor 独立联调时禁用。
+  # classpath 上 filesystem/project 模块的 db/init 脚本含 MySQL-only 语法（SET @x=IF(...)），
+  # H2 下语法错误即使 continue-on-error 也可能阻断启动；必要 DDL 由 spring.sql.init.schema-locations
+  # 单独加载（纯 H2 兼容），生产 MySQL 环境可改回 enable: true。
   datasource:
     script:
-      enable: true
-      scan-mode: ONCE
-      migration-scan-mode: ALWAYS
-      continue-on-error: true
-      ignore-failed-drops: true
-      verbose: true
+      enable: false
 # 实时推送通道：socketio(29181)
   # tshark 抓包逐包/会话状态广播（前端 subscribe("monitor","tshark-packet"/"tshark-session")）
   socket:

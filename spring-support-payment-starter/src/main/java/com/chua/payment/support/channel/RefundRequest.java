@@ -13,18 +13,18 @@ import java.math.BigDecimal;
 public class RefundRequest {
     /** 排序NO */
     private String orderNo;
-    /** 用户ID */
+    /** 用户标识 */
     private Long userId;
-    /** TradeNO */
+    /** 贸易no */
     private String tradeNo;
-    /** RefundNO */
+    /** 退税no */
     private String refundNo;
     /** Refundamount */
     private BigDecimal refundAmount;
     /** 总数amount */
     private BigDecimal totalAmount;
-    /** Reason */
+    /** ReasonMLmlml */
     private String reason;
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
 }

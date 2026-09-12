@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
 
 /**
- * 执行器 (EXECUTOR) 模式可执行应用, 用于「启动服务测接口」全业务验证。
+   * 执行器 (执行器) 模式可执行应用, 用于「启动服务测接口」全业务验证。
  *
  * <p>运行方式 (模块目录下):</p>
  * <pre>
@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Import;
  * </pre>
  *
  * <p>效果: 装配 {@link JobAutoConfiguration} 并以 EXECUTOR 角色启动,
- * 通过 SyncClient 连上调度中心, 订阅 cmd, 本地执行 handler, 上行 TASK_LOG。
+   * 通过 同步客户端 连上调度中心, 订阅 CMD, 本地执行 处理器, 上行 任务_日志。
  * 需与 {@code JobSchedulerApplication} 配合组成完整链路。</p>
  *
  * @since 4.0.0.42

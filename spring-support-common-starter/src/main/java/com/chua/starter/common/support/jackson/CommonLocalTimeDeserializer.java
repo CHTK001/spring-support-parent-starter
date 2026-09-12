@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.time.LocalTime;
 
 /**
- * 通用LocalTime解析
+   * 通用本地时间解析
  * @since 2024/12/19
  * @author CH
  */

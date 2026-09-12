@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 /**
  * DevOps 环境配置后置处理器
  * <p>
- * 用于根据当前激活的 Profile 动态加载 ops 目录下的配置文件。
+   * 用于根据当前激活的 配置文件 动态加载 ops 目录下的配置文件。
  * </p>
  * <p>
  * 功能说明：
@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
  * </p>
  *
  * @since 2024/12/4
- * @version 2.0.0
+   * @版本 2.0.0
  * @author CH
  */
 @SuppressWarnings("removal")
@@ -80,12 +80,12 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     private final YamlPropertySourceLoader yamlLoader = new YamlPropertySourceLoader();
 
     /**
-     * Properties配置加载器
+      * 属性配置加载器
      */
     private final PropertiesPropertySourceLoader propertiesLoader = new PropertiesPropertySourceLoader();
 
     @Override
-    /** Post处理Environment */
+    /** Post处理环境 */
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         // 检查是否启用
         var enabledValue = environment.getProperty(ENABLED_KEY, "true");
@@ -94,14 +94,14 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
             return;
         }
 
-        // 优先使用 Environment 已解析的激活环境（兼容 profile group / include 派生）
+ // 优先使用 环境 已解析的激活环境（兼容 配置文件 群体 / include 派生）
         var activeProfiles = new LinkedHashSet<String>();
         Arrays.stream(environment.getActiveProfiles())
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .forEach(activeProfiles::add);
 
-        // 兜底回退到 spring.profiles.active，兼容极早期解析阶段
+ // 兜底回退到 spring.配置文件.活跃，兼容极早期解析阶段
         if (activeProfiles.isEmpty()) {
             var activeProperty = environment.getProperty("spring.profiles.active");
             if (activeProperty != null && !activeProperty.isBlank()) {
@@ -112,7 +112,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
             }
         }
 
-        // 只基于 spring.profiles.include 决定加载哪些 application-xxx 配置
+ // 只基于 spring.配置文件.include 决定加载哪些 application-xxx 配置
         var includeProfiles = new LinkedHashSet<String>();
         var includeProperty = environment.getProperty("spring.profiles.include");
         if (includeProperty != null && !includeProperty.isBlank()) {
@@ -131,16 +131,16 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
         List<String> defaultLoadedConfigs = new ArrayList<>();
         List<String> profileLoadedConfigs = new ArrayList<>();
 
-        // 合并后的配置：key=文件名，value=合并后的属性
+ // 合并后的配置：钥匙=文件名，价值观=合并后的属性
         Map<String, Map<String, Object>> mergedConfigs = new LinkedHashMap<>();
 
         // 1. 计算需要加载的目录列表：
-        //    - 始终加载兜底目录 ops-default/（所有环境共用）
-        //    - 环境配置目录基于 Environment 已解析的 active profiles：每个 active 生成一个 ops-{profile}/
+ // - 始终加载兜底目录 ops-默认/（所有环境共用）
+ // - 环境配置目录基于 环境 已解析的 活跃 配置文件：每个 活跃 生成一个 ops-{配置文件}/
         var directories = new LinkedHashSet<String>();
         // 兜底目录
         directories.add(DEFAULT_PROFILE_DIR);
-        // 环境目录（来源于 Environment 已解析的 active profiles）
+ // 环境目录（来源于 环境 已解析的 活跃 配置文件）
         for (var profile : activeProfiles) {
             directories.add(DIR_PREFIX + profile);
         }
@@ -149,13 +149,29 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
         //    - 先处理兜底目录，后处理具体环境目录，保证优先级正确
         for (var dir : directories) {
             if (DEFAULT_PROFILE_DIR.equals(dir)) {
+                /**
+                 * 加载配置转为映射。
+                 * @param resolver 解析器
+                 * @param dir dir
+                 * @param mergedConfigs 合并配置
+                 * @param defaultLoadedConfigs 默认加载配置
+                 * @param includeProfiles include配置文件
+                 */
                 loadConfigsToMap(resolver, dir, mergedConfigs, defaultLoadedConfigs, includeProfiles);
             } else {
+                /**
+                 * 加载配置转为映射。
+                 * @param resolver 解析器
+                 * @param dir dir
+                 * @param mergedConfigs 合并配置
+                 * @param profileLoadedConfigs 配置文件加载配置
+                 * @param includeProfiles include配置文件
+                 */
                 loadConfigsToMap(resolver, dir, mergedConfigs, profileLoadedConfigs, includeProfiles);
             }
         }
 
-        // 3. 注册合并后的配置到 Environment
+ // 3. 注册合并后的配置到 环境
         for (Map.Entry<String, Map<String, Object>> entry : mergedConfigs.entrySet()) {
             String filename = entry.getKey();
             Map<String, Object> properties = entry.getValue();
@@ -165,7 +181,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
                 continue;
             }
 
-            // 使用 addLast，确保优先级低于业务配置和配置中心
+ // 使用 添加最后一个，确保优先级低于业务配置和配置中心
             propertySources.addLast(new MapPropertySource(sourceName, properties));
             log.debug("[OPS配置]注册配置: {}", sourceName);
         }
@@ -183,11 +199,11 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     }
 
     /**
-     * 加载指定目录的配置到 Map，支持属性级合并
+      * 加载指定目录的配置到 映射，支持属性级合并
      *
      * @param resolver      资源解析器
      * @param profileDir    目录名
-     * @param mergedConfigs 合并后的配置 Map
+     * @param mergedConfigs 合并后的配置 映射
      * @param loadedConfigs 已加载的配置列表（用于日志）
      */
     private void loadConfigsToMap(PathMatchingResourcePatternResolver resolver,
@@ -195,7 +211,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
                                   Map<String, Map<String, Object>> mergedConfigs,
                                   List<String> loadedConfigs,
                                   Set<String> includeProfiles) {
-        // 未配置 spring.profiles.include 时不加载任何 application-xxx 配置
+ // 未配置 spring.配置文件.include 时不加载任何 application-xxx 配置
         if (includeProfiles == null || includeProfiles.isEmpty()) {
             log.info("[OPS配置]spring.profiles.include 未配置，跳过目录: {}/", profileDir);
             return;
@@ -220,7 +236,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
                     continue;
                 }
 
-                // 只加载 application-{include}.xxx 格式，且 include 在 spring.profiles.include 列表中
+ // 只加载 application-{include}.xxx 格式，且 include 在 spring.配置文件.include 列表中
                 if (!isIncludedConfig(filename, includeProfiles)) {
                     continue;
                 }
@@ -237,6 +253,11 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
                             return new LinkedHashMap<>(props);
                         }
                         // 深度合并：新配置覆盖旧配置
+                        /**
+                         * deep合并。
+                         * @param existing existing
+                         * @param props props
+                         */
                         deepMerge(existing, props);
                         return existing;
                     });
@@ -253,10 +274,10 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     }
 
     /**
-     * 加载资源文件为平坦的 Map
+      * 加载资源文件为平坦的 映射
      *
      * @param resource 资源文件
-     * @return 属性 Map
+     * @return 属性 映射
      * @throws IOException 加载失败时抛出
      */
     private Map<String, Object> loadResourceAsMap(Resource resource) throws IOException {
@@ -277,13 +298,13 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
             return Collections.emptyMap();
         }
 
-        // 合并所有 PropertySource
+ // 合并所有 财产源
         Map<String, Object> result = new LinkedHashMap<>();
         for (PropertySource<?> source : sources) {
             if (source.getSource() instanceof Map) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> sourceMap = (Map<String, Object>) source.getSource();
-                // 解包 OriginTrackedValue
+ // 解包 origintracked价值观
                 sourceMap.forEach((key, value) -> result.put(key, unwrapValue(value)));
             }
         }
@@ -291,7 +312,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     }
 
     /**
-     * 判断配置文件名是否属于 spring.profiles.include 指定的 application-xxx 配置
+      * 判断配置文件名是否属于 spring.配置文件.include 指定的 application-xxx 配置
      *
      * @param filename       文件名
      * @param includeProfiles include 列表
@@ -313,10 +334,10 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     }
 
     /**
-     * 深度合并 Map，新值覆盖旧值
+      * 深度合并 映射，新值覆盖旧值
      *
-     * @param target 目标 Map
-     * @param source 源 Map
+     * @param target 目标 映射
+     * @param source 源 映射
      */
     @SuppressWarnings("unchecked")
     private void deepMerge(Map<String, Object> target, Map<String, Object> source) {
@@ -326,7 +347,11 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
             Object oldValue = target.get(key);
 
             if (oldValue instanceof Map && newValue instanceof Map) {
-                // 递归合并嵌套 Map
+ // 递归合并嵌套 映射
+                /**
+                 * deep合并。
+                 * @param Object> 对象>
+                 */
                 deepMerge((Map<String, Object>) oldValue, (Map<String, Object>) newValue);
             } else {
                 // 直接覆盖
@@ -336,7 +361,7 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     }
 
     /**
-     * 解包 OriginTrackedValue
+      * 解包 origintracked价值观
      *
      * @param value 原始值
      * @return 解包后的值
@@ -364,9 +389,9 @@ public class ProfileEnvironmentPostProcessor implements EnvironmentPostProcessor
     }
 
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
-        // 在 ConfigDataEnvironmentPostProcessor 之后执行
+ // 在 配置数据环境post处理器 之后执行
         // 优先级低于业务配置和配置中心
         return ConfigDataEnvironmentPostProcessor.ORDER + 100;
     }

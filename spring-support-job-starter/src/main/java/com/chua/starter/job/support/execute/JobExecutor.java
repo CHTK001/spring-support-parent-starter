@@ -17,10 +17,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * EXECUTOR / SINGLE 角色任务执行入口。
+   * 执行器 / 单个 角色任务执行入口。
  *
  * <p>消费 {@link JobSyncBus} 上的 {@link JobSyncTopics#TASK_COMMAND} 事件,
- * 提交到内置执行器, handler 成功执行后构造
+   * 提交到内置执行器, 处理器 成功执行后构造
  * {@link JobLogEvent} 通过 bus 上的 {@link JobSyncTopics#TASK_LOG} 投递。
  * 执行器可为平台 {@link ThreadPoolExecutor} 或虚拟线程执行器 (见 {@link #defaultExecutor()})。</p>
  *
@@ -83,13 +83,13 @@ public class JobExecutor {
     private final AtomicLong dropped = new AtomicLong(0L);
 
     /**
-     * 已执行 init 生命周期钩子的 handler 名称集合 (惰性, 每 handler 仅一次)
+      * 已执行 初始化 生命周期钩子的 处理器 名称集合 (惰性, 每 处理器 仅一次)
      */
     private final java.util.Set<String> initializedHandlers =
             java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     /**
-     * cmd 监听器引用 (持有, 用于注销)
+      * CMD 监听器引用 (持有, 用于注销)
      */
     private final java.util.function.BiConsumer<String, Object> cmdListener = (topic, payload) -> onCommand(topic, payload);
 
@@ -122,10 +122,11 @@ public class JobExecutor {
     }
 
     /**
-     * 接收到 cmd 事件的回调。
+      * 接收到 CMD 事件的回调。
      *
-     * @param topic   topic 名 (固定为 TASK_COMMAND)
+     * @param topic   topic 名 (固定为 任务_命令)
      * @param payload 业务负载 (任务名)
+     * @param source 源
      */
     private void onCommand(String source, Object payload) {
         log.info("[job] 收到 cmd source={} payload={}", source, payload);
@@ -149,7 +150,7 @@ public class JobExecutor {
     }
 
     /**
-     * 实际调用 handler, 抛异常也仅记日志, 不影响其他任务。
+      * 实际调用 处理器, 抛异常也仅记日志, 不影响其他任务。
      *
      * @param jobName 任务名
      * @param handler 处理器
@@ -170,7 +171,9 @@ public class JobExecutor {
             long cost = System.currentTimeMillis() - start;
             processed.incrementAndGet();
             String logContent = JobLogHelper.getAndClear();
-            if (logContent == null) logContent = "";
+            if (logContent == null) {
+                logContent = "";
+            }
             String exMsg = ex.getMessage();
             logContent += "Exception: " + (exMsg != null ? exMsg : ex.getClass().getSimpleName()) + "\n";
             log.error("[job] 执行失败 job={} cause={}", jobName, exMsg, ex);
@@ -180,10 +183,10 @@ public class JobExecutor {
     }
 
     /**
-     * 惰性执行 handler 的 init 生命周期钩子 (每个 handler 仅执行一次)。
+      * 惰性执行 处理器 的 初始化 生命周期钩子 (每个 处理器 仅执行一次)。
      *
      * @param handler 处理器
-     * @throws Exception init 钩子异常
+     * @throws Exception 初始化 钩子异常
      */
     private void lazyInit(JobHandler handler) throws Exception {
         if (!initializedHandlers.add(handler.name())) {
@@ -194,7 +197,7 @@ public class JobExecutor {
     }
 
     /**
-     * 关闭执行器, 释放线程池, 并回调所有已 init handler 的 destroy 生命周期钩子。
+      * 关闭执行器, 释放线程池, 并回调所有已 初始化 处理器 的 销毁 生命周期钩子。
      */
     public void shutdown() {
         bus.unsubscribe(JobSyncTopics.TASK_COMMAND, cmdListener);
@@ -250,7 +253,7 @@ public class JobExecutor {
             private final AtomicLong counter = new AtomicLong(0L);
 
             @Override
-            /** NewThread */
+            /** 新thread */
             public Thread newThread(Runnable r) {
                 Thread t = new Thread(r, DEFAULT_THREAD_NAME_PREFIX + counter.incrementAndGet());
                 t.setDaemon(true);
@@ -269,10 +272,10 @@ public class JobExecutor {
     }
 
     /**
-     * 平台线程池执行器 (core/max/queue + AbortPolicy), 供 {@code pool.virtual=false} 时使用。
+      * 平台线程池执行器 (核心/最大/队列 + abortpolicy), 供 {@code pool.virtual=false} 时使用。
      *
      * <p>注意: {@link java.util.concurrent.LinkedBlockingQueue} 只有队列填满后才扩线程至 max,
-     * 默认 queue=1000 下线程数恒等于 core。</p>
+      * 默认 队列=1000 下线程数恒等于 核心。</p>
      *
      * @return ThreadPoolExecutor
      */

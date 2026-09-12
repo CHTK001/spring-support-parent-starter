@@ -6,11 +6,11 @@ import lombok.Getter;
 /**
  * 作业执行上下文
  * <p>
- * 使用ThreadLocal存储当前线程的任务执行上下文信息。
- * 在任务执行过程中，可通过此类获取任务ID、参数、分片信息等。
+   * 使用thread本地存储当前线程的任务执行上下文信息。
+   * 在任务执行过程中，可通过此类获取任务标识、参数、分片信息等。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/03/11
  * @author CH
  */
@@ -18,7 +18,7 @@ import lombok.Getter;
 public class JobContext {
 
     /**
-     * 线程本地存储，使用InheritableThreadLocal支持子线程继承
+      * 线程本地存储，使用inheritablethread本地支持子线程继承
      */
     private static final InheritableThreadLocal<JobContext> CONTEXT_HOLDER = new InheritableThreadLocal<>();
 
@@ -38,10 +38,10 @@ public class JobContext {
     public static final int HANDLE_CODE_TIMEOUT = 502;
 
     /**
-     * 任务ID
+      * 任务标识
      */
     @Getter
-    /** 作业ID */
+    /** 作业标识 */
     private final long jobId;
 
     /**
@@ -95,7 +95,7 @@ public class JobContext {
     /**
      * 构造函数
      *
-     * @param jobId          任务ID
+     * @param jobId          任务标识
      * @param jobParam       任务参数
      * @param jobLogFileName 日志文件名
      * @param shardIndex     分片索引

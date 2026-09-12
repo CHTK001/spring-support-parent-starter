@@ -12,6 +12,12 @@ import java.time.LocalDate;
  */
 public interface PaymentDashboardService {
 
+    /**
+     * summary。
+     * @param startDate 启动日期
+     * @param endDate 结束日期
+     * @return summary的结果
+     */
     PaymentDashboardSummaryVO summary(LocalDate startDate, LocalDate endDate);
 }
 

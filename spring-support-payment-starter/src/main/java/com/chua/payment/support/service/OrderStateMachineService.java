@@ -15,14 +15,14 @@ public interface OrderStateMachineService {
     /**
      * 创建状态机
      *
-     * @param orderId 订单ID
+     * @param orderId 订单标识
      */
     void createStateMachine(Long orderId);
 
     /**
      * 发送状态机事件
      *
-     * @param orderId   订单ID
+     * @param orderId   订单标识
      * @param event     事件
      * @param operator  操作人
      * @return 是否成功
@@ -32,7 +32,7 @@ public interface OrderStateMachineService {
     /**
      * 获取订单当前状态
      *
-     * @param orderId 订单ID
+     * @param orderId 订单标识
      * @return 当前状态
      */
     OrderState getCurrentState(Long orderId);

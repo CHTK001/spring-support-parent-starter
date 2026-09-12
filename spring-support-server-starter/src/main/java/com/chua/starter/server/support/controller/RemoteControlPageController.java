@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 远程控制页面（生成 URL——前端 iframe 嵌入）
  * <p>
- * 后端集中生成远程控制页面（内嵌 guacamole-common-js 客户端 + 现有
+   * 后端集中生成远程控制页面（内嵌 guacamole-通用-js 客户端 + 现有
  * {@code /ws/ms/server/terminal} 隧道端点——guacd / guacd-client 地址均由系统配置表动态提供），
  * 前端只需 {@code <iframe :src="/ms/server/remote/connect?hostId=..&protocol=.."/>} 嵌入，
  * 不再自己实现 Guacamole 客户端逻辑。
@@ -30,23 +30,23 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class RemoteControlPageController {
 
-    /** 系统配置服务（guacd-client 网关动态化——配置表优先） */
+    /** 系统配置服务（guacd-客户端 网关动态化——配置表优先） */
     private final ServerConfigService configService;
 
-    /** 服务属性（guacd-client 回落值） */
+    /** 服务属性（guacd-客户端 回落值） */
     private final ServerProperties properties;
 
     /**
      * 远程控制页面（返回内嵌 HTML——浏览器/iframe 直接渲染）。
      * <p>
-     * 直接写 {@link HttpServletResponse}：本项目定制了消息转换器（无 StringHttpMessageConverter），
-     * 任何 String 返回值（裸返回/ResponseEntity）都会 500 "No converter for [class java.lang.String]"。
+      * 直接写 {@link HttpServletResponse}：本项目定制了消息转换器（无 字符串http消息转换器），
+      * 任何 字符串 返回值（裸返回/响应实体）都会 500 "No 转换器 for [类 Java.lang.字符串]"。
      * </p>
      *
-     * @param hostId     主机 id（凭据由后端按主机解析）
+     * @param hostId     主机 标识（凭据由后端按主机解析）
      * @param protocol   ssh/vnc/rdp
-     * @param identityId 登录身份 id（可选）
-     * @param targetPort 目标端口（可选——null 按协议默认）
+     * @param identityId 登录身份 标识（可选）
+     * @param targetPort 目标端口（可选——空 按协议默认）
      * @return 远程控制页面 HTML
      */
     @GetMapping("/connect")
@@ -60,12 +60,17 @@ public class RemoteControlPageController {
     }
 
     /**
-     * 渲染远程控制页面（内嵌 guacamole-common-js——esm 自包含单文件）。
+      * 渲染远程控制页面（内嵌 guacamole-通用-js——esm 自包含单文件）。
      * <p>
-     * 页面使用 token 替换而非 {@code String.formatted}（HTML/CSS 中的 % 会被
-     * Formatter 误解析）；guacd-client 网关（浏览器回连后端的 WS 隧道地址）
-     * 由系统配置表动态提供，空串回落同域 location.host。
+      * 页面使用 令牌 替换而非 {@code String.formatted}（HTML/CSS 中的 % 会被
+      * Formatter 误解析）；guacd-客户端 网关（浏览器回连后端的 WS 隧道地址）
+      * 由系统配置表动态提供，空串回落同域 位置.主机。
      * </p>
+     * @param hostId 主机标识
+     * @param protocol 协议
+     * @param identityId identityid
+     * @param targetPort Target端口
+     * @return renderPage的结果
      */
     private String renderPage(Long hostId, String protocol, Long identityId, Integer targetPort) {
         String idParam = identityId == null ? "" : String.valueOf(identityId);

@@ -73,7 +73,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
 
     /** Answersheetmapper */
     private final EduAnswerSheetMapper answerSheetMapper;
-    /** Marking结果mapper */
+    /** Marking结果映射器 */
     private final EduMarkingResultMapper markingResultMapper;
     /** Questionmapper */
     private final EduQuestionMapper questionMapper;
@@ -86,7 +86,12 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /** 提交AnswerSheet */
+    /**
+     * 提交answersheet
+     *
+     * @param dto dto
+     * @return submitAnswerSheet的结果
+     */
     public String submitAnswerSheet(MarkingSubmitDTO dto) {
         // 1. 持久化答题卡
         EduAnswerSheet sheet = new EduAnswerSheet();
@@ -99,7 +104,7 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         sheet.setAnswerSheetUpdateTime(LocalDateTime.now());
         answerSheetMapper.insert(sheet);
 
-        // 2. 生成 taskId 并预占 marking_result
+ // 2. 生成 任务标识 并预占 marking_结果
         String taskId = UUID.randomUUID().toString().replace("-", "");
         for (MarkingSubmitDTO.AnswerItem item : dto.getAnswers()) {
             EduMarkingResult result = new EduMarkingResult();
@@ -113,8 +118,18 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         }
 
         if (properties.getMarking().isAsync()) {
+            /**
+              * dispatch异步。
+             * @param taskId 任务标识
+             * @param sheet.getAnswerSheetId( sheet.获取answersheetid(
+             */
             dispatchAsync(taskId, sheet.getAnswerSheetId(), dto.getAnswers());
         } else {
+            /**
+             * mark同步。
+             * @param taskId 任务标识
+             * @param dto.getAnswers( dto.获取answers(
+             */
             markSync(taskId, dto.getAnswers());
         }
 
@@ -125,6 +140,9 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
 
     /**
      * 把阅卷任务投递到队列，由 {@link MarkingMessageListener} 异步消费。
+     * @param taskId 任务标识
+     * @param answerSheetId answersheetid
+     * @param answers answers
      */
     private void dispatchAsync(String taskId, Long answerSheetId, List<MarkingSubmitDTO.AnswerItem> answers) {
         MarkingJob job = new MarkingJob();
@@ -137,12 +155,19 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
             messageTemplate.sendAsync(QUEUE_NAME, job, headers);
         } catch (Exception e) {
             log.error("[EduAi] 队列投递失败，回退到同步阅卷: taskId={}, err={}", taskId, e.getMessage(), e);
+            /**
+             * mark同步。
+             * @param taskId 任务标识
+             * @param answers answers
+             */
             markSync(taskId, answers);
         }
     }
 
     /**
      * 同步阅卷：阻塞直到全部题目批改完成。
+     * @param taskId 任务标识
+     * @param answers answers
      */
     public void markSync(String taskId, List<MarkingSubmitDTO.AnswerItem> answers) {
         int maxScore = properties.getMarking().getMaxScore();
@@ -158,12 +183,21 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                     item.getAnswer(),
                     maxScore
             );
+            /**
+              * applyoutcome。
+             * @param taskId 任务标识
+             * @param question question
+             * @param outcome outcome
+             */
             applyOutcome(taskId, question, outcome);
         }
     }
 
     /**
      * 把单题批改结果写入 DB。
+     * @param taskId 任务标识
+     * @param question question
+     * @param outcome outcome
      */
     public void applyOutcome(String taskId, EduQuestion question, EduAiService.MarkingOutcome outcome) {
         LambdaUpdateWrapper<EduMarkingResult> wrapper = new LambdaUpdateWrapper<>();
@@ -177,13 +211,18 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     }
 
     @Override
-    /** 获取Result */
+    /** 获取结果 */
     public MarkingResultVO getResult(String taskId) {
         LambdaQueryWrapper<EduMarkingResult> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(EduMarkingResult::getMarkingResultTaskId, taskId);
         List<EduMarkingResult> results = markingResultMapper.selectList(wrapper);
 
         if (results.isEmpty()) {
+            /**
+             * 业务异常。
+             * @param "任务不存在" "任务不存在"
+             * @return 业务异常的结果
+             */
             throw new BusinessException("任务不存在");
         }
 
@@ -216,7 +255,12 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /** ConfirmMarking */
+    /**
+     * confirmmarking
+     *
+     * @param dto dto
+     * @return confirmMarking的结果
+     */
     public boolean confirmMarking(MarkingConfirmDTO dto) {
         for (MarkingConfirmDTO.ScoreAdjustment adj : dto.getAdjustments()) {
             EduMarkingResult result = markingResultMapper.selectById(adj.getResultId());

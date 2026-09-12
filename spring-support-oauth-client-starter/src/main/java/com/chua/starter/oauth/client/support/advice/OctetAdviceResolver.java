@@ -14,7 +14,7 @@ import java.io.IOException;
 public class OctetAdviceResolver implements AdviceResolver {
 
     @Override
-    /** Type */
+    /** 类型 */
     public String type() {
         return MediaType.APPLICATION_OCTET_STREAM_VALUE;
     }

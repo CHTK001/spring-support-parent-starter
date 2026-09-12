@@ -5,11 +5,12 @@ import lombok.Data;
 /**
  * 支付全局配置 DTO
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class PaymentGlobalConfigDTO {
 
-    /** PaymentnotifybaseURL */
+    /** paymentnotifybaseurl */
     private String paymentNotifyBaseUrl;
 
     /** Payment返回值URL */
@@ -24,7 +25,7 @@ public class PaymentGlobalConfigDTO {
     /** Coupondeductwithdrawable */
     private Boolean couponDeductWithdrawable;
 
-    /** Remark */
+    /** 评论 */
     private String remark;
 }
 

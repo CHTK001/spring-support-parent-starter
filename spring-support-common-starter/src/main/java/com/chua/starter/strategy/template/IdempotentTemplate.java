@@ -9,7 +9,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 内存版幂等模板，提供 tryAcquire / release / complete 操作。
+   * 内存版幂等模板，提供 尝试acquire / release / 完成 操作。
  * <p>
  * 适用于单机场景或非强依赖分布式锁的环境。
  * 分布式场景请使用基于 Redis 的实现。
@@ -28,7 +28,7 @@ public class IdempotentTemplate {
         return t;
     });
 
-    /** key -> 过期时间戳（毫秒） */
+    /** 钥匙 -> 过期时间戳（毫秒） */
     private static final ConcurrentHashMap<String, Long> ACQUIRED_KEYS = new ConcurrentHashMap<>();
 
     static {

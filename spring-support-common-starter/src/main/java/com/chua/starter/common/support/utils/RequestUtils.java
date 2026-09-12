@@ -20,7 +20,7 @@ public class RequestUtils {
     }
 
     /**
-     * 用户ID请求头名称
+      * 用户标识请求头名称
      */
     private static final String USER_ID_HEADER = "X-User-Id";
 
@@ -30,12 +30,12 @@ public class RequestUtils {
     private static final String USERNAME_HEADER = "X-Username";
 
     /**
-     * 租户ID请求头名称
+      * 租户标识请求头名称
      */
     private static final String TENANT_ID_HEADER = "X-Tenant-Id";
 
     /**
-     * 获取当前请求的 HttpServletRequest 对象
+      * 获取当前请求的 httpservlet请求 对象
      *
      * @return HttpServletRequest，如果无法获取则返回null
      */
@@ -45,13 +45,13 @@ public class RequestUtils {
             attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             return null != attributes ? attributes.getRequest() : null;
         } catch (Exception e) {
-            // 忽略异常，返回null
+ // 忽略异常，返回空
         }
         return null;
     }
 
     /**
-     * 获取当前请求的用户ID
+      * 获取当前请求的用户标识
      * <p>优先从请求头 X-User-Id 获取，如果不存在则从请求属性中获取</p>
      *
      * @return 用户ID，如果无法获取则返回null
@@ -117,7 +117,7 @@ public class RequestUtils {
     }
 
     /**
-     * 获取当前请求的租户ID
+      * 获取当前请求的租户标识
      * <p>优先从请求头 X-Tenant-Id 获取，如果不存在则从请求属性中获取</p>
      *
      * @return 租户ID，如果无法获取则返回null
@@ -153,7 +153,7 @@ public class RequestUtils {
      * 获取客户端IP地址
      * <p>优先级：X-Forwarded-For > X-Real-IP > getRemoteAddr</p>
      *
-     * @param request HttpServletRequest
+     * @param request httpservlet请求
      * @return 客户端IP地址
      */
     public static String getIpAddress(HttpServletRequest request) {
@@ -161,10 +161,10 @@ public class RequestUtils {
             return null;
         }
 
-        // 优先从 X-Forwarded-For 获取（可能包含多个IP，取第一个）
+ // 优先从 X-远期-For 获取（可能包含多个IP，取第一个）
         String ip = request.getHeader("X-Forwarded-For");
         if (null != ip && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
-            // X-Forwarded-For 可能包含多个IP，用逗号分隔，取第一个
+ // X-远期-For 可能包含多个IP，用逗号分隔，取第一个
             int index = ip.indexOf(',');
             if (index > 0) {
                 ip = ip.substring(0, index).trim();
@@ -178,7 +178,7 @@ public class RequestUtils {
             return ip;
         }
 
-        // 从 getRemoteAddr 获取
+ // 从 获取远程addr 获取
         ip = request.getRemoteAddr();
         if (null != ip && !ip.isEmpty()) {
             return ip;
@@ -191,7 +191,7 @@ public class RequestUtils {
      * 获取请求URL
      * <p>包含协议、主机、端口、路径和查询参数</p>
      *
-     * @param request HttpServletRequest
+     * @param request httpservlet请求
      * @return 请求URL
      */
     public static String getUrl(HttpServletRequest request) {
@@ -221,7 +221,7 @@ public class RequestUtils {
     /**
      * 获取请求头值
      *
-     * @param request HttpServletRequest
+     * @param request httpservlet请求
      * @param name    请求头名称
      * @return 请求头值，如果不存在则返回null
      */
@@ -258,7 +258,7 @@ public class RequestUtils {
             }
         }
 
-        // 检查是否为静态资源路径（如 /static/, /assets/, /resources/ 等）
+ // 检查是否为静态资源路径（如 /静态/, /assets/, /resources/ 等）
         String[] staticPaths = {"/static/", "/assets/", "/resources/", "/public/", "/webjars/"};
         for (String path : staticPaths) {
             if (lowerURI.startsWith(path)) {

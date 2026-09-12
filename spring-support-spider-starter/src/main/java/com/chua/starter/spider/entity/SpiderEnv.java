@@ -26,15 +26,15 @@ import lombok.EqualsAndHashCode;
 public class SpiderEnv extends SysBase {
 
     /**
-     * 主键 ID（自增）
+      * 主键 标识（自增）
      */
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
-    /** ID */
+    /** 标识 */
     private Long id;
 
     /**
-     * 变量名（如 COOKIE、TOKEN）
+      * 变量名（如 Cookie、令牌）
      */
     @TableField("env_key")
     @Schema(description = "变量名")

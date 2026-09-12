@@ -7,12 +7,17 @@ import java.io.ByteArrayOutputStream;
 
 /**
  * @author CH
+ * @since 4.0.0
  */
 @Extension("csv")
 public class CsvMediaTypeHandler implements MediaTypeHandler {
     @Override
-    /** AsByteArray */
+    /** asbytearray */
     public byte[] asByteArray(Object o) {
+        /**
+         * 尝试。
+         * @param ByteArrayOutputStream( bytearray输出流(
+         */
         try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();) {
             return byteArrayOutputStream.toByteArray();
         } catch (Exception ignored) {

@@ -9,6 +9,7 @@ import java.util.Set;
  * 插件 Bean 取消注册事件
  *
  * @author CH
+ * @since 4.0.0
  */
 public class PluginBeanUnregisteredEvent extends ApplicationEvent {
 
@@ -40,6 +41,10 @@ public class PluginBeanUnregisteredEvent extends ApplicationEvent {
      * @param beanInstance Bean 实例
      */
     public PluginBeanUnregisteredEvent(Object source, String beanName, Object beanInstance) {
+        /**
+         * 父。
+         * @param source 源
+         */
         super(source);
         this.beanName = beanName;
         this.beanInstance = beanInstance;

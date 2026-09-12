@@ -6,6 +6,7 @@ import com.chua.common.support.spi.annotations.Spi;
  * MCP World 市场源 SPI。
  *
  * @since 4.0.0.42
+ * @author CH
  */
 @Spi("mcpworld")
 public class McpWorldSkillMarketSourceProvider implements SkillMarketSourceProvider {

@@ -18,7 +18,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Provider 注册中心
+   * 提供者 注册中心
  * <p>
  * 启动时扫描所有 {@link MetricProvider} / {@link OperationProvider} Bean,
  * 分别建立双键索引, 供调度器与控制器路由使用。
@@ -42,31 +42,39 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ProviderRegistry {
 
     /**
-     * 指标 Provider 索引
+      * 指标 提供者 索引
      */
     private final Map<ServiceType, Map<ProviderType, MetricProvider>> metricIndex = new EnumMap<>(ServiceType.class);
 
     /**
-     * 操作 Provider 索引
+      * 操作 提供者 索引
      */
     private final Map<ServiceType, OperationProvider> operationIndex = new ConcurrentHashMap<>();
 
     /**
-     * 构造方法, 自动注入所有 Provider 实现
+      * 构造方法, 自动注入所有 提供者 实现
      *
-     * @param metricProviders 指标 Provider 列表
-     * @param operationProviders 操作 Provider 列表
+     * @param metricProviders 指标 提供者 列表
+     * @param operationProviders 操作 提供者 列表
      */
     @Autowired
     public ProviderRegistry(List<MetricProvider> metricProviders, List<OperationProvider> operationProviders) {
+        /**
+         * 注册指标。
+         * @param metricProviders 指标提供者
+         */
         registerMetric(metricProviders);
+        /**
+         * 注册operation。
+         * @param operationProviders operation提供者
+         */
         registerOperation(operationProviders);
     }
 
     /**
-     * 注册指标 Provider
+      * 注册指标 提供者
      *
-     * @param providers Provider 列表
+     * @param providers 提供者 列表
      */
     private void registerMetric(List<MetricProvider> providers) {
         if (providers == null || providers.isEmpty()) {
@@ -84,9 +92,9 @@ public class ProviderRegistry {
     }
 
     /**
-     * 注册操作 Provider
+      * 注册操作 提供者
      *
-     * @param providers Provider 列表
+     * @param providers 提供者 列表
      */
     private void registerOperation(List<OperationProvider> providers) {
         if (providers == null || providers.isEmpty()) {
@@ -102,7 +110,7 @@ public class ProviderRegistry {
     }
 
     /**
-     * 解析指标 Provider
+      * 解析指标 提供者
      *
      * @param serviceType 服务类型
      * @param providerType 采集方式
@@ -117,7 +125,7 @@ public class ProviderRegistry {
     }
 
     /**
-     * 解析操作 Provider
+      * 解析操作 提供者
      *
      * @param serviceType 服务类型
      * @return Optional, 可能为空
@@ -127,7 +135,7 @@ public class ProviderRegistry {
     }
 
     /**
-     * 列出所有已注册的指标 Provider 组合
+      * 列出所有已注册的指标 提供者 组合
      *
      * @return 不可变视图
      */
@@ -138,7 +146,7 @@ public class ProviderRegistry {
     /**
      * 用于测试与文档展示
      *
-     * @return 已注册 Provider 描述 Map
+     * @return 已注册 提供者 描述 映射
      */
     public Map<String, String> describe() {
         Map<String, String> out = new HashMap<>();

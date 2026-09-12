@@ -83,7 +83,9 @@ public class RequestFingerprintAutoConfiguration {
                 response.getWriter().write("{\"error\":\"Duplicate request\"}");
                 return;
             }
-            if (props.getValidityMs() > 0) cache.put(fp, now + props.getValidityMs());
+            if (props.getValidityMs() > 0) {
+                cache.put(fp, now + props.getValidityMs());
+            }
             response.setHeader(props.getHeaderName(), fp);
             chain.doFilter(request, res);
         };
@@ -101,15 +103,23 @@ public class RequestFingerprintAutoConfiguration {
         try {
             HashFunction hf = selectHash(cfg.getAlgorithm());
             Hasher hasher = hf.newHasher();
-            if (cfg.getSalt() != null) hasher.putString(cfg.getSalt(), StandardCharsets.UTF_8);
-            if (cfg.isIncludeMethod()) hasher.putString(nullToEmpty(req.getMethod()), StandardCharsets.UTF_8);
-            if (cfg.isIncludePath()) hasher.putString(nullToEmpty(req.getRequestURI()), StandardCharsets.UTF_8);
+            if (cfg.getSalt() != null) {
+                hasher.putString(cfg.getSalt(), StandardCharsets.UTF_8);
+            }
+            if (cfg.isIncludeMethod()) {
+                hasher.putString(nullToEmpty(req.getMethod()), StandardCharsets.UTF_8);
+            }
+            if (cfg.isIncludePath()) {
+                hasher.putString(nullToEmpty(req.getRequestURI()), StandardCharsets.UTF_8);
+            }
             if (cfg.isIncludeParams()) {
                 List<String> names = Collections.list(req.getParameterNames());
                 Collections.sort(names);
                 for (String k : names) {
                     hasher.putString(k, StandardCharsets.UTF_8);
-                    for (String v : req.getParameterValues(k)) hasher.putString(nullToEmpty(v), StandardCharsets.UTF_8);
+                    for (String v : req.getParameterValues(k)) {
+                        hasher.putString(nullToEmpty(v), StandardCharsets.UTF_8);
+                    }
                 }
             }
             if (cfg.getIncludeHeaders() != null && !cfg.getIncludeHeaders().isEmpty()) {
@@ -129,7 +139,13 @@ public class RequestFingerprintAutoConfiguration {
         }
     }
 
-    /** MatchBodyMethod */
+    /**
+     * 匹配主体方法
+     *
+     * @param method 方法
+     * @param props props
+     * @return 匹配主体方法的结果
+     */
     private boolean matchBodyMethod(String method, FingerprintProps props) {
         if (method == null) {
             return false;
@@ -140,7 +156,13 @@ public class RequestFingerprintAutoConfiguration {
         return props.getBodyMethods().contains(method.toUpperCase(Locale.ROOT));
     }
 
-    /** Within获取大小Limit */
+    /**
+     * Within获取大小限制
+     *
+     * @param req req
+     * @param maxBytes 最大bytes
+     * @return within大小限制的结果
+     */
     private boolean withinSizeLimit(HttpServletRequest req, long maxBytes) {
         if (maxBytes <= 0) {
             return true;
@@ -171,7 +193,7 @@ public class RequestFingerprintAutoConfiguration {
     }
 
     /**
-     * null 安全转换
+      * 空 安全转换
      *
      * @param s 字符串
      * @return 非空字符串
@@ -180,6 +202,8 @@ public class RequestFingerprintAutoConfiguration {
 
     /**
      * 指纹配置属性
+     * @author CH
+     * @since 4.0.0
      */
     @ConfigurationProperties(prefix = "plugin.security.fingerprint")
     public static class FingerprintProps {
@@ -203,139 +227,243 @@ public class RequestFingerprintAutoConfiguration {
         private boolean includeBody = false;
         /** 1MB 默认上限 */
         private long includeBodyMaxBytes = 1024 * 1024;
-        /** 请求体methods */
+        /** 请求体方法 */
         private Set<String> bodyMethods = new LinkedHashSet<>(Arrays.asList("POST", "PUT", "PATCH"));
-        /** ValidityMS */
+        /** validityms */
         private long validityMs = 60_000;
         /** Rejectduplicate */
         private boolean rejectDuplicate = false;
 
-        /** 是否Enabled */
+        /**
+         * 是否已启用
+         *
+         * @return 是否已启用的结果
+         */
         public boolean isEnabled() {
             return enabled;
         }
 
-        /** 设置Enabled */
+        /**
+         * 设置已启用
+         *
+         * @param enabled 已启用
+         */
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
         }
 
-        /** 获取HeaderName */
+        /**
+         * 获取头部名称
+         *
+         * @return 获取头部名称的结果
+         */
         public String getHeaderName() {
             return headerName;
         }
 
-        /** 设置HeaderName */
+        /**
+         * 设置头部名称
+         *
+         * @param headerName 头部名称
+         */
         public void setHeaderName(String headerName) {
             this.headerName = headerName;
         }
 
-        /** 获取Algorithm */
+        /**
+         * 获取Algorithm
+         *
+         * @return 获取algorithm的结果
+         */
         public String getAlgorithm() {
             return algorithm;
         }
 
-        /** 设置Algorithm */
+        /**
+         * 设置Algorithm
+         *
+         * @param algorithm algorithm
+         */
         public void setAlgorithm(String algorithm) {
             this.algorithm = algorithm;
         }
 
-        /** 获取Salt */
+        /**
+         * 获取Salt
+         *
+         * @return 获取salt的结果
+         */
         public String getSalt() {
             return salt;
         }
 
-        /** 设置Salt */
+        /**
+         * 设置Salt
+         *
+         * @param salt salt
+         */
         public void setSalt(String salt) {
             this.salt = salt;
         }
 
-        /** 是否IncludeMethod */
+        /**
+         * 是否include方法
+         *
+         * @return 是否include方法的结果
+         */
         public boolean isIncludeMethod() {
             return includeMethod;
         }
 
-        /** 设置IncludeMethod */
+        /**
+         * 设置include方法
+         *
+         * @param includeMethod include方法
+         */
         public void setIncludeMethod(boolean includeMethod) {
             this.includeMethod = includeMethod;
         }
 
-        /** 是否IncludePath */
+        /**
+         * 是否include路径
+         *
+         * @return 是否include路径的结果
+         */
         public boolean isIncludePath() {
             return includePath;
         }
 
-        /** 设置IncludePath */
+        /**
+         * 设置include路径
+         *
+         * @param includePath include路径
+         */
         public void setIncludePath(boolean includePath) {
             this.includePath = includePath;
         }
 
-        /** 是否IncludeParams */
+        /**
+         * 是否include参数
+         *
+         * @return 是否include参数的结果
+         */
         public boolean isIncludeParams() {
             return includeParams;
         }
 
-        /** 设置IncludeParams */
+        /**
+         * 设置include参数
+         *
+         * @param includeParams include参数
+         */
         public void setIncludeParams(boolean includeParams) {
             this.includeParams = includeParams;
         }
 
-        /** 获取IncludeHeaders */
+        /**
+         * 获取include头部
+         *
+         * @return 获取include头部的结果
+         */
         public Set<String> getIncludeHeaders() {
             return includeHeaders;
         }
 
-        /** 设置IncludeHeaders */
+        /**
+         * 设置include头部
+         *
+         * @param includeHeaders include头部
+         */
         public void setIncludeHeaders(Set<String> includeHeaders) {
             this.includeHeaders = includeHeaders;
         }
 
-        /** 是否IncludeBody */
+        /**
+         * 是否include主体
+         *
+         * @return 是否include主体的结果
+         */
         public boolean isIncludeBody() {
             return includeBody;
         }
 
-        /** 设置IncludeBody */
+        /**
+         * 设置include主体
+         *
+         * @param includeBody include主体
+         */
         public void setIncludeBody(boolean includeBody) {
             this.includeBody = includeBody;
         }
 
-        /** 获取IncludeBody最大值Bytes */
+        /**
+         * 获取include主体最大值Bytes
+         *
+         * @return 获取include主体最大bytes的结果
+         */
         public long getIncludeBodyMaxBytes() {
             return includeBodyMaxBytes;
         }
 
-        /** 设置IncludeBody最大值Bytes */
+        /**
+         * 设置include主体最大值Bytes
+         *
+         * @param includeBodyMaxBytes include主体最大bytes
+         */
         public void setIncludeBodyMaxBytes(long includeBodyMaxBytes) {
             this.includeBodyMaxBytes = includeBodyMaxBytes;
         }
 
-        /** 获取BodyMethods */
+        /**
+         * 获取主体方法
+         *
+         * @return 获取主体方法的结果
+         */
         public Set<String> getBodyMethods() {
             return bodyMethods;
         }
 
-        /** 设置BodyMethods */
+        /**
+         * 设置主体方法
+         *
+         * @param bodyMethods 主体方法
+         */
         public void setBodyMethods(Set<String> bodyMethods) {
             this.bodyMethods = bodyMethods;
         }
 
-        /** 获取ValidityMs */
+        /**
+         * 获取validityms
+         *
+         * @return 获取validityms的结果
+         */
         public long getValidityMs() {
             return validityMs;
         }
 
-        /** 设置ValidityMs */
+        /**
+         * 设置validityms
+         *
+         * @param validityMs validityms
+         */
         public void setValidityMs(long validityMs) {
             this.validityMs = validityMs;
         }
 
-        /** 是否RejectDuplicate */
+        /**
+         * 是否reject重复
+         *
+         * @return 是否reject重复的结果
+         */
         public boolean isRejectDuplicate() {
             return rejectDuplicate;
         }
 
-        /** 设置RejectDuplicate */
+        /**
+         * 设置reject重复
+         *
+         * @param rejectDuplicate reject重复
+         */
         public void setRejectDuplicate(boolean rejectDuplicate) {
             this.rejectDuplicate = rejectDuplicate;
         }
@@ -352,7 +480,9 @@ public class RequestFingerprintAutoConfiguration {
     }
 
     /**
-     * 带缓存请求体的 Request 包装器
+      * 带缓存请求体的 请求 包装器
+     * @author CH
+     * @since 4.0.0
      */
     static class CachedBodyHttpServletRequest extends HttpServletRequestWrapper {
         /** Cached请求体 */
@@ -373,13 +503,15 @@ public class RequestFingerprintAutoConfiguration {
             while ((read = is.read(buf, 0, (int) Math.min(buf.length, remaining))) != -1) {
                 baos.write(buf, 0, read);
                 remaining -= read;
-                if (remaining <= 0) break;
+                if (remaining <= 0) {
+                    break;
+                }
             }
             this.cachedBody = baos.toByteArray();
         }
         byte[] getCachedBody() { return cachedBody; }
         @Override
-        /** 获取InputStream */
+        /** 获取输入流 */
         public ServletInputStream getInputStream() {
             final java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(cachedBody);
             return new ServletInputStream() {

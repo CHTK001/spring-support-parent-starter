@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
  * 格式化
  *
  * @author CH
+ * @since 4.0.0
  */
 public interface Formatter {
     /**

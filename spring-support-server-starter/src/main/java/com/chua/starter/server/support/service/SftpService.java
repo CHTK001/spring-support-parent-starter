@@ -22,8 +22,8 @@ public interface SftpService {
     /**
      * 列出目录内容
      *
-     * @param hostId     主机 ID
-     * @param identityId 指定身份 ID，可为空取默认绑定身份
+     * @param hostId     主机 标识
+     * @param identityId 指定身份 标识，可为空取默认绑定身份
      * @param path       目录路径，空时取用户主目录
      * @return 文件条目列表（name/path/directory/file/size 等键）
      */
@@ -32,18 +32,18 @@ public interface SftpService {
     /**
      * 读取文本文件内容
      *
-     * @param hostId     主机 ID
-     * @param identityId 身份 ID
+     * @param hostId     主机 标识
+     * @param identityId 身份 标识
      * @param path       文件路径
-     * @return 内容结果：content（可能被截断）/ truncated / size
+     * @return 内容结果：content（可能被截断）/ truncated / 大小
      */
     ReturnResult<Map<String, Object>> readContent(Long hostId, Long identityId, String path);
 
     /**
      * 写入文本文件内容（整文件覆盖）
      *
-     * @param hostId     主机 ID
-     * @param identityId 身份 ID
+     * @param hostId     主机 标识
+     * @param identityId 身份 标识
      * @param path       文件路径
      * @param content    新内容
      * @return 结果
@@ -53,8 +53,8 @@ public interface SftpService {
     /**
      * 上传文件到指定目录
      *
-     * @param hostId     主机 ID
-     * @param identityId 身份 ID
+     * @param hostId     主机 标识
+     * @param identityId 身份 标识
      * @param directory  目标目录
      * @param file       上传的文件
      * @return 结果（含远端完整路径）
@@ -64,18 +64,18 @@ public interface SftpService {
     /**
      * 下载远端文件到本地临时文件
      *
-     * @param hostId     主机 ID
-     * @param identityId 身份 ID
+     * @param hostId     主机 标识
+     * @param identityId 身份 标识
      * @param path       远端文件路径
-     * @return 临时文件句柄（使用方负责 close 删除）
+     * @return 临时文件句柄（使用方负责 关闭 删除）
      */
     ReturnResult<TempFile> download(Long hostId, Long identityId, String path);
 
     /**
      * 创建目录
      *
-     * @param hostId     主机 ID
-     * @param identityId 身份 ID
+     * @param hostId     主机 标识
+     * @param identityId 身份 标识
      * @param path       新目录路径
      * @return 结果
      */
@@ -84,8 +84,8 @@ public interface SftpService {
     /**
      * 删除文件或目录
      *
-     * @param hostId     主机 ID
-     * @param identityId 身份 ID
+     * @param hostId     主机 标识
+     * @param identityId 身份 标识
      * @param path       路径
      * @param recursive  目录是否递归删除
      * @return 结果
@@ -95,8 +95,8 @@ public interface SftpService {
     /**
      * 重命名或移动
      *
-     * @param hostId     主机 ID
-     * @param identityId 身份 ID
+     * @param hostId     主机 标识
+     * @param identityId 身份 标识
      * @param fromPath   原路径
      * @param toPath     新路径
      * @return 结果

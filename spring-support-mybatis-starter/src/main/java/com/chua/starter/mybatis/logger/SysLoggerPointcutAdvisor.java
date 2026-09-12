@@ -33,7 +33,7 @@ import java.util.Date;
  *     <li>通过事件机制发布日志，支持模块化处理</li>
  * </ul>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/01/01
  * @see SysLog
  * @see SysLoggerInfo
@@ -51,7 +51,7 @@ public class SysLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
     }
 
     @Override
-    /** 创建OperateLogger */
+    /** 创建operate日志记录器 */
     protected void createOperateLogger(Object proceed, Throwable throwable, MethodInvocation invocation, long startTime) {
         Method method = invocation.getMethod();
         SysLog sysLog = method.getDeclaredAnnotation(SysLog.class);
@@ -97,6 +97,10 @@ public class SysLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
         sysLoggerInfo.setMethodName(method.getName());
 
         // 发布日志事件
+        /**
+         * 发布事件。
+         * @param sysLoggerInfo sys日志记录器信息
+         */
         publishEvent(sysLoggerInfo);
     }
 }

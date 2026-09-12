@@ -18,36 +18,50 @@ public enum TrainStage {
 
     /**
      * 任务已创建（数据已就绪、处于 PENDING）。
+     * @param "任务已创建" "任务已创建"
+     * @return 任务创建的结果
      */
     TASK_CREATED("任务已创建"),
 
     /**
      * 超参数已更新（仅 PENDING 可改，部分更新语义）。
+     * @param "超参数已更新" "超参数已更新"
+     * @return 参数更新的结果
      */
     ARGUMENT_UPDATED("超参数已更新"),
 
     /**
      * 训练线程已启动（PENDING → RUNNING）。
+     * @param "训练启动" "训练启动"
+     * @return train启动的结果
      */
     TRAIN_STARTED("训练启动"),
 
     /**
-     * 迭代进度更新（每个 epoch 完成时上报）。
+      * 迭代进度更新（每个 轮次 完成时上报）。
+     * @param "迭代进度" "迭代进度"
+     * @return 轮次进步的结果
      */
     EPOCH_PROGRESS("迭代进度"),
 
     /**
-     * 训练成功（进入 SUCCESS）。
+      * 训练成功（进入 成功）。
+     * @param "训练成功" "训练成功"
+     * @return TRAIN_SUCCEEDED的结果
      */
     TRAIN_SUCCEEDED("训练成功"),
 
     /**
-     * 训练失败（进入 FAILED，含异常信息）。
+      * 训练失败（进入 失败，含异常信息）。
+     * @param "训练失败" "训练失败"
+     * @return train失败的结果
      */
     TRAIN_FAILED("训练失败"),
 
     /**
      * 训练被中断/取消（进入 CANCELLED）。
+     * @param "训练取消" "训练取消"
+     * @return TRAIN_CANCELLED的结果
      */
     TRAIN_CANCELLED("训练取消");
 

@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 大华云睿（DH Cloud / DoLynk Cloud / ICC）平台 OpenAPI 会话
+   * 大华云睿（DH Cloud / 执行lynk Cloud / ICC）平台 打开api 会话
  * <p>对接大华云睿平台 OpenAPI，基于 common-starter HttpClient，全平台可用。</p>
  *
  * <h3>接入说明</h3>
@@ -28,7 +28,7 @@ import java.util.UUID;
 public class DahuaCloudSession extends AbstractOpenApiSession {
 
     /**
-     * 大华云睿默认 baseUrl（按官方文档配置）
+      * 大华云睿默认 baseurl（按官方文档配置）
      */
     private static final String DEFAULT_BASE_URL = "https://api.dahua-cloud.com";
 
@@ -53,16 +53,27 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     private static final String PATH_DOOR_CONTROL = "/openapi/access/control";
 
     /**
-     * 创建 DahuaCloudSession 实例
-     * @param info info
+      * 创建 dahuacloud会话 实例
+     * @param info 信息
      */
     public DahuaCloudSession(DeviceConnectInfo info) {
+        /**
+         * 父。
+         * @param info 信息
+         * @param DEFAULT_BASE_URL 默认baseurl
+         */
         super(info, DEFAULT_BASE_URL);
+        /**
+         * login。
+         */
         login();
     }
 
     /**
-     * 大华云睿签名：sign = MD5(appSecret + time + nonce + appKey)。
+      * 大华云睿签名：标志 = MD5(appsecret + 时间 + nonce + app钥匙)。
+     * @param time 时间
+     * @param nonce nonce
+     * @return 标志的结果
      */
     private String sign(String time, String nonce) {
         try {
@@ -75,6 +86,12 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
             }
             return sb.toString();
         } catch (Exception e) {
+            /**
+             * illegal状态异常。
+             * @param "大华云睿签名失败" "大华云睿签名失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("大华云睿签名失败", e);
         }
     }
@@ -90,19 +107,37 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
             String token = data.path("accessToken").asText(null);
             long expires = data.path("expiresIn").asLong(7200L);
             if (token == null || token.isEmpty()) {
+                /**
+                 * illegal状态异常。
+                 * @param 为空" 为空"
+                 * @return illegal状态异常的结果
+                 */
                 throw new IllegalStateException("大华云睿 accessToken 为空");
             }
+            /**
+             * 缓存令牌。
+             * @param token 令牌
+             * @param expires expires
+             */
             cacheToken(token, expires);
             log.info("大华云睿登录成功: deviceSerial={}", info.getDeviceSerial());
         } catch (Exception e) {
+            /**
+             * illegal状态异常。
+             * @param e.getMessage( e.获取消息(
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("大华云睿登录失败: " + e.getMessage(), e);
         }
     }
 
     @Override
-    /** DoRequest */
+    /** 执行请求 */
     protected JsonNode doRequest(String method, String path, Map<String, Object> params) {
         if (!tokenValid() && !PATH_LOGIN.equals(path)) {
+            /**
+             * login。
+             */
             login();
         }
         String time = String.valueOf(System.currentTimeMillis());
@@ -126,7 +161,12 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
         return execute(method, path, realParams, null);
     }
 
-    /** 获取LiveUrl */
+    /**
+     * 获取liveurl
+     *
+     * @param channel 通道
+     * @return 获取liveurl的结果
+     */
     public JsonNode getLiveUrl(int channel) {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceSerial", info.getDeviceSerial());
@@ -136,14 +176,14 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     }
 
     @Override
-    /** 获取LiveUrl */
+    /** 获取liveurl */
     public String getLiveUrl(int channel, String protocol) {
         JsonNode data = getLiveUrl(channel);
         return data.path("url").asText(data.path("hls").asText(data.path("flv").asText("")));
     }
 
     @Override
-    /** 获取PlaybackUrl */
+    /** 获取playbackurl */
     public String getPlaybackUrl(int channel, com.chua.starter.device.spi.model.TimeRange range) {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceSerial", info.getDeviceSerial());
@@ -156,17 +196,17 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
 
     @Override
     /**
-     * 查询AccessRecords
-     * @param range range
-     * @param params params
-     * @param cmd cmd
-     * @param speed speed
+      * 查询accessrecords
+     * @param range 范围
+     * @param params 参数
+     * @param cmd CMD
+     * @param speed 速度
      * @param 1 1
-     * @param params params
-     * @param cmd cmd
-     * @param doorId doorId
-     * @param doorId doorId
-     * @param params params
+     * @param params 参数
+     * @param cmd CMD
+     * @param doorId 门标识
+     * @param doorId 门标识
+     * @param params 参数
      */
     public java.util.List<com.chua.starter.device.spi.model.AccessRecord> queryAccessRecords(
             com.chua.starter.device.spi.model.TimeRange range) {
@@ -179,7 +219,7 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     }
 
     @Override
-    /** PtzControl */
+    /** ptzcontrol */
     public void ptzControl(com.chua.starter.device.spi.model.PtzCommand cmd, double speed) {
         if (cmd == com.chua.starter.device.spi.model.PtzCommand.STOP) {
             return;
@@ -189,10 +229,20 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
         params.put("channel", 1);
         params.put("action", mapAction(cmd));
         params.put("speed", (int) Math.max(1, Math.min(255, Math.round(speed * 255))));
+        /**
+         * post。
+         * @param PATH_PTZ_CONTROL 路径ptzcontrol
+         * @param params 参数
+         */
         post(PATH_PTZ_CONTROL, params);
     }
 
-    /** MapAction */
+    /**
+     * 映射动作
+     *
+     * @param cmd CMD
+     * @return 映射动作的结果
+     */
     private String mapAction(com.chua.starter.device.spi.model.PtzCommand cmd) {
         switch (cmd) {
             case UP: return "up";
@@ -210,12 +260,17 @@ public class DahuaCloudSession extends AbstractOpenApiSession {
     }
 
     @Override
-    /** Remote解锁 */
+    /** 远程解锁 */
     public void remoteUnlock(int doorId) {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceSerial", info.getDeviceSerial());
         params.put("doorId", doorId);
         params.put("action", "open");
+        /**
+         * post。
+         * @param PATH_DOOR_CONTROL 路径门control
+         * @param params 参数
+         */
         post(PATH_DOOR_CONTROL, params);
     }
 }

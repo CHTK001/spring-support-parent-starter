@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * AppKey 控制器，提供 AppKey 的增删改查与启停切换。
+   * app钥匙 控制器，提供 app钥匙 的增删改查与启停切换。
  *
  * <p>所有写接口均受 {@code @Permission("admin")} 保护，统一返回 {@link ReturnResult}。</p>
  *
@@ -35,12 +35,12 @@ import java.util.List;
 public class AiAppKeyController {
 
     /**
-     * AppKey 服务
+      * app钥匙 服务
      */
     private final AiAppKeyService appKeyService;
 
     /**
-     * 查询所有 AppKey。
+      * 查询所有 app钥匙。
      *
      * @return 操作结果
      */
@@ -52,9 +52,9 @@ public class AiAppKeyController {
     }
 
     /**
-     * 新建 AppKey。
+      * 新建 app钥匙。
      *
-     * @param appKey AppKey DTO
+     * @param appKey app钥匙 DTO
      * @return 操作结果
      */
     @Permission("admin")
@@ -65,11 +65,12 @@ public class AiAppKeyController {
     }
 
     /**
-     * 更新 AppKey。
+      * 更新 app钥匙。
      *
-     * @param appKeyId AppKey 主键
-     * @param appKey   AppKey DTO
+     * @param appKeyId app钥匙 主键
+     * @param appKey   app钥匙 DTO
      * @return 操作结果
+     * @param ID" 标识"
      */
     @Permission("admin")
     @Operation(summary = "更新 AppKey")
@@ -80,10 +81,13 @@ public class AiAppKeyController {
     }
 
     /**
-     * 删除 AppKey（逻辑删除）。
+      * 删除 app钥匙（逻辑删除）。
      *
-     * @param appKeyId AppKey 主键
+     * @param appKeyId app钥匙 主键
      * @return 操作结果
+     * @param ID" 标识"
+     * @param ID" 标识"
+     * @param ID" ID"
      */
     @Permission("admin")
     @Operation(summary = "删除 AppKey")
@@ -93,11 +97,12 @@ public class AiAppKeyController {
     }
 
     /**
-     * 切换 AppKey 启用状态。
+      * 切换 app钥匙 启用状态。
      *
-     * @param appKeyId AppKey 主键
+     * @param appKeyId app钥匙 主键
      * @param enabled  是否启用
      * @return 操作结果
+     * @param ID" 标识"
      */
     @Permission("admin")
     @Operation(summary = "切换 AppKey 启用状态")

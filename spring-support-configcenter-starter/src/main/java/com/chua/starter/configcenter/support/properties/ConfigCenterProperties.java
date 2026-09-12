@@ -38,7 +38,7 @@ public class ConfigCenterProperties {
     /**
      * 协议类型
      * <p>
-     * 支持：nacos, apollo, consul, zookeeper 等
+      * 支持：nacos, apollo, consul, ZooKeeper 等
      * </p>
      */
     private String protocol;
@@ -59,9 +59,9 @@ public class ConfigCenterProperties {
     private String password;
 
     /**
-     * 命名空间ID
+      * 命名空间标识
      * <p>
-     * 不填写默认为 spring.profiles.active
+      * 不填写默认为 spring.配置文件.活跃
      * </p>
      */
     private String namespaceId;
@@ -73,6 +73,8 @@ public class ConfigCenterProperties {
 
     /**
      * 热更新配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class HotReload {
@@ -86,19 +88,19 @@ public class ConfigCenterProperties {
         private boolean enabled = true;
 
         /**
-         * 是否支持 @Value 注解热更新
+          * 是否支持 @价值观 注解热更新
          * <p>
-         * 启用后，使用 @Value 注解的字段也能实现热更新。
-         * 注意：需要配合 @RefreshScope 使用，或者使用 @ConfigValue 注解。
+          * 启用后，使用 @价值观 注解的字段也能实现热更新。
+          * 注意：需要配合 @refreshscope 使用，或者使用 @配置价值观 注解。
          * </p>
          */
         private boolean valueAnnotationEnabled = true;
 
         /**
-         * 是否支持 @ConfigValue 注解热更新
+          * 是否支持 @配置价值观 注解热更新
          * <p>
-         * 启用后，使用 @ConfigValue 注解的字段支持热更新，
-         * 无需 @RefreshScope。
+          * 启用后，使用 @配置价值观 注解的字段支持热更新，
+          * 无需 @refreshscope。
          * </p>
          */
         private boolean configValueAnnotationEnabled = true;

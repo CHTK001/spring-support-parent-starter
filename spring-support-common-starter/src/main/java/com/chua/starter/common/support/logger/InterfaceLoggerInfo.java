@@ -17,12 +17,13 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * 接口日志信息
  *
  * @author CH
+ * @since 4.0.0
  */
 @EqualsAndHashCode(callSuper = true)
 public class InterfaceLoggerInfo extends ApplicationEvent {
 
 
-    final transient HttpServletRequest request;
+    final transient HttpServletRequest request; // 请求
     /**
      * 请求方法
      */
@@ -45,10 +46,14 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
     private byte[] body = new byte[0];
 
     /**
-     * 创建 InterfaceLoggerInfo 实例
-     * @param request request
+      * 创建 接口日志记录器信息 实例
+     * @param request 请求
      */
     public InterfaceLoggerInfo(HttpServletRequest request) {
+        /**
+         * 父。
+         * @param request 请求
+         */
         super(request);
         this.request = request;
         this.method = request.getMethod();
@@ -74,7 +79,7 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 获取 request
+      * 获取 请求
      *
      * @return request
      */
@@ -83,7 +88,7 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 获取 method
+      * 获取 方法
      *
      * @return method
      */
@@ -92,9 +97,9 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 method
+      * 设置 方法
      *
-     * @param method method
+     * @param method 方法
      */
     public void setMethod(String method) {
         this.method = method;
@@ -137,7 +142,7 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 获取 queryParams
+      * 获取 查询参数
      *
      * @return queryParams
      */
@@ -146,16 +151,16 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 queryParams
+      * 设置 查询参数
      *
-     * @param queryParams queryParams
+     * @param queryParams 查询参数
      */
     public void setQueryParams(String queryParams) {
         this.queryParams = queryParams;
     }
 
     /**
-     * 获取 body
+      * 获取 主体
      *
      * @return body
      */
@@ -164,9 +169,9 @@ public class InterfaceLoggerInfo extends ApplicationEvent {
     }
 
     /**
-     * 设置 body
+      * 设置 主体
      *
-     * @param body body
+     * @param body 主体
      */
     public void setBody(byte[] body) {
         this.body = body;

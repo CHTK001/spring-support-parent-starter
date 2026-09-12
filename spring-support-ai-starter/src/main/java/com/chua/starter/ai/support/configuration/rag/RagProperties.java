@@ -24,12 +24,12 @@ public class RagProperties {
     private boolean enabled = true;
 
     /**
-     * 默认向量化引擎（memory / openai / siliconflow 等）
+      * 默认向量化引擎（内存 / openai / siliconflow 等）
      */
     private String embeddingEngine = "memory";
 
     /**
-     * 默认向量数据库（jvector / milvus / mysql / memory）
+       * 默认向量数据库（jvector / milvus / MySQL / 内存）
      */
     private String vectorStorage = "jvector";
 

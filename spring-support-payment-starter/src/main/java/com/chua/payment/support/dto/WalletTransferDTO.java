@@ -10,27 +10,28 @@ import java.math.BigDecimal;
 /**
  * 钱包转账DTO
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class WalletTransferDTO {
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
-    /** From用户ID */
+    /** 从用户标识 */
     private Long fromUserId;
-    /** TO用户ID */
+    /** 转为用户标识 */
     private Long toUserId;
-    /** TransferNO */
+    /** 调动no */
     private String transferNo;
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
     /** Amount */
     private BigDecimal amount;
-    /** Operator */
+    /** 操作符 */
     private String operator;
-    /** Remark */
+    /** 评论 */
     private String remark;
 }
 

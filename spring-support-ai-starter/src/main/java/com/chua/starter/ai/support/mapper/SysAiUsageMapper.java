@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * AI 用量 Mapper。
+   * AI 用量 映射器。
  *
  * @since 4.0.0.42
  * @author CH
@@ -22,11 +22,11 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
      * 用量聚合统计结果。
      *
      * @param totalCalls          总调用次数
-     * @param totalPromptTokens   总输入 Token
-     * @param totalCompletionTokens 总输出 Token
-     * @param totalTokens         总 Token
+     * @param totalPromptTokens   总输入 令牌
+     * @param totalCompletionTokens 总输出 令牌
+     * @param totalTokens         总 令牌
      * @param totalCost           总费用（元）
-     * @param totalCachedTokens   缓存读取 Token
+     * @param totalCachedTokens   缓存读取 令牌
      * @param standardCost        标准费用（官方价格计算，未折扣）
      * @param totalLatency        总耗时（ms）
      * @param totalFirstTokenLatency 总首字延迟（ms）
@@ -44,14 +44,14 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
     ) {}
 
     /**
-     * 数据库端聚合统计——单条 SQL 完成 SUM/COUNT，配合索引秒级返回，避免全量装载到 JVM。
+      * 数据库端聚合统计——单条 SQL 完成 SUM/数量，配合索引秒级返回，避免全量装载到 JVM。
      *
      * @param groupName 分组名称（可为空，为空时不按分组过滤）
      * @param provider  服务商（可为空）
      * @param model     模型（可为空）
      * @param startTime 开始时间（可为空，不传则不限起始时间）
      * @param endTime   结束时间（可为空，不传则不限截止时间）
-     * @return 聚合统计行，所有字段可能为 null（无数据时）
+     * @return 聚合统计行，所有字段可能为 空（无数据时）
      */
     UsageStatsRow selectStatistics(
             @Param("groupName") String groupName,
@@ -69,11 +69,11 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
      * @param provider  服务商
      * @param model     模型
      * @param totalCalls 总调用次数
-     * @param totalPromptTokens 总输入 Token
-     * @param totalCompletionTokens 总输出 Token
-     * @param totalTokens 总 Token
+     * @param totalPromptTokens 总输入 令牌
+     * @param totalCompletionTokens 总输出 令牌
+     * @param totalTokens 总 令牌
      * @param totalCost 总费用（元）
-     * @param totalCachedTokens 缓存读取 Token
+     * @param totalCachedTokens 缓存读取 令牌
      * @param totalLatency 总耗时（ms）
      * @param totalFirstTokenLatency 总首字延迟（ms）
      */
@@ -93,10 +93,10 @@ public interface SysAiUsageMapper extends BaseMapper<SysAiUsage> {
     ) {}
 
     /**
-     * 数据库端按天、group、provider、model 分组聚合，一次 SQL 返回全部日汇总数据。
+      * 数据库端按天、群体、提供者、模型 分组聚合，一次 SQL 返回全部日汇总数据。
      *
-     * @param startTime 开始时间（含），不能为 null
-     * @param endTime   结束时间（不含），不能为 null
+     * @param startTime 开始时间（含），不能为 空
+     * @param endTime   结束时间（不含），不能为 空
      * @return 按天分组的聚合行列表，无数据时为空列表
      */
     List<DailyAggregateRow> selectDailyAggregate(

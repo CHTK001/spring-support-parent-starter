@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.util.Converter;
  * 数组解析
  *
  * @author CH
+ * @since 4.0.0
  */
 public class JsonArrayConverter implements Converter<Object[], String> {
     @Override
@@ -17,13 +18,13 @@ public class JsonArrayConverter implements Converter<Object[], String> {
     }
 
     @Override
-    /** 获取InputType */
+    /** 获取输入类型 */
     public JavaType getInputType(TypeFactory typeFactory) {
         return typeFactory.constructArrayType(Object.class);
     }
 
     @Override
-    /** 获取OutputType */
+    /** 获取输出类型 */
     public JavaType getOutputType(TypeFactory typeFactory) {
         return typeFactory.constructType(String.class);
     }

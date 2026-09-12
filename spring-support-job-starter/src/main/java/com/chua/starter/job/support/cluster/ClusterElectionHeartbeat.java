@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Leader 续约心跳守护线程。
  *
  * <p>每 {@code leaseSeconds/3} 秒由守护线程主动调用 {@link LeaderElectionResolver#tryAcquire}
- * (CAS 重入实现) 续约; 若失败则释放本地 Leader 状态。</p>
+   * (CAS 重入实现) 续约; 若失败则释放本地 铅 状态。</p>
  *
  * <h3>行为</h3>
  * <ul>
@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ClusterElectionHeartbeat {
 
     /**
-     * 心跳周期占租约比例 (heartbeat = lease / 3)
+      * 心跳周期占租约比例 (心跳 = lease / 3)
      */
     public static final int HEARTBEAT_DIVISOR = 3;
 

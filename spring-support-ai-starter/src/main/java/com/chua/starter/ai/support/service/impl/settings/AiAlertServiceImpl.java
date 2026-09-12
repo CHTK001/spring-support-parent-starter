@@ -33,7 +33,7 @@ public class AiAlertServiceImpl implements AiAlertService {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
-     * 告警 Mapper
+      * 告警 映射器
      */
     private final AiAlertMapper alertMapper;
 

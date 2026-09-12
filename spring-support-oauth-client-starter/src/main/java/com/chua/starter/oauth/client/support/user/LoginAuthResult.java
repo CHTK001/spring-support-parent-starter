@@ -6,6 +6,7 @@ import lombok.*;
  * 登录结果
  *
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @NoArgsConstructor
@@ -20,7 +21,7 @@ public class LoginAuthResult extends LoginResult {
     );
 
     /**
-     * code
+      * 编码
      */
     @NonNull
     /** 代码 */

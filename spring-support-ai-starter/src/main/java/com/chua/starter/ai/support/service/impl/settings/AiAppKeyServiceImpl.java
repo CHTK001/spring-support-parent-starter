@@ -26,7 +26,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * AppKey 服务实现类。
+   * app钥匙 服务实现类。
  *
  * <p>面板层 AppKey 复用 {@link SysAiAppKey} 实体与 {@link SysAiAppKeyMapper}，
  * 与协议层共用同一张 {@code sys_ai_app_key} 表，消除双实体对账写的风险。</p>
@@ -45,16 +45,16 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
-     * AppKey Mapper（与协议层共用）
+      * app钥匙 映射器（与协议层共用）
      */
     private final SysAiAppKeyMapper appKeyMapper;
-    /** 提供者mapper */
+    /** 提供者映射器 */
     private final AiProviderMapper providerMapper;
-    /** 分组mapper */
+    /** 分组映射器 */
     private final AiGroupMapper groupMapper;
 
     /**
-     * 查询所有 AppKey。
+      * 查询所有 app钥匙。
      *
      * @return 操作结果
      */
@@ -78,7 +78,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     /**
      * 解析全部分组名称映射。
      *
-     * @return groupId → groupName 映射
+     * @return groupId → 群体名称 映射
      */
     private Map<Integer, String> resolveGroupNames() {
         return groupMapper.selectList(null).stream()
@@ -86,9 +86,9 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     }
 
     /**
-     * 新建 AppKey。
+      * 新建 app钥匙。
      *
-     * @param dto AppKey DTO
+     * @param dto app钥匙 DTO
      * @return 操作结果
      */
     @Override
@@ -116,10 +116,10 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     }
 
     /**
-     * 更新 AppKey。
+      * 更新 app钥匙。
      *
-     * @param appKeyId AppKey 主键
-     * @param dto      AppKey DTO
+     * @param appKeyId app钥匙 主键
+     * @param dto      app钥匙 DTO
      * @return 操作结果
      */
     @Override
@@ -142,9 +142,9 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     }
 
     /**
-     * 删除 AppKey（逻辑删除）。
+      * 删除 app钥匙（逻辑删除）。
      *
-     * @param appKeyId AppKey 主键
+     * @param appKeyId app钥匙 主键
      * @return 操作结果
      */
     @Override
@@ -159,9 +159,9 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     }
 
     /**
-     * 切换 AppKey 启用状态。
+      * 切换 app钥匙 启用状态。
      *
-     * @param appKeyId AppKey 主键
+     * @param appKeyId app钥匙 主键
      * @param enabled  是否启用
      * @return 操作结果
      */
@@ -184,7 +184,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     /**
      * 解析供应商名称。
      *
-     * @param providerId 供应商 ID
+     * @param providerId 供应商 标识
      * @return 供应商名称
      */
     private String resolveProvider(Long providerId) {
@@ -199,7 +199,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     /**
      * 解析分组名称。
      *
-     * @param groupId 分组 ID
+     * @param groupId 分组 标识
      * @return 分组名称
      */
     private String resolveGroup(Integer groupId) {
@@ -214,7 +214,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     /**
      * 实体转 DTO。
      *
-     * @param entity       AppKey 实体
+     * @param entity       app钥匙 实体
      * @param providerName 供应商名称
      * @param groupName    分组名称
      * @return AppKey DTO
@@ -246,7 +246,7 @@ public class AiAppKeyServiceImpl implements AiAppKeyService {
     /**
      * DTO 转实体。
      *
-     * @param dto AppKey DTO
+     * @param dto app钥匙 DTO
      * @return AppKey 实体
      */
     private SysAiAppKey toEntity(AiAppKeyDTO dto) {

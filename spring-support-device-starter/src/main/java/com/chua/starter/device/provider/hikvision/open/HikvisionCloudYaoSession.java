@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 海康云耀（Hik-Connect / HiDDNS 外网云）OpenAPI 会话
+   * 海康云耀（Hik-连接 / hiddns 外网云）打开api 会话
  * <p>对接海康消费级/中小项目云平台，基于 common-starter HttpClient，全平台可用。</p>
  *
  * <h3>接入说明</h3>
@@ -27,12 +27,12 @@ import java.util.stream.Collectors;
 public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
 
     /**
-     * 海康云耀默认 baseUrl（按官方文档配置）
+      * 海康云耀默认 baseurl（按官方文档配置）
      */
     private static final String DEFAULT_BASE_URL = "https://api.hik-cloud.com";
 
     /**
-     * accessToken 接口路径
+      * access令牌 接口路径
      */
     private static final String PATH_TOKEN = "/api/v1/oauth/token";
 
@@ -57,12 +57,20 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
      * @param info 设备连接信息
      */
     public HikvisionCloudYaoSession(DeviceConnectInfo info) {
+        /**
+         * 父。
+         * @param info 信息
+         * @param DEFAULT_BASE_URL 默认baseurl
+         */
         super(info, DEFAULT_BASE_URL);
+        /**
+         * login。
+         */
         login();
     }
 
     /**
-     * 登录换取 accessToken（按海康云耀文档约定的 OAuth 流程）
+      * 登录换取 access令牌（按海康云耀文档约定的 o认证 流程）
      */
     private void login() {
         Map<String, Object> params = new LinkedHashMap<>();
@@ -74,17 +82,32 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
             String token = data.path("accessToken").asText(null);
             long expires = data.path("expiresIn").asLong(7200L);
             if (token == null || token.isEmpty()) {
+                /**
+                 * illegal状态异常。
+                 * @param 为空" 为空"
+                 * @return illegal状态异常的结果
+                 */
                 throw new IllegalStateException("海康云耀 accessToken 为空");
             }
+            /**
+             * 缓存令牌。
+             * @param token 令牌
+             * @param expires expires
+             */
             cacheToken(token, expires);
             log.info("海康云耀登录成功: deviceSerial={}", info.getDeviceSerial());
         } catch (Exception e) {
+            /**
+             * illegal状态异常。
+             * @param e.getMessage( e.获取消息(
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("海康云耀登录失败: " + e.getMessage(), e);
         }
     }
 
     /**
-     * 海康云耀通用签名：按参数键排序后拼接 + appSecret，HMAC-SHA256。
+      * 海康云耀通用签名：按参数键排序后拼接 + appsecret，HMAC-SHA256。
      *
      * @param params 参数
      * @return 签名值
@@ -105,14 +128,23 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
             }
             return sb.toString();
         } catch (Exception e) {
+            /**
+             * illegal状态异常。
+             * @param "海康云耀签名失败" "海康云耀签名失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("海康云耀签名失败", e);
         }
     }
 
     @Override
-    /** DoRequest */
+    /** 执行请求 */
     protected JsonNode doRequest(String method, String path, Map<String, Object> params) {
         if (!tokenValid() && !PATH_TOKEN.equals(path)) {
+            /**
+             * login。
+             */
             login();
         }
         Map<String, Object> realParams = new LinkedHashMap<>();
@@ -148,11 +180,11 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
     }
 
     @Override
-    /** 获取LiveUrl */
+    /** 获取liveurl */
     public String getLiveUrl(int channel, String protocol) {
         String p = protocol == null || protocol.isEmpty() ? "hls" : protocol;
         JsonNode data = getLiveAddress(channel, p);
-        // 海康云耀返回字段示例：data.url / data.hls / data.hlsAddress
+ // 海康云耀返回字段示例：数据.url / 数据.hls / 数据.hls地址
         return data.path("url").asText(data.path("hls").asText(data.path("hlsAddress").asText("")));
     }
 
@@ -176,7 +208,7 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
     }
 
     @Override
-    /** PtzControl */
+    /** ptzcontrol */
     public void ptzControl(com.chua.starter.device.spi.model.PtzCommand cmd, double speed) {
         if (cmd == com.chua.starter.device.spi.model.PtzCommand.STOP) {
             return;
@@ -186,11 +218,18 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
         params.put("channel", 1);
         params.put("direction", mapDirection(cmd));
         params.put("speed", Math.max(1, Math.min(255, Math.round(speed * 255))));
+        /**
+         * post。
+         * @param PATH_PTZ_CONTROL 路径ptzcontrol
+         * @param params 参数
+         */
         post(PATH_PTZ_CONTROL, params);
     }
 
     /**
      * 海康云耀云台方向码（按官方文档约定）
+     * @param cmd CMD
+     * @return 映射direction的结果
      */
     private int mapDirection(com.chua.starter.device.spi.model.PtzCommand cmd) {
         switch (cmd) {
@@ -209,12 +248,17 @@ public class HikvisionCloudYaoSession extends AbstractOpenApiSession {
     }
 
     @Override
-    /** Remote解锁 */
+    /** 远程解锁 */
     public void remoteUnlock(int doorId) {
         Map<String, Object> params = new HashMap<>();
         params.put("deviceSerial", info.getDeviceSerial());
         params.put("doorId", doorId);
         params.put("command", 1);
+        /**
+         * post。
+         * @param PATH_DOOR_CONTROL 路径门control
+         * @param params 参数
+         */
         post(PATH_DOOR_CONTROL, params);
     }
 }

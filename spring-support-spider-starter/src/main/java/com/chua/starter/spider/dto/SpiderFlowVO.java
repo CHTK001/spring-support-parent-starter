@@ -2,43 +2,91 @@ package com.chua.starter.spider.dto;
 
 import java.time.LocalDateTime;
 
-/** @author CH */
+/** @作者 CH */
 public class SpiderFlowVO {
-    /** Flow代码 */
+    /** 流代码 */
     private String flowCode;
-    /** Flow名称 */
+    /** 流名称 */
     private String flowName;
-    /** Flow版本 */
+    /** 流版本 */
     private Integer flowVersion;
-    /** Flow节点数量 */
+    /** 流节点数量 */
     private Integer flowNodeCount;
-    /** Flow状态 */
+    /** 流状态 */
     private Integer flowStatus;
-    /** Update时间 */
+    /** 更新时间 */
     private LocalDateTime updateTime;
 
-    /** 获取FlowCode */
+    /**
+     * 获取流编码
+     *
+     * @return 获取流编码的结果
+     */
     public String getFlowCode() { return flowCode; }
-    /** 设置FlowCode */
+    /**
+     * 设置流编码
+     *
+     * @param flowCode 流编码
+     */
     public void setFlowCode(String flowCode) { this.flowCode = flowCode; }
-    /** 获取FlowName */
+    /**
+     * 获取流名称
+     *
+     * @return 获取流名称的结果
+     */
     public String getFlowName() { return flowName; }
-    /** 设置FlowName */
+    /**
+     * 设置流名称
+     *
+     * @param flowName 流名称
+     */
     public void setFlowName(String flowName) { this.flowName = flowName; }
-    /** 获取FlowVersion */
+    /**
+     * 获取流版本
+     *
+     * @return 获取流版本的结果
+     */
     public Integer getFlowVersion() { return flowVersion; }
-    /** 设置FlowVersion */
+    /**
+     * 设置流版本
+     *
+     * @param flowVersion 流版本
+     */
     public void setFlowVersion(Integer flowVersion) { this.flowVersion = flowVersion; }
-    /** 获取FlowNode计算数量 */
+    /**
+     * 获取流节点计算数量
+     *
+     * @return 获取流节点数量的结果
+     */
     public Integer getFlowNodeCount() { return flowNodeCount; }
-    /** 设置FlowNode计算数量 */
+    /**
+     * 设置流节点计算数量
+     *
+     * @param flowNodeCount 流节点数量
+     */
     public void setFlowNodeCount(Integer flowNodeCount) { this.flowNodeCount = flowNodeCount; }
-    /** 获取FlowStatus */
+    /**
+     * 获取流状态
+     *
+     * @return 获取流状态的结果
+     */
     public Integer getFlowStatus() { return flowStatus; }
-    /** 设置FlowStatus */
+    /**
+     * 设置流状态
+     *
+     * @param flowStatus 流状态
+     */
     public void setFlowStatus(Integer flowStatus) { this.flowStatus = flowStatus; }
-    /** 获取更新Time */
+    /**
+     * 获取更新时间
+     *
+     * @return 获取更新时间的结果
+     */
     public LocalDateTime getUpdateTime() { return updateTime; }
-    /** 设置更新Time */
+    /**
+     * 设置更新时间
+     *
+     * @param updateTime 更新时间
+     */
     public void setUpdateTime(LocalDateTime updateTime) { this.updateTime = updateTime; }
 }

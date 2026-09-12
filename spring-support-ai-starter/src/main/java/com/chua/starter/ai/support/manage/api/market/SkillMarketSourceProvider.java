@@ -4,12 +4,13 @@ package com.chua.starter.ai.support.manage.api.market;
  * 技能市场源 SPI 提供者。
  *
  * <p>每个市场源一个实现（如 ClawHub、LoopHub、SkillHub、SkillHub MCP、MCP World、
- * ClawHub Plugins、SkillHub Packages），通过 {@code @Spi("source-key")} 注册。
+   * clawhub Plugins、skillhub 包），通过 {@code @Spi("source-key")} 注册。
  * 前端「技能 / MCP 市场」设置页枚举全部 SPI 渲染来源配置列表（每个源一个开关），
  * 仅渲染启用来源的市场内容。默认启用，开关状态持久化在 {@code sys_ai_global_setting}
  * 的 {@code skills} 分组（字段 {@code market_<source>_enabled}）。</p>
  *
  * @since 4.0.0.42
+ * @author CH
  */
 public interface SkillMarketSourceProvider {
 

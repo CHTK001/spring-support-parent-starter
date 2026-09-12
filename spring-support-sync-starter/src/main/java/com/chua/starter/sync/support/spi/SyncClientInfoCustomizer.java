@@ -3,7 +3,7 @@ package com.chua.starter.sync.support.spi;
 import com.chua.starter.sync.support.pojo.ClientInfo;
 
 /**
- * Sync 客户端信息定制器。
+   * 同步 客户端信息定制器。
  * <p>
  * 用于在客户端注册前补充业务元数据，便于服务端按租户、节点角色等维度定向投递。
  * </p>

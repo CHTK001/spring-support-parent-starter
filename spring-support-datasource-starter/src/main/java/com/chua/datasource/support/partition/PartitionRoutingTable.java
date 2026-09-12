@@ -22,24 +22,25 @@ import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Calcite {@link ScannableTable} 实现 — 将源表（热表）与所有已发现的分区表组合为 UNION ALL 虚拟表，
+   * Calcite {@link ScannableTable} 实现 — 将源表（热表）与所有已发现的分区表组合为 UNION 全部 虚拟表，
  * 使通过 Calcite 执行的查询可以透明地访问全量冷热数据。
  *
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class PartitionRoutingTable extends AbstractTable implements ScannableTable {
 
     /** 来源表 */
     private final String sourceTable;
-    /** 表names */
+    /** 表名称 */
     private final List<String> tableNames = new CopyOnWriteArrayList<>();
     /** JDBC模板 */
     private final JdbcTemplate jdbcTemplate;
-    /** 表comment */
+    /** 表评论 */
     private final String tableComment;
 
-    private volatile RelDataType rowType;
+    private volatile RelDataType rowType; // row类型
 
     /**
      * @param sourceTable   源表（热表）名
@@ -58,6 +59,7 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
 
     /**
      * 刷新分区表列表（热表始终在第一位）。
+     * @param discoveredPartitions discovered分区
      */
     public void refreshTableNames(List<String> discoveredPartitions) {
         List<String> refreshed = new ArrayList<>();
@@ -70,18 +72,26 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
         log.debug("[分区路由] {} 表列表刷新: {} 个表", sourceTable, refreshed.size());
     }
 
-    /** 获取SourceTable */
+    /**
+     * 获取源table
+     *
+     * @return 获取源table的结果
+     */
     public String getSourceTable() {
         return sourceTable;
     }
 
-    /** 获取TableNames */
+    /**
+     * 获取table名称
+     *
+     * @return 获取table名称的结果
+     */
     public List<String> getTableNames() {
         return List.copyOf(tableNames);
     }
 
     @Override
-    /** 获取RowType */
+    /** 获取row类型 */
     public RelDataType getRowType(RelDataTypeFactory typeFactory) {
         if (rowType == null) {
             synchronized (this) {
@@ -108,7 +118,7 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
         });
         return new AbstractEnumerable<Object[]>() {
             @Override
-            /** Iterator */
+            /** 迭代器 */
             public Iterator<Object[]> iterator() {
                 return rows.iterator();
             }
@@ -121,13 +131,13 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
                     private int index = -1;
 
                     @Override
-                    /** Current */
+                    /** 当前 */
                     public Object[] current() {
                         return rows.get(index);
                     }
 
                     @Override
-                    /** 移动Next */
+                    /** 移动下一个 */
                     public boolean moveNext() {
                         return ++index < rows.size();
                     }
@@ -147,7 +157,11 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
         };
     }
 
-    /** 构建UnionAllSql */
+    /**
+      * 构建union全部SQL
+     *
+     * @return 构建union全部sql的结果
+     */
     private String buildUnionAllSql() {
         StringBuilder sql = new StringBuilder();
         for (int i = 0; i < tableNames.size(); i++) {
@@ -159,10 +173,23 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
         return sql.toString();
     }
 
-    /** 构建RowType */
+    /**
+     * 构建row类型
+     *
+     * @param typeFactory 类型工厂
+     * @return 构建row类型的结果
+     */
     private RelDataType buildRowType(RelDataTypeFactory typeFactory) {
+        /**
+         * 尝试。
+         * @param Objects.requireNonNull(jdbcTemplate.getDataSource( 对象.requirenonnull(jdbctemplate.获取数据源(
+         */
         try (var conn = Objects.requireNonNull(jdbcTemplate.getDataSource()).getConnection()) {
             DatabaseMetaData metaData = conn.getMetaData();
+            /**
+             * 尝试。
+             * @param null 空
+             */
             try (ResultSet rs = metaData.getColumns(null, null, sourceTable, null)) {
                 List<String> names = new ArrayList<>();
                 List<RelDataType> types = new ArrayList<>();
@@ -188,7 +215,13 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
         }
     }
 
-    /** ToCalciteType */
+    /**
+     * 转为calcite类型
+     *
+     * @param typeFactory 类型工厂
+     * @param sqlType SQL类型
+     * @return 转为calcite类型的结果
+     */
     private static RelDataType toCalciteType(RelDataTypeFactory typeFactory, int sqlType) {
         SqlTypeName typeName = switch (sqlType) {
             case Types.VARCHAR, Types.CHAR, Types.NCHAR, Types.NVARCHAR, Types.LONGVARCHAR, Types.LONGNVARCHAR ->
@@ -210,7 +243,12 @@ public class PartitionRoutingTable extends AbstractTable implements ScannableTab
         return typeFactory.createSqlType(typeName);
     }
 
-    /** FallbackRowType */
+    /**
+     * 降级row类型
+     *
+     * @param typeFactory 类型工厂
+     * @return 降级row类型的结果
+     */
     private static RelDataType fallbackRowType(RelDataTypeFactory typeFactory) {
         return typeFactory.createStructType(
                 List.of(typeFactory.createSqlType(SqlTypeName.VARCHAR)),

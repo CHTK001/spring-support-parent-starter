@@ -3,7 +3,7 @@ package com.chua.payment.support.dto;
 /**
  * 微信支付退款回调通知参数对象。
  *
- * @param channelId      渠道ID
+ * @param channelId      渠道标识
  * @param refundNo       退款单号
  * @param serialNumber   证书序列号
  * @param timestamp      时间戳

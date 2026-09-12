@@ -56,7 +56,7 @@ public class InputOptimizeGlobalSettingProvider implements GlobalSettingProvider
      * 输入优化模块全部配置项。
      *
      * <p>核心链路：optimizer_model（优化模型）、optimizer_enabled（开关）、optimizer_prompt（提示词）、
-     * optimizer_temperature（温度）。optimizer_model 为空时使用 {@code runtime} 分组的默认对话模型。</p>
+      * 优化器_temperature（温度）。优化器_模型 为空时使用 {@code runtime} 分组的默认对话模型。</p>
      *
      * @return 配置项列表
      */

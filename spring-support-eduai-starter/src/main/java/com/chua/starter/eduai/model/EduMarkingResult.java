@@ -18,19 +18,19 @@ import java.time.LocalDateTime;
 public class EduMarkingResult {
 
     /**
-     * 阅卷结果ID
+      * 阅卷结果标识
      */
     @TableId(type = IdType.AUTO)
-    /** Marking结果ID */
+    /** Marking结果标识 */
     private Long markingResultId;
 
     /**
-     * 答题卡ID
+      * 答题卡标识
      */
     private Long markingResultAnswerSheetId;
 
     /**
-     * 题目ID
+      * 题目标识
      */
     private Long markingResultQuestionId;
 
@@ -75,7 +75,7 @@ public class EduMarkingResult {
     private Integer markingResultStatus;
 
     /**
-     * 异步任务ID
+      * 异步任务标识
      */
     private String markingResultTaskId;
 

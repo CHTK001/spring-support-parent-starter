@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 通道管理 Controller
+   * 通道管理 控制器
  *
  * @since 4.0.0.42
  * @author CH
@@ -33,6 +33,8 @@ public class ChannelController {
 
     /**
      * 添加通道
+     * @param channel 通道
+     * @return 添加通道的结果
      */
     @PostMapping
     public DeviceChannel addChannel(@RequestBody DeviceChannel channel) {
@@ -41,6 +43,8 @@ public class ChannelController {
 
     /**
      * 更新通道
+     * @param id 标识
+     * @param channel 通道
      */
     @PutMapping("/{id}")
     public void updateChannel(@PathVariable String id, @RequestBody DeviceChannel channel) {
@@ -49,6 +53,7 @@ public class ChannelController {
 
     /**
      * 删除通道
+     * @param id 标识
      */
     @DeleteMapping("/{id}")
     public void deleteChannel(@PathVariable String id) {
@@ -57,6 +62,8 @@ public class ChannelController {
 
     /**
      * 获取通道
+     * @param id 标识
+     * @return 获取通道的结果
      */
     @GetMapping("/{id}")
     public DeviceChannel getChannel(@PathVariable String id) {
@@ -65,6 +72,8 @@ public class ChannelController {
 
     /**
      * 查询设备的通道列表
+     * @param deviceId deviceid
+     * @return 列表通道的结果
      */
     @GetMapping("/list")
     public List<DeviceChannel> listChannels(@RequestParam String deviceId) {
@@ -73,6 +82,8 @@ public class ChannelController {
 
     /**
      * 启用/禁用通道
+     * @param id 标识
+     * @param status 状态
      */
     @PutMapping("/{id}/status")
     public void toggleStatus(@PathVariable String id, @RequestParam String status) {

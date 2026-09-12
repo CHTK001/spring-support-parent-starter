@@ -28,6 +28,10 @@ public class MessageAuditEvent extends ApplicationEvent {
      * @param auditLog  审计日志
      */
     public MessageAuditEvent(Object source, MessageAuditLog auditLog) {
+        /**
+         * 父。
+         * @param source 源
+         */
         super(source);
         this.auditLog = auditLog;
     }

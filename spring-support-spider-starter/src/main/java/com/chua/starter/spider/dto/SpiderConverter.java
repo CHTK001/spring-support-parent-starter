@@ -18,6 +18,7 @@ import java.util.List;
  * 反向转换用于保存请求回填实体。</p>
  *
  * @since 4.0.0.42
+ * @author CH
  */
 public final class SpiderConverter {
 
@@ -236,7 +237,7 @@ public final class SpiderConverter {
      * 计算节点耗时（毫秒）。
      *
      * @param log 执行日志
-     * @return 耗时，无结束时间返回 null
+     * @return 耗时，无结束时间返回 空
      */
     private static Long costMs(SpiderExecutionLog log) {
         if (log.getStartAt() == null || log.getEndAt() == null) {

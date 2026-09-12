@@ -32,7 +32,7 @@ public class ProcedureReader {
     private final TriggerReader.DatabaseDialect dialect;
 
     /**
-     * 创建 ProcedureReader 实例
+      * 创建 procedure读取 实例
      * @param dialect dialect
      */
     public ProcedureReader(TriggerReader.DatabaseDialect dialect) {
@@ -41,6 +41,8 @@ public class ProcedureReader {
 
     /**
      * 读取存储过程 + 函数
+     * @param conn conn
+     * @return 读取全部的结果
      */
     public List<ProcedureInfo> readAll(Connection conn) {
         List<ProcedureInfo> result = readViaJdbc(conn);
@@ -69,13 +71,22 @@ public class ProcedureReader {
         }
     }
 
-    /** 读取ViaJdbc */
+    /**
+     * 读取viajdbc
+     *
+     * @param conn conn
+     * @return 读取viajdbc的结果
+     */
     private List<ProcedureInfo> readViaJdbc(Connection conn) {
         try {
             DatabaseMetaData meta = conn.getMetaData();
             String catalog = conn.getCatalog();
             String schema = conn.getSchema();
             List<ProcedureInfo> list = new ArrayList<>();
+            /**
+             * 尝试。
+             * @param "%" "%"
+             */
             try (ResultSet rs = meta.getProcedures(catalog, schema, "%")) {
                 while (rs.next()) {
                     ProcedureInfo p = new ProcedureInfo();
@@ -87,7 +98,11 @@ public class ProcedureReader {
                     list.add(p);
                 }
             }
-            // 单独补函数（部分驱动 getProcedures 不返回函数）
+ // 单独补函数（部分驱动 获取procedures 不返回函数）
+            /**
+             * 尝试。
+             * @param "%" "%"
+             */
             try (ResultSet rs = meta.getFunctions(catalog, schema, "%")) {
                 while (rs.next()) {
                     ProcedureInfo p = new ProcedureInfo();
@@ -105,12 +120,21 @@ public class ProcedureReader {
         }
     }
 
-    /** 读取MysqlLike */
-    // 豁免：查询 information_schema.ROUTINES 系统视图，无用户可控参数，仅读取数据库元数据
+    /** 读取mysqllike */
+ // 豁免：查询 信息_模式.惯例 系统视图，无用户可控参数，仅读取数据库元数据
+    /**
+     * 读取mysqllike。
+     * @param conn conn
+     * @return 读取mysqllike的结果
+     */
     private List<ProcedureInfo> readMysqlLike(Connection conn) throws SQLException {
         String sql = "SELECT ROUTINE_NAME, ROUTINE_TYPE, ROUTINE_SCHEMA, ROUTINE_COMMENT " +
                 "FROM information_schema.ROUTINES";
         List<ProcedureInfo> list = new ArrayList<>();
+        /**
+         * 尝试。
+         * @param conn.createStatement( conn.创建对账单(
+         */
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 ProcedureInfo p = new ProcedureInfo();
@@ -124,11 +148,20 @@ public class ProcedureReader {
         return list;
     }
 
-    /** 读取Postgresql */
+    /**
+      * 读取PostgreSQL
+     *
+     * @param conn conn
+     * @return 读取postgresql的结果
+     */
     private List<ProcedureInfo> readPostgresql(Connection conn) throws SQLException {
         String sql = "SELECT routine_name, routine_type, specific_schema " +
                 "FROM information_schema.routines";
         List<ProcedureInfo> list = new ArrayList<>();
+        /**
+         * 尝试。
+         * @param conn.createStatement( conn.创建对账单(
+         */
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 ProcedureInfo p = new ProcedureInfo();
@@ -141,11 +174,20 @@ public class ProcedureReader {
         return list;
     }
 
-    /** 读取Oracle */
+    /**
+     * 读取Oracle
+     *
+     * @param conn conn
+     * @return 读取oracle的结果
+     */
     private List<ProcedureInfo> readOracle(Connection conn) throws SQLException {
         String sql = "SELECT OBJECT_NAME, OBJECT_TYPE FROM ALL_OBJECTS " +
                 "WHERE OBJECT_TYPE IN ('PROCEDURE','FUNCTION') AND OWNER = USER";
         List<ProcedureInfo> list = new ArrayList<>();
+        /**
+         * 尝试。
+         * @param conn.createStatement( conn.创建对账单(
+         */
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 ProcedureInfo p = new ProcedureInfo();
@@ -158,11 +200,20 @@ public class ProcedureReader {
         return list;
     }
 
-    /** 读取SqlServer */
+    /**
+      * 读取SQL服务端
+     *
+     * @param conn conn
+     * @return 读取sql服务端的结果
+     */
     private List<ProcedureInfo> readSqlServer(Connection conn) throws SQLException {
         String sql = "SELECT o.name, o.type_desc FROM sys.objects o " +
                 "WHERE o.type IN ('P','FN','IF','TF')";
         List<ProcedureInfo> list = new ArrayList<>();
+        /**
+         * 尝试。
+         * @param conn.createStatement( conn.创建对账单(
+         */
         try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 ProcedureInfo p = new ProcedureInfo();

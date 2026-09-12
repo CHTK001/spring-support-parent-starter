@@ -8,7 +8,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * 软件信息表 Mapper
+   * 软件信息表 映射器
  *
  * @since 2026/7/25
  * @author CH
@@ -21,7 +21,7 @@ public interface SoftSoftwareMapper extends BaseMapperX<SoftSoftware> {
      *
      * @param page 分页参数
      * @param request 查询条件
-     * @param installedIds 已安装软件ID集合
+     * @param installedIds 已安装软件标识集合
      * @return 分页结果
      */
     Page<SoftSoftware> selectPageFor(
@@ -31,11 +31,12 @@ public interface SoftSoftwareMapper extends BaseMapperX<SoftSoftware> {
     );
 
     /**
-     * 根据源ID批量更新软件状态
+      * 根据源标识批量更新软件状态
      *
-     * @param sourceId 源ID
+     * @param sourceId 源标识
      * @param status   新状态
      * @return 更新行数
+     * @param @Param("sourceId" @参数("源标识"
      */
     int updateStatusBySourceId(@Param("sourceId") String sourceId, @Param("status") Integer status);
 }

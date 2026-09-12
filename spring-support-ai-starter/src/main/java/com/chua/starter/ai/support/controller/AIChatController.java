@@ -39,6 +39,7 @@ import java.util.Map;
  * 继承 {@link BaseAiController} 以便统一使用基础服务能力。
  *
  * @author CH
+ * @since 4.0.0
  */
 @Tag(name = "AI Chat Dialog Controller", description = "AI 对话聊天接口")
 @RestController
@@ -57,9 +58,9 @@ public class AIChatController extends BaseAiController {
      */
     private static final int COMPRESSED_CONTEXT_MAX_LENGTH = 16000;
 
-    /** AIdialogrecord服务 */
+    /** aidialogrecord服务 */
     private final AIDialogRecordService aiDialogRecordService;
-    /** AIchatfacade服务 */
+    /** aichatfacade服务 */
     private final AiChatFacadeService aiChatFacadeService;
     /** AI会话compression服务 */
     private final SysAiSessionCompressionService aiSessionCompressionService;
@@ -70,6 +71,10 @@ public class AIChatController extends BaseAiController {
 
     /**
      * 创建新会话。
+     * @param "新对话" "新对话"
+     * @return 创建dialog的结果
+     * @param "新对话" "新对话"
+     * @param "新对话" "新对话"
      */
     @Operation(summary = "创建会话", description = "创建新的对话会话")
     @Permission("admin")
@@ -85,6 +90,8 @@ public class AIChatController extends BaseAiController {
 
     /**
      * 删除指定会话。
+     * @param dialogId dialogid
+     * @return 删除dialog的结果
      */
     @Operation(summary = "删除会话", description = "删除指定对话会话及其所有消息")
     @Permission("admin")
@@ -96,6 +103,7 @@ public class AIChatController extends BaseAiController {
 
     /**
      * 获取所有会话列表。
+     * @return 获取dialog的结果
      */
     @Operation(summary = "获取会话列表", description = "获取所有对话会话列表")
     @Permission("admin")
@@ -107,6 +115,8 @@ public class AIChatController extends BaseAiController {
 
     /**
      * 获取指定会话的消息记录。
+     * @param dialogId dialogid
+     * @return 获取dialogrecord的结果
      */
     @Operation(summary = "获取会话消息", description = "获取指定会话的所有消息记录")
     @Permission("admin")
@@ -140,10 +150,10 @@ public class AIChatController extends BaseAiController {
             }
         }
 
-        // 构建 AiChatRequest
+ // 构建 AI对话请求
         AiChatRequest request = new AiChatRequest();
         List<Map<String, Object>> msgList = new ArrayList<>();
-        // 命中会话压缩上下文时，用「摘要 + 最近 N 轮」压缩结果替代全量历史，真正降低发送给模型的 token 量
+ // 命中会话压缩上下文时，用「摘要 + 最近 N 轮」压缩结果替代全量历史，真正降低发送给模型的 令牌 量
         SysAiSessionCompression compression = aiSessionCompressionService.getBySessionId(dialogId);
         if (compression != null && compression.getSysAiCompressionContext() != null
                 && !compression.getSysAiCompressionContext().isEmpty()) {
@@ -175,7 +185,7 @@ public class AIChatController extends BaseAiController {
             request.setMessages(msgList);
         }
 
-        // 注入 AppKey 与分组 ID 到扩展参数，供用量统计与配额同步使用
+ // 注入 app钥匙 与分组 标识 到扩展参数，供用量统计与配额同步使用
         String appKey = resolveAppKey(servletRequest);
         if (appKey != null) {
             Map<String, Object> parameters = request.getParameters();
@@ -196,6 +206,10 @@ public class AIChatController extends BaseAiController {
                 aiDialogRecordService.addMessage(dialogId, ChatMessage.assistant(reply));
             }
             // 回复完成后，将历史压缩为「摘要 + 最近 N 轮」写入上下文表
+            /**
+             * compressand保存上下文。
+             * @param dialogId dialogid
+             */
             compressAndSaveContext(dialogId);
         });
     }
@@ -213,7 +227,7 @@ public class AIChatController extends BaseAiController {
      *   <li>{@code chat_compress_retain_rounds} — 压缩后保留的最近轮数，默认 6</li>
      * </ul></p>
      *
-     * @param dialogId 会话 ID
+     * @param dialogId 会话 标识
      */
     private void compressAndSaveContext(Long dialogId) {
         try {

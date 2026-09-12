@@ -9,7 +9,7 @@ import com.wechat.pay.java.core.http.RequestBody;
 import java.io.InputStream;
 
 /**
- * 微信支付沙箱环境 HttpClient 包装器
+   * 微信支付沙箱环境 http客户端 包装器
  * <p>将生产环境 URL {@code api.mch.weixin.qq.com/...} 重写为沙箱环境 URL
  * {@code api.mch.weixin.qq.com/sandboxnew/...}，使 SDK 服务类可在沙箱环境下工作。</p>
  *
@@ -18,16 +18,16 @@ import java.io.InputStream;
  */
 public class SandboxWechatHttpClient implements HttpClient {
 
-    /** Production_host */
+    /** Production_主机 */
     private static final String PRODUCTION_HOST = "api.mch.weixin.qq.com";
-    /** Sandbox_path */
+    /** Sandbox_路径 */
     private static final String SANDBOX_PATH = "/sandboxnew";
 
     /** Delegate */
     private final HttpClient delegate;
 
     /**
-     * 创建 SandboxWechatHttpClient 实例
+      * 创建 sandboxwechathttp客户端 实例
      * @param delegate delegate
      */
     public SandboxWechatHttpClient(HttpClient delegate) {
@@ -59,7 +59,7 @@ public class SandboxWechatHttpClient implements HttpClient {
     }
 
     @Override
-    /** Put */
+    /** 放入 */
     public <T> HttpResponse<T> put(HttpHeaders headers, String url, RequestBody body, Class<T> responseClass) {
         return delegate.put(headers, rewriteUrl(url), body, responseClass);
     }
@@ -76,7 +76,12 @@ public class SandboxWechatHttpClient implements HttpClient {
         return delegate.download(rewriteUrl(url));
     }
 
-    /** RewriteRequest */
+    /**
+     * rewrite请求
+     *
+     * @param request 请求
+     * @return rewrite请求的结果
+     */
     private HttpRequest rewriteRequest(HttpRequest request) {
         String originalUrl = request.getUrl().toString();
         String newUrl = rewriteUrl(originalUrl);
@@ -91,7 +96,12 @@ public class SandboxWechatHttpClient implements HttpClient {
                 .build();
     }
 
-    /** RewriteUrl */
+    /**
+     * rewriteurl
+     *
+     * @param url url
+     * @return rewriteUrl的结果
+     */
     private String rewriteUrl(String url) {
         if (url == null || url.contains(SANDBOX_PATH)) {
             return url;

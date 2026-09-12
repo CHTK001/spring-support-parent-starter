@@ -14,29 +14,29 @@ import java.time.LocalDateTime;
  */
 @Data
 public class OrderVO implements Serializable {
-    private static final long serialVersionUID = 1L;
-    /** ID */
+    private static final long serialVersionUID = 1L; // 串行版本uid
+    /** 标识 */
     private Long id;
 
     /** 排序NO */
     private String orderNo;
 
-    /** Business排序NO */
+    /** 业务排序NO */
     private String businessOrderNo;
 
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
 
     /** Merchant名称 */
     private String merchantName;
 
-    /** 通道ID */
+    /** 通道标识 */
     private Long channelId;
 
     /** 通道名称 */
     private String channelName;
 
-    /** 用户ID */
+    /** 用户标识 */
     private Long userId;
 
     /** 通道类型 */
@@ -57,7 +57,7 @@ public class OrderVO implements Serializable {
     /** Discountamount */
     private BigDecimal discountAmount;
 
-    /** Currency */
+    /** 货币 */
     private String currency;
 
     /** 状态 */
@@ -66,13 +66,13 @@ public class OrderVO implements Serializable {
     /** 状态desc */
     private String statusDesc;
 
-    /** Subject */
+    /** 主题 */
     private String subject;
 
     /** 请求体 */
     private String body;
 
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
 
     /** 返回值URL */
@@ -81,19 +81,19 @@ public class OrderVO implements Serializable {
     /** Expire时间 */
     private LocalDateTime expireTime;
 
-    /** PAY时间 */
+    /** 薪酬时间 */
     private LocalDateTime payTime;
 
-    /** Complete时间 */
+    /** 完成时间 */
     private LocalDateTime completeTime;
 
-    /** Refund时间 */
+    /** 退税时间 */
     private LocalDateTime refundTime;
 
     /** Thirdparty排序NO */
     private String thirdPartyOrderNo;
 
-    /** Remark */
+    /** 评论 */
     private String remark;
 
     /** 删除标记 */

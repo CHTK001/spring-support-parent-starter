@@ -46,7 +46,7 @@ public interface SysMessageService {
     /**
      * 已注册消息渠道列表
      * <p>
-     * 遍历所有通过 SPI 注册的 MessagePush 渠道，返回其标识、中文名称、类型与支持能力，
+      * 遍历所有通过 SPI 注册的 消息push 渠道，返回其标识、中文名称、类型与支持能力，
      * 用于前端「消息渠道」下拉选择。
      * </p>
      *
@@ -73,7 +73,7 @@ public interface SysMessageService {
     /**
      * 删除提供商
      *
-     * @param providerId 提供商ID
+     * @param providerId 提供商标识
      * @return 删除结果
      */
     ReturnResult<Boolean> deleteProvider(Integer providerId);
@@ -114,7 +114,7 @@ public interface SysMessageService {
     /**
      * 删除模板
      *
-     * @param templateId 模板ID
+     * @param templateId 模板标识
      * @return 删除结果
      */
     ReturnResult<Boolean> deleteTemplate(Integer templateId);
@@ -144,7 +144,7 @@ public interface SysMessageService {
      * 从指定提供商拉取远端模板列表，写入本地消息模板表。
      * </p>
      *
-     * @param providerId 提供商ID
+     * @param providerId 提供商标识
      * @return 同步结果
      */
     ReturnResult<Integer> syncTemplate(Integer providerId);
@@ -215,10 +215,10 @@ public interface SysMessageService {
     /**
      * 当前用户站内消息标记已读
      * <p>
-     * 将当前用户所有未读站内消息标记为已读（lastId 为空时标记全部）。
+       * 将当前用户所有未读站内消息标记为已读（最后一个标识 为空时标记全部）。
      * </p>
      *
-     * @param lastId 已读游标（消息ID）；为空表示全部已读
+     * @param lastId 已读游标（消息标识）；为空表示全部已读
      * @return 是否已更新
      */
     ReturnResult<Boolean> markStationMessageRead(Integer lastId);

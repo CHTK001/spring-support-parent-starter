@@ -19,9 +19,14 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.BiConsumer;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /**
@@ -45,19 +50,19 @@ import java.util.function.Consumer;
 @RequiredArgsConstructor
 public class HostOnlineScheduler {
 
-    /** 主机 Mapper */
+    /** 主机 映射器 */
     private final MsServerHostMapper hostMapper;
 
-    /** 采集 Provider 注册中心（SPI 按 mode 路由） */
+    /** 采集 提供者 注册中心（SPI 按 mode 路由） */
     private final HostCollectProviderRegistry collectRegistry;
 
-    /** 延迟检测结果钩子（monitor 侧注册，推送 socket 实时延迟；未注册时不推送） */
+    /** 延迟检测结果钩子（监控 侧注册，推送 套接字 实时延迟；未注册时不推送） */
     @Setter
-    private Consumer<MsServerHost> delayHook;
+    private Consumer<MsServerHost> delayHook; // 延迟hook
 
-    /** 在线状态变更钩子（monitor 侧注册；仅状态翻转时回调） */
+    /** 在线状态变更钩子（监控 侧注册；仅状态翻转时回调） */
     @Setter
-    private Consumer<MsServerHost> onlineHook;
+    private Consumer<MsServerHost> onlineHook; // onlinehook
 
     /** TCP 连接超时(毫秒) */
     private static final int CONNECT_TIMEOUT_MS = 3000;
@@ -77,46 +82,59 @@ public class HostOnlineScheduler {
     /** 状态：启用 */
     private static final int ENABLED = 1;
 
+    /** 虚拟线程执行器（批量并发探测/采集/延迟，避免逐个串行阻塞时间轮） */
+    private static final ExecutorService VIRTUAL_EXECUTOR =
+            java.util.concurrent.Executors.newThreadPerTaskExecutor(
+                    Thread.ofVirtual().name("host-online-").factory());
+
+    /**
+     * 存在仅用于占位的统一入口（兼容旧调用）：
+     * 拆分的 tick / delayTick / collectTick 由时间轮分别调度。
+     */
+
     /**
      * 在离线检测：扫描所有启用主机，按各自开关/间隔决定是否探测
+     * <p>使用虚拟线程批量并发 TCP 探测，避免大量主机串行阻塞时间轮 tick。</p>
      */
     public void tick() {
         try {
             List<MsServerHost> hosts = hostMapper.selectList(
                     new LambdaQueryWrapper<MsServerHost>().eq(MsServerHost::getServerHostStatus, 1));
             LocalDateTime now = LocalDateTime.now();
-            int online = 0;
-            int probed = 0;
-            for (MsServerHost host : hosts) {
-                // 主机级在离线开关
-                if (!isEnabled(host.getServerHostOnlineEnabled())) {
-                    continue;
-                }
-                int interval = normalizeInterval(
-                        host.getServerHostOnlineInterval() == null ? DEFAULT_ONLINE_INTERVAL : host.getServerHostOnlineInterval());
-                // 到达间隔才探测
-                if (!isDue(host.getServerHostOnlineTime(), interval, now)) {
-                    continue;
-                }
-                probed++;
-                boolean reachable = isReachable(host);
-                if (reachable) {
-                    online++;
-                }
-                boolean prevOnline = isEnabled(host.getServerHostOnline());
-                updateOnline(host.getId(), reachable);
-                if (onlineHook != null && prevOnline != reachable) {
-                    host.setServerHostOnline(reachable ? 1 : 0);
-                    try {
-                        onlineHook.accept(host);
-                    } catch (Exception hookEx) {
-                        log.debug("[online] 在线状态钩子异常 hostId={}: {}", host.getId(), hookEx.getMessage());
+            // 过滤出到期的探测主机
+            List<MsServerHost> dueHosts = hosts.stream()
+                    .filter(h -> isEnabled(h.getServerHostOnlineEnabled()))
+                    .filter(h -> {
+                        int interval = normalizeInterval(h.getServerHostOnlineInterval() == null
+                                ? DEFAULT_ONLINE_INTERVAL : h.getServerHostOnlineInterval());
+                        return isDue(h.getServerHostOnlineTime(), interval, now);
+                    })
+                    .toList();
+            if (dueHosts.isEmpty()) {
+                return;
+            }
+            AtomicInteger online = new AtomicInteger(0);
+            List<CompletableFuture<Void>> tasks = new ArrayList<>(dueHosts.size());
+            for (MsServerHost host : dueHosts) {
+                tasks.add(CompletableFuture.runAsync(() -> {
+                    boolean reachable = isReachable(host);
+                    if (reachable) {
+                        online.incrementAndGet();
                     }
-                }
+                    boolean prevOnline = isEnabled(host.getServerHostOnline());
+                    updateOnline(host.getId(), reachable);
+                    if (onlineHook != null && prevOnline != reachable) {
+                        host.setServerHostOnline(reachable ? 1 : 0);
+                        try {
+                            onlineHook.accept(host);
+                        } catch (Exception hookEx) {
+                            log.debug("[online] 在线状态钩子异常 hostId={}: {}", host.getId(), hookEx.getMessage());
+                        }
+                    }
+                }, VIRTUAL_EXECUTOR));
             }
-            if (probed > 0) {
-                log.info("[online] 在离线检测完成: 探测 {} 台, {} 台在线", probed, online);
-            }
+            CompletableFuture.allOf(tasks.toArray(new CompletableFuture[0])).join();
+            log.info("[online] 在离线检测完成: 探测 {} 台, {} 台在线", dueHosts.size(), online.get());
         } catch (Exception e) {
             log.warn("[online] 在离线检测异常: {}", e.getMessage());
         }
@@ -147,6 +165,12 @@ public class HostOnlineScheduler {
                     .map(host -> {
                         HostCollectType mode = HostCollectType.of(
                                 host.getServerHostCollectMode() == null ? "SCHEDULED" : host.getServerHostCollectMode());
+                        /**
+                         * 主机collect上下文。
+                         * @param mode mode
+                         * @param host 主机
+                         * @return 主机collect上下文的结果
+                         */
                         return new HostCollectContext(mode, host);
                     })
                     .filter(ctx -> ctx.getMode() != null)
@@ -154,6 +178,10 @@ public class HostOnlineScheduler {
                         Optional<HostCollectProvider> providerOpt = collectRegistry.resolve(context.getMode());
                         if (providerOpt.isEmpty()) {
                             log.warn("[collect] 未找到采集 Provider: mode={}", context.getMode());
+                            /**
+                              * markcollected。
+                             * @param context.getHost( 上下文.获取主机(
+                             */
                             markCollected(context.getHost());
                             return Mono.empty();
                         }
@@ -181,28 +209,30 @@ public class HostOnlineScheduler {
 
     /**
      * 延迟检测：扫描启用主机，按各自开关/间隔 TCP 连接测 RTT 毫秒并回写
+     * <p>使用虚拟线程批量并发探测，避免大量主机串行阻塞时间轮 tick。</p>
      */
     public void delayTick() {
         try {
             List<MsServerHost> hosts = hostMapper.selectList(
                     new LambdaQueryWrapper<MsServerHost>().eq(MsServerHost::getServerHostStatus, 1));
             LocalDateTime now = LocalDateTime.now();
-            int probed = 0;
-            for (MsServerHost host : hosts) {
-                if (!isEnabled(host.getServerHostDelayEnabled())) {
-                    continue;
-                }
-                int interval = normalizeInterval(
-                        host.getServerHostDelayInterval() == null ? DEFAULT_DELAY_INTERVAL : host.getServerHostDelayInterval());
-                if (!isDue(host.getServerHostLastDelayTime(), interval, now)) {
-                    continue;
-                }
-                probed++;
-                updateDelay(host.getId());
+            List<MsServerHost> dueHosts = hosts.stream()
+                    .filter(h -> isEnabled(h.getServerHostDelayEnabled()))
+                    .filter(h -> {
+                        int interval = normalizeInterval(h.getServerHostDelayInterval() == null
+                                ? DEFAULT_DELAY_INTERVAL : h.getServerHostDelayInterval());
+                        return isDue(h.getServerHostLastDelayTime(), interval, now);
+                    })
+                    .toList();
+            if (dueHosts.isEmpty()) {
+                return;
             }
-            if (probed > 0) {
-                log.info("[delay] 延迟检测完成: 探测 {} 台", probed);
+            List<CompletableFuture<Void>> tasks = new ArrayList<>(dueHosts.size());
+            for (MsServerHost host : dueHosts) {
+                tasks.add(CompletableFuture.runAsync(() -> updateDelay(host.getId()), VIRTUAL_EXECUTOR));
             }
+            CompletableFuture.allOf(tasks.toArray(new CompletableFuture[0])).join();
+            log.info("[delay] 延迟检测完成: 探测 {} 台", dueHosts.size());
         } catch (Exception e) {
             log.warn("[delay] 延迟检测异常: {}", e.getMessage());
         }
@@ -211,7 +241,7 @@ public class HostOnlineScheduler {
     /**
      * TCP 连接测 RTT 延迟并回写（连不上则置 -1）
      *
-     * @param hostId 主机 ID
+     * @param hostId 主机 标识
      */
     private void updateDelay(Long hostId) {
         try {
@@ -247,6 +277,10 @@ public class HostOnlineScheduler {
             return 0;
         }
         int port = host.getServerHostPort() == null || host.getServerHostPort() <= 0 ? 22 : host.getServerHostPort();
+        /**
+         * 尝试。
+         * @param Socket( 套接字(
+         */
         try (Socket socket = new Socket()) {
             long start = System.nanoTime();
             socket.connect(new InetSocketAddress(address, port), CONNECT_TIMEOUT_MS);
@@ -274,7 +308,7 @@ public class HostOnlineScheduler {
     /**
      * 更新主机在线状态
      *
-     * @param hostId   主机 ID
+     * @param hostId   主机 标识
      * @param reachable 是否可达
      */
     private void updateOnline(Long hostId, boolean reachable) {
@@ -305,9 +339,10 @@ public class HostOnlineScheduler {
         if (address == null || "127.0.0.1".equals(address.trim()) || "localhost".equalsIgnoreCase(address.trim())) {
             return true;
         }
-        int port = host.getServerHostPort() == null || host.getServerHostPort() <= 0 ? 22 : host.getServerHostPort();
+        // 按系统类型选择探测端口：Windows → WinRM(5985)，Linux/Mac → host.port（默认22）
+        int port = getDetectPort(host);
         try (Socket socket = new Socket()) {
-            socket.connect(new InetSocketAddress(host.getServerHostAddress(), port), CONNECT_TIMEOUT_MS);
+            socket.connect(new InetSocketAddress(address, port), CONNECT_TIMEOUT_MS);
             return true;
         } catch (Exception e) {
             return false;
@@ -315,7 +350,24 @@ public class HostOnlineScheduler {
     }
 
     /**
-     * 判断开关是否启用（null 视为启用）
+     * 根据系统类型获取探测端口：Windows 走 WinRM(5985)，其他取主机配置端口或默认 22
+     *
+     * @param host 主机
+     * @return 探测端口
+     */
+    private int getDetectPort(MsServerHost host) {
+        String osType = host.getServerHostOsType();
+        if (osType != null && osType.toUpperCase().contains("WINDOWS")) {
+            // Windows：优先用已配置的端口（RDP 3389），否则 WinRM HTTP 默认 5985
+            return host.getServerHostPort() != null && host.getServerHostPort() > 0
+                    ? host.getServerHostPort() : 5985;
+        }
+        return host.getServerHostPort() != null && host.getServerHostPort() > 0
+                ? host.getServerHostPort() : 22;
+    }
+
+    /**
+      * 判断开关是否启用（空 视为启用）
      *
      * @param flag 开关值
      * @return 是否启用
@@ -325,7 +377,7 @@ public class HostOnlineScheduler {
     }
 
     /**
-     * 判断是否到达执行间隔（lastTime 为空视为到期）
+      * 判断是否到达执行间隔（最后一个时间 为空视为到期）
      *
      * @param lastTime 上次执行时间
      * @param interval 间隔（秒）

@@ -5,10 +5,11 @@ import org.springframework.core.annotation.AliasFor;
 import java.lang.annotation.*;
 
 /**
- * 解析参数 (Header: application/json)
+   * 解析参数 (头部: application/json)
  *
  * @since 2023-08-01
  * @see org.springframework.web.bind.annotation.RequestParam
+ * @author CH
  */
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)

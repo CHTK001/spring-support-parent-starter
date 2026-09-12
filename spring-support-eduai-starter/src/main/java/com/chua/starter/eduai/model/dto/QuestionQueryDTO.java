@@ -47,7 +47,7 @@ public class QuestionQueryDTO {
     private Integer difficulty;
 
     /**
-     * 知识点ID列表（逗号分隔）
+      * 知识点标识列表（逗号分隔）
      */
     private String knowledgePointIds;
 

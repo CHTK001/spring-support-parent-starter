@@ -12,7 +12,7 @@ import com.chua.starter.oauth.client.support.web.WebRequest;
 import java.util.Map;
 
 /**
- * 实现了ProtocolExecutor接口的StaticProtocolExecutor类。
+   * 实现了协议执行器接口的静态协议执行器类。
  * <p>
  * 该类旨在处理特定的协议执行逻辑，通过静态方法提供协议处理能力。
  * 作为协议执行器，它负责解析和执行特定格式的协议数据。
@@ -23,16 +23,16 @@ import java.util.Map;
 @Spi("default")
 public class DefaultProtocolExecutor implements ProtocolExecutor{
 
-    /** Auth客户端属性 */
+    /** 认证客户端属性 */
     private final AuthClientProperties authClientProperties;
 
-    /** 创建 DefaultProtocolExecutor 实例 */
+    /** 创建 默认协议执行器 实例 */
     public DefaultProtocolExecutor() {
         this.authClientProperties = OauthClientRuntimeContext.getAuthClientProperties();
     }
 
     @Override
-    /** 获取AccessToken */
+    /** 获取access令牌 */
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
         return WebRequest.getProtocolExtension(authClientProperties)
                 .getAccessToken(username, password, authType, ext);

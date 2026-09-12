@@ -14,7 +14,7 @@ import java.io.Serializable;
 @Data
 @Schema(name = "服务运行状态 DTO")
 public class AiServiceStatusDTO implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
      * 服务名称

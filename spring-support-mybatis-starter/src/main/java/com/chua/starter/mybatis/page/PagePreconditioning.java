@@ -15,14 +15,15 @@ import java.util.stream.Collectors;
  * 分页条件
  *
  * @author CH
+ * @since 4.0.0
  */
 public class PagePreconditioning<T> {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
     /** 页 */
     private final IPage<T> page;
 
     /**
-     * 创建 PagePreconditioning 实例
+      * 创建 pagepreconditioning 实例
      * @param page page
      */
     public PagePreconditioning(IPage<T> page) {
@@ -33,6 +34,7 @@ public class PagePreconditioning<T> {
      * 转换
      *
      * @param function 转化器
+     * @return 转换的结果
      */
     public <R> PagePreconditioning<R> convert(Function<T, R> function) {
         IPage<R> page = new Page<>(this.page.getCurrent(), this.page.getSize(), this.page.getTotal());
@@ -45,6 +47,7 @@ public class PagePreconditioning<T> {
      *
      * @param idFunction 映射
      * @param consumer   消费
+     * @return mapping的结果
      */
     public PagePreconditioning<T> mapping(Function<T, Serializable> idFunction, BiConsumer<Set<Serializable>, Map<Serializable, T>> consumer) {
         List<T> records = page.getRecords();

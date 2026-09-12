@@ -14,12 +14,12 @@ import java.time.LocalDateTime;
 public class RecordFile {
 
     /**
-     * 录像文件唯一 ID
+      * 录像文件唯一 标识
      */
     private String fileId;
 
     /**
-     * 所属通道 ID
+      * 所属通道 标识
      */
     private String channelId;
 

@@ -3,9 +3,10 @@ package com.chua.starter.ai.support.manage.api.market;
 import com.chua.common.support.spi.annotations.Spi;
 
 /**
- * SkillHub MCP 市场源 SPI。
+   * skillhub MCP 市场源 SPI。
  *
  * @since 4.0.0.42
+ * @author CH
  */
 @Spi("skillhub_mcp")
 public class SkillHubMcpSkillMarketSourceProvider implements SkillMarketSourceProvider {

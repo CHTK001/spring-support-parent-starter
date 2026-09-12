@@ -6,20 +6,20 @@ import java.io.Serializable;
 import java.util.Date;
 
 /**
- * Job日志查询请求
+   * 作业日志查询请求
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/12/06
  * @author CH
  */
 @Data
 public class JobCat implements Serializable {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
-     * 日志ID
+      * 日志标识
      */
     private Integer logId;
 

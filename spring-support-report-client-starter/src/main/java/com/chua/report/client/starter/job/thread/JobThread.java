@@ -21,11 +21,11 @@ import static org.slf4j.LoggerFactory.getLogger;
 /**
  * 作业执行线程
  * <p>
- * 每个任务对应一个独立的JobThread实例，通过队列接收触发参数并执行任务。
+   * 每个任务对应一个独立的作业thread实例，通过队列接收触发参数并执行任务。
  * 支持超时控制、重复触发检测、空闲自动回收等特性。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/03/11
  * @author CH
  */
@@ -33,7 +33,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 public class JobThread extends Thread {
 
     /**
-     * 任务ID
+      * 任务标识
      */
     private final int jobId;
 
@@ -48,7 +48,7 @@ public class JobThread extends Thread {
     private final LinkedBlockingQueue<TriggerParam> triggerQueue;
 
     /**
-     * 触发日志ID集合，用于防止重复触发
+      * 触发日志标识集合，用于防止重复触发
      */
     private final Set<Long> triggerLogIdSet;
 
@@ -81,7 +81,7 @@ public class JobThread extends Thread {
     /**
      * 构造函数
      *
-     * @param jobId   任务ID
+     * @param jobId   任务标识
      * @param handler 任务处理器
      */
     public JobThread(int jobId, JobHandler handler) {
@@ -149,28 +149,28 @@ public class JobThread extends Thread {
     /** 运行 */
     public void run() {
 
-        // init
+ // 初始化
         try {
             handler.init();
         } catch (Throwable e) {
             log.error(e.getMessage(), e);
         }
 
-        // execute
+ // 执行
         while(!toStop){
             running = false;
             idleTimes++;
 
             TriggerParam triggerParam = null;
             try {
-                // to check toStop signal, we need cycle, so wo cannot use queue.take(), instand of poll(timeout)
+ // 转为 检查 转为停止 标志, we need 循环, so wo cannot use 队列.取(), instand 的 poll(超时)
                 triggerParam = triggerQueue.poll(3L, TimeUnit.SECONDS);
                 if (triggerParam!=null) {
                     running = true;
                     idleTimes = 0;
                     triggerLogIdSet.remove(triggerParam.getLogId());
 
-                    // log filename, like "logPath/yyyy-MM-dd/9999.log"
+ // 日志 文件名, like "日志路径/yyyy-MM-dd/9999.日志"
                     String logFileName = JobFileAppender.makeLogFileName(new Date(triggerParam.getLogDateTime()), triggerParam.getLogId());
                     JobContext xxlJobContext = new JobContext(
                             triggerParam.getJobId(),
@@ -179,14 +179,14 @@ public class JobThread extends Thread {
                             triggerParam.getBroadcastIndex(),
                             triggerParam.getBroadcastTotal());
 
-                    // init job context
+ // 初始化 作业 上下文
                     JobContext.setJobContext(xxlJobContext);
 
-                    // execute
+ // 执行
                     DefaultJobLog.log("<br>----------- job job execute start -----------<br>----------- Param:" + xxlJobContext.getJobParam());
 
                     if (triggerParam.getExecutorTimeout() > 0) {
-                        // limit timeout
+ // 限制 超时
                         Thread futureThread = null;
                         try {
                             FutureTask<Boolean> futureTask = new FutureTask<Boolean>(new Callable<Boolean>() {
@@ -194,7 +194,7 @@ public class JobThread extends Thread {
                                 /** 调用 */
                                 public Boolean call() throws Exception {
 
-                                    // init job context
+ // 初始化 作业 上下文
                                     JobContext.setJobContext(xxlJobContext);
 
                                     handler.execute();
@@ -205,6 +205,12 @@ public class JobThread extends Thread {
                             futureThread.start();
 
                             Boolean tempResult = futureTask.get(triggerParam.getExecutorTimeout(), TimeUnit.SECONDS);
+                            /**
+                             * report作业。
+                             * @param triggerParam trigger参数
+                             * @param "SUCCESS" "成功"
+                             * @param null 空
+                             */
                             reportJob(triggerParam, "SUCCESS", null);
 
                         } catch (TimeoutException e) {
@@ -212,20 +218,26 @@ public class JobThread extends Thread {
                             DefaultJobLog.log("<br>----------- job job execute timeout");
                             DefaultJobLog.log(e.getMessage());
 
-                            // handle result
+ // 把手 结果
                             DefaultJobLog.log("job execute timeout ");
 
+                            /**
+                             * report作业。
+                             * @param triggerParam trigger参数
+                             * @param "FAILURE" "失败"
+                             * @param " "
+                             */
                             reportJob(triggerParam, "FAILURE", "job execute timeout ");
 
                         } finally {
                             futureThread.interrupt();
                         }
                     } else {
-                        // just execute
+ // just 执行
                         handler.execute();
                     }
 
-                    // valid execute handle data
+ // valid 执行 把手 数据
                     if (JobContext.getXxlJobContext().getHandleCode() <= 0) {
                         DefaultJobLog.log("job handle result lost.");
                     } else {
@@ -255,11 +267,17 @@ public class JobThread extends Thread {
                     DefaultJobLog.log("<br>----------- JobThread toStop, stopReason:" + stopReason);
                 }
 
-                // handle result
+ // 把手 结果
                 StringWriter stringWriter = new StringWriter();
                 e.printStackTrace(new PrintWriter(stringWriter));
                 String errorMsg = stringWriter.toString();
 
+                /**
+                 * report作业。
+                 * @param triggerParam trigger参数
+                 * @param "FAILURE" "失败"
+                 * @param errorMsg 错误msg
+                 */
                 reportJob(triggerParam, "FAILURE", errorMsg);
 
                 DefaultJobLog.log(errorMsg);
@@ -269,7 +287,7 @@ public class JobThread extends Thread {
         }
 
 
-        // destroy
+ // 销毁
         try {
             handler.destroy();
         } catch (Throwable e) {
@@ -279,7 +297,13 @@ public class JobThread extends Thread {
         log.info("任务线程已停止, 任务ID: {}", jobId);
     }
 
-    /** ReportJob */
+    /**
+     * report作业
+     *
+     * @param triggerParam trigger参数
+     * @param status 状态
+     * @param message 消息
+     */
     private void reportJob(TriggerParam triggerParam, String status, String message) {
         JobReporter.getInstance().report(triggerParam.getJobId(), triggerParam.getLogId(), status, message);
     }

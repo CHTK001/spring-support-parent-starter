@@ -9,14 +9,14 @@ import java.util.List;
  * JDK 动态代理工厂实现
  * <p>作为默认的代理创建方式，无额外依赖</p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/04/07
  * @author CH
  */
 public class JdkRpcProxyFactory implements RpcProxyFactory {
 
     @Override
-    /** 创建Proxy */
+    /** 创建代理 */
     public Object createProxy(ClassLoader classLoader, List<Class<?>> interfaces, InvocationHandler handler) {
         return ReflectUtils.newProxy(
                 classLoader,
@@ -26,7 +26,7 @@ public class JdkRpcProxyFactory implements RpcProxyFactory {
     }
 
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
         // JDK 代理作为兜底，优先级最低
         return Integer.MAX_VALUE;

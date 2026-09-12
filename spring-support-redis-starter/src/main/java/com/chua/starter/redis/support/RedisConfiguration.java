@@ -47,7 +47,7 @@ import java.text.SimpleDateFormat;
 import java.util.List;
 
 /**
- * Redis 自动配置类，负责初始化 Redisson 客户端、RedisTemplate、StringRedisTemplate
+   * Redis 自动配置类，负责初始化 Redisson 客户端、redistemplate、字符串redistemplate
  * 及 Redis 消息监听容器等相关组件，支持嵌入式中、单机两种部署模式。
  *
  * <p>该配置在 {@code plugin.redis.server.enable=true}（默认开启）时生效，
@@ -75,12 +75,12 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     private static final String REDIS_ADDRESS_SUFFIX = "/";
 
     /**
-     * 默认命令执行超时时间（毫秒），当 RedisProperties 未配置 timeout 时使用
+       * 默认命令执行超时时间（毫秒），当 Redis属性 未配置 超时 时使用
      */
     private static final int DEFAULT_TIMEOUT_MILLIS = 10000;
 
     /**
-     * 默认连接建立超时时间（毫秒），当 RedisProperties 未配置 connectTimeout 时使用
+       * 默认连接建立超时时间（毫秒），当 Redis属性 未配置 连接超时 时使用
      */
     private static final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 10000;
 
@@ -95,13 +95,13 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     private RedisServerProperties redisServerProperties;
 
     /**
-     * 创建 Redisson 客户端，基于 Spring Boot RedisProperties 构建单机连接配置。
+       * 创建 Redisson 客户端，基于 Spring Boot Redis属性 构建单机连接配置。
      *
      * <p>当 RedisProperties.url 为空时，使用 host:port 拼接 redis:// 地址；
-     * timeout 与 connectTimeout 缺省时回退到 10000 毫秒。</p>
+      * 超时 与 连接超时 缺省时回退到 10000 毫秒。</p>
      *
      * @param redisProperties Spring Boot 自动装配的 Redis 属性
-     * @return 已配置完成的 RedissonClient 实例
+     * @return 已配置完成的 redisson客户端 实例
      */
     @Bean(destroyMethod = "shutdown")
     @ConditionalOnMissingBean
@@ -128,6 +128,10 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     @Bean
     @ConditionalOnMissingBean
     public TimeSeriesService timeSeriesService() {
+        /**
+         * 时间series服务impl。
+         * @return 时间series服务impl的结果
+         */
         return new TimeSeriesServiceImpl();
     }
 
@@ -139,6 +143,10 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     @Bean
     @ConditionalOnMissingBean
     public RedisSearchService redisSearchService() {
+        /**
+          * Redis搜索服务impl。
+         * @return redis搜索服务impl的结果
+         */
         return new RedisSearchServiceImpl();
     }
 
@@ -150,6 +158,10 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     @Bean
     @ConditionalOnMissingBean
     public SimpleRedisService simpleRedisService() {
+        /**
+          * 简单Redis服务impl。
+         * @return 简单redis服务impl的结果
+         */
         return new SimpleRedisServiceImpl();
     }
 
@@ -157,12 +169,17 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
      * 创建统一 KV 引擎实例，基于 {@link StringRedisTemplate} 实现 {@link KvEngine} 接口。
      * <p>提供 get/put/delete/incr/expire/ttl 等基础 KV 操作，以及 findAllByPrefix 前缀查询。</p>
      *
-     * @param stringRedisTemplate Spring Data Redis 字符串操作模板
+     * @param stringRedisTemplate Spring 数据 Redis 字符串操作模板
      * @return KV 引擎实现实例
      */
     @Bean
     @ConditionalOnMissingBean
     public KvEngine kvEngine(StringRedisTemplate stringRedisTemplate) {
+        /**
+          * rediskvengine。
+         * @param stringRedisTemplate 字符串redistemplate
+         * @return RedisKvEngine的结果
+         */
         return new RedisKvEngine(stringRedisTemplate);
     }
 
@@ -179,17 +196,17 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     }
 
     /**
-     * 创建通用的 Jackson ObjectMapper，忽略未知字段、注册 Java 8 时间模块并指定日期格式。
+      * 创建通用的 Jackson 对象映射器，忽略未知字段、注册 Java 8 时间模块并指定日期格式。
      *
      * <p>用于非 Redis 场景的通用 JSON 序列化/反序列化。</p>
      *
-     * @return 配置完成的 ObjectMapper 实例
+     * @return 配置完成的 对象映射器 实例
      */
     public static ObjectMapper createObjectMapper() {
         ObjectMapper objectMapper = new ObjectMapper();
         // 忽略未知字段，避免反序列化失败
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        // 注册 JavaTimeModule 以支持 Java 8 日期时间类型
+ // 注册 Java时间module 以支持 Java 8 日期时间类型
         objectMapper.registerModule(new JavaTimeModule());
         // 统一设置日期格式为 yyyy-MM-dd HH:mm:ss
         objectMapper.setDateFormat(new SimpleDateFormat(DATE_FORMAT_PATTERN));
@@ -204,7 +221,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
      *
      * @param connectionFactory Redis 连接工厂
      * @param listeners         已注册的所有 Redis 监听器列表
-     * @return 配置完成的 RedisMessageListenerContainer 实例
+     * @return 配置完成的 Redis消息监听器容器 实例
      */
     @Bean
     @ConditionalOnMissingBean
@@ -224,53 +241,53 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     }
 
     /**
-     * 创建 RedisTemplate，使用 StringRedisSerializer 序列化 Key、
-     * GenericJackson2JsonRedisSerializer 序列化 Value，支持复杂对象类型。
+       * 创建 redistemplate，使用 字符串Redis序列化器 序列化 钥匙、
+      * genericjackson2jsonredis序列化器 序列化 价值观，支持复杂对象类型。
      *
      * <p>源码 autoConfig 中默认为 {@code <Object, Object>}，开发中一般直接使用
      * {@code <String, Object>}，本方法按此约定进行配置。</p>
      *
      * @param factory Redis 连接工厂
-     * @return 配置完成的 RedisTemplate 实例
+     * @return 配置完成的 redistemplate 实例
      */
     @Bean
     @SuppressWarnings("all")
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
-        // 由于源码 autoConfig 中是<Object, Object>，开发中一般直接使用<String,Object>
+ // 由于源码 auto配置 中是<Object, Object>，开发中一般直接使用<String,Object>
         RedisTemplate<String, Object> template = new RedisTemplate();
         template.setConnectionFactory(factory);
 
-        // 使用 GenericJackson2JsonRedisSerializer，它能更好地处理复杂类型
+ // 使用 genericjackson2jsonredis序列化器，它能更好地处理复杂类型
         GenericJackson2JsonRedisSerializer genericSerializer = new GenericJackson2JsonRedisSerializer(createRedisObjectMapper());
 
-        // String 的序列化
+ // 字符串 的序列化
         StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
 
-        // key 采用 string 的序列化
+ // 钥匙 采用 字符串 的序列化
         template.setKeySerializer(stringRedisSerializer);
-        // hash 的 key 采用 string 的序列化
+ // 哈希 的 钥匙 采用 字符串 的序列化
         template.setHashKeySerializer(stringRedisSerializer);
-        // value 序列化采用 GenericJackson2JsonRedisSerializer
+ // 价值观 序列化采用 genericjackson2jsonredis序列化器
         template.setValueSerializer(genericSerializer);
-        // hash 的 value 序列化方式采用 GenericJackson2JsonRedisSerializer
+ // 哈希 的 价值观 序列化方式采用 genericjackson2jsonredis序列化器
         template.setHashValueSerializer(genericSerializer);
         template.afterPropertiesSet();
         return template;
     }
 
     /**
-     * 创建 Redis 专用的 ObjectMapper。
+      * 创建 Redis 专用的 对象映射器。
      *
      * <p>配置支持 Java 8 时间类型，启用所有字段可见性，
      * 禁用日期时间戳写法，并使用安全的类型处理。</p>
      *
-     * @return 配置完成的 ObjectMapper 实例
+     * @return 配置完成的 对象映射器 实例
      * @since 1.0.0
      */
     private static ObjectMapper createRedisObjectMapper() {
         ObjectMapper om = new ObjectMapper();
         om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-        // 注册 JavaTimeModule 支持 LocalDateTime 等 Java 8 时间类型
+ // 注册 Java时间module 支持 本地日期时间 等 Java 8 时间类型
         om.registerModule(new JavaTimeModule());
         // 忽略未知字段
         om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -282,19 +299,19 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     }
 
     /**
-     * 创建 StringRedisTemplate，Key/Value 均使用 StringRedisSerializer。
+       * 创建 字符串redistemplate，钥匙/价值观 均使用 字符串Redis序列化器。
      *
      * <p>StringRedisTemplate 的 key/value 必须使用 StringRedisSerializer，
-     * 否则 get() 返回类型不匹配。</p>
+      * 否则 获取() 返回类型不匹配。</p>
      *
      * @param factory Redis 连接工厂
-     * @return 配置完成的 StringRedisTemplate 实例
+     * @return 配置完成的 字符串redistemplate 实例
      */
     @Bean("stringRedisTemplate")
     public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory factory) {
         StringRedisTemplate template = new StringRedisTemplate();
         template.setConnectionFactory(factory);
-        // StringRedisTemplate 的 key/value 必须用 StringRedisSerializer，否则 get() 返回类型不匹配
+ // 字符串redistemplate 的 钥匙/价值观 必须用 字符串redis序列化器，否则 获取() 返回类型不匹配
         template.setKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(new StringRedisSerializer());
         template.setHashKeySerializer(new StringRedisSerializer());
@@ -305,7 +322,7 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     /**
      * 返回当前配置类的加载优先级，使用最高优先级确保 Redis 相关 Bean 优先初始化。
      *
-     * @return 优先级常量 Ordered.HIGHEST_PRECEDENCE
+     * @return 优先级常量 订单.HIGHEST_PRECEDENCE
      */
     @Override
     public int getOrder() {
@@ -313,7 +330,11 @@ public class RedisConfiguration implements ApplicationContextAware, Ordered {
     }
 
     @Bean
-    /** RedisServiceInfoContributor */
+    /**
+      * Redis服务信息contributor
+     *
+     * @return redis服务信息contributor的结果
+     */
     public ServiceInfoContributor redisServiceInfoContributor() {
         return registry -> {
             registry.registerEndpoint("Redis", "Redis服务", "/redis/**", "Redis服务");

@@ -6,6 +6,7 @@ import javax.sql.DataSource;
  * 物化视图 SQL 数据源路由器
  *
  * @author CH
+ * @since 4.0.0
  */
 public interface MaterializedSqlDataSourceRouter extends MaterializedSqlRouter {
 

@@ -18,17 +18,17 @@ import lombok.Data;
 public class DeviceOrganization {
 
     /**
-     * 主键 ID
+      * 主键 标识
      */
     @TableId(value = "device_organization_id", type = IdType.ASSIGN_UUID)
-    /** DeviceorganizationID */
+    /** deviceorganizationid */
     private String deviceOrganizationId;
 
     /**
-     * 父级组织 ID
+      * 父级组织 标识
      */
     @TableField("device_organization_parent_id")
-    /** Deviceorganization父级ID */
+    /** Deviceorganization父级标识 */
     private String deviceOrganizationParentId;
 
     /**

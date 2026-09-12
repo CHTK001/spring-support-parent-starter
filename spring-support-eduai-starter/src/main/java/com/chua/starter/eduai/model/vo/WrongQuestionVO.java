@@ -13,11 +13,11 @@ import java.time.LocalDateTime;
 @Data
 public class WrongQuestionVO {
 
-    /** ID */
+    /** 标识 */
     private Long id;
-    /** StudentID */
+    /** studentid */
     private String studentId;
-    /** QuestionID */
+    /** questionid */
     private Long questionId;
     /** Wrong数量 */
     private Integer wrongCount;
@@ -25,8 +25,8 @@ public class WrongQuestionVO {
     private Integer masteryLevel;
     /** 最后wrong时间 */
     private LocalDateTime lastWrongTime;
-    /** 最后review时间 */
+    /** 最后评审时间 */
     private LocalDateTime lastReviewTime;
-    /** Review数量 */
+    /** 评审数量 */
     private Integer reviewCount;
 }

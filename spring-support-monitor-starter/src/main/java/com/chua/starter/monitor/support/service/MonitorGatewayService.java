@@ -6,7 +6,7 @@ import com.chua.starter.monitor.support.entity.MsMonitorGateway;
 import java.util.List;
 
 /**
- * 监控网关 Service
+   * 监控网关 服务
  *
  * @since 2026/8/4
  * @author CH
@@ -40,7 +40,7 @@ public interface MonitorGatewayService {
     /**
      * 按主机查询
      *
-     * @param monitorId 主机 id
+     * @param monitorId 主机 标识
      * @return 列表
      */
     ReturnResult<List<MsMonitorGateway>> listByMonitor(Long monitorId);

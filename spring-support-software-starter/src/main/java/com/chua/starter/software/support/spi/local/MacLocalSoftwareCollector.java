@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * macOS 平台本地软件采集器
+   * macOS 平台本地软件采集器
  *
  * <p>从 /Applications 目录读取 .app 包信息，使用 mdls 提取名称和版本。</p>
  *
@@ -24,7 +24,7 @@ import java.util.List;
 public class MacLocalSoftwareCollector implements LocalSoftwareCollector {
 
     @Override
-    /** Support */
+    /** 支持 */
     public boolean support() {
         return System.getProperty("os.name", "").toLowerCase().contains("mac") ||
                 System.getProperty("os.name", "").toLowerCase().contains("darwin");
@@ -51,7 +51,12 @@ public class MacLocalSoftwareCollector implements LocalSoftwareCollector {
         return list;
     }
 
-    /** 读取AppInfo */
+    /**
+     * 读取app信息
+     *
+     * @param app app
+     * @return 读取app信息的结果
+     */
     private SoftSoftware readAppInfo(File app) {
         try {
             SoftSoftware software = new SoftSoftware();
@@ -75,7 +80,13 @@ public class MacLocalSoftwareCollector implements LocalSoftwareCollector {
         }
     }
 
-    /** 获取Mdls */
+    /**
+     * 获取Mdls
+     *
+     * @param app app
+     * @param attribute attribute
+     * @return 获取mdls的结果
+     */
     private String getMdls(File app, String attribute) {
         try {
             Process process = Runtime.getRuntime().exec(

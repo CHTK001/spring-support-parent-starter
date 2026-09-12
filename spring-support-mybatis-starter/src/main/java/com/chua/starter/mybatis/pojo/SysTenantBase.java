@@ -9,6 +9,7 @@ import lombok.EqualsAndHashCode;
  * 系统租户基础
  *
  * @author CH
+ * @since 4.0.0
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
@@ -19,6 +20,6 @@ public class SysTenantBase extends SysBase{
      */
     @ColumnDefinition(defaultValue = "0", comment = "租户ID", refresh = true)
     @Schema(description = "租户ID")
-    /** SYStenantID */
+    /** systenantid */
     private Integer sysTenantId;
 }

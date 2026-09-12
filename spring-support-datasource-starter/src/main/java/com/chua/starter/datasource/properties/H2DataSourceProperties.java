@@ -12,6 +12,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * plugin.h2.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
  * plugin.h2.script-path=classpath:db/migration/h2
  * plugin.h2.cleanup-after-test=true
+ * }</pre>ue
  * }</pre>
  * </p>
  *
@@ -37,12 +38,12 @@ public class H2DataSourceProperties {
     /** 密码（默认空） */
     private String password = "";
 
-    /** 迁移脚本路径，支持 classpath: 前缀，如 {@code classpath:db/migration/h2} */
+    /** 迁移脚本路径，支持 类路径: 前缀，如 {@code classpath:db/migration/h2} */
     private String scriptPath = "";
 
     /** 是否在应用关闭时清理所有用户表（仅测试环境建议开启） */
     private boolean cleanupAfterShutdown = false;
 
-    /** 是否在测试结束后清理数据（通过 Spring Test 生命周期绑定） */
+    /** 是否在测试结束后清理数据（通过 Spring 测试 生命周期绑定） */
     private boolean cleanupAfterTest = false;
 }

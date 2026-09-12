@@ -5,7 +5,7 @@ import com.chua.starter.software.support.entity.SoftSoftware;
 import java.util.List;
 
 /**
- * 本地软件采集器 SPI（Strategy + Factory 模式）
+   * 本地软件采集器 SPI（Strategy + 工厂 模式）
  *
  * <p>每个平台提供自己的实现，由 {@link LocalSoftwareSource} 按当前 OS 选择使用。</p>
  *

@@ -11,7 +11,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.util.List;
 
 /**
- * 委托 WebSocket 处理器
+   * 委托 web套接字 处理器
  * <p>
  * 管理会话并将事件委托给用户实现的 {@link WebSocketMessageHandler}
  * </p>
@@ -24,7 +24,7 @@ public class DelegatingWebSocketHandler extends TextWebSocketHandler {
 
     /** 会话管理器 */
     private final WebSocketSessionManager sessionManager;
-    /** Handlers */
+    /** 处理器 */
     private final List<WebSocketMessageHandler> handlers;
 
     /**
@@ -39,7 +39,7 @@ public class DelegatingWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    /** AfterConnectionEstablished */
+    /** 之后connectionestablished */
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         sessionManager.addSession(session);
         log.info("[WebSocket] 连接建立: sessionId={}, uri={}", session.getId(), session.getUri());
@@ -54,7 +54,7 @@ public class DelegatingWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    /** 处理TextMessage */
+    /** 处理文本消息 */
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
         log.debug("[WebSocket] 收到消息: sessionId={}, payload={}", session.getId(), payload);
@@ -69,7 +69,7 @@ public class DelegatingWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    /** AfterConnectionClosed */
+    /** 之后connection关闭 */
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         sessionManager.removeSession(session);
         log.info("[WebSocket] 连接关闭: sessionId={}, code={}, reason={}", 
@@ -99,7 +99,7 @@ public class DelegatingWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    /** SupportsPartialMessages */
+    /** 支持部分消息 */
     public boolean supportsPartialMessages() {
         return false;
     }

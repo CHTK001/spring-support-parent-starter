@@ -15,11 +15,11 @@ import java.time.LocalDateTime;
 @TableName("pay_merchant")
 public class Merchant {
     @TableId(value = "pay_merchant_id", type = IdType.AUTO)
-    /** ID */
+    /** 标识 */
     private Long id;
 
     @TableField("pay_merchant_no")
-    /** MerchantNO */
+    /** merchantno */
     private String merchantNo;
 
     @TableField("pay_merchant_name")
@@ -47,7 +47,7 @@ public class Merchant {
     private String legalPerson;
 
     @TableField("pay_merchant_default_notify_url")
-    /** 默认notifyURL */
+    /** 默认通知url */
     private String defaultNotifyUrl;
 
     @TableField("pay_merchant_default_return_url")
@@ -79,7 +79,7 @@ public class Merchant {
     private Boolean paymentCouponEnabled;
 
     @TableField("pay_merchant_remark")
-    /** Remark */
+    /** 评论 */
     private String remark;
 
     @TableField("pay_merchant_status")

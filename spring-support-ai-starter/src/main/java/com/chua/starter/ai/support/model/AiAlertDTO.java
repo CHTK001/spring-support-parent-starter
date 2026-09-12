@@ -14,13 +14,13 @@ import java.io.Serializable;
 @Data
 @Schema(name = "告警规则 DTO")
 public class AiAlertDTO implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
-     * 告警主键 ID
+      * 告警主键 标识
      */
     @Schema(description = "告警主键 ID")
-    /** ID */
+    /** 标识 */
     private Long id;
 
     /**
@@ -31,10 +31,10 @@ public class AiAlertDTO implements Serializable {
     private String name;
 
     /**
-     * 关联 AppKey ID
+       * 关联 app钥匙 标识
      */
     @Schema(description = "关联 AppKey ID")
-    /** APP密钥ID */
+    /** APP密钥标识 */
     private Long appKeyId;
 
     /**
@@ -55,7 +55,7 @@ public class AiAlertDTO implements Serializable {
      * 通知渠道(JSON)
      */
     @Schema(description = "通知渠道(JSON)")
-    /** Channels */
+    /** 通道 */
     private String channels;
 
     /**

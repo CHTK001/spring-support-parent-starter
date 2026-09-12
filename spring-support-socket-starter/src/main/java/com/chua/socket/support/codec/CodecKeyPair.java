@@ -4,15 +4,18 @@ package com.chua.socket.support.codec;
  * 编解码密钥对接口
  *
  * @author CH
+ * @since 4.0.0
  */
 public interface CodecKeyPair {
     /**
      * 获取公钥（十六进制）
+     * @return 获取公共钥匙hex的结果
      */
     String getPublicKeyHex();
 
     /**
      * 获取私钥（十六进制）
+     * @return 获取私募钥匙hex的结果
      */
     String getPrivateKeyHex();
 

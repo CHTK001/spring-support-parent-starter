@@ -53,7 +53,7 @@ public class SpiderOutputNode implements FlowNode {
     private static final String SOURCE_CURRENT = "current";
 
     /**
-     * 落库记录 ID 属性键
+      * 落库记录 标识 属性键
      */
     private static final String ATTR_RECORD_ID = "spider.output.recordId";
 
@@ -116,7 +116,7 @@ public class SpiderOutputNode implements FlowNode {
      * 执行落库节点。
      *
      * <p>从来源数据中取标准字段，构造 {@link SpiderDataRecord} 并写入数据库。
-     * 写入成功后记录 ID 放入上下文属性。</p>
+      * 写入成功后记录 标识 放入上下文属性。</p>
      *
      * @param context 当前流程上下文
      */
@@ -153,7 +153,7 @@ public class SpiderOutputNode implements FlowNode {
      *
      * @param source  来源标识
      * @param context 当前流程上下文
-     * @return 来源映射，非映射类型时包一层 key 为 value 的映射
+     * @return 来源映射，非映射类型时包一层 钥匙 为 价值观 的映射
      */
     @SuppressWarnings("unchecked")
     private Map<String, Object> resolveMap(String source, FlowContext context) {

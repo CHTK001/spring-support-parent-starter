@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 /**
  * 支付宝单笔转账响应
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @Builder
@@ -18,11 +19,11 @@ import java.math.BigDecimal;
 public class AliyunAlipayTransferResponse {
 
     /** 是否成功 */
-    /** Success */
+    /** 成功 */
     private boolean success;
 
     /** 支付宝转账订单号 */
-    /** TransferNO */
+    /** 调动no */
     private String transferNo;
 
     /** 商户转账唯一订单号 */
@@ -33,19 +34,19 @@ public class AliyunAlipayTransferResponse {
     /** Amount */
     private BigDecimal amount;
 
-    /** 转账状态：SUCCESS/FAIL/WAIT_PAY */
+    /** 转账状态：成功/失败/WAIT_薪酬 */
     /** 状态 */
     private String status;
 
     /** 支付时间 */
-    /** PAY日期 */
+    /** 薪酬日期 */
     private String payDate;
 
     /** 错误信息 */
     /** 消息 */
     private String message;
 
-    /** 原始响应 body */
+    /** 原始响应 主体 */
     /** RAW响应 */
     private String rawResponse;
 }

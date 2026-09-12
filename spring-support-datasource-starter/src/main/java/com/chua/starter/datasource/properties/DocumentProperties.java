@@ -87,7 +87,7 @@ public class DocumentProperties {
     private String excludeTables = "flyway_schema_history,sys_database_version";
 
     /**
-     * Schema 白名单（逗号分隔，{@code *} 表示全部）
+      * 模式 白名单（逗号分隔，{@code *} 表示全部）
      */
     private String includeSchemas;
 
@@ -97,59 +97,99 @@ public class DocumentProperties {
     private boolean cacheable = true;
 
     /**
-     * 透传给 DocumentParser 的扩展参数
+      * 透传给 文档parser 的扩展参数
      * <p>例如：{@code all=true} 表示跨 catalog 导出</p>
      */
     private Map<String, Object> options = new LinkedHashMap<>();
 
     // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
 
-    /** 是否启用 */
+    /**
+     * 是否启用
+     *
+     * @return 是否enable的结果
+     */
     public boolean isEnable() {
         return enable;
     }
 
-    /** 获取BasePath */
+    /**
+      * 获取基础路径
+     *
+     * @return 获取base路径的结果
+     */
     public String getBasePath() {
         return basePath;
     }
 
-    /** 获取Title */
+    /**
+     * 获取Title
+     *
+     * @return 获取title的结果
+     */
     public String getTitle() {
         return title;
     }
 
-    /** 获取Version */
+    /**
+     * 获取版本
+     *
+     * @return 获取版本的结果
+     */
     public String getVersion() {
         return version;
     }
 
-    /** 获取Template */
+    /**
+     * 获取Template
+     *
+     * @return 获取template的结果
+     */
     public String getTemplate() {
         return template;
     }
 
-    /** 获取IncludeTables */
+    /**
+     * 获取includetables
+     *
+     * @return 获取includetables的结果
+     */
     public String getIncludeTables() {
         return includeTables;
     }
 
-    /** 获取ExcludeTables */
+    /**
+     * 获取excludetables
+     *
+     * @return 获取excludetables的结果
+     */
     public String getExcludeTables() {
         return excludeTables;
     }
 
-    /** 获取IncludeSchemas */
+    /**
+     * 获取include模式
+     *
+     * @return 获取include模式的结果
+     */
     public String getIncludeSchemas() {
         return includeSchemas;
     }
 
-    /** 是否Cacheable */
+    /**
+     * 是否Cacheable
+     *
+     * @return 是否缓存的结果
+     */
     public boolean isCacheable() {
         return cacheable;
     }
 
-    /** 获取Options */
+    /**
+     * 获取期权
+     *
+     * @return 获取期权的结果
+     */
     public Map<String, Object> getOptions() {
         return options;
     }

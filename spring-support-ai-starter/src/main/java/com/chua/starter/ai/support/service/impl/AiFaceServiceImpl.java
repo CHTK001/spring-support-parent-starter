@@ -53,7 +53,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      * 检测最大人脸（单独能力）。
      *
      * @param imageData 图片字节
-     * @return 最大人脸命中，无则 null
+     * @return 最大人脸命中，无则 空
      */
     @Override
     public FaceDetectionHit detectLargest(byte[] imageData) {
@@ -84,7 +84,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     @Override
-    /** ExtractFeaturePipeline */
+    /** extract特征pipeline */
     public FaceFeaturePipelineResult extractFeaturePipeline(byte[] imageData) {
         return faceClientManager.currentPipeline().extractFeatureWithMeta(imageData);
     }
@@ -104,7 +104,7 @@ public class AiFaceServiceImpl implements AiFaceService {
      */
     @Override
     public double compare(byte[] imageA, byte[] imageB) {
-        // 走完整管线（detect→crop→liveness→align→feature）提取两侧特征后余弦比对
+ // 走完整管线（detect→crop→liveness→align→特征）提取两侧特征后余弦比对
         FaceFeaturePipelineResult a = faceClientManager.currentPipeline().extractFeatureWithMeta(imageA);
         FaceFeaturePipelineResult b = faceClientManager.currentPipeline().extractFeatureWithMeta(imageB);
         if (a == null || b == null || a.feature() == null || b.feature() == null) {
@@ -114,7 +114,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     @Override
-    /** 比较WithMeta */
+    /** 比较withmeta */
     public FaceCompareResult compareWithMeta(byte[] imageA, byte[] imageB) {
         return faceClientManager.currentPipeline().compareWithMeta(imageA, imageB);
     }
@@ -134,7 +134,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     /**
      * 登记人脸入库（单独能力，取最大人脸）。
      *
-     * @param id        人脸 ID
+     * @param id        人脸 标识
      * @param imageData 图片字节
      * @param metadata  附加元数据
      * @return 是否登记成功
@@ -146,9 +146,9 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 登记管线（detect → crop → liveness → feature → 入库，取最大人脸）。
+      * 登记管线（detect → crop → liveness → 特征 → 入库，取最大人脸）。
      *
-     * @param id        人脸 ID
+     * @param id        人脸 标识
      * @param imageData 图片字节
      * @param metadata  附加元数据
      * @return 是否登记成功
@@ -159,7 +159,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     @Override
-    /** EnrollFeature */
+    /** enroll特征 */
     public boolean enrollFeature(String id, float[] feature, Map<String, Object> metadata) {
         return faceClientManager.currentPipeline().enroll(id, feature, metadata, id);
     }
@@ -176,7 +176,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 识别管线（detect → crop → liveness → feature → 检索，取最大人脸）。
+      * 识别管线（detect → crop → liveness → 特征 → 检索，取最大人脸）。
      *
      * @param imageData 图片字节
      * @return 识别命中（TopK）
@@ -199,6 +199,10 @@ public class AiFaceServiceImpl implements AiFaceService {
                 .stream()
                 .map(v -> new FaceSearchHit(
                         v.id(),
+                        /**
+                         * score的。
+                         * @param v v
+                         */
                         scoreOf(v),
                         v.data(),
                         v.metadata() == null ? Map.of() : v.metadata(),
@@ -207,9 +211,9 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 核验管线（detect → feature → 与指定库中检索比对，取最大人脸）。
+      * 核验管线（detect → 特征 → 与指定库中检索比对，取最大人脸）。
      *
-     * @param id        人脸 ID
+     * @param id        人脸 标识
      * @param imageData 图片字节
      * @return 是否匹配
      */
@@ -278,7 +282,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 人脸修复（辅助能力，CodeFormer）。
+      * 人脸修复（辅助能力，编码former）。
      *
      * @param imageData 图片字节
      * @return 修复后图片字节
@@ -365,7 +369,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     /**
      * 枚举可用人脸模型。
      *
-     * @return 模型清单（能力分组 → 模型 ID 列表）
+     * @return 模型清单（能力分组 → 模型 标识 列表）
      */
     @Override
     public Map<String, List<String>> listModels() {
@@ -398,7 +402,7 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 计算某条入库向量与查询向量的相似度（供 search 结果展示）。
+      * 计算某条入库向量与查询向量的相似度（供 搜索 结果展示）。
      *
      * <p>向量库实现（Memory/JVector）在 search 时会将相似度写入向量 metadata 的 "score" 键，
      * 此处直接读取，缺失时返回 0。</p>

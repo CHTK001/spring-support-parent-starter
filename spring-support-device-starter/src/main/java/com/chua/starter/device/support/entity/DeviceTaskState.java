@@ -20,10 +20,10 @@ import java.time.LocalDateTime;
 public class DeviceTaskState {
 
     /**
-     * 主键 ID
+      * 主键 标识
      */
     @TableId(value = "device_task_state_id", type = IdType.ASSIGN_UUID)
-    /** Device任务状态ID */
+    /** Device任务状态标识 */
     private String deviceTaskStateId;
 
     /**

@@ -11,6 +11,7 @@ import java.util.List;
  * 对象结构化接口
  *
  * @author CH
+ * @since 4.0.0
  */
 public interface ObjectStruct<T> {
 

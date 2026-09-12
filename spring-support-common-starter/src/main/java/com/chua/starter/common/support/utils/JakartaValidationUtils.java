@@ -21,6 +21,9 @@ import java.util.function.Predicate;
  */
 public class JakartaValidationUtils {
 
+    /**
+     * jakarta校验工具。
+     */
     private JakartaValidationUtils() {
     }
 
@@ -28,6 +31,10 @@ public class JakartaValidationUtils {
     private static final Validator VALIDATOR;
 
     static {
+        /**
+         * 尝试。
+         * @param Validation.buildDefaultValidatorFactory( 校验.构建默认validatorfactory(
+         */
         try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
             VALIDATOR = factory.getValidator();
         }
@@ -38,8 +45,8 @@ public class JakartaValidationUtils {
      *
      * @param object           要验证的对象
      * @param condition        条件判断器，用于决定使用哪个验证组
-     * @param updateGroupClass 更新组Class
-     * @param addGroupClass    添加组Class
+     * @param updateGroupClass 更新组类
+     * @param addGroupClass    添加组类
      * @param <T>              对象类型
      * @return 验证错误
      */
@@ -84,7 +91,7 @@ public class JakartaValidationUtils {
     }
 
     /**
-     * 将验证错误转换为 ReturnResult
+      * 将验证错误转换为 申报结果
      *
      * @param errors 验证错误
      * @param <T>    结果类型

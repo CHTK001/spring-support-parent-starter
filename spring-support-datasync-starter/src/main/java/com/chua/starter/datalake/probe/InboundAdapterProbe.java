@@ -35,26 +35,48 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class InboundAdapterProbe {
 
-    private static int passed = 0;
-    private static int failed = 0;
-    private static int total = 0;
-    private static final List<String> failedCases = new CopyOnWriteArrayList<>();
+    private static int passed = 0; // 通过
+    private static int failed = 0; // 失败
+    private static int total = 0; // total
+    private static final List<String> failedCases = new CopyOnWriteArrayList<>(); // 失败CAS
 
-    private static PipelineManager pipelineManager;
-    private static final Map<String, DataSink> sinkRegistry = new ConcurrentHashMap<>();
-    private static PipelineEngine pipelineEngine;
-    private static MockSink mockSink;
+    private static PipelineManager pipelineManager; // pipeline管理器
+    private static final Map<String, DataSink> sinkRegistry = new ConcurrentHashMap<>(); // sinkregistry
+    private static PipelineEngine pipelineEngine; // pipelineengine
+    private static MockSink mockSink; // mocksink
 
+    /**
+     * main。
+     * @param args 参数
+     */
     public static void main(String[] args) throws Exception {
         log.info("═══════════════════════════════════════════════════════");
         log.info("║   被动推送入站适配器全面探测 (InboundAdapterProbe)     ║");
         log.info("═══════════════════════════════════════════════════════");
 
+        /**
+          * setupinfrastructure。
+         */
         setupInfrastructure();
+        /**
+         * 测试构建器校验。
+         */
         testBuilderValidation();
+        /**
+         * 测试mqttlifecycle。
+         */
         testMqttLifecycle();
+        /**
+         * 测试webhookpush。
+         */
         testWebhookPush();
+        /**
+         * 测试cdclifecycle。
+         */
         testCdcLifecycle();
+        /**
+         * 测试完整pipeline。
+         */
         testFullPipeline();
 
         log.info("═══════════════════════════════════════════════════════");
@@ -71,8 +93,11 @@ public class InboundAdapterProbe {
 
     // ━━━━━━━━━━━━━━━ 基础设施 ━━━━━━━━━━━━━━━
 
+    /**
+      * setupinfrastructure。
+     */
     private static void setupInfrastructure() {
-        // PipelineManager — 注册四条测试管线
+ // pipeline管理器 — 注册四条测试管线
         pipelineManager = new DefaultPipelineManager();
 
         String defaultSinkPipeline = "{\"stages\":{\"default\":{\"sink\":[{\"type\":\"mock\"}]}}}";
@@ -81,7 +106,7 @@ public class InboundAdapterProbe {
         pipelineManager.savePipeline("test-cdc", defaultSinkPipeline);
         pipelineManager.savePipeline("test-full", defaultSinkPipeline);
 
-        // MockSink — 记录所有写入
+ // mocksink — 记录所有写入
         mockSink = new MockSink();
         sinkRegistry.put("mock", mockSink);
 
@@ -90,12 +115,15 @@ public class InboundAdapterProbe {
         log.info("[InboundAdapterProbe] 基础设施就绪: 4 条管线, MockSink 注册");
     }
 
-    // ━━━━━━━━━━━━━━━ T01~T03: Builder 校验 ━━━━━━━━━━━━━━━
+ // ━━━━━━━━━━━━━━━ T01~T03: 构建器 校验 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试构建器校验。
+     */
     private static void testBuilderValidation() {
         log.info("───── T01~T03: Builder 参数校验 ─────");
 
-        // T01: MqttInboundAdapter 无 pipelineEngine 应抛异常
+ // T01: mqttinbound适配器 无 pipelineengine 应抛异常
         check("T01-MqttBuilder无PipelineEngine", () -> {
             try {
                 MqttInboundAdapter.builder().build();
@@ -105,7 +133,7 @@ public class InboundAdapterProbe {
             }
         });
 
-        // T02: WebhookInboundAdapter 无 pipelineEngine 应抛异常
+ // T02: webhookinbound适配器 无 pipelineengine 应抛异常
         check("T02-WebhookBuilder无PipelineEngine", () -> {
             try {
                 WebhookInboundAdapter.builder().build();
@@ -115,7 +143,7 @@ public class InboundAdapterProbe {
             }
         });
 
-        // T03: MysqlCdcListener 无 pipelineEngine 应抛异常
+ // T03: mysqlcdc监听器 无 pipelineengine 应抛异常
         check("T03-CdcBuilder无PipelineEngine", () -> {
             try {
                 MysqlCdcListener.builder().build();
@@ -128,6 +156,9 @@ public class InboundAdapterProbe {
 
     // ━━━━━━━━━━━━━━━ T04~T05: MQTT 生命周期 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试mqttlifecycle。
+     */
     private static void testMqttLifecycle() {
         log.info("───── T04~T05: MQTT 适配器生命周期 ─────");
 
@@ -144,7 +175,7 @@ public class InboundAdapterProbe {
             return adapter != null && !adapter.isRunning();
         });
 
-        // T05: start → stop（Broker 不可用时应优雅降级）
+ // T05: 启动 → 停止（Broker 不可用时应优雅降级）
         check("T05-Mqtt StartStop无异常", () -> {
             MqttInboundAdapter adapter = MqttInboundAdapter.builder()
                     .brokerUrl("tcp://localhost:19999")  // 故意用不存在的端口
@@ -157,7 +188,7 @@ public class InboundAdapterProbe {
                 adapter.start();  // 应捕获异常，不崩溃
                 adapter.stop();
             } catch (Exception e) {
-                // start 失败时 stop 也不应崩溃
+ // 启动 失败时 停止 也不应崩溃
             }
             return adapter.getMessageCount() == 0;
         });
@@ -165,6 +196,9 @@ public class InboundAdapterProbe {
 
     // ━━━━━━━━━━━━━━━ T06~T08: Webhook 推送 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试webhookpush。
+     */
     private static void testWebhookPush() throws Exception {
         log.info("───── T06~T08: Webhook HTTP 推送 ─────");
 
@@ -177,7 +211,7 @@ public class InboundAdapterProbe {
             return adapter != null && !adapter.isRunning();
         });
 
-        // T07: start → HTTP POST → 数据到达 PipelineEngine → MockSink 收到
+ // T07: 启动 → HTTP POST → 数据到达 pipelineengine → mocksink 收到
         check("T07-Webhook推送单条数据", () -> {
             mockSink.reset();
             WebhookInboundAdapter adapter = WebhookInboundAdapter.builder()
@@ -240,6 +274,9 @@ public class InboundAdapterProbe {
 
     // ━━━━━━━━━━━━━━━ T09~T10: CDC 生命周期 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试cdclifecycle。
+     */
     private static void testCdcLifecycle() {
         log.info("───── T09~T10: CDC 适配器生命周期 ─────");
 
@@ -257,7 +294,7 @@ public class InboundAdapterProbe {
             return listener != null && !listener.isRunning();
         });
 
-        // T10: start → stop（MySQL 不可用时应优雅降级）
+ // T10: 启动 → 停止（MySQL 不可用时应优雅降级）
         check("T10-Cdc StartStop无异常", () -> {
             MysqlCdcListener listener = MysqlCdcListener.builder()
                     .host("127.0.0.1")
@@ -281,10 +318,13 @@ public class InboundAdapterProbe {
 
     // ━━━━━━━━━━━━━━━ T11~T12: 全链路验证 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试完整pipeline。
+     */
     private static void testFullPipeline() throws Exception {
         log.info("───── T11~T12: 全链路（Webhook → Pipeline → MockSink）─────");
 
-        // T11: Webhook → PipelineEngine → MockSink 写入含完整字段
+ // T11: Webhook → pipelineengine → mocksink 写入含完整字段
         check("T11-全链路数据完整性", () -> {
             mockSink.reset();
             WebhookInboundAdapter adapter = WebhookInboundAdapter.builder()
@@ -349,6 +389,11 @@ public class InboundAdapterProbe {
 
     // ━━━━━━━━━━━━━━━ 辅助 ━━━━━━━━━━━━━━━
 
+    /**
+     * 检查。
+     * @param name 名称
+     * @param check 检查
+     */
     private static void check(String name, ProbeCheck check) {
         total++;
         try {
@@ -369,17 +414,36 @@ public class InboundAdapterProbe {
     }
 
     @FunctionalInterface
+    /**
+     * 探针检查接口。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     interface ProbeCheck {
+        /**
+         * 检查。
+         * @return 检查的结果
+         */
         boolean check() throws Exception;
     }
 
-    // ━━━━━━━━━━━━━━━ MockSink ━━━━━━━━━━━━━━━
+ // ━━━━━━━━━━━━━━━ mocksink ━━━━━━━━━━━━━━━
 
+    /**
+      * mocksink类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     public static class MockSink implements DataSink {
-        private final AtomicInteger writeCount = new AtomicInteger(0);
-        private volatile DataEnvelope lastEnvelope;
-        private volatile Map<String, Object> lastData;
+        private final AtomicInteger writeCount = new AtomicInteger(0); // 写入数量
+        private volatile DataEnvelope lastEnvelope; // 最后一个envelope
+        private volatile Map<String, Object> lastData; // 最后一个数据
 
+        /**
+         * reset。
+         */
         public void reset() {
             writeCount.set(0);
             lastEnvelope = null;
@@ -408,8 +472,20 @@ public class InboundAdapterProbe {
             return null;
         }
 
+        /**
+         * 获取写入数量。
+         * @return 获取写入数量的结果
+         */
         public int getWriteCount() { return writeCount.get(); }
+        /**
+         * 获取最后一个envelope。
+         * @return 获取最后一个envelope的结果
+         */
         public DataEnvelope getLastEnvelope() { return lastEnvelope; }
+        /**
+         * 获取最后一个数据。
+         * @return 获取最后一个数据的结果
+         */
         public Map<String, Object> getLastData() { return lastData; }
     }
 }

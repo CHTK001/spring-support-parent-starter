@@ -47,7 +47,7 @@ public class LocalSoftwareController {
      *
      * <p>扫描当前操作系统已安装的软件，同步到本地软件源（source_type=3）。</p>
      *
-     * @param sourceId 软件源ID（可选，为空时使用默认本地源）
+     * @param sourceId 软件源标识（可选，为空时使用默认本地源）
      * @return 扫描结果，包含扫描数量
      */
     @Operation(summary = "扫描本地软件")
@@ -64,7 +64,7 @@ public class LocalSoftwareController {
      *
      * <p>将指定本地源下的所有软件标记为删除状态（软删除）。</p>
      *
-     * @param sourceId 软件源ID
+     * @param sourceId 软件源标识
      * @return 操作结果
      */
     @Operation(summary = "清空本地软件")
@@ -98,7 +98,7 @@ public class LocalSoftwareController {
     /**
      * 本地软件详情
      *
-     * @param softwareId 软件ID
+     * @param softwareId 软件标识
      * @return 软件详情
      */
     @Operation(summary = "本地软件详情")
@@ -134,9 +134,9 @@ public class LocalSoftwareController {
      *
      * <p>从管理系统中移除本地软件记录。</p>
      *
-     * @param softwareId 软件ID
-     * @param userId     用户ID
-     * @param deviceId   设备ID
+     * @param softwareId 软件标识
+     * @param userId     用户标识
+     * @param deviceId   设备标识
      * @return 卸载结果
      */
     @Operation(summary = "卸载本地软件")

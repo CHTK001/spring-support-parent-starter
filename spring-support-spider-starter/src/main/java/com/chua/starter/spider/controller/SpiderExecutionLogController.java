@@ -46,7 +46,7 @@ public class SpiderExecutionLogController {
     /**
      * 按执行号查询全链路节点日志。
      *
-     * @param executionNo 执行号（traceId）
+     * @param executionNo 执行号（追踪标识）
      * @return 节点日志列表
      */
     @GetMapping("/logs")

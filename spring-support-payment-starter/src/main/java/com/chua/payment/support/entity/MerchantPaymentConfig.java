@@ -11,20 +11,21 @@ import java.time.LocalDateTime;
 /**
  * 商户支付配置
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @TableName("pay_merchant_payment_config")
 public class MerchantPaymentConfig {
     @TableId(value = "pay_merchant_payment_config_id", type = IdType.AUTO)
-    /** ID */
+    /** 标识 */
     private Long id;
 
     @TableField("pay_merchant_payment_config_tenant_id")
-    /** TenantID */
+    /** tenantid */
     private Long tenantId;
 
     @TableField("pay_merchant_payment_config_merchant_id")
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
 
     @TableField("pay_merchant_payment_config_order_reusable")
@@ -44,27 +45,27 @@ public class MerchantPaymentConfig {
     private Boolean autoCancelTimeoutOrder;
 
     @TableField("pay_merchant_payment_config_create_time")
-    /** Create时间 */
+    /** 创建时间 */
     private LocalDateTime createTime;
 
     @TableField("pay_merchant_payment_config_update_time")
-    /** Update时间 */
+    /** 更新时间 */
     private LocalDateTime updateTime;
 
     @TableField("pay_merchant_payment_config_create_by")
-    /** CreateBY */
+    /** 创建by */
     private String createBy;
 
     @TableField("pay_merchant_payment_config_update_by")
-    /** UpdateBY */
+    /** 更新by */
     private String updateBy;
 
     @TableField("pay_merchant_payment_config_create_name")
-    /** Create名称 */
+    /** 创建名称 */
     private String createName;
 
     @TableField("pay_merchant_payment_config_update_name")
-    /** Update名称 */
+    /** 更新名称 */
     private String updateName;
 }
 

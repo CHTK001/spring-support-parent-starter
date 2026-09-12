@@ -44,8 +44,8 @@ public class DahuaSession implements DeviceSession {
     private final Map<EventType, List<EventListener>> listeners = new ConcurrentHashMap<>();
 
     /**
-     * 创建 DahuaSession 实例
-     * @param info info
+      * 创建 dahua会话 实例
+     * @param info 信息
      */
     public DahuaSession(DeviceConnectInfo info) {
         this.info = info;
@@ -53,7 +53,7 @@ public class DahuaSession implements DeviceSession {
     }
 
     @Override
-    /** 获取DeviceId */
+    /** 获取deviceid */
     public String getDeviceId() {
         return info.getIp();
     }
@@ -85,25 +85,25 @@ public class DahuaSession implements DeviceSession {
     }
 
     @Override
-    /** 获取LiveUrl */
+    /** 获取liveurl */
     public String getLiveUrl(int channel, String protocol) {
         return "";
     }
 
     @Override
-    /** 获取PlaybackUrl */
+    /** 获取playbackurl */
     public String getPlaybackUrl(int channel, TimeRange range) {
         return null;
     }
 
     @Override
-    /** 查询AccessRecords */
+    /** 查询accessrecords */
     public List<AccessRecord> queryAccessRecords(TimeRange range) {
         return new ArrayList<>();
     }
 
     @Override
-    /** TestConnection */
+    /** 测试connection */
     public boolean testConnection() {
         return online;
     }
@@ -116,7 +116,7 @@ public class DahuaSession implements DeviceSession {
     }
 
     @Override
-    /** PtzControl */
+    /** ptzcontrol */
     public void ptzControl(PtzCommand cmd, double speed) {
         log.info("大华云台控制: cmd={}, speed={}", cmd, speed);
     }
@@ -140,31 +140,31 @@ public class DahuaSession implements DeviceSession {
     }
 
     @Override
-    /** ListPresets */
+    /** 列表presets */
     public List<PresetInfo> listPresets() {
         return new ArrayList<>();
     }
 
     @Override
-    /** Remote解锁 */
+    /** 远程解锁 */
     public void remoteUnlock(int doorId) {
         log.info("大华远程开门: doorId={}", doorId);
     }
 
     @Override
-    /** 订阅Event */
+    /** 订阅事件 */
     public void subscribeEvent(EventType type, EventListener listener) {
         listeners.computeIfAbsent(type, k -> new ArrayList<>()).add(listener);
     }
 
     @Override
-    /** 取消订阅Event */
+    /** 取消订阅事件 */
     public void unsubscribeEvent(EventType type) {
         listeners.remove(type);
     }
 
     @Override
-    /** 取出Events */
+    /** 取出事件 */
     public List<DeviceEvent> pollEvents(TimeRange range) {
         return new ArrayList<>();
     }

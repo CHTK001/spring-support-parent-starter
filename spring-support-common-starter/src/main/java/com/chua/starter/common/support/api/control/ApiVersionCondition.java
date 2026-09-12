@@ -46,26 +46,30 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
     private static final String LATEST = "latest";
 
     /**
-     * API VERSION interface
+      * API 版本 接口
      */
     private final ApiVersion apiVersion;
 
     /**
-     * 创建 ApiVersionCondition 实例
-     * @param apiVersion apiVersion
+      * 创建 api版本条件 实例
+     * @param apiVersion api版本
      */
     public ApiVersionCondition(ApiVersion apiVersion) {
         this.apiVersion = apiVersion;
     }
 
     /**
-     * 合并条件（method 优先于 class）
+      * 合并条件（方法 优先于 类）
      *
      * @param other 另一个条件
      * @return 合并后的条件
      */
     @Override
     public ApiVersionCondition combine(ApiVersionCondition other) {
+        /**
+         * api版本条件。
+         * @param other.getApiVersion( other.获取api版本(
+         */
         return new ApiVersionCondition(other.getApiVersion());
     }
 
@@ -73,21 +77,21 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
      * 判断是否匹配
      * <p>
      * 支持的版本指定方式：
-     * 1. 查询参数：?apiVersion=1 或 ?apiVersion=v1 或 ?apiVersion=latest
-     * 2. 请求头：X-Api-Version: 1 或 X-Api-Version: latest
+      * 1. 查询参数：?api版本=1 或 ?api版本=v1 或 ?api版本=latest
+      * 2. 请求头：X-Api-版本: 1 或 X-Api-版本: latest
      * </p>
      *
      * @param httpServletRequest HTTP 请求
-     * @return 匹配成功的条件，失败返回 null
+     * @return 匹配成功的条件，失败返回 空
      */
     @Override
     public ApiVersionCondition getMatchingCondition(HttpServletRequest httpServletRequest) {
-        // 1. 从查询参数获取版本号 ?apiVersion=1 或 ?apiVersion=v1 或 ?apiVersion=latest
-        //    使用 getParameter 而非解析 getQueryString：QueryString 在部分环境（MockMvc）为 null，
+ // 1. 从查询参数获取版本号 ?api版本=1 或 ?api版本=v1 或 ?api版本=latest
+ // 使用 获取参数 而非解析 获取查询字符串：查询字符串 在部分环境（mockmvc）为 空，
         //    且手工切分存在编码/嵌套解析问题
         String versionStr = httpServletRequest.getParameter(VERSION_PARAM);
 
-        // 2. 如果没有查询参数，尝试从请求头获取 X-Api-Version
+ // 2. 如果没有查询参数，尝试从请求头获取 X-Api-版本
         if (null == versionStr || versionStr.isEmpty()) {
             versionStr = httpServletRequest.getHeader(VERSION_HEADER);
         }
@@ -99,7 +103,7 @@ public class ApiVersionCondition implements RequestCondition<ApiVersionCondition
         
         // 支持 latest 关键字，表示匹配最新版本
         if (LATEST.equalsIgnoreCase(versionStr)) {
-            // latest 总是匹配，由 compareTo 决定优先级（版本号最大的优先）
+ // latest 总是匹配，由 compare转为 决定优先级（版本号最大的优先）
             return this;
         }
 
@@ -152,7 +156,7 @@ Version apiVersionValue = Version.of(currentApiVersion.value());
     /**
      * 比较优先级（版本号大的优先）
      * <p>
-     * 当请求指定 apiVersion=latest 时，版本号最大的接口优先匹配。
+      * 当请求指定 api版本=latest 时，版本号最大的接口优先匹配。
      * </p>
      *
      * @param other              另一个条件
@@ -173,7 +177,7 @@ Version apiVersionValue = Version.of(currentApiVersion.value());
         return otherVersion.compareTo(thisVersion);
     }
     /**
-     * 获取 apiVersion
+      * 获取 api版本
      *
      * @return apiVersion
      */

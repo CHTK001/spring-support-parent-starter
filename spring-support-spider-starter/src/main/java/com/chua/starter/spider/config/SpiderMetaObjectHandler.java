@@ -6,7 +6,7 @@ import org.apache.ibatis.reflection.MetaObject;
 import java.time.LocalDateTime;
 
 /**
- * MyBatis-Plus 公共字段自动填充。
+   * MyBatis-Plus 公共字段自动填充。
  *
  * <p>框架未提供全局 {@link MetaObjectHandler}，这里按 {@code SysBase}
  * 字段约定在新增/更新时自动填充创建人与时间信息，

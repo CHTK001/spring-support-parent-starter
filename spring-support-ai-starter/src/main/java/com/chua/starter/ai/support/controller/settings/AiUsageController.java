@@ -36,6 +36,9 @@ public class AiUsageController {
      *
      * @param model 模型名称（可选）
      * @return 用量 DTO 列表
+     * @param "模型名称" "模型名称"
+     * @param "模型名称" "模型名称"
+     * @param "模型名称" "模型名称"
      */
     @Permission("admin")
     @Operation(summary = "查询用量统计")

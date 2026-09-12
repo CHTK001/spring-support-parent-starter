@@ -84,7 +84,7 @@ public class SysMessageController {
     /**
      * 已注册消息渠道列表
      * <p>
-     * 返回所有通过 SPI 注册的 MessagePush 渠道标识，用于前端「厂家编码」下拉选择。
+      * 返回所有通过 SPI 注册的 消息push 渠道标识，用于前端「厂家编码」下拉选择。
      * </p>
      *
      * @return 渠道信息列表
@@ -125,7 +125,7 @@ public class SysMessageController {
     /**
      * 删除提供商
      *
-     * @param providerId 提供商ID
+     * @param providerId 提供商标识
      * @return 删除结果
      */
     @Operation(summary = "删除提供商")
@@ -193,7 +193,7 @@ public class SysMessageController {
     /**
      * 删除模板
      *
-     * @param templateId 模板ID
+     * @param templateId 模板标识
      * @return 删除结果
      */
     @Operation(summary = "删除模板")
@@ -232,7 +232,7 @@ public class SysMessageController {
     /**
      * 手动同步模板
      *
-     * @param providerId 提供商ID
+     * @param providerId 提供商标识
      * @return 同步结果
      */
     @Operation(summary = "手动同步模板")
@@ -245,7 +245,7 @@ public class SysMessageController {
     /**
      * 模板内容渲染预览
      *
-     * @param request 预览请求（模板ID + 参数）
+     * @param request 预览请求（模板标识 + 参数）
      * @return 渲染结果
      */
     @Operation(summary = "模板内容渲染预览")
@@ -260,6 +260,7 @@ public class SysMessageController {
      *
      * @param beforeTime 截止时间（ISO 时间串，如 2026-01-01T00:00:00）
      * @return 删除条数
+     * @param false false
      */
     @Operation(summary = "清理推送日志")
     @PostMapping("/log/clean")
@@ -294,6 +295,7 @@ public class SysMessageController {
      * @param page     页码
      * @param pageSize 每页条数
      * @return 分页结果
+     * @param "1" "1"
      */
     @Operation(summary = "当前用户站内消息分页查询")
     @GetMapping("/sys-message/page")
@@ -316,11 +318,12 @@ public class SysMessageController {
     /**
      * 当前用户站内消息标记已读
      * <p>
-     * 将当前用户所有未读站内消息标记为已读；传 lastId 时仅标记该游标及之前的消息。
+       * 将当前用户所有未读站内消息标记为已读；传 最后一个标识 时仅标记该游标及之前的消息。
      * </p>
      *
-     * @param lastId 已读游标（消息ID），可空
+     * @param lastId 已读游标（消息标识），可空
      * @return 是否已更新
+     * @param false false
      */
     @Operation(summary = "当前用户站内消息标记已读")
     @PutMapping("/sys-message/read")

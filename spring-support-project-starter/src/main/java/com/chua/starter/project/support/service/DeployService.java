@@ -28,9 +28,9 @@ public interface DeployService {
      * 多目标服务器并行执行。
      * </p>
      *
-     * @param projectId  项目 ID
+     * @param projectId  项目 标识
      * @param action     操作类型 DEPLOY / UPGRADE
-     * @param file       部署包文件（zip/tar.gz/jar 等）
+     * @param file       部署包文件（压缩/焦油.gz/jar 等）
      * @return 每台主机的部署日志
      */
     ReturnResult<List<MsProjectDeployLog>> deploy(Long projectId, String action, MultipartFile file);
@@ -38,7 +38,7 @@ public interface DeployService {
     /**
      * 启动项目（执行启动脚本）
      *
-     * @param projectId 项目 ID
+     * @param projectId 项目 标识
      * @return 每台主机的执行日志
      */
     ReturnResult<List<MsProjectDeployLog>> start(Long projectId);
@@ -46,7 +46,7 @@ public interface DeployService {
     /**
      * 停止项目（执行停止脚本）
      *
-     * @param projectId 项目 ID
+     * @param projectId 项目 标识
      * @return 每台主机的执行日志
      */
     ReturnResult<List<MsProjectDeployLog>> stop(Long projectId);
@@ -54,7 +54,7 @@ public interface DeployService {
     /**
      * 重启项目（执行重启脚本）
      *
-     * @param projectId 项目 ID
+     * @param projectId 项目 标识
      * @return 每台主机的执行日志
      */
     ReturnResult<List<MsProjectDeployLog>> restart(Long projectId);
@@ -62,7 +62,7 @@ public interface DeployService {
     /**
      * 部署日志列表
      *
-     * @param projectId 项目 ID，可为空查询全部
+     * @param projectId 项目 标识，可为空查询全部
      * @param action    操作类型，可为空
      * @return 日志列表（最新在前，上限 200）
      */
@@ -71,8 +71,8 @@ public interface DeployService {
     /**
      * 部署包归档列表（资产维度历史版本）
      *
-     * @param projectId 项目 ID
-     * @param hostId    主机 ID，可为空
+     * @param projectId 项目 标识
+     * @param hostId    主机 标识，可为空
      * @return 归档记录（版本去重后倒序，供回滚选择）
      */
     ReturnResult<List<MsProjectUploadArchive>> listArchives(Long projectId, Long hostId);
@@ -84,8 +84,8 @@ public interface DeployService {
      * （清目录 → 上传 → 可选解压），失败主机单独标记。
      * </p>
      *
-     * @param projectId 项目 ID
-     * @param archiveId 归档记录 ID（指定版本来源）
+     * @param projectId 项目 标识
+     * @param archiveId 归档记录 标识（指定版本来源）
      * @return 每台主机的部署日志
      */
     ReturnResult<List<MsProjectDeployLog>> rollback(Long projectId, Long archiveId);
@@ -94,14 +94,14 @@ public interface DeployService {
      * 实时查看项目日志（tail）
      * <p>
      * 基于项目配置的日志目录与文件名，SSH 执行 {@code tail} 读取最近内容。
-     * cursor 不为空时返回从该字节偏移起的增量内容（增量轮询）。
+      * Cursor 不为空时返回从该字节偏移起的增量内容（增量轮询）。
      * </p>
      *
-     * @param projectId 项目 ID
-     * @param hostId    目标主机 ID
+     * @param projectId 项目 标识
+     * @param hostId    目标主机 标识
      * @param cursor    上次读取的字节偏移，可为空
      * @param lines     拉取行数，默认 500
-     * @return 日志内容（content / cursor / eof）
+     * @return 日志内容（content / Cursor / eof）
      */
     ReturnResult<Map<String, Object>> tailLog(Long projectId, Long hostId, Long cursor, Integer lines);
 }

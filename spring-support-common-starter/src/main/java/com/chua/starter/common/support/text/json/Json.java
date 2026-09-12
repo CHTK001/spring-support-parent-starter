@@ -6,18 +6,22 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 
 /**
- * JSON 序列化/反序列化工具类，统一封装 Jackson ObjectMapper。
+   * JSON 序列化/反序列化工具类，统一封装 Jackson 对象映射器。
  *
  * <p>本类是 spring-support-common-starter 提供的统一 JSON 能力，其他 spring-* 模块必须通过本类复用，
  * 禁止在各模块中重复实现 Json 工具类。</p>
  *
  * @author CH
+ * @since 4.0.0
  */
 public final class Json {
 
-    /** Jackson ObjectMapper 单例 */
+    /** Jackson 对象映射器 单例 */
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
+    /**
+     * Json。
+     */
     private Json() {
     }
 
@@ -32,6 +36,12 @@ public final class Json {
         try {
             return MAPPER.writeValueAsString(value);
         } catch (Exception e) {
+            /**
+             * runtime异常。
+             * @param failure" 失败"
+             * @param e e
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("JSON serialize failure", e);
         }
     }
@@ -60,12 +70,18 @@ public final class Json {
         try {
             return MAPPER.readValue(json, clazz);
         } catch (Exception e) {
+            /**
+             * runtime异常。
+             * @param failure" 失败"
+             * @param e e
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("JSON parse failure", e);
         }
     }
 
     /**
-     * 从 JSON 字符串反序列化为 Map。
+      * 从 JSON 字符串反序列化为 映射。
      *
      * @param content JSON 字符串
      * @return Map 对象
@@ -75,6 +91,12 @@ public final class Json {
         try {
             return MAPPER.readValue(content, new TypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
+            /**
+             * runtime异常。
+             * @param failure" 失败"
+             * @param e e
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("JSON parse failure", e);
         }
     }

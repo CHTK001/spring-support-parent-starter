@@ -6,13 +6,13 @@ import java.util.function.Supplier;
 /**
  * 分布式锁模板接口（临时接口，用于编译）
  * <p>
- * 提供统一的分布式锁API，支持多种锁实现（如Redisson、Zookeeper等）。
+   * 提供统一的分布式锁API，支持多种锁实现（如Redisson、ZooKeeper等）。
  * </p>
  * <p>
  * 注意：此接口是临时创建的，用于编译通过。实际应该使用 strategy-starter 中的接口。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2025-12-25
  * @author CH
  */
@@ -47,7 +47,7 @@ public interface LockTemplate {
      * 尝试获取锁并执行
      * <p>
      * 尝试在指定时间内获取锁，获取成功后执行业务逻辑。
-     * 如果获取锁失败，返回null。
+      * 如果获取锁失败，返回空。
      * </p>
      *
      * @param lockKey  锁的唯一标识

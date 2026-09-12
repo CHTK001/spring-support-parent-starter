@@ -15,10 +15,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Prometheus 拉取采集 Provider（PROMETHEUS）
+   * Prometheus 拉取采集 提供者（Prometheus）
  * <p>
- * 从目标主机 {@code http://{address}:{port}/metrics} 抓取 Prometheus 文本格式指标，
- * 解析 CPU / 内存 / 磁盘使用率并回写。适合部署了 node_exporter 等组件的主机。
+   * 从目标主机 {@code http://{address}:{端口}/指标} 抓取 Prometheus 文本格式指标，
+   * 解析 CPU / 内存 / 磁盘使用率并回写。适合部署了 节点_导出 等组件的主机。
  * </p>
  *
  * @author CH
@@ -32,7 +32,7 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
     /** Prometheus 指标端点路径 */
     private static final String METRICS_PATH = "/metrics";
 
-    /** 主机 Mapper */
+    /** 主机 映射器 */
     private final MsServerHostMapper hostMapper;
 
     /** CPU 空闲秒数指标 */
@@ -93,6 +93,11 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
         String url = "http://" + address.trim() + ":" + port + METRICS_PATH;
         try {
             String body = fetchBody(url);
+            /**
+             * apply指标。
+             * @param host 主机
+             * @param body 主体
+             */
             applyMetrics(host, body);
             hostMapper.updateById(host);
             return CollectOutcome.ok("Prometheus 采集成功");
@@ -115,6 +120,11 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
         conn.setRequestMethod("GET");
         int code = conn.getResponseCode();
         if (code != 200) {
+            /**
+             * illegal状态异常。
+             * @param code 编码
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("metrics 端点返回 " + code);
         }
         StringBuilder sb = new StringBuilder();

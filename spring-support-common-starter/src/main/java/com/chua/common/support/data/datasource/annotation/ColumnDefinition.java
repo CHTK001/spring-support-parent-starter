@@ -5,6 +5,8 @@ import java.lang.annotation.*;
 /**
  * 列定义注解，用于标记实体类字段对应的数据库列信息
  *
+ * @author CH
+ * @since 4.0.0
  */
 @Target({ElementType.FIELD, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)

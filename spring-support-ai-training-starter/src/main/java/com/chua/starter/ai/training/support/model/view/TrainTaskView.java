@@ -17,10 +17,10 @@ import java.time.Instant;
 @Data
 public class TrainTaskView implements Serializable {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
-     * 任务 ID。
+      * 任务 标识。
      */
     private String taskId;
 
@@ -30,7 +30,7 @@ public class TrainTaskView implements Serializable {
     private TrainStatus status;
 
     /**
-     * 上传的 ZIP 原始文件名。
+      * 上传的 压缩 原始文件名。
      */
     private String fileName;
 
@@ -98,19 +98,21 @@ public class TrainTaskView implements Serializable {
 
     /**
      * 内部进度视图。
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class TrainProgressView implements Serializable {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = 1L; // 串行版本uid
 
         /**
-         * 当前 epoch。
+          * 当前 轮次。
          */
         private int currentEpoch;
 
         /**
-         * 总 epoch 数。
+          * 总 轮次 数。
          */
         private int totalEpochs;
 

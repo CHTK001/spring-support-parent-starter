@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * 消息阅读追踪配置属性
  * <p>
- * 开启后，发送 HTML 邮件时会在内容末尾注入追踪图（&lt;img src="{baseUrl}/v2/message/track/{token}"&gt;），
+   * 开启后，发送 HTML 邮件时会在内容末尾注入追踪图（&lt;img src="{baseurl}/v2/消息/track/{令牌}"&gt;），
  * 收件人打开邮件即触发该地址，后端将日志标记为已读。
  * </p>
  *

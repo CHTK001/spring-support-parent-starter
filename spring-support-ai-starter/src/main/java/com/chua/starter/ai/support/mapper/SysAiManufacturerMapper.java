@@ -5,7 +5,7 @@ import com.chua.starter.ai.support.entity.SysAiManufacturer;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * AI 厂商 Mapper。
+   * AI 厂商 映射器。
  *
  * @since 4.0.0.42
  * @author CH

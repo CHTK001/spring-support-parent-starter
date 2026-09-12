@@ -7,10 +7,10 @@ import java.util.concurrent.CompletableFuture;
 /**
  * 统一消息模板接口
  * <p>
- * 提供统一的消息队列操作API，支持MQTT、Kafka、RabbitMQ、RocketMQ等实现。
+   * 提供统一的消息队列操作API，支持MQTT、Kafka、RabbitMQ、RocketMQ等实现。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2025-12-25
  * @author CH
  */
@@ -19,7 +19,7 @@ public interface MessageTemplate {
     /**
      * 同步发送消息
      *
-     * @param destination 目标地址（topic/queue）
+     * @param destination 目标地址（topic/队列）
      * @param payload     消息内容
      * @return 发送结果
      */
@@ -35,7 +35,7 @@ public interface MessageTemplate {
     CompletableFuture<SendResult> sendAsync(String destination, Object payload);
 
     /**
-     * 异步发送带Header的消息
+      * 异步发送带头部的消息
      *
      * @param destination 目标地址
      * @param payload     消息内容
@@ -47,7 +47,7 @@ public interface MessageTemplate {
     }
 
     /**
-     * 发送带Header的消息
+      * 发送带头部的消息
      *
      * @param destination 目标地址
      * @param payload     消息内容
@@ -59,7 +59,7 @@ public interface MessageTemplate {
     /**
      * 发送延迟消息
      * <p>
-     * 注意：并非所有消息队列都支持延迟消息，不支持的实现可能会抛出UnsupportedOperationException
+      * 注意：并非所有消息队列都支持延迟消息，不支持的实现可能会抛出unsupportedoperation异常
      * </p>
      *
      * @param destination 目标地址
@@ -68,6 +68,11 @@ public interface MessageTemplate {
      * @return 发送结果
      */
     default SendResult sendDelayed(String destination, Object payload, Duration delay) {
+        /**
+         * unsupportedoperation异常。
+         * @param implementation" implementation"
+         * @return unsupportedoperation异常的结果
+         */
         throw new UnsupportedOperationException("Delayed message is not supported by this implementation");
     }
 
@@ -78,6 +83,12 @@ public interface MessageTemplate {
      * @param handler     消息处理器
      */
     default void subscribe(String destination, MessageHandler handler) {
+        /**
+         * 订阅。
+         * @param destination 目标
+         * @param handler 处理器
+         * @param true true
+         */
         subscribe(destination, handler, true);
     }
 
@@ -98,6 +109,13 @@ public interface MessageTemplate {
      * @param handler     消息处理器
      */
     default void subscribe(String destination, String group, MessageHandler handler) {
+        /**
+         * 订阅。
+         * @param destination 目标
+         * @param group 群体
+         * @param handler 处理器
+         * @param true true
+         */
         subscribe(destination, group, handler, true);
     }
 
@@ -110,6 +128,12 @@ public interface MessageTemplate {
      * @param autoAck     是否自动确认（true=自动确认，false=手动确认）
      */
     default void subscribe(String destination, String group, MessageHandler handler, boolean autoAck) {
+        /**
+         * 订阅。
+         * @param destination 目标
+         * @param handler 处理器
+         * @param autoAck autoACK
+         */
         subscribe(destination, handler, autoAck);
     }
 
@@ -127,10 +151,22 @@ public interface MessageTemplate {
      */
     default void subscribe(String destination, MessageHandler handler, boolean autoAck, int concurrency) {
         if (concurrency <= 1) {
+            /**
+             * 订阅。
+             * @param destination 目标
+             * @param handler 处理器
+             * @param autoAck autoACK
+             */
             subscribe(destination, handler, autoAck);
         } else {
             // 默认实现：创建多个消费者实例
             for (int i = 0; i < concurrency; i++) {
+                /**
+                 * 订阅。
+                 * @param destination 目标
+                 * @param handler 处理器
+                 * @param autoAck autoACK
+                 */
                 subscribe(destination, handler, autoAck);
             }
         }
@@ -147,6 +183,13 @@ public interface MessageTemplate {
      */
     default void subscribe(String destination, String group, MessageHandler handler, boolean autoAck, int concurrency) {
         if (concurrency <= 1) {
+            /**
+             * 订阅。
+             * @param destination 目标
+             * @param group 群体
+             * @param handler 处理器
+             * @param autoAck autoACK
+             */
             subscribe(destination, group, handler, autoAck);
         } else {
             // 默认实现：创建多个消费者实例，每个使用不同的组名
@@ -154,6 +197,13 @@ public interface MessageTemplate {
                 String groupWithConcurrency = (group != null && !group.isEmpty()) 
                         ? group + "-concurrent-" + i 
                         : "concurrent-" + i;
+                /**
+                 * 订阅。
+                 * @param destination 目标
+                 * @param groupWithConcurrency 群体withconcurrency
+                 * @param handler 处理器
+                 * @param autoAck autoACK
+                 */
                 subscribe(destination, groupWithConcurrency, handler, autoAck);
             }
         }

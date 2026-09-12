@@ -10,30 +10,49 @@ import java.util.concurrent.ConcurrentHashMap;
  * </p>
  *
  * @author CH
+ * @since 4.0.0
  */
 public interface CacheProvider {
 
     /**
      * 获取默认缓存提供者（内存）
+     * @return auto的结果
      */
     static CacheProvider auto() {
+        /**
+         * 内存缓存提供者。
+         * @return 内存缓存提供者的结果
+         */
         return new MemoryCacheProvider();
     }
 
     /**
      * 写入缓存
+     * @param key 钥匙
+     * @param value 价值观
      */
     void put(String key, Object value);
 
     /**
      * 写入缓存并设置 TTL（秒）
+     * @param key 钥匙
+     * @param value 价值观
+     * @param ttlSeconds ttlseconds
      */
     default void put(String key, Object value, long ttlSeconds) {
+        /**
+         * 放入。
+         * @param key 钥匙
+         * @param value 价值观
+         */
         put(key, value);
     }
 
     /**
      * 读取缓存
+     * @param key 钥匙
+     * @param type 类型
+     * @return 获取的结果
      */
     default Object get(String key, Class<?> type) {
         return null;
@@ -41,6 +60,7 @@ public interface CacheProvider {
 
     /**
      * 移除缓存
+     * @param key 钥匙
      */
     default void remove(String key) {
     }
@@ -53,6 +73,7 @@ public interface CacheProvider {
 
     /**
      * 统计命中率
+     * @return 获取hitrate的结果
      */
     default double getHitRate() {
         return 0.0;
@@ -66,6 +87,8 @@ public interface CacheProvider {
 
     /**
      * 内存缓存提供者（支持 TTL 过期）
+     * @author CH
+     * @since 4.0.0
      */
     class MemoryCacheProvider implements CacheProvider {
         /**
@@ -81,6 +104,11 @@ public interface CacheProvider {
              */
             final long expireAt;
 
+            /**
+             * 缓存entry。
+             * @param value 价值观
+             * @param ttlSeconds ttlseconds
+             */
             CacheEntry(Object value, long ttlSeconds) {
                 this.value = value;
                 this.expireAt = ttlSeconds > 0 ? System.currentTimeMillis() + ttlSeconds * 1000 : 0;
@@ -102,13 +130,19 @@ public interface CacheProvider {
         private final Map<String, CacheEntry> store = new ConcurrentHashMap<>();
 
         @Override
-        /** Put */
+        /** 放入 */
         public void put(String key, Object value) {
+            /**
+             * 放入。
+             * @param key 钥匙
+             * @param value 价值观
+             * @param 0 0
+             */
             put(key, value, 0);
         }
 
         @Override
-        /** Put */
+        /** 放入 */
         public void put(String key, Object value, long ttlSeconds) {
             if (key != null && value != null) {
                 store.put(key, new CacheEntry(value, ttlSeconds));
@@ -149,36 +183,50 @@ public interface CacheProvider {
 
     /**
      * Redis 缓存提供者（抽象）
+     * @author CH
+     * @since 4.0.0
      */
     abstract class RedisCacheProvider implements CacheProvider {
-        /** 密钥prefix */
+        /** 密钥前缀 */
         protected final String keyPrefix;
         /** 默认TTL */
         protected final long defaultTtl;
 
         /**
-         * 创建 RedisCacheProvider 实例
-         * @param keyPrefix keyPrefix
-         * @param long long
+           * 创建 Redis缓存提供者 实例
+         * @param keyPrefix 钥匙前缀
+         * @param defaultTtl long
+         * @param defaultTtl 默认ttl
          */
         protected RedisCacheProvider(String keyPrefix, long defaultTtl) {
             this.keyPrefix = keyPrefix == null ? "" : keyPrefix;
             this.defaultTtl = defaultTtl;
         }
 
-        /** 解析Key */
+        /**
+         * 解析钥匙
+         *
+         * @param key 钥匙
+         * @return resolve钥匙的结果
+         */
         protected String resolveKey(String key) {
             return keyPrefix + key;
         }
 
         @Override
-        /** Put */
+        /** 放入 */
         public void put(String key, Object value) {
+            /**
+             * 放入。
+             * @param key 钥匙
+             * @param value 价值观
+             * @param defaultTtl 默认ttl
+             */
             put(key, value, defaultTtl);
         }
 
         @Override
-        /** Put */
+        /** 放入 */
         public abstract void put(String key, Object value, long ttlSeconds);
 
         @Override

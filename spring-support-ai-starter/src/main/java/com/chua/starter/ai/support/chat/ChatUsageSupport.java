@@ -6,13 +6,15 @@ import com.chua.common.support.ai.chat.ChatResponse;
 /**
  * AI 用量统计工具类。
  *
+ * @author CH
+ * @since 4.0.0
  */
 public abstract class ChatUsageSupport {
 
     /**
-     * 从 ChatResponse 提取 AgentUsage。
+      * 从 对话响应 提取 智能体usage。
      *
-     * @param response ChatResponse
+     * @param response 对话响应
      * @return AgentUsage 实例
      */
     public static AgentUsage from(ChatResponse response) {
@@ -30,10 +32,20 @@ public abstract class ChatUsageSupport {
                 .build();
     }
 
-    /** 合并 */
+    /**
+     * 合并
+     *
+     * @param a a
+     * @param b b
+     * @return 合并的结果
+     */
     public static AgentUsage merge(AgentUsage a, AgentUsage b) {
-        if (a == null) return b;
-        if (b == null) return a;
+        if (a == null) {
+            return b;
+        }
+        if (b == null) {
+            return a;
+        }
         int pt = (a.getPromptTokens() != null ? a.getPromptTokens() : 0) + (b.getPromptTokens() != null ? b.getPromptTokens() : 0);
         int ct = (a.getCompletionTokens() != null ? a.getCompletionTokens() : 0) + (b.getCompletionTokens() != null ? b.getCompletionTokens() : 0);
         int tt = (a.getTotalTokens() != null ? a.getTotalTokens() : 0) + (b.getTotalTokens() != null ? b.getTotalTokens() : 0);

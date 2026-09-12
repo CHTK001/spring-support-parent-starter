@@ -21,7 +21,7 @@ public interface SpiderExecutionLogService extends SpiderBaseService<SpiderExecu
     /**
      * 按执行号查询全链路节点日志（按开始时间升序）。
      *
-     * @param executionNo 执行号（traceId）
+     * @param executionNo 执行号（追踪标识）
      * @return 节点日志列表
      */
     List<SpiderExecutionLog> listByExecutionNo(String executionNo);

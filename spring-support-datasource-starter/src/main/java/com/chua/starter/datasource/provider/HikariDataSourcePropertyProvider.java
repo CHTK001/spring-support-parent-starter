@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * HikariCP数据源属性提供者
+   * hikaricp数据源属性提供者
  *
  * @since 2024/12/21
  * @author CH
@@ -21,13 +21,13 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
     );
 
     @Override
-    /** 获取DataSourceType */
+    /** 获取数据源类型 */
     public Class<HikariDataSource> getDataSourceType() {
         return HikariDataSource.class;
     }
 
     @Override
-    /** 获取Properties */
+    /** 获取属性 */
     public Map<String, Object> getProperties(HikariDataSource dataSource) {
         Map<String, Object> properties = new HashMap<>();
         
@@ -44,7 +44,7 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
         if (maximumPoolSize > 0) {
             properties.put("maximumPoolSize", maximumPoolSize);
         }
-        // minimumIdle为-1表示未设置，使用HikariCP默认值
+ // minimum空闲为-1表示未设置，使用hikaricp默认值
         if (minimumIdle >= 0) {
             properties.put("minimumIdle", minimumIdle);
         }
@@ -80,13 +80,13 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
     }
 
     @Override
-    /** 设置Properties */
+    /** 设置属性 */
     public void setProperties(HikariDataSource dataSource, Map<String, Object> properties) {
         properties.forEach((name, value) -> setProperty(dataSource, name, value));
     }
 
     @Override
-    /** 设置Property */
+    /** 设置财产 */
     public void setProperty(HikariDataSource dataSource, String name, Object value) {
         if (value == null) {
             return;
@@ -103,7 +103,7 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
             case "maximumPoolSize", "maxPoolSize" -> dataSource.setMaximumPoolSize(toInt(value));
             case "minimumIdle", "minIdle" -> {
                 int minIdle = toInt(value);
-                // 只设置非负值，负值表示未配置，使用HikariCP默认值
+ // 只设置非负值，负值表示未配置，使用hikaricp默认值
                 if (minIdle >= 0) {
                     dataSource.setMinimumIdle(minIdle);
                 }
@@ -134,18 +134,23 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
     }
 
     @Override
-    /** 获取PropertyNameMapping */
+    /** 获取财产名称mapping */
     public Map<String, String> getPropertyNameMapping() {
         return PROPERTY_MAPPING;
     }
 
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
         return 10;
     }
 
-    /** ToInt */
+    /**
+     * 转为int
+     *
+     * @param value 价值观
+     * @return 转为int的结果
+     */
     private int toInt(Object value) {
         if (value instanceof Number) {
             return ((Number) value).intValue();
@@ -153,7 +158,12 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
         return Integer.parseInt(String.valueOf(value));
     }
 
-    /** ToLong */
+    /**
+     * 转为long
+     *
+     * @param value 价值观
+     * @return 转为long的结果
+     */
     private long toLong(Object value) {
         if (value instanceof Number) {
             return ((Number) value).longValue();
@@ -161,7 +171,12 @@ public class HikariDataSourcePropertyProvider implements DataSourcePropertyProvi
         return Long.parseLong(String.valueOf(value));
     }
 
-    /** ToBoolean */
+    /**
+     * 转为布尔值
+     *
+     * @param value 价值观
+     * @return 转为布尔值的结果
+     */
     private boolean toBoolean(Object value) {
         if (value instanceof Boolean) {
             return (Boolean) value;

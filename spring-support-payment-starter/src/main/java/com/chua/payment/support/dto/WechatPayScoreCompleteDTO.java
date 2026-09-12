@@ -9,21 +9,22 @@ import java.util.Map;
 /**
  * 微信支付分完结请求
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class WechatPayScoreCompleteDTO {
     /** 总数amount */
     private BigDecimal totalAmount;
-    /** Finish类型 */
+    /** 饰面类型 */
     private String finishType;
-    /** Reason */
+    /** ReasonMLmlml */
     private String reason;
     /** 结束时间 */
     private String endTime;
-    private List<Map<String, Object>> postPayments;
-    private List<Map<String, Object>> postDiscounts;
-    private Map<String, Object> extraParams;
-    /** Remark */
+    private List<Map<String, Object>> postPayments; // postpayments
+    private List<Map<String, Object>> postDiscounts; // postdiscounts
+    private Map<String, Object> extraParams; // extra参数
+    /** 评论 */
     private String remark;
 }
 

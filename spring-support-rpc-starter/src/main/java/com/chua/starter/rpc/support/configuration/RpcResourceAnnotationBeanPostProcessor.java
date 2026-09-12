@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * rpc资源注释配置
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/04/07
  * @author CH
  */
@@ -44,7 +44,7 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
     public static final String BEAN_NAME = "referenceAnnotationBeanPostProcessor";
 
     /**
-     * Cache size
+      * 缓存 大小
      */
     private static final int CACHE_SIZE = Integer.getInteger(BEAN_NAME + ".cache.size", 32);
 
@@ -59,14 +59,18 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
     /** RPC客户端 */
     private RpcClient rpcClient;
 
-    /** 创建 RpcResourceAnnotationBeanPostProcessor 实例 */
+    /** 创建 rpcresource注解Beanpost处理器 实例 */
     public RpcResourceAnnotationBeanPostProcessor() {
+        /**
+         * 父。
+         * @param RpcResource.class rpcresource.类
+         */
         super(RpcResource.class);
     }
 
 
     @Override
-    /** Post处理BeanFactory */
+    /** Post处理Bean工厂 */
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         if(!rpcProperties.isEnable()) {
             return;
@@ -77,10 +81,20 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
             if (beanType != null) {
                 AnnotatedInjectionMetadata metadata = findInjectionMetadata(beanName, beanType, null);
                 try {
+                    /**
+                      * prepareinjection。
+                     * @param metadata metadata
+                     */
                     prepareInjection(metadata);
                 } catch (BeansException e) {
                     throw e;
                 } catch (Exception e) {
+                    /**
+                     * illegal状态异常。
+                     * @param failed" 失败"
+                     * @param e e
+                     * @return illegal状态异常的结果
+                     */
                     throw new IllegalStateException("Prepare rpc reference injection element failed", e);
                 }
             }
@@ -98,7 +112,7 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
     }
 
     @Override
-    /** Post处理MergedBeanDefinition */
+    /** Post处理合并Beandefinition */
     public void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
         if(!rpcProperties.isEnable()) {
             return;
@@ -106,25 +120,45 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
         AnnotatedInjectionMetadata metadata = findInjectionMetadata(beanName, beanType, null);
         metadata.checkConfigMembers(beanDefinition);
         try {
+            /**
+              * prepareinjection。
+             * @param metadata metadata
+             */
             prepareInjection(metadata);
         } catch (Exception e) {
+            /**
+             * illegal状态异常。
+             * @param failed" 失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("Prepare reference injection element failed", e);
         }
     }
 
     @Override
-    /** Post处理Properties */
+    /** Post处理属性 */
     public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) throws BeansException {
         if(!rpcProperties.isEnable()) {
             return pvs;
         }
         try {
             AnnotatedInjectionMetadata metadata = findInjectionMetadata(beanName, bean.getClass(), pvs);
+            /**
+              * prepareinjection。
+             * @param metadata metadata
+             */
             prepareInjection(metadata);
             metadata.inject(bean, beanName, pvs);
         } catch (BeansException ex) {
             throw ex;
         } catch (Throwable ex) {
+            /**
+             * Bean创建异常。
+             * @param beanName Bean名称
+             * @param getAnnotationType( 获取注解类型(
+             * @return Bean创建异常的结果
+             */
             throw new BeanCreationException(beanName, "Injection of @" + getAnnotationType().getSimpleName()
                     + " dependencies is failed", ex);
         }
@@ -133,12 +167,17 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
 
 
     @Override
-    /** Do获取InjectedBean */
+    /** 执行获取injectedBean */
     protected Object doGetInjectedBean(AnnotationAttributes attributes, Object bean, String beanName, Class<?> injectedType, AnnotatedInjectElement injectedElement) throws Exception {
         if(!rpcProperties.isEnable()) {
             return bean;
         }
         if (injectedElement.injectedObject == null) {
+            /**
+             * illegal状态异常。
+             * @param injection" injection"
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("The AnnotatedInjectElement of bean should be inited before injection");
         }
 
@@ -146,7 +185,11 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
         return getBeanFactory().getBean((String) injectedElement.injectedObject);
     }
 
-    /** PrepareInjection */
+    /**
+     * prepareinjection
+     *
+     * @param metadata metadata
+     */
     protected void prepareInjection(AnnotatedInjectionMetadata metadata) throws BeansException {
         try {
             for (AnnotatedFieldElement fieldElement : metadata.getFieldElements()) {
@@ -174,11 +217,25 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
                 injectedMethodReferenceBeanCache.put(methodElement, referenceBeanName);
             }
         } catch (ClassNotFoundException e) {
+            /**
+             * Bean创建异常。
+             * @param failed" 失败"
+             * @param e e
+             * @return Bean创建异常的结果
+             */
             throw new BeanCreationException("prepare reference annotation failed", e);
         }
     }
 
-    /** 注册ReferenceBean */
+    /**
+     * 注册引用Bean
+     *
+     * @param propertyName 财产名称
+     * @param injectedType injected类型
+     * @param attributes attributes
+     * @param member member
+     * @return 注册引用Bean的结果
+     */
     public String registerReferenceBean(String propertyName, Class<?> injectedType, Map<String, Object> attributes, Member member) throws BeansException {
 
         boolean renameable = true;
@@ -192,13 +249,18 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
         String checkLocation = "Please check " + member.toString();
 
 
-        // get interface
+ // 获取 接口
         String interfaceName = MapUtils.getString(attributes, RpcAttribute.INTERFACE);
         if (com.chua.common.support.utils.StringUtils.isBlank(interfaceName)) {
+            /**
+             * Bean创建异常。
+             * @param checkLocation 检查位置
+             * @return Bean创建异常的结果
+             */
             throw new BeanCreationException("Need to specify the 'interfaceName' or 'interfaceClass' attribute of 'bean' if enable generic. " + checkLocation);
         }
 
-        //check bean definition
+ // 检查 Bean definition
         if (beanDefinitionRegistry.containsBeanDefinition(referenceBeanName)) {
             BeanDefinition prevBeanDefinition = beanDefinitionRegistry.getBeanDefinition(referenceBeanName);
             String prevBeanType = prevBeanDefinition.getBeanClassName();
@@ -217,40 +279,40 @@ public class RpcResourceAnnotationBeanPostProcessor extends AbstractAnnotationBe
         }
         attributes.put(RpcAttribute.ID, referenceBeanName);
 
-        // Register the reference bean definition to the beanFactory
+ // 注册 the 引用 Bean definition 转为 the Bean工厂
         RootBeanDefinition beanDefinition = new RootBeanDefinition();
         beanDefinition.setBeanClassName(RpcResourceBean.class.getName());
         beanDefinition.getPropertyValues().add(RpcAttribute.ID, referenceBeanName);
         beanDefinition.getPropertyValues().add("rpcClient", rpcClient);
 
-        // set attribute instead of property values
-//        beanDefinition.setAttribute(Constants.REFERENCE_PROPS, attributes);
+ // 设置 attribute instead 的 财产 价值观
+ // Beandefinition.设置attribute(常量.引用_PROPS, attributes);
         beanDefinition.setAttribute(RpcAttribute.INTERFACE_CLASS, injectedType);
         beanDefinition.setAttribute(RpcAttribute.INTERFACE_NAME, interfaceName);
 
-        // create decorated definition for reference bean, Avoid being instantiated when getting the beanType of ReferenceBean
-        // see org.springframework.beans.order.support.AbstractBeanFactory#getTypeForFactoryBean()
+ // 创建 decorated definition for 引用 Bean, Avoid 存在 instantiated When.js.js.js getting the Bean类型 的 引用Bean
+ // 参见 org.springframework.Bean.订单.支持.抽象Bean工厂#获取类型for工厂Bean()
         GenericBeanDefinition targetDefinition = new GenericBeanDefinition();
         targetDefinition.setBeanClass(injectedType);
         beanDefinition.setDecoratedDefinition(new BeanDefinitionHolder(targetDefinition, referenceBeanName + "_decorated"));
 
-        // signal object type since Spring 5.2
-//        beanDefinition.setAttribute(Constants.OBJECT_TYPE_ATTRIBUTE, interfaceClass);
+ // 标志 对象 类型 自 Spring 5.2
+ // Beandefinition.设置attribute(常量.对象_类型_ATTRIBUTE, 接口类);
 
         beanDefinitionRegistry.registerBeanDefinition(referenceBeanName, beanDefinition);
-//        referenceBeanManager.registerReferenceKeyAndBeanName(referenceKey, referenceBeanName);
+ // 引用Bean管理器.注册引用钥匙andBean名称(引用钥匙, 引用Bean名称);
         return referenceBeanName;
     }
 
 
     @Override
-    /** 设置Environment */
+    /** 设置环境 */
     public void setEnvironment(Environment environment) {
         super.setEnvironment(environment);
         BindResult<RpcProperties> bindResult = Binder.get(environment).bind(RpcProperties.PRE, RpcProperties.class);
         if(bindResult.isBound()) {
             rpcProperties = bindResult.get();
-            // 未显式配置 token 时，由 accessKey/secretKey/serviceKey 派生，避免配置死区
+ // 未显式配置 令牌 时，由 access钥匙/secret钥匙/服务钥匙 派生，避免配置死区
             if (rpcProperties.getConsumer().getToken() == null) {
                 rpcProperties.getConsumer().setToken(deriveToken(rpcProperties));
             }

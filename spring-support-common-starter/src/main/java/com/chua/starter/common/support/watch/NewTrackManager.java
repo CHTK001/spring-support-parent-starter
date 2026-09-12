@@ -9,22 +9,31 @@ import java.util.concurrent.Callable;
 /**
  * 追踪管控
  * @author CH
+ * @since 4.0.0
  */
 public class NewTrackManager {
 
+    /**
+     * 新track管理器。
+     */
     private NewTrackManager() {
     }
 
-    /** Track_cache */
+    /** Track_缓存 */
     private static final ThreadLocal<Stack<Span>> TRACK_CACHE = new ThreadLocal<>();
 
-    /** 调用 */
+    /**
+     * 调用
+     *
+     * @param callable callable
+     * @return invoke的结果
+     */
     public static Object invoke(Callable<?> callable) throws Exception {
         return callable.call();
     }
 
 
-    /** Before */
+    /** 之前 */
     public static void before() {
         Span currentSpan = NewTrackManager.getCurrentSpan();
         if (null == currentSpan) {
@@ -34,7 +43,11 @@ public class NewTrackManager {
         NewTrackManager.createEntrySpan();
     }
 
-    /** 获取CurrentSpan */
+    /**
+     * 获取当前span
+     *
+     * @return 获取当前span的结果
+     */
     public static Span getCurrentSpan() {
         Stack<Span> stack = TRACK_CACHE.get();
         if (stack == null || stack.isEmpty()) {
@@ -58,7 +71,11 @@ public class NewTrackManager {
         TRACK_CACHE.remove();
     }
 
-    /** 创建EntrySpan */
+    /**
+     * 创建entryspan
+     *
+     * @return 创建entryspan的结果
+     */
     public static Span createEntrySpan() {
         Span span = createSpan();
         Stack<Span> stack = TRACK_CACHE.get();
@@ -74,7 +91,11 @@ public class NewTrackManager {
     }
 
 
-    /** 获取LastSpan */
+    /**
+     * 获取最后一个span
+     *
+     * @return 获取最后一个span的结果
+     */
     public static Span getLastSpan() {
         Stack<Span> stack = TRACK_CACHE.get();
         if (stack == null || stack.isEmpty()) {
@@ -84,7 +105,11 @@ public class NewTrackManager {
         return stack.peek();
     }
 
-    /** 注册Span */
+    /**
+     * 注册Span
+     *
+     * @param span span
+     */
     public static void registerSpan(Span span) {
         Stack<Span> spans = TRACK_CACHE.get();
         if (spans == null) {
@@ -95,7 +120,11 @@ public class NewTrackManager {
         TRACK_CACHE.set(spans);
     }
 
-    /** 创建Span */
+    /**
+     * 创建Span
+     *
+     * @return 创建span的结果
+     */
     private static Span createSpan() {
         Stack<Span> stack = TRACK_CACHE.get();
         if (stack == null) {
@@ -116,10 +145,19 @@ public class NewTrackManager {
             linkId = span.getLinkId();
             TrackContext.setLinkId(linkId);
         }
+        /**
+         * Span。
+         * @param linkId 链接标识
+         * @return Span的结果
+         */
         return new Span(linkId);
     }
 
-    /** RefreshCost */
+    /**
+     * refreshcost
+     *
+     * @param span span
+     */
     public static void refreshCost(Span span) {
         if(null == span) {
             return;

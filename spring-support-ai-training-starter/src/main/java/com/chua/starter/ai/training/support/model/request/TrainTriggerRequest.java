@@ -19,24 +19,24 @@ import lombok.Data;
 public class TrainTriggerRequest {
 
     /**
-     * 训练任务 ID。
+      * 训练任务 标识。
      */
     @NotBlank(message = "taskId 不能为空")
     @Schema(description = "训练任务 ID", requiredMode = Schema.RequiredMode.REQUIRED)
-    private String taskId;
+    private String taskId; // 任务标识
 
     /**
      * 续训练模型路径（可选）。
      */
     @Schema(description = "续训练模型路径；不传则使用默认预训练模型冷启动")
-    private String resumeModelPath;
+    private String resumeModelPath; // resume模型路径
 
     /**
      * 训练类型（引擎路由键）。可选，缺省 {@code resnet50}（DL4J 图像分类迁移学习）；
-     * 传 {@code yolo} 走 python-http 引擎（本地拉起 Ultralytics YOLO 子进程）。
+      * 传 {@code yolo} 走 Python-http 引擎（本地拉起 Ultralytics YOLO 子进程）。
      */
     @Schema(description = "训练类型；resnet50(默认,DL4J 图像分类) / yolo(python 检测)", example = "resnet50")
-    private String type;
+    private String type; // 类型
 
     /**
      * 是否为续训练模式（由领域语义驱动，非简单 getter 委托）。
@@ -48,7 +48,7 @@ public class TrainTriggerRequest {
     }
 
     /**
-     * 转换为领域配置（仅携带 resumeModelPath，供部分更新合并）。
+      * 转换为领域配置（仅携带 resume模型路径，供部分更新合并）。
      *
      * @return 领域对象
      */

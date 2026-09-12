@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
  * 支持 Logback 日志框架
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/12/08
  * @author CH
  */
@@ -31,13 +31,13 @@ public class LoggingConfigHandler implements SyncMessageHandler {
 
 
     @Override
-    /** 获取Name */
+    /** 获取名称 */
     public String getName() {
         return "loggingConfigHandler";
     }
 
     @Override
-    /** Supports */
+    /** 支持 */
     public boolean supports(String topic) {
         return MonitorTopics.LOGGING_CONFIG.equals(topic);
     }
@@ -58,7 +58,7 @@ public class LoggingConfigHandler implements SyncMessageHandler {
     /**
      * 设置日志级别
      * 
-     * @param data 请求数据，包含 loggerName 和 level
+     * @param data 请求数据，包含 日志记录器名称 和 水平仪
      * @return 操作结果
      */
     private Object handleSetLevel(Map<String, Object> data) {
@@ -146,7 +146,7 @@ public class LoggingConfigHandler implements SyncMessageHandler {
     /**
      * 获取指定日志器的级别
      * 
-     * @param data 请求数据，包含 loggerName
+     * @param data 请求数据，包含 日志记录器名称
      * @return 日志级别信息
      */
     private Object handleGetLevel(Map<String, Object> data) {
@@ -173,7 +173,13 @@ public class LoggingConfigHandler implements SyncMessageHandler {
         }
     }
 
-    /** 获取String */
+    /**
+     * 获取字符串
+     *
+     * @param data 数据
+     * @param key 钥匙
+     * @return 获取字符串的结果
+     */
     private String getString(Map<String, Object> data, String key) {
         Object v = data.get(key);
         return v != null ? v.toString() : null;

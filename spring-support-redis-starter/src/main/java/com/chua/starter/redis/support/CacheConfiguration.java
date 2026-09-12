@@ -22,6 +22,7 @@ import static com.chua.starter.common.support.jackson.configuration.JacksonConfi
  * 缓存配置
  *
  * @author CH
+ * @since 4.0.0
  */
 @Configuration
 public class CacheConfiguration {
@@ -30,7 +31,7 @@ public class CacheConfiguration {
      * 系统缓存经理
      *
      * @param factory 工厂
-     * @return {@link CacheManager}
+     * @return {@link 缓存管理器}
      */
     @Bean(REDIS_CACHE_MIN)
     public CacheManager systemCacheManager600(RedisConnectionFactory factory) {
@@ -40,7 +41,7 @@ public class CacheConfiguration {
      * 系统缓存经理
      *
      * @param factory 工厂
-     * @return {@link CacheManager}
+     * @return {@link 缓存管理器}
      */
     @Bean(REDIS_CACHE_HALF_MINUTES)
     public CacheManager systemCacheManager30(RedisConnectionFactory factory) {
@@ -50,7 +51,7 @@ public class CacheConfiguration {
      * 系统缓存经理
      *
      * @param factory 工厂
-     * @return {@link CacheManager}
+     * @return {@link 缓存管理器}
      */
     @Bean(REDIS_CACHE_TEN_SECOND)
     public CacheManager systemCacheManager10(RedisConnectionFactory factory) {
@@ -60,7 +61,7 @@ public class CacheConfiguration {
      * 系统缓存经理
      *
      * @param factory 工厂
-     * @return {@link CacheManager}
+     * @return {@link 缓存管理器}
      */
     @Bean(REDIS_CACHE_MINUTES)
     public CacheManager systemCacheManager60(RedisConnectionFactory factory) {
@@ -70,7 +71,7 @@ public class CacheConfiguration {
      * 系统缓存经理
      *
      * @param factory 工厂
-     * @return {@link CacheManager}
+     * @return {@link 缓存管理器}
      */
     @Bean({REDIS_CACHE_HOUR})
     public CacheManager systemCacheManager( RedisConnectionFactory factory) {
@@ -80,7 +81,7 @@ public class CacheConfiguration {
      * 系统缓存经理
      *
      * @param factory 工厂
-     * @return {@link CacheManager}
+     * @return {@link 缓存管理器}
      */
     @Bean({REDIS_CACHE_ALWAYS})
     public CacheManager systemCacheManagerAlways( RedisConnectionFactory factory) {
@@ -90,19 +91,19 @@ public class CacheConfiguration {
      * 系统缓存经理
      *
      * @param factory 工厂
-     * @return {@link CacheManager}
+     * @return {@link 缓存管理器}
      */
     @Bean({REDIS_CACHE_ONE_DAY})
     public CacheManager redis86400CacheManager(RedisConnectionFactory factory) {
         return createRedisCacheManager(null, factory, 86400);
     }
     /**
-     * 创建redis缓存管理器
+      * 创建Redis缓存管理器
      *
      * @param om
      * @param factory 工厂
      * @param seconds 秒
-     * @return {@link CacheManager}
+     * @return {@link 缓存管理器}
      */
     public static CacheManager createRedisCacheManager(ObjectMapper om, RedisConnectionFactory factory, int seconds) {
         RedisSerializer<String> redisSerializer = new StringRedisSerializer();

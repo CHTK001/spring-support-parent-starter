@@ -49,8 +49,9 @@ import java.lang.annotation.*;
  * </pre>
  *
  * @since 2020-09-23
- * @version 1.0.0
+   * @版本 1.0.0
  * @see com.chua.starter.common.support.api.response.ApiUniformResponseBodyAdvice
+ * @author CH
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)

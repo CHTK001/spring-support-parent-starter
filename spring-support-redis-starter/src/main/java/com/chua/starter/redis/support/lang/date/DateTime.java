@@ -7,6 +7,7 @@ import java.time.ZoneId;
  * 日期时间工具类
  *
  * @since 2024/12/25
+ * @author CH
  */
 public final class DateTime {
 
@@ -14,8 +15,8 @@ public final class DateTime {
     private final LocalDateTime localDateTime;
 
     /**
-     * 创建 DateTime 实例
-     * @param localDateTime localDateTime
+      * 创建 日期时间 实例
+     * @param localDateTime 本地日期时间
      */
     private DateTime(LocalDateTime localDateTime) {
         this.localDateTime = localDateTime;
@@ -27,6 +28,10 @@ public final class DateTime {
      * @return DateTime 实例
      */
     public static DateTime now() {
+        /**
+         * 日期时间。
+         * @param LocalDateTime.now( 本地日期时间.now(
+         */
         return new DateTime(LocalDateTime.now());
     }
 
@@ -40,11 +45,16 @@ public final class DateTime {
                 .withMinute(59)
                 .withSecond(59)
                 .withNano(999_999_999);
+        /**
+         * comparable日期时间。
+         * @param lastTime 最后一个时间
+         * @return comparable日期时间的结果
+         */
         return new ComparableDateTime(lastTime);
     }
 
     /**
-     * 获取 LocalDateTime
+      * 获取 本地日期时间
      *
      * @return LocalDateTime
      */

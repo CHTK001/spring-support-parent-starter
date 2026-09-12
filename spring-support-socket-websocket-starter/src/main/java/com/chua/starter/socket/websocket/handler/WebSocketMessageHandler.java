@@ -3,9 +3,9 @@ package com.chua.starter.socket.websocket.handler;
 import org.springframework.web.socket.WebSocketSession;
 
 /**
- * WebSocket 消息处理器接口
+   * web套接字 消息处理器接口
  * <p>
- * 实现此接口以处理 WebSocket 消息和事件
+   * 实现此接口以处理 web套接字 消息和事件
  * </p>
  *
  * @since 2025-12-25

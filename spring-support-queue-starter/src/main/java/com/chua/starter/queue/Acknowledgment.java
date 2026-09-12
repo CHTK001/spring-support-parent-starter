@@ -38,6 +38,10 @@ public interface Acknowledgment {
      * </p>
      */
     default void nack() {
+        /**
+         * nack。
+         * @param false false
+         */
         nack(false);
     }
 
@@ -47,23 +51,32 @@ public interface Acknowledgment {
      * 当消息处理失败时，可以将消息发送到指定的死信队列，而不是使用默认的死信队列。
      * </p>
      *
-     * @param deadLetterQueue 死信队列名称（如果为 null 或空，则使用默认死信队列）
+     * @param deadLetterQueue 死信队列名称（如果为 空 或空，则使用默认死信队列）
      * @param reason          失败原因（可选）
      */
     default void nackToDeadLetter(String deadLetterQueue, String reason) {
         // 默认实现：调用 nack(false)，由具体实现类决定如何处理死信队列
+        /**
+         * nack。
+         * @param false false
+         */
         nack(false);
     }
 
     /**
      * 拒绝消息并发送到指定的死信队列（无原因）
      * <p>
-     * 等同于 nackToDeadLetter(deadLetterQueue, null)
+      * 等同于 nack转为deadletter(deadletter队列, 空)
      * </p>
      *
      * @param deadLetterQueue 死信队列名称
      */
     default void nackToDeadLetter(String deadLetterQueue) {
+        /**
+         * nack转为deadletter。
+         * @param deadLetterQueue deadletter队列
+         * @param null 空
+         */
         nackToDeadLetter(deadLetterQueue, null);
     }
 

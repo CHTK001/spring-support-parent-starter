@@ -31,19 +31,24 @@ import java.util.concurrent.atomic.LongAdder;
  * 全能力标准测试：覆盖文件格式、转换器、边界、调度、多数据源。
  *
  * @since 4.0.0.42
+ * @author CH
  */
 @Slf4j
 public final class DataSyncAllInOneProbe {
 
     /** Work_dir */
     private static final Path WORK_DIR = Paths.get("target/all-in-one");
-    /** Pass */
+    /** 通过 */
     private final List<String> pass = new CopyOnWriteArrayList<>();
-    /** Fail */
+    /** 失败 */
     private final List<String> fail = new CopyOnWriteArrayList<>();
     /** 信息记录（不阻断结论的已知问题） */
     private final List<String> info = new CopyOnWriteArrayList<>();
 
+    /**
+     * main。
+     * @param args 参数
+     */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);
         new DataSyncAllInOneProbe().run();
@@ -72,6 +77,9 @@ public final class DataSyncAllInOneProbe {
     }
 
     // ========== 1. 文件格式解析 ==========
+    /**
+     * 测试文件解析。
+     */
     private void testFileParsing() throws Exception {
         Path mappingDir = Paths.get("src/main/resources/datasync/mappings");
         var yaml = new YamlConfigFileParser();
@@ -79,12 +87,20 @@ public final class DataSyncAllInOneProbe {
         var props = new PropertiesConfigFileParser();
 
         var y = yaml.parse(mappingDir.resolve("user-sync.yaml"));
-        if (y != null && y.mappings().size() == 2) pass.add("YAML 解析: user-sync 字段=" + y.mappings().size());
-        else fail.add("YAML 解析失败");
+        if (y != null && y.mappings().size() == 2) {
+            pass.add("YAML 解析: user-sync 字段=" + y.mappings().size());
+        }
+        else {
+            fail.add("YAML 解析失败");
+        }
 
         var j = json.parse(mappingDir.resolve("order-sync.json"));
-        if (j != null && j.mappings().size() == 2) pass.add("JSON 解析: order-sync 字段=" + j.mappings().size());
-        else fail.add("JSON 解析失败");
+        if (j != null && j.mappings().size() == 2) {
+            pass.add("JSON 解析: order-sync 字段=" + j.mappings().size());
+        }
+        else {
+            fail.add("JSON 解析失败");
+        }
 
         Path tmp = WORK_DIR.resolve("test.properties");
         Files.writeString(tmp, "mappingId=prop-test\ninputId=in\nsourceId=src\noutputId=out\nsinkId=snk\nbatch=10\ncronType=fixed\ncron=0/5 * * * * ?\n");
@@ -95,12 +111,19 @@ public final class DataSyncAllInOneProbe {
         } catch (Exception ex) {
             propOk = false;
         }
-        if (propOk) pass.add("Properties 解析: prop-test");
-        else fail.add("Properties 解析失败");
+        if (propOk) {
+            pass.add("Properties 解析: prop-test");
+        }
+        else {
+            fail.add("Properties 解析失败");
+        }
         Files.deleteIfExists(tmp);
     }
 
     // ========== 2. 字段转换器 ==========
+    /**
+     * 测试转换器。
+     */
     private void testConverters() throws Exception {
         Path csv = WORK_DIR.resolve("convert.csv");
         Files.writeString(csv, "name,age,score,active\n张三,30,85.5,true\n李四,25,92.3,false\n", StandardCharsets.UTF_8);
@@ -123,12 +146,19 @@ public final class DataSyncAllInOneProbe {
             server.start();
             Thread.sleep(1500);
             server.stop();
-            if (sink.collected.size() > 0) pass.add("转换器 " + conv.getKey() + "(" + conv.getValue() + "→out) 写入 " + sink.collected.size() + " 行");
-            else fail.add("转换器 " + conv.getKey() + " 无数据");
+            if (sink.collected.size() > 0) {
+                pass.add("转换器 " + conv.getKey() + "(" + conv.getValue() + "→out) 写入 " + sink.collected.size() + " 行");
+            }
+            else {
+                fail.add("转换器 " + conv.getKey() + " 无数据");
+            }
         }
     }
 
     // ========== 3. 边界场景 ==========
+    /**
+      * 测试edgecas。
+     */
     private void testEdgeCases() throws Exception {
         // 3a. 空 CSV
         Path empty = WORK_DIR.resolve("empty.csv");
@@ -143,8 +173,12 @@ public final class DataSyncAllInOneProbe {
         s1.start();
         Thread.sleep(1500);
         s1.stop();
-        if (es.collected.isEmpty()) pass.add("边界: 空 CSV → 0 行写入");
-        else fail.add("边界: 空 CSV → " + es.collected.size() + " 行(预期 0)");
+        if (es.collected.isEmpty()) {
+            pass.add("边界: 空 CSV → 0 行写入");
+        }
+        else {
+            fail.add("边界: 空 CSV → " + es.collected.size() + " 行(预期 0)");
+        }
 
         // 3b. 缺失源文件
         Path missing = WORK_DIR.resolve("nope.csv");
@@ -165,7 +199,7 @@ public final class DataSyncAllInOneProbe {
             pass.add("边界: 缺失源文件 → 抛异常(" + e.getClass().getSimpleName() + "), 不阻塞");
         }
 
-        // 3c. 不同 batch 大小
+ // 3C. 不同 批量 大小
         Path batchCsv = WORK_DIR.resolve("batch.csv");
         Files.writeString(batchCsv, "id,val\n1,a\n2,b\n3,c\n4,d\n5,e\n6,f\n7,g\n8,h\n9,i\n10,j\n11,k\n12,l\n", StandardCharsets.UTF_8);
         for (int b : new int[]{1, 5, 100}) {
@@ -194,6 +228,9 @@ public final class DataSyncAllInOneProbe {
     }
 
     // ========== 4. 调度策略 ==========
+    /**
+     * 测试调度。
+     */
     private void testSchedules() throws Exception {
         Path csv = WORK_DIR.resolve("schedule.csv");
         Files.writeString(csv, "id,val\n1,a\n2,b\n3,c\n4,d\n5,e\n", StandardCharsets.UTF_8);
@@ -212,14 +249,18 @@ public final class DataSyncAllInOneProbe {
         s1.start();
         Thread.sleep(3500);
         s1.stop();
-        if (c1s.rounds >= 2) pass.add("调度: cron=0/1 → 3.5s 内 " + c1s.rounds + " 轮(≥2)");
-        else fail.add("调度: cron=0/1 → 仅 " + c1s.rounds + " 轮");
-        // 已知问题：DefaultSyncDataSchedulerManager 实际触发频率高于 cron 配置
+        if (c1s.rounds >= 2) {
+            pass.add("调度: cron=0/1 → 3.5s 内 " + c1s.rounds + " 轮(≥2)");
+        }
+        else {
+            fail.add("调度: cron=0/1 → 仅 " + c1s.rounds + " 轮");
+        }
+ // 已知问题：默认同步数据调度器管理器 实际触发频率高于 cron 配置
         // （cron=0/5 理论 3.5s 内 ≤1 次，实测多次；cron=0/1 同样存在 ~2.6 倍超频）
-        // 待专项排查 isTriggerSatisfied 判定与 executeMapping 执行链路，此处仅作信息记录不阻断
+ // 待专项排查 是否triggersatisfied 判定与 执行mapping 执行链路，此处仅作信息记录不阻断
         info.add("调度[已知问题]: cron=0/5 → 3.5s 内 " + c5s.rounds + " 批(理论≤1)，调度超频待专项排查");
 
-        // 4b. NONE 模式（手动触发）
+ // 4b. 无 模式（手动触发）
         DefaultDataSyncServer s2 = new DefaultDataSyncServer(new DataSyncAgentServer(null, null, "none"),
                 DefaultSyncDataSchedulerManager.SchedulerConfig.builder().retryMaxAttempts(0).build());
         s2.setMappingManager(new DefaultDataSyncMappingManager());
@@ -232,11 +273,18 @@ public final class DataSyncAllInOneProbe {
         s2.addMapping(new DefaultDataSyncMapping("none-map2", "none-in", "none-src", "none-out", "none-sink",
                 null, List.of(), 100, "none", "", Map.of(), null));
         Thread.sleep(1000); s2.stop();
-        if (ns.rounds >= 0) pass.add("调度: NONE 模式 → 不自动触发, 0 轮");
-        else fail.add("调度: NONE 模式 → 异常");
+        if (ns.rounds >= 0) {
+            pass.add("调度: NONE 模式 → 不自动触发, 0 轮");
+        }
+        else {
+            fail.add("调度: NONE 模式 → 异常");
+        }
     }
 
     // ========== 5. 多映射并发 ==========
+    /**
+     * 测试concurrency。
+     */
     private void testConcurrency() throws Exception {
         Path csv = WORK_DIR.resolve("concurrent.csv");
         Files.writeString(csv, "id,val\n" + "1,a\n".repeat(1000), StandardCharsets.UTF_8);
@@ -257,15 +305,33 @@ public final class DataSyncAllInOneProbe {
         Thread.sleep(2500);
         server.stop();
         long total = sinks.stream().mapToLong(s -> s.total).sum();
-        if (total > 0) pass.add("并发: 5 映射同 tick 执行, 共 " + total + " 行");
-        else fail.add("并发: 5 映射 0 行");
+        if (total > 0) {
+            pass.add("并发: 5 映射同 tick 执行, 共 " + total + " 行");
+        }
+        else {
+            fail.add("并发: 5 映射 0 行");
+        }
     }
 
+    /**
+     * 映射。
+     * @param id 标识
+     * @param cron cron
+     * @param srcId srcid
+     * @param sinkId sinkid
+     * @return 映射的结果
+     */
     private static DataSyncMapping map(String id, String cron, String srcId, String sinkId) {
         return new DefaultDataSyncMapping(id, id + "-input", srcId, id + "-output", sinkId,
                 null, List.of(), 100, "fixed", cron, Map.of(), new CronTrigger(cron, LocalDateTime.now()));
     }
 
+    /**
+     * 映射。
+     * @param id 标识
+     * @param cron cron
+     * @return 映射的结果
+     */
     private static DataSyncMapping map(String id, String cron) {
         return map(id, cron, id + "-src", id + "-sink");
     }
@@ -273,7 +339,7 @@ public final class DataSyncAllInOneProbe {
     record SimpleFieldMapping(String sourceField, String targetField, String converter) implements DataSyncFieldMapping {}
 
     static final class CollectSink implements DataSyncAgentSink {
-        /** SinkID */
+        /** sinkid */
         private final String sinkId;
         final List<Map<String, Object>> collected = new CopyOnWriteArrayList<>();
         final LongAdder total = new LongAdder();
@@ -286,7 +352,7 @@ public final class DataSyncAllInOneProbe {
     }
 
     static final class CountSink implements DataSyncAgentSink {
-        /** SinkID */
+        /** sinkid */
         private final String sinkId;
         volatile int rounds = 0; volatile long total = 0;
         CountSink(String sinkId) { this.sinkId = sinkId; }

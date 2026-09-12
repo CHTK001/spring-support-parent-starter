@@ -68,6 +68,7 @@ public class AiGroupController {
      * @param groupId 分组主键
      * @param group   分组 DTO
      * @return 更新后的分组 DTO
+     * @param ID" 标识"
      */
     @Permission("admin")
     @Operation(summary = "更新分组")
@@ -81,6 +82,9 @@ public class AiGroupController {
      * 删除分组（逻辑删除）。
      *
      * @param groupId 分组主键
+     * @param ID" 标识"
+     * @param ID" 标识"
+     * @param ID" ID"
      */
     @Permission("admin")
     @Operation(summary = "删除分组")

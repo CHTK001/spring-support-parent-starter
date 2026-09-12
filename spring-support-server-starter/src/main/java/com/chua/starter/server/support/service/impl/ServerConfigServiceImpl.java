@@ -22,6 +22,8 @@ import java.util.Set;
 
 /**
  * 服务器系统配置服务实现
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @Service
@@ -38,14 +40,14 @@ public class ServerConfigServiceImpl implements ServerConfigService {
         // guacd（远程控制网关——系统配置页可动态修改）
         DEFAULTS.put("guacd.host", "127.0.0.1");
         DEFAULTS.put("guacd.port", "4822");
-        // guacd-client（浏览器侧 guacamole 客户端回连后端 WS 隧道的 host:port，空串=同域 location.host）
+ // guacd-客户端（浏览器侧 guacamole 客户端回连后端 WS 隧道的 主机:端口，空串=同域 位置.主机）
         DEFAULTS.put("guacd.client.host", "127.0.0.1:8082");
         // 连接缓存
         DEFAULTS.put("connection.sweep.interval", "60");
         DEFAULTS.put("connection.idle.timeout", "300");
     }
 
-    /** 配置 Mapper */
+    /** 配置 映射器 */
     private final MsServerConfigMapper configMapper;
 
     /** 应用事件发布器 */
@@ -71,6 +73,11 @@ public class ServerConfigServiceImpl implements ServerConfigService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 保存配置。
+     * @param map 映射
+     * @return 保存配置的结果
+     */
     public ReturnResult<Void> saveConfig(Map<String, Object> map) {
         if (map == null) {
             return ReturnResult.error("配置不能为空");
@@ -175,6 +182,8 @@ public class ServerConfigServiceImpl implements ServerConfigService {
 
     /**
      * 判断纯数字
+     * @param s s
+     * @return 是否numeric的结果
      */
     private boolean isNumeric(String s) {
         if (s == null || s.isEmpty()) {
@@ -190,6 +199,8 @@ public class ServerConfigServiceImpl implements ServerConfigService {
 
     /**
      * 配置键默认描述
+     * @param key 钥匙
+     * @return 默认desc的结果
      */
     private String defaultDesc(String key) {
         Map<String, String> desc = new HashMap<>();

@@ -3,11 +3,11 @@ package com.chua.payment.support.vo;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-/** @author CH */
+/** @作者 CH */
 
 @Data
 public class OrderPartitionConfigVO {
-    /** Business类型 */
+    /** 业务类型 */
     private String businessType;
     /** 来源表 */
     private String sourceTable;
@@ -27,23 +27,23 @@ public class OrderPartitionConfigVO {
     private Boolean autoMigrateEnabled;
     /** Keep来源数据 */
     private Boolean keepSourceData;
-    /** MigrationDRYRUN */
+    /** migrationdryrun */
     private Boolean migrationDryRun;
     /** 表时间列 */
     private String tableTimeColumn;
-    /** 表ID列 */
+    /** 表标识列 */
     private String tableIdColumn;
-    /** Create任务密钥 */
+    /** 创建任务密钥 */
     private String createTaskKey;
     /** Migrate任务密钥 */
     private String migrateTaskKey;
-    /** 最后partition表 */
+    /** 最后分区表 */
     private String lastPartitionTable;
-    /** 最后partitionAT */
+    /** 最后分区at */
     private LocalDateTime lastPartitionAt;
-    /** 最后migrateAT */
+    /** 最后migrateat */
     private LocalDateTime lastMigrateAt;
-    /** Remark */
+    /** 评论 */
     private String remark;
 }
 

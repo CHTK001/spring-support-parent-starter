@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
  * </ul>
  *
  * <p>每次执行调用 {@link ModelMetricsSnapshotService#buildAndPushSnapshot()}：
- * 聚合全量配置模型的价格/速度/延迟快照 → 写 Redis → 经 WebSocket 推送
+   * 聚合全量配置模型的价格/速度/延迟快照 → 写 Redis → 经 web套接字 推送
  * {@code model.metrics.push} 主题。</p>
  *
  * @since 4.0.0.42
@@ -105,7 +105,7 @@ public class ModelMetricsPushTask implements SchedulingConfigurer {
     }
 
     /**
-     * 判断模型指标推送是否启用（global 分组 enable_model_metrics_push，默认启用）。
+      * 判断模型指标推送是否启用（全局 分组 enable_模型_指标_push，默认启用）。
      *
      * @return true 表示启用
      */

@@ -22,12 +22,12 @@ import java.util.List;
 public class MarkingJob {
 
     /**
-     * 阅卷任务 ID（与 {@code edu_marking_result.marking_result_task_id} 对应）。
+      * 阅卷任务 标识（与 {@code edu_marking_result.marking_result_task_id} 对应）。
      */
     private String taskId;
 
     /**
-     * 答题卡 ID。
+      * 答题卡 标识。
      */
     private Long answerSheetId;
 

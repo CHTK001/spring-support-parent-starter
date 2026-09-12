@@ -18,6 +18,7 @@ import java.util.List;
 /**
  * 订单超时处理定时任务
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @Component
@@ -25,14 +26,14 @@ import java.util.List;
 @ConditionalOnProperty(prefix = "plugin.payment.scheduler", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class PaymentOrderTimeoutTask implements PaymentManagedTask {
 
-    /** 排序mapper */
+    /** 排序映射器 */
     private final PaymentOrderMapper orderMapper;
-    /** 配置mapper */
+    /** 配置映射器 */
     private final MerchantPaymentConfigMapper configMapper;
     /** Payment排序服务 */
     private final PaymentOrderService paymentOrderService;
 
-    /** CancelTimeoutOrders */
+    /** cancel超时订单 */
     public void cancelTimeoutOrders() {
         log.info("开始执行订单超时处理任务");
 
@@ -60,7 +61,12 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
         }
     }
 
-    /** CancelMerchantTimeoutOrders */
+    /**
+     * cancelmerchant超时订单
+     *
+     * @param config 配置
+     * @return cancelmerchant超时订单的结果
+     */
     private int cancelMerchantTimeoutOrders(MerchantPaymentConfig config) {
         LocalDateTime expireTime = LocalDateTime.now().minusMinutes(config.getOrderTimeoutMinutes());
 
@@ -86,19 +92,19 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
     }
 
     @Override
-    /** TaskKey */
+    /** 任务钥匙 */
     public String taskKey() {
         return "payment-order-timeout-scan";
     }
 
     @Override
-    /** TaskName */
+    /** 任务名称 */
     public String taskName() {
         return "订单超时扫描";
     }
 
     @Override
-    /** DefaultCron */
+    /** 默认cron */
     public String defaultCron() {
         return "0 */10 * * * ?";
     }
@@ -117,6 +123,9 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
     )
     /** 执行 */
     public void execute() {
+        /**
+         * cancel超时订单。
+         */
         cancelTimeoutOrders();
     }
 }

@@ -45,7 +45,7 @@ import java.util.Set;
  * 流程编排管理接口。
  *
  * <p>提供流程编排的分页/详情/保存/启停/删除/执行/调试/历史/回滚等能力，
- * 路径前缀 {@code /spider/flows}，对齐前端 spiderApi。</p>
+   * 路径前缀 {@code /spider/flows}，对齐前端 蜘蛛api。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -249,7 +249,7 @@ public class SpiderFlowController {
     }
 
     /**
-     * 执行流程（同步执行，返回 executionNo）。
+      * 执行流程（同步执行，返回 执行no）。
      *
      * @param flowCode 流程编码
      * @return 执行号
@@ -339,10 +339,10 @@ public class SpiderFlowController {
     }
 
     /**
-     * 节点执行日志（按 executionNo 回放）。
+      * 节点执行日志（按 执行no 回放）。
      *
      * @param executionNo 执行号，可空
-     * @param flowId      流程 ID，可空
+     * @param flowId      流程 标识，可空
      * @return 节点日志列表
      */
     @GetMapping("/node-logs")

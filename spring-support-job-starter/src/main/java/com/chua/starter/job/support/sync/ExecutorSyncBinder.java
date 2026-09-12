@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
 
 /**
- * 执行器侧同步绑定器 (role=EXECUTOR)。
+   * 执行器侧同步绑定器 (角色=执行器)。
  *
  * <p>持有仓库公共 {@link SyncClient}, 完成:</p>
  * <ul>
@@ -36,7 +36,7 @@ import java.util.function.BiConsumer;
 public class ExecutorSyncBinder {
 
     /**
-     * SyncClient SPI key, 由仓库公共服务端负责注入
+      * 同步客户端 SPI 钥匙, 由仓库公共服务端负责注入
      */
     public static final String SPI_SYNC_CLIENT = "sync.client";
 
@@ -61,12 +61,12 @@ public class ExecutorSyncBinder {
     private final String nodeId;
 
     /**
-     * 任务 cmd 监听器
+      * 任务 CMD 监听器
      */
     private SyncMessageHandler cmdHandler;
 
     /**
-     * log 转发器 (持有, 用于注销)
+      * 日志 转发器 (持有, 用于注销)
      */
     private BiConsumer<String, Object> logForwarder;
 
@@ -76,17 +76,17 @@ public class ExecutorSyncBinder {
     private ScheduledExecutorService reconnectExecutor;
 
     /**
-     * 标记是否已注册 (成功后置 true, 避免重复 log)
+      * 标记是否已注册 (成功后置 true, 避免重复 日志)
      */
     private final AtomicBoolean registered = new AtomicBoolean(false);
 
     /**
-     * 最近一次 connect/register 尝试时间戳 (毫秒), 用于周期性心跳式重连
+      * 最近一次 连接/注册 尝试时间戳 (毫秒), 用于周期性心跳式重连
      */
     private final AtomicLong lastReconnectAttemptMs = new AtomicLong(0L);
 
     /**
-     * 已注册后的心跳重连间隔 (毫秒), 在 TcpSyncClient.isConnected()
+      * 已注册后的心跳重连间隔 (毫秒), 在 tcp同步客户端.是否连接()
      * 永远返回 true 的 pre-existing bug 下作为唯一兜底
      */
     private static final long HEARTBEAT_INTERVAL_MS = 30_000L;
@@ -97,7 +97,7 @@ public class ExecutorSyncBinder {
     @PostConstruct
     public void start() {
         cmdHandler = (topic, payload) -> {
-            // 简单诊断, 记录 EXECUTOR 端 wire 收到的事件
+ // 简单诊断, 记录 执行器 端 wire 收到的事件
             log.info("[job] EXECUTOR wire-recv topic={} payload={}", topic, payload);
             bus.publish(topic, nodeId, payload);
         };
@@ -108,7 +108,7 @@ public class ExecutorSyncBinder {
                 return;
             }
             try {
-                // 序列化为 JSON 而非 toString(), 服务端可反序列化为 JobLogEvent
+ // 序列化为 JSON 而非 转为字符串(), 服务端可反序列化为 作业日志事件
                 String json = event.toJson();
                 syncClient.send(JobSyncTopics.TASK_LOG, json);
                 log.info("[job] EXECUTOR 上行 TASK_LOG topic={} job={} status={} jsonSnippet={}",
@@ -120,8 +120,8 @@ public class ExecutorSyncBinder {
         };
         bus.subscribe(JobSyncTopics.TASK_LOG, logForwarder);
 
-        // 监听 SyncFlowListener.onStop / onError, 当 channel 被对端关闭时立即重置 registered
-        //   (pre-existing: Netty client ChannelHandler 没实现 channelInactive, 不会自动通知 listener)
+ // 监听 同步流监听器.on停止 / on错误, 当 通道 被对端关闭时立即重置 注册
+ // (pre-existing: Netty 客户端 通道处理器 没实现 通道inactive, 不会自动通知 监听器)
         syncClient.addListener(new com.chua.common.support.network.sync.SyncFlowListener() {
             @Override
             /** On停止 */
@@ -140,6 +140,9 @@ public class ExecutorSyncBinder {
         });
 
         // 同步尝试一次, 失败后由守护线程周期重试
+        /**
+          * 尝试连接和注册。
+         */
         tryConnectAndRegister();
 
         reconnectExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -149,10 +152,10 @@ public class ExecutorSyncBinder {
         });
         reconnectExecutor.scheduleWithFixedDelay(() -> {
             // 周期心跳式重连策略:
-            //   - 已 registered 时每 HEARTBEAT_INTERVAL_MS 调一次 syncClient.disconnect()+connect() 强制重建连接
-            //     解决 TcpSyncClient 在对端 (scheduler) 重启后因连接断开没通知 listener 而永久失联的问题
-            //   - 期间任何 SyncFlowListener.onStop / onError 触发 registered=false 时, 立即进入 tryConnectAndRegister 分支
-            //   - 未 registered 时直接走 tryConnectAndRegister 立即重连 (5s 周期)
+ // - 已 注册 时每 心跳_间隔_MS 调一次 同步客户端.断开连接()+连接() 强制重建连接
+ // 解决 tcp同步客户端 在对端 (调度器) 重启后因连接断开没通知 监听器 而永久失联的问题
+ // - 期间任何 同步流监听器.on停止 / on错误 触发 注册=false 时, 立即进入 尝试连接and注册 分支
+ // - 未 注册 时直接走 尝试连接and注册 立即重连 (5s 周期)
             long lastTryMs = lastReconnectAttemptMs.get();
             long nowMs = System.currentTimeMillis();
             if (registered.get() && nowMs - lastTryMs < HEARTBEAT_INTERVAL_MS) {
@@ -161,11 +164,14 @@ public class ExecutorSyncBinder {
             lastReconnectAttemptMs.set(nowMs);
             try {
                 if (registered.get()) {
-                    // 已注册但到心跳周期: 主动 disconnect 触发 onStop → listener 重置 registered → 下次 tick 重建
+ // 已注册但到心跳周期: 主动 断开连接 触发 on停止 → 监听器 重置 注册 → 下次 tick 重建
                     log.info("[job] 心跳触发 EXECUTOR 主动重连 (scheduler 端可能已重启)");
                     syncClient.disconnect();
                     registered.set(false);
                 }
+                /**
+                  * 尝试连接和注册。
+                 */
                 tryConnectAndRegister();
             } catch (Throwable ex) {
                 log.debug("[job] reconnect 失败 cause={}", ex.getMessage());
@@ -174,7 +180,7 @@ public class ExecutorSyncBinder {
     }
 
     /**
-     * 同步尝试连接 + REGISTER 上行一次。
+      * 同步尝试连接 + 注册 上行一次。
      */
     private void tryConnectAndRegister() {
         try {

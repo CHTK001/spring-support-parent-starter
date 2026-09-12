@@ -16,7 +16,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
- * 门禁控制 Controller
+   * 门禁控制 控制器
  *
  * @since 4.0.0.42
  * @author CH
@@ -39,7 +39,7 @@ public class AccessController {
     /**
      * 远程开门
      *
-     * @param deviceId 设备 ID
+     * @param deviceId 设备 标识
      * @param doorId   门编号
      */
     @PostMapping("/unlock")
@@ -47,6 +47,11 @@ public class AccessController {
                        @RequestParam int doorId) {
         DeviceSession session = sessionManager.getSession(deviceId);
         if (session == null || !session.isOnline()) {
+            /**
+             * runtime异常。
+             * @param deviceId deviceid
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("设备不在线: " + deviceId);
         }
         session.remoteUnlock(doorId);
@@ -55,7 +60,7 @@ public class AccessController {
     /**
      * 查询门禁出入记录
      *
-     * @param deviceId 设备 ID
+     * @param deviceId 设备 标识
      * @param start    开始时间（yyyy-MM-dd HH:mm:ss）
      * @param end      结束时间（yyyy-MM-dd HH:mm:ss）
      * @return 出入记录列表
@@ -66,12 +71,23 @@ public class AccessController {
                                                  @RequestParam String end) {
         DeviceSession session = sessionManager.getSession(deviceId);
         if (session == null || !session.isOnline()) {
+            /**
+             * runtime异常。
+             * @param deviceId deviceid
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("设备不在线: " + deviceId);
         }
         return session.queryAccessRecords(parseRange(start, end));
     }
 
-    /** 解析Range */
+    /**
+     * 解析范围
+     *
+     * @param start 启动
+     * @param end 结束
+     * @return 解析范围的结果
+     */
     private TimeRange parseRange(String start, String end) {
         LocalDateTime s;
         LocalDateTime e;
@@ -85,6 +101,12 @@ public class AccessController {
         } catch (Exception ex) {
             e = LocalDateTime.now();
         }
+        /**
+         * 时间范围。
+         * @param s s
+         * @param e e
+         * @return 时间范围的结果
+         */
         return new TimeRange(s, e);
     }
 }

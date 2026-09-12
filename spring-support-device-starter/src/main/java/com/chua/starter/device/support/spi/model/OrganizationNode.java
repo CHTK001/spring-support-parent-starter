@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 public class OrganizationNode {
 
     /**
-     * 厂商侧组织 ID
+      * 厂商侧组织 标识
      */
     private String orgId;
 
@@ -26,7 +26,7 @@ public class OrganizationNode {
     private String orgName;
 
     /**
-     * 父组织 ID（顶层节点为空）
+      * 父组织 标识（顶层节点为空）
      */
     private String parentId;
 }

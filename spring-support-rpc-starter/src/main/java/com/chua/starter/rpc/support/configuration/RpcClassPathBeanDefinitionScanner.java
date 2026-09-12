@@ -49,12 +49,29 @@ public class RpcClassPathBeanDefinitionScanner extends ClassPathBeanDefinitionSc
     public RpcClassPathBeanDefinitionScanner(BeanDefinitionRegistry registry, boolean useDefaultFilters, Environment environment,
                                              ResourceLoader resourceLoader) {
 
+        /**
+         * 父。
+         * @param registry registry
+         * @param useDefaultFilters use默认过滤器
+         */
         super(registry, useDefaultFilters);
 
+        /**
+         * 设置环境。
+         * @param environment 环境
+         */
         setEnvironment(environment);
 
+        /**
+         * 设置resource加载。
+         * @param resourceLoader resource加载
+         */
         setResourceLoader(resourceLoader);
 
+        /**
+         * 注册注解配置处理器。
+         * @param registry registry
+         */
         registerAnnotationConfigProcessors(registry);
 
     }
@@ -72,6 +89,13 @@ public class RpcClassPathBeanDefinitionScanner extends ClassPathBeanDefinitionSc
     public RpcClassPathBeanDefinitionScanner(BeanDefinitionRegistry registry, Environment environment,
                                              ResourceLoader resourceLoader) {
 
+        /**
+         * this。
+         * @param registry registry
+         * @param false false
+         * @param environment 环境
+         * @param resourceLoader resource加载
+         */
         this(registry, false, environment, resourceLoader);
 
     }
@@ -79,7 +103,7 @@ public class RpcClassPathBeanDefinitionScanner extends ClassPathBeanDefinitionSc
     /**
      * 查找指定包路径下的候选组件
      *
-     * @param basePackage 基础包路径，例如: "com.example.service"
+     * @param basePackage 基础包路径，例如: "com.example.服务"
      * @return 指定包路径下的所有候选Bean定义集合
      * @throws IllegalArgumentException 当基础包路径为空时抛出异常
      */
@@ -87,6 +111,11 @@ public class RpcClassPathBeanDefinitionScanner extends ClassPathBeanDefinitionSc
     public Set<BeanDefinition> findCandidateComponents(String basePackage) {
         // 参数校验
         if (basePackage == null || basePackage.trim().isEmpty()) {
+            /**
+             * illegal参数异常。
+             * @param "基础包路径不能为空" "基础包路径不能为空"
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("基础包路径不能为空");
         }
         

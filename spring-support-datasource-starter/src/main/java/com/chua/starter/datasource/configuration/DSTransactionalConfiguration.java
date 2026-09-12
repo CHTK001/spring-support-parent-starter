@@ -28,6 +28,10 @@ public class DSTransactionalConfiguration {
     @Bean
     @ConditionalOnMissingBean(DSTransactionalAspect.class)
     public DSTransactionalAspect dsTransactionalAspect() {
+        /**
+          * dstransactionalaspect。
+         * @return DSTransactionalAspect的结果
+         */
         return new DSTransactionalAspect();
     }
 }

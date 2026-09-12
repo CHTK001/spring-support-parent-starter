@@ -24,15 +24,20 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ServerKeyServiceImpl implements ServerKeyService {
 
-    /** 密钥 Mapper */
+    /** 密钥 映射器 */
     private final MsServerKeyMapper keyMapper;
-    /** 身份 Mapper */
+    /** 身份 映射器 */
     private final MsServerIdentityMapper identityMapper;
     /** 凭据加解密器 */
     private final CredentialCipher cipher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 创建。
+     * @param key 钥匙
+     * @return 创建的结果
+     */
     public ReturnResult<MsServerKey> create(MsServerKey key) {
         if (key.getMsServerKeyName() == null || key.getMsServerKeyName().isEmpty()) {
             return ReturnResult.error("密钥名称不能为空");
@@ -49,12 +54,18 @@ public class ServerKeyServiceImpl implements ServerKeyService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 更新。
+     * @param id 标识
+     * @param key 钥匙
+     * @return 更新的结果
+     */
     public ReturnResult<MsServerKey> update(Long id, MsServerKey key) {
         MsServerKey exists = keyMapper.selectById(id);
         if (exists == null) {
             return ReturnResult.error("密钥不存在: " + id);
         }
-        // 空串表示清空；null 表示保持不变；非空则加密覆盖
+ // 空串表示清空；空 表示保持不变；非空则加密覆盖
         if (key.getMsServerKeyPrivateKey() != null) {
             exists.setMsServerKeyPrivateKey(key.getMsServerKeyPrivateKey().isEmpty()
                     ? "" : cipher.encrypt(key.getMsServerKeyPrivateKey()));
@@ -73,6 +84,11 @@ public class ServerKeyServiceImpl implements ServerKeyService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    /**
+     * 删除。
+     * @param id 标识
+     * @return 删除的结果
+     */
     public ReturnResult<Void> delete(Long id) {
         Long refCount = identityMapper.selectCount(
                 new LambdaQueryWrapper<MsServerIdentity>().eq(MsServerIdentity::getMsServerIdentityKeyId, id));

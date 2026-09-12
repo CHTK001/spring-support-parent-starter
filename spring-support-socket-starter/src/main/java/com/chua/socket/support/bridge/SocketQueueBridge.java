@@ -14,12 +14,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Queue → Socket 桥接监听器
+   * 队列 → 套接字 桥接监听器
  * <p>
  * 监听固定 topic {@code socket:push}（业务方统一向此 topic 发送），
  * 从消息 payload 解析 {@code {module, event, data, dataId}} 后，
  * 通过 {@link SocketSessionTemplate} 广播到前端。
- * 业务模块（如监控）无需直接依赖 Socket，只向 queue 发消息即可。
+   * 业务模块（如监控）无需直接依赖 套接字，只向 队列 发消息即可。
  * </p>
  *
  * <h3>协议</h3>
@@ -39,17 +39,17 @@ import java.util.Map;
 @ConditionalOnProperty(prefix = "plugin.queue", name = "enable", havingValue = "true")
 public class SocketQueueBridge {
 
-    /** 固定订阅 topic：业务方统一向此 topic 发送 socket 广播消息 */
+    /** 固定订阅 topic：业务方统一向此 topic 发送 套接字 广播消息 */
     public static final String TOPIC = "socket:push";
 
-    /** Socket 会话模板（socket 未启用时为空实现） */
+    /** 套接字 会话模板（套接字 未启用时为空实现） */
     private final ObjectProvider<SocketSessionTemplate> socketTemplateProvider;
 
     /** JSON 解析器 */
     private final ObjectMapper objectMapper;
 
     /**
-     * 监听 socket:push topic，解析 payload 后广播到所有前端会话
+      * 监听 套接字:push topic，解析 payload 后广播到所有前端会话
      *
      * @param message 队列消息（payload 为 JSON 字符串）
      */
@@ -79,10 +79,10 @@ public class SocketQueueBridge {
     }
 
     /**
-     * 解析消息载荷为 Map（兼容 JSON 对象）
+      * 解析消息载荷为 映射（兼容 JSON 对象）
      *
      * @param payload 载荷字符串
-     * @return Map 或 null
+     * @return Map 或 空（载荷为空或非法 JSON 时）
      */
     @SuppressWarnings("unchecked")
     private Map<String, Object> parsePayload(String payload) {
@@ -93,6 +93,7 @@ public class SocketQueueBridge {
             Object parsed = objectMapper.readValue(payload, Object.class);
             return parsed instanceof Map<?, ?> map ? (Map<String, Object>) map : null;
         } catch (Exception e) {
+            log.debug("[socket-bridge] payload 非 JSON 对象，原样透传: {}", e.getMessage());
             return null;
         }
     }

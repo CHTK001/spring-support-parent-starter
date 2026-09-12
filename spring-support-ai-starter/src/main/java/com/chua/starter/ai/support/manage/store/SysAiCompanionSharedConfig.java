@@ -20,23 +20,23 @@ import java.io.Serializable;
 @Data
 @TableName("sys_ai_companion_shared_config")
 public class SysAiCompanionSharedConfig implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
-     * 配置键（如 shared、consent、disable_all）
+      * 配置键（如 共享、consent、disable_全部）
      */
     @TableId(value = "sys_ai_companion_shared_config_key", type = IdType.INPUT)
-    private String configKey;
+    private String configKey; // 配置钥匙
 
     /**
      * 配置值（JSON 字符串）
      */
     @TableField("sys_ai_companion_shared_config_value")
-    private String configValue;
+    private String configValue; // 配置价值观
 
     /**
-     * 更新时间（epoch 毫秒）
+      * 更新时间（轮次 毫秒）
      */
     @TableField("sys_ai_companion_shared_config_updated_at")
-    private Long updatedAt;
+    private Long updatedAt; // 更新at
 }

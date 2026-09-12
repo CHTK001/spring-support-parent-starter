@@ -13,7 +13,7 @@ import java.util.Map;
  *
  * <p>调度触发时间统一委托给 {@link JobTriggering} (内部复用仓库公共
  * {@link com.chua.common.support.task.scheduler.CronTrigger} / {@link com.chua.common.support.task.scheduler.FixedTrigger}),
- * 支持 cron / fixedDelay / fixedRate 三种调度方式;</p>
+   * 支持 cron / fixed延迟 / fixedrate 三种调度方式;</p>
  *
  * <p>每个任务的触发器与最近一次触发时间都在内存中维护, 以实现固定的频率/延迟序列推进。</p>
  *
@@ -29,12 +29,12 @@ public class InMemoryJobRepository implements JobRepository {
     private final Map<String, JobDefinition> table = new HashMap<>();
 
     /**
-     * 触发器缓存, key 为任务名
+      * 触发器缓存, 钥匙 为任务名
      */
     private final Map<String, Trigger> triggerCache = new HashMap<>();
 
     /**
-     * 最近一次触发时间, key 为任务名
+      * 最近一次触发时间, 钥匙 为任务名
      */
     private final Map<String, Long> lastFireMs = new HashMap<>();
 

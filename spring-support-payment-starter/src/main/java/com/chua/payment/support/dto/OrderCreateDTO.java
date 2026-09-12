@@ -13,17 +13,17 @@ import java.math.BigDecimal;
  */
 @Data
 public class OrderCreateDTO implements Serializable {
-    private static final long serialVersionUID = 1L;
-    /** MerchantID */
+    private static final long serialVersionUID = 1L; // 串行版本uid
+    /** merchantid */
     private Long merchantId;
 
-    /** 通道ID */
+    /** 通道标识 */
     private Long channelId;
 
-    /** 用户ID */
+    /** 用户标识 */
     private Long userId;
 
-    /** Business排序NO */
+    /** 业务排序NO */
     private String businessOrderNo;
 
     /** 通道类型 */
@@ -38,16 +38,16 @@ public class OrderCreateDTO implements Serializable {
     /** Discountamount */
     private BigDecimal discountAmount;
 
-    /** Currency */
+    /** 货币 */
     private String currency;
 
-    /** Subject */
+    /** 主题 */
     private String subject;
 
     /** 请求体 */
     private String body;
 
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
 
     /** 返回值URL */
@@ -56,6 +56,6 @@ public class OrderCreateDTO implements Serializable {
     /** Expireminutes */
     private Integer expireMinutes;
 
-    /** Remark */
+    /** 评论 */
     private String remark;
 }

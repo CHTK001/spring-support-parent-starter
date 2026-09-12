@@ -25,6 +25,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *       model: gpt-3.5-turbo
  *       temperature: 0.3
  *       enabled: true              # 关闭后回退到字符串匹配
+ * }</pre>rbo
+ *       temperature: 0.3
+ *       enabled: true              # 关闭后回退到字符串匹配
  * }</pre>
  *
  * @since 4.0.0.42
@@ -55,6 +58,12 @@ public class EduAiProperties {
     private Ai ai = new Ai();
 
     @Data
+    /**
+     * Marking类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     public static class Marking {
         /**
          * 是否异步阅卷
@@ -62,7 +71,7 @@ public class EduAiProperties {
         private boolean async = true;
 
         /**
-         * 阅卷超时（秒），由调用方在 ChatScope.timeoutMillis 中体现
+          * 阅卷超时（秒），由调用方在 对话scope.超时millis 中体现
          */
         private int timeout = 300;
 
@@ -73,6 +82,12 @@ public class EduAiProperties {
     }
 
     @Data
+    /**
+     * Paper类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     public static class Paper {
         /**
          * 试卷最高总分
@@ -91,6 +106,12 @@ public class EduAiProperties {
     }
 
     @Data
+    /**
+     * 知识类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     public static class Knowledge {
         /**
          * 向量维度
@@ -99,6 +120,12 @@ public class EduAiProperties {
     }
 
     @Data
+    /**
+     * AI类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     public static class Ai {
         /**
          * 是否启用 AI（关闭后回退到本地启发式逻辑）
@@ -106,7 +133,7 @@ public class EduAiProperties {
         private boolean enabled = true;
 
         /**
-         * AI 服务商（与 ChatClientRegistry 中的 provider 一致）
+          * AI 服务商（与 对话客户端registry 中的 提供者 一致）
          */
         private String provider;
 

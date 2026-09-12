@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * AI 核心自动配置 — 全局 ChatClient 和 Agent 注册体系。
+   * AI 核心自动配置 — 全局 对话客户端 和 智能体 注册体系。
  *
  * <p>Spring Boot 专属层，职责：</p>
  * <ul>
@@ -59,55 +59,77 @@ import java.util.Map;
 public class AiConfiguration {
 
     /**
-     * 全局 ChatClient 注册中心。
+      * 全局 对话客户端 注册中心。
+     * @return 对话客户端registry的结果
      */
     @Bean
     @ConditionalOnMissingBean
     public ChatClientRegistry chatClientRegistry() {
         log.info("[AiConfiguration] 创建 ChatClientRegistry");
+        /**
+         * 对话客户端registry。
+         * @return 对话客户端registry的结果
+         */
         return new ChatClientRegistry();
     }
 
     /**
-     * 全局 Agent 注册中心。
+      * 全局 智能体 注册中心。
+     * @return 智能体registry的结果
      */
     @Bean
     @ConditionalOnMissingBean
     public AgentRegistry agentRegistry() {
         log.info("[AiConfiguration] 创建 AgentRegistry");
+        /**
+         * 智能体registry。
+         * @return 智能体registry的结果
+         */
         return new AgentRegistry();
     }
 
     /**
      * 对话记录服务——默认使用内存实现。
+     * @return AIdialogrecord服务的结果
      */
     @Bean
     @ConditionalOnMissingBean
     public AIDialogRecordService aiDialogRecordService() {
         log.info("[AiConfiguration] 创建 AIDialogRecordService（内存实现）");
+        /**
+          * aidialog本地record服务。
+         * @return AIdialog本地record服务的结果
+         */
         return new AIDialogLocalRecordService();
     }
 
     /**
-     * 本地回显 ChatClient 兜底 —— 无外部 AI 服务时保证会话链路可用。
+      * 本地回显 对话客户端 兜底 —— 无外部 AI 服务时保证会话链路可用。
      *
      * <p>当用户自行定义了名为 {@code echoChatClient} 的 Bean 时本兜底自动退避；
-     * 未配置真实 ChatClient 时，{@link #defaultChatClient} 仍会聚合本兜底，
-     * 使 chat 会话链路（POST → WS 流式 → turn.completed）在无模型环境下可联调，
+      * 未配置真实 对话客户端 时，{@link #defaultChatClient} 仍会聚合本兜底，
+      * 使 对话 会话链路（POST → WS 流式 → turn.完成）在无模型环境下可联调，
      * 生产环境应自行配置真实提供商客户端覆盖。</p>
+     * @return echo对话客户端的结果
      */
     @Bean
     @ConditionalOnMissingBean(name = "echoChatClient")
     public EchoChatClient echoChatClient() {
         log.info("[AiConfiguration] 注册本地 Echo ChatClient（无真实模型时的兜底）");
+        /**
+         * echo对话客户端。
+         * @return echo对话客户端的结果
+         */
         return new EchoChatClient();
     }
 
     /**
-     * 默认 ChatClient — 聚合客户端。
+      * 默认 对话客户端 — 聚合客户端。
      *
      * <p>通过 SPI 发现 ChatClient 实现，聚合为 AggregateChatClient。
-     * 如果找不到任何实现，返回 null（业务层自行处理兜底）。
+      * 如果找不到任何实现，返回 空（业务层自行处理兜底）。
+     * @param applicationContext application上下文
+     * @return 默认对话客户端的结果
      */
     @Bean
     @ConditionalOnMissingBean
@@ -126,6 +148,11 @@ public class AiConfiguration {
         if (!spiClients.isEmpty() || !springClients.isEmpty()) {
             AggregateChatClientSetting config = new AggregateChatClientSetting();
             config.setStrategy("failover");
+            /**
+             * aggregate对话客户端。
+             * @param config 配置
+             * @return aggregate对话客户端的结果
+             */
             return new AggregateChatClient(config);
         }
 
@@ -135,6 +162,7 @@ public class AiConfiguration {
 
     /**
      * 容器就绪后初始化注册中心。
+     * @param event 事件
      */
     @EventListener(ApplicationReadyEvent.class)
     @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -143,7 +171,7 @@ public class AiConfiguration {
         ChatClientRegistry chatClientRegistry = context.getBean(ChatClientRegistry.class);
         AgentRegistry agentRegistry = context.getBean(AgentRegistry.class);
 
-        // 收集所有 ChatClient Bean
+ // 收集所有 对话客户端 Bean
         Map<String, ChatClient> chatClients = context.getBeansOfType(ChatClient.class);
         for (Map.Entry<String, ChatClient> entry : chatClients.entrySet()) {
             ChatClient client = entry.getValue();
@@ -158,7 +186,7 @@ public class AiConfiguration {
                 chatClientRegistry.register("aggregate", "aggregate", aggregate, "chat", "routing", "aggregate");
             } else {
                 chatClientRegistry.register(entry.getKey(), client);
-                // 无聚合客户端时，用首个普通客户端兜底默认，保证 resolveChatClient 永不落空
+ // 无聚合客户端时，用首个普通客户端兜底默认，保证 resolve对话客户端 永不落空
                 if (chatClientRegistry.getDefault() == null) {
                     chatClientRegistry.setDefault(client);
                     log.info("[AiConfiguration] 设置默认 ChatClient: {}", entry.getKey());
@@ -168,7 +196,7 @@ public class AiConfiguration {
 
         log.info("[AiConfiguration] ChatClientRegistry 初始化完成，共 {} 个客户端", chatClientRegistry.size());
 
-        // 初始化主 Agent
+ // 初始化主 智能体
         ChatClient defaultClient = chatClientRegistry.getDefault();
         if (defaultClient != null) {
             try {
@@ -186,7 +214,11 @@ public class AiConfiguration {
     }
 
     @Bean
-    /** AiServiceInfoContributor */
+    /**
+     * AI服务信息contributor
+     *
+     * @return AI服务信息contributor的结果
+     */
     public ServiceInfoContributor aiServiceInfoContributor() {
         return registry -> {
             registry.registerEndpoint("AI", "AI接口", "/ai/**", "AI接口");

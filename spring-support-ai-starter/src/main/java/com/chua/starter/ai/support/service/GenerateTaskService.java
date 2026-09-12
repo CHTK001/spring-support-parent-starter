@@ -39,7 +39,7 @@ public interface GenerateTaskService {
     /**
      * 查询任务状态。
      *
-     * @param taskId 任务 ID
+     * @param taskId 任务 标识
      * @return 生成任务，不存在时返回 {@code null}
      */
     GenerateTask getTask(String taskId);
@@ -47,7 +47,7 @@ public interface GenerateTaskService {
     /**
      * 查询最近的任务列表（历史记录）。
      *
-     * @param type  任务类型（image/video），可为 {@code null}
+     * @param type  任务类型（镜像/视频），可为 {@code null}
      * @param limit 数量限制
      * @return 任务列表
      */

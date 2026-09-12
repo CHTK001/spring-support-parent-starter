@@ -18,14 +18,14 @@ import java.time.LocalDateTime;
 public class EduExam {
 
     /**
-     * 考试ID
+      * 考试标识
      */
     @TableId(type = IdType.AUTO)
-    /** ExamID */
+    /** examid */
     private Long examId;
 
     /**
-     * 试卷ID
+      * 试卷标识
      */
     private Long examPaperId;
 
@@ -35,7 +35,7 @@ public class EduExam {
     private String examName;
 
     /**
-     * 班级ID
+      * 班级标识
      */
     private String examClassId;
 

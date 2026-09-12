@@ -21,16 +21,21 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 数据同步完整管线压测：走 Server→Scheduler→Executor→Dispatch→Sink 全链路，手动触发单遍。
+   * 数据同步完整管线压测：走 服务端→调度器→执行器→Dispatch→Sink 全链路，手动触发单遍。
  *
  * @since 4.0.0.42
+ * @author CH
  */
 public final class DataSyncStressProbe {
 
     /** Work_dir */
     private static final Path WORK_DIR = Paths.get("target/stress-full");
 
-    /** Main */
+    /**
+     * Main
+     *
+     * @param args 参数
+     */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);
         int[] rows = {100_000_000};
@@ -57,7 +62,13 @@ public final class DataSyncStressProbe {
         System.err.println("========================================================================");
     }
 
-    /** 运行FullPipeline */
+    /**
+     * 运行完整pipeline
+     *
+     * @param csv csv
+     * @param totalRows totalrows
+     * @param batchSize 批量大小
+     */
     private static void runFullPipeline(Path csv, int totalRows, int batchSize) throws Exception {
         String id = "full-" + totalRows + "-" + batchSize;
 
@@ -76,7 +87,7 @@ public final class DataSyncStressProbe {
         server.registerSource(new DelimitedDataSyncAgentSource(id + "-src", id + "-input", csv.toString(), ","));
         server.registerSink(sink);
 
-        // NONE 型：不参与 cron 轮询，仅手动触发单遍
+ // 无 型：不参与 cron 轮询，仅手动触发单遍
         server.addMapping(new DefaultDataSyncMapping(id, id + "-input", id + "-src", id + "-output", id + "-sink",
                 null, List.of(), batchSize, "none", "",
                 Map.of(), null));
@@ -98,7 +109,12 @@ public final class DataSyncStressProbe {
                 totalRows, batchSize, elapsedMs, tp, batches, ok ? "PASS" : "FAIL(" + sink.count.get() + ")");
     }
 
-    /** GenerateCsv */
+    /**
+     * generatecsv
+     *
+     * @param path 路径
+     * @param lines 线
+     */
     private static void generateCsv(Path path, int lines) throws Exception {
         try (var writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
             writer.write("id,name,age,score,active,created_at\n");
@@ -111,9 +127,9 @@ public final class DataSyncStressProbe {
     }
 
     static final class CountSink implements DataSyncAgentSink {
-        /** SinkID */
+        /** sinkid */
         private final String sinkId;
-        /** Expected */
+        /** 期望 */
         private final long expected;
         final AtomicLong count = new AtomicLong(0);
         final AtomicLong batches = new AtomicLong(0);
@@ -129,7 +145,7 @@ public final class DataSyncStressProbe {
         }
 
         @Override
-        /** SinkId */
+        /** sinkid */
         public String sinkId() {
             return sinkId;
         }
@@ -139,7 +155,9 @@ public final class DataSyncStressProbe {
         public void write(Flux<Map<String, Object>> rows) {
             long t0 = System.currentTimeMillis();
             long b = batches.incrementAndGet();
-            if (b == 1) firstBatchMs = t0;
+            if (b == 1) {
+                firstBatchMs = t0;
+            }
             rows.doOnNext(m -> {
                 if (count.incrementAndGet() >= expected) {
                     done.countDown();

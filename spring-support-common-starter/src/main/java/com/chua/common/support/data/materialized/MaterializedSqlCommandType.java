@@ -4,6 +4,7 @@ package com.chua.common.support.data.materialized;
  * 物化视图 SQL 命令类型枚举
  *
  * @author CH
+ * @since 4.0.0
  */
 public enum MaterializedSqlCommandType {
 

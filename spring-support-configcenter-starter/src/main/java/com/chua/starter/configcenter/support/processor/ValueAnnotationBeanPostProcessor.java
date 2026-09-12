@@ -27,9 +27,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * @Value注解Bean后置处理器
+   * @价值观注解Bean后置处理器
  * <p>
- * 在Bean初始化后扫描@Value注解，注入配置值并支持热更新和配置缓存。
+   * 在Bean初始化后扫描@价值观注解，注入配置值并支持热更新和配置缓存。
  * </p>
  *
  * <h3>功能</h3>
@@ -42,7 +42,7 @@ import java.util.regex.Pattern;
  * </ul>
  *
  * @since 2024-12-07
- * @version 1.0.0
+   * @版本 1.0.0
  * @author CH
  */
 @Slf4j
@@ -80,15 +80,15 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
 
     /**
      * 配置值缓存
-     * key: 配置键
-     * value: 缓存的配置值
+      * 钥匙: 配置键
+      * 价值观: 缓存的配置值
      */
     private final Map<String, String> configValueCache = new ConcurrentHashMap<>();
 
     /**
      * 绑定信息映射
-     * key: 配置键
-     * value: 绑定信息列表
+      * 钥匙: 配置键
+      * 价值观: 绑定信息列表
      */
     private final Map<String, List<ValueBindingInfo>> bindingsByKey = new ConcurrentHashMap<>();
 
@@ -104,8 +104,8 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
 
     /**
      * 配置刷新时间缓存
-     * key: 配置键
-     * value: 上次刷新时间戳
+      * 钥匙: 配置键
+      * 价值观: 上次刷新时间戳
      */
     private final Map<String, Long> lastRefreshTimeByKey = new ConcurrentHashMap<>();
 
@@ -115,6 +115,12 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
      * @param configCenter 配置中心
      */
     public ValueAnnotationBeanPostProcessor(ConfigCenter configCenter) {
+        /**
+         * this。
+         * @param configCenter 配置center
+         * @param true true
+         * @param DEFAULT_REFRESH_DELAY_MS 默认refresh延迟ms
+         */
         this(configCenter, true, DEFAULT_REFRESH_DELAY_MS);
     }
 
@@ -125,6 +131,12 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
      * @param hotReloadEnabled 是否启用热更新
      */
     public ValueAnnotationBeanPostProcessor(ConfigCenter configCenter, boolean hotReloadEnabled) {
+        /**
+         * this。
+         * @param configCenter 配置center
+         * @param hotReloadEnabled hotreload已启用
+         * @param DEFAULT_REFRESH_DELAY_MS 默认refresh延迟ms
+         */
         this(configCenter, hotReloadEnabled, DEFAULT_REFRESH_DELAY_MS);
     }
 
@@ -143,8 +155,8 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
 
     @Override
     /**
-     * 设置Environment
-     * @param environment environment
+      * 设置环境
+     * @param environment 环境
      */
     public void setEnvironment(Environment environment) {
         this.environment = environment;
@@ -152,8 +164,8 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
 
     @Override
     /**
-     * 设置BeanFactory
-     * @param beanFactory beanFactory
+      * 设置Bean工厂
+     * @param beanFactory Bean工厂
      */
     public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
         if (beanFactory instanceof ConfigurableListableBeanFactory) {
@@ -163,9 +175,9 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
 
     @Override
     /**
-     * Post处理AfterInitialization
-     * @param bean bean
-     * @param beanName beanName
+      * Post处理之后initialization
+     * @param bean Bean
+     * @param beanName Bean名称
      */
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         if (beanFactory != null && !beanFactory.isSingleton(beanName)) {
@@ -175,9 +187,21 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
         Class<?> clazz = bean.getClass();
 
         // 扫描字段
+        /**
+         * 扫描字段。
+         * @param bean Bean
+         * @param beanName Bean名称
+         * @param clazz clazz
+         */
         scanFields(bean, beanName, clazz);
 
         // 扫描方法
+        /**
+         * 扫描方法。
+         * @param bean Bean
+         * @param beanName Bean名称
+         * @param clazz clazz
+         */
         scanMethods(bean, beanName, clazz);
 
         return bean;
@@ -200,10 +224,16 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
             String expression = annotation.value();
             ParsedExpression parsed = parseExpression(expression);
 
-            // 从缓存或Environment中获取值
+ // 从缓存或环境中获取值
             String value = getCachedOrResolveValue(parsed.key(), parsed.defaultValue());
             
             // 注入初始值
+            /**
+             * inject字段价值观。
+             * @param bean Bean
+             * @param field 字段
+             * @param value 价值观
+             */
             injectFieldValue(bean, field, value);
 
             // 如果支持热更新，注册监听
@@ -218,6 +248,10 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
                         field.getType()
                 );
 
+                /**
+                 * 注册binding。
+                 * @param binding binding
+                 */
                 registerBinding(binding);
                 log.debug("注册@Value热更新绑定: key={}, bean={}, field={}",
                         parsed.key(), beanName, field.getName());
@@ -242,10 +276,16 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
             String expression = annotation.value();
             ParsedExpression parsed = parseExpression(expression);
 
-            // 从缓存或Environment中获取值
+ // 从缓存或环境中获取值
             String value = getCachedOrResolveValue(parsed.key(), parsed.defaultValue());
             
             // 注入初始值
+            /**
+             * inject方法价值观。
+             * @param bean Bean
+             * @param method 方法
+             * @param value 价值观
+             */
             injectMethodValue(bean, method, value);
 
             // 如果支持热更新，注册监听
@@ -260,6 +300,10 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
                         method.getParameterTypes()[0]
                 );
 
+                /**
+                 * 注册binding。
+                 * @param binding binding
+                 */
                 registerBinding(binding);
                 log.debug("注册@Value热更新绑定: key={}, bean={}, method={}",
                         parsed.key(), beanName, method.getName());
@@ -268,7 +312,7 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
     }
 
     /**
-     * 从缓存或Environment中获取配置值
+      * 从缓存或环境中获取配置值
      *
      * @param key          配置键
      * @param defaultValue 默认值
@@ -281,13 +325,13 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
             return cachedValue;
         }
 
-        // 从Environment获取
+ // 从环境获取
         String value = null;
         if (environment != null) {
             value = environment.getProperty(key);
         }
 
-        // 如果值为null，使用默认值
+ // 如果值为空，使用默认值
         if (value == null) {
             value = defaultValue;
         }
@@ -379,8 +423,20 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
         if (matcher.find()) {
             String key = matcher.group(1);
             String defaultValue = matcher.group(2);
+            /**
+             * 解析expression。
+             * @param key 钥匙
+             * @param defaultValue 默认价值观
+             * @return 解析expression的结果
+             */
             return new ParsedExpression(key, defaultValue);
         }
+        /**
+         * 解析expression。
+         * @param expression expression
+         * @param null 空
+         * @return 解析expression的结果
+         */
         return new ParsedExpression(expression, null);
     }
 
@@ -402,32 +458,38 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
 
     /**
      * 配置值监听器
+     * @author CH
+     * @since 4.0.0
      */
     private class ValueConfigListener implements ConfigListener {
 
         /** 配置密钥 */
         private final String configKey;
 
+        /**
+         * 价值观配置监听器。
+         * @param configKey 配置钥匙
+         */
         ValueConfigListener(String configKey) {
             this.configKey = configKey;
         }
 
         @Override
         /**
-         * OnChange
-         * @param key key
-         * @param oldValue oldValue
-         * @param newValue newValue
+          * on改变
+         * @param key 钥匙
+         * @param oldValue 旧价值观
+         * @param newValue 新价值观
          */
         public void onChange(String key, String oldValue, String newValue) {
-            // 由 onUpdate 处理
+ // 由 on更新 处理
         }
 
         @Override
         /**
          * On删除
-         * @param key key
-         * @param oldValue oldValue
+         * @param key 钥匙
+         * @param oldValue 旧价值观
          */
         public void onDelete(String key, String oldValue) {
             List<ValueBindingInfo> bindings = bindingsByKey.get(configKey);
@@ -436,10 +498,21 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
             }
 
             // 更新缓存
+            /**
+             * 更新缓存。
+             * @param configKey 配置钥匙
+             * @param null 空
+             */
             updateCache(configKey, null);
 
             for (ValueBindingInfo binding : bindings) {
                 // 使用默认值
+                /**
+                 * 更新binding。
+                 * @param binding binding
+                 * @param oldValue 旧价值观
+                 * @param binding.defaultValue binding.默认价值观
+                 */
                 updateBinding(binding, oldValue, binding.defaultValue);
             }
         }
@@ -447,9 +520,9 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
         @Override
         /**
          * On更新
-         * @param key key
-         * @param oldValue oldValue
-         * @param newValue newValue
+         * @param key 钥匙
+         * @param oldValue 旧价值观
+         * @param newValue 新价值观
          */
         public void onUpdate(String key, String oldValue, String newValue) {
             List<ValueBindingInfo> bindings = bindingsByKey.get(configKey);
@@ -468,9 +541,14 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
             lastRefreshTimeByKey.put(configKey, now);
 
             // 更新缓存
+            /**
+             * 更新缓存。
+             * @param configKey 配置钥匙
+             * @param newValue 新价值观
+             */
             updateCache(configKey, newValue);
 
-            // 从Environment重新获取值（可能包含占位符解析）
+ // 从环境重新获取值（可能包含占位符解析）
             String resolvedValue = null;
             if (environment != null) {
                 resolvedValue = environment.getProperty(configKey);
@@ -480,6 +558,12 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
             }
 
             for (ValueBindingInfo binding : bindings) {
+                /**
+                 * 更新binding。
+                 * @param binding binding
+                 * @param oldValue 旧价值观
+                 * @param resolvedValue resolved价值观
+                 */
                 updateBinding(binding, oldValue, resolvedValue);
             }
         }
@@ -506,8 +590,16 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
 
             // 更新值
             if (binding.field() != null) {
+                /**
+                 * inject字段价值观。
+                 * @param binding.bean( binding.Bean(
+                 */
                 injectFieldValue(binding.bean(), binding.field(), newValue);
             } else if (binding.method() != null) {
+                /**
+                 * inject方法价值观。
+                 * @param binding.bean( binding.Bean(
+                 */
                 injectMethodValue(binding.bean(), binding.method(), newValue);
             }
 
@@ -531,6 +623,9 @@ public class ValueAnnotationBeanPostProcessor implements BeanPostProcessor, Envi
 
     /**
      * 解析后的表达式
+     * @param key 钥匙
+     * @param defaultValue 默认价值观
+     * @return 解析expression的结果
      */
     private record ParsedExpression(String key, String defaultValue) {
     }

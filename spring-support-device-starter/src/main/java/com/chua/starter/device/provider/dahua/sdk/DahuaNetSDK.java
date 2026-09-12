@@ -10,7 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * 大华 NetSDK JNA 绑定（仅声明本模块使用到的函数与结构体）
+   * 大华 netsdk JNA 绑定（仅声明本模块使用到的函数与结构体）
  * <p>完整头文件见大华官方《NetSDK 网络开发包》。</p>
  *
  * <p>使用方式：{@code DahuaNetSDK INSTANCE = Native.load("dhnetsdk", DahuaNetSDK.class)}，</p>
@@ -38,15 +38,15 @@ public interface DahuaNetSDK extends Library {
 
     /** 云台指令：方向 */
     int DH_PTZ_UP = 0;
-    int DH_PTZ_DOWN = 1;
-    int DH_PTZ_LEFT = 2;
-    int DH_PTZ_RIGHT = 3;
-    int DH_PTZ_ZOOM_ADD = 11;
-    int DH_PTZ_ZOOM_DEC = 12;
-    int DH_PTZ_FOCUS_ADD = 13;
-    int DH_PTZ_FOCUS_DEC = 14;
-    int DH_PTZ_IRIS_ADD = 15;
-    int DH_PTZ_IRIS_DEC = 16;
+    int DH_PTZ_DOWN = 1; // DH_PTZ_DOWN
+    int DH_PTZ_LEFT = 2; // DH_PTZ_LEFT
+    int DH_PTZ_RIGHT = 3; // DH_PTZ_RIGHT
+    int DH_PTZ_ZOOM_ADD = 11; // dhptzzoom添加
+    int DH_PTZ_ZOOM_DEC = 12; // DH_PTZ_ZOOM_DEC
+    int DH_PTZ_FOCUS_ADD = 13; // dhptzfocus添加
+    int DH_PTZ_FOCUS_DEC = 14; // DH_PTZ_FOCUS_DEC
+    int DH_PTZ_IRIS_ADD = 15; // dhptziris添加
+    int DH_PTZ_IRIS_DEC = 16; // DH_PTZ_IRIS_DEC
 
     /**
      * 初始化 SDK
@@ -163,6 +163,8 @@ public interface DahuaNetSDK extends Library {
 
     /**
      * 连接状态回调
+     * @author CH
+     * @since 4.0.0
      */
     interface ConnectStateCallback extends Callback {
         /**
@@ -176,6 +178,8 @@ public interface DahuaNetSDK extends Library {
 
     /**
      * 实时码流回调
+     * @author CH
+     * @since 4.0.0
      */
     interface RealDataCallback extends Callback {
         /**
@@ -195,6 +199,12 @@ public interface DahuaNetSDK extends Library {
      */
     @Structure.FieldOrder({"szHost", "szUser", "szPassword", "nPort", "emType", "bUseSSL",
             "dwLoginType", "szDeviceID"})
+    /**
+     * login信息类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     class LOGIN_INFO extends Structure {
 
         /** 设备地址 */
@@ -222,11 +232,11 @@ public interface DahuaNetSDK extends Library {
         public boolean bUseSSL;
 
         /** 登录类型 */
-        /** DWlogin类型 */
+        /** dwlogin类型 */
         public int dwLoginType;
 
-        /** 设备 ID */
-        /** SZdeviceID */
+        /** 设备 标识 */
+        /** szdeviceid */
         public byte[] szDeviceID = new byte[48];
 
         /**
@@ -263,30 +273,36 @@ public interface DahuaNetSDK extends Library {
             "bySubProto", "bySupport", "bySupport1", "bySupport2", "wDevType", "bySupport3",
             "byMultiStreamProto", "byStartDChan", "byStartDTalkChan", "byHighDChanNum", "bySupport4",
             "bySupport5", "byIPChanInHighMax", "byReserved1"})
+    /**
+     * DEVICEINFO类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     class DEVICEINFO extends Structure {
 
         /** 设备序列号 */
-        /** SZserial数字 */
+        /** szserial数字 */
         public byte[] szSerialNumber = new byte[DH_DEVICE_SERIALNO_LEN];
 
         /** 报警输入口个数 */
-        /** BYalarmIN端口NUM */
+        /** byalarm入端口NUM */
         public byte byAlarmInPortNum;
 
         /** 报警输出口个数 */
-        /** BYalarmOUT端口NUM */
+        /** byalarm出端口NUM */
         public byte byAlarmOutPortNum;
 
         /** 硬盘个数 */
-        /** BYdiskNUM */
+        /** bydisknum */
         public byte byDiskNum;
 
         /** 设备类型 */
-        /** BYdvrtype */
+        /** bydvrtype */
         public byte byDVRType;
 
         /** 模拟通道个数 */
-        /** BYchanNUM */
+        /** bychannum */
         public byte byChanNum;
 
         /** 起始通道号 */
@@ -294,35 +310,35 @@ public interface DahuaNetSDK extends Library {
         public byte byStartChan;
 
         /** 语音通道数 */
-        /** BY音频chanNUM */
+        /** BY音频channum */
         public byte byAudioChanNum;
 
         /** 数字通道个数 */
-        /** BYipchanNUM */
+        /** byipchannum */
         public byte byIPChanNum;
 
         /** 零通道编码个数 */
-        /** BYzerochanNUM */
+        /** byzerochannum */
         public byte byZeroChanNum;
 
         /** 主协议 */
-        /** BYmainproto */
+        /** bymainproto */
         public byte byMainProto;
 
         /** 子协议 */
-        /** BYSUBproto */
+        /** bysubproto */
         public byte bySubProto;
 
         /** 支持能力 */
-        /** BYsupport */
+        /** bysupport */
         public byte bySupport;
 
         /** 支持能力 1 */
-        /** BYsupport1 */
+        /** bysupport1 */
         public byte bySupport1;
 
         /** 支持能力 2 */
-        /** BYsupport2 */
+        /** bysupport2 */
         public byte bySupport2;
 
         /** 设备类型 */
@@ -330,11 +346,11 @@ public interface DahuaNetSDK extends Library {
         public short wDevType;
 
         /** 支持能力 3 */
-        /** BYsupport3 */
+        /** bysupport3 */
         public byte bySupport3;
 
         /** 多码流能力 */
-        /** BYmulti流proto */
+        /** bymulti流Proto.io.io */
         public byte byMultiStreamProto;
 
         /** 起始数字通道 */
@@ -346,23 +362,23 @@ public interface DahuaNetSDK extends Library {
         public byte byStartDTalkChan;
 
         /** 高清数字通道数 */
-        /** BYhighdchanNUM */
+        /** byhighdchannum */
         public byte byHighDChanNum;
 
         /** 支持能力 4 */
-        /** BYsupport4 */
+        /** bysupport4 */
         public byte bySupport4;
 
         /** 支持能力 5 */
-        /** BYsupport5 */
+        /** bysupport5 */
         public byte bySupport5;
 
         /** 高清数字通道最大值 */
-        /** BYipchanINhigh最大值 */
+        /** byipchaninhigh最大值 */
         public byte byIPChanInHighMax;
 
         /** 保留字节 */
-        /** BYreserved1 */
+        /** byreserved1 */
         public byte[] byReserved1 = new byte[24];
 
         @Override

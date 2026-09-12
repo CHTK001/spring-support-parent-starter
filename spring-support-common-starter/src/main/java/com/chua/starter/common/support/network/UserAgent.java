@@ -1,23 +1,33 @@
 package com.chua.starter.common.support.network;
 
 /**
- * User-Agent 工具。
+   * 用户-智能体 工具。
  *
  * @since 4.0.0.42
+ * @author CH
  */
 public final class UserAgent {
 
+    /**
+     * 用户智能体。
+     */
     private UserAgent() {
     }
 
     /**
-     * 解析 User-Agent 字符串。
+      * 解析 用户-智能体 字符串。
      *
-     * @param userAgentString User-Agent 字符串
+     * @param userAgentString 用户-智能体 字符串
      * @return UserAgent 实例
      */
     public static UserAgentInfo parseUserAgentString(String userAgentString) {
         if (userAgentString == null || userAgentString.isBlank()) {
+            /**
+             * 用户智能体信息。
+             * @param null 空
+             * @param null 空
+             * @return 用户智能体信息的结果
+             */
             return new UserAgentInfo(null, null);
         }
         String lower = userAgentString.toLowerCase();
@@ -48,9 +58,20 @@ public final class UserAgent {
             os = OperatingSystem.IOS;
         }
 
+        /**
+         * 用户智能体信息。
+         * @param browser browser
+         * @param os os
+         * @return 用户智能体信息的结果
+         */
         return new UserAgentInfo(browser, os);
     }
 
+    /**
+     * 是否爬虫。
+     * @param userAgent 用户智能体
+     * @return 是否爬虫的结果
+     */
     public static boolean isCrawler(String userAgent) {
         if (userAgent == null) {
             return false;
@@ -60,7 +81,7 @@ public final class UserAgent {
     }
 
     /**
-     * User-Agent 信息。
+      * 用户-智能体 信息。
      */
     public static final class UserAgentInfo {
         /** Browser */
@@ -68,6 +89,12 @@ public final class UserAgent {
         /** Operatingsystem */
         private final OperatingSystem operatingSystem;
 
+        /**
+         * 用户智能体信息。
+         * @param browser browser
+         * @param operatingSystem operating系统
+         * @return 用户智能体信息的结果
+         */
         public UserAgentInfo(Browser browser, OperatingSystem operatingSystem) {
             this.browser = browser;
             this.operatingSystem = operatingSystem;
@@ -75,6 +102,7 @@ public final class UserAgent {
 
         /**
          * 浏览器信息。
+         * @return 获取browser的结果
          */
         public Browser getBrowser() {
             return browser;
@@ -82,6 +110,7 @@ public final class UserAgent {
 
         /**
          * 操作系统信息。
+         * @return 获取operating系统的结果
          */
         public OperatingSystem getOperatingSystem() {
             return operatingSystem;
@@ -90,6 +119,8 @@ public final class UserAgent {
 
     /**
      * 浏览器类型。
+     * @author CH
+     * @since 4.0.0
      */
     public enum Browser {
         CHROME,
@@ -97,7 +128,7 @@ public final class UserAgent {
         SAFARI,
         EDGE,
         IE,
-        UNKNOWN;
+        UNKNOWN; // UNKNOWN
 
         @Override
         public String toString() {
@@ -107,6 +138,8 @@ public final class UserAgent {
 
     /**
      * 操作系统类型。
+     * @author CH
+     * @since 4.0.0
      */
     public enum OperatingSystem {
         WINDOWS,
@@ -114,8 +147,12 @@ public final class UserAgent {
         LINUX,
         ANDROID,
         IOS,
-        UNKNOWN;
+        UNKNOWN; // UNKNOWN
 
+        /**
+         * 获取名称。
+         * @return 获取名称的结果
+         */
         public String getName() {
             return this == UNKNOWN ? null : name();
         }

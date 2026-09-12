@@ -29,7 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Datalake 深度探测 — 覆盖订阅器生命周期、实时 Sink 过滤、Server 启动、压测上限、边界值。
+   * 数据湖 深度探测 — 覆盖订阅器生命周期、实时 Sink 过滤、服务端 启动、压测上限、边界值。
  *
  * <ul>
  *   <li>D01~D04: RealTimeSink isLog() 过滤</li>
@@ -46,20 +46,24 @@ import java.util.concurrent.atomic.AtomicLong;
 @Slf4j
 public class DatalakeDeepProbe {
 
-    private static int passed = 0;
-    private static int failed = 0;
-    private static int total = 0;
-    private static final List<String> failedCases = new CopyOnWriteArrayList<>();
+    private static int passed = 0; // 通过
+    private static int failed = 0; // 失败
+    private static int total = 0; // total
+    private static final List<String> failedCases = new CopyOnWriteArrayList<>(); // 失败CAS
 
-    private static PipelineManager pipelineManager;
-    private static final Map<String, DataSink> sinkRegistry = new ConcurrentHashMap<>();
-    private static PipelineEngine pipelineEngine;
-    private static OffsetFlow offsetFlow;
-    private static CapturingSink logSink;
-    private static CapturingSink rtSink;
-    private static DispatcherProvider dispatcher;
-    private static DatalakeServer server;
+    private static PipelineManager pipelineManager; // pipeline管理器
+    private static final Map<String, DataSink> sinkRegistry = new ConcurrentHashMap<>(); // sinkregistry
+    private static PipelineEngine pipelineEngine; // pipelineengine
+    private static OffsetFlow offsetFlow; // 偏移量流
+    private static CapturingSink logSink; // 日志sink
+    private static CapturingSink rtSink; // rtsink
+    private static DispatcherProvider dispatcher; // dispatcher
+    private static DatalakeServer server; // 服务端
 
+    /**
+     * main。
+     * @param args 参数
+     */
     public static void main(String[] args) throws Exception {
         log.info("═══════════════════════════════════════════════════════");
         log.info("║            Datalake 深度探测 (DatalakeDeepProbe)         ║");
@@ -87,6 +91,9 @@ public class DatalakeDeepProbe {
 
     // ━━━━━━━━━━━━━━━ 基础设施 ━━━━━━━━━━━━━━━
 
+    /**
+      * setupinfrastructure。
+     */
     private static void setupInfrastructure() throws Exception {
         pipelineManager = new DefaultPipelineManager();
         logSink = new CapturingSink("log");
@@ -107,22 +114,37 @@ public class DatalakeDeepProbe {
         log.info("[DatalakeDeepProbe] 基础设施就绪: log/realtime Sink + Chronicle Dispatcher");
     }
 
+    /**
+     * 单个sinkpipeline。
+     * @param sinkType sink类型
+     * @return 单个sinkpipeline的结果
+     */
     private static String singleSinkPipeline(String sinkType) {
         return "{\"stages\":{\"default\":{\"sink\":[{\"type\":\"" + sinkType + "\"}]}}}";
     }
 
+    /**
+      * multisinkpipeline。
+     * @param sinkTypes sink类型
+     * @return multiSinkPipeline的结果
+     */
     private static String multiSinkPipeline(String... sinkTypes) {
         StringBuilder sb = new StringBuilder("{\"stages\":{\"default\":{\"sink\":[");
         for (int i = 0; i < sinkTypes.length; i++) {
-            if (i > 0) sb.append(',');
+            if (i > 0) {
+                sb.append(',');
+            }
             sb.append("{\"type\":\"").append(sinkTypes[i]).append("\"}");
         }
         sb.append("]}}}");
         return sb.toString();
     }
 
-    // ━━━━━━━━━━━━━━━ D01~D04: RealTimeSink isLog 过滤 ━━━━━━━━━━━━━━━
+ // ━━━━━━━━━━━━━━━ D01~D04: real时间sink 是否日志 过滤 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试real时间sink过滤器。
+     */
     private static void testRealTimeSinkFiltering() {
         log.info("───── D01~D04: RealTimeSink isLog() 过滤 ─────");
 
@@ -181,8 +203,11 @@ public class DatalakeDeepProbe {
         });
     }
 
-    // ━━━━━━━━━━━━━━━ D05~D07: RealTimeDatalakeSubscriber 生命周期 ━━━━━━━━━━━━━━━
+ // ━━━━━━━━━━━━━━━ D05~D07: real时间数据湖subscriber 生命周期 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试subscriberlifecycle。
+     */
     private static void testSubscriberLifecycle() {
         log.info("───── D05~D07: RealTimeDatalakeSubscriber 生命周期 ─────");
 
@@ -215,8 +240,11 @@ public class DatalakeDeepProbe {
         });
     }
 
-    // ━━━━━━━━━━━━━━━ D08~D10: DatalakeServer 生命周期 ━━━━━━━━━━━━━━━
+ // ━━━━━━━━━━━━━━━ D08~D10: 数据湖服务端 生命周期 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试数据湖服务端lifecycle。
+     */
     private static void testDatalakeServerLifecycle() throws Exception {
         log.info("───── D08~D10: DatalakeServer 生命周期 ─────");
 
@@ -296,8 +324,11 @@ public class DatalakeDeepProbe {
         });;
     }
 
-    // ━━━━━━━━━━━━━━━ D11~D13: Webhook /batch 边界 ━━━━━━━━━━━━━━━
+ // ━━━━━━━━━━━━━━━ D11~D13: Webhook /批量 边界 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试webhookbatchedge。
+     */
     private static void testWebhookBatchEdge() throws Exception {
         log.info("───── D11~D13: Webhook /batch 端点边界 ─────");
 
@@ -357,7 +388,9 @@ public class DatalakeDeepProbe {
                 Thread.sleep(300);
                 StringBuilder sb = new StringBuilder("[");
                 for (int i = 0; i < 1000; i++) {
-                    if (i > 0) sb.append(',');
+                    if (i > 0) {
+                        sb.append(',');
+                    }
                     sb.append("{\"seq\":").append(i).append(",\"v\":\"x\"}");
                 }
                 sb.append("]");
@@ -377,8 +410,11 @@ public class DatalakeDeepProbe {
         });;
     }
 
-    // ━━━━━━━━━━━━━━━ D14~D17: DataEnvelope 极端边界值 ━━━━━━━━━━━━━━━
+ // ━━━━━━━━━━━━━━━ D14~D17: 数据envelope 极端边界值 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试数据envelopeboundary。
+     */
     private static void testDataEnvelopeBoundary() {
         log.info("───── D14~D17: DataEnvelope 极端边界值 ─────");
 
@@ -433,6 +469,9 @@ public class DatalakeDeepProbe {
 
     // ━━━━━━━━━━━━━━━ D18~D20: 高并发压测 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试highconcurrencystress。
+     */
     private static void testHighConcurrencyStress() throws Exception {
         log.info("───── D18~D20: 高并发压测 ─────");
 
@@ -512,6 +551,14 @@ public class DatalakeDeepProbe {
     }
 
     // ━━━━━━━━━━━━━━━ 辅助 ━━━━━━━━━━━━━━━
+    /**
+     * 探针检查接口。
+     *
+     * @author CH
+     * @since 4.0.0
+     * @param name 名称
+     * @param check 检查
+     */
 
     private static void check(String name, ProbeCheck check) {
         total++;
@@ -538,15 +585,36 @@ public class DatalakeDeepProbe {
     }
 
     // ━━━━━━━━━━━━━━━ 辅助类 ━━━━━━━━━━━━━━━
+    /**
+      * capturingsink类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
 
     public static class CapturingSink implements DataSink {
-        private final String type;
-        private final AtomicInteger count = new AtomicInteger(0);
-        private volatile Map<String, Object> lastConfig;
+        private final String type; // 类型
+        private final AtomicInteger count = new AtomicInteger(0); // 数量
+        private volatile Map<String, Object> lastConfig; // 最后一个配置
 
+        /**
+          * capturingsink。
+         * @param type 类型
+         */
         public CapturingSink(String type) { this.type = type; }
+        /**
+         * reset。
+         */
         public void reset() { count.set(0); lastConfig = null; }
+        /**
+         * 获取数量。
+         * @return 获取数量的结果
+         */
         public int getCount() { return count.get(); }
+        /**
+         * 获取最后一个配置。
+         * @return 获取最后一个配置的结果
+         */
         public Map<String, Object> getLastConfig() { return lastConfig; }
         @Override public String type() { return type; }
         @Override public void start() {}

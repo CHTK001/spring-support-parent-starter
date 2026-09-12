@@ -23,7 +23,7 @@ import java.io.Serializable;
  */
 @Data
 public class ApiResult<T> implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
      * 是否成功
@@ -31,28 +31,28 @@ public class ApiResult<T> implements Serializable {
     private boolean success;
 
     /**
-     * 业务数据（成功时返回，始终输出即使为 null）
+      * 业务数据（成功时返回，始终输出即使为 空）
      */
     @JsonInclude(JsonInclude.Include.ALWAYS)
-    private T data;
+    private T data; // 数据
 
     /**
      * 机器可读错误码（如 CONVERSATION_ARCHIVED / FORBIDDEN）
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    private String code;
+    private String code; // 编码
 
     /**
      * 人类可读错误信息
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    private String error;
+    private String error; // 错误
 
     /**
      * 附加提示信息
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    private String msg;
+    private String msg; // msg
 
     /**
      * 构造成功响应。

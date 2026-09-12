@@ -8,6 +8,7 @@ import lombok.Getter;
 /**
  * 消息
  * @author CH
+ * @since 4.0.0
  */
 @Getter
 public enum SseMessageType {

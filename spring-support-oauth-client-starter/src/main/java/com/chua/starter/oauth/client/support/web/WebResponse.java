@@ -20,11 +20,12 @@ import java.io.IOException;
  * 响应
  *
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class WebResponse {
 
-    /** Auth属性 */
+    /** 认证属性 */
     private final AuthClientProperties authProperties;
     /** Chain */
     private final FilterChain chain;
@@ -34,11 +35,14 @@ public class WebResponse {
     private final HttpServletResponse response;
 
     /**
-     * 创建 WebResponse 实例
-     * @param authProperties authProperties
-     * @param FilterChain FilterChain
-     * @param HttpServletRequest HttpServletRequest
-     * @param HttpServletResponse HttpServletResponse
+      * 创建 web响应 实例
+     * @param authProperties 认证属性
+     * @param chain 过滤器chain
+     * @param request httpservlet请求
+     * @param response httpservlet响应
+     * @param chain chain
+     * @param request 请求
+     * @param response 响应
      */
     public WebResponse(AuthClientProperties authProperties, FilterChain chain, HttpServletRequest request, HttpServletResponse response) {
         this.authProperties = authProperties;
@@ -47,7 +51,11 @@ public class WebResponse {
         this.response = response;
     }
 
-    /** DoFailureChain */
+    /**
+     * 执行失败chain
+     *
+     * @param information 信息
+     */
     public void doFailureChain(Information information) {
         if (null != information) {
             response.setStatus(information.getCode());
@@ -73,7 +81,11 @@ public class WebResponse {
 
     }
 
-    /** 是否Localhost */
+    /**
+     * 是否Localhost
+     *
+     * @return 是否localhost的结果
+     */
     private boolean isLocalhost() {
         String ipAddress = RequestUtils.getIpAddress(request);
         return null == ipAddress || "localhost".equalsIgnoreCase(ipAddress) || "127.0.0.1".equalsIgnoreCase(ipAddress);

@@ -10,6 +10,8 @@ import java.lang.annotation.Target;
 /**
  * 隐藏字段
  *
+ * @author CH
+ * @since 4.0.0
  */
 @Target({ElementType.FIELD, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)

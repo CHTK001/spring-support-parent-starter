@@ -14,14 +14,18 @@ import static com.chua.starter.datasource.support.DynamicDataSource.TARGET_DATA_
  * 数据源管理器
  *
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class DataSourceContextSupport {
 
+    /**
+     * 数据源上下文支持。
+     */
     private DataSourceContextSupport() {
     }
 
-    public static final Map<Object, Object> DATA_SOURCE_MAP = new ConcurrentHashMap<>();
+    public static final Map<Object, Object> DATA_SOURCE_MAP = new ConcurrentHashMap<>(); // 数据源映射
 
     /**
      * 默认数据源
@@ -32,7 +36,7 @@ public class DataSourceContextSupport {
      */
     private static final ThreadLocal<String> CONTEXT_HOLDER = new ThreadLocal<>();
 
-    /** 数据源上下文栈（用于 @DSTransactional 嵌套切换） */
+    /** 数据源上下文栈（用于 @dstransactional 嵌套切换） */
     /** Ds_stack */
     private static final ThreadLocal<Deque<String>> DS_STACK = ThreadLocal.withInitial(ArrayDeque::new);
 
@@ -43,7 +47,7 @@ public class DataSourceContextSupport {
      */
     public static void setDbType(String dbType) {
         CONTEXT_HOLDER.set(dbType);
-        // 当 @DSTransactional 激活时，自动追踪已使用的数据源
+ // 当 @dstransactional 激活时，自动追踪已使用的数据源
         MultiDSTransactionContext ctx = MultiDSTransactionContext.getCurrent();
         if (ctx != null) {
             ctx.pushDataSource(dbType);
@@ -62,7 +66,7 @@ public class DataSourceContextSupport {
     /**
      * 弹出数据源上下文栈，恢复上一级上下文
      *
-     * @return 上一级数据源名称（栈空时返回 null）
+     * @return 上一级数据源名称（栈空时返回 空）
      */
     public static String popDbType() {
         Deque<String> stack = DS_STACK.get();

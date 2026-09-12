@@ -13,9 +13,9 @@ import com.chua.starter.ai.support.entity.SysAiSessionCompression;
 public interface SysAiSessionCompressionService {
 
     /**
-     * 按会话 ID 查询压缩上下文。
+      * 按会话 标识 查询压缩上下文。
      *
-     * @param sessionId 会话 ID
+     * @param sessionId 会话 标识
      * @return 压缩上下文实体，不存在时返回 {@code null}
      */
     SysAiSessionCompression getBySessionId(Long sessionId);
@@ -30,7 +30,7 @@ public interface SysAiSessionCompressionService {
     /**
      * 删除会话的压缩上下文。
      *
-     * @param sessionId 会话 ID
+     * @param sessionId 会话 标识
      */
     void deleteBySessionId(Long sessionId);
 }

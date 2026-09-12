@@ -34,7 +34,7 @@ public class MailboxController {
     /**
      * 收件箱邮件列表
      *
-     * @param identityId 邮箱身份 ID
+     * @param identityId 邮箱身份 标识
      * @param folder     文件夹(默认 INBOX)
      * @param limit      最大条数(默认 20)
      * @return 邮件列表
@@ -50,7 +50,7 @@ public class MailboxController {
     /**
      * 邮件正文详情
      *
-     * @param identityId 邮箱身份 ID
+     * @param identityId 邮箱身份 标识
      * @param folder     文件夹(默认 INBOX)
      * @param subject    邮件主题关键字(定位，可空默认最新)
      * @return 邮件详情

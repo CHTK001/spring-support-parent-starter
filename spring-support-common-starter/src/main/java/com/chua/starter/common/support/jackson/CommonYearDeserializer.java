@@ -51,7 +51,7 @@ public class CommonYearDeserializer extends YearDeserializer {
                 // 尝试标准解析
                 return _fromString(parser, context, parser.getText());
             } catch (IOException e) {
-                // 标准解析失败，尝试通过 DateUtils 解析为 LocalDateTime
+ // 标准解析失败，尝试通过 日期工具 解析为 本地日期时间
                 try {
                     LocalDateTime ldt = DateUtils.toLocalDateTime(parser.getText());
                     if (ldt != null) {
@@ -63,7 +63,7 @@ public class CommonYearDeserializer extends YearDeserializer {
                 throw e;
             }
         }
-        // 30-Sep-2020, tatu: New! "Scalar from Object" (mostly for XML)
+ // 30-Sep-2020, tatu: 新! "Scalar 从 对象" (Most.js for XML)
         if (t == JsonToken.START_OBJECT) {
             return _fromString(parser, context,
                     context.extractScalarFromObject(parser, this, handledType()));

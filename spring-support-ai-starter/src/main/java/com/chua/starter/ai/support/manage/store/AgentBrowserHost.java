@@ -10,11 +10,11 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 浏览器 Host 实体类。
+   * 浏览器 主机 实体类。
  *
  * <p>Host 代表一个托管的浏览器宿主进程。每个 Host 可以承载多个 Lane，
- * 并负责管理浏览器的生命周期、资源分配和隔离策略。Host 重启后 epoch 递增，
- * 前端通过此值判断 Lane 是否属于当前活跃的 Host。</p>
+   * 并负责管理浏览器的生命周期、资源分配和隔离策略。主机 重启后 轮次 递增，
+   * 前端通过此值判断 Lane 是否属于当前活跃的 主机。</p>
  *
  * <p>数据来源：{@code sys_agent_browser_host} 表</p>
  *
@@ -26,19 +26,19 @@ import java.io.Serializable;
 @Schema(description = "浏览器宿主进程信息")
 public class AgentBrowserHost implements Serializable {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
-     * Host 唯一标识。
+      * 主机 唯一标识。
      *
      * <p>由后端自动生成，用于在系统中唯一标识一个浏览器宿主进程。</p>
      */
     @TableId(type = IdType.INPUT)
     @Schema(description = "Host 唯一标识", example = "default-host")
-    private String hostId;
+    private String hostId; // 主机标识
 
     /**
-     * Host 生命周期状态。
+      * 主机 生命周期状态。
      *
      * <p>取值范围：</p>
      * <ul>
@@ -52,28 +52,28 @@ public class AgentBrowserHost implements Serializable {
      */
     @TableField("state")
     @Schema(description = "Host 生命周期状态", example = "running")
-    private String state;
+    private String state; // 状态
 
     /**
-     * Host 纪元（Epoch）。
+      * 主机 纪元（轮次）。
      *
      * <p>每次 Host 重启后递增。Lane 通过此值判断自己是否仍属于当前活跃的 Host。
-     * 如果 Lane 的 browser_epoch 与 Host 的 epoch 不匹配，说明 Host 已重启，
+      * 如果 Lane 的 browser_轮次 与 主机 的 轮次 不匹配，说明 主机 已重启，
      * Lane 需要重新初始化。</p>
      */
     @TableField("epoch")
     @Schema(description = "Host 纪元，重启后递增", example = "1")
-    private Long epoch;
+    private Long epoch; // 轮次
 
     /**
      * 是否以有头模式（Headful）运行。
      *
      * <p>{@code true} 表示 Host 以可见窗口模式运行，{@code false} 表示无头模式。
-     * 此字段反映 Host 的实际运行模式，而非配置策略。</p>
+      * 此字段反映 主机 的实际运行模式，而非配置策略。</p>
      */
     @TableField("headful")
     @Schema(description = "是否以有头模式运行", example = "false")
-    private Boolean headful;
+    private Boolean headful; // headful
 
     /**
      * 身份模式（Identity Mode）。
@@ -88,7 +88,7 @@ public class AgentBrowserHost implements Serializable {
      */
     @TableField("identity_mode")
     @Schema(description = "身份模式", example = "anonymous")
-    private String identityMode;
+    private String identityMode; // identitymode
 
     /**
      * 当前承载的 Lane 数量。
@@ -97,16 +97,16 @@ public class AgentBrowserHost implements Serializable {
      */
     @TableField("lane_count")
     @Schema(description = "当前承载的 Lane 数量", example = "0")
-    private Integer laneCount;
+    private Integer laneCount; // lane数量
 
     /**
-     * 常驻内存大小（RSS, Resident Set Size），单位：字节。
+      * 常驻内存大小（RSS, Resident 设置 大小），单位：字节。
      *
      * <p>记录 Host 进程的实际内存占用，用于全局资源压力评估和调度决策。</p>
      */
     @TableField("rss_bytes")
     @Schema(description = "常驻内存大小（字节）", example = "0")
-    private Long rssBytes;
+    private Long rssBytes; // rssbytes
 
     /**
      * 创建时间（毫秒级时间戳）。
@@ -115,7 +115,7 @@ public class AgentBrowserHost implements Serializable {
      */
     @TableField("created_at")
     @Schema(description = "创建时间（毫秒级时间戳）")
-    private Long createdAt;
+    private Long createdAt; // 创建at
 
     /**
      * 更新时间（毫秒级时间戳）。
@@ -124,5 +124,5 @@ public class AgentBrowserHost implements Serializable {
      */
     @TableField("updated_at")
     @Schema(description = "更新时间（毫秒级时间戳）")
-    private Long updatedAt;
+    private Long updatedAt; // 更新at
 }

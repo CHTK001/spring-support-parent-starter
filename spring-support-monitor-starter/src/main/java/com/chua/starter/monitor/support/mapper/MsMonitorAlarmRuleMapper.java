@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.monitor.support.entity.MsMonitorAlarmRule;
 
 /**
- * MsMonitorAlarmRule Mapper
+   * ms监控报警器rule 映射器
  *
  * @author CH
  * @since 4.0.0.42

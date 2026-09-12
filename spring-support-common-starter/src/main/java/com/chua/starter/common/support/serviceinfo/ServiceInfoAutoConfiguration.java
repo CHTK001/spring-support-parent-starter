@@ -34,7 +34,7 @@ import java.util.Map;
  * <h3>运行时序保证</h3>
  * <ul>
  *   <li>基础端点检测在 {@link org.springframework.boot.context.event.ApplicationReadyEvent}
- *       阶段执行; 此时所有 starter 的 {@code @Bean ServiceInfoContributor} 都已注册。</li>
+   * 阶段执行; 此时所有 启动 的 {@code @Bean ServiceInfoContributor} 都已注册。</li>
  *   <li>横幅渲染通过 {@link ServiceInfoBannerListener} 在 ready/failed 事件中触发,
  *       比业务 {@code CommandLineRunner} 更晚 (即使它们没有显式 {@code @Order})。</li>
  * </ul>
@@ -51,33 +51,52 @@ public class ServiceInfoAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    /** ServiceInfoController */
+    /**
+     * 服务信息控制器
+     *
+     * @return 服务信息控制器的结果
+     */
     public ServiceInfoController serviceInfoController() {
+        /**
+         * 服务信息控制器。
+         * @return 服务信息控制器的结果
+         */
         return new ServiceInfoController();
     }
 
     @Bean
     @Order(Ordered.LOWEST_PRECEDENCE)
-    /** ServiceInfoEndpointDetector */
+    /** 服务信息端点detector */
     public ServiceInfoEndpointDetector serviceInfoEndpointDetector(
             Environment environment, ServiceInfoProperties properties) {
+        /**
+         * 服务信息端点detector。
+         * @param environment 环境
+         * @return 服务信息端点detector的结果
+         */
         return new ServiceInfoEndpointDetector(environment)
                 .infrastructureEnabled(properties.isInfrastructure());
     }
 
     @Bean
     /**
-     * ServiceInfoBannerListener
+      * 服务信息banner监听器
      * @param detector detector
-     * @param properties properties
+     * @param properties 属性
      */
     public ServiceInfoBannerListener serviceInfoBannerListener(
             ServiceInfoEndpointDetector detector, ServiceInfoProperties properties) {
+        /**
+         * 服务信息banner监听器。
+         * @param detector detector
+         * @param properties 属性
+         * @return 服务信息banner监听器的结果
+         */
         return new ServiceInfoBannerListener(detector, properties);
     }
 
     /**
-     * 注册 ServiceInfo 认证过滤器 (可选)。
+      * 注册 服务信息 认证过滤器 (可选)。
      *
      * <p>当 {@code plugin.service-info.auth.enable=true} 时注册, 否则不创建。</p>
      */
@@ -101,12 +120,18 @@ public class ServiceInfoAutoConfiguration {
      *
      * <p>注意: 此端点暴露应用内部信息 (包括路径、开关状态), 默认应仅内网访问;
      * 公网访问请通过 {@code plugin.service-info.auth.enable=true} 启用认证。</p>
+     * @author CH
+     * @since 4.0.0
      */
     @RestController
     @RequestMapping("/service-info")
     public static class ServiceInfoController {
         @GetMapping
-        /** Info */
+        /**
+         * 信息
+         *
+         * @return 信息的结果
+         */
         public Map<String, Object> info() {
             return ServiceInfoRegistry.getInstance().getInfo();
         }
@@ -120,6 +145,7 @@ public class ServiceInfoAutoConfiguration {
      *
      * <p>由 {@link ServiceInfoBannerListener} 调用, package-private 静态方法,
      * 避免业务 starter 误用。</p>
+     * @param registry registry
      */
     static void printBanner(ServiceInfoRegistry registry) {
         String banner = ServiceInfoBanner.render(registry);

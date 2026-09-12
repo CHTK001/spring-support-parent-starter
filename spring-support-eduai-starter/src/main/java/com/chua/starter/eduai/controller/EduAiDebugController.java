@@ -37,6 +37,7 @@ public class EduAiDebugController {
 
     /**
      * AI 健康检查。
+     * @return AI健康的结果
      */
     @Operation(summary = "AI 模块健康检查")
     @GetMapping("/ai-health")
@@ -50,6 +51,7 @@ public class EduAiDebugController {
 
     /**
      * 队列连通性测试（echo）。
+     * @return 队列echo的结果
      */
     @Operation(summary = "队列连通性测试")
     @GetMapping("/queue-echo")
@@ -65,6 +67,7 @@ public class EduAiDebugController {
 
     /**
      * 队列名称常量（供前端展示）。
+     * @return 队列名称的结果
      */
     @Operation(summary = "队列名称")
     @GetMapping("/queue-name")

@@ -19,7 +19,7 @@ import java.io.IOException;
  *     <li>桌面模式携带 {@code x-nomi-local-trust} 头（Tauri 预加载注入的 per-boot 密钥）→ 标记为受信本地客户端放行；</li>
  *     <li>否则（WebUI 浏览器模式 / 本地开发）→ 默认放行。</li>
  * </ul>
- * 其余路径交由现有 {@code @Permission} / Bearer Token 机制处理，本过滤器不做干预。</p>
+   * 其余路径交由现有 {@code @Permission} / Bearer 令牌 机制处理，本过滤器不做干预。</p>
  *
  * @since 4.0.0.42
  * @author CH

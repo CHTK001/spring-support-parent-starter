@@ -18,24 +18,24 @@ import lombok.Data;
 public class DevicePreset {
 
     /**
-     * 主键 ID
+      * 主键 标识
      */
     @TableId(value = "device_preset_id", type = IdType.ASSIGN_UUID)
-    /** DevicepresetID */
+    /** devicepresetid */
     private String devicePresetId;
 
     /**
-     * 所属设备 ID
+      * 所属设备 标识
      */
     @TableField("device_preset_device_id")
-    /** DevicepresetdeviceID */
+    /** devicepresetdeviceid */
     private String devicePresetDeviceId;
 
     /**
      * 预置位编号
      */
     @TableField("device_preset_no")
-    /** DevicepresetNO */
+    /** devicepresetno */
     private Integer devicePresetNo;
 
     /**

@@ -15,10 +15,10 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Leader 单秒扫描循环 (SCHEDULER / SINGLE 角色专用)。
+   * 铅 单秒扫描循环 (调度器 / 单个 角色专用)。
  *
  * <p>每秒调用 {@link JobRepository#findDue(long, long, int)} 拉取到期任务,
- * 通过 {@link JobSyncBus#publish(String, String, Object)} 发出 cmd 事件:</p>
+   * 通过 {@link JobSyncBus#publish(String, String, Object)} 发出 CMD 事件:</p>
  * <ul>
  *   <li>SCHEDULER: bus 上的 cmd 事件被 {@code SchedulerSyncBinder} 转发给所有 Executor</li>
  *   <li>SINGLE:    bus 上的 cmd 事件被本地 {@code JobExecutor} 直接消费</li>
@@ -110,6 +110,10 @@ public class JobLeaderLoop {
                 nodeId, intervalMs, preReadMs);
         while (running.get()) {
             try {
+                /**
+                 * tick。
+                 * @param preReadMs pre读取ms
+                 */
                 tick(preReadMs);
             } catch (Throwable ex) {
                 log.error("[job] Leader 循环异常", ex);

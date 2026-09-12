@@ -5,10 +5,11 @@ import lombok.Data;
 /**
  * 订单创建结果
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class OrderCreateResult {
-    /** Success */
+    /** 成功 */
     private boolean success;
     /** 排序NO */
     private String orderNo;

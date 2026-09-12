@@ -6,12 +6,12 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import java.lang.management.ManagementFactory;
 
 /**
- * 进程ID转换器
+   * 进程标识转换器
  * <p>
- * 用于在日志中输出当前进程ID。
+   * 用于在日志中输出当前进程标识。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/01/01
  * @author CH
  */
@@ -20,7 +20,11 @@ public class PidConverter extends ClassicConverter {
     /** PID */
     private static final String PID = getPid();
 
-    /** 获取Pid */
+    /**
+     * 获取Pid
+     *
+     * @return 获取pid的结果
+     */
     private static String getPid() {
         String name = ManagementFactory.getRuntimeMXBean().getName();
         return name.split("@")[0];

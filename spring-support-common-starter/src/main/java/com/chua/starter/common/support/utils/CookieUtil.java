@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
  *
  * @author xuxueli 2015-12-12 18:01:06
  * @author CH
+ * @since 4.0.0
  */
 public class CookieUtil {
 
@@ -26,10 +27,11 @@ public class CookieUtil {
     private static final String COOKIE_PATH = "/";
 
     /**
-     * 获取cookie
+      * 获取Cookie
      *
-     * @param cookieName cookie
+     * @param cookieName Cookie
      * @return cookie
+     * @param cookies Cookie
      */
     public static Cookie getCookie(Cookie[] cookies, String cookieName) {
         if (null == cookies) {
@@ -46,21 +48,31 @@ public class CookieUtil {
     }
 
     /**
-     * 将键值对存储到HttpServletResponse中，可以选择是否长期保存。
+      * 将键值对存储到httpservlet响应中，可以选择是否长期保存。
      *
-     * @param response 用于设置Cookie的HttpServletResponse对象。
+     * @param response 用于设置Cookie的httpservlet响应对象。
      * @param key Cookie的键。
      * @param value Cookie的值。
      * @param ifRemember 是否记住该Cookie，如果为true，则设置较长的过期时间；否则，设置为会话Cookie。
      */
     public static void set(HttpServletResponse response, String key, String value, boolean ifRemember) {
-        // 如果response为null，则直接返回，不执行任何操作。
+ // 如果响应为空，则直接返回，不执行任何操作。
         if(null == response) {
             return;
         }
-        // 根据ifRemember的值确定Cookie的过期时间。
+ // 根据ifremember的值确定Cookie的过期时间。
         int age = ifRemember ? COOKIE_MAX_AGE : -1;
-        // 调用另一个set方法，完成Cookie的设置。
+ // 调用另一个设置方法，完成Cookie的设置。
+        /**
+         * 设置。
+         * @param response 响应
+         * @param key 钥匙
+         * @param value 价值观
+         * @param null 空
+         * @param COOKIE_PATH Cookie路径
+         * @param age age
+         * @param true true
+         */
         set(response, key, value, null, COOKIE_PATH, age, true);
     }
 
@@ -91,15 +103,15 @@ public class CookieUtil {
     }
 
     /**
-     * 从HttpServletRequest中获取指定键对应的Cookie其值。
-     * 此方法首先检查请求是否为null，然后尝试根据键查找Cookie。如果找到，则返回Cookie的值。
+      * 从httpservlet请求中获取指定键对应的Cookie其值。
+      * 此方法首先检查请求是否为空，然后尝试根据键查找Cookie。如果找到，则返回Cookie的值。
      *
-     * @param request HttpServletRequest对象，从中检索Cookie。
+     * @param request httpservlet请求对象，从中检索Cookie。
      * @param key 要查找的Cookie的键。
      * @return 如果找到指定键的Cookie，则返回其值；否则返回null。
      */
     public static String getValue(HttpServletRequest request, String key) {
-        // 检查请求对象是否为空，为空则直接返回null
+ // 检查请求对象是否为空，为空则直接返回空
         if(request == null) {
             return null;
         }
@@ -110,16 +122,16 @@ public class CookieUtil {
         if (cookie != null) {
             return cookie.getValue();
         }
-        // 如果Cookie不存在，则返回null
+ // 如果Cookie不存在，则返回空
         return null;
     }
 
     /**
-     * 从HttpServletRequest中获取指定名称的Cookie。
+      * 从httpservlet请求中获取指定名称的Cookie。
      * 这个方法用于在服务器端根据Cookie的名称查找并返回对应的Cookie对象。
-     * 如果找不到匹配的Cookie，则返回null。
+      * 如果找不到匹配的Cookie，则返回空。
      *
-     * @param request HttpServletRequest对象，从中获取Cookie。
+     * @param request httpservlet请求对象，从中获取Cookie。
      * @param key 指定的Cookie名称。
      * @return 返回名称匹配的Cookie对象，如果不存在则返回null。
      */
@@ -131,7 +143,7 @@ public class CookieUtil {
     /**
      * 从Cookie数组中获取指定名称的Cookie。
      * 这个方法用于在服务器端根据Cookie的名称查找并返回对应的Cookie对象。
-     * 如果找不到匹配的Cookie，则返回null。
+      * 如果找不到匹配的Cookie，则返回空。
      *
      * @param cookies Cookie数组，从中获取Cookie。
      * @param key 指定的Cookie名称。
@@ -142,13 +154,13 @@ public class CookieUtil {
         if (cookies != null) {
             // 遍历所有Cookie，寻找匹配名称的Cookie
             for (Cookie cookie : cookies) {
-                // 如果当前Cookie的名称与参数key匹配，则返回该Cookie
+ // 如果当前Cookie的名称与参数钥匙匹配，则返回该Cookie
                 if (cookie.getName().equals(key)) {
                     return cookie;
                 }
             }
         }
-        // 如果没有找到匹配的Cookie，返回null
+ // 如果没有找到匹配的Cookie，返回空
         return null;
     }
 
@@ -157,11 +169,21 @@ public class CookieUtil {
      *
      * @param request  请求
      * @param response 详情
-     * @param key      cookie
+     * @param key      Cookie
      */
     public static void remove(HttpServletRequest request, HttpServletResponse response, String key) {
         Cookie cookie = get(request, key);
         if (cookie != null) {
+            /**
+             * 设置。
+             * @param response 响应
+             * @param key 钥匙
+             * @param "" ""
+             * @param null 空
+             * @param COOKIE_PATH Cookie路径
+             * @param 0 0
+             * @param false false
+             */
             set(response, key, "", null, COOKIE_PATH, 0, false);
         }
     }
@@ -170,7 +192,7 @@ public class CookieUtil {
      * 到字符串
      *
      * @param cookies Cookie
-     * @return {@link String}
+     * @return {@link 字符串}
      */
     public static String toString(Cookie... cookies) {
         return Joiner.on(";").withKeyValueSeparator("=").join(Arrays.stream(cookies)

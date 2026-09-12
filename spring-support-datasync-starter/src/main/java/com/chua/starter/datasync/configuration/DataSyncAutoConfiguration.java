@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * DataSync 自动配置。
+   * 数据同步 自动配置。
  *
  * @since 4.0.0.42
  * @author CH
@@ -39,17 +39,25 @@ public class DataSyncAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    /** DataSyncMappingManager */
+    /**
+     * 数据同步mapping管理器
+     *
+     * @return 数据同步mapping管理器的结果
+     */
     public DataSyncMappingManager dataSyncMappingManager() {
+        /**
+         * 默认数据同步mapping管理器。
+         * @return 默认数据同步mapping管理器的结果
+         */
         return new DefaultDataSyncMappingManager();
     }
 
     @Bean
     @ConditionalOnMissingBean
     /**
-     * DataSyncServer
-     * @param agentServerManager agentServerManager
-     * @param mappingManager mappingManager
+      * 数据同步服务端
+     * @param agentServerManager 智能体服务端管理器
+     * @param mappingManager mapping管理器
      */
     public com.chua.starter.datasync.DataSyncServer dataSyncServer(AgentServerManager agentServerManager,
                                                                    DataSyncMappingManager mappingManager) {
@@ -60,8 +68,19 @@ public class DataSyncAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    /** AgentServerManager */
+    /**
+     * 智能体服务端管理器
+     *
+     * @return 智能体服务端管理器的结果
+     */
     public AgentServerManager agentServerManager() {
+        /**
+         * 数据同步智能体服务端。
+         * @param null 空
+         * @param null 空
+         * @param "default-server" "默认-服务端"
+         * @return 数据同步智能体服务端的结果
+         */
         return new DataSyncAgentServer(null, null, "default-server");
     }
 
@@ -69,9 +88,9 @@ public class DataSyncAutoConfiguration {
     @ConditionalOnProperty(prefix = "plugin.datasync", name = "mapping-source", havingValue = "file")
     @ConditionalOnMissingBean
     /**
-     * DirectoryDataSyncMappingScanner
-     * @param properties properties
-     * @param mappingManager mappingManager
+      * 目录数据同步mappingscanner
+     * @param properties 属性
+     * @param mappingManager mapping管理器
      */
     public DirectoryDataSyncMappingScanner directoryDataSyncMappingScanner(DatasyncProperties properties,
                                                                           DataSyncMappingManager mappingManager) {
@@ -90,51 +109,68 @@ public class DataSyncAutoConfiguration {
     @ConditionalOnProperty(prefix = "plugin.datasync.database-mapping", name = "enabled", havingValue = "true")
     @ConditionalOnMissingBean
     /**
-     * DatabaseMappingLoader
-     * @param dataSource dataSource
-     * @param properties properties
-     * @param mappingManager mappingManager
+      * databasemapping加载
+     * @param dataSource 数据源
+     * @param properties 属性
+     * @param mappingManager mapping管理器
      */
     public DatabaseMappingLoader databaseMappingLoader(javax.sql.DataSource dataSource,
                                                        DatasyncProperties properties,
                                                        DataSyncMappingManager mappingManager) {
+        /**
+         * databasemapping加载。
+         * @param dataSource 数据源
+         * @param properties 属性
+         * @param mappingManager mapping管理器
+         * @return databasemapping加载的结果
+         */
         return new DatabaseMappingLoader(dataSource, properties, mappingManager);
     }
 
+    /**
+     * 简单目录配置definition类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     private static class SimpleDirectoryConfigDefinition implements DirectoryConfigDefinition {
-        /** Directory路径 */
+        /** 目录路径 */
         private final String directoryPath;
 
+        /**
+         * 简单目录配置definition。
+         * @param directoryPath 目录路径
+         */
         SimpleDirectoryConfigDefinition(String directoryPath) {
             this.directoryPath = directoryPath;
         }
 
         @Override
-        /** DirectoryPath */
+        /** 目录路径 */
         public String directoryPath() {
             return directoryPath;
         }
 
         @Override
-        /** InputId */
+        /** 输入标识 */
         public String inputId() {
             return null;
         }
 
         @Override
-        /** SourceId */
+        /** 源标识 */
         public String sourceId() {
             return null;
         }
 
         @Override
-        /** OutputId */
+        /** 输出标识 */
         public String outputId() {
             return null;
         }
 
         @Override
-        /** SinkId */
+        /** sinkid */
         public String sinkId() {
             return null;
         }
@@ -146,13 +182,13 @@ public class DataSyncAutoConfiguration {
         }
 
         @Override
-        /** Batch */
+        /** 批量 */
         public int batch() {
             return 100;
         }
 
         @Override
-        /** CronType */
+        /** cron类型 */
         public String cronType() {
             return null;
         }
@@ -164,14 +200,18 @@ public class DataSyncAutoConfiguration {
         }
 
         @Override
-        /** Params */
+        /** 参数 */
         public Map<String, Object> params() {
             return Map.of();
         }
     }
 
     @Bean
-    /** DataSyncServiceInfoContributor */
+    /**
+     * 数据同步服务信息contributor
+     *
+     * @return 数据同步服务信息contributor的结果
+     */
     public ServiceInfoContributor dataSyncServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("datasync", "数据同步", true, "数据同步模块");

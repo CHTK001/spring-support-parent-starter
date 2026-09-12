@@ -53,7 +53,7 @@ import java.util.function.Supplier;
 /**
  * 处理注解
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2021/4/12
  * @author CH
  */
@@ -61,9 +61,9 @@ import java.util.function.Supplier;
 public class MybatisPlusConfiguration {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(MybatisPlusConfiguration.class);
-    /** Encryptor_password_property */
+    /** Encryptor_密码_财产 */
     private static final String ENCRYPTOR_PASSWORD_PROPERTY = "mybatis-plus.encryptor.password";
-    /** Encryptor_mode_property */
+    /** Encryptor_mode_财产 */
     private static final String ENCRYPTOR_MODE_PROPERTY = "mybatis-plus.encryptor.mode";
 
     /**
@@ -81,7 +81,7 @@ public class MybatisPlusConfiguration {
      */
     private static final String LOGIC_NOT_DELETE_VALUE = "0";
 
-    /** Mybatis属性 */
+    /** MyBatis属性 */
     private final MybatisPlusProperties mybatisProperties;
     /** Methodsecurityinterceptor */
     private final MybatisPlusDataScopeProperties methodSecurityInterceptor;
@@ -100,11 +100,14 @@ public class MybatisPlusConfiguration {
         this.mybatisProperties = mybatisProperties;
         this.methodSecurityInterceptor = methodSecurityInterceptor;
         this.environment = environment;
+        /**
+         * 同步encryptor属性。
+         */
         syncEncryptorProperties();
     }
 
     static {
-        // 不使用 sanitizeSingleSql，避免 JSQLParser 将 AS group 等关键字别名解析失败
+ // 不使用 sanitize单个SQL，避免 jsqlparser 将 AS 群体 等关键字别名解析失败
         JsqlParserGlobal.setParserMultiFunc((sql) -> {
             return CCJSqlParserUtil.parseStatements(sql, JsqlParserGlobal.getExecutorService(), null);
         });
@@ -120,12 +123,16 @@ public class MybatisPlusConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public PaginationInnerInterceptor paginationInnerInterceptor() {
+        /**
+         * pagination内部拦截器。
+         * @return pagination内部拦截器的结果
+         */
         return new PaginationInnerInterceptor();
     }
 
 
     /**
-     * 配置MyBatis Plus全局配置
+       * 配置MyBatis Plus全局配置
      *
      * @return GlobalConfig 全局配置对象
      */
@@ -146,10 +153,16 @@ public class MybatisPlusConfiguration {
      * 删除权限
      *
      * @return OptimisticLockerInnerInterceptor
+     * @param authService 认证服务
      */
     @Bean
     @ConditionalOnMissingBean
     public DeleteOnlySelfInterceptor deleteOnlySelfInterceptor(AuthService authService) {
+        /**
+         * 删除onlyself拦截器。
+         * @param authService 认证服务
+         * @return 删除onlyself拦截器的结果
+         */
         return new DeleteOnlySelfInterceptor(authService);
     }
     /**
@@ -172,6 +185,13 @@ public class MybatisPlusConfiguration {
         if(null == dataPermissionHandler) {
             dataPermissionHandler = new MybatisPlusDataPermissionHandler(methodSecurityInterceptor, authServiceSupplier);
         }
+        /**
+         * mybatisplus数据权限拦截器。
+         * @param dataPermissionHandler 数据权限处理器
+         * @param methodSecurityInterceptor 方法安全性拦截器
+         * @param authServiceSupplier 认证服务供应商
+         * @return mybatisplus数据权限拦截器的结果
+         */
         return new MybatisPlusDataPermissionInterceptor(dataPermissionHandler, methodSecurityInterceptor, authServiceSupplier);
     }
 
@@ -184,6 +204,10 @@ public class MybatisPlusConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public OptimisticLockerInnerInterceptor optimisticLockerInnerInterceptor() {
+        /**
+         * optimistic锁内部拦截器。
+         * @return optimistic锁内部拦截器的结果
+         */
         return new OptimisticLockerInnerInterceptor();
     }
     /**
@@ -194,11 +218,15 @@ public class MybatisPlusConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public CryptoInterceptor cryptoInterceptor() {
+        /**
+         * 加密货币拦截器。
+         * @return 加密货币拦截器的结果
+         */
         return new CryptoInterceptor();
     }
 
     /**
-     * MybatisPlusInterceptor
+      * mybatisplus拦截器
      *
      * @return MybatisPlusInterceptor
      */
@@ -224,37 +252,51 @@ public class MybatisPlusConfiguration {
 
 
     /**
-     * SqlInterceptor
+       * SQL拦截器
      *
      * @return SqlInterceptor
+     * @param sqlSessionFactory SQL会话工厂
+     * @param mybatisProperties MyBatis属性
      */
     @Bean("mapper-reload")
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = MybatisPlusProperties.PRE, name = "open-xml-reload", havingValue = "true", matchIfMissing = false)
     public Reload xmlReload(List<SqlSessionFactory> sqlSessionFactory, MybatisPlusProperties mybatisProperties) {
+        /**
+         * 映射器reload。
+         * @param sqlSessionFactory SQL会话工厂
+         * @param mybatisProperties MyBatis属性
+         * @return 映射器reload的结果
+         */
         return new MapperReload(sqlSessionFactory, mybatisProperties);
     }
     /**
-     * SupportInjector
+      * 支持injector
      *
      * @return SupportInjector
+     * @param mybatisProperties MyBatis属性
      */
     @Bean
     @ConditionalOnMissingBean(name = {"supportInjector"})
     public SupportInjector supportInjector(MybatisPlusProperties mybatisProperties) {
+        /**
+         * 支持injector。
+         * @param mybatisProperties MyBatis属性
+         * @return 支持injector的结果
+         */
         return new SupportInjector(mybatisProperties);
     }
 
     @Bean
     @ConditionalOnMissingBean
     /**
-     * MybatisConfigurationCustomizer
-     * @param mybatisProperties mybatisProperties
-     * @param materializedSqlRouter materializedSqlRouter
-     * @param materializedRouteProperties materializedRouteProperties
-     * @param multiDataSourceSettingProperties multiDataSourceSettingProperties
-     * @param applicationContext applicationContext
-     * @param slowSqlDetectInterceptorProvider slowSqlDetectInterceptorProvider
+       * MyBatis配置customizer
+     * @param mybatisProperties MyBatis属性
+     * @param materializedSqlRouter 物化sqlrouter
+     * @param materializedRouteProperties 物化route属性
+     * @param multiDataSourceSettingProperties multi数据源setting属性
+     * @param applicationContext application上下文
+     * @param slowSqlDetectInterceptorProvider slowsqldetect拦截器提供者
      */
     public ConfigurationCustomizer mybatisConfigurationCustomizer(MybatisPlusProperties mybatisProperties,
                                                                  @Autowired(required = false) MaterializedSqlDataSourceRouter materializedSqlRouter,
@@ -291,17 +333,32 @@ public class MybatisPlusConfiguration {
     @ConditionalOnProperty(prefix = MybatisPlusProperties.PRE + ".slow-sql", name = "enabled", havingValue = "true", matchIfMissing = true)
     public SlowSqlDetectInterceptor slowSqlDetectInterceptor(org.springframework.context.ApplicationEventPublisher eventPublisher,
                                                             MybatisSlowSqlProperties properties) {
+        /**
+         * slowsqldetect拦截器。
+         * @param eventPublisher 事件发布
+         * @param properties 属性
+         * @return slowsqldetect拦截器的结果
+         */
         return new SlowSqlDetectInterceptor(eventPublisher, properties);
     }
     /**
-     * MybatisEndpoint
+       * MyBatis端点
      *
-     * @return MybatisEndpoint MybatisEndpoint
+     * @return MybatisEndpoint MyBatis端点
+     * @param reload reload
+     * @param sqlSessionFactory SQL会话工厂
+     * @param false false
      */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnBean(name = {"mapper-reload", "supportInjector"})
     public MybatisEndpoint mybatisEndpoint(Reload reload, SqlSessionFactory sqlSessionFactory, @Autowired(required = false) SupportInjector supportInjector ) {
+        /**
+          * MyBatis端点。
+         * @param reload reload
+         * @param sqlSessionFactory.getConfiguration( SQL会话工厂.getconfiguration(
+         * @return mybatis端点的结果
+         */
         return new MybatisEndpoint(reload, sqlSessionFactory.getConfiguration(), supportInjector);
     }
 
@@ -325,7 +382,7 @@ public class MybatisPlusConfiguration {
         var factoryBean = new MybatisSqlSessionFactoryBean();
         factoryBean.setDataSource(dataSource);
         factoryBean.setPlugins(mybatisPlusInterceptor);
-        // 关联容器中的 MetaObjectHandler，实现公共字段自动填充（如 SysBase 的 create_time/update_time）
+ // 关联容器中的 meta对象处理器，实现公共字段自动填充（如 sysbase 的 创建_时间/更新_时间）
         MetaObjectHandler metaObjectHandler = metaObjectHandlerProvider.getIfAvailable();
         if (null != metaObjectHandler) {
             globalConfig.setMetaObjectHandler(metaObjectHandler);
@@ -340,22 +397,39 @@ public class MybatisPlusConfiguration {
      * 创建 {@link SqlSessionTemplate}。
      * <p>用于给 Mapper 提供实际使用的 SqlSession。</p>
      *
-     * @param sqlSessionFactory SqlSessionFactory 实例
+     * @param sqlSessionFactory SQL会话工厂 实例
      * @return SqlSessionTemplate 实例
      */
     @Bean
     @ConditionalOnMissingBean
     public SqlSessionTemplate sqlSessionTemplate(SqlSessionFactory sqlSessionFactory) {
+        /**
+          * SQL会话template。
+         * @param sqlSessionFactory SQL会话工厂
+         * @return sql会话template的结果
+         */
         return new SqlSessionTemplate(sqlSessionFactory);
     }
 
-    /** SyncEncryptorProperties */
+    /** 同步encryptor属性 */
     private void syncEncryptorProperties() {
+        /**
+         * 同步系统财产。
+         * @param ENCRYPTOR_PASSWORD_PROPERTY encryptor密码财产
+         */
         syncSystemProperty(ENCRYPTOR_PASSWORD_PROPERTY);
+        /**
+         * 同步系统财产。
+         * @param ENCRYPTOR_MODE_PROPERTY encryptormode财产
+         */
         syncSystemProperty(ENCRYPTOR_MODE_PROPERTY);
     }
 
-    /** SyncSystemProperty */
+    /**
+     * 同步系统财产
+     *
+     * @param propertyName 财产名称
+     */
     private void syncSystemProperty(String propertyName) {
         String value = environment.getProperty(propertyName);
         if (value == null || value.isBlank()) {
@@ -365,7 +439,11 @@ public class MybatisPlusConfiguration {
     }
 
     @Bean
-    /** MybatisPlusServiceInfoContributor */
+    /**
+     * mybatisplus服务信息contributor
+     *
+     * @return mybatisplus服务信息contributor的结果
+     */
     public ServiceInfoContributor mybatisPlusServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("mybatis", "MyBatis", true, "MyBatis Plus模块", null);

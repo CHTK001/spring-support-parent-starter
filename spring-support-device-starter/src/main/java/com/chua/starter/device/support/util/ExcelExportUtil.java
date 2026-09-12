@@ -41,6 +41,10 @@ public class ExcelExportUtil {
      */
     public static void exportDevices(HttpServletResponse response, List<DeviceInfo> devices) throws Exception {
         XSSFWorkbook workbook = new XSSFWorkbook();
+        /**
+         * 尝试。
+         * @param workbook workbook
+         */
         try (workbook) {
             Sheet sheet = workbook.createSheet("设备列表");
 
@@ -78,6 +82,10 @@ public class ExcelExportUtil {
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             response.setHeader("Content-Disposition", "attachment; filename=" + filename);
 
+            /**
+             * 尝试。
+             * @param response.getOutputStream( 响应.获取输出流(
+             */
             try (OutputStream os = response.getOutputStream()) {
                 workbook.write(os);
             }

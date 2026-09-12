@@ -23,7 +23,7 @@ import java.time.LocalDateTime;
 @TableName("ms_monitor_metric_disk")
 public class MsMonitorMetricDisk implements Serializable {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -31,15 +31,15 @@ public class MsMonitorMetricDisk implements Serializable {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
-    /** ID */
+    /** 标识 */
     private Long id;
 
     /**
-     * 监控主机 id
+      * 监控主机 标识
      */
     @TableField("ms_monitor_metric_disk_monitor_id")
     @Schema(description = "监控主机 id", example = "1")
-    /** MonitorID */
+    /** 监控标识 */
     private Long monitorId;
 
     /**
@@ -55,7 +55,7 @@ public class MsMonitorMetricDisk implements Serializable {
      */
     @TableField("ms_monitor_metric_disk_file_system")
     @Schema(description = "文件系统", example = "ext4")
-    /** 文件system */
+    /** 文件系统 */
     private String fileSystem;
 
     /**

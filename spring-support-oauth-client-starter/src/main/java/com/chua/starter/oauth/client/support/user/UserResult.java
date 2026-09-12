@@ -13,7 +13,7 @@ import java.io.Serializable;
 /**
  * 用户认证结果
  * <p>
- * 继承自 {@link UserResume}，在用户基本信息基础上增加Token相关字段。
+   * 继承自 {@link UserResume}，在用户基本信息基础上增加令牌相关字段。
  * 主要用于登录成功后返回给客户端的完整用户信息。
  * </p>
  *
@@ -30,7 +30,7 @@ import java.io.Serializable;
  *   <li><b>refreshToken</b> - 刷新令牌(RT)，用于获取新的访问令牌，有效期较长（默认4天）</li>
  * </ul>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2022/7/23 8:48
  * @see UserResume
  * @author CH
@@ -43,9 +43,9 @@ import java.io.Serializable;
 @JsonIgnoreProperties({"beanType", "accessSecret", "expire", "password", "salt", "userEnable", "lastArea", "lastLatitude", "lastLongitude"})
 public class UserResult extends UserResume implements Serializable {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
-    /** _empty */
+    /** _空 */
     private static final UserResult _EMPTY = new UserResult();
 
     /**
@@ -54,10 +54,14 @@ public class UserResult extends UserResume implements Serializable {
      * @param message 错误消息
      */
     public UserResult(String message) {
+        /**
+         * 父。
+         * @param message 消息
+         */
         super(message);
     }
 
-    // ==================== Token信息 ====================
+ // ==================== 令牌信息 ====================
 
     /**
      * 访问令牌
@@ -96,12 +100,12 @@ public class UserResult extends UserResume implements Serializable {
     private String uid;
 
     /**
-     * openId
+       * 打开标识
      */
     private String openId;
 
     /**
-     * unionId
+      * unionid
      */
     private String unionId;
 
@@ -132,9 +136,9 @@ public class UserResult extends UserResume implements Serializable {
     /**
      * 从用户简历转换用户认证结果
      * <p>UserResult 与 UserResume 均使用 {@link Accessors @Accessors(chain = true)}，
-     * setter 返回自身而非 void，JavaBeans Introspector 无法识别其 write method，
+        * setter 返回自身而非 Void Linux Linux Linux，javaBean Introspector 无法识别其 写入 方法，
      * 导致 {@link com.chua.common.support.utils.BeanUtils#copyProperties(Object, Object)} 复制时字段全部丢失。
-     * 这里改用 JSON 序列化/反序列化完成转换，保证继承自 UserResume 的字段完整保留。</p>
+      * 这里改用 JSON 序列化/反序列化完成转换，保证继承自 用户resume 的字段完整保留。</p>
      *
      * @param userResume 用户简历
      * @return 用户认证结果

@@ -21,9 +21,11 @@ import java.lang.annotation.*;
  * // 禁用数据权限
  * @DataScope(enabled = false)
  * List<SysUser> selectAllUserList();
+ * }</pre> * List<SysUser> selectAllUserList();
  * }</pre>
  *
  * @since 2022/7/29 8:23
+ * @author CH
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)

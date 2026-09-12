@@ -30,7 +30,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * 爬虫中心自动配置。
  *
  * <p>负责：组件扫描（service / controller / mapper）、全链路追踪过滤器，
- * 以及将 10 个爬虫节点（request/extract/transform/subLoop/map/output/condition/script/db/function）
+   * 以及将 10 个爬虫节点（请求/extract/转换/sub循环/映射/输出/条件/script/db/function）
  * 注册到 {@link FlowNodeRegistry}，供流程编排与节点清单使用。</p>
  *
  * @since 4.0.0.42
@@ -46,7 +46,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class SpiderAutoConfiguration {
 
     /**
-     * traceId 过滤器注册顺序
+       * 追踪标识 过滤器注册顺序
      */
     private static final int TRACE_FILTER_ORDER = 0;
 

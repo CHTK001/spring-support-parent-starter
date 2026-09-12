@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 /**
- * 多数据源（@DS）演示控制器：暴露数据源路由查询接口，供接口级（MockMvc）测试驱动。
+   * 多数据源（@DS）演示控制器：暴露数据源路由查询接口，供接口级（mockmvc）测试驱动。
  *
  * <p>{@code /api/ds/region} 无 {@code @DS} → 默认数据源（master 主库）；
  * {@code /api/ds/region/ds1|ds2} → Service 级 {@code @DS} 路由；
@@ -22,39 +22,64 @@ import java.util.Map;
 @RequestMapping("/api/ds")
 public class DsDemoController {
 
-    private final DsSwitchService dsSwitchService;
-    private final DsRegionMapper dsRegionMapper;
+    private final DsSwitchService dsSwitchService; // dsswitch服务
+    private final DsRegionMapper dsRegionMapper; // dsregion映射器
 
+    /**
+     * dsdemo控制器。
+     * @param dsSwitchService dsswitch服务
+     * @param dsRegionMapper dsregion映射器
+     */
     public DsDemoController(DsSwitchService dsSwitchService, DsRegionMapper dsRegionMapper) {
         this.dsSwitchService = dsSwitchService;
         this.dsRegionMapper = dsRegionMapper;
     }
 
-    /** 无 @DS：默认数据源（master 主库） */
+    /**
+     * 无 @DS：默认数据源（master 主库）
+     *
+     * @return 默认region的结果
+     */
     @GetMapping("/region")
     public Map<String, Object> defaultRegion() {
         return Map.of("data", dsSwitchService.defaultRegion());
     }
 
-    /** Service 级 @DS：路由到 ds1 */
+    /**
+     * 服务 级 @DS：路由到 ds1
+     *
+     * @return region从ds1的结果
+     */
     @GetMapping("/region/ds1")
     public Map<String, Object> regionFromDs1() {
         return Map.of("data", dsSwitchService.regionFromDs1());
     }
 
-    /** Service 级 @DS：路由到 ds2 */
+    /**
+     * 服务 级 @DS：路由到 ds2
+     *
+     * @return region从ds2的结果
+     */
     @GetMapping("/region/ds2")
     public Map<String, Object> regionFromDs2() {
         return Map.of("data", dsSwitchService.regionFromDs2());
     }
 
-    /** mapper 级 @DS：路由到 ds1 */
+    /**
+     * 映射器 级 @DS：路由到 ds1
+     *
+     * @return 映射器regionds1的结果
+     */
     @GetMapping("/region/mapper/ds1")
     public Map<String, Object> mapperRegionDs1() {
         return Map.of("data", dsRegionMapper.queryRegionDs1());
     }
 
-    /** mapper 级 @DS：路由到 ds2 */
+    /**
+     * 映射器 级 @DS：路由到 ds2
+     *
+     * @return 映射器regionds2的结果
+     */
     @GetMapping("/region/mapper/ds2")
     public Map<String, Object> mapperRegionDs2() {
         return Map.of("data", dsRegionMapper.queryRegionDs2());

@@ -11,7 +11,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 用量统计实体——读取 {@code sys_ai_usage} 明细表，按模型维度查询调用次数与 token 消耗。
+   * 用量统计实体——读取 {@code sys_ai_usage} 明细表，按模型维度查询调用次数与 令牌 消耗。
  *
  * @since 2026-08-03
  * @author CH
@@ -20,17 +20,17 @@ import java.time.LocalDateTime;
 @TableName("sys_ai_usage")
 @Schema(name = "用量统计")
 public class SysAiSettingUsage implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
-     * 用量主键 ID
+      * 用量主键 标识
      */
     /**
-     * 用量主键 ID
+      * 用量主键 标识
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "用量主键 ID")
-    /** UsageID */
+    /** usageid */
     private Long usageId;
 
     /**
@@ -56,10 +56,10 @@ public class SysAiSettingUsage implements Serializable {
     private Long usageRequestCount;
 
     /**
-     * 提示 tokens
+      * 提示 令牌
      */
     /**
-     * 提示 tokens
+      * 提示 令牌
      */
     @TableField("prompt_tokens")
     @Schema(description = "提示 tokens")
@@ -67,10 +67,10 @@ public class SysAiSettingUsage implements Serializable {
     private Long usagePromptTokens;
 
     /**
-     * 生成 tokens
+      * 生成 令牌
      */
     /**
-     * 生成 tokens
+      * 生成 令牌
      */
     @TableField("completion_tokens")
     @Schema(description = "生成 tokens")
@@ -78,14 +78,14 @@ public class SysAiSettingUsage implements Serializable {
     private Long usageCompletionTokens;
 
     /**
-     * 总 tokens
+      * 总 令牌
      */
     /**
-     * 总 tokens
+      * 总 令牌
      */
     @TableField("total_tokens")
     @Schema(description = "总 tokens")
-    /** Usage总数tokens */
+    /** Usage总数令牌 */
     private Long usageTotalTokens;
 
     /**

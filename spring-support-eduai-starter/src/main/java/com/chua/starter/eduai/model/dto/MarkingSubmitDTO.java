@@ -14,12 +14,12 @@ import java.util.List;
 public class MarkingSubmitDTO {
 
     /**
-     * 考试ID
+      * 考试标识
      */
     private Long examId;
 
     /**
-     * 学生ID
+      * 学生标识
      */
     private String studentId;
 
@@ -34,8 +34,14 @@ public class MarkingSubmitDTO {
     private List<AnswerItem> answers;
 
     @Data
+    /**
+      * answeritem类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     public static class AnswerItem {
-        /** QuestionID */
+        /** questionid */
         private Long questionId;
         /** Answer */
         private String answer;

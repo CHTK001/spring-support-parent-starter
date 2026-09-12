@@ -19,7 +19,7 @@ import java.util.Map;
  *
  * <p>当 SPI 未发现 SyncServer 扩展时 (常见于精简部署或单元测试),
  * {@link com.chua.starter.job.support.JobAutoConfiguration} 装配本 bean,
- * 让 SCHEDULER 模式不需要真实网络也能工作。</p>
+   * 让 调度器 模式不需要真实网络也能工作。</p>
  *
  * <p>所有 publish / send 都进入内存列表,可通过 {@link #getPublished} 断言。</p>
  *
@@ -34,7 +34,7 @@ public class InMemorySyncServer implements SyncServer {
     private final Map<String, List<Object>> published = new HashMap<>();
 
     /**
-     * listener 列表
+      * 监听器 列表
      */
     private final List<SyncServerListener> listeners = new ArrayList<>();
 
@@ -62,25 +62,25 @@ public class InMemorySyncServer implements SyncServer {
     }
 
     @Override
-    /** 获取ConnectedClients */
+    /** 获取连接客户端 */
     public List<String> getConnectedClients() {
         return Collections.unmodifiableList(clients);
     }
 
     @Override
-    /** 获取ClientMetadata */
+    /** 获取客户端metadata */
     public Map<String, Object> getClientMetadata(String clientId) {
         return Map.of();
     }
 
     @Override
-    /** 添加Listener */
+    /** 添加监听器 */
     public void addListener(SyncServerListener listener) {
         listeners.add(listener);
     }
 
     @Override
-    /** 移除Listener */
+    /** 移除监听器 */
     public void removeListener(SyncServerListener listener) {
         listeners.remove(listener);
     }
@@ -102,13 +102,13 @@ public class InMemorySyncServer implements SyncServer {
     }
 
     @Override
-    /** 获取ProtocolType */
+    /** 获取协议类型 */
     public ProtocolType getProtocolType() {
         return ProtocolType.WS;
     }
 
     @Override
-    /** 获取Port */
+    /** 获取端口 */
     public int getPort() {
         return 18081;
     }
@@ -120,18 +120,18 @@ public class InMemorySyncServer implements SyncServer {
     }
 
     @Override
-    /** 获取ObjectContext */
+    /** 获取对象上下文 */
     public ObjectContext getObjectContext() {
         return null;
     }
 
     @Override
-    /** 设置ObjectContext */
+    /** 设置对象上下文 */
     public void setObjectContext(ObjectContext objectContext) {
     }
 
     @Override
-    /** 获取Filters */
+    /** 获取过滤器 */
     public List<ServerFilter> getFilters() {
         return List.of();
     }
@@ -149,7 +149,7 @@ public class InMemorySyncServer implements SyncServer {
     }
 
     @Override
-    /** RefreshFilters */
+    /** refresh过滤器 */
     public Server refreshFilters() {
         return this;
     }

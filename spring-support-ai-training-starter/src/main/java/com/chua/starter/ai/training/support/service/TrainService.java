@@ -23,10 +23,10 @@ public interface TrainService {
     TrainTask createTask(String originalFileName, String dataPath);
 
     /**
-     * 启动异步训练（后台线程执行，引擎按 type 经 SPI 分发）。
+      * 启动异步训练（后台线程执行，引擎按 类型 经 SPI 分发）。
      *
-     * @param taskId 任务 ID
-     * @param type   训练类型（resnet50 / yolo）；null 视为默认 resnet50
+     * @param taskId 任务 标识
+     * @param type   训练类型（resnet50 / yolo）；空 视为默认 resnet50
      * @throws Exception 训练启动失败（任务不存在或已在运行）
      */
     void startTraining(String taskId, String type) throws Exception;
@@ -34,7 +34,7 @@ public interface TrainService {
     /**
      * 获取任务状态。
      *
-     * @param taskId 任务 ID
+     * @param taskId 任务 标识
      * @return 任务详情（含进度）
      */
     TrainTask getTask(String taskId);
@@ -49,7 +49,7 @@ public interface TrainService {
     /**
      * 更新任务的超参数配置（仅 PENDING 状态可修改）。
      *
-     * @param taskId   任务 ID
+     * @param taskId   任务 标识
      * @param argument 新的超参数
      */
     void updateArgument(String taskId, TrainArgument argument);

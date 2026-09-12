@@ -1,0 +1,6 @@
+com.chua.starter.filesystem.support.spi.filter.NoneImageFilterProvider
+com.chua.starter.filesystem.support.spi.filter.GrayscaleImageFilterProvider
+com.chua.starter.filesystem.support.spi.filter.SepiaImageFilterProvider
+com.chua.starter.filesystem.support.spi.filter.InvertImageFilterProvider
+com.chua.starter.filesystem.support.spi.filter.BlurImageFilterProvider
+com.chua.starter.filesystem.support.spi.filter.SaturateImageFilterProvider

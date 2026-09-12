@@ -49,19 +49,29 @@ public class ApiIdmmController {
     private final ApiWebSocketPushService pushService;
 
     /**
-     * IDMM 状态：kind:target_id → 状态
+       * IDMM 状态：种类:Target_标识 → 状态
      */
     private final Map<String, Map<String, Object>> states = new ConcurrentHashMap<>();
 
     /**
-     * IDMM 干预记录：kind:target_id → 记录列表
+       * IDMM 干预记录：种类:Target_标识 → 记录列表
      */
     private final Map<String, List<Map<String, Object>>> logs = new ConcurrentHashMap<>();
 
     @PostMapping
+    /**
+     * 设置。
+     * @param body 主体
+     * @return 设置的结果
+     */
     public ApiResult<Map<String, Object>> set(@RequestBody Map<String, Object> body) {
         String key = keyOf(body.get("kind"), body.get("target_id"));
         Map<String, Object> state = states.computeIfAbsent(key, k -> defaultState(body.get("kind"), body.get("target_id")));
+        /**
+         * 合并状态。
+         * @param state 状态
+         * @param body 主体
+         */
         mergeState(state, body);
         pushService.push("idmm.statusChanged", state);
         return ApiResult.ok(state);
@@ -117,10 +127,22 @@ public class ApiIdmmController {
         return ApiResult.ok();
     }
 
+    /**
+     * 钥匙的。
+     * @param kind 种类
+     * @param targetId Targetid
+     * @return 钥匙的的结果
+     */
     private String keyOf(Object kind, Object targetId) {
         return kind + ":" + targetId;
     }
 
+    /**
+     * 默认状态。
+     * @param kind 种类
+     * @param targetId Targetid
+     * @return 默认状态的结果
+     */
     private Map<String, Object> defaultState(Object kind, Object targetId) {
         Map<String, Object> state = new LinkedHashMap<>();
         state.put("kind", kind);
@@ -135,6 +157,11 @@ public class ApiIdmmController {
         return state;
     }
 
+    /**
+     * 合并状态。
+     * @param state 状态
+     * @param body 主体
+     */
     private void mergeState(Map<String, Object> state, Map<String, Object> body) {
         if (body.containsKey("enabled")) {
             state.put("enabled", body.get("enabled"));

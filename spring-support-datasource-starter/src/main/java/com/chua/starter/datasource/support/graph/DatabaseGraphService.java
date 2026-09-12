@@ -48,20 +48,25 @@ public class DatabaseGraphService {
 
     /** 锁 */
     private final ReentrantLock lock = new ReentrantLock();
-    private volatile GraphPayload cached;
-    private volatile long cachedAt;
+    private volatile GraphPayload cached; // 缓存
+    private volatile long cachedAt; // 缓存at
 
     /**
-     * 创建 DatabaseGraphService 实例
-     * @param dataSource dataSource
-     * @param DocumentProperties DocumentProperties
+      * 创建 database图计算服务 实例
+     * @param dataSource 数据源
+     * @param properties 文档属性
+     * @param properties 属性
      */
     public DatabaseGraphService(DataSource dataSource, DocumentProperties properties) {
         this.dataSource = dataSource;
         this.properties = properties;
     }
 
-    /** 应用 */
+    /**
+     * 应用
+     *
+     * @return apply的结果
+     */
     public GraphPayload apply() {
         lock.lock();
         try {
@@ -76,7 +81,11 @@ public class DatabaseGraphService {
         }
     }
 
-    /** Preview */
+    /**
+     * Preview
+     *
+     * @return preview的结果
+     */
     public GraphPayload preview() {
         if (properties.isCacheable() && cached != null) {
             return cached;
@@ -84,14 +93,22 @@ public class DatabaseGraphService {
         return apply();
     }
 
-    /** 获取CachedAt */
+    /**
+     * 获取缓存at
+     *
+     * @return 获取缓存at的结果
+     */
     public long getCachedAt() {
         return cachedAt;
     }
 
     // ============================ 内部构建 ============================
 
-    /** Do构建 */
+    /**
+     * 执行构建
+     *
+     * @return 执行构建的结果
+     */
     private GraphPayload doBuild() {
         // 1) 读取表 + FK 边
         TableGraphReader tableReader = new TableGraphReader(dataSource);
@@ -99,6 +116,12 @@ public class DatabaseGraphService {
         try {
             tableResult = tableReader.read();
         } catch (Exception e) {
+            /**
+             * illegal状态异常。
+             * @param "读取表结构失败" "读取表结构失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("读取表结构失败", e);
         }
 
@@ -119,6 +142,10 @@ public class DatabaseGraphService {
         // 3) 读取触发器 / 存储过程，并按表名串联
         List<TriggerInfo> triggers = List.of();
         List<ProcedureInfo> procedures = List.of();
+        /**
+         * 尝试。
+         * @param dataSource.getConnection( 数据源.getconnection(
+         */
         try (Connection conn = dataSource.getConnection()) {
             TriggerReader.DatabaseDialect dialect = TriggerReader.DatabaseDialect.resolve(conn.getMetaData());
             triggers = new TriggerReader(dialect).readAll(conn);
@@ -135,7 +162,7 @@ public class DatabaseGraphService {
         }
         for (ProcedureInfo p : procedures) {
             // 1) 严格匹配：procedure 名 = 表名 或 procedure 名以 表名_ 开头
-            // 2) 启发式：扫描 procedure 定义里出现的 CREATE/INSERT/UPDATE/DELETE/FROM/JOIN + 表名（此处不解析 SQL）
+ // 2) 启发式：扫描 procedure 定义里出现的 创建/插入/更新/删除/从/连接 + 表名（此处不解析 SQL）
             String matched = matchTable(p, tableMap.keySet());
             if (matched != null) {
                 p.setTableName(matched);
@@ -144,7 +171,7 @@ public class DatabaseGraphService {
                     node.getProcedures().add(p);
                 }
             } else {
-                // 无归属：归到 synthetic node "（未关联）" 之外的根节点不归任何表，这里直接挂在 schema 级
+ // 无归属：归到 synthetic 节点 "（未关联）" 之外的根节点不归任何表，这里直接挂在 模式 级
                 // 简化处理：归到一个虚拟节点 "__procedures__"
                 // 当前实现选择：放到 procedures_unbound 列表，由前端决定如何展示
             }
@@ -158,7 +185,7 @@ public class DatabaseGraphService {
             }
         }
 
-        // 5) 组装 relation-graph payload
+ // 5) 组装 relation-图计算 payload
         List<Map<String, Object>> nodes = new ArrayList<>();
         String rootId = null;
         int maxDegree = -1;
@@ -168,7 +195,7 @@ public class DatabaseGraphService {
             node.put("text", t.getName());
             node.put("width", nodeWidth(t));
             node.put("height", nodeHeight(t));
-            // 节点 data：所有表详情，供前端 slot 渲染
+ // 节点 数据：所有表详情，供前端 slot 渲染
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("schema", t.getSchema());
             data.put("type", t.getType());
@@ -238,7 +265,10 @@ public class DatabaseGraphService {
     }
 
     /**
-     * 启发式匹配：procedure 名直接 = 表名；或 形如 {@code proc_table_action}；或 schema 内表名前缀
+      * 启发式匹配：procedure 名直接 = 表名；或 形如 {@code proc_table_action}；或 模式 内表名前缀
+     * @param p p
+     * @param tables tables
+     * @return 匹配table的结果
      */
     private static String matchTable(ProcedureInfo p, java.util.Set<String> tables) {
         if (p.getName() == null) {
@@ -259,6 +289,8 @@ public class DatabaseGraphService {
 
     /**
      * 节点宽度：表名长度 + 是否有 FK 加宽
+     * @param t t
+     * @return 节点width的结果
      */
     private static int nodeWidth(TableNodeInfo t) {
         int base = Math.max(120, t.getName().length() * 10 + 40);
@@ -270,6 +302,8 @@ public class DatabaseGraphService {
 
     /**
      * 节点高度：基础 60 + 触发器 * 16 + 存储过程 * 16（封顶）
+     * @param t t
+     * @return 节点height的结果
      */
     private static int nodeHeight(TableNodeInfo t) {
         int h = 60;
@@ -282,18 +316,20 @@ public class DatabaseGraphService {
     }
 
     /**
-     * relation-graph 兼容的 payload
+      * relation-图计算 兼容的 payload
+     * @author CH
+     * @since 4.0.0
      */
     public static class GraphPayload {
-        /** 根级ID */
+        /** 根级标识 */
         public String rootId;
-        public List<Map<String, Object>> nodes;
-        public List<Map<String, Object>> lines;
+        public List<Map<String, Object>> nodes; // 节点
+        public List<Map<String, Object>> lines; // 线
         /** Trigger数量 */
         public int triggerCount;
         /** Procedure数量 */
         public int procedureCount;
-        /** CachedAT */
+        /** 缓存at */
         public long cachedAt;
     }
 }

@@ -16,7 +16,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Windows 平台本地软件采集器
+   * 窗口 平台本地软件采集器
  *
  * <p>从注册表 Uninstall 节点读取已安装软件，提取 DisplayName / DisplayVersion / InstallLocation / DisplayIcon。</p>
  *
@@ -27,14 +27,14 @@ import java.util.regex.Pattern;
 @Component
 public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
 
-    /** Uninstall_key */
+    /** Uninstall_钥匙 */
     private static final Pattern UNINSTALL_KEY = Pattern.compile(
             "SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Uninstall\\\\([^\\\\]+)",
             Pattern.CASE_INSENSITIVE
     );
 
     @Override
-    /** Support */
+    /** 支持 */
     public boolean support() {
         return System.getProperty("os.name", "").toLowerCase().contains("windows");
     }
@@ -49,7 +49,12 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
         return result;
     }
 
-    /** 扫描UninstallKey */
+    /**
+     * 扫描uninstall钥匙
+     *
+     * @param baseKey 基础钥匙
+     * @return 扫描uninstall钥匙的结果
+     */
     private List<SoftSoftware> scanUninstallKey(String baseKey) {
         List<SoftSoftware> list = new ArrayList<>();
         try {
@@ -71,7 +76,12 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
         return list;
     }
 
-    /** 读取SoftwareInfo */
+    /**
+     * 读取software信息
+     *
+     * @param key 钥匙
+     * @return 读取software信息的结果
+     */
     private SoftSoftware readSoftwareInfo(String key) {
         try {
             Process process = Runtime.getRuntime().exec(
@@ -101,7 +111,13 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
         }
     }
 
-    /** ExtractValue */
+    /**
+     * extract价值观
+     *
+     * @param output 输出
+     * @param name 名称
+     * @return extract价值观的结果
+     */
     private String extractValue(String output, String name) {
         for (String line : output.split("\n")) {
             if (line.contains(name)) {
@@ -114,7 +130,12 @@ public class WindowsLocalSoftwareCollector implements LocalSoftwareCollector {
         return null;
     }
 
-    /** ExtractIconPath */
+    /**
+     * extracticon路径
+     *
+     * @param output 输出
+     * @return extracticon路径的结果
+     */
     private String extractIconPath(String output) {
         String icon = extractValue(output, "DisplayIcon");
         if (icon != null && new File(icon).exists()) {

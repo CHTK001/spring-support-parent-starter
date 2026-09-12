@@ -23,7 +23,7 @@ import java.time.LocalDateTime;
 @TableName("ms_monitor_metric_network")
 public class MsMonitorMetricNetwork implements Serializable {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -31,15 +31,15 @@ public class MsMonitorMetricNetwork implements Serializable {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
-    /** ID */
+    /** 标识 */
     private Long id;
 
     /**
-     * 监控主机 id
+      * 监控主机 标识
      */
     @TableField("ms_monitor_metric_network_monitor_id")
     @Schema(description = "监控主机 id", example = "1")
-    /** MonitorID */
+    /** 监控标识 */
     private Long monitorId;
 
     /**
@@ -55,7 +55,7 @@ public class MsMonitorMetricNetwork implements Serializable {
      */
     @TableField("ms_monitor_metric_network_rx_bytes")
     @Schema(description = "接收字节数", example = "1073741824")
-    /** RXbytes */
+    /** rxbytes */
     private Long rxBytes;
 
     /**
@@ -63,7 +63,7 @@ public class MsMonitorMetricNetwork implements Serializable {
      */
     @TableField("ms_monitor_metric_network_tx_bytes")
     @Schema(description = "发送字节数", example = "536870912")
-    /** TXbytes */
+    /** txbytes */
     private Long txBytes;
 
     /**
@@ -71,7 +71,7 @@ public class MsMonitorMetricNetwork implements Serializable {
      */
     @TableField("ms_monitor_metric_network_speed_bps")
     @Schema(description = "网卡速率(bps)", example = "1000000000")
-    /** SpeedBPS */
+    /** 速度bps */
     private Long speedBps;
 
     /**

@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_bot_binding` (
     `sys_ai_bot_binding_bot_id`          VARCHAR(128) NULL COMMENT 'Bot 唯一标识（iLink 分配的 botId）',
     `sys_ai_bot_binding_bot_token`       VARCHAR(512) NULL COMMENT '登录凭证 Token',
     `sys_ai_bot_binding_platform`        VARCHAR(32)  NULL COMMENT '平台类型（wechat / wecom）',
+    `sys_ai_bot_binding_owner_key`       VARCHAR(128) NULL COMMENT '归属标识（u:<userId> / fp:<fingerprint>）',
     `sys_ai_bot_binding_nickname`        VARCHAR(128) NULL COMMENT 'Bot 昵称（来自微信资料）',
     `sys_ai_bot_binding_avatar_url`      VARCHAR(512) NULL COMMENT '头像地址',
     `sys_ai_bot_binding_gateway_port`    INT          NULL COMMENT '独立网关端口号',
@@ -170,6 +171,16 @@ CREATE TABLE IF NOT EXISTS `sys_ai_usage` (
     KEY `idx_sys_ai_usage_request_id` (`sys_ai_usage_request_id`),
     KEY `idx_sys_ai_usage_call_time` (`sys_ai_usage_call_time`)
 );
+
+CREATE TABLE IF NOT EXISTS `sys_ai_usage_sync_log` (
+    `sys_ai_usage_sync_log_id`   BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `sys_ai_usage_sync_log_level` VARCHAR(16)  NULL DEFAULT 'INFO' COMMENT '日志级别 INFO/WARN/ERROR',
+    `sys_ai_usage_sync_log_source` VARCHAR(64) NULL DEFAULT 'schedule' COMMENT '来源（schedule/manual/parser）',
+    `sys_ai_usage_sync_log_message` TEXT       NULL COMMENT '日志内容',
+    `create_time`                  DATETIME    NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`sys_ai_usage_sync_log_id`),
+    KEY `idx_usage_sync_log_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI 用量同步日志';
 
 CREATE TABLE IF NOT EXISTS `sys_ai_usage_daily` (
     `sys_ai_usage_daily_id`                     BIGINT       NOT NULL AUTO_INCREMENT COMMENT ' ID',
@@ -839,6 +850,8 @@ CREATE TABLE IF NOT EXISTS `sys_ai_model` (
     `sys_ai_model_code` VARCHAR(255) NOT NULL COMMENT '(gpt-4o, deepseek-chat)',
     `sys_ai_model_provider_id` BIGINT DEFAULT NULL COMMENT ' ID',
     `sys_ai_model_capabilities` VARCHAR(512) DEFAULT NULL COMMENT '(: chat,vision,think,search)',
+    `sys_ai_model_required_pipelines` VARCHAR(512) DEFAULT NULL COMMENT '(JSON: ["ocr","layout"])',
+    `sys_ai_model_optional_pipelines` VARCHAR(512) DEFAULT NULL COMMENT '(JSON: ["text-to-video"])',
     `sys_ai_model_description` VARCHAR(512) DEFAULT NULL COMMENT '',
     `sys_ai_model_enabled` INT DEFAULT 1 COMMENT '',
     `sys_ai_model_sort` INT DEFAULT 0 COMMENT '',

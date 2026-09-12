@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 /**
  * 钱包支付查询请求参数对象。
  *
- * @param userId     用户ID
+ * @param userId     用户标识
  * @param page       页码
  * @param size       每页大小
  * @param orderNo    订单号

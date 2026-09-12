@@ -2,7 +2,9 @@ package com.chua.starter.ai.support.service.impl.settings;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.chua.starter.ai.support.entity.SysAiManufacturer;
+import com.chua.starter.ai.support.entity.SysAiManufacturerKey;
 import com.chua.starter.ai.support.entity.settings.SysAiModel;
+import com.chua.starter.ai.support.mapper.SysAiManufacturerKeyMapper;
 import com.chua.starter.ai.support.mapper.SysAiManufacturerMapper;
 import com.chua.starter.ai.support.mapper.settings.AiModelMapper;
 import com.chua.starter.ai.support.model.AiModelDTO;
@@ -14,9 +16,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -25,22 +31,20 @@ import java.util.stream.Collectors;
  * AI 模型定义服务实现类
  *
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AiModelServiceImpl implements AiModelService {
 
-    /** Formatter */
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    /** 模型mapper */
     private final AiModelMapper modelMapper;
-    /** Manufacturermapper */
     private final SysAiManufacturerMapper manufacturerMapper;
+    private final SysAiManufacturerKeyMapper manufacturerKeyMapper;
 
     @Override
-    /** List */
     public List<AiModelDTO> list() {
         List<SysAiModel> models = modelMapper.selectList(
                 new LambdaQueryWrapper<SysAiModel>()
@@ -58,7 +62,6 @@ public class AiModelServiceImpl implements AiModelService {
 
     @Override
     @Transactional
-    /** 创建 */
     public AiModelDTO create(AiModelDTO model) {
         SysAiModel entity = toEntity(model);
         LocalDateTime now = LocalDateTime.now();
@@ -71,37 +74,107 @@ public class AiModelServiceImpl implements AiModelService {
             entity.setModelDeleted(0);
         }
         modelMapper.insert(entity);
-        log.debug("[SysAiModel] 新建成功: id={}, code={}", entity.getModelId(), entity.getModelCode());
+        log.debug("[SysAiModel] create success: id={}, code={}", entity.getModelId(), entity.getModelCode());
         return toDto(entity, resolveProviderName(entity.getModelProviderId(), null));
     }
 
     @Override
     @Transactional
-    /** 更新 */
     public AiModelDTO update(Long modelId, AiModelDTO model) {
         SysAiModel entity = toEntity(model);
         entity.setModelId(modelId);
         entity.setModelUpdateTime(LocalDateTime.now());
         modelMapper.updateById(entity);
-        log.debug("[SysAiModel] 更新成功: id={}", modelId);
+        log.debug("[SysAiModel] update success: id={}", modelId);
         return toDto(modelMapper.selectById(modelId), resolveProviderName(entity.getModelProviderId(), null));
     }
 
     @Override
     @Transactional
-    /** 删除 */
     public void delete(Long modelId) {
         modelMapper.deleteById(modelId);
-        log.debug("[SysAiModel] 删除成功: id={}", modelId);
+        log.debug("[SysAiModel] delete success: id={}", modelId);
     }
 
-    /**
-     * 解析供应商名称：优先模型供应商表，回退厂商表（兼容 syncModels 写入的 manufacturerId）。
-     *
-     * @param providerId   关联 ID（可能是 providerId 或 manufacturerId）
-     * @param providerNames 预加载的供应商名称映射（可为 null）
-     * @return 供应商/厂商名称，未找到返回 null
-     */
+    @Override
+    @Transactional
+    public AiModelDTO testLatency(Long modelId) {
+        SysAiModel model = modelMapper.selectById(modelId);
+        if (model == null) {
+            throw new IllegalArgumentException("Model not found: " + modelId);
+        }
+        Long providerId = model.getModelProviderId();
+        if (providerId == null) {
+            throw new IllegalStateException("Model has no provider configured, cannot test latency");
+        }
+        SysAiManufacturer manufacturer = manufacturerMapper.selectById(providerId.intValue());
+        if (manufacturer == null) {
+            throw new IllegalStateException("Provider not found: " + providerId);
+        }
+        String baseUrl = manufacturer.getBaseUrl();
+        if (baseUrl == null || baseUrl.isBlank()) {
+            throw new IllegalStateException("Provider has no baseUrl configured");
+        }
+        // Find first enabled API key
+        SysAiManufacturerKey key = manufacturerKeyMapper.selectList(
+                new LambdaQueryWrapper<SysAiManufacturerKey>()
+                        .eq(SysAiManufacturerKey::getSysAiManufacturerCode, manufacturer.getCode())
+                        .eq(SysAiManufacturerKey::getStatus, 1)
+                        .last("LIMIT 1")
+        ).stream().findFirst().orElse(null);
+        String apiKey = key != null ? key.getValue() : manufacturer.getAppKey();
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException("No API key available for provider: " + manufacturer.getCode());
+        }
+        // Build OpenAI-compatible chat completions request (max_tokens=1)
+        String endpoint = baseUrl.endsWith("/") ? baseUrl + "v1/chat/completions" : baseUrl + "/v1/chat/completions";
+        String body = Json.toJson(Map.of(
+                "model", model.getModelCode(),
+                "messages", List.of(Map.of("role", "user", "content", "ping")),
+                "max_tokens", 1,
+                "stream", false
+        ));
+        HttpClient client = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(endpoint))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + apiKey)
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .timeout(Duration.ofSeconds(30))
+                .build();
+        long start = System.currentTimeMillis();
+        long latency;
+        try {
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            latency = System.currentTimeMillis() - start;
+            if (response.statusCode() >= 400) {
+                log.warn("[SysAiModel] latency test failed for model {}: status={}, body={}",
+                        model.getModelCode(), response.statusCode(),
+                        response.body() == null ? "" : response.body().substring(0, Math.min(200, response.body().length())));
+                // Still record latency even on error, but mark via exception
+                throw new RuntimeException("API returned status " + response.statusCode());
+            }
+            log.info("[SysAiModel] latency test success for model {}: {}ms", model.getModelCode(), latency);
+        } catch (Exception e) {
+            latency = System.currentTimeMillis() - start;
+            log.warn("[SysAiModel] latency test error for model {}: {}ms, error={}",
+                    model.getModelCode(), latency, e.getMessage());
+            // Record latency even on failure (negative would indicate error, but we keep positive with update)
+            model.setModelLastLatency(latency);
+            model.setModelLastTestTime(LocalDateTime.now());
+            model.setModelUpdateTime(LocalDateTime.now());
+            modelMapper.updateById(model);
+            throw new RuntimeException("Latency test failed: " + e.getMessage(), e);
+        }
+        model.setModelLastLatency(latency);
+        model.setModelLastTestTime(LocalDateTime.now());
+        model.setModelUpdateTime(LocalDateTime.now());
+        modelMapper.updateById(model);
+        return toDto(model, resolveProviderName(model.getModelProviderId(), null));
+    }
+
     private String resolveProviderName(Long providerId, Map<Long, String> providerNames) {
         if (providerId == null) {
             return null;
@@ -115,14 +188,14 @@ public class AiModelServiceImpl implements AiModelService {
             SysAiManufacturer manufacturer = manufacturerMapper.selectById(providerId.intValue());
             return manufacturer != null ? manufacturer.getName() : null;
         }
-        // 回退厂商表
         SysAiManufacturer manufacturer = manufacturerMapper.selectById(providerId.intValue());
         return manufacturer != null ? manufacturer.getName() : null;
     }
 
-    /** ToDto */
     private AiModelDTO toDto(SysAiModel entity, String providerName) {
-        if (entity == null) return null;
+        if (entity == null) {
+            return null;
+        }
         AiModelDTO dto = new AiModelDTO();
         dto.setId(entity.getModelId());
         dto.setName(entity.getModelName());
@@ -130,40 +203,47 @@ public class AiModelServiceImpl implements AiModelService {
         dto.setProviderId(entity.getModelProviderId());
         dto.setProviderName(providerName);
         dto.setCapabilities(parseList(entity.getModelCapabilities()));
+        dto.setRequiredPipelines(parseList(entity.getModelRequiredPipelines()));
+        dto.setOptionalPipelines(parseList(entity.getModelOptionalPipelines()));
         dto.setDescription(entity.getModelDescription());
         dto.setEnabled(entity.getModelEnabled());
         dto.setSort(entity.getModelSort());
         dto.setInputPrice(entity.getModelInputPrice());
         dto.setOutputPrice(entity.getModelOutputPrice());
         dto.setCachePrice(entity.getModelCachePrice());
+        dto.setAliases(parseList(entity.getModelAliases()));
+        dto.setLastLatency(entity.getModelLastLatency());
+        dto.setLastTestTime(entity.getModelLastTestTime() != null ? entity.getModelLastTestTime().format(FORMATTER) : null);
         dto.setCreatedAt(entity.getModelCreateTime() != null ? entity.getModelCreateTime().format(FORMATTER) : null);
         return dto;
     }
 
-    /** ToEntity */
     private SysAiModel toEntity(AiModelDTO dto) {
         SysAiModel entity = new SysAiModel();
         entity.setModelName(dto.getName());
         entity.setModelCode(dto.getCode());
         entity.setModelProviderId(dto.getProviderId());
         entity.setModelCapabilities(toJsonArray(dto.getCapabilities()));
+        entity.setModelRequiredPipelines(toJsonArray(dto.getRequiredPipelines()));
+        entity.setModelOptionalPipelines(toJsonArray(dto.getOptionalPipelines()));
         entity.setModelDescription(dto.getDescription());
         entity.setModelEnabled(dto.getEnabled());
         entity.setModelSort(dto.getSort());
         entity.setModelInputPrice(dto.getInputPrice());
         entity.setModelOutputPrice(dto.getOutputPrice());
         entity.setModelCachePrice(dto.getCachePrice());
+        entity.setModelAliases(toJsonArray(dto.getAliases()));
         return entity;
     }
 
-    /** 解析List */
     private List<String> parseList(String content) {
         return Converter.convertIfListNecessary(content, String.class);
     }
 
-    /** ToJsonArray */
     private String toJsonArray(List<String> values) {
-        if (values == null || values.isEmpty()) return "[]";
+        if (values == null || values.isEmpty()) {
+            return "[]";
+        }
         return Json.toJson(values);
     }
 }

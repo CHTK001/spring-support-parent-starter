@@ -10,7 +10,7 @@ import java.util.List;
  * 注解驱动的运行时开关清单（扫描结果）。
  *
  * <p>包含 {@code @ApiFeature}/{@code @ApiGray} 注解的规范化描述与整体指纹：
- * 指纹用于启动时与 SQLite 存储的上次指纹比对，不一致则重置覆盖库（"注解更新启动重置"）。</p>
+   * 指纹用于启动时与 sqlite 存储的上次指纹比对，不一致则重置覆盖库（"注解更新启动重置"）。</p>
  *
  * @author CH
  * @since 2026/09/04
@@ -19,23 +19,23 @@ import java.util.List;
 @Builder
 public class SwitchInventory {
 
-    /** @ApiFeature 注解描述列表 */
+    /** @api特征 注解描述列表 */
     @Builder.Default
-    private final List<FeatureDescriptor> features = new ArrayList<>();
+    private final List<FeatureDescriptor> features = new ArrayList<>(); // 特征
 
-    /** @ApiGray 注解描述列表 */
+    /** @apigray 注解描述列表 */
     @Builder.Default
-    private final List<GrayDescriptor> grays = new ArrayList<>();
+    private final List<GrayDescriptor> grays = new ArrayList<>(); // grays
 
     /** 注解指纹（SHA-256 hex，基于规范化描述排序后哈希） */
     private String fingerprint;
 
-    /** @ApiFeature 注解规范化描述 */
+    /** @api特征 注解规范化描述 */
     @Data
     @Builder
     public static class FeatureDescriptor {
 
-        /** 功能标识（@ApiFeature.value） */
+        /** 功能标识（@api特征.价值观） */
         private String featureId;
 
         /** 默认是否启用 */
@@ -56,7 +56,11 @@ public class SwitchInventory {
         /** 映射路径（用于页面定位） */
         private List<String> patterns;
 
-        /** 规范化描述（参与指纹计算） */
+        /**
+         * 规范化描述（参与指纹计算）
+         *
+         * @return canonical的结果
+         */
         public String canonical() {
             return "feature:" + featureId + ":enabled=" + defaultEnabled
                     + ":message=" + nvl(disabledMessage)
@@ -66,12 +70,12 @@ public class SwitchInventory {
         }
     }
 
-    /** @ApiGray 注解规范化描述 */
+    /** @apigray 注解规范化描述 */
     @Data
     @Builder
     public static class GrayDescriptor {
 
-        /** 灰度标识（@ApiGray.value） */
+        /** 灰度标识（@apigray.价值观） */
         private String pattern;
 
         /** 灰度比例 */
@@ -86,7 +90,7 @@ public class SwitchInventory {
         /** 请求头白名单 */
         private String[] headers;
 
-        /** SpEL 规则 */
+        /** spel 规则 */
         private String rule;
 
         /** 是否强制灰度 */
@@ -95,7 +99,11 @@ public class SwitchInventory {
         /** 映射路径（用于页面定位） */
         private List<String> patterns;
 
-        /** 规范化描述（参与指纹计算） */
+        /**
+         * 规范化描述（参与指纹计算）
+         *
+         * @return canonical的结果
+         */
         public String canonical() {
             return "gray:" + pattern + ":percentage=" + percentage
                     + ":roles=" + join(roles) + ":users=" + join(users)
@@ -104,10 +112,20 @@ public class SwitchInventory {
         }
     }
 
+    /**
+     * nvl。
+     * @param s s
+     * @return nvl的结果
+     */
     private static String nvl(String s) {
         return s == null ? "" : s;
     }
 
+    /**
+     * 连接。
+     * @param arr arr
+     * @return 连接的结果
+     */
     private static String join(String[] arr) {
         if (arr == null || arr.length == 0) {
             return "";

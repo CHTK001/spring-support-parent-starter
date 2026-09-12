@@ -12,7 +12,7 @@ import lombok.Data;
 public class KnowledgePointSaveDTO {
 
     /**
-     * 知识点ID（更新时必填）
+      * 知识点标识（更新时必填）
      */
     private Long id;
 
@@ -27,7 +27,7 @@ public class KnowledgePointSaveDTO {
     private String code;
 
     /**
-     * 父知识点ID，0表示根节点
+      * 父知识点标识，0表示根节点
      */
     private Long parentId;
 

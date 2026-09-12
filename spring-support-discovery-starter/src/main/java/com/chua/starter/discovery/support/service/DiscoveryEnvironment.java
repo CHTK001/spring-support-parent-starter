@@ -7,6 +7,7 @@ import java.util.Properties;
  * 用于定义服务发现所需的环境配置信息
  *
  * @author CH
+ * @since 4.0.0
  */
 public interface DiscoveryEnvironment {
 

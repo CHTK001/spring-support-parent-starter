@@ -23,7 +23,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
-// import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
+ // 导入 com.fasterxml.jackson.module.paramnames.参数名称module;
 // 由 Spring Boot 自动提供，无需手动引入
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -56,21 +56,32 @@ import org.slf4j.LoggerFactory;
 public class JacksonConfiguration {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(JacksonConfiguration.class);
-    /** Date_time_formatter */
+    /** 日期_时间_formatter */
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    /** Date_formatter */
+    /** 日期_formatter */
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    /** Time_formatter */
+    /** 时间_formatter */
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss");
-    /** Simple_date_format */
+    /** 简单_日期_格式化 */
     private static final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-    /** 创建ObjectMapper */
+    /**
+     * 创建对象映射器
+     *
+     * @param forEverything foreverything
+     * @return 创建对象映射器的结果
+     */
     public static ObjectMapper createObjectMapper(boolean forEverything) {
         return createObjectMapper(forEverything, false);
     }
 
-    /** 创建ObjectMapper */
+    /**
+     * 创建对象映射器
+     *
+     * @param forEverything foreverything
+     * @param includeNull include空
+     * @return 创建对象映射器的结果
+     */
     public static ObjectMapper createObjectMapper(boolean forEverything, boolean includeNull) {
         log.trace("[Jackson配置]开始创建 ObjectMapper, forEverything={}, includeNull={}", forEverything, includeNull);
         ObjectMapper objectMapper = JsonMapper.builder()
@@ -140,7 +151,7 @@ public class JacksonConfiguration {
         if(log.isDebugEnabled()) {
             log.debug("[Jackson配置]时区: {}", TimeZone.getDefault().getID());
         }
-//        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
+ // 对象映射器.设置财产名称strategy(财产名称strategy.SNAKE_大小写);
         objectMapper.registerModule(new SimpleModule().addSerializer(new NullValueSerializer(null)));
         if(log.isDebugEnabled()) {
             log.debug("[Jackson配置]注册 NullValueSerializer: {}", NullValueSerializer.class.getName());
@@ -148,9 +159,9 @@ public class JacksonConfiguration {
 
         objectMapper.registerModule(javaTimeModule);
         objectMapper.registerModule(new Jdk8Module());
-        // JsonMixinModule 基于 Jackson 3 (tools.jackson), 此处使用 Jackson 2 ObjectMapper, 不注册
-        // ParameterNamesModule 由 Spring Boot 自动注册，无需手动添加
-        // objectMapper.registerModule(new ParameterNamesModule());
+ // jsonmixinmodule 基于 Jackson 3 (tools.jackson), 此处使用 Jackson 2 对象映射器, 不注册
+ // 参数名称module 由 Spring Boot 自动注册，无需手动添加
+ // 对象映射器.注册module(新 参数名称module());
         if (log.isTraceEnabled()) {
             log.trace("[Jackson配置]注册模块: JavaTimeModule={}, Jdk8Module={}",
                     JavaTimeModule.class.getName(),
@@ -164,7 +175,12 @@ public class JacksonConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    /** DefaultObjectMapper */
+    /**
+     * 默认对象映射器
+     *
+     * @param jacksonProperties jackson属性
+     * @return 默认对象映射器的结果
+     */
     public ObjectMapper defaultObjectMapper(JacksonProperties jacksonProperties) {
         log.debug("[Jackson配置]创建默认 ObjectMapper Bean, includeNull={}", jacksonProperties.isIncludeNull());
         ObjectMapper objectMapper = createObjectMapper(false, jacksonProperties.isIncludeNull());
@@ -174,7 +190,12 @@ public class JacksonConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    /** ObjectMapperBuilder */
+    /**
+     * 对象映射器构建器
+     *
+     * @param objectMapper 对象映射器
+     * @return 对象映射器构建器的结果
+     */
     public Jackson2ObjectMapperBuilder objectMapperBuilder(ObjectMapper objectMapper) {
         log.debug("[Jackson配置]创建 Jackson2ObjectMapperBuilder, 使用 ObjectMapper: {}", objectMapper.getClass().getName());
         Jackson2ObjectMapperBuilder builder = new Jackson2ObjectMapperBuilder();
@@ -183,12 +204,22 @@ public class JacksonConfiguration {
         return builder;
     }
 
+    /**
+     * transient字段ignoring反序列化器类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     static class TransientFieldIgnoringDeserializer extends StdDeserializer<Object> {
-        /** Serial版本UID */
+        /** 串行版本UID */
         private static final long serialVersionUID = 1L;
 
-        /** 创建 TransientFieldIgnoringDeserializer 实例 */
+        /** 创建 transient字段ignoring反序列化器 实例 */
         public TransientFieldIgnoringDeserializer() {
+            /**
+             * 父。
+             * @param Object.class 对象.类
+             */
             super(Object.class);
         }
 
@@ -199,9 +230,15 @@ public class JacksonConfiguration {
         }
     }
 
+    /**
+     * 空字段deserializationproblem处理器类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     static class NullableFieldsDeserializationProblemHandler extends DeserializationProblemHandler {
 
-        static Table<String, Class<?>, Class<? extends JacksonProblemHandler>> NULLABLE_FIELDS = HashBasedTable.create();
+        static Table<String, Class<?>, Class<? extends JacksonProblemHandler>> NULLABLE_FIELDS = HashBasedTable.create(); // 空字段
 
         static {
             NULLABLE_FIELDS.put("START_ARRAY", String.class, JsonArray2StringJacksonProblemHandler.class);
@@ -209,7 +246,7 @@ public class JacksonConfiguration {
         }
 
         @Override
-        /** 处理UnexpectedToken */
+        /** 处理unexpected令牌 */
         public Object handleUnexpectedToken(DeserializationContext ctxt, JavaType targetType, JsonToken t, JsonParser p, String failureMsg) throws IOException {
             Class<?> targetRawClass = targetType.getRawClass();
             String name = t.name();

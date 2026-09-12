@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 public class AccessRecord {
 
     /**
-     * 门 ID
+      * 门 标识
      */
     private String doorId;
 

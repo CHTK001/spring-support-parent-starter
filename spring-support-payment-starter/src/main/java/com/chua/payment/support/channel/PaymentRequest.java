@@ -15,29 +15,29 @@ import java.time.LocalDateTime;
 public class PaymentRequest {
     /** 排序NO */
     private String orderNo;
-    /** 用户ID */
+    /** 用户标识 */
     private Long userId;
     /** Amount */
     private BigDecimal amount;
-    /** Subject */
+    /** 主题 */
     private String subject;
     /** 请求体 */
     private String body;
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
     /** 返回值URL */
     private String returnUrl;
-    /** Currency */
+    /** 货币 */
     private String currency;
     /** Expire时间 */
     private LocalDateTime expireTime;
-    /** PayeropenID */
+    /** payeropenid */
     private String payerOpenId;
     /** 客户端IP */
     private String clientIp;
-    /** DeviceID */
+    /** deviceid */
     private String deviceId;
-    /** 用户agent */
+    /** 用户智能体 */
     private String userAgent;
     /** Attach */
     private String attach;

@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 基于 Spring WebClient 的 HTTP 客户端执行器。
+   * 基于 Spring web客户端 的 HTTP 客户端执行器。
  *
  * @since 4.0.0.42
  * @author CH
@@ -28,7 +28,7 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     /** Web客户端 */
     private final WebClient webClient;
 
-    /** 创建 WebClientHttpClientExecutor 实例 */
+    /** 创建 web客户端http客户端执行器 实例 */
     public WebClientHttpClientExecutor() {
         this.webClient = WebClient.builder()
                 .codecs(config -> config.defaultCodecs().maxInMemorySize(10 * 1024 * 1024))
@@ -36,19 +36,19 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     }
 
     @Override
-    /** 获取Name */
+    /** 获取名称 */
     public String getName() {
         return "webclient";
     }
 
     @Override
-    /** 是否Available */
+    /** 是否可用 */
     public boolean isAvailable() {
         return ReflectUtils.forName("org.springframework.web.reactive.function.client.WebClient") != null;
     }
 
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
         return 50;
     }
@@ -65,7 +65,7 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     }
 
     @Override
-    /** 执行Async */
+    /** 执行异步 */
     public Mono<ClientResponse> executeAsync(ClientRequest request) {
         WebClient.RequestBodySpec spec = buildSpec(request);
         Object body = request.getBody();
@@ -75,12 +75,17 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
     }
 
     @Override
-    /** SupportedVersions */
+    /** 支持版本 */
     public List<HttpVersion> supportedVersions() {
         return List.of(HttpVersion.HTTP_1_1, HttpVersion.HTTP_2);
     }
 
-    /** 构建Spec */
+    /**
+     * 构建Spec
+     *
+     * @param request 请求
+     * @return 构建spec的结果
+     */
     private WebClient.RequestBodySpec buildSpec(ClientRequest request) {
         WebClient.RequestBodySpec spec = webClient
                 .method(toHttpMethod(request.getMethod()))
@@ -96,7 +101,12 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
         return spec;
     }
 
-    /** MapResponse */
+    /**
+     * 映射响应
+     *
+     * @param resp resp
+     * @return 映射响应的结果
+     */
     private Mono<ClientResponse> mapResponse(org.springframework.web.reactive.function.client.ClientResponse resp) {
         ClientResponse cr = new ClientResponse();
         cr.setStatusCode(resp.statusCode().value());
@@ -115,7 +125,12 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
                 });
     }
 
-    /** ToHttpMethod */
+    /**
+     * 转为http方法
+     *
+     * @param method 方法
+     * @return 转为http方法的结果
+     */
     private static HttpMethod toHttpMethod(com.chua.common.support.network.http.HttpMethod method) {
         return switch (method) {
             case GET -> HttpMethod.GET;
@@ -128,7 +143,12 @@ public class WebClientHttpClientExecutor implements HttpClientExecutor {
         };
     }
 
-    /** ToClientResponse */
+    /**
+     * 转为客户端响应
+     *
+     * @param response 响应
+     * @return 转为客户端响应的结果
+     */
     private static ClientResponse toClientResponse(ClientResponse response) {
         return response;
     }

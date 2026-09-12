@@ -23,7 +23,7 @@ import java.time.LocalDateTime;
 public class DeviceTaskStateServiceImpl implements DeviceTaskStateService {
 
     /**
-     * 任务状态 Mapper
+      * 任务状态 映射器
      */
     private final DeviceTaskStateMapper taskStateMapper;
 
@@ -56,7 +56,7 @@ public class DeviceTaskStateServiceImpl implements DeviceTaskStateService {
     }
 
     @Override
-    /** 标记Finished */
+    /** 标记饰面 */
     public void markFinished(String taskName) {
         LambdaUpdateWrapper<DeviceTaskState> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(DeviceTaskState::getDeviceTaskStateName, taskName);
@@ -65,7 +65,7 @@ public class DeviceTaskStateServiceImpl implements DeviceTaskStateService {
     }
 
     @Override
-    /** 获取State */
+    /** 获取状态 */
     public DeviceTaskState getState(String taskName) {
         LambdaQueryWrapper<DeviceTaskState> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(DeviceTaskState::getDeviceTaskStateName, taskName);
@@ -73,7 +73,7 @@ public class DeviceTaskStateServiceImpl implements DeviceTaskStateService {
     }
 
     @Override
-    /** 更新Interval */
+    /** 更新间隔 */
     public void updateInterval(String taskName, int interval) {
         LambdaUpdateWrapper<DeviceTaskState> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(DeviceTaskState::getDeviceTaskStateName, taskName);

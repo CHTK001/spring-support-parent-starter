@@ -5,18 +5,19 @@ package com.chua.starter.oauth.client.support.enums;
  * 模式
  *
  * @author CH
+ * @since 4.0.0
  */
 public enum LogoutType {
     /**
-     * session
+      * 会话
      */
     NONE,
     /**
-     * token
+      * 令牌
      */
     LOGOUT,
     /**
-     * token
+      * 令牌
      */
     LOGOUT_ALL,
     /**

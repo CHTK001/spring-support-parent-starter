@@ -22,10 +22,10 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class MessageTraceInterceptor implements MessageInterceptor {
 
-    private final ConcurrentHashMap<String, MessageTraceContext> traces = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, MessageTraceContext> traces = new ConcurrentHashMap<>(); // 追踪
 
     @Override
-    /** Before发送 */
+    /** 之前发送 */
     public Message beforeSend(Message message) {
         String traceId = generateTraceId();
         String spanId = generateSpanId();
@@ -50,7 +50,7 @@ public class MessageTraceInterceptor implements MessageInterceptor {
     }
 
     @Override
-    /** After发送 */
+    /** 之后发送 */
     public void afterSend(Message message, boolean success, Throwable error) {
         MessageTraceContext context = traces.get(message.getId());
         if (context != null) {
@@ -62,7 +62,7 @@ public class MessageTraceInterceptor implements MessageInterceptor {
     }
 
     @Override
-    /** Before接收 */
+    /** 之前接收 */
     public Message beforeReceive(Message message) {
         String traceId = message.getHeaderAsString("X-Trace-Id");
         String parentSpanId = message.getHeaderAsString("X-Span-Id");
@@ -87,7 +87,7 @@ public class MessageTraceInterceptor implements MessageInterceptor {
     }
 
     @Override
-    /** After接收 */
+    /** 之后接收 */
     public void afterReceive(Message message, boolean success, Throwable error) {
         MessageTraceContext context = traces.get(message.getId());
         if (context != null) {
@@ -110,6 +110,8 @@ public class MessageTraceInterceptor implements MessageInterceptor {
 
     /**
      * 获取追踪上下文
+     * @param messageId 消息标识
+     * @return 获取追踪上下文的结果
      */
     public MessageTraceContext getTraceContext(String messageId) {
         return traces.get(messageId);
@@ -123,21 +125,23 @@ public class MessageTraceInterceptor implements MessageInterceptor {
     }
 
     /**
-     * 生成追踪ID
+      * 生成追踪标识
+     * @return generate追踪id的结果
      */
     private String generateTraceId() {
         return UUID.randomUUID().toString().replace("-", "");
     }
 
     /**
-     * 生成跨度ID
+      * 生成跨度标识
+     * @return generateSpanId的结果
      */
     private String generateSpanId() {
         return UUID.randomUUID().toString().substring(0, 16);
     }
 
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
         return -1000; // 最高优先级
     }

@@ -14,12 +14,12 @@ import org.springframework.context.ApplicationEvent;
 public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade<ApiRequestDecodeSetting> {
 
     /**
-     * 数据库配置别名：CodecRequestOpen
+      * 数据库配置别名：codec请求打开
      */
     private boolean codecRequestOpen = true;
 
     /**
-     * 请求加密key
+      * 请求加密钥匙
      */
     private String codecRequestKey = null;
 
@@ -27,6 +27,10 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
      * 无参构造方法
      */
     public ApiRequestDecodeSetting() {
+        /**
+         * this。
+         * @param true true
+         */
         this(true);
     }
 
@@ -36,6 +40,10 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
      * @param source 事件源对象
      */
     public ApiRequestDecodeSetting(Object source) {
+        /**
+         * 父。
+         * @param source 源
+         */
         super(source);
     }
 
@@ -77,7 +85,7 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     }
 
     /**
-     * 获取 codecRequestOpen
+      * 获取 codec请求打开
      *
      * @return codecRequestOpen
      */
@@ -95,16 +103,16 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     }
 
     /**
-     * 设置 codecRequestOpen
+      * 设置 codec请求打开
      *
-     * @param codecRequestOpen codecRequestOpen
+     * @param codecRequestOpen codec请求打开
      */
     public void setCodecRequestOpen(boolean codecRequestOpen) {
         this.codecRequestOpen = codecRequestOpen;
     }
 
     /**
-     * 获取 codecRequestKey
+      * 获取 codec请求钥匙
      *
      * @return codecRequestKey
      */
@@ -113,9 +121,9 @@ public class ApiRequestDecodeSetting extends ApplicationEvent implements Upgrade
     }
 
     /**
-     * 设置 codecRequestKey
+      * 设置 codec请求钥匙
      *
-     * @param codecRequestKey codecRequestKey
+     * @param codecRequestKey codec请求钥匙
      */
     public void setCodecRequestKey(String codecRequestKey) {
         this.codecRequestKey = codecRequestKey;

@@ -5,12 +5,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Mapper XML文件信息
+   * 映射器 XML文件信息
  * <p>
- * 用于描述可重载的Mapper XML文件的详细信息，包括文件位置、资源类型和监听能力。
+   * 用于描述可重载的映射器 XML文件的详细信息，包括文件位置、资源类型和监听能力。
  * </p>
  *
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @NoArgsConstructor
@@ -19,7 +20,7 @@ public class FileInfo {
     /**
      * 文件名（不含路径）
      * <p>
-     * 例如：UserMapper.xml
+      * 例如：用户映射器.xml
      * </p>
      */
     String name;
@@ -27,9 +28,9 @@ public class FileInfo {
     /**
      * 文件完整路径或URI
      * <p>
-     * 本地文件：file:///path/to/UserMapper.xml
-     * classpath资源：classpath:mapper/UserMapper.xml
-     * jar包资源：jar:file:/path/to.jar!/mapper/UserMapper.xml
+      * 本地文件：文件:///路径/转为/用户映射器.xml
+      * 类路径资源：类路径:映射器/用户映射器.xml
+      * jar包资源：jar:文件:/路径/转为.jar!/映射器/用户映射器.xml
      * </p>
      */
     String path;
@@ -37,8 +38,8 @@ public class FileInfo {
     /**
      * 资源类型
      * <p>
-     * FILE：本地文件系统中的文件，可监听
-     * CLASSPATH：classpath中的资源，如果在文件系统中可监听
+      * 文件：本地文件系统中的文件，可监听
+      * 类路径：类路径中的资源，如果在文件系统中可监听
      * JAR：jar包或war包中的资源，不可监听
      * UNKNOWN：未知类型，不可监听
      * </p>

@@ -45,15 +45,20 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     public static final String X_REQ_FINGERPRINT = "x-req-fingerprint";
 
     @Autowired
-    protected HttpServletRequest request;
+    protected HttpServletRequest request; // 请求
 
     @Autowired
-    protected HttpServletResponse response;
+    protected HttpServletResponse response; // 响应
 
     @Autowired
-    protected ApplicationContext applicationContext;
+    protected ApplicationContext applicationContext; // application上下文
 
     @SuppressWarnings("unchecked")
+    /**
+     * resolve注解类。
+     * @param className 类名称
+     * @return resolve注解类的结果
+     */
     private static Class<? extends Annotation> resolveAnnotationClass(String className) {
         try {
             return (Class<? extends Annotation>) Class.forName(className).asSubclass(Annotation.class);
@@ -68,16 +73,16 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     private static final Class<? extends Annotation> OPERATION = resolveAnnotationClass("io.swagger.v3.oas.annotations.Operation");
 
     /**
-     * Swagger 2.x ApiOperation 注解类
+      * Swagger 2.x apioperation 注解类
      */
     private static final Class<? extends Annotation> API_OPERATION = resolveAnnotationClass("io.swagger.annotations.ApiOperation");
 
     /**
-     * SpEL 表达式缓存，避免每次调用都重新解析
+      * spel 表达式缓存，避免每次调用都重新解析
      */
     private static final ConcurrentHashMap<String, Expression> EXPRESSION_CACHE = new ConcurrentHashMap<>();
-    private static final ExpressionParser EXPRESSION_PARSER = new SpelExpressionParser();
-    private static final ParserContext TEMPLATE_PARSER_CONTEXT = new TemplateParserContext();
+    private static final ExpressionParser EXPRESSION_PARSER = new SpelExpressionParser(); // EXPRESSION_PARSER
+    private static final ParserContext TEMPLATE_PARSER_CONTEXT = new TemplateParserContext(); // templateparser上下文
 
     @Override
     public void afterPropertiesSet() throws Exception {
@@ -106,6 +111,13 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
         } catch (Throwable e) {
             throwable = e;
         }
+        /**
+         * 创建operate日志记录器。
+         * @param proceed proceed
+         * @param throwable 抛出
+         * @param invocation invocation
+         * @param startTime 启动时间
+         */
         createOperateLogger(proceed, throwable, invocation, startTime);
         if (null != throwable) {
             throw throwable;
@@ -118,7 +130,7 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
      * <p>子类需要实现此方法来构建具体的日志信息对象并发布事件</p>
      *
      * @param proceed    方法执行结果
-     * @param throwable  方法执行异常，为null表示执行成功
+     * @param throwable  方法执行异常，为空表示执行成功
      * @param invocation 方法调用信息
      * @param startTime  方法执行开始时间戳
      */
@@ -219,7 +231,7 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     }
 
     /**
-     * 解析SpEL表达式内容
+      * 解析spel表达式内容
      *
      * @param content    表达式内容
      * @param invocation 方法调用信息
@@ -257,7 +269,7 @@ public abstract class AbstractLoggerPointcutAdvisor extends StaticMethodMatcherP
     }
 
     /**
-     * 获取用户ID
+      * 获取用户标识
      *
      * @return 用户ID
      */

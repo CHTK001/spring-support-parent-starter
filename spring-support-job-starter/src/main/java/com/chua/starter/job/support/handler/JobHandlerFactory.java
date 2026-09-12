@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentMap;
  * 运行时调度事件消费侧通过 {@link #get(String)} 查找处理器。</p>
  *
  * @since 4.0.0.42
+ * @author CH
  */
 public final class JobHandlerFactory {
 
@@ -21,11 +22,11 @@ public final class JobHandlerFactory {
     private static final JobHandlerFactory INSTANCE = new JobHandlerFactory();
 
     /**
-     * 处理器存储, key 为处理器名称
+      * 处理器存储, 钥匙 为处理器名称
      */
     private final ConcurrentMap<String, JobHandler> handlers = new ConcurrentHashMap<>(32);
 
-    /** 创建 JobHandlerFactory 实例 */
+    /** 创建 作业处理器工厂 实例 */
     private JobHandlerFactory() {
     }
 
@@ -42,10 +43,15 @@ public final class JobHandlerFactory {
      * 注册处理器。 同名处理器已存在时覆盖并返回旧值。
      *
      * @param handler 处理器实例
-     * @return 被覆盖的旧处理器, 允许为 null
+     * @return 被覆盖的旧处理器, 允许为 空
      */
     public JobHandler register(JobHandler handler) {
         if (handler == null) {
+            /**
+             * illegal参数异常。
+             * @param 不能为空" 不能为空"
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("handler 不能为空");
         }
         return handlers.put(handler.name(), handler);
@@ -55,7 +61,7 @@ public final class JobHandlerFactory {
      * 按名称注销处理器。
      *
      * @param name 处理器名称
-     * @return 被注销的处理器, 允许为 null
+     * @return 被注销的处理器, 允许为 空
      */
     public JobHandler deregister(String name) {
         return handlers.remove(name);
@@ -65,7 +71,7 @@ public final class JobHandlerFactory {
      * 按名称获取处理器。
      *
      * @param name 处理器名称
-     * @return 处理器实例, 不存在时为 null
+     * @return 处理器实例, 不存在时为 空
      */
     public JobHandler get(String name) {
         return handlers.get(name);

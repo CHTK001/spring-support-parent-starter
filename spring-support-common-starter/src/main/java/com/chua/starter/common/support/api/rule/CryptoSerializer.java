@@ -16,6 +16,7 @@ import java.util.Objects;
 
 /**
  * @author CH
+ * @since 4.0.0
  */
 public class CryptoSerializer extends JsonSerializer<String> implements ContextualSerializer {
 
@@ -59,8 +60,8 @@ public class CryptoSerializer extends JsonSerializer<String> implements Contextu
     /**
      * 序列化
      * @param origin origin
-     * @param jsonGenerator jsonGenerator
-     * @param serializerProvider serializerProvider
+     * @param jsonGenerator json生成器
+     * @param serializerProvider 序列化器提供者
      */
     public void serialize(final String origin, final JsonGenerator jsonGenerator,
                           final SerializerProvider serializerProvider) throws IOException {
@@ -83,6 +84,10 @@ public class CryptoSerializer extends JsonSerializer<String> implements Contextu
                 }
                 if (crypto != null) {
                     String key = SpringBeanUtils.getEnvironment().resolvePlaceholders(crypto.key());
+                    /**
+                     * 加密货币序列化器。
+                     * @param key 钥匙
+                     */
                     return new CryptoSerializer(Codec.build("sm4", key), key, crypto.keyType());
                 }
             }

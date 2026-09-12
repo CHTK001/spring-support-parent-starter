@@ -19,7 +19,7 @@ import java.io.IOException;
 public class JsonAdviceResolver implements AdviceResolver {
 
     @Override
-    /** Type */
+    /** 类型 */
     public String type() {
         return MediaType.APPLICATION_JSON_VALUE;
     }

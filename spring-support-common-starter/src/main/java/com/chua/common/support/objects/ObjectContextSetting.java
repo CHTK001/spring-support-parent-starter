@@ -6,10 +6,11 @@ import java.util.List;
 /**
  * 对象上下文配置类，用于配置对象容器的初始化参数
  * <p>
- * 提供 SPI 开关、注解扫描开关和扫描包路径等配置项，通过 Builder 模式构建。
+   * 提供 SPI 开关、注解扫描开关和扫描包路径等配置项，通过 构建器 模式构建。
  * </p>
  *
  * @author CH
+ * @since 4.0.0
  */
 public class ObjectContextSetting {
 
@@ -75,27 +76,33 @@ public class ObjectContextSetting {
     }
 
     /**
-     * 创建 Builder 实例
+      * 创建 构建器 实例
      *
      * @return Builder 构建器
      */
     public static Builder builder() {
+        /**
+         * 构建器。
+         * @return 构建器的结果
+         */
         return new Builder();
     }
 
     /**
-     * ObjectContextSetting 构建器类
+      * 对象上下文setting 构建器类
+     * @author CH
+     * @since 4.0.0
      */
     public static class Builder {
-        private boolean spiEnabled = true;
-        private boolean annotationScanEnabled = true;
-        private List<String> scanPackages = new ArrayList<>();
+        private boolean spiEnabled = true; // spi已启用
+        private boolean annotationScanEnabled = true; // 注解扫描已启用
+        private List<String> scanPackages = new ArrayList<>(); // 扫描包
 
         /**
          * 设置 SPI 启用状态
          *
          * @param spiEnabled SPI 是否启用
-         * @return 当前 Builder 实例
+         * @return 当前 构建器 实例
          */
         public Builder spiEnabled(boolean spiEnabled) {
             this.spiEnabled = spiEnabled;
@@ -106,7 +113,7 @@ public class ObjectContextSetting {
          * 设置注解扫描启用状态
          *
          * @param annotationScanEnabled 是否启用注解扫描
-         * @return 当前 Builder 实例
+         * @return 当前 构建器 实例
          */
         public Builder annotationScanEnabled(boolean annotationScanEnabled) {
             this.annotationScanEnabled = annotationScanEnabled;
@@ -117,7 +124,7 @@ public class ObjectContextSetting {
          * 设置扫描包路径
          *
          * @param scanPackages 扫描包路径列表
-         * @return 当前 Builder 实例
+         * @return 当前 构建器 实例
          */
         public Builder scanPackages(List<String> scanPackages) {
             this.scanPackages = scanPackages;
@@ -125,11 +132,18 @@ public class ObjectContextSetting {
         }
 
         /**
-         * 构建 ObjectContextSetting 实例
+          * 构建 对象上下文setting 实例
          *
          * @return 构建完成的配置实例
          */
         public ObjectContextSetting build() {
+            /**
+             * 对象上下文setting。
+             * @param spiEnabled spi已启用
+             * @param annotationScanEnabled 注解扫描已启用
+             * @param scanPackages 扫描包
+             * @return 对象上下文setting的结果
+             */
             return new ObjectContextSetting(spiEnabled, annotationScanEnabled, scanPackages);
         }
     }

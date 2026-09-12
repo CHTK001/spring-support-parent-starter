@@ -41,7 +41,7 @@ public class McpConnectionService {
      * 连接 MCP 服务器并列举其工具。
      *
      * @param name      服务器名称（仅用于日志）
-     * @param transport transport 配置（type + url + headers）
+     * @param transport transport 配置（类型 + url + 头部）
      * @return 前端约定的连接测试结果：
      *         {@code { success, tools?: [{name, description, input_schema}], error?, code? }}
      */
@@ -68,6 +68,10 @@ public class McpConnectionService {
 
         try {
             io.modelcontextprotocol.spec.McpClientTransport clientTransport =
+                    /**
+                     * 构建transport。
+                     * @param transport transport
+                     */
                     buildTransport(transport);
             if (clientTransport == null) {
                 result.put("success", false);
@@ -76,6 +80,10 @@ public class McpConnectionService {
                 return result;
             }
 
+            /**
+             * 尝试。
+             * @param McpClient.sync(clientTransport mcp客户端.同步(客户端transport
+             */
             try (McpSyncClient client = McpClient.sync(clientTransport)
                     .requestTimeout(CONNECT_TIMEOUT)
                     .initializationTimeout(CONNECT_TIMEOUT)
@@ -104,10 +112,10 @@ public class McpConnectionService {
     }
 
     /**
-     * 根据传输配置构建 MCP client transport。
+      * 根据传输配置构建 MCP 客户端 transport。
      *
-     * @param transport transport 配置（type + url/command/args/env + headers）
-     * @return 对应 transport，不支持的 type 返回 null
+     * @param transport transport 配置（类型 + url/命令/参数/env + 头部）
+     * @return 对应 transport，不支持的 类型 返回 空
      */
     private io.modelcontextprotocol.spec.McpClientTransport buildTransport(Map<String, Object> transport) {
         String type = transport == null ? "" : String.valueOf(transport.getOrDefault("type", ""));
@@ -137,6 +145,11 @@ public class McpConnectionService {
             String url, Map<String, Object> headers) {
         HttpClientStreamableHttpTransport.Builder builder =
                 HttpClientStreamableHttpTransport.builder(url);
+        /**
+         * apply头部。
+         * @param builder 构建器
+         * @param headers 头部
+         */
         applyHeaders(builder, headers);
         return builder.build();
     }
@@ -144,11 +157,21 @@ public class McpConnectionService {
     private io.modelcontextprotocol.spec.McpClientTransport buildSseTransport(
             String url, Map<String, Object> headers) {
         HttpClientSseClientTransport.Builder builder = HttpClientSseClientTransport.builder(url);
+        /**
+         * apply头部。
+         * @param builder 构建器
+         * @param headers 头部
+         */
         applyHeaders(builder, headers);
         return builder.build();
     }
 
-    /** 构建 stdio 本地进程 transport（command + args + env） */
+    /**
+     * 构建 stdio 本地进程 transport（命令 + 参数 + env）
+     *
+     * @param transport transport
+     * @return 构建stdiotransport的结果
+     */
     private io.modelcontextprotocol.spec.McpClientTransport buildStdioTransport(Map<String, Object> transport) {
         String command = String.valueOf(transport.getOrDefault("command", ""));
         ServerParameters.Builder builder = ServerParameters.builder(command);
@@ -177,10 +200,15 @@ public class McpConnectionService {
             }
         }
 
+        /**
+         * stdio客户端transport。
+         * @param builder.build( 构建器.构建(
+         * @return stdio客户端transport的结果
+         */
         return new StdioClientTransport(builder.build(), McpJsonDefaults.getMapper());
     }
 
-    /** 把自定义 header 应用到请求构造器（默认每次请求都带上） */
+    /** 把自定义 头部 应用到请求构造器（默认每次请求都带上） */
     private void applyHeaders(
             HttpClientStreamableHttpTransport.Builder builder,
             Map<String, Object> headers) {
@@ -199,7 +227,7 @@ public class McpConnectionService {
         builder.customizeRequest(req -> flat.forEach(req::header));
     }
 
-    /** 把自定义 header 应用到 SSE transport 请求构造器 */
+    /** 把自定义 头部 应用到 SSE transport 请求构造器 */
     private void applyHeaders(
             HttpClientSseClientTransport.Builder builder,
             Map<String, Object> headers) {

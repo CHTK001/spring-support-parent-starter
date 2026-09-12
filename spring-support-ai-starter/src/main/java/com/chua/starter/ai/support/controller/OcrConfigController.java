@@ -86,7 +86,7 @@ public class OcrConfigController {
     /**
      * 更新 OCR 配置（整组替换）。
      *
-     * @param body 配置请求（group + fields）
+     * @param body 配置请求（群体 + 字段）
      * @return 更新结果
      */
     @Permission("admin")
@@ -101,7 +101,12 @@ public class OcrConfigController {
         return ReturnResult.ok("OCR 配置已更新");
     }
 
-    /** ToInt */
+    /**
+     * 转为int
+     *
+     * @param obj obj
+     * @return 转为int的结果
+     */
     private static int toInt(Object obj) {
         if (obj instanceof Number n) {
             return n.intValue();

@@ -14,8 +14,9 @@ import org.slf4j.LoggerFactory;
  * </ul>
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024-12-28
+ * @author CH
  */
 public final class ModuleLog {
 
@@ -45,9 +46,9 @@ public final class ModuleLog {
     private final String moduleName;
 
     /**
-     * 创建 ModuleLog 实例
-     * @param moduleName moduleName
-     * @param Class Class
+      * 创建 module日志 实例
+     * @param moduleName module名称
+     * @param clazz 类
      * @param clazz clazz
      */
     private ModuleLog(String moduleName, Class<?> clazz) {
@@ -56,9 +57,10 @@ public final class ModuleLog {
     }
 
     /**
-     * 创建 ModuleLog 实例
-     * @param moduleName moduleName
-     * @param Logger Logger
+      * 创建 module日志 实例
+     * @param moduleName module名称
+     * @param logger 日志记录器
+     * @param logger 日志记录器
      */
     private ModuleLog(String moduleName, Logger logger) {
         this.moduleName = moduleName;
@@ -73,6 +75,11 @@ public final class ModuleLog {
      * @return ModuleLog 实例
      */
     public static ModuleLog of(String moduleName, Class<?> clazz) {
+        /**
+         * module日志。
+         * @param moduleName module名称
+         * @param clazz clazz
+         */
         return new ModuleLog(moduleName, clazz);
     }
 
@@ -84,6 +91,11 @@ public final class ModuleLog {
      * @return ModuleLog 实例
      */
     public static ModuleLog of(String moduleName, Logger logger) {
+        /**
+         * module日志。
+         * @param moduleName module名称
+         * @param logger 日志记录器
+         */
         return new ModuleLog(moduleName, logger);
     }
 
@@ -135,6 +147,10 @@ public final class ModuleLog {
      * @return 格式化后的状态
      */
     public static String status(boolean enabled) {
+        /**
+         * 已启用。
+         * @return 已启用的结果
+         */
         return enabled ? enabled() : disabled();
     }
 
@@ -189,18 +205,20 @@ public final class ModuleLog {
     // ==================== 日志方法 ====================
 
     /**
-     * INFO 日志
+      * 信息 日志
      *
      * @param message 消息
+     * @param args 参数
      */
     public void info(String message, Object... args) {
         log.info("[{}] {}", moduleName, format(message, args));
     }
 
     /**
-     * DEBUG 日志
+      * 调试 日志
      *
      * @param message 消息
+     * @param args 参数
      */
     public void debug(String message, Object... args) {
         log.debug("[{}] {}", moduleName, format(message, args));
@@ -210,22 +228,24 @@ public final class ModuleLog {
      * WARN 日志
      *
      * @param message 消息
+     * @param args 参数
      */
     public void warn(String message, Object... args) {
         log.warn("[{}] {}", moduleName, format(message, args));
     }
 
     /**
-     * ERROR 日志
+      * 错误 日志
      *
      * @param message 消息
+     * @param args 参数
      */
     public void error(String message, Object... args) {
         log.error("[{}] {}", moduleName, format(message, args));
     }
 
     /**
-     * ERROR 日志（带异常）
+      * 错误 日志（带异常）
      *
      * @param message   消息
      * @param throwable 异常
@@ -285,7 +305,13 @@ public final class ModuleLog {
 
     // ==================== 私有方法 ====================
 
-    /** 格式化 */
+    /**
+     * 格式化
+     *
+     * @param message 消息
+     * @param args 参数
+     * @return 格式化的结果
+     */
     private String format(String message, Object... args) {
         if (args == null || args.length == 0) {
             return message;

@@ -43,7 +43,7 @@ import java.util.zip.ZipOutputStream;
  * 前端文件系统控制器（对接 nomicore {@code fs.*} 契约）。
  *
  * <p>替代原 Rust 后端的文件系统能力，使用 {@link java.nio.file} 真实操作本地磁盘。
- * 所有接口以 {@code /api/fs} 为前缀，请求体字段统一使用 snake_case，响应统一包裹在
+   * 所有接口以 {@code /api/fs} 为前缀，请求体字段统一使用 snake_大小写，响应统一包裹在
  * {@link ApiResult} 信封中（{@code success:true,data:<T>}）。</p>
  *
  * <p>基准目录由 {@code nomifun.fs-root} 配置（默认 {@code ./fs-root}），{@code list} 等接口的
@@ -63,7 +63,7 @@ public class ApiFsController {
      * 文件系统根目录（可被单次请求覆盖）
      */
     @Value("${nomifun.fs-root:./fs-root}")
-    private String fsRoot;
+    private String fsRoot; // fs根
 
     /**
      * 远端图片缓存目录（懒初始化）
@@ -71,7 +71,7 @@ public class ApiFsController {
     private Path remoteCacheDir;
 
     /**
-     * Office 文件监听集合（workspace -> 监听标记）
+      * 办公室 文件监听集合（workspace -> 监听标记）
      */
     private final Map<String, Boolean> officeWatchRegistry = new ConcurrentHashMap<>();
 
@@ -115,6 +115,10 @@ public class ApiFsController {
         if (!Files.exists(base)) {
             return ApiResult.ok(result);
         }
+        /**
+         * 尝试。
+         * @param Files.list(base 文件.列表(基础
+         */
         try (Stream<Path> stream = Files.list(base)) {
             List<Path> children = stream.sorted().toList();
             for (Path p : children) {
@@ -123,16 +127,22 @@ public class ApiFsController {
                 result.add(flatFile(name, base.resolve(rel).toString(), rel));
             }
         } catch (IOException e) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+             * @param e.getMessage( e.获取消息(
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "读取目录失败: " + e.getMessage());
         }
         return ApiResult.ok(result);
     }
 
     /**
-     * 读取图片并以 base64 返回。
+      * 读取图片并以 基础64 返回。
      *
      * @param body 请求体 {@code { path: string, workspace?: string }}
-     * @return base64 字符串或 null
+     * @return base64 字符串或 空
      */
     @PostMapping("/image-base64")
     public ApiResult<String> imageBase64(@RequestBody Map<String, Object> body) {
@@ -144,6 +154,12 @@ public class ApiFsController {
             byte[] bytes = Files.readAllBytes(file);
             return ApiResult.ok(Base64.getEncoder().encodeToString(bytes));
         } catch (IOException e) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+             * @param e.getMessage( e.获取消息(
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "读取图片失败: " + e.getMessage());
         }
     }
@@ -158,6 +174,12 @@ public class ApiFsController {
     public ApiResult<String> fetchRemoteImage(@RequestBody Map<String, Object> body) {
         String url = asText(body.get("url"));
         if (url == null || url.isBlank()) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+             * @param 不能为空" 不能为空"
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "url 不能为空");
         }
         try {
@@ -165,6 +187,12 @@ public class ApiFsController {
             HttpRequest request = HttpRequest.newBuilder().uri(URI.create(url)).GET().build();
             HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                /**
+                 * api异常。
+                 * @param ApiErrorCode.UPSTREAM_ERROR api错误编码.upstream错误
+                 * @param response.statusCode( 响应.状态编码(
+                 * @return api异常的结果
+                 */
                 throw new ApiException(ApiErrorCode.UPSTREAM_ERROR, "远端图片拉取失败: HTTP " + response.statusCode());
             }
             String fileName = url.substring(url.lastIndexOf('/') + 1);
@@ -172,6 +200,10 @@ public class ApiFsController {
                 fileName = "remote-" + System.currentTimeMillis();
             }
             Path target = ensureCacheDir().resolve(fileName);
+            /**
+             * 尝试。
+             * @param response.body( 响应.主体(
+             */
             try (InputStream in = response.body()) {
                 Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
             }
@@ -179,6 +211,12 @@ public class ApiFsController {
         } catch (ApiException ex) {
             throw ex;
         } catch (Exception e) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+             * @param e.getMessage( e.获取消息(
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "抓取远端图片失败: " + e.getMessage());
         }
     }
@@ -187,7 +225,7 @@ public class ApiFsController {
      * 读取文本文件内容。
      *
      * @param body 请求体 {@code { path: string, workspace?: string }}
-     * @return 文件内容或 null
+     * @return 文件内容或 空
      */
     @PostMapping("/read")
     public ApiResult<String> read(@RequestBody Map<String, Object> body) {
@@ -198,6 +236,12 @@ public class ApiFsController {
         try {
             return ApiResult.ok(Files.readString(file, StandardCharsets.UTF_8));
         } catch (IOException e) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+             * @param e.getMessage( e.获取消息(
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "读取文件失败: " + e.getMessage());
         }
     }
@@ -220,12 +264,18 @@ public class ApiFsController {
             Files.writeString(file, data, StandardCharsets.UTF_8);
             return ApiResult.ok(true);
         } catch (IOException e) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+             * @param e.getMessage( e.获取消息(
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "写入文件失败: " + e.getMessage());
         }
     }
 
     /**
-     * 将一组文件打包为 zip。
+      * 将一组文件打包为 压缩。
      *
      * @param body 请求体 {@code { path, request_id?, files: [{ name, content?, source_path? }] }}
      * @return 是否成功
@@ -234,11 +284,23 @@ public class ApiFsController {
     public ApiResult<Boolean> zip(@RequestBody Map<String, Object> body) {
         String path = asText(body.get("path"));
         if (path == null || path.isBlank()) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+             * @param 不能为空" 不能为空"
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "path 不能为空");
         }
         Path target = resolveRoot(path).toAbsolutePath().normalize();
         Object filesObj = body.get("files");
         if (!(filesObj instanceof List)) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+             * @param 必须为数组" 必须为数组"
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "files 必须为数组");
         }
         try {
@@ -246,6 +308,10 @@ public class ApiFsController {
             if (parent != null) {
                 Files.createDirectories(parent);
             }
+            /**
+             * 尝试。
+             * @param ZipOutputStream(Files.newOutputStream(target 压缩输出流(文件.新输出流(Target
+             */
             try (ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(target))) {
                 for (Object item : (List<?>) filesObj) {
                     if (!(item instanceof Map)) {
@@ -274,12 +340,18 @@ public class ApiFsController {
         } catch (ApiException ex) {
             throw ex;
         } catch (IOException e) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+             * @param e.getMessage( e.获取消息(
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "打包 zip 失败: " + e.getMessage());
         }
     }
 
     /**
-     * 取消进行中的 zip 任务（当前实现为占位，始终返回成功）。
+      * 取消进行中的 压缩 任务（当前实现为占位，始终返回成功）。
      *
      * @param body 请求体 {@code { request_id: string }}
      * @return 是否成功
@@ -299,6 +371,12 @@ public class ApiFsController {
     public ApiResult<Map<String, Object>> metadata(@RequestBody Map<String, Object> body) {
         Path file = resolvePath(body);
         if (!Files.exists(file)) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+             * @param file 文件
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "文件不存在: " + file);
         }
         try {
@@ -312,6 +390,12 @@ public class ApiFsController {
             meta.put("last_modified", Files.getLastModifiedTime(file).toMillis());
             return ApiResult.ok(meta);
         } catch (IOException e) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+             * @param e.getMessage( e.获取消息(
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "读取元数据失败: " + e.getMessage());
         }
     }
@@ -367,8 +451,18 @@ public class ApiFsController {
             return ApiResult.ok();
         }
         try {
+            /**
+             * 删除recursively。
+             * @param file 文件
+             */
             deleteRecursively(file);
         } catch (IOException e) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+             * @param e.getMessage( e.获取消息(
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "删除失败: " + e.getMessage());
         }
         return ApiResult.ok();
@@ -385,15 +479,33 @@ public class ApiFsController {
         Path file = resolvePath(body);
         String newName = asText(body.get("new_name"));
         if (newName == null || newName.isBlank()) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+             * @param 不能为空" 不能为空"
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "new_name 不能为空");
         }
         if (!Files.exists(file)) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+             * @param file 文件
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "文件不存在: " + file);
         }
         Path target = file.getParent().resolve(newName);
         try {
             Files.move(file, target, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+             * @param e.getMessage( e.获取消息(
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "重命名失败: " + e.getMessage());
         }
         Map<String, String> result = new LinkedHashMap<>();
@@ -406,14 +518,21 @@ public class ApiFsController {
      *
      * @param file           文件本体
      * @param fileName       可选文件名覆盖
-     * @param conversationId 可选会话 ID
+     * @param conversationId 可选会话 标识
      * @return 落盘后的绝对路径字符串
+     * @param @RequestParam("file" @请求参数("文件"
      */
     @PostMapping("/upload")
     public ApiResult<String> upload(@RequestParam("file") MultipartFile file,
                                     @RequestParam(value = "file_name", required = false) String fileName,
                                     @RequestParam(value = "conversation_id", required = false) String conversationId) {
         if (file.isEmpty()) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+             * @param "上传文件为空" "上传文件为空"
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "上传文件为空");
         }
         String name = fileName != null && !fileName.isBlank() ? fileName : file.getOriginalFilename();
@@ -432,6 +551,12 @@ public class ApiFsController {
             file.transferTo(target.toFile());
             return ApiResult.ok(target.toAbsolutePath().toString());
         } catch (IOException e) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+             * @param e.getMessage( e.获取消息(
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "上传失败: " + e.getMessage());
         }
     }
@@ -449,9 +574,19 @@ public class ApiFsController {
             @RequestParam(defaultValue = "false") boolean showFiles) {
         Path dir = path.isBlank() ? Paths.get(System.getProperty("user.home")) : Paths.get(path).toAbsolutePath().normalize();
         if (!Files.isDirectory(dir)) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+             * @param path 路径
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "目录不存在: " + path);
         }
         List<Map<String, Object>> items = new ArrayList<>();
+        /**
+         * 尝试。
+         * @param Files.list(dir 文件.列表(dir
+         */
         try (var stream = Files.list(dir)) {
             stream.sorted(Comparator.comparing(p -> p.getFileName().toString().toLowerCase()))
                     .forEach(p -> {
@@ -467,6 +602,12 @@ public class ApiFsController {
                         items.add(item);
                     });
         } catch (Exception e) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+             * @param e.getMessage( e.获取消息(
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "浏览目录失败: " + e.getMessage());
         }
         Path parent = dir.getParent();
@@ -490,6 +631,12 @@ public class ApiFsController {
         String parentPath = String.valueOf(body.get("parentPath"));
         String name = String.valueOf(body.get("name"));
         if (parentPath.isBlank() || name.isBlank()) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+             * @param 不能为空" 不能为空"
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "parentPath 和 name 不能为空");
         }
         Path parent = Paths.get(parentPath).toAbsolutePath().normalize();
@@ -497,6 +644,12 @@ public class ApiFsController {
         try {
             Files.createDirectories(newDir);
         } catch (Exception e) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+             * @param e.getMessage( e.获取消息(
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "创建目录失败: " + e.getMessage());
         }
         Map<String, Object> result = new LinkedHashMap<>();
@@ -507,7 +660,7 @@ public class ApiFsController {
     }
 
     /**
-     * 开始监听工作区 Office 文件变更。
+      * 开始监听工作区 办公室 文件变更。
      *
      * @param body 请求体 {@code { workspace: string }}
      * @return 成功信封
@@ -516,6 +669,12 @@ public class ApiFsController {
     public ApiResult<Void> officeWatchStart(@RequestBody Map<String, Object> body) {
         String workspace = asText(body.get("workspace"));
         if (workspace == null || workspace.isBlank()) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+             * @param 不能为空" 不能为空"
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "workspace 不能为空");
         }
         officeWatchRegistry.put(workspace, Boolean.TRUE);
@@ -523,7 +682,7 @@ public class ApiFsController {
     }
 
     /**
-     * 停止监听工作区 Office 文件变更。
+      * 停止监听工作区 办公室 文件变更。
      *
      * @param body 请求体 {@code { workspace: string }}
      * @return 成功信封
@@ -573,13 +732,19 @@ public class ApiFsController {
      * 读取基线文件内容。
      *
      * @param body 请求体 {@code { workspace: string, file_path: string }}
-     * @return 基线内容或 null
+     * @return 基线内容或 空
      */
     @PostMapping("/snapshot/baseline")
     public ApiResult<String> snapshotBaseline(@RequestBody Map<String, Object> body) {
         SnapshotState state = requireSnapshot(body);
         String filePath = asText(body.get("file_path"));
         if (filePath == null) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+             * @param 不能为空" 不能为空"
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "file_path 不能为空");
         }
         return ApiResult.ok(state.baselineContent(filePath));
@@ -681,7 +846,7 @@ public class ApiFsController {
     /**
      * 解析基准根目录。
      *
-     * @param root 覆盖目录（可为 null）
+     * @param root 覆盖目录（可为 空）
      * @return 根路径
      */
     private Path resolveRoot(String root) {
@@ -700,6 +865,12 @@ public class ApiFsController {
     private Path resolvePath(Map<String, Object> body) {
         String path = asText(body.get("path"));
         if (path == null || path.isBlank()) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+             * @param 不能为空" 不能为空"
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "path 不能为空");
         }
         Path p = Paths.get(path);
@@ -737,6 +908,10 @@ public class ApiFsController {
      */
     private void deleteRecursively(Path path) throws IOException {
         if (Files.isDirectory(path)) {
+            /**
+             * 尝试。
+             * @param Files.walk(path 文件.walk(路径
+             */
             try (Stream<Path> stream = Files.walk(path)) {
                 List<Path> all = stream.sorted((a, b) -> b.getNameCount() - a.getNameCount()).toList();
                 for (Path p : all) {
@@ -768,7 +943,7 @@ public class ApiFsController {
      * 安全取文本。
      *
      * @param obj 对象
-     * @return 文本或 null
+     * @return 文本或 空
      */
     private static String asText(Object obj) {
         return obj == null ? null : String.valueOf(obj);
@@ -804,6 +979,7 @@ public class ApiFsController {
          * 构造快照状态。
          *
          * @param root 工作区根目录
+         * @return snapshot状态的结果
          */
         SnapshotState(Path root) {
             this.root = root.toAbsolutePath().normalize();
@@ -817,6 +993,10 @@ public class ApiFsController {
             if (!Files.exists(root) || !Files.isDirectory(root)) {
                 return;
             }
+            /**
+             * 尝试。
+             * @param Files.walk(root 文件.walk(根
+             */
             try (Stream<Path> stream = Files.walk(root)) {
                 for (Path p : stream.filter(Files::isRegularFile).toList()) {
                     String rel = root.relativize(p).toString().replace("\\", "/");
@@ -840,6 +1020,10 @@ public class ApiFsController {
             List<Map<String, String>> stagedList = new ArrayList<>();
             List<Map<String, String>> unstagedList = new ArrayList<>();
             if (Files.exists(root) && Files.isDirectory(root)) {
+                /**
+                 * 尝试。
+                 * @param Files.walk(root 文件.walk(根
+                 */
                 try (Stream<Path> stream = Files.walk(root)) {
                     for (Path p : stream.filter(Files::isRegularFile).toList()) {
                         String rel = root.relativize(p).toString().replace("\\", "/");
@@ -879,7 +1063,7 @@ public class ApiFsController {
          * 读取基线内容。
          *
          * @param relPath 相对路径
-         * @return 内容或 null
+         * @return 内容或 空
          */
         String baselineContent(String relPath) {
             if (relPath == null) {
@@ -951,6 +1135,12 @@ public class ApiFsController {
                 }
                 staged.remove(rel);
             } catch (IOException e) {
+                /**
+                 * api异常。
+                 * @param ApiErrorCode.INTERNAL_ERROR api错误编码.内部错误
+                 * @param e.getMessage( e.获取消息(
+                 * @return api异常的结果
+                 */
                 throw new ApiException(ApiErrorCode.INTERNAL_ERROR, "还原文件失败: " + e.getMessage());
             }
         }

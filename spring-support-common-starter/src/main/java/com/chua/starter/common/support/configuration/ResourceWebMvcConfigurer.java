@@ -16,12 +16,13 @@ import org.slf4j.LoggerFactory;
  * resource
  *
  * @author CH
+ * @since 4.0.0
  */
 public class ResourceWebMvcConfigurer implements WebMvcConfigurer  {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ResourceWebMvcConfigurer.class);
         @Override
-    /** 添加ResourceHandlers */
+    /** 添加resource处理器 */
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         log.info("当前运行目录: {}", new File(".").getAbsolutePath());
         registry.addResourceHandler("/static/**").addResourceLocations("classpath:/static/", "file:./static/").setCachePeriod(3600);

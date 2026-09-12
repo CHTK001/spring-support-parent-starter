@@ -11,10 +11,11 @@ import java.nio.charset.StandardCharsets;
 /**
  * 令牌编解码工具
  * <p>统一使用 SM4/ECB + Hex 对用户信息进行加密与解密，
- * 保证登录侧（SysLoginServiceImpl）、静态鉴权侧（StaticProtocol）与登录执行器（StaticProtocolExecutor）
- * 生成和解析 token 的算法完全一致，避免各实现各自维护导致的不兼容问题。</p>
+   * 保证登录侧（syslogin服务impl）、静态鉴权侧（静态协议）与登录执行器（静态协议执行器）
+   * 生成和解析 令牌 的算法完全一致，避免各实现各自维护导致的不兼容问题。</p>
  *
  * @since 4.0.0.42
+ * @author CH
  */
 public final class TokenCipher {
 
@@ -51,10 +52,10 @@ public final class TokenCipher {
     }
 
     /**
-     * 加密用户信息为 token
+      * 加密用户信息为 令牌
      *
      * @param userResult 用户信息
-     * @return 加密后的 token，失败返回 null
+     * @return 加密后的 令牌，失败返回 空
      */
     public static String encrypt(UserResult userResult) {
         if (null == userResult) {
@@ -64,10 +65,10 @@ public final class TokenCipher {
     }
 
     /**
-     * 加密明文为 token
+      * 加密明文为 令牌
      *
      * @param plainText 明文
-     * @return 加密后的 token，失败返回 null
+     * @return 加密后的 令牌，失败返回 空
      */
     public static String encrypt(String plainText) {
         if (null == plainText) {
@@ -81,16 +82,21 @@ public final class TokenCipher {
     }
 
     /**
-     * 解密 token 为明文
+      * 解密 令牌 为明文
      *
-     * @param hexToken 加密后的 token
-     * @return 解密后的明文，失败返回 null
+     * @param hexToken 加密后的 令牌
+     * @return 解密后的明文，失败返回 空
      */
     public static String decrypt(String hexToken) {
         if (null == hexToken || hexToken.isEmpty()) {
             return null;
         }
         try {
+            /**
+             * 字符串。
+             * @param cipher( cipher(
+             * @return 字符串的结果
+             */
             return new String(cipher().decrypt(KEY, Hex.decodeHex(hexToken)), StandardCharsets.UTF_8);
         } catch (Exception e) {
             return null;
@@ -98,10 +104,10 @@ public final class TokenCipher {
     }
 
     /**
-     * 解密 token 为用户信息
+      * 解密 令牌 为用户信息
      *
-     * @param hexToken 加密后的 token
-     * @return 用户信息，解密或解析失败返回 null
+     * @param hexToken 加密后的 令牌
+     * @return 用户信息，解密或解析失败返回 空
      */
     public static UserResult decryptToUser(String hexToken) {
         String source = decrypt(hexToken);

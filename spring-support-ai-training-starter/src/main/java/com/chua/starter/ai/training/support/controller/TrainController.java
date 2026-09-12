@@ -45,14 +45,17 @@ import java.util.List;
 @Tag(name = "AI 训练平台", description = "分类模型训练：数据上传、异步训练、状态查询、超参数配置")
 public class TrainController {
 
-    private final DataService dataService;
-    private final TrainService trainService;
+    private final DataService dataService; // 数据服务
+    private final TrainService trainService; // train服务
 
     /**
-     * 上传训练数据 ZIP 文件并创建训练任务。
+      * 上传训练数据 压缩 文件并创建训练任务。
      *
-     * @param file 训练数据 ZIP 文件（子目录为类别）
+     * @param file 训练数据 压缩 文件（子目录为类别）
      * @return 上传结果视图
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "上传训练数据", description = "上传 ZIP 格式训练数据并创建训练任务")
@@ -85,7 +88,7 @@ public class TrainController {
      *
      * <p>不传 {@code resumeModelPath} 时使用默认预训练模型（冷启动训练）；
      * 传入已训练模型路径时从该模型继续微调。{@code type} 缺省 resnet50，
-     * 传 {@code yolo} 时走 python-http 引擎（本地拉起 Ultralytics YOLO 子进程）。</p>
+      * 传 {@code yolo} 时走 Python-http 引擎（本地拉起 Ultralytics YOLO 子进程）。</p>
      *
      * @param request 请求体
      * @return 启动结果
@@ -99,7 +102,7 @@ public class TrainController {
             if (request.isResumeMode()) {
                 trainService.updateArgument(request.getTaskId(), request.toArgument());
             }
-            // type 随启动请求传入（缺省 resnet50，由任务领域对象锁定）
+ // 类型 随启动请求传入（缺省 resnet50，由任务领域对象锁定）
             trainService.startTraining(request.getTaskId(), request.getType());
             return ReturnResult.ok();
         } catch (Exception e) {
@@ -111,8 +114,11 @@ public class TrainController {
     /**
      * 查询训练进度（返回强类型视图对象）。
      *
-     * @param taskId 任务 ID
+     * @param taskId 任务 标识
      * @return 任务详情视图
+     * @param @RequestParam("taskId" @请求参数("任务标识"
+     * @param @RequestParam("taskId" @请求参数("任务id"
+     * @param @RequestParam("taskId" @RequestParam("taskId"
      */
     @Permission("admin")
     @Operation(summary = "查询训练进度", description = "实时查询训练任务的进度、当前 epoch、F1 等信息")

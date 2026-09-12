@@ -29,22 +29,22 @@ public class BeanJobHandler implements JobHandler {
     private final String desc;
 
     /**
-     * 目标 bean 实例
+      * 目标 Bean 实例
      */
     private final Object target;
 
     /**
-     * execute 方法
+      * 执行 方法
      */
     private final Method method;
 
     /**
-     * init 方法, 可为 null
+      * 初始化 方法, 可为 空
      */
     private final Method initMethod;
 
     /**
-     * destroy 方法, 可为 null
+      * 销毁 方法, 可为 空
      */
     private final Method destroyMethod;
 
@@ -53,10 +53,10 @@ public class BeanJobHandler implements JobHandler {
      *
      * @param name          处理器名称
      * @param desc          任务描述
-     * @param target        目标 bean
-     * @param method        execute 方法
-     * @param initMethod    init 方法, 允许为 null
-     * @param destroyMethod destroy 方法, 允许为 null
+     * @param target        目标 Bean
+     * @param method        执行 方法
+     * @param initMethod    初始化 方法, 允许为 空
+     * @param destroyMethod 销毁 方法, 允许为 空
      */
     public BeanJobHandler(String name,
                           String desc,
@@ -80,7 +80,7 @@ public class BeanJobHandler implements JobHandler {
     }
 
     @Override
-    /** Name */
+    /** 名称 */
     public String name() {
         return name;
     }

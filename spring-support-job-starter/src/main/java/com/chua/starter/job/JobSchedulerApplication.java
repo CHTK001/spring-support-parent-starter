@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
 
 /**
- * 调度中心 (SCHEDULER) 模式可执行应用, 用于「启动服务测接口」全业务验证。
+   * 调度中心 (调度器) 模式可执行应用, 用于「启动服务测接口」全业务验证。
  *
  * <p>运行方式 (模块目录下):</p>
  * <pre>
@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Import;
  * </pre>
  *
  * <p>效果: 装配 {@link JobAutoConfiguration} 并以 SCHEDULER 角色启动,
- * Leader 抢占 + 单秒扫描仓库 + 通过 SyncServer 长链广播/单播 cmd,
+   * 铅 抢占 + 单秒扫描仓库 + 通过 同步服务端 长链广播/单播 CMD,
  * 再配合 {@code JobExecutorApplication} 组成完整的调度→执行→回传链路。</p>
  *
  * @since 4.0.0.42

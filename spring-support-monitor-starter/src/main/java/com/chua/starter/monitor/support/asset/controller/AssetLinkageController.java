@@ -36,7 +36,7 @@ public class AssetLinkageController {
     /**
      * 资产聚合详情：基础信息 + 在线/通道状态 + 服务节点清单。
      *
-     * @param hostId 主机 ID
+     * @param hostId 主机 标识
      * @return 资产聚合视图
      */
     @Operation(summary = "资产聚合详情")
@@ -50,6 +50,7 @@ public class AssetLinkageController {
      *
      * @param keyword 关键字（可空，空则返回全部）
      * @return 资产简表列表
+     * @param false false
      */
     @Operation(summary = "资产检索")
     @GetMapping("/search")

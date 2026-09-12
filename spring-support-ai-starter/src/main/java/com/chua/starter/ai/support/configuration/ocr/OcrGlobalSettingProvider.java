@@ -38,7 +38,7 @@ public class OcrGlobalSettingProvider implements GlobalSettingProvider {
     }
 
     @Override
-    /** 分组Name */
+    /** 分组名称 */
     public String groupName() {
         return GROUP_NAME;
     }

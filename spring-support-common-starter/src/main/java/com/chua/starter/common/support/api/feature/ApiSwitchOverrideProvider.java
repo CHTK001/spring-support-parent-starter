@@ -1,11 +1,11 @@
 package com.chua.starter.common.support.api.feature;
 
 /**
- * 注解驱动开关（@ApiFeature / @ApiGray）的运行时覆盖提供者。
+   * 注解驱动开关（@api特征 / @apigray）的运行时覆盖提供者。
  *
  * <p>由 console-starter 等管理端实现并注册 Bean；{@link com.chua.starter.common.support.api.interceptor.ApiControlInterceptor}
  * 在判定时优先咨询覆盖（有覆盖则生效），无覆盖时回退注解 + {@link ApiFeatureManager} 默认判定——
- * 因此未注册任何实现时，行为与现有完全一致（默认方法全部返回 null）。</p>
+   * 因此未注册任何实现时，行为与现有完全一致（默认方法全部返回 空）。</p>
  *
  * @author CH
  * @since 2026/09/04
@@ -13,20 +13,20 @@ package com.chua.starter.common.support.api.feature;
 public interface ApiSwitchOverrideProvider {
 
     /**
-     * 功能开关覆盖（按 @ApiFeature.value 标识）；返回 null 表示无覆盖
+      * 功能开关覆盖（按 @api特征.价值观 标识）；返回 空 表示无覆盖
      *
      * @param featureId 功能标识
-     * @return 覆盖值或 null
+     * @return 覆盖值或 空
      */
     default FeatureOverride featureOverride(String featureId) {
         return null;
     }
 
     /**
-     * 灰度规则覆盖（按 @ApiGray.value 标识）；返回 null 表示无覆盖
+      * 灰度规则覆盖（按 @apigray.价值观 标识）；返回 空 表示无覆盖
      *
      * @param pattern 灰度标识
-     * @return 覆盖值或 null
+     * @return 覆盖值或 空
      */
     default GrayOverride grayOverride(String pattern) {
         return null;
@@ -43,7 +43,7 @@ public interface ApiSwitchOverrideProvider {
         boolean isEnabled();
 
         /**
-         * 覆盖后的禁用提示（null 表示沿用注解）
+          * 覆盖后的禁用提示（空 表示沿用注解）
          *
          * @return 禁用提示
          */
@@ -65,7 +65,7 @@ public interface ApiSwitchOverrideProvider {
     interface GrayOverride {
 
         /**
-         * 覆盖后的灰度比例（null 表示沿用注解）
+          * 覆盖后的灰度比例（空 表示沿用注解）
          *
          * @return 灰度比例
          */
@@ -74,7 +74,7 @@ public interface ApiSwitchOverrideProvider {
         }
 
         /**
-         * 覆盖后的角色白名单（null 表示沿用注解）
+          * 覆盖后的角色白名单（空 表示沿用注解）
          *
          * @return 角色列表
          */
@@ -83,7 +83,7 @@ public interface ApiSwitchOverrideProvider {
         }
 
         /**
-         * 覆盖后的用户白名单（null 表示沿用注解）
+          * 覆盖后的用户白名单（空 表示沿用注解）
          *
          * @return 用户列表
          */
@@ -92,7 +92,7 @@ public interface ApiSwitchOverrideProvider {
         }
 
         /**
-         * 覆盖后的请求头白名单（null 表示沿用注解）
+          * 覆盖后的请求头白名单（空 表示沿用注解）
          *
          * @return 请求头列表
          */
@@ -101,7 +101,7 @@ public interface ApiSwitchOverrideProvider {
         }
 
         /**
-         * 覆盖后的 SpEL 规则（null 表示沿用注解）
+          * 覆盖后的 spel 规则（空 表示沿用注解）
          *
          * @return 规则表达式
          */

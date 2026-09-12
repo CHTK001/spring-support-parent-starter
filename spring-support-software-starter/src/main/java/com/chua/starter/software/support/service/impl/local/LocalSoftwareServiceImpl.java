@@ -55,13 +55,13 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
 
     @Autowired
     /**
-     * 创建 LocalSoftwareServiceImpl 实例
-     * @param transactionTemplate transactionTemplate
-     * @param softSourceService softSourceService
-     * @param softSoftwareService softSoftwareService
-     * @param softSoftwareMapper softSoftwareMapper
-     * @param localSoftwareSource localSoftwareSource
-     * @param softwareSources softwareSources
+      * 创建 本地software服务impl 实例
+     * @param transactionTemplate transactiontemplate
+     * @param softSourceService soft源服务
+     * @param softSoftwareService softsoftware服务
+     * @param softSoftwareMapper softsoftware映射器
+     * @param localSoftwareSource 本地software源
+     * @param softwareSources software源
      */
     public LocalSoftwareServiceImpl(TransactionTemplate transactionTemplate,
                                     SoftSourceService softSourceService,
@@ -80,7 +80,7 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     }
 
     @Override
-    /** 扫描LocalSoftware */
+    /** 扫描本地software */
     public int scanLocalSoftware(String sourceId) {
         if (StringUtils.isBlank(sourceId)) {
             sourceId = getLocalSourceId();
@@ -106,7 +106,7 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
 
             int count = 0;
             for (SoftSoftware software : collected) {
-                // 必填字段 set
+ // 必填字段 设置
                 software.setSoftwareSourceId(finalSourceId);
                 software.setSoftwareStatus(0);
                 software.setSoftwareCreateTime(LocalDateTime.now());
@@ -115,7 +115,7 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
                 software.setSoftwareIsRecommended(false);
                 software.setSoftwareIsFree(true);
 
-                // 根据 code 判断是否已存在
+ // 根据 编码 判断是否已存在
                 SoftSoftware exist = softSoftwareService.getByCode(software.getSoftwareCode());
                 if (exist != null && exist.getSoftwareStatus() == 0) {
                     software.setSoftwareId(exist.getSoftwareId());
@@ -131,7 +131,7 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     }
 
     @Override
-    /** ClearLocalSoftware */
+    /** clear本地software */
     public boolean clearLocalSoftware(String sourceId) {
         if (StringUtils.isBlank(sourceId)) {
             sourceId = getLocalSourceId();
@@ -141,7 +141,7 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     }
 
     @Override
-    /** InstallLocalSoftware */
+    /** install本地software */
     public ReturnResult<Object> installLocalSoftware(InstallRequest request) {
         // 从本地软件列表安装，本质上是检查软件是否存在于本地源，然后创建安装记录
         SoftSoftware software = softSoftwareService.getById(request.getSoftwareId());
@@ -171,7 +171,7 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     }
 
     @Override
-    /** UninstallLocalSoftware */
+    /** uninstall本地software */
     public ReturnResult<Object> uninstallLocalSoftware(String softwareId, String userId, String deviceId) {
         SoftSoftware software = softSoftwareService.getById(softwareId);
         if (software == null) {
@@ -187,7 +187,7 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     }
 
     @Override
-    /** 添加LocalSoftware */
+    /** 添加本地software */
     public ReturnResult<SoftSoftware> addLocalSoftware(SoftSoftware software) {
         if (StringUtils.isBlank(software.getSoftwareName())) {
             return ReturnResult.illegal("软件名称不能为空");
@@ -208,7 +208,7 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     }
 
     @Override
-    /** ListLocalSoftware */
+    /** 列表本地software */
     public List<SoftSoftware> listLocalSoftware(String keyword) {
         String localSourceId = getLocalSourceId();
         LambdaQueryWrapper<SoftSoftware> wrapper = new LambdaQueryWrapper<SoftSoftware>()
@@ -220,7 +220,7 @@ public class LocalSoftwareServiceImpl implements LocalSoftwareService {
     }
 
     @Override
-    /** 获取LocalSourceId */
+    /** 获取本地源标识 */
     public String getLocalSourceId() {
         // 查询默认本地源
         SoftSource localSource = softSourceService.getDefaultLocalSource();

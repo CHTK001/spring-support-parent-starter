@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.util.List;
 
 /**
- * ShardingSphere分库分表配置属性
+   * 分库分表sphere分库分表配置属性
  * <p>
  * 配置示例:
  * <pre>
@@ -55,6 +55,8 @@ public class ShardingDataSourceProperties {
 
     /**
      * 分表配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class ShardingTableConfig {
@@ -79,39 +81,67 @@ public class ShardingDataSourceProperties {
         private String strategy = "TABLE";
 
         // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
-        /** 获取LogicTable */
+        /**
+         * 获取逻辑table
+         *
+         * @return 获取逻辑table的结果
+         */
         public String getLogicTable() {
             return logicTable;
         }
 
-        /** 获取ShardingColumn */
+        /**
+         * 获取分库分表column
+         *
+         * @return 获取分库分表column的结果
+         */
         public String getShardingColumn() {
             return shardingColumn;
         }
 
-        /** 获取TimeUnit */
+        /**
+         * 获取时间unit
+         *
+         * @return 获取时间unit的结果
+         */
         public String getTimeUnit() {
             return timeUnit;
         }
 
-        /** 获取Strategy */
+        /**
+         * 获取Strategy
+         *
+         * @return 获取strategy的结果
+         */
         public String getStrategy() {
             return strategy;
         }
     }
 
     // Getter 方法（Lombok 在 Java 25 下可能不工作，手动添加）
-    /** 是否ShowSql */
+    /**
+     * 是否showsql
+     *
+     * @return 是否showsql的结果
+     */
     public boolean isShowSql() {
         return showSql;
     }
 
-    /** 获取Databases */
+    /**
+     * 获取Databases
+     *
+     * @return 获取databases的结果
+     */
     public List<String> getDatabases() {
         return databases;
     }
 
-    /** 获取Tables */
+    /**
+     * 获取Tables
+     *
+     * @return 获取tables的结果
+     */
     public List<ShardingTableConfig> getTables() {
         return tables;
     }

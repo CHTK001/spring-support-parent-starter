@@ -26,15 +26,15 @@ import java.util.regex.Pattern;
 @Component
 public class LinuxLocalSoftwareCollector implements LocalSoftwareCollector {
 
-    /** Desktop_name */
+    /** Desktop_名称 */
     private static final Pattern DESKTOP_NAME = Pattern.compile("^Name=(.+)$", Pattern.CASE_INSENSITIVE);
     /** Desktop_icon */
     private static final Pattern DESKTOP_ICON = Pattern.compile("^Icon=(.+)$", Pattern.CASE_INSENSITIVE);
-    /** Desktop_exec */
+    /** Desktop_执行 */
     private static final Pattern DESKTOP_EXEC = Pattern.compile("^Exec=(.+)$", Pattern.CASE_INSENSITIVE);
 
     @Override
-    /** Support */
+    /** 支持 */
     public boolean support() {
         String os = System.getProperty("os.name", "").toLowerCase();
         return os.contains("linux") && !os.contains("darwin");
@@ -50,7 +50,11 @@ public class LinuxLocalSoftwareCollector implements LocalSoftwareCollector {
         return result;
     }
 
-    /** 扫描Dpkg */
+    /**
+     * 扫描Dpkg
+     *
+     * @return 扫描dpkg的结果
+     */
     private List<SoftSoftware> scanDpkg() {
         List<SoftSoftware> list = new ArrayList<>();
         try {
@@ -79,7 +83,11 @@ public class LinuxLocalSoftwareCollector implements LocalSoftwareCollector {
         return list;
     }
 
-    /** 扫描Rpm */
+    /**
+     * 扫描Rpm
+     *
+     * @return 扫描rpm的结果
+     */
     private List<SoftSoftware> scanRpm() {
         List<SoftSoftware> list = new ArrayList<>();
         try {
@@ -108,7 +116,11 @@ public class LinuxLocalSoftwareCollector implements LocalSoftwareCollector {
         return list;
     }
 
-    /** 扫描DesktopFiles */
+    /**
+     * 扫描desktop文件
+     *
+     * @return 扫描desktop文件的结果
+     */
     private List<SoftSoftware> scanDesktopFiles() {
         List<SoftSoftware> list = new ArrayList<>();
         String[] dirs = {
@@ -131,7 +143,12 @@ public class LinuxLocalSoftwareCollector implements LocalSoftwareCollector {
         return list;
     }
 
-    /** 解析DesktopFile */
+    /**
+     * 解析desktop文件
+     *
+     * @param file 文件
+     * @return 解析desktop文件的结果
+     */
     private SoftSoftware parseDesktopFile(File file) {
         SoftSoftware software = null;
         String iconPath = null;
@@ -169,7 +186,13 @@ public class LinuxLocalSoftwareCollector implements LocalSoftwareCollector {
         return software;
     }
 
-    /** ContainsName */
+    /**
+     * contains名称
+     *
+     * @param list 列表
+     * @param name 名称
+     * @return contains名称的结果
+     */
     private boolean containsName(List<SoftSoftware> list, String name) {
         return list.stream().anyMatch(s -> name.equals(s.getSoftwareName()));
     }

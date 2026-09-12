@@ -8,20 +8,21 @@ import java.time.LocalDateTime;
 /**
  * 钱包订单视图
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class WalletOrderVO {
-    /** ID */
+    /** 标识 */
     private Long id;
     /** 排序NO */
     private String orderNo;
     /** 排序类型 */
     private String orderType;
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
-    /** 用户ID */
+    /** 用户标识 */
     private Long userId;
-    /** Related用户ID */
+    /** Related用户标识 */
     private Long relatedUserId;
     /** Amount */
     private BigDecimal amount;
@@ -33,23 +34,23 @@ public class WalletOrderVO {
     private String bankAccount;
     /** Bank名称 */
     private String bankName;
-    /** Account名称 */
+    /** 账户名称 */
     private String accountName;
     /** 请求payload */
     private String requestPayload;
     /** 响应payload */
     private String responsePayload;
-    /** Operator */
+    /** 操作符 */
     private String operator;
-    /** Remark */
+    /** 评论 */
     private String remark;
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
-    /** CompletedAT */
+    /** 完成at */
     private LocalDateTime completedAt;
-    /** Create时间 */
+    /** 创建时间 */
     private LocalDateTime createTime;
-    /** Update时间 */
+    /** 更新时间 */
     private LocalDateTime updateTime;
 }
 

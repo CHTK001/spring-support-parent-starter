@@ -10,7 +10,7 @@ import lombok.EqualsAndHashCode;
 /**
  * 消息模板实体
  * <p>
- * 对应表 sys_message_template，管理各渠道消息模板。
+   * 对应表 sys_消息_template，管理各渠道消息模板。
  * </p>
  *
  * @since 2026/08/03
@@ -22,14 +22,14 @@ import lombok.EqualsAndHashCode;
 public class SysMessageTemplate extends SysBase {
 
     /**
-     * 模板ID - 主键自增
+      * 模板标识 - 主键自增
      */
     @TableId(value = "sys_message_template_id", type = IdType.AUTO)
-    /** SYS消息模板ID */
+    /** SYS消息模板标识 */
     private Integer sysMessageTemplateId;
 
     /**
-     * 提供商ID - 关联sys_message_provider表
+       * 提供商标识 - 关联sys_消息_提供者表
      */
     private Integer sysMessageProviderId;
 

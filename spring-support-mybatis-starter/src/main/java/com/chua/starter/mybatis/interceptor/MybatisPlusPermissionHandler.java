@@ -27,23 +27,24 @@ import java.util.List;
  * 处理查询语句的数据权限过滤
  *
  * @author CH
+ * @since 4.0.0
  */
 public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(MybatisPlusPermissionHandler.class);
 
-    /** Create_by */
+    /** 创建_by */
     private static final String CREATE_BY = "rule_create_by";
-    /** Dept_id */
+    /** Dept_标识 */
     private static final String DEPT_ID = "rule_dept_id";
-    /** No_data */
+    /** No_数据 */
     public static final NotEqualsTo NO_DATA = new NotEqualsTo();
     static {
         NO_DATA.setLeftExpression(new LongValue(1));
         NO_DATA.setRightExpression(new LongValue(1));
     }
 
-    final MybatisPlusDataScopeProperties metaDataScopeProperties;
+    final MybatisPlusDataScopeProperties metaDataScopeProperties; // meta数据scope属性
 
     /**
      * 构造函数
@@ -60,7 +61,7 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
      *
      * @param plainSelect      查询对象
      * @param where           当前查询条件
-     * @param mappedStatementId Mapper 方法全限定名
+     * @param mappedStatementId 映射器 方法全限定名
      * @param currentUser     当前登录用户
      */
     @Override
@@ -84,12 +85,28 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
                 if (dataScope != null) {
                     if (method.getName().equals(methodName) || (method.getName() + "_COUNT").equals(methodName)) {
                         DataFilterTypeEnum permission = dataScope.value() != null ? dataScope.value() : currentUser.getDataPermission();
+                        /**
+                         * 数据scope过滤器。
+                         * @param plainSelect plain选择
+                         * @param currentUser 当前用户
+                         * @param metaDataScopeProperties meta数据scope属性
+                         * @param where where
+                         * @param permission 权限
+                         */
                         dataScopeFilter(plainSelect, currentUser, metaDataScopeProperties, where, permission);
                     }
                     return;
                 }
             }
-            // 如果没有找到 DataScope 注解，使用用户默认权限
+ // 如果没有找到 数据scope 注解，使用用户默认权限
+            /**
+             * 数据scope过滤器。
+             * @param plainSelect plain选择
+             * @param currentUser 当前用户
+             * @param metaDataScopeProperties meta数据scope属性
+             * @param where where
+             * @param currentUser.getDataPermission( 当前用户.获取数据权限(
+             */
             dataScopeFilter(plainSelect, currentUser, metaDataScopeProperties, where, currentUser.getDataPermission());
         } catch (Exception e) {
             log.error("处理数据权限时发生异常: mappedStatementId={}", mappedStatementId, e);
@@ -124,7 +141,7 @@ public class MybatisPlusPermissionHandler implements SelectDataPermissionHandler
     }
 
     @Override
-    /** 获取SqlSegment */
+    /** 获取sqlsegment */
     public Expression getSqlSegment(Expression where, String mappedStatementId) {
         return where;
     }

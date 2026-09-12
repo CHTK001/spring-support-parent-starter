@@ -30,7 +30,7 @@ import java.time.LocalDateTime;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MsProjectDeployLog extends SysBase {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -38,70 +38,70 @@ public class MsProjectDeployLog extends SysBase {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
-    private Long id;
+    private Long id; // 标识
 
     /**
-     * 关联项目 ID
+      * 关联项目 标识
      */
     @TableField("ms_project_deploy_log_project_id")
     @Schema(description = "项目ID", example = "1")
-    private Long msProjectDeployLogProjectId;
+    private Long msProjectDeployLogProjectId; // msprojectdeploy日志projectid
 
     /**
      * 项目名称（冗余）
      */
     @TableField("ms_project_deploy_log_project_name")
     @Schema(description = "项目名称", example = "user-service")
-    private String msProjectDeployLogProjectName;
+    private String msProjectDeployLogProjectName; // msprojectdeploy日志project名称
 
     /**
-     * 目标主机 ID
+      * 目标主机 标识
      */
     @TableField("ms_project_deploy_log_host_id")
     @Schema(description = "目标主机ID", example = "1")
-    private Long msProjectDeployLogHostId;
+    private Long msProjectDeployLogHostId; // msprojectdeploy日志主机标识
 
     /**
      * 主机名称（冗余）
      */
     @TableField("ms_project_deploy_log_host_name")
     @Schema(description = "主机名称", example = "应用服务器-01")
-    private String msProjectDeployLogHostName;
+    private String msProjectDeployLogHostName; // msprojectdeploy日志主机名称
 
     /**
-     * 操作类型：DEPLOY/UPGRADE/START/STOP/RESTART
+      * 操作类型：DEPLOY/UPGRADE/启动/停止/RESTART
      */
     @TableField("ms_project_deploy_log_action")
     @Schema(description = "操作类型", example = "DEPLOY")
-    private String msProjectDeployLogAction;
+    private String msProjectDeployLogAction; // msprojectdeploy日志动作
 
     /**
      * 上传版本标识（部署包文件名或版本号）
      */
     @TableField("ms_project_deploy_log_version")
     @Schema(description = "版本标识")
-    private String msProjectDeployLogVersion;
+    private String msProjectDeployLogVersion; // msprojectdeploy日志版本
 
     /**
-     * 执行状态：SUCCESS/FAIL/RUNNING
+      * 执行状态：成功/失败/RUNNING
      */
     @TableField("ms_project_deploy_log_status")
     @Schema(description = "执行状态", example = "SUCCESS")
-    private String msProjectDeployLogStatus;
+    private String msProjectDeployLogStatus; // msprojectdeploy日志状态
 
     /**
      * 执行输出（标准输出截断存储）
      */
     @TableField("ms_project_deploy_log_output")
     @Schema(description = "执行输出")
-    private String msProjectDeployLogOutput;
+    private String msProjectDeployLogOutput; // msprojectdeploy日志输出
 
     /**
      * 错误信息
      */
     @TableField("ms_project_deploy_log_error")
     @Schema(description = "错误信息")
-    private String msProjectDeployLogError;
+    private String msProjectDeployLogError; // msprojectdeploy日志错误
 
     /**
      * 开始时间
@@ -111,7 +111,7 @@ public class MsProjectDeployLog extends SysBase {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
-    private LocalDateTime msProjectDeployLogStartTime;
+    private LocalDateTime msProjectDeployLogStartTime; // msprojectdeploy日志启动时间
 
     /**
      * 结束时间
@@ -121,12 +121,12 @@ public class MsProjectDeployLog extends SysBase {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
-    private LocalDateTime msProjectDeployLogEndTime;
+    private LocalDateTime msProjectDeployLogEndTime; // msprojectdeploy日志结束时间
 
     /**
      * 耗时（毫秒）
      */
     @TableField("ms_project_deploy_log_cost_ms")
     @Schema(description = "耗时(ms)")
-    private Long msProjectDeployLogCostMs;
+    private Long msProjectDeployLogCostMs; // msprojectdeploy日志costms
 }

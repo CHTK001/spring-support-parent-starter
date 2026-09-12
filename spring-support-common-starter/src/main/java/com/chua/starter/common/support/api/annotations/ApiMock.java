@@ -10,7 +10,7 @@ import java.lang.annotation.*;
  *
  * <h3>处理优先级：3</h3>
  * <p>
- * 优先级顺序：@ApiInternal(1) &gt; @ApiFeature(2) &gt; @ApiMock(3) &gt; @ApiDeprecated(4) &gt; @ApiGray(5)
+   * 优先级顺序：@api内部(1) &gt; @api特征(2) &gt; @apimock(3) &gt; @api已弃用(4) &gt; @apigray(5)
  * </p>
  * <p>
  * 处理阶段：拦截器阶段（请求进入前）。
@@ -29,7 +29,8 @@ import java.lang.annotation.*;
  * </pre>
  *
  * @since 2024/12/08
- * @version 1.0.0
+   * @版本 1.0.0
+ * @author CH
  */
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
@@ -37,9 +38,9 @@ import java.lang.annotation.*;
 public @interface ApiMock {
 
     /**
-     * 生效的环境（spring.profiles.active）
+      * 生效的环境（spring.配置文件.活跃）
      * <p>
-     * 多个环境用逗号分隔，如 "dev,test"
+      * 多个环境用逗号分隔，如 "dev,测试"
      * </p>
      *
      * @return 环境列表，默认 dev
@@ -47,9 +48,9 @@ public @interface ApiMock {
     String[] profile() default {"dev"};
 
     /**
-     * Mock 响应文件路径（classpath 下）
+      * Mock 响应文件路径（类路径 下）
      * <p>
-     * 优先级低于 response，如果 response 有值则使用 response
+      * 优先级低于 响应，如果 响应 有值则使用 响应
      * </p>
      *
      * @return 文件路径
@@ -59,7 +60,7 @@ public @interface ApiMock {
     /**
      * Mock 响应内容（JSON 字符串）
      * <p>
-     * 优先级高于 responseFile
+      * 优先级高于 响应文件
      * </p>
      *
      * @return JSON 响应内容
@@ -74,7 +75,7 @@ public @interface ApiMock {
     int status() default 200;
 
     /**
-     * 响应 Content-Type
+      * 响应 内容-类型
      *
      * @return Content-Type
      */

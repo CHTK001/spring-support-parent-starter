@@ -44,9 +44,9 @@ import java.util.stream.Collectors;
 @Spi("lark")
 public class LarkRequirementDataSource implements IRequirementDataSource {
 
-    private static final String TYPE = "lark";
-    private static final Duration HTTP_TIMEOUT = Duration.ofSeconds(30);
-    private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper();
+    private static final String TYPE = "lark"; // 类型
+    private static final Duration HTTP_TIMEOUT = Duration.ofSeconds(30); // http超时
+    private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper(); // JSON
 
     @Override
     public String type() {
@@ -77,7 +77,9 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
             int count = 0;
             for (Map<String, Object> record : records) {
                 String title = getFieldText(record, "title");
-                if (title == null || title.isEmpty()) continue;
+                if (title == null || title.isEmpty()) {
+                    continue;
+                }
 
                 Map<String, Object> fieldMap = extractFieldMap(record);
                 String status = mapStatus(getString(fieldMap, "status", "pending"));
@@ -121,7 +123,9 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
     }
 
     /**
-     * 使用 app_id + app_secret 获取 tenant_access_token。
+      * 使用 app_标识 + app_secret 获取 tenant_access_令牌。
+     * @param config 配置
+     * @return 获取access令牌的结果
      */
     private String getAccessToken(Map<String, Object> config) {
         String appId = getString(config, "app_id");
@@ -161,6 +165,10 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
 
     /**
      * 分页获取多维表格记录。
+     *
+     * @param accessToken 访问令牌
+     * @param tableId     多维表格 ID
+     * @return 记录列表
      */
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> fetchRecords(String accessToken, String tableId) {
@@ -230,13 +238,26 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
         }
         return String.valueOf(val);
     }
-
     /**
-     * 从飞书记录中提取字段 Map。
+     * extract字段映射。
+     * @param record record
+     * @return extract字段映射的结果
      */
     private Map<String, Object> extractFieldMap(Map<String, Object> record) {
+        /**
+         * 映射状态。
+         * @param raw raw
+         * @return 映射状态的结果
+         * @param map 映射
+         * @param key 键
+         */
         Object fields = record.get("fields");
         return fields instanceof Map ? (Map<String, Object>) fields : new LinkedHashMap<>();
+    /**
+     * 映射状态。
+     * @param raw raw
+     * @return 映射状态的结果
+     */
     }
 
     private String mapStatus(String raw) {
@@ -257,11 +278,24 @@ public class LarkRequirementDataSource implements IRequirementDataSource {
     private String getString(Map<String, Object> map, String key) {
         Object v = map.get(key);
         return v != null ? v.toString() : null;
+    /**
+     * 获取字符串。
+     * @param map 映射
+     * @param key 键
+     * @param defaultValue 默认值
+     * @return 获取字符串的结果
+     */
     }
 
     private String getString(Map<String, Object> map, String key, String defaultValue) {
         Object v = map.get(key);
         return v != null ? v.toString() : defaultValue;
+    /**
+      * escapejson。
+     * @param s s
+     * @return escapeJson的结果
+     * @param json json
+     */
     }
 
     private String escapeJson(String s) {

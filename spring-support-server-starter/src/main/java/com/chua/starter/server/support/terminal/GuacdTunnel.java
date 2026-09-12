@@ -14,10 +14,10 @@ import org.apache.guacamole.protocol.GuacamoleInstruction;
 import java.util.Map;
 
 /**
- * guacd 隧道封装（对齐 Orion-Visor 的 GuacdTunnel）
+   * guacd 隧道封装（对齐 Orion-Visor 的 guacdtunnel）
  *
  * <p>封装 {@link GuacamoleConfiguration} 与 guacd 的握手、指令读写、参数设置。
- * 支持 SSH/RDP/VNC 全部协议参数，包括 RDP 磁盘映射、RemoteApp、VNC 红蓝交换等。</p>
+   * 支持 SSH/RDP/VNC 全部协议参数，包括 RDP 磁盘映射、远程app、VNC 红蓝交换等。</p>
  *
  * @author CH
  * @since 4.0.0.42
@@ -38,15 +38,15 @@ public class GuacdTunnel {
 
     /** 服务器配置 */
     @Getter
-    private final GuacamoleConfiguration serverConfig;
+    private final GuacamoleConfiguration serverConfig; // 服务端配置
 
     /** 客户端信息 */
     @Getter
-    private final GuacamoleClientInformation clientConfig;
+    private final GuacamoleClientInformation clientConfig; // 客户端配置
 
-    /** guacd socket */
+    /** guacd 套接字 */
     @Getter
-    private GuacamoleSocket socket;
+    private GuacamoleSocket socket; // 套接字
 
     /** 关闭标记 */
     private volatile boolean closed;
@@ -214,7 +214,7 @@ public class GuacdTunnel {
     /**
      * 读取 guacd 输出
      *
-     * @return 读取到的字符数组，EOF 返回 null
+     * @return 读取到的字符数组，EOF 返回 空
      * @throws GuacamoleException 读取失败
      */
     public char[] read() throws GuacamoleException {
@@ -248,9 +248,9 @@ public class GuacdTunnel {
     }
 
     /**
-     * 获取连接 ID
+      * 获取连接 标识
      *
-     * @return 连接 ID
+     * @return 连接 标识
      */
     public String getConnectionId() {
         return serverConfig.getConnectionID();

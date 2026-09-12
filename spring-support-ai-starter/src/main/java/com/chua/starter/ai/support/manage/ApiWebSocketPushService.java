@@ -25,9 +25,9 @@ public class ApiWebSocketPushService {
     private final SysAiWebSocketHandler webSocketHandler;
 
     /**
-     * 推送事件（{@code {name, data}} 信封，前端按 name 路由）。
+      * 推送事件（{@code {name, data}} 信封，前端按 名称 路由）。
      *
-     * @param event 事件名（如 message.stream）
+     * @param event 事件名（如 消息.流）
      * @param data  事件数据
      */
     public void push(String event, Object data) {

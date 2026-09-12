@@ -19,7 +19,7 @@ import java.util.logging.Logger;
  * {@link MonitoringConnection}，其余方法全部透传。连接池内部连接管理不受影响。</p>
  *
  * <p>提供 {@code unwrap} 透传，保证 {@code instanceof} / {@code isWrapperFor} 判断兼容
- * Druid、Hikari、Seata Proxy 等场景。</p>
+   * Druid、Hikari、Seata 代理 等场景。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -65,6 +65,14 @@ public class MonitoringDataSource implements DataSource {
     public Connection getConnection() throws SQLException {
         Connection connection = delegate.getConnection();
         activeConnections.incrementAndGet();
+        /**
+         * 监控connection。
+         * @param connection connection
+         * @param dataSourceName 数据源名称
+         * @param monitor 监控
+         * @param closeCallback( 关闭callback(
+         * @return 监控connection的结果
+         */
         return new MonitoringConnection(connection, dataSourceName, monitor, closeCallback()).proxy();
     }
 
@@ -73,6 +81,14 @@ public class MonitoringDataSource implements DataSource {
     public Connection getConnection(String username, String password) throws SQLException {
         Connection connection = delegate.getConnection(username, password);
         activeConnections.incrementAndGet();
+        /**
+         * 监控connection。
+         * @param connection connection
+         * @param dataSourceName 数据源名称
+         * @param monitor 监控
+         * @param closeCallback( 关闭callback(
+         * @return 监控connection的结果
+         */
         return new MonitoringConnection(connection, dataSourceName, monitor, closeCallback()).proxy();
     }
 
@@ -86,7 +102,7 @@ public class MonitoringDataSource implements DataSource {
     }
 
     @Override
-    /** 是否WrapperFor */
+    /** 是否包装器for */
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
         return iface.isInstance(this) || delegate.isWrapperFor(iface);
     }
@@ -104,19 +120,19 @@ public class MonitoringDataSource implements DataSource {
     }
 
     @Override
-    /** 设置LoginTimeout */
+    /** 设置login超时 */
     public void setLoginTimeout(int seconds) throws SQLException {
         delegate.setLoginTimeout(seconds);
     }
 
     @Override
-    /** 获取LoginTimeout */
+    /** 获取login超时 */
     public int getLoginTimeout() throws SQLException {
         return delegate.getLoginTimeout();
     }
 
     @Override
-    /** 获取ParentLogger */
+    /** 获取父日志记录器 */
     public Logger getParentLogger() throws SQLFeatureNotSupportedException {
         return delegate.getParentLogger();
     }
@@ -149,7 +165,7 @@ public class MonitoringDataSource implements DataSource {
     }
 
     /**
-     * 构建连接关闭回调（幂等：连接被重复 close 时仅递减一次）
+      * 构建连接关闭回调（幂等：连接被重复 关闭 时仅递减一次）
      *
      * @return 关闭回调
      */
@@ -163,7 +179,7 @@ public class MonitoringDataSource implements DataSource {
     }
 
     @Override
-    /** ToString */
+    /** 转为字符串 */
     public String toString() {
         return "MonitoringDataSource{" +
                 "name='" + dataSourceName + '\'' +

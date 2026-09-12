@@ -13,21 +13,22 @@ import java.time.LocalDateTime;
 /**
  * 钱包账户
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @TableName("pay_wallet_account")
 public class WalletAccount {
 
     @TableId(value = "pay_wallet_account_id", type = IdType.AUTO)
-    /** ID */
+    /** 标识 */
     private Long id;
 
     @TableField("pay_wallet_account_merchant_id")
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
 
     @TableField("pay_wallet_account_user_id")
-    /** 用户ID */
+    /** 用户标识 */
     private Long userId;
 
     @TableField("pay_wallet_account_available_balance")

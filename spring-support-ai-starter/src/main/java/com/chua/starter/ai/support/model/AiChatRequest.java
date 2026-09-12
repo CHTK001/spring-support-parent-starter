@@ -30,7 +30,7 @@ public class AiChatRequest {
     private String systemPrompt;
 
     /**
-     * AI 角色编码（人设，如 java-dev/ui-designer），由后端解析为系统提示词
+       * AI 角色编码（人设，如 Java-dev/ui-Designer），由后端解析为系统提示词
      */
     private String roleCode;
 
@@ -40,7 +40,7 @@ public class AiChatRequest {
     private Double temperature;
 
     /**
-     * 最大生成 tokens
+      * 最大生成 令牌
      */
     private Integer maxTokens;
 
@@ -75,12 +75,12 @@ public class AiChatRequest {
     private String provider;
 
     /**
-     * 思考模式开关（透传 ChatClient，支持深度思考类模型）
+      * 思考模式开关（透传 对话客户端，支持深度思考类模型）
      */
     private Boolean think;
 
     /**
-     * 搜索开关（透传 ChatClient，支持联网搜索类模型）
+      * 搜索开关（透传 对话客户端，支持联网搜索类模型）
      */
     private Boolean search;
 }

@@ -4,9 +4,10 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * redis server
+   * Redis 服务端
  *
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @ConfigurationProperties(prefix = "plugin.redis.server")
@@ -29,7 +30,7 @@ public class RedisServerProperties {
      */
     private Integer database = 0;
     /**
-     * host
+      * 主机
      */
     private String host = "0.0.0.0";
     /**

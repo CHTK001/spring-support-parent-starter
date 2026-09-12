@@ -32,6 +32,8 @@ import java.util.function.Supplier;
  *
  *   // 调用方法, 内部会 borrow / return
  *   String answer = client.chatSync("hello");
+ * }</pre>rrow / return
+ *   String answer = client.chatSync("hello");
  * }</pre>
  *
  * @since 4.0.0.42
@@ -63,7 +65,7 @@ public class PooledChatClient implements ChatClient {
     /**
      * 构造方法
      *
-     * @param factory 创建底层 ChatClient 的工厂
+     * @param factory 创建底层 对话客户端 的工厂
      */
     public PooledChatClient(Supplier<ChatClient> factory) {
         this.factory = factory;
@@ -71,10 +73,10 @@ public class PooledChatClient implements ChatClient {
 
 
     /**
-     * 包装已有的 ChatClient 为可池化版本
+      * 包装已有的 对话客户端 为可池化版本
      *
-     * @param client 已有的 ChatClient 实例 (作为模板)
-     * @return 可池化的 ChatClient 包装
+     * @param client 已有的 对话客户端 实例 (作为模板)
+     * @return 可池化的 对话客户端 包装
      */
     public static PooledChatClient wrap(ChatClient client) {
         return new PooledChatClient(() -> client);
@@ -82,10 +84,13 @@ public class PooledChatClient implements ChatClient {
 
 
     @Override
-    /** ConfigurePool */
+    /** configure游泳池 */
     public void configurePool(Number size) {
         int target = size == null ? 1 : size.intValue();
         synchronized (this) {
+            /**
+             * 关闭游泳池。
+             */
             closePool();
             if (target <= 0) {
                 poolMode = 0;
@@ -107,6 +112,7 @@ public class PooledChatClient implements ChatClient {
 
     /**
      * 借出底层客户端
+     * @return borrow客户端的结果
      */
     private ChatClient borrowClient() {
         int mode = poolMode;
@@ -140,6 +146,12 @@ public class PooledChatClient implements ChatClient {
         try {
             return pool.borrow();
         } catch (Exception e) {
+            /**
+             * illegal状态异常。
+             * @param "借出客户端实例失败" "借出客户端实例失败"
+             * @param e e
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("借出客户端实例失败", e);
         }
     }
@@ -147,6 +159,7 @@ public class PooledChatClient implements ChatClient {
 
     /**
      * 归还底层客户端
+     * @param client 客户端
      */
     private void returnClient(ChatClient client) {
         if (client == null) {
@@ -176,6 +189,8 @@ public class PooledChatClient implements ChatClient {
 
     /**
      * 创建对象池
+     * @param maxTotal 最大total
+     * @return 创建游泳池的结果
      */
     private ObjectPool<ChatClient> createPool(int maxTotal) {
         ObjectPoolConfig config = ObjectPoolConfig.builder()
@@ -212,36 +227,48 @@ public class PooledChatClient implements ChatClient {
 
 
     @Override
-    /** Chat */
+    /** 对话 */
     public ChatResponse chat(ChatScope scope) {
         ChatClient inner = borrowClient();
         try {
             return inner.chat(scope);
         } finally {
+            /**
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
 
 
     @Override
-    /** Chat */
+    /** 对话 */
     public void chat(ChatScope scope, java.util.function.Consumer<String> consumer, Runnable onComplete, java.util.function.Consumer<Throwable> onError) {
         ChatClient inner = borrowClient();
         try {
             inner.chat(scope, consumer, onComplete, onError);
         } finally {
+            /**
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
 
 
     @Override
-    /** ListTools */
+    /** 列表tools */
     public List<AiTool> listTools(ChatScope scope) {
         ChatClient inner = borrowClient();
         try {
             return inner.listTools(scope);
         } finally {
+            /**
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
@@ -254,114 +281,154 @@ public class PooledChatClient implements ChatClient {
         try {
             return inner.callTool(scope, toolCall);
         } finally {
+            /**
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
 
 
     @Override
-    /** 获取ModelName */
+    /** 获取模型名称 */
     public String getModelName() {
         ChatClient inner = borrowClient();
         try {
             return inner.getModelName();
         } finally {
+            /**
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
 
 
     @Override
-    /** 获取Factory */
+    /** 获取工厂 */
     public String getFactory() {
         ChatClient inner = borrowClient();
         try {
             return inner.getFactory();
         } finally {
+            /**
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
 
 
     @Override
-    /** 获取Provider */
+    /** 获取提供者 */
     public String getProvider() {
         ChatClient inner = borrowClient();
         try {
             return inner.getProvider();
         } finally {
+            /**
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
 
 
     @Override
-    /** 获取DefaultModel */
+    /** 获取默认模型 */
     public String getDefaultModel() {
         ChatClient inner = borrowClient();
         try {
             return inner.getDefaultModel();
         } finally {
+            /**
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
 
 
     @Override
-    /** 获取Endpoint */
+    /** 获取端点 */
     public String getEndpoint() {
         ChatClient inner = borrowClient();
         try {
             return inner.getEndpoint();
         } finally {
+            /**
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
 
 
     @Override
-    /** ListModelDefinitions */
+    /** 列表模型definitions */
     public List<ModelDefinition> listModelDefinitions() {
         ChatClient inner = borrowClient();
         try {
             return inner.listModelDefinitions();
         } finally {
+            /**
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
 
 
     @Override
-    /** ChatSync */
+    /** 对话同步 */
     public String chatSync(String prompt) {
         ChatClient inner = borrowClient();
         try {
             return inner.chatSync(prompt);
         } finally {
+            /**
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
 
 
     @Override
-    /** ChatSync */
+    /** 对话同步 */
     public String chatSync(String prompt, long timeoutMillis) {
         ChatClient inner = borrowClient();
         try {
             return inner.chatSync(prompt, timeoutMillis);
         } finally {
+            /**
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
 
 
     @Override
-    /** ChatSyncWithResponse */
+    /** 对话同步with响应 */
     public com.chua.common.support.ai.chat.ChatSyncResponse chatSyncWithResponse(String prompt) {
         ChatClient inner = borrowClient();
         try {
             return inner.chatSyncWithResponse(prompt);
         } finally {
+            /**
+             * 申报客户端。
+             * @param inner 内部
+             */
             returnClient(inner);
         }
     }
@@ -371,6 +438,9 @@ public class PooledChatClient implements ChatClient {
     /** 关闭 */
     public void close() {
         synchronized (this) {
+            /**
+             * 关闭游泳池。
+             */
             closePool();
         }
     }

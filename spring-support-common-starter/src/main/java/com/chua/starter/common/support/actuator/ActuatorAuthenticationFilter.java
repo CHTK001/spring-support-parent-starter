@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
  * 用于对Actuator端点进行认证，防止未授权访问。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/6/21
  * @author CH
  */
@@ -29,24 +29,24 @@ import org.slf4j.LoggerFactory;
 public class ActuatorAuthenticationFilter implements Filter  {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ActuatorAuthenticationFilter.class);
-        /** Authorization */
+        /** 授权 */
         private static final String AUTHORIZATION = "Authorization";
-    /** Basic */
+    /** 基础 */
     private static final String BASIC = "Basic ";
 
     /** Actuator属性 */
     private final ActuatorProperties actuatorProperties;
 
     /**
-     * 创建 ActuatorAuthenticationFilter 实例
-     * @param actuatorProperties actuatorProperties
+      * 创建 actuator认证过滤器 实例
+     * @param actuatorProperties actuator属性
      */
     public ActuatorAuthenticationFilter(ActuatorProperties actuatorProperties) {
         this.actuatorProperties = actuatorProperties;
     }
 
     @Override
-    /** Do过滤 */
+    /** 执行过滤 */
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
@@ -73,7 +73,7 @@ public class ActuatorAuthenticationFilter implements Filter  {
             return;
         }
 
-        // Basic认证
+ // 基础认证
         String authHeader = httpRequest.getHeader(AUTHORIZATION);
         if (authHeader != null && authHeader.startsWith(BASIC)) {
             String base64Credentials = authHeader.substring(BASIC.length());
@@ -130,7 +130,7 @@ public class ActuatorAuthenticationFilter implements Filter  {
     }
 
     /**
-     * 生成Basic认证头
+      * 生成基础认证头
      *
      * @param username 用户名
      * @param password 密码

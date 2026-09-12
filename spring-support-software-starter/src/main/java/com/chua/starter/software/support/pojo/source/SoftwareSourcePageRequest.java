@@ -39,6 +39,6 @@ public class SoftwareSourcePageRequest extends Query {
      * 是否启用
      */
     @Schema(description = "是否启用")
-    /** 来源IS是否启用 */
+    /** 来源是否是否启用 */
     private Boolean sourceIsEnabled;
 }

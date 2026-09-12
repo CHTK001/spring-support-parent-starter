@@ -11,28 +11,29 @@ import java.time.LocalDateTime;
 /**
  * 回调异常记录
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @TableName("pay_notify_error")
 public class PaymentNotifyError {
     @TableId(value = "pay_notify_error_id", type = IdType.AUTO)
-    /** ID */
+    /** 标识 */
     private Long id;
 
     @TableField("pay_notify_error_notify_log_id")
-    /** Notify日志ID */
+    /** 通知日志标识 */
     private Long notifyLogId;
 
     @TableField("pay_notify_error_notify_type")
-    /** Notify类型 */
+    /** 通知类型 */
     private String notifyType;
 
     @TableField("pay_notify_error_tenant_id")
-    /** TenantID */
+    /** tenantid */
     private Long tenantId;
 
     @TableField("pay_notify_error_merchant_id")
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
 
     @TableField("pay_notify_error_order_no")
@@ -40,7 +41,7 @@ public class PaymentNotifyError {
     private String orderNo;
 
     @TableField("pay_notify_error_refund_no")
-    /** RefundNO */
+    /** 退税no */
     private String refundNo;
 
     @TableField("pay_notify_error_error_type")
@@ -76,23 +77,23 @@ public class PaymentNotifyError {
     private String status;
 
     @TableField("pay_notify_error_resolved_at")
-    /** ResolvedAT */
+    /** resolvedat */
     private LocalDateTime resolvedAt;
 
     @TableField("pay_notify_error_resolved_by")
-    /** ResolvedBY */
+    /** resolvedby */
     private String resolvedBy;
 
     @TableField("pay_notify_error_remark")
-    /** Remark */
+    /** 评论 */
     private String remark;
 
     @TableField("pay_notify_error_create_time")
-    /** Create时间 */
+    /** 创建时间 */
     private LocalDateTime createTime;
 
     @TableField("pay_notify_error_update_time")
-    /** Update时间 */
+    /** 更新时间 */
     private LocalDateTime updateTime;
 }
 

@@ -23,7 +23,7 @@ import java.util.Map;
  *   <li>告警规则逐点评估（原有 AlarmEngineService 链路）</li>
  *   <li>最新指标 Socket 实时推送（新增实时能力）</li>
  * </ul>
- * 事件由 MonitorScheduler 采集成功后发布；监听器内异常只记日志，不阻断主链路。
+   * 事件由 监控调度器 采集成功后发布；监听器内异常只记日志，不阻断主链路。
  * </p>
  *
  * @author CH
@@ -47,7 +47,7 @@ public class MetricCollectedEventListener {
      */
     @EventListener
     public void onCollected(MetricCollectedEvent event) {
-        CollectResult result = event.getResult();
+        CollectResult result = event.result();
         if (result == null || result.getPoints() == null || result.getPoints().isEmpty()) {
             return;
         }
@@ -67,13 +67,13 @@ public class MetricCollectedEventListener {
             log.warn("[event] 告警评估异常: {}", e.getMessage());
         }
 
-        // 2) 最新指标实时推送（Socket 未启用时静默跳过）
+ // 2) 最新指标实时推送（套接字 未启用时静默跳过）
         try {
             Map<String, Object> payload = new HashMap<>(8);
             payload.put("monitorId", monitorId);
             payload.put("monitorName", monitorName == null ? "" : monitorName);
             payload.put("collectTime", collectTime.toString());
-            Map<String, Object> metrics = new HashMap<>();
+            Map<String, Object> metrics = new HashMap<>(points.size());
             for (MetricPoint point : points) {
                 if (point.getMetricName() != null && point.getValue() != null) {
                     metrics.put(point.getMetricName(), point.getValue());

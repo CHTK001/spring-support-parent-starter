@@ -11,12 +11,13 @@ import java.time.LocalDateTime;
 /**
  * 支付调度任务配置
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @TableName("pay_scheduler_config")
 public class PaymentSchedulerConfig {
     @TableId(value = "pay_scheduler_config_id", type = IdType.AUTO)
-    /** ID */
+    /** 标识 */
     private Long id;
 
     @TableField("pay_scheduler_config_task_key")
@@ -40,27 +41,27 @@ public class PaymentSchedulerConfig {
     private String description;
 
     @TableField("pay_scheduler_config_last_started_at")
-    /** 最后startedAT */
+    /** 最后启动at */
     private LocalDateTime lastStartedAt;
 
     @TableField("pay_scheduler_config_last_finished_at")
-    /** 最后finishedAT */
+    /** 最后饰面at */
     private LocalDateTime lastFinishedAt;
 
     @TableField("pay_scheduler_config_last_run_status")
-    /** 最后RUN状态 */
+    /** 最后运行状态 */
     private String lastRunStatus;
 
     @TableField("pay_scheduler_config_last_run_message")
-    /** 最后RUN消息 */
+    /** 最后运行消息 */
     private String lastRunMessage;
 
     @TableField("pay_scheduler_config_create_time")
-    /** Create时间 */
+    /** 创建时间 */
     private LocalDateTime createTime;
 
     @TableField("pay_scheduler_config_update_time")
-    /** Update时间 */
+    /** 更新时间 */
     private LocalDateTime updateTime;
 }
 

@@ -35,13 +35,14 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
 /**
  * 数据库注入
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         EnvironmentAware,
         ApplicationContextAware {
 
-    /** 数据来源class */
+    /** 数据来源类 */
     protected Class<DataSource> dataSourceClass;
     /** Application上下文 */
     private ApplicationContext applicationContext;
@@ -51,7 +52,7 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     private String filter;
 
     {
-        // 使用Provider工厂获取首选数据源类型
+ // 使用提供者工厂获取首选数据源类型
         Class<? extends DataSource> preferredType = DataSourcePropertyProviderFactory.getPreferredDataSourceType();
         if (preferredType != null) {
             dataSourceClass = (Class<DataSource>) preferredType;
@@ -62,7 +63,7 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
 
     /** Transaction */
     private static final String TRANSACTION = "_transaction";
-    /** Prefix */
+    /** 前缀 */
     private final String[] PREFIX = new String[]{
             "spring.datasource.hikari.*",
             "spring.datasource.druid.*",
@@ -72,26 +73,51 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     /** 环境 */
     private Environment environment;
 
-    /** 环境support */
+    /** 环境支持 */
     private EnvironmentSupport environmentSupport;
 
     @Override
-    /** Post处理BeanDefinitionRegistry */
+    /** Post处理Beandefinitionregistry */
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry beanDefinitionRegistry) throws BeansException {
+        /**
+         * 注册multi数据源属性。
+         * @param beanDefinitionRegistry Beandefinitionregistry
+         */
         registerMultiDataSourceProperties(beanDefinitionRegistry);
+        /**
+         * 注册环境。
+         * @param beanDefinitionRegistry Beandefinitionregistry
+         */
         registerEnvironment(beanDefinitionRegistry);
     }
 
-    /** 注册MultiDataSourceProperties */
+    /**
+     * 注册multi数据源属性
+     *
+     * @param beanDefinitionRegistry Beandefinitionregistry
+     */
     private void registerMultiDataSourceProperties(BeanDefinitionRegistry beanDefinitionRegistry) {
         MultiDataSourceProperties multiDataSourceProperties = bindMultiDataSourceProperties(environment);
+        /**
+         * 注册数据源。
+         * @param multiDataSourceProperties.getDataSource( multi数据源属性.获取数据源(
+         */
         registerDataSource(multiDataSourceProperties.getDataSource(), beanDefinitionRegistry, null);
 
         MultiHikariDataSourceProperties multiHikariDataSourceProperties = bindMultiHikariDataSourceProperties(environment);
+        /**
+         * 注册数据源。
+         * @param multiHikariDataSourceProperties.getDataSource( multihikari数据源属性.获取数据源(
+         */
         registerDataSource(multiHikariDataSourceProperties.getDataSource(), beanDefinitionRegistry, HikariDataSource.class);
     }
 
-    /** 绑定MultiDataSourceProperties */
+    /**
+     * 绑定multi数据源属性
+     *
+     * @param environment 环境
+     * @return bindmulti数据源属性的结果
+     */
     static MultiDataSourceProperties bindMultiDataSourceProperties(Environment environment) {
         MultiDataSourceProperties current = Binder.get(environment)
                 .bindOrCreate(MultiDataSourceProperties.PRE, MultiDataSourceProperties.class);
@@ -104,7 +130,12 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         return result;
     }
 
-    /** 绑定MultiHikariDataSourceProperties */
+    /**
+     * 绑定multihikari数据源属性
+     *
+     * @param environment 环境
+     * @return bindmultihikari数据源属性的结果
+     */
     static MultiHikariDataSourceProperties bindMultiHikariDataSourceProperties(Environment environment) {
         MultiHikariDataSourceProperties current = Binder.get(environment)
                 .bindOrCreate(MultiHikariDataSourceProperties.PRE, MultiHikariDataSourceProperties.class);
@@ -117,15 +148,37 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         return result;
     }
 
-    /** 合并DataSourceProperties */
+    /**
+     * 合并数据源属性
+     *
+     * @param current 当前
+     * @param legacy legacy
+     * @return 合并数据源属性的结果
+     */
     private static <T extends DataSourceProperties> List<T> mergeDataSourceProperties(List<T> current, List<T> legacy) {
         Map<String, T> merged = new LinkedHashMap<>();
+        /**
+         * 放入数据源属性。
+         * @param merged 合并
+         * @param legacy legacy
+         */
         putDataSourceProperties(merged, legacy);
+        /**
+         * 放入数据源属性。
+         * @param merged 合并
+         * @param current 当前
+         */
         putDataSourceProperties(merged, current);
         return merged.isEmpty() ? null : new ArrayList<>(merged.values());
     }
 
-    /** PutDataSourceProperties */
+    /**
+     * 放入数据源属性
+     *
+     * @param target Target
+     * @param source 源
+     * @return 放入数据源属性的结果
+     */
     private static <T extends DataSourceProperties> void putDataSourceProperties(Map<String, T> target, List<T> source) {
         if (source == null) {
             return;
@@ -140,10 +193,10 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
     }
 
     /**
-     * 注册DataSource
-     * @param dataSource dataSource
-     * @param beanDefinitionRegistry beanDefinitionRegistry
-     * @param dataSourceType dataSourceType
+      * 注册数据源
+     * @param dataSource 数据源
+     * @param beanDefinitionRegistry Beandefinitionregistry
+     * @param dataSourceType 数据源类型
      */
     private void registerDataSource(List<? extends DataSourceProperties> dataSource,
                                     BeanDefinitionRegistry beanDefinitionRegistry,
@@ -188,13 +241,23 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         }
     }
 
-    /** 注册Environment */
+    /**
+     * 注册环境
+     *
+     * @param beanDefinitionRegistry Beandefinitionregistry
+     */
     private void registerEnvironment(BeanDefinitionRegistry beanDefinitionRegistry) {
         if (null == dataSourceClass) {
             return;
         }
         for (String prefix : PREFIX) {
             Map<String, Object> objectMap = environmentSupport.getProperties(prefix);
+            /**
+             * analysis数据源。
+             * @param objectMap 对象映射
+             * @param prefix 前缀
+             * @param beanDefinitionRegistry Beandefinitionregistry
+             */
             analysisDataSource(objectMap, prefix, beanDefinitionRegistry);
         }
 
@@ -208,7 +271,7 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.rootBeanDefinition(DynamicDataSource.class);
         beanDefinitionBuilder.setPrimary(true);
 
-        // 桥接配置：将 strict/loadBalance 设置到 DynamicDataSource
+ // 桥接配置：将 strict/加载balance 设置到 dynamic数据源
         MultiDataSourceSettingProperties settingProperties = Binder.get(environment)
                 .bindOrCreate(MultiDataSourceSettingProperties.PRE, MultiDataSourceSettingProperties.class);
         beanDefinitionBuilder.addPropertyValue("strict", settingProperties.isStrict());
@@ -258,7 +321,7 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
 
             BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.rootBeanDefinition(dataSourceClass);
             
-            // 使用Provider获取属性，替代反射
+ // 使用提供者获取属性，替代反射
             DataSourcePropertyProvider<DataSource> provider = DataSourcePropertyProviderFactory.getProvider(dataSource);
             if (provider != null) {
                 Map<String, Object> properties = provider.getProperties(dataSource);
@@ -308,6 +371,12 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
             DataSource dataSource = dataSources.get(item);
             if (null != dataSource) {
                 //补充名称
+                /**
+                  * analysismapping。
+                 * @param objectMap 对象映射
+                 * @param newKey 新钥匙
+                 * @param dataSource 数据源
+                 */
                 analysisMapping(objectMap, newKey, dataSource);
             }
         }
@@ -326,25 +395,38 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         BindResult<? extends DataSource> bindResult = Binder.get(environment).bind(prefix, dataSourceType);
         DataSource dataSource = bindResult.orElse(null);
 
-        // 将 spring.datasource.hikari.* 属性应用到已创建的 HikariDataSource
+ // 将 spring.datasource.hikari.* 属性应用到已创建的 hikari数据源
         if (dataSource instanceof HikariDataSource hikari) {
+            /**
+             * applyhikari属性。
+             * @param hikari hikari
+             * @param prefix 前缀
+             */
             applyHikariProperties(hikari, prefix);
         }
 
-        // 使用Provider设置过滤器，替代反射
+ // 使用提供者设置过滤器，替代反射
         if (null != dataSource && null != filter && !filter.isEmpty()) {
             DataSourcePropertyProviderFactory.setFilters(dataSource, filter);
         }
 
         //补充名称
+        /**
+          * analysismapping。
+         * @param objectMap 对象映射
+         * @param prefix 前缀
+         * @param dataSource 数据源
+         */
         analysisMapping(objectMap, prefix, dataSource);
         return dataSource;
     }
 
     /**
-     * 将 prefix.hikari.* 配置属性应用到 HikariDataSource。
+      * 将 前缀.hikari.* 配置属性应用到 hikari数据源。
      * Spring Boot 的 Binder.bind() 对已有实例的绑定可能不生效，
-     * 因此通过 Provider 直接设置属性。
+      * 因此通过 提供者 直接设置属性。
+     * @param hikari hikari
+     * @param prefix 前缀
      */
     private void applyHikariProperties(HikariDataSource hikari, String prefix) {
         String hikariPrefix = prefix + ".hikari";
@@ -362,7 +444,7 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
             String key = entry.getKey();
             if (key.startsWith(stripPrefix)) {
                 String prop = key.substring(stripPrefix.length());
-                // kebab-case → camelCase
+ // kebab-大小写 → camel大小写
                 prop = kebabToCamelCase(prop);
                 toSet.put(prop, entry.getValue());
             }
@@ -373,7 +455,12 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
         }
     }
 
-    /** KebabToCamelCase */
+    /**
+     * kebab转为camel大小写
+     *
+     * @param kebab kebab
+     * @return kebab转为camel大小写的结果
+     */
     private static String kebabToCamelCase(String kebab) {
         StringBuilder sb = new StringBuilder(kebab.length());
         boolean nextUpper = false;
@@ -418,7 +505,7 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
             return;
         }
         
-        // 使用Provider设置属性，替代反射
+ // 使用提供者设置属性，替代反射
         DataSourcePropertyProvider<DataSource> provider = DataSourcePropertyProviderFactory.getProvider(dataSource);
         if (provider == null) {
             return;
@@ -438,24 +525,24 @@ public class DataSourceInspect implements BeanDefinitionRegistryPostProcessor,
             }
         }
         
-        // 通过Provider设置属性
+ // 通过提供者设置属性
         provider.setProperties(dataSource, properties);
     }
 
     @Override
-    /** Post处理BeanFactory */
+    /** Post处理Bean工厂 */
     public void postProcessBeanFactory(ConfigurableListableBeanFactory configurableListableBeanFactory) throws BeansException {
     }
 
     @Override
-    /** 设置ApplicationContext */
+    /** 设置application上下文 */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
         this.filter = applicationContext.getEnvironment().getProperty("spring.datasource.druid.filters");
     }
 
     @Override
-    /** 设置Environment */
+    /** 设置环境 */
     public void setEnvironment(Environment environment) {
         this.environment = environment;
         this.environmentSupport = new EnvironmentSupport(environment);

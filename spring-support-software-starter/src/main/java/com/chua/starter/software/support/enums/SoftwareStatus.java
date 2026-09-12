@@ -7,21 +7,44 @@ package com.chua.starter.software.support.enums;
  * @author CH
  */
 public enum SoftwareStatus {
-    /** 正常 */
+    /**
+     * 正常
+     *
+     * @param 0 0
+     * @return NORMAL的结果
+     */
     NORMAL(0),
-    /** 已删除 */
+    /**
+     * 已删除
+     *
+     * @param 1 1
+     * @return 删除的结果
+     */
     DELETED(1),
-    /** 已禁用 */
+    /**
+     * 已禁用
+     *
+     * @param 2 2
+     * @return 已禁用的结果
+     */
     DISABLED(2);
 
     /** 值 */
     private final int value;
 
+    /**
+     * software状态。
+     * @param value 价值观
+     */
     SoftwareStatus(int value) {
         this.value = value;
     }
 
-    /** 获取Value */
+    /**
+     * 获取价值观
+     *
+     * @return 获取价值观的结果
+     */
     public int getValue() {
         return value;
     }

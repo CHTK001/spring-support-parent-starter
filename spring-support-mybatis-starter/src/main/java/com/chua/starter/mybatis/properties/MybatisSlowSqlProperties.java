@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import static com.chua.starter.mybatis.properties.MybatisPlusProperties.PRE;
 
 /**
- * MyBatis 慢 SQL 检测配置。
+   * MyBatis 慢 SQL 检测配置。
  *
  * <p>当 SQL 执行耗时超过阈值时，拦截器会发布 Spring 事件，供业务侧订阅进行告警/审计。</p>
  *
@@ -48,32 +48,56 @@ public class MybatisSlowSqlProperties {
      */
     private int maxSqlLength = 2000;
 
-    /** 是否Enabled */
+    /**
+     * 是否已启用
+     *
+     * @return 是否已启用的结果
+     */
     public boolean isEnabled() {
         return enabled;
     }
 
-    /** 获取ThresholdMs */
+    /**
+     * 获取阈值ms
+     *
+     * @return 获取阈值ms的结果
+     */
     public long getThresholdMs() {
         return thresholdMs;
     }
 
-    /** 是否Print */
+    /**
+     * 是否Print
+     *
+     * @return 是否print的结果
+     */
     public boolean isPrint() {
         return print;
     }
 
-    /** 是否IncludeSql */
+    /**
+     * 是否includesql
+     *
+     * @return 是否includesql的结果
+     */
     public boolean isIncludeSql() {
         return includeSql;
     }
 
-    /** 是否IncludeParameters */
+    /**
+     * 是否include参数
+     *
+     * @return 是否include参数的结果
+     */
     public boolean isIncludeParameters() {
         return includeParameters;
     }
 
-    /** 获取最大值Sql获取长度 */
+    /**
+      * 获取最大值SQL获取长度
+     *
+     * @return 获取最大sql长度的结果
+     */
     public int getMaxSqlLength() {
         return maxSqlLength;
     }

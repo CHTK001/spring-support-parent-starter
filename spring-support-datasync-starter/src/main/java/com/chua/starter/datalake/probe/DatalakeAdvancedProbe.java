@@ -15,7 +15,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Datalake 管线进阶探测 — 覆盖 20 项场景：
+   * 数据湖 管线进阶探测 — 覆盖 20 项场景：
  * <ul>
  *   <li>A01~A05: Null/缺失安全</li>
  *   <li>A06~A09: Sink 状态流转</li>
@@ -31,20 +31,24 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class DatalakeAdvancedProbe {
 
-    private static int passed = 0;
-    private static int failed = 0;
-    private static int total = 0;
-    private static final List<String> failedCases = new CopyOnWriteArrayList<>();
+    private static int passed = 0; // 通过
+    private static int failed = 0; // 失败
+    private static int total = 0; // total
+    private static final List<String> failedCases = new CopyOnWriteArrayList<>(); // 失败CAS
 
-    private static PipelineManager pipelineManager;
-    private static final Map<String, DataSink> sinkRegistry = new ConcurrentHashMap<>();
-    private static PipelineEngine pipelineEngine;
-    private static CapturingSink logSink;
-    private static CapturingSink statSink;
-    private static CapturingSink jdbcSink;
-    private static FailingSink failingSink;
-    private static long startTime;
+    private static PipelineManager pipelineManager; // pipeline管理器
+    private static final Map<String, DataSink> sinkRegistry = new ConcurrentHashMap<>(); // sinkregistry
+    private static PipelineEngine pipelineEngine; // pipelineengine
+    private static CapturingSink logSink; // 日志sink
+    private static CapturingSink statSink; // statsink
+    private static CapturingSink jdbcSink; // jdbcsink
+    private static FailingSink failingSink; // 失败sink
+    private static long startTime; // 启动时间
 
+    /**
+     * main。
+     * @param args 参数
+     */
     public static void main(String[] args) throws Exception {
         log.info("═══════════════════════════════════════════════════════");
         log.info("║         Datalake 管线进阶探测 (DatalakeAdvancedProbe)     ║");
@@ -72,6 +76,9 @@ public class DatalakeAdvancedProbe {
 
     // ━━━━━━━━━━━━━━━ 基础设施 ━━━━━━━━━━━━━━━
 
+    /**
+      * setupinfrastructure。
+     */
     private static void setupInfrastructure() {
         pipelineManager = new DefaultPipelineManager();
         logSink = new CapturingSink("log");
@@ -92,22 +99,37 @@ public class DatalakeAdvancedProbe {
         log.info("[DatalakeAdvancedProbe] 基础设施就绪: log/stat/jdbc/failing 共 4 个 Sink");
     }
 
+    /**
+     * 单个sinkpipeline。
+     * @param sinkType sink类型
+     * @return 单个sinkpipeline的结果
+     */
     private static String singleSinkPipeline(String sinkType) {
         return "{\"stages\":{\"default\":{\"sink\":[{\"type\":\"" + sinkType + "\"}]}}}";
     }
 
+    /**
+      * multisinkpipeline。
+     * @param sinkTypes sink类型
+     * @return multiSinkPipeline的结果
+     */
     private static String multiSinkPipeline(String... sinkTypes) {
         StringBuilder sb = new StringBuilder("{\"stages\":{\"default\":{\"sink\":[");
         for (int i = 0; i < sinkTypes.length; i++) {
-            if (i > 0) sb.append(',');
+            if (i > 0) {
+                sb.append(',');
+            }
             sb.append("{\"type\":\"").append(sinkTypes[i]).append("\"}");
         }
         sb.append("]}}}");
         return sb.toString();
     }
 
-    // ━━━━━━━━━━━━━━━ A01~A05: Null/缺失安全 ━━━━━━━━━━━━━━━
+ // ━━━━━━━━━━━━━━━ A01~A05: 空/缺失安全 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试空safety。
+     */
     private static void testNullSafety() {
         log.info("───── A01~A05: Null/缺失安全 ─────");
 
@@ -160,6 +182,9 @@ public class DatalakeAdvancedProbe {
 
     // ━━━━━━━━━━━━━━━ A06~A09: Sink 状态流转 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试sink状态过渡。
+     */
     private static void testSinkStateTransition() {
         log.info("───── A06~A09: Sink 状态流转 ─────");
 
@@ -202,8 +227,11 @@ public class DatalakeAdvancedProbe {
         });
     }
 
-    // ━━━━━━━━━━━━━━━ A10~A13: DataEnvelope 属性 ━━━━━━━━━━━━━━━
+ // ━━━━━━━━━━━━━━━ A10~A13: 数据envelope 属性 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试数据envelope属性。
+     */
     private static void testDataEnvelopeProperties() {
         log.info("───── A10~A13: DataEnvelope 属性 ─────");
 
@@ -254,6 +282,9 @@ public class DatalakeAdvancedProbe {
 
     // ━━━━━━━━━━━━━━━ A14~A15: 并发 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试concurrency。
+     */
     private static void testConcurrency() throws Exception {
         log.info("───── A14~A15: 并发执行 ─────");
 
@@ -309,6 +340,9 @@ public class DatalakeAdvancedProbe {
 
     // ━━━━━━━━━━━━━━━ A16~A18: 管线生命周期 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试pipelinelifecycle。
+     */
     private static void testPipelineLifecycle() {
         log.info("───── A16~A18: 管线生命周期 ─────");
 
@@ -332,7 +366,7 @@ public class DatalakeAdvancedProbe {
         check("A18-重复注册覆盖旧配置", () -> {
             logSink.reset();
             statSink.reset();
-            // 先用 log 注册
+ // 先用 日志 注册
             pipelineManager.savePipeline("a18", singleSinkPipeline("log"));
             DataEnvelope env1 = buildEnv("a18", "A18-v1");
             pipelineEngine.execute("a18", env1);
@@ -351,6 +385,9 @@ public class DatalakeAdvancedProbe {
 
     // ━━━━━━━━━━━━━━━ A19~A20: Sink 配置传递 + 压测 ━━━━━━━━━━━━━━━
 
+    /**
+     * 测试sink配置和stress。
+     */
     private static void testSinkConfigAndStress() throws Exception {
         log.info("───── A19~A20: Sink 配置传递 + 压测 ─────");
 
@@ -395,6 +432,28 @@ public class DatalakeAdvancedProbe {
     }
 
     // ━━━━━━━━━━━━━━━ 辅助 ━━━━━━━━━━━━━━━
+    /**
+     * 探针检查接口。
+     *
+     * @author CH
+     * @since 4.0.0
+     * @param name 名称
+     * @param check 检查
+     /**
+      * 构建env。
+      * @param pipelineId pipelineid
+      * @param traceTag 追踪标签
+      * @return 构建env的结果
+      */
+      * @param name 名称
+      * @param check 检查
+     /**
+      * 构建env。
+      * @param pipelineId pipelineId
+      * @param traceTag 追踪标签
+      * @return 构建env的结果
+      */
+     */
 
     private static DataEnvelope buildEnv(String pipelineId, String traceTag) {
         return DataEnvelope.builder()
@@ -430,16 +489,42 @@ public class DatalakeAdvancedProbe {
     }
 
     // ━━━━━━━━━━━━━━━ 模拟 Sink ━━━━━━━━━━━━━━━
+     /**
+       * capturingsink类。
+      *
+      * @author CH
+      * @since 4.0.0
+      */
+     * 失败sink类。
+     *
+     */
 
     public static class CapturingSink implements DataSink {
-        private final String type;
-        private final AtomicInteger count = new AtomicInteger(0);
-        private volatile Map<String, Object> lastConfig;
+        private final String type; // 类型
+        private final AtomicInteger count = new AtomicInteger(0); // 数量
+        private volatile Map<String, Object> lastConfig; // 最后一个配置
 
+        /**
+          * capturingsink。
+         * @param type 类型
+         */
         public CapturingSink(String type) { this.type = type; }
 
+        /**
+         * reset。
+         */
         public void reset() { count.set(0); lastConfig = null; }
+        /**
+         * 获取数量。
+         * @return 获取数量的结果
+         */
         public int getCount() { return count.get(); }
+        /**
+         * 获取最后一个配置。
+         * @return 获取最后一个配置的结果
+         * @author CH
+         * @since 4.0.0
+         */
         public Map<String, Object> getLastConfig() { return lastConfig; }
 
         @Override
@@ -461,7 +546,14 @@ public class DatalakeAdvancedProbe {
     public static class FailingSink implements DataSink {
         private final AtomicInteger count = new AtomicInteger(0);
 
+        /**
+         * reset。
+         */
         public void reset() { count.set(0); }
+        /**
+         * 获取数量。
+         * @return 获取数量的结果
+         */
         public int getCount() { return count.get(); }
 
         @Override

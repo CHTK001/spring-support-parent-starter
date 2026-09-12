@@ -12,16 +12,23 @@ import java.util.Collection;
 import java.util.function.Consumer;
 
 /**
- * 拓展 MyBatis Plus Join QueryWrapper 类，主要增加如下功能：
+   * 拓展 MyBatis Plus 连接 查询包装器 类，主要增加如下功能：
  * <p>
- * 1. 拼接条件的方法，增加 xxxIfPresent 方法，用于判断值不存在的时候，不要拼接到条件中。
+   * 1. 拼接条件的方法，增加 xxxifpresent 方法，用于判断值不存在的时候，不要拼接到条件中。
  *
  * @param <T> 数据类型
  * @author CH
+ * @since 4.0.0
  */
 public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
 
-    /** LikeIfPresent */
+    /**
+     * likeifpresent
+     *
+     * @param column column
+     * @param val val
+     * @return likeIfPresent的结果
+     */
     public MPJLambdaWrapperX<T> likeIfPresent(SFunction<T, ?> column, String val) {
         MPJWrappers.lambdaJoin().like(column, val);
         if (StringUtils.hasText(val)) {
@@ -30,7 +37,13 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
         return this;
     }
 
-    /** InIfPresent */
+    /**
+     * 入ifpresent
+     *
+     * @param column column
+     * @param values 价值观
+     * @return 入ifpresent的结果
+     */
     public MPJLambdaWrapperX<T> inIfPresent(SFunction<T, ?> column, Collection<?> values) {
         if (ObjectUtils.isAllNotEmpty(values) && !CollectionUtils.isEmpty(values)) {
             return (MPJLambdaWrapperX<T>) super.in(column, values);
@@ -38,7 +51,13 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
         return this;
     }
 
-    /** InIfPresent */
+    /**
+     * 入ifpresent
+     *
+     * @param column column
+     * @param values 价值观
+     * @return 入ifpresent的结果
+     */
     public MPJLambdaWrapperX<T> inIfPresent(SFunction<T, ?> column, Object... values) {
         if (ObjectUtils.isAllNotEmpty(values) && !ArrayUtils.isEmpty(values)) {
             return (MPJLambdaWrapperX<T>) super.in(column, values);
@@ -46,7 +65,13 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
         return this;
     }
 
-    /** EqIfPresent */
+    /**
+     * eqifpresent
+     *
+     * @param column column
+     * @param val val
+     * @return eqIfPresent的结果
+     */
     public MPJLambdaWrapperX<T> eqIfPresent(SFunction<T, ?> column, Object val) {
         if (ObjectUtils.isNotEmpty(val)) {
             return (MPJLambdaWrapperX<T>) super.eq(column, val);
@@ -54,7 +79,13 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
         return this;
     }
 
-    /** NeIfPresent */
+    /**
+     * neifpresent
+     *
+     * @param column column
+     * @param val val
+     * @return neIfPresent的结果
+     */
     public MPJLambdaWrapperX<T> neIfPresent(SFunction<T, ?> column, Object val) {
         if (ObjectUtils.isNotEmpty(val)) {
             return (MPJLambdaWrapperX<T>) super.ne(column, val);
@@ -62,7 +93,13 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
         return this;
     }
 
-    /** GtIfPresent */
+    /**
+     * gtifpresent
+     *
+     * @param column column
+     * @param val val
+     * @return gtIfPresent的结果
+     */
     public MPJLambdaWrapperX<T> gtIfPresent(SFunction<T, ?> column, Object val) {
         if (val != null) {
             return (MPJLambdaWrapperX<T>) super.gt(column, val);
@@ -70,7 +107,13 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
         return this;
     }
 
-    /** GeIfPresent */
+    /**
+     * geifpresent
+     *
+     * @param column column
+     * @param val val
+     * @return geIfPresent的结果
+     */
     public MPJLambdaWrapperX<T> geIfPresent(SFunction<T, ?> column, Object val) {
         if (val != null) {
             return (MPJLambdaWrapperX<T>) super.ge(column, val);
@@ -78,7 +121,13 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
         return this;
     }
 
-    /** LtIfPresent */
+    /**
+     * ltifpresent
+     *
+     * @param column column
+     * @param val val
+     * @return ltIfPresent的结果
+     */
     public MPJLambdaWrapperX<T> ltIfPresent(SFunction<T, ?> column, Object val) {
         if (val != null) {
             return (MPJLambdaWrapperX<T>) super.lt(column, val);
@@ -86,7 +135,13 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
         return this;
     }
 
-    /** LeIfPresent */
+    /**
+     * leifpresent
+     *
+     * @param column column
+     * @param val val
+     * @return leIfPresent的结果
+     */
     public MPJLambdaWrapperX<T> leIfPresent(SFunction<T, ?> column, Object val) {
         if (val != null) {
             return (MPJLambdaWrapperX<T>) super.le(column, val);
@@ -94,7 +149,14 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
         return this;
     }
 
-    /** BetweenIfPresent */
+    /**
+     * betweenifpresent
+     *
+     * @param column column
+     * @param val1 val1
+     * @param val2 val2
+     * @return betweenIfPresent的结果
+     */
     public MPJLambdaWrapperX<T> betweenIfPresent(SFunction<T, ?> column, Object val1, Object val2) {
         if (val1 != null && val2 != null) {
             return (MPJLambdaWrapperX<T>) super.between(column, val1, val2);
@@ -108,7 +170,13 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
         return this;
     }
 
-    /** BetweenIfPresent */
+    /**
+     * betweenifpresent
+     *
+     * @param column column
+     * @param values 价值观
+     * @return betweenIfPresent的结果
+     */
     public MPJLambdaWrapperX<T> betweenIfPresent(SFunction<T, ?> column, Object[] values) {
         Object val1 = ArrayUtils.getIndex(values, 0);
         Object val2 = ArrayUtils.getIndex(values, 1);
@@ -132,7 +200,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     }
 
     @Override
-    /** OrderByDesc */
+    /** 订单bydesc */
     public <X> MPJLambdaWrapperX<T> orderByDesc(SFunction<X, ?> column) {
         //noinspection unchecked
         super.orderByDesc(true, column);
@@ -140,28 +208,28 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     }
 
     @Override
-    /** Last */
+    /** 最后一个 */
     public MPJLambdaWrapperX<T> last(String lastSql) {
         super.last(lastSql);
         return this;
     }
 
     @Override
-    /** In */
+    /** 入 */
     public <X> MPJLambdaWrapperX<T> in(SFunction<X, ?> column, Collection<?> coll) {
         super.in(column, coll);
         return this;
     }
 
     @Override
-    /** 选择All */
+    /** 选择全部 */
     public MPJLambdaWrapperX<T> selectAll(Class<?> clazz) {
         super.selectAll(clazz);
         return this;
     }
 
     @Override
-    /** 选择All */
+    /** 选择全部 */
     public MPJLambdaWrapperX<T> selectAll(Class<?> clazz, String prefix) {
         super.selectAll(clazz, prefix);
         return this;
@@ -196,7 +264,7 @@ public class MPJLambdaWrapperX<T> extends MPJLambdaWrapper<T> {
     }
 
     @Override
-    /** 选择AsClass */
+    /** 选择as类 */
     public <E> MPJLambdaWrapperX<T> selectAsClass(Class<E> source, Class<?> tag) {
         super.selectAsClass(source, tag);
         return this;

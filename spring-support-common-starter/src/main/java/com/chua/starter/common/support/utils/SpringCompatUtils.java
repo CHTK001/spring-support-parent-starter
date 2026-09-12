@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
  * tools
  *
  * @author CH
+ * @since 4.0.0
  */
 public class SpringCompatUtils {
 
@@ -25,9 +26,14 @@ public class SpringCompatUtils {
 
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(SpringCompatUtils.class);
-        private static volatile Boolean factoryMethodMetadataEnabled = null;
+        private static volatile Boolean factoryMethodMetadataEnabled = null; // 工厂方法metadata已启用
 
-    /** 获取FactoryMethodReturnType */
+    /**
+     * 获取工厂方法申报类型
+     *
+     * @param annotatedBeanDefinition annotatedbeandefinition
+     * @return 获取工厂方法申报类型的结果
+     */
     public static String getFactoryMethodReturnType(AnnotatedBeanDefinition annotatedBeanDefinition) {
         try {
             if (isFactoryMethodMetadataEnabled()) {
@@ -50,7 +56,12 @@ public class SpringCompatUtils {
         return null;
     }
 
-    /** 获取FactoryMethodMetadata */
+    /**
+     * 获取工厂方法metadata
+     *
+     * @param annotatedBeanDefinition annotatedbeandefinition
+     * @return 获取工厂方法metadata的结果
+     */
     public static MethodMetadata getFactoryMethodMetadata(AnnotatedBeanDefinition annotatedBeanDefinition) {
         if (isFactoryMethodMetadataEnabled()) {
             return annotatedBeanDefinition.getFactoryMethodMetadata();
@@ -65,7 +76,7 @@ public class SpringCompatUtils {
 
 
     /**
-     * Get the generic type of return type of the method.
+      * 获取 the generic 类型 的 申报 类型 的 the 方法.
      *
      * <pre>
      *  Source method:
@@ -91,14 +102,18 @@ public class SpringCompatUtils {
         return null;
     }
 
-    /** 是否FactoryMethodMetadataEnabled */
+    /**
+     * 是否工厂方法metadata已启用
+     *
+     * @return 是否工厂方法metadata已启用的结果
+     */
     public static boolean isFactoryMethodMetadataEnabled() {
         if (factoryMethodMetadataEnabled == null) {
             try {
-                //check AnnotatedBeanDefinition.getFactoryMethodMetadata() since spring 4.1
+ // 检查 annotatedBeandefinition.获取工厂方法metadata() 自 spring 4.1
                 AnnotatedBeanDefinition.class.getMethod("getFactoryMethodMetadata");
 
-                // check MethodMetadata.getReturnTypeName() since spring 4.2
+ // 检查 方法metadata.获取申报类型名称() 自 spring 4.2
                 MethodMetadata.class.getMethod("getReturnTypeName");
 
                 factoryMethodMetadataEnabled = true;

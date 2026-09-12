@@ -12,6 +12,7 @@ import java.util.Set;
  * </p>
  *
  * @author CH
+ * @since 4.0.0
  */
 public class Splitter {
 
@@ -19,7 +20,7 @@ public class Splitter {
     private final String separator;
     /** Trimresults */
     private boolean trimResults;
-    /** Omit是否为空strings */
+    /** Omit是否为空字符串 */
     private boolean omitEmptyStrings;
 
     /**
@@ -38,6 +39,10 @@ public class Splitter {
      * @return Splitter 实例
      */
     public static Splitter on(String separator) {
+        /**
+         * Splitter。
+         * @param separator separator
+         */
         return new Splitter(separator);
     }
 
@@ -83,10 +88,10 @@ public class Splitter {
     }
 
     /**
-     * 将字符串拆分为 Set
+      * 将字符串拆分为 设置
      *
      * @param input 输入字符串
-     * @return 拆分后的 Set
+     * @return 拆分后的 设置
      */
     public Set<String> splitToSet(String input) {
         return new HashSet<>(splitToList(input));

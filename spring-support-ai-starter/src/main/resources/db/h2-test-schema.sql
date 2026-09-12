@@ -124,6 +124,15 @@ CREATE TABLE IF NOT EXISTS sys_ai_manufacturer (
   create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+-- 补齐厂商实体所需列（与 SysAiManufacturer 对齐）
+ALTER TABLE sys_ai_manufacturer ADD COLUMN IF NOT EXISTS sys_ai_manufacturer_factory VARCHAR(255);
+ALTER TABLE sys_ai_manufacturer ADD COLUMN IF NOT EXISTS sys_ai_manufacturer_base_url VARCHAR(512);
+ALTER TABLE sys_ai_manufacturer ADD COLUMN IF NOT EXISTS sys_ai_manufacturer_app_key VARCHAR(255);
+ALTER TABLE sys_ai_manufacturer ADD COLUMN IF NOT EXISTS sys_ai_manufacturer_api_secret VARCHAR(512);
+ALTER TABLE sys_ai_manufacturer ADD COLUMN IF NOT EXISTS sys_ai_manufacturer_openai_compatible TINYINT DEFAULT 0;
+ALTER TABLE sys_ai_manufacturer ADD COLUMN IF NOT EXISTS sys_ai_manufacturer_logo VARCHAR(512);
+ALTER TABLE sys_ai_manufacturer ADD COLUMN IF NOT EXISTS sys_ai_manufacturer_remark VARCHAR(512);
+ALTER TABLE sys_ai_manufacturer ADD COLUMN IF NOT EXISTS sys_ai_manufacturer_sort INT DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS sys_ai_manufacturer_key (
   sys_ai_manufacturer_key_id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -206,10 +215,12 @@ CREATE TABLE IF NOT EXISTS sys_ai_mcp_server (
   sys_ai_mcp_server_description VARCHAR(512),
   sys_ai_mcp_server_transport   CLOB NOT NULL,
   sys_ai_mcp_server_original_json CLOB,
-  sys_ai_mcp_server_enabled     TINYINT DEFAULT 1,
-  sys_ai_mcp_server_status      VARCHAR(32) DEFAULT 'unknown',
-  sys_ai_mcp_server_create_time BIGINT NOT NULL,
-  sys_ai_mcp_server_update_time BIGINT NOT NULL
+  sys_ai_mcp_server_builtin    TINYINT DEFAULT 0,
+  sys_ai_mcp_server_enabled    TINYINT DEFAULT 1,
+  sys_ai_mcp_server_last_test_status VARCHAR(32),
+  sys_ai_mcp_server_last_connected_at BIGINT,
+  sys_ai_mcp_server_created_at BIGINT,
+  sys_ai_mcp_server_updated_at  BIGINT
 );
 
 -- -------------------------------------------------------------------
@@ -235,3 +246,101 @@ INSERT INTO sys_ai_global_setting (sys_ai_global_setting_group, sys_ai_global_se
 ('ocr','direction_model','','STRING','方向矫正模型（pp-word-rotate，留空关闭）',5,1),
 ('ocr','restorer_model','','STRING','文字超分修复模型（text-bsr，留空关闭）',6,1),
 ('ocr','device','cpu','STRING','推理设备（cpu / cuda）',7,1);
+
+-- -------------------------------------------------------------------
+-- 模型管理 — /v2/models 依赖此表（含别名 aliases、延迟 last_latency）
+-- -------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sys_ai_model (
+  sys_ai_model_id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+  sys_ai_model_name            VARCHAR(255),
+  sys_ai_model_code            VARCHAR(128),
+  sys_ai_model_provider_id     BIGINT,
+  sys_ai_model_capabilities    CLOB,
+  sys_ai_model_description     VARCHAR(512),
+  sys_ai_model_enabled         TINYINT DEFAULT 1,
+  sys_ai_model_sort            INT DEFAULT 0,
+  sys_ai_model_create_time     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  sys_ai_model_update_time     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  sys_ai_model_deleted         INT DEFAULT 0,
+  sys_ai_model_required_pipelines CLOB,
+  sys_ai_model_optional_pipelines CLOB,
+  sys_ai_model_input_price     DECIMAL(18,8),
+  sys_ai_model_output_price    DECIMAL(18,8),
+  sys_ai_model_cache_price      DECIMAL(18,8),
+  sys_ai_model_aliases          CLOB,
+  sys_ai_model_last_latency     BIGINT,
+  sys_ai_model_last_test_time  TIMESTAMP
+);
+
+-- -------------------------------------------------------------------
+-- 角色管理 — /v2/roles、RoleOfflineProvider 依赖此表
+-- -------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sys_ai_role (
+  sys_ai_role_id            INT AUTO_INCREMENT PRIMARY KEY,
+  sys_ai_role_name          VARCHAR(255),
+  sys_ai_role_code          VARCHAR(128),
+  sys_ai_role_description   VARCHAR(512),
+  sys_ai_role_system_prompt CLOB,
+  sys_ai_role_model         VARCHAR(128),
+  sys_ai_role_temperature   DOUBLE,
+  sys_ai_role_sort          INT DEFAULT 0,
+  sys_ai_role_status        INT DEFAULT 1,
+  sys_ai_role_delete        INT DEFAULT 0,
+  create_name               VARCHAR(255),
+  create_time               TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  update_time               TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- -------------------------------------------------------------------
+-- 模型供应商 — ChatClient 路由依赖此表
+-- -------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sys_ai_provider (
+  sys_ai_provider_id        BIGINT AUTO_INCREMENT PRIMARY KEY,
+  sys_ai_provider_name      VARCHAR(255),
+  sys_ai_provider_type      VARCHAR(64),
+  sys_ai_provider_base_url  VARCHAR(512),
+  sys_ai_provider_api_key   VARCHAR(512),
+  sys_ai_provider_logo      VARCHAR(512),
+  sys_ai_provider_models    CLOB,
+  sys_ai_provider_enabled   TINYINT DEFAULT 1,
+  sys_ai_provider_deleted   INT DEFAULT 0,
+  create_name               VARCHAR(255),
+  create_by                 INT,
+  create_time               TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  update_time               TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  update_name               VARCHAR(255),
+  update_by                 INT
+);
+
+-- -------------------------------------------------------------------
+-- 服务运行状态 — /v2/service-status 依赖此表
+-- -------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sys_ai_service_status (
+  sys_ai_service_status_id       BIGINT AUTO_INCREMENT PRIMARY KEY,
+  sys_ai_service_status_service_name VARCHAR(255),
+  sys_ai_service_status_running TINYINT DEFAULT 0,
+  sys_ai_service_status_pid     BIGINT,
+  sys_ai_service_status_start_time TIMESTAMP,
+  sys_ai_service_status_uptime_sec BIGINT,
+  sys_ai_service_status_update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- -------------------------------------------------------------------
+-- 厂商（制造商）— /v2/models 依赖此表
+-- -------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sys_ai_manufacturer (
+  sys_ai_manufacturer_id            INT AUTO_INCREMENT PRIMARY KEY,
+  sys_ai_manufacturer_code          VARCHAR(128),
+  sys_ai_manufacturer_name          VARCHAR(255),
+  sys_ai_manufacturer_factory       VARCHAR(255),
+  sys_ai_manufacturer_base_url      VARCHAR(512),
+  sys_ai_manufacturer_app_key       VARCHAR(255),
+  sys_ai_manufacturer_api_secret    VARCHAR(512),
+  sys_ai_manufacturer_openai_compatible TINYINT DEFAULT 0,
+  sys_ai_manufacturer_logo          VARCHAR(512),
+  sys_ai_manufacturer_remark        VARCHAR(512),
+  sys_ai_manufacturer_status        INT DEFAULT 1,
+  sys_ai_manufacturer_sort          INT DEFAULT 0,
+  create_time                       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  update_time                       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * WebSocket 配置属性
+   * web套接字 配置属性
  *
  * @since 2025-12-25
  * @author CH
@@ -16,7 +16,7 @@ import java.util.List;
 @ConfigurationProperties(prefix = WebSocketProperties.PREFIX)
 public class WebSocketProperties {
 
-    /** Prefix */
+    /** 前缀 */
     public static final String PREFIX = "plugin.websocket";
 
     /**
@@ -25,17 +25,17 @@ public class WebSocketProperties {
     private boolean enable = false;
 
     /**
-     * WebSocket 端点路径列表
+      * web套接字 端点路径列表
      */
     private List<String> endpoints = new ArrayList<>(List.of("/ws"));
 
     /**
-     * 允许的源（CORS）
+      * 允许的源（跨域资源共享）
      */
     private List<String> allowedOrigins = new ArrayList<>(List.of("*"));
 
     /**
-     * 是否启用 SockJS 支持
+       * 是否启用 SockJS 支持
      */
     private boolean sockJs = false;
 
@@ -78,7 +78,7 @@ public class WebSocketProperties {
     }
 
     /**
-     * 获取是否启用 SockJS
+       * 获取是否启用 SockJS
      *
      * @return 是否启用 SockJS
      */
@@ -87,7 +87,7 @@ public class WebSocketProperties {
     }
 
     /**
-     * 设置是否启用 SockJS
+       * 设置是否启用 SockJS
      *
      * @param sockJs 是否启用 SockJS
      */

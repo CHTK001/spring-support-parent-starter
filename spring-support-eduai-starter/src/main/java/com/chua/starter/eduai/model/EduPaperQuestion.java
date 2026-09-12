@@ -18,19 +18,19 @@ import java.time.LocalDateTime;
 public class EduPaperQuestion {
 
     /**
-     * 关联ID
+      * 关联标识
      */
     @TableId(type = IdType.AUTO)
-    /** PaperquestionID */
+    /** paperquestionid */
     private Long paperQuestionId;
 
     /**
-     * 试卷ID
+      * 试卷标识
      */
     private Long paperQuestionPaperId;
 
     /**
-     * 题目ID
+      * 题目标识
      */
     private Long paperQuestionQuestionId;
 

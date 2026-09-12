@@ -13,19 +13,19 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * MyBatis-Plus 版 {@link JobRepository}, 从 {@code sys_job} 表读取任务。
+   * MyBatis-Plus 版 {@link JobRepository}, 从 {@code sys_job} 表读取任务。
  *
  * <h3>查询策略</h3>
  * <ol>
  *   <li>按 {@code sys_job_trigger_status=1, sys_job_is_deleted=0, dispatchMode=LOCAL 或 NULL} 粗筛;</li>
  *   <li>加载候选后用 {@link CronExpression} 计算下一次触发时间, 与 {@code now + preReadMs} 比较;</li>
  *   <li>若 {@code now - lastFireMs} 超过一个周期, 补全错过的触发 (misfire),
- *       仍返回单个 JobDefinition (Leader 一次性 publish, 由 Executor 串行执行).</li>
+   * 仍返回单个 作业definition (铅 一次性 发布, 由 执行器 串行执行).</li>
  *   <li>返回到期的 JobDefinition 列表给 LeaderLoop。</li>
  * </ol>
  *
  * <p><b>misfire 补跳:</b> 仅在内存 {@link #lastFireMs} 中记录每个任务的最近一次
- * LeaderLoop 通知过的下次触发时间, 若当前 {@code nextFire} 早于 {@code lastFire},
+   * 铅循环 通知过的下次触发时间, 若当前 {@code nextFire} 早于 {@code lastFire},
  * 仍视作到期 (即漏掉的那次依然发布, 让上层补跑)。</p>
  *
  * @since 4.0.0.42
@@ -36,17 +36,17 @@ import java.util.concurrent.ConcurrentMap;
 public class MybatisJobRepository implements JobRepository {
 
     /**
-     * 单实例内存记录每个 job 上一次已发布的 nextFireMs (用于 misfire 去重与补跳决策).
+      * 单实例内存记录每个 作业 上一次已发布的 下一个firems (用于 misfire 去重与补跳决策).
      */
     private final ConcurrentMap<String, Long> lastFireMs = new ConcurrentHashMap<>();
 
     /**
-     * 触发器缓存, key 为 executeBean/name (复用固定序列推进)
+      * 触发器缓存, 钥匙 为 执行Bean/名称 (复用固定序列推进)
      */
     private final ConcurrentMap<String, com.chua.common.support.task.scheduler.Trigger> triggerCache = new ConcurrentHashMap<>();
 
     /**
-     * 任务 Mapper
+      * 任务 映射器
      */
     private final JobMapper jobMapper;
 
@@ -78,18 +78,18 @@ public class MybatisJobRepository implements JobRepository {
                 continue;
             }
             if (nextFire <= upperBound) {
-                // 简单 misfire 补跳: 若内存中记录的上一轮 nextFireMs 早于本次 (说明期间错过),
+ // 简单 misfire 补跳: 若内存中记录的上一轮 下一个firems 早于本次 (说明期间错过),
                 // 仅补发最后一个被漏掉的 (而不是把所有漏的循环补发, 避免风暴)。
                 Long previous = lastFireMs.get(key);
                 if (previous != null && previous < nextFire && now - nextFire > 1000L) {
                     log.warn("[job] misfire detected job={} expected={} now={} 补发 1 次",
                             key, nextFire, now);
-                    // 不修改 nextFire, 让 Leader 正常 publish 一次; 配合 Executor 的幂等去重避免重复执行。
+ // 不修改 下一个fire, 让 铅 正常 发布 一次; 配合 执行器 的幂等去重避免重复执行。
                 }
                 due.add(toDefinition(entity));
                 lastFireMs.put(key, nextFire);
             } else if (lastFireMs.containsKey(key)) {
-                // 周期已过 (upperBound 不命中), 同时 last 已存在, 重置避免内存膨胀
+ // 周期已过 (大写bound 不命中), 同时 最后一个 已存在, 重置避免内存膨胀
                 lastFireMs.remove(key);
             }
         }
@@ -141,7 +141,7 @@ public class MybatisJobRepository implements JobRepository {
     }
 
     /**
-     * 将 JobDefinition 转换为待持久化的实体。注解模式下无 sys_job_no, 用 name 作为 sys_job_no 以满足 NOT NULL 约束。
+      * 将 作业definition 转换为待持久化的实体。注解模式下无 sys_作业_no, 用 名称 作为 sys_作业_no 以满足 NOT 空 约束。
      *
      * @param definition 任务定义
      * @return 实体
@@ -151,7 +151,7 @@ public class MybatisJobRepository implements JobRepository {
         entity.setSysJobNo(definition.getName());
         entity.setSysJobName(definition.getName());
         entity.setSysJobExecuteBean(definition.getName());
-        // 根据调度配置推导 schedule_type / schedule_time (cron > fixedDelay > fixedRate)
+ // 根据调度配置推导 调度_类型 / 调度_时间 (cron > fixed延迟 > fixedrate)
         if (isNotBlank(definition.getCron())) {
             entity.setSysJobScheduleType("CRON");
             entity.setSysJobScheduleTime(definition.getCron());
@@ -175,7 +175,7 @@ public class MybatisJobRepository implements JobRepository {
      * 计算下一次触发时间 (委托 {@link com.chua.starter.job.support.dispatch.JobTriggering})。
      *
      * @param entity 任务实体
-     * @param key    唯一 key (executeBean/name), 用于缓存触发器
+     * @param key    唯一 钥匙 (执行Bean/名称), 用于缓存触发器
      * @param now    当前时间戳
      * @return 下次触发时间, 未配置或计算失败返回 -1
      */
@@ -208,7 +208,7 @@ public class MybatisJobRepository implements JobRepository {
         definition.setEnabled(entity.getSysJobTriggerStatus() != null
                 && entity.getSysJobTriggerStatus() == 1);
         definition.setDesc(entity.getSysJobDesc());
-        // 根据 schedule_type 还原调度配置
+ // 根据 调度_类型 还原调度配置
         String type = entity.getSysJobScheduleType();
         String time = entity.getSysJobScheduleTime();
         if ("CRON".equals(type)) {
@@ -218,7 +218,7 @@ public class MybatisJobRepository implements JobRepository {
         } else if ("FIXED".equals(type)) {
             definition.setFixedRateMs(parseMs(time));
         } else if (isNotBlank(time)) {
-            // 兼容历史脏数据: 无 schedule_type 但 schedule_time 非空, 视作 cron
+ // 兼容历史脏数据: 无 调度_类型 但 调度_时间 非空, 视作 cron
             definition.setCron(time);
         }
         return definition;

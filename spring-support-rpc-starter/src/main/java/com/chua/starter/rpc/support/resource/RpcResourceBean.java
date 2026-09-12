@@ -25,13 +25,13 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * rpc资源bean
+   * rpc资源Bean
  * <p>
  * 通过注入的 {@link RpcClient}（按协议类型 SPI 创建）获得远程服务代理，
  * 不耦合任何具体协议实现。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/04/07
  * @author CH
  */
@@ -45,7 +45,7 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
 
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(RpcResourceBean.class);
-    /** ID */
+    /** 标识 */
     private String id;
 
     /** 密钥 */
@@ -66,7 +66,7 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     private RpcClient rpcClient;
 
     /**
-     * 获取 ID
+      * 获取 标识
      *
      * @return ID
      */
@@ -75,9 +75,14 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     }
 
     @Override
-    /** 获取Object */
+    /** 获取对象 */
     public T getObject() throws Exception {
         if (interfaceClass == null) {
+            /**
+             * illegal状态异常。
+             * @param initialized" initialized"
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("The interface class of ReferenceBean is not initialized");
         }
         return intercept((T) rpcClient.get(interfaceClass));
@@ -105,7 +110,7 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
      * @param target       远程代理对象
      * @param method       调用方法
      * @param args         调用参数
-     * @param interceptors 拦截器链（已按 order 排序）
+     * @param interceptors 拦截器链（已按 订单 排序）
      * @return 调用结果
      * @throws Throwable 远程调用或业务异常
      */
@@ -125,6 +130,11 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
             MethodHandle handle = ReflectUtils.findMethodHandle(target.getClass(), method.getName(),
                     method.getReturnType(), method.getParameterTypes());
             if (handle == null) {
+                /**
+                 * illegal状态异常。
+                 * @param target.getClass( Target.获取类(
+                 * @return illegal状态异常的结果
+                 */
                 throw new IllegalStateException("No such RPC method: " + target.getClass().getName()
                         + "." + method.getName());
             }
@@ -157,13 +167,13 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     }
 
     @Override
-    /** 设置BeanClassLoader */
+    /** 设置Bean类加载 */
     public void setBeanClassLoader(ClassLoader classLoader) {
         this.classLoader = classLoader;
     }
 
     @Override
-    /** 设置BeanName */
+    /** 设置Bean名称 */
     public void setBeanName(String name) {
         this.beanName = name;
     }
@@ -175,28 +185,42 @@ public class RpcResourceBean<T> implements FactoryBean<T>, ApplicationContextAwa
     }
 
     @Override
-    /** AfterProperties设置 */
+    /** 之后属性设置 */
     public void afterPropertiesSet() throws Exception {
         ConfigurableListableBeanFactory beanFactory = getBeanFactory();
 
         if (getId() == null || getId().isEmpty()) {
+            /**
+             * illegal状态异常。
+             * @param empty" 空"
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("The id of ReferenceBean cannot be empty");
         }
         BeanDefinition beanDefinition = beanFactory.getBeanDefinition(getId());
         this.interfaceClass = (Class<?>) beanDefinition.getAttribute(RpcAttribute.INTERFACE_CLASS);
         this.interfaceName = (String) beanDefinition.getAttribute(RpcAttribute.INTERFACE_NAME);
         if (this.interfaceClass == null) {
+            /**
+             * illegal状态异常。
+             * @param initialized" initialized"
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("The interface class of ReferenceBean is not initialized");
         }
     }
 
     @Override
-    /** 设置ApplicationContext */
+    /** 设置application上下文 */
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
 
-    /** 获取BeanFactory */
+    /**
+     * 获取Bean工厂
+     *
+     * @return 获取Bean工厂的结果
+     */
     private ConfigurableListableBeanFactory getBeanFactory() {
         return (ConfigurableListableBeanFactory) applicationContext.getAutowireCapableBeanFactory();
     }

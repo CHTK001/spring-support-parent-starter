@@ -3,7 +3,7 @@ package com.chua.starter.oauth.client.support.trace;
 import lombok.Getter;
 
 /**
- * OAuth 链路追踪 Span
+   * o认证 链路追踪 Span
  * <p>
  * 表示追踪链路中的一个节点，记录该节点的耗时信息
  * </p>
@@ -15,12 +15,12 @@ import lombok.Getter;
 public class TraceSpan {
 
     /**
-     * Span ID
+      * Span 标识
      */
     private final String spanId;
 
     /**
-     * 父 Span ID
+      * 父 Span 标识
      */
     private final String parentSpanId;
 
@@ -52,8 +52,8 @@ public class TraceSpan {
     /**
      * 构造函数
      *
-     * @param spanId       Span ID
-     * @param parentSpanId 父 Span ID
+     * @param spanId       Span 标识
+     * @param parentSpanId 父 Span 标识
      * @param spanName     Span 名称
      */
     public TraceSpan(String spanId, String parentSpanId, String spanName) {
@@ -120,7 +120,7 @@ public class TraceSpan {
     }
 
     @Override
-    /** ToString */
+    /** 转为字符串 */
     public String toString() {
         return String.format("[%s] %s: %dms", spanId, spanName, getCostMs());
     }

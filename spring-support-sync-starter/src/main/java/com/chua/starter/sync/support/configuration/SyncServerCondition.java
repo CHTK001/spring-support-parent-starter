@@ -7,10 +7,10 @@ import org.springframework.core.type.AnnotatedTypeMetadata;
 /**
  * 同步服务端条件判断
  * <p>
- * 当 type 为 server 或 both，且 server.enable = true 时，条件成立
+   * 当 类型 为 服务端 或 both，且 服务端.enable = true 时，条件成立
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/12/10
  * @author CH
  */
@@ -19,12 +19,12 @@ public class SyncServerCondition implements Condition {
     @Override
     /** Matches */
     public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
-        // 获取 type 配置，默认为 client
+ // 获取 类型 配置，默认为 客户端
         String type = context.getEnvironment().getProperty("plugin.sync.type", "server");
-        // 获取 server.enable 配置，默认为 false
+ // 获取 服务端.enable 配置，默认为 false
         Boolean serverEnable = context.getEnvironment().getProperty("plugin.sync.server.enable", Boolean.class, false);
         
-        // type 为 server 或 both 时，才检查 server.enable
+ // 类型 为 服务端 或 both 时，才检查 服务端.enable
         boolean typeMatch = "server".equalsIgnoreCase(type) || "both".equalsIgnoreCase(type);
         
         return typeMatch && serverEnable;

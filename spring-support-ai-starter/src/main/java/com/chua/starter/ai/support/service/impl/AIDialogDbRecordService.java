@@ -31,12 +31,12 @@ import java.util.stream.Collectors;
 public class AIDialogDbRecordService implements AIDialogRecordService {
 
     /**
-     * 会话 Mapper
+      * 会话 映射器
      */
     private final SysAiSessionMapper sessionMapper;
 
     /**
-     * 消息 Mapper
+      * 消息 映射器
      */
     private final SysAiMessageMapper messageMapper;
 
@@ -69,7 +69,7 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     }
 
     @Override
-    /** ListDialog */
+    /** 列表dialog */
     public List<AIDialog> listDialog() {
         return sessionMapper.selectList(new LambdaQueryWrapper<SysAiSession>()
                         .eq(SysAiSession::getStatus, 1)
@@ -80,7 +80,7 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     }
 
     @Override
-    /** 获取DialogMessages */
+    /** 获取dialog消息 */
     public List<ChatMessage> getDialogMessages(Long dialogId) {
         return messageMapper.selectList(new LambdaQueryWrapper<SysAiMessage>()
                         .eq(SysAiMessage::getSysAiSessionId, dialogId)
@@ -91,7 +91,7 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
     }
 
     @Override
-    /** 添加Message */
+    /** 添加消息 */
     public void addMessage(Long dialogId, ChatMessage message) {
         if (dialogId == null || message == null) {
             return;
@@ -105,7 +105,7 @@ public class AIDialogDbRecordService implements AIDialogRecordService {
         entity.setCreateTime(now);
         entity.setUpdateTime(now);
         messageMapper.insert(entity);
-        // 同步 ID 与会话 ID，保持接口语义
+ // 同步 标识 与会话 标识，保持接口语义
         message.setId(entity.getId());
         message.setDialogId(dialogId);
         if (message.getTimestamp() == null) {

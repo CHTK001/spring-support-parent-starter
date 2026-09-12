@@ -14,15 +14,15 @@ import lombok.Data;
 public class TemplatePreviewRequest {
 
     /**
-     * 模板ID
+      * 模板标识
      */
     @Schema(description = "模板ID")
-    /** SYS消息模板ID */
+    /** SYS消息模板标识 */
     private Integer sysMessageTemplateId;
 
     /**
      * 模板参数
      */
     @Schema(description = "模板参数")
-    private java.util.Map<String, Object> params;
+    private java.util.Map<String, Object> params; // 参数
 }

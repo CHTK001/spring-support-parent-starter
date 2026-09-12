@@ -12,6 +12,7 @@ import java.util.Set;
  * 客户端配置
  *
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @ConfigurationProperties(prefix = AuthClientProperties.PRE, ignoreInvalidFields = true)
@@ -67,12 +68,13 @@ public class AuthClientProperties {
             "/api/settings/client"
     );
 
-    /** 创建 AuthClientProperties 实例 */
+    /** 创建 认证客户端属性 实例 */
     public AuthClientProperties() {
     }
 
     /**
      * 获取完整白名单（内置默认 + yaml 自定义 + 动态添加）
+     * @return 获取effectivewhitelist的结果
      */
     public List<String> getEffectiveWhitelist() {
         List<String> effective = new java.util.ArrayList<>(DEFAULT_WHITELIST);
@@ -91,7 +93,7 @@ public class AuthClientProperties {
     /**
      * 动态添加白名单规则
      *
-     * @param pattern URL Pattern，支持 Ant 风格，例如 /v2/face/**
+     * @param pattern URL 模式，支持 Ant 风格，例如 /v2/face/**
      */
     public void addWhitelist(String pattern) {
         if (null != pattern && !pattern.isBlank()) {
@@ -102,7 +104,7 @@ public class AuthClientProperties {
     /**
      * 动态删除白名单规则
      *
-     * @param pattern 已添加的 URL Pattern
+     * @param pattern 已添加的 URL 模式
      */
     public void removeWhitelist(String pattern) {
         dynamicWhitelist.remove(pattern);
@@ -142,7 +144,7 @@ public class AuthClientProperties {
     /**
      * 限流配置
      * <p>
-     * OAuth 客户端限流能力，支持接口 QPS 限流与登录防暴力破解限流。
+      * o认证 客户端限流能力，支持接口 QPS 限流与登录防暴力破解限流。
      * </p>
      */
     private RateLimit rateLimit = new RateLimit();
@@ -187,7 +189,7 @@ public class AuthClientProperties {
      * 外部白名单文件路径
      * <p>
      * 支持动态加载和热更新，文件变更后自动重新加载。
-     * 文件格式：每行一个URL Pattern，支持 # 注释
+      * 文件格式：每行一个URL 模式，支持 # 注释
      * </p>
      */
     private String whitelistFile = "config/oauth.whitelist";
@@ -205,15 +207,15 @@ public class AuthClientProperties {
      */
     private String protocol = "static";
     /**
-     * token-name
+      * 令牌-名称
      */
     private String tokenName = "x-oauth-token";
     /**
-     * cookie-name
+      * Cookie-名称
      */
     private String cookieName = "x-oauth-cookie";
     /**
-     * token 别名
+      * 令牌 别名
      */
     private String alias = "Boren-Token";
     /**
@@ -261,48 +263,50 @@ public class AuthClientProperties {
     private Fingerprint fingerprint = new Fingerprint();
 
     /**
-     * AI AppKey 本地认证配置
+      * AI app钥匙 本地认证配置
      * <p>
-     * 启用后，OAuth 过滤器对 Bearer Token 先做本地 AI AppKey 校验
-     * （通过 {@link com.chua.datasource.support.engine.JdbcEngine} 动态查表，无需 Mapper）。
-     * 用于单机部署或外部 OAuth 服务不可达时的 AI AppKey 认证。
+      * 启用后，o认证 过滤器对 Bearer 令牌 先做本地 AI app钥匙 校验
+      * （通过 {@link com.chua.datasource.support.engine.JdbcEngine} 动态查表，无需 映射器）。
+      * 用于单机部署或外部 o认证 服务不可达时的 AI app钥匙 认证。
      * </p>
      */
     private AiAppKey aiAppKey = new AiAppKey();
 
     /**
-     * AI AppKey 本地认证配置
+      * AI app钥匙 本地认证配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class AiAppKey {
 
         /**
-         * 是否启用 AI AppKey 本地认证
+          * 是否启用 AI app钥匙 本地认证
          */
         private boolean enabled = false;
 
         /**
-         * AppKey 表名（动态表，默认 AI 模块的 sys_ai_app_key）
+          * app钥匙 表名（动态表，默认 AI 模块的 sys_AI_app_钥匙）
          */
         private String tableName = "sys_ai_app_key";
 
         /**
-         * AppKey 列名（默认 sys_ai_app_key_app_key）
+          * app钥匙 列名（默认 sys_AI_app_钥匙_app_钥匙）
          */
         private String appKeyColumn = "sys_ai_app_key_app_key";
 
         /**
-         * 状态列名（1 启用 / 0 停用，默认 sys_ai_app_key_status）
+          * 状态列名（1 启用 / 0 停用，默认 sys_AI_app_钥匙_状态）
          */
         private String statusColumn = "sys_ai_app_key_status";
 
         /**
-         * 过期时间列名（默认 sys_ai_app_key_expire_datetime，可为空）
+          * 过期时间列名（默认 sys_AI_app_钥匙_expire_datetime，可为空）
          */
         private String expireTimeColumn = "sys_ai_app_key_expire_datetime";
 
         /**
-         * 用户名列（返回给认证结果使用，默认取 appKeyColumn）
+          * 用户名列（返回给认证结果使用，默认取 app钥匙column）
          */
         private String usernameColumn;
     }
@@ -313,6 +317,8 @@ public class AuthClientProperties {
      * <p>
      * 用于对请求数据进行二次加密，提高安全性
      * </p>
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class Aksk {
@@ -321,16 +327,22 @@ public class AuthClientProperties {
          */
         private boolean enabled = false;
         /**
-         * AccessKey (用于标识客户端)
+          * access钥匙 (用于标识客户端)
          */
         private String accessKey;
         /**
-         * SecretKey (用于加密数据)
+          * secret钥匙 (用于加密数据)
          */
         private String secretKey;
     }
 
     @Data
+    /**
+     * temp用户类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     public static class TempUser {
 
         /**
@@ -341,7 +353,7 @@ public class AuthClientProperties {
          * 临时账号配置(只用于账号类型为Embed)
          * <p>
          * [安全警告]生产环境禁止启用临时账号功能！
-         * 格式: username:password;username2:password2
+          * 格式: 用户名:密码;用户名2:密码2
          * </p>
          */
         private String user = "admin:admin@123!456";
@@ -352,6 +364,8 @@ public class AuthClientProperties {
      * <p>
      * 用于配置浏览器指纹验证功能
      * </p>
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class Fingerprint {
@@ -359,10 +373,10 @@ public class AuthClientProperties {
          * 是否开启全局指纹验证
          * <p>
          * 开启后，所有需要认证的接口都会验证浏览器指纹，
-         * 而不仅仅是标记了 @VerifyFingerprint 注解的接口。
+          * 而不仅仅是标记了 @验证fingerprint 注解的接口。
          * </p>
          * <p>
-         * 默认关闭，只有标记了 @VerifyFingerprint 注解的接口才会验证指纹。
+          * 默认关闭，只有标记了 @验证fingerprint 注解的接口才会验证指纹。
          * </p>
          */
         private boolean globalVerification = false;
@@ -382,17 +396,17 @@ public class AuthClientProperties {
         /**
          * 指纹配置缓存时间（秒）
          * <p>
-         * 客户端会缓存从服务端获取的 appKey 指纹配置，此配置控制缓存的有效期。
+          * 客户端会缓存从服务端获取的 app钥匙 指纹配置，此配置控制缓存的有效期。
          * 默认 1 小时（3600 秒）。
          * </p>
          */
         private long configCacheTimeout = 3600;
         
         /**
-         * AppKey 指纹配置映射
+          * app钥匙 指纹配置映射
          * <p>
-         * Key: AppKey
-         * Value: 指纹配置（enableFingerprint: 0-不启用, 1-启用; fingerprintWhitelist: 指纹白名单，多个用逗号分隔）
+          * 钥匙: app钥匙
+          * 价值观: 指纹配置（enablefingerprint: 0-不启用, 1-启用; fingerprintwhitelist: 指纹白名单，多个用逗号分隔）
          * </p>
          * <p>
          * 配置示例：
@@ -413,7 +427,9 @@ public class AuthClientProperties {
     }
     
     /**
-     * AppKey 指纹配置
+      * app钥匙 指纹配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class AppKeyFingerprintConfig {
@@ -433,6 +449,8 @@ public class AuthClientProperties {
 
     /**
      * 重试配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class RetryConfig {
@@ -464,6 +482,8 @@ public class AuthClientProperties {
 
     /**
      * 熔断配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class CircuitBreakerConfig {
@@ -511,14 +531,16 @@ public class AuthClientProperties {
     /**
      * 限流配置类
      * <p>
-     * 配置前缀：<code>plugin.oauth.rate-limit</code>。
+       * 配置前缀：<code>plugin.OAuth.rate-限制</code>。
      * </p>
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class RateLimit {
 
         /**
-         * 是否启用 OAuth 限流（总开关）
+          * 是否启用 o认证 限流（总开关）
          * <p>
          * 默认值：false
          * </p>
@@ -537,6 +559,8 @@ public class AuthClientProperties {
 
         /**
          * 登录限流配置类（防暴力破解）
+         * @author CH
+         * @since 4.0.0
          */
         @Data
         public static class LoginLimit {
@@ -583,7 +607,9 @@ public class AuthClientProperties {
         }
 
         /**
-         * 全局接口限流配置类（防刷/防 DoS）
+          * 全局接口限流配置类（防刷/防 执行s）
+         * @author CH
+         * @since 4.0.0
          */
         @Data
         public static class ApiLimit {

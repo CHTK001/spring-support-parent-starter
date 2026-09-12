@@ -7,12 +7,17 @@ import java.time.LocalDateTime;
  * 可比较的日期时间类
  *
  * @since 2024/12/25
+ * @author CH
  */
 public final class ComparableDateTime {
 
     /** 本地日期时间 */
     private final LocalDateTime localDateTime;
 
+    /**
+     * comparable日期时间。
+     * @param localDateTime 本地日期时间
+     */
     ComparableDateTime(LocalDateTime localDateTime) {
         this.localDateTime = localDateTime;
     }

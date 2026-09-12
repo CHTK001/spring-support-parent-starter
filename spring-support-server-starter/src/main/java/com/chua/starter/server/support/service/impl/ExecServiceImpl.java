@@ -41,8 +41,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 批量执行服务实现
  * <p>
  * 命令执行与文件分发按主机并发执行（并发度取 {@code server.support.exec-concurrency}，
- * 线程池以显式 ThreadPoolExecutor 构造并命名），每台主机独立记录执行日志。
- * 计划任务的到期判定与下次运行时间预计算基于 Spring CronTrigger。
+   * 线程池以显式 thread游泳池执行器 构造并命名），每台主机独立记录执行日志。
+   * 计划任务的到期判定与下次运行时间预计算基于 Spring crontrigger。
  * </p>
  *
  * @author CH
@@ -65,13 +65,13 @@ public class ExecServiceImpl implements ExecService {
     /** 默认分发目标目录 */
     private static final String DEFAULT_DIRECTORY = "/tmp";
 
-    /** JSON 解析器（hostIds 数组解析） */
+    /** JSON 解析器（主机标识 数组解析） */
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    /** 任务 Mapper */
+    /** 任务 映射器 */
     private final MsExecJobMapper jobMapper;
 
-    /** 执行日志 Mapper */
+    /** 执行日志 映射器 */
     private final MsExecLogMapper logMapper;
 
     /** 主机服务 */
@@ -132,6 +132,10 @@ public class ExecServiceImpl implements ExecService {
             }
             return ReturnResult.ok(logs, "分发成功");
         } finally {
+            /**
+              * cleanupquietly。
+             * @param tempFile temp文件
+             */
             cleanupQuietly(tempFile);
         }
     }
@@ -226,7 +230,7 @@ public class ExecServiceImpl implements ExecService {
     // ==================== 调度支撑 ====================
 
     /**
-     * 扫描到期任务并触发执行（由 ExecJobScheduler 定时调用）
+      * 扫描到期任务并触发执行（由 执行作业调度器 定时调用）
      *
      * @return 本次触发的任务数
      */
@@ -242,6 +246,10 @@ public class ExecServiceImpl implements ExecService {
                 continue;
             }
             fired++;
+            /**
+             * trigger作业。
+             * @param job 作业
+             */
             triggerJob(job);
         }
         return fired;
@@ -255,7 +263,12 @@ public class ExecServiceImpl implements ExecService {
     private void triggerJob(MsExecJob job) {
         try {
             List<Long> hostIds = parseHostIds(job.getMsExecJobHostIds());
-            // 透传 jobId，日志在 executeSingle 中统一落库（不再重复 insert）
+ // 透传 作业标识，日志在 执行单个 中统一落库（不再重复 插入）
+            /**
+             * 运行命令。
+             * @param hostIds 主机标识
+             * @param job.getMsExecJobCommand( 作业.getms执行作业命令(
+             */
             runCommand(hostIds, job.getMsExecJobCommand(), job.getMsExecJobTimeout(), job.getId());
         } catch (Exception e) {
             log.warn("[exec] 计划任务执行异常 jobId={}: {}", job.getId(), e.getMessage());
@@ -273,11 +286,11 @@ public class ExecServiceImpl implements ExecService {
      * 按主机并发执行：命令或文件分发
      *
      * @param hosts          主机列表
-     * @param type           日志类型 COMMAND / FILE
-     * @param jobId          关联任务 ID，可为空
+     * @param type           日志类型 命令 / 文件
+     * @param jobId          关联任务 标识，可为空
      * @param commandOrPath  命令或"目录/文件名"
      * @param timeoutSeconds 超时（秒）
-     * @param localFile      分发的本地文件，命令场景为 null
+     * @param localFile      分发的本地文件，命令场景为 空
      * @return 各主机执行日志
      */
     private List<MsExecLog> executeParallel(List<MsServerHost> hosts, String type, Long jobId,
@@ -306,11 +319,11 @@ public class ExecServiceImpl implements ExecService {
     }
 
     /**
-     * 单主机执行：命令走 SSH exec，文件走 SFTP 上传
+      * 单主机执行：命令走 SSH 执行，文件走 SFTP 上传
      *
      * @param host           主机
      * @param type           日志类型
-     * @param jobId          任务 ID
+     * @param jobId          任务 标识
      * @param commandOrPath  命令或远端目标路径
      * @param timeoutSeconds 超时（秒）
      * @param localFile      本地文件（文件分发场景）
@@ -332,8 +345,18 @@ public class ExecServiceImpl implements ExecService {
         }
         try {
             if (localFile != null) {
+                /**
+                  * uploadviasftp。
+                 * @param host 主机
+                 * @param resolved.getData( resolved.获取数据(
+                 */
                 uploadViaSftp(host, resolved.getData(), commandOrPath, localFile);
             } else {
+                /**
+                 * 执行viassh。
+                 * @param host 主机
+                 * @param resolved.getData( resolved.获取数据(
+                 */
                 execViaSsh(host, resolved.getData(), commandOrPath, timeoutSeconds, item);
             }
             item.setMsExecLogStatus(ServerConstants.EXEC_STATUS_SUCCESS);
@@ -341,7 +364,16 @@ public class ExecServiceImpl implements ExecService {
         } catch (Exception e) {
             return fail(item, e.getMessage(), startMs);
         }
+        /**
+          * fillcost。
+         * @param item item
+         * @param startMs 启动ms
+         */
         fillCost(item, startMs);
+        /**
+          * persistquietly。
+         * @param item item
+         */
         persistQuietly(item);
         return item;
     }
@@ -365,9 +397,19 @@ public class ExecServiceImpl implements ExecService {
             item.setMsExecLogOutput(truncate(result.stdout()));
             item.setMsExecLogExitCode(result.exitCode());
             if (result.exitCode() != 0 && isBlank(result.stderr())) {
+                /**
+                 * illegal状态异常。
+                 * @param result.exitCode( 结果.exit编码(
+                 * @return illegal状态异常的结果
+                 */
                 throw new IllegalStateException("退出码非 0: " + result.exitCode());
             }
             if (result.exitCode() != 0) {
+                /**
+                 * illegal状态异常。
+                 * @param result.stderr( 结果.stderr(
+                 * @return illegal状态异常的结果
+                 */
                 throw new IllegalStateException(result.stderr());
             }
         } finally {
@@ -430,6 +472,10 @@ public class ExecServiceImpl implements ExecService {
             client.connect();
             return client;
         } finally {
+            /**
+              * cleanupquietly。
+             * @param tempKey temp钥匙
+             */
             cleanupQuietly(tempKey);
         }
     }
@@ -437,7 +483,7 @@ public class ExecServiceImpl implements ExecService {
     /**
      * 加载并校验目标主机列表
      *
-     * @param hostIds 主机 ID 集合
+     * @param hostIds 主机 标识 集合
      * @return 存在的主机列表
      */
     private List<MsServerHost> loadHosts(List<Long> hostIds) {
@@ -452,7 +498,7 @@ public class ExecServiceImpl implements ExecService {
     }
 
     /**
-     * 解析 hostIds JSON 数组
+      * 解析 主机标识 JSON 数组
      *
      * @param json JSON 字符串
      * @return ID 列表，解析失败返回空列表
@@ -473,7 +519,7 @@ public class ExecServiceImpl implements ExecService {
      * 校验计划任务参数
      *
      * @param job 任务
-     * @return 校验失败的错误结果，合法返回 null
+     * @return 校验失败的错误结果，合法返回 空
      */
     private ReturnResult<MsExecJob> validateJob(MsExecJob job) {
         if (job == null || isBlank(job.getMsExecJobName()) || isBlank(job.getMsExecJobCron())
@@ -483,8 +529,12 @@ public class ExecServiceImpl implements ExecService {
         if (parseHostIds(job.getMsExecJobHostIds()).isEmpty()) {
             return ReturnResult.error("至少选择一台目标主机");
         }
-        // 借助 CronTrigger 构造校验表达式合法性（非法表达式抛出异常）
+ // 借助 crontrigger 构造校验表达式合法性（非法表达式抛出异常）
         try {
+            /**
+             * 下一个fire时间。
+             * @param job.getMsExecJobCron( 作业.getms执行作业cron(
+             */
             nextFireTime(job.getMsExecJobCron(), LocalDateTime.now());
         } catch (IllegalArgumentException e) {
             return ReturnResult.error("cron 表达式非法: " + job.getMsExecJobCron());
@@ -497,7 +547,7 @@ public class ExecServiceImpl implements ExecService {
      *
      * @param cron cron 表达式
      * @param base 时间基准
-     * @return 下次运行时间，计算失败返回 null
+     * @return 下次运行时间，计算失败返回 空
      */
     private LocalDateTime nextFireTime(String cron, LocalDateTime base) {
         Instant baseInstant = base.atZone(ZoneId.systemDefault()).toInstant();
@@ -509,7 +559,7 @@ public class ExecServiceImpl implements ExecService {
     /**
      * 创建带命名线程的固定线程池
      * <p>
-     * P3C 要求禁用 Executors 工厂方法：此处以显式 ThreadPoolExecutor
+      * P3C 要求禁用 执行器 工厂方法：此处以显式 thread游泳池执行器
      * 构造，队列有界，拒绝策略为调用方执行。
      * </p>
      *
@@ -545,7 +595,16 @@ public class ExecServiceImpl implements ExecService {
         item.setMsExecLogCommand(target);
         item.setMsExecLogStatus(ServerConstants.EXEC_STATUS_FAIL);
         item.setMsExecLogError(reason);
+        /**
+          * fillcost。
+         * @param item item
+         * @param System.currentTimeMillis( 系统.当前时间millis(
+         */
         fillCost(item, System.currentTimeMillis());
+        /**
+          * persistquietly。
+         * @param item item
+         */
         persistQuietly(item);
         return item;
     }
@@ -561,7 +620,16 @@ public class ExecServiceImpl implements ExecService {
     private MsExecLog fail(MsExecLog item, String reason, long startMs) {
         item.setMsExecLogStatus(ServerConstants.EXEC_STATUS_FAIL);
         item.setMsExecLogError(reason);
+        /**
+          * fillcost。
+         * @param item item
+         * @param startMs 启动ms
+         */
         fillCost(item, startMs);
+        /**
+          * persistquietly。
+         * @param item item
+         */
         persistQuietly(item);
         return item;
     }

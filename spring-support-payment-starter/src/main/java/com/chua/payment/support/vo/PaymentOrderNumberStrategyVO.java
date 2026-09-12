@@ -5,12 +5,13 @@ import lombok.Data;
 /**
  * 订单号策略视图
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class PaymentOrderNumberStrategyVO {
-    /** Business类型 */
+    /** 业务类型 */
     private String businessType;
-    /** Field名称 */
+    /** 字段名称 */
     private String fieldName;
     /** Generationrule */
     private String generationRule;
@@ -18,7 +19,7 @@ public class PaymentOrderNumberStrategyVO {
     private String callerOverrideField;
     /** Idempotentrule */
     private String idempotentRule;
-    /** Notes */
+    /** 笔记 */
     private String notes;
 }
 

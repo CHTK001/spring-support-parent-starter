@@ -38,6 +38,7 @@ import java.util.Map;
  * http
  *
  * @author CH
+ * @since 4.0.0
  */
 @Spi({"http", "http-lite"})
 @Slf4j
@@ -49,8 +50,8 @@ public class HttpProtocol extends AbstractProtocol {
     private final OAuthClientResilience resilience;
 
     /**
-     * 创建 HttpProtocol 实例
-     * @param authClientProperties authClientProperties
+      * 创建 http协议 实例
+     * @param authClientProperties 认证客户端属性
      */
     public HttpProtocol(AuthClientProperties authClientProperties) {
         super(authClientProperties);
@@ -60,7 +61,7 @@ public class HttpProtocol extends AbstractProtocol {
     @Override
     /** Approve */
     protected AuthenticationInformation approve(Cookie cookie, String token, String subProtocol) {
-        // 如果传入的subProtocol（认证类型）为空，尝试从Header读取 x-oauth-type
+ // 如果传入的sub协议（认证类型）为空，尝试从头部读取 x-OAuth-类型
         if (StringUtils.isBlank(subProtocol)) {
             HttpServletRequest request = RequestUtils.getRequest();
             if (request != null) {
@@ -84,9 +85,9 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** AuthenticationUserCode */
+    /** 认证用户编码 */
     protected AuthenticationInformation authenticationUserCode(AppKeySecret appKeySecret) {
-        // 注意：指纹校验应该在Filter层进行，因为需要比对用户信息里的指纹
+ // 注意：指纹校验应该在过滤器层进行，因为需要比对用户信息里的指纹
         // 协议层此时还没有用户信息，无法进行真正的指纹比对
         // 指纹比对逻辑在 AuthFilter.verifyFingerprint() 中实现
         
@@ -101,7 +102,9 @@ public class HttpProtocol extends AbstractProtocol {
     }
     
     /**
-     * 脱敏 AppKey
+      * 脱敏 app键
+     * @param appKey app键
+     * @return maskapp键的结果
      */
     private String maskAppKey(String appKey) {
         if (appKey == null || appKey.length() < 8) {
@@ -112,6 +115,8 @@ public class HttpProtocol extends AbstractProtocol {
     
     /**
      * 脱敏指纹
+     * @param fingerprint fingerprint
+     * @return maskFingerprint的结果
      */
     private String maskFingerprint(String fingerprint) {
         if (fingerprint == null || fingerprint.length() < 8) {
@@ -121,7 +126,7 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** UpgradeInformation */
+    /** upgrade信息 */
     protected AuthenticationInformation upgradeInformation(Cookie cookie, String token, UpgradeType upgradeType, String refreshToken) {
         JsonObject jsonObject = new JsonObject();
         // 构建认证数据
@@ -151,7 +156,7 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** 获取AccessToken */
+    /** 获取access令牌 */
     public LoginAuthResult getAccessToken(String username, String password, AuthType authType, Map<String, Object> ext) {
         JsonObject jsonObject = new JsonObject();
         // 构建认证数据
@@ -224,7 +229,7 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** 创建TemporaryToken */
+    /** 创建temporary令牌 */
     public LoginAuthResult createTemporaryToken(String sourceToken, Map<String, Object> ext) {
         JsonObject jsonObject = new JsonObject();
         // 构建请求数据
@@ -247,7 +252,7 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** 获取OnlineUsers */
+    /** 获取online用户 */
     public OnlineUserResult getOnlineUsers(OnlineUserQuery query) {
         JsonObject jsonObject = new JsonObject();
         // 构建请求数据
@@ -316,7 +321,7 @@ public class HttpProtocol extends AbstractProtocol {
     }
 
     @Override
-    /** 获取OnlineStatus */
+    /** 获取online状态 */
     public OnlineStatus getOnlineStatus(String uid) {
         JsonObject jsonObject = new JsonObject();
         // 构建请求数据
@@ -348,6 +353,8 @@ public class HttpProtocol extends AbstractProtocol {
 
     /**
      * 解析在线用户结果
+     * @param resultMap 结果映射
+     * @return 解析online用户结果的结果
      */
     private OnlineUserResult parseOnlineUserResult(Map<String, Object> resultMap) {
         OnlineUserResult result = new OnlineUserResult();
@@ -384,7 +391,14 @@ public class HttpProtocol extends AbstractProtocol {
         return result;
     }
 
-    /** 获取IntValue */
+    /**
+     * 获取int值
+     *
+     * @param map 映射
+     * @param key 键
+     * @param defaultValue 默认值
+     * @return 获取int值的结果
+     */
     private int getIntValue(Map<String, Object> map, String key, int defaultValue) {
         Object value = map.get(key);
         if (value instanceof Number) {
@@ -393,7 +407,14 @@ public class HttpProtocol extends AbstractProtocol {
         return defaultValue;
     }
 
-    /** 获取StringValue */
+    /**
+     * 获取字符串值
+     *
+     * @param map 映射
+     * @param key 键
+     * @param defaultValue 默认值
+     * @return 获取字符串值的结果
+     */
     private String getStringValue(Map<String, Object> map, String key, String defaultValue) {
         Object value = map.get(key);
         return value != null ? value.toString() : defaultValue;
@@ -409,18 +430,32 @@ public class HttpProtocol extends AbstractProtocol {
      */
     /**
      * 大小写不敏感读取响应头
+     * @param headers 头部
+     * @param name 名称
+     * @return 头部ignore大小写的结果
      */
     private String headerIgnoreCase(com.chua.common.support.network.http.HttpHeader headers, String name) {
-        if (headers == null) return null;
+        if (headers == null) {
+            return null;
+        }
         var value = headers.get(name);
-        if (value != null) return value;
+        if (value != null) {
+            return value;
+        }
         return headers.toMap().entrySet().stream()
                 .filter(e -> e.getKey() != null && e.getKey().equalsIgnoreCase(name))
                 .map(Map.Entry::getValue)
                 .findFirst().orElse(null);
     }
 
-    /** 创建AuthenticationInformation */
+    /**
+     * 创建认证信息
+     *
+     * @param jsonObject json对象
+     * @param upgradeType upgrade类型
+     * @param path 路径
+     * @return 创建认证信息的结果
+     */
     protected AuthenticationInformation createAuthenticationInformation(JsonObject jsonObject, UpgradeType upgradeType, String path) {
         // 使用弹性处理器执行请求（含熔断和重试）
         return resilience.executeWithResilience(
@@ -432,6 +467,10 @@ public class HttpProtocol extends AbstractProtocol {
 
     /**
      * 执行实际的HTTP请求
+     * @param jsonObject json对象
+     * @param upgradeType upgrade类型
+     * @param path 路径
+     * @return 执行请求的结果
      */
     private AuthenticationInformation doRequest(JsonObject jsonObject, UpgradeType upgradeType, String path) {
         // 创建或获取追踪上下文
@@ -490,7 +529,7 @@ public class HttpProtocol extends AbstractProtocol {
                     client = client.header("x-oauth-ak", accessKey);
                 }
 
-                // 添加认证类型请求头（x-oauth-type）
+ // 添加认证类型请求头（x-OAuth-类型）
                 HttpServletRequest currentRequest = RequestUtils.getRequest();
                 if (currentRequest != null) {
                     String authType = currentRequest.getHeader("x-oauth-type");
@@ -504,10 +543,10 @@ public class HttpProtocol extends AbstractProtocol {
                     String authorization = currentRequest.getHeader("Authorization");
                     if (StringUtils.isNotBlank(authorization) && authorization.startsWith("Bearer ")) {
                         client = client.header("Authorization", authorization);
-                        // 设置认证类型为 bearer，服务端根据此通过 SPI 选择 BearerAuthorizationHandler
+ // 设置认证类型为 bearer，服务端根据此通过 SPI 选择 bearer授权处理器
                         client = client.header("x-oauth-type", "bearer");
                         log.debug("[HttpProtocol] 透传 Authorization: Bearer 头到服务端, x-oauth-type=bearer");
-                        // 同时在请求体中放入 token，兼容加密协议解析
+ // 同时在请求体中放入 令牌，兼容加密协议解析
                         jsonObject.put("x-oauth-token", authorization.substring(7).trim());
                     }
                 }

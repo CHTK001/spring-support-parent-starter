@@ -3,10 +3,11 @@ package com.chua.common.support.lang;
 /**
  * 版本号解析与比较
  * <p>
- * 支持语义化版本号（SemVer）的解析和比较，格式为 major.minor.patch。
+   * 支持语义化版本号（semver）的解析和比较，格式为 major.minor.patch。
  * </p>
  *
  * @author CH
+ * @since 4.0.0
  */
 public class Version implements Comparable<Version> {
 
@@ -47,6 +48,11 @@ public class Version implements Comparable<Version> {
      */
     public static Version parse(String version) {
         if (version == null || version.isEmpty()) {
+            /**
+             * illegal参数异常。
+             * @param "版本号不能为空" "版本号不能为空"
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("版本号不能为空");
         }
         String[] parts = version.split("\\.");
@@ -64,8 +70,20 @@ public class Version implements Comparable<Version> {
                 patch = Integer.parseInt(parts[2].replaceAll("[^0-9]", ""));
             }
         } catch (NumberFormatException e) {
+            /**
+             * illegal参数异常。
+             * @param version 版本
+             * @param e e
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("版本号格式不正确: " + version, e);
         }
+        /**
+         * 版本。
+         * @param major major
+         * @param minor minor
+         * @param patch patch
+         */
         return new Version(major, minor, patch);
     }
 

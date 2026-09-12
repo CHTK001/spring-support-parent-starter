@@ -46,7 +46,7 @@ public class EduQuestionController {
     /**
      * 获取题目详情
      *
-     * @param id 题目ID
+     * @param id 题目标识
      * @return 题目详情
      */
     @Operation(summary = "获取题目详情")
@@ -85,7 +85,7 @@ public class EduQuestionController {
     /**
      * 删除题目（逻辑删除）
      *
-     * @param id 题目ID
+     * @param id 题目标识
      * @return 是否成功
      */
     @Operation(summary = "删除题目")

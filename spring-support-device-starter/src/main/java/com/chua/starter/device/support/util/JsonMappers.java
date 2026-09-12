@@ -12,9 +12,10 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * OpenAPI 响应 JSON 到设备领域模型的解析工具
+   * 打开api 响应 JSON 到设备领域模型的解析工具
  *
  * @since 4.0.0.42
+ * @author CH
  */
 public final class JsonMappers {
 
@@ -23,7 +24,7 @@ public final class JsonMappers {
      */
     private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    /** 创建 JsonMappers 实例 */
+    /** 创建 json映射器 实例 */
     private JsonMappers() {
     }
 
@@ -105,7 +106,12 @@ public final class JsonMappers {
         return list;
     }
 
-    /** 解析Date */
+    /**
+     * 解析日期
+     *
+     * @param s s
+     * @return 解析日期的结果
+     */
     private static LocalDateTime parseDate(String s) {
         if (s == null || s.isEmpty()) {
             return null;

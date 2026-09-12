@@ -43,7 +43,7 @@ public class EduPaperController {
     /**
      * 获取试卷详情
      *
-     * @param id 试卷ID
+     * @param id 试卷标识
      * @return 试卷详情
      */
     @Operation(summary = "获取试卷详情")
@@ -67,9 +67,9 @@ public class EduPaperController {
     /**
      * 替换试卷中的某道题
      *
-     * @param id    试卷ID
-     * @param oldId 旧题目ID
-     * @param newId 新题目ID
+     * @param id    试卷标识
+     * @param oldId 旧题目标识
+     * @param newId 新题目标识
      * @return 是否成功
      */
     @Operation(summary = "替换试卷中的某道题")

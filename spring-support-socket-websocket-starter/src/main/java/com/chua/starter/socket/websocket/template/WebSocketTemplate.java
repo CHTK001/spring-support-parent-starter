@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.util.Collection;
 
 /**
- * WebSocket 消息模板
+   * web套接字 消息模板
  * <p>
  * 提供便捷的消息发送方法
  * </p>
@@ -38,7 +38,7 @@ public class WebSocketTemplate {
     /**
      * 发送消息到指定会话
      *
-     * @param sessionId 会话ID
+     * @param sessionId 会话标识
      * @param message   消息内容
      * @return 是否发送成功
      */
@@ -50,7 +50,7 @@ public class WebSocketTemplate {
     /**
      * 发送消息到指定用户
      *
-     * @param userId  用户ID
+     * @param userId  用户标识
      * @param message 消息内容
      * @return 是否发送成功
      */
@@ -79,8 +79,8 @@ public class WebSocketTemplate {
     /**
      * 绑定用户到当前会话
      *
-     * @param sessionId 会话ID
-     * @param userId    用户ID
+     * @param sessionId 会话标识
+     * @param userId    用户标识
      */
     public void bindUser(String sessionId, String userId) {
         sessionManager.bindUser(sessionId, userId);
@@ -89,7 +89,7 @@ public class WebSocketTemplate {
     /**
      * 解绑用户
      *
-     * @param userId 用户ID
+     * @param userId 用户标识
      */
     public void unbindUser(String userId) {
         sessionManager.unbindUser(userId);
@@ -106,6 +106,9 @@ public class WebSocketTemplate {
 
     /**
      * 发送消息到会话
+     * @param session 会话
+     * @param message 消息
+     * @return 发送转为会话的结果
      */
     private boolean sendToSession(WebSocketSession session, String message) {
         if (session == null || !session.isOpen()) {

@@ -1,10 +1,10 @@
 package com.chua.starter.ai.support.manage;
 
 /**
- * Nomifun 前后端 WebSocket 主题常量。
+   * Nomifun 前后端 web套接字 主题常量。
  *
  * <p>前后端必须保持同名，前端在 <code>src/common/adapter/ipcBridge.ts</code> / 业务组件中
- * 以 {@code wsEmitter('model.metrics.push')} 订阅对应的 name。</p>
+   * 以 {@code wsEmitter('model.metrics.push')} 订阅对应的 名称。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -18,6 +18,9 @@ public final class SysAiWsTopics {
      */
     public static final String MODEL_METRICS_PUSH = "model.metrics.push";
 
+    /**
+      * sysaiwstopics。
+     */
     private SysAiWsTopics() {
     }
 }

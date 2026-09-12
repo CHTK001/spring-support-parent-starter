@@ -28,7 +28,7 @@ import java.util.Base64;
  *
  * # 使用加密密码
  * spring.datasource.password: ENC(uX5z1H+z5f3k8L9mW2qR4w==)
- * }</pre>
+ * }</pre> * }</pre>
  *
  * @since 2026/07/14
  * @author CH
@@ -39,11 +39,11 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
     /** AES 算法 */
     /** Aes_algorithm */
     private static final String AES_ALGORITHM = "AES";
-    /** Cipher_transformation */
+    /** Cipher_转变 */
     private static final String CIPHER_TRANSFORMATION = "AES/ECB/PKCS5Padding";
 
     /** 默认密钥（32字节，用于没有配置密钥时的兼容） */
-    /** Default_secret_key */
+    /** 默认_secret_钥匙 */
     private static final byte[] DEFAULT_SECRET_KEY;
 
     static {
@@ -51,6 +51,11 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
             MessageDigest sha = MessageDigest.getInstance("SHA-256");
             DEFAULT_SECRET_KEY = sha.digest("spring-support-datasource-default-key".getBytes(StandardCharsets.UTF_8));
         } catch (NoSuchAlgorithmException e) {
+            /**
+             * 异常入initializer错误。
+             * @param available" 可用"
+             * @return 异常入initializer错误的结果
+             */
             throw new ExceptionInInitializerError("SHA-256 not available");
         }
     }
@@ -84,6 +89,12 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
             MessageDigest sha = MessageDigest.getInstance("SHA-256");
             this.secretKey = sha.digest(secretKeyStr.getBytes(StandardCharsets.UTF_8));
         } catch (NoSuchAlgorithmException e) {
+            /**
+             * illegal参数异常。
+             * @param available" 可用"
+             * @param e e
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("SHA-256 not available", e);
         }
     }
@@ -101,9 +112,21 @@ public class AesPasswordDecryptor implements PasswordDecryptor {
             Cipher cipher = Cipher.getInstance(CIPHER_TRANSFORMATION);
             cipher.init(Cipher.DECRYPT_MODE, keySpec);
             byte[] decrypted = cipher.doFinal(decoded);
+            /**
+             * 字符串。
+             * @param decrypted decrypted
+             * @param StandardCharsets.UTF_8 标准字符集.utf8
+             * @return 字符串的结果
+             */
             return new String(decrypted, StandardCharsets.UTF_8);
         } catch (Exception e) {
             log.error("AES 解密失败", e);
+            /**
+             * illegal参数异常。
+             * @param "密码解密失败，请检查密钥配置" "密码解密失败，请检查密钥配置"
+             * @param e e
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("密码解密失败，请检查密钥配置", e);
         }
     }

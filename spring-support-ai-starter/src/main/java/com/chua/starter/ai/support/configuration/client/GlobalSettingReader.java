@@ -31,7 +31,7 @@ public class GlobalSettingReader {
      *
      * @param group 分组
      * @param field 字段名
-     * @return 值，未配置时返回 null
+     * @return 值，未配置时返回 空
      */
     public String getStr(String group, String field) {
         return sysAiGlobalSettingService.getValue(group, field).orElse(null);
@@ -75,7 +75,7 @@ public class GlobalSettingReader {
      *
      * @param group 分组
      * @param field 字段名
-     * @return 整数值，未配置或解析失败时返回 null
+     * @return 整数值，未配置或解析失败时返回 空
      */
     public Integer getIntOrNull(String group, String field) {
         String v = getStr(group, field);
@@ -95,7 +95,7 @@ public class GlobalSettingReader {
      *
      * @param group 分组
      * @param field 字段名
-     * @return 长整数值，未配置或解析失败时返回 null
+     * @return 长整数值，未配置或解析失败时返回 空
      */
     public Long getLongOrNull(String group, String field) {
         String v = getStr(group, field);
@@ -115,7 +115,7 @@ public class GlobalSettingReader {
      *
      * @param group 分组
      * @param field 字段名
-     * @return 小数值，未配置或解析失败时返回 null
+     * @return 小数值，未配置或解析失败时返回 空
      */
     public BigDecimal getDecimalOrNull(String group, String field) {
         String v = getStr(group, field);
@@ -123,6 +123,11 @@ public class GlobalSettingReader {
             return null;
         }
         try {
+            /**
+              * bigdecimal。
+             * @param v.trim( v.修剪(
+             * @return BigDecimal的结果
+             */
             return new BigDecimal(v.trim());
         } catch (NumberFormatException e) {
             log.debug("[GlobalSettingReader] 字段 {} 非小数: {}", field, v);

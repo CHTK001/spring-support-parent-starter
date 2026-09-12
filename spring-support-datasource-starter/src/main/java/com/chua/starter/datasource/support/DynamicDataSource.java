@@ -22,16 +22,17 @@ import static com.chua.starter.common.support.logger.ModuleLog.highlight;
  * 动态数据源
  *
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class DynamicDataSource extends AbstractRoutingDataSource {
 
     /** Master */
     private static final String MASTER = "master";
-    protected static final Map<Object, Object> TARGET_DATA_SOURCES = DataSourceContextSupport.DATA_SOURCE_MAP;
+    protected static final Map<Object, Object> TARGET_DATA_SOURCES = DataSourceContextSupport.DATA_SOURCE_MAP; // Target数据源
     /** 默认数据来源 */
     private final Object defaultDataSource;
-    /** Mybatis */
+    /** MyBatis */
     private static final String MYBATIS = "org.springframework.transaction.support.TransactionSynchronizationManager";
     /** Binder */
     private boolean binder;
@@ -39,6 +40,9 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
     /** Connectionholder */
     private DynmaicSimpleConnectionHolder connectionHolder = null;
 
+    /**
+     * dynamic数据源。
+     */
     public DynamicDataSource() {
         this.setTargetDataSources(TARGET_DATA_SOURCES);
         this.defaultDataSource = createDefaultDataSource();
@@ -106,6 +110,9 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
 
     @Override
     protected DataSource determineTargetDataSource() {
+        /**
+          * unbindresource。
+         */
         unbindResource();
         Object lookupKey = determineCurrentLookupKey();
         if (null == lookupKey) {
@@ -132,11 +139,21 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
             dataSource = (DataSource) this.defaultDataSource;
         }
         if (dataSource == null) {
+            /**
+             * illegal状态异常。
+             * @param "]" "]"
+             * @return illegal状态异常的结果
+             */
             throw new IllegalStateException("Cannot determine target DataSource for lookup key [" + lookupKey + "]");
         }
         return dataSource;
     }
 
+    /**
+     * 获取数据源。
+     * @param name 名称
+     * @return 获取数据源的结果
+     */
     public DataSource getDataSource(String name) {
         if (Strings.isNullOrEmpty(name)) {
             return determineTargetDataSource();
@@ -181,21 +198,35 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
     }
 
 
+    /**
+     * dynmaicconnection把手类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     class DynmaicConnectionHandle extends SimpleConnectionHandle {
 
         /** Connection */
         private Connection connection;
 
         /**
-         * Create a new SimpleConnectionHandle for the given Connection.
+          * 创建 a 新 简单connection把手 for the given Connection.
          *
          * @param connection the JDBC Connection
          */
         public DynmaicConnectionHandle(Connection connection) {
+            /**
+             * 父。
+             * @param connection connection
+             */
             super(connection);
             this.connection = connection;
         }
 
+        /**
+         * 设置connection。
+         * @param connection connection
+         */
         public void setConnection(Connection connection) {
             this.connection = connection;
         }
@@ -206,17 +237,35 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
         }
     }
 
+    /**
+     * dynmaic简单connectionholder类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     class DynmaicSimpleConnectionHolder extends ConnectionHolder {
 
 
         /** Connectionhandle */
         private final DynmaicConnectionHandle connectionHandle;
 
+        /**
+         * dynmaic简单connectionholder。
+         * @param connectionHandle connection把手
+         */
         public DynmaicSimpleConnectionHolder(DynmaicConnectionHandle connectionHandle) {
+            /**
+             * 父。
+             * @param connectionHandle connection把手
+             */
             super(connectionHandle);
             this.connectionHandle = connectionHandle;
         }
 
+        /**
+         * 设置connection。
+         * @param connection connection
+         */
         public void setConnection(Connection connection) {
             connectionHandle.setConnection(connection);
         }

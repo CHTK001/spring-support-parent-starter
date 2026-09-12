@@ -9,7 +9,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import java.util.List;
 
 /**
- * 软件源表 Service 接口
+   * 软件源表 服务 接口
  *
  * @since 2026/7/25
  * @author CH
@@ -44,7 +44,7 @@ public interface SoftSourceService extends IService<SoftSource> {
     /**
      * 删除软件源
      *
-     * @param sourceId 软件源ID
+     * @param sourceId 软件源标识
      * @return 返回删除结果
      */
     ReturnResult<Boolean> deleteSource(String sourceId);
@@ -74,7 +74,7 @@ public interface SoftSourceService extends IService<SoftSource> {
     /**
      * 同步软件源
      *
-     * @param sourceId 软件源ID
+     * @param sourceId 软件源标识
      * @return 返回同步的软件数量
      */
     ReturnResult<Integer> syncSource(String sourceId);
@@ -82,7 +82,7 @@ public interface SoftSourceService extends IService<SoftSource> {
     /**
      * 启用软件源
      *
-     * @param sourceId 软件源ID
+     * @param sourceId 软件源标识
      * @return 返回启用结果
      */
     ReturnResult<Boolean> enableSource(String sourceId);
@@ -90,7 +90,7 @@ public interface SoftSourceService extends IService<SoftSource> {
     /**
      * 禁用软件源
      *
-     * @param sourceId 软件源ID
+     * @param sourceId 软件源标识
      * @return 返回禁用结果
      */
     ReturnResult<Boolean> disableSource(String sourceId);

@@ -23,6 +23,7 @@ public interface RpcInterceptor {
      *
      * @param method 方法
      * @return 是否继续执行，返回false表示拦截
+     * @param args 参数
      */
     default boolean preHandle(Method method, Object[] args) {
         return true;
@@ -34,6 +35,7 @@ public interface RpcInterceptor {
      * @param method 方法
      * @param result 返回结果
      * @return 处理后的结果
+     * @param args 参数
      */
     default Object postHandle(Method method, Object[] args, Object result) {
         return result;
@@ -45,6 +47,7 @@ public interface RpcInterceptor {
      * @param method 方法
      * @param error  异常
      * @throws Throwable 处理后的异常
+     * @param args 参数
      */
     default void handleException(Method method, Object[] args, Throwable error) throws Throwable {
         throw error;
@@ -54,6 +57,7 @@ public interface RpcInterceptor {
      * 最终处理（无论成功失败都会执行）
      *
      * @param method 方法
+     * @param args 参数
      */
     default void afterCompletion(Method method, Object[] args) {
         // 默认不处理

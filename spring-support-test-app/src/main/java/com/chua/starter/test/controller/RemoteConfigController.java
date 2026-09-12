@@ -27,10 +27,10 @@ import java.util.Map;
 @RequestMapping("/api/remote/config")
 public class RemoteConfigController {
 
-    /** 配置文件路径（应用目录 remote-config.json） */
+    /** 配置文件路径（应用目录 远程-配置.json） */
     private static final Path CONFIG_FILE = Paths.get(System.getProperty("user.dir"), "remote-config.json");
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper(); // 对象映射器
 
     /**
      * 回显配置。

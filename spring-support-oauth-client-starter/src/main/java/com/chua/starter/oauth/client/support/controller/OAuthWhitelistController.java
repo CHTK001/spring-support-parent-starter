@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * OAuth 客户端白名单管理控制器。
+   * o认证 客户端白名单管理控制器。
  *
  * <p>提供白名单规则的动态添加、删除与查询能力，规则变更实时生效，无需重启。</p>
  *
@@ -44,15 +44,18 @@ public class OAuthWhitelistController {
     private final WhitelistFileWatcher whitelistFileWatcher;
 
     /**
-     * OAuth 客户端配置
+      * o认证 客户端配置
      */
     private final AuthClientProperties authClientProperties;
 
     /**
      * 动态添加白名单规则。
      *
-     * @param pattern URL Pattern，支持 Ant 风格，例如 /v2/face/**
+     * @param pattern URL 模式，支持 Ant 风格，例如 /v2/face/**
      * @return 添加结果
+      * @param @RequestParam("pattern" @请求参数("模式"
+      * @param @RequestParam("pattern" @请求参数("模式"
+      * @param @RequestParam("pattern" @RequestParam("pattern"
      */
     @Permission("admin")
     @Operation(summary = "动态添加白名单规则")
@@ -70,8 +73,11 @@ public class OAuthWhitelistController {
     /**
      * 动态删除白名单规则。
      *
-     * @param pattern URL Pattern
+     * @param pattern URL 模式
      * @return 删除结果
+     * @param @RequestParam("pattern" @请求参数("模式"
+     * @param @RequestParam("pattern" @请求参数("模式"
+     * @param @RequestParam("pattern" @RequestParam("pattern"
      */
     @Permission("admin")
     @Operation(summary = "动态删除白名单规则")

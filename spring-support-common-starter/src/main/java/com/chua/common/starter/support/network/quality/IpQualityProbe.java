@@ -6,15 +6,16 @@ import lombok.extern.slf4j.Slf4j;
 import java.nio.file.Path;
 
 /**
- * IP2Proxy LITE 离线 IP 质量检测示例
+   * IP2代理 LITE 离线 IP 质量检测示例
  *
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 public class IpQualityProbe {
 
     /**
-     * 默认 IP2Proxy BIN 数据库路径
+      * 默认 IP2代理 BIN 数据库路径
      */
     private static final String DEFAULT_BIN_PATH = System.getProperty("ip2proxy.bin.path", "IP2PROXY-LITE-PX2.BIN");
 
@@ -23,7 +24,11 @@ public class IpQualityProbe {
      */
     private static final String DEFAULT_TEST_IPS = "1.2.3.4,5.6.7.8,8.8.8.8,1.1.1.1";
 
-    /** Main */
+    /**
+     * Main
+     *
+     * @param args 参数
+     */
     public static void main(String[] args) throws Exception {
         CommandLine cli = CommandLine.parse(args)
                 .program("IpQualityProbe")
@@ -46,12 +51,22 @@ public class IpQualityProbe {
         }
     }
 
-    /** 运行WithDefaults */
+    /** 运行with默认 */
     private void runWithDefaults() throws Exception {
+        /**
+         * 运行withips。
+         * @param DEFAULT_BIN_PATH 默认bin路径
+         * @param DEFAULT_TEST_IPS.split("," 默认测试ips.分割(","
+         */
         runWithIps(DEFAULT_BIN_PATH, DEFAULT_TEST_IPS.split(","));
     }
 
-    /** 运行WithIps */
+    /**
+     * 运行withips
+     *
+     * @param binPath bin路径
+     * @param testIps 测试ips
+     */
     private void runWithIps(String binPath, String[] testIps) throws Exception {
         IP2ProxyLiteIpQualityDetector detector = new IP2ProxyLiteIpQualityDetector(Path.of(binPath));
         for (String ip : testIps) {

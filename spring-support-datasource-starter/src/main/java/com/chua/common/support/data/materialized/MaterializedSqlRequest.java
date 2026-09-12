@@ -16,7 +16,7 @@ import java.util.List;
 @Builder(toBuilder = true)
 public class MaterializedSqlRequest {
 
-    /** StatementID */
+    /** 对账单标识 */
     private String statementId;
     /** 来源数据来源 */
     private String sourceDataSource;
@@ -32,6 +32,6 @@ public class MaterializedSqlRequest {
     private List<String> tables;
 
     @Singular("parameter")
-    /** Parameters */
+    /** 参数 */
     private List<Object> parameters;
 }

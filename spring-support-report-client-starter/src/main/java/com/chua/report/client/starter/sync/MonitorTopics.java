@@ -1,26 +1,26 @@
 package com.chua.report.client.starter.sync;
 
 /**
- * Monitor 通信主题常量
+   * 监控 通信主题常量
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/12/05
  * @author CH
  */
 public interface MonitorTopics {
 
-    // ==================== Job ====================
+ // ==================== 作业 ====================
     String JOB_DISPATCH = "monitor/job/dispatch";
-    String JOB_CANCEL = "monitor/job/cancel";
-    String JOB_RESULT = "monitor/job/result";
+    String JOB_CANCEL = "monitor/job/cancel"; // 作业cancel
+    String JOB_RESULT = "monitor/job/result"; // 作业结果
 
-    // ==================== File ====================
+ // ==================== 文件 ====================
     String FILE_REQUEST = "monitor/file/request";
-    String FILE_RESPONSE = "monitor/file/response";
+    String FILE_RESPONSE = "monitor/file/response"; // 文件响应
 
     // ==================== Device Report ====================
     String DEVICE_METRICS = "monitor/device/metrics";
-    String DEVICE_INFO = "monitor/device/info";
+    String DEVICE_INFO = "monitor/device/info"; // device信息
 
     // ==================== App Report ====================
     /** 应用信息上报（定时） */
@@ -30,11 +30,11 @@ public interface MonitorTopics {
     /** API 功能开关控制 */
     String API_FEATURE_CONTROL = "monitor/control/api-feature";
 
-    // ==================== Logging Config ====================
+ // ==================== 日志 配置 ====================
     /** 日志级别配置 */
     String LOGGING_CONFIG = "monitor/control/log-level";
 
-    // ==================== MyBatis Config ====================
+ // ==================== mybatis 配置 ====================
     /** MyBatis 配置管理 */
     String MYBATIS_CONFIG = "monitor/control/mybatis";
 
@@ -42,13 +42,13 @@ public interface MonitorTopics {
     /** URL 请求统计上报 */
     String URL_QPS_REPORT = "monitor/url/qps-report";
 
-    // ==================== Node Control ====================
+ // ==================== 节点 Control ====================
     /** 节点重启控制 */
     String NODE_RESTART = "monitor/control/node-restart";
     /** 节点关闭控制 */
     String NODE_SHUTDOWN = "monitor/control/node-shutdown";
 
-    // ==================== Node Maintenance ====================
+ // ==================== 节点 Maintenance ====================
     /** 节点配置备份 */
     String NODE_BACKUP = "monitor/maintenance/backup";
     /** 节点升级 */
@@ -56,11 +56,11 @@ public interface MonitorTopics {
     /** 节点配置还原 */
     String NODE_RESTORE = "monitor/maintenance/restore";
 
-    // ==================== Log Push ====================
-    /** 日志推送（Agent -> Monitor） */
+ // ==================== 日志 Push ====================
+    /** 日志推送（智能体 -> 监控） */
     String LOG_PUSH = "monitor/log/push";
-    /** 日志订阅请求（Monitor -> Agent） */
+    /** 日志订阅请求（监控 -> 智能体） */
     String LOG_SUBSCRIBE = "monitor/log/subscribe";
-    /** 日志取消订阅（Monitor -> Agent） */
+    /** 日志取消订阅（监控 -> 智能体） */
     String LOG_UNSUBSCRIBE = "monitor/log/unsubscribe";
 }

@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * OSGi 集成配置属性。
+   * osgi 集成配置属性。
  *
  * <p>配置前缀：{@code plugin.osgi}。控制 Felix 框架启动和远程管理。</p>
  *
@@ -25,7 +25,7 @@ import java.util.Map;
 public class OsgiProperties {
 
     /**
-     * 是否启用 OSGi 集成（默认开启）。
+      * 是否启用 osgi 集成（默认开启）。
      */
     private boolean enabled = true;
 
@@ -40,7 +40,7 @@ public class OsgiProperties {
     private int startLevel = 4;
 
     /**
-     * Felix 框架附加配置（原样透传给 Felix framework）。
+      * Felix 框架附加配置（原样透传给 Felix 框架）。
      *
      * <p>用于需要自定义框架行为的场景，例如跨 bundle 共享应用侧接口包：</p>
      * <pre>{@code
@@ -48,6 +48,7 @@ public class OsgiProperties {
      *   osgi:
      *     framework-properties:
      *       org.osgi.framework.system.packages.extra: com.example:api
+     * }</pre>ges.extra: com.example:api
      * }</pre>
      */
     private Map<String, Object> frameworkProperties = new HashMap<>();
@@ -62,6 +63,8 @@ public class OsgiProperties {
      *
      * <p>单一协议原则：shell 同时只启用一种远程连接方式。
      * 默认使用 SSH（端口 8122），安全性更高。</p>
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class Shell {

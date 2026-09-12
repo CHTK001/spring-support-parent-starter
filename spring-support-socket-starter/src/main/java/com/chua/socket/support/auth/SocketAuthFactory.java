@@ -5,10 +5,10 @@ import com.chua.socket.support.session.SocketUser;
 import java.util.Map;
 
 /**
- * Socket 认证工厂接口
+   * 套接字 认证工厂接口
  * 用于验证客户端连接的合法性
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */

@@ -19,6 +19,8 @@ public interface IEduKnowledgeDocService extends IService<EduKnowledgeDoc> {
      *
      * @param query 查询条件
      * @return 分页结果
+     * @param page page
+     * @param pageSize page大小
      */
     PageResult<KnowledgeDocVO> pageQuery(EduKnowledgeDoc query, long page, long pageSize);
 
@@ -43,7 +45,7 @@ public interface IEduKnowledgeDocService extends IService<EduKnowledgeDoc> {
     /**
      * 删除文档
      *
-     * @param id 文档ID
+     * @param id 文档标识
      * @return 是否成功
      */
     boolean deleteDoc(Long id);

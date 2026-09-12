@@ -29,7 +29,7 @@ public class LocalSoftwareSource implements SoftwareSource {
 
     @Autowired
     /**
-     * 创建 LocalSoftwareSource 实例
+      * 创建 本地software源 实例
      * @param collectors collectors
      */
     public LocalSoftwareSource(List<LocalSoftwareCollector> collectors) {
@@ -37,13 +37,13 @@ public class LocalSoftwareSource implements SoftwareSource {
     }
 
     @Override
-    /** Support */
+    /** 支持 */
     public boolean support(SoftSource source) {
         return source != null && source.getSourceType() == 3;
     }
 
     @Override
-    /** FetchSoftwareList */
+    /** 获取software列表 */
     public List<SoftSoftware> fetchSoftwareList(SoftSource source) {
         if (!support(source)) {
             return Collections.emptyList();
@@ -57,7 +57,7 @@ public class LocalSoftwareSource implements SoftwareSource {
     }
 
     @Override
-    /** FetchSoftwareDetail */
+    /** 获取softwaredetail */
     public SoftSoftware fetchSoftwareDetail(SoftSource source, String softwareCode) {
         // 本地软件源暂不支持通过编码获取详情（可后续实现）
         return null;
@@ -86,7 +86,7 @@ public class LocalSoftwareSource implements SoftwareSource {
     }
 
     @Override
-    /** 获取LatestVersion */
+    /** 获取latest版本 */
     public String getLatestVersion(SoftSource source, String softwareCode) {
         // 返回当前版本作为最新版本
         return null;

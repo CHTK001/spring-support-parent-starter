@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 钱包订单控制器
  * @author CH
+ * @since 4.0.0
  */
 @RestController
 @RequestMapping("/wallet/order")
@@ -35,11 +36,16 @@ public class WalletOrderController {
 
     /** Wallet排序服务 */
     private final WalletOrderService walletOrderService;
-    /** PaymentcallbackURL解析器 */
+    /** paymentcallbackurl解析器 */
     private final PaymentCallbackUrlResolver paymentCallbackUrlResolver;
 
     @PostMapping("/recharge")
-    /** 创建Recharge */
+    /**
+     * 创建Recharge
+     *
+     * @param dto dto
+     * @return 创建recharge的结果
+     */
     public Result<WalletOrderVO> createRecharge(@RequestBody WalletRechargeDTO dto) {
         RechargeRequest request = new RechargeRequest();
         BeanUtils.copyProperties(dto, request);
@@ -47,7 +53,12 @@ public class WalletOrderController {
     }
 
     @PostMapping("/transfer")
-    /** 创建Transfer */
+    /**
+     * 创建调动
+     *
+     * @param dto dto
+     * @return 创建调动的结果
+     */
     public Result<WalletOrderVO> createTransfer(@RequestBody WalletTransferDTO dto) {
         TransferRequest request = new TransferRequest();
         BeanUtils.copyProperties(dto, request);
@@ -55,7 +66,12 @@ public class WalletOrderController {
     }
 
     @PostMapping("/withdraw")
-    /** 创建Withdraw */
+    /**
+     * 创建Withdraw
+     *
+     * @param dto dto
+     * @return 创建withdraw的结果
+     */
     public Result<WalletOrderVO> createWithdraw(@RequestBody WalletWithdrawDTO dto) {
         WithdrawRequest request = new WithdrawRequest();
         BeanUtils.copyProperties(dto, request);
@@ -63,14 +79,24 @@ public class WalletOrderController {
     }
 
     @GetMapping("/{orderNo}")
-    /** 获取ByOrderNo */
+    /**
+     * 获取by订单no
+     *
+     * @param orderNo 订单no
+     * @return 获取by订单no的结果
+     */
     public Result<WalletOrderVO> getByOrderNo(@PathVariable String orderNo) {
         WalletOrder order = walletOrderService.getByOrderNo(orderNo);
         return order == null ? Result.error("钱包订单不存在") : Result.success(convert(order));
     }
 
     @GetMapping("/page")
-    /** Page */
+    /**
+     * Page
+     *
+     * @param "1" "1"
+     * @return page的结果
+     */
     public Result<PageResult<WalletOrderVO>> page(@RequestParam(defaultValue = "1") int pageNum,
                                                   @RequestParam(defaultValue = "10") int pageSize,
                                                   @RequestParam(required = false) Long merchantId,
@@ -83,7 +109,12 @@ public class WalletOrderController {
         return Result.success(PageResult.of(voPage));
     }
 
-    /** 转换 */
+    /**
+     * 转换
+     *
+     * @param order 订单
+     * @return 转换的结果
+     */
     private WalletOrderVO convert(WalletOrder order) {
         WalletOrderVO vo = new WalletOrderVO();
         BeanUtils.copyProperties(order, vo);

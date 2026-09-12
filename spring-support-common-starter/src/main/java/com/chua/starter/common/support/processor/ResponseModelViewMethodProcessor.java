@@ -17,9 +17,10 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * model view
+   * 模型 view
  *
  * @author CH
+ * @since 4.0.0
  */
 public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodProcessor {
 
@@ -27,29 +28,33 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
     private String redirectPatterns;
 
     /**
-     * 创建 ResponseModelViewMethodProcessor 实例
-     * @param converters converters
+      * 创建 响应模型view方法处理器 实例
+     * @param converters 转换器
      */
     public ResponseModelViewMethodProcessor(List<HttpMessageConverter<?>> converters) {
+        /**
+         * 父。
+         * @param converters 转换器
+         */
         super(converters);
     }
 
     @Override
-    /** SupportsParameter */
+    /** 支持参数 */
     public boolean supportsParameter(MethodParameter returnType) {
         Class<?> paramType = returnType.getParameterType();
         return ModelView.class.isAssignableFrom(paramType);
     }
 
     @Override
-    /** SupportsReturnType */
+    /** 支持申报类型 */
     public boolean supportsReturnType(MethodParameter returnType) {
         Class<?> paramType = returnType.getParameterType();
         return ModelView.class.isAssignableFrom(paramType);
     }
 
     @Override
-    /** 处理ReturnValue */
+    /** 处理申报价值观 */
     public void handleReturnValue(Object returnValue, MethodParameter returnType, ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws IOException, HttpMediaTypeNotAcceptableException, HttpMessageNotWritableException {
         ModelView modelView = (ModelView) returnValue;
         Object data = modelView.getData();
@@ -60,7 +65,14 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
             ServletServerHttpRequest inputMessage = createInputMessage(webRequest);
             ServletServerHttpResponse outputMessage = createOutputMessage(webRequest);
 
-            // Try even with null return value. ResponseBodyAdvice could get involved.
+ // 尝试 even with 空 申报 价值观. 响应主体advice could 获取 involved.
+            /**
+             * 写入with消息转换器。
+             * @param data 数据
+             * @param returnType 申报类型
+             * @param inputMessage 输入消息
+             * @param outputMessage 输出消息
+             */
             writeWithMessageConverters(data, returnType, inputMessage, outputMessage);
             return;
         }
@@ -78,7 +90,13 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
         }
     }
 
-    /** 获取Accept */
+    /**
+     * 获取Accept
+     *
+     * @param modelView 模型view
+     * @param webRequest web请求
+     * @return 获取accept的结果
+     */
     private String getAccept(ModelView modelView, NativeWebRequest webRequest) {
         MediaType mediaType = modelView.getMediaType();
         if (null != mediaType) {
@@ -89,13 +107,13 @@ public class ResponseModelViewMethodProcessor extends RequestResponseBodyMethodP
 
 
     /**
-     * Whether the given view name is a redirect view reference.
-     * The default implementation checks the configured redirect patterns and
-     * also if the view name starts with the "redirect:" prefix.
+      * Whether the given view 名称 是否 a redirect view 引用.
+       * The 默认 implementation 检查 the configured redirect 模式 和
+      * also if the view 名称 启动 with the "redirect:" 前缀.
      *
-     * @param viewName the view name to check, never {@code null}
-     * @return "true" if the given view name is recognized as a redirect view
-     * reference; "false" otherwise.
+     * @param viewName the view 名称 转为 检查, 从不 {@code null}
+     * @return "true" if the given view 名称 是否 recognized as a redirect view
+      * 引用; "false" otherwise.
      */
     protected boolean isRedirectViewName(String viewName) {
         return (PatternMatchUtils.simpleMatch(this.redirectPatterns, viewName) || viewName.startsWith("redirect:"));

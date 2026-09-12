@@ -29,10 +29,10 @@ public class SysFileSystemUploadChunkServiceImpl
     /**
      * 保存单个分片记录。
      *
-     * @param uploadId     上传任务 ID
+     * @param uploadId     上传任务 标识
      * @param partNumber   分片序号
      * @param chunkSize    分片大小（字节）
-     * @param etag         分片 ETag
+     * @param etag         分片 e标签
      * @param storagePath  存储路径
      * @return 是否保存成功
      */
@@ -57,9 +57,9 @@ public class SysFileSystemUploadChunkServiceImpl
     }
 
     /**
-     * 按上传任务 ID 查询所有分片，按序号升序排列。
+      * 按上传任务 标识 查询所有分片，按序号升序排列。
      *
-     * @param uploadId 上传任务 ID
+     * @param uploadId 上传任务 标识
      * @return 分片列表
      */
     @Override
@@ -72,7 +72,7 @@ public class SysFileSystemUploadChunkServiceImpl
     /**
      * 统计已上传的分片数量。
      *
-     * @param uploadId 上传任务 ID
+     * @param uploadId 上传任务 标识
      * @return 已上传分片数
      */
     @Override
@@ -86,7 +86,7 @@ public class SysFileSystemUploadChunkServiceImpl
     /**
      * 批量标记指定上传任务的所有分片为已合并状态。
      *
-     * @param uploadId 上传任务 ID
+     * @param uploadId 上传任务 标识
      * @return 是否更新成功
      */
     @Override
@@ -102,7 +102,7 @@ public class SysFileSystemUploadChunkServiceImpl
     /**
      * 删除指定上传任务的所有分片记录。
      *
-     * @param uploadId 上传任务 ID
+     * @param uploadId 上传任务 标识
      * @return 是否删除成功
      */
     @Override

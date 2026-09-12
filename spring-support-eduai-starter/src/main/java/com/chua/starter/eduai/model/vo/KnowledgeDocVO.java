@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 public class KnowledgeDocVO {
 
     /**
-     * 文档ID
+      * 文档标识
      */
     private Long id;
 
@@ -39,7 +39,7 @@ public class KnowledgeDocVO {
     private Long fileSize;
 
     /**
-     * 向量存储ID
+      * 向量存储标识
      */
     private String vectorStoreId;
 

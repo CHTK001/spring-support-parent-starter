@@ -23,8 +23,8 @@ import java.lang.reflect.Proxy;
 public class MaterializedRouteAdvisor extends StaticMethodMatcherPointcutAdvisor {
 
     /**
-     * 创建 MaterializedRouteAdvisor 实例
-     * @param properties properties
+      * 创建 物化routeadvisor 实例
+     * @param properties 属性
      */
     public MaterializedRouteAdvisor(MaterializedRouteProperties properties) {
         this.setAdvice(new MethodInterceptor() {
@@ -57,7 +57,13 @@ public class MaterializedRouteAdvisor extends StaticMethodMatcherPointcutAdvisor
         return resolveRoute(method, targetClass) != null;
     }
 
-    /** 解析Route */
+    /**
+     * 解析Route
+     *
+     * @param method 方法
+     * @param targetClass Target类
+     * @return resolveRoute的结果
+     */
     private MaterializedRoute resolveRoute(Method method, Class<?> targetClass) {
         MaterializedRoute route = AnnotatedElementUtils.findMergedAnnotation(method, MaterializedRoute.class);
         if (route != null) {

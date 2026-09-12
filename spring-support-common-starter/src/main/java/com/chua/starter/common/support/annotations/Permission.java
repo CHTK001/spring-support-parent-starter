@@ -9,6 +9,7 @@ import java.lang.annotation.*;
  * <p>用于标记方法需要特定权限才能访问</p>
  *
  * @since 2022/7/29 8:23
+ * @author CH
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
@@ -26,7 +27,7 @@ public @interface Permission {
     String[] value() default {};
 
     /**
-     * 权限标识列表(与value属性互为别名)
+      * 权限标识列表(与价值观属性互为别名)
      * <p>可配置多个权限标识，用户拥有其中任一权限即可访问该方法</p>
      * <p>示例：{@code @Permission(permission = {"login:create", "admin"})}</p>
      *

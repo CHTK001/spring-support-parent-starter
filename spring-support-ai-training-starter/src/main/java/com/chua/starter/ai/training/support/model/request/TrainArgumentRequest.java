@@ -19,53 +19,53 @@ import lombok.Data;
 public class TrainArgumentRequest {
 
     /**
-     * 训练任务 ID。
+      * 训练任务 标识。
      */
     @NotBlank(message = "taskId 不能为空")
     @Schema(description = "训练任务 ID", requiredMode = Schema.RequiredMode.REQUIRED)
-    private String taskId;
+    private String taskId; // 任务标识
 
     /**
      * 迭代周期。
      */
     @Schema(description = "迭代周期（epochs）")
-    private Integer epoch;
+    private Integer epoch; // 轮次
 
     /**
      * 批次大小。
      */
     @Schema(description = "批次大小")
-    private Integer batchSize;
+    private Integer batchSize; // 批量大小
 
     /**
      * 分类数量。
      */
     @Schema(description = "分类数量（类别数）")
-    private Integer nClasses;
+    private Integer nClasses; // n类
 
     /**
      * 学习率。
      */
     @Schema(description = "学习率")
-    private Double learningRate;
+    private Double learningRate; // 学习rate
 
     /**
      * 动量。
      */
     @Schema(description = "动量")
-    private Double lrMomentum;
+    private Double lrMomentum; // lrmomentum
 
     /**
      * 训练集占比（0~100）。
      */
     @Schema(description = "训练集占比（0~100，剩余为测试集）")
-    private Integer trainPercent;
+    private Integer trainPercent; // trainpercent
 
     /**
      * 续训练模型路径；传入后从该模型继续微调。
      */
     @Schema(description = "续训练模型路径；传入后从该模型继续微调")
-    private String resumeModelPath;
+    private String resumeModelPath; // resume模型路径
 
     /**
      * 转换为领域对象 {@link TrainArgument}（仅携带非空字段，供部分更新合并）。

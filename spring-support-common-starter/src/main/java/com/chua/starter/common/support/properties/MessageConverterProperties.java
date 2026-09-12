@@ -11,6 +11,7 @@ import java.util.List;
  * 消息转换器属性
  *
  * @author CH
+ * @since 4.0.0
  */
 @ConfigurationProperties(prefix = MessageConverterProperties.PRE, ignoreInvalidFields = true)
 public class MessageConverterProperties {
@@ -64,7 +65,7 @@ public class MessageConverterProperties {
     }
 
     /**
-     * 获取 dataFormat
+      * 获取 数据格式化
      *
      * @return dataFormat
      */
@@ -73,16 +74,16 @@ public class MessageConverterProperties {
     }
 
     /**
-     * 设置 dataFormat
+      * 设置 数据格式化
      *
-     * @param dataFormat dataFormat
+     * @param dataFormat 数据格式化
      */
     public void setDataFormat(String dataFormat) {
         this.dataFormat = dataFormat;
     }
 
     /**
-     * 获取 openDesensitize
+      * 获取 打开desensitize
      *
      * @return openDesensitize
      */
@@ -91,16 +92,16 @@ public class MessageConverterProperties {
     }
 
     /**
-     * 设置 openDesensitize
+      * 设置 打开desensitize
      *
-     * @param openDesensitize openDesensitize
+     * @param openDesensitize 打开desensitize
      */
     public void setOpenDesensitize(boolean openDesensitize) {
         this.openDesensitize = openDesensitize;
     }
 
     /**
-     * 获取 openCrypto
+      * 获取 打开加密货币
      *
      * @return openCrypto
      */
@@ -109,16 +110,16 @@ public class MessageConverterProperties {
     }
 
     /**
-     * 设置 openCrypto
+      * 设置 打开加密货币
      *
-     * @param openCrypto openCrypto
+     * @param openCrypto 打开加密货币
      */
     public void setOpenCrypto(boolean openCrypto) {
         this.openCrypto = openCrypto;
     }
 
     /**
-     * 获取 mediaTypes
+      * 获取 media类型
      *
      * @return mediaTypes
      */
@@ -127,9 +128,9 @@ public class MessageConverterProperties {
     }
 
     /**
-     * 设置 mediaTypes
+      * 设置 media类型
      *
-     * @param mediaTypes mediaTypes
+     * @param mediaTypes media类型
      */
     public void setMediaTypes(List<MediaType> mediaTypes) {
         this.mediaTypes = mediaTypes;

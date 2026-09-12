@@ -16,8 +16,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 灰度规则矩阵真实测试：覆盖 {@code @ApiGray} 除 users 名单外的全部匹配维度
- * （roles 角色 / ips IP / headers 请求头 / rule SpEL / percentage 百分比），
+   * 灰度规则矩阵真实测试：覆盖 {@code @ApiGray} 除 用户 名单外的全部匹配维度
+   * （角色 角色 / ips IP / 头部 请求头 / rule spel / percentage 百分比），
  * 命中返回 {@code X-Gray-Hit: true} 响应头。
  *
  * @author CH
@@ -29,8 +29,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class GrayRuleMatrixTest {
 
     @Autowired
-    private MockMvc mockMvc;
+    private MockMvc mockMvc; // mockmvc
 
+    /**
+     * 会话。
+     * @param username 用户名
+     * @param roles 角色
+     * @return 会话的结果
+     */
     private static MockHttpSession session(String username, List<String> roles) {
         MockHttpSession session = new MockHttpSession();
         session.setAttribute("username", username);
@@ -41,7 +47,7 @@ class GrayRuleMatrixTest {
         return session;
     }
 
-    /** 角色名单：用户角色含 gray-role -> 命中；不含 -> 未命中 */
+    /** 角色名单：用户角色含 gray-角色 -> 命中；不含 -> 未命中 */
     @Test
     void rolesDimension() throws Exception {
         mockMvc.perform(get("/api/api-version/preview-roles").session(session("any-user", List.of("gray-role"))))
@@ -52,7 +58,7 @@ class GrayRuleMatrixTest {
                 .andExpect(header().doesNotExist("X-Gray-Hit"));
     }
 
-    /** IP 名单：X-Forwarded-For 命中（IpUtils 优先取该头）-> 命中；其他 IP -> 未命中 */
+    /** IP 名单：X-远期-For 命中（ip工具 优先取该头）-> 命中；其他 IP -> 未命中 */
     @Test
     void ipsDimension() throws Exception {
         mockMvc.perform(get("/api/api-version/preview-ips").session(session("any-user", null))
@@ -71,7 +77,7 @@ class GrayRuleMatrixTest {
                 .andExpect(header().doesNotExist("X-Gray-Hit"));
     }
 
-    /** 请求头维度：X-Gray-Header=1 精确匹配 -> 命中；缺失/不符 -> 未命中 */
+    /** 请求头维度：X-Gray-头部=1 精确匹配 -> 命中；缺失/不符 -> 未命中 */
     @Test
     void headersDimension() throws Exception {
         mockMvc.perform(get("/api/api-version/preview-headers").session(session("any-user", null))
@@ -83,7 +89,7 @@ class GrayRuleMatrixTest {
                 .andExpect(header().doesNotExist("X-Gray-Hit"));
     }
 
-    /** SpEL 规则维度：username == 'spel-user' -> 命中；其他用户 -> 未命中 */
+    /** spel 规则维度：用户名 == 'spel-用户' -> 命中；其他用户 -> 未命中 */
     @Test
     void ruleDimension() throws Exception {
         mockMvc.perform(get("/api/api-version/preview-rule").session(session("spel-user", null)))

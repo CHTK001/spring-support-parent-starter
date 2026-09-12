@@ -22,7 +22,7 @@ public interface ServerIdentityService {
     ReturnResult<MsServerIdentity> create(MsServerIdentity identity);
 
     /**
-     * 更新身份（密码空串表示清空，null 表示不变）
+      * 更新身份（密码空串表示清空，空 表示不变）
      *
      * @param id       主键
      * @param identity 身份

@@ -33,14 +33,19 @@ public class MerchantServiceImpl implements MerchantService {
 
     /** Merchantmapper */
     private final MerchantMapper merchantMapper;
-    /** Merchant通道mapper */
+    /** Merchant通道映射器 */
     private final MerchantChannelMapper merchantChannelMapper;
-    /** Payment排序mapper */
+    /** 薪酬排序映射器 */
     private final PaymentOrderMapper paymentOrderMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /** 创建Merchant */
+    /**
+     * 创建Merchant
+     *
+     * @param dto dto
+     * @return 创建merchant的结果
+     */
     public MerchantVO createMerchant(MerchantDTO dto) {
         Merchant merchant = new Merchant();
         BeanUtils.copyProperties(dto, merchant);
@@ -58,7 +63,13 @@ public class MerchantServiceImpl implements MerchantService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /** 更新Merchant */
+    /**
+     * 更新Merchant
+     *
+     * @param id 标识
+     * @param dto dto
+     * @return 更新merchant的结果
+     */
     public MerchantVO updateMerchant(Long id, MerchantDTO dto) {
         Merchant merchant = requireMerchant(id);
         BeanUtils.copyProperties(dto, merchant);
@@ -74,18 +85,33 @@ public class MerchantServiceImpl implements MerchantService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /** 删除Merchant */
+    /**
+     * 删除Merchant
+     *
+     * @param id 标识
+     * @return 删除merchant的结果
+     */
     public boolean deleteMerchant(Long id) {
         Merchant merchant = requireMerchant(id);
         long channelCount = merchantChannelMapper.selectCount(new LambdaQueryWrapper<MerchantChannel>()
                 .eq(MerchantChannel::getMerchantId, id));
         if (channelCount > 0) {
+            /**
+             * 薪酬异常。
+             * @param "商户下仍存在支付方式配置，不能删除" "商户下仍存在支付方式配置，不能删除"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("商户下仍存在支付方式配置，不能删除");
         }
         long orderCount = paymentOrderMapper.selectCount(new LambdaQueryWrapper<PaymentOrder>()
                 .eq(PaymentOrder::getMerchantId, id)
                 .and(wrapper -> wrapper.isNull(PaymentOrder::getDeleted).or().eq(PaymentOrder::getDeleted, 0)));
         if (orderCount > 0) {
+            /**
+             * 薪酬异常。
+             * @param "商户下仍存在订单，不能删除" "商户下仍存在订单，不能删除"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("商户下仍存在订单，不能删除");
         }
         return merchantMapper.deleteById(merchant.getId()) > 0;
@@ -98,7 +124,7 @@ public class MerchantServiceImpl implements MerchantService {
     }
 
     @Override
-    /** ListMerchants */
+    /** 列表merchants */
     public Page<MerchantVO> listMerchants(int page, int size, String merchantName, Integer status) {
         LambdaQueryWrapper<Merchant> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(merchantName)) {
@@ -117,7 +143,12 @@ public class MerchantServiceImpl implements MerchantService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /** ActivateMerchant */
+    /**
+     * activatemerchant
+     *
+     * @param id 标识
+     * @return activateMerchant的结果
+     */
     public boolean activateMerchant(Long id) {
         Merchant merchant = requireMerchant(id);
         merchant.setStatus(MerchantStatus.ACTIVE.getCode());
@@ -126,28 +157,52 @@ public class MerchantServiceImpl implements MerchantService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    /** DeactivateMerchant */
+    /**
+     * deactivatemerchant
+     *
+     * @param id 标识
+     * @return deactivateMerchant的结果
+     */
     public boolean deactivateMerchant(Long id) {
         Merchant merchant = requireMerchant(id);
         merchant.setStatus(MerchantStatus.DISABLED.getCode());
         return merchantMapper.updateById(merchant) > 0;
     }
 
-    /** RequireMerchant */
+    /**
+     * requiremerchant
+     *
+     * @param id 标识
+     * @return requireMerchant的结果
+     */
     private Merchant requireMerchant(Long id) {
         Merchant merchant = merchantMapper.selectById(id);
         if (merchant == null) {
+            /**
+             * 薪酬异常。
+             * @param "商户不存在" "商户不存在"
+             * @return 薪酬异常的结果
+             */
             throw new PaymentException("商户不存在");
         }
         return merchant;
     }
 
-    /** GenerateMerchantNo */
+    /**
+     * generatemerchantno
+     *
+     * @return generateMerchantNo的结果
+     */
     private String generateMerchantNo() {
         return "M" + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }
 
-    /** 转换ToVO */
+    /**
+     * 转换转为vo
+     *
+     * @param merchant merchant
+     * @return 转换转为vo的结果
+     */
     private MerchantVO convertToVO(Merchant merchant) {
         MerchantVO vo = new MerchantVO();
         BeanUtils.copyProperties(merchant, vo);

@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_bot_binding` (
     `sys_ai_bot_binding_bot_id`          VARCHAR(128) NULL COMMENT 'Bot 唯一标识（iLink 分配的 botId）',
     `sys_ai_bot_binding_bot_token`       VARCHAR(512) NULL COMMENT '登录凭证 Token',
     `sys_ai_bot_binding_platform`        VARCHAR(32)  NULL COMMENT '平台类型（wechat / wecom）',
+    `sys_ai_bot_binding_owner_key`       VARCHAR(128) NULL COMMENT '归属标识（u:<userId> / fp:<fingerprint>）',
     `sys_ai_bot_binding_nickname`        VARCHAR(128) NULL COMMENT 'Bot 昵称（来自微信资料）',
     `sys_ai_bot_binding_avatar_url`      VARCHAR(512) NULL COMMENT '头像地址',
     `sys_ai_bot_binding_gateway_port`    INT          NULL COMMENT '独立网关端口号',

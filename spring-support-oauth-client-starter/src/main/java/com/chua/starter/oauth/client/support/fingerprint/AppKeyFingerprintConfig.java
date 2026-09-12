@@ -4,12 +4,13 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * AppKey 指纹配置工具类
+   * app钥匙 指纹配置工具类
  * <p>
- * 用于从配置文件读取的 appKey 指纹配置信息
+   * 用于从配置文件读取的 app钥匙 指纹配置信息
  * </p>
  *
  * @author CH
+ * @since 4.0.0
  */
 public class AppKeyFingerprintConfig {
     

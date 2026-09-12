@@ -20,8 +20,9 @@ import org.springframework.context.annotation.Bean;
  * - 文件传输配置
  * - 安全配置
  * 
- * @version 4.0.0.32
+   * @版本 4.0.0.32
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @AutoConfiguration
@@ -39,11 +40,20 @@ public class SshAutoConfiguration {
     @Bean
     public SshServerService sshServerService(SshServerProperties properties) {
         log.info(" >>>>>>> 初始化SSH服务端服务，端口: {}", properties.getPort());
+        /**
+         * ssh服务端服务。
+         * @param properties 属性
+         * @return ssh服务端服务的结果
+         */
         return new SshServerService(properties);
     }
 
     @Bean
-    /** SshServiceInfoContributor */
+    /**
+     * ssh服务信息contributor
+     *
+     * @return ssh服务信息contributor的结果
+     */
     public ServiceInfoContributor sshServiceInfoContributor() {
         return registry -> {
             registry.registerFlag("ssh", "SSH", true, "SSH服务端模块");

@@ -28,7 +28,7 @@ public class SqlExecutionEvent extends ApplicationEvent {
     private final String sql;
 
     /**
-     * SQL 类型（select/insert/update/delete/其他）
+      * SQL 类型（选择/插入/更新/删除/其他）
      */
     private final String sqlType;
 
@@ -71,6 +71,10 @@ public class SqlExecutionEvent extends ApplicationEvent {
      */
     public SqlExecutionEvent(Object source, String dataSourceName, String sql, String sqlType,
                              long costMs, boolean slowSql, boolean success, String errorMessage) {
+        /**
+         * 父。
+         * @param source 源
+         */
         super(source);
         this.dataSourceName = dataSourceName;
         this.sql = sql;

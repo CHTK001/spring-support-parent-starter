@@ -24,7 +24,9 @@ import java.util.stream.Stream;
  * 小程序库 REST 控制器。
  *
  * <p>提供 /api/miniapps 全量 CRUD、画布文档读写、发布、导入验证等接口。
- * 内部以内存 Map 为元数据层，文件系统（user.dir/miniapps/{id}/）为 HTML 存储层。</p>
+   * 内部以内存 映射 为元数据层，文件系统（用户.dir/miniapps/{标识}/）为 HTML 存储层。</p>
+ * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @RestController
@@ -33,14 +35,18 @@ import java.util.stream.Stream;
 @Tag(name = "小程序库", description = "小程序列表/创建/更新/删除/发布/导入")
 public class MiniAppController {
 
-    private static final Path ROOT = Path.of(System.getProperty("user.dir"), "miniapps");
-    private final Map<String, Map<String, Object>> apps = new ConcurrentHashMap<>();
-    private final ObjectMapper om = new ObjectMapper();
+    private static final Path ROOT = Path.of(System.getProperty("user.dir"), "miniapps"); // 根
+    private final Map<String, Map<String, Object>> apps = new ConcurrentHashMap<>(); // apps
+    private final ObjectMapper om = new ObjectMapper(); // om
 
     // ─── 集合接口 ───────────────────────────────────────────────────────────────
 
     @Operation(summary = "列出小程序", description = "返回所有已发布小程序的元数据列表")
     @GetMapping
+    /**
+     * 列表。
+     * @return 列表的结果
+     */
     public Map<String, Object> list() {
         List<Map<String, Object>> items = new ArrayList<>(apps.values());
         items.sort(Comparator.comparingLong(
@@ -53,6 +59,11 @@ public class MiniAppController {
 
     @Operation(summary = "创建小程序", description = "创建并首次发布，初始化工作目录")
     @PostMapping
+    /**
+     * 创建。
+     * @param body 主体
+     * @return 创建的结果
+     */
     public Map<String, Object> create(@RequestBody Map<String, Object> body) {
         String id = generateUuidV7();
         long now = System.currentTimeMillis();
@@ -86,6 +97,11 @@ public class MiniAppController {
 
     @Operation(summary = "获取小程序详情", description = "按 id 查询单个小程序元数据")
     @GetMapping("/{id}")
+    /**
+     * 获取。
+     * @param id 标识
+     * @return 获取的结果
+     */
     public Map<String, Object> get(@PathVariable String id) {
         Map<String, Object> app = apps.get(id);
         Map<String, Object> result = new LinkedHashMap<>();
@@ -96,6 +112,12 @@ public class MiniAppController {
 
     @Operation(summary = "更新小程序", description = "部分更新名称/描述/图标/HTML")
     @PutMapping("/{id}")
+    /**
+     * 更新。
+     * @param id 标识
+     * @param body 主体
+     * @return 更新的结果
+     */
     public Map<String, Object> update(@PathVariable String id, @RequestBody Map<String, Object> body) {
         Map<String, Object> app = apps.get(id);
         if (app == null) {
@@ -105,9 +127,15 @@ public class MiniAppController {
             return err;
         }
         long now = System.currentTimeMillis();
-        if (body.get("name") instanceof String n && !n.isBlank()) app.put("name", n);
-        if (body.get("description") instanceof String d) app.put("description", d);
-        if (body.get("icon") instanceof String ic) app.put("icon", ic);
+        if (body.get("name") instanceof String n && !n.isBlank()) {
+            app.put("name", n);
+        }
+        if (body.get("description") instanceof String d) {
+            app.put("description", d);
+        }
+        if (body.get("icon") instanceof String ic) {
+            app.put("icon", ic);
+        }
         if (body.get("html") instanceof String h) {
             Path dir = ROOT.resolve(id);
             try {
@@ -128,6 +156,11 @@ public class MiniAppController {
 
     @Operation(summary = "删除小程序", description = "删除元数据及文件系统上的工作目录")
     @DeleteMapping("/{id}")
+    /**
+     * 删除。
+     * @param id 标识
+     * @return 删除的结果
+     */
     public Map<String, Object> delete(@PathVariable String id) {
         apps.remove(id);
         Path dir = ROOT.resolve(id);
@@ -142,6 +175,11 @@ public class MiniAppController {
 
     @Operation(summary = "分配工作目录", description = "确保 miniapps/{id}/ 存在并返回绝对路径")
     @PostMapping("/{id}/workspace")
+    /**
+      * provisionworkspace。
+     * @param id 标识
+     * @return provisionWorkspace的结果
+     */
     public Map<String, Object> provisionWorkspace(@PathVariable String id) {
         Path dir = ROOT.resolve(id);
         try {
@@ -162,6 +200,11 @@ public class MiniAppController {
 
     @Operation(summary = "发布", description = "将工作目录中的 miniapp.html 提升为已发布快照")
     @PostMapping("/{id}/publish")
+    /**
+     * 发布。
+     * @param id 标识
+     * @return 发布的结果
+     */
     public Map<String, Object> publish(@PathVariable String id) {
         Map<String, Object> app = apps.get(id);
         if (app == null) {
@@ -197,6 +240,11 @@ public class MiniAppController {
 
     @Operation(summary = "服务已发布内容", description = "返回已发布的 HTML 内容，供 iframe 加载（无鉴权）")
     @GetMapping(value = "/{id}/serve", produces = MediaType.TEXT_HTML_VALUE)
+    /**
+     * serve。
+     * @param id 标识
+     * @param response 响应
+     */
     public void serve(@PathVariable String id, HttpServletResponse response) throws IOException {
         Path src = ROOT.resolve(id).resolve("miniapp.html");
         if (!Files.exists(src)) {
@@ -218,16 +266,32 @@ public class MiniAppController {
 
     @Operation(summary = "校验导入", description = "检查候选小程序的有效性，不写入任何数据")
     @PostMapping("/validate")
+    /**
+     * 校验。
+     * @param body 主体
+     * @return 校验的结果
+     */
     public Map<String, Object> validate(@RequestBody Map<String, Object> body) {
         return doImport(body, false);
     }
 
     @Operation(summary = "导入小程序", description = "将候选 HTML 或路径下的 index.html 导入为新小程序")
     @PostMapping("/import")
+    /**
+     * 导入app。
+     * @param body 主体
+     * @return 导入app的结果
+     */
     public Map<String, Object> importApp(@RequestBody Map<String, Object> body) {
         return doImport(body, true);
     }
 
+    /**
+     * 执行导入。
+     * @param body 主体
+     * @param adopt adopt
+     * @return 执行导入的结果
+     */
     private Map<String, Object> doImport(Map<String, Object> body, boolean adopt) {
         String html = optStr(body, "html", null);
         String path = optStr(body, "path", null);
@@ -241,8 +305,12 @@ public class MiniAppController {
         try {
             if (path != null && !path.isBlank()) {
                 Path p = Path.of(path);
-                if (Files.isDirectory(p)) p = p.resolve("index.html");
-                if (!Files.exists(p)) throw new IllegalArgumentException("文件不存在: " + path);
+                if (Files.isDirectory(p)) {
+                    p = p.resolve("index.html");
+                }
+                if (!Files.exists(p)) {
+                    throw new IllegalArgumentException("文件不存在: " + path);
+                }
                 source = Files.readString(p);
             } else {
                 source = html;
@@ -274,10 +342,14 @@ public class MiniAppController {
             int start = source.indexOf("<title>");
             if (start >= 0) {
                 int end = source.indexOf("</title>", start);
-                if (end > start) name = source.substring(start + 7, end).trim();
+                if (end > start) {
+                    name = source.substring(start + 7, end).trim();
+                }
             }
         }
-        if (name == null || name.isBlank()) name = "导入的小程序";
+        if (name == null || name.isBlank()) {
+            name = "导入的小程序";
+        }
 
         String id = generateUuidV7();
         long now = System.currentTimeMillis();
@@ -323,11 +395,21 @@ public class MiniAppController {
         return app;
     }
 
+    /**
+     * 是否包含unpublished。
+     * @param id 标识
+     * @param app app
+     * @return 是否包含unpublished的结果
+     */
     private boolean hasUnpublished(String id, Map<String, Object> app) {
         Object publishedAt = app.get("published_at");
-        if (publishedAt == null) return false;
+        if (publishedAt == null) {
+            return false;
+        }
         Path src = ROOT.resolve(id).resolve("miniapp.html");
-        if (!Files.exists(src)) return false;
+        if (!Files.exists(src)) {
+            return false;
+        }
         try {
             long mod = Files.getLastModifiedTime(src).toMillis();
             long pub = ((Number) publishedAt).longValue();
@@ -337,6 +419,13 @@ public class MiniAppController {
         }
     }
 
+    /**
+     * 查找。
+     * @param severity severity
+     * @param ruleId ruleid
+     * @param detail detail
+     * @return 查找的结果
+     */
     private Map<String, Object> finding(String severity, String ruleId, String detail) {
         Map<String, Object> f = new LinkedHashMap<>();
         f.put("severity", severity);
@@ -345,6 +434,11 @@ public class MiniAppController {
         return f;
     }
 
+    /**
+     * report的。
+     * @param findings findings
+     * @return report的的结果
+     */
     private Map<String, Object> reportOf(List<Map<String, Object>> findings) {
         Map<String, Object> r = new LinkedHashMap<>();
         r.put("findings", findings);
@@ -352,17 +446,31 @@ public class MiniAppController {
         return r;
     }
 
+    /**
+      * optstr。
+     * @param m m
+     * @param k k
+     * @param def def
+     * @return optStr的结果
+     */
     private static String optStr(Map<String, Object> m, String k, String def) {
         Object v = m.get(k);
         return v instanceof String s && !s.isBlank() ? s : def;
     }
 
+    /**
+      * eschtml。
+     * @param s s
+     * @return escHtml的结果
+     */
     private static String escHtml(String s) {
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
     }
 
     /**
-     * 生成 UUIDv7 格式字符串（时间排序、前端兼容）。
+     * 生成 uuidv7 格式字符串（时间排序、前端兼容）。
+     *
+     * @return generateUuidV7 的结果
      */
     private static String generateUuidV7() {
         UUID uuid = UUID.randomUUID();
@@ -388,7 +496,9 @@ public class MiniAppController {
     }
 
     private static void deleteRecursively(Path p) {
-        if (p == null) return;
+        if (p == null) {
+            return;
+        }
         try (Stream<Path> s = Files.walk(p)) {
             s.sorted(Comparator.reverseOrder()).forEach(q -> {
                 try { Files.deleteIfExists(q); } catch (IOException ignored) {}

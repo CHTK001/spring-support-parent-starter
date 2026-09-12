@@ -10,11 +10,11 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * 作业线程工厂
  * <p>
- * 采用单例模式，负责管理所有JobThread实例的生命周期。
- * 使用ConcurrentHashMap保证线程安全。
+   * 采用单例模式，负责管理所有作业thread实例的生命周期。
+   * 使用并发哈希映射保证线程安全。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/03/11
  * @author CH
  */
@@ -28,8 +28,8 @@ public class JobThreadFactory {
 
     /**
      * 作业线程仓库
-     * key: 任务ID
-     * value: JobThread实例
+       * 钥匙: 任务标识
+      * 价值观: 作业thread实例
      */
     private static final ConcurrentMap<Integer, JobThread> JOB_THREAD_REPOSITORY = new ConcurrentHashMap<>();
 
@@ -42,10 +42,10 @@ public class JobThreadFactory {
     /**
      * 注册作业线程
      * <p>
-     * 创建新的JobThread并启动，如果已存在同ID的线程则先停止旧线程。
+       * 创建新的作业thread并启动，如果已存在同标识的线程则先停止旧线程。
      * </p>
      *
-     * @param jobId           任务ID
+     * @param jobId           任务标识
      * @param handler         任务处理器
      * @param removeOldReason 删除旧线程的原因
      * @return 新创建的JobThread实例
@@ -72,7 +72,7 @@ public class JobThreadFactory {
     /**
      * 删除作业线程
      *
-     * @param jobId           任务ID
+     * @param jobId           任务标识
      * @param removeOldReason 删除原因
      * @return 被删除的JobThread实例，如果不存在返回null
      */
@@ -90,7 +90,7 @@ public class JobThreadFactory {
     /**
      * 加载作业线程
      *
-     * @param jobId 任务ID
+     * @param jobId 任务标识
      * @return JobThread实例，如果不存在返回null
      */
     public static JobThread loadJobThread(int jobId) {

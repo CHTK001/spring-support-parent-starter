@@ -121,7 +121,7 @@ public class SpiderFunctionNode implements FlowNode {
     }
 
     /**
-     * 通过 ReflectUtils 调用方法。
+      * 通过 reflect工具 调用方法。
      *
      * <p>按参数类型自动匹配最合适的方法：优先精确匹配参数类型，
      * 若无匹配则尝试按顺序匹配参数类型兼容的方法。若方法抛出异常则直接向上抛出。</p>
@@ -190,14 +190,30 @@ public class SpiderFunctionNode implements FlowNode {
      * @return 包装类型
      */
     private Class<?> wrapPrimitive(Class<?> primitive) {
-        if (primitive == boolean.class) return Boolean.class;
-        if (primitive == byte.class) return Byte.class;
-        if (primitive == char.class) return Character.class;
-        if (primitive == short.class) return Short.class;
-        if (primitive == int.class) return Integer.class;
-        if (primitive == long.class) return Long.class;
-        if (primitive == float.class) return Float.class;
-        if (primitive == double.class) return Double.class;
+        if (primitive == boolean.class) {
+            return Boolean.class;
+        }
+        if (primitive == byte.class) {
+            return Byte.class;
+        }
+        if (primitive == char.class) {
+            return Character.class;
+        }
+        if (primitive == short.class) {
+            return Short.class;
+        }
+        if (primitive == int.class) {
+            return Integer.class;
+        }
+        if (primitive == long.class) {
+            return Long.class;
+        }
+        if (primitive == float.class) {
+            return Float.class;
+        }
+        if (primitive == double.class) {
+            return Double.class;
+        }
         return primitive;
     }
 }

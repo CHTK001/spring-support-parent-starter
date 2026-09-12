@@ -45,7 +45,7 @@ public class EduExamController {
     /**
      * 获取考试详情
      *
-     * @param id 考试ID
+     * @param id 考试标识
      * @return 考试详情
      */
     @Operation(summary = "获取考试详情")
@@ -81,7 +81,7 @@ public class EduExamController {
     /**
      * 删除考试（逻辑删除）
      *
-     * @param id 考试ID
+     * @param id 考试标识
      * @return 是否成功
      */
     @Operation(summary = "删除考试")

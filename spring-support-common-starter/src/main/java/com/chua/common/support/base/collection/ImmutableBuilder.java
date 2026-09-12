@@ -8,6 +8,7 @@ import java.util.Map;
  * 不可变构建器
  *
  * @author CH
+ * @since 4.0.0
  */
 public class ImmutableBuilder {
 
@@ -23,6 +24,9 @@ public class ImmutableBuilder {
      * @return ImmutableBuilder 实例
      */
     public static ImmutableBuilder builderOfStringStringMap() {
+        /**
+         * immutable构建器。
+         */
         return new ImmutableBuilder();
     }
 
@@ -39,10 +43,10 @@ public class ImmutableBuilder {
     }
 
     /**
-     * 基于当前已添加的所有键值对，返回一个同步（线程安全）的 Map 视图
+      * 基于当前已添加的所有键值对，返回一个同步（线程安全）的 映射 视图
      * <p>返回的 Map 是对当前数据副本的包装，后续对构建器的修改不会影响已返回的 Map。</p>
      *
-     * @return 线程安全的同步 Map
+     * @return 线程安全的同步 映射
      */
     public Map<String, String> asSynchronizedMap() {
         return Collections.synchronizedMap(new HashMap<>(map));

@@ -16,12 +16,12 @@ import java.util.List;
 public class TableNodeInfo {
 
     /**
-     * 表名（节点 id 同名）
+      * 表名（节点 标识 同名）
      */
     private String name;
 
     /**
-     * Schema / Catalog
+      * 模式 / Catalog
      */
     private String schema;
 
@@ -41,7 +41,7 @@ public class TableNodeInfo {
     private int columnCount;
 
     /**
-     * 列名清单（按 ORDINAL_POSITION 排序）
+      * 列名清单（按 ORDINAL_立场 排序）
      */
     private List<String> columnNames = new ArrayList<>();
 

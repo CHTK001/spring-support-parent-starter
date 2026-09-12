@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
  * 采集数据记录实体。
  *
  * <p>对应 {@code spider_data_record} 表，由 spider.output 节点写入采集结果，
- * raw_data 以 JSON 保存完整原始数据，供前端检索。</p>
+   * raw_数据 以 JSON 保存完整原始数据，供前端检索。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -28,19 +28,19 @@ import java.time.LocalDateTime;
 public class SpiderDataRecord extends SysBase {
 
     /**
-     * 主键 ID（自增）
+      * 主键 标识（自增）
      */
     @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
-    /** ID */
+    /** 标识 */
     private Long id;
 
     /**
-     * 执行号（traceId）
+       * 执行号（追踪标识）
      */
     @TableField("execution_no")
     @Schema(description = "执行号")
-    /** ExecutionNO */
+    /** 执行no */
     private String executionNo;
 
     /**
@@ -84,7 +84,7 @@ public class SpiderDataRecord extends SysBase {
     private String rawData;
 
     /**
-     * 状态（SUCCESS/FAIL）
+      * 状态（成功/失败）
      */
     @TableField("status")
     @Schema(description = "状态")

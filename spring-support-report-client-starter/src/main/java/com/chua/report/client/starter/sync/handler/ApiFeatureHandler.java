@@ -15,24 +15,24 @@ import java.util.Map;
  * </p>
  *
  * @since 2024/12/08
- * @version 1.0.0
+   * @版本 1.0.0
  * @author CH
  */
 @Slf4j
 @RequiredArgsConstructor
 public class ApiFeatureHandler implements SyncMessageHandler {
 
-    /** Feature管理器 */
+    /** 特征管理器 */
     private final ApiFeatureManager featureManager;
 
     @Override
-    /** 获取Name */
+    /** 获取名称 */
     public String getName() {
         return "api-feature";
     }
 
     @Override
-    /** Supports */
+    /** 支持 */
     public boolean supports(String topic) {
         return "monitor/control/api-feature".equals(topic);
     }
@@ -68,6 +68,8 @@ public class ApiFeatureHandler implements SyncMessageHandler {
 
     /**
      * 处理设置单个功能开关状态
+     * @param payload payload
+     * @return 把手设置已启用的结果
      */
     private Object handleSetEnabled(Map<String, Object> payload) {
         String featureId = MapUtils.getString(payload, "featureId");
@@ -85,6 +87,8 @@ public class ApiFeatureHandler implements SyncMessageHandler {
 
     /**
      * 处理批量设置功能开关状态
+     * @param payload payload
+     * @return 把手设置batch的结果
      */
     @SuppressWarnings("unchecked")
     private Object handleSetBatch(Map<String, Object> payload) {
@@ -102,6 +106,7 @@ public class ApiFeatureHandler implements SyncMessageHandler {
 
     /**
      * 处理重置所有功能开关
+     * @return 把手reset全部的结果
      */
     private Object handleResetAll() {
         featureManager.resetAllToDefault();
@@ -111,6 +116,8 @@ public class ApiFeatureHandler implements SyncMessageHandler {
 
     /**
      * 处理重置单个功能开关
+     * @param payload payload
+     * @return 把手reset的结果
      */
     private Object handleReset(Map<String, Object> payload) {
         String featureId = MapUtils.getString(payload, "featureId");
@@ -125,7 +132,7 @@ public class ApiFeatureHandler implements SyncMessageHandler {
     }
 
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
         return 100;
     }

@@ -38,7 +38,7 @@ import java.util.Map;
  * </pre>
  *
  * @since 2024/12/08
- * @version 1.0.0
+   * @版本 1.0.0
  * @author CH
  */
 @Slf4j
@@ -89,7 +89,7 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer, SmartInitializ
     private final Environment environment;
 
     /**
-     * Spring MVC 请求映射处理器，用于枚举所有 Controller 方法
+      * Spring MVC 请求映射处理器，用于枚举所有 控制器 方法
      */
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
 
@@ -99,7 +99,7 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer, SmartInitializ
      * @param apiProperties                 API 配置属性
      * @param environment                   Spring 环境对象
      * @param requestMappingHandlerMapping  Spring MVC 请求映射处理器（@Lazy 打破
-     *                                      WebMvcConfigurer 与自定义版本映射 Bean 的装配环）
+      * webmvcconfigurer 与自定义版本映射 Bean 的装配环）
      */
     public ApiFeatureConfiguration(ApiProperties apiProperties,
                                    Environment environment,
@@ -110,17 +110,21 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer, SmartInitializ
     }
 
     /**
-     * 创建 {@link ApiFeatureManager} Bean，统一管理所有 @ApiFeature 功能开关。
+      * 创建 {@link ApiFeatureManager} Bean，统一管理所有 @api特征 功能开关。
      *
      * @return 功能开关管理器实例
      */
     @Bean
     public ApiFeatureManager apiFeatureManager() {
+        /**
+         * api特征管理器。
+         * @return api特征管理器的结果
+         */
         return new ApiFeatureManager();
     }
 
     @Autowired
-    private ObjectProvider<ApiSwitchOverrideProvider> overrideProvider;
+    private ObjectProvider<ApiSwitchOverrideProvider> overrideProvider; // override提供者
 
     /**
      * 创建 {@link ApiControlInterceptor} Bean，用于拦截未启用的功能开关。
@@ -130,6 +134,14 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer, SmartInitializ
      */
     @Bean
     public ApiControlInterceptor apiControlInterceptor(ApiFeatureManager featureManager) {
+        /**
+         * apicontrol拦截器。
+         * @param apiProperties api属性
+         * @param environment 环境
+         * @param featureManager 特征管理器
+         * @param overrideProvider override提供者
+         * @return apicontrol拦截器的结果
+         */
         return new ApiControlInterceptor(apiProperties, environment, featureManager, overrideProvider);
     }
 
@@ -151,16 +163,22 @@ public class ApiFeatureConfiguration implements WebMvcConfigurer, SmartInitializ
      *
      * <p>不能在 {@code @PostConstruct} 中执行：创建期解析 {@code RequestMappingHandlerMapping}
      * 会触发 {@code WebMvcConfigurer} 集合解析，与正在创建的自身形成循环引用
-     * （@Lazy 仅在构造期生效，init 期使用仍会触发）。</p>
+      * （@Lazy 仅在构造期生效，初始化 期使用仍会触发）。</p>
      *
      * <p>查找顺序：先方法级注解，再类级注解。同一功能开关 value 重复注册时，
      * 后注册的会覆盖前者。</p>
      */
     @Override
     public void afterSingletonsInstantiated() {
+        /**
+         * 扫描api特征。
+         */
         scanApiFeatures();
     }
 
+    /**
+     * 扫描api特征。
+     */
     private void scanApiFeatures() {
         Map<RequestMappingInfo, HandlerMethod> handlerMethods = requestMappingHandlerMapping.getHandlerMethods();
         ApiFeatureManager featureManager = apiFeatureManager();

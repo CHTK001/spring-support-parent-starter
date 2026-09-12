@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * 管理控制台配置属性。
  *
  * <p>控制台提供 FTL 管理页面（鉴权）临时调整 {@code @ApiFeature}/{@code @ApiGray} 与通用键值
- * 运行设置；调整写入 SQLite 持久化；启动时注解指纹比对，不一致则重置覆盖库（见测试报告/模块说明）。</p>
+   * 运行设置；调整写入 sqlite 持久化；启动时注解指纹比对，不一致则重置覆盖库（见测试报告/模块说明）。</p>
  *
  * @author CH
  * @since 2026/09/04
@@ -16,7 +16,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = ConsoleProperties.PRE)
 public class ConsoleProperties {
 
-    public static final String PRE = "console";
+    public static final String PRE = "console"; // PRE
 
     /**
      * 是否启用控制台（默认启用——模块按需引入）
@@ -24,7 +24,7 @@ public class ConsoleProperties {
     private boolean enable = true;
 
     /**
-     * SQLite 持久化文件路径（相对运行目录，默认 console.sqlite）
+      * sqlite 持久化文件路径（相对运行目录，默认 控制台.sqlite）
      */
     private String sqlitePath = "console.sqlite";
 

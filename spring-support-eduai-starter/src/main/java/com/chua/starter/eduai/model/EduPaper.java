@@ -18,10 +18,10 @@ import java.time.LocalDateTime;
 public class EduPaper {
 
     /**
-     * 试卷ID
+      * 试卷标识
      */
     @TableId(type = IdType.AUTO)
-    /** PaperID */
+    /** paperid */
     private Long paperId;
 
     /**

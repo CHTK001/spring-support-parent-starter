@@ -3,7 +3,7 @@ package com.chua.starter.sync.support.spi;
 import com.chua.starter.sync.support.client.SyncClient;
 
 /**
- * SyncClient 连接前自定义扩展点。
+   * 同步客户端 连接前自定义扩展点。
  *
  * @since 2026/03/25
  * @author CH
@@ -20,12 +20,12 @@ public interface SyncClientCustomizer {
     }
 
     /**
-     * 自定义 SyncClient。
+      * 自定义 同步客户端。
      * <p>
      * 调用时机早于底层网络连接建立，可用于提前注册主题和处理器。
      * </p>
      *
-     * @param syncClient SyncClient
+     * @param syncClient 同步客户端
      */
     void customize(SyncClient syncClient);
 }

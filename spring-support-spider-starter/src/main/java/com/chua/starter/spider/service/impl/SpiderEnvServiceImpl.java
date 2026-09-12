@@ -22,7 +22,7 @@ public class SpiderEnvServiceImpl
         implements SpiderEnvService {
 
     @Override
-    /** MapEnabled */
+    /** 映射已启用 */
     public Map<String, String> mapEnabled() {
         List<SpiderEnv> list = list(Wrappers.<SpiderEnv>lambdaQuery()
                 .eq(SpiderEnv::getEnabled, Integer.valueOf(1)));

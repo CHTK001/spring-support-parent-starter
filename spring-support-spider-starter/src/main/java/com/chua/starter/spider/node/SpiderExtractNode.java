@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
  * 提取节点。
  *
  * <p>从指定数据源中按表达式提取字段，将结果写入上下文指定属性。
- * 支持 JSONPath / 正则 / CSS 选择器三种解析方式，表达式支持环境变量插值。</p>
+   * 支持 json路径 / 正则 / CSS 选择器三种解析方式，表达式支持环境变量插值。</p>
  *
  * <p>节点配置说明：</p>
  * <ul>
@@ -49,7 +49,7 @@ public class SpiderExtractNode implements FlowNode {
     private static final String SOURCE_CURRENT = "current";
 
     /**
-     * 解析方式：JSONPath
+      * 解析方式：json路径
      */
     private static final String PARSER_JSONPATH = "jsonpath";
 
@@ -120,10 +120,20 @@ public class SpiderExtractNode implements FlowNode {
         String parserType = props.getString("parserType", PARSER_JSONPATH);
         String expression = envResolver.resolve(props.getString("expression"));
         if (expression == null || expression.isEmpty()) {
+            /**
+             * illegal参数异常。
+             * @param 参数" 参数"
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("spider.extract 节点缺少 expression 参数");
         }
         String saveAs = props.getString("saveAs");
         if (saveAs == null || saveAs.isEmpty()) {
+            /**
+             * illegal参数异常。
+             * @param 参数" 参数"
+             * @return illegal参数异常的结果
+             */
             throw new IllegalArgumentException("spider.extract 节点缺少 saveAs 参数");
         }
         boolean isList = Boolean.TRUE.equals(props.getBoolean("isList"));
@@ -172,17 +182,22 @@ public class SpiderExtractNode implements FlowNode {
                 return extractCss(sourceData, expression, isList);
             }
             default -> {
+                /**
+                 * illegal参数异常。
+                 * @param parserType parser类型
+                 * @return illegal参数异常的结果
+                 */
                 throw new IllegalArgumentException("不支持的解析方式: " + parserType);
             }
         }
     }
 
     /**
-     * 按 JSONPath 提取。
+      * 按 json路径 提取。
      *
      * @param sourceData 数据来源值
-     * @param expression JSONPath 表达式
-     * @return 提取结果，匹配失败返回 null
+     * @param expression json路径 表达式
+     * @return 提取结果，匹配失败返回 空
      */
     private Object extractJsonPath(Object sourceData, String expression) {
         if (sourceData == null) {

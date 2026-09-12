@@ -26,7 +26,7 @@ import lombok.EqualsAndHashCode;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MsMonitor extends SysBase {
 
-    /** Serial版本UID */
+    /** 串行版本UID */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -34,7 +34,7 @@ public class MsMonitor extends SysBase {
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
-    /** ID */
+    /** 标识 */
     private Long id;
 
     /**
@@ -42,7 +42,7 @@ public class MsMonitor extends SysBase {
      */
     @TableField("ms_monitor_name")
     @Schema(description = "名称", example = "redis-prod-01")
-    /** Monitor名称 */
+    /** 监控名称 */
     private String monitorName;
 
     /**
@@ -50,7 +50,7 @@ public class MsMonitor extends SysBase {
      */
     @TableField("ms_monitor_host")
     @Schema(description = "主机地址", example = "192.168.1.10")
-    /** Monitor主机 */
+    /** 监控主机 */
     private String monitorHost;
 
     /**
@@ -58,7 +58,7 @@ public class MsMonitor extends SysBase {
      */
     @TableField("ms_monitor_port")
     @Schema(description = "连接端口", example = "22")
-    /** Monitor端口 */
+    /** 监控端口 */
     private Integer monitorPort;
 
     /**
@@ -92,7 +92,7 @@ public class MsMonitor extends SysBase {
      */
     @TableField("ms_monitor_group")
     @Schema(description = "分组", example = "default")
-    /** Monitor分组 */
+    /** 监控分组 */
     private String monitorGroup;
 
     /**
@@ -100,7 +100,7 @@ public class MsMonitor extends SysBase {
      */
     @TableField("ms_monitor_description")
     @Schema(description = "描述", example = "生产 Redis")
-    /** Monitor描述 */
+    /** 监控描述 */
     private String monitorDescription;
 
     /**
@@ -108,20 +108,20 @@ public class MsMonitor extends SysBase {
      */
     @TableField("ms_monitor_enabled")
     @Schema(description = "是否启用 1启用 0禁用", example = "1")
-    /** Monitor是否启用 */
+    /** 监控是否启用 */
     private Integer monitorEnabled;
 
     /**
-     * 探针标识（Agent 推送鉴权键，服务端生成或录入）
+      * 探针标识（智能体 推送鉴权键，服务端生成或录入）
      */
     @TableField("ms_monitor_agent_key")
     @Schema(description = "探针标识(Agent推送鉴权)", example = "8f14e45fceea167a5a36dedd4bea2543")
-    private String monitorAgentKey;
+    private String monitorAgentKey; // 监控智能体钥匙
 
     /**
-     * 关联服务器主机 ID（ms_server_host.id，用于联动服务器台账配置）
+       * 关联服务器主机 标识（ms_服务端_主机.标识，用于联动服务器台账配置）
      */
     @TableField("ms_server_host_id")
     @Schema(description = "关联服务器主机ID", example = "1")
-    private Long msServerHostId;
+    private Long msServerHostId; // ms服务端主机标识
 }

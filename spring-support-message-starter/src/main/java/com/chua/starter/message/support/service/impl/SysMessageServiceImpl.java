@@ -52,8 +52,8 @@ import java.util.regex.Pattern;
 /**
  * 消息推送服务实现
  * <p>
- * 基于 MyBatis-Plus 提供消息提供商与模板的管理，并通过 utils 的 MessagePush SPI 实现统一发送。
- * 发送完成后通过 @Async 异步记录推送日志；开启邮件阅读追踪时，会在 HTML 内容中注入追踪图，
+   * 基于 MyBatis-Plus 提供消息提供商与模板的管理，并通过 工具 的 消息push SPI 实现统一发送。
+   * 发送完成后通过 @异步 异步记录推送日志；开启邮件阅读追踪时，会在 HTML 内容中注入追踪图，
  * 收件人打开邮件后由追踪接口回写已读状态。
  * </p>
  *
@@ -65,11 +65,11 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class SysMessageServiceImpl implements SysMessageService {
 
-    /** SYS消息提供者mapper */
+    /** SYS消息提供者映射器 */
     private final SysMessageProviderMapper sysMessageProviderMapper;
-    /** SYS消息模板mapper */
+    /** SYS消息模板映射器 */
     private final SysMessageTemplateMapper sysMessageTemplateMapper;
-    /** SYS消息日志mapper */
+    /** SYS消息日志映射器 */
     private final SysMessageLogMapper sysMessageLogMapper;
     /** 消息track属性 */
     private final MessageTrackProperties messageTrackProperties;
@@ -81,10 +81,10 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-     * PageForProvider
-     * @param provider provider
+      * pagefor提供者
+     * @param provider 提供者
      * @param page page
-     * @param pageSize pageSize
+     * @param pageSize page大小
      */
     public IPage<SysMessageProvider> pageForProvider(SysMessageProvider provider, long page, long pageSize) {
         LambdaQueryWrapper<SysMessageProvider> wrapper = Wrappers.<SysMessageProvider>lambdaQuery()
@@ -102,7 +102,7 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     @Override
-    /** ListForProvider */
+    /** 列表for提供者 */
     public List<SysMessageProvider> listForProvider() {
         return sysMessageProviderMapper.selectList(Wrappers.<SysMessageProvider>lambdaQuery()
                 .eq(SysMessageProvider::getSysMessageProviderDelete, 0)
@@ -111,7 +111,7 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     @Override
-    /** ListChannels */
+    /** 列表通道 */
     public List<ChannelInfo> listChannels() {
         List<ChannelInfo> result = new ArrayList<>();
         ServiceProvider.of(MessagePush.class).forDefinitionEach(definition -> result.add(new ChannelInfo(
@@ -127,8 +127,8 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-     * 保存Provider
-     * @param provider provider
+      * 保存提供者
+     * @param provider 提供者
      */
     public ReturnResult<SysMessageProvider> saveProvider(SysMessageProvider provider) {
         if (StringUtils.isBlank(provider.getSysMessageProviderCode())) {
@@ -153,8 +153,8 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-     * 更新Provider
-     * @param provider provider
+      * 更新提供者
+     * @param provider 提供者
      */
     public ReturnResult<Boolean> updateProvider(SysMessageProvider provider) {
         if (provider.getSysMessageProviderId() == null) {
@@ -174,8 +174,8 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-     * 删除Provider
-     * @param providerId providerId
+      * 删除提供者
+     * @param providerId 提供者标识
      */
     public ReturnResult<Boolean> deleteProvider(Integer providerId) {
         if (providerId == null) {
@@ -189,10 +189,10 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-     * PageForTemplate
+      * pagefortemplate
      * @param template template
      * @param page page
-     * @param pageSize pageSize
+     * @param pageSize page大小
      */
     public IPage<SysMessageTemplate> pageForTemplate(SysMessageTemplate template, long page, long pageSize) {
         LambdaQueryWrapper<SysMessageTemplate> wrapper = Wrappers.<SysMessageTemplate>lambdaQuery()
@@ -212,7 +212,7 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     @Override
-    /** ListForTemplate */
+    /** 列表fortemplate */
     public List<SysMessageTemplate> listForTemplate() {
         return sysMessageTemplateMapper.selectList(Wrappers.<SysMessageTemplate>lambdaQuery()
                 .eq(SysMessageTemplate::getSysMessageTemplateDelete, 0)
@@ -283,7 +283,7 @@ public class SysMessageServiceImpl implements SysMessageService {
     @Override
     /**
      * 删除Template
-     * @param templateId templateId
+     * @param templateId templateid
      */
     public ReturnResult<Boolean> deleteTemplate(Integer templateId) {
         if (templateId == null) {
@@ -298,7 +298,7 @@ public class SysMessageServiceImpl implements SysMessageService {
     @Override
     /**
      * 发送
-     * @param request request
+     * @param request 请求
      */
     public ReturnResult<List<MessageResponse>> send(MessageSendRequest request) {
         if (request.getSysMessageTemplateId() == null) {
@@ -364,6 +364,15 @@ public class SysMessageServiceImpl implements SysMessageService {
             } catch (Exception e) {
                 log.error("发送消息失败, 接收人: {}", target, e);
                 result.add(MessageResponse.failure(e.getMessage()));
+                /**
+                  * 保存日志异步。
+                 * @param channel 通道
+                 * @param target Target
+                 * @param template template
+                 * @param provider 提供者
+                 * @param request 请求
+                 * @param MessageResponse.failure(e.getMessage( 消息响应.失败(e.getmessage(
+                 */
                 saveLogAsync(channel, target, template, provider, request, MessageResponse.failure(e.getMessage()),
                         trackToken, batchId, request.getSubject());
             }
@@ -373,8 +382,8 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-     * 发送Content
-     * @param request request
+      * 发送内容
+     * @param request 请求
      */
     public ReturnResult<List<MessageResponse>> sendContent(MessageContentSendRequest request) {
         if (request.getSysMessageProviderId() == null) {
@@ -435,6 +444,14 @@ public class SysMessageServiceImpl implements SysMessageService {
             } catch (Exception e) {
                 log.error("按内容发送消息失败, 接收人: {}", target, e);
                 result.add(MessageResponse.failure(e.getMessage()));
+                /**
+                  * 保存内容日志异步。
+                 * @param channel 通道
+                 * @param target Target
+                 * @param provider 提供者
+                 * @param request 请求
+                 * @param MessageResponse.failure(e.getMessage( 消息响应.失败(e.getmessage(
+                 */
                 saveContentLogAsync(channel, target, provider, request, MessageResponse.failure(e.getMessage()),
                         trackToken, batchId, request.getSubject());
             }
@@ -444,8 +461,8 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-     * SyncTemplate
-     * @param providerId providerId
+      * 同步template
+     * @param providerId 提供者标识
      */
     public ReturnResult<Integer> syncTemplate(Integer providerId) {
         if (providerId == null) {
@@ -501,7 +518,7 @@ public class SysMessageServiceImpl implements SysMessageService {
     /**
      * 异步记录按内容发送的消息推送日志
      * <p>
-     * 使用 @Async 在独立的线程池中执行，不阻塞发送主流程。
+      * 使用 @异步 在独立的线程池中执行，不阻塞发送主流程。
      * </p>
      *
      * @param channel    渠道标识
@@ -542,7 +559,7 @@ public class SysMessageServiceImpl implements SysMessageService {
     /**
      * 异步记录消息推送日志
      * <p>
-     * 使用 @Async 在独立的线程池中执行，不阻塞发送主流程。
+      * 使用 @异步 在独立的线程池中执行，不阻塞发送主流程。
      * </p>
      *
      * @param channel    渠道标识
@@ -584,10 +601,10 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-     * PageForLog
-     * @param log log
+      * pagefor日志
+     * @param log 日志
      * @param page page
-     * @param pageSize pageSize
+     * @param pageSize page大小
      */
     public IPage<SysMessageLog> pageForLog(SysMessageLog log, long page, long pageSize) {
         LambdaQueryWrapper<SysMessageLog> wrapper = Wrappers.<SysMessageLog>lambdaQuery()
@@ -612,8 +629,8 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-     * PreviewTemplate
-     * @param request request
+      * previewtemplate
+     * @param request 请求
      */
     public ReturnResult<TemplatePreviewResponse> previewTemplate(TemplatePreviewRequest request) {
         if (request == null || request.getSysMessageTemplateId() == null) {
@@ -657,8 +674,8 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-     * CleanLog
-     * @param beforeTime beforeTime
+      * clean日志
+     * @param beforeTime 之前时间
      */
     public ReturnResult<Integer> cleanLog(LocalDateTime beforeTime) {
         if (beforeTime == null) {
@@ -671,8 +688,8 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-     * MarkLog读取
-     * @param token token
+      * mark日志读取
+     * @param token 令牌
      */
     public ReturnResult<Boolean> markLogRead(String token) {
         if (StringUtils.isBlank(token)) {
@@ -697,9 +714,9 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-     * PageForStationMessage
+      * pagefor状态消息
      * @param page page
-     * @param pageSize pageSize
+     * @param pageSize page大小
      */
     public IPage<SysMessageStationItem> pageForStationMessage(long page, long pageSize) {
         String userId = currentUserId();
@@ -716,7 +733,7 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     @Override
-    /** 计算数量StationMessageUnread */
+    /** 计算数量状态消息unread */
     public ReturnResult<Long> countStationMessageUnread() {
         String userId = currentUserId();
         if (StringUtils.isBlank(userId)) {
@@ -733,8 +750,8 @@ public class SysMessageServiceImpl implements SysMessageService {
 
     @Override
     /**
-     * MarkStationMessage读取
-     * @param lastId lastId
+      * mark状态消息读取
+     * @param lastId 最后一个标识
      */
     public ReturnResult<Boolean> markStationMessageRead(Integer lastId) {
         String userId = currentUserId();
@@ -748,7 +765,7 @@ public class SysMessageServiceImpl implements SysMessageService {
                 .and(w -> w.isNull(SysMessageLog::getSysMessageReadStatus)
                         .or().eq(SysMessageLog::getSysMessageReadStatus, 0));
         if (lastId != null) {
-            // 已读游标：标记 ID 小于等于游标的未读消息为已读
+ // 已读游标：标记 标识 小于等于游标的未读消息为已读
             wrapper.le(SysMessageLog::getSysMessageLogId, lastId);
         }
         SysMessageLog update = new SysMessageLog();
@@ -774,7 +791,7 @@ public class SysMessageServiceImpl implements SysMessageService {
     }
 
     /**
-     * 获取当前登录用户ID（未接入认证时返回 null）
+       * 获取当前登录用户标识（未接入认证时返回 空）
      *
      * @return 用户ID
      */
@@ -838,8 +855,8 @@ public class SysMessageServiceImpl implements SysMessageService {
      *
      * @param provider   消息提供商
      * @param target     接收人
-     * @param templateId 模板ID（按模板发送时传入，按内容发送传 null）
-     * @param content    消息内容（按内容发送时传入，按模板发送传 null）
+     * @param templateId 模板标识（按模板发送时传入，按内容发送传 空）
+     * @param content    消息内容（按内容发送时传入，按模板发送传 空）
      * @return 是否命中防抖（间隔内已发送成功）
      */
     private boolean isDebounced(SysMessageProvider provider, String target, Integer templateId, String content) {
@@ -919,11 +936,11 @@ public class SysMessageServiceImpl implements SysMessageService {
      * 校验模板内容中的占位符格式
      * <p>
      * 只允许 ${var} 或 {{var}} 两种形式，找到第一个非法占位符返回其原始文本，
-     * 未发现非法占位符时返回 null。
+      * 未发现非法占位符时返回 空。
      * </p>
      *
      * @param content 模板内容
-     * @return 第一个非法占位符文本，无则返回 null
+     * @return 第一个非法占位符文本，无则返回 空
      */
     private String findIllegalPlaceholder(String content) {
         if (StringUtils.isBlank(content)) {

@@ -23,11 +23,11 @@ import java.time.format.DateTimeFormatter;
 @Slf4j
 public class FileJobLogSink implements JobLogSink {
 
-    /** Date_fmt */
+    /** 日期_fmt */
     private static final DateTimeFormatter DATE_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.systemDefault());
 
-    /** Base路径 */
+    /** 基础路径 */
     private final Path basePath;
 
     /**
@@ -80,7 +80,12 @@ public class FileJobLogSink implements JobLogSink {
         return dateDir + "/" + jobName + "/" + event.executedAtMs() + ".log";
     }
 
-    /** 格式化记录日志 */
+    /**
+     * 格式化记录日志
+     *
+     * @param event 事件
+     * @return 格式化日志的结果
+     */
     private String formatLog(JobLogEvent event) {
         StringBuilder sb = new StringBuilder(512);
         sb.append("=== JOB EXECUTION LOG ===\n");
@@ -102,7 +107,12 @@ public class FileJobLogSink implements JobLogSink {
         return sb.toString();
     }
 
-    /** Sanitize */
+    /**
+     * Sanitize
+     *
+     * @param name 名称
+     * @return sanitize的结果
+     */
     private static String sanitize(String name) {
         return name.replaceAll("[/\\\\:*?\"<>|]", "_");
     }

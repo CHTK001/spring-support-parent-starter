@@ -17,22 +17,50 @@ import lombok.Getter;
 public enum ServerNodeProtocol {
 
     /**
-     * HTTP 服务器（可挂 ServerFilter 插件，例如 FileStorageServerFilter 变成文件服务器）
+      * HTTP 服务器（可挂 服务端过滤器 插件，例如 文件storage服务端过滤器 变成文件服务器）
+     * @param "HTTP" "HTTP"
+     * @param "http" "http"
+     * @param 18080 18080
+     * @param "jdk" "jdk"
+     * @param false false
+     * @param 插件 插件
+     * @return HTTP的结果
      */
     HTTP("HTTP", "http", 18080, "jdk", false, "HTTP 服务器(可挂 ServerFilter 插件)"),
 
     /**
-     * HTTP 反向代理服务器（需要 backendHost/backendPort 后端地址）
+      * HTTP 反向代理服务器（需要 backend主机/backend端口 后端地址）
+     * @param "HTTP_PROXY" "HTTP_代理"
+     * @param "http-proxy" "http-代理"
+     * @param 18081 18081
+     * @param "jdk" "jdk"
+     * @param true true
+     * @param 反向代理服务器" 反向代理服务器"
+     * @return http代理的结果
      */
     HTTP_PROXY("HTTP_PROXY", "http-proxy", 18081, "jdk", true, "HTTP 反向代理服务器"),
 
     /**
-     * TCP 端口代理服务器（需要 backendHost/backendPort 后端地址）
+      * TCP 端口代理服务器（需要 backend主机/backend端口 后端地址）
+     * @param "TCP_PROXY" "TCP_代理"
+     * @param "tcp-proxy" "tcp-代理"
+     * @param 18082 18082
+     * @param "jdk" "jdk"
+     * @param true true
+     * @param 端口代理服务器" 端口代理服务器"
+     * @return tcp代理的结果
      */
     TCP_PROXY("TCP_PROXY", "tcp-proxy", 18082, "jdk", true, "TCP 端口代理服务器"),
 
     /**
-     * SIP 隧道服务器（单端口信令 + 数据平面，需要 token 认证）
+      * SIP 隧道服务器（单端口信令 + 数据平面，需要 令牌 认证）
+     * @param "SIP" "SIP"
+     * @param "sip" "sip"
+     * @param 19460 19460
+     * @param "sip" "sip"
+     * @param false false
+     * @param 隧道服务器" 隧道服务器"
+     * @return SIP的结果
      */
     SIP("SIP", "sip", 19460, "sip", false, "SIP 隧道服务器");
 
@@ -88,7 +116,7 @@ public enum ServerNodeProtocol {
      * {@code tcp-proxy / tcp_proxy}、{@code sip} 等写法。</p>
      *
      * @param code 编码或别名
-     * @return 枚举值，未匹配返回 null
+     * @return 枚举值，未匹配返回 空
      */
     public static ServerNodeProtocol of(String code) {
         if (code == null || code.isBlank()) {

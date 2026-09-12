@@ -12,7 +12,7 @@ import java.io.Serializable;
  */
 @Data
 public class Result<T> implements Serializable {
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
      * 状态码
@@ -34,16 +34,18 @@ public class Result<T> implements Serializable {
      */
     private Long timestamp;
 
-    /** 创建 Result 实例 */
+    /** 创建 结果 实例 */
     public Result() {
         this.timestamp = System.currentTimeMillis();
     }
 
     /**
-     * 创建 Result 实例
-     * @param code code
-     * @param String String
-     * @param T T
+      * 创建 结果 实例
+     * @param code 编码
+     * @param message 字符串
+     * @param data T
+     * @param message 消息
+     * @param data 数据
      */
     public Result(Integer code, String message, T data) {
         this.code = code;
@@ -54,6 +56,7 @@ public class Result<T> implements Serializable {
 
     /**
      * 成功返回
+     * @return 成功的结果
      */
     public static <T> Result<T> success() {
         return new Result<>(200, "操作成功", null);
@@ -61,6 +64,8 @@ public class Result<T> implements Serializable {
 
     /**
      * 成功返回（带数据）
+     * @param data 数据
+     * @return 成功的结果
      */
     public static <T> Result<T> success(T data) {
         return new Result<>(200, "操作成功", data);
@@ -68,6 +73,9 @@ public class Result<T> implements Serializable {
 
     /**
      * 成功返回（带消息和数据）
+     * @param message 消息
+     * @param data 数据
+     * @return 成功的结果
      */
     public static <T> Result<T> success(String message, T data) {
         return new Result<>(200, message, data);
@@ -75,6 +83,8 @@ public class Result<T> implements Serializable {
 
     /**
      * 失败返回
+     * @param message 消息
+     * @return 错误的结果
      */
     public static <T> Result<T> error(String message) {
         return new Result<>(500, message, null);
@@ -82,6 +92,9 @@ public class Result<T> implements Serializable {
 
     /**
      * 失败返回（带状态码）
+     * @param code 编码
+     * @param message 消息
+     * @return 错误的结果
      */
     public static <T> Result<T> error(Integer code, String message) {
         return new Result<>(code, message, null);
@@ -89,6 +102,10 @@ public class Result<T> implements Serializable {
 
     /**
      * 自定义返回
+     * @param code 编码
+     * @param message 消息
+     * @param data 数据
+     * @return 构建的结果
      */
     public static <T> Result<T> build(Integer code, String message, T data) {
         return new Result<>(code, message, data);

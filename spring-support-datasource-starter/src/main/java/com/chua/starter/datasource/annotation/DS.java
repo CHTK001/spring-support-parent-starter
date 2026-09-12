@@ -28,8 +28,9 @@ import java.lang.annotation.*;
  * public List&lt;User&gt; queryAll() { ... }
  * </pre>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/01/01
+ * @author CH
  */
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)

@@ -12,7 +12,7 @@ import java.lang.annotation.Target;
 /**
  * 字段加密密钥标记注解
  * <p>
- * 用于标记实体中存储加密密钥的字段，与 @ApiFieldCrypto 配合使用。
+   * 用于标记实体中存储加密密钥的字段，与 @api字段加密货币 配合使用。
  * 序列化时该字段会被特殊处理。
  * </p>
  *
@@ -36,8 +36,9 @@ import java.lang.annotation.Target;
  * </pre>
  *
  * @since 2023-01-01
- * @version 1.0.0
+   * @版本 1.0.0
  * @see ApiFieldCrypto
+ * @author CH
  */
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)

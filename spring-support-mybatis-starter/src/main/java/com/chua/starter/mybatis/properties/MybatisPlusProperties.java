@@ -9,6 +9,7 @@ import static com.chua.starter.mybatis.properties.MybatisPlusProperties.PRE;
 
 /**
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @ConfigurationProperties(prefix = PRE)
@@ -44,7 +45,7 @@ public class MybatisPlusProperties {
     }
 
     /**
-     * mapper加载源
+      * 映射器加载源
      */
     private List<SqlMethodProperties> sqlMethod;
 
@@ -94,17 +95,23 @@ public class MybatisPlusProperties {
 
     /**
      * 热重载监听目录配置
-     * 支持本地文件系统路径和classpath路径
-     * 本地路径示例: /path/to/mapper, D:/mappers
-     * classpath路径示例: classpath:mapper, classpath*:mapper/**
+      * 支持本地文件系统路径和类路径路径
+      * 本地路径示例: /路径/转为/映射器, D:/映射器
+      * 类路径路径示例: 类路径:映射器, 类路径*:映射器/**
      */
     private List<ReloadDirectory> reloadDirectories;
 
 
     @Data
+    /**
+      * SQL方法属性类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     public static class SqlMethodProperties {
         /**
-         * sql来源
+          * SQL来源
          */
         private SqlMethodType type;
 
@@ -163,6 +170,8 @@ public class MybatisPlusProperties {
 
     /**
      * 方法类型
+     * @author CH
+     * @since 4.0.0
      */
     public enum SqlMethodType {
         /**
@@ -170,13 +179,15 @@ public class MybatisPlusProperties {
          */
         FILE,
         /**
-         * mysql
+          * MySQL
          */
         MYSQL
     }
 
     /**
      * 类型
+     * @author CH
+     * @since 4.0.0
      */
     public enum ReloadType {
         /**
@@ -191,26 +202,28 @@ public class MybatisPlusProperties {
 
     /**
      * 热重载目录配置
+     * @author CH
+     * @since 4.0.0
      */
     @Data
     public static class ReloadDirectory {
         /**
          * 目录路径
          * 支持格式：
-         * - 本地文件系统路径: /path/to/mapper, D:/mappers
-         * - classpath路径: classpath:mapper, classpath*:mapper/**
+          * - 本地文件系统路径: /路径/转为/映射器, D:/映射器
+          * - 类路径路径: 类路径:映射器, 类路径*:映射器/**
          */
         private String path;
 
         /**
          * 是否启用监听
-         * 本地路径默认启用，classpath路径在jar包中无法监听
+          * 本地路径默认启用，类路径路径在jar包中无法监听
          */
         private boolean watchEnabled = true;
 
         /**
          * 文件匹配模式
-         * 默认为双星号斜杠星号 Mapper.xml
+          * 默认为双星号斜杠星号 映射器.xml
          */
         private String pattern = "**/*Mapper.xml";
 

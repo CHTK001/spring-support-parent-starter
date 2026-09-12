@@ -34,41 +34,42 @@ import static com.chua.starter.mybatis.interceptor.MybatisPlusPermissionHandler.
  * </ul>
  *
  * @author CH
+ * @since 4.0.0
  */
 public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHandler {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(MybatisPlusDataPermissionHandler.class);
-    /** Super_admin */
+    /** 父_admin */
     private static final String SUPER_ADMIN = "SUPER_ADMIN";
     /** Admin */
     private static final String ADMIN = "ADMIN";
     /** Dept_leader */
     private static final String DEPT_LEADER = "DEPT_LEADER";
-    /** Managed_dept_tree_ids */
+    /** Managed_dept_树_标识 */
     private static final String MANAGED_DEPT_TREE_IDS = "managedDeptTreeIds";
 
     /**
-     * 缓存 mappedStatementId 对应的 DataScope 注解
+       * 缓存 mapped对账单标识 对应的 数据scope 注解
      */
     private static final Map<String, DataScopeInfo> DATA_SCOPE_CACHE = new ConcurrentReferenceHashMap<>(4096);
 
     /** Meta数据作用域属性 */
     private final MybatisPlusDataScopeProperties metaDataScopeProperties;
-    /** Auth服务供应商 */
+    /** 认证服务供应商 */
     private final Supplier<AuthService> authServiceSupplier;
 
     /**
-     * 创建 MybatisPlusDataPermissionHandler 实例
-     * @param metaDataScopeProperties metaDataScopeProperties
+      * 创建 mybatisplus数据权限处理器 实例
+     * @param metaDataScopeProperties meta数据scope属性
      */
     public MybatisPlusDataPermissionHandler(MybatisPlusDataScopeProperties metaDataScopeProperties) {
         this(metaDataScopeProperties, () -> null);
     }
 
     /**
-     * 创建 MybatisPlusDataPermissionHandler 实例
-     * @param metaDataScopeProperties metaDataScopeProperties
-     * @param authServiceSupplier authServiceSupplier
+      * 创建 mybatisplus数据权限处理器 实例
+     * @param metaDataScopeProperties meta数据scope属性
+     * @param authServiceSupplier 认证服务供应商
      */
     public MybatisPlusDataPermissionHandler(MybatisPlusDataScopeProperties metaDataScopeProperties,
                                             Supplier<AuthService> authServiceSupplier) {
@@ -81,7 +82,7 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
      *
      * @param table            表对象
      * @param where            WHERE条件表达式
-     * @param mappedStatementId MyBatis mappedStatementId
+     * @param mappedStatementId MyBatis mapped对账单标识
      * @return 过滤后的WHERE条件表达式，如果不需要过滤则返回null
      * @throws RuntimeException 数据权限处理失败时抛出异常
      */
@@ -93,7 +94,7 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
         }
 
         try {
-            // 获取 @DataScope 注解信息
+ // 获取 @数据scope 注解信息
             DataScopeInfo dataScopeInfo = getDataScopeInfo(mappedStatementId);
 
             // 检查注解是否禁用数据权限
@@ -118,6 +119,12 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
         } catch (Exception e) {
             log.error("数据权限处理异常, mappedStatementId: {}", mappedStatementId, e);
             // 异常时抛出异常，而不是静默返回空结果，避免掩盖问题
+            /**
+             * runtime异常。
+             * @param mappedStatementId mapped对账单标识
+             * @param e e
+             * @return runtime异常的结果
+             */
             throw new RuntimeException("数据权限处理失败: " + mappedStatementId, e);
         }
     }
@@ -126,7 +133,7 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
      * 确定数据权限类型
      * <p>优先级：注解指定 > 用户当前权限</p>
      *
-     * @param dataScopeInfo 注解信息，可能为null
+     * @param dataScopeInfo 注解信息，可能为空
      * @param currentUser   当前用户信息
      * @return 数据权限类型
      */
@@ -140,11 +147,11 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
     }
 
     /**
-     * 获取 @DataScope 注解信息
+      * 获取 @数据scope 注解信息
      * <p>优先查找方法级别注解，如果未找到则查找类级别注解</p>
      * <p>结果会被缓存，避免重复解析</p>
      *
-     * @param mappedStatementId MyBatis mappedStatementId，格式：com.example.mapper.UserMapper.selectList
+     * @param mappedStatementId MyBatis mapped对账单标识，格式：com.example.映射器.用户映射器.选择列表
      * @return 注解信息，如果未找到则返回null
      */
     private DataScopeInfo getDataScopeInfo(String mappedStatementId) {
@@ -152,10 +159,10 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
     }
 
     /**
-     * 解析 @DataScope 注解信息
+      * 解析 @数据scope 注解信息
      * <p>从mappedStatementId中解析类名和方法名，然后查找对应的注解</p>
      *
-     * @param mappedStatementId MyBatis mappedStatementId，格式：com.example.mapper.UserMapper.selectList
+     * @param mappedStatementId MyBatis mapped对账单标识，格式：com.example.映射器.用户映射器.选择列表
      * @return 注解信息，如果未找到或解析失败则返回null
      */
     private DataScopeInfo parseDataScopeInfo(String mappedStatementId) {
@@ -169,18 +176,28 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
             String className = mappedStatementId.substring(0, lastDot);
             String methodName = normalizeMethodName(mappedStatementId.substring(lastDot + 1));
 
-            // 使用ClassUtils替代Class.forName
+ // 使用类工具替代类.for名称
             Class<?> mapperClass = ClassUtils.forName(className);
 
             // 先查找方法级别的注解
             DataScope methodAnnotation = findMethodAnnotation(mapperClass, methodName);
             if (methodAnnotation != null) {
+                /**
+                 * 数据scope信息。
+                 * @param methodAnnotation 方法注解
+                 * @return 数据scope信息的结果
+                 */
                 return new DataScopeInfo(methodAnnotation);
             }
 
             // 再查找类级别的注解
             DataScope classAnnotation = mapperClass.getAnnotation(DataScope.class);
             if (classAnnotation != null) {
+                /**
+                 * 数据scope信息。
+                 * @param classAnnotation 类注解
+                 * @return 数据scope信息的结果
+                 */
                 return new DataScopeInfo(classAnnotation);
             }
 
@@ -191,9 +208,9 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
     }
 
     /**
-     * 查找方法上的 @DataScope 注解
+      * 查找方法上的 @数据scope 注解
      *
-     * @param clazz       Mapper接口类
+     * @param clazz       映射器接口类
      * @param methodName  方法名
      * @return 注解，如果方法上未找到则返回null
      */
@@ -209,7 +226,12 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
         return null;
     }
 
-    /** NormalizeMethodName */
+    /**
+     * normalize方法名称
+     *
+     * @param methodName 方法名称
+     * @return normalize方法名称的结果
+     */
     private String normalizeMethodName(String methodName) {
         if (null == methodName || methodName.isBlank()) {
             return methodName;
@@ -250,6 +272,17 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
                 ? dataScopeInfo.userAlias : null;
 
         if (hasManagedDeptLeaderScope(currentUser)) {
+            /**
+             * tabledept注册。
+             * @param table table
+             * @param null 空
+             * @param currentUser 当前用户
+             * @param dataPermission 数据权限
+             * @param dataScopeProperties 数据scope属性
+             * @param deptAlias dept别名
+             * @param userAlias 用户别名
+             * @return tabledept注册的结果
+             */
             return new TableDeptRegister(table, null, currentUser, dataPermission, dataScopeProperties, deptAlias, userAlias).register();
         }
 
@@ -257,10 +290,26 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
             return null;
         }
 
+        /**
+         * tabledept注册。
+         * @param table table
+         * @param null 空
+         * @param currentUser 当前用户
+         * @param dataPermission 数据权限
+         * @param dataScopeProperties 数据scope属性
+         * @param deptAlias dept别名
+         * @param userAlias 用户别名
+         * @return tabledept注册的结果
+         */
         return new TableDeptRegister(table, null, currentUser, dataPermission, dataScopeProperties, deptAlias, userAlias).register();
     }
 
-    /** 是否拥有ManagedDeptLeaderScope */
+    /**
+     * 是否拥有manageddept铅scope
+     *
+     * @param currentUser 当前用户
+     * @return 是否包含manageddept铅scope的结果
+     */
     private boolean hasManagedDeptLeaderScope(CurrentUser currentUser) {
         if (!currentUser.hasRole(DEPT_LEADER) || null == currentUser.getExt()) {
             return false;
@@ -272,7 +321,11 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
         return null != managedDeptTreeIds && !managedDeptTreeIds.toString().isBlank();
     }
 
-    /** 获取CurrentUser */
+    /**
+     * 获取当前用户
+     *
+     * @return 获取当前用户的结果
+     */
     private CurrentUser getCurrentUser() {
         if (authServiceSupplier == null) {
             return null;
@@ -283,8 +336,10 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
 
 
     /**
-     * @DataScope 注解信息封装
+      * @数据scope 注解信息封装
      * <p>用于缓存注解解析结果，避免重复解析</p>
+     * @author CH
+     * @since 4.0.0
      */
     private static class DataScopeInfo {
         /** 是否启用数据权限 */
@@ -301,7 +356,7 @@ public class MybatisPlusDataPermissionHandler implements MultiDataPermissionHand
         /**
          * 构造函数
          *
-         * @param annotation @DataScope注解对象
+         * @param annotation @数据scope注解对象
          */
         DataScopeInfo(DataScope annotation) {
             this.enabled = annotation.enabled();

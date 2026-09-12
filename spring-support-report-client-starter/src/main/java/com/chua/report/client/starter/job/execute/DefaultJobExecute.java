@@ -17,11 +17,11 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 默认作业执行实现
  * <p>
- * 根据任务类型（Bean、Groovy、Script）获取或创建对应的处理器和线程。
+   * 根据任务类型（Bean、Groovy、script）获取或创建对应的处理器和线程。
  * 支持处理器热更新和版本管理。
  * </p>
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024/03/11
  * @author CH
  */
@@ -34,7 +34,7 @@ public class DefaultJobExecute implements JobExecute {
     public ServletResponse run(ServletRequest request, TriggerParam triggerParam) {
         log.debug("开始执行任务, 任务ID: {}, 处理器: {}", triggerParam.getJobId(), triggerParam.getExecutorHandler());
 
-        // 解析GLUE类型
+ // 解析胶水类型
         GlueTypeEnum glueTypeEnum = GlueTypeEnum.match(triggerParam.getGlueType());
 
         // 获取或创建任务处理器
@@ -62,10 +62,10 @@ public class DefaultJobExecute implements JobExecute {
     }
 
     /**
-     * 根据触发参数和GLUE类型获取或创建任务处理器
+      * 根据触发参数和胶水类型获取或创建任务处理器
      *
      * @param triggerParam 触发参数
-     * @param glueTypeEnum GLUE类型
+     * @param glueTypeEnum 胶水类型
      * @return 处理器结果
      */
     private HandlerResult getJobHandler(TriggerParam triggerParam, GlueTypeEnum glueTypeEnum) {
@@ -146,23 +146,31 @@ public class DefaultJobExecute implements JobExecute {
     }
 }
 
+/**
+ * 处理器结果类。
+ *
+ * @author CH
+ * @since 4.0.0
+ */
 class HandlerResult {
     /** 作业处理器 */
     private JobHandler jobHandler;
     /** 作业线程 */
     private JobThread jobThread;
-    /** RemoveOLDreason */
+    /** 移除oldreason */
     private String removeOldReason;
 
-    /** 创建 HandlerResult 实例 */
+    /** 创建 处理器结果 实例 */
     public HandlerResult() {
     }
 
     /**
-     * 创建 HandlerResult 实例
-     * @param jobHandler jobHandler
-     * @param JobThread JobThread
-     * @param String String
+      * 创建 处理器结果 实例
+     * @param jobHandler 作业处理器
+     * @param jobThread 作业thread
+     * @param removeOldReason 字符串
+     * @param jobThread 作业thread
+     * @param removeOldReason 移除旧ReasonMLmlml
      */
     public HandlerResult(JobHandler jobHandler, JobThread jobThread, String removeOldReason) {
         this.jobHandler = jobHandler;
@@ -170,32 +178,56 @@ class HandlerResult {
         this.removeOldReason = removeOldReason;
     }
 
-    /** 获取JobHandler */
+    /**
+     * 获取作业处理器
+     *
+     * @return 获取作业处理器的结果
+     */
     public JobHandler getJobHandler() {
         return jobHandler;
     }
 
-    /** 设置JobHandler */
+    /**
+     * 设置作业处理器
+     *
+     * @param jobHandler 作业处理器
+     */
     public void setJobHandler(JobHandler jobHandler) {
         this.jobHandler = jobHandler;
     }
 
-    /** 获取JobThread */
+    /**
+     * 获取作业thread
+     *
+     * @return 获取作业thread的结果
+     */
     public JobThread getJobThread() {
         return jobThread;
     }
 
-    /** 设置JobThread */
+    /**
+     * 设置作业thread
+     *
+     * @param jobThread 作业thread
+     */
     public void setJobThread(JobThread jobThread) {
         this.jobThread = jobThread;
     }
 
-    /** 获取移除OldReason */
+    /**
+       * 获取移除旧ReasonMLmlml
+     *
+     * @return 获取移除旧ReasonML的结果
+     */
     public String getRemoveOldReason() {
         return removeOldReason;
     }
 
-    /** 设置移除OldReason */
+    /**
+       * 设置移除旧ReasonMLmlml
+     *
+     * @param removeOldReason 移除旧ReasonMLmlml
+     */
     public void setRemoveOldReason(String removeOldReason) {
         this.removeOldReason = removeOldReason;
     }

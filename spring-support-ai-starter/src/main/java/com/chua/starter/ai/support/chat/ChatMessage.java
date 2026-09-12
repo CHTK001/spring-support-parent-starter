@@ -9,12 +9,12 @@ package com.chua.starter.ai.support.chat;
 public class ChatMessage {
 
     /**
-     * 消息 ID
+      * 消息 标识
      */
     private Long id;
 
     /**
-     * 所属对话 ID
+      * 所属对话 标识
      */
     private Long dialogId;
 
@@ -24,7 +24,7 @@ public class ChatMessage {
     private Long timestamp;
 
     /**
-     * 角色（system / user / assistant / tool）
+      * 角色（系统 / 用户 / assistant / tool）
      */
     private String role;
 
@@ -54,8 +54,8 @@ public class ChatMessage {
     /**
      * 全参构造，时间戳取当前系统时间。
      *
-     * @param id       消息 ID
-     * @param dialogId 对话 ID
+     * @param id       消息 标识
+     * @param dialogId 对话 标识
      * @param role     角色
      * @param content  消息内容
      */
@@ -68,36 +68,36 @@ public class ChatMessage {
     }
 
     /**
-     * 获取消息 ID。
+      * 获取消息 标识。
      *
-     * @return 消息 ID
+     * @return 消息 标识
      */
     public Long getId() {
         return id;
     }
 
     /**
-     * 设置消息 ID。
+      * 设置消息 标识。
      *
-     * @param id 消息 ID
+     * @param id 消息 标识
      */
     public void setId(Long id) {
         this.id = id;
     }
 
     /**
-     * 获取对话 ID。
+      * 获取对话 标识。
      *
-     * @return 对话 ID
+     * @return 对话 标识
      */
     public Long getDialogId() {
         return dialogId;
     }
 
     /**
-     * 设置对话 ID。
+      * 设置对话 标识。
      *
-     * @param dialogId 对话 ID
+     * @param dialogId 对话 标识
      */
     public void setDialogId(Long dialogId) {
         this.dialogId = dialogId;
@@ -165,6 +165,11 @@ public class ChatMessage {
      * @return 消息实例
      */
     public static ChatMessage of(String role, String content) {
+        /**
+         * 对话消息。
+         * @param role 角色
+         * @param content 内容
+         */
         return new ChatMessage(role, content);
     }
 
@@ -175,6 +180,11 @@ public class ChatMessage {
      * @return 消息实例
      */
     public static ChatMessage assistant(String content) {
+        /**
+         * 对话消息。
+         * @param "assistant" "assistant"
+         * @param content 内容
+         */
         return new ChatMessage("assistant", content);
     }
 }

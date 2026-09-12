@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 /**
  * 响应加密
  * @author CH
+ * @since 4.0.0
  */
 @RestControllerAdvice
 @SuppressWarnings({"unchecked", "rawtypes"})
@@ -38,8 +39,8 @@ public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<O
 
 
     /**
-     * 创建 ApiResponseEncodeResponseBodyAdvice 实例
-     * @param apiResponseEncodeRegister apiResponseEncodeRegister
+      * 创建 api响应encode响应主体advice 实例
+     * @param apiResponseEncodeRegister api响应encode注册
      */
     public ApiResponseEncodeResponseBodyAdvice(ApiResponseEncodeRegister apiResponseEncodeRegister) {
         this.apiResponseEncodeRegister = apiResponseEncodeRegister;
@@ -47,14 +48,14 @@ public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<O
 
 
     @Override
-    /** Supports */
+    /** 支持 */
     public boolean supports(MethodParameter methodParameter, Class<? extends HttpMessageConverter<?>> aClass) {
         return true;
     }
 
     @SneakyThrows
     @Override
-    /** BeforeBody写入 */
+    /** 之前主体写入 */
     public Object beforeBodyWrite(Object o, MethodParameter methodParameter, MediaType mediaType, Class<? extends HttpMessageConverter<?>> aClass, ServerHttpRequest serverHttpRequest, ServerHttpResponse serverHttpResponse) {
         if (o instanceof StreamingResponseBody || o instanceof ResponseBodyEmitter) {
             return o;
@@ -94,19 +95,19 @@ public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<O
         headers.set("access-control-timestamp-user", codecResult.getTimestamp());
         headers.set("access-control-no-data", String.valueOf(true));
 
-        // 设置Content-Type为application/octet-stream
+ // 设置内容-类型为application/octet-流
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
 
-        // 添加X-Content-Type-Options: nosniff响应头
+ // 添加X-内容-类型-期权: nosniff响应头
         headers.set("X-Content-Type-Options", "nosniff");
 
-        // 构建响应数据（key直接拼接在02后面）
+ // 构建响应数据（钥匙直接拼接在02后面）
         String responseData = "02" + codecResult.getKey() + "200" + codecResult.getData() + "ffff";
 
         // 将响应数据转换为字节数组（使用更真实的二进制转换方法）
         byte[] responseBytes = convertToBinary(responseData);
 
-        // 设置Content-Length头，值为加密后数据的实际长度
+ // 设置内容-长度头，值为加密后数据的实际长度
         headers.setContentLength(responseBytes.length);
 
         // 返回二进制数据而不是JSON
@@ -127,7 +128,7 @@ public class ApiResponseEncodeResponseBodyAdvice implements ResponseBodyAdvice<O
             return new byte[0];
         }
         
-        // 使用CharsetEncoder将字符串转换为字节缓冲区
+ // 使用字符集编码器将字符串转换为字节缓冲区
         CharBuffer charBuffer = CharBuffer.wrap(str);
         ByteBuffer byteBuffer = StandardCharsets.UTF_8.encode(charBuffer);
         

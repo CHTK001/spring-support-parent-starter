@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 监控目标探针上下文
  * <p>
- * 内存维护每个监控目标(Agent)的最后心跳时间，供在线判定使用。
+   * 内存维护每个监控目标(智能体)的最后心跳时间，供在线判定使用。
  * 判定规则：距最后一次心跳超过 {@code timeoutMinutes} 即视为离线；
  * 从未上报过心跳的目标不纳入本上下文（视为从未上线）。
  * </p>
@@ -26,16 +26,16 @@ public class MonitorAgentContext {
     /** 默认离线判定阈值（分钟） */
     private static final int DEFAULT_OFFLINE_MINUTES = 5;
 
-    /** 最后心跳时间表: monitorId -> 心跳时间 */
+    /** 最后心跳时间表: 监控标识 -> 心跳时间 */
     private final Map<Long, LocalDateTime> lastHeartbeatMap = new ConcurrentHashMap<>();
 
-    /** 离线状态表: monitorId -> 是否已判定离线（用于状态翻转检测） */
+    /** 离线状态表: 监控标识 -> 是否已判定离线（用于状态翻转检测） */
     private final Map<Long, Boolean> offlineFlagMap = new ConcurrentHashMap<>();
 
     /**
      * 标记目标心跳活跃
      *
-     * @param monitorId 目标 ID
+     * @param monitorId 目标 标识
      */
     public void markActive(Long monitorId) {
         if (monitorId == null) {
@@ -48,7 +48,7 @@ public class MonitorAgentContext {
     /**
      * 判断目标当前是否在线
      *
-     * @param monitorId 目标 ID
+     * @param monitorId 目标 标识
      * @return true 表示在超时窗口内有心跳
      */
     public boolean isOnline(Long monitorId) {
@@ -59,7 +59,7 @@ public class MonitorAgentContext {
     /**
      * 扫描并翻转离线状态（由定时任务调用）
      *
-     * @return 本轮新转为离线的目标 ID 列表
+     * @return 本轮新转为离线的目标 标识 列表
      */
     public List<Long> sweepOffline() {
         List<Long> newlyOffline = new ArrayList<>();
@@ -77,7 +77,7 @@ public class MonitorAgentContext {
     /**
      * 全量状态快照
      *
-     * @return monitorId -> [lastHeartbeat, online]
+     * @return monitorId -> [最后一个心跳, online]
      */
     public List<AgentStatus> snapshot() {
         List<AgentStatus> list = new ArrayList<>(lastHeartbeatMap.size());
@@ -91,9 +91,10 @@ public class MonitorAgentContext {
     /**
      * 探针在线状态视图
      *
-     * @param monitorId     目标 ID
+     * @param monitorId     目标 标识
      * @param lastHeartbeat 最后心跳时间
      * @param online        是否在线
+     * @return 智能体状态的结果
      */
     public record AgentStatus(Long monitorId, LocalDateTime lastHeartbeat, boolean online) {
     }

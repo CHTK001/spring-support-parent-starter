@@ -48,6 +48,9 @@ public class OcrController {
      *
      * @param file 图片文件
      * @return 识别结果（文本 + 明细 + 数量 + 耗时）
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "OCR 文字识别", description = "识别图片中全部文字块，返回拼接文本、明细（文本/置信度/位置/角度）与耗时")
@@ -80,6 +83,9 @@ public class OcrController {
      *
      * @param file 图片文件
      * @return 标注后 JPEG 图片
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @请求参数("文件"
+     * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "OCR 检测标注图", description = "返回标注了检测框与识别文字的 JPEG 图片")
@@ -102,7 +108,7 @@ public class OcrController {
     /**
      * OCR 模型枚举（按能力分组）。
      *
-     * @return 能力分组 → 模型 ID 列表
+     * @return 能力分组 → 模型 标识 列表
      */
     @Permission("admin")
     @Operation(summary = "OCR 模型清单", description = "枚举可用的文字检测/识别/方向矫正/修复模型")

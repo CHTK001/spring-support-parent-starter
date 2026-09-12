@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 
 /**
- * Fastjson for Spring MVC Converter.
+   * Fastjson for Spring MVC 转换器.
  * <p>
  * Compatible fastjson 1.2.x
  *
@@ -40,7 +40,7 @@ public class ResultDataHttpMessageConverter
 
 
     @Override
-    /** 写入Internal */
+    /** 写入内部 */
     protected void writeInternal(Object object, Type type, HttpOutputMessage outputMessage) throws IOException, HttpMessageNotWritableException {
         super.writeInternal(object, type, outputMessage);
     }

@@ -9,6 +9,7 @@ import java.util.List;
  * 方法构建器
  *
  * @author CH
+ * @since 4.0.0
  */
 public interface SqlMethodMarker extends DisposableBean {
 
@@ -21,9 +22,9 @@ public interface SqlMethodMarker extends DisposableBean {
     List<AbstractMethod> analysis(String source);
 
     /**
-     * 刷新mapper
+      * 刷新映射器
      *
-     * @param name name
+     * @param name 名称
      */
     void refresh(String name);
 

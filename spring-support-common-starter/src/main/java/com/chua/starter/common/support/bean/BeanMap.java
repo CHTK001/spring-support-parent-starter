@@ -7,16 +7,24 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
- * Bean 转 Map 工具。
+   * Bean 转 映射 工具。
+ * @author CH
+ * @since 4.0.0
  */
 public final class BeanMap {
 
-    /** 创建 BeanMap 实例 */
+    /** 创建 Bean映射 实例 */
     private BeanMap() {
     }
 
     @SuppressWarnings("unchecked")
-    /** Of */
+    /**
+     * 的
+     *
+     * @param bean Bean
+     * @param ignoreNull ignore空
+     * @return 的的结果
+     */
     public static Map<String, Object> of(Object bean, boolean ignoreNull) {
         if (bean == null) {
             return Collections.emptyMap();

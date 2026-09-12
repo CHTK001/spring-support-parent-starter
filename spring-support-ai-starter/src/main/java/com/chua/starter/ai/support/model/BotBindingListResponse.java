@@ -5,7 +5,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * Bot 绑定列表响应。
+   * 机器人 绑定列表响应。
  *
  * @author CH
  * @since 4.0.0.42
@@ -14,12 +14,12 @@ import java.time.LocalDateTime;
 public class BotBindingListResponse {
 
     /**
-     * 绑定 ID
+      * 绑定 标识
      */
     private Long id;
 
     /**
-     * 归属用户 ID（可为空，表示未分配用户）
+      * 归属用户 标识（可为空，表示未分配用户）
      */
     private Long userId;
 
@@ -29,7 +29,7 @@ public class BotBindingListResponse {
     private String userName;
 
     /**
-     * Bot 唯一标识
+      * 机器人 唯一标识
      */
     private String botId;
 
@@ -39,7 +39,7 @@ public class BotBindingListResponse {
     private String platform;
 
     /**
-     * Bot 昵称
+      * 机器人 昵称
      */
     private String nickname;
 
@@ -79,12 +79,12 @@ public class BotBindingListResponse {
     private String thinkingEffort;
 
     /**
-     * 系统提示词（AI 回复时注入的 system prompt）
+      * 系统提示词（AI 回复时注入的 系统 提示符）
      */
     private String systemPrompt;
 
     /**
-     * 是否记录 AI 用量（token/费用），bot 专属开关，默认开启
+      * 是否记录 AI 用量（令牌/费用），机器人 专属开关，默认开启
      */
     private Boolean recordUsage;
 

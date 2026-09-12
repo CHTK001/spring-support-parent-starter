@@ -58,19 +58,26 @@ public class DataSourceDocumentController {
     private final DatabaseGraphService graphService;
 
     /**
-     * 创建 DataSourceDocumentController 实例
-     * @param service service
-     * @param DocumentProperties DocumentProperties
+      * 创建 数据源文档控制器 实例
+     * @param service 服务
+     * @param properties 文档属性
+     * @param properties 属性
      */
     public DataSourceDocumentController(DataSourceDocumentService service, DocumentProperties properties) {
+        /**
+         * this。
+         * @param service 服务
+         * @param properties 属性
+         * @param null 空
+         */
         this(service, properties, null);
     }
 
     /**
-     * 创建 DataSourceDocumentController 实例
-     * @param service service
-     * @param properties properties
-     * @param graphService graphService
+      * 创建 数据源文档控制器 实例
+     * @param service 服务
+     * @param properties 属性
+     * @param graphService 图计算服务
      */
     public DataSourceDocumentController(DataSourceDocumentService service,
                                         DocumentProperties properties,
@@ -82,22 +89,35 @@ public class DataSourceDocumentController {
 
     /**
      * 渲染整库 HTML，优先使用缓存
+     * @param response 响应
      */
     public void preview(HttpServletResponse response) throws IOException {
         DocumentData data = service.preview();
+        /**
+          * 写入HTML。
+         * @param response 响应
+         * @param null 空
+         */
         writeHtml(response, renderHtml(data, null));
     }
 
     /**
      * 强制刷新后渲染整库 HTML
+     * @param response 响应
      */
     public void apply(HttpServletResponse response) throws IOException {
         DocumentData data = service.apply();
+        /**
+          * 写入HTML。
+         * @param response 响应
+         * @param null 空
+         */
         writeHtml(response, renderHtml(data, null));
     }
 
     /**
      * 文档元信息 JSON
+     * @param response 响应
      */
     public void list(HttpServletResponse response) throws IOException {
         DocumentData data = service.preview();
@@ -125,21 +145,38 @@ public class DataSourceDocumentController {
         }
         body.put("tables", tables);
 
+        /**
+         * 写入json。
+         * @param response 响应
+         * @param body 主体
+         */
         writeJson(response, body);
     }
 
     /**
      * 渲染单表详情 HTML
      * <p>从 request URI 末段解析表名（避免 path variable 绑定问题）</p>
+     * @param request 请求
+     * @param response 响应
      */
     public void table(jakarta.servlet.http.HttpServletRequest request, HttpServletResponse response) throws IOException {
         String tableName = lastPathSegment(request);
         if (tableName.isEmpty()) {
+            /**
+             * 写入notfound。
+             * @param response 响应
+             * @param "未指定表名" "未指定表名"
+             */
             writeNotFound(response, "未指定表名");
             return;
         }
         DocumentData data = service.preview();
         if (data.getTables() == null) {
+            /**
+             * 写入notfound。
+             * @param response 响应
+             * @param tableName table名称
+             */
             writeNotFound(response, "未找到表: " + tableName);
             return;
         }
@@ -151,53 +188,99 @@ public class DataSourceDocumentController {
             }
         }
         if (target == null) {
+            /**
+             * 写入notfound。
+             * @param response 响应
+             * @param tableName table名称
+             */
             writeNotFound(response, "未找到表: " + tableName);
             return;
         }
+        /**
+          * 写入HTML。
+         * @param response 响应
+         * @param target Target
+         */
         writeHtml(response, renderHtml(data, target));
     }
 
     /**
      * 表关系图 JSON（节点 + 边）
+     * @param response 响应
      */
     public void relationshipJson(HttpServletResponse response) throws IOException {
         DocumentData data = service.preview();
+        /**
+         * 写入json。
+         * @param response 响应
+         * @param com.chua.common.support.lang.document.DocumentProvider.toRelationshipJson(data com.chua.通用.支持.lang.文档.文档提供者.转为relationshipjson(数据
+         */
         writeJson(response, com.chua.common.support.lang.document.DocumentProvider.toRelationshipJson(data));
     }
 
     // ==================== 数据库关系图谱 ====================
 
     /**
-     * 返回 relation-graph 兼容的 JSON（图 + 节点 data 携带触发器/存储过程）
+      * 返回 relation-图计算 兼容的 JSON（图 + 节点 数据 携带触发器/存储过程）
+     * @param request 请求
+     * @param response 响应
      */
     public void graphJson(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        /**
+         * ensure图计算服务。
+         */
         ensureGraphService();
         DatabaseGraphService.GraphPayload payload = isForceRefresh(request) ? graphService.apply() : graphService.preview();
+        /**
+         * 写入json。
+         * @param response 响应
+         * @param payload payload
+         */
         writeJson(response, payload);
     }
 
     /**
-     * 内嵌 relation-graph 的 HTML 可视化预览页
+      * 内嵌 relation-图计算 的 HTML 可视化预览页
+     * @param request 请求
+     * @param response 响应
      */
     public void graphHtml(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        /**
+         * ensure图计算服务。
+         */
         ensureGraphService();
         DatabaseGraphService.GraphPayload payload = isForceRefresh(request) ? graphService.apply() : graphService.preview();
         String json = com.chua.common.support.lang.json.Json.toJson(payload);
+        /**
+          * 写入HTML。
+         * @param response 响应
+         * @param payload payload
+         */
         writeHtml(response, renderGraphHtml(json, payload));
     }
 
     /**
      * 单表汇总：列 + 触发器 + 关联存储过程
      * <p>从 request URI 末段解析表名（避免 path variable 绑定问题）</p>
+     * @param request 请求
+     * @param response 响应
      */
     public void graphTable(jakarta.servlet.http.HttpServletRequest request, HttpServletResponse response) throws IOException {
+        /**
+         * ensure图计算服务。
+         */
         ensureGraphService();
-        // 解析 URI：/plugin/datasource/document/graph/table/SYS_USER.json -> SYS_USER
+ // 解析 URI：/plugin/datasource/文档/图计算/table/SYS_用户.json -> SYS_用户
         String pathInfo = request.getRequestURI();
         String suffix = ".json";
         int idx = pathInfo.lastIndexOf('/');
         if (idx < 0 || idx == pathInfo.length() - 1) {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            /**
+             * 写入json。
+             * @param response 响应
+             * @param pathInfo 路径信息
+             */
             writeJson(response, Map.of("error", "Invalid path: " + pathInfo));
             return;
         }
@@ -207,6 +290,11 @@ public class DataSourceDocumentController {
         }
         if (tableName.isEmpty()) {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            /**
+             * 写入json。
+             * @param response 响应
+             * @param empty" 空"
+             */
             writeJson(response, Map.of("error", "Table name is empty"));
             return;
         }
@@ -221,24 +309,43 @@ public class DataSourceDocumentController {
                 body.put("name", node.get("id"));
                 body.put("text", node.get("text"));
                 body.putAll(data);
+                /**
+                 * 写入json。
+                 * @param response 响应
+                 * @param body 主体
+                 */
                 writeJson(response, body);
                 return;
             }
         }
         response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        /**
+         * 写入json。
+         * @param response 响应
+         * @param tableName table名称
+         */
         writeJson(response, Map.of("error", "Table not found: " + tableName));
     }
 
     /**
      * 强制重建图谱缓存
+     * @param response 响应
      */
     public void graphApply(HttpServletResponse response) throws IOException {
+        /**
+         * ensure图计算服务。
+         */
         ensureGraphService();
         DatabaseGraphService.GraphPayload payload = graphService.apply();
+        /**
+         * 写入json。
+         * @param response 响应
+         * @param payload payload
+         */
         writeJson(response, payload);
     }
 
-    /** EnsureGraphService */
+    /** ensure图计算服务 */
     private void ensureGraphService() {
         if (graphService == null) {
             throw new IllegalStateException(
@@ -246,7 +353,12 @@ public class DataSourceDocumentController {
         }
     }
 
-    /** 是否ForceRefresh */
+    /**
+     * 是否forcerefresh
+     *
+     * @param request 请求
+     * @return 是否forcerefresh的结果
+     */
     private boolean isForceRefresh(HttpServletRequest request) {
         if (request == null) {
             return false;
@@ -256,7 +368,10 @@ public class DataSourceDocumentController {
     }
 
     /**
-     * 渲染 relation-graph 可视化 HTML（CDN 内嵌，零构建）
+      * 渲染 relation-图计算 可视化 HTML（CDN 内嵌，零构建）
+     * @param json json
+     * @param payload payload
+     * @return render图计算html的结果
      */
     private String renderGraphHtml(String json, DatabaseGraphService.GraphPayload payload) {
         StringBuilder sb = new StringBuilder(8192);
@@ -333,7 +448,13 @@ public class DataSourceDocumentController {
 
     // ==================== 渲染辅助 ====================
 
-    /** RenderHtml */
+    /**
+     * renderhtml
+     *
+     * @param data 数据
+     * @param single 单个
+     * @return renderHtml的结果
+     */
     private String renderHtml(DocumentData data, TableData single) {
         try {
             DocumentTemplate template = resolveTemplate();
@@ -341,7 +462,7 @@ public class DataSourceDocumentController {
                 return fallbackHtml(data, single);
             }
             if (single != null) {
-                // 单表：构造一个只含单表的 DocumentData
+ // 单表：构造一个只含单表的 文档数据
                 DocumentData singleData = DocumentData.builder()
                         .databaseName(data.getDatabaseName())
                         .productName(data.getProductName())
@@ -362,7 +483,8 @@ public class DataSourceDocumentController {
     }
 
     /**
-     * 解析模板：优先按用户配置名（如 SWAGGER）查找，找不到回退 DEFAULT
+       * 解析模板：优先按用户配置名（如 Swagger）查找，找不到回退 默认
+     * @return resolveTemplate的结果
      */
     private DocumentTemplate resolveTemplate() {
         try {
@@ -380,6 +502,9 @@ public class DataSourceDocumentController {
 
     /**
      * 内置最简 HTML 模板（兜底，不依赖任何三方模板）
+     * @param data 数据
+     * @param single 单个
+     * @return 降级html的结果
      */
     private String fallbackHtml(DocumentData data, TableData single) {
         StringBuilder sb = new StringBuilder();
@@ -457,7 +582,12 @@ public class DataSourceDocumentController {
         return sb.toString();
     }
 
-    /** TypeDesc */
+    /**
+     * 类型desc
+     *
+     * @param c c
+     * @return 类型desc的结果
+     */
     private String typeDesc(com.chua.common.support.lang.document.ColumnData c) {
         String name = c.getTypeName();
         if (name == null) {
@@ -478,39 +608,71 @@ public class DataSourceDocumentController {
         return name;
     }
 
-    /** 写入Html */
+    /**
+      * 写入HTML
+     *
+     * @param response 响应
+     * @param html HTML
+     */
     private void writeHtml(HttpServletResponse response, String html) throws IOException {
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType(MediaType.TEXT_HTML_VALUE + ";charset=UTF-8");
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        /**
+         * 尝试。
+         * @param response.getWriter( 响应.获取writer(
+         */
         try (PrintWriter w = response.getWriter()) {
             w.write(html);
             w.flush();
         }
     }
 
-    /** 写入Json */
+    /**
+     * 写入Json
+     *
+     * @param response 响应
+     * @param body 主体
+     */
     private void writeJson(HttpServletResponse response, Object body) throws IOException {
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8");
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        /**
+         * 尝试。
+         * @param response.getWriter( 响应.获取writer(
+         */
         try (PrintWriter w = response.getWriter()) {
             w.write(Json.toJson(body));
             w.flush();
         }
     }
 
-    /** 写入NotFound */
+    /**
+     * 写入notfound
+     *
+     * @param response 响应
+     * @param msg msg
+     */
     private void writeNotFound(HttpServletResponse response, String msg) throws IOException {
         response.setStatus(HttpServletResponse.SC_NOT_FOUND);
         response.setContentType(MediaType.TEXT_HTML_VALUE + ";charset=UTF-8");
+        /**
+         * 尝试。
+         * @param response.getWriter( 响应.获取writer(
+         */
         try (PrintWriter w = response.getWriter()) {
             w.write("<!DOCTYPE html><html><body><h1>404</h1><p>" + escape(msg) + "</p></body></html>");
             w.flush();
         }
     }
 
-    /** Escape */
+    /**
+     * Escape
+     *
+     * @param s s
+     * @return escape的结果
+     */
     private static String escape(String s) {
         if (s == null) {
             return "";
@@ -519,13 +681,20 @@ public class DataSourceDocumentController {
                 .replace("\"", "&quot;").replace("'", "&#39;");
     }
 
-    /** NullToEmpty */
+    /**
+     * 空转为空
+     *
+     * @param s s
+     * @return 空转为空的结果
+     */
     private static String nullToEmpty(String s) {
         return s == null ? "" : s;
     }
 
     /**
-     * 从 request URI 中提取最后一段路径
+      * 从 请求 URI 中提取最后一段路径
+     * @param request 请求
+     * @return 最后一个路径segment的结果
      */
     private static String lastPathSegment(jakarta.servlet.http.HttpServletRequest request) {
         String uri = request.getRequestURI();

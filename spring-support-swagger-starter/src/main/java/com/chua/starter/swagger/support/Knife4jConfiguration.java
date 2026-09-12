@@ -38,9 +38,10 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Knife4j 配置
+   * 刀4j 配置
  *
  * @author CH
+ * @since 4.0.0
  */
 @Slf4j
 @EnableKnife4j
@@ -50,7 +51,7 @@ import java.util.List;
 public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor, ApplicationContextAware {
 
     /**
-     * Knife4j配置属性
+      * 刀4j配置属性
      */
     private Knife4jProperties knife4jProperties;
 
@@ -94,7 +95,7 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
      *
      * @param webEndpointsSupplier Web端点提供者
      * @param endpointMediaTypes 端点媒体类型
-     * @param corsProperties CORS配置
+     * @param corsProperties 跨域资源共享配置
      * @param webEndpointProperties Web端点属性
      * @param environment 环境变量
      * @return WebMvc端点处理器映射
@@ -138,7 +139,7 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
     }
 
     /**
-     * Knife4j 模块开关。
+      * 刀4j 模块开关。
      *
      * <p>只注册"模块开关": 端点 (含 host:port 的完整 URL) 由
      * {@code ServiceInfoEndpointDetector} 统一探测注册, 此处不再重复注册, 否则横幅会出现两行 doc.html。</p>
@@ -146,7 +147,11 @@ public class Knife4jConfiguration implements BeanDefinitionRegistryPostProcessor
      * @return ServiceInfoContributor
      */
     @Bean
-    /** KnifejServiceInfoContributor */
+    /**
+     * knifej服务信息contributor
+     *
+     * @return knife4j服务信息contributor的结果
+     */
     public ServiceInfoContributor knife4jServiceInfoContributor() {
         return registry -> registry.registerFlag("knife4j", "文档", true, "Knife4j接口文档");
     }

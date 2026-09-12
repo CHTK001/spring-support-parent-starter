@@ -4,7 +4,7 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * DataSync 配置属性。
+   * 数据同步 配置属性。
  *
  * @since 4.0.0.42
  * @author CH
@@ -14,12 +14,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class DatasyncProperties {
 
     /**
-     * 是否启用 DataSync
+      * 是否启用 数据同步
      */
     private boolean enabled = true;
 
     /**
-     * 映射来源：file | database
+      * 映射来源：文件 | database
      */
     private String mappingSource = "file";
 
@@ -34,6 +34,12 @@ public class DatasyncProperties {
     private DatabaseMapping databaseMapping = new DatabaseMapping();
 
     @Data
+    /**
+     * 文件mapping类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     public static class FileMapping {
         /**
          * 映射配置文件目录路径
@@ -42,6 +48,12 @@ public class DatasyncProperties {
     }
 
     @Data
+    /**
+      * databasemapping类。
+     *
+     * @author CH
+     * @since 4.0.0
+     */
     public static class DatabaseMapping {
         /**
          * 是否启用数据库映射源

@@ -55,6 +55,10 @@ public class ApiCompanionController {
     // ==================== 伙伴 CRUD ====================
 
     @GetMapping("/companions")
+    /**
+     * 列表companions。
+     * @return 列表companions的结果
+     */
     public ApiResult<List<Map<String, Object>>> listCompanions() {
         List<Map<String, Object>> result = new ArrayList<>();
         for (SysAiCompanion c : companionStore.listCompanions()) {
@@ -64,6 +68,11 @@ public class ApiCompanionController {
     }
 
     @PostMapping("/companions")
+    /**
+     * 创建companion。
+     * @param body 主体
+     * @return 创建companion的结果
+     */
     public ApiResult<Map<String, Object>> createCompanion(@RequestBody Map<String, Object> body) {
         SysAiCompanion companion = new SysAiCompanion();
         companion.setCompanionId(companionStore.newId());
@@ -79,6 +88,11 @@ public class ApiCompanionController {
     }
 
     @GetMapping("/companions/{companionId}")
+    /**
+     * 获取companion。
+     * @param companionId companionid
+     * @return 获取companion的结果
+     */
     public ApiResult<Map<String, Object>> getCompanion(@PathVariable String companionId) {
         return ApiResult.ok(withStatus(toProfile(companionStore.getCompanion(companionId))));
     }
@@ -94,6 +108,11 @@ public class ApiCompanionController {
     }
 
     @DeleteMapping("/companions/{companionId}")
+    /**
+     * 删除companion。
+     * @param companionId companionid
+     * @return 删除companion的结果
+     */
     public ApiResult<Void> deleteCompanion(@PathVariable String companionId) {
         companionStore.deleteCompanion(companionId);
         pushService.push("companion.deleted", Map.of("companion_id", companionId));
@@ -109,6 +128,11 @@ public class ApiCompanionController {
     }
 
     @GetMapping("/companions/{companionId}/status")
+    /**
+     * companion状态。
+     * @param companionId companionid
+     * @return companion状态的结果
+     */
     public ApiResult<Map<String, Object>> companionStatus(@PathVariable String companionId) {
         SysAiCompanion companion = companionStore.getCompanion(companionId);
         return ApiResult.ok(statusOf(companion));
@@ -117,7 +141,7 @@ public class ApiCompanionController {
     @PostMapping("/companions/{companionId}/figure")
     public ApiResult<Map<String, Object>> setFigure(@PathVariable String companionId,
                                                     @RequestBody Map<String, Object> body) {
-        // 记录 source_path 到 appearance.custom_figure（前端两阶段上传，此处简化记录）
+ // 记录 源_路径 到 appearance.习俗_figure（前端两阶段上传，此处简化记录）
         @SuppressWarnings("unchecked")
         Map<String, Object> appearance = toMapOrEmpty(companionStore.getCompanion(companionId).getAppearance());
         Map<String, Object> customFigure = new HashMap<>();
@@ -130,6 +154,11 @@ public class ApiCompanionController {
     // ==================== 伙伴专属会话 ====================
 
     @GetMapping("/companions/{companionId}/companion/active")
+    /**
+     * 活跃companion。
+     * @param companionId companionid
+     * @return 活跃companion的结果
+     */
     public ApiResult<Map<String, Object>> activeCompanion(@PathVariable String companionId) {
         SysAiCompanion companion = companionStore.getCompanion(companionId);
         Map<String, Object> result = new LinkedHashMap<>();
@@ -138,6 +167,11 @@ public class ApiCompanionController {
     }
 
     @GetMapping("/companions/{companionId}/companion/threads")
+    /**
+      * companionthreads。
+     * @param companionId companionid
+     * @return companionThreads的结果
+     */
     public ApiResult<List<Map<String, Object>>> companionThreads(@PathVariable String companionId) {
         List<Map<String, Object>> result = new ArrayList<>();
         SysAiCompanion companion = companionStore.getCompanion(companionId);
@@ -149,6 +183,8 @@ public class ApiCompanionController {
 
     /**
      * 幂等确保伙伴专属会话：不存在则创建一条 nomi 会话并持久化绑定。
+     * @param companionId companionid
+     * @return ensurecompanion会话的结果
      */
     @PostMapping("/companions/{companionId}/companion/threads")
     public ApiResult<Map<String, Object>> ensureCompanionSession(@PathVariable String companionId) {
@@ -204,6 +240,11 @@ public class ApiCompanionController {
     }
 
     @GetMapping("/companions/{companionId}/history/days")
+    /**
+     * 历史days。
+     * @param companionId companionid
+     * @return 历史days的结果
+     */
     public ApiResult<List<Map<String, Object>>> historyDays(@PathVariable String companionId) {
         return ApiResult.ok(List.of());
     }
@@ -292,6 +333,11 @@ public class ApiCompanionController {
     }
 
     @PostMapping("/memories")
+    /**
+     * 创建内存。
+     * @param body 主体
+     * @return 创建内存的结果
+     */
     public ApiResult<Map<String, Object>> createMemory(@RequestBody Map<String, Object> body) {
         SysAiCompanionMemory memory = new SysAiCompanionMemory();
         memory.setMemoryId(companionStore.newId());
@@ -327,11 +373,21 @@ public class ApiCompanionController {
     }
 
     @PostMapping("/memories/batch")
+    /**
+      * 批量内存。
+     * @param body 主体
+     * @return batch内存的结果
+     */
     public ApiResult<Void> batchMemories(@RequestBody Map<String, Object> body) {
         return ApiResult.ok();
     }
 
     @PostMapping("/memories/merge-suggestions")
+    /**
+     * 合并suggestions。
+     * @param body 主体
+     * @return 合并suggestions的结果
+     */
     public ApiResult<List<Map<String, Object>>> mergeSuggestions(@RequestBody Map<String, Object> body) {
         String companionId = strOr(body.get("companion_id"), null);
         if (companionId == null || companionId.isBlank()) {
@@ -352,6 +408,11 @@ public class ApiCompanionController {
     }
 
     @PostMapping("/memories/merge")
+    /**
+     * 合并内存。
+     * @param body 主体
+     * @return 合并内存的结果
+     */
     public ApiResult<Map<String, Object>> mergeMemories(@RequestBody Map<String, Object> body) {
         return ApiResult.ok(Map.of("status", "merged"));
     }
@@ -359,6 +420,10 @@ public class ApiCompanionController {
     // ==================== 形象 ====================
 
     @GetMapping("/figures")
+    /**
+     * 列表figures。
+     * @return 列表figures的结果
+     */
     public ApiResult<List<Map<String, Object>>> listFigures() {
         List<Map<String, Object>> result = new ArrayList<>();
         for (SysAiCompanionFigure figure : companionStore.listFigures()) {
@@ -368,20 +433,29 @@ public class ApiCompanionController {
     }
 
     @PostMapping("/figures")
+    /**
+     * 创建figure。
+     * @param body 主体
+     * @return 创建figure的结果
+     */
     public ApiResult<Map<String, Object>> createFigure(@RequestBody Map<String, Object> body) {
         SysAiCompanionFigure figure = new SysAiCompanionFigure();
         figure.setFigureId(companionStore.newId());
         figure.setName(strOr(body.get("name"), "形象"));
         figure.setSourcePath(strOr(body.get("source_path"), null));
         figure.setSizeTier(strOr(body.get("size_tier"), "m"));
-        if (body.get("aspect") instanceof Number aspect) figure.setAspect(aspect.doubleValue());
+        if (body.get("aspect") instanceof Number aspect) {
+            figure.setAspect(aspect.doubleValue());
+        }
         figure.setHeadBox(toMapOrNull(body.get("head_box")));
         companionStore.createFigure(figure);
         return ApiResult.ok(toFigure(figure));
     }
 
     /**
-     * PATCH 形象（兼容前端 updateFigure/renameFigure 的 PATCH 请求）。
+      * PATCH 形象（兼容前端 更新figure/renamefigure 的 PATCH 请求）。
+     * @param figureId figureid
+     * @return 删除figure的结果
      */
     @PatchMapping("/figures/{figureId}")
     public ApiResult<Map<String, Object>> patchFigure(@PathVariable String figureId,
@@ -412,17 +486,30 @@ public class ApiCompanionController {
     // ==================== 事件统计 / 授权 ====================
 
     @GetMapping("/events/stats")
+    /**
+     * 事件stats。
+     * @return 事件stats的结果
+     */
     public ApiResult<List<Map<String, Object>>> eventStats() {
         return ApiResult.ok(List.of());
     }
 
     @GetMapping("/events/storage")
+    /**
+     * 事件storage。
+     * @return 事件storage的结果
+     */
     public ApiResult<Map<String, Object>> eventStorage() {
         return ApiResult.ok(nullableMap("total_bytes", 0, "max_bytes", 0, "file_count", 0,
                 "oldest_day", null, "newest_day", null, "retention_days", 0, "max_storage_mb", 0));
     }
 
     @PostMapping("/consent")
+    /**
+      * applyconsent。
+     * @param body 主体
+     * @return applyConsent的结果
+     */
     public ApiResult<Map<String, Object>> applyConsent(@RequestBody Map<String, Object> body) {
         Map<String, Object> config = sharedConfig();
         config.putIfAbsent("consent_applied", true);
@@ -431,6 +518,11 @@ public class ApiCompanionController {
     }
 
     @PostMapping("/disable-all")
+    /**
+     * disable全部。
+     * @param body 主体
+     * @return disable全部的结果
+     */
     public ApiResult<Map<String, Object>> disableAll(@RequestBody Map<String, Object> body) {
         Map<String, Object> config = sharedConfig();
         config.put("disable_all", true);
@@ -441,6 +533,10 @@ public class ApiCompanionController {
     // ==================== 共享配置 ====================
 
     @GetMapping("/config")
+    /**
+     * 获取配置。
+     * @return 获取配置的结果
+     */
     public ApiResult<Map<String, Object>> getConfig() {
         Map<String, Object> config = sharedConfig();
         pushService.push("companion.config-updated", Map.of("scope", "shared", "config", config));
@@ -448,6 +544,11 @@ public class ApiCompanionController {
     }
 
     @PatchMapping("/config")
+    /**
+     * patch配置。
+     * @param body 主体
+     * @return patch配置的结果
+     */
     public ApiResult<Map<String, Object>> patchConfig(@RequestBody Map<String, Object> body) {
         Map<String, Object> config = sharedConfig();
         config.putAll(toMapOrEmpty(body));
@@ -459,6 +560,11 @@ public class ApiCompanionController {
     // ==================== 导出 / 导入 ====================
 
     @PostMapping("/export/memory")
+    /**
+     * 导出内存。
+     * @param body 主体
+     * @return 导出内存的结果
+     */
     public ApiResult<Map<String, Object>> exportMemory(@RequestBody Map<String, Object> body) {
         return ApiResult.ok(Map.of("dest_path", strOr(body.get("dest_path"), ""), "exported", 0));
     }
@@ -470,12 +576,22 @@ public class ApiCompanionController {
     }
 
     @PostMapping("/import")
+    /**
+     * 导入bundle。
+     * @param body 主体
+     * @return 导入bundle的结果
+     */
     public ApiResult<Map<String, Object>> importBundle(@RequestBody Map<String, Object> body) {
         return ApiResult.ok(Map.of("imported", 0));
     }
 
     // ==================== 内部序列化辅助 ====================
 
+    /**
+     * 转为配置文件。
+     * @param c c
+     * @return 转为配置文件的结果
+     */
     private Map<String, Object> toProfile(SysAiCompanion c) {
         Map<String, Object> profile = new LinkedHashMap<>();
         profile.put("companion_id", c.getCompanionId());
@@ -508,6 +624,11 @@ public class ApiCompanionController {
         return profile;
     }
 
+    /**
+     * 状态的。
+     * @param c c
+     * @return 状态的的结果
+     */
     private Map<String, Object> statusOf(SysAiCompanion c) {
         Map<String, Object> status = new LinkedHashMap<>();
         status.put("companion_id", c.getCompanionId());
@@ -523,11 +644,21 @@ public class ApiCompanionController {
         return status;
     }
 
+    /**
+     * with状态。
+     * @param profile 配置文件
+     * @return with状态的结果
+     */
     private Map<String, Object> withStatus(Map<String, Object> profile) {
         profile.put("status", statusOf(companionStore.getCompanion(strOr(profile.get("companion_id"), null))));
         return profile;
     }
 
+    /**
+     * 转为内存。
+     * @param memory 内存
+     * @return 转为内存的结果
+     */
     private Map<String, Object> toMemory(SysAiCompanionMemory memory) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("memory_id", memory.getMemoryId());
@@ -546,6 +677,11 @@ public class ApiCompanionController {
         return map;
     }
 
+    /**
+     * 转为skill。
+     * @param skill skill
+     * @return 转为skill的结果
+     */
     private Map<String, Object> toSkill(SysAiCompanionSkill skill) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("companion_skill_id", skill.getSkillId());
@@ -567,6 +703,11 @@ public class ApiCompanionController {
         return map;
     }
 
+    /**
+     * 转为figure。
+     * @param figure figure
+     * @return 转为figure的结果
+     */
     private Map<String, Object> toFigure(SysAiCompanionFigure figure) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("figure_id", figure.getFigureId());
@@ -579,6 +720,11 @@ public class ApiCompanionController {
         return map;
     }
 
+    /**
+     * thread的。
+     * @param c c
+     * @return thread的的结果
+     */
     private Map<String, Object> threadOf(SysAiCompanion c) {
         Map<String, Object> thread = new LinkedHashMap<>();
         thread.put("conversation_id", c.getConversationId());
@@ -589,6 +735,10 @@ public class ApiCompanionController {
         return thread;
     }
 
+    /**
+     * 共享配置。
+     * @return 共享配置的结果
+     */
     private Map<String, Object> sharedConfig() {
         String json = companionStore.getConfigValue("shared");
         Map<String, Object> config = new LinkedHashMap<>();
@@ -612,14 +762,25 @@ public class ApiCompanionController {
         return config;
     }
 
+    /**
+     * str或。
+     * @param value 值
+     * @param fallback 降级
+     * @return str或的结果
+     */
     private static String strOr(Object value, String fallback) {
-        if (value == null) return fallback;
+        if (value == null) {
+            return fallback;
+        }
         String s = String.valueOf(value);
         return s.isBlank() ? fallback : s;
     }
 
     /**
-     * 构造允许 null 值的 Map（{@link Map#of} 不允许 null，前端契约中大量可空字段需要它）。
+     * 构造允许 空 值的 映射（{@link Map#of} 不允许 空，前端契约中大量可空字段需要它）。
+     *
+     * @param kv 键值对（键、值、键、值……）
+     * @return 映射
      */
     private static Map<String, Object> nullableMap(Object... kv) {
         Map<String, Object> map = new LinkedHashMap<>();

@@ -37,8 +37,8 @@ import java.util.Map;
  * 真实场景矩阵探针：数据库双向 + 文件系统桥接。
  *
  * <p>覆盖用户关注的"很多场景"（Excel 同步到数据库 / 数据库导出 Excel）：
- * 由于 datasync 的 {@code FileSystemDataSyncSource} 为占位实现（read 返回空流），
- * 本探针通过通用 {@link FileSystem} SPI（POI 的 ExcelFileSystem）桥接出 Excel 源/汇，
+   * 由于 datasync 的 {@code FileSystemDataSyncSource} 为占位实现（读取 返回空流），
+   * 本探针通过通用 {@link FileSystem} SPI（POI 的 excel文件系统）桥接出 Excel 源/汇，
  * 与现成的 CSV/JDBC 组件组合出以下真实数据同步场景：</p>
  *
  * <ol>
@@ -50,9 +50,10 @@ import java.util.Map;
  * </ol>
  *
  * <p>运行说明：需要把 {@code utils-support-excel-starter} 与 POI 全家 jar 追加到运行 classpath
- * （datasync 默认 classpath 不含 POI），并从 H2/源库验证行数与内容一致性。</p>
+   * （datasync 默认 类路径 不含 POI），并从 H2/源库验证行数与内容一致性。</p>
  *
  * @since 4.0.0.42
+ * @author CH
  */
 public final class DataSyncExcelJdbcProbe {
 
@@ -83,6 +84,9 @@ public final class DataSyncExcelJdbcProbe {
      */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);
+        /**
+         * 初始化database。
+         */
         initDatabase();
 
         int failed = 0;
@@ -115,13 +119,17 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-     * 场景1：CSV(Files) → JDBC 数据库。
+      * 场景1：CSV(文件) → JDBC 数据库。
      *
      * @return 失败计数（0 为通过）
      */
     private static int runCsvToDb() throws Exception {
         String name = "CSV->DB(文件导入数据库)";
         Path csv = WORK_DIR.resolve("source.csv");
+        /**
+         * 写入csv。
+         * @param csv csv
+         */
         writeCsv(csv);
 
         DataSyncAgentSource source = new DelimitedDataSyncAgentSource("csv-src", "csv-input", csv.toString(), ",");
@@ -135,7 +143,7 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-     * 场景2：JDBC 数据库 → CSV(Files)。
+      * 场景2：JDBC 数据库 → CSV(文件)。
      *
      * @return 失败计数（0 为通过）
      */
@@ -171,13 +179,17 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-     * 场景4：Excel(FileSystem SPI) → JDBC 数据库。
+      * 场景4：Excel(文件系统 SPI) → JDBC 数据库。
      *
      * @return 失败计数（0 为通过）
      */
     private static int runExcelToDb() throws Exception {
         String name = "Excel->DB(excel同步到数据库, POI)";
         Path excel = WORK_DIR.resolve("seed.xlsx");
+        /**
+         * 写入excel。
+         * @param excel excel
+         */
         writeExcel(excel);
 
         DataSyncAgentSource source = new ExcelFileSource("excel-src", "excel-input", excel.toString());
@@ -191,7 +203,7 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-     * 场景5：JDBC 数据库 → Excel(FileSystem SPI)。
+      * 场景5：JDBC 数据库 → Excel(文件系统 SPI)。
      *
      * @return 失败计数（0 为通过）
      */
@@ -223,7 +235,7 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-     * 场景6：JDBC → JDBC 增量同步（offset 断点续传）。
+      * 场景6：JDBC → JDBC 增量同步（偏移量 断点续传）。
      *
      * <p>先同步前 3000 行到 dst_inc，再用 offset=2999 增量同步剩余 2000 行，
      * 验证最终 5000 行全部到位且增量段不重不丢。</p>
@@ -253,6 +265,10 @@ public final class DataSyncExcelJdbcProbe {
         JdbcDataSyncAgentSink incSink = new JdbcDataSyncAgentSink("inc-sink2", JDBC_URL, "sa", "", insert,
                 1000, COLS);
         incSink.write(Flux.fromIterable(incRows));
+        /**
+         * sleep。
+         * @param 1500 1500
+         */
         sleep(1500);
         incSink.close();
         long incCount = count("dst_inc");
@@ -294,13 +310,17 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-     * 场景9：CSV → Excel（CSV 文件转 Excel 文件，FileSystem SPI 桥接）。
+      * 场景9：CSV → Excel（CSV 文件转 Excel 文件，文件系统 SPI 桥接）。
      *
      * @return 失败计数（0 为通过）
      */
     private static int runCsvToExcel() throws Exception {
         String name = "CSV->Excel(CSV文件转Excel文件, POI)";
         Path csv = WORK_DIR.resolve("source.csv");
+        /**
+         * 写入csv。
+         * @param csv csv
+         */
         writeCsv(csv);
         Path excelOut = WORK_DIR.resolve("csv2excel.xlsx");
 
@@ -333,6 +353,10 @@ public final class DataSyncExcelJdbcProbe {
     private static int runExcelToCsv() throws Exception {
         String name = "Excel->CSV(Excel文件转CSV文件, POI)";
         Path excel = WORK_DIR.resolve("seed.xlsx");
+        /**
+         * 写入excel。
+         * @param excel excel
+         */
         writeExcel(excel);
         Path csvOut = WORK_DIR.resolve("excel2csv.csv");
 
@@ -353,6 +377,10 @@ public final class DataSyncExcelJdbcProbe {
     private static int runExcelMultiSheet() throws Exception {
         String name = "Excel多Sheet(索引+名称双读取)";
         Path excel = WORK_DIR.resolve("multisheet.xlsx");
+        /**
+         * 写入multisheetexcel。
+         * @param excel excel
+         */
         writeMultiSheetExcel(excel);
 
         ExcelFileSource src = new ExcelFileSource("ms-src", "ms-input", excel.toString());
@@ -417,6 +445,10 @@ public final class DataSyncExcelJdbcProbe {
         Path dataPath = WORK_DIR.resolve("chronicle-data");
         // 清理上次运行残留的队列文件，避免 tailer 从头消费旧数据导致重复计数
         if (java.nio.file.Files.exists(dataPath)) {
+            /**
+             * 尝试。
+             * @param java.nio.file.Files.walk(dataPath Java.nio.文件.文件.walk(数据路径
+             */
             try (var walk = java.nio.file.Files.walk(dataPath)) {
                 walk.sorted(java.util.Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
             }
@@ -449,7 +481,7 @@ public final class DataSyncExcelJdbcProbe {
             Thread.sleep(200);
         }
 
-        // 幂等校验：按 id 去重后比对（ChronicleDispatcherProvider tailer 存在重复投递 ~1.8x，为已知问题待专项修复；
+ // 幂等校验：按 标识 去重后比对（chronicledispatcher提供者 tailer 存在重复投递 ~1.8x，为已知问题待专项修复；
         // 数据完整性以「唯一 id 数 == 源行数」为准，重复不影响下游幂等写入场景）
         long unique = received.stream().map(m -> m.get("id")).distinct().count();
         boolean ok = unique == ROWS && "user0".equals(received.get(0).get("name"));
@@ -461,7 +493,7 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-     * 场景14：Delimited 文件增量读取（文件 offset 按行跳过 + FileSyncDataOffsetStorage 持久化）。
+      * 场景14：Delimited 文件增量读取（文件 偏移量 按行跳过 + 文件同步数据偏移量storage 持久化）。
      *
      * @return 失败计数（0 为通过）
      */
@@ -507,13 +539,17 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-     * 场景15：DataSyncAgent 生命周期编排（start/stop、getSource/getSink）。
+      * 场景15：数据同步智能体 生命周期编排（启动/停止、获取源/获取sink）。
      *
      * @return 失败计数（0 为通过）
      */
     private static int runAgentLifecycle() throws Exception {
         String name = "Agent生命周期(start/stop/装配)";
         Path csv = WORK_DIR.resolve("lifecycle.csv");
+        /**
+         * 写入csv。
+         * @param csv csv
+         */
         writeCsv(csv);
         String insert = "INSERT INTO dst_user (id, name, age, score) VALUES (?, ?, ?, ?)";
         DataSyncAgentSource source = new DelimitedDataSyncAgentSource("lc-src", "in", csv.toString(), ",");
@@ -521,7 +557,15 @@ public final class DataSyncExcelJdbcProbe {
                 1000, COLS);
         AbstractDataSyncAgent agent = new AbstractDataSyncAgent("lc-agent") {
             {
+                /**
+                 * 添加源。
+                 * @param source 源
+                 */
                 addSource(source);
+                /**
+                 * 添加sink。
+                 * @param sink sink
+                 */
                 addSink(sink);
             }
         };
@@ -545,6 +589,10 @@ public final class DataSyncExcelJdbcProbe {
      */
     private static int runJdbcBigBatch() throws Exception {
         String name = "JDBC大批量(读写10万行)";
+        /**
+         * 尝试。
+         * @param "" ""
+         */
         try (Connection c = DriverManager.getConnection(JDBC_URL, "sa", "");
              Statement st = c.createStatement()) {
             st.execute("DROP TABLE IF EXISTS big_src");
@@ -571,6 +619,10 @@ public final class DataSyncExcelJdbcProbe {
                 1000, COLS);
 
         long rows = drive(name, source, sink);
+        /**
+         * sleep。
+         * @param 1500 1500
+         */
         sleep(1500);
         sink.close();
         long count = count("big_dst");
@@ -590,14 +642,54 @@ public final class DataSyncExcelJdbcProbe {
             System.out.println("[SKIP] Apache POI not on classpath");
             return 0;
         }
+        /**
+         * 尝试。
+         * @param (java.io.Closeable (Java.io.关闭
+         */
         try (java.io.Closeable wb = (java.io.Closeable) wbClass.getConstructor().newInstance()) {
             Object sheet = wbClass.getMethod("createSheet").invoke(wb);
             Object row0 = sheet.getClass().getMethod("createRow", int.class).invoke(sheet, 0);
+            /**
+             * 设置cellreflect。
+             * @param row0 row0
+             * @param 0 0
+             * @param "str" "str"
+             */
             setCellReflect(row0, 0, "str");
+            /**
+             * 设置cellreflect。
+             * @param row0 row0
+             * @param 1 1
+             * @param "命中" "命中"
+             */
             setCellReflect(row0, 1, "命中");
+            /**
+             * 设置cellreflect。
+             * @param row0 row0
+             * @param 2 2
+             * @param "bool" "bool"
+             */
             setCellReflect(row0, 2, "bool");
+            /**
+             * 设置cellreflect。
+             * @param row0 row0
+             * @param 3 3
+             * @param "date" "日期"
+             */
             setCellReflect(row0, 3, "date");
+            /**
+             * 设置cellreflect。
+             * @param row0 row0
+             * @param 4 4
+             * @param "num" "num"
+             */
             setCellReflect(row0, 4, "num");
+            /**
+             * 设置cellreflect。
+             * @param row0 row0
+             * @param 5 5
+             * @param "formula" "formula"
+             */
             setCellReflect(row0, 5, "formula");
             Object row1 = sheet.getClass().getMethod("createRow", int.class).invoke(sheet, 1);
             row1.getClass().getMethod("createCell", int.class).invoke(row1, 0)
@@ -619,6 +711,10 @@ public final class DataSyncExcelJdbcProbe {
             row1.getClass().getMethod("createCell", int.class).invoke(row1, 5)
                     .getClass().getMethod("setCellFormula", String.class).invoke(
                     row1.getClass().getMethod("createCell", int.class).invoke(row1, 5), "SUM(B2,2)");
+            /**
+             * 尝试。
+             * @param java.io.FileOutputStream(excel.toFile( Java.io.文件输出流(excel.tofile(
+             */
             try (java.io.FileOutputStream fos = new java.io.FileOutputStream(excel.toFile())) {
                 wbClass.getMethod("write", java.io.OutputStream.class).invoke(wb, fos);
             }
@@ -648,7 +744,7 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-     * 反射写入简单单元格（Header 辅助）。
+      * 反射写入简单单元格（头部 辅助）。
      *
      * @param row  行对象
      * @param col  列下标
@@ -663,7 +759,7 @@ public final class DataSyncExcelJdbcProbe {
      * 场景7：DB → Excel → DB 全链路往返一致性（逐字段比对）。
      *
      * <p>从 src_user 导出一份 Excel，再用 SPI 读回 Excel 全部行写入 dst_round，
-     * 最后对 id 做逐字段比对（数值单元格读回为 double，统一转 long 后比较）。</p>
+      * 最后对 标识 做逐字段比对（数值单元格读回为 double，统一转 long 后比较）。</p>
      *
      * @return 失败计数（0 为通过）
      */
@@ -686,6 +782,10 @@ public final class DataSyncExcelJdbcProbe {
         JdbcDataSyncAgentSink rtSink = new JdbcDataSyncAgentSink("rt-sink", JDBC_URL, "sa", "", insert,
                 1000, COLS);
         rtSink.write(Flux.fromIterable(readBack));
+        /**
+         * sleep。
+         * @param 1500 1500
+         */
         sleep(1500);
         rtSink.close();
         long back = count("dst_round");
@@ -694,6 +794,10 @@ public final class DataSyncExcelJdbcProbe {
             return 1;
         }
 
+        /**
+         * 尝试。
+         * @param "" ""
+         */
         try (Connection c = DriverManager.getConnection(JDBC_URL, "sa", "");
              Statement st = c.createStatement();
              ResultSet rs = st.executeQuery(
@@ -735,6 +839,10 @@ public final class DataSyncExcelJdbcProbe {
         long n = rows.size();
         System.out.println("[EXCEL-JDBC-PROBE] 源读取行数=" + n);
         sink.write(Flux.fromIterable(rows));
+        /**
+         * sleep。
+         * @param 1500 1500
+         */
         sleep(1500);
         try {
             sink.close();
@@ -770,6 +878,10 @@ public final class DataSyncExcelJdbcProbe {
      * @throws Exception SQL 异常
      */
     private static void initDatabase() throws Exception {
+        /**
+         * 尝试。
+         * @param "" ""
+         */
         try (Connection c = DriverManager.getConnection(JDBC_URL, "sa", "");
              Statement st = c.createStatement()) {
             st.execute("DROP TABLE IF EXISTS src_user");
@@ -803,6 +915,10 @@ public final class DataSyncExcelJdbcProbe {
      * @return 行数
      */
     private static long count(String table) throws Exception {
+        /**
+         * 尝试。
+         * @param "" ""
+         */
         try (Connection c = DriverManager.getConnection(JDBC_URL, "sa", "");
              Statement st = c.createStatement();
              ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM " + table)) {
@@ -828,7 +944,7 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-     * 写 Excel 种子文件（FileSystem SPI, 首行表头）。
+      * 写 Excel 种子文件（文件系统 SPI, 首行表头）。
      *
      * @param path 目标文件
      */
@@ -861,11 +977,31 @@ public final class DataSyncExcelJdbcProbe {
             System.out.println("[SKIP] Apache POI not on classpath");
             return;
         }
+        /**
+         * 尝试。
+         * @param (java.io.Closeable (Java.io.关闭
+         */
         try (java.io.Closeable wb = (java.io.Closeable) wbClass.getConstructor().newInstance()) {
             Object sheet0 = wbClass.getMethod("createSheet", String.class).invoke(wb, "sheet0");
+            /**
+              * fillsheetreflect。
+             * @param sheet0 sheet0
+             * @param 100 100
+             * @param "user" "用户"
+             */
             fillSheetReflect(sheet0, 100, "user");
             Object sheet1 = wbClass.getMethod("createSheet", String.class).invoke(wb, "sheet1");
+            /**
+              * fillsheetreflect。
+             * @param sheet1 sheet1
+             * @param 50 50
+             * @param "bob" "bob"
+             */
             fillSheetReflect(sheet1, 50, "bob");
+            /**
+             * 尝试。
+             * @param java.io.FileOutputStream(path.toFile( Java.io.文件输出流(路径.tofile(
+             */
             try (java.io.FileOutputStream fos = new java.io.FileOutputStream(path.toFile())) {
                 wbClass.getMethod("write", java.io.OutputStream.class).invoke(wb, fos);
             }
@@ -910,17 +1046,17 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-     * Excel 文件源：基于 {@link FileSystem} SPI（POI ExcelFileSystem）读取 xlsx 为数据行流。
+      * Excel 文件源：基于 {@link FileSystem} SPI（POI excel文件系统）读取 xlsx 为数据行流。
      */
     static final class ExcelFileSource implements DataSyncAgentSource {
 
         /**
-         * 源 id
+          * 源 标识
          */
         private final String sourceId;
 
         /**
-         * 入参 id
+          * 入参 标识
          */
         private final String inputId;
 
@@ -932,9 +1068,10 @@ public final class DataSyncExcelJdbcProbe {
         /**
          * 构造器。
          *
-         * @param sourceId 源 id
-         * @param inputId  入参 id
+         * @param sourceId 源 标识
+         * @param inputId  入参 标识
          * @param filePath Excel 文件路径
+         * @return excel文件源的结果
          */
         ExcelFileSource(String sourceId, String inputId, String filePath) {
             this.sourceId = sourceId;
@@ -1016,12 +1153,12 @@ public final class DataSyncExcelJdbcProbe {
     }
 
     /**
-     * Excel 文件汇：基于 {@link FileSystem} SPI（POI ExcelFileSystem）将数据行写入 xlsx。
+      * Excel 文件汇：基于 {@link FileSystem} SPI（POI excel文件系统）将数据行写入 xlsx。
      */
     static final class ExcelFileSink implements DataSyncAgentSink {
 
         /**
-         * 汇 id
+          * 汇 标识
          */
         private final String sinkId;
 
@@ -1033,8 +1170,9 @@ public final class DataSyncExcelJdbcProbe {
         /**
          * 构造器。
          *
-         * @param sinkId   汇 id
+         * @param sinkId   汇 标识
          * @param filePath 输出文件路径
+         * @return excel文件sink的结果
          */
         ExcelFileSink(String sinkId, String filePath) {
             this.sinkId = sinkId;

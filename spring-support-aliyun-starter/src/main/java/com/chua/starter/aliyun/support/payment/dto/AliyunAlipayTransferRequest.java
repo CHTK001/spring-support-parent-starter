@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 /**
  * 支付宝单笔转账请求
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @Builder
@@ -34,7 +35,7 @@ public class AliyunAlipayTransferRequest {
     private BigDecimal amount;
 
     /** 转账备注 */
-    /** Remark */
+    /** 评论 */
     private String remark;
 }
 

@@ -29,11 +29,11 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 系统 / 设置 / WebUI 凭据 / 鉴权 / 计算机权限 控制器（对接 nomicore 契约）。
+   * 系统 / 设置 / webui 凭据 / 鉴权 / 计算机权限 控制器（对接 nomicore 契约）。
  *
  * <p>替代 Rust 后端的 system / settings / webui / auth / computer 命名空间，
- * 向前端 pages/ai（React+Tauri 桌面应用）提供纯 Spring 实现的 /api/* 接口。
- * 客户端设置与伙伴访问令牌使用内存 Map 维护（无持久态，符合契约占位语义）。</p>
+   * 向前端 pages/AI（React+Tauri 桌面应用）提供纯 Spring 实现的 /api/* 接口。
+   * 客户端设置与伙伴访问令牌使用内存 映射 维护（无持久态，符合契约占位语义）。</p>
  *
  * @since 4.0.0.42
  * @author CH
@@ -51,18 +51,18 @@ public class ApiSystemController {
     private final ApiWebSocketPushService pushService;
 
     /**
-     * Spring 环境（用于读取 active profile）
+      * Spring 环境（用于读取 活跃 配置文件）
      */
     private final Environment environment;
 
     /**
-     * 客户端设置内存存储（key: notificationEnabled|cronNotificationEnabled|keepAwake|
-     * saveUploadToWorkspace|autoPreviewOfficeFiles，value: 是否开启）
+      * 客户端设置内存存储（键: notification已启用|cronnotification已启用|keepawake|
+      * 保存upload转为workspace|autopreview办公室文件，值: 是否开启）
      */
     private final Map<String, Boolean> clientSettings = new ConcurrentHashMap<>();
 
     /**
-     * 伙伴远程访问令牌内存存储（companionId → token 明文，仅生成一次，再次查询返回已配置）
+      * 伙伴远程访问令牌内存存储（companionid → 令牌 明文，仅生成一次，再次查询返回已配置）
      */
     private final Map<String, String> companionAccessTokens = new ConcurrentHashMap<>();
 
@@ -84,7 +84,7 @@ public class ApiSystemController {
     );
 
     // -----------------------------------------------------------------------
-    // System 命名空间
+ // 系统 命名空间
     // -----------------------------------------------------------------------
 
     /**
@@ -119,16 +119,16 @@ public class ApiSystemController {
 
     /**
      * 持久化用户选择的目录配置。
-     * 角色校验由 @Permission 注解经 oauth PermissionInterceptor 处理。
-     * dev profile 校验在此处直接执行。
+      * 角色校验由 @权限 注解经 OAuth 权限拦截器 处理。
+      * dev 配置文件 校验在此处直接执行。
      *
-     * @param body 请求体（含 work_dir / cache_dir / log_dir）
+     * @param body 请求体（含 work_dir / 缓存_dir / 日志_dir）
      * @return 成功信封
      */
     @Permission(role = {"admin", "superadmin"})
     @PostMapping("/system/work-dir")
     public ApiResult<Void> workDir(@RequestBody Map<String, Object> body) {
-        // 仅 dev profile 允许修改系统目录
+ // 仅 dev 配置文件 允许修改系统目录
         String[] profiles = environment.getActiveProfiles();
         boolean isDev = profiles.length == 0 || "dev".equals(profiles[0]);
         if (!isDev) {
@@ -154,8 +154,9 @@ public class ApiSystemController {
     /**
      * 读取单个客户端设置（未设置默认 false）。
      *
-     * @param key 设置键（如 notificationEnabled）
+     * @param key 设置键（如 notification已启用）
      * @return 布尔值
+     * @param false false
      */
     @GetMapping("/settings/client")
     public ApiResult<Object> getClientSetting(@RequestParam(required = false) String key) {
@@ -166,7 +167,7 @@ public class ApiSystemController {
     }
 
     /**
-     * 更新客户端设置（请求体以 key 为字段名，如 {notificationEnabled:true}）。
+      * 更新客户端设置（请求体以 键 为字段名，如 {notification已启用:true}）。
      *
      * @param body 设置键值对
      * @return 成功信封
@@ -197,13 +198,13 @@ public class ApiSystemController {
     }
 
     // -----------------------------------------------------------------------
-    // WebUI 凭据命名空间（本地信任，桌面壳专用）
+ // webui 凭据命名空间（本地信任，桌面壳专用）
     // -----------------------------------------------------------------------
 
     /**
-     * 修改 WebUI 管理员密码（纯后端占位实现）。
+      * 修改 webui 管理员密码（纯后端占位实现）。
      *
-     * @param body 请求体（含 new_password）
+     * @param body 请求体（含 新_密码）
      * @return 成功信封
      */
     @PostMapping("/webui/change-password")
@@ -216,9 +217,9 @@ public class ApiSystemController {
     }
 
     /**
-     * 修改 WebUI 管理员用户名。
+      * 修改 webui 管理员用户名。
      *
-     * @param body 请求体（含 new_username）
+     * @param body 请求体（含 新_用户名）
      * @return 新用户名
      */
     @PostMapping("/webui/change-username")
@@ -249,7 +250,7 @@ public class ApiSystemController {
     /**
      * 查询某伙伴的远程访问令牌是否已配置。
      *
-     * @param companionId 伙伴 ID
+     * @param companionId 伙伴 标识
      * @return 是否已配置
      */
     @GetMapping("/webui/companions/{companionId}/access-token")
@@ -262,8 +263,8 @@ public class ApiSystemController {
     /**
      * 为某伙伴生成远程访问令牌（仅返回明文一次）。
      *
-     * @param companionId 伙伴 ID
-     * @return 令牌 / 伙伴 ID / 可选告警
+     * @param companionId 伙伴 标识
+     * @return 令牌 / 伙伴 标识 / 可选告警
      */
     @PostMapping("/webui/companions/{companionId}/access-token")
     public ApiResult<Map<String, Object>> mintCompanionAccessToken(@PathVariable String companionId) {
@@ -278,7 +279,7 @@ public class ApiSystemController {
     /**
      * 吊销某伙伴的远程访问令牌。
      *
-     * @param companionId 伙伴 ID
+     * @param companionId 伙伴 标识
      * @return 是否已配置（吊销后恒为 false）
      */
     @DeleteMapping("/webui/companions/{companionId}/access-token")
@@ -290,7 +291,7 @@ public class ApiSystemController {
     }
 
     // -----------------------------------------------------------------------
-    // Auth 命名空间（WebUI 浏览器会话自助改密）
+ // 认证 命名空间（webui 浏览器会话自助改密）
     // -----------------------------------------------------------------------
 
     /**
@@ -329,7 +330,7 @@ public class ApiSystemController {
     /**
      * 校验当前密码并修改登录密码（纯后端占位实现）。
      *
-     * @param body 请求体（含 current_password / new_password）
+     * @param body 请求体（含 当前_密码 / 新_密码）
      * @return 成功信封
      */
     @PostMapping("/auth/change-password")
@@ -347,7 +348,7 @@ public class ApiSystemController {
     /**
      * 校验当前密码并修改登录用户名。
      *
-     * @param body 请求体（含 current_password / new_username）
+     * @param body 请求体（含 当前_密码 / 新_用户名）
      * @return 新用户名
      */
     @PostMapping("/auth/change-username")
@@ -369,7 +370,7 @@ public class ApiSystemController {
     // -----------------------------------------------------------------------
 
     /**
-     * 返回当前进程的辅助功能 / 屏幕录制授权状态（占位：非 macOS 返回 null）。
+      * 返回当前进程的辅助功能 / 屏幕录制授权状态（占位：非 macOS 返回 空）。
      *
      * @return 权限状态
      */
@@ -381,7 +382,7 @@ public class ApiSystemController {
     /**
      * 触发授权请求（占位：仅返回当前探测状态）。
      *
-     * @param body 请求体（含 kind）
+     * @param body 请求体（含 种类）
      * @return 权限状态
      */
     @PostMapping("/computer/permissions/request")
@@ -396,7 +397,7 @@ public class ApiSystemController {
     /**
      * 打开系统设置的对应隐私面板（占位实现）。
      *
-     * @param body 请求体（含 kind）
+     * @param body 请求体（含 种类）
      * @return 成功信封
      */
     @PostMapping("/computer/permissions/open-settings")
@@ -412,9 +413,15 @@ public class ApiSystemController {
     // 内部工具方法
     // -----------------------------------------------------------------------
 
+        /**
+          * resolvestoragegeneration。
+         * @return resolveStorageGeneration的结果
+         */
         private String resolveStorageGeneration() {
         String env = System.getenv("STORAGE_GENERATION");
-        if (env != null && !env.isBlank()) return env;
+        if (env != null && !env.isBlank()) {
+            return env;
+        }
         long millis = System.currentTimeMillis();
         byte[] bytes = new byte[16];
         bytes[0] = (byte)(millis >>> 40);
@@ -429,7 +436,9 @@ public class ApiSystemController {
         char[] hex = "0123456789abcdef".toCharArray();
         StringBuilder sb = new StringBuilder(36);
         for (int i = 0; i < 16; i++) {
-            if (i == 4 || i == 6 || i == 8 || i == 10) sb.append('-');
+            if (i == 4 || i == 6 || i == 8 || i == 10) {
+                sb.append('-');
+            }
             sb.append(hex[(bytes[i] >> 4) & 0xF]).append(hex[bytes[i] & 0xF]);
         }
         return sb.toString();
@@ -438,7 +447,7 @@ public class ApiSystemController {
 /**
      * 构造计算机权限状态对象。
      *
-     * @return 权限状态（accessibility / screen_recording / platform / app_label）
+     * @return 权限状态（accessibility / 屏幕_recording / platform / app_标签）
      */
     private Map<String, Object> buildPermissionStatus() {
         Map<String, Object> status = new LinkedHashMap<>();
@@ -452,7 +461,7 @@ public class ApiSystemController {
     /**
      * 探测运行平台。
      *
-     * @return macos / windows / linux / other
+     * @return macos / 窗口 / Linux / other
      */
     private String detectPlatform() {
         String os = System.getProperty("os.name", "").toLowerCase();
@@ -512,7 +521,8 @@ public class ApiSystemController {
     }
 
     /**
-     * 返回当前激活的 Spring profile（用于前端 dev 模式判断）。
+      * 返回当前激活的 Spring 配置文件（用于前端 dev 模式判断）。
+     * @return resolve活跃配置文件的结果
      */
     private String resolveActiveProfile() {
         String[] profiles = environment.getActiveProfiles();

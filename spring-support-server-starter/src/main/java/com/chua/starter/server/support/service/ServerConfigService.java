@@ -8,6 +8,8 @@ import java.util.Map;
 
 /**
  * 服务器系统配置服务
+ * @author CH
+ * @since 4.0.0
  */
 public interface ServerConfigService {
 
@@ -19,9 +21,9 @@ public interface ServerConfigService {
     ReturnResult<List<MsServerConfig>> listAll();
 
     /**
-     * 读取全部配置为扁平 Map（缺省合并默认值）
+      * 读取全部配置为扁平 映射（缺省合并默认值）
      *
-     * @return key -> value 映射
+     * @return key -> 价值观 映射
      */
     ReturnResult<Map<String, Object>> getConfigMap();
 

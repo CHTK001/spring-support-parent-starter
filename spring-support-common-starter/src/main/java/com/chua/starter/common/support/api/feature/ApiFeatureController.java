@@ -16,11 +16,11 @@ import java.util.Set;
  * API 功能开关管理控制器
  * <p>
  * 提供功能开关的查询和管理接口。
- * 此接口为内部接口，仅允许内网IP或白名单服务调用，不受 OAuth 鉴权控制。
+   * 此接口为内部接口，仅允许内网IP或白名单服务调用，不受 o认证 鉴权控制。
  * </p>
  *
  * @since 2024/12/08
- * @version 1.0.0
+   * @版本 1.0.0
  * @author CH
  */
 @RestController
@@ -30,13 +30,13 @@ import java.util.Set;
 @ConditionalOnProperty(name = "plugin.api.feature.enable", havingValue = "true", matchIfMissing = false)
 public class ApiFeatureController {
 
-    /** Feature管理器 */
+    /** 特征管理器 */
     private final ApiFeatureManager featureManager;
 
     /**
      * 构造函数
      *
-     * @param featureManager ApiFeatureManager
+     * @param featureManager api特征管理器
      */
     public ApiFeatureController(ApiFeatureManager featureManager) {
         this.featureManager = featureManager;

@@ -12,12 +12,13 @@ import java.time.LocalDateTime;
 /**
  * 钱包订单
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @TableName("pay_wallet_order")
 public class WalletOrder {
     @TableId(value = "pay_wallet_order_id", type = IdType.AUTO)
-    /** ID */
+    /** 标识 */
     private Long id;
 
     @TableField("pay_wallet_order_order_no")
@@ -29,19 +30,19 @@ public class WalletOrder {
     private String orderType;
 
     @TableField("pay_wallet_order_tenant_id")
-    /** TenantID */
+    /** tenantid */
     private Long tenantId;
 
     @TableField("pay_wallet_order_merchant_id")
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
 
     @TableField("pay_wallet_order_user_id")
-    /** 用户ID */
+    /** 用户标识 */
     private Long userId;
 
     @TableField("pay_wallet_order_related_user_id")
-    /** Related用户ID */
+    /** Related用户标识 */
     private Long relatedUserId;
 
     @TableField("pay_wallet_order_amount")
@@ -65,7 +66,7 @@ public class WalletOrder {
     private String bankName;
 
     @TableField("pay_wallet_order_account_name")
-    /** Account名称 */
+    /** 账户名称 */
     private String accountName;
 
     @TableField("pay_wallet_order_request_payload")
@@ -77,39 +78,39 @@ public class WalletOrder {
     private String responsePayload;
 
     @TableField("pay_wallet_order_operator")
-    /** Operator */
+    /** 操作符 */
     private String operator;
 
     @TableField("pay_wallet_order_remark")
-    /** Remark */
+    /** 评论 */
     private String remark;
 
     @TableField("pay_wallet_order_completed_at")
-    /** CompletedAT */
+    /** 完成at */
     private LocalDateTime completedAt;
 
     @TableField("pay_wallet_order_create_time")
-    /** Create时间 */
+    /** 创建时间 */
     private LocalDateTime createTime;
 
     @TableField("pay_wallet_order_update_time")
-    /** Update时间 */
+    /** 更新时间 */
     private LocalDateTime updateTime;
 
     @TableField("pay_wallet_order_create_by")
-    /** CreateBY */
+    /** 创建by */
     private String createBy;
 
     @TableField("pay_wallet_order_update_by")
-    /** UpdateBY */
+    /** 更新by */
     private String updateBy;
 
     @TableField("pay_wallet_order_create_name")
-    /** Create名称 */
+    /** 创建名称 */
     private String createName;
 
     @TableField("pay_wallet_order_update_name")
-    /** Update名称 */
+    /** 更新名称 */
     private String updateName;
 }
 

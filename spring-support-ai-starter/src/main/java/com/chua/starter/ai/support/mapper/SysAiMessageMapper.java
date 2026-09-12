@@ -5,7 +5,7 @@ import com.chua.starter.ai.support.entity.SysAiMessage;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * AI 会话消息 Mapper。
+   * AI 会话消息 映射器。
  *
  * @since 4.0.0.42
  * @author CH

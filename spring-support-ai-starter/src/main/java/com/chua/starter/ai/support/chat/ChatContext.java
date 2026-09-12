@@ -13,7 +13,7 @@ import java.util.Map;
 public class ChatContext {
 
     /**
-     * 用户 ID
+      * 用户 标识
      */
     private String userId;
 
@@ -33,18 +33,18 @@ public class ChatContext {
     private Map<String, Object> attributes;
 
     /**
-     * 获取用户 ID。
+      * 获取用户 标识。
      *
-     * @return 用户 ID
+     * @return 用户 标识
      */
     public String getUserId() {
         return userId;
     }
 
     /**
-     * 设置用户 ID。
+      * 设置用户 标识。
      *
-     * @param userId 用户 ID
+     * @param userId 用户 标识
      */
     public void setUserId(String userId) {
         this.userId = userId;
@@ -121,7 +121,7 @@ public class ChatContext {
      * 读取扩展属性。
      *
      * @param key 属性键
-     * @return 属性值，不存在时返回 null
+     * @return 属性值，不存在时返回 空
      */
     public Object attribute(String key) {
         if (attributes == null) {

@@ -38,6 +38,12 @@ public interface SimpleRedisService {
     default void incrementDay(String indicator, String key) {
         ComparableDateTime comparableDateTime = DateTime.now().withLastTimeOfDay();
         long ofSeconds = comparableDateTime.betweenOfSeconds(LocalDateTime.now());
+        /**
+         * increment。
+         * @param indicator indicator
+         * @param key 钥匙
+         * @param ofSeconds 的seconds
+         */
         increment(indicator, key, ofSeconds);
     }
     /**
@@ -57,6 +63,12 @@ public interface SimpleRedisService {
     default void decrementDay(String indicator, String key) {
         ComparableDateTime comparableDateTime = DateTime.now().withLastTimeOfDay();
         long ofSeconds = comparableDateTime.betweenOfSeconds(LocalDateTime.now());
+        /**
+         * decrement。
+         * @param indicator indicator
+         * @param key 钥匙
+         * @param ofSeconds 的seconds
+         */
         decrement(indicator, key, ofSeconds);
     }
     /**

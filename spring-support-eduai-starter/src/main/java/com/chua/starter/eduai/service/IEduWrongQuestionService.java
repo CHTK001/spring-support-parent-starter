@@ -20,9 +20,9 @@ public interface IEduWrongQuestionService extends IService<EduWrongQuestion> {
     /**
      * 记录错题
      *
-     * @param studentId  学生ID
-     * @param questionId 题目ID
-     * @param examId     考试ID
+     * @param studentId  学生标识
+     * @param questionId 题目标识
+     * @param examId     考试标识
      */
     void recordWrongQuestion(String studentId, Long questionId, Long examId);
 
@@ -45,7 +45,7 @@ public interface IEduWrongQuestionService extends IService<EduWrongQuestion> {
     /**
      * 更新掌握度
      *
-     * @param wrongId      错题记录ID
+     * @param wrongId      错题记录标识
      * @param masteryLevel 掌握度
      * @return 是否成功
      */

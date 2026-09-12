@@ -7,20 +7,21 @@ import java.math.BigDecimal;
 /**
  * 订单创建请求
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class OrderCreateRequest {
     /** 排序NO */
     private String orderNo;
-    /** 用户ID */
+    /** 用户标识 */
     private Long userId;
     /** Amount */
     private BigDecimal amount;
-    /** Subject */
+    /** 主题 */
     private String subject;
     /** 请求体 */
     private String body;
-    /** Currency */
+    /** 货币 */
     private String currency;
     /** Attach */
     private String attach;

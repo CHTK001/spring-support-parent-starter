@@ -7,7 +7,7 @@ import org.springframework.expression.common.TemplateParserContext;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 /**
- * SpEL 表达式解析器适配。
+   * spel 表达式解析器适配。
  *
  * @since 2024/01/01
  * @author CH
@@ -21,7 +21,7 @@ public class SpringSpelExpressionParser implements com.chua.common.support.lang.
     private final org.springframework.expression.ExpressionParser expressionParser = new org.springframework.expression.spel.standard.SpelExpressionParser();
 
     @Override
-    /** Type */
+    /** 类型 */
     public String type() {
         return "spring";
     }

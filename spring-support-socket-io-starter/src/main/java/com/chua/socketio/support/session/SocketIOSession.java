@@ -13,17 +13,17 @@ import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Socket.IO 会话实现
+   * 套接字.IO 会话实现
  *
- * @version 1.0.0
+   * @版本 1.0.0
  * @since 2024-12-04
  * @author CH
  */
 public class SocketIOSession implements SocketSession {
 
-    /** Object_mapper */
+    /** 对象_映射器 */
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    /** Attribute_encrypt_requested */
+    /** Attribute_encrypt_请求 */
     public static final String ATTRIBUTE_ENCRYPT_REQUESTED = "socketEncryptRequested";
     /** 客户端 */
     private final SocketIOClient client;
@@ -31,16 +31,17 @@ public class SocketIOSession implements SocketSession {
     private final SocketProperties properties;
     /** 消息codec */
     private final SocketMessageCodec messageCodec;
-    private final Map<String, Object> attributes = new ConcurrentHashMap<>();
-    /** 客户端ID */
+    private final Map<String, Object> attributes = new ConcurrentHashMap<>(); // attributes
+    /** 客户端标识 */
     private String clientId;
     /** 用户 */
     private SocketUser user;
 
     /**
-     * 创建 SocketIOSession 实例
-     * @param client client
-     * @param SocketProperties SocketProperties
+      * 创建 套接字io会话 实例
+     * @param client 客户端
+     * @param properties 套接字属性
+     * @param properties 属性
      */
     public SocketIOSession(SocketIOClient client, SocketProperties properties) {
         this.client = client;
@@ -48,36 +49,41 @@ public class SocketIOSession implements SocketSession {
         this.messageCodec = new SocketMessageCodec(properties);
         Boolean encryptRequested = resolveEncryptRequested(client);
         if (encryptRequested != null) {
+            /**
+             * 设置attribute。
+             * @param ATTRIBUTE_ENCRYPT_REQUESTED attributeencrypt请求
+             * @param encryptRequested encrypt请求
+             */
             setAttribute(ATTRIBUTE_ENCRYPT_REQUESTED, encryptRequested);
         }
     }
 
     @Override
-    /** 获取Id */
+    /** 获取标识 */
     public String getId() {
         return client.getSessionId().toString();
     }
 
     @Override
-    /** 获取ClientId */
+    /** 获取客户端标识 */
     public String getClientId() {
         return clientId;
     }
 
     @Override
-    /** 设置ClientId */
+    /** 设置客户端标识 */
     public void setClientId(String clientId) {
         this.clientId = clientId;
     }
 
     @Override
-    /** 获取User */
+    /** 获取用户 */
     public SocketUser getUser() {
         return user;
     }
 
     @Override
-    /** 设置User */
+    /** 设置用户 */
     public void setUser(SocketUser user) {
         this.user = user;
     }
@@ -90,7 +96,12 @@ public class SocketIOSession implements SocketSession {
 
     @Override
     @SuppressWarnings("unchecked")
-    /** 获取Attribute */
+    /**
+     * 获取Attribute
+     *
+     * @param key 钥匙
+     * @return 获取attribute的结果
+     */
     public <T> T getAttribute(String key) {
         return (T) attributes.get(key);
     }
@@ -108,7 +119,7 @@ public class SocketIOSession implements SocketSession {
     }
 
     @Override
-    /** 是否Connected */
+    /** 是否连接 */
     public boolean isConnected() {
         return client.isChannelOpen();
     }
@@ -141,20 +152,24 @@ public class SocketIOSession implements SocketSession {
     /** 发送Binary */
     public void sendBinary(String event, byte[] data) {
         if (client.isChannelOpen()) {
-            // Socket.IO 原生支持二进制数据传输
+ // 套接字.IO 原生支持二进制数据传输
             client.sendEvent(event, data);
         }
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    /** 获取Connection */
+    /**
+     * 获取Connection
+     *
+     * @return 获取connection的结果
+     */
     public <T> T getConnection() {
         return (T) client;
     }
 
     /**
-     * 获取原生 Socket.IO 客户端
+      * 获取原生 套接字.IO 客户端
      *
      * @return SocketIOClient
      */
@@ -162,7 +177,12 @@ public class SocketIOSession implements SocketSession {
         return client;
     }
 
-    /** 解析EncryptRequested */
+    /**
+     * 解析encrypt请求
+     *
+     * @param client 客户端
+     * @return resolveencrypt请求的结果
+     */
     private Boolean resolveEncryptRequested(SocketIOClient client) {
         if (client == null) {
             return null;
@@ -177,7 +197,13 @@ public class SocketIOSession implements SocketSession {
         return parseEncryptRequested(encryptValue);
     }
 
-    /** FirstNonBlank */
+    /**
+     * 第一个nonblank
+     *
+     * @param first 第一个
+     * @param second second
+     * @return 第一个nonblank的结果
+     */
     private String firstNonBlank(String first, String second) {
         if (first != null && !first.isBlank()) {
             return first;
@@ -188,7 +214,12 @@ public class SocketIOSession implements SocketSession {
         return null;
     }
 
-    /** 解析EncryptRequested */
+    /**
+     * 解析encrypt请求
+     *
+     * @param value 价值观
+     * @return 解析encrypt请求的结果
+     */
     private Boolean parseEncryptRequested(String value) {
         if (value == null || value.isBlank()) {
             return null;

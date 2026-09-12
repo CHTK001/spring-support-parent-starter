@@ -13,7 +13,7 @@ import java.util.Set;
 /**
  * OAuth Principal实现
  * 
- * 实现java.security.Principal接口，集成OAuth用户信息，
+   * 实现Java.安全性.Principal接口，集成OAuth用户信息，
  * 提供用户身份验证和权限管理功能。
  * 
  * @since 2024/12/20
@@ -146,6 +146,8 @@ public class OAuthPrincipal implements Principal {
     
     /**
      * 判断字符串是否有值
+     * @param value 值
+     * @return 是否包含值的结果
      */
     private static boolean hasValue(String value) {
         return value != null && !value.isEmpty();
@@ -163,7 +165,7 @@ public class OAuthPrincipal implements Principal {
     }
 
     @Override
-    /** 获取Name */
+    /** 获取名称 */
     public String getName() {
         String name = userResume != null ? userResume.getUsername() : "anonymous";
         log.debug("[Principal获取]获取用户名: {}", name);
@@ -171,7 +173,7 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-     * 获取用户ID
+      * 获取用户标识
      * 
      * @return 用户ID
      */
@@ -193,7 +195,7 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-     * 获取租户ID
+      * 获取租户标识
      * 
      * @return 租户ID
      */
@@ -204,7 +206,7 @@ public class OAuthPrincipal implements Principal {
     }
 
     /**
-     * 获取部门ID
+      * 获取部门标识
      * 
      * @return 部门ID
      */
@@ -404,6 +406,8 @@ public class OAuthPrincipal implements Principal {
     
     /**
      * 脱敏手机号
+     * @param phone phone
+     * @return maskPhone的结果
      */
     private String maskPhone(String phone) {
         if (phone == null || phone.length() < 7) {
@@ -414,6 +418,8 @@ public class OAuthPrincipal implements Principal {
     
     /**
      * 脱敏身份证号
+     * @param card 卡片
+     * @return mask卡片的结果
      */
     private String maskCard(String card) {
         if (card == null || card.length() < 10) {
@@ -423,7 +429,7 @@ public class OAuthPrincipal implements Principal {
     }
 
     @Override
-    /** ToString */
+    /** 转为字符串 */
     public String toString() {
         return "OAuthPrincipal{" +
                 "name='" + getName() + '\'' +
@@ -438,18 +444,26 @@ public class OAuthPrincipal implements Principal {
     @Override
     /** 判断相等 */
     public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
         
         OAuthPrincipal that = (OAuthPrincipal) obj;
         
-        if (authenticated != that.authenticated) return false;
-        if (userResume != null ? !userResume.equals(that.userResume) : that.userResume != null) return false;
+        if (authenticated != that.authenticated) {
+            return false;
+        }
+        if (userResume != null ? !userResume.equals(that.userResume) : that.userResume != null) {
+            return false;
+        }
         return authType != null ? authType.equals(that.authType) : that.authType == null;
     }
 
     @Override
-    /** HashCode */
+    /** 哈希编码 */
     public int hashCode() {
         int result = userResume != null ? userResume.hashCode() : 0;
         result = 31 * result + (authType != null ? authType.hashCode() : 0);

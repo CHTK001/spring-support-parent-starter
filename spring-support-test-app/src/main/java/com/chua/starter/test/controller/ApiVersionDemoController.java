@@ -23,12 +23,20 @@ public class ApiVersionDemoController {
 
     @GetMapping
     @ApiVersion("1")
+    /**
+      * greetv1。
+     * @return greetV1的结果
+     */
     public Map<String, Object> greetV1() {
         return Map.of("version", "1", "message", "hello-v1");
     }
 
     @GetMapping
     @ApiVersion("2")
+    /**
+      * greetv2。
+     * @return greetV2的结果
+     */
     public Map<String, Object> greetV2() {
         return Map.of("version", "2", "message", "hello-v2");
     }

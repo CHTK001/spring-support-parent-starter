@@ -29,7 +29,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Agent Browser 管理控制器。
+   * 智能体 Browser 管理控制器。
  *
  * <p>提供浏览器实例（Lane）、标签页（Tab）、宿主进程（Host）和全局设置的 CRUD 操作。
  * 对接前端 {@code /api/browser/*} 端点，替代原 Rust 后端的浏览器管理能力。</p>
@@ -54,22 +54,22 @@ import java.util.stream.Collectors;
 public class AgentBrowserController {
 
     /**
-     * Lane Mapper
+      * Lane 映射器
      */
     private final AgentBrowserLaneMapper laneMapper;
 
     /**
-     * Tab Mapper
+      * Tab 映射器
      */
     private final AgentBrowserTabMapper tabMapper;
 
     /**
-     * Host Mapper
+      * 主机 映射器
      */
     private final AgentBrowserHostMapper hostMapper;
 
     /**
-     * Setting Mapper
+      * Setting 映射器
      */
     private final AgentBrowserSettingMapper settingMapper;
 
@@ -88,6 +88,10 @@ public class AgentBrowserController {
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "获取成功")
     })
+    /**
+     * 获取overview。
+     * @return 获取overview的结果
+     */
     public ApiResult<Map<String, Object>> getOverview() {
         long now = System.currentTimeMillis();
 
@@ -98,10 +102,10 @@ public class AgentBrowserController {
                 + laneMapper.countByState("starting")
                 + laneMapper.countByState("frozen");
 
-        // 获取 Host 列表
+ // 获取 主机 列表
         List<AgentBrowserHost> hosts = hostMapper.selectList(null);
 
-        // 构建 Host 列表
+ // 构建 主机 列表
         List<Map<String, Object>> hostList = hosts.stream().map(h -> {
             Map<String, Object> hostMap = new LinkedHashMap<>();
             hostMap.put("host_id", h.getHostId());
@@ -177,7 +181,7 @@ public class AgentBrowserController {
     /**
      * 获取单个 Lane 详情。
      *
-     * @param laneId Lane ID
+     * @param laneId Lane 标识
      * @return Lane 详情
      */
     @GetMapping("/lanes/{lane_id}")
@@ -186,6 +190,12 @@ public class AgentBrowserController {
             @Parameter(description = "Lane ID") @PathVariable("lane_id") String laneId) {
         AgentBrowserLane lane = laneMapper.selectById(laneId);
         if (lane == null) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+             * @param laneId laneid
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "Lane 不存在: " + laneId);
         }
         return ApiResult.ok(toLaneResponse(lane));
@@ -245,7 +255,7 @@ public class AgentBrowserController {
     /**
      * 更新 Lane 信息。
      *
-     * @param laneId Lane ID
+     * @param laneId Lane 标识
      * @param body   更新参数
      * @return 更新后的 Lane 信息
      */
@@ -256,6 +266,12 @@ public class AgentBrowserController {
             @RequestBody Map<String, Object> body) {
         AgentBrowserLane lane = laneMapper.selectById(laneId);
         if (lane == null) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+             * @param laneId laneid
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "Lane 不存在: " + laneId);
         }
 
@@ -286,7 +302,7 @@ public class AgentBrowserController {
      *
      * <p>将 Lane 状态设置为 stopping，删除关联的 Tab，并更新 Host 的 lane_count。</p>
      *
-     * @param laneId Lane ID
+     * @param laneId Lane 标识
      * @return 关闭结果
      */
     @PostMapping("/lanes/{lane_id}/close")
@@ -296,6 +312,12 @@ public class AgentBrowserController {
             @Parameter(description = "Lane ID") @PathVariable("lane_id") String laneId) {
         AgentBrowserLane lane = laneMapper.selectById(laneId);
         if (lane == null) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+             * @param laneId laneid
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "Lane 不存在: " + laneId);
         }
 
@@ -315,7 +337,7 @@ public class AgentBrowserController {
     /**
      * 将 Lane 前台化（显示窗口）。
      *
-     * @param laneId Lane ID
+     * @param laneId Lane 标识
      * @return 前台化结果
      */
     @PostMapping("/lanes/{lane_id}/foreground")
@@ -324,10 +346,16 @@ public class AgentBrowserController {
             @Parameter(description = "Lane ID") @PathVariable("lane_id") String laneId) {
         AgentBrowserLane lane = laneMapper.selectById(laneId);
         if (lane == null) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+             * @param laneId laneid
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "Lane 不存在: " + laneId);
         }
 
-        // 更新 Host 为 headful 模式
+ // 更新 主机 为 headful 模式
         List<AgentBrowserHost> hosts = hostMapper.selectList(null);
         for (AgentBrowserHost host : hosts) {
             host.setHeadful(true);
@@ -345,7 +373,7 @@ public class AgentBrowserController {
     /**
      * 将 Lane 后台化（返回无头）。
      *
-     * @param laneId Lane ID
+     * @param laneId Lane 标识
      * @return 后台化结果
      */
     @PostMapping("/lanes/{lane_id}/background")
@@ -354,10 +382,16 @@ public class AgentBrowserController {
             @Parameter(description = "Lane ID") @PathVariable("lane_id") String laneId) {
         AgentBrowserLane lane = laneMapper.selectById(laneId);
         if (lane == null) {
+            /**
+             * api异常。
+             * @param ApiErrorCode.NOT_FOUND api错误编码.notfound
+             * @param laneId laneid
+             * @return api异常的结果
+             */
             throw new ApiException(ApiErrorCode.NOT_FOUND, "Lane 不存在: " + laneId);
         }
 
-        // 更新 Host 为 headless 模式
+ // 更新 主机 为 headless 模式
         List<AgentBrowserHost> hosts = hostMapper.selectList(null);
         for (AgentBrowserHost host : hosts) {
             host.setHeadful(false);
@@ -377,7 +411,7 @@ public class AgentBrowserController {
     /**
      * 关闭指定对话的所有 Lane。
      *
-     * @param conversationId 对话 ID
+     * @param conversationId 对话 标识
      * @return 关闭结果
      */
     @PostMapping("/conversations/{conversation_id}/close")
@@ -420,7 +454,7 @@ public class AgentBrowserController {
         // 删除所有 Lane
         laneMapper.delete(null);
 
-        // 重置 Host lane_count
+ // 重置 主机 lane_数量
         List<AgentBrowserHost> hosts = hostMapper.selectList(null);
         long now = System.currentTimeMillis();
         for (AgentBrowserHost host : hosts) {
@@ -692,9 +726,9 @@ public class AgentBrowserController {
     }
 
     /**
-     * 从 Map 中安全获取字符串值。
+      * 从 映射 中安全获取字符串值。
      *
-     * @param map          源 Map
+     * @param map          源 映射
      * @param key          键名
      * @param defaultValue 默认值
      * @return 字符串值

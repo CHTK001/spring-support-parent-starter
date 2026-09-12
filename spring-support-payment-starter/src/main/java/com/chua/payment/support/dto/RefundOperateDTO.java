@@ -7,20 +7,21 @@ import java.math.BigDecimal;
 /**
  * 退款单操作 DTO
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class RefundOperateDTO {
 
-    /** Operator */
+    /** 操作符 */
     private String operator;
 
-    /** Remark */
+    /** 评论 */
     private String remark;
 
     /** Refundamount */
     private BigDecimal refundAmount;
 
-    /** ThirdpartyrefundNO */
+    /** thirdpartyrefundno */
     private String thirdPartyRefundNo;
 }
 

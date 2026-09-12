@@ -9,24 +9,25 @@ import java.util.Map;
 /**
  * 微信支付分创建请求
  * @author CH
+ * @since 4.0.0
  */
 @Data
 public class WechatPayScoreCreateDTO {
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
-    /** 通道ID */
+    /** 通道标识 */
     private Long channelId;
-    /** 用户ID */
+    /** 用户标识 */
     private Long userId;
-    /** OUT排序NO */
+    /** 出排序NO */
     private String outOrderNo;
-    /** 服务ID */
+    /** 服务标识 */
     private String serviceId;
-    /** OpenID */
+    /** 打开标识 */
     private String openId;
     /** 总数amount */
     private BigDecimal totalAmount;
-    /** NotifyURL */
+    /** 通知url */
     private String notifyUrl;
     /** 服务introduction */
     private String serviceIntroduction;
@@ -34,18 +35,18 @@ public class WechatPayScoreCreateDTO {
     private String startTime;
     /** 结束时间 */
     private String endTime;
-    /** Reason */
+    /** ReasonMLmlml */
     private String reason;
-    /** Finish类型 */
+    /** 饰面类型 */
     private String finishType;
     /** Need用户confirm */
     private Boolean needUserConfirm;
     /** Attach */
     private String attach;
-    private List<Map<String, Object>> postPayments;
-    private List<Map<String, Object>> postDiscounts;
-    private Map<String, Object> extraParams;
-    /** Remark */
+    private List<Map<String, Object>> postPayments; // postpayments
+    private List<Map<String, Object>> postDiscounts; // postdiscounts
+    private Map<String, Object> extraParams; // extra参数
+    /** 评论 */
     private String remark;
 }
 

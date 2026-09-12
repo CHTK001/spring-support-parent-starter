@@ -15,7 +15,7 @@ public class PaperQueryDTO {
     private Integer pageNum = 1;
     /** 每页大小 */
     private Integer pageSize = 10;
-    /** Subject */
+    /** 主题 */
     private String subject;
     /** Grade级别 */
     private String gradeLevel;

@@ -13,21 +13,22 @@ import java.time.LocalDateTime;
 /**
  * 钱包账户流水
  * @author CH
+ * @since 4.0.0
  */
 @Data
 @TableName("pay_wallet_account_log")
 public class WalletAccountLog {
 
     @TableId(value = "pay_wallet_account_log_id", type = IdType.AUTO)
-    /** ID */
+    /** 标识 */
     private Long id;
 
     @TableField("pay_wallet_account_log_merchant_id")
-    /** MerchantID */
+    /** merchantid */
     private Long merchantId;
 
     @TableField("pay_wallet_account_log_user_id")
-    /** 用户ID */
+    /** 用户标识 */
     private Long userId;
 
     @TableField("pay_wallet_account_log_biz_type")
@@ -39,7 +40,7 @@ public class WalletAccountLog {
     private String bizNo;
 
     @TableField("pay_wallet_account_log_change_type")
-    /** Change类型 */
+    /** 改变类型 */
     private String changeType;
 
     @TableField("pay_wallet_account_log_change_amount")
@@ -55,11 +56,11 @@ public class WalletAccountLog {
     private BigDecimal balanceAfter;
 
     @TableField("pay_wallet_account_log_operator")
-    /** Operator */
+    /** 操作符 */
     private String operator;
 
     @TableField("pay_wallet_account_log_remark")
-    /** Remark */
+    /** 评论 */
     private String remark;
 
     @TableField(value = "pay_wallet_account_log_created_at", fill = FieldFill.INSERT)

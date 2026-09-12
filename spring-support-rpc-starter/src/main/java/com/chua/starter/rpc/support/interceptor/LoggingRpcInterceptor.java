@@ -33,7 +33,7 @@ public class LoggingRpcInterceptor implements RpcInterceptor {
     }
 
     @Override
-    /** 处理Exception */
+    /** 处理异常 */
     public void handleException(Method method, Object[] args, Throwable error) throws Throwable {
         log.error("[RPC] 调用失败: {}.{}, error={}",
             method.getDeclaringClass().getSimpleName(), method.getName(), error.getMessage());
@@ -41,7 +41,7 @@ public class LoggingRpcInterceptor implements RpcInterceptor {
     }
 
     @Override
-    /** 获取Order */
+    /** 获取订单 */
     public int getOrder() {
         return Integer.MAX_VALUE; // 最低优先级，最后执行
     }

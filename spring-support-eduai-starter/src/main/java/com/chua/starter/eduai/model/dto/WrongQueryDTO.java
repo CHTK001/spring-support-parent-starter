@@ -15,9 +15,9 @@ public class WrongQueryDTO {
     private Integer pageNum = 1;
     /** 每页大小 */
     private Integer pageSize = 10;
-    /** StudentID */
+    /** studentid */
     private String studentId;
-    /** Subject */
+    /** 主题 */
     private String subject;
     /** Mastery级别 */
     private Integer masteryLevel;

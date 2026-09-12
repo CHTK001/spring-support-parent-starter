@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.server.support.entity.MsExecLog;
 
 /**
- * MsExecLog Mapper
+   * ms执行日志 映射器
  *
  * @author CH
  * @since 4.0.0.42
