@@ -175,7 +175,7 @@ public class ApmController {
                 emitter.complete();
             }
         }, 0, effective, TimeUnit.MILLISECONDS);
-        emitter.onCompletion(task::cancel);
+        emitter.onCompletion(() -> task.cancel(true));
         emitter.onTimeout(() -> {
             task.cancel(false);
             emitter.complete();
