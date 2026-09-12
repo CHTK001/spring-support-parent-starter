@@ -312,10 +312,23 @@ public class AlarmEngineServiceImpl implements AlarmEngineService {
         if (event == null) {
             return ReturnResult.error("事件不存在: " + id);
         }
-        event.setMsMonitorAlarmEventStatus(falseAlarm ? "FALSE_ALARM" : "PROCESSED");
+        String newStatus = falseAlarm ? "FALSE_ALARM" : "PROCESSED";
+        event.setMsMonitorAlarmEventStatus(newStatus);
         event.setMsMonitorAlarmEventHandleRemark(remark);
         event.setMsMonitorAlarmEventHandleTime(LocalDateTime.now());
         eventMapper.updateById(event);
+        // 广播告警状态变更（前端徽标实时 -1）
+        try {
+            monitorPushService.pushAlarm(MonitorPushService.buildAlarmPayload(
+                    event.getMsMonitorAlarmEventMonitorId(),
+                    event.getMsMonitorAlarmEventMonitorName(),
+                    event.getMsMonitorAlarmEventMetricName(),
+                    event.getMsMonitorAlarmEventAlarmValue() == null ? 0 : event.getMsMonitorAlarmEventAlarmValue().doubleValue(),
+                    event.getMsMonitorAlarmEventThreshold() == null ? 0 : event.getMsMonitorAlarmEventThreshold().doubleValue(),
+                    event.getMsMonitorAlarmEventLevel(), newStatus));
+        } catch (Exception e) {
+            log.debug("[alarm] 处理事件广播跳过: {}", e.getMessage());
+        }
         return ReturnResult.success();
     }
 

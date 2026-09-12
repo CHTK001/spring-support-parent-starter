@@ -37,6 +37,16 @@ public class SysAiBotBinding extends SysBase {
     private Long userId;
 
     /**
+     * 归属标识，用于绑定资源的所有权过滤。
+     *
+     * <p>登录用户为 {@code u:<userId>}；未登录（匿名）为 {@code fp:<浏览器指纹>}
+     * （取自请求头 {@code x-req-fingerprint} / {@code X-Request-Fingerprint}）。
+     * 为空表示未归属（历史数据）。</p>
+     */
+    @TableField("sys_ai_bot_binding_owner_key")
+    private String ownerKey;
+
+    /**
      * Bot 唯一标识（iLink 分配的 botId）
      */
     @TableField("sys_ai_bot_binding_bot_id")

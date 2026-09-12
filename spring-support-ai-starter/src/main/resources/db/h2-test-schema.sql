@@ -4,6 +4,7 @@
 CREATE TABLE IF NOT EXISTS sys_ai_bot_binding (
   sys_ai_bot_binding_id BIGINT AUTO_INCREMENT PRIMARY KEY,
   sys_ai_bot_binding_user_id BIGINT,
+  sys_ai_bot_binding_owner_key VARCHAR(128),
   sys_ai_bot_binding_bot_id VARCHAR(128),
   sys_ai_bot_binding_bot_token VARCHAR(512),
   sys_ai_bot_binding_platform VARCHAR(32),
@@ -215,14 +216,12 @@ CREATE TABLE IF NOT EXISTS sys_ai_mcp_server (
 -- 用量日志/浏览历史 — Usage/Session 相关接口依赖此表
 -- -------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS sys_ai_bot_message (
-  sys_ai_bot_message_id         BIGINT AUTO_INCREMENT PRIMARY KEY,
-  sys_ai_bot_message_session_id VARCHAR(64),
-  sys_ai_bot_message_role       VARCHAR(32),
-  sys_ai_bot_message_content    CLOB,
-  sys_ai_bot_message_bot_id     VARCHAR(128),
-  sys_ai_bot_message_platform   VARCHAR(32),
-  sys_ai_bot_message_create_time BIGINT,
-  sys_ai_bot_message_update_time BIGINT
+  sys_ai_bot_message_id       BIGINT AUTO_INCREMENT PRIMARY KEY,
+  sys_ai_bot_message_bot_id   VARCHAR(128),
+  sys_ai_bot_message_direction VARCHAR(16),
+  sys_ai_bot_message_from_user VARCHAR(128),
+  sys_ai_bot_message_content  CLOB,
+  sys_ai_bot_message_create_time TIMESTAMP
 );
 
 -- -------------------------------------------------------------------

@@ -505,30 +505,10 @@ public class AiBotChatService {
                 c.setNickname(c.getFromUser());
             }
         }
-        // 无消息历史的绑定用户也进入会话列表（左侧至少可见，避免空白页）
-        for (SysAiBotBinding binding : bindings) {
-            if (binding.getBotId() == null) {
-                continue;
-            }
-            String convUser = (binding.getNickname() != null && !binding.getNickname().isBlank())
-                    ? binding.getNickname() : binding.getBotId();
-            if (convUser == null || convUser.isBlank()) {
-                continue;
-            }
-            String key = binding.getBotId() + "|" + convUser;
-            if (byKey.containsKey(key)) {
-                continue;
-            }
-            BotConversation c = new BotConversation();
-            c.setBotId(binding.getBotId());
-            c.setFromUser(convUser);
-            c.setNickname(convUser);
-            c.setStatus(binding.getStatus());
-            c.setPlatform(binding.getPlatform());
-            c.setLastTime(binding.getLastActiveTime());
-            result.add(c);
-            byKey.put(key, c);
-        }
+        // 注：不再为“无消息历史的绑定”伪造会话条目。
+        // 旧实现用 nickname/botId 冒充 fromUser，与 WS 推送、/messages、/send 使用的
+        // 真实微信用户 ID 语义冲突（会导致重复会话、发送到错误目标）；
+        // 现在只返回存在真实消息往来的会话，前端空状态文案已引导用户先扫码绑定。
         result.sort((a, b) -> {
             if (a.getLastTime() == null) return 1;
             if (b.getLastTime() == null) return -1;
