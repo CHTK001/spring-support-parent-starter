@@ -1082,14 +1082,39 @@ public class MonitorController {
             Map<String, Object> detail = new java.util.LinkedHashMap<>();
             String type = redisTemplate.type(key) != null ? redisTemplate.type(key).name() : "none";
             Long ttl = redisTemplate.getExpire(key);
-            String value = null;
+            Object value = null;
+            Long size = null;
             if ("STRING".equals(type)) {
                 value = redisTemplate.opsForValue().get(key);
+                size = value != null ? (long) value.toString().length() : 0L;
+            } else if ("LIST".equals(type)) {
+                value = redisTemplate.opsForList().range(key, 0, -1);
+                size = redisTemplate.opsForList().size(key);
+            } else if ("SET".equals(type)) {
+                value = redisTemplate.opsForSet().members(key);
+                size = redisTemplate.opsForSet().size(key);
+            } else if ("HASH".equals(type)) {
+                value = redisTemplate.opsForHash().entries(key);
+                size = redisTemplate.opsForHash().size(key);
+            } else if ("ZSET".equals(type)) {
+                var zSetValues = redisTemplate.opsForZSet().rangeWithScores(key, 0, -1);
+                if (zSetValues != null) {
+                    java.util.List<Map<String, Object>> zSetList = new java.util.ArrayList<>();
+                    for (var v : zSetValues) {
+                        Map<String, Object> item = new java.util.LinkedHashMap<>();
+                        item.put("member", v.getValue());
+                        item.put("score", v.getScore());
+                        zSetList.add(item);
+                    }
+                    value = zSetList;
+                }
+                size = redisTemplate.opsForZSet().size(key);
             }
             detail.put("key", key);
             detail.put("type", type);
             detail.put("ttl", ttl != null && ttl >= 0 ? ttl : -1);
             detail.put("value", value);
+            detail.put("size", size);
             return ReturnResult.ok(detail);
         } catch (Exception e) {
             return ReturnResult.error("获取 Redis Key 详情失败: " + e.getMessage());
