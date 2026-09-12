@@ -27,9 +27,11 @@ spring:
         - classpath:db/init/V1.0__init_monitor.sql
         - classpath:db/init/V1.0__init_server.sql
         - classpath:db/init/V1.0__init_project.sql
+        # AI 模块 H2 兼容建表脚本（纯 CREATE TABLE，无 MySQL-only 语法）
+        - classpath:db/h2-test-schema.sql
 
   datasource:
-    url: jdbc:h2:mem:monitordb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false
+    url: jdbc:h2:mem:monitordb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false;NON_KEYWORDS=VALUE
     driver-class-name: org.h2.Driver
     username: sa
     password:
