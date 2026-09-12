@@ -93,7 +93,7 @@ effective-pom
 **/cp.args
 **/backend-new.log
 **/backend.pid
-**/args.txt
+**/args*.txt
 **/start-backend-node.mjs
 **/monitor-run.bat
 **/start-*.bat

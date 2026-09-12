@@ -57,9 +57,8 @@ plugin:
   # 关闭自建配置，由 Spring Boot 默认 executor 接管 @Async。
   async:
     enable: false
-  # FlywayLike 脚本迁移（DataSourceScriptConfiguration）：启用。
-  # DataSource 就绪后自动扫描 classpath*:db/init|migration|sync 下 V*__*.sql，
-  # monitor 独立启动即建全部表（monitor/server/project 模块的资产台账与监控表均在 SQL 文件）。
+  # FlywayLike 脚本迁移（DataSourceScriptConfiguration）：默认已由 datasource-starter 全局开启。
+  # 这里仅做行为调优：表结构扫描 ONCE，补丁 ALWAYS，单脚本失败继续。
   datasource:
     script:
       enable: true
