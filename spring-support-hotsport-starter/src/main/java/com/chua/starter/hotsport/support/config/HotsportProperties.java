@@ -192,17 +192,18 @@ public class HotsportProperties {
     // ==================================================================
 
     /**
-    * 获取当前 apmstorage（可能为 noopstorage，永不为 空）。
-    *
-    * @return 存储实例
+     * 获取当前 ApmStorage（可能为 NoopStorage，永不为 null）。
+     *
+     * @return 存储实例
      */
     public static ApmStorage storage() {
+        ApmStorage s;
         try {
-            ApmStorage s = StorageManager.get();
-            return s != null ? s : noop();
+            s = com.chua.runtime.apm.storage.StorageManager.get();
         } catch (Throwable t) {
-            return noop();
+            s = null;
         }
+        return s != null ? s : noop();
     }
 
     /** Noop 兜底实例（storage管理器 未初始化时使用）。 */
