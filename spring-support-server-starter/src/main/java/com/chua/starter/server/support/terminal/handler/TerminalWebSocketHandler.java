@@ -9,6 +9,7 @@ import com.chua.starter.server.support.terminal.GuacdSession;
 import com.chua.starter.server.support.terminal.GuacdSessionRegistry;
 import com.chua.starter.server.support.terminal.GuacdTunnel;
 import com.chua.starter.server.support.terminal.GuacdConnectionFactory;
+import com.chua.starter.server.support.service.RemoteTokenService;
 import com.chua.starter.server.support.service.ServerHostService;
 import com.chua.starter.server.support.service.TerminalSessionService;
 import lombok.RequiredArgsConstructor;
@@ -26,9 +27,9 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
- * 远程终端 WebSocket 处理器
+   * 远程终端 web套接字 处理器
  * <p>
- * 桥接浏览器（guacamole-common-js）与 guacd 守护进程：
+   * 桥接浏览器（guacamole-通用-js）与 guacd 守护进程：
  * <ul>
  *   <li>握手阶段：解析查询参数 -> 解析主机凭据 -> 与 guacd 握手 -> 写入审计记录</li>
  *   <li>数据阶段：浏览器指令写入 guacd；读线程将 guacd 输出推回浏览器</li>
@@ -57,6 +58,9 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     /** guacd 连接工厂 */
     private final GuacdConnectionFactory connectionFactory;
 
+    /** 远控短令牌服务（令牌 模式反解连接参数） */
+    private final RemoteTokenService remoteTokenService;
+
     /** 会话注册表 */
     private final GuacdSessionRegistry sessionRegistry;
 
@@ -73,13 +77,61 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession wsSession) throws Exception {
         wsSession.setTextMessageSizeLimit(MAX_TEXT_BUFFER);
         Map<String, String> params = parseQuery(wsSession);
+        String token = params.get("token");
         Long hostId = parseLong(params.get("hostId"));
         String protocolName = params.getOrDefault("protocol", "ssh");
         Long identityId = parseLong(params.get("identityId"));
         Integer targetPort = parseInteger(params.get("targetPort"));
         String userName = params.getOrDefault("user", "anonymous");
 
+ // ---- 令牌 模式：连接参数由短令牌反解（服务器信息不出后端，免查库） ----
+        if (token != null && !token.isBlank()) {
+            var specOpt = remoteTokenService.resolve(token);
+            if (specOpt.isEmpty()) {
+                reject(wsSession, "令牌无效或已过期");
+                return;
+            }
+            var spec = specOpt.get();
+            String tokenProtocolName = spec.protocol().name().toLowerCase();
+            ProtocolType tokenProtocol;
+            try {
+                tokenProtocol = ProtocolType.valueOf(spec.protocol().name().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                reject(wsSession, "令牌协议不支持: " + spec.protocol());
+                return;
+            }
+            if (!tokenProtocol.isGuacdProtocol()) {
+                reject(wsSession, "令牌协议不支持经 guacd 连接: " + spec.protocol());
+                return;
+            }
+            String tunnelId = java.util.UUID.randomUUID().toString();
+            GuacdTunnel tokenTunnel;
+            try {
+                tokenTunnel = connectionFactory.create(tokenProtocol, spec.host(),
+                        spec.port(), new SshCredential(spec.username(), spec.password(), null), tunnelId);
+            } catch (RuntimeException e) {
+                log.warn("[terminal] guacd 握手失败(token) protocol={}: {}", tokenProtocolName, e.getMessage());
+                reject(wsSession, "guacd 握手失败: " + e.getMessage());
+                return;
+            }
+            // token 模式无 hostId 上下文，审计记录以 host 地址标记（hostId=空）
+            MsTerminalSession tokenRecord = terminalSessionService.openRecord(
+                    null, spec.host(), tokenProtocol.name(), userName, resolveClientIp(wsSession));
+            var tokenSession = new GuacdSession(tunnelId, wsSession, tokenTunnel, null,
+                    tokenRecord == null ? null : tokenRecord.getId(), tokenProtocolName, null);
+            Thread tokenReader = new Thread(() -> pumpGuacdToBrowser(tokenSession), "guac-reader-" + tunnelId);
+            tokenReader.setDaemon(true);
+            tokenReader.start();
+            log.info("[terminal] 会话建立(token) tunnelId={} host={} protocol={}", tunnelId, spec.host(), tokenProtocolName);
+            return;
+        }
+
         if (hostId == null) {
+            /**
+             * reject。
+             * @param wsSession ws会话
+             * @param 参数" 参数"
+             */
             reject(wsSession, "缺少 hostId 参数");
             return;
         }
@@ -87,10 +139,20 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
         try {
             protocolType = ProtocolType.valueOf(protocolName.toUpperCase());
         } catch (IllegalArgumentException e) {
+            /**
+             * reject。
+             * @param wsSession ws会话
+             * @param protocolName 协议名称
+             */
             reject(wsSession, "未知协议: " + protocolName);
             return;
         }
         if (!protocolType.isGuacdProtocol()) {
+            /**
+             * reject。
+             * @param wsSession ws会话
+             * @param protocolName 协议名称
+             */
             reject(wsSession, "协议不支持经 guacd 连接: " + protocolName);
             return;
         }
@@ -98,11 +160,21 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
         // 解析凭据（含解密）
         ReturnResult<SshCredential> resolved = serverHostService.resolveCredential(hostId, identityId);
         if (!resolved.isOk()) {
+            /**
+             * reject。
+             * @param wsSession ws会话
+             * @param resolved.getMsg( resolved.获取msg(
+             */
             reject(wsSession, resolved.getMsg());
             return;
         }
         var hostResult = serverHostService.get(hostId);
         if (!hostResult.isOk()) {
+            /**
+             * reject。
+             * @param wsSession ws会话
+             * @param hostResult.getMsg( 主机结果.getmsg(
+             */
             reject(wsSession, hostResult.getMsg());
             return;
         }
@@ -115,6 +187,11 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
                     hostResult.getData().getServerHostAddress(), targetPort, resolved.getData(), tunnelId);
         } catch (RuntimeException e) {
             log.warn("[terminal] guacd 握手失败 hostId={} protocol={}: {}", hostId, protocolName, e.getMessage());
+            /**
+             * reject。
+             * @param wsSession ws会话
+             * @param e.getMessage( e.获取消息(
+             */
             reject(wsSession, "guacd 握手失败: " + e.getMessage());
             return;
         }
@@ -129,7 +206,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
                 record == null ? null : record.getId(), protocolType.name().toLowerCase(), null);
         Thread readerThread = new Thread(() -> pumpGuacdToBrowser(session), "guac-reader-" + tunnelId);
         readerThread.setDaemon(true);
-        session.setReaderThread(readerThread); // 写回引用，供 close() 中断
+        session.setReaderThread(readerThread); // 写回引用，供 关闭() 中断
         session.setLastActiveTime(LocalDateTime.now());
         sessionRegistry.register(session);
         readerThread.start();
@@ -151,7 +228,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             return;
         }
         String payload = message.getPayload();
-        // 过滤 guacamole-common-js 自定义隧道的心跳/内部控制指令，避免透传给 guacd 导致 parse error
+ // 过滤 guacamole-通用-js 自定义隧道的心跳/内部控制指令，避免透传给 guacd 导致 解析 错误
         if (payload != null && payload.startsWith("internal.")) {
             log.debug("[terminal] 丢弃内部控制指令 tunnelId={} payload={}", session.getTunnelId(), payload);
             session.setLastActiveTime(LocalDateTime.now());
@@ -229,11 +306,11 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
                 session.sendToBrowser(instruction);
             }
         } catch (IOException | GuacamoleException e) {
-            // 不预调 markClosed()——统一由 close() 负责标记+清理，
-            // 避免异常分支跳过 socket 关闭和注册表移除导致泄漏
+ // 不预调 mark关闭()——统一由 关闭() 负责标记+清理，
+ // 避免异常分支跳过 套接字 关闭和注册表移除导致泄漏
             log.info("[terminal] guacd 读通道结束 tunnelId={}: {}", session.getTunnelId(), e.getMessage());
         }
-        // close() 内部幂等：先标记 closed，再关 socket / WS / 移除注册表
+ // 关闭() 内部幂等：先标记 关闭，再关 套接字 / WS / 移除注册表
         sessionRegistry.close(session, "guacd 关闭或读取结束");
         if (session.getSessionId() != null) {
             terminalSessionService.closeRecord(session.getSessionId(), "远端关闭");
@@ -299,7 +376,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
      * 安全解析长整型参数
      *
      * @param value 原始字符串
-     * @return 长整型或 null
+     * @return 长整型或 空
      */
     private Long parseLong(String value) {
         if (value == null || value.isBlank()) {
@@ -316,7 +393,7 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
      * 安全解析整型参数
      *
      * @param value 原始字符串
-     * @return 整型或 null
+     * @return 整型或 空
      */
     private Integer parseInteger(String value) {
         if (value == null || value.isBlank()) {
