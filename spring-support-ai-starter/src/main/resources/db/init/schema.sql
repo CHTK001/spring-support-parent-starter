@@ -96,6 +96,18 @@ CREATE TABLE IF NOT EXISTS `sys_ai_bot_binding` (
     PRIMARY KEY (`sys_ai_bot_binding_id`),
     KEY `idx_sys_ai_bot_binding_bot_id` (`sys_ai_bot_binding_bot_id`)
 );
+
+CREATE TABLE IF NOT EXISTS `sys_ai_bot_message` (
+    `sys_ai_bot_message_id`       BIGINT    NOT NULL AUTO_INCREMENT COMMENT '消息 ID',
+    `sys_ai_bot_message_bot_id`   VARCHAR(128) NULL COMMENT 'Bot 唯一标识（关联绑定表）',
+    `sys_ai_bot_message_direction` VARCHAR(16) NULL COMMENT '方向：IN（用户→bot）/ OUT（bot→用户）',
+    `sys_ai_bot_message_from_user` VARCHAR(128) NULL COMMENT '微信用户 ID（来源）',
+    `sys_ai_bot_message_content`  TEXT      NULL COMMENT '消息内容',
+    `sys_ai_bot_message_create_time` DATETIME NULL COMMENT '创建时间',
+    PRIMARY KEY (`sys_ai_bot_message_id`),
+    KEY `idx_sys_ai_bot_message_bot` (`sys_ai_bot_message_bot_id`),
+    KEY `idx_sys_ai_bot_message_conv` (`sys_ai_bot_message_bot_id`, `sys_ai_bot_message_from_user`)
+);
 CREATE TABLE IF NOT EXISTS `sys_ai_pricing` (
     `sys_ai_pricing_id`                  BIGINT       NOT NULL AUTO_INCREMENT COMMENT ' ID',
     `sys_ai_pricing_provider`            VARCHAR(64)  NULL COMMENT '',
