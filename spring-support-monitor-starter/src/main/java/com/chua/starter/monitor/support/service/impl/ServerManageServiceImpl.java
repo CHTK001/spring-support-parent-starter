@@ -21,14 +21,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 服务管理 —— 协议服务器节点管理服务实现。
- *
- * <p>定义持久化到 {@code ms_server_node}（MyBatis-Plus），运行期实例托管在
- * {@link ServerNodeRegistry}。更新语义：先停运行实例 → 全量替换定义 →
-   * 已启用=1 时按新配置重新拉起。</p>
- *
- * @author CH
- * @since 4.0.0.42
+* 服务管理 —— 协议服务器节点管理服务实现。
+*
+* <p>定义持久化到 {@code ms_server_node}（MyBatis-Plus），运行期实例托管在
+* {@link ServerNodeRegistry}。更新语义：先停运行实例 → 全量替换定义 →
+* 已启用=1 时按新配置重新拉起。</p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @Service
@@ -75,16 +75,16 @@ public class ServerManageServiceImpl implements ServerManageService {
         try {
             ServerNodeProtocol protocol = requireProtocol(request);
             /**
-             * requireunique名称。
-             * @param request.getName( 请求.获取名称(
+            * requireunique名称。
+            * @param request.getName( 请求.获取名称(
              */
             requireUniqueName(request.getName(), null);
             MsServerNode node = new MsServerNode();
             /**
-             * apply请求。
-             * @param node 节点
-             * @param request 请求
-             * @param protocol 协议
+            * apply请求。
+            * @param node 节点
+            * @param request 请求
+            * @param protocol 协议
              */
             applyRequest(node, request, protocol);
             nodeMapper.insert(node);
@@ -103,8 +103,8 @@ public class ServerManageServiceImpl implements ServerManageService {
             }
             ServerNodeProtocol protocol = requireProtocol(request);
             /**
-             * requireunique名称。
-             * @param request.getName( 请求.获取名称(
+            * requireunique名称。
+            * @param request.getName( 请求.获取名称(
              */
             requireUniqueName(request.getName(), id);
             // 先停运行实例
@@ -112,10 +112,10 @@ public class ServerManageServiceImpl implements ServerManageService {
             MsServerNode node = new MsServerNode();
             node.setId(id);
             /**
-             * apply请求。
-             * @param node 节点
-             * @param request 请求
-             * @param protocol 协议
+            * apply请求。
+            * @param node 节点
+            * @param request 请求
+            * @param protocol 协议
              */
             applyRequest(node, request, protocol);
             node.setCreateName(exists.getCreateName());
@@ -219,10 +219,10 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-      * 已启用=1 时按定义拉起节点并返回视图。
-     *
-     * @param node 节点定义
-     * @return 节点视图
+    * 已启用=1 时按定义拉起节点并返回视图。
+    *
+    * @param node 节点定义
+    * @return 节点视图
      */
     private ReturnResult<ServerNodeView> startIfEnabled(MsServerNode node) {
         if (node.getEnabled() != null && node.getEnabled() == 1) {
@@ -236,18 +236,18 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-     * 解析并校验协议类型。
-     *
-     * @param request 请求体
-     * @return 协议枚举
+    * 解析并校验协议类型。
+    *
+    * @param request 请求体
+    * @return 协议枚举
      */
     private ServerNodeProtocol requireProtocol(ServerNodeRequest request) {
         ServerNodeProtocol protocol = ServerNodeProtocol.of(request.getProtocol());
         if (protocol == null) {
             /**
-             * illegal参数异常。
-             * @param request.getProtocol( 请求.获取协议(
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param request.getProtocol( 请求.获取协议(
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("不支持的协议类型: " + request.getProtocol()
                     + " (支持: http / http-proxy / tcp-proxy / sip)");
@@ -256,17 +256,17 @@ public class ServerManageServiceImpl implements ServerManageService {
     }
 
     /**
-     * 校验节点名称唯一。
-     *
-     * @param name      名称
-     * @param excludeId 排除的节点 标识(更新场景)
+    * 校验节点名称唯一。
+    *
+    * @param name      名称
+    * @param excludeId 排除的节点 标识(更新场景)
      */
     private void requireUniqueName(String name, Long excludeId) {
         if (name == null || name.isBlank()) {
             /**
-             * illegal参数异常。
-             * @param "节点名称不能为空" "节点名称不能为空"
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param "节点名称不能为空" "节点名称不能为空"
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("节点名称不能为空");
         }
@@ -277,20 +277,20 @@ public class ServerManageServiceImpl implements ServerManageService {
         }
         if (nodeMapper.selectCount(wrapper) > 0) {
             /**
-             * illegal参数异常。
-             * @param name 名称
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param name 名称
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("节点名称已存在: " + name);
         }
     }
 
     /**
-     * 请求体 → 实体(全量替换)。
-     *
-     * @param node     目标实体
-     * @param request  请求体
-     * @param protocol 协议枚举
+    * 请求体 → 实体(全量替换)。
+    *
+    * @param node     目标实体
+    * @param request  请求体
+    * @param protocol 协议枚举
      */
     private void applyRequest(MsServerNode node, ServerNodeRequest request, ServerNodeProtocol protocol) {
         node.setName(request.getName().trim());
@@ -309,19 +309,19 @@ public class ServerManageServiceImpl implements ServerManageService {
                     request.getFilters() == null ? List.of() : request.getFilters()));
         } catch (Exception e) {
             /**
-             * illegal参数异常。
-             * @param e.getMessage( e.获取消息(
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param e.getMessage( e.获取消息(
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("config/filters JSON 序列化失败: " + e.getMessage(), e);
         }
     }
 
     /**
-     * 实体 + 运行时 → 视图。
-     *
-     * @param node 节点定义
-     * @return 视图
+    * 实体 + 运行时 → 视图。
+    *
+    * @param node 节点定义
+    * @return 视图
      */
     private ServerNodeView toView(MsServerNode node) {
         ServerNodeView view = new ServerNodeView();

@@ -25,50 +25,50 @@ import java.util.concurrent.ThreadLocalRandom;
 import javax.sql.DataSource;
 
 /**
- * 桌面伙伴（Companion）持久化存储服务。
- *
- * <p>基于 MyBatis-Plus 提供伙伴、记忆、技能、形象、共享配置的 CRUD 与 JSON 序列化，
-   * 数据持久化到 MySQL（companions/内存/skills/figures/共享_配置 五张表）。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 桌面伙伴（Companion）持久化存储服务。
+*
+* <p>基于 MyBatis-Plus 提供伙伴、记忆、技能、形象、共享配置的 CRUD 与 JSON 序列化，
+* 数据持久化到 MySQL（companions/内存/skills/figures/共享_配置 五张表）。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @Service
 public class SysAiCompanionStore {
 
     /**
-      * 伙伴表 映射器
+    * 伙伴表 映射器
      */
     private final SysAiCompanionMapper companionMapper;
 
     /**
-      * 记忆表 映射器
+    * 记忆表 映射器
      */
     private final SysAiCompanionMemoryMapper memoryMapper;
 
     /**
-      * 技能表 映射器
+    * 技能表 映射器
      */
     private final SysAiCompanionSkillMapper skillMapper;
 
     /**
-      * 形象表 映射器
+    * 形象表 映射器
      */
     private final SysAiCompanionFigureMapper figureMapper;
 
     /**
-      * 共享配置表 映射器
+    * 共享配置表 映射器
      */
     private final SysAiCompanionSharedConfigMapper configMapper;
 
     /**
-     * JSON 序列化器
+    * JSON 序列化器
      */
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * 构造注入；启动时自动补列。
+    * 构造注入；启动时自动补列。
      */
     public SysAiCompanionStore(SysAiCompanionMapper companionMapper,
                                SysAiCompanionMemoryMapper memoryMapper,
@@ -85,8 +85,8 @@ public class SysAiCompanionStore {
     }
 
     /**
-      * 启动时确保五张表存在（幂等 创建 TABLE IF NOT EXISTS）。
-     * @param dataSource 数据源
+    * 启动时确保五张表存在（幂等 创建 TABLE IF NOT EXISTS）。
+    * @param dataSource 数据源
      */
     private void ensureTables(DataSource dataSource) {
         String[] ddl = {
@@ -180,18 +180,18 @@ public class SysAiCompanionStore {
     // ==================== JSON 序列化辅助 ====================
 
     /**
-      * 生成 uuidv7 字符串（36 位）。
-     *
-     * @return UUIDv7
+    * 生成 uuidv7 字符串（36 位）。
+    *
+    * @return UUIDv7
      */
     public String newId() {
         return SysAiConversationStore.generateUuidV7();
     }
 
     /**
-      * 将对象序列化为 JSON 字符串（空 返回 空）。
-     * @param value 值
-     * @return 转为json的结果
+    * 将对象序列化为 JSON 字符串（空 返回 空）。
+    * @param value 值
+    * @return 转为json的结果
      */
     public String toJson(Object value) {
         if (value == null) {
@@ -205,9 +205,9 @@ public class SysAiCompanionStore {
     }
 
     /**
-      * 将 JSON 字符串解析为 映射（空/空返回空 映射）。
-     * @param json json
-     * @return 从json的结果
+    * 将 JSON 字符串解析为 映射（空/空返回空 映射）。
+    * @param json json
+    * @return 从json的结果
      */
     public Map<String, Object> fromJson(String json) {
         if (json == null || json.isBlank()) {
@@ -223,9 +223,9 @@ public class SysAiCompanionStore {
     // ==================== 伙伴 CRUD ====================
 
     /**
-     * 创建companion。
-     * @param companion companion
-     * @return 创建companion的结果
+    * 创建companion。
+    * @param companion companion
+    * @return 创建companion的结果
      */
     public SysAiCompanion createCompanion(SysAiCompanion companion) {
         if (companion.getSeq() == null) {
@@ -242,9 +242,9 @@ public class SysAiCompanionStore {
     }
 
     /**
-     * 获取companion。
-     * @param companionId companionid
-     * @return 获取companion的结果
+    * 获取companion。
+    * @param companionId companionid
+    * @return 获取companion的结果
      */
     public SysAiCompanion getCompanion(String companionId) {
         SysAiCompanion companion = companionMapper.selectById(companionId);
@@ -255,8 +255,8 @@ public class SysAiCompanionStore {
     }
 
     /**
-     * 列表companions。
-     * @return 列表companions的结果
+    * 列表companions。
+    * @return 列表companions的结果
      */
     public List<SysAiCompanion> listCompanions() {
         return companionMapper.selectList(
@@ -265,10 +265,10 @@ public class SysAiCompanionStore {
     }
 
     /**
-     * PATCH 伙伴（RFC 7396 简化：非 空 顶层字段覆盖，映射 字段合并）。
-     *
-     * @param companionId 伙伴 ID
-     * @param patch       补丁
+    * PATCH 伙伴（RFC 7396 简化：非 空 顶层字段覆盖，映射 字段合并）。
+    *
+    * @param companionId 伙伴 ID
+    * @param patch       补丁
      */
     public SysAiCompanion patchCompanion(String companionId, Map<String, Object> patch) {
         SysAiCompanion current = getCompanion(companionId);
@@ -289,11 +289,11 @@ public class SysAiCompanionStore {
     }
 
     /**
-      * 将 RFC 7396 patch 的顶层键应用到实体（含 映射 字段的 JSON 字段合并语义）。
-     * @author CH
-     * @since 4.0.0
-     * @param target Target
-     * @param patch patch
+    * 将 RFC 7396 patch 的顶层键应用到实体（含 映射 字段的 JSON 字段合并语义）。
+    * @author CH
+    * @since 4.0.0
+    * @param target Target
+    * @param patch patch
      */
     private void applyPatch(SysAiCompanion target, Map<String, Object> patch) {
         for (Map.Entry<String, Object> e : patch.entrySet()) {
@@ -326,11 +326,11 @@ public class SysAiCompanionStore {
     private interface Setter { void set(Map<String, Object> v); }
 
     /**
-     * 映射 字段合并：空 patch 值清除；否则在现有值上合并 patch 键。
-     *
-     * @param getter     现有值 getter
-     * @param setter     写回 setter
-     * @param patchValue 补丁值
+    * 映射 字段合并：空 patch 值清除；否则在现有值上合并 patch 键。
+    *
+    * @param getter     现有值 getter
+    * @param setter     写回 setter
+    * @param patchValue 补丁值
      */
     private void mergeMap(Getter getter, Setter setter, Object patchValue) {
         if (patchValue == null) {
@@ -345,18 +345,18 @@ public class SysAiCompanionStore {
         current.putAll(patch);
         setter.set(current);
     /**
-     * str。
-     * @param value 值
-     * @return str的结果
+    * str。
+    * @param value 值
+    * @return str的结果
      */
     }
 
     private static String str(Object value) {
         return value == null ? null : String.valueOf(value);
     /**
-     * num。
-     * @param value 值
-     * @return num的结果
+    * num。
+    * @param value 值
+    * @return num的结果
      */
     }
 
@@ -385,11 +385,11 @@ public class SysAiCompanionStore {
     // ==================== 记忆 CRUD ====================
 
     /**
-     * 列表内存。
-     * @param companionId companionid
-     * @param limit 限制
-     * @param offset 偏移量
-     * @return 列表内存的结果
+    * 列表内存。
+    * @param companionId companionid
+    * @param limit 限制
+    * @param offset 偏移量
+    * @return 列表内存的结果
      */
     public List<SysAiCompanionMemory> listMemories(String companionId, Integer limit, Integer offset) {
         LambdaQueryWrapper<SysAiCompanionMemory> wrapper = new LambdaQueryWrapper<SysAiCompanionMemory>()
@@ -402,9 +402,9 @@ public class SysAiCompanionStore {
     }
 
     /**
-     * 数量内存。
-     * @param companionId companionid
-     * @return 数量内存的结果
+    * 数量内存。
+    * @param companionId companionid
+    * @return 数量内存的结果
      */
     public long countMemories(String companionId) {
         return memoryMapper.selectCount(
@@ -414,9 +414,9 @@ public class SysAiCompanionStore {
     }
 
     /**
-     * 设置companionconversationid。
-     * @param companionId companionid
-     * @param conversationId conversationid
+    * 设置companionconversationid。
+    * @param companionId companionid
+    * @param conversationId conversationid
      */
     public void setCompanionConversationId(String companionId, String conversationId) {
         SysAiCompanion companion = getCompanion(companionId);
@@ -426,9 +426,9 @@ public class SysAiCompanionStore {
     }
 
     /**
-     * 创建内存。
-     * @param memory 内存
-     * @return 创建内存的结果
+    * 创建内存。
+    * @param memory 内存
+    * @return 创建内存的结果
      */
     public SysAiCompanionMemory createMemory(SysAiCompanionMemory memory) {
         long now = System.currentTimeMillis();
@@ -456,9 +456,9 @@ public class SysAiCompanionStore {
     }
 
     /**
-     * 获取内存。
-     * @param memoryId 内存标识
-     * @return 获取内存的结果
+    * 获取内存。
+    * @param memoryId 内存标识
+    * @return 获取内存的结果
      */
     public SysAiCompanionMemory getMemory(String memoryId) {
         SysAiCompanionMemory memory = memoryMapper.selectById(memoryId);
@@ -491,9 +491,9 @@ public class SysAiCompanionStore {
     }
 
     /**
-     * 删除内存。
-     * @param memoryId 内存标识
-     * @param companionId companionid
+    * 删除内存。
+    * @param memoryId 内存标识
+    * @param companionId companionid
      */
     public void deleteMemory(String memoryId, String companionId) {
         SysAiCompanionMemory memory = getMemory(memoryId);
@@ -505,14 +505,14 @@ public class SysAiCompanionStore {
     }
 
     /**
-      * 查重合并建议：扫描该伙伴的 活跃 记忆，按归一化内容分组，
-     * 返回包含两条以上疑似重复记忆的分组。
-     *
-     * <p>归一化规则：去除首尾空白、折叠内部空白（含换行/全角空格）、去除
-     * 常见标点后做全文比对；完全一致或仅标点/空白差异视为疑似重复。</p>
-     *
-     * @param companionId 伙伴 标识
-     * @return 疑似重复分组（每组 memories ≥ 2）
+    * 查重合并建议：扫描该伙伴的 活跃 记忆，按归一化内容分组，
+    * 返回包含两条以上疑似重复记忆的分组。
+    *
+    * <p>归一化规则：去除首尾空白、折叠内部空白（含换行/全角空格）、去除
+    * 常见标点后做全文比对；完全一致或仅标点/空白差异视为疑似重复。</p>
+    *
+    * @param companionId 伙伴 标识
+    * @return 疑似重复分组（每组 memories ≥ 2）
      */
     public List<List<SysAiCompanionMemory>> suggestMemoryMerges(String companionId) {
         LambdaQueryWrapper<SysAiCompanionMemory> wrapper = new LambdaQueryWrapper<SysAiCompanionMemory>()
@@ -548,9 +548,9 @@ public class SysAiCompanionStore {
     }
 
     /**
-     * 归一化记忆文本：折叠空白（含全角空格/换行）→ 转小写 → 去常见标点。
-     * @param text 文本
-     * @return normalize内存文本的结果
+    * 归一化记忆文本：折叠空白（含全角空格/换行）→ 转小写 → 去常见标点。
+    * @param text 文本
+    * @return normalize内存文本的结果
      */
     private String normalizeMemoryText(String text) {
         String collapsed = text.replaceAll("\\s+", "").replace("\u3000", "");
@@ -560,9 +560,9 @@ public class SysAiCompanionStore {
     }
 
     /**
-     * 创建skill。
-     * @param skill skill
-     * @return 创建skill的结果
+    * 创建skill。
+    * @param skill skill
+    * @return 创建skill的结果
      */
     public SysAiCompanionSkill createSkill(SysAiCompanionSkill skill) {
         long now = System.currentTimeMillis();
@@ -590,9 +590,9 @@ public class SysAiCompanionStore {
     }
 
     /**
-     * 获取skill。
-     * @param skillId skillid
-     * @return 获取skill的结果
+    * 获取skill。
+    * @param skillId skillid
+    * @return 获取skill的结果
      */
     public SysAiCompanionSkill getSkill(String skillId) {
         SysAiCompanionSkill skill = skillMapper.selectById(skillId);
@@ -603,11 +603,11 @@ public class SysAiCompanionStore {
     }
 
     /**
-     * 列表skills。
-     * @param companionId companionid
-     * @param limit 限制
-     * @param offset 偏移量
-     * @return 列表skills的结果
+    * 列表skills。
+    * @param companionId companionid
+    * @param limit 限制
+    * @param offset 偏移量
+    * @return 列表skills的结果
      */
     public List<SysAiCompanionSkill> listSkills(String companionId, Integer limit, Integer offset) {
         LambdaQueryWrapper<SysAiCompanionSkill> wrapper = new LambdaQueryWrapper<SysAiCompanionSkill>()
@@ -638,9 +638,9 @@ public class SysAiCompanionStore {
     }
 
     /**
-     * 删除skill。
-     * @param skillId skillid
-     * @param companionId companionid
+    * 删除skill。
+    * @param skillId skillid
+    * @param companionId companionid
      */
     public void deleteSkill(String skillId, String companionId) {
         SysAiCompanionSkill skill = getSkill(skillId);
@@ -654,9 +654,9 @@ public class SysAiCompanionStore {
     // ==================== 形象 CRUD ====================
 
     /**
-     * 创建figure。
-     * @param figure figure
-     * @return 创建figure的结果
+    * 创建figure。
+    * @param figure figure
+    * @return 创建figure的结果
      */
     public SysAiCompanionFigure createFigure(SysAiCompanionFigure figure) {
         if (figure.getCreatedAt() == null) {
@@ -673,8 +673,8 @@ public class SysAiCompanionStore {
     }
 
     /**
-     * 列表figures。
-     * @return 列表figures的结果
+    * 列表figures。
+    * @return 列表figures的结果
      */
     public List<SysAiCompanionFigure> listFigures() {
         return figureMapper.selectList(
@@ -682,9 +682,9 @@ public class SysAiCompanionStore {
     }
 
     /**
-     * 获取figure。
-     * @param figureId figureid
-     * @return 获取figure的结果
+    * 获取figure。
+    * @param figureId figureid
+    * @return 获取figure的结果
      */
     public SysAiCompanionFigure getFigure(String figureId) {
         SysAiCompanionFigure figure = figureMapper.selectById(figureId);
@@ -711,8 +711,8 @@ public class SysAiCompanionStore {
     }
 
     /**
-     * 删除figure。
-     * @param figureId figureid
+    * 删除figure。
+    * @param figureId figureid
      */
     public void deleteFigure(String figureId) {
         getFigure(figureId);
@@ -722,9 +722,9 @@ public class SysAiCompanionStore {
     // ==================== 共享配置 KV ====================
 
     /**
-     * 获取配置值。
-     * @param key 键
-     * @return 获取配置值的结果
+    * 获取配置值。
+    * @param key 键
+    * @return 获取配置值的结果
      */
     public String getConfigValue(String key) {
         SysAiCompanionSharedConfig config = configMapper.selectById(key);
@@ -732,9 +732,9 @@ public class SysAiCompanionStore {
     }
 
     /**
-     * 设置配置值。
-     * @param key 键
-     * @param jsonValue json值
+    * 设置配置值。
+    * @param key 键
+    * @param jsonValue json值
      */
     public void setConfigValue(String key, String jsonValue) {
         SysAiCompanionSharedConfig config = configMapper.selectById(key);

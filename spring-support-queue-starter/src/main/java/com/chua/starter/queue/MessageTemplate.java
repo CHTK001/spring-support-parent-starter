@@ -5,167 +5,167 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * 统一消息模板接口
- * <p>
-   * 提供统一的消息队列操作API，支持MQTT、Kafka、RabbitMQ、RocketMQ等实现。
- * </p>
- *
-   * @版本 1.0.0
- * @since 2025-12-25
- * @author CH
+* 统一消息模板接口
+* <p>
+* 提供统一的消息队列操作API，支持MQTT、Kafka、RabbitMQ、RocketMQ等实现。
+* </p>
+*
+* @版本 1.0.0
+* @since 2025-12-25
+* @author CH
  */
 public interface MessageTemplate {
 
     /**
-     * 同步发送消息
-     *
-     * @param destination 目标地址（topic/队列）
-     * @param payload     消息内容
-     * @return 发送结果
+    * 同步发送消息
+    *
+    * @param destination 目标地址（topic/队列）
+    * @param payload     消息内容
+    * @return 发送结果
      */
     SendResult send(String destination, Object payload);
 
     /**
-     * 异步发送消息
-     *
-     * @param destination 目标地址
-     * @param payload     消息内容
-     * @return 异步发送结果
+    * 异步发送消息
+    *
+    * @param destination 目标地址
+    * @param payload     消息内容
+    * @return 异步发送结果
      */
     CompletableFuture<SendResult> sendAsync(String destination, Object payload);
 
     /**
-      * 异步发送带头部的消息
-     *
-     * @param destination 目标地址
-     * @param payload     消息内容
-     * @param headers     消息头
-     * @return 异步发送结果
+    * 异步发送带头部的消息
+    *
+    * @param destination 目标地址
+    * @param payload     消息内容
+    * @param headers     消息头
+    * @return 异步发送结果
      */
     default CompletableFuture<SendResult> sendAsync(String destination, Object payload, Map<String, Object> headers) {
         return CompletableFuture.completedFuture(send(destination, payload, headers));
     }
 
     /**
-      * 发送带头部的消息
-     *
-     * @param destination 目标地址
-     * @param payload     消息内容
-     * @param headers     消息头
-     * @return 发送结果
+    * 发送带头部的消息
+    *
+    * @param destination 目标地址
+    * @param payload     消息内容
+    * @param headers     消息头
+    * @return 发送结果
      */
     SendResult send(String destination, Object payload, Map<String, Object> headers);
 
     /**
-     * 发送延迟消息
-     * <p>
-      * 注意：并非所有消息队列都支持延迟消息，不支持的实现可能会抛出unsupportedoperation异常
-     * </p>
-     *
-     * @param destination 目标地址
-     * @param payload     消息内容
-     * @param delay       延迟时间
-     * @return 发送结果
+    * 发送延迟消息
+    * <p>
+    * 注意：并非所有消息队列都支持延迟消息，不支持的实现可能会抛出unsupportedoperation异常
+    * </p>
+    *
+    * @param destination 目标地址
+    * @param payload     消息内容
+    * @param delay       延迟时间
+    * @return 发送结果
      */
     default SendResult sendDelayed(String destination, Object payload, Duration delay) {
         /**
-         * unsupportedoperation异常。
-         * @param implementation" implementation"
-         * @return unsupportedoperation异常的结果
+        * unsupportedoperation异常。
+        * @param implementation" implementation"
+        * @return unsupportedoperation异常的结果
          */
         throw new UnsupportedOperationException("Delayed message is not supported by this implementation");
     }
 
     /**
-     * 订阅消息
-     *
-     * @param destination 目标地址
-     * @param handler     消息处理器
+    * 订阅消息
+    *
+    * @param destination 目标地址
+    * @param handler     消息处理器
      */
     default void subscribe(String destination, MessageHandler handler) {
         /**
-         * 订阅。
-         * @param destination 目标
-         * @param handler 处理器
-         * @param true true
+        * 订阅。
+        * @param destination 目标
+        * @param handler 处理器
+        * @param true true
          */
         subscribe(destination, handler, true);
     }
 
     /**
-     * 订阅消息（指定是否自动确认）
-     *
-     * @param destination 目标地址
-     * @param handler     消息处理器
-     * @param autoAck     是否自动确认（true=自动确认，false=手动确认）
+    * 订阅消息（指定是否自动确认）
+    *
+    * @param destination 目标地址
+    * @param handler     消息处理器
+    * @param autoAck     是否自动确认（true=自动确认，false=手动确认）
      */
     void subscribe(String destination, MessageHandler handler, boolean autoAck);
 
     /**
-     * 订阅消息（指定消费组）
-     *
-     * @param destination 目标地址
-     * @param group       消费组
-     * @param handler     消息处理器
+    * 订阅消息（指定消费组）
+    *
+    * @param destination 目标地址
+    * @param group       消费组
+    * @param handler     消息处理器
      */
     default void subscribe(String destination, String group, MessageHandler handler) {
         /**
-         * 订阅。
-         * @param destination 目标
-         * @param group 群体
-         * @param handler 处理器
-         * @param true true
+        * 订阅。
+        * @param destination 目标
+        * @param group 群体
+        * @param handler 处理器
+        * @param true true
          */
         subscribe(destination, group, handler, true);
     }
 
     /**
-     * 订阅消息（指定消费组和是否自动确认）
-     *
-     * @param destination 目标地址
-     * @param group       消费组
-     * @param handler     消息处理器
-     * @param autoAck     是否自动确认（true=自动确认，false=手动确认）
+    * 订阅消息（指定消费组和是否自动确认）
+    *
+    * @param destination 目标地址
+    * @param group       消费组
+    * @param handler     消息处理器
+    * @param autoAck     是否自动确认（true=自动确认，false=手动确认）
      */
     default void subscribe(String destination, String group, MessageHandler handler, boolean autoAck) {
         /**
-         * 订阅。
-         * @param destination 目标
-         * @param handler 处理器
-         * @param autoAck autoACK
+        * 订阅。
+        * @param destination 目标
+        * @param handler 处理器
+        * @param autoAck autoACK
          */
         subscribe(destination, handler, autoAck);
     }
 
     /**
-     * 订阅消息（指定并发数）
-     * <p>
-     * 默认实现：如果 concurrency > 1，创建多个消费者实例。
-     * 具体实现类可以重写此方法以提供更高效的并发支持。
-     * </p>
-     *
-     * @param destination 目标地址
-     * @param handler     消息处理器
-     * @param autoAck     是否自动确认
-     * @param concurrency 并发消费者数量（>= 1）
+    * 订阅消息（指定并发数）
+    * <p>
+    * 默认实现：如果 concurrency > 1，创建多个消费者实例。
+    * 具体实现类可以重写此方法以提供更高效的并发支持。
+    * </p>
+    *
+    * @param destination 目标地址
+    * @param handler     消息处理器
+    * @param autoAck     是否自动确认
+    * @param concurrency 并发消费者数量（>= 1）
      */
     default void subscribe(String destination, MessageHandler handler, boolean autoAck, int concurrency) {
         if (concurrency <= 1) {
             /**
-             * 订阅。
-             * @param destination 目标
-             * @param handler 处理器
-             * @param autoAck autoACK
+            * 订阅。
+            * @param destination 目标
+            * @param handler 处理器
+            * @param autoAck autoACK
              */
             subscribe(destination, handler, autoAck);
         } else {
             // 默认实现：创建多个消费者实例
             for (int i = 0; i < concurrency; i++) {
                 /**
-                 * 订阅。
-                 * @param destination 目标
-                 * @param handler 处理器
-                 * @param autoAck autoACK
+                * 订阅。
+                * @param destination 目标
+                * @param handler 处理器
+                * @param autoAck autoACK
                  */
                 subscribe(destination, handler, autoAck);
             }
@@ -173,22 +173,22 @@ public interface MessageTemplate {
     }
 
     /**
-     * 订阅消息（指定消费组、是否自动确认和并发数）
-     *
-     * @param destination 目标地址
-     * @param group       消费组
-     * @param handler     消息处理器
-     * @param autoAck     是否自动确认
-     * @param concurrency 并发消费者数量（>= 1）
+    * 订阅消息（指定消费组、是否自动确认和并发数）
+    *
+    * @param destination 目标地址
+    * @param group       消费组
+    * @param handler     消息处理器
+    * @param autoAck     是否自动确认
+    * @param concurrency 并发消费者数量（>= 1）
      */
     default void subscribe(String destination, String group, MessageHandler handler, boolean autoAck, int concurrency) {
         if (concurrency <= 1) {
             /**
-             * 订阅。
-             * @param destination 目标
-             * @param group 群体
-             * @param handler 处理器
-             * @param autoAck autoACK
+            * 订阅。
+            * @param destination 目标
+            * @param group 群体
+            * @param handler 处理器
+            * @param autoAck autoACK
              */
             subscribe(destination, group, handler, autoAck);
         } else {
@@ -198,11 +198,11 @@ public interface MessageTemplate {
                         ? group + "-concurrent-" + i 
                         : "concurrent-" + i;
                 /**
-                 * 订阅。
-                 * @param destination 目标
-                 * @param groupWithConcurrency 群体withconcurrency
-                 * @param handler 处理器
-                 * @param autoAck autoACK
+                * 订阅。
+                * @param destination 目标
+                * @param groupWithConcurrency 群体withconcurrency
+                * @param handler 处理器
+                * @param autoAck autoACK
                  */
                 subscribe(destination, groupWithConcurrency, handler, autoAck);
             }
@@ -210,28 +210,28 @@ public interface MessageTemplate {
     }
 
     /**
-     * 取消订阅
-     *
-     * @param destination 目标地址
+    * 取消订阅
+    *
+    * @param destination 目标地址
      */
     void unsubscribe(String destination);
 
     /**
-     * 获取消息队列类型
-     *
-     * @return 类型名称（mqtt/kafka/rabbitmq/rocketmq）
+    * 获取消息队列类型
+    *
+    * @return 类型名称（mqtt/kafka/rabbitmq/rocketmq）
      */
     String getType();
 
     /**
-     * 检查连接状态
-     *
-     * @return 是否已连接
+    * 检查连接状态
+    *
+    * @return 是否已连接
      */
     boolean isConnected();
 
     /**
-     * 关闭连接
+    * 关闭连接
      */
     void close();
 }

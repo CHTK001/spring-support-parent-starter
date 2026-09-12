@@ -32,43 +32,43 @@ import java.util.concurrent.ConcurrentHashMap;
 import static com.chua.starter.common.support.logger.ModuleLog.*;
 
 /**
- * 文件服务器管理器。
- *
- * <p>根据 {@link FileStorageProperties#getServers()} 启动 HTTP 文件服务器，
- * 提供按 bucket 读取存储对象的文件访问能力。</p>
- *
- * @since 4.0.0
- * @author CH
+* 文件服务器管理器。
+*
+* <p>根据 {@link FileStorageProperties#getServers()} 启动 HTTP 文件服务器，
+* 提供按 bucket 读取存储对象的文件访问能力。</p>
+*
+* @since 4.0.0
+* @author CH
  */
 @Slf4j
 public class FileServerManager implements AutoCloseable {
 
     /**
-     * 启动成功的服务器映射
+    * 启动成功的服务器映射
      */
     @Getter
     private final Map<String, Server> serverMap = new ConcurrentHashMap<>(); // 服务端映射
 
     /**
-     * 文件存储配置
+    * 文件存储配置
      */
     private final FileStorageProperties properties;
 
     /**
-     * 文件存储模板
+    * 文件存储模板
      */
     private final FileStorageTemplate storageTemplate;
 
     /**
-     * Spring 应用上下文
+    * Spring 应用上下文
      */
     private final ApplicationContext applicationContext;
 
     /**
-      * 创建 文件服务端管理器 实例
-     * @param properties 属性
-     * @param storageTemplate storagetemplate
-     * @param applicationContext application上下文
+    * 创建 文件服务端管理器 实例
+    * @param properties 属性
+    * @param storageTemplate storagetemplate
+    * @param applicationContext application上下文
      */
     public FileServerManager(FileStorageProperties properties,
                              FileStorageTemplate storageTemplate,
@@ -79,7 +79,7 @@ public class FileServerManager implements AutoCloseable {
     }
 
     /**
-     * 启动所有配置的文件服务器。
+    * 启动所有配置的文件服务器。
      */
     public void startAll() {
         List<FileStorageProperties.ServerConfig> servers = properties.getServers();
@@ -99,8 +99,8 @@ public class FileServerManager implements AutoCloseable {
             }
             try {
                 /**
-                 * 启动服务端。
-                 * @param serverConfig 服务端配置
+                * 启动服务端。
+                * @param serverConfig 服务端配置
                  */
                 startServer(serverConfig);
             } catch (Exception e) {
@@ -112,10 +112,10 @@ public class FileServerManager implements AutoCloseable {
     }
 
     /**
-     * 启动单个文件服务器。
-     *
-     * @param config 服务器配置
-     * @throws Exception 启动失败时抛出
+    * 启动单个文件服务器。
+    *
+    * @param config 服务器配置
+    * @throws Exception 启动失败时抛出
      */
     private void startServer(FileStorageProperties.ServerConfig config) throws Exception {
         String serverName = config.getName();
@@ -165,8 +165,8 @@ public class FileServerManager implements AutoCloseable {
         serverMap.put(serverName, server);
         log.info("├─ 启动服务器: {} -> {}:{} [{}]",
                 /**
-                 * highlight。
-                 * @param serverName 服务端名称
+                * highlight。
+                * @param serverName 服务端名称
                  */
                 highlight(serverName),
                 host, port,
@@ -174,19 +174,19 @@ public class FileServerManager implements AutoCloseable {
     }
 
     /**
-      * 创建 服务端 实例。
-     *
-     * @param type    服务端 类型（jdk 或 SPI 名称）
-     * @param setting 服务配置
-     * @return Server 实例
-     * @throws Exception 创建失败时抛出
+    * 创建 服务端 实例。
+    *
+    * @param type    服务端 类型（jdk 或 SPI 名称）
+    * @param setting 服务配置
+    * @return Server 实例
+    * @throws Exception 创建失败时抛出
      */
     private Server createServer(String type, ServerSetting setting) throws Exception {
         if (type == null || type.isEmpty() || "jdk".equalsIgnoreCase(type)) {
             /**
-             * jdkhttp服务端。
-             * @param setting setting
-             * @return jdkhttp服务端的结果
+            * jdkhttp服务端。
+            * @param setting setting
+            * @return jdkhttp服务端的结果
              */
             return new JdkHttpServer(setting);
         }
@@ -198,20 +198,20 @@ public class FileServerManager implements AutoCloseable {
         Class<?> clazz = ReflectUtils.forName(type);
         if (clazz == null) {
             /**
-             * illegal参数异常。
-             * @param " "
-             * @param JDK" JDK"
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param " "
+            * @param JDK" JDK"
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("Unknown server type: " + type + ", fallback to JDK");
         }
         Server created = (Server) ReflectUtils.instantiate(clazz, setting);
         if (created == null) {
             /**
-             * illegal参数异常。
-             * @param " "
-             * @param JDK" JDK"
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param " "
+            * @param JDK" JDK"
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("Unknown server type: " + type + ", fallback to JDK");
         }
@@ -219,11 +219,11 @@ public class FileServerManager implements AutoCloseable {
     }
 
     /**
-      * 创建文件访问 http处理器。
-     *
-     * @param config      服务器配置
-     * @param contextPath 上下文 前缀
-     * @return HttpHandler
+    * 创建文件访问 http处理器。
+    *
+    * @param config      服务器配置
+    * @param contextPath 上下文 前缀
+    * @return HttpHandler
      */
     private HttpHandler createFileHandler(FileStorageProperties.ServerConfig config, String contextPath) {
         List<ServerFilter> filters = buildFilters(config);
@@ -242,10 +242,10 @@ public class FileServerManager implements AutoCloseable {
     }
 
     /**
-     * 构建过滤器链。
-     *
-     * @param config 服务器配置
-     * @return 过滤器列表
+    * 构建过滤器链。
+    *
+    * @param config 服务器配置
+    * @return 过滤器列表
      */
     private List<ServerFilter> buildFilters(FileStorageProperties.ServerConfig config) {
         List<ServerFilter> filters = new ArrayList<>();
@@ -262,10 +262,10 @@ public class FileServerManager implements AutoCloseable {
     }
 
     /**
-     * 实例化过滤器。
-     *
-     * @param filterName 过滤器类名
-     * @return 过滤器实例
+    * 实例化过滤器。
+    *
+    * @param filterName 过滤器类名
+    * @return 过滤器实例
      */
     private ServerFilter getFilterInstance(String filterName) {
         if (applicationContext != null) {
@@ -283,14 +283,14 @@ public class FileServerManager implements AutoCloseable {
     }
 
     /**
-     * 处理文件访问请求。
-     *
-     * <p>路径格式: {context}/{bucket}/{key} 或 {context}/view/{bucket}/{key} 或 {context}/download/{bucket}/{key}。
-      * 访问模式由 属性 的 mode 配置决定：前端请求意图与 mode 取交集，冲突时降级到 mode 允许的行为。</p>
-     *
-     * @param exchange    httpexchange
-     * @param contextPath 上下文 前缀
-     * @throws IOException IO 异常
+    * 处理文件访问请求。
+    *
+    * <p>路径格式: {context}/{bucket}/{key} 或 {context}/view/{bucket}/{key} 或 {context}/download/{bucket}/{key}。
+    * 访问模式由 属性 的 mode 配置决定：前端请求意图与 mode 取交集，冲突时降级到 mode 允许的行为。</p>
+    *
+    * @param exchange    httpexchange
+    * @param contextPath 上下文 前缀
+    * @throws IOException IO 异常
      */
     private void handleFileRequest(HttpExchange exchange, String contextPath) throws IOException {
         String fullPath = exchange.getRequestURI().getPath();
@@ -363,8 +363,8 @@ public class FileServerManager implements AutoCloseable {
             byte[] data = null;
             if (getResult != null && getResult.getInputStream() != null) {
                 /**
-                 * 尝试。
-                 * @param getResult.getInputStream( 获取结果.获取输入流(
+                * 尝试。
+                * @param getResult.getInputStream( 获取结果.获取输入流(
                  */
                 try (java.io.InputStream in = getResult.getInputStream()) {
                     data = in.readAllBytes();
@@ -384,8 +384,8 @@ public class FileServerManager implements AutoCloseable {
             }
             exchange.sendResponseHeaders(HttpURLConnection.HTTP_OK, data.length);
             /**
-             * 尝试。
-             * @param exchange.getResponseBody( exchange.获取响应主体(
+            * 尝试。
+            * @param exchange.getResponseBody( exchange.获取响应主体(
              */
             try (OutputStream os = exchange.getResponseBody()) {
                 os.write(data);
@@ -397,7 +397,7 @@ public class FileServerManager implements AutoCloseable {
     }
 
     /**
-     * 停止所有服务器。
+    * 停止所有服务器。
      */
     public void stopAll() {
         for (Map.Entry<String, Server> entry : serverMap.entrySet()) {
@@ -412,20 +412,20 @@ public class FileServerManager implements AutoCloseable {
     }
 
     /**
-     * 获取服务器实例。
-     *
-     * @param name 服务器名称
-     * @return Server 实例
+    * 获取服务器实例。
+    *
+    * @param name 服务器名称
+    * @return Server 实例
      */
     public Server getServer(String name) {
         return serverMap.get(name);
     }
 
     /**
-     * 判断服务器是否运行中。
-     *
-     * @param name 服务器名称
-     * @return true 表示运行中
+    * 判断服务器是否运行中。
+    *
+    * @param name 服务器名称
+    * @return true 表示运行中
      */
     public boolean isRunning(String name) {
         Server server = serverMap.get(name);
@@ -436,7 +436,7 @@ public class FileServerManager implements AutoCloseable {
     /** 关闭 */
     public void close() {
         /**
-         * 停止全部。
+        * 停止全部。
          */
         stopAll();
     }

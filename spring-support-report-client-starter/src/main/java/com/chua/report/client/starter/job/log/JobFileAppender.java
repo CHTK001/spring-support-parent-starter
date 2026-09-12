@@ -10,12 +10,12 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
- * 调度任务日志文件追加器，负责将执行日志写入本地文件系统。
- *
- * <p>按日期目录组织日志文件，并支持 GLUE 脚本源码的读写。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 调度任务日志文件追加器，负责将执行日志写入本地文件系统。
+*
+* <p>按日期目录组织日志文件，并支持 GLUE 脚本源码的读写。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 public class JobFileAppender {
@@ -23,25 +23,25 @@ public class JobFileAppender {
 
 
     /**
-       * 日志 基础 路径
-     *
-     * strut like:
-     * 	---/
-     * 	---/gluesource/
-     * 	---/gluesource/10_1514171108000.js
-     * 	---/gluesource/10_1514171108000.js
-     * 	---/2017-12-25/
-      * ---/2017-12-25/639.日志
-      * ---/2017-12-25/821.日志
-     *
+    * 日志 基础 路径
+    *
+    * strut like:
+    * 	---/
+    * 	---/gluesource/
+    * 	---/gluesource/10_1514171108000.js
+    * 	---/gluesource/10_1514171108000.js
+    * 	---/2017-12-25/
+    * ---/2017-12-25/639.日志
+    * ---/2017-12-25/821.日志
+    *
      */
     private static String logBasePath = "/data/applogs/job/jobhandler";
     /** 胶水src路径 */
     private static String glueSrcPath = logBasePath.concat("/gluesource");
     /**
-     * 初始化记录日志路径
-     *
-     * @param logPath 日志路径
+    * 初始化记录日志路径
+    *
+    * @param logPath 日志路径
      */
     public static void initLogPath(String logPath){
  // 初始化
@@ -63,28 +63,28 @@ public class JobFileAppender {
         glueSrcPath = glueBaseDir.getPath();
     }
     /**
-     * 获取记录日志路径
-     *
-     * @return 获取日志路径的结果
+    * 获取记录日志路径
+    *
+    * @return 获取日志路径的结果
      */
     public static String getLogPath() {
         return logBasePath;
     }
     /**
-     * 获取胶水src路径
-     *
-     * @return 获取胶水src路径的结果
+    * 获取胶水src路径
+    *
+    * @return 获取胶水src路径的结果
      */
     public static String getGlueSrcPath() {
         return glueSrcPath;
     }
 
     /**
-      * 日志 文件名, like "日志路径/yyyy-MM-dd/9999.日志"
-     *
-     * @param triggerDate
-     * @param logId
-     * @return
+    * 日志 文件名, like "日志路径/yyyy-MM-dd/9999.日志"
+    *
+    * @param triggerDate
+    * @param logId
+    * @return
      */
     public static String makeLogFileName(Date triggerDate, long logId) {
 
@@ -104,10 +104,10 @@ public class JobFileAppender {
     }
 
     /**
-      * 追加 日志
-     *
-     * @param logFileName
-     * @param appendLog
+    * 追加 日志
+    *
+    * @param logFileName
+    * @param appendLog
      */
     public static void appendLog(String logFileName, String appendLog) {
 
@@ -154,23 +154,23 @@ public class JobFileAppender {
     }
 
     /**
-      * 支持 读取 日志-文件
-     *
-     * @param logFileName
-     * @return log 内容
-     * @param fromLineNum 从线num
+    * 支持 读取 日志-文件
+    *
+    * @param logFileName
+    * @return log 内容
+    * @param fromLineNum 从线num
      */
     public static LogResult readLog(String logFileName, int fromLineNum){
  // valid 日志 文件
         if (logFileName==null || logFileName.trim().isEmpty()) {
             /**
-             * 日志结果。
-             * @param fromLineNum 从线num
-             * @param 0 0
-             * @param fail 失败
-             * @param found" found"
-             * @param true true
-             * @return 日志结果的结果
+            * 日志结果。
+            * @param fromLineNum 从线num
+            * @param 0 0
+            * @param fail 失败
+            * @param found" found"
+            * @param true true
+            * @return 日志结果的结果
              */
             return new LogResult(fromLineNum, 0, "readLog fail, logFile not found", true);
         }
@@ -178,13 +178,13 @@ public class JobFileAppender {
 
         if (!logFile.exists()) {
             /**
-             * 日志结果。
-             * @param fromLineNum 从线num
-             * @param 0 0
-             * @param fail 失败
-             * @param exists" exists"
-             * @param true true
-             * @return 日志结果的结果
+            * 日志结果。
+            * @param fromLineNum 从线num
+            * @param 0 0
+            * @param fail 失败
+            * @param exists" exists"
+            * @param true true
+            * @return 日志结果的结果
              */
             return new LogResult(fromLineNum, 0, "readLog fail, logFile not exists", true);
         }
@@ -218,20 +218,20 @@ public class JobFileAppender {
 
  // 结果
         /**
-         * 日志结果。
-         * @param fromLineNum 从线num
-         * @param toLineNum 转为线num
-         * @param logContentBuffer.toString( 日志内容缓冲.tostring(
-         * @return 日志结果的结果
+        * 日志结果。
+        * @param fromLineNum 从线num
+        * @param toLineNum 转为线num
+        * @param logContentBuffer.toString( 日志内容缓冲.tostring(
+        * @return 日志结果的结果
          */
         return new LogResult(fromLineNum, toLineNum, logContentBuffer.toString(), false);
 
     }
 
     /**
-      * 读取 日志 数据
-     * @param logFile
-     * @return log 线 内容
+    * 读取 日志 数据
+    * @param logFile
+    * @return log 线 内容
      */
     public static String readLines(File logFile){
         BufferedReader reader = null;

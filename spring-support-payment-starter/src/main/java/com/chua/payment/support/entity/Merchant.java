@@ -6,10 +6,10 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 商户实体类
- *
- * @since 2026-03-18
- * @author CH
+* 商户实体类
+*
+* @since 2026-03-18
+* @author CH
  */
 @Data
 @TableName("pay_merchant")

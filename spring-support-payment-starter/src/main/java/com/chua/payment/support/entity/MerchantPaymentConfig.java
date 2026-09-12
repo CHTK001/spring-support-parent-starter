@@ -9,9 +9,9 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 商户支付配置
- * @author CH
- * @since 4.0.0
+* 商户支付配置
+* @author CH
+* @since 4.0.0
  */
 @Data
 @TableName("pay_merchant_payment_config")

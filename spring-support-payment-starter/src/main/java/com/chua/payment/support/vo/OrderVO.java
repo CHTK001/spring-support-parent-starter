@@ -7,10 +7,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 订单视图对象
- *
- * @since 2026-03-18
- * @author CH
+* 订单视图对象
+*
+* @since 2026-03-18
+* @author CH
  */
 @Data
 public class OrderVO implements Serializable {

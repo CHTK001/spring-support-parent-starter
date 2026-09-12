@@ -16,13 +16,13 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 执行日志查询接口。
- *
- * <p>提供节点级执行日志查询、按 execution_no 聚合的执行历史分页与按爬虫维度的执行统计，
- * 路径前缀 {@code /spider-api/spider/executions}。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 执行日志查询接口。
+*
+* <p>提供节点级执行日志查询、按 execution_no 聚合的执行历史分页与按爬虫维度的执行统计，
+* 路径前缀 {@code /spider-api/spider/executions}。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Tag(name = "执行日志")
 @RestController
@@ -30,24 +30,24 @@ import java.util.List;
 public class SpiderExecutionLogController {
 
     /**
-     * 执行日志服务
+    * 执行日志服务
      */
     private final SpiderExecutionLogService executionLogService;
 
     /**
-     * 构造方法。
-     *
-     * @param executionLogService 执行日志服务
+    * 构造方法。
+    *
+    * @param executionLogService 执行日志服务
      */
     public SpiderExecutionLogController(SpiderExecutionLogService executionLogService) {
         this.executionLogService = executionLogService;
     }
 
     /**
-     * 按执行号查询全链路节点日志。
-     *
-     * @param executionNo 执行号（追踪标识）
-     * @return 节点日志列表
+    * 按执行号查询全链路节点日志。
+    *
+    * @param executionNo 执行号（追踪标识）
+    * @return 节点日志列表
      */
     @GetMapping("/logs")
     @Operation(summary = "按执行号查询全链路节点日志")
@@ -56,13 +56,13 @@ public class SpiderExecutionLogController {
     }
 
     /**
-     * 执行历史分页（按 execution_no 聚合）。
-     *
-     * @param pageNo        页码（默认 1）
-     * @param pageSize      每页条数（默认 10）
-     * @param definitionCode 爬虫编码（可选）
-     * @param status        执行状态（可选）
-     * @return 分页结果
+    * 执行历史分页（按 execution_no 聚合）。
+    *
+    * @param pageNo        页码（默认 1）
+    * @param pageSize      每页条数（默认 10）
+    * @param definitionCode 爬虫编码（可选）
+    * @param status        执行状态（可选）
+    * @return 分页结果
      */
     @GetMapping("/records")
     @Operation(summary = "执行历史分页查询")
@@ -75,9 +75,9 @@ public class SpiderExecutionLogController {
     }
 
     /**
-     * 按爬虫编码聚合执行统计。
-     *
-     * @return 统计列表
+    * 按爬虫编码聚合执行统计。
+    *
+    * @return 统计列表
      */
     @GetMapping("/stats")
     @Operation(summary = "执行统计聚合")

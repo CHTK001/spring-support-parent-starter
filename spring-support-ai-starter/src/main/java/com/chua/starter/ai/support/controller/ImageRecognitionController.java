@@ -23,14 +23,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * AI 图片识别控制器。
- *
- * <p>提供图片分析执行能力（图像分类、目标检测、图像描述、超分修复），
-   * 全部配置读取自 {@code image} 分组全局设置，未配置的能力自动降级（返回 空 字段），
- * 配置变更实时生效。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* AI 图片识别控制器。
+*
+* <p>提供图片分析执行能力（图像分类、目标检测、图像描述、超分修复），
+* 全部配置读取自 {@code image} 分组全局设置，未配置的能力自动降级（返回 空 字段），
+* 配置变更实时生效。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @RestController
@@ -40,17 +40,17 @@ import java.util.Map;
 public class ImageRecognitionController {
 
     /**
-     * 图片识别客户端管理器
+    * 图片识别客户端管理器
      */
     private final ImageRecognitionClientManager recognitionClientManager;
 
     /**
-      * 图片综合分析（分类 + 检测 + 描述，未配置的能力为 空）。
-     *
-     * @param file 图片文件
-     * @param topK 分类返回类别数
-     * @return 综合分析结果
-     * @param @RequestParam("file" @请求参数("文件"
+    * 图片综合分析（分类 + 检测 + 描述，未配置的能力为 空）。
+    *
+    * @param file 图片文件
+    * @param topK 分类返回类别数
+    * @return 综合分析结果
+    * @param @RequestParam("file" @请求参数("文件"
      */
     @Permission("admin")
     @Operation(summary = "图片综合分析", description = "按已配置能力执行图像分类/目标检测/图像描述，未配置的能力返回 null")
@@ -79,13 +79,13 @@ public class ImageRecognitionController {
     }
 
     /**
-     * 图像超分修复。
-     *
-     * @param file 图片文件
-     * @return 超分后 PNG 图片
-     * @param @RequestParam("file" @请求参数("文件"
-     * @param @RequestParam("file" @请求参数("文件"
-     * @param @RequestParam("file" @RequestParam("file"
+    * 图像超分修复。
+    *
+    * @param file 图片文件
+    * @return 超分后 PNG 图片
+    * @param @RequestParam("file" @请求参数("文件"
+    * @param @RequestParam("file" @请求参数("文件"
+    * @param @RequestParam("file" @RequestParam("file"
      */
     @Permission("admin")
     @Operation(summary = "图像超分修复", description = "对图片执行超分辨率修复，需先在设置启用 image 分组的超分能力")
@@ -110,9 +110,9 @@ public class ImageRecognitionController {
     }
 
     /**
-     * 图片识别模型枚举（按能力分组）。
-     *
-     * @return 能力分组 → 模型 标识 列表
+    * 图片识别模型枚举（按能力分组）。
+    *
+    * @return 能力分组 → 模型 标识 列表
      */
     @Permission("admin")
     @Operation(summary = "图片识别模型清单", description = "枚举可用的图像分类/目标检测/描述/超分模型")

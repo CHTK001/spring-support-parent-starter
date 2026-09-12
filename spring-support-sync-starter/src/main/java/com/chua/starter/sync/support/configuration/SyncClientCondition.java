@@ -5,14 +5,14 @@ import org.springframework.context.annotation.ConditionContext;
 import org.springframework.core.type.AnnotatedTypeMetadata;
 
 /**
- * 同步客户端条件判断
- * <p>
-   * 当 类型 为 客户端 或 both，且 客户端.enable = true 时，条件成立
- * </p>
- *
-   * @版本 1.0.0
- * @since 2024/12/10
- * @author CH
+* 同步客户端条件判断
+* <p>
+* 当 类型 为 客户端 或 both，且 客户端.enable = true 时，条件成立
+* </p>
+*
+* @版本 1.0.0
+* @since 2024/12/10
+* @author CH
  */
 public class SyncClientCondition implements Condition {
 

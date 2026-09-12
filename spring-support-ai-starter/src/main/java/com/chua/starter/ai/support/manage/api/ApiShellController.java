@@ -16,12 +16,12 @@ import java.io.File;
 import java.util.Map;
 
 /**
- * Shell 操作控制器。
- *
- * <p>提供桌面壳模式下的系统级操作：打开文件、文件夹、外部链接、检查工具安装等。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* Shell 操作控制器。
+*
+* <p>提供桌面壳模式下的系统级操作：打开文件、文件夹、外部链接、检查工具安装等。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @ApiReturnFormatIgnore
@@ -30,19 +30,19 @@ import java.util.Map;
 public class ApiShellController {
 
     /**
-     * 打开文件（使用系统默认应用）。
-     * @param body 主体
-     * @return 打开文件的结果
+    * 打开文件（使用系统默认应用）。
+    * @param body 主体
+    * @return 打开文件的结果
      */
     @PostMapping("/open-file")
     public ApiResult<Void> openFile(@RequestBody Map<String, Object> body) {
         String filePath = String.valueOf(body.getOrDefault("file_path", ""));
         if (filePath.isEmpty()) {
             /**
-             * api异常。
-             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
-             * @param 不能为空" 不能为空"
-             * @return api异常的结果
+            * api异常。
+            * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+            * @param 不能为空" 不能为空"
+            * @return api异常的结果
              */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "file_path 不能为空");
         }
@@ -57,19 +57,19 @@ public class ApiShellController {
     }
 
     /**
-     * 在文件管理器中显示文件。
-     * @param body 主体
-     * @return showitem入文件夹的结果
+    * 在文件管理器中显示文件。
+    * @param body 主体
+    * @return showitem入文件夹的结果
      */
     @PostMapping("/show-item-in-folder")
     public ApiResult<Void> showItemInFolder(@RequestBody Map<String, Object> body) {
         String filePath = String.valueOf(body.getOrDefault("file_path", ""));
         if (filePath.isEmpty()) {
             /**
-             * api异常。
-             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
-             * @param 不能为空" 不能为空"
-             * @return api异常的结果
+            * api异常。
+            * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+            * @param 不能为空" 不能为空"
+            * @return api异常的结果
              */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "file_path 不能为空");
         }
@@ -84,19 +84,19 @@ public class ApiShellController {
     }
 
     /**
-     * 使用外部应用打开 URL。
-     * @param body 主体
-     * @return 打开外部的结果
+    * 使用外部应用打开 URL。
+    * @param body 主体
+    * @return 打开外部的结果
      */
     @PostMapping("/open-external")
     public ApiResult<Void> openExternal(@RequestBody Map<String, Object> body) {
         String url = String.valueOf(body.getOrDefault("url", ""));
         if (url.isEmpty()) {
             /**
-             * api异常。
-             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
-             * @param 不能为空" 不能为空"
-             * @return api异常的结果
+            * api异常。
+            * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+            * @param 不能为空" 不能为空"
+            * @return api异常的结果
              */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "url 不能为空");
         }
@@ -111,19 +111,19 @@ public class ApiShellController {
     }
 
     /**
-     * 检查工具是否已安装。
-     * @param body 主体
-     * @return 检查toolinstalled的结果
+    * 检查工具是否已安装。
+    * @param body 主体
+    * @return 检查toolinstalled的结果
      */
     @PostMapping("/check-tool-installed")
     public ApiResult<Boolean> checkToolInstalled(@RequestBody Map<String, Object> body) {
         String tool = String.valueOf(body.getOrDefault("tool", ""));
         if (tool.isEmpty()) {
             /**
-             * api异常。
-             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
-             * @param 不能为空" 不能为空"
-             * @return api异常的结果
+            * api异常。
+            * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+            * @param 不能为空" 不能为空"
+            * @return api异常的结果
              */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "tool 不能为空");
         }
@@ -139,19 +139,19 @@ public class ApiShellController {
     }
 
     /**
-     * 使用指定应用打开文件夹。
-     * @param body 主体
-     * @return 打开文件夹with的结果
+    * 使用指定应用打开文件夹。
+    * @param body 主体
+    * @return 打开文件夹with的结果
      */
     @PostMapping("/open-folder-with")
     public ApiResult<Void> openFolderWith(@RequestBody Map<String, Object> body) {
         String filePath = String.valueOf(body.getOrDefault("file_path", ""));
         if (filePath.isEmpty()) {
             /**
-             * api异常。
-             * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
-             * @param 不能为空" 不能为空"
-             * @return api异常的结果
+            * api异常。
+            * @param ApiErrorCode.INVALID_PARAM api错误编码.invalid参数
+            * @param 不能为空" 不能为空"
+            * @return api异常的结果
              */
             throw new ApiException(ApiErrorCode.INVALID_PARAM, "file_path 不能为空");
         }

@@ -12,10 +12,10 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 监控 Redis 小时聚合
- *
- * @since 2026/8/4
- * @author CH
+* 监控 Redis 小时聚合
+*
+* @since 2026/8/4
+* @author CH
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
@@ -27,7 +27,7 @@ public class MsMonitorRedisMetricStatistics implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 主键
+    * 主键
      */
     @TableId(value = "id", type = IdType.AUTO)
     @Schema(description = "主键", example = "1")
@@ -35,7 +35,7 @@ public class MsMonitorRedisMetricStatistics implements Serializable {
     private Long id;
 
     /**
-      * 监控主机 标识
+    * 监控主机 标识
      */
     @TableField("ms_monitor_redis_metric_statistics_monitor_id")
     @Schema(description = "监控主机 id", example = "1")
@@ -43,7 +43,7 @@ public class MsMonitorRedisMetricStatistics implements Serializable {
     private Long monitorId;
 
     /**
-     * 指标名
+    * 指标名
      */
     @TableField("ms_monitor_redis_metric_statistics_metric_name")
     @Schema(description = "指标名", example = "redis_connected_clients")
@@ -51,7 +51,7 @@ public class MsMonitorRedisMetricStatistics implements Serializable {
     private String metricName;
 
     /**
-     * 小时桶
+    * 小时桶
      */
     @TableField("ms_monitor_redis_metric_statistics_hour_bucket")
     @Schema(description = "小时桶(整点)", example = "2026-08-04T10:00:00")
@@ -59,7 +59,7 @@ public class MsMonitorRedisMetricStatistics implements Serializable {
     private LocalDateTime hourBucket;
 
     /**
-     * 平均值
+    * 平均值
      */
     @TableField("ms_monitor_redis_metric_statistics_avg_value")
     @Schema(description = "平均值", example = "23.0")
@@ -67,7 +67,7 @@ public class MsMonitorRedisMetricStatistics implements Serializable {
     private Double avgValue;
 
     /**
-     * 最小值
+    * 最小值
      */
     @TableField("ms_monitor_redis_metric_statistics_min_value")
     @Schema(description = "最小值", example = "5.0")
@@ -75,7 +75,7 @@ public class MsMonitorRedisMetricStatistics implements Serializable {
     private Double minValue;
 
     /**
-     * 最大值
+    * 最大值
      */
     @TableField("ms_monitor_redis_metric_statistics_max_value")
     @Schema(description = "最大值", example = "78.0")
@@ -83,7 +83,7 @@ public class MsMonitorRedisMetricStatistics implements Serializable {
     private Double maxValue;
 
     /**
-     * 样本数
+    * 样本数
      */
     @TableField("ms_monitor_redis_metric_statistics_count_value")
     @Schema(description = "样本数", example = "360")

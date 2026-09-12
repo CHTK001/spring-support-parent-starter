@@ -13,13 +13,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
-   * AI 厂商 API 钥匙 服务实现。
- *
- * <p>基于 MyBatis Plus 操作 {@code sys_ai_manufacturer_key} 表，
-   * 提供按厂商编码的多 钥匙 管理与启停切换。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* AI 厂商 API 钥匙 服务实现。
+*
+* <p>基于 MyBatis Plus 操作 {@code sys_ai_manufacturer_key} 表，
+* 提供按厂商编码的多 钥匙 管理与启停切换。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @Service
@@ -27,14 +27,14 @@ import java.util.List;
 public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyService {
 
     /**
-      * 厂商 API 钥匙 映射器
+    * 厂商 API 钥匙 映射器
      */
     private final SysAiManufacturerKeyMapper manufacturerKeyMapper;
 
     /**
-      * 查询全部厂商 API 钥匙。
-     *
-     * @return API 钥匙 列表
+    * 查询全部厂商 API 钥匙。
+    *
+    * @return API 钥匙 列表
      */
     @Override
     public List<SysAiManufacturerKey> list() {
@@ -42,10 +42,10 @@ public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyServ
     }
 
     /**
-      * 按厂商编码查询 API 钥匙 列表。
-     *
-     * @param manufacturerCode 厂商编码
-     * @return API 钥匙 列表
+    * 按厂商编码查询 API 钥匙 列表。
+    *
+    * @param manufacturerCode 厂商编码
+    * @return API 钥匙 列表
      */
     @Override
     public List<SysAiManufacturerKey> listByManufacturerCode(String manufacturerCode) {
@@ -55,10 +55,10 @@ public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyServ
     }
 
     /**
-      * 新增厂商 API 钥匙。
-     *
-     * @param manufacturerKey API 钥匙 实体
-     * @return 保存后的实体
+    * 新增厂商 API 钥匙。
+    *
+    * @param manufacturerKey API 钥匙 实体
+    * @return 保存后的实体
      */
     @Override
     public SysAiManufacturerKey save(SysAiManufacturerKey manufacturerKey) {
@@ -73,10 +73,10 @@ public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyServ
     }
 
     /**
-      * 更新厂商 API 钥匙。
-     *
-     * @param manufacturerKey API 钥匙 实体
-     * @return 是否成功
+    * 更新厂商 API 钥匙。
+    *
+    * @param manufacturerKey API 钥匙 实体
+    * @return 是否成功
      */
     @Override
     public boolean update(SysAiManufacturerKey manufacturerKey) {
@@ -103,10 +103,10 @@ public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyServ
     }
 
     /**
-       * 按 标识 删除厂商 API 钥匙。
-     *
-     * @param id 主键 标识
-     * @return 是否成功
+    * 按 标识 删除厂商 API 钥匙。
+    *
+    * @param id 主键 标识
+    * @return 是否成功
      */
     @Override
     public boolean delete(Long id) {
@@ -117,11 +117,11 @@ public class SysAiManufacturerKeyServiceImpl implements SysAiManufacturerKeyServ
     }
 
     /**
-      * 切换 API 钥匙 启停状态。
-     *
-     * @param id      主键 标识
-     * @param enabled 是否启用
-     * @return 是否成功
+    * 切换 API 钥匙 启停状态。
+    *
+    * @param id      主键 标识
+    * @param enabled 是否启用
+    * @return 是否成功
      */
     @Override
     public boolean toggle(Long id, Boolean enabled) {

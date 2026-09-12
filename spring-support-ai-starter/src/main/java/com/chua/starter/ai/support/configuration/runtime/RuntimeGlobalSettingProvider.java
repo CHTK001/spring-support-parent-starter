@@ -6,36 +6,36 @@ import com.chua.common.support.spi.annotations.Spi;
 import java.util.List;
 
 /**
- * 全局对话路由（runtime 分组）全局设置提供者 SPI。
- *
- * <p>定义 {@code runtime} 分组的全部配置项，由 {@link com.chua.starter.ai.support.configuration.client.GlobalSettingInitializer}
-   * 启动时自动注册到 {@code sys_ai_global_setting} 表（仅首次）。LLM 供应商地址、API 钥匙、默认模型等
- * 全部通过表管理，由 {@link com.chua.starter.ai.support.chat.ChatClientSettingsResolver} 读取并构建全局
- * {@code ChatClient}。</p>
- *
- * <p>该分组配置数据完全来自数据库表，不依赖任何环境变量。修改表后可通过
- * {@code GlobalChatClientManager.rebuild()} 热重建全局客户端，实时生效。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 全局对话路由（runtime 分组）全局设置提供者 SPI。
+*
+* <p>定义 {@code runtime} 分组的全部配置项，由 {@link com.chua.starter.ai.support.configuration.client.GlobalSettingInitializer}
+* 启动时自动注册到 {@code sys_ai_global_setting} 表（仅首次）。LLM 供应商地址、API 钥匙、默认模型等
+* 全部通过表管理，由 {@link com.chua.starter.ai.support.chat.ChatClientSettingsResolver} 读取并构建全局
+* {@code ChatClient}。</p>
+*
+* <p>该分组配置数据完全来自数据库表，不依赖任何环境变量。修改表后可通过
+* {@code GlobalChatClientManager.rebuild()} 热重建全局客户端，实时生效。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Spi("runtime")
 public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
 
     /**
-     * 配置分组标识
+    * 配置分组标识
      */
     private static final String GROUP = "runtime";
 
     /**
-     * 分组显示名称
+    * 分组显示名称
      */
     private static final String GROUP_NAME = "对话路由";
 
     /**
-     * 配置分组标识。
-     *
-     * @return runtime
+    * 配置分组标识。
+    *
+    * @return runtime
      */
     @Override
     public String group() {
@@ -43,9 +43,9 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
     }
 
     /**
-     * 配置分组显示名称。
-     *
-     * @return 对话路由
+    * 配置分组显示名称。
+    *
+    * @return 对话路由
      */
     @Override
     public String groupName() {
@@ -53,12 +53,12 @@ public class RuntimeGlobalSettingProvider implements GlobalSettingProvider {
     }
 
     /**
-     * 对话路由分组全部配置项。
-     *
-     * <p>核心链路（必填）：provider / factory / provider_api_key / default_model。
-      * 辅助配置（选填）：超时、温度、最大令牌、输入优化、上下文压缩等。</p>
-     *
-     * @return 配置项列表
+    * 对话路由分组全部配置项。
+    *
+    * <p>核心链路（必填）：provider / factory / provider_api_key / default_model。
+    * 辅助配置（选填）：超时、温度、最大令牌、输入优化、上下文压缩等。</p>
+    *
+    * @return 配置项列表
      */
     @Override
     public List<SettingItem> getItems() {

@@ -31,54 +31,54 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 服务管理 —— 协议服务器运行时注册表。
- *
- * <p>按 {@link MsServerNode} 定义拉起 common-starter {@link Server} 实例并托管生命周期：</p>
- * <ul>
- *   <li>HTTP：{@code ServerBuilder.type(engine)}（jdk/nio/aio），可挂 ServerFilter 插件</li>
- *   <li>HTTP_PROXY：{@code HttpProxyServer(setting, backend)}（backend 取 config.backendHost/backendPort）</li>
- *   <li>TCP_PROXY：{@code TcpProxyServer(setting, backend)}</li>
- *   <li>SIP：{@code SipServer(SipConfig)}（token 取 config.token）</li>
- * </ul>
- *
- * <p>应用就绪后自动拉起 {@code enabled=1} 的节点；单节点启动失败仅记录错误，不影响其他节点。</p>
- *
- * @author CH
- * @since 4.0.0.42
+* 服务管理 —— 协议服务器运行时注册表。
+*
+* <p>按 {@link MsServerNode} 定义拉起 common-starter {@link Server} 实例并托管生命周期：</p>
+* <ul>
+*   <li>HTTP：{@code ServerBuilder.type(engine)}（jdk/nio/aio），可挂 ServerFilter 插件</li>
+*   <li>HTTP_PROXY：{@code HttpProxyServer(setting, backend)}（backend 取 config.backendHost/backendPort）</li>
+*   <li>TCP_PROXY：{@code TcpProxyServer(setting, backend)}</li>
+*   <li>SIP：{@code SipServer(SipConfig)}（token 取 config.token）</li>
+* </ul>
+*
+* <p>应用就绪后自动拉起 {@code enabled=1} 的节点；单节点启动失败仅记录错误，不影响其他节点。</p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @Component
 public class ServerNodeRegistry {
 
     /**
-     * HTTP 引擎白名单
+    * HTTP 引擎白名单
      */
     private static final Set<String> HTTP_ENGINES = Set.of("jdk", "nio", "aio");
 
     /**
-       * 运行中/曾拉起的节点: 节点标识 -> 运行时
+    * 运行中/曾拉起的节点: 节点标识 -> 运行时
      */
     private final Map<Long, RuntimeServer> runtimes = new ConcurrentHashMap<>();
 
     /**
-      * 节点 映射器
+    * 节点 映射器
      */
     private final MsServerNodeMapper nodeMapper;
     /**
-     * 插件工厂
+    * 插件工厂
      */
     private final ServerFilterFactory filterFactory;
     /**
-     * JSON
+    * JSON
      */
     private final ObjectMapper objectMapper;
 
     /**
-     * 创建注册表
-     *
-     * @param nodeMapper    节点 映射器
-     * @param filterFactory 插件工厂
-     * @param objectMapper  JSON
+    * 创建注册表
+    *
+    * @param nodeMapper    节点 映射器
+    * @param filterFactory 插件工厂
+    * @param objectMapper  JSON
      */
     @Autowired
     public ServerNodeRegistry(MsServerNodeMapper nodeMapper,
@@ -90,9 +90,9 @@ public class ServerNodeRegistry {
     }
 
     /**
-     * 应用就绪后自动拉起启用节点。
-     *
-     * @param event 就绪事件
+    * 应用就绪后自动拉起启用节点。
+    *
+    * @param event 就绪事件
      */
     @EventListener(ApplicationReadyEvent.class)
     public void autoStart() {
@@ -121,19 +121,19 @@ public class ServerNodeRegistry {
     }
 
     /**
-     * 按定义构建并启动服务器。
-     *
-     * @param node 节点定义
-     * @return 运行时
-     * @throws Exception 启动失败时抛出
+    * 按定义构建并启动服务器。
+    *
+    * @param node 节点定义
+    * @return 运行时
+    * @throws Exception 启动失败时抛出
      */
     public RuntimeServer start(MsServerNode node) throws Exception {
         ServerNodeProtocol protocol = ServerNodeProtocol.of(node.getProtocol());
         if (protocol == null) {
             /**
-             * illegal参数异常。
-             * @param node.getProtocol( 节点.获取协议(
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param node.getProtocol( 节点.获取协议(
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("未知协议类型: " + node.getProtocol());
         }
@@ -145,8 +145,8 @@ public class ServerNodeRegistry {
  // 若残留未运行或错误实例, 先清理, 避免旧 服务端 占着端口
         if (existing != null) {
             /**
-             * 停止。
-             * @param node.getId( 节点.获取标识(
+            * 停止。
+            * @param node.getId( 节点.获取标识(
              */
             stop(node.getId());
         }
@@ -169,9 +169,9 @@ public class ServerNodeRegistry {
     }
 
     /**
-     * 停止节点(定义保留)。
-     *
-     * @param nodeId 节点 标识
+    * 停止节点(定义保留)。
+    *
+    * @param nodeId 节点 标识
      */
     public void stop(Long nodeId) {
         RuntimeServer runtime = runtimes.remove(nodeId);
@@ -191,44 +191,44 @@ public class ServerNodeRegistry {
     }
 
     /**
-     * 停止并移除节点。
-     *
-     * @param nodeId 节点 标识
+    * 停止并移除节点。
+    *
+    * @param nodeId 节点 标识
      */
     public void remove(Long nodeId) {
         /**
-         * 停止。
-         * @param nodeId 节点标识
+        * 停止。
+        * @param nodeId 节点标识
          */
         stop(nodeId);
     }
 
     /**
-     * 查询节点运行时。
-     *
-     * @param nodeId 节点 标识
-     * @return 运行时，未拉起返回 空
+    * 查询节点运行时。
+    *
+    * @param nodeId 节点 标识
+    * @return 运行时，未拉起返回 空
      */
     public RuntimeServer get(Long nodeId) {
         return runtimes.get(nodeId);
     }
 
     /**
-     * 全部运行时快照。
-     *
-     * @return 不可变快照
+    * 全部运行时快照。
+    *
+    * @return 不可变快照
      */
     public Collection<RuntimeServer> snapshot() {
         return Collections.unmodifiableCollection(runtimes.values());
     }
 
     /**
-     * 按协议构建服务器实例。
-     *
-     * @param node     节点定义
-     * @param protocol 协议枚举
-     * @return 服务器实例（未启动）
-     * @throws Exception 构建失败
+    * 按协议构建服务器实例。
+    *
+    * @param node     节点定义
+    * @param protocol 协议枚举
+    * @return 服务器实例（未启动）
+    * @throws Exception 构建失败
      */
     private Server buildServer(MsServerNode node, ServerNodeProtocol protocol) throws Exception {
         Map<String, Object> config = parseConfig(node);
@@ -243,20 +243,20 @@ public class ServerNodeRegistry {
     }
 
     /**
-      * 通过 服务提供者 SPI 创建代理服务器。
-     *
-     * @param spiName  SPI 扩展名（http-代理 / tcp-代理）
-     * @param setting 服务器配置
-     * @param backend 后端地址
-     * @return 代理服务器实例
+    * 通过 服务提供者 SPI 创建代理服务器。
+    *
+    * @param spiName  SPI 扩展名（http-代理 / tcp-代理）
+    * @param setting 服务器配置
+    * @param backend 后端地址
+    * @return 代理服务器实例
      */
     private Server createProxyServer(String spiName, ServerSetting setting, InetSocketAddress backend) {
         Server server = ServiceProvider.of(Server.class).getNewExtension(spiName, setting, backend);
         if (server == null) {
             /**
-             * illegal状态异常。
-             * @param spiName spi名称
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param spiName spi名称
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("代理服务器 SPI 未注册: " + spiName);
         }
@@ -264,21 +264,21 @@ public class ServerNodeRegistry {
     }
 
     /**
-     * 构建 HTTP 服务器并挂载插件。
-     *
-     * @param node        节点定义
-     * @param setting     配置
-     * @param descriptors 插件描述
-     * @return 服务器实例
+    * 构建 HTTP 服务器并挂载插件。
+    *
+    * @param node        节点定义
+    * @param setting     配置
+    * @param descriptors 插件描述
+    * @return 服务器实例
      */
     private Server buildHttpServer(MsServerNode node, ServerSetting setting, List<ServerFilterDescriptor> descriptors) {
         String engine = node.getEngine() == null || node.getEngine().isBlank()
                 ? ServerNodeProtocol.HTTP.getDefaultEngine() : node.getEngine().trim().toLowerCase();
         if (!HTTP_ENGINES.contains(engine)) {
             /**
-             * illegal参数异常。
-             * @param engine engine
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param engine engine
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("HTTP 服务器引擎仅支持 jdk/nio/aio: " + engine);
         }
@@ -294,13 +294,13 @@ public class ServerNodeRegistry {
     }
 
     /**
-     * 为代理服务器挂载插件。
-     *
-     * @param server      代理服务器
-     * @param node        节点定义
-     * @param descriptors 插件描述
-     * @param <T>         代理类型
-     * @return 服务器实例
+    * 为代理服务器挂载插件。
+    *
+    * @param server      代理服务器
+    * @param node        节点定义
+    * @param descriptors 插件描述
+    * @param <T>         代理类型
+    * @return 服务器实例
      */
     @SuppressWarnings("unchecked")
     private <T extends com.chua.common.support.network.server.Server> Server buildProxyServer(
@@ -313,12 +313,12 @@ public class ServerNodeRegistry {
     }
 
     /**
-     * 构建 SIP 服务器并挂载插件。
-     *
-     * @param node        节点定义
-     * @param config      协议配置
-     * @param descriptors 插件描述
-     * @return 服务器实例
+    * 构建 SIP 服务器并挂载插件。
+    *
+    * @param node        节点定义
+    * @param config      协议配置
+    * @param descriptors 插件描述
+    * @return 服务器实例
      */
     private Server buildSipServer(MsServerNode node, Map<String, Object> config, List<ServerFilterDescriptor> descriptors) {
         SipConfig.Builder builder = SipConfig.builder()
@@ -341,12 +341,12 @@ public class ServerNodeRegistry {
     }
 
     /**
-      * 构建通用 服务端setting。
-     *
-     * @param node     节点定义
-     * @param protocol 协议枚举
-     * @param config   协议配置
-     * @return 配置实例
+    * 构建通用 服务端setting。
+    *
+    * @param node     节点定义
+    * @param protocol 协议枚举
+    * @param config   协议配置
+    * @return 配置实例
      */
     private ServerSetting buildSetting(MsServerNode node, ServerNodeProtocol protocol, Map<String, Object> config) {
         ServerSetting setting = ServerSetting.defaults();
@@ -354,19 +354,19 @@ public class ServerNodeRegistry {
         setting.setPort(node.getPort() != null ? node.getPort() : protocol.getDefaultPort());
         setting.setProtocol(protocol.getAlias());
         /**
-         * apply通用期权。
-         * @param setting setting
-         * @param config 配置
+        * apply通用期权。
+        * @param setting setting
+        * @param config 配置
          */
         applyCommonOptions(setting, config);
         return setting;
     }
 
     /**
-     * 应用通用配置项（可选）。
-     *
-     * @param setting 配置实例
-     * @param config  协议配置
+    * 应用通用配置项（可选）。
+    *
+    * @param setting 配置实例
+    * @param config  协议配置
      */
     private void applyCommonOptions(ServerSetting setting, Map<String, Object> config) {
         applyString(setting::setContextPath, config, "contextPath");
@@ -383,10 +383,10 @@ public class ServerNodeRegistry {
     }
 
     /**
-      * 解析代理后端地址（配置.backend主机/backend端口 必填）。
-     *
-     * @param config 协议配置
-     * @return 后端地址
+    * 解析代理后端地址（配置.backend主机/backend端口 必填）。
+    *
+    * @param config 协议配置
+    * @return 后端地址
      */
     private InetSocketAddress resolveBackend(Map<String, Object> config) {
         Object backendHost = config.get("backendHost");
@@ -394,25 +394,25 @@ public class ServerNodeRegistry {
         if (backendHost == null || String.valueOf(backendHost).isBlank()
                 || backendPort == null || String.valueOf(backendPort).isBlank()) {
             /**
-             * illegal参数异常。
-             * @param backendPort" backend端口"
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param backendPort" backend端口"
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("代理服务器必须在 config 中提供 backendHost 与 backendPort");
         }
         /**
-         * inet套接字地址。
-         * @param String.valueOf(backendHost 字符串.valueof(backend主机
-         * @return inet套接字地址的结果
+        * inet套接字地址。
+        * @param String.valueOf(backendHost 字符串.valueof(backend主机
+        * @return inet套接字地址的结果
          */
         return new InetSocketAddress(String.valueOf(backendHost), Integer.parseInt(String.valueOf(backendPort).trim()));
     }
 
     /**
-      * 解析节点 配置 JSON。
-     *
-     * @param node 节点定义
-     * @return 配置 映射
+    * 解析节点 配置 JSON。
+    *
+    * @param node 节点定义
+    * @return 配置 映射
      */
     public Map<String, Object> parseConfig(MsServerNode node) {
         String json = node.getConfig();
@@ -424,19 +424,19 @@ public class ServerNodeRegistry {
             });
         } catch (Exception e) {
             /**
-             * illegal参数异常。
-             * @param node.getName( 节点.获取名称(
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param node.getName( 节点.获取名称(
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("节点 [" + node.getName() + "] config JSON 解析失败: " + e.getMessage(), e);
         }
     }
 
     /**
-      * 解析节点 过滤器 JSON。
-     *
-     * @param node 节点定义
-     * @return 插件描述列表
+    * 解析节点 过滤器 JSON。
+    *
+    * @param node 节点定义
+    * @return 插件描述列表
      */
     public List<ServerFilterDescriptor> parseFilters(MsServerNode node) {
         String json = node.getFilters();
@@ -448,20 +448,20 @@ public class ServerNodeRegistry {
             });
         } catch (Exception e) {
             /**
-             * illegal参数异常。
-             * @param node.getName( 节点.获取名称(
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param node.getName( 节点.获取名称(
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("节点 [" + node.getName() + "] filters JSON 解析失败: " + e.getMessage(), e);
         }
     }
 
     /**
-     * 构建访问地址。
-     *
-     * @param node     节点定义
-     * @param protocol 协议枚举
-     * @return 地址字符串
+    * 构建访问地址。
+    *
+    * @param node     节点定义
+    * @param protocol 协议枚举
+    * @return 地址字符串
      */
     private String buildServerUrl(MsServerNode node, ServerNodeProtocol protocol) {
         String scheme = switch (protocol) {
@@ -474,10 +474,10 @@ public class ServerNodeRegistry {
     }
 
     /**
-     * apply字符串。
-     * @param setter setter
-     * @param config 配置
-     * @param key 钥匙
+    * apply字符串。
+    * @param setter setter
+    * @param config 配置
+    * @param key 钥匙
      */
     private void applyString(java.util.function.Consumer<String> setter, Map<String, Object> config, String key) {
         Object v = config.get(key);
@@ -487,10 +487,10 @@ public class ServerNodeRegistry {
     }
 
     /**
-      * applyint。
-     * @param setter setter
-     * @param config 配置
-     * @param key 钥匙
+    * applyint。
+    * @param setter setter
+    * @param config 配置
+    * @param key 钥匙
      */
     private void applyInt(java.util.function.IntConsumer setter, Map<String, Object> config, String key) {
         Object v = config.get(key);
@@ -500,10 +500,10 @@ public class ServerNodeRegistry {
     }
 
     /**
-      * applylong。
-     * @param setter setter
-     * @param config 配置
-     * @param key 钥匙
+    * applylong。
+    * @param setter setter
+    * @param config 配置
+    * @param key 钥匙
      */
     private void applyLong(java.util.function.LongConsumer setter, Map<String, Object> config, String key) {
         Object v = config.get(key);
@@ -513,10 +513,10 @@ public class ServerNodeRegistry {
     }
 
     /**
-     * apply布尔值。
-     * @param setter setter
-     * @param config 配置
-     * @param key 钥匙
+    * apply布尔值。
+    * @param setter setter
+    * @param config 配置
+    * @param key 钥匙
      */
     private void applyBoolean(java.util.function.Consumer<Boolean> setter, Map<String, Object> config, String key) {
         Object v = config.get(key);
@@ -527,96 +527,96 @@ public class ServerNodeRegistry {
     }
 
     /**
-     * 节点运行时。
-     * @author CH
-     * @since 4.0.0
+    * 节点运行时。
+    * @author CH
+    * @since 4.0.0
      */
     @Getter
     public static class RuntimeServer {
 
         /**
-          * 节点 标识
+        * 节点 标识
          */
         private Long id;
         /**
-         * 节点名称
+        * 节点名称
          */
         private String name;
         /**
-         * 协议编码
+        * 协议编码
          */
         private String protocol;
         /**
-         * 服务器实例(停止后置空)
+        * 服务器实例(停止后置空)
          */
         private volatile Server server;
         /**
-         * 访问地址
+        * 访问地址
          */
         private volatile String serverUrl;
         /**
-         * 最近错误
+        * 最近错误
          */
         private volatile String error;
 
         /**
-          * 设置节点 标识
-         *
-         * @param id 节点 标识
+        * 设置节点 标识
+        *
+        * @param id 节点 标识
          */
         public void setId(Long id) {
             this.id = id;
         }
 
         /**
-         * 设置节点名称
-         *
-         * @param name 节点名称
+        * 设置节点名称
+        *
+        * @param name 节点名称
          */
         public void setName(String name) {
             this.name = name;
         }
 
         /**
-         * 设置协议编码
-         *
-         * @param protocol 协议编码
+        * 设置协议编码
+        *
+        * @param protocol 协议编码
          */
         public void setProtocol(String protocol) {
             this.protocol = protocol;
         }
 
         /**
-         * 设置服务器实例
-         *
-         * @param server 服务器实例
+        * 设置服务器实例
+        *
+        * @param server 服务器实例
          */
         public void setServer(Server server) {
             this.server = server;
         }
 
         /**
-         * 设置访问地址
-         *
-         * @param serverUrl 访问地址
+        * 设置访问地址
+        *
+        * @param serverUrl 访问地址
          */
         public void setServerUrl(String serverUrl) {
             this.serverUrl = serverUrl;
         }
 
         /**
-         * 设置最近错误
-         *
-         * @param error 错误信息
+        * 设置最近错误
+        *
+        * @param error 错误信息
          */
         public void setError(String error) {
             this.error = error;
         }
 
 /**
-     * 运行状态。
-     *
-     * @return RUNNING / STOPPED / 错误
+* 运行状态。
+*
+* @return RUNNING / STOPPED / 错误
      */
     public String status() {
         Server s = this.server;
@@ -630,9 +630,9 @@ public class ServerNodeRegistry {
     }
 
     /**
-      * 是否处于运行中(服务端 非空且底层服务器正在运行)。
-     *
-     * @return true=运行中
+    * 是否处于运行中(服务端 非空且底层服务器正在运行)。
+    *
+    * @return true=运行中
      */
     public boolean isRunning() {
         return server != null && server.isRunning();

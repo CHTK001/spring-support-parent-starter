@@ -7,10 +7,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
 
 /**
-   * 吞吐量压测专用单机 (单个) 应用, 仅装配 {@link TpJobs}, 排除并发压测任务干扰。
- *
- * @since 4.0.0.42
- * @author CH
+* 吞吐量压测专用单机 (单个) 应用, 仅装配 {@link TpJobs}, 排除并发压测任务干扰。
+*
+* @since 4.0.0.42
+* @author CH
  */
 @SpringBootApplication
 @Import({JobAutoConfiguration.class, TpJobs.class})
@@ -18,9 +18,9 @@ import org.springframework.context.annotation.Import;
 public class JobTpApplication {
 
     /**
-     * 启动入口。
-     *
-     * @param args 命令行参数
+    * 启动入口。
+    *
+    * @param args 命令行参数
      */
     public static void main(String[] args) {
         SpringApplication.run(JobTpApplication.class, args);

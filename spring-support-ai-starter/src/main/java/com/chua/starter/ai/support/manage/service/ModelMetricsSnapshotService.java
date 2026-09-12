@@ -22,20 +22,20 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
-     * 模型价格/指标快照服务。
-     *
-     * <p>定时枚举全部已配置供应商与模型，用 {@link AiModelMetricsEnrichmentService}
-     * （Artificial Analysis 指标源）匹配「输入价格/输出价格/缓存价格/智能/输出速度/首块延迟/
-      * 深度思考/联网查询/图片识别/函数调用」，合并模型自身的 <code>指标</code> 实时字段
-      * 与能力健康探测延迟，构建一份快照写入 Redis（钥匙 {@code nomifun:model-metrics:latest}，
-      * TTL 12h），供查询接口按需读取。不再经 web套接字 定时推送，前端通过
-     * {@code GET /api/model-metrics} 从缓存获取。</p>
-     *
-     * <p>快照行同时输出厂商 Logo（{@code provider_logo}）与模型 Logo（{@code icon_url}，
-     * 以 Artificial Analysis 图标优先，缺省回退厂商 Logo），供前端渲染真实品牌图。</p>
-     *
-     * @since 4.0.0.42
-     * @author CH
+* 模型价格/指标快照服务。
+*
+* <p>定时枚举全部已配置供应商与模型，用 {@link AiModelMetricsEnrichmentService}
+* （Artificial Analysis 指标源）匹配「输入价格/输出价格/缓存价格/智能/输出速度/首块延迟/
+* 深度思考/联网查询/图片识别/函数调用」，合并模型自身的 <code>指标</code> 实时字段
+* 与能力健康探测延迟，构建一份快照写入 Redis（钥匙 {@code nomifun:model-metrics:latest}，
+* TTL 12h），供查询接口按需读取。不再经 web套接字 定时推送，前端通过
+* {@code GET /api/model-metrics} 从缓存获取。</p>
+*
+* <p>快照行同时输出厂商 Logo（{@code provider_logo}）与模型 Logo（{@code icon_url}，
+* 以 Artificial Analysis 图标优先，缺省回退厂商 Logo），供前端渲染真实品牌图。</p>
+*
+* @since 4.0.0.42
+* @author CH
      */
 @Slf4j
 @Service
@@ -43,16 +43,16 @@ import java.util.concurrent.TimeUnit;
 public class ModelMetricsSnapshotService {
 
     /**
-     * 平台标识 → Logo 静态资源基名（对应 {@code /api/assets/logos/{base}}）。
-      * 与前端 {@code modelPlatforms.ts} 的 模型_PLATFORMS 命名对齐；缺失平台忽略。
+    * 平台标识 → Logo 静态资源基名（对应 {@code /api/assets/logos/{base}}）。
+    * 与前端 {@code modelPlatforms.ts} 的 模型_PLATFORMS 命名对齐；缺失平台忽略。
      */
     private static final Map<String, String> PLATFORM_LOGO = logoMap();
 
     /**
-     * 由平台标识解析厂商 Logo URL（外部部署时由前端按运行时地址展开）。
-     *
-     * @param platform 平台标识（区分大小写匹配后统一小写）
-     * @return Logo 相对 URL，平台未配置时返回 空
+    * 由平台标识解析厂商 Logo URL（外部部署时由前端按运行时地址展开）。
+    *
+    * @param platform 平台标识（区分大小写匹配后统一小写）
+    * @return Logo 相对 URL，平台未配置时返回 空
      */
     public static String providerLogoUrl(String platform) {
         if (platform == null) {
@@ -66,9 +66,9 @@ public class ModelMetricsSnapshotService {
     }
 
     /**
-     * 构建平台 → Logo 基名映射。
-     *
-     * @return 不可变映射
+    * 构建平台 → Logo 基名映射。
+    *
+    * @return 不可变映射
      */
     private static Map<String, String> logoMap() {
         Map<String, String> m = new java.util.HashMap<>();
@@ -124,83 +124,83 @@ public class ModelMetricsSnapshotService {
     }
 
     /**
-      * Redis 快照 钥匙
+    * Redis 快照 钥匙
      */
     static final String REDIS_KEY = "nomifun:model-metrics:latest";
 
     /**
-     * Redis 快照 TTL（12 小时，防止冗余堆积）
+    * Redis 快照 TTL（12 小时，防止冗余堆积）
      */
     private static final long REDIS_TTL_SECONDS = 12L * 60 * 60;
 
     /**
-      * 提供商 映射器
+    * 提供商 映射器
      */
     private final SysAiProviderMapper providerMapper;
 
     /**
-      * 提供商模型 映射器
+    * 提供商模型 映射器
      */
     private final SysAiProviderModelMapper modelMapper;
 
     /**
-     * 指标富集服务（Artificial Analysis 价格/速度/延迟匹配）
+    * 指标富集服务（Artificial Analysis 价格/速度/延迟匹配）
      */
     private final AiModelMetricsEnrichmentService metricsEnrichmentService;
 
     /**
-     * Redis 模板
+    * Redis 模板
      */
     private final StringRedisTemplate stringRedisTemplate;
 
     /**
-     * JSON 工具
+    * JSON 工具
      */
     private final ObjectMapper objectMapper;
 
     /**
-     * WS 推送服务
+    * WS 推送服务
      */
     private final ApiWebSocketPushService pushService;
 
     /**
-     * 构建最新快照并写入 Redis（不推送 WS，查询接口按需读取缓存）。
-     *
-     * <p>指标缺失不回退失败：该模型行仍会进入快照，价格/速度等字段置 null，
-     * 前端展示占位符。Redis 写入失败仅告警。</p>
-     *
-     * @return 本次快照
+    * 构建最新快照并写入 Redis（不推送 WS，查询接口按需读取缓存）。
+    *
+    * <p>指标缺失不回退失败：该模型行仍会进入快照，价格/速度等字段置 null，
+    * 前端展示占位符。Redis 写入失败仅告警。</p>
+    *
+    * @return 本次快照
      */
     public Map<String, Object> buildAndPushSnapshot() {
         Map<String, Object> snapshot = buildSnapshotInternal();
         /**
-          * persist转为Redis。
-         * @param snapshot snapshot
+        * persist转为Redis。
+        * @param snapshot snapshot
          */
         persistToRedis(snapshot);
         return snapshot;
     }
 
     /**
-     * 仅构建快照（不写 Redis、不推送），供查询接口首查/后台任务直接使用。
-     *
-     * @return 快照 映射
+    * 仅构建快照（不写 Redis、不推送），供查询接口首查/后台任务直接使用。
+    *
+    * @return 快照 映射
      */
     public Map<String, Object> buildSnapshot() {
         return buildSnapshotInternal();
     }
 
     /**
-     * 立即将某模型的实测探测延迟写入 Redis 快照，替换该模型旧值。
-     *
-     * <p>由健康检测（监控检测）接口在探测成功后调用：读取现有 Redis 快照，
-     * 定位 {@code provider_id + model} 对应的行并更新 {@code latency_ms}，
-     * 写回 Redis（保持 TTL）。Redis 无快照或模型行不存在时静默跳过，
-     * 不干扰调用方。</p>
-     *
-     * @param providerId 提供商 标识
-     * @param model      模型名
-     * @param latencyMs  实测延迟（毫秒）
+    * 立即将某模型的实测探测延迟写入 Redis 快照，替换该模型旧值。
+    *
+    * <p>由健康检测（监控检测）接口在探测成功后调用：读取现有 Redis 快照，
+    * 定位 {@code provider_id + model} 对应的行并更新 {@code latency_ms}，
+    * 写回 Redis（保持 TTL）。Redis 无快照或模型行不存在时静默跳过，
+    * 不干扰调用方。</p>
+    *
+    * @param providerId 提供商 标识
+    * @param model      模型名
+    * @param latencyMs  实测延迟（毫秒）
      */
     public void updateProbeLatency(String providerId, String model, long latencyMs) {
         try {
@@ -231,8 +231,8 @@ public class ModelMetricsSnapshotService {
             }
             if (updated) {
                 /**
-                  * persist转为Redis。
-                 * @param parsed 解析
+                * persist转为Redis。
+                * @param parsed 解析
                  */
                 persistToRedis(parsed);
                 log.debug("[ModelMetrics] 已更新模型探测延迟 provider={} model={} latency={}ms",
@@ -244,9 +244,9 @@ public class ModelMetricsSnapshotService {
     }
 
     /**
-     * 读取最近一次 Redis 快照；无快照时现场构建一份并返回。
-     *
-     * @return 快照 映射，构造失败时返回空结构
+    * 读取最近一次 Redis 快照；无快照时现场构建一份并返回。
+    *
+    * @return 快照 映射，构造失败时返回空结构
      */
     public Map<String, Object> latestSnapshot() {
         try {
@@ -265,9 +265,9 @@ public class ModelMetricsSnapshotService {
     }
 
     /**
-     * 快照构建核心：枚举配置模型并匹配指标。
-     *
-     * @return 快照 映射
+    * 快照构建核心：枚举配置模型并匹配指标。
+    *
+    * @return 快照 映射
      */
     private Map<String, Object> buildSnapshotInternal() {
         List<Map<String, Object>> models = new ArrayList<>();
@@ -289,11 +289,11 @@ public class ModelMetricsSnapshotService {
     }
 
     /**
-      * 单行聚合：提供者 基本信息 + enrich 静态指标 + 模型实时 指标 + 健康延迟。
-     *
-     * @param provider 供应商
-     * @param row      模型实体
-     * @return 聚合行
+    * 单行聚合：提供者 基本信息 + enrich 静态指标 + 模型实时 指标 + 健康延迟。
+    *
+    * @param provider 供应商
+    * @param row      模型实体
+    * @return 聚合行
      */
     private Map<String, Object> toRow(SysAiProvider provider, SysAiProviderModel row) {
         Map<String, Object> out = new LinkedHashMap<>();
@@ -323,24 +323,24 @@ public class ModelMetricsSnapshotService {
         Map<String, Object> metrics = row.getMetrics();
         if (metrics != null && !metrics.isEmpty()) {
             /**
-             * 合并not空。
-             * @param out 出
-             * @param "latency_ms" "延迟_ms"
-             * @param metrics.get("latency_ms" 指标.获取("延迟_ms"
+            * 合并not空。
+            * @param out 出
+            * @param "latency_ms" "延迟_ms"
+            * @param metrics.get("latency_ms" 指标.获取("延迟_ms"
              */
             mergeNotNull(out, "latency_ms", metrics.get("latency_ms"));
             /**
-             * 合并not空。
-             * @param out 出
-             * @param "intelligence" "智能"
-             * @param metrics.get("intelligence" 指标.获取("智能"
+            * 合并not空。
+            * @param out 出
+            * @param "intelligence" "智能"
+            * @param metrics.get("intelligence" 指标.获取("智能"
              */
             mergeNotNull(out, "intelligence", metrics.get("intelligence"));
             /**
-             * 合并not空。
-             * @param out 出
-             * @param "output_speed" "输出_速度"
-             * @param metrics.get("output_speed" 指标.获取("输出_速度"
+            * 合并not空。
+            * @param out 出
+            * @param "output_speed" "输出_速度"
+            * @param metrics.get("output_speed" 指标.获取("输出_速度"
              */
             mergeNotNull(out, "output_speed", metrics.get("output_speed"));
         }
@@ -364,10 +364,10 @@ public class ModelMetricsSnapshotService {
     }
 
     /**
-     * 取第一条能力探测延迟（若存在）。
-     *
-     * @param row 模型实体
-     * @return 延迟毫秒或 空
+    * 取第一条能力探测延迟（若存在）。
+    *
+    * @param row 模型实体
+    * @return 延迟毫秒或 空
      */
     private Long firstCapabilityLatency(SysAiProviderModel row) {
         List<Map<String, Object>> capabilities = row.getCapabilities();
@@ -387,11 +387,11 @@ public class ModelMetricsSnapshotService {
     }
 
     /**
-      * 非空值合并（避免覆盖 enrich 已输出的 钥匙）。
-     *
-     * @param out   目标行
-     * @param key   键
-     * @param value 值
+    * 非空值合并（避免覆盖 enrich 已输出的 钥匙）。
+    *
+    * @param out   目标行
+    * @param key   键
+    * @param value 值
      */
     private void mergeNotNull(Map<String, Object> out, String key, Object value) {
         if (value != null) {
@@ -400,9 +400,9 @@ public class ModelMetricsSnapshotService {
     }
 
     /**
-     * 快照写入 Redis（失败仅告警，不影响 WS 推送）。
-     *
-     * @param snapshot 快照
+    * 快照写入 Redis（失败仅告警，不影响 WS 推送）。
+    *
+    * @param snapshot 快照
      */
     private void persistToRedis(Map<String, Object> snapshot) {
         try {

@@ -4,33 +4,33 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 表名通配符匹配工具
- * <p>支持 {@code *} 通配，{@code *} 可匹配任意字符（含 {@code _}），
- * 不支持 {@code ?} 与 {@code [...]}。空字符串视为通配全部。</p>
- *
- * @since 2026/8/5
- * @author CH
+* 表名通配符匹配工具
+* <p>支持 {@code *} 通配，{@code *} 可匹配任意字符（含 {@code _}），
+* 不支持 {@code ?} 与 {@code [...]}。空字符串视为通配全部。</p>
+*
+* @since 2026/8/5
+* @author CH
  */
 public final class TablePatternMatcher {
 
     /**
-     * 编译后的模式
+    * 编译后的模式
      */
     private final String regex;
 
     /**
-     * table模式匹配。
-     * @param regex regex
+    * table模式匹配。
+    * @param regex regex
      */
     private TablePatternMatcher(String regex) {
         this.regex = regex;
     }
 
     /**
-     * 编译逗号分隔的多模式字符串
-     *
-     * @param csv 模式字符串
-     * @return 匹配器列表（空列表表示无过滤）
+    * 编译逗号分隔的多模式字符串
+    *
+    * @param csv 模式字符串
+    * @return 匹配器列表（空列表表示无过滤）
      */
     public static List<TablePatternMatcher.Matcher> build(String csv) {
         List<TablePatternMatcher.Matcher> list = new ArrayList<>();
@@ -49,10 +49,10 @@ public final class TablePatternMatcher {
     }
 
     /**
-     * 任意一个匹配器命中即返回 true
-     * @param matchers matchers
-     * @param name 名称
-     * @return 任意匹配的结果
+    * 任意一个匹配器命中即返回 true
+    * @param matchers matchers
+    * @param name 名称
+    * @return 任意匹配的结果
      */
     public static boolean anyMatch(List<TablePatternMatcher.Matcher> matchers, String name) {
         for (Matcher m : matchers) {
@@ -64,9 +64,9 @@ public final class TablePatternMatcher {
     }
 
     /**
-     * 将通配符模式转为正则
-     * @param pattern 模式
-     * @return 转为regex的结果
+    * 将通配符模式转为正则
+    * @param pattern 模式
+    * @return 转为regex的结果
      */
     private static String toRegex(String pattern) {
         StringBuilder sb = new StringBuilder(pattern.length() + 4);
@@ -84,16 +84,16 @@ public final class TablePatternMatcher {
     }
 
     /**
-     * 简单函数式匹配器
-     * @author CH
-     * @since 4.0.0
+    * 简单函数式匹配器
+    * @author CH
+    * @since 4.0.0
      */
     @FunctionalInterface
     public interface Matcher {
         /**
-         * 测试。
-         * @param name 名称
-         * @return 测试的结果
+        * 测试。
+        * @param name 名称
+        * @return 测试的结果
          */
         boolean test(String name);
     }

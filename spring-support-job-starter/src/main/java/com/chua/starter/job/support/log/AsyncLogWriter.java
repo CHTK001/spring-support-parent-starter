@@ -7,12 +7,12 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 异步日志写入器，包装多个 {@link JobLogSink}。
- *
- * <p>使用后台线程异步消费队列，避免阻塞 Netty 事件循环。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 异步日志写入器，包装多个 {@link JobLogSink}。
+*
+* <p>使用后台线程异步消费队列，避免阻塞 Netty 事件循环。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 public class AsyncLogWriter implements JobLogSink {
@@ -26,11 +26,11 @@ public class AsyncLogWriter implements JobLogSink {
     private volatile boolean running = true; // running
 
     /**
-     * 构造异步日志写入器。
-     *
-     * @param sinks     下游 sink 列表
-     * @param queueSize 队列容量
-     * @param threadName 后台线程名称
+    * 构造异步日志写入器。
+    *
+    * @param sinks     下游 sink 列表
+    * @param queueSize 队列容量
+    * @param threadName 后台线程名称
      */
     public AsyncLogWriter(List<JobLogSink> sinks, int queueSize, String threadName) {
         this.sinks = sinks;
@@ -54,7 +54,7 @@ public class AsyncLogWriter implements JobLogSink {
     }
 
     /**
-     * 关闭写入器，等待剩余日志写入完毕。
+    * 关闭写入器，等待剩余日志写入完毕。
      */
     public void shutdown() {
         running = false;
@@ -66,7 +66,7 @@ public class AsyncLogWriter implements JobLogSink {
         }
         // 消费剩余
         /**
-         * drain。
+        * drain。
          */
         drain();
     }
@@ -78,12 +78,12 @@ public class AsyncLogWriter implements JobLogSink {
                 JobLogEvent event = queue.poll(1, TimeUnit.SECONDS);
                 if (event != null) {
                     /**
-                     * 写入转为sinks。
-                     * @param event 事件
+                    * 写入转为sinks。
+                    * @param event 事件
                      */
                     writeToSinks(event);
                     /**
-                     * drain。
+                    * drain。
                      */
                     drain();
                 }
@@ -93,7 +93,7 @@ public class AsyncLogWriter implements JobLogSink {
             }
         }
         /**
-         * drain。
+        * drain。
          */
         drain();
     }
@@ -103,17 +103,17 @@ public class AsyncLogWriter implements JobLogSink {
         JobLogEvent event;
         while ((event = queue.poll()) != null) {
             /**
-             * 写入转为sinks。
-             * @param event 事件
+            * 写入转为sinks。
+            * @param event 事件
              */
             writeToSinks(event);
         }
     }
 
     /**
-     * 写入转为sinks
-     *
-     * @param event 事件
+    * 写入转为sinks
+    *
+    * @param event 事件
      */
     private void writeToSinks(JobLogEvent event) {
         for (JobLogSink sink : sinks) {

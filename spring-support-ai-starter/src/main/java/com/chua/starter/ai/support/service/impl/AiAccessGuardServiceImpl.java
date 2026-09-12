@@ -14,10 +14,10 @@ import org.springframework.stereotype.Service;
 import java.util.concurrent.TimeUnit;
 
 /**
- * AI 访问守卫服务实现。
- *
- * @author CH
- * @since 4.0.0
+* AI 访问守卫服务实现。
+*
+* @author CH
+* @since 4.0.0
  */
 @Service
 @RequiredArgsConstructor
@@ -28,7 +28,7 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
     private static final String BEARER_PREFIX = "Bearer ";
 
     /**
-      * app_钥匙_已启用 开关缓存，5s TTL — 避免每次请求都查询远程 DB/Redis
+    * app_钥匙_已启用 开关缓存，5s TTL — 避免每次请求都查询远程 DB/Redis
      */
     private static final Cache<String, Boolean> APP_KEY_ENABLED_CACHE = Caffeine.newBuilder()
             .expireAfterWrite(5, TimeUnit.SECONDS)
@@ -36,8 +36,8 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
             .build();
 
     /**
-      * Bearer 令牌 校验缓存，2s TTL — 尽量缩短"禁用/删除 钥匙 后僵尸窗口"，
-     * 同时避免每次请求都查询远端 DB/Redis
+    * Bearer 令牌 校验缓存，2s TTL — 尽量缩短"禁用/删除 钥匙 后僵尸窗口"，
+    * 同时避免每次请求都查询远端 DB/Redis
      */
     private static final Cache<String, Boolean> BEARER_TOKEN_CACHE = Caffeine.newBuilder()
             .expireAfterWrite(2, TimeUnit.SECONDS)
@@ -102,10 +102,10 @@ public class AiAccessGuardServiceImpl implements AiAccessGuardService {
     }
 
     /**
-      * 按 app钥匙 绑定分组的 令牌 限流检查。
-     *
-     * @param appKey app钥匙
-     * @return 未触发限流返回 true
+    * 按 app钥匙 绑定分组的 令牌 限流检查。
+    *
+    * @param appKey app钥匙
+    * @return 未触发限流返回 true
      */
     private boolean isGroupRateLimited(String appKey) {
         try {

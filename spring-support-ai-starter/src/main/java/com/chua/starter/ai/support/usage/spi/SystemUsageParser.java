@@ -14,13 +14,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
-   * 系统用量解析器 — 从 sys_AI_usage 数据库表读取 AI 调用用量数据。
- *
- * <p>与外部工具（opencode、codex 等）的本地文件解析器不同，
- * 本解析器直接从系统数据库读取已记录的 LLM 调用用量。
- *
- * @since 4.0.0.42
- * @author CH
+* 系统用量解析器 — 从 sys_AI_usage 数据库表读取 AI 调用用量数据。
+*
+* <p>与外部工具（opencode、codex 等）的本地文件解析器不同，
+* 本解析器直接从系统数据库读取已记录的 LLM 调用用量。
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @Component
@@ -49,9 +49,9 @@ public class SystemUsageParser implements UsageParser {
     }
 
     /**
-      * 转为aiusage。
-     * @param u u
-     * @return 转为AIusage的结果
+    * 转为aiusage。
+    * @param u u
+    * @return 转为AIusage的结果
      */
     private AiUsage toAiUsage(SysAiUsage u) {
         AiUsage.AiUsageBuilder builder = AiUsage.builder()

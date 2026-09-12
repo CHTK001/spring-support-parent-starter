@@ -15,14 +15,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * 外部验证码解析服务配置
- * <p>
-   * 对接 yescaptcha（yescaptcha.com）和 captcha运行（captcha-运行.com）等第三方验证码解析服务。
-   * 通过 {@code plugin.captcha.external.*} 配置项设置 API 令牌 和服务地址。
- * </p>
- *
- * @author CH
- * @since 2026-09-07
+* 外部验证码解析服务配置
+* <p>
+* 对接 yescaptcha（yescaptcha.com）和 captcha运行（captcha-运行.com）等第三方验证码解析服务。
+* 通过 {@code plugin.captcha.external.*} 配置项设置 API 令牌 和服务地址。
+* </p>
+*
+* @author CH
+* @since 2026-09-07
  */
 @Data
 @Configuration
@@ -43,8 +43,8 @@ public class ExternalCaptchaConfiguration {
     @Bean
     @ConditionalOnProperty(prefix = "plugin.captcha.external", name = "api-token")
     /**
-      * captchasetting。
-     * @return captchaSetting的结果
+    * captchasetting。
+    * @return captchaSetting的结果
      */
     public CaptchaSetting captchaSetting() {
         return CaptchaSetting.builder()
@@ -58,18 +58,18 @@ public class ExternalCaptchaConfiguration {
     @Bean
     @ConditionalOnProperty(prefix = "plugin.captcha.external", name = "provider", havingValue = "yescaptcha", matchIfMissing = true)
     /**
-      * yescaptchaparser。
-     * @param setting setting
-     * @return yesCaptchaParser的结果
+    * yescaptchaparser。
+    * @param setting setting
+    * @return yesCaptchaParser的结果
      */
     public CaptchaParser yesCaptchaParser(CaptchaSetting setting) {
         log.info("[ExternalCaptcha] 初始化 YesCaptcha 客户端, apiUrl={}, apiToken={}",
                 setting.getApiUrl(),
                 setting.getApiToken() != null ? setting.getApiToken().substring(0, Math.min(8, setting.getApiToken().length())) + "..." : "null");
         /**
-         * yescaptcha客户端。
-         * @param setting setting
-         * @return yescaptcha客户端的结果
+        * yescaptcha客户端。
+        * @param setting setting
+        * @return yescaptcha客户端的结果
          */
         return new YesCaptchaClient(setting);
     }
@@ -77,25 +77,25 @@ public class ExternalCaptchaConfiguration {
     @Bean
     @ConditionalOnProperty(prefix = "plugin.captcha.external", name = "provider", havingValue = "captcha-run")
     /**
-     * captcha运行parser。
-     * @param setting setting
-     * @return captcha运行parser的结果
+    * captcha运行parser。
+    * @param setting setting
+    * @return captcha运行parser的结果
      */
     public CaptchaParser captchaRunParser(CaptchaSetting setting) {
         log.info("[ExternalCaptcha] 初始化 CaptchaRun 客户端, apiUrl={}, apiToken={}",
                 setting.getApiUrl(),
                 setting.getApiToken() != null ? setting.getApiToken().substring(0, Math.min(8, setting.getApiToken().length())) + "..." : "null");
         /**
-         * captcha运行客户端。
-         * @param setting setting
-         * @return captcha运行客户端的结果
+        * captcha运行客户端。
+        * @param setting setting
+        * @return captcha运行客户端的结果
          */
         return new CaptchaRunClient(setting);
     }
 
     /**
-      * resolvecaptchaparser。
-     * @return resolveCaptchaParser的结果
+    * resolvecaptchaparser。
+    * @return resolveCaptchaParser的结果
      */
     public static CaptchaParser resolveCaptchaParser() {
         try {

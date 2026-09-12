@@ -24,18 +24,18 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * 人脸识别客户端管理器。
- *
- * <p>引入 AI 模块即提供人脸识别能力，配置读取自 {@code sys_ai_global_setting}
- * 键值表（分组 {@code face}：检测模型、特征模型、向量库、算法、阈值、活体、质量、超分、修复、
- * 属性、表情、关键点、换脸检测）。
- * 配置通过全局配置面板修改后调用 {@link #rebuild()} 热重建运行实例，无需重启。</p>
- *
- * <p>模型采用懒加载：仅在首次调用对应能力时才创建 deeplearning 模型实例，
- * 避免应用启动即加载 ONNX 模型导致启动阻塞或崩溃（与 OCR 提取器一致）。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 人脸识别客户端管理器。
+*
+* <p>引入 AI 模块即提供人脸识别能力，配置读取自 {@code sys_ai_global_setting}
+* 键值表（分组 {@code face}：检测模型、特征模型、向量库、算法、阈值、活体、质量、超分、修复、
+* 属性、表情、关键点、换脸检测）。
+* 配置通过全局配置面板修改后调用 {@link #rebuild()} 热重建运行实例，无需重启。</p>
+*
+* <p>模型采用懒加载：仅在首次调用对应能力时才创建 deeplearning 模型实例，
+* 避免应用启动即加载 ONNX 模型导致启动阻塞或崩溃（与 OCR 提取器一致）。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @Component
@@ -43,94 +43,94 @@ import java.util.Objects;
 public class FaceClientManager {
 
     /**
-     * 全局设置键值分组
+    * 全局设置键值分组
      */
     private static final String GROUP = "face";
 
     /**
-      * 默认特征向量维度（R50/face-特征 输出，与 {@code dimension(512)} 对齐）
+    * 默认特征向量维度（R50/face-特征 输出，与 {@code dimension(512)} 对齐）
      */
     private static final int DEFAULT_FEATURE_DIMENSION = 512;
 
     /**
-     * 全局设置读取工具
+    * 全局设置读取工具
      */
     private final GlobalSettingReader settingReader;
 
     /**
-      * Spring Bean工厂（预留动态注册 Bean）
+    * Spring Bean工厂（预留动态注册 Bean）
      */
     private final DefaultListableBeanFactory beanFactory;
 
     /**
-     * 当前生效的识别管线（懒构建，热更新时替换）
+    * 当前生效的识别管线（懒构建，热更新时替换）
      */
     private volatile FacePipeline pipeline;
 
     /**
-     * 当前生效的特征提取器（懒构建，热更新时替换）
+    * 当前生效的特征提取器（懒构建，热更新时替换）
      */
     private volatile FeatureExtractor featureExtractor;
 
     /**
-     * 当前生效的人脸向量库（懒构建，热更新时替换）
+    * 当前生效的人脸向量库（懒构建，热更新时替换）
      */
     private volatile VectorStorage vectorStorage;
 
     /**
-      * 当前生效的活体检测器（懒构建，可为 空）
+    * 当前生效的活体检测器（懒构建，可为 空）
      */
     private volatile LivenessDetector liveness;
 
     /**
-      * 当前生效的质量评估器（懒构建，可为 空）
+    * 当前生效的质量评估器（懒构建，可为 空）
      */
     private volatile FaceQualityAssessor qualityAssessor;
 
     /**
-     * 当前生效的人脸检测器（单独能力）
+    * 当前生效的人脸检测器（单独能力）
      */
     private volatile FaceDetector detector;
 
     /**
-     * 当前生效的动漫人脸检测器（单独能力）
+    * 当前生效的动漫人脸检测器（单独能力）
      */
     private volatile FaceDetector animeDetector;
 
     /**
-     * 当前生效的人脸超分器（单独能力）
+    * 当前生效的人脸超分器（单独能力）
      */
     private volatile ImageEnhancer superResolution;
 
     /**
-     * 当前生效的人脸修复器（单独能力）
+    * 当前生效的人脸修复器（单独能力）
      */
     private volatile ImageEnhancer restorer;
 
     /**
-     * 当前生效的人脸属性分类器（年龄/性别/种族）
+    * 当前生效的人脸属性分类器（年龄/性别/种族）
      */
     private volatile ImageClassifier attributeClassifier;
 
     /**
-     * 当前生效的人脸表情分类器
+    * 当前生效的人脸表情分类器
      */
     private volatile ImageClassifier emotionClassifier;
 
     /**
-     * 当前生效的换脸检测分类器
+    * 当前生效的换脸检测分类器
      */
     private volatile ImageClassifier deepfakeClassifier;
 
     /**
-     * 当前生效的人脸关键点提取器（单独能力）
+    * 当前生效的人脸关键点提取器（单独能力）
      */
     private volatile FeatureExtractor landmarkExtractor;
 
     /**
-     * 获取当前检测管线（懒加载）。
-     *
-     * @return 人脸检测管线
+    * 获取当前检测管线（懒加载）。
+    *
+    * @return 人脸检测管线
      */
     public FacePipeline currentPipeline() {
         FacePipeline current = pipeline;
@@ -146,9 +146,9 @@ public class FaceClientManager {
     }
 
     /**
-     * 获取当前特征提取器（懒加载）。
-     *
-     * @return 特征提取器
+    * 获取当前特征提取器（懒加载）。
+    *
+    * @return 特征提取器
      */
     public FeatureExtractor currentFeatureExtractor() {
         FeatureExtractor current = featureExtractor;
@@ -164,9 +164,9 @@ public class FaceClientManager {
     }
 
     /**
-     * 获取当前向量库（懒加载）。
-     *
-     * @return 人脸向量库
+    * 获取当前向量库（懒加载）。
+    *
+    * @return 人脸向量库
      */
     public VectorStorage currentVectorStorage() {
         VectorStorage current = vectorStorage;
@@ -182,9 +182,9 @@ public class FaceClientManager {
     }
 
     /**
-      * 获取当前活体检测器（可为 空）。
-     *
-     * @return 活体检测器或 空
+    * 获取当前活体检测器（可为 空）。
+    *
+    * @return 活体检测器或 空
      */
     public LivenessDetector currentLiveness() {
         if (liveness == null) {
@@ -198,9 +198,9 @@ public class FaceClientManager {
     }
 
     /**
-      * 获取当前质量评估器（可为 空）。
-     *
-     * @return 质量评估器或 空
+    * 获取当前质量评估器（可为 空）。
+    *
+    * @return 质量评估器或 空
      */
     public FaceQualityAssessor currentQualityAssessor() {
         if (qualityAssessor == null) {
@@ -214,9 +214,9 @@ public class FaceClientManager {
     }
 
     /**
-     * 获取当前人脸检测器（单独能力，懒加载）。
-     *
-     * @return 人脸检测器
+    * 获取当前人脸检测器（单独能力，懒加载）。
+    *
+    * @return 人脸检测器
      */
     public FaceDetector currentDetector() {
         FaceDetector current = detector;
@@ -232,9 +232,9 @@ public class FaceClientManager {
     }
 
     /**
-      * 构建带阈值的 facedetector（置信度阈值 + NMS + 最小人脸尺寸）。
-     * @param modelId 模型标识
-     * @return 构建detector的结果
+    * 构建带阈值的 facedetector（置信度阈值 + NMS + 最小人脸尺寸）。
+    * @param modelId 模型标识
+    * @return 构建detector的结果
      */
     private FaceDetector buildDetector(String modelId) {
         FaceDetector d = FaceDetector.create(modelId);
@@ -252,9 +252,9 @@ public class FaceClientManager {
     }
 
     /**
-     * 获取当前动漫人脸检测器（懒加载）。
-     *
-     * @return 动漫人脸检测器
+    * 获取当前动漫人脸检测器（懒加载）。
+    *
+    * @return 动漫人脸检测器
      */
     public FaceDetector currentAnimeDetector() {
         FaceDetector current = animeDetector;
@@ -270,9 +270,9 @@ public class FaceClientManager {
     }
 
     /**
-     * 获取当前人脸超分器（懒加载）。
-     *
-     * @return 人脸超分器
+    * 获取当前人脸超分器（懒加载）。
+    *
+    * @return 人脸超分器
      */
     public ImageEnhancer currentSuperResolution() {
         ImageEnhancer current = superResolution;
@@ -293,9 +293,9 @@ public class FaceClientManager {
     }
 
     /**
-     * 获取当前人脸修复器（懒加载）。
-     *
-     * @return 人脸修复器
+    * 获取当前人脸修复器（懒加载）。
+    *
+    * @return 人脸修复器
      */
     public ImageEnhancer currentRestorer() {
         ImageEnhancer current = restorer;
@@ -311,9 +311,9 @@ public class FaceClientManager {
     }
 
     /**
-     * 获取当前属性分类器（懒加载）。
-     *
-     * @return 属性分类器
+    * 获取当前属性分类器（懒加载）。
+    *
+    * @return 属性分类器
      */
     public ImageClassifier currentAttributeClassifier() {
         ImageClassifier current = attributeClassifier;
@@ -329,9 +329,9 @@ public class FaceClientManager {
     }
 
     /**
-     * 获取当前表情分类器（懒加载）。
-     *
-     * @return 表情分类器
+    * 获取当前表情分类器（懒加载）。
+    *
+    * @return 表情分类器
      */
     public ImageClassifier currentEmotionClassifier() {
         ImageClassifier current = emotionClassifier;
@@ -347,9 +347,9 @@ public class FaceClientManager {
     }
 
     /**
-     * 获取当前换脸检测分类器（懒加载）。
-     *
-     * @return 换脸检测分类器
+    * 获取当前换脸检测分类器（懒加载）。
+    *
+    * @return 换脸检测分类器
      */
     public ImageClassifier currentDeepfakeClassifier() {
         ImageClassifier current = deepfakeClassifier;
@@ -365,9 +365,9 @@ public class FaceClientManager {
     }
 
     /**
-     * 获取当前人脸关键点提取器（懒加载）。
-     *
-     * @return 关键点提取器
+    * 获取当前人脸关键点提取器（懒加载）。
+    *
+    * @return 关键点提取器
      */
     public FeatureExtractor currentLandmarkExtractor() {
         FeatureExtractor current = landmarkExtractor;
@@ -383,9 +383,9 @@ public class FaceClientManager {
     }
 
     /**
-     * 全局配置变更监听：face 分组更新后热重建，实时生效。
-     *
-     * @param event 配置变更事件
+    * 全局配置变更监听：face 分组更新后热重建，实时生效。
+    *
+    * @param event 配置变更事件
      */
     @EventListener
     public void onFaceSettingsChanged(FaceSettingsChangedEvent event) {
@@ -397,13 +397,13 @@ public class FaceClientManager {
         }
         log.info("[FaceClientManager] 收到 face 分组配置变更，开始热重建");
         /**
-         * rebuild。
+        * rebuild。
          */
         rebuild();
     }
 
     /**
-     * 配置热更新：按最新配置重建全部人脸实例，替换引用并关闭旧实例。
+    * 配置热更新：按最新配置重建全部人脸实例，替换引用并关闭旧实例。
      */
     public synchronized void rebuild() {
         VectorStorage oldVectorStorage = this.vectorStorage;
@@ -433,17 +433,17 @@ public class FaceClientManager {
         this.landmarkExtractor = FeatureExtractor.create(settingReader.getStr(GROUP, "landmark_model"));
 
         /**
-         * 关闭quietly。
-         * @param oldVectorStorage 旧向量storage
+        * 关闭quietly。
+        * @param oldVectorStorage 旧向量storage
          */
         closeQuietly(oldVectorStorage);
         log.info("[FaceClientManager] 人脸识别实例热更新完成");
     }
 
     /**
-      * 构建检测管线（detect + crop + liveness + 特征 + 检索 + 辅助能力）。
-     *
-     * @return 检测管线
+    * 构建检测管线（detect + crop + liveness + 特征 + 检索 + 辅助能力）。
+    *
+    * @return 检测管线
      */
     private FacePipeline buildPipeline() {
         FacePipeline.Builder builder = FacePipeline.builder()
@@ -473,12 +473,12 @@ public class FaceClientManager {
     }
 
     /**
-      * 可选模型注入：启用开关为 true（未配置时默认开启）且配置了模型 标识 才注入构建器。
-     *
-     * @param builder      构建器
-     * @param enabledField 启用开关字段
-     * @param field        模型字段
-     * @param inject       注入动作
+    * 可选模型注入：启用开关为 true（未配置时默认开启）且配置了模型 标识 才注入构建器。
+    *
+    * @param builder      构建器
+    * @param enabledField 启用开关字段
+    * @param field        模型字段
+    * @param inject       注入动作
      */
     private void injectOptional(FacePipeline.Builder builder, String enabledField, String field,
                                 java.util.function.Consumer<String> inject) {
@@ -492,9 +492,9 @@ public class FaceClientManager {
     }
 
     /**
-     * 构建人脸向量库。
-     *
-     * @return 向量库
+    * 构建人脸向量库。
+    *
+    * @return 向量库
      */
     private VectorStorage buildVectorStorage() {
         String name = settingReader.getStr(GROUP, "vector_storage");
@@ -508,9 +508,9 @@ public class FaceClientManager {
     }
 
     /**
-      * 构建活体检测器（未配置时返回 空）。
-     *
-     * @return 活体检测器或 空
+    * 构建活体检测器（未配置时返回 空）。
+    *
+    * @return 活体检测器或 空
      */
     private LivenessDetector buildLiveness() {
         String model = settingReader.getStr(GROUP, "liveness_model");
@@ -521,9 +521,9 @@ public class FaceClientManager {
     }
 
     /**
-      * 构建质量评估器（未配置时返回 空）。
-     *
-     * @return 质量评估器或 空
+    * 构建质量评估器（未配置时返回 空）。
+    *
+    * @return 质量评估器或 空
      */
     private FaceQualityAssessor buildQualityAssessor() {
         boolean enabled = settingReader.getBool(GROUP, "quality_enabled", false);
@@ -534,10 +534,10 @@ public class FaceClientManager {
     }
 
     /**
-     * 解析向量算法名称。
-     *
-     * @param name 算法名（COSINE / EUCLIDEAN / DOT）
-     * @return 算法实例
+    * 解析向量算法名称。
+    *
+    * @param name 算法名（COSINE / EUCLIDEAN / DOT）
+    * @return 算法实例
      */
     private VectorCompareAlgorithm resolveAlgorithm(String name) {
         return switch (Objects.requireNonNullElse(name, "COSINE").toUpperCase()) {
@@ -548,11 +548,11 @@ public class FaceClientManager {
     }
 
     /**
-     * 读取浮点配置，未配置或非法时返回默认值。
-     *
-     * @param field        字段名
-     * @param defaultValue 默认值
-     * @return 浮点值
+    * 读取浮点配置，未配置或非法时返回默认值。
+    *
+    * @param field        字段名
+    * @param defaultValue 默认值
+    * @return 浮点值
      */
     private float readFloat(String field, float defaultValue) {
         BigDecimal value = settingReader.getDecimalOrNull(GROUP, field);
@@ -567,9 +567,9 @@ public class FaceClientManager {
     }
 
     /**
-     * 静默关闭资源。
-     *
-     * @param storage 向量库
+    * 静默关闭资源。
+    *
+    * @param storage 向量库
      */
     private static void closeQuietly(VectorStorage storage) {
         if (storage == null) {
@@ -582,9 +582,9 @@ public class FaceClientManager {
     }
 
     /**
-     * 构建人脸配置摘要（供日志/健康检查使用）。
-     *
-     * @return 配置摘要
+    * 构建人脸配置摘要（供日志/健康检查使用）。
+    *
+    * @return 配置摘要
      */
     public Map<String, String> describe() {
         Map<String, String> desc = new HashMap<>();

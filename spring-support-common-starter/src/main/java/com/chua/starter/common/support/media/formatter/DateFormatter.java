@@ -9,16 +9,16 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * 日期格式化器
- * <p>
- * 用于将日期类型的值按照指定格式进行格式化输出。
-   * 支持 日期、本地日期、本地日期时间、本地时间 等类型。
- * </p>
- *
-   * @版本 1.0.0
- * @see Formatter
- * @author CH
- * @since 4.0.0
+* 日期格式化器
+* <p>
+* 用于将日期类型的值按照指定格式进行格式化输出。
+* 支持 日期、本地日期、本地日期时间、本地时间 等类型。
+* </p>
+*
+* @版本 1.0.0
+* @see Formatter
+* @author CH
+* @since 4.0.0
  */
 @Spi({"date", "localdate", "LocalDateTime", "LocalTime"})
 public class DateFormatter implements Formatter {

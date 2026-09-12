@@ -30,36 +30,36 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 爬虫流程执行器。
- *
- * <p>负责把持久化的流程（前端保存的节点/连线 JSON）转换为 utils-flow 引擎可执行的
- * {@link FlowDefinition}，并运行一次：</p>
- * <ol>
- *   <li>按爬虫定义 ID 加载其关联流程</li>
- *   <li>解析节点 JSON（flowNodeKey/flowNodeType/flowNodeConfig）与连线 JSON（flowEdgeFrom/flowEdgeTo）</li>
- *   <li>映射节点类型到引擎已注册类型（request/extract/loop/output 等）</li>
- *   <li>通过 {@link FlowEngine} 运行流程，记录节点级执行日志</li>
- *   <li>回写爬虫定义最近执行时间与状态</li>
- * </ol>
- *
- * @since 4.0.0.42
- * @author CH
+* 爬虫流程执行器。
+*
+* <p>负责把持久化的流程（前端保存的节点/连线 JSON）转换为 utils-flow 引擎可执行的
+* {@link FlowDefinition}，并运行一次：</p>
+* <ol>
+*   <li>按爬虫定义 ID 加载其关联流程</li>
+*   <li>解析节点 JSON（flowNodeKey/flowNodeType/flowNodeConfig）与连线 JSON（flowEdgeFrom/flowEdgeTo）</li>
+*   <li>映射节点类型到引擎已注册类型（request/extract/loop/output 等）</li>
+*   <li>通过 {@link FlowEngine} 运行流程，记录节点级执行日志</li>
+*   <li>回写爬虫定义最近执行时间与状态</li>
+* </ol>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Service
 public class SpiderFlowRunner {
 
     /**
-     * 日志记录器
+    * 日志记录器
      */
     private static final Logger log = LoggerFactory.getLogger(SpiderFlowRunner.class);
 
     /**
-     * JSON 解析器
+    * JSON 解析器
      */
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /**
-     * 前端节点类型 → 引擎节点类型映射
+    * 前端节点类型 → 引擎节点类型映射
      */
     private static final Map<String, String> NODE_TYPE_MAP = Map.ofEntries(
             Map.entry("start", "start"),
@@ -77,26 +77,26 @@ public class SpiderFlowRunner {
     );
 
     /**
-     * 爬虫定义服务
+    * 爬虫定义服务
      */
     private final SpiderDefinitionService definitionService;
 
     /**
-     * 流程编排服务
+    * 流程编排服务
      */
     private final SpiderFlowService flowService;
 
     /**
-     * 执行日志服务
+    * 执行日志服务
      */
     private final SpiderExecutionLogService executionLogService;
 
     /**
-     * 构造执行器。
-     *
-     * @param definitionService   爬虫定义服务
-     * @param flowService         流程编排服务
-     * @param executionLogService 执行日志服务
+    * 构造执行器。
+    *
+    * @param definitionService   爬虫定义服务
+    * @param flowService         流程编排服务
+    * @param executionLogService 执行日志服务
      */
     public SpiderFlowRunner(SpiderDefinitionService definitionService,
                             SpiderFlowService flowService,
@@ -107,20 +107,20 @@ public class SpiderFlowRunner {
     }
 
     /**
-     * 按爬虫定义执行一次流程。
-     *
-     * <p>执行成功返回执行号，流程不存在或无有效节点时抛出异常。</p>
-     *
-     * @param definition 爬虫定义
-     * @return 执行号（executionNo）
+    * 按爬虫定义执行一次流程。
+    *
+    * <p>执行成功返回执行号，流程不存在或无有效节点时抛出异常。</p>
+    *
+    * @param definition 爬虫定义
+    * @return 执行号（executionNo）
      */
     @Transactional(rollbackFor = Exception.class)
     public String run(SpiderDefinition definition) {
         if (definition == null) {
             /**
-             * illegal参数异常。
-             * @param "爬虫定义不存在" "爬虫定义不存在"
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param "爬虫定义不存在" "爬虫定义不存在"
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("爬虫定义不存在");
         }
@@ -128,18 +128,18 @@ public class SpiderFlowRunner {
         SpiderFlow flow = flowId == null ? null : flowService.getById(flowId);
         if (flow == null) {
             /**
-             * illegal状态异常。
-             * @param definition.getCode( definition.获取编码(
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param definition.getCode( definition.获取编码(
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("爬虫 [" + definition.getCode() + "] 未关联流程编排");
         }
         FlowDefinition definitionModel = toFlowDefinition(flow);
         if (definitionModel.getNodes().isEmpty()) {
             /**
-             * illegal状态异常。
-             * @param "流程编排为空，无法执行" "流程编排为空，无法执行"
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param "流程编排为空，无法执行" "流程编排为空，无法执行"
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("流程编排为空，无法执行");
         }
@@ -152,50 +152,50 @@ public class SpiderFlowRunner {
             FlowInstance instance = flowModel.createGraph().createInstance(executionParams(definition, executionNo));
             instance.run();
             /**
-             * record追踪。
-             * @param definition definition
-             * @param flow 流
-             * @param executionNo 执行no
-             * @param instance instance
-             * @param startAt 启动at
+            * record追踪。
+            * @param definition definition
+            * @param flow 流
+            * @param executionNo 执行no
+            * @param instance instance
+            * @param startAt 启动at
              */
             recordTraces(definition, flow, executionNo, instance, startAt);
             /**
-             * 饰面。
-             * @param definition definition
-             * @param "SUCCESS" "成功"
-             * @param (System.currentTimeMillis( (系统.当前时间millis(
+            * 饰面。
+            * @param definition definition
+            * @param "SUCCESS" "成功"
+            * @param (System.currentTimeMillis( (系统.当前时间millis(
              */
             finish(definition, "SUCCESS", "执行成功，耗时 " + (System.currentTimeMillis() - start) + "ms");
             log.info("爬虫 [{}] 执行成功，executionNo={}", definition.getCode(), executionNo);
             return executionNo;
         } catch (Exception e) {
             /**
-             * record失败。
-             * @param definition definition
-             * @param flow 流
-             * @param executionNo 执行no
-             * @param startAt 启动at
-             * @param e e
+            * record失败。
+            * @param definition definition
+            * @param flow 流
+            * @param executionNo 执行no
+            * @param startAt 启动at
+            * @param e e
              */
             recordFailure(definition, flow, executionNo, startAt, e);
             /**
-             * illegal状态异常。
-             * @param definition.getCode( definition.获取编码(
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param definition.getCode( definition.获取编码(
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("爬虫 [" + definition.getCode() + "] 执行失败: " + e.getMessage(), e);
         }
     }
 
     /**
-     * 构造实例运行参数。
-     *
-     * <p>将执行号与爬虫编码写入上下文，供 output 节点落库时读取。</p>
-     *
-     * @param definition  爬虫定义
-     * @param executionNo 执行号
-     * @return 运行参数映射
+    * 构造实例运行参数。
+    *
+    * <p>将执行号与爬虫编码写入上下文，供 output 节点落库时读取。</p>
+    *
+    * @param definition  爬虫定义
+    * @param executionNo 执行号
+    * @return 运行参数映射
      */
     private Map<String, Object> executionParams(SpiderDefinition definition, String executionNo) {
         Map<String, Object> params = new LinkedHashMap<>();
@@ -205,10 +205,10 @@ public class SpiderFlowRunner {
     }
 
     /**
-     * 将持久化流程转换为引擎可执行的流程定义。
-     *
-     * @param flow 持久化流程
-     * @return 引擎流程定义
+    * 将持久化流程转换为引擎可执行的流程定义。
+    *
+    * @param flow 持久化流程
+    * @return 引擎流程定义
      */
     private FlowDefinition toFlowDefinition(SpiderFlow flow) {
         FlowDefinition definition = new FlowDefinition();
@@ -220,10 +220,10 @@ public class SpiderFlowRunner {
     }
 
     /**
-     * 解析节点 JSON 数组。
-     *
-     * @param nodesJson 节点 JSON 数组
-     * @return 引擎节点定义列表
+    * 解析节点 JSON 数组。
+    *
+    * @param nodesJson 节点 JSON 数组
+    * @return 引擎节点定义列表
      */
     private List<FlowDefinition.FlowNodeDef> parseNodes(String nodesJson) {
         List<FlowDefinition.FlowNodeDef> result = new ArrayList<>();
@@ -246,9 +246,9 @@ public class SpiderFlowRunner {
             }
         } catch (Exception e) {
             /**
-             * illegal状态异常。
-             * @param e.getMessage( e.获取消息(
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param e.getMessage( e.获取消息(
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("解析节点 JSON 失败: " + e.getMessage(), e);
         }
@@ -256,10 +256,10 @@ public class SpiderFlowRunner {
     }
 
     /**
-     * 解析连线 JSON 数组。
-     *
-     * @param edgesJson 连线 JSON 数组
-     * @return 引擎连线定义列表
+    * 解析连线 JSON 数组。
+    *
+    * @param edgesJson 连线 JSON 数组
+    * @return 引擎连线定义列表
      */
     private List<FlowDefinition.FlowEdgeDef> parseEdges(String edgesJson) {
         List<FlowDefinition.FlowEdgeDef> result = new ArrayList<>();
@@ -281,9 +281,9 @@ public class SpiderFlowRunner {
             }
         } catch (Exception e) {
             /**
-             * illegal状态异常。
-             * @param e.getMessage( e.获取消息(
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param e.getMessage( e.获取消息(
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("解析连线 JSON 失败: " + e.getMessage(), e);
         }
@@ -291,10 +291,10 @@ public class SpiderFlowRunner {
     }
 
     /**
-     * 解析节点配置 JSON 字符串为属性映射。
-     *
-     * @param configNode 配置 JSON 节点
-     * @return 属性映射
+    * 解析节点配置 JSON 字符串为属性映射。
+    *
+    * @param configNode 配置 JSON 节点
+    * @return 属性映射
      */
     @SuppressWarnings("unchecked")
     private Map<String, Object> parseConfig(JsonNode configNode) {
@@ -317,11 +317,11 @@ public class SpiderFlowRunner {
     }
 
     /**
-     * 读取 JSON 节点字符串字段。
-     *
-     * @param node JSON 节点
-     * @param key  字段名
-     * @return 字符串值，不存在时为 空
+    * 读取 JSON 节点字符串字段。
+    *
+    * @param node JSON 节点
+    * @param key  字段名
+    * @return 字符串值，不存在时为 空
      */
     private String text(JsonNode node, String key) {
         JsonNode value = node.get(key);
@@ -329,13 +329,13 @@ public class SpiderFlowRunner {
     }
 
     /**
-     * 记录节点级执行日志。
-     *
-     * @param definition  爬虫定义
-     * @param flow        流程
-     * @param executionNo 执行号
-     * @param instance    流程实例
-     * @param startAt     开始时间
+    * 记录节点级执行日志。
+    *
+    * @param definition  爬虫定义
+    * @param flow        流程
+    * @param executionNo 执行号
+    * @param instance    流程实例
+    * @param startAt     开始时间
      */
     private void recordTraces(SpiderDefinition definition, SpiderFlow flow,
                               String executionNo, FlowInstance instance, LocalDateTime startAt) {
@@ -363,13 +363,13 @@ public class SpiderFlowRunner {
     }
 
     /**
-     * 记录失败信息。
-     *
-     * @param definition  爬虫定义
-     * @param flow        流程
-     * @param executionNo 执行号
-     * @param startAt     开始时间
-     * @param e           异常
+    * 记录失败信息。
+    *
+    * @param definition  爬虫定义
+    * @param flow        流程
+    * @param executionNo 执行号
+    * @param startAt     开始时间
+    * @param e           异常
      */
     private void recordFailure(SpiderDefinition definition, SpiderFlow flow,
                                String executionNo, LocalDateTime startAt, Exception e) {
@@ -385,11 +385,11 @@ public class SpiderFlowRunner {
     }
 
     /**
-     * 回写爬虫定义最近执行结果。
-     *
-     * @param definition 爬虫定义
-     * @param status     执行状态
-     * @param message    执行消息
+    * 回写爬虫定义最近执行结果。
+    *
+    * @param definition 爬虫定义
+    * @param status     执行状态
+    * @param message    执行消息
      */
     private void finish(SpiderDefinition definition, String status, String message) {
         SpiderDefinition update = new SpiderDefinition();
@@ -401,10 +401,10 @@ public class SpiderFlowRunner {
     }
 
     /**
-     * 序列化对象为 JSON 字符串。
-     *
-     * @param value 对象
-     * @return JSON 字符串
+    * 序列化对象为 JSON 字符串。
+    *
+    * @param value 对象
+    * @return JSON 字符串
      */
     private String safeJson(Object value) {
         try {

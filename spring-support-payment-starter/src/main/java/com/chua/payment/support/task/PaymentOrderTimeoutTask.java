@@ -16,9 +16,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 订单超时处理定时任务
- * @author CH
- * @since 4.0.0
+* 订单超时处理定时任务
+* @author CH
+* @since 4.0.0
  */
 @Slf4j
 @Component
@@ -62,10 +62,10 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
     }
 
     /**
-     * cancelmerchant超时订单
-     *
-     * @param config 配置
-     * @return cancelmerchant超时订单的结果
+    * cancelmerchant超时订单
+    *
+    * @param config 配置
+    * @return cancelmerchant超时订单的结果
      */
     private int cancelMerchantTimeoutOrders(MerchantPaymentConfig config) {
         LocalDateTime expireTime = LocalDateTime.now().minusMinutes(config.getOrderTimeoutMinutes());
@@ -124,7 +124,7 @@ public class PaymentOrderTimeoutTask implements PaymentManagedTask {
     /** 执行 */
     public void execute() {
         /**
-         * cancel超时订单。
+        * cancel超时订单。
          */
         cancelTimeoutOrders();
     }

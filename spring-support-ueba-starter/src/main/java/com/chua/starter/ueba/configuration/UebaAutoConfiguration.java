@@ -14,24 +14,24 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.util.StringUtils;
 
 /**
- * UEBA 自动配置。
- * <p>
-   * 当 类路径 存在 {@link UebaEngine}（依赖 utils-support-ueba-starter）且属性
- * {@code plugin.ueba.enabled=true}（默认）时，装配一个可注入的 {@link UebaEngine}
- * Spring Bean。配置来源优先级：{@code configPath} 外部文件 &gt; {@code configResource}
-   * 类路径 资源；模型目录通过 {@code modelDir} 写入 {@code ueba.model.dir}。
- * Bean 生命周期随 Spring 容器销毁时自动调用 {@code UebaEngine#close()} 释放模型资源。</p>
- *
- * <p>使用示例：</p>
- * <pre>
- * &#064;Resource
- * private UebaEngine uebaEngine;
- *
- * UebaResult result = uebaEngine.analyze(trafficEvent);
- * </pre>
- *
- * @author CH
- * @since 4.0.0.42
+* UEBA 自动配置。
+* <p>
+* 当 类路径 存在 {@link UebaEngine}（依赖 utils-support-ueba-starter）且属性
+* {@code plugin.ueba.enabled=true}（默认）时，装配一个可注入的 {@link UebaEngine}
+* Spring Bean。配置来源优先级：{@code configPath} 外部文件 &gt; {@code configResource}
+* 类路径 资源；模型目录通过 {@code modelDir} 写入 {@code ueba.model.dir}。
+* Bean 生命周期随 Spring 容器销毁时自动调用 {@code UebaEngine#close()} 释放模型资源。</p>
+*
+* <p>使用示例：</p>
+* <pre>
+* &#064;Resource
+* private UebaEngine uebaEngine;
+*
+* UebaResult result = uebaEngine.analyze(trafficEvent);
+* </pre>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @AutoConfiguration
@@ -41,11 +41,11 @@ import org.springframework.util.StringUtils;
 public class UebaAutoConfiguration {
 
     /**
-     * 装配 UEBA 分析引擎 Bean。
-     *
-     * @param properties UEBA 配置属性，不能为 空
-     * @return 就绪的分析引擎
-     * @throws IllegalStateException 当默认配置加载失败时
+    * 装配 UEBA 分析引擎 Bean。
+    *
+    * @param properties UEBA 配置属性，不能为 空
+    * @return 就绪的分析引擎
+    * @throws IllegalStateException 当默认配置加载失败时
      */
     @Bean(destroyMethod = "close")
     @ConditionalOnMissingBean
@@ -72,10 +72,10 @@ public class UebaAutoConfiguration {
     }
 
     /**
-      * UEBA 分析引擎的 服务信息 贡献者。
-     *
-     * @param properties UEBA 配置属性
-     * @return ServiceInfoContributor
+    * UEBA 分析引擎的 服务信息 贡献者。
+    *
+    * @param properties UEBA 配置属性
+    * @return ServiceInfoContributor
      */
     @Bean
     public ServiceInfoContributor uebaServiceInfoContributor(UebaProperties properties) {

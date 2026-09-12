@@ -27,10 +27,10 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 /**
-   * osgi 与 SSH 集成验证 Rtful 接口。
- *
- * @since 4.0.0.42
- * @author CH
+* osgi 与 SSH 集成验证 Rtful 接口。
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @RestController
@@ -50,8 +50,8 @@ public class IntegrationDemoController {
     private ApplicationContext applicationContext;
 
     /**
-     * 获取关键集成 Bean 信息。
-     * @return Bean的结果
+    * 获取关键集成 Bean 信息。
+    * @return Bean的结果
      */
     @GetMapping("/beans")
     public Object beans() {
@@ -65,11 +65,11 @@ public class IntegrationDemoController {
     }
 
     /**
-     * 获取 Spring 容器中所有 Bean 名称列表（可按关键字过滤）。
-     *
-     * @param keyword 关键字过滤（可选）
-     * @param false false
-     * @return 列表全部Bean的结果
+    * 获取 Spring 容器中所有 Bean 名称列表（可按关键字过滤）。
+    *
+    * @param keyword 关键字过滤（可选）
+    * @param false false
+    * @return 列表全部Bean的结果
      */
     @GetMapping("/beans/all")
     public Object listAllBeans(@RequestParam(required = false) String keyword) {
@@ -94,9 +94,9 @@ public class IntegrationDemoController {
     }
 
     /**
-     * 获取指定 Bean 的类型与实现类信息。
-     * @param name 名称
-     * @return 获取Bean的结果
+    * 获取指定 Bean 的类型与实现类信息。
+    * @param name 名称
+    * @return 获取Bean的结果
      */
     @GetMapping("/beans/{name}")
     public Object getBean(@PathVariable String name) {
@@ -114,13 +114,13 @@ public class IntegrationDemoController {
     }
 
     /**
-      * 调用通过 osgi Bundle 注册的 dynamic服务。
-     *
-     * @param input 输入参数
-     * @param "world" "world"
-     * @return invokeDynamic的结果
-     * @param "world" "world"
-     * @param "world" "world"
+    * 调用通过 osgi Bundle 注册的 dynamic服务。
+    *
+    * @param input 输入参数
+    * @param "world" "world"
+    * @return invokeDynamic的结果
+    * @param "world" "world"
+    * @param "world" "world"
      */
     @GetMapping("/dynamic/invoke")
     public Object invokeDynamic(@RequestParam(defaultValue = "world") String input) {
@@ -149,8 +149,8 @@ public class IntegrationDemoController {
     }
 
     /**
-     * 列出所有 Bundle。
-     * @return 列表bundles的结果
+    * 列出所有 Bundle。
+    * @return 列表bundles的结果
      */
     @GetMapping("/osgi/bundles")
     public Object listBundles() {
@@ -168,9 +168,9 @@ public class IntegrationDemoController {
     }
 
     /**
-     * 获取指定 Bundle 详情。
-     * @param symbolicName symbolic名称
-     * @return 获取bundle的结果
+    * 获取指定 Bundle 详情。
+    * @param symbolicName symbolic名称
+    * @return 获取bundle的结果
      */
     @GetMapping("/osgi/bundles/{symbolicName}")
     public Object getBundle(@PathVariable String symbolicName) {
@@ -189,7 +189,7 @@ public class IntegrationDemoController {
     }
 
     /**
-     * 安装 Bundle（可选自动启动）。
+    * 安装 Bundle（可选自动启动）。
      */
     @PostMapping("/osgi/bundles/install")
     public Object installBundle(@RequestParam String url,
@@ -215,9 +215,9 @@ public class IntegrationDemoController {
     }
 
     /**
-     * 卸载 Bundle。
-     * @param symbolicName symbolic名称
-     * @return uninstallBundle的结果
+    * 卸载 Bundle。
+    * @param symbolicName symbolic名称
+    * @return uninstallBundle的结果
      */
     @DeleteMapping("/osgi/bundles/{symbolicName}")
     public Object uninstallBundle(@PathVariable String symbolicName) {
@@ -237,9 +237,9 @@ public class IntegrationDemoController {
     }
 
     /**
-     * 启动 Bundle。
-     * @param symbolicName symbolic名称
-     * @return 启动bundle的结果
+    * 启动 Bundle。
+    * @param symbolicName symbolic名称
+    * @return 启动bundle的结果
      */
     @PostMapping("/osgi/bundles/{symbolicName}/start")
     public Object startBundle(@PathVariable String symbolicName) {
@@ -247,9 +247,9 @@ public class IntegrationDemoController {
     }
 
     /**
-     * 停止 Bundle。
-     * @param symbolicName symbolic名称
-     * @return 停止bundle的结果
+    * 停止 Bundle。
+    * @param symbolicName symbolic名称
+    * @return 停止bundle的结果
      */
     @PostMapping("/osgi/bundles/{symbolicName}/stop")
     public Object stopBundle(@PathVariable String symbolicName) {
@@ -257,7 +257,7 @@ public class IntegrationDemoController {
     }
 
     /**
-      * 查询已注册的 osgi 服务。
+    * 查询已注册的 osgi 服务。
      */
     @GetMapping("/osgi/services")
     public Object listServices(@RequestParam String type,
@@ -298,8 +298,8 @@ public class IntegrationDemoController {
     }
 
     /**
-     * 获取 SSH 服务状态。
-     * @return ssh信息的结果
+    * 获取 SSH 服务状态。
+    * @return ssh信息的结果
      */
     @GetMapping("/ssh/info")
     public Object sshInfo() {
@@ -317,19 +317,19 @@ public class IntegrationDemoController {
     // ============================ 私有辅助 ============================
 
     /**
-     * 就绪
-     *
-     * @return 就绪的结果
+    * 就绪
+    *
+    * @return 就绪的结果
      */
     private boolean ready() {
         return osgiLauncher != null && osgiLauncher.isActive();
     }
 
     /**
-     * 查找Bundle
-     *
-     * @param symbolicName symbolic名称
-     * @return findBundle的结果
+    * 查找Bundle
+    *
+    * @param symbolicName symbolic名称
+    * @return findBundle的结果
      */
     private OsgiBundle findBundle(String symbolicName) {
         for (OsgiBundle bundle : osgiLauncher.getBundles()) {
@@ -341,12 +341,12 @@ public class IntegrationDemoController {
     }
 
     /**
-     * 改变bundle状态
-     *
-     * @param symbolicName symbolic名称
-     * @param start 启动
-     * @param action 动作
-     * @return 改变bundle状态的结果
+    * 改变bundle状态
+    *
+    * @param symbolicName symbolic名称
+    * @param start 启动
+    * @param action 动作
+    * @return 改变bundle状态的结果
      */
     private Object changeBundleState(String symbolicName, boolean start, String action) {
         if (!ready()) {
@@ -374,10 +374,10 @@ public class IntegrationDemoController {
     }
 
     /**
-     * 转为映射
-     *
-     * @param bundle bundle
-     * @return 转为映射的结果
+    * 转为映射
+    *
+    * @param bundle bundle
+    * @return 转为映射的结果
      */
     private Map<String, Object> toMap(OsgiBundle bundle) {
         Map<String, Object> info = new HashMap<>();
@@ -388,17 +388,17 @@ public class IntegrationDemoController {
     }
 
     /**
-     * normalizeurl
-     *
-     * @param url url
-     * @return normalizeUrl的结果
+    * normalizeurl
+    *
+    * @param url url
+    * @return normalizeUrl的结果
      */
     private String normalizeUrl(String url) {
         if (url == null || url.isEmpty()) {
             /**
-             * illegal参数异常。
-             * @param 不能为空" 不能为空"
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param 不能为空" 不能为空"
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("url 不能为空");
         }
@@ -408,9 +408,9 @@ public class IntegrationDemoController {
         File f = new File(url);
         if (!f.exists()) {
             /**
-             * illegal参数异常。
-             * @param url url
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param url url
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("文件不存在: " + url);
         }
@@ -418,9 +418,9 @@ public class IntegrationDemoController {
     }
 
     /**
-     * resolve类。
-     * @param name 名称
-     * @return resolve类的结果
+    * resolve类。
+    * @param name 名称
+    * @return resolve类的结果
      */
     private Class<?> resolveClass(String name) {
         Class<?> clazz = ReflectUtils.forName(name);
@@ -444,10 +444,10 @@ public class IntegrationDemoController {
     }
 
     /**
-     * 扫描导出包
-     *
-     * @param bundle bundle
-     * @return 扫描导出包的结果
+    * 扫描导出包
+    *
+    * @param bundle bundle
+    * @return 扫描导出包的结果
      */
     private List<String> scanExportedPackages(OsgiBundle bundle) {
         List<String> packages = new ArrayList<>();
@@ -461,8 +461,8 @@ public class IntegrationDemoController {
                     File jarFile = new File(versionDir, "bundle.jar");
                     if (jarFile.exists()) {
                         /**
-                         * 尝试。
-                         * @param JarFile(jarFile jarfile(jar文件
+                        * 尝试。
+                        * @param JarFile(jarFile jarfile(jar文件
                          */
                         try (JarFile jar = new JarFile(jarFile)) {
                             Enumeration<JarEntry> entries = jar.entries();
@@ -488,10 +488,10 @@ public class IntegrationDemoController {
     }
 
     /**
-     * 记录错误
-     *
-     * @param message 消息
-     * @return 错误的结果
+    * 记录错误
+    *
+    * @param message 消息
+    * @return 错误的结果
      */
     private Map<String, Object> error(String message) {
         Map<String, Object> resp = new HashMap<>();

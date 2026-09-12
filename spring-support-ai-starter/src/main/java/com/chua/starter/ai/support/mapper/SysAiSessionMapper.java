@@ -5,10 +5,10 @@ import com.chua.starter.ai.support.entity.SysAiSession;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
-   * AI 会话 映射器。
- *
- * @since 4.0.0.42
- * @author CH
+* AI 会话 映射器。
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Mapper
 public interface SysAiSessionMapper extends BaseMapper<SysAiSession> {

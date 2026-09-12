@@ -5,10 +5,10 @@ import com.chua.starter.ai.support.entity.settings.SysAiProvider;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
-   * 模型供应商 映射器
- *
- * @since 2026-08-03
- * @author CH
+* 模型供应商 映射器
+*
+* @since 2026-08-03
+* @author CH
  */
 @Mapper
 public interface AiProviderMapper extends BaseMapper<SysAiProvider> {

@@ -10,9 +10,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 商户钱包限额配置
- * @author CH
- * @since 4.0.0
+* 商户钱包限额配置
+* @author CH
+* @since 4.0.0
  */
 @Data
 @TableName("pay_merchant_wallet_limit")

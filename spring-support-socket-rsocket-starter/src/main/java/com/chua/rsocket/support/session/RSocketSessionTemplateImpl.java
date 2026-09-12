@@ -26,12 +26,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
-   * r套接字 会话模板实现
-   * 基于 Spring web套接字 实现，支持多房间配置
- *
-   * @版本 1.0.0
- * @since 2024-12-04
- * @author CH
+* r套接字 会话模板实现
+* 基于 Spring web套接字 实现，支持多房间配置
+*
+* @版本 1.0.0
+* @since 2024-12-04
+* @author CH
  */
 @Slf4j
 public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements SocketSessionTemplate {
@@ -46,27 +46,27 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     private final List<SocketListener> listeners;
 
     /**
-      * 事件监听器处理器（扫描 @on事件 注解并分发事件）
+    * 事件监听器处理器（扫描 @on事件 注解并分发事件）
      */
     private final EventListenerProcessor eventListenerProcessor;
     
     /**
-       * 会话缓存：客户端标识 -> 会话
+    * 会话缓存：客户端标识 -> 会话
      */
     private final Map<String, List<RSocketSessionImpl>> sessionCache = new ConcurrentHashMap<>();
     
     /**
-       * 会话标识到客户端标识的映射
+    * 会话标识到客户端标识的映射
      */
     private final Map<String, String> sessionClientMap = new ConcurrentHashMap<>();
     
     private volatile boolean running = false; // running
 
     /**
-      * 创建 r套接字会话templateimpl 实例
-     * @param properties 属性
-     * @param listeners 列表
-     * @param listeners 监听器
+    * 创建 r套接字会话templateimpl 实例
+    * @param properties 属性
+    * @param listeners 列表
+    * @param listeners 监听器
      */
     public RSocketSessionTemplateImpl(SocketProperties properties, List<SocketListener> listeners) {
         this.properties = properties;
@@ -107,12 +107,12 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     }
 
     /**
-       * 从路径中提取 客户端标识
-     * <p>
-       * 例如：/ws/WebRTC -> WebRTC, /ws -> 默认, / -> 默认
-     * </p>
-     * @param path 路径
-     * @return extract客户端id的结果
+    * 从路径中提取 客户端标识
+    * <p>
+    * 例如：/ws/WebRTC -> WebRTC, /ws -> 默认, / -> 默认
+    * </p>
+    * @param path 路径
+    * @return extract客户端id的结果
      */
     private String extractClientId(String path) {
         if (path == null || path.isEmpty() || "/".equals(path)) {
@@ -334,10 +334,10 @@ public class RSocketSessionTemplateImpl extends TextWebSocketHandler implements 
     }
 
     /**
-     * 创建消息
-     * @param event 事件
-     * @param data 数据
-     * @return 创建消息的结果
+    * 创建消息
+    * @param event 事件
+    * @param data 数据
+    * @return 创建消息的结果
      */
     private String createMessage(String event, Object data) {
         try {

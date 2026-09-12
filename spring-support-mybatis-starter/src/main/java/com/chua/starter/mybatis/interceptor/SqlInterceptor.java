@@ -32,11 +32,11 @@ import static com.chua.common.support.constant.NameConstant.NULL;
 import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
 
 /**
-   * SQL拦截器
- *
- * @author chh
- * @since 2022/10/25 9:26
- **/
+* SQL拦截器
+*
+* @author chh
+* @since 2022/10/25 9:26
+*
 @Intercepts({
         @Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class}),
         @Signature(type = StatementHandler.class, method = "getBoundSql", args = {}),
@@ -45,10 +45,10 @@ import static com.chua.starter.common.support.constant.MdcConstant.TRACE_ID;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, RowBounds.class, ResultHandler.class, CacheKey.class, BoundSql.class}),
 })
 /**
-   * SQL拦截器类。
- *
- * @author CH
- * @since 4.0.0
+* SQL拦截器类。
+*
+* @author CH
+* @since 4.0.0
  */
 public class SqlInterceptor implements Interceptor {
     /** 日志 */
@@ -60,15 +60,15 @@ public class SqlInterceptor implements Interceptor {
     private static final SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     /**
-     * SQL 格式化器
+    * SQL 格式化器
      */
     static final Formatter FORMATTER = new DmlFormatter();
 
     /**
-      * 重写intercept，拦截SQL，拼接完整SQL语句
-     *
-     * @param invocation 调用
-     * @return Object
+    * 重写intercept，拦截SQL，拼接完整SQL语句
+    *
+    * @param invocation 调用
+    * @return Object
      */
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
@@ -117,21 +117,21 @@ public class SqlInterceptor implements Interceptor {
     }
 
     /**
-      * 封装了一下SQL语句，使得结果返回完整xml路径下的SQL语句节点标识 + SQL语句
-     *
-     * @param configuration 配置
-     * @param boundSql      boundsql
-     * @param sqlId         sqlid
-     * @param time          执行时间
-     * @param result        结果
-     * @param name          SQL操作类型
-     * @return String
+    * 封装了一下SQL语句，使得结果返回完整xml路径下的SQL语句节点标识 + SQL语句
+    *
+    * @param configuration 配置
+    * @param boundSql      boundsql
+    * @param sqlId         sqlid
+    * @param time          执行时间
+    * @param result        结果
+    * @param name          SQL操作类型
+    * @return String
      */
     public static String getSql(Configuration configuration, BoundSql boundSql, String sqlId, long time, Object result, String name) {
         /**
-          * showsql。
-         * @param configuration 配置
-         * @param boundSql boundsql
+        * showsql。
+        * @param configuration 配置
+        * @param boundSql boundsql
          */
         showSql(configuration, boundSql);
         String traceId = MDC.get(TRACE_ID);
@@ -169,11 +169,11 @@ public class SqlInterceptor implements Interceptor {
     }
 
     /**
-      * 如果参数是字符串，则添加单引号，
-      * 如果是日期，则转换为时间格式器并加单引号； 对参数是空和不是空的情况作了处理
-     *
-     * @return String
-     * @param obj obj
+    * 如果参数是字符串，则添加单引号，
+    * 如果是日期，则转换为时间格式器并加单引号； 对参数是空和不是空的情况作了处理
+    *
+    * @return String
+    * @param obj obj
      */
     private static String getParameterValue(Object obj) {
         String value;
@@ -192,11 +192,11 @@ public class SqlInterceptor implements Interceptor {
     }
 
     /**
-     * 进行？的替换
-     *
-     * @param configuration 配置
-     * @param boundSql      boundsql
-     * @return void
+    * 进行？的替换
+    *
+    * @param configuration 配置
+    * @param boundSql      boundsql
+    * @return void
      */
     public static void showSql(Configuration configuration, BoundSql boundSql) {
         // 获取参数

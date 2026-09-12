@@ -16,71 +16,71 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 提取节点。
- *
- * <p>从指定数据源中按表达式提取字段，将结果写入上下文指定属性。
-   * 支持 json路径 / 正则 / CSS 选择器三种解析方式，表达式支持环境变量插值。</p>
- *
- * <p>节点配置说明：</p>
- * <ul>
- *   <li>{@code source} 数据来源，当前数据 {@code current} 或上下文属性名，默认 current</li>
- *   <li>{@code parserType} 解析方式，jsonpath / regex / css，默认 jsonpath</li>
- *   <li>{@code expression} 提取表达式（必填）</li>
- *   <li>{@code saveAs} 结果写入的上下文属性名（必填）</li>
- *   <li>{@code isList} 是否提取列表结果，开关，默认关闭</li>
- * </ul>
- *
- * <p>执行后写入上下文属性 {@code saveAs} 指定的提取结果。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 提取节点。
+*
+* <p>从指定数据源中按表达式提取字段，将结果写入上下文指定属性。
+* 支持 json路径 / 正则 / CSS 选择器三种解析方式，表达式支持环境变量插值。</p>
+*
+* <p>节点配置说明：</p>
+* <ul>
+*   <li>{@code source} 数据来源，当前数据 {@code current} 或上下文属性名，默认 current</li>
+*   <li>{@code parserType} 解析方式，jsonpath / regex / css，默认 jsonpath</li>
+*   <li>{@code expression} 提取表达式（必填）</li>
+*   <li>{@code saveAs} 结果写入的上下文属性名（必填）</li>
+*   <li>{@code isList} 是否提取列表结果，开关，默认关闭</li>
+* </ul>
+*
+* <p>执行后写入上下文属性 {@code saveAs} 指定的提取结果。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Component
 public class SpiderExtractNode implements FlowNode {
 
     /**
-     * 日志记录器
+    * 日志记录器
      */
     private static final Logger log = LoggerFactory.getLogger(SpiderExtractNode.class);
 
     /**
-     * 数据来源：当前数据
+    * 数据来源：当前数据
      */
     private static final String SOURCE_CURRENT = "current";
 
     /**
-      * 解析方式：json路径
+    * 解析方式：json路径
      */
     private static final String PARSER_JSONPATH = "jsonpath";
 
     /**
-     * 解析方式：正则
+    * 解析方式：正则
      */
     private static final String PARSER_REGEX = "regex";
 
     /**
-     * 解析方式：CSS 选择器
+    * 解析方式：CSS 选择器
      */
     private static final String PARSER_CSS = "css";
 
     /**
-     * 环境变量解析器
+    * 环境变量解析器
      */
     private final SpiderEnvResolver envResolver;
 
     /**
-     * 通过构造器注入环境变量解析器。
-     *
-     * @param envResolver 环境变量解析器
+    * 通过构造器注入环境变量解析器。
+    *
+    * @param envResolver 环境变量解析器
      */
     public SpiderExtractNode(SpiderEnvResolver envResolver) {
         this.envResolver = envResolver;
     }
 
     /**
-     * 节点类型标识。
-     *
-     * @return 节点类型
+    * 节点类型标识。
+    *
+    * @return 节点类型
      */
     @Override
     public String type() {
@@ -88,9 +88,9 @@ public class SpiderExtractNode implements FlowNode {
     }
 
     /**
-     * 节点配置表单元信息。
-     *
-     * @return 表单元信息列表
+    * 节点配置表单元信息。
+    *
+    * @return 表单元信息列表
      */
     @Override
     public List<FlowNodeField> configSchema() {
@@ -107,11 +107,11 @@ public class SpiderExtractNode implements FlowNode {
     }
 
     /**
-     * 执行提取节点。
-     *
-     * <p>根据配置从数据源取值，按指定解析方式提取结果并写入上下文属性。</p>
-     *
-     * @param context 当前流程上下文
+    * 执行提取节点。
+    *
+    * <p>根据配置从数据源取值，按指定解析方式提取结果并写入上下文属性。</p>
+    *
+    * @param context 当前流程上下文
      */
     @Override
     public void execute(FlowContext context) {
@@ -121,18 +121,18 @@ public class SpiderExtractNode implements FlowNode {
         String expression = envResolver.resolve(props.getString("expression"));
         if (expression == null || expression.isEmpty()) {
             /**
-             * illegal参数异常。
-             * @param 参数" 参数"
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param 参数" 参数"
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("spider.extract 节点缺少 expression 参数");
         }
         String saveAs = props.getString("saveAs");
         if (saveAs == null || saveAs.isEmpty()) {
             /**
-             * illegal参数异常。
-             * @param 参数" 参数"
-             * @return illegal参数异常的结果
+            * illegal参数异常。
+            * @param 参数" 参数"
+            * @return illegal参数异常的结果
              */
             throw new IllegalArgumentException("spider.extract 节点缺少 saveAs 参数");
         }
@@ -145,13 +145,13 @@ public class SpiderExtractNode implements FlowNode {
     }
 
     /**
-     * 解析数据来源。
-     *
-     * <p>{@code current} 取当前数据，其他取值按上下文属性读取。</p>
-     *
-     * @param source  数据来源标识
-     * @param context 当前流程上下文
-     * @return 数据来源值
+    * 解析数据来源。
+    *
+    * <p>{@code current} 取当前数据，其他取值按上下文属性读取。</p>
+    *
+    * @param source  数据来源标识
+    * @param context 当前流程上下文
+    * @return 数据来源值
      */
     private Object resolveSource(String source, FlowContext context) {
         if (SOURCE_CURRENT.equals(source)) {
@@ -161,13 +161,13 @@ public class SpiderExtractNode implements FlowNode {
     }
 
     /**
-     * 按指定解析方式提取结果。
-     *
-     * @param sourceData 数据来源值
-     * @param parserType 解析方式
-     * @param expression 提取表达式
-     * @param isList     是否提取列表
-     * @return 提取结果
+    * 按指定解析方式提取结果。
+    *
+    * @param sourceData 数据来源值
+    * @param parserType 解析方式
+    * @param expression 提取表达式
+    * @param isList     是否提取列表
+    * @return 提取结果
      */
     private Object extract(Object sourceData, String parserType,
                            String expression, boolean isList) {
@@ -183,9 +183,9 @@ public class SpiderExtractNode implements FlowNode {
             }
             default -> {
                 /**
-                 * illegal参数异常。
-                 * @param parserType parser类型
-                 * @return illegal参数异常的结果
+                * illegal参数异常。
+                * @param parserType parser类型
+                * @return illegal参数异常的结果
                  */
                 throw new IllegalArgumentException("不支持的解析方式: " + parserType);
             }
@@ -193,11 +193,11 @@ public class SpiderExtractNode implements FlowNode {
     }
 
     /**
-      * 按 json路径 提取。
-     *
-     * @param sourceData 数据来源值
-     * @param expression json路径 表达式
-     * @return 提取结果，匹配失败返回 空
+    * 按 json路径 提取。
+    *
+    * @param sourceData 数据来源值
+    * @param expression json路径 表达式
+    * @return 提取结果，匹配失败返回 空
      */
     private Object extractJsonPath(Object sourceData, String expression) {
         if (sourceData == null) {
@@ -215,14 +215,14 @@ public class SpiderExtractNode implements FlowNode {
     }
 
     /**
-     * 按正则提取。
-     *
-     * <p>优先提取第一个捕获组，无捕获组时提取完整匹配。</p>
-     *
-     * @param sourceData 数据来源值
-     * @param expression 正则表达式
-     * @param isList     是否提取全部匹配
-     * @return 提取结果
+    * 按正则提取。
+    *
+    * <p>优先提取第一个捕获组，无捕获组时提取完整匹配。</p>
+    *
+    * @param sourceData 数据来源值
+    * @param expression 正则表达式
+    * @param isList     是否提取全部匹配
+    * @return 提取结果
      */
     private Object extractRegex(Object sourceData, String expression, boolean isList) {
         if (sourceData == null) {
@@ -244,14 +244,14 @@ public class SpiderExtractNode implements FlowNode {
     }
 
     /**
-     * 按 CSS 选择器提取（简化实现）。
-     *
-     * <p>仅支持标签名选择器，通过正则提取标签内容。</p>
-     *
-     * @param sourceData 数据来源值
-     * @param expression CSS 选择器
-     * @param isList     是否提取全部匹配
-     * @return 提取结果
+    * 按 CSS 选择器提取（简化实现）。
+    *
+    * <p>仅支持标签名选择器，通过正则提取标签内容。</p>
+    *
+    * @param sourceData 数据来源值
+    * @param expression CSS 选择器
+    * @param isList     是否提取全部匹配
+    * @return 提取结果
      */
     private Object extractCss(Object sourceData, String expression, boolean isList) {
         if (sourceData == null) {

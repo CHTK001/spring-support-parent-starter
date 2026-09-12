@@ -16,15 +16,15 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
-   * 键值环境注入：启动时（Spring 装配前）读取 sqlite {@code console_kv} 表，
-   * 以 {@code MapPropertySource("console-kv")} 注入 环境——业务代码可经
- * {@code @Value("${key}")} / {@code environment.getProperty("key")} 读取"运行设置"。
- *
- * <p>镜像 {@code DatabaseSettingEnvironmentPostProcessor} 模式（spring.factories 注册）；
-   * 库/表不存在或不可读时静默跳过（首次启动）；键值优先级最高（添加第一个——页面临时调整优先生效）。</p>
- *
- * @author CH
- * @since 2026/09/04
+* 键值环境注入：启动时（Spring 装配前）读取 sqlite {@code console_kv} 表，
+* 以 {@code MapPropertySource("console-kv")} 注入 环境——业务代码可经
+* {@code @Value("${key}")} / {@code environment.getProperty("key")} 读取"运行设置"。
+*
+* <p>镜像 {@code DatabaseSettingEnvironmentPostProcessor} 模式（spring.factories 注册）；
+* 库/表不存在或不可读时静默跳过（首次启动）；键值优先级最高（添加第一个——页面临时调整优先生效）。</p>
+*
+* @author CH
+* @since 2026/09/04
  */
 @Slf4j
 public class ConsoleKvEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
@@ -39,8 +39,8 @@ public class ConsoleKvEnvironmentPostProcessor implements EnvironmentPostProcess
         try {
             ReflectUtils.forName("org.sqlite.JDBC");
             /**
-             * 尝试。
-             * @param path 路径
+            * 尝试。
+            * @param path 路径
              */
             try (Connection connection = DriverManager.getConnection("jdbc:sqlite:" + path);
                  Statement statement = connection.createStatement();

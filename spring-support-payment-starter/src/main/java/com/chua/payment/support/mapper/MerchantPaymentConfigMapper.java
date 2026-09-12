@@ -5,9 +5,9 @@ import com.chua.payment.support.entity.MerchantPaymentConfig;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
-   * 商户支付配置映射器
- * @author CH
- * @since 4.0.0
+* 商户支付配置映射器
+* @author CH
+* @since 4.0.0
  */
 @Mapper
 public interface MerchantPaymentConfigMapper extends BaseMapper<MerchantPaymentConfig> {

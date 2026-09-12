@@ -18,35 +18,35 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 通用能力配置控制器基类。
- *
- * <p>按指定分组（如 image / layout）读取 GlobalSettingProvider SPI 定义的配置项，
-   * 返回 {字段,价值观,价值观类型,description,排序}，供前端 {@code CapabilityConfigForm} 数据驱动渲染。
- * 更新时整组替换。</p>
- *
- * <p>子类只需声明分组，并配置 {@code @RequestMapping} 即可。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 通用能力配置控制器基类。
+*
+* <p>按指定分组（如 image / layout）读取 GlobalSettingProvider SPI 定义的配置项，
+* 返回 {字段,价值观,价值观类型,description,排序}，供前端 {@code CapabilityConfigForm} 数据驱动渲染。
+* 更新时整组替换。</p>
+*
+* <p>子类只需声明分组，并配置 {@code @RequestMapping} 即可。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @RequiredArgsConstructor
 public abstract class AbstractCapabilityConfigController {
 
     /**
-     * 全局设置服务
+    * 全局设置服务
      */
     protected final SysAiGlobalSettingService settingService;
 
     /**
-      * 配置分组（如 ocr / face / 镜像 / layout）
-     * @return 群体的结果
+    * 配置分组（如 ocr / face / 镜像 / layout）
+    * @return 群体的结果
      */
     protected abstract String group();
 
     /**
-     * 获取配置项定义与当前值。
-     *
-     * @return 配置列表（field/value/valueType/description/sort）
+    * 获取配置项定义与当前值。
+    *
+    * @return 配置列表（field/value/valueType/description/sort）
      */
     @Permission("admin")
     @GetMapping
@@ -79,10 +79,10 @@ public abstract class AbstractCapabilityConfigController {
     }
 
     /**
-     * 更新配置（整组替换）。
-     *
-     * @param body 配置请求（群体 + 字段）
-     * @return 更新结果
+    * 更新配置（整组替换）。
+    *
+    * @param body 配置请求（群体 + 字段）
+    * @return 更新结果
      */
     @Permission("admin")
     @PutMapping
@@ -95,9 +95,9 @@ public abstract class AbstractCapabilityConfigController {
     }
 
     /**
-     * 安全转换整数。
-     * @param obj obj
-     * @return 转为int的结果
+    * 安全转换整数。
+    * @param obj obj
+    * @return 转为int的结果
      */
     private static int toInt(Object obj) {
         if (obj instanceof Number n) {

@@ -6,101 +6,101 @@ import java.util.List;
 import java.util.Optional;
 
 /**
-   * AI app钥匙 服务接口。
- *
- * @since 4.0.0.42
- * @author CH
+* AI app钥匙 服务接口。
+*
+* @since 4.0.0.42
+* @author CH
  */
 public interface SysAiAppKeyService {
 
     /**
-      * 查询全部 app钥匙。
-     *
-     * @return AppKey 列表
+    * 查询全部 app钥匙。
+    *
+    * @return AppKey 列表
      */
     List<SysAiAppKey> list();
 
     /**
-      * 新增 app钥匙。
-     *
-     * @param appKey app钥匙 实体
-     * @return 保存后的 app钥匙
+    * 新增 app钥匙。
+    *
+    * @param appKey app钥匙 实体
+    * @return 保存后的 app钥匙
      */
     SysAiAppKey save(SysAiAppKey appKey);
 
     /**
-      * 更新 app钥匙。
-     *
-     * @param appKey app钥匙 实体
-     * @return 是否成功
+    * 更新 app钥匙。
+    *
+    * @param appKey app钥匙 实体
+    * @return 是否成功
      */
     boolean update(SysAiAppKey appKey);
 
     /**
-       * 按 标识 删除 app钥匙。
-     *
-     * @param id app钥匙 标识
-     * @return 是否成功
+    * 按 标识 删除 app钥匙。
+    *
+    * @param id app钥匙 标识
+    * @return 是否成功
      */
     boolean deleteById(Integer id);
 
     /**
-      * 按 app钥匙 查询。
-     *
-     * @param appKey app钥匙
-     * @return AppKey 实体（可选）
+    * 按 app钥匙 查询。
+    *
+    * @param appKey app钥匙
+    * @return AppKey 实体（可选）
      */
     default Optional<SysAiAppKey> findByAppKey(String appKey) {
         return Optional.ofNullable(getByAppKey(appKey));
     }
 
     /**
-     * 获取byapp钥匙。
-     * @param appKey app钥匙
-     * @return 获取byapp钥匙的结果
+    * 获取byapp钥匙。
+    * @param appKey app钥匙
+    * @return 获取byapp钥匙的结果
      */
     SysAiAppKey getByAppKey(String appKey);
 
     /**
-     * 获取群体idbyapp钥匙。
-     * @param appKey app钥匙
-     * @return 获取群体idbyapp钥匙的结果
+    * 获取群体idbyapp钥匙。
+    * @param appKey app钥匙
+    * @return 获取群体idbyapp钥匙的结果
      */
     Integer getGroupIdByAppKey(String appKey);
 
     /**
-     * 验证。
-     * @param appKey app钥匙
-     * @param secret secret
-     * @param ip ip
-     * @return 验证的结果
+    * 验证。
+    * @param appKey app钥匙
+    * @param secret secret
+    * @param ip ip
+    * @return 验证的结果
      */
     boolean verify(String appKey, String secret, String ip);
 
     /**
-      * 仅校验 app钥匙 是否有效（状态、过期、IP 白名单）。
-     * <p>用于 Bearer/Header 单项凭证鉴权场景，AppKey 即完整凭证，不要求额外的 secret。</p>
-     *
-     * @param appKey app钥匙
-     * @param ip     客户端 IP（可为空）
-     * @return 是否有效
+    * 仅校验 app钥匙 是否有效（状态、过期、IP 白名单）。
+    * <p>用于 Bearer/Header 单项凭证鉴权场景，AppKey 即完整凭证，不要求额外的 secret。</p>
+    *
+    * @param appKey app钥匙
+    * @param ip     客户端 IP（可为空）
+    * @return 是否有效
      */
     boolean verifyAppKeyOnly(String appKey, String ip);
 
     /**
-     * 更新use信息byapp钥匙。
-     * @param appKey app钥匙
+    * 更新use信息byapp钥匙。
+    * @param appKey app钥匙
      */
     void updateUseInfoByAppKey(String appKey);
 
     /**
-      * 更新 app钥匙 的 令牌 消耗累计值。
-     *
-     * <p>每次对话成功后异步调用，将本次消耗的 Token 数累加到
-     * {@code sys_ai_app_key_total_tokens} 字段。</p>
-     *
-     * @param appKey  app钥匙 值
-     * @param tokens  本次消耗的 令牌 数
+    * 更新 app钥匙 的 令牌 消耗累计值。
+    *
+    * <p>每次对话成功后异步调用，将本次消耗的 Token 数累加到
+    * {@code sys_ai_app_key_total_tokens} 字段。</p>
+    *
+    * @param appKey  app钥匙 值
+    * @param tokens  本次消耗的 令牌 数
      */
     void updateTokenQuotaByAppKey(String appKey, long tokens);
 }

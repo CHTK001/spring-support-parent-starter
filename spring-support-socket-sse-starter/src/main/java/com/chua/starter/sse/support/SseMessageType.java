@@ -6,26 +6,26 @@ import lombok.Data;
 import lombok.Getter;
 
 /**
- * 消息
- * @author CH
- * @since 4.0.0
+* 消息
+* @author CH
+* @since 4.0.0
  */
 @Getter
 public enum SseMessageType {
     /**
-     * 通知
+    * 通知
      */
     NOTIFY,
     /**
-     * 通知
+    * 通知
      */
     NOTIFY_HTML,
     /**
-     * 进度
+    * 进度
      */
     PROCESS,
     /**
-     * 完成
+    * 完成
      */
     FINISH
 }

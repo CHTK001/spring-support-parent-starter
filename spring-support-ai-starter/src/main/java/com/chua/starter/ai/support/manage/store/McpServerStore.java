@@ -13,14 +13,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * MCP 服务器档案的数据库存储服务。
- *
- * <p>基于 {@link SysAiMcpServerMapper} 持久化到 {@code sys_ai_mcp_server} 表，
- * 并把实体与前端契约的 {@code Map<String, Object>} 之间做 JSON 序列化转换
- * （transport 字段存 JSON 文本）。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* MCP 服务器档案的数据库存储服务。
+*
+* <p>基于 {@link SysAiMcpServerMapper} 持久化到 {@code sys_ai_mcp_server} 表，
+* 并把实体与前端契约的 {@code Map<String, Object>} 之间做 JSON 序列化转换
+* （transport 字段存 JSON 文本）。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Component
 @RequiredArgsConstructor
@@ -31,8 +31,8 @@ public class McpServerStore {
     private final ObjectMapper objectMapper; // 对象映射器
 
     /**
-     * 列出全部 MCP 服务器（按创建时间升序）
-     * @return 列表全部的结果
+    * 列出全部 MCP 服务器（按创建时间升序）
+    * @return 列表全部的结果
      */
     public List<Map<String, Object>> listAll() {
         List<SysAiMcpServer> entities = mcpServerMapper.selectList(
@@ -46,9 +46,9 @@ public class McpServerStore {
     }
 
     /**
-      * 按 标识 查询
-     * @param serverId 服务端标识
-     * @return 获取的结果
+    * 按 标识 查询
+    * @param serverId 服务端标识
+    * @return 获取的结果
      */
     public Map<String, Object> get(String serverId) {
         SysAiMcpServer entity = mcpServerMapper.selectById(serverId);
@@ -56,9 +56,9 @@ public class McpServerStore {
     }
 
     /**
-      * 新增（由调用方预先填充 标识 与时间戳）
-     * @param contract contract
-     * @return 插入的结果
+    * 新增（由调用方预先填充 标识 与时间戳）
+    * @param contract contract
+    * @return 插入的结果
      */
     public Map<String, Object> insert(Map<String, Object> contract) {
         SysAiMcpServer entity = fromContract(contract);
@@ -67,9 +67,9 @@ public class McpServerStore {
     }
 
     /**
-      * 更新（按 标识，非 空 字段覆盖）
-     * @param contract contract
-     * @return 更新的结果
+    * 更新（按 标识，非 空 字段覆盖）
+    * @param contract contract
+    * @return 更新的结果
      */
     public Map<String, Object> update(Map<String, Object> contract) {
         SysAiMcpServer entity = fromContract(contract);
@@ -78,17 +78,17 @@ public class McpServerStore {
     }
 
     /**
-     * 删除
-     * @param serverId 服务端标识
+    * 删除
+    * @param serverId 服务端标识
      */
     public void delete(String serverId) {
         mcpServerMapper.deleteById(serverId);
     }
 
     /**
-      * 契约 映射 → 实体
-     * @param c c
-     * @return 从contract的结果
+    * 契约 映射 → 实体
+    * @param c c
+    * @return 从contract的结果
      */
     private SysAiMcpServer fromContract(Map<String, Object> c) {
         SysAiMcpServer e = new SysAiMcpServer();
@@ -107,10 +107,10 @@ public class McpServerStore {
     }
 
     /**
-     * 实体 → 契约 映射（前端 mcp 服务端 结构）
-     *
-     * @param e 实体
-     * @return 契约 Map
+    * 实体 → 契约 映射（前端 mcp 服务端 结构）
+    *
+    * @param e 实体
+    * @return 契约 Map
      */
     private Map<String, Object> toContract(SysAiMcpServer e) {
         Map<String, Object> m = new LinkedHashMap<>();
@@ -130,28 +130,28 @@ public class McpServerStore {
         m.put("created_at", e.getCreatedAt());
         m.put("updated_at", e.getUpdatedAt());
         /**
-         * str。
-         * @param v v
-         * @return str的结果
+        * str。
+        * @param v v
+        * @return str的结果
          */
         return m;
     }
 
     private String str(Object v) {
         /**
-         * bool。
-         * @param v v
-         * @return bool的结果
+        * bool。
+        * @param v v
+        * @return bool的结果
          */
         return v == null ? null : String.valueOf(v);
     }
 
     private Boolean bool(Object v) {
         /**
-          * longval。
-         * @param v v
-         * @return longVal的结果
-         * @param json json
+        * longval。
+        * @param v v
+        * @return longVal的结果
+        * @param json json
          */
         return v instanceof Boolean ? (Boolean) v : (v == null ? null : Boolean.parseBoolean(String.valueOf(v)));
     }

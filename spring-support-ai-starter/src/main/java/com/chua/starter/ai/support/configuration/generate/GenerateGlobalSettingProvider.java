@@ -6,28 +6,28 @@ import com.chua.common.support.spi.annotations.Spi;
 import java.util.List;
 
 /**
- * 文生图 / 文生视频 全局设置提供者 SPI。
- *
- * <p>定义 {@code generate} 分组的全部配置项，由
- * {@link com.chua.starter.ai.support.configuration.client.GlobalSettingInitializer}
- * 启动时自动注册到 {@code sys_ai_global_setting} 表（仅首次）。</p>
- *
- * <p>该分组为系统内部使用的全局 Bean 配置：全局 {@code ImageClient} 与
- * {@code VideoClient} 会话由此驱动，供文生图 / 文生视频管线在后台调用。</p>
- *
- * @author CH
- * @since 4.0.0.42
+* 文生图 / 文生视频 全局设置提供者 SPI。
+*
+* <p>定义 {@code generate} 分组的全部配置项，由
+* {@link com.chua.starter.ai.support.configuration.client.GlobalSettingInitializer}
+* 启动时自动注册到 {@code sys_ai_global_setting} 表（仅首次）。</p>
+*
+* <p>该分组为系统内部使用的全局 Bean 配置：全局 {@code ImageClient} 与
+* {@code VideoClient} 会话由此驱动，供文生图 / 文生视频管线在后台调用。</p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Spi("generate")
 public class GenerateGlobalSettingProvider implements GlobalSettingProvider {
 
     /**
-     * 配置分组标识
+    * 配置分组标识
      */
     private static final String GROUP = "generate";
 
     /**
-     * 分组显示名称
+    * 分组显示名称
      */
     private static final String GROUP_NAME = "文生图 / 文生视频";
 

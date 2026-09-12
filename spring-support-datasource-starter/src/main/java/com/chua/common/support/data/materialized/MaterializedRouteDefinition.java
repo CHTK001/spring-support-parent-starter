@@ -5,10 +5,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 物理化路由定义。
- *
- * @since 2026/4/2
- * @author CH
+* 物理化路由定义。
+*
+* @since 2026/4/2
+* @author CH
  */
 @Data
 @NoArgsConstructor

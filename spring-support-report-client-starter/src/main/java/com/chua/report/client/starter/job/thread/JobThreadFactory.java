@@ -8,47 +8,47 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * 作业线程工厂
- * <p>
-   * 采用单例模式，负责管理所有作业thread实例的生命周期。
-   * 使用并发哈希映射保证线程安全。
- * </p>
- *
-   * @版本 1.0.0
- * @since 2024/03/11
- * @author CH
+* 作业线程工厂
+* <p>
+* 采用单例模式，负责管理所有作业thread实例的生命周期。
+* 使用并发哈希映射保证线程安全。
+* </p>
+*
+* @版本 1.0.0
+* @since 2024/03/11
+* @author CH
  */
 @Slf4j
 public class JobThreadFactory {
 
     /**
-     * 单例实例
+    * 单例实例
      */
     private static final JobThreadFactory INSTANCE = new JobThreadFactory();
 
     /**
-     * 作业线程仓库
-       * 钥匙: 任务标识
-      * 价值观: 作业thread实例
+    * 作业线程仓库
+    * 钥匙: 任务标识
+    * 价值观: 作业thread实例
      */
     private static final ConcurrentMap<Integer, JobThread> JOB_THREAD_REPOSITORY = new ConcurrentHashMap<>();
 
     /**
-     * 私有构造函数
+    * 私有构造函数
      */
     private JobThreadFactory() {
     }
 
     /**
-     * 注册作业线程
-     * <p>
-       * 创建新的作业thread并启动，如果已存在同标识的线程则先停止旧线程。
-     * </p>
-     *
-     * @param jobId           任务标识
-     * @param handler         任务处理器
-     * @param removeOldReason 删除旧线程的原因
-     * @return 新创建的JobThread实例
+    * 注册作业线程
+    * <p>
+    * 创建新的作业thread并启动，如果已存在同标识的线程则先停止旧线程。
+    * </p>
+    *
+    * @param jobId           任务标识
+    * @param handler         任务处理器
+    * @param removeOldReason 删除旧线程的原因
+    * @return 新创建的JobThread实例
      */
     public static JobThread registJobThread(int jobId, JobHandler handler, String removeOldReason) {
         JobThread newJobThread = new JobThread(jobId, handler);
@@ -70,11 +70,11 @@ public class JobThreadFactory {
     }
 
     /**
-     * 删除作业线程
-     *
-     * @param jobId           任务标识
-     * @param removeOldReason 删除原因
-     * @return 被删除的JobThread实例，如果不存在返回null
+    * 删除作业线程
+    *
+    * @param jobId           任务标识
+    * @param removeOldReason 删除原因
+    * @return 被删除的JobThread实例，如果不存在返回null
      */
     public static JobThread removeJobThread(int jobId, String removeOldReason) {
         JobThread oldJobThread = JOB_THREAD_REPOSITORY.remove(jobId);
@@ -88,28 +88,28 @@ public class JobThreadFactory {
     }
 
     /**
-     * 加载作业线程
-     *
-     * @param jobId 任务标识
-     * @return JobThread实例，如果不存在返回null
+    * 加载作业线程
+    *
+    * @param jobId 任务标识
+    * @return JobThread实例，如果不存在返回null
      */
     public static JobThread loadJobThread(int jobId) {
         return JOB_THREAD_REPOSITORY.get(jobId);
     }
 
     /**
-     * 获取工厂单例实例
-     *
-     * @return JobThreadFactory实例
+    * 获取工厂单例实例
+    *
+    * @return JobThreadFactory实例
      */
     public static JobThreadFactory getInstance() {
         return INSTANCE;
     }
 
     /**
-     * 获取当前活跃的作业线程数量
-     *
-     * @return 线程数量
+    * 获取当前活跃的作业线程数量
+    *
+    * @return 线程数量
      */
     public static int size() {
         return JOB_THREAD_REPOSITORY.size();

@@ -35,11 +35,11 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 /**
- * 数据权限拦截器
- * 用于在执行查询时自动添加数据权限过滤条件
- *
- * @author CH
- * @since 4.0.0
+* 数据权限拦截器
+* 用于在执行查询时自动添加数据权限过滤条件
+*
+* @author CH
+* @since 4.0.0
  */
 @Data
 @NoArgsConstructor
@@ -56,20 +56,20 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     static final Map<String, Expression> MAPPED_STATEMENT_ID = new ConcurrentReferenceHashMap<>(4096); // mapped对账单标识
 
     /**
-      * 创建 mybatisplus权限拦截器 实例
-     * @param mybatisPlusPermissionHandler mybatisplus权限处理器
-     * @param methodSecurityInterceptor mybatisplus数据scope属性
-     * @param methodSecurityInterceptor 方法安全性拦截器
+    * 创建 mybatisplus权限拦截器 实例
+    * @param mybatisPlusPermissionHandler mybatisplus权限处理器
+    * @param methodSecurityInterceptor mybatisplus数据scope属性
+    * @param methodSecurityInterceptor 方法安全性拦截器
      */
     public MybatisPlusPermissionInterceptor(DataPermissionHandler mybatisPlusPermissionHandler, MybatisPlusDataScopeProperties methodSecurityInterceptor) {
         this(mybatisPlusPermissionHandler, methodSecurityInterceptor, () -> null);
     }
 
     /**
-      * 创建 mybatisplus权限拦截器 实例
-     * @param mybatisPlusPermissionHandler mybatisplus权限处理器
-     * @param methodSecurityInterceptor 方法安全性拦截器
-     * @param authServiceSupplier 认证服务供应商
+    * 创建 mybatisplus权限拦截器 实例
+    * @param mybatisPlusPermissionHandler mybatisplus权限处理器
+    * @param methodSecurityInterceptor 方法安全性拦截器
+    * @param authServiceSupplier 认证服务供应商
      */
     public MybatisPlusPermissionInterceptor(DataPermissionHandler mybatisPlusPermissionHandler,
                                             MybatisPlusDataScopeProperties methodSecurityInterceptor,
@@ -79,13 +79,13 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     }
 
     /**
-     * 查询前置处理，解析SQL并添加数据权限条件
-     *
-     * @param executor      执行器
-     * @param ms           mapped对账单对象
-     * @param rowBounds    行边界
-     * @param resultHandler 结果处理器
-     * @param boundSql     boundsql对象
+    * 查询前置处理，解析SQL并添加数据权限条件
+    *
+    * @param executor      执行器
+    * @param ms           mapped对账单对象
+    * @param rowBounds    行边界
+    * @param resultHandler 结果处理器
+    * @param boundSql     boundsql对象
      */
     @Override
     public void beforeQuery(Executor executor, MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) {
@@ -101,11 +101,11 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     }
 
     /**
-     * 操作前置处理
-     *
-     * @param sh                  对账单处理器对象
-     * @param connection          数据库连接
-     * @param transactionTimeout 事务超时时间
+    * 操作前置处理
+    *
+    * @param sh                  对账单处理器对象
+    * @param connection          数据库连接
+    * @param transactionTimeout 事务超时时间
      */
     @Override
     public void beforePrepare(StatementHandler sh, Connection connection, Integer transactionTimeout) {
@@ -113,12 +113,12 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     }
 
     /**
-     * 处理删除语句
-     *
-     * @param delete 删除语句对象
-     * @param index  索引
-     * @param sql    SQL语句
-     * @param obj    对象
+    * 处理删除语句
+    *
+    * @param delete 删除语句对象
+    * @param index  索引
+    * @param sql    SQL语句
+    * @param obj    对象
      */
     @Override
     protected void processDelete(Delete delete, int index, String sql, Object obj) {
@@ -126,12 +126,12 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     }
 
     /**
-     * 处理更新语句
-     *
-     * @param update 更新语句对象
-     * @param index  索引
-     * @param sql    SQL语句
-     * @param obj    对象
+    * 处理更新语句
+    *
+    * @param update 更新语句对象
+    * @param index  索引
+    * @param sql    SQL语句
+    * @param obj    对象
      */
     @Override
     protected void processUpdate(Update update, int index, String sql, Object obj) {
@@ -139,12 +139,12 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     }
 
     /**
-     * 处理查询语句，添加数据权限过滤条件
-     *
-     * @param select 选择语句对象
-     * @param index  索引
-     * @param sql    SQL语句
-     * @param obj    对象
+    * 处理查询语句，添加数据权限过滤条件
+    *
+    * @param select 选择语句对象
+    * @param index  索引
+    * @param sql    SQL语句
+    * @param obj    对象
      */
     @Override
     protected void processSelect(Select select, int index, String sql, Object obj) {
@@ -182,9 +182,9 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     }
 
     /**
-     * 获取当前用户
-     *
-     * @return 获取当前用户的结果
+    * 获取当前用户
+    *
+    * @return 获取当前用户的结果
      */
     private CurrentUser getCurrentUser() {
         if (authServiceSupplier == null) {
@@ -195,11 +195,11 @@ public class MybatisPlusPermissionInterceptor extends JsqlParserSupport implemen
     }
 
     /**
-     * 设置WHERE条件，添加数据权限过滤
-     *
-     * @param plainSelect plain选择对象
-     * @param mapperId    映射器方法标识
-     * @param currentUser 当前用户
+    * 设置WHERE条件，添加数据权限过滤
+    *
+    * @param plainSelect plain选择对象
+    * @param mapperId    映射器方法标识
+    * @param currentUser 当前用户
      */
     protected void setWhere(PlainSelect plainSelect, String mapperId, CurrentUser currentUser) {
         if (mybatisPlusPermissionHandler == null) {

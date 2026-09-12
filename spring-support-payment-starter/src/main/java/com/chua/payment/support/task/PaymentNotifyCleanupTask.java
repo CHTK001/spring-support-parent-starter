@@ -12,9 +12,9 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 
 /**
- * 回调异常清理任务
- * @author CH
- * @since 4.0.0
+* 回调异常清理任务
+* @author CH
+* @since 4.0.0
  */
 @Slf4j
 @Component
@@ -74,7 +74,7 @@ public class PaymentNotifyCleanupTask implements PaymentManagedTask {
     /** 执行 */
     public void execute() {
         /**
-         * cleanresolved错误。
+        * cleanresolved错误。
          */
         cleanResolvedErrors();
     }

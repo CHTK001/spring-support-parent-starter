@@ -14,12 +14,12 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 /**
-   * 套接字.IO 协议提供者
-   * 实现基础 套接字 模块的 SPI 接口
- *
-   * @版本 1.0.0
- * @since 2024-12-04
- * @author CH
+* 套接字.IO 协议提供者
+* 实现基础 套接字 模块的 SPI 接口
+*
+* @版本 1.0.0
+* @since 2024-12-04
+* @author CH
  */
 @Slf4j
 @Spi("socketio")
@@ -36,22 +36,22 @@ public class SocketIOProvider implements SocketProvider {
 
     @Override
     /**
-      * 创建会话template
-     * @param properties 属性
-     * @param listeners 监听器
-     * @param listeners 监听器
-     * @param template template
-     * @param template template
+    * 创建会话template
+    * @param properties 属性
+    * @param listeners 监听器
+    * @param listeners 监听器
+    * @param template template
+    * @param template template
      */
     public SocketSessionTemplate createSessionTemplate(
             SocketProperties properties,
             List<SocketListener> listeners) {
         log.info("[SocketIO] 创建 Socket.IO 会话模板");
         /**
-         * 套接字io会话template。
-         * @param properties 属性
-         * @param listeners 监听器
-         * @return 套接字io会话template的结果
+        * 套接字io会话template。
+        * @param properties 属性
+        * @param listeners 监听器
+        * @return 套接字io会话template的结果
          */
         return new SocketIOSessionTemplate(properties, listeners);
     }

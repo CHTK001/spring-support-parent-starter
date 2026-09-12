@@ -15,14 +15,14 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 基于Spring的RPC客户端实现
- * <p>
-   * 委托真实的 {@link RpcClient}（json/NAT/Dubbo/sofa 等协议）发起网络调用，
- * 并对远程代理附加拦截器、重试、熔断等 Spring 增强能力。
- * </p>
- *
- * @since 2025-03-20
- * @author CH
+* 基于Spring的RPC客户端实现
+* <p>
+* 委托真实的 {@link RpcClient}（json/NAT/Dubbo/sofa 等协议）发起网络调用，
+* 并对远程代理附加拦截器、重试、熔断等 Spring 增强能力。
+* </p>
+*
+* @since 2025-03-20
+* @author CH
  */
 @Slf4j
 public class SpringRpcClient implements RpcClient, ApplicationContextAware {
@@ -38,15 +38,15 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
     private final Map<Class<?>, Object> proxyCache = new ConcurrentHashMap<>(); // 代理缓存
 
     /**
-     * 真实协议客户端委托（懒初始化），避免 SPI 构造阶段触发注册中心连接
+    * 真实协议客户端委托（懒初始化），避免 SPI 构造阶段触发注册中心连接
      */
     private volatile RpcClient delegate;
 
     /**
-      * 创建 springrpc客户端 实例
-     * @param registryConfigs registry配置
-     * @param consumerConfig consumer配置
-     * @param appName app名称
+    * 创建 springrpc客户端 实例
+    * @param registryConfigs registry配置
+    * @param consumerConfig consumer配置
+    * @param appName app名称
      */
     public SpringRpcClient(List<RpcRegistryConfig> registryConfigs,
                           RpcConsumerConfig consumerConfig,
@@ -65,20 +65,20 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
     @Override
     @SuppressWarnings("unchecked")
     /**
-     * 获取
-     *
-     * @param targetType Target类型
-     * @return 获取的结果
+    * 获取
+    *
+    * @param targetType Target类型
+    * @return 获取的结果
      */
     public <T> T get(Class<T> targetType) {
         return (T) proxyCache.computeIfAbsent(targetType, this::createProxy);
     }
 
     /**
-      * 解析真实 RPC 协议名：优先取注册配置中显式指定的 RPC 协议（json/NAT/Dubbo/sofa），
-     * 否则回退 JSON-RPC（纯 JDK HTTP 实现，无需额外依赖）。
-     *
-     * @return SPI 协议名
+    * 解析真实 RPC 协议名：优先取注册配置中显式指定的 RPC 协议（json/NAT/Dubbo/sofa），
+    * 否则回退 JSON-RPC（纯 JDK HTTP 实现，无需额外依赖）。
+    *
+    * @return SPI 协议名
      */
     private String resolveProtocol() {
         if (registryConfigs != null) {
@@ -97,9 +97,9 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
     }
 
     /**
-     * 懒创建真实协议客户端委托
-     *
-     * @return 真实 RPC 客户端
+    * 懒创建真实协议客户端委托
+    *
+    * @return 真实 RPC 客户端
      */
     private RpcClient delegate() {
         RpcClient current = delegate;
@@ -116,9 +116,9 @@ public class SpringRpcClient implements RpcClient, ApplicationContextAware {
     }
 
     /**
-     * 创建代理对象，底层委托真实 RPC 客户端发起网络调用
-     * @param targetType Target类型
-     * @return 创建代理的结果
+    * 创建代理对象，底层委托真实 RPC 客户端发起网络调用
+    * @param targetType Target类型
+    * @return 创建代理的结果
      */
     private <T> Object createProxy(Class<T> targetType) {
         return ReflectUtils.newProxy(

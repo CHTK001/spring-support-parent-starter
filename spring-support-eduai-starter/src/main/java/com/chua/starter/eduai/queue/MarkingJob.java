@@ -8,13 +8,13 @@ import lombok.AllArgsConstructor;
 import java.util.List;
 
 /**
- * 阅卷任务载荷。
- *
- * <p>由 {@code EduMarkingServiceImpl} 投递到 {@code edu.marking} 队列，
- * 由 {@link MarkingMessageListener} 异步消费。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 阅卷任务载荷。
+*
+* <p>由 {@code EduMarkingServiceImpl} 投递到 {@code edu.marking} 队列，
+* 由 {@link MarkingMessageListener} 异步消费。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Data
 @NoArgsConstructor
@@ -22,17 +22,17 @@ import java.util.List;
 public class MarkingJob {
 
     /**
-      * 阅卷任务 标识（与 {@code edu_marking_result.marking_result_task_id} 对应）。
+    * 阅卷任务 标识（与 {@code edu_marking_result.marking_result_task_id} 对应）。
      */
     private String taskId;
 
     /**
-      * 答题卡 标识。
+    * 答题卡 标识。
      */
     private Long answerSheetId;
 
     /**
-     * 学生答案列表。
+    * 学生答案列表。
      */
     private List<MarkingSubmitDTO.AnswerItem> items;
 }

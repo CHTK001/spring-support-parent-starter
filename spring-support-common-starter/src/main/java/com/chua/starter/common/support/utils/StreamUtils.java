@@ -9,26 +9,26 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
-   * 工具工具类
- *
-   * @版本 1.0.0
- * @since 2024/01/22
- * @author CH
+* 工具工具类
+*
+* @版本 1.0.0
+* @since 2024/01/22
+* @author CH
  */
 public class StreamUtils {
 
     /**
-     * 私有构造函数，防止实例化
+    * 私有构造函数，防止实例化
      */
     private StreamUtils() {
     }
 
     /**
-     * 获取第一个
-     *
-     * @param data         数据
-     * @param idFunction   流名称
-     * @return {@link T}
+    * 获取第一个
+    *
+    * @param data         数据
+    * @param idFunction   流名称
+    * @return {@link T}
      */
     public static <R, T> Map<R, T> toMap(Collection<T> data, Function<T, R> idFunction) {
         if(null == data || null == idFunction) {
@@ -52,11 +52,11 @@ public class StreamUtils {
         return rs;
     }
     /**
-     * 获取第一个
-     *
-     * @param data         数据
-     * @param idFunction   流名称
-     * @return {@link T}
+    * 获取第一个
+    *
+    * @param data         数据
+    * @param idFunction   流名称
+    * @return {@link T}
      */
     public static <R, T> Map<R, List<T>> tpMultiMap(Collection<T> data, Function<T, R> idFunction) {
         if(null == data || null == idFunction) {
@@ -76,26 +76,26 @@ public class StreamUtils {
         return rs;
     }
     /**
-     * 获取第一个
-     *
-     * @param data         数据
-     * @param streamName   流名称
-     * @param operatorType 运算符类型
-     * @param value        值
-     * @return {@link T}
+    * 获取第一个
+    *
+    * @param data         数据
+    * @param streamName   流名称
+    * @param operatorType 运算符类型
+    * @param value        值
+    * @return {@link T}
      */
     public static <T>T getFirst(Collection<T> data, Function<T, String> streamName, OperatorType operatorType, String value) {
         List<T> ts = get(data, streamName, operatorType, value);
         return CollectionUtils.findFirst(ts);
     }
     /**
-     * 获取
-     *
-     * @param data         数据
-     * @param streamName   流名称
-     * @param operatorType 运算符类型
-     * @param value        值
-     * @return {@link T}
+    * 获取
+    *
+    * @param data         数据
+    * @param streamName   流名称
+    * @param operatorType 运算符类型
+    * @param value        值
+    * @return {@link T}
      */
     public static <T>List<T> get(Collection<T> data, Function<T, String> streamName, OperatorType operatorType, String value) {
         return CollectionUtils.isEmpty(data) ? null :

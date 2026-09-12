@@ -5,39 +5,39 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 /**
- * 请求工具类
- * <p>提供从 HttpServletRequest 中提取常用信息的方法</p>
- *
- * @since 2024-01-01
- * @author CH
+* 请求工具类
+* <p>提供从 HttpServletRequest 中提取常用信息的方法</p>
+*
+* @since 2024-01-01
+* @author CH
  */
 public class RequestUtils {
 
     /**
-     * 私有构造函数，防止实例化
+    * 私有构造函数，防止实例化
      */
     private RequestUtils() {
     }
 
     /**
-      * 用户标识请求头名称
+    * 用户标识请求头名称
      */
     private static final String USER_ID_HEADER = "X-User-Id";
 
     /**
-     * 用户名请求头名称
+    * 用户名请求头名称
      */
     private static final String USERNAME_HEADER = "X-Username";
 
     /**
-      * 租户标识请求头名称
+    * 租户标识请求头名称
      */
     private static final String TENANT_ID_HEADER = "X-Tenant-Id";
 
     /**
-      * 获取当前请求的 httpservlet请求 对象
-     *
-     * @return HttpServletRequest，如果无法获取则返回null
+    * 获取当前请求的 httpservlet请求 对象
+    *
+    * @return HttpServletRequest，如果无法获取则返回null
      */
     public static HttpServletRequest getRequest() {
         ServletRequestAttributes attributes = null;
@@ -51,10 +51,10 @@ public class RequestUtils {
     }
 
     /**
-      * 获取当前请求的用户标识
-     * <p>优先从请求头 X-User-Id 获取，如果不存在则从请求属性中获取</p>
-     *
-     * @return 用户ID，如果无法获取则返回null
+    * 获取当前请求的用户标识
+    * <p>优先从请求头 X-User-Id 获取，如果不存在则从请求属性中获取</p>
+    *
+    * @return 用户ID，如果无法获取则返回null
      */
     public static String getUserId() {
         HttpServletRequest request = getRequest();
@@ -84,10 +84,10 @@ public class RequestUtils {
     }
 
     /**
-     * 获取当前请求的用户名
-     * <p>优先从请求头 X-Username 获取，如果不存在则从请求属性中获取</p>
-     *
-     * @return 用户名，如果无法获取则返回null
+    * 获取当前请求的用户名
+    * <p>优先从请求头 X-Username 获取，如果不存在则从请求属性中获取</p>
+    *
+    * @return 用户名，如果无法获取则返回null
      */
     public static String getUsername() {
         HttpServletRequest request = getRequest();
@@ -117,10 +117,10 @@ public class RequestUtils {
     }
 
     /**
-      * 获取当前请求的租户标识
-     * <p>优先从请求头 X-Tenant-Id 获取，如果不存在则从请求属性中获取</p>
-     *
-     * @return 租户ID，如果无法获取则返回null
+    * 获取当前请求的租户标识
+    * <p>优先从请求头 X-Tenant-Id 获取，如果不存在则从请求属性中获取</p>
+    *
+    * @return 租户ID，如果无法获取则返回null
      */
     public static String getCurrentTenantId() {
         HttpServletRequest request = getRequest();
@@ -150,11 +150,11 @@ public class RequestUtils {
     }
 
     /**
-     * 获取客户端IP地址
-     * <p>优先级：X-Forwarded-For > X-Real-IP > getRemoteAddr</p>
-     *
-     * @param request httpservlet请求
-     * @return 客户端IP地址
+    * 获取客户端IP地址
+    * <p>优先级：X-Forwarded-For > X-Real-IP > getRemoteAddr</p>
+    *
+    * @param request httpservlet请求
+    * @return 客户端IP地址
      */
     public static String getIpAddress(HttpServletRequest request) {
         if (null == request) {
@@ -188,11 +188,11 @@ public class RequestUtils {
     }
 
     /**
-     * 获取请求URL
-     * <p>包含协议、主机、端口、路径和查询参数</p>
-     *
-     * @param request httpservlet请求
-     * @return 请求URL
+    * 获取请求URL
+    * <p>包含协议、主机、端口、路径和查询参数</p>
+    *
+    * @param request httpservlet请求
+    * @return 请求URL
      */
     public static String getUrl(HttpServletRequest request) {
         if (null == request) {
@@ -219,11 +219,11 @@ public class RequestUtils {
     }
 
     /**
-     * 获取请求头值
-     *
-     * @param request httpservlet请求
-     * @param name    请求头名称
-     * @return 请求头值，如果不存在则返回null
+    * 获取请求头值
+    *
+    * @param request httpservlet请求
+    * @param name    请求头名称
+    * @return 请求头值，如果不存在则返回null
      */
     public static String getHeader(HttpServletRequest request, String name) {
         if (null == request || null == name || name.isEmpty()) {
@@ -233,11 +233,11 @@ public class RequestUtils {
     }
 
     /**
-     * 判断是否为静态资源请求
-     * <p>常见的静态资源扩展名：css, js, jpg, jpeg, png, gif, ico, svg, woff, woff2, ttf, eot, map 等</p>
-     *
-     * @param requestURI 请求URI
-     * @return 如果是静态资源返回true，否则返回false
+    * 判断是否为静态资源请求
+    * <p>常见的静态资源扩展名：css, js, jpg, jpeg, png, gif, ico, svg, woff, woff2, ttf, eot, map 等</p>
+    *
+    * @param requestURI 请求URI
+    * @return 如果是静态资源返回true，否则返回false
      */
     public static boolean isResource(String requestURI) {
         if (null == requestURI || requestURI.isEmpty()) {

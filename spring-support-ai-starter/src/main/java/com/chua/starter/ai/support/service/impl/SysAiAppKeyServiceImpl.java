@@ -22,10 +22,10 @@ import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE
 import static com.chua.starter.common.support.constant.CacheConstant.REDIS_CACHE_MIN;
 
 /**
- * AI 应用密钥服务实现。
- *
- * @author CH
- * @since 4.0.0
+* AI 应用密钥服务实现。
+*
+* @author CH
+* @since 4.0.0
  */
 @Slf4j
 @Service
@@ -51,10 +51,10 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
             unless = "#result == null"
     )
     /**
-     * 获取byapp钥匙
-     *
-     * @param appKey app钥匙
-     * @return 获取byapp钥匙的结果
+    * 获取byapp钥匙
+    *
+    * @param appKey app钥匙
+    * @return 获取byapp钥匙的结果
      */
     public SysAiAppKey getByAppKey(String appKey) {
         if (StringUtils.isBlank(appKey)) {
@@ -76,10 +76,10 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
     /**
-     * 保存
-     *
-     * @param entity 实体
-     * @return 保存的结果
+    * 保存
+    *
+    * @param entity 实体
+    * @return 保存的结果
      */
     public SysAiAppKey save(SysAiAppKey entity) {
         // 自动生成 sk- 格式密钥
@@ -99,10 +99,10 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
     /**
-     * 更新
-     *
-     * @param entity 实体
-     * @return 更新的结果
+    * 更新
+    *
+    * @param entity 实体
+    * @return 更新的结果
      */
     public boolean update(SysAiAppKey entity) {
         return sysAiAppKeyMapper.updateById(entity) > 0;
@@ -111,10 +111,10 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     @Override
     @CacheEvict(cacheManager = REDIS_CACHE_ALWAYS, cacheNames = REDIS_CACHE_ALWAYS, allEntries = true)
     /**
-     * 删除byid
-     *
-     * @param id 标识
-     * @return 删除byid的结果
+    * 删除byid
+    *
+    * @param id 标识
+    * @return 删除byid的结果
      */
     public boolean deleteById(Integer id) {
         if (id == null) {
@@ -141,10 +141,10 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     }
 
     /**
-      * 绕过缓存实时查询 app钥匙（限流/配额检查需要最新 DB 值）。
-     *
-     * @param appKey app钥匙
-     * @return AppKey 记录；不存在返回 空
+    * 绕过缓存实时查询 app钥匙（限流/配额检查需要最新 DB 值）。
+    *
+    * @param appKey app钥匙
+    * @return AppKey 记录；不存在返回 空
      */
     private SysAiAppKey queryAppKeyUncached(String appKey) {
         if (StringUtils.isBlank(appKey)) {
@@ -154,11 +154,11 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     }
 
     /**
-      * 校验 app钥匙 记录自身有效性（存在、启用、未过期、次数上限、令牌 配额、IP 白名单）。
-     *
-     * @param dbAppKey app钥匙 记录
-     * @param ip       客户端 IP
-     * @return 是否有效
+    * 校验 app钥匙 记录自身有效性（存在、启用、未过期、次数上限、令牌 配额、IP 白名单）。
+    *
+    * @param dbAppKey app钥匙 记录
+    * @param ip       客户端 IP
+    * @return 是否有效
      */
     private boolean isValidAppKey(SysAiAppKey dbAppKey, String ip) {
         if (dbAppKey == null) {
@@ -205,9 +205,9 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     @Override
     @Async("taskExecutor")
     /**
-     * 更新use信息byapp钥匙
-     *
-     * @param appKey app钥匙
+    * 更新use信息byapp钥匙
+    *
+    * @param appKey app钥匙
      */
     public void updateUseInfoByAppKey(String appKey) {
         if (StringUtils.isBlank(appKey)) {
@@ -233,10 +233,10 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     @Override
     @Async("taskExecutor")
     /**
-     * 更新令牌配额byapp钥匙
-     *
-     * @param appKey app钥匙
-     * @param tokens 令牌
+    * 更新令牌配额byapp钥匙
+    *
+    * @param appKey app钥匙
+    * @param tokens 令牌
      */
     public void updateTokenQuotaByAppKey(String appKey, long tokens) {
         if (StringUtils.isBlank(appKey) || tokens <= 0) {
@@ -259,10 +259,10 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
             unless = "#result == null"
     )
     /**
-     * 获取分组idbyapp钥匙
-     *
-     * @param appKey app钥匙
-     * @return 获取群体idbyapp钥匙的结果
+    * 获取分组idbyapp钥匙
+    *
+    * @param appKey app钥匙
+    * @return 获取群体idbyapp钥匙的结果
      */
     public Integer getGroupIdByAppKey(String appKey) {
         if (StringUtils.isBlank(appKey)) {
@@ -280,10 +280,10 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     
 
     /**
-     * 是否Expired
-     *
-     * @param appKey app钥匙
-     * @return 是否expired的结果
+    * 是否Expired
+    *
+    * @param appKey app钥匙
+    * @return 是否expired的结果
      */
     private boolean isExpired(SysAiAppKey appKey) {
         Long expireTime = resolveExpireTime(appKey);
@@ -294,10 +294,10 @@ public class SysAiAppKeyServiceImpl implements SysAiAppKeyService {
     }
 
     /**
-     * 解析expire时间
-     *
-     * @param appKey app钥匙
-     * @return resolveexpire时间的结果
+    * 解析expire时间
+    *
+    * @param appKey app钥匙
+    * @return resolveexpire时间的结果
      */
     private Long resolveExpireTime(SysAiAppKey appKey) {
         if (appKey == null) {

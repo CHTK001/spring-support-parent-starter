@@ -21,14 +21,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 执行日志服务实现。
- *
- * <p>执行历史按 execution_no 聚合自 {@code spider_execution_log}：通过
-   * 最小(启动_at)/最大(结束_at) 与 SUM(状态) 规则推导每条执行的起止时间与最终状态，
- * 分页结果不含节点级明细，仅返回概要记录。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 执行日志服务实现。
+*
+* <p>执行历史按 execution_no 聚合自 {@code spider_execution_log}：通过
+* 最小(启动_at)/最大(结束_at) 与 SUM(状态) 规则推导每条执行的起止时间与最终状态，
+* 分页结果不含节点级明细，仅返回概要记录。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Service
 public class SpiderExecutionLogServiceImpl
@@ -36,15 +36,15 @@ public class SpiderExecutionLogServiceImpl
         implements SpiderExecutionLogService {
 
     /**
-     * 状态：成功
+    * 状态：成功
      */
     private static final String STATUS_SUCCESS = "SUCCESS";
     /**
-     * 状态：失败
+    * 状态：失败
      */
     private static final String STATUS_FAIL = "FAIL";
     /**
-     * 状态：运行中
+    * 状态：运行中
      */
     private static final String STATUS_RUNNING = "RUNNING";
 
@@ -67,10 +67,10 @@ public class SpiderExecutionLogServiceImpl
                 .isNotNull(SpiderExecutionLog::getExecutionNo)
                 .ne(SpiderExecutionLog::getExecutionNo, "");
         /**
-         * apply过滤器。
-         * @param countQuery 数量查询
-         * @param definitionCode definition编码
-         * @param status 状态
+        * apply过滤器。
+        * @param countQuery 数量查询
+        * @param definitionCode definition编码
+        * @param status 状态
          */
         applyFilters(countQuery, definitionCode, status);
         List<SpiderExecutionLog> distinctLogs = baseMapper.selectList(countQuery);
@@ -185,10 +185,10 @@ public class SpiderExecutionLogServiceImpl
     }
 
     /**
-      * 推导整体执行状态：任一节点 失败 则整体 失败；否则若有 RUNNING 则 RUNNING；全 成功 则 成功。
-     *
-     * @param row 聚合行
-     * @return 状态字符串
+    * 推导整体执行状态：任一节点 失败 则整体 失败；否则若有 RUNNING 则 RUNNING；全 成功 则 成功。
+    *
+    * @param row 聚合行
+    * @return 状态字符串
      */
     private String deriveOverallStatus(Map<String, Object> row) {
         long fail = NumberUtils.toLong(ObjectUtils.defaultIfStringNull(row.get("fail_cnt"), "0"), 0L);
@@ -203,11 +203,11 @@ public class SpiderExecutionLogServiceImpl
     }
 
     /**
-      * 在 lambda查询包装器 上叠加 definition编码 与 状态 过滤。
-     *
-     * @param wrapper        查询条件
-     * @param definitionCode 爬虫编码（可选）
-     * @param status         执行状态（可选）
+    * 在 lambda查询包装器 上叠加 definition编码 与 状态 过滤。
+    *
+    * @param wrapper        查询条件
+    * @param definitionCode 爬虫编码（可选）
+    * @param status         执行状态（可选）
      */
     private void applyFilters(LambdaQueryWrapper<SpiderExecutionLog> wrapper, String definitionCode, String status) {
         if (definitionCode != null && !definitionCode.isEmpty()) {

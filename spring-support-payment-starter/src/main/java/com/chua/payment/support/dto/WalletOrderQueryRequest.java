@@ -1,16 +1,16 @@
 package com.chua.payment.support.dto;
 
 /**
- * 钱包订单分页查询请求参数对象。
- *
- * @param pageNum     页码
- * @param pageSize    每页大小
- * @param merchantId  商户标识
- * @param userId      用户标识
- * @param orderType   订单类型（可选）
- * @param status      状态（可选）
- * @author CH
- * @since 4.0.0.50
+* 钱包订单分页查询请求参数对象。
+*
+* @param pageNum     页码
+* @param pageSize    每页大小
+* @param merchantId  商户标识
+* @param userId      用户标识
+* @param orderType   订单类型（可选）
+* @param status      状态（可选）
+* @author CH
+* @since 4.0.0.50
  */
 public record WalletOrderQueryRequest(
         int pageNum,

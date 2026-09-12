@@ -11,81 +11,81 @@ import lombok.Getter;
 import java.time.Instant;
 
 /**
- * 训练任务领域对象（充血模型）。
- *
- * <p>封装训练任务完整生命周期状态机：PENDING → RUNNING → SUCCESS / FAILED / CANCELLED，
-   * 以及超参数合并、进度观测等业务行为，服务 层只编排领域方法，不直接 setter 拼装状态。</p>
- *
- * @author CH
- * @since 4.0.0.42
+* 训练任务领域对象（充血模型）。
+*
+* <p>封装训练任务完整生命周期状态机：PENDING → RUNNING → SUCCESS / FAILED / CANCELLED，
+* 以及超参数合并、进度观测等业务行为，服务 层只编排领域方法，不直接 setter 拼装状态。</p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Getter
 public class TrainTask {
 
     /**
-      * 任务 标识（UUID）。
+    * 任务 标识（UUID）。
      */
     private final String id;
 
     /**
-      * 上传的 压缩 原始文件名。
+    * 上传的 压缩 原始文件名。
      */
     private final String originalFileName;
 
     /**
-     * 解压后的数据目录路径。
+    * 解压后的数据目录路径。
      */
     private final String dataPath;
 
     /**
-     * 任务创建时间。
+    * 任务创建时间。
      */
     private final Instant createdAt;
 
     /**
-     * 训练状态。
+    * 训练状态。
      */
     private volatile TrainStatus status;
 
     /**
-     * 训练超参数。
+    * 训练超参数。
      */
     private volatile TrainArgument argument;
 
     /**
-     * 训练进度快照（实时更新，供轮询）。
+    * 训练进度快照（实时更新，供轮询）。
      */
     private volatile TrainProgress progress;
 
     /**
-     * 训练开始时间。
+    * 训练开始时间。
      */
     private volatile Instant startedAt;
 
     /**
-     * 训练完成/失败时间。
+    * 训练完成/失败时间。
      */
     private volatile Instant finishedAt;
 
     /**
-     * 错误信息（失败时填充）。
+    * 错误信息（失败时填充）。
      */
     private volatile String errorMessage;
 
     /**
-     * 训练类型（引擎路由键，如 resnet50 / yolo）。创建时默认 resnet50，
-     * 启动训练前可经 {@link #selectType(String)} 显式指定（仅 PENDING 可改）。
-     * 注意：类型变更必须走 {@link #selectType(String)}（含 PENDING-only 守卫），
-     * 不提供公开 setter，避免绕开状态机直接改写类型。
+    * 训练类型（引擎路由键，如 resnet50 / yolo）。创建时默认 resnet50，
+    * 启动训练前可经 {@link #selectType(String)} 显式指定（仅 PENDING 可改）。
+    * 注意：类型变更必须走 {@link #selectType(String)}（含 PENDING-only 守卫），
+    * 不提供公开 setter，避免绕开状态机直接改写类型。
      */
     private volatile String type = TrainProviders.DEFAULT_TYPE;
 
     /**
-     * 领域工厂：创建新训练任务。
-     *
-     * @param originalFileName 上传文件名
-     * @param dataPath         解压后数据目录
-     * @return 新任务（PENDING + 默认超参数）
+    * 领域工厂：创建新训练任务。
+    *
+    * @param originalFileName 上传文件名
+    * @param dataPath         解压后数据目录
+    * @return 新任务（PENDING + 默认超参数）
      */
     public static TrainTask create(String originalFileName, String dataPath) {
         TrainTask task = new TrainTask(
@@ -100,11 +100,11 @@ public class TrainTask {
     }
 
     /**
-     * train任务。
-     * @param id 标识
-     * @param originalFileName 原始文件名称
-     * @param dataPath 数据路径
-     * @param createdAt 创建at
+    * train任务。
+    * @param id 标识
+    * @param originalFileName 原始文件名称
+    * @param dataPath 数据路径
+    * @param createdAt 创建at
      */
     private TrainTask(String id, String originalFileName, String dataPath, Instant createdAt) {
         this.id = id;
@@ -114,17 +114,17 @@ public class TrainTask {
     }
 
     /**
-     * 启动训练（PENDING → RUNNING）。同步方法保证并发重复触发时
-     * 同一任务只允许一次成功流转（后到者看到 RUNNING 即抛）。
-     *
-     * @throws IllegalStateException 非 PENDING 状态时抛出
+    * 启动训练（PENDING → RUNNING）。同步方法保证并发重复触发时
+    * 同一任务只允许一次成功流转（后到者看到 RUNNING 即抛）。
+    *
+    * @throws IllegalStateException 非 PENDING 状态时抛出
      */
     public synchronized void start() {
         if (status != TrainStatus.PENDING) {
             /**
-             * illegal状态异常。
-             * @param 可启动）" 可启动）"
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param 可启动）" 可启动）"
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("任务状态为 " + status + "，不可启动（仅 PENDING 可启动）");
         }
@@ -136,18 +136,18 @@ public class TrainTask {
     }
 
     /**
-      * 指定训练类型（引擎路由键）。空/空串回退默认类型，仅 PENDING 可改。
-     *
-     * @param type 训练类型（resnet50 / yolo ...）；空 视为未指定
-     * @return 本次实际生效的类型
-     * @throws IllegalStateException 已启动后不可再改类型
+    * 指定训练类型（引擎路由键）。空/空串回退默认类型，仅 PENDING 可改。
+    *
+    * @param type 训练类型（resnet50 / yolo ...）；空 视为未指定
+    * @return 本次实际生效的类型
+    * @throws IllegalStateException 已启动后不可再改类型
      */
     public synchronized String selectType(String type) {
         if (status != TrainStatus.PENDING) {
             /**
-             * illegal状态异常。
-             * @param 可指定）" 可指定）"
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param 可指定）" 可指定）"
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("任务状态为 " + status + "，不可再改训练类型（仅 PENDING 可指定）");
         }
@@ -156,9 +156,9 @@ public class TrainTask {
     }
 
     /**
-     * 标记训练成功。
-     *
-     * @param result 训练结果（含 bestscore、elapsedms、标签）
+    * 标记训练成功。
+    *
+    * @param result 训练结果（含 bestscore、elapsedms、标签）
      */
     public synchronized void succeed(TrainResult result) {
         this.status = TrainStatus.SUCCESS;
@@ -175,9 +175,9 @@ public class TrainTask {
     }
 
     /**
-     * 标记训练失败。
-     *
-     * @param errorMessage 错误描述
+    * 标记训练失败。
+    *
+    * @param errorMessage 错误描述
      */
     public synchronized void fail(String errorMessage) {
         this.status = TrainStatus.FAILED;
@@ -186,10 +186,10 @@ public class TrainTask {
     }
 
     /**
-     * 标记训练失败（含原始异常）。
-     *
-     * @param errorMessage 错误描述
-     * @param cause        原始异常
+    * 标记训练失败（含原始异常）。
+    *
+    * @param errorMessage 错误描述
+    * @param cause        原始异常
      */
     public synchronized void fail(String errorMessage, Throwable cause) {
         this.status = TrainStatus.FAILED;
@@ -201,7 +201,7 @@ public class TrainTask {
     }
 
     /**
-     * 标记训练被取消。
+    * 标记训练被取消。
      */
     public synchronized void cancel() {
         this.status = TrainStatus.CANCELLED;
@@ -210,23 +210,23 @@ public class TrainTask {
     }
 
     /**
-     * 合并超参数更新（部分更新语义，仅非空字段覆盖，领域行为封装）。
-     *
-     * @param incoming 新超参数
+    * 合并超参数更新（部分更新语义，仅非空字段覆盖，领域行为封装）。
+    *
+    * @param incoming 新超参数
      */
     public void mergeArgument(TrainArgument incoming) {
         this.argument = argument == null ? incoming : argument.merge(incoming);
     }
 
     /**
-     * 返回绑定到当前任务的训练监听器（观察者模式，由任务自身生产）。
-     *
-     * @return TrainListener
+    * 返回绑定到当前任务的训练监听器（观察者模式，由任务自身生产）。
+    *
+    * @return TrainListener
      */
     public TrainListener createListener() {
         /**
-         * train监听器。
-         * @return train监听器的结果
+        * train监听器。
+        * @return train监听器的结果
          */
         return new TrainListener() {
             @Override

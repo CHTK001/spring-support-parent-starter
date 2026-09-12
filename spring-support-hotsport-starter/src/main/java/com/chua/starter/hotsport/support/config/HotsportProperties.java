@@ -14,10 +14,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Hotsport 配置属性 — 绑定 {@code hotsport.*}。
- *
- * @author CH
- * @since 4.0.0.42
+* Hotsport 配置属性 — 绑定 {@code hotsport.*}。
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Component
 @ConfigurationProperties(prefix = "hotsport")
@@ -30,32 +30,32 @@ public class HotsportProperties {
     private Apm apm = new Apm();
 
     /**
-     * 获取智能体。
-     * @return 获取智能体的结果
+    * 获取智能体。
+    * @return 获取智能体的结果
      */
     public Agent getAgent() {
         return agent;
     }
 
     /**
-     * 设置智能体。
-     * @param agent 智能体
+    * 设置智能体。
+    * @param agent 智能体
      */
     public void setAgent(Agent agent) {
         this.agent = agent;
     }
 
     /**
-     * 获取apm。
-     * @return 获取apm的结果
+    * 获取apm。
+    * @return 获取apm的结果
      */
     public Apm getApm() {
         return apm;
     }
 
     /**
-     * 设置apm。
-     * @param apm apm
+    * 设置apm。
+    * @param apm apm
      */
     public void setApm(Apm apm) {
         this.apm = apm;
@@ -74,48 +74,48 @@ public class HotsportProperties {
         private String options = "";
 
         /**
-         * 是否已启用。
-         * @return 是否已启用的结果
+        * 是否已启用。
+        * @return 是否已启用的结果
          */
         public boolean isEnabled() {
             return enabled;
         }
 
         /**
-         * 设置已启用。
-         * @param enabled 已启用
+        * 设置已启用。
+        * @param enabled 已启用
          */
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
         }
 
         /**
-          * 获取Shell端口。
-         * @return 获取shell端口的结果
+        * 获取Shell端口。
+        * @return 获取shell端口的结果
          */
         public int getShellPort() {
             return shellPort;
         }
 
         /**
-          * 设置Shell端口。
-         * @param shellPort Shell端口
+        * 设置Shell端口。
+        * @param shellPort Shell端口
          */
         public void setShellPort(int shellPort) {
             this.shellPort = shellPort;
         }
 
         /**
-         * 获取期权。
-         * @return 获取期权的结果
+        * 获取期权。
+        * @return 获取期权的结果
          */
         public String getOptions() {
             return options;
         }
 
         /**
-         * 设置期权。
-         * @param options 期权
+        * 设置期权。
+        * @param options 期权
          */
         public void setOptions(String options) {
             this.options = options;
@@ -129,16 +129,16 @@ public class HotsportProperties {
         private Storage storage = new Storage();
 
         /**
-         * 获取storage。
-         * @return 获取storage的结果
+        * 获取storage。
+        * @return 获取storage的结果
          */
         public Storage getStorage() {
             return storage;
         }
 
         /**
-         * 设置storage。
-         * @param storage storage
+        * 设置storage。
+        * @param storage storage
          */
         public void setStorage(Storage storage) {
             this.storage = storage;
@@ -155,32 +155,32 @@ public class HotsportProperties {
         private long retentionMs = 7L * 24 * 60 * 60 * 1000;
 
         /**
-         * 获取类型。
-         * @return 获取类型的结果
+        * 获取类型。
+        * @return 获取类型的结果
          */
         public String getType() {
             return type;
         }
 
         /**
-         * 设置类型。
-         * @param type 类型
+        * 设置类型。
+        * @param type 类型
          */
         public void setType(String type) {
             this.type = type;
         }
 
         /**
-         * 获取retentionms。
-         * @return 获取retentionms的结果
+        * 获取retentionms。
+        * @return 获取retentionms的结果
          */
         public long getRetentionMs() {
             return retentionMs;
         }
 
         /**
-         * 设置retentionms。
-         * @param retentionMs retentionms
+        * 设置retentionms。
+        * @param retentionMs retentionms
          */
         public void setRetentionMs(long retentionMs) {
             this.retentionMs = retentionMs;
@@ -192,9 +192,9 @@ public class HotsportProperties {
     // ==================================================================
 
     /**
-      * 获取当前 apmstorage（可能为 noopstorage，永不为 空）。
-     *
-     * @return 存储实例
+    * 获取当前 apmstorage（可能为 noopstorage，永不为 空）。
+    *
+    * @return 存储实例
      */
     public static ApmStorage storage() {
         try {
@@ -268,8 +268,8 @@ public class HotsportProperties {
     };
 
     /**
-     * noop。
-     * @return noop的结果
+    * noop。
+    * @return noop的结果
      */
     private static ApmStorage noop() {
         return NOOP;

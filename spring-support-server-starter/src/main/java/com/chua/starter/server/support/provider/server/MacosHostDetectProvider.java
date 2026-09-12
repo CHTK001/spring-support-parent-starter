@@ -13,14 +13,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * macOS 主机硬件探测提供者（SSH 采集）
- * <p>
- * 通过 SSH 连接目标 macOS 主机，使用 BSD 系命令（sysctl / sw_vers / ipconfig getifaddr）
- * 采集 CPU/内存/系统版本/内网 IP 等资产字段。
- * </p>
- *
- * @author CH
- * @since 4.0.0.42
+* macOS 主机硬件探测提供者（SSH 采集）
+* <p>
+* 通过 SSH 连接目标 macOS 主机，使用 BSD 系命令（sysctl / sw_vers / ipconfig getifaddr）
+* 采集 CPU/内存/系统版本/内网 IP 等资产字段。
+* </p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -86,11 +86,11 @@ public class MacosHostDetectProvider implements HostDetectProvider {
     }
 
     /**
-     * 静默执行 SSH 命令并返回输出（失败返回 null，不抛出异常）
-     *
-     * @param handle  SSH 连接句柄，不能为 null
-     * @param command 待执行命令，不能为 null 或空
-     * @return 命令标准输出；执行失败返回 null
+    * 静默执行 SSH 命令并返回输出（失败返回 null，不抛出异常）
+    *
+    * @param handle  SSH 连接句柄，不能为 null
+    * @param command 待执行命令，不能为 null 或空
+    * @return 命令标准输出；执行失败返回 null
      */
     private String execQuiet(SshClients.Handle handle, String command) {
         try {

@@ -16,13 +16,13 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import java.lang.reflect.Method;
 
 /**
- * API 版本控制请求映射处理器
- * <p>
-   * 支持 @api版本、@api配置文件、@apiplatform 注解的版本和平台控制。
- * </p>
- *
- * @since 2020-11-15
- * @author CH
+* API 版本控制请求映射处理器
+* <p>
+* 支持 @api版本、@api配置文件、@apiplatform 注解的版本和平台控制。
+* </p>
+*
+* @since 2020-11-15
+* @author CH
  */
 public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandlerMapping {
 
@@ -38,10 +38,10 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
     private final String[] activeProfiles;
 
     /**
-      * 创建 api版本请求mapping处理器mapping 实例
-     * @param apiProperties api属性
-     * @param environment 环境
-     * @param environment 环境
+    * 创建 api版本请求mapping处理器mapping 实例
+    * @param apiProperties api属性
+    * @param environment 环境
+    * @param environment 环境
      */
     public ApiVersionRequestMappingHandlerMapping(ApiProperties apiProperties, Environment environment) {
         this.apiProperties = apiProperties;
@@ -53,10 +53,10 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
     }
 
     /**
-     * 获取类级别的版本条件
-     *
-     * @param handlerType 处理器类型
-     * @return 版本条件
+    * 获取类级别的版本条件
+    *
+    * @param handlerType 处理器类型
+    * @return 版本条件
      */
     @Override
     protected RequestCondition<?> getCustomTypeCondition(Class<?> handlerType) {
@@ -64,19 +64,19 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
             return super.getCustomTypeCondition(handlerType);
         }
         /**
-         * api版本条件。
-         * @param ApiVersion.class api版本.类
-         * @return api版本条件的结果
+        * api版本条件。
+        * @param ApiVersion.class api版本.类
+        * @return api版本条件的结果
          */
         return new ApiVersionCondition(AnnotationUtils.findAnnotation(handlerType, ApiVersion.class));
     }
 
     /**
-     * 获取方法的映射信息
-     *
-     * @param method      方法
-     * @param handlerType 处理器类型
-     * @return 映射信息
+    * 获取方法的映射信息
+    *
+    * @param method      方法
+    * @param handlerType 处理器类型
+    * @return 映射信息
      */
     @Override
     @Nullable
@@ -109,11 +109,11 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
     }
 
     /**
-     * 判断是否匹配环境
-     *
-     * @param method      方法
-     * @param handlerType 处理器类型
-     * @return 是否匹配
+    * 判断是否匹配环境
+    *
+    * @param method      方法
+    * @param handlerType 处理器类型
+    * @return 是否匹配
      */
     private boolean isMatchProfile(Method method, Class<?> handlerType) {
         ApiProfile apiProfile = AnnotationUtils.findAnnotation(method, ApiProfile.class);
@@ -135,10 +135,10 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
     }
 
     /**
-     * 获取方法级别的版本条件
-     *
-     * @param method 方法
-     * @return 版本条件
+    * 获取方法级别的版本条件
+    *
+    * @param method 方法
+    * @return 版本条件
      */
     @Override
     protected RequestCondition<?> getCustomMethodCondition(Method method) {
@@ -146,9 +146,9 @@ public class ApiVersionRequestMappingHandlerMapping extends RequestMappingHandle
             return super.getCustomMethodCondition(method);
         }
         /**
-         * api版本条件。
-         * @param ApiVersion.class api版本.类
-         * @return api版本条件的结果
+        * api版本条件。
+        * @param ApiVersion.class api版本.类
+        * @return api版本条件的结果
          */
         return new ApiVersionCondition(AnnotationUtils.findAnnotation(method, ApiVersion.class));
     }

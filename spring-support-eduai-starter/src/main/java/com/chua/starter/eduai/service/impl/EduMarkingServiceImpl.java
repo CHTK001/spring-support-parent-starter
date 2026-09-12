@@ -31,22 +31,22 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 阅卷服务实现
- *
- * <p>同步路径（{@link #submitAnswerSheet}）：
- * <ol>
- *   <li>持久化 {@code edu_answer_sheet} 答题卡</li>
- *   <li>生成 taskId，写入 {@code edu_marking_result} 状态 = PENDING</li>
- *   <li>异步路径（{@link #markAsync}）通过 {@link MessageTemplate} 派发到
- *       {@code edu.marking} 队列，由 {@link MarkingMessageListener} 异步消费</li>
- *   <li>同步路径立即执行阅卷并把结果落库</li>
- * </ol>
- *
- * <p>队列消费由 {@link MessageTemplate} Bean 驱动（默认实现来自 queue-starter 的 LocalMessageTemplate），
- * 失败时记录错误到 {@code ai_comment} 列，前端轮询可观察到。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 阅卷服务实现
+*
+* <p>同步路径（{@link #submitAnswerSheet}）：
+* <ol>
+*   <li>持久化 {@code edu_answer_sheet} 答题卡</li>
+*   <li>生成 taskId，写入 {@code edu_marking_result} 状态 = PENDING</li>
+*   <li>异步路径（{@link #markAsync}）通过 {@link MessageTemplate} 派发到
+*       {@code edu.marking} 队列，由 {@link MarkingMessageListener} 异步消费</li>
+*   <li>同步路径立即执行阅卷并把结果落库</li>
+* </ol>
+*
+* <p>队列消费由 {@link MessageTemplate} Bean 驱动（默认实现来自 queue-starter 的 LocalMessageTemplate），
+* 失败时记录错误到 {@code ai_comment} 列，前端轮询可观察到。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @Service
@@ -54,20 +54,20 @@ import java.util.UUID;
 public class EduMarkingServiceImpl implements IEduMarkingService {
 
     /**
-     * 阅卷队列名称。
+    * 阅卷队列名称。
      */
     public static final String QUEUE_NAME = "edu.marking";
 
     /**
-     * 阅卷结果状态：待批改
+    * 阅卷结果状态：待批改
      */
     private static final int STATUS_PENDING = 0;
     /**
-     * 阅卷结果状态：AI 已批改
+    * 阅卷结果状态：AI 已批改
      */
     private static final int STATUS_AI_DONE = 1;
     /**
-     * 阅卷结果状态：教师已确认
+    * 阅卷结果状态：教师已确认
      */
     private static final int STATUS_TEACHER_DONE = 2;
 
@@ -87,10 +87,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 提交answersheet
-     *
-     * @param dto dto
-     * @return submitAnswerSheet的结果
+    * 提交answersheet
+    *
+    * @param dto dto
+    * @return submitAnswerSheet的结果
      */
     public String submitAnswerSheet(MarkingSubmitDTO dto) {
         // 1. 持久化答题卡
@@ -119,16 +119,16 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
 
         if (properties.getMarking().isAsync()) {
             /**
-              * dispatch异步。
-             * @param taskId 任务标识
-             * @param sheet.getAnswerSheetId( sheet.获取answersheetid(
+            * dispatch异步。
+            * @param taskId 任务标识
+            * @param sheet.getAnswerSheetId( sheet.获取answersheetid(
              */
             dispatchAsync(taskId, sheet.getAnswerSheetId(), dto.getAnswers());
         } else {
             /**
-             * mark同步。
-             * @param taskId 任务标识
-             * @param dto.getAnswers( dto.获取answers(
+            * mark同步。
+            * @param taskId 任务标识
+            * @param dto.getAnswers( dto.获取answers(
              */
             markSync(taskId, dto.getAnswers());
         }
@@ -139,10 +139,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     }
 
     /**
-     * 把阅卷任务投递到队列，由 {@link MarkingMessageListener} 异步消费。
-     * @param taskId 任务标识
-     * @param answerSheetId answersheetid
-     * @param answers answers
+    * 把阅卷任务投递到队列，由 {@link MarkingMessageListener} 异步消费。
+    * @param taskId 任务标识
+    * @param answerSheetId answersheetid
+    * @param answers answers
      */
     private void dispatchAsync(String taskId, Long answerSheetId, List<MarkingSubmitDTO.AnswerItem> answers) {
         MarkingJob job = new MarkingJob();
@@ -156,18 +156,18 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
         } catch (Exception e) {
             log.error("[EduAi] 队列投递失败，回退到同步阅卷: taskId={}, err={}", taskId, e.getMessage(), e);
             /**
-             * mark同步。
-             * @param taskId 任务标识
-             * @param answers answers
+            * mark同步。
+            * @param taskId 任务标识
+            * @param answers answers
              */
             markSync(taskId, answers);
         }
     }
 
     /**
-     * 同步阅卷：阻塞直到全部题目批改完成。
-     * @param taskId 任务标识
-     * @param answers answers
+    * 同步阅卷：阻塞直到全部题目批改完成。
+    * @param taskId 任务标识
+    * @param answers answers
      */
     public void markSync(String taskId, List<MarkingSubmitDTO.AnswerItem> answers) {
         int maxScore = properties.getMarking().getMaxScore();
@@ -184,20 +184,20 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
                     maxScore
             );
             /**
-              * applyoutcome。
-             * @param taskId 任务标识
-             * @param question question
-             * @param outcome outcome
+            * applyoutcome。
+            * @param taskId 任务标识
+            * @param question question
+            * @param outcome outcome
              */
             applyOutcome(taskId, question, outcome);
         }
     }
 
     /**
-     * 把单题批改结果写入 DB。
-     * @param taskId 任务标识
-     * @param question question
-     * @param outcome outcome
+    * 把单题批改结果写入 DB。
+    * @param taskId 任务标识
+    * @param question question
+    * @param outcome outcome
      */
     public void applyOutcome(String taskId, EduQuestion question, EduAiService.MarkingOutcome outcome) {
         LambdaUpdateWrapper<EduMarkingResult> wrapper = new LambdaUpdateWrapper<>();
@@ -219,9 +219,9 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
 
         if (results.isEmpty()) {
             /**
-             * 业务异常。
-             * @param "任务不存在" "任务不存在"
-             * @return 业务异常的结果
+            * 业务异常。
+            * @param "任务不存在" "任务不存在"
+            * @return 业务异常的结果
              */
             throw new BusinessException("任务不存在");
         }
@@ -256,10 +256,10 @@ public class EduMarkingServiceImpl implements IEduMarkingService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * confirmmarking
-     *
-     * @param dto dto
-     * @return confirmMarking的结果
+    * confirmmarking
+    *
+    * @param dto dto
+    * @return confirmMarking的结果
      */
     public boolean confirmMarking(MarkingConfirmDTO dto) {
         for (MarkingConfirmDTO.ScoreAdjustment adj : dto.getAdjustments()) {

@@ -22,10 +22,10 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
-   * 调度触发时序诊断：打印每次 Sink.写入 的时间戳与线程，定位调度超频根因。
- *
- * @author CH
- * @since 4.0.0.42
+* 调度触发时序诊断：打印每次 Sink.写入 的时间戳与线程，定位调度超频根因。
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 public final class DataSyncTickDebugProbe {
@@ -34,10 +34,10 @@ public final class DataSyncTickDebugProbe {
     private static final Path WORK_DIR = Paths.get("target/tick-debug");
 
     /**
-     * 入口。
-     *
-     * @param args 命令行参数
-     * @throws Exception 异常
+    * 入口。
+    *
+    * @param args 命令行参数
+    * @throws Exception 异常
      */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);

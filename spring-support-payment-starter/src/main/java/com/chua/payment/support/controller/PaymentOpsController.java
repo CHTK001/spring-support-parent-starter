@@ -34,11 +34,11 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 支付运营能力控制器。
-   * 直接返回原始业务对象，由通用响应包装层统一输出 申报结果，
-   * 避免这里再返回支付模块自己的 结果 造成双协议并存。
- * @author CH
- * @since 4.0.0
+* 支付运营能力控制器。
+* 直接返回原始业务对象，由通用响应包装层统一输出 申报结果，
+* 避免这里再返回支付模块自己的 结果 造成双协议并存。
+* @author CH
+* @since 4.0.0
  */
 @RestController
 @RequestMapping("/ops")
@@ -57,12 +57,12 @@ public class PaymentOpsController {
     private final PaymentNotifyProcessService paymentNotifyProcessService;
 
     /**
-      * 创建 薪酬ops控制器 实例
-     * @param paymentSchedulerTaskOpsService 薪酬调度器任务ops服务
-     * @param paymentDashboardService 薪酬dashboard服务
-     * @param paymentNotifyLogMapper 薪酬通知日志映射器
-     * @param paymentNotifyErrorMapper 薪酬通知错误映射器
-     * @param paymentNotifyProcessService 薪酬通知处理服务
+    * 创建 薪酬ops控制器 实例
+    * @param paymentSchedulerTaskOpsService 薪酬调度器任务ops服务
+    * @param paymentDashboardService 薪酬dashboard服务
+    * @param paymentNotifyLogMapper 薪酬通知日志映射器
+    * @param paymentNotifyErrorMapper 薪酬通知错误映射器
+    * @param paymentNotifyProcessService 薪酬通知处理服务
      */
     public PaymentOpsController(PaymentSchedulerTaskOpsService paymentSchedulerTaskOpsService,
                                 PaymentDashboardService paymentDashboardService,
@@ -78,10 +78,10 @@ public class PaymentOpsController {
 
     @GetMapping("/dashboard/summary")
     /**
-     * dashboardsummary
-     *
-     * @param false false
-     * @return dashboardSummary的结果
+    * dashboardsummary
+    *
+    * @param false false
+    * @return dashboardSummary的结果
      */
     public PaymentDashboardSummaryVO dashboardSummary(@RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
                                                       @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
@@ -90,9 +90,9 @@ public class PaymentOpsController {
 
     @GetMapping("/overview")
     /**
-     * Overview
-     *
-     * @return overview的结果
+    * Overview
+    *
+    * @return overview的结果
      */
     public PaymentOpsOverviewVO overview() {
         PaymentOpsOverviewVO overview = new PaymentOpsOverviewVO();
@@ -103,9 +103,9 @@ public class PaymentOpsController {
 
     @GetMapping("/scheduler/tasks")
     /**
-     * 列表任务
-     *
-     * @return 列表任务的结果
+    * 列表任务
+    *
+    * @return 列表任务的结果
      */
     public List<PaymentSchedulerTaskVO> listTasks() {
         return paymentSchedulerTaskOpsService.listTasks();
@@ -113,9 +113,9 @@ public class PaymentOpsController {
 
     @PutMapping("/scheduler/tasks/{taskKey}")
     /**
-      * 更新任务
-     * @param taskKey 任务钥匙
-     * @param dto dto
+    * 更新任务
+    * @param taskKey 任务钥匙
+    * @param dto dto
      */
     public PaymentSchedulerTaskVO updateTask(@PathVariable String taskKey,
                                              @RequestBody PaymentSchedulerTaskUpdateDTO dto) {
@@ -124,10 +124,10 @@ public class PaymentOpsController {
 
     @PostMapping("/scheduler/tasks/{taskKey}/trigger")
     /**
-     * trigger任务
-     *
-     * @param taskKey 任务钥匙
-     * @return trigger任务的结果
+    * trigger任务
+    *
+    * @param taskKey 任务钥匙
+    * @return trigger任务的结果
      */
     public PaymentSchedulerTaskVO triggerTask(@PathVariable String taskKey) {
         return paymentSchedulerTaskOpsService.triggerTask(taskKey);
@@ -135,10 +135,10 @@ public class PaymentOpsController {
 
     @GetMapping("/notify/log/page")
     /**
-     * Page通知日志
-     *
-     * @param "1" "1"
-     * @return page通知日志的结果
+    * Page通知日志
+    *
+    * @param "1" "1"
+    * @return page通知日志的结果
      */
     public PageResult<PaymentNotifyLog> pageNotifyLogs(@RequestParam(defaultValue = "1") int pageNum,
                                                        @RequestParam(defaultValue = "10") int pageSize,
@@ -168,10 +168,10 @@ public class PaymentOpsController {
 
     @GetMapping("/notify/error/page")
     /**
-     * Page通知错误
-     *
-     * @param "1" "1"
-     * @return page通知错误的结果
+    * Page通知错误
+    *
+    * @param "1" "1"
+    * @return page通知错误的结果
      */
     public PageResult<PaymentNotifyError> pageNotifyErrors(@RequestParam(defaultValue = "1") int pageNum,
                                                            @RequestParam(defaultValue = "10") int pageSize,
@@ -201,10 +201,10 @@ public class PaymentOpsController {
 
     @PostMapping("/notify/error/{id}/retry")
     /**
-     * 重试通知记录错误
-     *
-     * @param id 标识
-     * @return 重试通知错误的结果
+    * 重试通知记录错误
+    *
+    * @param id 标识
+    * @return 重试通知错误的结果
      */
     public Boolean retryNotifyError(@PathVariable Long id) {
         paymentNotifyProcessService.retryFailedNotify(id);
@@ -212,9 +212,9 @@ public class PaymentOpsController {
     }
 
     /**
-     * callback审计
-     *
-     * @return callback审计的结果
+    * callback审计
+    *
+    * @return callback审计的结果
      */
     private List<PaymentCallbackAuditVO> callbackAudits() {
         return List.of(
@@ -261,9 +261,9 @@ public class PaymentOpsController {
     }
 
     /**
-     * 订单数字strategies
-     *
-     * @return 订单数字strategies的结果
+    * 订单数字strategies
+    *
+    * @return 订单数字strategies的结果
      */
     private List<PaymentOrderNumberStrategyVO> orderNumberStrategies() {
         return List.of(
@@ -291,14 +291,14 @@ public class PaymentOpsController {
     }
 
     /**
-      * callback审计
-     * @param callbackType callback类型
-     * @param callbackName callback名称
-     * @param recommendedPattern recommended模式
-     * @param scopedIdentifier scopedidentifier
-     * @param strictScoped strictscoped
-     * @param effectivePriority effectivepriority
-     * @param notes 笔记
+    * callback审计
+    * @param callbackType callback类型
+    * @param callbackName callback名称
+    * @param recommendedPattern recommended模式
+    * @param scopedIdentifier scopedidentifier
+    * @param strictScoped strictscoped
+    * @param effectivePriority effectivepriority
+    * @param notes 笔记
      */
     private PaymentCallbackAuditVO callbackAudit(String callbackType,
                                                 String callbackName,
@@ -319,13 +319,13 @@ public class PaymentOpsController {
     }
 
     /**
-      * 订单数字strategy
-     * @param businessType 业务类型
-     * @param fieldName 字段名称
-     * @param generationRule generationrule
-     * @param callerOverrideField calleroverride字段
-     * @param idempotentRule 幂等rule
-     * @param notes 笔记
+    * 订单数字strategy
+    * @param businessType 业务类型
+    * @param fieldName 字段名称
+    * @param generationRule generationrule
+    * @param callerOverrideField calleroverride字段
+    * @param idempotentRule 幂等rule
+    * @param notes 笔记
      */
     private PaymentOrderNumberStrategyVO orderNumberStrategy(String businessType,
                                                              String fieldName,

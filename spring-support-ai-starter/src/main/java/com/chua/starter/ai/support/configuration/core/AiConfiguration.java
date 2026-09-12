@@ -28,29 +28,29 @@ import java.util.List;
 import java.util.Map;
 
 /**
-   * AI 核心自动配置 — 全局 对话客户端 和 智能体 注册体系。
- *
- * <p>Spring Boot 专属层，职责：</p>
- * <ul>
- *   <li>将 {@code utils-*} 核心库的 ChatClient/Agent 桥接到 Spring 容器</li>
- *   <li>通过 SPI 发现所有 ChatClient 实现，聚合为 {@link AggregateChatClient}</li>
- *   <li>创建 {@link ChatClientRegistry} / {@link AgentRegistry} 全局单例</li>
- *   <li>在 {@code ApplicationReadyEvent} 时完成注册中心初始化</li>
- * </ul>
- *
- * <p>核心类型（ChatClient、Agent、AggregateChatClient、AgentMode 等）全部来自
- * {@code utils-support-common-starter}，不在此模块重复定义。</p>
- *
- * <h2>多模型聚合 ChatClient 启动流程</h2>
- * <pre>
- *   1. SPI 发现 ChatClient 实现
- *   2. 聚合为 AggregateChatClient
- *   3. 注册到 ChatClientRegistry 作为默认客户端
- *   4. 业务代码通过 registry.getDefault() 使用
- * </pre>
- *
- * @since 4.0.0.42
- * @author CH
+* AI 核心自动配置 — 全局 对话客户端 和 智能体 注册体系。
+*
+* <p>Spring Boot 专属层，职责：</p>
+* <ul>
+*   <li>将 {@code utils-*} 核心库的 ChatClient/Agent 桥接到 Spring 容器</li>
+*   <li>通过 SPI 发现所有 ChatClient 实现，聚合为 {@link AggregateChatClient}</li>
+*   <li>创建 {@link ChatClientRegistry} / {@link AgentRegistry} 全局单例</li>
+*   <li>在 {@code ApplicationReadyEvent} 时完成注册中心初始化</li>
+* </ul>
+*
+* <p>核心类型（ChatClient、Agent、AggregateChatClient、AgentMode 等）全部来自
+* {@code utils-support-common-starter}，不在此模块重复定义。</p>
+*
+* <h2>多模型聚合 ChatClient 启动流程</h2>
+* <pre>
+*   1. SPI 发现 ChatClient 实现
+*   2. 聚合为 AggregateChatClient
+*   3. 注册到 ChatClientRegistry 作为默认客户端
+*   4. 业务代码通过 registry.getDefault() 使用
+* </pre>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @AutoConfiguration
@@ -59,77 +59,77 @@ import java.util.Map;
 public class AiConfiguration {
 
     /**
-      * 全局 对话客户端 注册中心。
-     * @return 对话客户端registry的结果
+    * 全局 对话客户端 注册中心。
+    * @return 对话客户端registry的结果
      */
     @Bean
     @ConditionalOnMissingBean
     public ChatClientRegistry chatClientRegistry() {
         log.info("[AiConfiguration] 创建 ChatClientRegistry");
         /**
-         * 对话客户端registry。
-         * @return 对话客户端registry的结果
+        * 对话客户端registry。
+        * @return 对话客户端registry的结果
          */
         return new ChatClientRegistry();
     }
 
     /**
-      * 全局 智能体 注册中心。
-     * @return 智能体registry的结果
+    * 全局 智能体 注册中心。
+    * @return 智能体registry的结果
      */
     @Bean
     @ConditionalOnMissingBean
     public AgentRegistry agentRegistry() {
         log.info("[AiConfiguration] 创建 AgentRegistry");
         /**
-         * 智能体registry。
-         * @return 智能体registry的结果
+        * 智能体registry。
+        * @return 智能体registry的结果
          */
         return new AgentRegistry();
     }
 
     /**
-     * 对话记录服务——默认使用内存实现。
-     * @return AIdialogrecord服务的结果
+    * 对话记录服务——默认使用内存实现。
+    * @return AIdialogrecord服务的结果
      */
     @Bean
     @ConditionalOnMissingBean
     public AIDialogRecordService aiDialogRecordService() {
         log.info("[AiConfiguration] 创建 AIDialogRecordService（内存实现）");
         /**
-          * aidialog本地record服务。
-         * @return AIdialog本地record服务的结果
+        * aidialog本地record服务。
+        * @return AIdialog本地record服务的结果
          */
         return new AIDialogLocalRecordService();
     }
 
     /**
-      * 本地回显 对话客户端 兜底 —— 无外部 AI 服务时保证会话链路可用。
-     *
-     * <p>当用户自行定义了名为 {@code echoChatClient} 的 Bean 时本兜底自动退避；
-      * 未配置真实 对话客户端 时，{@link #defaultChatClient} 仍会聚合本兜底，
-      * 使 对话 会话链路（POST → WS 流式 → turn.完成）在无模型环境下可联调，
-     * 生产环境应自行配置真实提供商客户端覆盖。</p>
-     * @return echo对话客户端的结果
+    * 本地回显 对话客户端 兜底 —— 无外部 AI 服务时保证会话链路可用。
+    *
+    * <p>当用户自行定义了名为 {@code echoChatClient} 的 Bean 时本兜底自动退避；
+    * 未配置真实 对话客户端 时，{@link #defaultChatClient} 仍会聚合本兜底，
+    * 使 对话 会话链路（POST → WS 流式 → turn.完成）在无模型环境下可联调，
+    * 生产环境应自行配置真实提供商客户端覆盖。</p>
+    * @return echo对话客户端的结果
      */
     @Bean
     @ConditionalOnMissingBean(name = "echoChatClient")
     public EchoChatClient echoChatClient() {
         log.info("[AiConfiguration] 注册本地 Echo ChatClient（无真实模型时的兜底）");
         /**
-         * echo对话客户端。
-         * @return echo对话客户端的结果
+        * echo对话客户端。
+        * @return echo对话客户端的结果
          */
         return new EchoChatClient();
     }
 
     /**
-      * 默认 对话客户端 — 聚合客户端。
-     *
-     * <p>通过 SPI 发现 ChatClient 实现，聚合为 AggregateChatClient。
-      * 如果找不到任何实现，返回 空（业务层自行处理兜底）。
-     * @param applicationContext application上下文
-     * @return 默认对话客户端的结果
+    * 默认 对话客户端 — 聚合客户端。
+    *
+    * <p>通过 SPI 发现 ChatClient 实现，聚合为 AggregateChatClient。
+    * 如果找不到任何实现，返回 空（业务层自行处理兜底）。
+    * @param applicationContext application上下文
+    * @return 默认对话客户端的结果
      */
     @Bean
     @ConditionalOnMissingBean
@@ -149,9 +149,9 @@ public class AiConfiguration {
             AggregateChatClientSetting config = new AggregateChatClientSetting();
             config.setStrategy("failover");
             /**
-             * aggregate对话客户端。
-             * @param config 配置
-             * @return aggregate对话客户端的结果
+            * aggregate对话客户端。
+            * @param config 配置
+            * @return aggregate对话客户端的结果
              */
             return new AggregateChatClient(config);
         }
@@ -161,8 +161,8 @@ public class AiConfiguration {
     }
 
     /**
-     * 容器就绪后初始化注册中心。
-     * @param event 事件
+    * 容器就绪后初始化注册中心。
+    * @param event 事件
      */
     @EventListener(ApplicationReadyEvent.class)
     @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -215,9 +215,9 @@ public class AiConfiguration {
 
     @Bean
     /**
-     * AI服务信息contributor
-     *
-     * @return AI服务信息contributor的结果
+    * AI服务信息contributor
+    *
+    * @return AI服务信息contributor的结果
      */
     public ServiceInfoContributor aiServiceInfoContributor() {
         return registry -> {

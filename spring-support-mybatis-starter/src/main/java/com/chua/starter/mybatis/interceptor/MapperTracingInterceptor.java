@@ -15,7 +15,7 @@ import org.slf4j.MDC;
 import java.sql.Statement;
 
 /**
- * @since 2025/6/27 15:54
+* @since 2025/6/27 15:54
  */
 @Intercepts({
         @Signature(type = Executor.class, method = "update", args = {MappedStatement.class, Object.class}),
@@ -25,10 +25,10 @@ import java.sql.Statement;
         @Signature(type = ResultSetHandler.class, method = "handleResultSets", args = {Statement.class})
 })
 /**
- * 映射器追踪拦截器类。
- *
- * @author CH
- * @since 4.0.0
+* 映射器追踪拦截器类。
+*
+* @author CH
+* @since 4.0.0
  */
 public class MapperTracingInterceptor implements Interceptor {
 
@@ -38,8 +38,8 @@ public class MapperTracingInterceptor implements Interceptor {
         if (arg instanceof MappedStatement ms) {
             String mapperMethod = ms.getId();
             /**
-             * 尝试。
-             * @param mapperMethod 映射器方法
+            * 尝试。
+            * @param mapperMethod 映射器方法
              */
             try (MDC.MDCCloseable closeable = MDC.putCloseable("mapper", mapperMethod)) {
                 return invocation.proceed();

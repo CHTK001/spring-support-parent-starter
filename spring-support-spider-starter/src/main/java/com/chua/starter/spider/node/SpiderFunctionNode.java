@@ -17,38 +17,38 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 函数调用节点。
- *
- * <p>通过 Spring Bean 名称与方法名，调用任意无参或有参方法，并将返回值写入上下文属性。
- * 参数从上下文属性中按名称解析，支持 {@code current} 引用当前处理数据。</p>
- *
- * <p>节点配置说明：</p>
- * <ul>
- *   <li>{@code beanName} Spring Bean 名称（必填）</li>
- *   <li>{@code methodName} 方法名（必填）</li>
- *   <li>{@code params} 方法参数取值来源，顺序对应方法参数位置，
- *       每一项为上下文属性名（逗号分隔），{@code current} 表示当前处理数据</li>
- *   <li>{@code saveAs} 返回值写入的上下文属性名（必填）</li>
- * </ul>
- *
- * @since 4.0.0.42
- * @author CH
+* 函数调用节点。
+*
+* <p>通过 Spring Bean 名称与方法名，调用任意无参或有参方法，并将返回值写入上下文属性。
+* 参数从上下文属性中按名称解析，支持 {@code current} 引用当前处理数据。</p>
+*
+* <p>节点配置说明：</p>
+* <ul>
+*   <li>{@code beanName} Spring Bean 名称（必填）</li>
+*   <li>{@code methodName} 方法名（必填）</li>
+*   <li>{@code params} 方法参数取值来源，顺序对应方法参数位置，
+*       每一项为上下文属性名（逗号分隔），{@code current} 表示当前处理数据</li>
+*   <li>{@code saveAs} 返回值写入的上下文属性名（必填）</li>
+* </ul>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @Component
 public class SpiderFunctionNode implements FlowNode {
 
     /**
-     * Spring 容器
+    * Spring 容器
      */
     @Resource
     /** Application上下文 */
     private ApplicationContext applicationContext;
 
     /**
-     * 节点类型标识。
-     *
-     * @return 节点类型
+    * 节点类型标识。
+    *
+    * @return 节点类型
      */
     @Override
     public String type() {
@@ -56,9 +56,9 @@ public class SpiderFunctionNode implements FlowNode {
     }
 
     /**
-     * 节点配置表单元信息。
-     *
-     * @return 表单元信息列表
+    * 节点配置表单元信息。
+    *
+    * @return 表单元信息列表
      */
     @Override
     public List<FlowNodeField> configSchema() {
@@ -71,9 +71,9 @@ public class SpiderFunctionNode implements FlowNode {
     }
 
     /**
-     * 执行函数调用节点。
-     *
-     * @param context 当前流程上下文
+    * 执行函数调用节点。
+    *
+    * @param context 当前流程上下文
      */
     @Override
     public void execute(FlowContext context) {
@@ -98,11 +98,11 @@ public class SpiderFunctionNode implements FlowNode {
     }
 
     /**
-     * 解析方法参数值列表。
-     *
-     * @param paramsText 属性名列表（逗号分隔）
-     * @param context    当前流程上下文
-     * @return 参数值列表
+    * 解析方法参数值列表。
+    *
+    * @param paramsText 属性名列表（逗号分隔）
+    * @param context    当前流程上下文
+    * @return 参数值列表
      */
     private List<Object> resolveParams(String paramsText, FlowContext context) {
         List<Object> result = new ArrayList<>();
@@ -121,15 +121,15 @@ public class SpiderFunctionNode implements FlowNode {
     }
 
     /**
-      * 通过 reflect工具 调用方法。
-     *
-     * <p>按参数类型自动匹配最合适的方法：优先精确匹配参数类型，
-     * 若无匹配则尝试按顺序匹配参数类型兼容的方法。若方法抛出异常则直接向上抛出。</p>
-     *
-     * @param bean       目标 Bean 实例
-     * @param methodName 方法名
-     * @param args       实参列表
-     * @return 方法返回值
+    * 通过 reflect工具 调用方法。
+    *
+    * <p>按参数类型自动匹配最合适的方法：优先精确匹配参数类型，
+    * 若无匹配则尝试按顺序匹配参数类型兼容的方法。若方法抛出异常则直接向上抛出。</p>
+    *
+    * @param bean       目标 Bean 实例
+    * @param methodName 方法名
+    * @param args       实参列表
+    * @return 方法返回值
      */
     private Object invokeMethod(Object bean, String methodName, List<Object> args) {
         Class<?> clazz = bean.getClass();
@@ -184,10 +184,10 @@ public class SpiderFunctionNode implements FlowNode {
     }
 
     /**
-     * 将原始类型包装为其对应的包装类型。
-     *
-     * @param primitive 原始类型
-     * @return 包装类型
+    * 将原始类型包装为其对应的包装类型。
+    *
+    * @param primitive 原始类型
+    * @return 包装类型
      */
     private Class<?> wrapPrimitive(Class<?> primitive) {
         if (primitive == boolean.class) {

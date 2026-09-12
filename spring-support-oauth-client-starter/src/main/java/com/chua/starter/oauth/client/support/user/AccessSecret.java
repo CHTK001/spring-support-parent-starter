@@ -7,10 +7,10 @@ import lombok.NoArgsConstructor;
 import java.util.Map;
 
 /**
- * ak/sk
- *
- * @author CH
- * @since 4.0.0
+* ak/sk
+*
+* @author CH
+* @since 4.0.0
  */
 @Data
 @NoArgsConstructor
@@ -18,16 +18,16 @@ import java.util.Map;
 public class AccessSecret {
 
     /**
-     * ak
+    * ak
      */
     private String accessKey;
 
     /**
-     * sk
+    * sk
      */
     private String secretKey;
     /**
-      * 钥匙
+    * 钥匙
      */
     private String uKey;
 
@@ -37,7 +37,7 @@ public class AccessSecret {
     private Map<String, Object> ext; // ext
 
     /**
-     * 缓存时间（用于性能优化）
+    * 缓存时间（用于性能优化）
      */
     private transient long cacheTime;
 

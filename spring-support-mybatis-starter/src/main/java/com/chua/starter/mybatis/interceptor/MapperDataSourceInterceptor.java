@@ -21,9 +21,9 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
-   * 支持在 MyBatis 映射器 上解析 @DS。
- *
- * @since 2026/4/2
+* 支持在 MyBatis 映射器 上解析 @DS。
+*
+* @since 2026/4/2
  */
 @Intercepts({
         @Signature(type = Executor.class, method = "update", args = {MappedStatement.class, Object.class}),
@@ -31,10 +31,10 @@ import java.util.concurrent.ConcurrentHashMap;
         @Signature(type = Executor.class, method = "query", args = {MappedStatement.class, Object.class, org.apache.ibatis.session.RowBounds.class, org.apache.ibatis.session.ResultHandler.class, org.apache.ibatis.cache.CacheKey.class, org.apache.ibatis.mapping.BoundSql.class}),
 })
 /**
- * 映射器数据源拦截器类。
- *
- * @author CH
- * @since 4.0.0
+* 映射器数据源拦截器类。
+*
+* @author CH
+* @since 4.0.0
  */
 public class MapperDataSourceInterceptor implements Interceptor {
     /** 日志 */
@@ -75,16 +75,16 @@ public class MapperDataSourceInterceptor implements Interceptor {
             throw ex;
         } finally {
             /**
-             * restore数据源。
-             * @param originalDataSource 原始数据源
+            * restore数据源。
+            * @param originalDataSource 原始数据源
              */
             restoreDataSource(originalDataSource);
         }
     }
 
     /**
-     * restore数据源。
-     * @param originalDataSource 原始数据源
+    * restore数据源。
+    * @param originalDataSource 原始数据源
      */
     private void restoreDataSource(String originalDataSource) {
         if (StringUtils.hasText(originalDataSource)) {
@@ -96,9 +96,9 @@ public class MapperDataSourceInterceptor implements Interceptor {
     }
 
     /**
-     * resolve映射器数据源。
-     * @param statementId 对账单标识
-     * @return resolve映射器数据源的结果
+    * resolve映射器数据源。
+    * @param statementId 对账单标识
+    * @return resolve映射器数据源的结果
      */
     private String resolveMapperDataSource(String statementId) {
         int lastDot = statementId.lastIndexOf('.');

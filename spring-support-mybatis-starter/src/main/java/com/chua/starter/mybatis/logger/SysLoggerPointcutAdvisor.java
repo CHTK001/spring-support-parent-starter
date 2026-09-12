@@ -15,30 +15,30 @@ import java.lang.reflect.Method;
 import java.util.Date;
 
 /**
- * 系统操作日志切入点顾问
- * <p>
- * 基于 AOP 的操作日志记录组件，用于自动记录带有 {@link SysLog} 注解的方法调用信息。
- * 通过事件机制发布日志信息，各模块可以监听并处理日志事件。
- * </p>
- *
- * <h3>功能特性：</h3>
- * <ul>
- *     <li>自动拦截带 @SysLog 注解的方法</li>
- *     <li>记录方法执行耗时</li>
- *     <li>记录请求参数（可配置）</li>
- *     <li>记录操作结果（成功/失败）</li>
- *     <li>支持 SpEL 表达式自定义日志内容</li>
- *     <li>自动识别 Swagger 注解获取操作名称</li>
- *     <li>根据方法名自动推断操作类型（添加/修改/删除/查询）</li>
- *     <li>通过事件机制发布日志，支持模块化处理</li>
- * </ul>
- *
-   * @版本 1.0.0
- * @since 2024/01/01
- * @see SysLog
- * @see SysLoggerInfo
- * @see LoggerIgnore
- * @author CH
+* 系统操作日志切入点顾问
+* <p>
+* 基于 AOP 的操作日志记录组件，用于自动记录带有 {@link SysLog} 注解的方法调用信息。
+* 通过事件机制发布日志信息，各模块可以监听并处理日志事件。
+* </p>
+*
+* <h3>功能特性：</h3>
+* <ul>
+*     <li>自动拦截带 @SysLog 注解的方法</li>
+*     <li>记录方法执行耗时</li>
+*     <li>记录请求参数（可配置）</li>
+*     <li>记录操作结果（成功/失败）</li>
+*     <li>支持 SpEL 表达式自定义日志内容</li>
+*     <li>自动识别 Swagger 注解获取操作名称</li>
+*     <li>根据方法名自动推断操作类型（添加/修改/删除/查询）</li>
+*     <li>通过事件机制发布日志，支持模块化处理</li>
+* </ul>
+*
+* @版本 1.0.0
+* @since 2024/01/01
+* @see SysLog
+* @see SysLoggerInfo
+* @see LoggerIgnore
+* @author CH
  */
 @Lazy
 @Component
@@ -98,8 +98,8 @@ public class SysLoggerPointcutAdvisor extends AbstractLoggerPointcutAdvisor {
 
         // 发布日志事件
         /**
-         * 发布事件。
-         * @param sysLoggerInfo sys日志记录器信息
+        * 发布事件。
+        * @param sysLoggerInfo sys日志记录器信息
          */
         publishEvent(sysLoggerInfo);
     }

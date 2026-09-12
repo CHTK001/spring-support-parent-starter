@@ -7,13 +7,13 @@ import com.chua.common.support.ai.chat.ChatSyncResponse;
 import java.util.function.Consumer;
 
 /**
-   * 内置 Echo 对话客户端 —— 无外部 AI 服务时的本地回显客户端。
- *
- * <p>用于验证会话全链路（POST → WS 流式推送 → turn.completed）而无需真实模型，
- * 也会在多轮历史后追加一句说明。仅作本地联调占位，生产请替换为真实提供商。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 内置 Echo 对话客户端 —— 无外部 AI 服务时的本地回显客户端。
+*
+* <p>用于验证会话全链路（POST → WS 流式推送 → turn.completed）而无需真实模型，
+* 也会在多轮历史后追加一句说明。仅作本地联调占位，生产请替换为真实提供商。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 public class EchoChatClient implements ChatClient {
 

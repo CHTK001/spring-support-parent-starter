@@ -13,13 +13,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 默认本地角色离线 Provider：从数据库 {@code sys_ai_role} 表读取启用角色。
- *
- * <p>作为 Spring Bean 注册，确保可注入 {@link SysAiRoleService}；
- * 同时由配置控制器通过 Spring 注入枚举。</p>
- *
- * @since 4.0.0.43
- * @author CH
+* 默认本地角色离线 Provider：从数据库 {@code sys_ai_role} 表读取启用角色。
+*
+* <p>作为 Spring Bean 注册，确保可注入 {@link SysAiRoleService}；
+* 同时由配置控制器通过 Spring 注入枚举。</p>
+*
+* @since 4.0.0.43
+* @author CH
  */
 @Slf4j
 @Component

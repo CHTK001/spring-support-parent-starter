@@ -28,10 +28,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 终端接口：在线会话、命令片段、路径书签
- *
- * @author CH
- * @since 4.0.0.42
+* 终端接口：在线会话、命令片段、路径书签
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Tag(name = "服务器资产-终端", description = "远控会话管理与终端辅助数据")
 @RestController
@@ -52,9 +52,9 @@ public class TerminalController {
     private final MsTerminalBookmarkMapper bookmarkMapper;
 
     /**
-     * 在线会话概览
-     *
-     * @return 在线会话摘要列表
+    * 在线会话概览
+    *
+    * @return 在线会话摘要列表
      */
     @Operation(summary = "在线会话列表")
     @GetMapping("/online")
@@ -74,10 +74,10 @@ public class TerminalController {
     }
 
     /**
-     * 强制关闭会话
-     *
-     * @param recordId 审计记录 标识
-     * @return 结果
+    * 强制关闭会话
+    *
+    * @param recordId 审计记录 标识
+    * @return 结果
      */
     @Operation(summary = "强制关闭会话")
     @PostMapping("/session/{recordId}/close")
@@ -90,10 +90,10 @@ public class TerminalController {
     }
 
     /**
-     * 会话审计记录查询
-     *
-     * @param status 状态过滤，可为空
-     * @return 记录列表
+    * 会话审计记录查询
+    *
+    * @param status 状态过滤，可为空
+    * @return 记录列表
      */
     @Operation(summary = "会话审计记录")
     @GetMapping("/session")
@@ -106,10 +106,10 @@ public class TerminalController {
     }
 
     /**
-     * 新增命令片段
-     *
-     * @param snippet 片段
-     * @return 结果
+    * 新增命令片段
+    *
+    * @param snippet 片段
+    * @return 结果
      */
     @Operation(summary = "新增命令片段")
     @PostMapping("/snippet")
@@ -122,11 +122,11 @@ public class TerminalController {
     }
 
     /**
-     * 更新命令片段
-     *
-     * @param id      主键
-     * @param snippet 片段
-     * @return 结果
+    * 更新命令片段
+    *
+    * @param id      主键
+    * @param snippet 片段
+    * @return 结果
      */
     @Operation(summary = "更新命令片段")
     @PutMapping("/snippet/{id}")
@@ -147,10 +147,10 @@ public class TerminalController {
     }
 
     /**
-     * 删除命令片段
-     *
-     * @param id 主键
-     * @return 结果
+    * 删除命令片段
+    *
+    * @param id 主键
+    * @return 结果
      */
     @Operation(summary = "删除命令片段")
     @DeleteMapping("/snippet/{id}")
@@ -160,9 +160,9 @@ public class TerminalController {
     }
 
     /**
-     * 命令片段列表
-     *
-     * @return 列表
+    * 命令片段列表
+    *
+    * @return 列表
      */
     @Operation(summary = "命令片段列表")
     @GetMapping("/snippet")
@@ -171,10 +171,10 @@ public class TerminalController {
     }
 
     /**
-     * 新增路径书签
-     *
-     * @param bookmark 书签
-     * @return 结果
+    * 新增路径书签
+    *
+    * @param bookmark 书签
+    * @return 结果
      */
     @Operation(summary = "新增路径书签")
     @PostMapping("/bookmark")
@@ -191,10 +191,10 @@ public class TerminalController {
     }
 
     /**
-     * 删除路径书签
-     *
-     * @param id 主键
-     * @return 结果
+    * 删除路径书签
+    *
+    * @param id 主键
+    * @return 结果
      */
     @Operation(summary = "删除路径书签")
     @DeleteMapping("/bookmark/{id}")
@@ -204,10 +204,10 @@ public class TerminalController {
     }
 
     /**
-     * 指定主机的书签列表
-     *
-     * @param hostId 主机 标识
-     * @return 书签列表
+    * 指定主机的书签列表
+    *
+    * @param hostId 主机 标识
+    * @return 书签列表
      */
     @Operation(summary = "主机书签列表")
     @GetMapping("/bookmark")
@@ -219,10 +219,10 @@ public class TerminalController {
     }
 
     /**
-     * 空串判断
-     *
-     * @param value 待判断字符串
-     * @return 是否为空
+    * 空串判断
+    *
+    * @param value 待判断字符串
+    * @return 是否为空
      */
     private boolean isBlank(String value) {
         return value == null || value.isBlank();

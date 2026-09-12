@@ -8,22 +8,22 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * RPC熔断器
- * <p>
- * 实现熔断保护机制，防止故障扩散
- * </p>
- *
- * @since 2025-03-20
- * @author CH
+* RPC熔断器
+* <p>
+* 实现熔断保护机制，防止故障扩散
+* </p>
+*
+* @since 2025-03-20
+* @author CH
  */
 @Slf4j
 @Data
 public class RpcCircuitBreaker {
 
     /**
-     * 熔断器状态
-     * @author CH
-     * @since 4.0.0
+    * 熔断器状态
+    * @author CH
+    * @since 4.0.0
      */
     public enum State {
         CLOSED,      // 关闭状态（正常）
@@ -32,58 +32,58 @@ public class RpcCircuitBreaker {
     }
 
     /**
-     * 当前状态
+    * 当前状态
      */
     private volatile State state = State.CLOSED;
 
     /**
-     * 失败次数阈值
+    * 失败次数阈值
      */
     private int failureThreshold = 5;
 
     /**
-     * 成功次数阈值（半开状态）
+    * 成功次数阈值（半开状态）
      */
     private int successThreshold = 2;
 
     /**
-     * 超时时间（打开状态持续时间）
+    * 超时时间（打开状态持续时间）
      */
     private Duration timeout = Duration.ofSeconds(60);
 
     /**
-     * 失败计数器
+    * 失败计数器
      */
     private final AtomicInteger failureCount = new AtomicInteger(0);
 
     /**
-     * 成功计数器
+    * 成功计数器
      */
     private final AtomicInteger successCount = new AtomicInteger(0);
 
     /**
-     * 打开时间
+    * 打开时间
      */
     private final AtomicLong openTime = new AtomicLong(0);
 
     /**
-     * 服务名称
+    * 服务名称
      */
     private String serviceName;
 
     /**
-      * 创建 rpc熔断中断 实例
-     * @param serviceName 服务名称
-     * @return rpc熔断中断的结果
+    * 创建 rpc熔断中断 实例
+    * @param serviceName 服务名称
+    * @return rpc熔断中断的结果
      */
     public RpcCircuitBreaker(String serviceName) {
         this.serviceName = serviceName;
     }
 
     /**
-     * 尝试调用
-     *
-     * @return 是否允许调用
+    * 尝试调用
+    *
+    * @return 是否允许调用
      */
     public boolean tryAcquire() {
         if (state == State.CLOSED) {
@@ -106,7 +106,7 @@ public class RpcCircuitBreaker {
     }
 
     /**
-     * 记录成功
+    * 记录成功
      */
     public void recordSuccess() {
         if (state == State.HALF_OPEN) {
@@ -124,7 +124,7 @@ public class RpcCircuitBreaker {
     }
 
     /**
-     * 记录失败
+    * 记录失败
      */
     public void recordFailure() {
         int count = failureCount.incrementAndGet();
@@ -144,7 +144,7 @@ public class RpcCircuitBreaker {
     }
 
     /**
-     * 重置熔断器
+    * 重置熔断器
      */
     public void reset() {
         state = State.CLOSED;
@@ -155,24 +155,24 @@ public class RpcCircuitBreaker {
     }
 
     /**
-     * 是否打开
-     * @return 是否打开的结果
+    * 是否打开
+    * @return 是否打开的结果
      */
     public boolean isOpen() {
         return state == State.OPEN;
     }
 
     /**
-     * 是否关闭
-     * @return 是否关闭的结果
+    * 是否关闭
+    * @return 是否关闭的结果
      */
     public boolean isClosed() {
         return state == State.CLOSED;
     }
 
     /**
-     * 是否半开
-     * @return 是否half打开的结果
+    * 是否半开
+    * @return 是否half打开的结果
      */
     public boolean isHalfOpen() {
         return state == State.HALF_OPEN;

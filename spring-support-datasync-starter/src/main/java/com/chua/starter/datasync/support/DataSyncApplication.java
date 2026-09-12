@@ -22,19 +22,19 @@ import lombok.extern.slf4j.Slf4j;
 import javax.sql.DataSource;
 
 /**
- * 数据同步模块启动类（真实启动测试入口）。
- *
- * <p>通过参数选择映射来源：</p>
- * <ul>
- *   <li><code>--datasync.mode=file</code>（默认）：从文件目录加载映射</li>
- *   <li><code>--datasync.mode=database</code>：从数据库表加载映射（默认嵌入 H2，
-   * 加 <code>--datasync.db=MySQL</code> 连接真实 MySQL）</li>
- * </ul>
- *
- * <p>启动嵌入式 H2 并加载表结构，验证映射加载与 DataSyncServer 启动。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 数据同步模块启动类（真实启动测试入口）。
+*
+* <p>通过参数选择映射来源：</p>
+* <ul>
+*   <li><code>--datasync.mode=file</code>（默认）：从文件目录加载映射</li>
+*   <li><code>--datasync.mode=database</code>：从数据库表加载映射（默认嵌入 H2，
+* 加 <code>--datasync.db=MySQL</code> 连接真实 MySQL）</li>
+* </ul>
+*
+* <p>启动嵌入式 H2 并加载表结构，验证映射加载与 DataSyncServer 启动。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class, DataSourceInspect.class})
@@ -42,24 +42,24 @@ import javax.sql.DataSource;
 public class DataSyncApplication {
 
     /**
-     * 映射配置文件目录（main resources 下）
+    * 映射配置文件目录（main resources 下）
      */
     private static final String MAPPING_DIR = "./src/main/resources/datasync/mappings";
 
     /**
-     * 数据库模式参数值
+    * 数据库模式参数值
      */
     private static final String MODE_DATABASE = "database";
 
     /**
-       * 数据库类型参数值（MySQL 显式指定；默认嵌入式 H2 便于本地真实启动验证）
+    * 数据库类型参数值（MySQL 显式指定；默认嵌入式 H2 便于本地真实启动验证）
      */
     private static final String DB_MYSQL = "mysql";
 
     /**
-     * 程序入口。
-     *
-     * @param args 命令行参数
+    * 程序入口。
+    *
+    * @param args 命令行参数
      */
     public static void main(String[] args) {
         // 解析模式参数（优先系统属性，其次命令行 --datasync.mode=）
@@ -132,10 +132,10 @@ public class DataSyncApplication {
 
  // 注册测试 源/Sink，使定时调度真正执行数据同步
         /**
-         * 注册样本源andsinks。
-         * @param server 服务端
-         * @param databaseMode databasemode
-         * @param useMysql usemysql
+        * 注册样本源andsinks。
+        * @param server 服务端
+        * @param databaseMode databasemode
+        * @param useMysql usemysql
          */
         registerSampleSourcesAndSinks(server, databaseMode, useMysql);
         log.info("[DATA-SYNC] 已注册测试 Source/Sink，等待定时调度执行");
@@ -143,16 +143,16 @@ public class DataSyncApplication {
     }
 
     /**
-      * 注册示例 源/Sink。
-     *
-     * <p>文件模式：Source 从 {@code datasync/samples} 目录的 CSV 文件读取数据，
-     * Sink 将转换后的数据写入 {@code target/datasync-out} 目录。
-       * 数据库模式：MySQL 时 源 从 {@code test_user} 表读取数据；
-      * 默认（嵌入式 H2）时 源 同样从 CSV 读取，Sink 写入 {@code target/datasync-out-db}。</p>
-     *
-     * @param server       数据同步服务器
-     * @param databaseMode 是否数据库模式
-     * @param useMysql     是否使用真实 MySQL（false 时数据库模式走嵌入式 H2）
+    * 注册示例 源/Sink。
+    *
+    * <p>文件模式：Source 从 {@code datasync/samples} 目录的 CSV 文件读取数据，
+    * Sink 将转换后的数据写入 {@code target/datasync-out} 目录。
+    * 数据库模式：MySQL 时 源 从 {@code test_user} 表读取数据；
+    * 默认（嵌入式 H2）时 源 同样从 CSV 读取，Sink 写入 {@code target/datasync-out-db}。</p>
+    *
+    * @param server       数据同步服务器
+    * @param databaseMode 是否数据库模式
+    * @param useMysql     是否使用真实 MySQL（false 时数据库模式走嵌入式 H2）
      */
     private static void registerSampleSourcesAndSinks(DefaultDataSyncServer server, boolean databaseMode, boolean useMysql) {
  // 确保 Sink 输出目录存在（delimited数据同步智能体sink 不会自动创建父目录）
@@ -197,17 +197,17 @@ public class DataSyncApplication {
     }
 
     /**
-     * 配置数据源。
-     *
-     * <p>启动类已排除 {@link DataSourceInspect}（datasource-starter 动态数据源注册器），
-      * 本数据源即为上下文唯一 数据源，{@code DatabaseMappingLoader} 直接注入本数据源
-     * 查询映射表。</p>
-     *
-     * <p>数据库模式默认使用嵌入式 H2（schema.sql 建表 + 预置 db-user-sync），保证无外网
-     * 也能真实启动验证数据库加载链路；仅当显式传入 {@code --datasync.db=mysql} 时才连接
-       * 真实 MySQL（172.16.0.40，库 datasync_测试）。文件模式同样使用嵌入式 H2。</p>
-     *
-     * @return 数据源
+    * 配置数据源。
+    *
+    * <p>启动类已排除 {@link DataSourceInspect}（datasource-starter 动态数据源注册器），
+    * 本数据源即为上下文唯一 数据源，{@code DatabaseMappingLoader} 直接注入本数据源
+    * 查询映射表。</p>
+    *
+    * <p>数据库模式默认使用嵌入式 H2（schema.sql 建表 + 预置 db-user-sync），保证无外网
+    * 也能真实启动验证数据库加载链路；仅当显式传入 {@code --datasync.db=mysql} 时才连接
+    * 真实 MySQL（172.16.0.40，库 datasync_测试）。文件模式同样使用嵌入式 H2。</p>
+    *
+    * @return 数据源
      */
     @Bean
     public DataSource dataSource() {
@@ -225,8 +225,8 @@ public class DataSyncApplication {
             return dataSource;
         }
         /**
-         * embeddeddatabase构建器。
-         * @return embeddeddatabase构建器的结果
+        * embeddeddatabase构建器。
+        * @return embeddeddatabase构建器的结果
          */
         return new EmbeddedDatabaseBuilder()
                 .setType(EmbeddedDatabaseType.H2)

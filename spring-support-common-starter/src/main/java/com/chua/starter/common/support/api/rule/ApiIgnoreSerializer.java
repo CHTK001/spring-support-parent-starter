@@ -19,12 +19,12 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import java.io.IOException;
 
 /**
- * 忽略字段
- *
- * @see ApiFieldIgnore
- * @see ApiGroup
- * @since 2025/1/1
- * @author CH
+* 忽略字段
+*
+* @see ApiFieldIgnore
+* @see ApiGroup
+* @since 2025/1/1
+* @author CH
  */
 public class ApiIgnoreSerializer extends JsonSerializer<Object> implements ContextualSerializer {
     /** 请求mapping处理器mapping */
@@ -32,12 +32,12 @@ public class ApiIgnoreSerializer extends JsonSerializer<Object> implements Conte
     private Class<?>[] group; // 群体
 
     /**
-      * 创建 apiignore序列化器 实例
-     * @param group 群体
+    * 创建 apiignore序列化器 实例
+    * @param group 群体
      */
     public ApiIgnoreSerializer(Class<?>[] group) {
         /**
-         * this。
+        * this。
          */
         this();
         this.group = group;
@@ -63,8 +63,8 @@ public class ApiIgnoreSerializer extends JsonSerializer<Object> implements Conte
             }
             if (apiFieldIgnore != null&& isMatch(apiFieldIgnore)) {
                 /**
-                 * apiignore序列化器。
-                 * @param apiFieldIgnore.value( api字段ignore.值(
+                * apiignore序列化器。
+                * @param apiFieldIgnore.value( api字段ignore.值(
                  */
                 return new ApiIgnoreSerializer(apiFieldIgnore.value());
             }
@@ -74,10 +74,10 @@ public class ApiIgnoreSerializer extends JsonSerializer<Object> implements Conte
     }
 
     /**
-     * 是否匹配
-     *
-     * @param apiFieldIgnore api字段ignore
-     * @return 是否匹配的结果
+    * 是否匹配
+    *
+    * @param apiFieldIgnore api字段ignore
+    * @return 是否匹配的结果
      */
     private boolean isMatch(ApiFieldIgnore apiFieldIgnore) {
         Class<?>[] value = apiFieldIgnore.value();
@@ -114,11 +114,11 @@ public class ApiIgnoreSerializer extends JsonSerializer<Object> implements Conte
     }
 
     /**
-     * 是否匹配
-     *
-     * @param value 价值观
-     * @param group 群体
-     * @return 是否匹配
+    * 是否匹配
+    *
+    * @param value 价值观
+    * @param group 群体
+    * @return 是否匹配
      */
     private boolean isMatch(Class<?>[] value, Class<?>[] group) {
         for (Class<?> aClass : group) {

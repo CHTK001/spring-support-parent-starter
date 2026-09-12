@@ -12,16 +12,16 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * 主机实时状态 → Socket 推送桥接
- * <p>
- * 向 server-starter 的 {@link HostOnlineScheduler} 注册延迟/在线 hooks，
- * 使主机延迟变化、在线状态翻转实时推送 socket
- * （前端 subscribe("monitor", "host-delay" / "host-online") 接收）。
- * server-starter 无 socket 依赖，由 monitor 侧按需绑定，未装配 socket 时静默跳过。
- * </p>
- *
- * @author CH
- * @since 4.0.0.42
+* 主机实时状态 → Socket 推送桥接
+* <p>
+* 向 server-starter 的 {@link HostOnlineScheduler} 注册延迟/在线 hooks，
+* 使主机延迟变化、在线状态翻转实时推送 socket
+* （前端 subscribe("monitor", "host-delay" / "host-online") 接收）。
+* server-starter 无 socket 依赖，由 monitor 侧按需绑定，未装配 socket 时静默跳过。
+* </p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @Configuration
@@ -32,10 +32,10 @@ public class HostRealtimePushConfiguration {
     private final MonitorPushService monitorPushService;
 
     /**
-     * 注册主机实时状态 hooks（延迟/在线 → socket 推送）
-     *
-     * @param onlineSchedulerProvider 在离线/延迟调度器（server-starter，可能未装配）
-     * @return 启动时执行的注册器
+    * 注册主机实时状态 hooks（延迟/在线 → socket 推送）
+    *
+    * @param onlineSchedulerProvider 在离线/延迟调度器（server-starter，可能未装配）
+    * @return 启动时执行的注册器
      */
     @Bean
     @ConditionalOnBean(HostOnlineScheduler.class)

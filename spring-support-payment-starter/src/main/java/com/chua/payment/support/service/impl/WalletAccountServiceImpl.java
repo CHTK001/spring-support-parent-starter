@@ -37,10 +37,10 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 钱包账户服务实现，负责钱包充值、转账、提现、退款等资金操作。
- *
- * @author CH
- * @since 4.0.0.50
+* 钱包账户服务实现，负责钱包充值、转账、提现、退款等资金操作。
+*
+* @author CH
+* @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor
@@ -66,9 +66,9 @@ public class WalletAccountServiceImpl implements WalletAccountService {
         WalletAccount account = findAccount(merchantId, userId);
         if (account == null) {
             /**
-             * 薪酬异常。
-             * @param "钱包账户不存在" "钱包账户不存在"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "钱包账户不存在" "钱包账户不存在"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("钱包账户不存在");
         }
@@ -77,17 +77,17 @@ public class WalletAccountServiceImpl implements WalletAccountService {
 
     @Override
     /**
-     * 钱包充值，校验限额后增加可用余额。
-     *
-     * @param dto 充值参数，包含商户标识、用户标识、金额、充值单号等
-     * @return 充值后的账户VO
+    * 钱包充值，校验限额后增加可用余额。
+    *
+    * @param dto 充值参数，包含商户标识、用户标识、金额、充值单号等
+    * @return 充值后的账户VO
      */
     public WalletAccountVO recharge(WalletRechargeDTO dto) {
         if (dto == null) {
             /**
-             * 薪酬异常。
-             * @param "充值参数不能为空" "充值参数不能为空"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "充值参数不能为空" "充值参数不能为空"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("充值参数不能为空");
         }
@@ -106,16 +106,16 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 薪酬。
-     * @param request 请求
-     * @return 薪酬的结果
+    * 薪酬。
+    * @param request 请求
+    * @return 薪酬的结果
      */
     public WalletAccountVO pay(WalletPayRequest request) {
         if (request == null) {
             /**
-             * 薪酬异常。
-             * @param "支付参数不能为空" "支付参数不能为空"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "支付参数不能为空" "支付参数不能为空"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("支付参数不能为空");
         }
@@ -126,16 +126,16 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 退税。
-     * @param request 请求
-     * @return 退税的结果
+    * 退税。
+    * @param request 请求
+    * @return 退税的结果
      */
     public WalletAccountVO refund(WalletRefundRequest request) {
         if (request == null) {
             /**
-             * 薪酬异常。
-             * @param "退款参数不能为空" "退款参数不能为空"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "退款参数不能为空" "退款参数不能为空"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("退款参数不能为空");
         }
@@ -152,41 +152,41 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-      * 调动
-     * @param merchantId merchantid
-     * @param fromUserId 从用户标识
-     * @param toUserId 转为用户标识
-     * @param amount amount
-     * @param transferNo 调动no
-     * @param operator 操作符
-     * @param remark 评论
-     * @param dto dto
+    * 调动
+    * @param merchantId merchantid
+    * @param fromUserId 从用户标识
+    * @param toUserId 转为用户标识
+    * @param amount amount
+    * @param transferNo 调动no
+    * @param operator 操作符
+    * @param remark 评论
+    * @param dto dto
      */
     public void transfer(WalletTransferOpDTO dto) {
         if (dto.fromUserId() == null || dto.toUserId() == null) {
             /**
-             * 薪酬异常。
-             * @param "转账双方用户不能为空" "转账双方用户不能为空"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "转账双方用户不能为空" "转账双方用户不能为空"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("转账双方用户不能为空");
         }
         if (dto.fromUserId().equals(dto.toUserId())) {
             /**
-             * 薪酬异常。
-             * @param "转出用户和转入用户不能相同" "转出用户和转入用户不能相同"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "转出用户和转入用户不能相同" "转出用户和转入用户不能相同"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("转出用户和转入用户不能相同");
         }
         /**
-         * 校验参数。
-         * @param dto.merchantId( dto.merchantid(
+        * 校验参数。
+        * @param dto.merchantId( dto.merchantid(
          */
         validateArgs(dto.merchantId(), dto.fromUserId(), "TRANSFER_OUT", dto.transferNo(), dto.amount());
         /**
-         * requirewallet已启用merchant。
-         * @param dto.merchantId( dto.merchantid(
+        * requirewallet已启用merchant。
+        * @param dto.merchantId( dto.merchantid(
          */
         requireWalletEnabledMerchant(dto.merchantId());
         walletLimitService.validateTransferLimit(dto.merchantId(), dto.fromUserId(), dto.amount());
@@ -197,15 +197,15 @@ public class WalletAccountServiceImpl implements WalletAccountService {
                 targetAccount != null ? scale(targetAccount.getAvailableBalance()) : zeroAmount(),
                 scale(dto.amount()));
         /**
-         * apply改变。
-         * @param "TRANSFER_OUT" "调动_出"
-         * @param dto.transferNo( dto.调动no(
+        * apply改变。
+        * @param "TRANSFER_OUT" "调动_出"
+        * @param dto.transferNo( dto.调动no(
          */
         applyChange("TRANSFER_OUT", dto.transferNo(), dto.merchantId(), dto.fromUserId(), dto.amount(), false, false, dto.operator(), dto.remark());
         /**
-         * apply改变。
-         * @param "TRANSFER_IN" "调动_入"
-         * @param dto.transferNo( dto.调动no(
+        * apply改变。
+        * @param "TRANSFER_IN" "调动_入"
+        * @param dto.transferNo( dto.调动no(
          */
         applyChange("TRANSFER_IN", dto.transferNo(), dto.merchantId(), dto.toUserId(), dto.amount(), true, true, dto.operator(), dto.remark());
     }
@@ -213,23 +213,23 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * withdraw。
-     * @param request 请求
+    * withdraw。
+    * @param request 请求
      */
     public void withdraw(WalletWithdrawRequest request) {
         if (request == null) {
             /**
-             * 薪酬异常。
-             * @param "提现参数不能为空" "提现参数不能为空"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "提现参数不能为空" "提现参数不能为空"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("提现参数不能为空");
         }
         walletLimitService.validateWithdrawLimit(request.merchantId(), request.userId(), request.amount());
         /**
-         * apply改变。
-         * @param "WITHDRAW" "WITHDRAW"
-         * @param request.withdrawNo( 请求.withdrawno(
+        * apply改变。
+        * @param "WITHDRAW" "WITHDRAW"
+        * @param request.withdrawNo( 请求.withdrawno(
          */
         applyChange("WITHDRAW", request.withdrawNo(), request.merchantId(), request.userId(), request.amount(), false, false, request.operator(), request.remark());
     }
@@ -237,25 +237,25 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 冻结用户可用余额用于提现，减少可用余额并增加冻结余额。
-     *
-     * @param dto 提现参数，包含商户标识、用户标识、金额、银行账号等
-     * @return 冻结后的账户VO
+    * 冻结用户可用余额用于提现，减少可用余额并增加冻结余额。
+    *
+    * @param dto 提现参数，包含商户标识、用户标识、金额、银行账号等
+    * @return 冻结后的账户VO
      */
     public WalletAccountVO freezeForWithdraw(WalletWithdrawDTO dto) {
         if (dto == null) {
             /**
-             * 薪酬异常。
-             * @param "提现参数不能为空" "提现参数不能为空"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "提现参数不能为空" "提现参数不能为空"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("提现参数不能为空");
         }
         if (dto.getAmount() == null || dto.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             /**
-             * 薪酬异常。
-             * @param "提现金额必须大于0" "提现金额必须大于0"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "提现金额必须大于0" "提现金额必须大于0"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("提现金额必须大于0");
         }
@@ -267,17 +267,17 @@ public class WalletAccountServiceImpl implements WalletAccountService {
                 StringUtils.hasText(dto.getRemark()) ? ": " + dto.getRemark() : "");
 
         /**
-         * requirewallet已启用merchant。
-         * @param dto.getMerchantId( dto.获取merchantid(
+        * requirewallet已启用merchant。
+        * @param dto.getMerchantId( dto.获取merchantid(
          */
         requireWalletEnabledMerchant(dto.getMerchantId());
 
         String idempotentKey = "payment:idempotent:wallet:WITHDRAW_FREEZE:" + dto.getMerchantId() + ":" + dto.getUserId() + ":" + bizNo;
         if (!idempotentTemplate.tryAcquire(idempotentKey, 10, TimeUnit.MINUTES)) {
             /**
-             * 薪酬异常。
-             * @param "请求正在处理中，请勿重复提交" "请求正在处理中，请勿重复提交"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "请求正在处理中，请勿重复提交" "请求正在处理中，请勿重复提交"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("请求正在处理中，请勿重复提交");
         }
@@ -286,8 +286,8 @@ public class WalletAccountServiceImpl implements WalletAccountService {
             for (int i = 0; i < 5; i++) {
                 WalletAccount account = requireAccount(dto.getMerchantId(), dto.getUserId(), false);
                 /**
-                 * ensure账户已启用。
-                 * @param account 账户
+                * ensure账户已启用。
+                * @param account 账户
                  */
                 ensureAccountEnabled(account);
 
@@ -297,9 +297,9 @@ public class WalletAccountServiceImpl implements WalletAccountService {
 
                 if (availBefore.compareTo(delta) < 0) {
                     /**
-                     * 薪酬异常。
-                     * @param "钱包余额不足" "钱包余额不足"
-                     * @return 薪酬异常的结果
+                    * 薪酬异常。
+                    * @param "钱包余额不足" "钱包余额不足"
+                    * @return 薪酬异常的结果
                      */
                     throw new PaymentException("钱包余额不足");
                 }
@@ -335,9 +335,9 @@ public class WalletAccountServiceImpl implements WalletAccountService {
             }
 
             /**
-             * 薪酬异常。
-             * @param "钱包余额更新失败，请稍后重试" "钱包余额更新失败，请稍后重试"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "钱包余额更新失败，请稍后重试" "钱包余额更新失败，请稍后重试"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("钱包余额更新失败，请稍后重试");
         } finally {
@@ -348,19 +348,19 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * confirmwithdraw
-     *
-     * @param merchantId merchantid
-     * @param userId 用户标识
-     * @param bizNo bizno
-     * @param amount amount
+    * confirmwithdraw
+    *
+    * @param merchantId merchantid
+    * @param userId 用户标识
+    * @param bizNo bizno
+    * @param amount amount
      */
     public void confirmWithdraw(Long merchantId, Long userId, String bizNo, BigDecimal amount) {
         if (merchantId == null || userId == null || !StringUtils.hasText(bizNo) || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             /**
-             * 薪酬异常。
-             * @param "参数不完整" "参数不完整"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "参数不完整" "参数不完整"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("参数不完整");
         }
@@ -373,9 +373,9 @@ public class WalletAccountServiceImpl implements WalletAccountService {
                 .eq(WalletAccountLog::getBizNo, bizNo));
         if (existingLog != null && existingLog > 0) {
             /**
-             * 薪酬异常。
-             * @param "提现已确认到账，请勿重复操作" "提现已确认到账，请勿重复操作"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "提现已确认到账，请勿重复操作" "提现已确认到账，请勿重复操作"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("提现已确认到账，请勿重复操作");
         }
@@ -387,9 +387,9 @@ public class WalletAccountServiceImpl implements WalletAccountService {
 
             if (frozenBefore.compareTo(delta) < 0) {
                 /**
-                 * 薪酬异常。
-                 * @param "冻结余额不足" "冻结余额不足"
-                 * @return 薪酬异常的结果
+                * 薪酬异常。
+                * @param "冻结余额不足" "冻结余额不足"
+                * @return 薪酬异常的结果
                  */
                 throw new PaymentException("冻结余额不足");
             }
@@ -420,9 +420,9 @@ public class WalletAccountServiceImpl implements WalletAccountService {
         }
 
         /**
-         * 薪酬异常。
-         * @param "钱包余额更新失败，请稍后重试" "钱包余额更新失败，请稍后重试"
-         * @return 薪酬异常的结果
+        * 薪酬异常。
+        * @param "钱包余额更新失败，请稍后重试" "钱包余额更新失败，请稍后重试"
+        * @return 薪酬异常的结果
          */
         throw new PaymentException("钱包余额更新失败，请稍后重试");
     }
@@ -430,15 +430,15 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-      * cancelwithdraw。
-     * @param request 请求
+    * cancelwithdraw。
+    * @param request 请求
      */
     public void cancelWithdraw(WalletCancelWithdrawRequest request) {
         if (request == null) {
             /**
-             * 薪酬异常。
-             * @param "取消提现参数不能为空" "取消提现参数不能为空"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "取消提现参数不能为空" "取消提现参数不能为空"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("取消提现参数不能为空");
         }
@@ -450,9 +450,9 @@ public class WalletAccountServiceImpl implements WalletAccountService {
 
         if (merchantId == null || userId == null || bizNo == null || bizNo.isEmpty() || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             /**
-             * 薪酬异常。
-             * @param "参数不完整" "参数不完整"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "参数不完整" "参数不完整"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("参数不完整");
         }
@@ -465,9 +465,9 @@ public class WalletAccountServiceImpl implements WalletAccountService {
                 .eq(WalletAccountLog::getBizNo, bizNo));
         if (existingLog != null && existingLog > 0) {
             /**
-             * 薪酬异常。
-             * @param "提现已取消，请勿重复操作" "提现已取消，请勿重复操作"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "提现已取消，请勿重复操作" "提现已取消，请勿重复操作"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("提现已取消，请勿重复操作");
         }
@@ -480,9 +480,9 @@ public class WalletAccountServiceImpl implements WalletAccountService {
 
             if (frozenBefore.compareTo(delta) < 0) {
                 /**
-                 * 薪酬异常。
-                 * @param "冻结余额不足" "冻结余额不足"
-                 * @return 薪酬异常的结果
+                * 薪酬异常。
+                * @param "冻结余额不足" "冻结余额不足"
+                * @return 薪酬异常的结果
                  */
                 throw new PaymentException("冻结余额不足");
             }
@@ -516,9 +516,9 @@ public class WalletAccountServiceImpl implements WalletAccountService {
         }
 
         /**
-         * 薪酬异常。
-         * @param "钱包余额更新失败，请稍后重试" "钱包余额更新失败，请稍后重试"
-         * @return 薪酬异常的结果
+        * 薪酬异常。
+        * @param "钱包余额更新失败，请稍后重试" "钱包余额更新失败，请稍后重试"
+        * @return 薪酬异常的结果
          */
         throw new PaymentException("钱包余额更新失败，请稍后重试");
     }
@@ -526,17 +526,17 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * ensure账户
-     *
-     * @param merchantId merchantid
-     * @param userId 用户标识
+    * ensure账户
+    *
+    * @param merchantId merchantid
+    * @param userId 用户标识
      */
     public void ensureAccount(Long merchantId, Long userId) {
         /**
-         * require账户。
-         * @param merchantId merchantid
-         * @param userId 用户标识
-         * @param true true
+        * require账户。
+        * @param merchantId merchantid
+        * @param userId 用户标识
+        * @param true true
          */
         requireAccount(merchantId, userId, true);
     }
@@ -544,35 +544,35 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 调动
-     *
-     * @param dto dto
-     * @return 调动的结果
+    * 调动
+    *
+    * @param dto dto
+    * @return 调动的结果
      */
     public WalletAccountVO transfer(WalletTransferDTO dto) {
         if (dto == null) {
             /**
-             * 薪酬异常。
-             * @param "转账参数不能为空" "转账参数不能为空"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "转账参数不能为空" "转账参数不能为空"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("转账参数不能为空");
         }
         if (dto.getFromUserId().equals(dto.getToUserId())) {
             /**
-             * 薪酬异常。
-             * @param "不能转账给自己" "不能转账给自己"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "不能转账给自己" "不能转账给自己"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("不能转账给自己");
         }
         String bizNo = StringUtils.hasText(dto.getTransferNo()) ? dto.getTransferNo() : generateBizNo("TRF");
 
         /**
-         * apply改变。
-         * @param "TRANSFER_OUT" "调动_出"
-         * @param bizNo bizno
-         * @param dto.getMerchantId( dto.获取merchantid(
+        * apply改变。
+        * @param "TRANSFER_OUT" "调动_出"
+        * @param bizNo bizno
+        * @param dto.getMerchantId( dto.获取merchantid(
          */
         applyChange("TRANSFER_OUT", bizNo, dto.getMerchantId(), dto.getFromUserId(), dto.getAmount(), false, false, dto.getOperator(), "转账给用户" + dto.getToUserId() + (StringUtils.hasText(dto.getRemark()) ? ": " + dto.getRemark() : ""));
         WalletAccount toAccount = applyChange("TRANSFER_IN", bizNo, dto.getMerchantId(), dto.getToUserId(), dto.getAmount(), true, true, dto.getOperator(), "来自用户" + dto.getFromUserId() + "的转账" + (StringUtils.hasText(dto.getRemark()) ? ": " + dto.getRemark() : ""));
@@ -583,25 +583,25 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * 执行提现操作，直接扣减可用余额。
-     *
-     * @param dto 提现参数，包含商户标识、用户标识、金额、银行账号等
-     * @return 提现后的账户VO
+    * 执行提现操作，直接扣减可用余额。
+    *
+    * @param dto 提现参数，包含商户标识、用户标识、金额、银行账号等
+    * @return 提现后的账户VO
      */
     public WalletAccountVO withdraw(WalletWithdrawDTO dto) {
         if (dto == null) {
             /**
-             * 薪酬异常。
-             * @param "提现参数不能为空" "提现参数不能为空"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "提现参数不能为空" "提现参数不能为空"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("提现参数不能为空");
         }
         if (!StringUtils.hasText(dto.getBankAccount())) {
             /**
-             * 薪酬异常。
-             * @param "银行账号不能为空" "银行账号不能为空"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "银行账号不能为空" "银行账号不能为空"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("银行账号不能为空");
         }
@@ -629,25 +629,25 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * Freeze
-     *
-     * @param id 标识
+    * Freeze
+    *
+    * @param id 标识
      */
     public void freeze(Long id) {
         WalletAccount account = walletAccountMapper.selectById(id);
         if (account == null) {
             /**
-             * 薪酬异常。
-             * @param "钱包账户不存在" "钱包账户不存在"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "钱包账户不存在" "钱包账户不存在"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("钱包账户不存在");
         }
         if (!Integer.valueOf(STATUS_ENABLED).equals(account.getStatus())) {
             /**
-             * 薪酬异常。
-             * @param "钱包账户已冻结" "钱包账户已冻结"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "钱包账户已冻结" "钱包账户已冻结"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("钱包账户已冻结");
         }
@@ -658,25 +658,25 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     /**
-     * Unfreeze
-     *
-     * @param id 标识
+    * Unfreeze
+    *
+    * @param id 标识
      */
     public void unfreeze(Long id) {
         WalletAccount account = walletAccountMapper.selectById(id);
         if (account == null) {
             /**
-             * 薪酬异常。
-             * @param "钱包账户不存在" "钱包账户不存在"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "钱包账户不存在" "钱包账户不存在"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("钱包账户不存在");
         }
         if (Integer.valueOf(STATUS_ENABLED).equals(account.getStatus())) {
             /**
-             * 薪酬异常。
-             * @param "钱包账户已启用" "钱包账户已启用"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "钱包账户已启用" "钱包账户已启用"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("钱包账户已启用");
         }
@@ -702,9 +702,9 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     public Page<WalletAccountLog> pageLogs(WalletLogQueryRequest request) {
         if (request == null) {
             /**
-             * 薪酬异常。
-             * @param "查询参数不能为空" "查询参数不能为空"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "查询参数不能为空" "查询参数不能为空"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("查询参数不能为空");
         }
@@ -732,16 +732,16 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     }
 
     /**
-      * 应用改变
-     * @param bizType biz类型
-     * @param bizNo bizno
-     * @param merchantId merchantid
-     * @param userId 用户标识
-     * @param amount amount
-     * @param increase 增加
-     * @param createIfAbsent 创建ifabsent
-     * @param operator 操作符
-     * @param remark 评论
+    * 应用改变
+    * @param bizType biz类型
+    * @param bizNo bizno
+    * @param merchantId merchantid
+    * @param userId 用户标识
+    * @param amount amount
+    * @param increase 增加
+    * @param createIfAbsent 创建ifabsent
+    * @param operator 操作符
+    * @param remark 评论
      */
     private WalletAccount applyChange(String bizType,
                                       String bizNo,
@@ -753,17 +753,17 @@ public class WalletAccountServiceImpl implements WalletAccountService {
                                       String operator,
                                       String remark) {
         /**
-         * 校验参数。
-         * @param merchantId merchantid
-         * @param userId 用户标识
-         * @param bizType biz类型
-         * @param bizNo bizno
-         * @param amount amount
+        * 校验参数。
+        * @param merchantId merchantid
+        * @param userId 用户标识
+        * @param bizType biz类型
+        * @param bizNo bizno
+        * @param amount amount
          */
         validateArgs(merchantId, userId, bizType, bizNo, amount);
         /**
-         * requirewallet已启用merchant。
-         * @param merchantId merchantid
+        * requirewallet已启用merchant。
+        * @param merchantId merchantid
          */
         requireWalletEnabledMerchant(merchantId);
 
@@ -786,8 +786,8 @@ public class WalletAccountServiceImpl implements WalletAccountService {
             for (int i = 0; i < 5; i++) {
                 WalletAccount account = requireAccount(merchantId, userId, createIfAbsent);
                 /**
-                 * ensure账户已启用。
-                 * @param account 账户
+                * ensure账户已启用。
+                * @param account 账户
                  */
                 ensureAccountEnabled(account);
                 BigDecimal before = scale(account.getAvailableBalance());
@@ -795,9 +795,9 @@ public class WalletAccountServiceImpl implements WalletAccountService {
                 BigDecimal after = increase ? before.add(delta) : before.subtract(delta);
                 if (!increase && before.compareTo(delta) < 0) {
                     /**
-                     * 薪酬异常。
-                     * @param "钱包余额不足" "钱包余额不足"
-                     * @return 薪酬异常的结果
+                    * 薪酬异常。
+                    * @param "钱包余额不足" "钱包余额不足"
+                    * @return 薪酬异常的结果
                      */
                     throw new PaymentException("钱包余额不足");
                 }
@@ -830,9 +830,9 @@ public class WalletAccountServiceImpl implements WalletAccountService {
             }
 
             /**
-             * 薪酬异常。
-             * @param "钱包余额更新失败，请稍后重试" "钱包余额更新失败，请稍后重试"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "钱包余额更新失败，请稍后重试" "钱包余额更新失败，请稍后重试"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("钱包余额更新失败，请稍后重试");
         } catch (RuntimeException e) {
@@ -842,12 +842,12 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     }
 
     /**
-     * require账户
-     *
-     * @param merchantId merchantid
-     * @param userId 用户标识
-     * @param createIfAbsent 创建ifabsent
-     * @return require账户的结果
+    * require账户
+    *
+    * @param merchantId merchantid
+    * @param userId 用户标识
+    * @param createIfAbsent 创建ifabsent
+    * @return require账户的结果
      */
     private WalletAccount requireAccount(Long merchantId, Long userId, boolean createIfAbsent) {
         WalletAccount account = findAccount(merchantId, userId);
@@ -856,16 +856,16 @@ public class WalletAccountServiceImpl implements WalletAccountService {
         }
         if (!createIfAbsent) {
             /**
-             * 薪酬异常。
-             * @param "钱包账户不存在" "钱包账户不存在"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "钱包账户不存在" "钱包账户不存在"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("钱包账户不存在");
         }
 
         /**
-         * requirewallet已启用merchant。
-         * @param merchantId merchantid
+        * requirewallet已启用merchant。
+        * @param merchantId merchantid
          */
         requireWalletEnabledMerchant(merchantId);
         WalletAccount created = new WalletAccount();
@@ -879,11 +879,11 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     }
 
     /**
-     * 查找账户
-     *
-     * @param merchantId merchantid
-     * @param userId 用户标识
-     * @return find账户的结果
+    * 查找账户
+    *
+    * @param merchantId merchantid
+    * @param userId 用户标识
+    * @return find账户的结果
      */
     private WalletAccount findAccount(Long merchantId, Long userId) {
         if (merchantId == null || userId == null) {
@@ -896,132 +896,132 @@ public class WalletAccountServiceImpl implements WalletAccountService {
     }
 
     /**
-     * 校验参数
-     *
-     * @param merchantId merchantid
-     * @param userId 用户标识
-     * @param bizType biz类型
-     * @param bizNo bizno
-     * @param amount amount
+    * 校验参数
+    *
+    * @param merchantId merchantid
+    * @param userId 用户标识
+    * @param bizType biz类型
+    * @param bizNo bizno
+    * @param amount amount
      */
     private void validateArgs(Long merchantId, Long userId, String bizType, String bizNo, BigDecimal amount) {
         if (merchantId == null) {
             /**
-             * 薪酬异常。
-             * @param "商户ID不能为空" "商户标识不能为空"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "商户ID不能为空" "商户标识不能为空"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("商户ID不能为空");
         }
         if (userId == null) {
             /**
-             * 薪酬异常。
-             * @param "用户ID不能为空" "用户标识不能为空"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "用户ID不能为空" "用户标识不能为空"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("用户ID不能为空");
         }
         if (!StringUtils.hasText(bizType) || !StringUtils.hasText(bizNo)) {
             /**
-             * 薪酬异常。
-             * @param "钱包业务标识不能为空" "钱包业务标识不能为空"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "钱包业务标识不能为空" "钱包业务标识不能为空"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("钱包业务标识不能为空");
         }
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             /**
-             * 薪酬异常。
-             * @param "钱包金额必须大于0" "钱包金额必须大于0"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "钱包金额必须大于0" "钱包金额必须大于0"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("钱包金额必须大于0");
         }
     }
 
     /**
-     * ensure账户已启用
-     *
-     * @param account 账户
+    * ensure账户已启用
+    *
+    * @param account 账户
      */
     private void ensureAccountEnabled(WalletAccount account) {
         if (account == null || !Integer.valueOf(STATUS_ENABLED).equals(account.getStatus())) {
             /**
-             * 薪酬异常。
-             * @param "钱包账户未启用" "钱包账户未启用"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "钱包账户未启用" "钱包账户未启用"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("钱包账户未启用");
         }
     }
 
     /**
-     * requirewallet已启用merchant
-     *
-     * @param merchantId merchantid
+    * requirewallet已启用merchant
+    *
+    * @param merchantId merchantid
      */
     private void requireWalletEnabledMerchant(Long merchantId) {
         Merchant merchant = merchantMapper.selectById(merchantId);
         if (merchant == null) {
             /**
-             * 薪酬异常。
-             * @param "商户不存在" "商户不存在"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "商户不存在" "商户不存在"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("商户不存在");
         }
         if (!Integer.valueOf(MerchantStatus.ACTIVE.getCode()).equals(merchant.getStatus())) {
             /**
-             * 薪酬异常。
-             * @param "商户未激活" "商户未激活"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "商户未激活" "商户未激活"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("商户未激活");
         }
         if (!Boolean.TRUE.equals(merchant.getPaymentWalletEnabled())) {
             /**
-             * 薪酬异常。
-             * @param "商户未启用钱包能力" "商户未启用钱包能力"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param "商户未启用钱包能力" "商户未启用钱包能力"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("商户未启用钱包能力");
         }
     }
 
     /**
-     * Scale
-     *
-     * @param value 价值观
-     * @return scale的结果
+    * Scale
+    *
+    * @param value 价值观
+    * @return scale的结果
      */
     private BigDecimal scale(BigDecimal value) {
         return value == null ? zeroAmount() : value.setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
-     * zeroamount
-     *
-     * @return zeroAmount的结果
+    * zeroamount
+    *
+    * @return zeroAmount的结果
      */
     private BigDecimal zeroAmount() {
         return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
-     * generatebizno
-     *
-     * @param prefix 前缀
-     * @return generateBizNo的结果
+    * generatebizno
+    *
+    * @param prefix 前缀
+    * @return generateBizNo的结果
      */
     private String generateBizNo(String prefix) {
         return prefix + System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
     }
 
     /**
-     * 转为vo
-     *
-     * @param account 账户
-     * @return 转为vo的结果
+    * 转为vo
+    *
+    * @param account 账户
+    * @return 转为vo的结果
      */
     private WalletAccountVO toVO(WalletAccount account) {
         WalletAccountVO vo = new WalletAccountVO();

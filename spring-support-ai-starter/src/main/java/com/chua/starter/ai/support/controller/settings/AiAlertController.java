@@ -20,12 +20,12 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 告警规则控制器，提供规则的增删改查与启停切换。
- *
- * <p>所有写接口均受 {@code @Permission("admin")} 保护。</p>
- *
- * @since 2026-08-03
- * @author CH
+* 告警规则控制器，提供规则的增删改查与启停切换。
+*
+* <p>所有写接口均受 {@code @Permission("admin")} 保护。</p>
+*
+* @since 2026-08-03
+* @author CH
  */
 @RestController
 @RequestMapping("/v2/alerts")
@@ -34,14 +34,14 @@ import java.util.List;
 public class AiAlertController {
 
     /**
-     * 告警服务
+    * 告警服务
      */
     private final AiAlertService alertService;
 
     /**
-     * 查询所有告警规则。
-     *
-     * @return 告警 DTO 列表
+    * 查询所有告警规则。
+    *
+    * @return 告警 DTO 列表
      */
     @Permission("admin")
     @Operation(summary = "查询所有告警规则")
@@ -51,10 +51,10 @@ public class AiAlertController {
     }
 
     /**
-     * 新建告警规则。
-     *
-     * @param alert 告警 DTO
-     * @return 创建后的告警 DTO
+    * 新建告警规则。
+    *
+    * @param alert 告警 DTO
+    * @return 创建后的告警 DTO
      */
     @Permission("admin")
     @Operation(summary = "新建告警规则")
@@ -64,12 +64,12 @@ public class AiAlertController {
     }
 
     /**
-     * 更新告警规则。
-     *
-     * @param alertId 告警主键
-     * @param alert   告警 DTO
-     * @return 更新后的告警 DTO
-     * @param ID" 标识"
+    * 更新告警规则。
+    *
+    * @param alertId 告警主键
+    * @param alert   告警 DTO
+    * @return 更新后的告警 DTO
+    * @param ID" 标识"
      */
     @Permission("admin")
     @Operation(summary = "更新告警规则")
@@ -80,12 +80,12 @@ public class AiAlertController {
     }
 
     /**
-     * 删除告警规则（逻辑删除）。
-     *
-     * @param alertId 告警主键
-     * @param ID" 标识"
-     * @param ID" 标识"
-     * @param ID" ID"
+    * 删除告警规则（逻辑删除）。
+    *
+    * @param alertId 告警主键
+    * @param ID" 标识"
+    * @param ID" 标识"
+    * @param ID" ID"
      */
     @Permission("admin")
     @Operation(summary = "删除告警规则")
@@ -95,12 +95,12 @@ public class AiAlertController {
     }
 
     /**
-     * 切换告警启用状态。
-     *
-     * @param alertId 告警主键
-     * @param enabled 是否启用
-     * @return 更新后的告警 DTO
-     * @param ID" 标识"
+    * 切换告警启用状态。
+    *
+    * @param alertId 告警主键
+    * @param enabled 是否启用
+    * @return 更新后的告警 DTO
+    * @param ID" 标识"
      */
     @Permission("admin")
     @Operation(summary = "切换告警启用状态")

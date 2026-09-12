@@ -16,16 +16,16 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 基础信息
- * @author CH
- * @since 4.0.0
+* 基础信息
+* @author CH
+* @since 4.0.0
  */
 @Data
 public class SysBase implements Serializable {
     /** 串行版本UID */
     private static final long serialVersionUID = 1L;
     /**
-     * 创建人
+    * 创建人
      */
     @TableField(fill = FieldFill.INSERT)
     @Schema(description = "创建人姓名")
@@ -33,7 +33,7 @@ public class SysBase implements Serializable {
     /** 创建名称 */
     protected String createName;
     /**
-     * 创建人
+    * 创建人
      */
     @TableField(fill = FieldFill.INSERT)
     @Schema(description = "创建人")
@@ -42,7 +42,7 @@ public class SysBase implements Serializable {
     protected Integer createBy;
 
     /**
-     * 创建时间
+    * 创建时间
      */
     @TableField(fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
@@ -53,7 +53,7 @@ public class SysBase implements Serializable {
     protected LocalDateTime createTime;
 
     /**
-     * 更新时间
+    * 更新时间
      */
     @TableField(fill = FieldFill.UPDATE)
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
@@ -65,7 +65,7 @@ public class SysBase implements Serializable {
 
 
     /**
-     * 更新人
+    * 更新人
      */
     @TableField(fill = FieldFill.UPDATE)
     @Schema(description = "更新人姓名")
@@ -74,7 +74,7 @@ public class SysBase implements Serializable {
     protected String updateName;
 
     /**
-     * 更新人
+    * 更新人
      */
     @TableField(fill = FieldFill.UPDATE)
     @Schema(description = "更新人")

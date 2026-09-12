@@ -3,10 +3,10 @@ package com.chua.starter.oauth.client.support.user;
 import lombok.*;
 
 /**
- * 登录结果
- *
- * @author CH
- * @since 4.0.0
+* 登录结果
+*
+* @author CH
+* @since 4.0.0
  */
 @Data
 @NoArgsConstructor
@@ -21,13 +21,13 @@ public class LoginAuthResult extends LoginResult {
     );
 
     /**
-      * 编码
+    * 编码
      */
     @NonNull
     /** 代码 */
     private Integer code;
     /**
-     * 错误信息
+    * 错误信息
      */
     private String message;
 }

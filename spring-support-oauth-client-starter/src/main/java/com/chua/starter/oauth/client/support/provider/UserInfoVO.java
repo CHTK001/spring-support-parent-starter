@@ -5,11 +5,11 @@ import lombok.Data;
 import java.util.Set;
 
 /**
- * 用户登录视图对象
- *
- * @author haoxr
- * @since 2022/1/14
- * @author CH
+* 用户登录视图对象
+*
+* @author haoxr
+* @since 2022/1/14
+* @author CH
  */
 @Data
 public class UserInfoVO {

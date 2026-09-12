@@ -7,15 +7,15 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.Method;
 
 /**
- * Spring Bean方式的作业处理程序
- * <p>
-   * 通过反射调用Spring Bean中标注了@作业注解的方法来执行任务。
- * 支持配置初始化方法和销毁方法。
- * </p>
- *
-   * @版本 1.0.0
- * @since 2024/03/11
- * @author CH
+* Spring Bean方式的作业处理程序
+* <p>
+* 通过反射调用Spring Bean中标注了@作业注解的方法来执行任务。
+* 支持配置初始化方法和销毁方法。
+* </p>
+*
+* @版本 1.0.0
+* @since 2024/03/11
+* @author CH
  */
 @Spi("bean")
 public class BeanJobHandler implements JobHandler {
@@ -23,32 +23,32 @@ public class BeanJobHandler implements JobHandler {
     private static final Logger log = LoggerFactory.getLogger(BeanJobHandler.class);
 
     /**
-     * 目标Bean对象
+    * 目标Bean对象
      */
     private final Object target;
 
     /**
-     * 执行方法
+    * 执行方法
      */
     private final Method method;
 
     /**
-     * 初始化方法
+    * 初始化方法
      */
     private final Method initMethod;
 
     /**
-     * 销毁方法
+    * 销毁方法
      */
     private final Method destroyMethod;
 
     /**
-     * 构造函数
-     *
-     * @param target        目标Bean对象
-     * @param method        执行方法
-     * @param initMethod    初始化方法，可为空
-     * @param destroyMethod 销毁方法，可为空
+    * 构造函数
+    *
+    * @param target        目标Bean对象
+    * @param method        执行方法
+    * @param initMethod    初始化方法，可为空
+    * @param destroyMethod 销毁方法，可为空
      */
     public BeanJobHandler(Object target, Method method, Method initMethod, Method destroyMethod) {
         this.target = target;

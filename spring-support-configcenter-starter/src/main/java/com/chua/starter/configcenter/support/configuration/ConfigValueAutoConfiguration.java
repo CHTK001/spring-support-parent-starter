@@ -16,16 +16,16 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
-   * 配置价值观自动配置
- * <p>
-   * 配置@配置价值观注解的自动处理和热更新功能。
-   * 复用 环境post处理器 阶段创建的 配置center 实例，
- * 避免重复创建和资源浪费。
- * </p>
- *
- * @since 2024-12-05
-   * @版本 1.0.0
- * @author CH
+* 配置价值观自动配置
+* <p>
+* 配置@配置价值观注解的自动处理和热更新功能。
+* 复用 环境post处理器 阶段创建的 配置center 实例，
+* 避免重复创建和资源浪费。
+* </p>
+*
+* @since 2024-12-05
+* @版本 1.0.0
+* @author CH
  */
 @Slf4j
 @Configuration
@@ -34,13 +34,13 @@ import org.springframework.context.annotation.Configuration;
 public class ConfigValueAutoConfiguration {
 
     /**
-     * 获取配置中心 Bean
-     * <p>
-      * 复用 配置center配置环境post处理器 创建的实例，
-      * 避免重复创建 配置center。
-     * </p>
-     *
-     * @return 配置中心实例
+    * 获取配置中心 Bean
+    * <p>
+    * 复用 配置center配置环境post处理器 创建的实例，
+    * 避免重复创建 配置center。
+    * </p>
+    *
+    * @return 配置中心实例
      */
     @Bean
     public ConfigCenter configCenter() {
@@ -55,14 +55,14 @@ public class ConfigValueAutoConfiguration {
     }
 
     /**
-      * 创建 配置价值观 Bean 后置处理器
-     * <p>
-      * 负责扫描 @配置价值观 注解并注册热更新监听。
-     * </p>
-     *
-     * @param configCenter 配置中心
-     * @param properties   配置属性
-     * @return Bean后置处理器
+    * 创建 配置价值观 Bean 后置处理器
+    * <p>
+    * 负责扫描 @配置价值观 注解并注册热更新监听。
+    * </p>
+    *
+    * @param configCenter 配置中心
+    * @param properties   配置属性
+    * @return Bean后置处理器
      */
     @Bean
     public ConfigValueBeanPostProcessor configValueBeanPostProcessor(
@@ -77,25 +77,25 @@ public class ConfigValueAutoConfiguration {
                 (hotReloadEnabled && supportListener) ? "已启用" : "未启用");
         
         /**
-         * 配置价值观Beanpost处理器。
-         * @param configCenter 配置center
-         * @param hotReloadEnabled hotreload已启用
-         * @param refreshDelayMs refresh延迟ms
-         * @param properties.getHotReload( 属性.获取hotreload(
-         * @return 配置价值观Beanpost处理器的结果
+        * 配置价值观Beanpost处理器。
+        * @param configCenter 配置center
+        * @param hotReloadEnabled hotreload已启用
+        * @param refreshDelayMs refresh延迟ms
+        * @param properties.getHotReload( 属性.获取hotreload(
+        * @return 配置价值观Beanpost处理器的结果
          */
         return new ConfigValueBeanPostProcessor(configCenter, hotReloadEnabled, refreshDelayMs, properties.getHotReload().isLogOnChange());
     }
 
     /**
-      * 创建 @价值观 注解 Bean 后置处理器
-     * <p>
-      * 负责扫描 @价值观 注解并注册热更新监听和配置缓存。
-     * </p>
-     *
-     * @param configCenter 配置中心
-     * @param properties   配置属性
-     * @return Bean后置处理器
+    * 创建 @价值观 注解 Bean 后置处理器
+    * <p>
+    * 负责扫描 @价值观 注解并注册热更新监听和配置缓存。
+    * </p>
+    *
+    * @param configCenter 配置中心
+    * @param properties   配置属性
+    * @return Bean后置处理器
      */
     @Bean
     public ValueAnnotationBeanPostProcessor valueAnnotationBeanPostProcessor(
@@ -110,35 +110,35 @@ public class ConfigValueAutoConfiguration {
                 (hotReloadEnabled && supportListener) ? "已启用" : "未启用");
         
         /**
-         * 价值观注解Beanpost处理器。
-         * @param configCenter 配置center
-         * @param hotReloadEnabled hotreload已启用
-         * @param refreshDelayMs refresh延迟ms
-         * @return 价值观注解Beanpost处理器的结果
+        * 价值观注解Beanpost处理器。
+        * @param configCenter 配置center
+        * @param hotReloadEnabled hotreload已启用
+        * @param refreshDelayMs refresh延迟ms
+        * @return 价值观注解Beanpost处理器的结果
          */
         return new ValueAnnotationBeanPostProcessor(configCenter, hotReloadEnabled, refreshDelayMs);
     }
 
     /**
-     * 注册配置中心属性到全局环境
-     *
-     * @param properties 配置中心属性
-     * @return 模块环境注册器
+    * 注册配置中心属性到全局环境
+    *
+    * @param properties 配置中心属性
+    * @return 模块环境注册器
      */
     @Bean
     public ModuleEnvironmentRegistration configCenterModuleEnvironment(ConfigCenterProperties properties) {
         /**
-         * module环境registration。
-         * @param ConfigCenterProperties.PRE 配置centerproperties.pre
-         * @param properties 属性
-         * @param properties.isEnable( 属性.是否enable(
-         * @return module环境registration的结果
+        * module环境registration。
+        * @param ConfigCenterProperties.PRE 配置centerproperties.pre
+        * @param properties 属性
+        * @param properties.isEnable( 属性.是否enable(
+        * @return module环境registration的结果
          */
         return new ModuleEnvironmentRegistration(ConfigCenterProperties.PRE, properties, properties.isEnable());
     }
 
     /**
-     * 应用关闭时清理资源
+    * 应用关闭时清理资源
      */
     @PreDestroy
     public void destroy() {
@@ -147,9 +147,9 @@ public class ConfigValueAutoConfiguration {
 
     @Bean
     /**
-     * 配置center服务信息contributor
-     *
-     * @return 配置center服务信息contributor的结果
+    * 配置center服务信息contributor
+    *
+    * @return 配置center服务信息contributor的结果
      */
     public ServiceInfoContributor configCenterServiceInfoContributor() {
         return registry -> {

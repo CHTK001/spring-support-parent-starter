@@ -20,16 +20,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * RPC 监控端点，暴露当前 RPC 服务端的连接信息与运行时指标。
- *
- * <ul>
- *   <li>{@code GET /v2/rpc/monitor/info} — 服务端基本信息（协议、服务列表）</li>
- *   <li>{@code GET /v2/rpc/monitor/connections} — 当前连接信息</li>
- *   <li>{@code GET /v2/rpc/monitor/metrics} — 运行时指标（含方法级调用统计）</li>
- * </ul>
- *
- * @author CH
- * @since 4.0.0.42
+* RPC 监控端点，暴露当前 RPC 服务端的连接信息与运行时指标。
+*
+* <ul>
+*   <li>{@code GET /v2/rpc/monitor/info} — 服务端基本信息（协议、服务列表）</li>
+*   <li>{@code GET /v2/rpc/monitor/connections} — 当前连接信息</li>
+*   <li>{@code GET /v2/rpc/monitor/metrics} — 运行时指标（含方法级调用统计）</li>
+* </ul>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @RestController
@@ -39,86 +39,86 @@ import java.util.Map;
 public class RpcMonitorController {
 
     /**
-      * 应用上下文（用于枚举已暴露的 rpc服务Bean）
+    * 应用上下文（用于枚举已暴露的 rpc服务Bean）
      */
     private final ApplicationContext applicationContext;
 
     /**
-     * 方法级指标拦截器（可选，未注册时跳过方法统计）
+    * 方法级指标拦截器（可选，未注册时跳过方法统计）
      */
     private final ObjectProvider<MetricsRpcInterceptor> metricsRpcInterceptor;
 
     /**
-     * 获取 RPC 服务端基本信息。
-     *
-     * @return 服务端基本信息
+    * 获取 RPC 服务端基本信息。
+    *
+    * @return 服务端基本信息
      */
     @GetMapping("/info")
     public MonitorInfo info() {
         RpcServer server = currentServer();
         if (server == null) {
             /**
-             * 监控信息。
-             * @param false false
-             * @param null 空
-             * @param 0 0
-             * @param List.of( 列表.的(
-             * @return 监控信息的结果
+            * 监控信息。
+            * @param false false
+            * @param null 空
+            * @param 0 0
+            * @param List.of( 列表.的(
+            * @return 监控信息的结果
              */
             return new MonitorInfo(false, null, 0, List.of());
         }
         /**
-         * 监控信息。
-         * @param true true
-         * @param server.getProtocol( 服务端.获取协议(
-         * @return 监控信息的结果
+        * 监控信息。
+        * @param true true
+        * @param server.getProtocol( 服务端.获取协议(
+        * @return 监控信息的结果
          */
         return new MonitorInfo(true, server.getProtocol(), server.getServiceCount(), collectServices());
     }
 
     /**
-     * 获取当前连接信息。
-     *
-     * @return 连接信息
+    * 获取当前连接信息。
+    *
+    * @return 连接信息
      */
     @GetMapping("/connections")
     public ConnectionsInfo connections() {
         RpcServer server = currentServer();
         if (server == null) {
             /**
-             * connections信息。
-             * @param false false
-             * @param null 空
-             * @param 0 0
-             * @param List.of( 列表.的(
-             * @return connections信息的结果
+            * connections信息。
+            * @param false false
+            * @param null 空
+            * @param 0 0
+            * @param List.of( 列表.的(
+            * @return connections信息的结果
              */
             return new ConnectionsInfo(false, null, 0, List.of());
         }
         List<RpcConnectionInfo> connections = server.getConnections();
         /**
-         * connections信息。
-         * @param true true
-         * @param server.getProtocol( 服务端.获取协议(
-         * @return connections信息的结果
+        * connections信息。
+        * @param true true
+        * @param server.getProtocol( 服务端.获取协议(
+        * @return connections信息的结果
          */
         return new ConnectionsInfo(true, server.getProtocol(), connections.size(), connections);
     }
 
     /**
-     * 获取运行时指标。
-     *
-     * @return 指标快照（含方法级调用统计）
+    * 获取运行时指标。
+    *
+    * @return 指标快照（含方法级调用统计）
      */
     @GetMapping("/metrics")
     public MetricsInfo metrics() {
         RpcServer server = currentServer();
         if (server == null) {
             /**
-             * 指标信息。
-             * @param false false
-             * @param RpcMetrics("unknown" rpc指标("unknown"
-             * @return 指标信息的结果
+            * 指标信息。
+            * @param false false
+            * @param RpcMetrics("unknown" rpc指标("unknown"
+            * @return 指标信息的结果
              */
             return new MetricsInfo(false, new RpcMetrics("unknown"));
         }
@@ -136,18 +136,18 @@ public class RpcMonitorController {
         }
         metrics.setMethodStats(new ArrayList<>(merged.values()));
         /**
-         * 指标信息。
-         * @param true true
-         * @param metrics 指标
-         * @return 指标信息的结果
+        * 指标信息。
+        * @param true true
+        * @param metrics 指标
+        * @return 指标信息的结果
          */
         return new MetricsInfo(true, metrics);
     }
 
     /**
-     * 获取当前激活的 RPC 服务端实例。
-     *
-     * @return RPC 服务端实例，未启用时返回 {@code null}
+    * 获取当前激活的 RPC 服务端实例。
+    *
+    * @return RPC 服务端实例，未启用时返回 {@code null}
      */
     private RpcServer currentServer() {
         RpcServer server = RpcServerHolder.getRpcServer();
@@ -158,9 +158,9 @@ public class RpcMonitorController {
     }
 
     /**
-     * 收集已暴露的服务接口列表。
-     *
-     * @return 服务接口全限定名列表
+    * 收集已暴露的服务接口列表。
+    *
+    * @return 服务接口全限定名列表
      */
     private List<String> collectServices() {
         List<String> services = new ArrayList<>();
@@ -174,35 +174,35 @@ public class RpcMonitorController {
     }
 
     /**
-     * 服务端基本信息。
-     *
-     * @param enabled      RPC 是否启用
-     * @param protocol     协议名称
-     * @param serviceCount 服务数量
-     * @param services     服务接口全限定名列表
-     * @return 监控信息的结果
+    * 服务端基本信息。
+    *
+    * @param enabled      RPC 是否启用
+    * @param protocol     协议名称
+    * @param serviceCount 服务数量
+    * @param services     服务接口全限定名列表
+    * @return 监控信息的结果
      */
     public record MonitorInfo(boolean enabled, String protocol, int serviceCount, List<String> services) {
     }
 
     /**
-     * 连接信息响应。
-     *
-     * @param enabled     RPC 是否启用
-     * @param protocol    协议名称
-     * @param count       连接数量
-     * @param connections 连接详情列表
+    * 连接信息响应。
+    *
+    * @param enabled     RPC 是否启用
+    * @param protocol    协议名称
+    * @param count       连接数量
+    * @param connections 连接详情列表
      */
     public record ConnectionsInfo(boolean enabled, String protocol, int count,
                                   List<RpcConnectionInfo> connections) {
     }
 
     /**
-     * 指标响应。
-     *
-     * @param enabled RPC 是否启用
-     * @param metrics 指标快照
-     * @return 指标信息的结果
+    * 指标响应。
+    *
+    * @param enabled RPC 是否启用
+    * @param metrics 指标快照
+    * @return 指标信息的结果
      */
     public record MetricsInfo(boolean enabled, RpcMetrics metrics) {
     }

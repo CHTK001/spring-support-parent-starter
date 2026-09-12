@@ -25,9 +25,9 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 /**
- * 微信 JSAPI 支付
- * @author CH
- * @since 4.0.0
+* 微信 JSAPI 支付
+* @author CH
+* @since 4.0.0
  */
 public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel implements PaymentChannel {
 
@@ -35,18 +35,18 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
     private final PaymentProviderGatewayRegistry providerGatewayRegistry;
 
     /**
-      * 创建 wechatjsapi薪酬通道 实例
-     * @param merchantChannelService merchant通道服务
-     * @param objectMapper 对象映射器
-     * @param providerGatewayRegistry 提供者gatewayregistry
+    * 创建 wechatjsapi薪酬通道 实例
+    * @param merchantChannelService merchant通道服务
+    * @param objectMapper 对象映射器
+    * @param providerGatewayRegistry 提供者gatewayregistry
      */
     public WechatJsapiPaymentChannel(MerchantChannelService merchantChannelService,
                                      ObjectMapper objectMapper,
                                      PaymentProviderGatewayRegistry providerGatewayRegistry) {
         /**
-         * 父。
-         * @param merchantChannelService merchant通道服务
-         * @param objectMapper 对象映射器
+        * 父。
+        * @param merchantChannelService merchant通道服务
+        * @param objectMapper 对象映射器
          */
         super(merchantChannelService, objectMapper);
         this.providerGatewayRegistry = providerGatewayRegistry;
@@ -64,9 +64,9 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
     public PaymentResult pay(MerchantChannel channel, PaymentRequest request) {
         if (!StringUtils.hasText(request.getPayerOpenId())) {
             /**
-             * 薪酬异常。
-             * @param payerOpenId" 薪酬打开标识"
-             * @return 薪酬异常的结果
+            * 薪酬异常。
+            * @param payerOpenId" 薪酬打开标识"
+            * @return 薪酬异常的结果
              */
             throw new PaymentException("微信 JSAPI 支付必须提供 payerOpenId");
         }
@@ -137,30 +137,30 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
     }
 
     /**
-     * Gateway
-     *
-     * @return gateway的结果
+    * Gateway
+    *
+    * @return gateway的结果
      */
     protected TencentWechatPayGateway gateway() {
         return providerGatewayRegistry.tencentWechatPayGateway();
     }
 
     /**
-     * Gateway
-     *
-     * @param extension 延伸
-     * @return gateway的结果
+    * Gateway
+    *
+    * @param extension 延伸
+    * @return gateway的结果
      */
     protected TencentWechatPayGateway gateway(String extension) {
         return providerGatewayRegistry.tencentWechatPayGateway(extension);
     }
 
     /**
-     * 构建薪酬请求
-     *
-     * @param channel 通道
-     * @param request 请求
-     * @return 构建薪酬请求的结果
+    * 构建薪酬请求
+    *
+    * @param channel 通道
+    * @param request 请求
+    * @return 构建薪酬请求的结果
      */
     protected TencentWechatPayRequest buildPayRequest(MerchantChannel channel, PaymentRequest request) {
         TencentWechatPayRequest payRequest = new TencentWechatPayRequest();
@@ -181,11 +181,11 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
     }
 
     /**
-     * 构建退税请求
-     *
-     * @param channel 通道
-     * @param request 请求
-     * @return 构建退税请求的结果
+    * 构建退税请求
+    *
+    * @param channel 通道
+    * @param request 请求
+    * @return 构建退税请求的结果
      */
     protected TencentWechatRefundRequest buildRefundRequest(MerchantChannel channel, RefundRequest request) {
         TencentWechatRefundRequest refundRequest = new TencentWechatRefundRequest();
@@ -200,10 +200,10 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
     }
 
     /**
-     * 构建属性
-     *
-     * @param channel 通道
-     * @return 构建属性的结果
+    * 构建属性
+    *
+    * @param channel 通道
+    * @return 构建属性的结果
      */
     protected TencentWechatPayProperties buildProperties(MerchantChannel channel) {
         TencentWechatPayProperties properties = new TencentWechatPayProperties();
@@ -213,9 +213,9 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
         properties.setApiV3Key(requiredText(decryptValue(channel.getApiKey()), "微信 APIv3 Key 不能为空"));
         properties.setMerchantSerialNumber(requiredText(
                 /**
-                 * ext文本。
-                 * @param channel 通道
-                 * @param "merchantSerialNumber" "merchant串行数字"
+                * ext文本。
+                * @param channel 通道
+                * @param "merchantSerialNumber" "merchant串行数字"
                  */
                 extText(channel, "merchantSerialNumber"),
                 "微信商户证书序列号不能为空，请在 extConfig 中提供 merchantSerialNumber"));
@@ -224,10 +224,10 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
     }
 
     /**
-     * normalize贸易状态
-     *
-     * @param tradeState 贸易状态
-     * @return normalize贸易状态的结果
+    * normalize贸易状态
+    *
+    * @param tradeState 贸易状态
+    * @return normalize贸易状态的结果
      */
     protected String normalizeTradeState(String tradeState) {
         if (!StringUtils.hasText(tradeState)) {
@@ -243,10 +243,10 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
     }
 
     /**
-     * normalize退税状态
-     *
-     * @param refundStatus 退税状态
-     * @return normalize退税状态的结果
+    * normalize退税状态
+    *
+    * @param refundStatus 退税状态
+    * @return normalize退税状态的结果
      */
     protected String normalizeRefundStatus(String refundStatus) {
         if (!StringUtils.hasText(refundStatus)) {
@@ -261,10 +261,10 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
     }
 
     /**
-     * 格式化expire时间
-     *
-     * @param request 请求
-     * @return 格式化expire时间的结果
+    * 格式化expire时间
+    *
+    * @param request 请求
+    * @return 格式化expire时间的结果
      */
     protected String formatExpireTime(PaymentRequest request) {
         if (request.getExpireTime() == null) {
@@ -276,11 +276,11 @@ public class WechatJsapiPaymentChannel extends AbstractMerchantPaymentChannel im
     }
 
     /**
-     * 解析paidamount
-     *
-     * @param payerTotalAmountFen 薪酬totalamountfen
-     * @param totalAmountFen totalamountfen
-     * @return resolvePaidAmount的结果
+    * 解析paidamount
+    *
+    * @param payerTotalAmountFen 薪酬totalamountfen
+    * @param totalAmountFen totalamountfen
+    * @return resolvePaidAmount的结果
      */
     protected BigDecimal resolvePaidAmount(Long payerTotalAmountFen, Long totalAmountFen) {
         Long amountFen = payerTotalAmountFen != null ? payerTotalAmountFen : totalAmountFen;

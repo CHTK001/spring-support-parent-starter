@@ -13,10 +13,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 /**
- * 支付全局配置服务实现，管理系统级支付参数（回调地址、超时等）。
- *
- * @author CH
- * @since 4.0.0.50
+* 支付全局配置服务实现，管理系统级支付参数（回调地址、超时等）。
+*
+* @author CH
+* @since 4.0.0.50
  */
 @Service
 @RequiredArgsConstructor
@@ -81,10 +81,10 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
     }
 
     /**
-     * 转为vo
-     *
-     * @param entity 实体
-     * @return 转为vo的结果
+    * 转为vo
+    *
+    * @param entity 实体
+    * @return 转为vo的结果
      */
     private PaymentGlobalConfigVO toVO(PaymentGlobalConfig entity) {
         PaymentGlobalConfigVO vo = new PaymentGlobalConfigVO();
@@ -96,10 +96,10 @@ public class PaymentGlobalConfigServiceImpl implements PaymentGlobalConfigServic
     }
 
     /**
-     * Normalize
-     *
-     * @param value 价值观
-     * @return normalize的结果
+    * Normalize
+    *
+    * @param value 价值观
+    * @return normalize的结果
      */
     private String normalize(String value) {
         if (!StringUtils.hasText(value)) {

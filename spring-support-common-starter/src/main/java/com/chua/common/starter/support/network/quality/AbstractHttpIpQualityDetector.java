@@ -20,10 +20,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 基于 HTTP API 的 IP 质量检测器抽象基类
- *
- * @since 4.0.0.42
- * @author CH
+* 基于 HTTP API 的 IP 质量检测器抽象基类
+*
+* @since 4.0.0.42
+* @author CH
  */
 public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector {
 
@@ -38,15 +38,15 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
     /** 创建 抽象httpipqualitydetector 实例 */
     protected AbstractHttpIpQualityDetector() {
         /**
-         * this。
-         * @param Duration.ofSeconds(10 持续时间.的seconds(10
+        * this。
+        * @param Duration.ofSeconds(10 持续时间.的seconds(10
          */
         this(Duration.ofSeconds(10));
     }
 
     /**
-      * 创建 抽象httpipqualitydetector 实例
-     * @param timeout 超时
+    * 创建 抽象httpipqualitydetector 实例
+    * @param timeout 超时
      */
     protected AbstractHttpIpQualityDetector(Duration timeout) {
         this.objectMapper = new ObjectMapper();
@@ -70,24 +70,24 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
             }
             Request request = buildRequest(url, ip);
             /**
-             * 尝试。
-             * @param httpClient.newCall(request HTTP客户端.新call(请求
+            * 尝试。
+            * @param httpClient.newCall(request HTTP客户端.新call(请求
              */
             try (Response response = httpClient.newCall(request).execute()) {
                 if (!response.isSuccessful()) {
                     /**
-                     * io异常。
-                     * @param response 响应
-                     * @return io异常的结果
+                    * io异常。
+                    * @param response 响应
+                    * @return io异常的结果
                      */
                     throw new IOException("Unexpected response: " + response);
                 }
                 ResponseBody body = response.body();
                 if (body == null) {
                     /**
-                     * io异常。
-                     * @param body" 主体"
-                     * @return io异常的结果
+                    * io异常。
+                    * @param body" 主体"
+                    * @return io异常的结果
                      */
                     throw new IOException("Empty response body");
                 }
@@ -116,19 +116,19 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
     }
 
     /**
-     * 构建请求 URL
-     *
-     * @param ip IP 地址
-     * @return URL
+    * 构建请求 URL
+    *
+    * @param ip IP 地址
+    * @return URL
      */
     protected abstract String buildUrl(String ip);
 
     /**
-     * 构建请求
-     *
-     * @param url URL
-     * @param ip  IP
-     * @return 请求
+    * 构建请求
+    *
+    * @param url URL
+    * @param ip  IP
+    * @return 请求
      */
     protected Request buildRequest(String url, String ip) {
         return new Request.Builder()
@@ -139,19 +139,19 @@ public abstract class AbstractHttpIpQualityDetector implements IpQualityDetector
     }
 
     /**
-     * 解析响应结果
-     *
-     * @param json 响应 JSON
-     * @return IP 质量信息
-     * @throws IOException 解析异常
+    * 解析响应结果
+    *
+    * @param json 响应 JSON
+    * @return IP 质量信息
+    * @throws IOException 解析异常
      */
     protected abstract IpQuality parseResult(String json) throws IOException;
 
     /**
-     * 安全获取字符串
-     * @param node 节点
-     * @param field 字段
-     * @return opt字符串的结果
+    * 安全获取字符串
+    * @param node 节点
+    * @param field 字段
+    * @return opt字符串的结果
      */
     protected String optString(JsonNode node, String field) {
         if (node == null) {

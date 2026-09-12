@@ -5,9 +5,9 @@ import lombok.Getter;
 import java.math.BigDecimal;
 
 /**
- * 支付成功事件
- * @author CH
- * @since 4.0.0
+* 支付成功事件
+* @author CH
+* @since 4.0.0
  */
 @Getter
 public class PaymentSuccessEvent extends PaymentEvent {
@@ -28,27 +28,27 @@ public class PaymentSuccessEvent extends PaymentEvent {
     private final String channelSubType;
 
     /**
-      * 创建 薪酬成功事件 实例
-     * @param source 源
-     * @param tenantId tenantid
-     * @param merchantId merchantid
-     * @param orderId 订单标识
-     * @param orderNo 订单no
-     * @param userId 用户标识
-     * @param paidAmount paidamount
-     * @param thirdPartyOrderNo thirdparty订单no
-     * @param channelType 通道类型
-     * @param channelSubType 通道sub类型
+    * 创建 薪酬成功事件 实例
+    * @param source 源
+    * @param tenantId tenantid
+    * @param merchantId merchantid
+    * @param orderId 订单标识
+    * @param orderNo 订单no
+    * @param userId 用户标识
+    * @param paidAmount paidamount
+    * @param thirdPartyOrderNo thirdparty订单no
+    * @param channelType 通道类型
+    * @param channelSubType 通道sub类型
      */
     public PaymentSuccessEvent(Object source, Long tenantId, Long merchantId, Long orderId, String orderNo,
                                Long userId, BigDecimal paidAmount, String thirdPartyOrderNo,
                                String channelType, String channelSubType) {
         /**
-         * 父。
-         * @param source 源
-         * @param "PAYMENT_SUCCESS" "薪酬_成功"
-         * @param tenantId tenantid
-         * @param merchantId merchantid
+        * 父。
+        * @param source 源
+        * @param "PAYMENT_SUCCESS" "薪酬_成功"
+        * @param tenantId tenantid
+        * @param merchantId merchantid
          */
         super(source, "PAYMENT_SUCCESS", tenantId, merchantId);
         this.orderId = orderId;

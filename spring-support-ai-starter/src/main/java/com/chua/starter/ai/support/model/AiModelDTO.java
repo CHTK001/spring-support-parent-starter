@@ -7,10 +7,10 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
- * AI 模型定义 DTO，字段命名与前端面板对齐。
- *
- * @author CH
- * @since 4.0.0
+* AI 模型定义 DTO，字段命名与前端面板对齐。
+*
+* @author CH
+* @since 4.0.0
  */
 @Data
 @Schema(name = "AI 模型定义 DTO")

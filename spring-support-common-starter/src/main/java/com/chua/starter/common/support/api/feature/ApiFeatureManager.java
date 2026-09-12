@@ -12,40 +12,40 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * API 功能开关管理器
- * <p>
-   * 管理所有 @api特征 注解标记的功能开关状态，支持运行时动态切换。
- * </p>
- *
- * @since 2024/12/08
-   * @版本 1.0.0
- * @author CH
+* API 功能开关管理器
+* <p>
+* 管理所有 @api特征 注解标记的功能开关状态，支持运行时动态切换。
+* </p>
+*
+* @since 2024/12/08
+* @版本 1.0.0
+* @author CH
  */
 @Component
 public class ApiFeatureManager {
     /** 日志 */
     private static final Logger log = LoggerFactory.getLogger(ApiFeatureManager.class);
         /**
-     * 功能开关状态缓存
-      * 钥匙: 功能标识
-      * 价值观: 是否启用
+        * 功能开关状态缓存
+        * 钥匙: 功能标识
+        * 价值观: 是否启用
      */
     private final Map<String, Boolean> featureStates = new ConcurrentHashMap<>();
 
     /**
-     * 功能信息缓存
-      * 钥匙: 功能标识
-      * 价值观: 功能信息
+    * 功能信息缓存
+    * 钥匙: 功能标识
+    * 价值观: 功能信息
      */
     private final Map<String, ApiFeatureInfo> featureInfoMap = new ConcurrentHashMap<>();
 
     /**
-     * 注册功能开关
-     *
-     * @param featureId      功能标识
-     * @param apiFeature     注解信息
-     * @param handlerMethod  处理方法
-     * @param mappingInfo    映射信息
+    * 注册功能开关
+    *
+    * @param featureId      功能标识
+    * @param apiFeature     注解信息
+    * @param handlerMethod  处理方法
+    * @param mappingInfo    映射信息
      */
     public void registerFeature(String featureId, ApiFeature apiFeature,
                                 HandlerMethod handlerMethod, RequestMappingInfo mappingInfo) {
@@ -73,21 +73,21 @@ public class ApiFeatureManager {
     }
 
     /**
-     * 检查功能是否启用
-     *
-     * @param featureId 功能标识
-     * @return 是否启用
+    * 检查功能是否启用
+    *
+    * @param featureId 功能标识
+    * @return 是否启用
      */
     public boolean isEnabled(String featureId) {
         return featureStates.getOrDefault(featureId, true);
     }
 
     /**
-     * 设置功能开关状态
-     *
-     * @param featureId 功能标识
-     * @param enabled   是否启用
-     * @return 操作是否成功
+    * 设置功能开关状态
+    *
+    * @param featureId 功能标识
+    * @param enabled   是否启用
+    * @return 操作是否成功
      */
     public boolean setEnabled(String featureId, boolean enabled) {
         if (!featureInfoMap.containsKey(featureId)) {
@@ -105,38 +105,38 @@ public class ApiFeatureManager {
     }
 
     /**
-     * 批量设置功能开关状态
-     *
-     * @param states 状态映射
+    * 批量设置功能开关状态
+    *
+    * @param states 状态映射
      */
     public void setEnabledBatch(Map<String, Boolean> states) {
         states.forEach(this::setEnabled);
     }
 
     /**
-     * 获取功能信息
-     *
-     * @param featureId 功能标识
-     * @return 功能信息
+    * 获取功能信息
+    *
+    * @param featureId 功能标识
+    * @return 功能信息
      */
     public ApiFeatureInfo getFeatureInfo(String featureId) {
         return featureInfoMap.get(featureId);
     }
 
     /**
-     * 获取所有功能信息
-     *
-     * @return 功能信息列表
+    * 获取所有功能信息
+    *
+    * @return 功能信息列表
      */
     public List<ApiFeatureInfo> getAllFeatures() {
         return new ArrayList<>(featureInfoMap.values());
     }
 
     /**
-     * 按分组获取功能信息
-     *
-     * @param group 分组名称
-     * @return 功能信息列表
+    * 按分组获取功能信息
+    *
+    * @param group 分组名称
+    * @return 功能信息列表
      */
     public List<ApiFeatureInfo> getFeaturesByGroup(String group) {
         return featureInfoMap.values().stream()
@@ -145,9 +145,9 @@ public class ApiFeatureManager {
     }
 
     /**
-     * 获取所有分组
-     *
-     * @return 分组列表
+    * 获取所有分组
+    *
+    * @return 分组列表
      */
     public Set<String> getAllGroups() {
         var groups = new TreeSet<String>();
@@ -156,42 +156,42 @@ public class ApiFeatureManager {
     }
 
     /**
-     * 重置功能开关到默认状态
-     *
-     * @param featureId 功能标识
+    * 重置功能开关到默认状态
+    *
+    * @param featureId 功能标识
      */
     public void resetToDefault(String featureId) {
         var info = featureInfoMap.get(featureId);
         if (info != null) {
             /**
-             * 设置已启用。
-             * @param featureId 特征标识
-             * @param info.isDefaultEnabled( 信息.是否默认已启用(
+            * 设置已启用。
+            * @param featureId 特征标识
+            * @param info.isDefaultEnabled( 信息.是否默认已启用(
              */
             setEnabled(featureId, info.isDefaultEnabled());
         }
     }
 
     /**
-     * 重置所有功能开关到默认状态
+    * 重置所有功能开关到默认状态
      */
     public void resetAllToDefault() {
         featureInfoMap.keySet().forEach(this::resetToDefault);
     }
 
     /**
-     * 获取功能开关数量
-     *
-     * @return 数量
+    * 获取功能开关数量
+    *
+    * @return 数量
      */
     public int getFeatureCount() {
         return featureInfoMap.size();
     }
 
     /**
-     * 获取启用的功能开关数量
-     *
-     * @return 数量
+    * 获取启用的功能开关数量
+    *
+    * @return 数量
      */
     public int getEnabledCount() {
         return (int) featureStates.values().stream().filter(Boolean::booleanValue).count();

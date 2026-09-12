@@ -18,10 +18,10 @@ import java.util.Map;
 import java.util.Set;
 
 /**
-   * 转换器
- *
- * @author CH
- * @since 4.0.0
+* 转换器
+*
+* @author CH
+* @since 4.0.0
  */
 public class TypeConverterRegisterConfiguration {
 
@@ -29,32 +29,32 @@ public class TypeConverterRegisterConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnBean(ConfigurableConversionService.class)
     /**
-     * 类型转换器registry
-     *
-     * @param conversionService 转换服务
-     * @return 类型转换器registry的结果
+    * 类型转换器registry
+    *
+    * @param conversionService 转换服务
+    * @return 类型转换器registry的结果
      */
     public TypeConverterRegistry typeConverterRegistry(ConfigurableConversionService conversionService) {
         /**
-         * 类型转换器registry。
-         * @param conversionService 转换服务
-         * @return 类型转换器registry的结果
+        * 类型转换器registry。
+        * @param conversionService 转换服务
+        * @return 类型转换器registry的结果
          */
         return new TypeConverterRegistry(conversionService);
     }
 
     /**
-     * 类型转换器registry类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * 类型转换器registry类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
     public static class TypeConverterRegistry {
 
         @SuppressWarnings({"unchecked", "rawtypes"})
         /**
-          * 创建 类型转换器registry 实例
-         * @param conversionService 转换服务
+        * 创建 类型转换器registry 实例
+        * @param conversionService 转换服务
          */
         public TypeConverterRegistry(ConfigurableConversionService conversionService) {
             conversionService.addConverter(new StringToLongTypeConverter());

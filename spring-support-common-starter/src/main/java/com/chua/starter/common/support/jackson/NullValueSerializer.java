@@ -12,8 +12,8 @@ import java.io.IOException;
 import java.io.Serial;
 
 /**
- * @since 2024/8/24
- * @author CH
+* @since 2024/8/24
+* @author CH
  */
 public class NullValueSerializer extends StdSerializer<NullValue> {
 
@@ -25,13 +25,13 @@ public class NullValueSerializer extends StdSerializer<NullValue> {
     private final String classIdentifier;
 
     /**
-     * @param classIdentifier 能否 be {@literal null} 和 will be 默认 转为 {@code @class}.
+    * @param classIdentifier 能否 be {@literal null} 和 will be 默认 转为 {@code @class}.
      */
     public NullValueSerializer(@Nullable String classIdentifier) {
 
         /**
-         * 父。
-         * @param NullValue.class 空值.类
+        * 父。
+        * @param NullValue.class 空值.类
          */
         super(NullValue.class);
         this.classIdentifier = StringUtils.hasText(classIdentifier) ? classIdentifier : "@class";
@@ -49,20 +49,20 @@ public class NullValueSerializer extends StdSerializer<NullValue> {
 
     @Override
     /**
-      * 序列化设置类型
-     * @param value 价值观
-     * @param jsonGenerator json生成器
-     * @param serializers 序列化器
-     * @param typeSerializer 类型序列化器
+    * 序列化设置类型
+    * @param value 价值观
+    * @param jsonGenerator json生成器
+    * @param serializers 序列化器
+    * @param typeSerializer 类型序列化器
      */
     public void serializeWithType(NullValue value, JsonGenerator jsonGenerator, SerializerProvider serializers,
                                   TypeSerializer typeSerializer) throws IOException {
 
         /**
-         * serialize。
-         * @param value 价值观
-         * @param jsonGenerator json生成器
-         * @param serializers 序列化器
+        * serialize。
+        * @param value 价值观
+        * @param jsonGenerator json生成器
+        * @param serializers 序列化器
          */
         serialize(value, jsonGenerator, serializers);
     }

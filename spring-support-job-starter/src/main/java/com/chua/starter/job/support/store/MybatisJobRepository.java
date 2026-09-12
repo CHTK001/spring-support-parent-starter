@@ -13,40 +13,40 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
-   * MyBatis-Plus 版 {@link JobRepository}, 从 {@code sys_job} 表读取任务。
- *
- * <h3>查询策略</h3>
- * <ol>
- *   <li>按 {@code sys_job_trigger_status=1, sys_job_is_deleted=0, dispatchMode=LOCAL 或 NULL} 粗筛;</li>
- *   <li>加载候选后用 {@link CronExpression} 计算下一次触发时间, 与 {@code now + preReadMs} 比较;</li>
- *   <li>若 {@code now - lastFireMs} 超过一个周期, 补全错过的触发 (misfire),
-   * 仍返回单个 作业definition (铅 一次性 发布, 由 执行器 串行执行).</li>
- *   <li>返回到期的 JobDefinition 列表给 LeaderLoop。</li>
- * </ol>
- *
- * <p><b>misfire 补跳:</b> 仅在内存 {@link #lastFireMs} 中记录每个任务的最近一次
-   * 铅循环 通知过的下次触发时间, 若当前 {@code nextFire} 早于 {@code lastFire},
- * 仍视作到期 (即漏掉的那次依然发布, 让上层补跑)。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* MyBatis-Plus 版 {@link JobRepository}, 从 {@code sys_job} 表读取任务。
+*
+* <h3>查询策略</h3>
+* <ol>
+*   <li>按 {@code sys_job_trigger_status=1, sys_job_is_deleted=0, dispatchMode=LOCAL 或 NULL} 粗筛;</li>
+*   <li>加载候选后用 {@link CronExpression} 计算下一次触发时间, 与 {@code now + preReadMs} 比较;</li>
+*   <li>若 {@code now - lastFireMs} 超过一个周期, 补全错过的触发 (misfire),
+* 仍返回单个 作业definition (铅 一次性 发布, 由 执行器 串行执行).</li>
+*   <li>返回到期的 JobDefinition 列表给 LeaderLoop。</li>
+* </ol>
+*
+* <p><b>misfire 补跳:</b> 仅在内存 {@link #lastFireMs} 中记录每个任务的最近一次
+* 铅循环 通知过的下次触发时间, 若当前 {@code nextFire} 早于 {@code lastFire},
+* 仍视作到期 (即漏掉的那次依然发布, 让上层补跑)。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @RequiredArgsConstructor
 public class MybatisJobRepository implements JobRepository {
 
     /**
-      * 单实例内存记录每个 作业 上一次已发布的 下一个firems (用于 misfire 去重与补跳决策).
+    * 单实例内存记录每个 作业 上一次已发布的 下一个firems (用于 misfire 去重与补跳决策).
      */
     private final ConcurrentMap<String, Long> lastFireMs = new ConcurrentHashMap<>();
 
     /**
-      * 触发器缓存, 钥匙 为 执行Bean/名称 (复用固定序列推进)
+    * 触发器缓存, 钥匙 为 执行Bean/名称 (复用固定序列推进)
      */
     private final ConcurrentMap<String, com.chua.common.support.task.scheduler.Trigger> triggerCache = new ConcurrentHashMap<>();
 
     /**
-      * 任务 映射器
+    * 任务 映射器
      */
     private final JobMapper jobMapper;
 
@@ -100,8 +100,8 @@ public class MybatisJobRepository implements JobRepository {
     }
 
     /**
-     * 将注解扫描出的任务定义同步到 {@code sys_job} 表 (按 {@code sys_job_execute_bean} 唯一。
-     * 已存在则更新调度配置, 不存在则新建触发状态=启用 的本地任务行)。
+    * 将注解扫描出的任务定义同步到 {@code sys_job} 表 (按 {@code sys_job_execute_bean} 唯一。
+    * 已存在则更新调度配置, 不存在则新建触发状态=启用 的本地任务行)。
      */
     @Override
     public void upsert(JobDefinition definition) {
@@ -141,10 +141,10 @@ public class MybatisJobRepository implements JobRepository {
     }
 
     /**
-      * 将 作业definition 转换为待持久化的实体。注解模式下无 sys_作业_no, 用 名称 作为 sys_作业_no 以满足 NOT 空 约束。
-     *
-     * @param definition 任务定义
-     * @return 实体
+    * 将 作业definition 转换为待持久化的实体。注解模式下无 sys_作业_no, 用 名称 作为 sys_作业_no 以满足 NOT 空 约束。
+    *
+    * @param definition 任务定义
+    * @return 实体
      */
     private JobEntity toEntity(JobDefinition definition) {
         JobEntity entity = new JobEntity();
@@ -172,12 +172,12 @@ public class MybatisJobRepository implements JobRepository {
     }
 
     /**
-     * 计算下一次触发时间 (委托 {@link com.chua.starter.job.support.dispatch.JobTriggering})。
-     *
-     * @param entity 任务实体
-     * @param key    唯一 钥匙 (执行Bean/名称), 用于缓存触发器
-     * @param now    当前时间戳
-     * @return 下次触发时间, 未配置或计算失败返回 -1
+    * 计算下一次触发时间 (委托 {@link com.chua.starter.job.support.dispatch.JobTriggering})。
+    *
+    * @param entity 任务实体
+    * @param key    唯一 钥匙 (执行Bean/名称), 用于缓存触发器
+    * @param now    当前时间戳
+    * @return 下次触发时间, 未配置或计算失败返回 -1
      */
     private long nextFireMs(JobEntity entity, String key, long now) {
         JobDefinition definition = toDefinition(entity);
@@ -195,10 +195,10 @@ public class MybatisJobRepository implements JobRepository {
     }
 
     /**
-     * 实体转内存定义。
-     *
-     * @param entity 实体
-     * @return 定义
+    * 实体转内存定义。
+    *
+    * @param entity 实体
+    * @return 定义
      */
     private JobDefinition toDefinition(JobEntity entity) {
         JobDefinition definition = new JobDefinition();
@@ -225,10 +225,10 @@ public class MybatisJobRepository implements JobRepository {
     }
 
     /**
-     * 将毫秒字串解析为 long, 解析失败返回 0。
-     *
-     * @param value 字串
-     * @return 毫秒数
+    * 将毫秒字串解析为 long, 解析失败返回 0。
+    *
+    * @param value 字串
+    * @return 毫秒数
      */
     private long parseMs(String value) {
         if (!isNotBlank(value)) {
@@ -242,10 +242,10 @@ public class MybatisJobRepository implements JobRepository {
     }
 
     /**
-     * 文本非空判定。
-     *
-     * @param value 文本
-     * @return 非空返回 true
+    * 文本非空判定。
+    *
+    * @param value 文本
+    * @return 非空返回 true
      */
     private boolean isNotBlank(String value) {
         return value != null && !value.isBlank();

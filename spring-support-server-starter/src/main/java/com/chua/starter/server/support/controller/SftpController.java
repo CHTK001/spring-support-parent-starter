@@ -26,13 +26,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * SFTP 文件管理接口
- * <p>
- * 全部接口按主机维度组织：{@code /ms/server/sftp/{hostId}/...}。
- * </p>
- *
- * @author CH
- * @since 4.0.0.42
+* SFTP 文件管理接口
+* <p>
+* 全部接口按主机维度组织：{@code /ms/server/sftp/{hostId}/...}。
+* </p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Tag(name = "服务器资产-SFTP", description = "远程文件浏览、编辑与传输")
 @RestController
@@ -44,12 +44,12 @@ public class SftpController {
     private final SftpService sftpService;
 
     /**
-     * 列出目录
-     *
-     * @param hostId     主机 标识
-     * @param identityId 身份 标识，可为空
-     * @param path       目录路径，可为空取主目录
-     * @return 条目列表
+    * 列出目录
+    *
+    * @param hostId     主机 标识
+    * @param identityId 身份 标识，可为空
+    * @param path       目录路径，可为空取主目录
+    * @return 条目列表
      */
     @Operation(summary = "列出目录")
     @GetMapping
@@ -60,12 +60,12 @@ public class SftpController {
     }
 
     /**
-     * 读取文本内容
-     *
-     * @param hostId     主机 标识
-     * @param identityId 身份 标识，可为空
-     * @param path       文件路径
-     * @return 内容结果
+    * 读取文本内容
+    *
+    * @param hostId     主机 标识
+    * @param identityId 身份 标识，可为空
+    * @param path       文件路径
+    * @return 内容结果
      */
     @Operation(summary = "读取文本内容")
     @GetMapping("/content")
@@ -76,13 +76,13 @@ public class SftpController {
     }
 
     /**
-     * 写入文本内容（整文件覆盖）
-     *
-     * @param hostId     主机 标识
-     * @param identityId 身份 标识，可为空
-     * @param path       文件路径（查询 参数）
-     * @param content    新内容
-     * @return 结果
+    * 写入文本内容（整文件覆盖）
+    *
+    * @param hostId     主机 标识
+    * @param identityId 身份 标识，可为空
+    * @param path       文件路径（查询 参数）
+    * @param content    新内容
+    * @return 结果
      */
     @Operation(summary = "写入文本内容")
     @PutMapping("/content")
@@ -94,14 +94,14 @@ public class SftpController {
     }
 
     /**
-     * 上传文件
-     *
-     * @param hostId     主机 标识
-     * @param identityId 身份 标识，可为空
-     * @param directory  目标目录，可为空取根（兼容旧参数名）
-     * @param path       目标目录，可为空取根（前端实际使用的参数名，优先于 目录）
-     * @param file       文件
-     * @return 远端路径
+    * 上传文件
+    *
+    * @param hostId     主机 标识
+    * @param identityId 身份 标识，可为空
+    * @param directory  目标目录，可为空取根（兼容旧参数名）
+    * @param path       目标目录，可为空取根（前端实际使用的参数名，优先于 目录）
+    * @param file       文件
+    * @return 远端路径
      */
     @Operation(summary = "上传文件")
     @PostMapping("/upload")
@@ -115,16 +115,16 @@ public class SftpController {
     }
 
     /**
-     * 下载文件
-     * <p>
-      * 内容一次性读入内存后随响应输出，临时文件由 temp文件 关闭时删除；
-     * 超大文件下载场景建议后续迭代改造为流式管道。
-     * </p>
-     *
-     * @param hostId     主机 标识
-     * @param identityId 身份 标识，可为空
-     * @param path       远端路径
-     * @return 文件字节响应
+    * 下载文件
+    * <p>
+    * 内容一次性读入内存后随响应输出，临时文件由 temp文件 关闭时删除；
+    * 超大文件下载场景建议后续迭代改造为流式管道。
+    * </p>
+    *
+    * @param hostId     主机 标识
+    * @param identityId 身份 标识，可为空
+    * @param path       远端路径
+    * @return 文件字节响应
      */
     @Operation(summary = "下载文件")
     @GetMapping("/download")
@@ -137,8 +137,8 @@ public class SftpController {
             return ResponseEntity.notFound().build();
         }
         /**
-         * 尝试。
-         * @param result.getData( 结果.获取数据(
+        * 尝试。
+        * @param result.getData( 结果.获取数据(
          */
         try (TempFile temp = result.getData()) {
             var headers = new HttpHeaders();
@@ -155,12 +155,12 @@ public class SftpController {
     }
 
     /**
-     * 创建目录
-     *
-     * @param hostId     主机 标识
-     * @param identityId 身份 标识，可为空
-     * @param path       新目录
-     * @return 结果
+    * 创建目录
+    *
+    * @param hostId     主机 标识
+    * @param identityId 身份 标识，可为空
+    * @param path       新目录
+    * @return 结果
      */
     @Operation(summary = "创建目录")
     @PostMapping("/mkdir")
@@ -171,13 +171,13 @@ public class SftpController {
     }
 
     /**
-     * 删除文件或目录
-     *
-     * @param hostId     主机 标识
-     * @param identityId 身份 标识，可为空
-     * @param path       目标路径
-     * @param recursive  目录递归删除
-     * @return 结果
+    * 删除文件或目录
+    *
+    * @param hostId     主机 标识
+    * @param identityId 身份 标识，可为空
+    * @param path       目标路径
+    * @param recursive  目录递归删除
+    * @return 结果
      */
     @Operation(summary = "删除文件或目录")
     @DeleteMapping
@@ -189,12 +189,12 @@ public class SftpController {
     }
 
     /**
-     * 重命名/移动
-     *
-     * @param hostId     主机 标识
-     * @param identityId 身份 标识，可为空
-     * @param body       从路径 + 转为路径
-     * @return 结果
+    * 重命名/移动
+    *
+    * @param hostId     主机 标识
+    * @param identityId 身份 标识，可为空
+    * @param body       从路径 + 转为路径
+    * @return 结果
      */
     @Operation(summary = "重命名或移动")
     @PutMapping("/rename")

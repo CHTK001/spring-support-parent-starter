@@ -31,10 +31,10 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
-   * 安装记录表 服务 实现
- *
- * @since 2026/7/25
- * @author CH
+* 安装记录表 服务 实现
+*
+* @since 2026/7/25
+* @author CH
  */
 @Slf4j
 @Service
@@ -42,32 +42,32 @@ import java.util.stream.Collectors;
 public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordMapper, SoftInstallRecord> implements SoftInstallRecordService {
 
     /**
-      * 安装记录映射器
+    * 安装记录映射器
      */
     private final SoftInstallRecordMapper installRecordMapper;
 
     /**
-     * 软件服务
+    * 软件服务
      */
     private final SoftSoftwareService softwareService;
 
     /**
-      * 软件映射器(用于更新安装计数)
+    * 软件映射器(用于更新安装计数)
      */
     private final SoftSoftwareMapper softwareMapper;
 
     /**
-     * 软件源服务
+    * 软件源服务
      */
     private final SoftSourceService sourceService;
 
     /**
-     * 软件源SPI列表
+    * 软件源SPI列表
      */
     private final List<SoftwareSource> softwareSources;
 
     /**
-     * 事务模板
+    * 事务模板
      */
     private final TransactionTemplate transactionTemplate;
 
@@ -112,19 +112,19 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
             try {
                 // 模拟进度
                 /**
-                 * 更新进步。
-                 * @param record.getInstallRecordId( record.获取installrecordid(
+                * 更新进步。
+                * @param record.getInstallRecordId( record.获取installrecordid(
                  */
                 updateProgress(record.getInstallRecordId(), 30, "准备安装");
                 SoftwareSourceResult result = installSource.install(source, software, request.getInstallPath());
                 /**
-                 * 更新进步。
-                 * @param record.getInstallRecordId( record.获取installrecordid(
+                * 更新进步。
+                * @param record.getInstallRecordId( record.获取installrecordid(
                  */
                 updateProgress(record.getInstallRecordId(), 100, result.getMessage());
                 /**
-                 * 完成install。
-                 * @param record.getInstallRecordId( record.获取installrecordid(
+                * 完成install。
+                * @param record.getInstallRecordId( record.获取installrecordid(
                  */
                 completeInstall(record.getInstallRecordId());
                 // 更新软件安装计数
@@ -133,8 +133,8 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
                 return ReturnResult.ok(toDetailResponse(record, software));
             } catch (Exception e) {
                 /**
-                 * 失败install。
-                 * @param record.getInstallRecordId( record.获取installrecordid(
+                * 失败install。
+                * @param record.getInstallRecordId( record.获取installrecordid(
                  */
                 failInstall(record.getInstallRecordId(), e.getMessage());
                 return ReturnResult.illegal("安装失败: " + e.getMessage());
@@ -170,21 +170,21 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
 
             try {
                 /**
-                 * 更新进步。
-                 * @param record.getInstallRecordId( record.获取installrecordid(
+                * 更新进步。
+                * @param record.getInstallRecordId( record.获取installrecordid(
                  */
                 updateProgress(record.getInstallRecordId(), 50, "正在卸载");
                 SoftwareSourceResult result = uninstallSource.uninstall(source, software, record.getInstallRecordInstallPath());
                 /**
-                 * 完成uninstall。
-                 * @param record.getInstallRecordId( record.获取installrecordid(
+                * 完成uninstall。
+                * @param record.getInstallRecordId( record.获取installrecordid(
                  */
                 completeUninstall(record.getInstallRecordId());
                 return ReturnResult.ok(toDetailResponse(record, software));
             } catch (Exception e) {
                 /**
-                 * 失败uninstall。
-                 * @param record.getInstallRecordId( record.获取installrecordid(
+                * 失败uninstall。
+                * @param record.getInstallRecordId( record.获取installrecordid(
                  */
                 failUninstall(record.getInstallRecordId(), e.getMessage());
                 return ReturnResult.illegal("卸载失败: " + e.getMessage());
@@ -224,14 +224,14 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
 
             try {
                 /**
-                 * 更新进步。
-                 * @param record.getInstallRecordId( record.获取installrecordid(
+                * 更新进步。
+                * @param record.getInstallRecordId( record.获取installrecordid(
                  */
                 updateProgress(record.getInstallRecordId(), 50, "正在更新");
                 SoftwareSourceResult result = softwareSourceImpl.update(source, software, targetVersion, record.getInstallRecordInstallPath());
                 /**
-                 * 完成install。
-                 * @param record.getInstallRecordId( record.获取installrecordid(
+                * 完成install。
+                * @param record.getInstallRecordId( record.获取installrecordid(
                  */
                 completeInstall(record.getInstallRecordId());
                 record.setInstallRecordVersion(targetVersion);
@@ -399,10 +399,10 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     /**
-     * 获取可用的软件源实现
-     *
-     * @param source 软件源配置
-     * @return 软件源实现，如果没有可用实现则返回null
+    * 获取可用的软件源实现
+    *
+    * @param source 软件源配置
+    * @return 软件源实现，如果没有可用实现则返回null
      */
     private SoftwareSource getSoftwareSource(SoftSource source) {
         for (SoftwareSource softwareSource : softwareSources) {
@@ -414,11 +414,11 @@ public class SoftInstallRecordServiceImpl extends ServiceImpl<SoftInstallRecordM
     }
 
     /**
-     * 转换为详情响应对象
-     *
-     * @param record 安装记录
-     * @param software 软件信息
-     * @return 详情响应
+    * 转换为详情响应对象
+    *
+    * @param record 安装记录
+    * @param software 软件信息
+    * @return 详情响应
      */
     private InstallDetailResponse toDetailResponse(SoftInstallRecord record, SoftSoftware software) {
         InstallDetailResponse response = new InstallDetailResponse();

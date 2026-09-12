@@ -10,14 +10,14 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
-   * 大华 netsdk JNA 绑定（仅声明本模块使用到的函数与结构体）
- * <p>完整头文件见大华官方《NetSDK 网络开发包》。</p>
- *
- * <p>使用方式：{@code DahuaNetSDK INSTANCE = Native.load("dhnetsdk", DahuaNetSDK.class)}，</p>
- * <p>运行环境需将 dhnetsdk.dll、dhconfigsdk.dll 等放入系统库路径或应用目录。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 大华 netsdk JNA 绑定（仅声明本模块使用到的函数与结构体）
+* <p>完整头文件见大华官方《NetSDK 网络开发包》。</p>
+*
+* <p>使用方式：{@code DahuaNetSDK INSTANCE = Native.load("dhnetsdk", DahuaNetSDK.class)}，</p>
+* <p>运行环境需将 dhnetsdk.dll、dhconfigsdk.dll 等放入系统库路径或应用目录。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 public interface DahuaNetSDK extends Library {
 
@@ -49,161 +49,161 @@ public interface DahuaNetSDK extends Library {
     int DH_PTZ_IRIS_DEC = 16; // DH_PTZ_IRIS_DEC
 
     /**
-     * 初始化 SDK
-     *
-     * @param cbConnectState 连接状态回调
-     * @param user           用户数据
-     * @return 是否成功
+    * 初始化 SDK
+    *
+    * @param cbConnectState 连接状态回调
+    * @param user           用户数据
+    * @return 是否成功
      */
     boolean CLIENT_Init(ConnectStateCallback cbConnectState, Pointer user);
 
     /**
-     * 清理 SDK
+    * 清理 SDK
      */
     void CLIENT_Cleanup();
 
     /**
-     * 高安全等级登录
-     *
-     * @param pLoginInfo     登录信息
-     * @param lpDeviceInfo   设备信息（输出）
-     * @param outLoginHandle 登录句柄（输出）
-     * @return 会话句柄
+    * 高安全等级登录
+    *
+    * @param pLoginInfo     登录信息
+    * @param lpDeviceInfo   设备信息（输出）
+    * @param outLoginHandle 登录句柄（输出）
+    * @return 会话句柄
      */
     long CLIENT_LoginWithHighLevelSecurity(LOGIN_INFO pLoginInfo, DEVICEINFO deviceInfo,
                                            Pointer outLoginHandle);
 
     /**
-     * 注销登录
-     *
-     * @param loginHandle 登录句柄
+    * 注销登录
+    *
+    * @param loginHandle 登录句柄
      */
     void CLIENT_Logout(long loginHandle);
 
     /**
-     * 获取最近错误码
-     *
-     * @return 错误码
+    * 获取最近错误码
+    *
+    * @return 错误码
      */
     int CLIENT_GetLastError();
 
     /**
-     * 开始实时预览
-     *
-     * @param loginHandle   登录句柄
-     * @param channel       通道号
-     * @param streamType    码流类型
-     * @param hPlayWnd      播放窗口句柄
-     * @param cbRealData    码流回调
-     * @param dwUser        用户数据
-     * @param pReserved     保留
-     * @return 预览句柄
+    * 开始实时预览
+    *
+    * @param loginHandle   登录句柄
+    * @param channel       通道号
+    * @param streamType    码流类型
+    * @param hPlayWnd      播放窗口句柄
+    * @param cbRealData    码流回调
+    * @param dwUser        用户数据
+    * @param pReserved     保留
+    * @return 预览句柄
      */
     long CLIENT_RealPlay(long loginHandle, int channel, int streamType, Pointer hPlayWnd,
                          RealDataCallback cbRealData, long dwUser, Pointer pReserved);
 
     /**
-     * 停止预览
-     *
-     * @param playHandle 预览句柄
+    * 停止预览
+    *
+    * @param playHandle 预览句柄
      */
     void CLIENT_StopPlay(long playHandle);
 
     /**
-     * 云台控制
-     *
-     * @param loginHandle  登录句柄
-     * @param channel      通道号
-     * @param cmd          云台指令
-     * @param bStart       0 停止、1 开始
-     * @param param        参数
-     * @return 是否成功
+    * 云台控制
+    *
+    * @param loginHandle  登录句柄
+    * @param channel      通道号
+    * @param cmd          云台指令
+    * @param bStart       0 停止、1 开始
+    * @param param        参数
+    * @return 是否成功
      */
     boolean CLIENT_DHPTZControl(long loginHandle, int channel, int cmd, int bStart, int param);
 
     /**
-     * 设置云台预置位
-     *
-     * @param loginHandle 登录句柄
-     * @param channel     通道号
-     * @param presetIndex 预置位号
-     * @return 是否成功
+    * 设置云台预置位
+    *
+    * @param loginHandle 登录句柄
+    * @param channel     通道号
+    * @param presetIndex 预置位号
+    * @return 是否成功
      */
     boolean CLIENT_SetPreset(long loginHandle, int channel, int presetIndex);
 
     /**
-     * 调用云台预置位
-     *
-     * @param loginHandle 登录句柄
-     * @param channel     通道号
-     * @param presetIndex 预置位号
-     * @return 是否成功
+    * 调用云台预置位
+    *
+    * @param loginHandle 登录句柄
+    * @param channel     通道号
+    * @param presetIndex 预置位号
+    * @return 是否成功
      */
     boolean CLIENT_GotoPreset(long loginHandle, int channel, int presetIndex);
 
     /**
-     * 删除云台预置位
-     *
-     * @param loginHandle 登录句柄
-     * @param channel     通道号
-     * @param presetIndex 预置位号
-     * @return 是否成功
+    * 删除云台预置位
+    *
+    * @param loginHandle 登录句柄
+    * @param channel     通道号
+    * @param presetIndex 预置位号
+    * @return 是否成功
      */
     boolean CLIENT_DelPreset(long loginHandle, int channel, int presetIndex);
 
     /**
-     * 远程开门
-     *
-     * @param loginHandle 登录句柄
-     * @param channel     通道号
-     * @param command     命令
-     * @return 是否成功
+    * 远程开门
+    *
+    * @param loginHandle 登录句柄
+    * @param channel     通道号
+    * @param command     命令
+    * @return 是否成功
      */
     boolean CLIENT_RemoteDoorOpen(long loginHandle, int channel, int command);
 
     /**
-     * 连接状态回调
-     * @author CH
-     * @since 4.0.0
+    * 连接状态回调
+    * @author CH
+    * @since 4.0.0
      */
     interface ConnectStateCallback extends Callback {
         /**
-         * 连接状态变化
-         *
-         * @param loginHandle 登录句柄
-         * @param user        用户数据
+        * 连接状态变化
+        *
+        * @param loginHandle 登录句柄
+        * @param user        用户数据
          */
         void invoke(long loginHandle, Pointer user);
     }
 
     /**
-     * 实时码流回调
-     * @author CH
-     * @since 4.0.0
+    * 实时码流回调
+    * @author CH
+    * @since 4.0.0
      */
     interface RealDataCallback extends Callback {
         /**
-         * 码流数据回调
-         *
-         * @param playHandle 预览句柄
-         * @param dataType   数据类型
-         * @param pBuffer    数据缓冲
-         * @param bufSize    数据长度
-         * @param user       用户数据
+        * 码流数据回调
+        *
+        * @param playHandle 预览句柄
+        * @param dataType   数据类型
+        * @param pBuffer    数据缓冲
+        * @param bufSize    数据长度
+        * @param user       用户数据
          */
         void invoke(long playHandle, int dataType, Pointer pBuffer, int bufSize, Pointer user);
     }
 
     /**
-     * 登录信息结构体
+    * 登录信息结构体
      */
     @Structure.FieldOrder({"szHost", "szUser", "szPassword", "nPort", "emType", "bUseSSL",
             "dwLoginType", "szDeviceID"})
     /**
-     * login信息类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * login信息类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
     class LOGIN_INFO extends Structure {
 
@@ -240,12 +240,12 @@ public interface DahuaNetSDK extends Library {
         public byte[] szDeviceID = new byte[48];
 
         /**
-         * 设置登录信息
-         *
-         * @param ip       IP 地址
-         * @param port     端口
-         * @param username 用户名
-         * @param password 密码
+        * 设置登录信息
+        *
+        * @param ip       IP 地址
+        * @param port     端口
+        * @param username 用户名
+        * @param password 密码
          */
         public void setLoginInfo(String ip, int port, String username, String password) {
             byte[] hostBytes = ip.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
@@ -266,7 +266,7 @@ public interface DahuaNetSDK extends Library {
     }
 
     /**
-     * 设备信息结构体
+    * 设备信息结构体
      */
     @Structure.FieldOrder({"szSerialNumber", "byAlarmInPortNum", "byAlarmOutPortNum", "byDiskNum", "byDVRType",
             "byChanNum", "byStartChan", "byAudioChanNum", "byIPChanNum", "byZeroChanNum", "byMainProto",
@@ -274,10 +274,10 @@ public interface DahuaNetSDK extends Library {
             "byMultiStreamProto", "byStartDChan", "byStartDTalkChan", "byHighDChanNum", "bySupport4",
             "bySupport5", "byIPChanInHighMax", "byReserved1"})
     /**
-     * DEVICEINFO类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * DEVICEINFO类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
     class DEVICEINFO extends Structure {
 

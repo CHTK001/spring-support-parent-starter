@@ -10,12 +10,12 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.util.Map;
 
 /**
-   * SSE 套接字 连接控制器
- * 提供 SSE 协议的连接端点
- *
-   * @版本 1.0.0
- * @since 2024-12-24
- * @author CH
+* SSE 套接字 连接控制器
+* 提供 SSE 协议的连接端点
+*
+* @版本 1.0.0
+* @since 2024-12-24
+* @author CH
  */
 @Slf4j
 @RestController
@@ -28,11 +28,11 @@ public class SseSocketController {
     private SseSocketSessionTemplate sseSocketSessionTemplate;
 
     /**
-     * 建立 SSE 连接
-     *
-     * @param clientId 客户端标识（可选）
-     * @return SseEmitter
-     * @param false false
+    * 建立 SSE 连接
+    *
+    * @param clientId 客户端标识（可选）
+    * @return SseEmitter
+    * @param false false
      */
     @GetMapping(value = "/connect", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter connect(@RequestParam(required = false) String clientId) {
@@ -41,9 +41,9 @@ public class SseSocketController {
     }
 
     /**
-     * 获取连接状态
-     *
-     * @return 连接状态信息
+    * 获取连接状态
+    *
+    * @return 连接状态信息
      */
     @GetMapping("/status")
     public Map<String, Object> getStatus() {
@@ -51,10 +51,10 @@ public class SseSocketController {
     }
 
     /**
-     * 绑定用户
-     *
-     * @param userId   用户标识
-     * @param clientId 客户端标识
+    * 绑定用户
+    *
+    * @param userId   用户标识
+    * @param clientId 客户端标识
      */
     @PostMapping("/bind")
     public void bindUser(@RequestParam String userId, @RequestParam String clientId) {
@@ -63,9 +63,9 @@ public class SseSocketController {
     }
 
     /**
-     * 断开连接
-     *
-     * @param clientId 客户端标识
+    * 断开连接
+    *
+    * @param clientId 客户端标识
      */
     @PostMapping("/disconnect")
     public void disconnect(@RequestParam String clientId) {

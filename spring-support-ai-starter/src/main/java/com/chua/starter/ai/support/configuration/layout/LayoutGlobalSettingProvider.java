@@ -6,27 +6,27 @@ import com.chua.common.support.spi.annotations.Spi;
 import java.util.List;
 
 /**
- * 布局识别模块全局设置提供者 SPI。
- *
- * <p>定义 {@code layout} 分组的全部配置项，由
- * {@link com.chua.starter.ai.support.configuration.client.GlobalSettingInitializer}
- * 启动时自动注册到 {@code sys_ai_global_setting} 表（仅首次）。</p>
- *
- * <p>布局识别管线：layout(版面分析/文档结构) → pose(姿态估计) → ocr 联动（表格/阅读顺序）。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 布局识别模块全局设置提供者 SPI。
+*
+* <p>定义 {@code layout} 分组的全部配置项，由
+* {@link com.chua.starter.ai.support.configuration.client.GlobalSettingInitializer}
+* 启动时自动注册到 {@code sys_ai_global_setting} 表（仅首次）。</p>
+*
+* <p>布局识别管线：layout(版面分析/文档结构) → pose(姿态估计) → ocr 联动（表格/阅读顺序）。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Spi("layout")
 public class LayoutGlobalSettingProvider implements GlobalSettingProvider {
 
     /**
-     * 配置分组标识
+    * 配置分组标识
      */
     private static final String GROUP = "layout";
 
     /**
-     * 分组显示名称
+    * 分组显示名称
      */
     private static final String GROUP_NAME = "布局识别";
 

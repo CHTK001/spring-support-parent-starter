@@ -18,13 +18,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 环境变量管理接口。
- *
- * <p>提供服务端环境变量的增删改查，爬虫运行期通过 {@code {{env.KEY}}}
- * 语法自动插值，路径前缀 {@code /spider-api/spider/envs}。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 环境变量管理接口。
+*
+* <p>提供服务端环境变量的增删改查，爬虫运行期通过 {@code {{env.KEY}}}
+* 语法自动插值，路径前缀 {@code /spider-api/spider/envs}。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Tag(name = "环境变量管理")
 @RestController
@@ -32,23 +32,23 @@ import java.util.Map;
 public class SpiderEnvController {
 
     /**
-     * 环境变量服务
+    * 环境变量服务
      */
     private final SpiderEnvService envService;
 
     /**
-     * 构造方法。
-     *
-     * @param envService 环境变量服务
+    * 构造方法。
+    *
+    * @param envService 环境变量服务
      */
     public SpiderEnvController(SpiderEnvService envService) {
         this.envService = envService;
     }
 
     /**
-     * 查询全部环境变量。
-     *
-     * @return 环境变量列表
+    * 查询全部环境变量。
+    *
+    * @return 环境变量列表
      */
     @GetMapping("/list")
     @Operation(summary = "查询全部环境变量")
@@ -57,9 +57,9 @@ public class SpiderEnvController {
     }
 
     /**
-     * 查询已启用环境变量映射。
-     *
-     * @return 环境变量 k-v 映射
+    * 查询已启用环境变量映射。
+    *
+    * @return 环境变量 k-v 映射
      */
     @GetMapping("/map-enabled")
     @Operation(summary = "查询已启用环境变量映射")
@@ -68,10 +68,10 @@ public class SpiderEnvController {
     }
 
     /**
-     * 新增环境变量。
-     *
-     * @param entity 环境变量
-     * @return 是否成功
+    * 新增环境变量。
+    *
+    * @param entity 环境变量
+    * @return 是否成功
      */
     @PostMapping
     @Operation(summary = "新增环境变量")
@@ -80,10 +80,10 @@ public class SpiderEnvController {
     }
 
     /**
-     * 更新环境变量。
-     *
-     * @param entity 环境变量
-     * @return 是否成功
+    * 更新环境变量。
+    *
+    * @param entity 环境变量
+    * @return 是否成功
      */
     @PutMapping
     @Operation(summary = "更新环境变量")
@@ -92,10 +92,10 @@ public class SpiderEnvController {
     }
 
     /**
-     * 删除环境变量。
-     *
-     * @param id 主键 标识
-     * @return 是否成功
+    * 删除环境变量。
+    *
+    * @param id 主键 标识
+    * @return 是否成功
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "删除环境变量")

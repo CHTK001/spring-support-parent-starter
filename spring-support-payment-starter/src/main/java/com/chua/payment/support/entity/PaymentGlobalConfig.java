@@ -10,9 +10,9 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 支付全局配置
- * @author CH
- * @since 4.0.0
+* 支付全局配置
+* @author CH
+* @since 4.0.0
  */
 @Data
 @TableName("pay_global_config")

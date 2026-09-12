@@ -3,10 +3,10 @@ package com.chua.starter.oauth.client.support.entity;
 import lombok.Data;
 
 /**
- * 身份验证请求
- *
- * @since 2023/09/09
- * @author CH
+* 身份验证请求
+*
+* @since 2023/09/09
+* @author CH
  */
 @Data
 public class AuthRequest {

@@ -20,13 +20,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * AI 人脸识别服务实现。
- *
- * <p>基于 {@link FaceClientManager} 获取懒加载的人脸模型实例，全部配置实时生效。
- * 1:1 比对使用余弦相似度（与向量库 COSINE 算法一致）。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* AI 人脸识别服务实现。
+*
+* <p>基于 {@link FaceClientManager} 获取懒加载的人脸模型实例，全部配置实时生效。
+* 1:1 比对使用余弦相似度（与向量库 COSINE 算法一致）。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @Service
@@ -34,15 +34,15 @@ import java.util.Map;
 public class AiFaceServiceImpl implements AiFaceService {
 
     /**
-     * 人脸客户端管理器（懒加载 + 热重建）
+    * 人脸客户端管理器（懒加载 + 热重建）
      */
     private final FaceClientManager faceClientManager;
 
     /**
-     * 人脸检测（单独能力）。
-     *
-     * @param imageData 图片字节
-     * @return 检测命中列表
+    * 人脸检测（单独能力）。
+    *
+    * @param imageData 图片字节
+    * @return 检测命中列表
      */
     @Override
     public List<FaceDetectionHit> detect(byte[] imageData) {
@@ -50,10 +50,10 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 检测最大人脸（单独能力）。
-     *
-     * @param imageData 图片字节
-     * @return 最大人脸命中，无则 空
+    * 检测最大人脸（单独能力）。
+    *
+    * @param imageData 图片字节
+    * @return 最大人脸命中，无则 空
      */
     @Override
     public FaceDetectionHit detectLargest(byte[] imageData) {
@@ -61,10 +61,10 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 人脸检测管线（detect → crop → liveness）。
-     *
-     * @param imageData 图片字节
-     * @return 检测命中列表
+    * 人脸检测管线（detect → crop → liveness）。
+    *
+    * @param imageData 图片字节
+    * @return 检测命中列表
      */
     @Override
     public List<FaceDetectionHit> detectPipeline(byte[] imageData) {
@@ -72,10 +72,10 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 提取人脸特征向量（单独能力）。
-     *
-     * @param imageData 图片字节
-     * @return 特征向量
+    * 提取人脸特征向量（单独能力）。
+    *
+    * @param imageData 图片字节
+    * @return 特征向量
      */
     @Override
     public float[] extractFeature(byte[] imageData) {
@@ -96,11 +96,11 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 1:1 人脸比对（单独能力）。
-     *
-     * @param imageA 图片 A 字节
-     * @param imageB 图片 B 字节
-     * @return 相似度（0~1）
+    * 1:1 人脸比对（单独能力）。
+    *
+    * @param imageA 图片 A 字节
+    * @param imageB 图片 B 字节
+    * @return 相似度（0~1）
      */
     @Override
     public double compare(byte[] imageA, byte[] imageB) {
@@ -120,11 +120,11 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 1:1 特征向量比对（单独能力）。
-     *
-     * @param featureA 特征向量 A
-     * @param featureB 特征向量 B
-     * @return 相似度（0~1）
+    * 1:1 特征向量比对（单独能力）。
+    *
+    * @param featureA 特征向量 A
+    * @param featureB 特征向量 B
+    * @return 相似度（0~1）
      */
     @Override
     public double compareFeature(float[] featureA, float[] featureB) {
@@ -132,12 +132,12 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 登记人脸入库（单独能力，取最大人脸）。
-     *
-     * @param id        人脸 标识
-     * @param imageData 图片字节
-     * @param metadata  附加元数据
-     * @return 是否登记成功
+    * 登记人脸入库（单独能力，取最大人脸）。
+    *
+    * @param id        人脸 标识
+    * @param imageData 图片字节
+    * @param metadata  附加元数据
+    * @return 是否登记成功
      */
     @Override
     public boolean enroll(String id, byte[] imageData, Map<String, Object> metadata) {
@@ -146,12 +146,12 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-      * 登记管线（detect → crop → liveness → 特征 → 入库，取最大人脸）。
-     *
-     * @param id        人脸 标识
-     * @param imageData 图片字节
-     * @param metadata  附加元数据
-     * @return 是否登记成功
+    * 登记管线（detect → crop → liveness → 特征 → 入库，取最大人脸）。
+    *
+    * @param id        人脸 标识
+    * @param imageData 图片字节
+    * @param metadata  附加元数据
+    * @return 是否登记成功
      */
     @Override
     public boolean enrollPipeline(String id, byte[] imageData, Map<String, Object> metadata) {
@@ -165,10 +165,10 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 1:N 人脸识别（单独能力，取最大人脸）。
-     *
-     * @param imageData 图片字节
-     * @return 识别命中（TopK）
+    * 1:N 人脸识别（单独能力，取最大人脸）。
+    *
+    * @param imageData 图片字节
+    * @return 识别命中（TopK）
      */
     @Override
     public FaceIdentifyHit identify(byte[] imageData) {
@@ -176,10 +176,10 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-      * 识别管线（detect → crop → liveness → 特征 → 检索，取最大人脸）。
-     *
-     * @param imageData 图片字节
-     * @return 识别命中（TopK）
+    * 识别管线（detect → crop → liveness → 特征 → 检索，取最大人脸）。
+    *
+    * @param imageData 图片字节
+    * @return 识别命中（TopK）
      */
     @Override
     public FaceIdentifyHit identifyPipeline(byte[] imageData) {
@@ -187,11 +187,11 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 1:N 特征检索（单独能力）。
-     *
-     * @param feature 特征向量
-     * @param topK    返回条数
-     * @return 检索命中列表
+    * 1:N 特征检索（单独能力）。
+    *
+    * @param feature 特征向量
+    * @param topK    返回条数
+    * @return 检索命中列表
      */
     @Override
     public List<FaceSearchHit> search(float[] feature, int topK) {
@@ -200,8 +200,8 @@ public class AiFaceServiceImpl implements AiFaceService {
                 .map(v -> new FaceSearchHit(
                         v.id(),
                         /**
-                         * score的。
-                         * @param v v
+                        * score的。
+                        * @param v v
                          */
                         scoreOf(v),
                         v.data(),
@@ -211,11 +211,11 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-      * 核验管线（detect → 特征 → 与指定库中检索比对，取最大人脸）。
-     *
-     * @param id        人脸 标识
-     * @param imageData 图片字节
-     * @return 是否匹配
+    * 核验管线（detect → 特征 → 与指定库中检索比对，取最大人脸）。
+    *
+    * @param id        人脸 标识
+    * @param imageData 图片字节
+    * @return 是否匹配
      */
     @Override
     public boolean verify(String id, byte[] imageData) {
@@ -228,10 +228,10 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 活体检测（辅助能力）。
-     *
-     * @param imageData 裁剪后人脸图片字节
-     * @return 是否活体
+    * 活体检测（辅助能力）。
+    *
+    * @param imageData 裁剪后人脸图片字节
+    * @return 是否活体
      */
     @Override
     public boolean isLive(byte[] imageData) {
@@ -242,10 +242,10 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 活体分数（辅助能力）。
-     *
-     * @param imageData 裁剪后人脸图片字节
-     * @return 活体分数
+    * 活体分数（辅助能力）。
+    *
+    * @param imageData 裁剪后人脸图片字节
+    * @return 活体分数
      */
     @Override
     public float liveScore(byte[] imageData) {
@@ -260,10 +260,10 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 动漫人脸检测（辅助能力）。
-     *
-     * @param imageData 图片字节
-     * @return 检测信息列表
+    * 动漫人脸检测（辅助能力）。
+    *
+    * @param imageData 图片字节
+    * @return 检测信息列表
      */
     @Override
     public List<DetectionInfo> animeDetect(byte[] imageData) {
@@ -271,10 +271,10 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 人脸超分（辅助能力）。
-     *
-     * @param imageData 图片字节
-     * @return 超分后图片字节
+    * 人脸超分（辅助能力）。
+    *
+    * @param imageData 图片字节
+    * @return 超分后图片字节
      */
     @Override
     public byte[] superResolution(byte[] imageData) {
@@ -282,10 +282,10 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-      * 人脸修复（辅助能力，编码former）。
-     *
-     * @param imageData 图片字节
-     * @return 修复后图片字节
+    * 人脸修复（辅助能力，编码former）。
+    *
+    * @param imageData 图片字节
+    * @return 修复后图片字节
      */
     @Override
     public byte[] restore(byte[] imageData) {
@@ -293,10 +293,10 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 人脸属性分析（辅助能力，年龄/性别/种族）。
-     *
-     * @param imageData 图片字节
-     * @return 分类结果标签
+    * 人脸属性分析（辅助能力，年龄/性别/种族）。
+    *
+    * @param imageData 图片字节
+    * @return 分类结果标签
      */
     @Override
     public String analyzeAttributes(byte[] imageData) {
@@ -304,10 +304,10 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 人脸表情识别（辅助能力）。
-     *
-     * @param imageData 图片字节
-     * @return 表情标签
+    * 人脸表情识别（辅助能力）。
+    *
+    * @param imageData 图片字节
+    * @return 表情标签
      */
     @Override
     public String analyzeEmotion(byte[] imageData) {
@@ -315,10 +315,10 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 人脸关键点（辅助能力，106 点）。
-     *
-     * @param imageData 图片字节
-     * @return 关键点坐标
+    * 人脸关键点（辅助能力，106 点）。
+    *
+    * @param imageData 图片字节
+    * @return 关键点坐标
      */
     @Override
     public float[] landmark(byte[] imageData) {
@@ -326,10 +326,10 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 人脸质量评估（辅助能力）。
-     *
-     * @param imageData 图片字节
-     * @return 质量信息
+    * 人脸质量评估（辅助能力）。
+    *
+    * @param imageData 图片字节
+    * @return 质量信息
      */
     @Override
     public FaceQualityInfo quality(byte[] imageData) {
@@ -340,10 +340,10 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 换脸检测（辅助能力）。
-     *
-     * @param imageData 图片字节
-     * @return 是否疑似换脸
+    * 换脸检测（辅助能力）。
+    *
+    * @param imageData 图片字节
+    * @return 是否疑似换脸
      */
     @Override
     public boolean isDeepfake(byte[] imageData) {
@@ -356,10 +356,10 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 人脸框坐标检测（返回原始矩形框）。
-     *
-     * @param imageData 图片字节
-     * @return 人脸框列表
+    * 人脸框坐标检测（返回原始矩形框）。
+    *
+    * @param imageData 图片字节
+    * @return 人脸框列表
      */
     @Override
     public List<PredictRectangle> detectBoxes(byte[] imageData) {
@@ -367,9 +367,9 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 枚举可用人脸模型。
-     *
-     * @return 模型清单（能力分组 → 模型 标识 列表）
+    * 枚举可用人脸模型。
+    *
+    * @return 模型清单（能力分组 → 模型 标识 列表）
      */
     @Override
     public Map<String, List<String>> listModels() {
@@ -377,11 +377,11 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-     * 余弦相似度计算（0~1）。
-     *
-     * @param a 向量 A
-     * @param b 向量 B
-     * @return 相似度
+    * 余弦相似度计算（0~1）。
+    *
+    * @param a 向量 A
+    * @param b 向量 B
+    * @return 相似度
      */
     private static double cosineSimilarity(float[] a, float[] b) {
         if (a == null || b == null || a.length == 0 || a.length != b.length) {
@@ -402,13 +402,13 @@ public class AiFaceServiceImpl implements AiFaceService {
     }
 
     /**
-      * 计算某条入库向量与查询向量的相似度（供 搜索 结果展示）。
-     *
-     * <p>向量库实现（Memory/JVector）在 search 时会将相似度写入向量 metadata 的 "score" 键，
-     * 此处直接读取，缺失时返回 0。</p>
-     *
-     * @param v 检索结果向量
-     * @return 相似度
+    * 计算某条入库向量与查询向量的相似度（供 搜索 结果展示）。
+    *
+    * <p>向量库实现（Memory/JVector）在 search 时会将相似度写入向量 metadata 的 "score" 键，
+    * 此处直接读取，缺失时返回 0。</p>
+    *
+    * @param v 检索结果向量
+    * @return 相似度
      */
     private static double scoreOf(com.chua.common.support.vector.Vector v) {
         if (v.metadata() != null && v.metadata().get("score") instanceof Number n) {

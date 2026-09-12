@@ -19,31 +19,31 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Spring 原生 {@link Scheduled} 注解扫描器。
- *
- * <p>注册到当前 Spring 上下文的 {@link TaskScheduler} 上, 由其真实执行。
- * 本模块仅做扫描, 不替换定时器实现。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* Spring 原生 {@link Scheduled} 注解扫描器。
+*
+* <p>注册到当前 Spring 上下文的 {@link TaskScheduler} 上, 由其真实执行。
+* 本模块仅做扫描, 不替换定时器实现。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartInitializingSingleton {
 
     /**
-     * Spring 任务调度器
+    * Spring 任务调度器
      */
     private final TaskScheduler taskScheduler;
 
     /**
-     * 已注册任务计数
+    * 已注册任务计数
      */
     private final AtomicInteger registeredCount = new AtomicInteger(0);
 
     /**
-     * 构造扫描器。
-     *
-     * @param taskScheduler Spring 任务调度器
+    * 构造扫描器。
+    *
+    * @param taskScheduler Spring 任务调度器
      */
     public ScheduledAnnotationScanner(TaskScheduler taskScheduler) {
         this.taskScheduler = taskScheduler;
@@ -67,10 +67,10 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
         }
         for (java.util.Map.Entry<Method, Scheduled> entry : annotated.entrySet()) {
             /**
-             * 调度。
-             * @param targetClass Target类
-             * @param bean Bean
-             * @param entry.getKey( entry.获取键(
+            * 调度。
+            * @param targetClass Target类
+            * @param bean Bean
+            * @param entry.getKey( entry.获取键(
              */
             schedule(targetClass, bean, entry.getKey(), entry.getValue());
         }
@@ -84,12 +84,12 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
     }
 
     /**
-     * 将方法注册为定时任务。
-     *
-     * @param targetClass 业务类
-     * @param bean        业务 Bean
-     * @param method      方法
-     * @param ann         Spring {@link Scheduled} 注解
+    * 将方法注册为定时任务。
+    *
+    * @param targetClass 业务类
+    * @param bean        业务 Bean
+    * @param method      方法
+    * @param ann         Spring {@link Scheduled} 注解
      */
     private void schedule(Class<?> targetClass, Object bean, Method method, Scheduled ann) {
         if (method.getParameterCount() > 0) {
@@ -127,10 +127,10 @@ public class ScheduledAnnotationScanner implements BeanPostProcessor, SmartIniti
     }
 
     /**
-     * 文本非空判定。
-     *
-     * @param value 文本
-     * @return 非空返回 true
+    * 文本非空判定。
+    *
+    * @param value 文本
+    * @return 非空返回 true
      */
     private static boolean StringUtilsHasText(String value) {
         return value != null && !value.isBlank();

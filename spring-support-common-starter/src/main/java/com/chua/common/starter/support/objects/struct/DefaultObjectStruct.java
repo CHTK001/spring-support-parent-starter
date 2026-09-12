@@ -8,10 +8,10 @@ import com.chua.common.starter.support.objects.struct.chart.TreemapData;
 import java.util.*;
 
 /**
- * 默认对象结构化实现
- *
- * @author CH
- * @since 4.0.0
+* 默认对象结构化实现
+*
+* @author CH
+* @since 4.0.0
  */
 public class DefaultObjectStruct<T> implements ObjectStruct<T> {
 
@@ -19,8 +19,8 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     private final TreeStructConfig<T> config;
 
     /**
-      * 创建 默认对象struct 实例
-     * @param config 配置
+    * 创建 默认对象struct 实例
+    * @param config 配置
      */
     public DefaultObjectStruct(TreeStructConfig<T> config) {
         this.config = config;
@@ -68,9 +68,9 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
 
         List<TreeNode<T>> allNodes = new ArrayList<>();
         /**
-         * collect节点。
-         * @param tree 树
-         * @param allNodes 全部节点
+        * collect节点。
+        * @param tree 树
+        * @param allNodes 全部节点
          */
         collectNodes(tree, allNodes);
 
@@ -94,9 +94,9 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
 
         List<TreeNode<T>> allNodes = new ArrayList<>();
         /**
-         * collect节点。
-         * @param tree 树
-         * @param allNodes 全部节点
+        * collect节点。
+        * @param tree 树
+        * @param allNodes 全部节点
          */
         collectNodes(tree, allNodes);
 
@@ -120,9 +120,9 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
 
         List<TreeNode<T>> allNodes = new ArrayList<>();
         /**
-         * collect节点。
-         * @param tree 树
-         * @param allNodes 全部节点
+        * collect节点。
+        * @param tree 树
+        * @param allNodes 全部节点
          */
         collectNodes(tree, allNodes);
 
@@ -132,9 +132,9 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
         }
 
         /**
-         * 添加链接。
-         * @param tree 树
-         * @param data 数据
+        * 添加链接。
+        * @param tree 树
+        * @param data 数据
          */
         addLinks(tree, data);
         return data;
@@ -150,9 +150,9 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
 
         List<TreeNode<T>> allNodes = new ArrayList<>();
         /**
-         * collect节点。
-         * @param tree 树
-         * @param allNodes 全部节点
+        * collect节点。
+        * @param tree 树
+        * @param allNodes 全部节点
          */
         collectNodes(tree, allNodes);
 
@@ -170,11 +170,11 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     }
 
     /**
-     * 构建路径
-     *
-     * @param node 节点
-     * @param currentName 当前名称
-     * @return 构建路径的结果
+    * 构建路径
+    *
+    * @param node 节点
+    * @param currentName 当前名称
+    * @return 构建路径的结果
      */
     private String buildPath(TreeNode<T> node, String currentName) {
         if (node.getParentId() == null) {
@@ -188,18 +188,18 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     }
 
     /**
-     * collect节点
-     *
-     * @param nodes 节点
-     * @param result 结果
+    * collect节点
+    *
+    * @param nodes 节点
+    * @param result 结果
      */
     private void collectNodes(List<TreeNode<T>> nodes, List<TreeNode<T>> result) {
         for (TreeNode<T> node : nodes) {
             result.add(node);
             if (node.getChildren() != null) {
                 /**
-                 * collect节点。
-                 * @param node.getChildren( 节点.获取children(
+                * collect节点。
+                * @param node.getChildren( 节点.获取children(
                  */
                 collectNodes(node.getChildren(), result);
             }
@@ -207,10 +207,10 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
     }
 
     /**
-     * 添加链接
-     *
-     * @param nodes 节点
-     * @param data 数据
+    * 添加链接
+    *
+    * @param nodes 节点
+    * @param data 数据
      */
     private void addLinks(List<TreeNode<T>> nodes, RelationData data) {
         for (TreeNode<T> node : nodes) {
@@ -222,8 +222,8 @@ public class DefaultObjectStruct<T> implements ObjectStruct<T> {
                     ));
                 }
                 /**
-                 * 添加链接。
-                 * @param node.getChildren( 节点.获取children(
+                * 添加链接。
+                * @param node.getChildren( 节点.获取children(
                  */
                 addLinks(node.getChildren(), data);
             }

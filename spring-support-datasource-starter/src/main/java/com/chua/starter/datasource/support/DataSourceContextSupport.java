@@ -11,16 +11,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import static com.chua.starter.datasource.support.DynamicDataSource.TARGET_DATA_SOURCES;
 
 /**
- * 数据源管理器
- *
- * @author CH
- * @since 4.0.0
+* 数据源管理器
+*
+* @author CH
+* @since 4.0.0
  */
 @Slf4j
 public class DataSourceContextSupport {
 
     /**
-     * 数据源上下文支持。
+    * 数据源上下文支持。
      */
     private DataSourceContextSupport() {
     }
@@ -28,11 +28,11 @@ public class DataSourceContextSupport {
     public static final Map<Object, Object> DATA_SOURCE_MAP = new ConcurrentHashMap<>(); // 数据源映射
 
     /**
-     * 默认数据源
+    * 默认数据源
      */
     public static final String DEFAULT_DATASOURCE = "master";
     /**
-     * 本地安全处理数据源
+    * 本地安全处理数据源
      */
     private static final ThreadLocal<String> CONTEXT_HOLDER = new ThreadLocal<>();
 
@@ -41,9 +41,9 @@ public class DataSourceContextSupport {
     private static final ThreadLocal<Deque<String>> DS_STACK = ThreadLocal.withInitial(ArrayDeque::new);
 
     /**
-     * 设置数据源名
-     *
-     * @param dbType 数据类型
+    * 设置数据源名
+    *
+    * @param dbType 数据类型
      */
     public static void setDbType(String dbType) {
         CONTEXT_HOLDER.set(dbType);
@@ -55,18 +55,18 @@ public class DataSourceContextSupport {
     }
 
     /**
-     * 推入数据源上下文栈（用于嵌套切换时的上下文恢复）
-     *
-     * @param dsName 数据源名称
+    * 推入数据源上下文栈（用于嵌套切换时的上下文恢复）
+    *
+    * @param dsName 数据源名称
      */
     public static void pushDbType(String dsName) {
         DS_STACK.get().push(dsName);
     }
 
     /**
-     * 弹出数据源上下文栈，恢复上一级上下文
-     *
-     * @return 上一级数据源名称（栈空时返回 空）
+    * 弹出数据源上下文栈，恢复上一级上下文
+    *
+    * @return 上一级数据源名称（栈空时返回 空）
      */
     public static String popDbType() {
         Deque<String> stack = DS_STACK.get();
@@ -79,11 +79,11 @@ public class DataSourceContextSupport {
     }
 
     /**
-     * 添加数据源
-     * <p>若 SQL 监听已启用，注册前会统一包装数据源（幂等），实现纯 JDBC 层 SQL 监控。</p>
-     *
-     * @param name       名称
-     * @param dataSource 添加数据源
+    * 添加数据源
+    * <p>若 SQL 监听已启用，注册前会统一包装数据源（幂等），实现纯 JDBC 层 SQL 监控。</p>
+    *
+    * @param name       名称
+    * @param dataSource 添加数据源
      */
     public static void addDatasource(String name, DataSource dataSource) {
         DataSource target = com.chua.starter.datasource.monitor.DataSourceSqlMonitor.wrapIfEnabled(name, dataSource);
@@ -93,29 +93,29 @@ public class DataSourceContextSupport {
     }
 
     /**
-     * 是否存在数据源
-     *
-     * @param dbType 数据源名称
-     * @return 是否存在数据源
+    * 是否存在数据源
+    *
+    * @param dbType 数据源名称
+    * @return 是否存在数据源
      */
     public static boolean hasDbType(String dbType) {
         return TARGET_DATA_SOURCES.containsKey(dbType);
     }
 
     /**
-     * 获取数据源
-     *
-     * @param name 名称
-     * @return dataSource 数据源
+    * 获取数据源
+    *
+    * @param name 名称
+    * @return dataSource 数据源
      */
     public static DataSource getDatasource(String name) {
         return (DataSource) TARGET_DATA_SOURCES.get(name);
     }
 
     /**
-     * 获取所有数据源
-     *
-     * @return 所有数据源Map
+    * 获取所有数据源
+    *
+    * @return 所有数据源Map
      */
     @SuppressWarnings("unchecked")
     public static Map<String, DataSource> getAllDataSources() {
@@ -129,16 +129,16 @@ public class DataSourceContextSupport {
     }
 
     /**
-     * 获取数据源名
-     *
-     * @return 获取数据源名
+    * 获取数据源名
+    *
+    * @return 获取数据源名
      */
     public static String getDbType() {
         return (CONTEXT_HOLDER.get());
     }
 
     /**
-     * 清除数据源名
+    * 清除数据源名
      */
     public static void clearDbType() {
         CONTEXT_HOLDER.remove();

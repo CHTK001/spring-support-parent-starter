@@ -18,26 +18,26 @@ import reactor.core.scheduler.Schedulers;
 import java.util.Set;
 
 /**
-   * 服务器终端采集 提供者(SSH)
- * <p>
- * 通过 SSH 在目标服务器执行自定义命令, 原始输出存于 {@link CollectResult#getRawOutput()},
- * 由调度器结合任务关联的解析规则生成指标点。
- * </p>
- *
- * @since 2026/8/4
- * @author CH
+* 服务器终端采集 提供者(SSH)
+* <p>
+* 通过 SSH 在目标服务器执行自定义命令, 原始输出存于 {@link CollectResult#getRawOutput()},
+* 由调度器结合任务关联的解析规则生成指标点。
+* </p>
+*
+* @since 2026/8/4
+* @author CH
  */
 @Slf4j
 @Component
 public class ServerTerminalProvider implements MetricProvider {
 
     /**
-     * 默认 SSH 端口
+    * 默认 SSH 端口
      */
     private static final int DEFAULT_SSH_PORT = 22;
 
     /**
-     * 默认命令超时(毫秒)
+    * 默认命令超时(毫秒)
      */
     private static final int DEFAULT_TIMEOUT_MS = 5_000;
 
@@ -62,10 +62,10 @@ public class ServerTerminalProvider implements MetricProvider {
     }
 
     /**
-     * 同步执行 SSH 命令
-     *
-     * @param context 采集上下文
-     * @return 采集结果
+    * 同步执行 SSH 命令
+    *
+    * @param context 采集上下文
+    * @return 采集结果
      */
 
     private CollectResult doCollect(CollectContext context) {
@@ -92,8 +92,8 @@ public class ServerTerminalProvider implements MetricProvider {
                 ? DEFAULT_TIMEOUT_MS : context.getTask().getMonitorTaskTimeout();
 
         /**
-         * 尝试。
-         * @param password 密码
+        * 尝试。
+        * @param password 密码
          */
         try (LinuxExecClient client = buildClient(host, port, username, password)) {
             client.connect();
@@ -112,13 +112,13 @@ public class ServerTerminalProvider implements MetricProvider {
     }
 
     /**
-      * 构造 Linux执行客户端
-     *
-     * @param host     主机
-     * @param port     端口
-     * @param username 用户名
-     * @param password 密码
-     * @return 客户端实例
+    * 构造 Linux执行客户端
+    *
+    * @param host     主机
+    * @param port     端口
+    * @param username 用户名
+    * @param password 密码
+    * @return 客户端实例
      */
     private LinuxExecClient buildClient(String host, Integer port, String username, String password) {
         ClientSetting setting = ClientSetting.builder()
@@ -131,28 +131,28 @@ public class ServerTerminalProvider implements MetricProvider {
                 .writeTimeout(30_000L)
                 .build();
         /**
-         * Linux执行客户端。
-         * @param setting setting
-         * @return Linux执行客户端的结果
+        * Linux执行客户端。
+        * @param setting setting
+        * @return Linux执行客户端的结果
          */
         return new LinuxExecClient(setting);
     }
 
     /**
-     * 对象转字符串
-     *
-     * @param o 对象
-     * @return 字符串, 空 时返回 空
+    * 对象转字符串
+    *
+    * @param o 对象
+    * @return 字符串, 空 时返回 空
      */
     private static String str(Object o) {
         return o == null ? null : String.valueOf(o);
     }
 
     /**
-     * 对象转 Integer
-     *
-     * @param o 对象
-     * @return Integer, 转换失败返回 空
+    * 对象转 Integer
+    *
+    * @param o 对象
+    * @return Integer, 转换失败返回 空
      */
     private static Integer intOrNull(Object o) {
         if (o == null) {

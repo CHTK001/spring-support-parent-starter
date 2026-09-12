@@ -13,10 +13,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 统一消息模型
- *
- * @since 2025-12-25
- * @author CH
+* 统一消息模型
+*
+* @since 2025-12-25
+* @author CH
  */
 @Data
 @Builder
@@ -25,78 +25,78 @@ import java.util.Map;
 public class Message {
 
     /**
-      * 消息标识
+    * 消息标识
      */
     private String id;
 
     /**
-      * 目标地址（topic/队列）
+    * 目标地址（topic/队列）
      */
     private String destination;
 
     /**
-     * 消息内容（原始字节）
+    * 消息内容（原始字节）
      */
     private byte[] payload;
 
     /**
-     * 消息头
+    * 消息头
      */
     @Builder.Default
     private Map<String, Object> headers = new HashMap<>(); // 头部
 
     /**
-     * 消息时间戳
+    * 消息时间戳
      */
     private long timestamp;
 
     /**
-      * 消息类型（MQTT/Kafka/RabbitMQ/RocketMQ）
+    * 消息类型（MQTT/Kafka/RabbitMQ/RocketMQ）
      */
     private String type;
 
     /**
-     * 消费组（如果有）
+    * 消费组（如果有）
      */
     private String group;
 
     /**
-     * 消息确认对象（用于手动确认）
-     * <p>
-      * 当 autoACK=false 时，此对象可用于手动确认或拒绝消息。
-     * </p>
+    * 消息确认对象（用于手动确认）
+    * <p>
+    * 当 autoACK=false 时，此对象可用于手动确认或拒绝消息。
+    * </p>
      */
     private Acknowledgment acknowledgment;
 
     /**
-       * 原始消息对象（用于获取底层队列的原始消息，如 RabbitMQ 通道、Kafka consumerrecord 等）
+    * 原始消息对象（用于获取底层队列的原始消息，如 RabbitMQ 通道、Kafka consumerrecord 等）
      */
     private Object originalMessage;
 
     /**
-     * 获取字符串格式的消息内容
-     *
-     * @return 字符串内容
+    * 获取字符串格式的消息内容
+    *
+    * @return 字符串内容
      */
     public String getPayloadAsString() {
         return payload != null ? new String(payload, StandardCharsets.UTF_8) : null;
     }
 
     /**
-     * 获取原始字节数组格式的消息内容
-     *
-     * @return 字节数组
+    * 获取原始字节数组格式的消息内容
+    *
+    * @return 字节数组
      */
     public byte[] getPayload() {
         return payload;
     }
 
     /**
-     * 获取指定类型的消息内容
-     *
-     * @param clazz 目标类型
-     * @param <T>   类型参数
-     * @return 反序列化后的对象
+    * 获取指定类型的消息内容
+    *
+    * @param clazz 目标类型
+    * @param <T>   类型参数
+    * @return 反序列化后的对象
      */
     public <T> T getPayload(Class<T> clazz) {
         if (payload == null) {
@@ -107,20 +107,20 @@ public class Message {
     }
 
     /**
-     * 获取消息头中的值
-     *
-     * @param key 键
-     * @return 值
+    * 获取消息头中的值
+    *
+    * @param key 键
+    * @return 值
      */
     public Object getHeader(String key) {
         return headers != null ? headers.get(key) : null;
     }
 
     /**
-     * 获取消息头中的字符串值
-     *
-     * @param key 键
-     * @return 字符串值
+    * 获取消息头中的字符串值
+    *
+    * @param key 键
+    * @return 字符串值
      */
     public String getHeaderAsString(String key) {
         Object value = getHeader(key);
@@ -128,11 +128,11 @@ public class Message {
     }
 
     /**
-     * 创建消息
-     *
-     * @param destination 目标地址
-     * @param payload     消息内容
-     * @return 消息对象
+    * 创建消息
+    *
+    * @param destination 目标地址
+    * @param payload     消息内容
+    * @return 消息对象
      */
     public static Message of(String destination, Object payload) {
         byte[] bytes;
@@ -154,175 +154,175 @@ public class Message {
 
     // Lombok 注解处理器未运行时的手动 getter/setter 方法
     /**
-      * 获取标识
-     *
-     * @return 获取id的结果
+    * 获取标识
+    *
+    * @return 获取id的结果
      */
     public String getId() {
         return id;
     }
 
     /**
-      * 设置标识
-     *
-     * @param id 标识
+    * 设置标识
+    *
+    * @param id 标识
      */
     public void setId(String id) {
         this.id = id;
     }
 
     /**
-     * 获取头部
-     *
-     * @return 获取头部的结果
+    * 获取头部
+    *
+    * @return 获取头部的结果
      */
     public Map<String, Object> getHeaders() {
         return headers;
     }
 
     /**
-     * 设置头部
-     *
-     * @param headers 头部
+    * 设置头部
+    *
+    * @param headers 头部
      */
     public void setHeaders(Map<String, Object> headers) {
         this.headers = headers;
     }
 
     /**
-     * 获取目标
-     *
-     * @return 获取目标的结果
+    * 获取目标
+    *
+    * @return 获取目标的结果
      */
     public String getDestination() {
         return destination;
     }
 
     /**
-     * 设置目标
-     *
-     * @param destination 目标
+    * 设置目标
+    *
+    * @param destination 目标
      */
     public void setDestination(String destination) {
         this.destination = destination;
     }
 
     /**
-     * 设置Payload
-     *
-     * @param payload payload
+    * 设置Payload
+    *
+    * @param payload payload
      */
     public void setPayload(byte[] payload) {
         this.payload = payload;
     }
 
     /**
-     * 设置时间戳
-     *
-     * @param timestamp 时间戳
+    * 设置时间戳
+    *
+    * @param timestamp 时间戳
      */
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
     }
 
     /**
-     * 设置类型
-     *
-     * @param type 类型
+    * 设置类型
+    *
+    * @param type 类型
      */
     public void setType(String type) {
         this.type = type;
     }
 
     /**
-     * 获取承认
-     *
-     * @return 获取承认的结果
+    * 获取承认
+    *
+    * @return 获取承认的结果
      */
     public Acknowledgment getAcknowledgment() {
         return acknowledgment;
     }
 
     /**
-     * 设置承认
-     *
-     * @param acknowledgment 承认
+    * 设置承认
+    *
+    * @param acknowledgment 承认
      */
     public void setAcknowledgment(Acknowledgment acknowledgment) {
         this.acknowledgment = acknowledgment;
     }
 
     /**
-     * 获取原始消息
-     *
-     * @return 获取原始消息的结果
+    * 获取原始消息
+    *
+    * @return 获取原始消息的结果
      */
     public Object getOriginalMessage() {
         return originalMessage;
     }
 
     /**
-     * 设置原始消息
-     *
-     * @param originalMessage 原始消息
+    * 设置原始消息
+    *
+    * @param originalMessage 原始消息
      */
     public void setOriginalMessage(Object originalMessage) {
         this.originalMessage = originalMessage;
     }
 
     /**
-     * 获取类型
-     *
-     * @return 获取类型的结果
+    * 获取类型
+    *
+    * @return 获取类型的结果
      */
     public String getType() {
         return type;
     }
 
     /**
-     * 获取时间戳
-     *
-     * @return 获取时间戳的结果
+    * 获取时间戳
+    *
+    * @return 获取时间戳的结果
      */
     public long getTimestamp() {
         return timestamp;
     }
 
     /**
-     * 获取分组
-     *
-     * @return 获取群体的结果
+    * 获取分组
+    *
+    * @return 获取群体的结果
      */
     public String getGroup() {
         return group;
     }
 
     /**
-     * 设置分组
-     *
-     * @param group 群体
+    * 设置分组
+    *
+    * @param group 群体
      */
     public void setGroup(String group) {
         this.group = group;
     }
 
     /**
-      * 创建 消息构建器 实例
-     *
-     * @return MessageBuilder 实例
+    * 创建 消息构建器 实例
+    *
+    * @return MessageBuilder 实例
      */
     public static MessageBuilder builder() {
         /**
-         * 消息构建器。
-         * @return 消息构建器的结果
+        * 消息构建器。
+        * @return 消息构建器的结果
          */
         return new MessageBuilder();
     }
 
     /**
-      * 消息 构建器 类
-     * @author CH
-     * @since 4.0.0
+    * 消息 构建器 类
+    * @author CH
+    * @since 4.0.0
      */
     public static class MessageBuilder {
         /** 标识 */
@@ -344,10 +344,10 @@ public class Message {
         private Object originalMessage;
 
         /**
-          * 标识
-         *
-         * @param id 标识
-         * @return id的结果
+        * 标识
+        *
+        * @param id 标识
+        * @return id的结果
          */
         public MessageBuilder id(String id) {
             this.id = id;
@@ -355,10 +355,10 @@ public class Message {
         }
 
         /**
-         * 目标
-         *
-         * @param destination 目标
-         * @return 目标的结果
+        * 目标
+        *
+        * @param destination 目标
+        * @return 目标的结果
          */
         public MessageBuilder destination(String destination) {
             this.destination = destination;
@@ -366,10 +366,10 @@ public class Message {
         }
 
         /**
-         * Payload
-         *
-         * @param payload payload
-         * @return payload的结果
+        * Payload
+        *
+        * @param payload payload
+        * @return payload的结果
          */
         public MessageBuilder payload(byte[] payload) {
             this.payload = payload;
@@ -377,10 +377,10 @@ public class Message {
         }
 
         /**
-         * 头部
-         *
-         * @param headers 头部
-         * @return 头部的结果
+        * 头部
+        *
+        * @param headers 头部
+        * @return 头部的结果
          */
         public MessageBuilder headers(Map<String, Object> headers) {
             this.headers = headers;
@@ -388,10 +388,10 @@ public class Message {
         }
 
         /**
-         * 时间戳
-         *
-         * @param timestamp 时间戳
-         * @return 时间戳的结果
+        * 时间戳
+        *
+        * @param timestamp 时间戳
+        * @return 时间戳的结果
          */
         public MessageBuilder timestamp(long timestamp) {
             this.timestamp = timestamp;
@@ -399,10 +399,10 @@ public class Message {
         }
 
         /**
-         * 类型
-         *
-         * @param type 类型
-         * @return 类型的结果
+        * 类型
+        *
+        * @param type 类型
+        * @return 类型的结果
          */
         public MessageBuilder type(String type) {
             this.type = type;
@@ -410,10 +410,10 @@ public class Message {
         }
 
         /**
-         * 分组
-         *
-         * @param group 群体
-         * @return 群体的结果
+        * 分组
+        *
+        * @param group 群体
+        * @return 群体的结果
          */
         public MessageBuilder group(String group) {
             this.group = group;
@@ -421,10 +421,10 @@ public class Message {
         }
 
         /**
-         * 承认
-         *
-         * @param acknowledgment 承认
-         * @return 承认的结果
+        * 承认
+        *
+        * @param acknowledgment 承认
+        * @return 承认的结果
          */
         public MessageBuilder acknowledgment(Acknowledgment acknowledgment) {
             this.acknowledgment = acknowledgment;
@@ -432,10 +432,10 @@ public class Message {
         }
 
         /**
-         * 原始消息
-         *
-         * @param originalMessage 原始消息
-         * @return 原始消息的结果
+        * 原始消息
+        *
+        * @param originalMessage 原始消息
+        * @return 原始消息的结果
          */
         public MessageBuilder originalMessage(Object originalMessage) {
             this.originalMessage = originalMessage;
@@ -443,9 +443,9 @@ public class Message {
         }
 
         /**
-         * 构建
-         *
-         * @return 构建的结果
+        * 构建
+        *
+        * @return 构建的结果
          */
         public Message build() {
             var message = new Message();

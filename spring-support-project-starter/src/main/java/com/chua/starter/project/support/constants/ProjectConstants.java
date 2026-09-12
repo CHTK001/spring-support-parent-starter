@@ -1,10 +1,10 @@
 package com.chua.starter.project.support.constants;
 
 /**
- * 发布项目管理模块常量
- *
- * @author CH
- * @since 4.0.0.42
+* 发布项目管理模块常量
+*
+* @author CH
+* @since 4.0.0.42
  */
 public final class ProjectConstants {
 
@@ -87,7 +87,7 @@ public final class ProjectConstants {
     public static final String OVERWRITE_MODE_REPLACE = "REPLACE";
 
     /**
-     * 工具类禁止实例化
+    * 工具类禁止实例化
      */
     private ProjectConstants() {
     }

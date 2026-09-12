@@ -5,9 +5,9 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 /**
- * 订单创建请求
- * @author CH
- * @since 4.0.0
+* 订单创建请求
+* @author CH
+* @since 4.0.0
  */
 @Data
 public class OrderCreateRequest {

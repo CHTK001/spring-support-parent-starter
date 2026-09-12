@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.chua.starter.project.support.entity.MsProjectDeployLog;
 
 /**
-   * msprojectdeploy日志 映射器
- *
- * @author CH
- * @since 4.0.0.42
+* msprojectdeploy日志 映射器
+*
+* @author CH
+* @since 4.0.0.42
  */
 public interface MsProjectDeployLogMapper extends BaseMapper<MsProjectDeployLog> {}

@@ -12,9 +12,9 @@ import java.util.Map;
 import java.util.LinkedHashMap;
 
 /**
- * 静态资源控制器 - 提供模型/平台 Logo SVG
- * @author CH
- * @since 4.0.0
+* 静态资源控制器 - 提供模型/平台 Logo SVG
+* @author CH
+* @since 4.0.0
  */
 @Slf4j
 @ApiReturnFormatIgnore
@@ -23,13 +23,13 @@ import java.util.LinkedHashMap;
 public class ApiAssetController {
 
     /**
-      * Logo 资源。前端（智能体logo.ts）请求带子目录的多段路径（如 brand/nomi.SVG、
-      * tools/coding/codex.SVG），单段 {名称} 无法匹配会导致 404 裂图，这里用
-      * /logos/** 接住全部层级；类路径 无对应文件时返回首字母兜底 SVG。
-      * 直接写 httpservlet响应：全局消息转换器不含二进制/SVG 转换器，
-      * 返回 Resource/byte[] 会报 "No 转换器 ... preset 内容-类型"。
-       * @param request 请求
-       * @param response 响应
+    * Logo 资源。前端（智能体logo.ts）请求带子目录的多段路径（如 brand/nomi.SVG、
+    * tools/coding/codex.SVG），单段 {名称} 无法匹配会导致 404 裂图，这里用
+    * /logos/** 接住全部层级；类路径 无对应文件时返回首字母兜底 SVG。
+    * 直接写 httpservlet响应：全局消息转换器不含二进制/SVG 转换器，
+    * 返回 Resource/byte[] 会报 "No 转换器 ... preset 内容-类型"。
+    * @param request 请求
+    * @param response 响应
      */
     @GetMapping("/logos/**")
     public void getLogo(jakarta.servlet.http.HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
@@ -57,9 +57,9 @@ public class ApiAssetController {
                 Resource resource = new ClassPathResource(candidate);
                 if (resource.exists()) {
                     /**
-                     * 写入SVG。
-                     * @param response 响应
-                     * @param resource.getContentAsByteArray( resource.获取内容asbytearray(
+                    * 写入SVG。
+                    * @param response 响应
+                    * @param resource.getContentAsByteArray( resource.获取内容asbytearray(
                      */
                     writeSvg(response, resource.getContentAsByteArray());
                     return;
@@ -77,17 +77,17 @@ public class ApiAssetController {
             displayName = displayName.substring(0, displayName.length() - 4);
         }
         /**
-         * 写入SVG。
-         * @param response 响应
-         * @param buildDefaultSvg(displayName 构建默认SVG(display名称
+        * 写入SVG。
+        * @param response 响应
+        * @param buildDefaultSvg(displayName 构建默认SVG(display名称
          */
         writeSvg(response, buildDefaultSvg(displayName).getBytes());
     }
 
     /**
-     * 写入SVG。
-     * @param response 响应
-     * @param bytes bytes
+    * 写入SVG。
+    * @param response 响应
+    * @param bytes bytes
      */
     private void writeSvg(jakarta.servlet.http.HttpServletResponse response, byte[] bytes) throws java.io.IOException {
         response.setContentType("image/svg+xml");
@@ -96,9 +96,9 @@ public class ApiAssetController {
     }
 
     /**
-     * 构建默认SVG。
-     * @param name 名称
-     * @return 构建默认SVG的结果
+    * 构建默认SVG。
+    * @param name 名称
+    * @return 构建默认SVG的结果
      */
     private String buildDefaultSvg(String name) {
         String initial = name.substring(0, Math.min(2, name.length())).toUpperCase();

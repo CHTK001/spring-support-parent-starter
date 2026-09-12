@@ -12,10 +12,10 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * 分页条件
- *
- * @author CH
- * @since 4.0.0
+* 分页条件
+*
+* @author CH
+* @since 4.0.0
  */
 public class PagePreconditioning<T> {
     private static final long serialVersionUID = 1L; // 串行版本uid
@@ -23,18 +23,18 @@ public class PagePreconditioning<T> {
     private final IPage<T> page;
 
     /**
-      * 创建 pagepreconditioning 实例
-     * @param page page
+    * 创建 pagepreconditioning 实例
+    * @param page page
      */
     public PagePreconditioning(IPage<T> page) {
         this.page = page;
     }
 
     /**
-     * 转换
-     *
-     * @param function 转化器
-     * @return 转换的结果
+    * 转换
+    *
+    * @param function 转化器
+    * @return 转换的结果
      */
     public <R> PagePreconditioning<R> convert(Function<T, R> function) {
         IPage<R> page = new Page<>(this.page.getCurrent(), this.page.getSize(), this.page.getTotal());
@@ -43,11 +43,11 @@ public class PagePreconditioning<T> {
     }
 
     /**
-     * 映射
-     *
-     * @param idFunction 映射
-     * @param consumer   消费
-     * @return mapping的结果
+    * 映射
+    *
+    * @param idFunction 映射
+    * @param consumer   消费
+    * @return mapping的结果
      */
     public PagePreconditioning<T> mapping(Function<T, Serializable> idFunction, BiConsumer<Set<Serializable>, Map<Serializable, T>> consumer) {
         List<T> records = page.getRecords();
@@ -57,9 +57,9 @@ public class PagePreconditioning<T> {
     }
 
     /**
-     * 返回分页
-     *
-     * @return 分页
+    * 返回分页
+    *
+    * @return 分页
      */
     public IPage<T> returnPage() {
         return page;

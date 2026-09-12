@@ -6,9 +6,9 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 订单状态流转日志视图对象
- * @author CH
- * @since 4.0.0
+* 订单状态流转日志视图对象
+* @author CH
+* @since 4.0.0
  */
 @Data
 public class OrderStateLogVO implements Serializable {

@@ -21,10 +21,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
-   * 数据同步完整管线压测：走 服务端→调度器→执行器→Dispatch→Sink 全链路，手动触发单遍。
- *
- * @since 4.0.0.42
- * @author CH
+* 数据同步完整管线压测：走 服务端→调度器→执行器→Dispatch→Sink 全链路，手动触发单遍。
+*
+* @since 4.0.0.42
+* @author CH
  */
 public final class DataSyncStressProbe {
 
@@ -32,9 +32,9 @@ public final class DataSyncStressProbe {
     private static final Path WORK_DIR = Paths.get("target/stress-full");
 
     /**
-     * Main
-     *
-     * @param args 参数
+    * Main
+    *
+    * @param args 参数
      */
     public static void main(String[] args) throws Exception {
         Files.createDirectories(WORK_DIR);
@@ -63,11 +63,11 @@ public final class DataSyncStressProbe {
     }
 
     /**
-     * 运行完整pipeline
-     *
-     * @param csv csv
-     * @param totalRows totalrows
-     * @param batchSize 批量大小
+    * 运行完整pipeline
+    *
+    * @param csv csv
+    * @param totalRows totalrows
+    * @param batchSize 批量大小
      */
     private static void runFullPipeline(Path csv, int totalRows, int batchSize) throws Exception {
         String id = "full-" + totalRows + "-" + batchSize;
@@ -110,10 +110,10 @@ public final class DataSyncStressProbe {
     }
 
     /**
-     * generatecsv
-     *
-     * @param path 路径
-     * @param lines 线
+    * generatecsv
+    *
+    * @param path 路径
+    * @param lines 线
      */
     private static void generateCsv(Path path, int lines) throws Exception {
         try (var writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {

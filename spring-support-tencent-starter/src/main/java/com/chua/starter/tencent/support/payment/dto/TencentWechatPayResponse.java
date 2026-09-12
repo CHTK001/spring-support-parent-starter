@@ -5,9 +5,9 @@ import lombok.Data;
 import java.util.Map;
 
 /**
- * 微信下单响应
- * @author CH
- * @since 4.0.0
+* 微信下单响应
+* @author CH
+* @since 4.0.0
  */
 @Data
 public class TencentWechatPayResponse {

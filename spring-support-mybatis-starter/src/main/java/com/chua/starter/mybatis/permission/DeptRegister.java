@@ -5,26 +5,26 @@ import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import net.sf.jsqlparser.expression.Expression;
 
 /**
-   * 注入机构标识
- *
- * @author CH
- * @since 4.0.0
+* 注入机构标识
+*
+* @author CH
+* @since 4.0.0
  */
 public interface DeptRegister {
 
     /**
-     * 注册
-     *
-     * @return Expression
+    * 注册
+    *
+    * @return Expression
      */
     Expression register();
 
 
     /**
-     * 获取表信息
-     *
-     * @param tableName 表名
-     * @return 表信息
+    * 获取表信息
+    *
+    * @param tableName 表名
+    * @return 表信息
      */
     default TableInfo getTableInfo(String tableName) {
         return TableInfoHelper.getTableInfos().stream().filter(

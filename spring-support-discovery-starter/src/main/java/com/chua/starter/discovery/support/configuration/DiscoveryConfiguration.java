@@ -35,9 +35,9 @@ import java.io.IOException;
 import java.util.*;
 
 /**
- * 发现服务
- * @since 2024/9/9
- * @author CH
+* 发现服务
+* @since 2024/9/9
+* @author CH
  */
 @Slf4j
 @EnableConfigurationProperties(DiscoveryListProperties.class)
@@ -59,9 +59,9 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
             log.info("[Discovery] 服务状态 [{}]", disabled());
             registry.registerBeanDefinition("discoveryService#embedd", BeanDefinitionBuilder.rootBeanDefinition(DiscoveryService.class, () -> {
                         /**
-                         * discovery服务。
-                         * @param DefaultServiceDiscovery( 默认服务discovery(
-                         * @return discovery服务的结果
+                        * discovery服务。
+                        * @param DefaultServiceDiscovery( 默认服务discovery(
+                        * @return discovery服务的结果
                          */
                         return new DiscoveryService(new DefaultServiceDiscovery());
                     })
@@ -100,12 +100,12 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     }
 
     /**
-     * 注册服务发现实现
-     *
-     * @param registry            Bean 注册器
-     * @param discoveryProperties 当前发现配置
-     * @param primaryCandidate    是否作为首选实现
-     * @return 是否成功注册 服务discovery Bean
+    * 注册服务发现实现
+    *
+    * @param registry            Bean 注册器
+    * @param discoveryProperties 当前发现配置
+    * @param primaryCandidate    是否作为首选实现
+    * @return 是否成功注册 服务discovery Bean
      */
     private boolean registryBean(BeanDefinitionRegistry registry, DiscoveryProperties discoveryProperties, boolean primaryCandidate) {
         DiscoveryOption discoveryOption = new DiscoveryOption();
@@ -144,10 +144,10 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     }
 
     /**
-     * registry节点
-     *
-     * @param discoveryNodeProperties discovery节点属性
-     * @return registry节点的结果
+    * registry节点
+    *
+    * @param discoveryNodeProperties discovery节点属性
+    * @return registry节点的结果
      */
     private Discovery registryNode(DiscoveryNodeProperties discoveryNodeProperties) {
         Project project = Project.getInstance();
@@ -190,12 +190,12 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
     }
 
     /**
-      * 创建服务发现 Beandefinition
-     *
-     * @param serviceDiscovery 服务发现实现
-     * @param discovery        发现配置列表
-     * @param primary          是否作为首选实现
-     * @return BeanDefinition
+    * 创建服务发现 Beandefinition
+    *
+    * @param serviceDiscovery 服务发现实现
+    * @param discovery        发现配置列表
+    * @param primary          是否作为首选实现
+    * @return BeanDefinition
      */
     private BeanDefinition createBeanDefinitionDiscovery(ServiceDiscovery serviceDiscovery, List<Discovery> discovery, boolean primary) {
         BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.rootBeanDefinition(ServiceDiscovertyFactoryBean.class);
@@ -210,10 +210,10 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
 
 
     /**
-     * 服务discoverty工厂Bean类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * 服务discoverty工厂Bean类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
     static class ServiceDiscovertyFactoryBean implements FactoryBean<ServiceDiscovery>, AutoCloseable{
 
@@ -222,10 +222,10 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
         private final List<Discovery> discoveryList;
 
         /**
-          * 创建 服务discoverty工厂Bean 实例
-         * @param serviceDiscovery 服务discovery
-         * @param discoveryList 列表
-         * @param discoveryList discovery列表
+        * 创建 服务discoverty工厂Bean 实例
+        * @param serviceDiscovery 服务discovery
+        * @param discoveryList 列表
+        * @param discoveryList discovery列表
          */
         public ServiceDiscovertyFactoryBean(ServiceDiscovery serviceDiscovery, List<Discovery> discoveryList) {
             this.serviceDiscovery = serviceDiscovery;
@@ -270,9 +270,9 @@ public class DiscoveryConfiguration implements EnvironmentAware, BeanDefinitionR
 
     @Bean
     /**
-     * discovery服务信息contributor
-     *
-     * @return discovery服务信息contributor的结果
+    * discovery服务信息contributor
+    *
+    * @return discovery服务信息contributor的结果
      */
     public ServiceInfoContributor discoveryServiceInfoContributor() {
         return registry -> {

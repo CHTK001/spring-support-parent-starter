@@ -13,11 +13,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 全局设置初始化器——启动时通过 SPI 发现 {@link GlobalSettingProvider}，
- * 自动将各模块的默认配置项注册到 {@code sys_ai_global_setting} 表（仅首次）。
- *
- * @author CH
- * @since 4.0.0
+* 全局设置初始化器——启动时通过 SPI 发现 {@link GlobalSettingProvider}，
+* 自动将各模块的默认配置项注册到 {@code sys_ai_global_setting} 表（仅首次）。
+*
+* @author CH
+* @since 4.0.0
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -25,17 +25,17 @@ import java.util.Map;
 public class GlobalSettingInitializer implements ApplicationRunner {
 
     /**
-     * 全局设置服务
+    * 全局设置服务
      */
     private final SysAiGlobalSettingService globalSettingService;
 
     /**
-     * 启动时同步所有 SPI 模块的默认全局配置项。
-     *
-     * <p>动态同步语义：分组已有部分配置时，仅补充 provider 定义但 DB 缺失的配置项，
-     * 不覆盖用户已配置的值；分组为空时全量注册。</p>
-     *
-     * @param args 启动参数
+    * 启动时同步所有 SPI 模块的默认全局配置项。
+    *
+    * <p>动态同步语义：分组已有部分配置时，仅补充 provider 定义但 DB 缺失的配置项，
+    * 不覆盖用户已配置的值；分组为空时全量注册。</p>
+    *
+    * @param args 启动参数
      */
     @Override
     public void run(ApplicationArguments args) {

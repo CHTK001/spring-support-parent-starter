@@ -12,64 +12,64 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
-   * 大华乐橙（IMOU / lecheng）开放平台 打开api 会话
- * <p>对接大华乐橙开放平台，基于 common-starter HttpClient，全平台可用。</p>
- *
- * <h3>接入说明</h3>
- * <ul>
- *   <li>endpoint、AppKey/AppSecret、签名算法需按乐橙开放平台 OpenAPI 文档配置</li>
- * </ul>
- *
- * @since 4.0.0.42
- * @author CH
+* 大华乐橙（IMOU / lecheng）开放平台 打开api 会话
+* <p>对接大华乐橙开放平台，基于 common-starter HttpClient，全平台可用。</p>
+*
+* <h3>接入说明</h3>
+* <ul>
+*   <li>endpoint、AppKey/AppSecret、签名算法需按乐橙开放平台 OpenAPI 文档配置</li>
+* </ul>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 public class DahuaLeChangeSession extends AbstractOpenApiSession {
 
     /**
-      * 乐橙开放平台默认 baseurl（按官方文档配置）
+    * 乐橙开放平台默认 baseurl（按官方文档配置）
      */
     private static final String DEFAULT_BASE_URL = "https://openapi.lechange.com/openapi";
 
     /**
-      * 获取 access令牌 接口
+    * 获取 access令牌 接口
      */
     private static final String PATH_TOKEN = "/accessToken";
 
     /**
-     * 实时预览 URL 接口
+    * 实时预览 URL 接口
      */
     private static final String PATH_LIVE_URL = "/live";
 
     /**
-     * 云台控制接口
+    * 云台控制接口
      */
     private static final String PATH_PTZ_CONTROL = "/ptz";
 
     /**
-      * 创建 dahuale改变会话 实例
-     * @param info 信息
+    * 创建 dahuale改变会话 实例
+    * @param info 信息
      */
     public DahuaLeChangeSession(DeviceConnectInfo info) {
         /**
-         * 父。
-         * @param info 信息
-         * @param DEFAULT_BASE_URL 默认baseurl
+        * 父。
+        * @param info 信息
+        * @param DEFAULT_BASE_URL 默认baseurl
          */
         super(info, DEFAULT_BASE_URL);
         /**
-         * login。
+        * login。
          */
         login();
     }
 
     /**
-      * 乐橙签名：MD5(appsecret + 系统 + 参数 + 时间 + nonce)。
-     * @param params 参数
-     * @param system 系统
-     * @param time 时间
-     * @param nonce nonce
-     * @return 标志的结果
+    * 乐橙签名：MD5(appsecret + 系统 + 参数 + 时间 + nonce)。
+    * @param params 参数
+    * @param system 系统
+    * @param time 时间
+    * @param nonce nonce
+    * @return 标志的结果
      */
     private String sign(Map<String, Object> params, String system, String time, String nonce) {
         TreeMap<String, Object> sorted = new TreeMap<>(params);
@@ -90,10 +90,10 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
             return sb.toString();
         } catch (Exception e) {
             /**
-             * illegal状态异常。
-             * @param "乐橙签名失败" "乐橙签名失败"
-             * @param e e
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param "乐橙签名失败" "乐橙签名失败"
+            * @param e e
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("乐橙签名失败", e);
         }
@@ -113,24 +113,24 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
             long expires = result.path("expiresIn").asLong(7200L);
             if (token == null || token.isEmpty()) {
                 /**
-                 * illegal状态异常。
-                 * @param 为空" 为空"
-                 * @return illegal状态异常的结果
+                * illegal状态异常。
+                * @param 为空" 为空"
+                * @return illegal状态异常的结果
                  */
                 throw new IllegalStateException("乐橙 accessToken 为空");
             }
             /**
-             * 缓存令牌。
-             * @param token 令牌
-             * @param expires expires
+            * 缓存令牌。
+            * @param token 令牌
+            * @param expires expires
              */
             cacheToken(token, expires);
             log.info("乐橙登录成功: deviceSerial={}", info.getDeviceSerial());
         } catch (Exception e) {
             /**
-             * illegal状态异常。
-             * @param e.getMessage( e.获取消息(
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param e.getMessage( e.获取消息(
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("乐橙登录失败: " + e.getMessage(), e);
         }
@@ -141,7 +141,7 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
     protected JsonNode doRequest(String method, String path, Map<String, Object> params) {
         if (!tokenValid() && !PATH_TOKEN.equals(path)) {
             /**
-             * login。
+            * login。
              */
             login();
         }
@@ -167,10 +167,10 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
     }
 
     /**
-     * 获取liveurl
-     *
-     * @param channel 通道
-     * @return 获取liveurl的结果
+    * 获取liveurl
+    *
+    * @param channel 通道
+    * @return 获取liveurl的结果
      */
     public JsonNode getLiveUrl(int channel) {
         Map<String, Object> params = new HashMap<>();
@@ -215,18 +215,18 @@ public class DahuaLeChangeSession extends AbstractOpenApiSession {
         params.put("operation", mapOperation(cmd));
         params.put("duration", (int) Math.max(100, Math.min(2000, Math.round(2000 * speed))));
         /**
-         * post。
-         * @param PATH_PTZ_CONTROL 路径ptzcontrol
-         * @param params 参数
+        * post。
+        * @param PATH_PTZ_CONTROL 路径ptzcontrol
+        * @param params 参数
          */
         post(PATH_PTZ_CONTROL, params);
     }
 
     /**
-     * 映射operation
-     *
-     * @param cmd CMD
-     * @return 映射operation的结果
+    * 映射operation
+    *
+    * @param cmd CMD
+    * @return 映射operation的结果
      */
     private int mapOperation(com.chua.starter.device.spi.model.PtzCommand cmd) {
         switch (cmd) {

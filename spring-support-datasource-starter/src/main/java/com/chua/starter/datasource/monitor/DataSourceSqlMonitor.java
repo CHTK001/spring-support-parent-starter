@@ -13,77 +13,77 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * SQL 监控门面
- *
- * <p>负责数据源包装、SQL 事件发布与统计聚合。
- * 设计要点：</p>
- * <ul>
- *   <li><b>静态单例 + Spring Bean</b>：{@link DataSourceContextSupport#addDatasource} 在
- *       Spring 容器初始化早期（BDRPP 阶段）即被调用，因此通过静态实例访问；
- *       自动配置创建 Spring Bean 后注册到静态引用</li>
- *   <li><b>幂等包装</b>：同一数据源只包装一次，并通过反射穿透 Seata
- *       {@code DataSourceProxy} 检测内部是否已包装，避免多层嵌套</li>
- *   <li><b>数据源无关</b>：通过 JDBC 代理拦截 execute 方法，不依赖 druid/p6spy/mybatis</li>
- *   <li><b>事务安全</b>：只包装 {@code getConnection()} 返回的连接，连接池内部事务不受影响</li>
- * </ul>
- *
- * @since 4.0.0.42
- * @author CH
+* SQL 监控门面
+*
+* <p>负责数据源包装、SQL 事件发布与统计聚合。
+* 设计要点：</p>
+* <ul>
+*   <li><b>静态单例 + Spring Bean</b>：{@link DataSourceContextSupport#addDatasource} 在
+*       Spring 容器初始化早期（BDRPP 阶段）即被调用，因此通过静态实例访问；
+*       自动配置创建 Spring Bean 后注册到静态引用</li>
+*   <li><b>幂等包装</b>：同一数据源只包装一次，并通过反射穿透 Seata
+*       {@code DataSourceProxy} 检测内部是否已包装，避免多层嵌套</li>
+*   <li><b>数据源无关</b>：通过 JDBC 代理拦截 execute 方法，不依赖 druid/p6spy/mybatis</li>
+*   <li><b>事务安全</b>：只包装 {@code getConnection()} 返回的连接，连接池内部事务不受影响</li>
+* </ul>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 public class DataSourceSqlMonitor {
 
     /**
-     * 全局静态实例（由自动配置初始化）
+    * 全局静态实例（由自动配置初始化）
      */
     private static volatile DataSourceSqlMonitor INSTANCE;
 
     /**
-     * 是否启用（由配置解析，未显式设置时按环境自动切换）
+    * 是否启用（由配置解析，未显式设置时按环境自动切换）
      */
     private volatile boolean enabled = true;
 
     /**
-     * 事件发布器
+    * 事件发布器
      */
     private final ApplicationEventPublisher eventPublisher;
 
     /**
-     * 自定义监听器
+    * 自定义监听器
      */
     private final List<SqlExecutionListener> listeners;
 
     /**
-     * 监控配置
+    * 监控配置
      */
     private final SqlMonitorProperties properties;
 
     /**
-      * 数据源统计缓存：数据源名称 → 统计
+    * 数据源统计缓存：数据源名称 → 统计
      */
     private final Map<String, SqlStatistics> statisticsMap = new ConcurrentHashMap<>();
 
     /**
-     * 已跟踪数据源名称（有界去重，按策略淘汰）
+    * 已跟踪数据源名称（有界去重，按策略淘汰）
      */
     private final CircularLinkedSet<String> trackedDataSources;
 
     /**
-     * 已包装数据源缓存，保证幂等
+    * 已包装数据源缓存，保证幂等
      */
     private final Map<DataSource, DataSource> wrappedCache = new ConcurrentHashMap<>();
 
     /**
-      * 已包装数据源 钥匙 集合（有界去重，按策略淘汰）
+    * 已包装数据源 钥匙 集合（有界去重，按策略淘汰）
      */
     private final CircularLinkedSet<DataSource> trackedWrappedKeys;
 
     /**
-     * 监控构造器
-     *
-     * @param eventPublisher 事件发布器
-     * @param listeners      自定义监听器
-     * @param properties     监控配置
+    * 监控构造器
+    *
+    * @param eventPublisher 事件发布器
+    * @param listeners      自定义监听器
+    * @param properties     监控配置
      */
     public DataSourceSqlMonitor(ApplicationEventPublisher eventPublisher,
                                 List<SqlExecutionListener> listeners,
@@ -96,29 +96,29 @@ public class DataSourceSqlMonitor {
     }
 
     /**
-     * 初始化静态实例
-     *
-     * @param monitor 监控实例
+    * 初始化静态实例
+    *
+    * @param monitor 监控实例
      */
     public static void initialize(DataSourceSqlMonitor monitor) {
         INSTANCE = monitor;
     }
 
     /**
-     * 获取静态实例
-     *
-     * @return 监控实例，未初始化时返回 空
+    * 获取静态实例
+    *
+    * @return 监控实例，未初始化时返回 空
      */
     public static DataSourceSqlMonitor getInstance() {
         return INSTANCE;
     }
 
     /**
-     * 注册数据源入口的包装方法（供 {@link DataSourceContextSupport#addDatasource} 调用）
-     *
-     * @param dataSourceName 数据源名称
-     * @param dataSource     数据源
-     * @return 包装后的数据源（监控未启用或数据源为 空 时返回原对象）
+    * 注册数据源入口的包装方法（供 {@link DataSourceContextSupport#addDatasource} 调用）
+    *
+    * @param dataSourceName 数据源名称
+    * @param dataSource     数据源
+    * @return 包装后的数据源（监控未启用或数据源为 空 时返回原对象）
      */
     public static DataSource wrapIfEnabled(String dataSourceName, DataSource dataSource) {
         DataSourceSqlMonitor instance = INSTANCE;
@@ -129,27 +129,27 @@ public class DataSourceSqlMonitor {
     }
 
     /**
-     * 设置启用状态
-     *
-     * @param enabled 是否启用
+    * 设置启用状态
+    *
+    * @param enabled 是否启用
      */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
 
     /**
-     * 是否启用
-     *
-     * @return 是否启用
+    * 是否启用
+    *
+    * @return 是否启用
      */
     public boolean isEnabled() {
         return enabled;
     }
 
     /**
-     * 补包装所有已注册的数据源
-     * <p>解决 {@link DataSourceInspect}（BDRPP）在容器早期注册数据源时监控尚未初始化的时序问题。
-     * 幂等：已包装的数据源保持不变，分组注册表同步替换为包装后的数据源。</p>
+    * 补包装所有已注册的数据源
+    * <p>解决 {@link DataSourceInspect}（BDRPP）在容器早期注册数据源时监控尚未初始化的时序问题。
+    * 幂等：已包装的数据源保持不变，分组注册表同步替换为包装后的数据源。</p>
      */
     public static void wrapExistingDataSources() {
         DataSourceSqlMonitor instance = INSTANCE;
@@ -171,12 +171,12 @@ public class DataSourceSqlMonitor {
     }
 
     /**
-     * 包装数据源
-     * <p>幂等：若数据源已包装（或内部已含监控包装）则原样返回，防止 Seata 替换等场景多层嵌套。</p>
-     *
-     * @param dataSource     数据源
-     * @param dataSourceName 数据源名称
-     * @return 包装后的数据源
+    * 包装数据源
+    * <p>幂等：若数据源已包装（或内部已含监控包装）则原样返回，防止 Seata 替换等场景多层嵌套。</p>
+    *
+    * @param dataSource     数据源
+    * @param dataSourceName 数据源名称
+    * @return 包装后的数据源
      */
     public DataSource wrap(DataSource dataSource, String dataSourceName) {
         if (dataSource instanceof MonitoringDataSource) {
@@ -211,14 +211,14 @@ public class DataSourceSqlMonitor {
     }
 
     /**
-     * 记录一次 SQL 执行
-     * <p>内部统一聚合统计，并按配置发布事件或日志。</p>
-     *
-     * @param dataSourceName 数据源名称
-     * @param sql            SQL 文本
-     * @param costMs         执行耗时（毫秒）
-     * @param success        是否成功
-     * @param errorMessage   失败原因（失败时）
+    * 记录一次 SQL 执行
+    * <p>内部统一聚合统计，并按配置发布事件或日志。</p>
+    *
+    * @param dataSourceName 数据源名称
+    * @param sql            SQL 文本
+    * @param costMs         执行耗时（毫秒）
+    * @param success        是否成功
+    * @param errorMessage   失败原因（失败时）
      */
     public void recordExecution(String dataSourceName, String sql, long costMs, boolean success, String errorMessage) {
         boolean slowSql = costMs >= properties.getSlowSqlThresholdMs();
@@ -280,36 +280,36 @@ public class DataSourceSqlMonitor {
     }
 
     /**
-     * 获取某数据源的统计
-     *
-     * @param dataSourceName 数据源名称
-     * @return 统计信息，不存在时返回 空
+    * 获取某数据源的统计
+    *
+    * @param dataSourceName 数据源名称
+    * @return 统计信息，不存在时返回 空
      */
     public SqlStatistics getStatistics(String dataSourceName) {
         return statisticsMap.get(dataSourceName);
     }
 
     /**
-     * 获取全部统计
-     *
-     * @return 全部统计信息
+    * 获取全部统计
+    *
+    * @return 全部统计信息
      */
     public Map<String, SqlStatistics> getAllStatistics() {
         return statisticsMap;
     }
 
     /**
-     * 重置统计
+    * 重置统计
      */
     public void resetStatistics() {
         statisticsMap.values().forEach(SqlStatistics::reset);
     }
 
     /**
-     * 解析 SQL 类型
-     *
-     * @param sql SQL 文本
-     * @return select/insert/update/delete/other
+    * 解析 SQL 类型
+    *
+    * @param sql SQL 文本
+    * @return select/insert/update/delete/other
      */
     private String resolveSqlType(String sql) {
         if (sql == null) {
@@ -332,10 +332,10 @@ public class DataSourceSqlMonitor {
     }
 
     /**
-     * 截断超长 SQL
-     *
-     * @param sql SQL 文本
-     * @return 截断后的 SQL
+    * 截断超长 SQL
+    *
+    * @param sql SQL 文本
+    * @return 截断后的 SQL
      */
     private String truncate(String sql) {
         if (sql == null) {
@@ -348,11 +348,11 @@ public class DataSourceSqlMonitor {
     }
 
     /**
-     * 检测数据源内部是否已被监控包装（供幂等判断）
-     * <p>递归穿透 {@code getTargetDataSource()}（Seata DataSourceProxy 等）检查包装链。</p>
-     *
-     * @param dataSource 数据源
-     * @return 是否已被监控包装
+    * 检测数据源内部是否已被监控包装（供幂等判断）
+    * <p>递归穿透 {@code getTargetDataSource()}（Seata DataSourceProxy 等）检查包装链。</p>
+    *
+    * @param dataSource 数据源
+    * @return 是否已被监控包装
      */
     public static boolean isMonitored(DataSource dataSource) {
         if (dataSource instanceof MonitoringDataSource) {

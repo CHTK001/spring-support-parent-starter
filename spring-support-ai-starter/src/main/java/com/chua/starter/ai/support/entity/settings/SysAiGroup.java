@@ -13,10 +13,10 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
-   * 模型分组表，将模型与 app钥匙 按业务/团队维度聚合。
- *
- * @since 2026-08-03
- * @author CH
+* 模型分组表，将模型与 app钥匙 按业务/团队维度聚合。
+*
+* @since 2026-08-03
+* @author CH
  */
 @Data
 @TableName("sys_ai_group")
@@ -25,10 +25,10 @@ public class SysAiGroup implements Serializable {
     private static final long serialVersionUID = 1L; // 串行版本uid
 
     /**
-      * 分组主键 标识
+    * 分组主键 标识
      */
     /**
-      * 分组主键 标识
+    * 分组主键 标识
      */
     @TableId(value = "sys_ai_group_id", type = IdType.AUTO)
     @Schema(description = "分组主键 ID")
@@ -36,10 +36,10 @@ public class SysAiGroup implements Serializable {
     private Long groupId;
 
     /**
-     * 分组名称
+    * 分组名称
      */
     /**
-     * 分组名称
+    * 分组名称
      */
     @TableField("sys_ai_group_name")
     @Schema(description = "分组名称")
@@ -47,10 +47,10 @@ public class SysAiGroup implements Serializable {
     private String groupName;
 
     /**
-     * 分组描述
+    * 分组描述
      */
     /**
-     * 分组描述
+    * 分组描述
      */
     @TableField("sys_ai_group_desc")
     @Schema(description = "分组描述")
@@ -58,10 +58,10 @@ public class SysAiGroup implements Serializable {
     private String groupDescription;
 
     /**
-     * 关联模型列表（JSON 数组字符串）
+    * 关联模型列表（JSON 数组字符串）
      */
     /**
-     * 关联模型列表(JSON)
+    * 关联模型列表(JSON)
      */
     @TableField("sys_ai_group_models")
     @Schema(description = "关联模型列表(JSON)")
@@ -69,10 +69,10 @@ public class SysAiGroup implements Serializable {
     private String groupModels;
 
     /**
-       * 绑定 app钥匙 标识 列表（JSON 数组字符串）
+    * 绑定 app钥匙 标识 列表（JSON 数组字符串）
      */
     /**
-       * 绑定 app钥匙 标识 列表(JSON)
+    * 绑定 app钥匙 标识 列表(JSON)
      */
     @TableField("sys_ai_group_app_key_ids")
     @Schema(description = "绑定 AppKey ID 列表(JSON)")
@@ -80,10 +80,10 @@ public class SysAiGroup implements Serializable {
     private String groupAppKeyIds;
 
     /**
-     * 是否启用
+    * 是否启用
      */
     /**
-     * 是否启用
+    * 是否启用
      */
     @TableField("sys_ai_group_enabled")
     @Schema(description = "是否启用")
@@ -91,10 +91,10 @@ public class SysAiGroup implements Serializable {
     private Boolean groupEnabled;
 
     /**
-     * 创建时间
+    * 创建时间
      */
     /**
-     * 创建时间
+    * 创建时间
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     @Schema(description = "创建时间")
@@ -102,10 +102,10 @@ public class SysAiGroup implements Serializable {
     private LocalDateTime groupCreateTime;
 
     /**
-     * 更新时间
+    * 更新时间
      */
     /**
-     * 更新时间
+    * 更新时间
      */
     @TableField(value = "update_time", fill = FieldFill.INSERT_UPDATE)
     @Schema(description = "更新时间")
@@ -113,10 +113,10 @@ public class SysAiGroup implements Serializable {
     private LocalDateTime groupUpdateTime;
 
     /**
-     * 逻辑删除标记
+    * 逻辑删除标记
      */
     /**
-     * 逻辑删除标记
+    * 逻辑删除标记
      */
     @TableField("sys_ai_group_delete")
     @TableLogic

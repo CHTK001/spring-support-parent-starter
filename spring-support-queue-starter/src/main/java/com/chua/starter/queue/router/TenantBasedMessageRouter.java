@@ -5,13 +5,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * 基于租户的消息路由器
- * <p>
-   * 根据消息中的租户标识路由到不同的队列
- * </p>
- *
- * @since 2025-03-20
- * @author CH
+* 基于租户的消息路由器
+* <p>
+* 根据消息中的租户标识路由到不同的队列
+* </p>
+*
+* @since 2025-03-20
+* @author CH
  */
 @Slf4j
 @Component

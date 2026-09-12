@@ -10,41 +10,41 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 本机虚拟线程承载能力探针: "同时能运行多少任务"分两类回答。
- *
- * <ul>
- *   <li>阻塞型任务 (sleep/IO): 虚拟线程 sleep 时让出 carrier, 可挂起的并发数由内存决定;</li>
- *   <li>CPU 密集型任务: 虚拟线程无处让位, 真实并行上限 = 物理/逻辑核心数。</li>
- * </ul>
- *
- * @since 4.0.0.42
- * @author CH
+* 本机虚拟线程承载能力探针: "同时能运行多少任务"分两类回答。
+*
+* <ul>
+*   <li>阻塞型任务 (sleep/IO): 虚拟线程 sleep 时让出 carrier, 可挂起的并发数由内存决定;</li>
+*   <li>CPU 密集型任务: 虚拟线程无处让位, 真实并行上限 = 物理/逻辑核心数。</li>
+* </ul>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 public class VtLimitProbe {
 
     /**
-     * 阻塞型: 并发提交任务量
+    * 阻塞型: 并发提交任务量
      */
     private static final int BLOCK_TASKS = 20000;
 
     /**
-     * 阻塞型: 单任务 sleep 时长
+    * 阻塞型: 单任务 sleep 时长
      */
     private static final long SLEEP_MS = 500L;
 
     /**
-     * CPU 型: 单任务忙循环基准工作量
+    * CPU 型: 单任务忙循环基准工作量
      */
     private static final int CPU_WORK = 3_000_000;
 
     /**
-     * CPU 型: 提交任务量
+    * CPU 型: 提交任务量
      */
     private static final int CPU_TASKS = 10000;
 
     /**
-     * 运行阻塞型场景。
+    * 运行阻塞型场景。
      */
     private static void runBlock() throws InterruptedException {
         ExecutorService vt = Executors.newVirtualThreadPerTaskExecutor();
@@ -80,7 +80,7 @@ public class VtLimitProbe {
     }
 
     /**
-     * 运行 CPU 密集型场景。
+    * 运行 CPU 密集型场景。
      */
     private static void runCpu() throws InterruptedException {
         ExecutorService vt = Executors.newVirtualThreadPerTaskExecutor();
@@ -116,18 +116,18 @@ public class VtLimitProbe {
     }
 
     /**
-     * 入口。
-     *
-     * @param args 忽略
+    * 入口。
+    *
+    * @param args 忽略
      */
     public static void main(String[] args) throws InterruptedException {
         log.info("[probe] 本机可用处理器 = {} 个", Runtime.getRuntime().availableProcessors());
         /**
-         * 运行block。
+        * 运行block。
          */
         runBlock();
         /**
-         * 运行cpu。
+        * 运行cpu。
          */
         runCpu();
     }

@@ -14,38 +14,38 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 字段映射节点。
- *
- * <p>按映射规则将来源数据字段重命名/复制到目标字段，支持默认值兜底。
- * 常用于将抓取字段映射为数据记录的标准字段（标题、内容、来源等）。</p>
- *
- * <p>节点配置说明：</p>
- * <ul>
- *   <li>{@code source} 来源数据，当前数据 {@code current} 或上下文属性名，默认 current</li>
- *   <li>{@code mappings} 映射规则列表，每项含 {@code from}/{@code to}/{@code defaultValue}</li>
- *   <li>{@code saveAs} 结果写入的上下文属性名（可选，缺省时写入当前数据）</li>
- * </ul>
- *
- * @since 4.0.0.42
- * @author CH
+* 字段映射节点。
+*
+* <p>按映射规则将来源数据字段重命名/复制到目标字段，支持默认值兜底。
+* 常用于将抓取字段映射为数据记录的标准字段（标题、内容、来源等）。</p>
+*
+* <p>节点配置说明：</p>
+* <ul>
+*   <li>{@code source} 来源数据，当前数据 {@code current} 或上下文属性名，默认 current</li>
+*   <li>{@code mappings} 映射规则列表，每项含 {@code from}/{@code to}/{@code defaultValue}</li>
+*   <li>{@code saveAs} 结果写入的上下文属性名（可选，缺省时写入当前数据）</li>
+* </ul>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Component
 public class SpiderMapNode implements FlowNode {
 
     /**
-     * 日志记录器
+    * 日志记录器
      */
     private static final Logger log = LoggerFactory.getLogger(SpiderMapNode.class);
 
     /**
-     * 来源数据：当前数据
+    * 来源数据：当前数据
      */
     private static final String SOURCE_CURRENT = "current";
 
     /**
-     * 节点类型标识。
-     *
-     * @return 节点类型
+    * 节点类型标识。
+    *
+    * @return 节点类型
      */
     @Override
     public String type() {
@@ -53,9 +53,9 @@ public class SpiderMapNode implements FlowNode {
     }
 
     /**
-     * 节点配置表单元信息。
-     *
-     * @return 表单元信息列表
+    * 节点配置表单元信息。
+    *
+    * @return 表单元信息列表
      */
     @Override
     public List<FlowNodeField> configSchema() {
@@ -68,9 +68,9 @@ public class SpiderMapNode implements FlowNode {
     }
 
     /**
-     * 执行映射节点。
-     *
-     * @param context 当前流程上下文
+    * 执行映射节点。
+    *
+    * @param context 当前流程上下文
      */
     @Override
     public void execute(FlowContext context) {
@@ -90,10 +90,10 @@ public class SpiderMapNode implements FlowNode {
     }
 
     /**
-     * 解析映射规则。
-     *
-     * @param raw 原始映射配置
-     * @return 映射规则列表
+    * 解析映射规则。
+    *
+    * @param raw 原始映射配置
+    * @return 映射规则列表
      */
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> parseMappings(Object raw) {
@@ -113,11 +113,11 @@ public class SpiderMapNode implements FlowNode {
     }
 
     /**
-     * 解析来源数据。
-     *
-     * @param source  来源标识
-     * @param context 当前流程上下文
-     * @return 来源值
+    * 解析来源数据。
+    *
+    * @param source  来源标识
+    * @param context 当前流程上下文
+    * @return 来源值
      */
     private Object resolveSource(String source, FlowContext context) {
         if (SOURCE_CURRENT.equals(source)) {
@@ -127,11 +127,11 @@ public class SpiderMapNode implements FlowNode {
     }
 
     /**
-     * 按映射规则转换来源数据。
-     *
-     * @param sourceValue 来源值
-     * @param mappings    映射规则
-     * @return 映射结果
+    * 按映射规则转换来源数据。
+    *
+    * @param sourceValue 来源值
+    * @param mappings    映射规则
+    * @return 映射结果
      */
     @SuppressWarnings("unchecked")
     private Map<String, Object> applyMappings(Object sourceValue, List<Map<String, Object>> mappings) {

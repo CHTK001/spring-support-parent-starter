@@ -30,11 +30,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * AI 用量控制器
- * 提供用量查询和统计接口
- *
- * @since 4.0.0.42
- * @author CH
+* AI 用量控制器
+* 提供用量查询和统计接口
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @RestController
@@ -44,17 +44,17 @@ import java.util.Map;
 public class UsageController {
 
     /**
-     * 用量服务
+    * 用量服务
      */
     private final SysAiUsageService usageService;
 
     /**
-      * 用量同步日志 映射器（持久化日志分页查询）
+    * 用量同步日志 映射器（持久化日志分页查询）
      */
     private final SysAiUsageSyncLogMapper syncLogMapper;
 
     /**
-      * Spring 应用上下文（用于收集 Spring 容器中的 usageparser 实现）
+    * Spring 应用上下文（用于收集 Spring 容器中的 usageparser 实现）
      */
     @Autowired
     private ApplicationContext applicationContext; // application上下文
@@ -63,29 +63,29 @@ public class UsageController {
     @Operation(summary = "用量列表", description = "分页查询用量明细")
     @GetMapping("/list")
     /**
-      * 列表
-     * @param groupName 群体名称
-     * @param provider 提供者
-     * @param model 模型
-     * @param startTime 启动时间
-     * @param endTime 结束时间
-     * @param page page
-     * @param size 大小
-     * @param provider 提供者
-     * @param model 模型
-     * @param startTime 启动时间
-     * @param endTime 结束时间
-     * @param page page
-     * @param size 大小
-     * @param groupName 群体名称
-     * @param provider 提供者
-     * @param model 模型
-     * @param startTime 启动时间
-     * @param endTime 结束时间
-     * @param provider 提供者
-     * @param model 模型
-     * @param startTime 启动时间
-     * @param endTime 结束时间
+    * 列表
+    * @param groupName 群体名称
+    * @param provider 提供者
+    * @param model 模型
+    * @param startTime 启动时间
+    * @param endTime 结束时间
+    * @param page page
+    * @param size 大小
+    * @param provider 提供者
+    * @param model 模型
+    * @param startTime 启动时间
+    * @param endTime 结束时间
+    * @param page page
+    * @param size 大小
+    * @param groupName 群体名称
+    * @param provider 提供者
+    * @param model 模型
+    * @param startTime 启动时间
+    * @param endTime 结束时间
+    * @param provider 提供者
+    * @param model 模型
+    * @param startTime 启动时间
+    * @param endTime 结束时间
      */
     public ReturnResult<?> list(
             @RequestParam(required = false) String groupName,
@@ -108,16 +108,16 @@ public class UsageController {
     @Operation(summary = "用量统计", description = "汇总统计")
     @GetMapping("/statistics")
     /**
-     * Statistics
-     * @param groupName 群体名称
-     * @param provider 提供者
-     * @param model 模型
-     * @param startTime 启动时间
-     * @param endTime 结束时间
-     * @param provider 提供者
-     * @param model 模型
-     * @param startTime 启动时间
-     * @param endTime 结束时间
+    * Statistics
+    * @param groupName 群体名称
+    * @param provider 提供者
+    * @param model 模型
+    * @param startTime 启动时间
+    * @param endTime 结束时间
+    * @param provider 提供者
+    * @param model 模型
+    * @param startTime 启动时间
+    * @param endTime 结束时间
      */
     public ReturnResult<Map<String, Object>> statistics(
             @RequestParam(required = false) String groupName,
@@ -166,8 +166,8 @@ public class UsageController {
     @Operation(summary = "用量数据源列表", description = "返回已注册的 UsageParser SPI 实现列表")
     @GetMapping("/parsers")
     /**
-     * parsers。
-     * @return parsers的结果
+    * parsers。
+    * @return parsers的结果
      */
     public ReturnResult<List<Map<String, Object>>> parsers() {
         Map<String, UsageParser> allParsers = new LinkedHashMap<>();
@@ -214,8 +214,8 @@ public class UsageController {
     @Operation(summary = "手动触发同步聚合", description = "立即执行外部数据同步与当天日汇总表聚合（异步执行）")
     @PostMapping("/trigger")
     /**
-     * trigger。
-     * @return trigger的结果
+    * trigger。
+    * @return trigger的结果
      */
     public ReturnResult<String> trigger() {
         UsageAggregationTask task = applicationContext.getBean(UsageAggregationTask.class);
@@ -233,8 +233,8 @@ public class UsageController {
     @Operation(summary = "仅执行当天聚合", description = "跳过外部同步，仅对当天已有明细数据执行日汇总（异步执行）")
     @PostMapping("/aggregate")
     /**
-     * aggregate。
-     * @return aggregate的结果
+    * aggregate。
+    * @return aggregate的结果
      */
     public ReturnResult<String> aggregate() {
         UsageAggregationTask task = applicationContext.getBean(UsageAggregationTask.class);
@@ -252,8 +252,8 @@ public class UsageController {
     @Operation(summary = "手动全量同步", description = "对全部历史用量明细执行全量聚合回填日汇总表（异步执行）")
     @PostMapping("/aggregate-all")
     /**
-     * aggregate全部。
-     * @return aggregate全部的结果
+    * aggregate全部。
+    * @return aggregate全部的结果
      */
     public ReturnResult<String> aggregateAll() {
         UsageAggregationTask task = applicationContext.getBean(UsageAggregationTask.class);
@@ -271,8 +271,8 @@ public class UsageController {
     @Operation(summary = "获取同步日志", description = "查看最近一次定时同步聚合的日志")
     @GetMapping("/logs")
     /**
-     * 日志。
-     * @return 日志的结果
+    * 日志。
+    * @return 日志的结果
      */
     public ReturnResult<List<UsageAggregationTask.SyncLogEntry>> logs() {
         return ReturnResult.ok(UsageAggregationTask.getSyncLogs());

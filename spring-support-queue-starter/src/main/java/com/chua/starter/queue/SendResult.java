@@ -6,10 +6,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 消息发送结果
- *
- * @since 2025-12-25
- * @author CH
+* 消息发送结果
+*
+* @since 2025-12-25
+* @author CH
  */
 @Data
 @Builder
@@ -18,41 +18,41 @@ import lombok.NoArgsConstructor;
 public class SendResult {
 
     /**
-     * 是否发送成功
+    * 是否发送成功
      */
     private boolean success;
 
     /**
-      * 消息标识
+    * 消息标识
      */
     private String messageId;
 
     /**
-     * 目标地址
+    * 目标地址
      */
     private String destination;
 
     /**
-     * 发送时间戳
+    * 发送时间戳
      */
     private long timestamp;
 
     /**
-     * 错误信息（如果失败）
+    * 错误信息（如果失败）
      */
     private Throwable error;
 
     /**
-     * 额外信息
+    * 额外信息
      */
     private Object extra;
 
     /**
-     * 创建成功结果
-     *
-     * @param messageId   消息标识
-     * @param destination 目标地址
-     * @return 发送结果
+    * 创建成功结果
+    *
+    * @param messageId   消息标识
+    * @param destination 目标地址
+    * @return 发送结果
      */
     public static SendResult success(String messageId, String destination) {
         var result = new SendResult();
@@ -64,11 +64,11 @@ public class SendResult {
     }
 
     /**
-     * 创建失败结果
-     *
-     * @param destination 目标地址
-     * @param error       错误信息
-     * @return 发送结果
+    * 创建失败结果
+    *
+    * @param destination 目标地址
+    * @param error       错误信息
+    * @return 发送结果
      */
     public static SendResult failure(String destination, Throwable error) {
         var result = new SendResult();
@@ -81,18 +81,18 @@ public class SendResult {
 
     // Lombok 注解处理器未运行时的手动 getter 方法
     /**
-     * 是否成功
-     *
-     * @return 是否成功的结果
+    * 是否成功
+    *
+    * @return 是否成功的结果
      */
     public boolean isSuccess() {
         return success;
     }
 
     /**
-     * 获取记录错误
-     *
-     * @return 获取错误的结果
+    * 获取记录错误
+    *
+    * @return 获取错误的结果
      */
     public Throwable getError() {
         return error;

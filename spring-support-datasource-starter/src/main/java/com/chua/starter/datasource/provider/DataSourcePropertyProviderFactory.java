@@ -9,11 +9,11 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 数据源属性提供者工厂
- * 使用Java SPI机制加载和管理数据源属性提供者
- *
- * @since 2024/12/21
- * @author CH
+* 数据源属性提供者工厂
+* 使用Java SPI机制加载和管理数据源属性提供者
+*
+* @since 2024/12/21
+* @author CH
  */
 @Slf4j
 public class DataSourcePropertyProviderFactory {
@@ -24,13 +24,13 @@ public class DataSourcePropertyProviderFactory {
     static {
  // 使用SPI机制加载提供者
         /**
-         * 加载提供者byspi。
+        * 加载提供者byspi。
          */
         loadProvidersBySpi();
     }
 
     /**
-      * 使用Java SPI机制加载提供者
+    * 使用Java SPI机制加载提供者
      */
     private static void loadProvidersBySpi() {
         var serviceProvider = ServiceProvider.of(DataSourcePropertyProvider.class);
@@ -53,9 +53,9 @@ public class DataSourcePropertyProviderFactory {
     }
     
     /**
-      * 检查提供者对应的数据源类是否可用
-     * @param provider 提供者
-     * @return 是否数据源类可用的结果
+    * 检查提供者对应的数据源类是否可用
+    * @param provider 提供者
+    * @return 是否数据源类可用的结果
      */
     private static boolean isDataSourceClassAvailable(DataSourcePropertyProvider<?> provider) {
         try {
@@ -67,9 +67,9 @@ public class DataSourcePropertyProviderFactory {
     }
 
     /**
-      * 注册自定义提供者
-     *
-     * @param provider 提供者实例
+    * 注册自定义提供者
+    *
+    * @param provider 提供者实例
      */
     public static void register(DataSourcePropertyProvider<?> provider) {
         PROVIDERS.add(provider);
@@ -79,10 +79,10 @@ public class DataSourcePropertyProviderFactory {
     }
 
     /**
-      * 获取数据源对应的提供者
-     *
-     * @param dataSource 数据源
-     * @return Provider，如果没有找到返回null
+    * 获取数据源对应的提供者
+    *
+    * @param dataSource 数据源
+    * @return Provider，如果没有找到返回null
      */
     @SuppressWarnings("unchecked")
     public static <T extends DataSource> DataSourcePropertyProvider<T> getProvider(T dataSource) {
@@ -93,10 +93,10 @@ public class DataSourcePropertyProviderFactory {
     }
 
     /**
-      * 获取数据源类型对应的提供者
-     *
-     * @param dataSourceClass 数据源类型
-     * @return Provider，如果没有找到返回null
+    * 获取数据源类型对应的提供者
+    *
+    * @param dataSourceClass 数据源类型
+    * @return Provider，如果没有找到返回null
      */
     @SuppressWarnings("unchecked")
     public static <T extends DataSource> DataSourcePropertyProvider<T> getProvider(Class<T> dataSourceClass) {
@@ -115,19 +115,19 @@ public class DataSourcePropertyProviderFactory {
     }
 
     /**
-      * 获取所有已注册的提供者
-     *
-     * @return Provider列表
+    * 获取所有已注册的提供者
+    *
+    * @return Provider列表
      */
     public static List<DataSourcePropertyProvider<?>> getAllProviders() {
         return Collections.unmodifiableList(PROVIDERS);
     }
 
     /**
-     * 获取数据源的所有属性
-     *
-     * @param dataSource 数据源
-     * @return 属性Map，如果没有对应的Provider返回空Map
+    * 获取数据源的所有属性
+    *
+    * @param dataSource 数据源
+    * @return 属性Map，如果没有对应的Provider返回空Map
      */
     @SuppressWarnings("unchecked")
     public static Map<String, Object> getProperties(DataSource dataSource) {
@@ -139,10 +139,10 @@ public class DataSourcePropertyProviderFactory {
     }
 
     /**
-     * 设置数据源属性
-     *
-     * @param dataSource 数据源
-     * @param properties 属性映射
+    * 设置数据源属性
+    *
+    * @param dataSource 数据源
+    * @param properties 属性映射
      */
     @SuppressWarnings("unchecked")
     public static void setProperties(DataSource dataSource, Map<String, Object> properties) {
@@ -153,10 +153,10 @@ public class DataSourcePropertyProviderFactory {
     }
 
     /**
-     * 设置数据源过滤器
-     *
-     * @param dataSource 数据源
-     * @param filters    过滤器配置
+    * 设置数据源过滤器
+    *
+    * @param dataSource 数据源
+    * @param filters    过滤器配置
      */
     @SuppressWarnings("unchecked")
     public static void setFilters(DataSource dataSource, String filters) {
@@ -167,20 +167,20 @@ public class DataSourcePropertyProviderFactory {
     }
 
     /**
-     * 判断是否支持该数据源类型
-     *
-     * @param dataSourceClass 数据源类型
-     * @return 是否支持
+    * 判断是否支持该数据源类型
+    *
+    * @param dataSourceClass 数据源类型
+    * @return 是否支持
      */
     public static boolean isSupported(Class<?> dataSourceClass) {
         return getProvider((Class<? extends DataSource>) dataSourceClass) != null;
     }
 
     /**
-     * 获取首选的数据源类型
-     * 按优先级返回第一个可用的数据源类型
-     *
-     * @return 数据源类型，如果没有可用的返回null
+    * 获取首选的数据源类型
+    * 按优先级返回第一个可用的数据源类型
+    *
+    * @return 数据源类型，如果没有可用的返回null
      */
     public static Class<? extends DataSource> getPreferredDataSourceType() {
         if (!PROVIDERS.isEmpty()) {

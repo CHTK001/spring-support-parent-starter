@@ -8,10 +8,10 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 
 /**
- * 切入点
- *
- * @author CH
- * @since 4.0.0
+* 切入点
+*
+* @author CH
+* @since 4.0.0
  */
 public class MethodPointcut implements ApplicationContextAware {
 
@@ -20,9 +20,9 @@ public class MethodPointcut implements ApplicationContextAware {
     private ApplicationContext applicationContext;
 
     /**
-     * 注册拦截器
-     *
-     * @return 注册拦截器
+    * 注册拦截器
+    *
+    * @return 注册拦截器
      */
     @Bean
     @ConditionalOnMissingBean

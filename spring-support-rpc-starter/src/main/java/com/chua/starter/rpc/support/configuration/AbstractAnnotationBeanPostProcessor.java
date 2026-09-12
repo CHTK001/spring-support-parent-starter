@@ -46,8 +46,8 @@ import static org.springframework.core.BridgeMethodResolver.findBridgedMethod;
 import static org.springframework.core.BridgeMethodResolver.isVisibilityBridgeMethodPair;
 
 /**
- * @author CH
- * @since 4.0.0
+* @author CH
+* @since 4.0.0
  */
 public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanDefinitionPostProcessor,
         ApplicationContextAware,
@@ -79,7 +79,7 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     /** Beandefinition注册表 */
     protected BeanDefinitionRegistry beanDefinitionRegistry;
     /**
-     * @param annotationTypes the 多个 类型 的 {@link Annotation annotations}
+    * @param annotationTypes the 多个 类型 的 {@link Annotation annotations}
      */
     public AbstractAnnotationBeanPostProcessor(Class<? extends Annotation>... annotationTypes) {
         Assert.notEmpty(annotationTypes, "The argument of annotations' types must not empty");
@@ -87,9 +87,9 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     }
 
     /**
-     * 组合。
-     * @param elements elements
-     * @return 组合的结果
+    * 组合。
+    * @param elements elements
+    * @return 组合的结果
      */
     private static <T> Collection<T> combine(Collection<? extends T>... elements) {
         List<T> allElements = new ArrayList<T>();
@@ -104,10 +104,10 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
         this.beanDefinitionRegistry = (BeanDefinitionRegistry) applicationContext.getAutowireCapableBeanFactory();
     }
     /**
-      * 注解 类型
-     *
-     * @return non-null
-     * @deprecated 2.7.3, uses {@link #getAnnotationTypes()}
+    * 注解 类型
+    *
+    * @return non-null
+    * @deprecated 2.7.3, uses {@link #getAnnotationTypes()}
      */
     @Deprecated
     public final Class<? extends Annotation> getAnnotationType() {
@@ -115,8 +115,8 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     }
 
     /**
-     * 获取注解类型。
-     * @return 获取注解类型的结果
+    * 获取注解类型。
+    * @return 获取注解类型的结果
      */
     protected final Class<? extends Annotation>[] getAnnotationTypes() {
         return annotationTypes;
@@ -130,10 +130,10 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     }
 
     /**
-      * 查找 {@link InjectionMetadata.InjectedElement} Metadata 从 annotated 字段
-     *
-     * @param beanClass The {@link Class} 的 Bean
-     * @return non-null {@link List}
+    * 查找 {@link InjectionMetadata.InjectedElement} Metadata 从 annotated 字段
+    *
+    * @param beanClass The {@link Class} 的 Bean
+    * @return non-null {@link List}
      */
     private List<AnnotatedFieldElement> findFieldAnnotationMetadata(final Class<?> beanClass) {
 
@@ -175,10 +175,10 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     }
 
     /**
-      * 查找 {@link InjectionMetadata.InjectedElement} Metadata 从 annotated 方法
-     *
-     * @param beanClass The {@link Class} 的 Bean
-     * @return non-null {@link List}
+    * 查找 {@link InjectionMetadata.InjectedElement} Metadata 从 annotated 方法
+    *
+    * @param beanClass The {@link Class} 的 Bean
+    * @return non-null {@link List}
      */
     private List<AnnotatedMethodElement> findAnnotatedMethodMetadata(final Class<?> beanClass) {
 
@@ -207,17 +207,17 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
                 if (method.equals(ClassUtils.getMostSpecificMethod(method, beanClass))) {
                     if (Modifier.isStatic(method.getModifiers())) {
                         /**
-                         * illegal状态异常。
-                         * @param annotationType.getName( 注解类型.getname(
-                         * @return illegal状态异常的结果
+                        * illegal状态异常。
+                        * @param annotationType.getName( 注解类型.getname(
+                        * @return illegal状态异常的结果
                          */
                         throw new IllegalStateException("When using @" + annotationType.getName() + " to inject interface proxy, it is not supported on static methods: " + method);
                     }
                     if (method.getParameterTypes().length != 1) {
                         /**
-                         * illegal状态异常。
-                         * @param annotationType.getName( 注解类型.getname(
-                         * @return illegal状态异常的结果
+                        * illegal状态异常。
+                        * @param annotationType.getName( 注解类型.getname(
+                        * @return illegal状态异常的结果
                          */
                         throw new IllegalStateException("When using @" + annotationType.getName() + " to inject interface proxy, the method must have only one parameter: " + method);
                     }
@@ -231,29 +231,29 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     }
 
     /**
-     * 构建annotatedmetadata。
-     * @param beanClass Bean类
-     * @return 构建annotatedmetadata的结果
+    * 构建annotatedmetadata。
+    * @param beanClass Bean类
+    * @return 构建annotatedmetadata的结果
      */
     private AnnotatedInjectionMetadata buildAnnotatedMetadata(final Class<?> beanClass) {
         Collection<AnnotatedFieldElement> fieldElements = findFieldAnnotationMetadata(beanClass);
         Collection<AnnotatedMethodElement> methodElements = findAnnotatedMethodMetadata(beanClass);
         /**
-          * annotatedinjectionmetadata。
-         * @param beanClass Bean类
-         * @param fieldElements 字段elements
-         * @param methodElements 方法elements
-         * @return AnnotatedInjectionMetadata的结果
+        * annotatedinjectionmetadata。
+        * @param beanClass Bean类
+        * @param fieldElements 字段elements
+        * @param methodElements 方法elements
+        * @return AnnotatedInjectionMetadata的结果
          */
         return new AnnotatedInjectionMetadata(beanClass, fieldElements, methodElements);
     }
 
     /**
-      * findinjectionmetadata。
-     * @param beanName Bean名称
-     * @param clazz clazz
-     * @param pvs pvs
-     * @return findInjectionMetadata的结果
+    * findinjectionmetadata。
+    * @param beanName Bean名称
+    * @param clazz clazz
+    * @param pvs pvs
+    * @return findInjectionMetadata的结果
      */
     protected AnnotatedInjectionMetadata findInjectionMetadata(String beanName, Class<?> clazz, PropertyValues pvs) {
  // 下降 back 转为 类 名称 as 缓存 钥匙, for backwards compatibility with 习俗 callers.
@@ -273,9 +273,9 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
                         this.injectionMetadataCache.put(cacheKey, metadata);
                     } catch (NoClassDefFoundError err) {
                         /**
-                         * illegal状态异常。
-                         * @param clazz.getName( clazz.获取名称(
-                         * @return illegal状态异常的结果
+                        * illegal状态异常。
+                        * @param clazz.getName( clazz.获取名称(
+                        * @return illegal状态异常的结果
                          */
                         throw new IllegalStateException("Failed to introspect object class [" + clazz.getName() +
                                 "] for annotation metadata: could not find class that it depends on", err);
@@ -288,10 +288,10 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
 
  // Use 习俗 检查 方法 转为 compatible with Spring 4.x
     /**
-      * needsrefreshinjectionmetadata。
-     * @param metadata metadata
-     * @param clazz clazz
-     * @return needsRefreshInjectionMetadata的结果
+    * needsrefreshinjectionmetadata。
+    * @param metadata metadata
+    * @param clazz clazz
+    * @return needsRefreshInjectionMetadata的结果
      */
     private boolean needsRefreshInjectionMetadata(AnnotatedInjectionMetadata metadata, Class<?> clazz) {
         return (metadata == null || metadata.needsRefresh(clazz));
@@ -319,39 +319,39 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     }
 
     /**
-     * 获取环境。
-     * @return 获取环境的结果
+    * 获取环境。
+    * @return 获取环境的结果
      */
     protected Environment getEnvironment() {
         return environment;
     }
 
     /**
-     * 获取类加载。
-     * @return 获取类加载的结果
+    * 获取类加载。
+    * @return 获取类加载的结果
      */
     protected ClassLoader getClassLoader() {
         return classLoader;
     }
 
     /**
-     * 获取Bean工厂。
-     * @return 获取Bean工厂的结果
+    * 获取Bean工厂。
+    * @return 获取Bean工厂的结果
      */
     protected ConfigurableListableBeanFactory getBeanFactory() {
         return beanFactory;
     }
 
     /**
-       * 获取 injected-对象 从 specified {@link AnnotationAttributes annotation attributes} 和 Bean 类
-     *
-     * @param attributes      {@link AnnotationAttributes the annotation attributes}
-     * @param bean            当前 Bean that will be injected
-     * @param beanName        当前 Bean 名称 that will be injected
-     * @param injectedType    the 类型 的 injected-对象
-     * @param injectedElement {@link AnnotatedInjectElement}
-     * @return An injected 对象
-     * @throws Exception If getting 是否 失败
+    * 获取 injected-对象 从 specified {@link AnnotationAttributes annotation attributes} 和 Bean 类
+    *
+    * @param attributes      {@link AnnotationAttributes the annotation attributes}
+    * @param bean            当前 Bean that will be injected
+    * @param beanName        当前 Bean 名称 that will be injected
+    * @param injectedType    the 类型 的 injected-对象
+    * @param injectedElement {@link AnnotatedInjectElement}
+    * @return An injected 对象
+    * @throws Exception If getting 是否 失败
      */
     protected Object getInjectedObject(AnnotationAttributes attributes, Object bean, String beanName, Class<?> injectedType,
                                        AnnotatedInjectElement injectedElement) throws Exception {
@@ -359,38 +359,38 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     }
 
     /**
-      * Prepare injection 数据 之后 found injection elements
-     *
-     * @param metadata
-     * @throws Exception
+    * Prepare injection 数据 之后 found injection elements
+    *
+    * @param metadata
+    * @throws Exception
      */
     protected void prepareInjection(AnnotatedInjectionMetadata metadata) throws Exception {
     }
 
     /**
-      * Subclass must implement this 方法 转为 获取 injected-对象. The 上下文 对象 could help this 方法 if
-     * necessary :
-     * <ul>
-     * <li>{@link #getBeanFactory() BeanFactory}</li>
-     * <li>{@link #getClassLoader() ClassLoader}</li>
-     * <li>{@link #getEnvironment() Environment}</li>
-     * </ul>
-     *
-     * @param attributes      {@link AnnotationAttributes the annotation attributes}
-     * @param bean            当前 Bean that will be injected
-     * @param beanName        当前 Bean 名称 that will be injected
-     * @param injectedType    the 类型 的 injected-对象
-     * @param injectedElement {@link AnnotatedInjectElement}
-     * @return The injected 对象
-     * @throws Exception If resolving an injected 对象 是否 失败.
+    * Subclass must implement this 方法 转为 获取 injected-对象. The 上下文 对象 could help this 方法 if
+    * necessary :
+    * <ul>
+    * <li>{@link #getBeanFactory() BeanFactory}</li>
+    * <li>{@link #getClassLoader() ClassLoader}</li>
+    * <li>{@link #getEnvironment() Environment}</li>
+    * </ul>
+    *
+    * @param attributes      {@link AnnotationAttributes the annotation attributes}
+    * @param bean            当前 Bean that will be injected
+    * @param beanName        当前 Bean 名称 that will be injected
+    * @param injectedType    the 类型 的 injected-对象
+    * @param injectedElement {@link AnnotatedInjectElement}
+    * @return The injected 对象
+    * @throws Exception If resolving an injected 对象 是否 失败.
      */
     protected abstract Object doGetInjectedBean(AnnotationAttributes attributes, Object bean, String beanName, Class<?> injectedType,
                                                 AnnotatedInjectElement injectedElement) throws Exception;
 
     /**
-     * {@link Annotation Annotated} {@link InjectionMetadata} implementation
-     * @author CH
-     * @since 4.0.0
+    * {@link Annotation Annotated} {@link InjectionMetadata} implementation
+    * @author CH
+    * @since 4.0.0
      */
     protected static class AnnotatedInjectionMetadata extends InjectionMetadata {
 
@@ -404,9 +404,9 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
         public AnnotatedInjectionMetadata(Class<?> targetClass, Collection<AnnotatedFieldElement> fieldElements,
                                           Collection<AnnotatedMethodElement> methodElements) {
             /**
-             * 父。
-             * @param targetClass Target类
-             * @param methodElements 方法elements
+            * 父。
+            * @param targetClass Target类
+            * @param methodElements 方法elements
              */
             super(targetClass, combine(fieldElements, methodElements));
             this.targetClass = targetClass;
@@ -415,16 +415,16 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
         }
 
         /**
-         * 获取字段elements。
-         * @return 获取字段elements的结果
+        * 获取字段elements。
+        * @return 获取字段elements的结果
          */
         public Collection<AnnotatedFieldElement> getFieldElements() {
             return fieldElements;
         }
 
         /**
-         * 获取方法elements。
-         * @return 获取方法elements的结果
+        * 获取方法elements。
+        * @return 获取方法elements的结果
          */
         public Collection<AnnotatedMethodElement> getMethodElements() {
             return methodElements;
@@ -441,9 +441,9 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     }
 
     /**
-     * {@link Annotation Annotated} {@link Method} {@link InjectionMetadata.InjectedElement}
-     * @author CH
-     * @since 4.0.0
+    * {@link Annotation Annotated} {@link Method} {@link InjectionMetadata.InjectedElement}
+    * @author CH
+    * @since 4.0.0
      */
     protected class AnnotatedInjectElement extends InjectionMetadata.InjectedElement {
 
@@ -455,16 +455,16 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
         private Class<?> injectedType; // injected类型
 
         /**
-          * annotatedinjectelement。
-         * @param member member
-         * @param pd pd
-         * @param attributes attributes
+        * annotatedinjectelement。
+        * @param member member
+        * @param pd pd
+        * @param attributes attributes
          */
         protected AnnotatedInjectElement(Member member, PropertyDescriptor pd, AnnotationAttributes attributes) {
             /**
-             * 父。
-             * @param member member
-             * @param pd pd
+            * 父。
+            * @param member member
+            * @param pd pd
              */
             super(member, pd);
             this.attributes = attributes;
@@ -485,8 +485,8 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
         }
 
         /**
-         * 获取injected类型。
-         * @return 获取injected类型的结果
+        * 获取injected类型。
+        * @return 获取injected类型的结果
          */
         public Class<?> getInjectedType() throws ClassNotFoundException {
             if (injectedType == null) {
@@ -500,9 +500,9 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
                         injectedType = method.getParameterTypes()[0];
                     } else {
                         /**
-                         * illegal状态异常。
-                         * @param failed" 失败"
-                         * @return illegal状态异常的结果
+                        * illegal状态异常。
+                        * @param failed" 失败"
+                        * @return illegal状态异常的结果
                          */
                         throw new IllegalStateException("get injected type failed");
                     }
@@ -512,8 +512,8 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
         }
 
         /**
-         * 获取财产名称。
-         * @return 获取财产名称的结果
+        * 获取财产名称。
+        * @return 获取财产名称的结果
          */
         public String getPropertyName() {
             if (member instanceof Field field) {
@@ -529,10 +529,10 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     }
 
     /**
-     * annotated方法element类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * annotated方法element类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
     protected class AnnotatedMethodElement extends AnnotatedInjectElement {
 
@@ -540,17 +540,17 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
         public final Method method;
 
         /**
-         * annotated方法element。
-         * @param method 方法
-         * @param pd pd
-         * @param attributes attributes
+        * annotated方法element。
+        * @param method 方法
+        * @param pd pd
+        * @param attributes attributes
          */
         protected AnnotatedMethodElement(Method method, PropertyDescriptor pd, AnnotationAttributes attributes) {
             /**
-             * 父。
-             * @param method 方法
-             * @param pd pd
-             * @param attributes attributes
+            * 父。
+            * @param method 方法
+            * @param pd pd
+            * @param attributes attributes
              */
             super(method, pd, attributes);
             this.method = method;
@@ -558,10 +558,10 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
     }
 
     /**
-     * annotated字段element类。
-     *
-     * @author CH
-     * @since 4.0.0
+    * annotated字段element类。
+    *
+    * @author CH
+    * @since 4.0.0
      */
     public class AnnotatedFieldElement extends AnnotatedInjectElement {
 
@@ -569,16 +569,16 @@ public abstract class AbstractAnnotationBeanPostProcessor implements MergedBeanD
         public final Field field;
 
         /**
-         * annotated字段element。
-         * @param field 字段
-         * @param attributes attributes
+        * annotated字段element。
+        * @param field 字段
+        * @param attributes attributes
          */
         protected AnnotatedFieldElement(Field field, AnnotationAttributes attributes) {
             /**
-             * 父。
-             * @param field 字段
-             * @param null 空
-             * @param attributes attributes
+            * 父。
+            * @param field 字段
+            * @param null 空
+            * @param attributes attributes
              */
             super(field, null, attributes);
             this.field = field;

@@ -26,13 +26,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 系统管理 —— 进程/服务/网络/磁盘/防火墙/驱动 管理端点。
- *
- * <p>通过执行系统命令获取主机运行时信息，支持 Windows（PowerShell）与 Linux（bash）。
- * 所有命令在 boundedElastic 调度器上执行，避免阻塞事件循环。</p>
- *
- * @author CH
- * @since 4.0.0.42
+* 系统管理 —— 进程/服务/网络/磁盘/防火墙/驱动 管理端点。
+*
+* <p>通过执行系统命令获取主机运行时信息，支持 Windows（PowerShell）与 Linux（bash）。
+* 所有命令在 boundedElastic 调度器上执行，避免阻塞事件循环。</p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @Tag(name = "监控-系统管理", description = "进程/服务/网络/磁盘/防火墙/驱动 管理")
@@ -46,13 +46,13 @@ public class SystemManageController {
     // ==================== 进程管理 ====================
 
     /**
-     * 获取进程列表。
-     *
-     * @param keyword   搜索关键词（进程名/命令行），空表示不过滤
-     * @param sortBy    排序字段：cpu/memory/pid/name，默认 cpu
-     * @param sortOrder 排序方向：asc/desc，默认 desc
-     * @param limit     返回条数，默认 50
-     * @return 进程列表
+    * 获取进程列表。
+    *
+    * @param keyword   搜索关键词（进程名/命令行），空表示不过滤
+    * @param sortBy    排序字段：cpu/memory/pid/name，默认 cpu
+    * @param sortOrder 排序方向：asc/desc，默认 desc
+    * @param limit     返回条数，默认 50
+    * @return 进程列表
      */
     @Operation(summary = "获取进程列表", description = "支持搜索、排序、限制条数；默认按 CPU 降序返回前 50 条")
     @GetMapping("/processes")
@@ -95,10 +95,10 @@ public class SystemManageController {
     }
 
     /**
-     * 关闭进程。
-     *
-     * @param pid 进程 ID
-     * @return 操作结果
+    * 关闭进程。
+    *
+    * @param pid 进程 ID
+    * @return 操作结果
      */
     @Operation(summary = "关闭进程")
     @PostMapping("/process/{pid}/kill")
@@ -114,10 +114,10 @@ public class SystemManageController {
     }
 
     /**
-     * 获取进程的子进程。
-     *
-     * @param pid 进程 ID
-     * @return 子进程列表
+    * 获取进程的子进程。
+    *
+    * @param pid 进程 ID
+    * @return 子进程列表
      */
     @Operation(summary = "获取进程的子进程")
     @GetMapping("/process/{pid}/children")
@@ -133,10 +133,10 @@ public class SystemManageController {
     }
 
     /**
-     * 获取进程的线程列表。
-     *
-     * @param pid 进程 ID
-     * @return 线程列表
+    * 获取进程的线程列表。
+    *
+    * @param pid 进程 ID
+    * @return 线程列表
      */
     @Operation(summary = "获取进程的线程列表")
     @GetMapping("/process/{pid}/threads")
@@ -176,10 +176,10 @@ public class SystemManageController {
     // ==================== 服务管理 ====================
 
     /**
-     * 获取系统服务列表。
-     *
-     * @param keyword 搜索关键词，空表示不过滤
-     * @return 服务列表
+    * 获取系统服务列表。
+    *
+    * @param keyword 搜索关键词，空表示不过滤
+    * @return 服务列表
      */
     @Operation(summary = "获取系统服务列表")
     @GetMapping("/services")
@@ -203,10 +203,10 @@ public class SystemManageController {
     }
 
     /**
-     * 启动服务。
-     *
-     * @param name 服务名称
-     * @return 操作结果
+    * 启动服务。
+    *
+    * @param name 服务名称
+    * @return 操作结果
      */
     @Operation(summary = "启动服务")
     @PostMapping("/service/{name}/start")
@@ -222,10 +222,10 @@ public class SystemManageController {
     }
 
     /**
-     * 停止服务。
-     *
-     * @param name 服务名称
-     * @return 操作结果
+    * 停止服务。
+    *
+    * @param name 服务名称
+    * @return 操作结果
      */
     @Operation(summary = "停止服务")
     @PostMapping("/service/{name}/stop")
@@ -241,10 +241,10 @@ public class SystemManageController {
     }
 
     /**
-     * 重启服务。
-     *
-     * @param name 服务名称
-     * @return 操作结果
+    * 重启服务。
+    *
+    * @param name 服务名称
+    * @return 操作结果
      */
     @Operation(summary = "重启服务")
     @PostMapping("/service/{name}/restart")
@@ -262,9 +262,9 @@ public class SystemManageController {
     // ==================== 网络管理 ====================
 
     /**
-     * 获取网络接口列表。
-     *
-     * @return 网络接口列表
+    * 获取网络接口列表。
+    *
+    * @return 网络接口列表
      */
     @Operation(summary = "获取网络接口列表")
     @GetMapping("/network/interfaces")
@@ -286,10 +286,10 @@ public class SystemManageController {
     }
 
     /**
-     * 获取网络连接列表。
-     *
-     * @param state 连接状态过滤（LISTEN/ESTABLISHED 等），空表示不过滤
-     * @return 网络连接列表
+    * 获取网络连接列表。
+    *
+    * @param state 连接状态过滤（LISTEN/ESTABLISHED 等），空表示不过滤
+    * @return 网络连接列表
      */
     @Operation(summary = "获取网络连接列表")
     @GetMapping("/network/connections")
@@ -332,9 +332,9 @@ public class SystemManageController {
     // ==================== 磁盘管理 ====================
 
     /**
-     * 获取磁盘列表。
-     *
-     * @return 磁盘列表
+    * 获取磁盘列表。
+    *
+    * @return 磁盘列表
      */
     @Operation(summary = "获取磁盘列表")
     @GetMapping("/disks")
@@ -356,9 +356,9 @@ public class SystemManageController {
     }
 
     /**
-     * 获取磁盘分区列表。
-     *
-     * @return 磁盘分区列表
+    * 获取磁盘分区列表。
+    *
+    * @return 磁盘分区列表
      */
     @Operation(summary = "获取磁盘分区列表")
     @GetMapping("/partitions")
@@ -396,9 +396,9 @@ public class SystemManageController {
     // ==================== 防火墙管理 ====================
 
     /**
-     * 获取防火墙规则列表。
-     *
-     * @return 防火墙规则列表
+    * 获取防火墙规则列表。
+    *
+    * @return 防火墙规则列表
      */
     @Operation(summary = "获取防火墙规则列表")
     @GetMapping("/firewall/rules")
@@ -439,9 +439,9 @@ public class SystemManageController {
     // ==================== 驱动管理 ====================
 
     /**
-     * 获取驱动列表。
-     *
-     * @return 驱动列表
+    * 获取驱动列表。
+    *
+    * @return 驱动列表
      */
     @Operation(summary = "获取驱动列表")
     @GetMapping("/drivers")
@@ -476,10 +476,10 @@ public class SystemManageController {
     // ==================== 工具方法 ====================
 
     /**
-     * 执行系统命令并返回输出。
-     *
-     * @param cmd 命令及参数
-     * @return 命令输出
+    * 执行系统命令并返回输出。
+    *
+    * @param cmd 命令及参数
+    * @return 命令输出
      */
     private String execCommand(String... cmd) {
         try {
@@ -503,9 +503,9 @@ public class SystemManageController {
     }
 
     /**
-     * Windows 进程列表。
-     *
-     * @return 进程列表
+    * Windows 进程列表。
+    *
+    * @return 进程列表
      */
     private List<Map<String, Object>> listProcessesWindows() {
         String output = execCommand("powershell", "-Command",
@@ -526,9 +526,9 @@ public class SystemManageController {
     }
 
     /**
-     * Linux 进程列表。
-     *
-     * @return 进程列表
+    * Linux 进程列表。
+    *
+    * @return 进程列表
      */
     private List<Map<String, Object>> listProcessesLinux() {
         String output = execCommand("ps", "-eo", "pid,ppid,pcpu,pmem,rss,comm,args,etime,lwp", "--no-headers");
@@ -555,9 +555,9 @@ public class SystemManageController {
     }
 
     /**
-     * Windows 服务列表。
-     *
-     * @return 服务列表
+    * Windows 服务列表。
+    *
+    * @return 服务列表
      */
     private List<Map<String, Object>> listServicesWindows() {
         String output = execCommand("powershell", "-Command",
@@ -566,9 +566,9 @@ public class SystemManageController {
     }
 
     /**
-     * Linux 服务列表。
-     *
-     * @return 服务列表
+    * Linux 服务列表。
+    *
+    * @return 服务列表
      */
     private List<Map<String, Object>> listServicesLinux() {
         String output = execCommand("systemctl", "list-units", "--type=service", "--all", "--no-pager", "--no-legend");
@@ -592,10 +592,10 @@ public class SystemManageController {
     }
 
     /**
-     * 解析 JSON 数组字符串为 List。
-     *
-     * @param json JSON 字符串
-     * @return Map 列表
+    * 解析 JSON 数组字符串为 List。
+    *
+    * @param json JSON 字符串
+    * @return Map 列表
      */
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> parseJsonList(String json) {

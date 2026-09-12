@@ -15,14 +15,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
-   * Prometheus 拉取采集 提供者（Prometheus）
- * <p>
-   * 从目标主机 {@code http://{address}:{端口}/指标} 抓取 Prometheus 文本格式指标，
-   * 解析 CPU / 内存 / 磁盘使用率并回写。适合部署了 节点_导出 等组件的主机。
- * </p>
- *
- * @author CH
- * @since 4.0.0.42
+* Prometheus 拉取采集 提供者（Prometheus）
+* <p>
+* 从目标主机 {@code http://{address}:{端口}/指标} 抓取 Prometheus 文本格式指标，
+* 解析 CPU / 内存 / 磁盘使用率并回写。适合部署了 节点_导出 等组件的主机。
+* </p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -75,10 +75,10 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
     }
 
     /**
-     * 同步执行 Prometheus 拉取
-     *
-     * @param context 上下文
-     * @return 结果
+    * 同步执行 Prometheus 拉取
+    *
+    * @param context 上下文
+    * @return 结果
      */
     private CollectOutcome doCollect(HostCollectContext context) {
         MsServerHost host = context == null ? null : context.getHost();
@@ -94,9 +94,9 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
         try {
             String body = fetchBody(url);
             /**
-             * apply指标。
-             * @param host 主机
-             * @param body 主体
+            * apply指标。
+            * @param host 主机
+            * @param body 主体
              */
             applyMetrics(host, body);
             hostMapper.updateById(host);
@@ -108,10 +108,10 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
     }
 
     /**
-     * 拉取指标文本
-     *
-     * @param url 端点
-     * @return 指标文本
+    * 拉取指标文本
+    *
+    * @param url 端点
+    * @return 指标文本
      */
     private String fetchBody(String url) throws Exception {
         java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
@@ -121,9 +121,9 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
         int code = conn.getResponseCode();
         if (code != 200) {
             /**
-             * illegal状态异常。
-             * @param code 编码
-             * @return illegal状态异常的结果
+            * illegal状态异常。
+            * @param code 编码
+            * @return illegal状态异常的结果
              */
             throw new IllegalStateException("metrics 端点返回 " + code);
         }
@@ -139,10 +139,10 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
     }
 
     /**
-     * 从 Prometheus 文本解析并回写主机
-     *
-     * @param host 主机
-     * @param body 指标文本
+    * 从 Prometheus 文本解析并回写主机
+    *
+    * @param host 主机
+    * @param body 指标文本
      */
     private void applyMetrics(MsServerHost host, String body) {
         double idleSum = sumGroup(CPU_IDLE, body);
@@ -172,11 +172,11 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
     }
 
     /**
-     * 求和所有匹配组
-     *
-     * @param pattern 正则
-     * @param body    文本
-     * @return 求和结果，无匹配返回 -1
+    * 求和所有匹配组
+    *
+    * @param pattern 正则
+    * @param body    文本
+    * @return 求和结果，无匹配返回 -1
      */
     private double sumGroup(Pattern pattern, String body) {
         Matcher m = pattern.matcher(body);
@@ -193,11 +193,11 @@ public class PrometheusHostCollectProvider implements HostCollectProvider {
     }
 
     /**
-     * 取首个匹配值
-     *
-     * @param pattern 正则
-     * @param body    文本
-     * @return 值，无匹配返回 -1
+    * 取首个匹配值
+    *
+    * @param pattern 正则
+    * @param body    文本
+    * @return 值，无匹配返回 -1
      */
     private double firstDouble(Pattern pattern, String body) {
         Matcher m = pattern.matcher(body);

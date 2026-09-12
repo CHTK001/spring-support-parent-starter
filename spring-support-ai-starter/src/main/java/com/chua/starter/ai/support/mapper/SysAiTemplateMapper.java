@@ -5,10 +5,10 @@ import com.chua.starter.ai.support.entity.SysAiTemplate;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
-   * AI 模板 映射器。
- *
- * @since 4.0.0.42
- * @author CH
+* AI 模板 映射器。
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Mapper
 public interface SysAiTemplateMapper extends BaseMapper<SysAiTemplate> {

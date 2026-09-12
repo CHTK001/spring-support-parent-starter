@@ -26,13 +26,13 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * APM 数据查询服务 — 统一门面，对 {@link StorageManager} 读操作做降级兜底。
- *
- * <p>设计原则：APM 数据"能 attach 就读实时，不能 attach 就返回空 + 明确标记"，
-   * 保证前端无论 智能体 是否成功注入，页面始终可演示、不报错。</p>
- *
- * @author CH
- * @since 4.0.0.42
+* APM 数据查询服务 — 统一门面，对 {@link StorageManager} 读操作做降级兜底。
+*
+* <p>设计原则：APM 数据"能 attach 就读实时，不能 attach 就返回空 + 明确标记"，
+* 保证前端无论 智能体 是否成功注入，页面始终可演示、不报错。</p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @Service
@@ -58,8 +58,8 @@ public class ApmQueryService {
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.systemDefault());
 
     /**
-      * 启动时尝试自注入 智能体。
-     * 失败仅告警，不阻断应用（前端走降级路径）。
+    * 启动时尝试自注入 智能体。
+    * 失败仅告警，不阻断应用（前端走降级路径）。
      */
     @PostConstruct
     public void attachAgent() {
@@ -91,13 +91,13 @@ public class ApmQueryService {
     }
 
     /**
-     * 从 Spring Boot fat jar 的 {@code BOOT-INF/lib/} 中定位 agent jar 并解压到临时目录。
-     *
-     * <p>{@code RuntimeBoot.resolveSelfAgentPath()} 依赖 System.getProperty("java.class.path")，
-     * 但 Spring Boot fat jar 的 LaunchedClassLoader 不会回填该属性，导致探测失败。
-     * 此方法直接解析外层 jar 文件作为兜底方案。</p>
-     *
-     * @return agent jar 物理路径；找不到返回 null
+    * 从 Spring Boot fat jar 的 {@code BOOT-INF/lib/} 中定位 agent jar 并解压到临时目录。
+    *
+    * <p>{@code RuntimeBoot.resolveSelfAgentPath()} 依赖 System.getProperty("java.class.path")，
+    * 但 Spring Boot fat jar 的 LaunchedClassLoader 不会回填该属性，导致探测失败。
+    * 此方法直接解析外层 jar 文件作为兜底方案。</p>
+    *
+    * @return agent jar 物理路径；找不到返回 null
      */
     private static Path resolveAgentJarFromBootInf() {
         String[] jars = System.getProperty("java.class.path").split(java.io.File.pathSeparator);
@@ -138,9 +138,9 @@ public class ApmQueryService {
     }
 
     /**
-     * 智能体 是否已激活。
-     *
-     * @return 是否智能体活跃的结果
+    * 智能体 是否已激活。
+    *
+    * @return 是否智能体活跃的结果
      */
     public boolean isAgentActive() {
         return agentActive;
@@ -151,9 +151,9 @@ public class ApmQueryService {
     // ------------------------------------------------------------------
 
     /**
-      * 概览统计（各类型总量 + 智能体 状态）。
-     *
-     * @return 统计 映射
+    * 概览统计（各类型总量 + 智能体 状态）。
+    *
+    * @return 统计 映射
      */
     public Map<String, Object> stats() {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -182,15 +182,15 @@ public class ApmQueryService {
     // ------------------------------------------------------------------
 
     /**
-     * 分页查询传输记录。
-     *
-     * @param page     页码（从 1 起）
-     * @param size     每页条数
-     * @param source   源端过滤（可空）
-     * @param target   目标端过滤（可空）
-     * @param protocol 协议过滤（可空）
-     * @param errorOnly 仅看错误（可空）
-     * @return 分页结果
+    * 分页查询传输记录。
+    *
+    * @param page     页码（从 1 起）
+    * @param size     每页条数
+    * @param source   源端过滤（可空）
+    * @param target   目标端过滤（可空）
+    * @param protocol 协议过滤（可空）
+    * @param errorOnly 仅看错误（可空）
+    * @return 分页结果
      */
     public Map<String, Object> transmissions(int page, int size, String source, String target,
                                               String protocol, Boolean errorOnly) {
@@ -225,9 +225,9 @@ public class ApmQueryService {
     }
 
     /**
-      * transmissiondto。
-     * @param e e
-     * @return transmissionDto的结果
+    * transmissiondto。
+    * @param e e
+    * @return transmissionDto的结果
      */
     private Map<String, Object> transmissionDto(TransmissionEvent e) {
         Map<String, Object> m = new LinkedHashMap<>();
@@ -259,10 +259,10 @@ public class ApmQueryService {
     // ------------------------------------------------------------------
 
     /**
-      * 查询依赖边（源 → Target 聚合）。
-     *
-     * @param size 上限
-     * @return 依赖边列表
+    * 查询依赖边（源 → Target 聚合）。
+    *
+    * @param size 上限
+    * @return 依赖边列表
      */
     public List<Map<String, Object>> dependencies(int size) {
         Query q = new Query().setLimit(size);
@@ -290,13 +290,13 @@ public class ApmQueryService {
     // ------------------------------------------------------------------
 
     /**
-     * 分页查询资源泄漏。
-     *
-     * @param page         页码
-     * @param size         每页条数
-     * @param resourceType 类型过滤（可空）
-     * @param minAgeMs     最小存活毫秒（可空）
-     * @return 分页结果
+    * 分页查询资源泄漏。
+    *
+    * @param page         页码
+    * @param size         每页条数
+    * @param resourceType 类型过滤（可空）
+    * @param minAgeMs     最小存活毫秒（可空）
+    * @return 分页结果
      */
     public Map<String, Object> leaks(int page, int size, String resourceType, Long minAgeMs) {
         Query q = new Query().setLimit(size).setOffset(Math.max(0, (page - 1) * size));
@@ -337,12 +337,12 @@ public class ApmQueryService {
     // ------------------------------------------------------------------
 
     /**
-     * 分页查询日志。
-     *
-     * @param page  页码
-     * @param size  每页条数
-     * @param level 级别过滤（可空）
-     * @return 分页结果
+    * 分页查询日志。
+    *
+    * @param page  页码
+    * @param size  每页条数
+    * @param level 级别过滤（可空）
+    * @return 分页结果
      */
     public Map<String, Object> logs(int page, int size, String level) {
         Query q = new Query().setLimit(size).setOffset(Math.max(0, (page - 1) * size));
@@ -377,20 +377,20 @@ public class ApmQueryService {
     // ------------------------------------------------------------------
 
     /**
-     * 当前 APM 存储（兜底 Noop，永不为 空）。
-     *
-     * @return 当前storage的结果
+    * 当前 APM 存储（兜底 Noop，永不为 空）。
+    *
+    * @return 当前storage的结果
      */
     private ApmStorage currentStorage() {
         return HotsportProperties.storage();
     }
 
     /**
-     * 取存储并执行查询；存储不可用返回空列表。
-     *
-     * @param q q
-     * @param fn fn
-     * @return 查询全部的结果
+    * 取存储并执行查询；存储不可用返回空列表。
+    *
+    * @param q q
+    * @param fn fn
+    * @return 查询全部的结果
      */
     private <T> List<T> queryAll(Query q, java.util.function.Function<ApmStorage, List<T>> fn) {
         ApmStorage storage = currentStorage();
@@ -407,10 +407,10 @@ public class ApmQueryService {
     }
 
     /**
-     * containsignore大小写。
-     * @param haystack haystack
-     * @param needle needle
-     * @return containsignore大小写的结果
+    * containsignore大小写。
+    * @param haystack haystack
+    * @param needle needle
+    * @return containsignore大小写的结果
      */
     private static boolean containsIgnoreCase(String haystack, String needle) {
         return haystack != null && needle != null
@@ -418,19 +418,19 @@ public class ApmQueryService {
     }
 
     /**
-     * 端点标签。
-     * @param edge edge
-     * @return 端点标签的结果
+    * 端点标签。
+    * @param edge edge
+    * @return 端点标签的结果
      */
     private static String endpointLabel(DependencyEdge edge) {
         return edge.getSource() != null ? edge.getSource().displayLabel() : "?";
     }
 
     /**
-     * 端点标签。
-     * @param edge edge
-     * @param target Target
-     * @return 端点标签的结果
+    * 端点标签。
+    * @param edge edge
+    * @param target Target
+    * @return 端点标签的结果
      */
     private static String endpointLabel(DependencyEdge edge, boolean target) {
         Endpoint t = target ? edge.getTarget() : edge.getSource();
@@ -459,9 +459,9 @@ public class ApmQueryService {
     }
 
     /**
-     * 转为iso。
-     * @param epochMillis 轮次millis
-     * @return 转为iso的结果
+    * 转为iso。
+    * @param epochMillis 轮次millis
+    * @return 转为iso的结果
      */
     private static String toIso(long epochMillis) {
         if (epochMillis <= 0) {

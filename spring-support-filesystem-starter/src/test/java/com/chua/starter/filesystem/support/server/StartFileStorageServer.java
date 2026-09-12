@@ -8,36 +8,36 @@ import com.chua.common.support.storage.setting.BucketSetting;
 import com.chua.starter.filesystem.support.local.LocalFileStorage;
 
 /**
- * 文件存储服务器启动器。
- *
- * <p>基于 JDK HTTP Server + {@link FileStorageServerFilter} 启动独立的
- * REST 文件存储服务，用于手动验证与联调。</p>
- *
- * <p>启动后可通过以下接口操作 local 存储桶：</p>
- * <ul>
- *   <li>{@code PUT http://127.0.0.1:18080/local/hello.txt}（body 为文件内容）— 上传</li>
- *   <li>{@code GET http://127.0.0.1:18080/local/hello.txt} — 下载/预览</li>
- *   <li>{@code GET http://127.0.0.1:18080/local/hello.txt?download=true} — 附件下载</li>
- *   <li>{@code GET http://127.0.0.1:18080/local}（携带 Range 头可分段）— 列表/分段下载</li>
- *   <li>{@code HEAD http://127.0.0.1:18080/local/hello.txt} — 存在性检查</li>
- *   <li>{@code DELETE http://127.0.0.1:18080/local/hello.txt} — 删除</li>
- * </ul>
- *
- * @author CH
- * @since 4.0.0
+* 文件存储服务器启动器。
+*
+* <p>基于 JDK HTTP Server + {@link FileStorageServerFilter} 启动独立的
+* REST 文件存储服务，用于手动验证与联调。</p>
+*
+* <p>启动后可通过以下接口操作 local 存储桶：</p>
+* <ul>
+*   <li>{@code PUT http://127.0.0.1:18080/local/hello.txt}（body 为文件内容）— 上传</li>
+*   <li>{@code GET http://127.0.0.1:18080/local/hello.txt} — 下载/预览</li>
+*   <li>{@code GET http://127.0.0.1:18080/local/hello.txt?download=true} — 附件下载</li>
+*   <li>{@code GET http://127.0.0.1:18080/local}（携带 Range 头可分段）— 列表/分段下载</li>
+*   <li>{@code HEAD http://127.0.0.1:18080/local/hello.txt} — 存在性检查</li>
+*   <li>{@code DELETE http://127.0.0.1:18080/local/hello.txt} — 删除</li>
+* </ul>
+*
+* @author CH
+* @since 4.0.0
  */
 public class StartFileStorageServer {
 
     /**
-     * 默认监听端口
+    * 默认监听端口
      */
     private static final int DEFAULT_PORT = 18080;
 
     /**
-     * 程序入口。
-     *
-     * @param args 参数[0] 可选端口号，默认 18080
-     * @throws Exception 启动失败时抛出
+    * 程序入口。
+    *
+    * @param args 参数[0] 可选端口号，默认 18080
+    * @throws Exception 启动失败时抛出
      */
     public static void main(String[] args) throws Exception {
         int port = args.length > 0 ? Integer.parseInt(args[0]) : DEFAULT_PORT;

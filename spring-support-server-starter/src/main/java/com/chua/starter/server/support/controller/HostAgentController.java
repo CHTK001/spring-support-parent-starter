@@ -20,15 +20,15 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 
 /**
-   * 服务器资产 智能体 上报接口
- * <p>
-   * 目标主机上的 智能体 按 智能体钥匙 主动推送硬件/状态数据，
- * 由 {@link AgentHostCollectProvider} 处理回写。用于 NAT / 防火墙下
- * 服务端无法直连的主机采集。
- * </p>
- *
- * @author CH
- * @since 4.0.0.42
+* 服务器资产 智能体 上报接口
+* <p>
+* 目标主机上的 智能体 按 智能体钥匙 主动推送硬件/状态数据，
+* 由 {@link AgentHostCollectProvider} 处理回写。用于 NAT / 防火墙下
+* 服务端无法直连的主机采集。
+* </p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Tag(name = "服务器资产-Agent上报", description = "Agent 主动推送采集数据")
 @RestController
@@ -43,11 +43,11 @@ public class HostAgentController {
     private final MsServerHostMapper hostMapper;
 
     /**
-      * 智能体 推送数据（按 智能体钥匙 定位主机）
-     *
-     * @param agentKey 探针标识
-     * @param payload  上报数据（cpu核心/内存mb/diskgb/os版本/公共ip/私募ip 等）
-     * @return 处理结果
+    * 智能体 推送数据（按 智能体钥匙 定位主机）
+    *
+    * @param agentKey 探针标识
+    * @param payload  上报数据（cpu核心/内存mb/diskgb/os版本/公共ip/私募ip 等）
+    * @return 处理结果
      */
     @Operation(summary = "Agent推送采集数据")
     @PostMapping("/{agentKey}/push")
@@ -64,9 +64,9 @@ public class HostAgentController {
         try {
             if (payload != null) {
                 /**
-                  * applypayload。
-                 * @param host 主机
-                 * @param payload payload
+                * applypayload。
+                * @param host 主机
+                * @param payload payload
                  */
                 applyPayload(host, payload);
             }
@@ -84,10 +84,10 @@ public class HostAgentController {
     }
 
     /**
-     * 将上报负载写入主机字段
-     *
-     * @param host    主机
-     * @param payload 上报数据
+    * 将上报负载写入主机字段
+    *
+    * @param host    主机
+    * @param payload 上报数据
      */
     private void applyPayload(MsServerHost host, Map<String, Object> payload) {
         Integer cpuCores = toInteger(payload.get("cpuCores"));
@@ -118,10 +118,10 @@ public class HostAgentController {
     }
 
     /**
-      * 安全转为 Integer（空/非数字返回 空）
-     *
-     * @param value 原始值
-     * @return Integer 或 空
+    * 安全转为 Integer（空/非数字返回 空）
+    *
+    * @param value 原始值
+    * @return Integer 或 空
      */
     private Integer toInteger(Object value) {
         if (value == null) {
@@ -139,10 +139,10 @@ public class HostAgentController {
     }
 
     /**
-      * 安全转为 Long（空/非数字返回 空）
-     *
-     * @param value 原始值
-     * @return Long 或 空
+    * 安全转为 Long（空/非数字返回 空）
+    *
+    * @param value 原始值
+    * @return Long 或 空
      */
     private Long toLong(Object value) {
         if (value == null) {

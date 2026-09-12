@@ -10,14 +10,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Windows 主机硬件探测提供者（WinRM 采集）
- * <p>
- * 通过 WinRM（Windows Remote Management，Windows 远程管理）连接目标 Windows 主机，
- * 使用 PowerShell 单条命令批量采集 CPU/内存/磁盘/系统版本/架构/内网 IP 并回写资产字段。
- * </p>
- *
- * @author CH
- * @since 4.0.0.42
+* Windows 主机硬件探测提供者（WinRM 采集）
+* <p>
+* 通过 WinRM（Windows Remote Management，Windows 远程管理）连接目标 Windows 主机，
+* 使用 PowerShell 单条命令批量采集 CPU/内存/磁盘/系统版本/架构/内网 IP 并回写资产字段。
+* </p>
+*
+* @author CH
+* @since 4.0.0.42
  */
 @Slf4j
 @Component
@@ -62,10 +62,10 @@ public class WindowsHostDetectProvider implements HostDetectProvider {
     }
 
     /**
-     * 解析 WinRM PowerShell 输出为硬件字段（| 分隔的 k=v 段）
-     *
-     * @param output 原始输出，可为 null
-     * @param host   待回写的主机，不能为 null
+    * 解析 WinRM PowerShell 输出为硬件字段（| 分隔的 k=v 段）
+    *
+    * @param output 原始输出，可为 null
+    * @param host   待回写的主机，不能为 null
      */
     private void parseWinrmOutput(String output, MsServerHost host) {
         if (StringUtils.isBlank(output)) {

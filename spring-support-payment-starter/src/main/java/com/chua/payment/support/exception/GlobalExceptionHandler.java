@@ -13,21 +13,21 @@ import java.util.stream.Collectors;
 import static com.chua.common.support.lang.code.ReturnCode.REQUEST_PARAM_ERROR;
 
 /**
-   * 支付模块异常统一转换为框架 申报结果。
- * 这样成功和失败路径都会保持同一套响应协议，避免再出现
- * `ReturnResult(code=00000, data=Result(code=500,...))` 这类双层包装。
- *
- * @since 2026-03-18
- * @author CH
+* 支付模块异常统一转换为框架 申报结果。
+* 这样成功和失败路径都会保持同一套响应协议，避免再出现
+* `ReturnResult(code=00000, data=Result(code=500,...))` 这类双层包装。
+*
+* @since 2026-03-18
+* @author CH
  */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     /**
-     * 处理支付异常
-     * @param e e
-     * @return 把手薪酬异常的结果
+    * 处理支付异常
+    * @param e e
+    * @return 把手薪酬异常的结果
      */
     @ExceptionHandler(PaymentException.class)
     public ReturnResult<Void> handlePaymentException(PaymentException e) {
@@ -36,9 +36,9 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 处理参数校验异常
-     * @param e e
-     * @return 把手校验异常的结果
+    * 处理参数校验异常
+    * @param e e
+    * @return 把手校验异常的结果
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ReturnResult<Void> handleValidationException(MethodArgumentNotValidException e) {
@@ -50,9 +50,9 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 处理绑定异常
-     * @param e e
-     * @return 把手bind异常的结果
+    * 处理绑定异常
+    * @param e e
+    * @return 把手bind异常的结果
      */
     @ExceptionHandler(BindException.class)
     public ReturnResult<Void> handleBindException(BindException e) {
@@ -64,9 +64,9 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 处理非法参数异常
-     * @param e e
-     * @return 把手illegal参数异常的结果
+    * 处理非法参数异常
+    * @param e e
+    * @return 把手illegal参数异常的结果
      */
     @ExceptionHandler(IllegalArgumentException.class)
     public ReturnResult<Void> handleIllegalArgumentException(IllegalArgumentException e) {
@@ -75,9 +75,9 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 处理通用异常
-     * @param e e
-     * @return 把手异常的结果
+    * 处理通用异常
+    * @param e e
+    * @return 把手异常的结果
      */
     @ExceptionHandler(Exception.class)
     public ReturnResult<Void> handleException(Exception e) {

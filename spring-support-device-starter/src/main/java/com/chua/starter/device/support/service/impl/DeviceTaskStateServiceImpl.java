@@ -12,10 +12,10 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 
 /**
- * 任务状态服务实现（Trigger 模式）
- *
- * @since 4.0.0.42
- * @author CH
+* 任务状态服务实现（Trigger 模式）
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @Service
@@ -23,7 +23,7 @@ import java.time.LocalDateTime;
 public class DeviceTaskStateServiceImpl implements DeviceTaskStateService {
 
     /**
-      * 任务状态 映射器
+    * 任务状态 映射器
      */
     private final DeviceTaskStateMapper taskStateMapper;
 

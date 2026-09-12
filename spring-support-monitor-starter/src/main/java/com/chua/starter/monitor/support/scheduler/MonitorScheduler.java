@@ -38,15 +38,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 监控采集调度器
- * <p>
- * 每 10 秒扫描启用的任务, 通过 Trigger 判断任务是否到达触发时间,
- * 使用 Reactor 背压控制采集并发与入库压力。
-   * 支持从配置读取调度间隔, 应用 ms监控指标配置 解析规则将原始输出转为结构化指标。
- * </p>
- *
- * @since 2026/8/4
- * @author CH
+* 监控采集调度器
+* <p>
+* 每 10 秒扫描启用的任务, 通过 Trigger 判断任务是否到达触发时间,
+* 使用 Reactor 背压控制采集并发与入库压力。
+* 支持从配置读取调度间隔, 应用 ms监控指标配置 解析规则将原始输出转为结构化指标。
+* </p>
+*
+* @since 2026/8/4
+* @author CH
  */
 @Slf4j
 @Component
@@ -90,7 +90,7 @@ public class MonitorScheduler {
     private final AtomicLong lastTickTime = new AtomicLong(0);
 
     /**
-     * 调度入口, 每 10 秒扫描一次, 根据配置的间隔决定是否执行采集
+    * 调度入口, 每 10 秒扫描一次, 根据配置的间隔决定是否执行采集
      */
     @Scheduled(fixedRate = 10_000)
     public void tick() {
@@ -119,7 +119,7 @@ public class MonitorScheduler {
     }
 
     /**
-     * 小时聚合, 每小时执行一次
+    * 小时聚合, 每小时执行一次
      */
     @Scheduled(cron = "0 0 * * * ?")
     public void aggregateHourly() {
@@ -127,7 +127,7 @@ public class MonitorScheduler {
     }
 
     /**
-     * 数据保留清理, 每天凌晨 3 点执行
+    * 数据保留清理, 每天凌晨 3 点执行
      */
     @Scheduled(cron = "0 0 3 * * ?")
     public void cleanupOldData() {
@@ -136,11 +136,11 @@ public class MonitorScheduler {
     }
 
     /**
-     * 判断任务是否到达触发时间
-     *
-     * @param task 任务
-     * @param now  当前时间
-     * @return true 表示应触发
+    * 判断任务是否到达触发时间
+    *
+    * @param task 任务
+    * @param now  当前时间
+    * @return true 表示应触发
      */
     private boolean isTriggered(MsMonitorTask task, LocalDateTime now) {
         String cron = task.getMonitorTaskCron();
@@ -162,14 +162,14 @@ public class MonitorScheduler {
     }
 
     /**
-     * 执行采集任务
-     * <p>
-      * 无论执行成功、失败或提前跳过，均会标记 最后一个运行时间，
-      * 防止 是否triggered 在后续 tick 中被重复判定为真（避免任务刷屏）。
-     * </p>
-     *
-     * @param task 任务
-     * @return 响应式采集结果
+    * 执行采集任务
+    * <p>
+    * 无论执行成功、失败或提前跳过，均会标记 最后一个运行时间，
+    * 防止 是否triggered 在后续 tick 中被重复判定为真（避免任务刷屏）。
+    * </p>
+    *
+    * @param task 任务
+    * @return 响应式采集结果
      */
     private reactor.core.publisher.Mono<CollectResult> execute(MsMonitorTask task) {
         ServiceType serviceType = ServiceType.of(task.getServiceType());
@@ -197,8 +197,8 @@ public class MonitorScheduler {
  // 成功：标记时间 + 解析规则 + 写入指标（含 influxdb 双写）
                     taskService.markLastRunTime(task.getId());
                     /**
-                     * apply解析rules。
-                     * @param task.getId( 任务.获取标识(
+                    * apply解析rules。
+                    * @param task.getId( 任务.获取标识(
                      */
                     applyParseRules(task.getId(), result);
                     metricService.writeCollectResult(result);
@@ -217,10 +217,10 @@ public class MonitorScheduler {
     }
 
     /**
-      * 应用 ms监控指标配置 解析规则, 将原始输出转为结构化指标点
-     *
-     * @param taskId 任务 标识
-     * @param result 采集结果
+    * 应用 ms监控指标配置 解析规则, 将原始输出转为结构化指标点
+    *
+    * @param taskId 任务 标识
+    * @param result 采集结果
      */
     private void applyParseRules(Long taskId, CollectResult result) {
         try {
@@ -241,11 +241,11 @@ public class MonitorScheduler {
     }
 
     /**
-     * 根据单条解析规则从原始输出中提取指标点
-     *
-     * @param rule      解析规则
-     * @param rawOutput 原始输出
-     * @return 指标点列表
+    * 根据单条解析规则从原始输出中提取指标点
+    *
+    * @param rule      解析规则
+    * @param rawOutput 原始输出
+    * @return 指标点列表
      */
     private List<MetricPoint> parseByRule(MsMonitorMetricConfig rule, String rawOutput) {
         String parseRule = rule.getParseRule();
@@ -276,13 +276,13 @@ public class MonitorScheduler {
     }
 
     /**
-      * 按 json路径 表达式解析, 从原始输出 JSON 中提取指定路径的值
-     * <p>规则格式: {"type":"jsonpath","expression":"$.cpu.usage"}</p>
-     *
-     * @param rule       解析规则
-     * @param rawOutput  原始输出
-     * @param expression json路径 表达式, 如 "$.cpu.usage"
-     * @return 指标点列表
+    * 按 json路径 表达式解析, 从原始输出 JSON 中提取指定路径的值
+    * <p>规则格式: {"type":"jsonpath","expression":"$.cpu.usage"}</p>
+    *
+    * @param rule       解析规则
+    * @param rawOutput  原始输出
+    * @param expression json路径 表达式, 如 "$.cpu.usage"
+    * @return 指标点列表
      */
     private List<MetricPoint> parseJsonPath(MsMonitorMetricConfig rule, String rawOutput, String expression) {
         try {
@@ -321,13 +321,13 @@ public class MonitorScheduler {
     }
 
     /**
-     * 按正则表达式解析, 从原始输出中提取匹配的数值
-     * <p>规则格式: {"type":"regex","expression":"Cpu\\(s\\):\\s+(\\d+\\.\\d+)","group":1}</p>
-     *
-     * @param rule       解析规则
-     * @param rawOutput  原始输出
-     * @param expression 正则表达式, 必须包含捕获组
-     * @return 指标点列表
+    * 按正则表达式解析, 从原始输出中提取匹配的数值
+    * <p>规则格式: {"type":"regex","expression":"Cpu\\(s\\):\\s+(\\d+\\.\\d+)","group":1}</p>
+    *
+    * @param rule       解析规则
+    * @param rawOutput  原始输出
+    * @param expression 正则表达式, 必须包含捕获组
+    * @return 指标点列表
      */
     private List<MetricPoint> parseRegex(MsMonitorMetricConfig rule, String rawOutput, String expression) {
         try {
@@ -364,12 +364,12 @@ public class MonitorScheduler {
     }
 
     /**
-     * 按 JSON 字段路径解析, 从原始输出 JSON 中提取指定字段的值
-     *
-     * @param rule       解析规则
-     * @param rawOutput  原始输出
-     * @param expression 逗号分隔的字段路径, 如 "cpu.usage,mem.used"
-     * @return 指标点列表
+    * 按 JSON 字段路径解析, 从原始输出 JSON 中提取指定字段的值
+    *
+    * @param rule       解析规则
+    * @param rawOutput  原始输出
+    * @param expression 逗号分隔的字段路径, 如 "cpu.usage,mem.used"
+    * @return 指标点列表
      */
     private List<MetricPoint> parseJsonFields(MsMonitorMetricConfig rule, String rawOutput, String expression) {
         try {
@@ -396,11 +396,11 @@ public class MonitorScheduler {
     }
 
     /**
-      * 按点号分隔的路径从 映射 中取值
-     *
-     * @param root 根 映射
-     * @param path 点号分隔路径, 如 "cpu.usage"
-     * @return 路径对应的值, 不存在返回 空
+    * 按点号分隔的路径从 映射 中取值
+    *
+    * @param root 根 映射
+    * @param path 点号分隔路径, 如 "cpu.usage"
+    * @return 路径对应的值, 不存在返回 空
      */
     @SuppressWarnings("unchecked")
     private Object resolveJsonPath(Map<String, Object> root, String path) {

@@ -14,13 +14,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 事务消息模板
- * <p>
- * 支持在Spring事务提交后发送消息，确保消息发送与数据库操作的一致性
- * </p>
- *
- * @since 2025-03-20
- * @author CH
+* 事务消息模板
+* <p>
+* 支持在Spring事务提交后发送消息，确保消息发送与数据库操作的一致性
+* </p>
+*
+* @since 2025-03-20
+* @author CH
  */
 @Slf4j
 @Component
@@ -31,26 +31,26 @@ public class TransactionalMessageTemplate {
     private final MessageTemplate messageTemplate;
 
     /**
-     * 在事务提交后发送消息
-     * <p>
-     * 如果当前没有事务，则立即发送
-     * </p>
-     *
-     * @param destination 目标地址
-     * @param payload     消息内容
-     * @return 发送结果（如果在事务中，返回null）
+    * 在事务提交后发送消息
+    * <p>
+    * 如果当前没有事务，则立即发送
+    * </p>
+    *
+    * @param destination 目标地址
+    * @param payload     消息内容
+    * @return 发送结果（如果在事务中，返回null）
      */
     public SendResult sendAfterCommit(String destination, Object payload) {
         return sendAfterCommit(destination, payload, null);
     }
 
     /**
-     * 在事务提交后发送消息（带消息头）
-     *
-     * @param destination 目标地址
-     * @param payload     消息内容
-     * @param headers     消息头
-     * @return 发送结果（如果在事务中，返回null）
+    * 在事务提交后发送消息（带消息头）
+    *
+    * @param destination 目标地址
+    * @param payload     消息内容
+    * @param headers     消息头
+    * @return 发送结果（如果在事务中，返回null）
      */
     public SendResult sendAfterCommit(String destination, Object payload, Map<String, Object> headers) {
         if (!TransactionSynchronizationManager.isActualTransactionActive()) {
@@ -67,9 +67,9 @@ public class TransactionalMessageTemplate {
     }
 
     /**
-     * 在事务提交后批量发送消息
-     *
-     * @param messages 消息列表
+    * 在事务提交后批量发送消息
+    *
+    * @param messages 消息列表
      */
     public void sendBatchAfterCommit(List<TransactionalMessage> messages) {
         if (!TransactionSynchronizationManager.isActualTransactionActive()) {
@@ -88,9 +88,9 @@ public class TransactionalMessageTemplate {
     }
 
     /**
-     * 消息发送同步器
-     * @author CH
-     * @since 4.0.0
+    * 消息发送同步器
+    * @author CH
+    * @since 4.0.0
      */
     private class MessageSendSynchronization implements TransactionSynchronization {
         /** 目的地 */
@@ -100,13 +100,13 @@ public class TransactionalMessageTemplate {
         private final Map<String, Object> headers; // 头部
 
         /**
-          * 创建 消息发送synchronization 实例
-         * @param destination 目标
-         * @param payload 对象
-         * @param headers 映射
-         * @param payload 对象
-         * @param headers 头部
-         * @param payload payload
+        * 创建 消息发送synchronization 实例
+        * @param destination 目标
+        * @param payload 对象
+        * @param headers 映射
+        * @param payload 对象
+        * @param headers 头部
+        * @param payload payload
          */
         public MessageSendSynchronization(String destination, Object payload, Map<String, Object> headers) {
             this.destination = destination;
@@ -132,17 +132,17 @@ public class TransactionalMessageTemplate {
     }
 
     /**
-     * 批量消息发送同步器
-     * @author CH
-     * @since 4.0.0
+    * 批量消息发送同步器
+    * @author CH
+    * @since 4.0.0
      */
     private class BatchMessageSendSynchronization implements TransactionSynchronization {
         /** 消息 */
         private final List<TransactionalMessage> messages;
 
         /**
-           * 创建 批量消息发送synchronization 实例
-         * @param messages 消息
+        * 创建 批量消息发送synchronization 实例
+        * @param messages 消息
          */
         public BatchMessageSendSynchronization(List<TransactionalMessage> messages) {
             this.messages = new ArrayList<>(messages);
@@ -176,9 +176,9 @@ public class TransactionalMessageTemplate {
     }
 
     /**
-     * 事务消息
-     * @author CH
-     * @since 4.0.0
+    * 事务消息
+    * @author CH
+    * @since 4.0.0
      */
     public static class TransactionalMessage {
         /** 目的地 */
@@ -188,29 +188,29 @@ public class TransactionalMessageTemplate {
         private final Map<String, Object> headers; // 头部
 
         /**
-          * 创建 transactional消息 实例
-         * @param destination 目标
-         * @param payload 对象
-         * @param payload payload
+        * 创建 transactional消息 实例
+        * @param destination 目标
+        * @param payload 对象
+        * @param payload payload
          */
         public TransactionalMessage(String destination, Object payload) {
             /**
-             * this。
-             * @param destination 目标
-             * @param payload payload
-             * @param null 空
+            * this。
+            * @param destination 目标
+            * @param payload payload
+            * @param null 空
              */
             this(destination, payload, null);
         }
 
         /**
-          * 创建 transactional消息 实例
-         * @param destination 目标
-         * @param payload 对象
-         * @param headers 映射
-         * @param payload 对象
-         * @param headers 头部
-         * @param payload payload
+        * 创建 transactional消息 实例
+        * @param destination 目标
+        * @param payload 对象
+        * @param headers 映射
+        * @param payload 对象
+        * @param headers 头部
+        * @param payload payload
          */
         public TransactionalMessage(String destination, Object payload, Map<String, Object> headers) {
             this.destination = destination;
@@ -219,27 +219,27 @@ public class TransactionalMessageTemplate {
         }
 
         /**
-         * 获取目标
-         *
-         * @return 获取目标的结果
+        * 获取目标
+        *
+        * @return 获取目标的结果
          */
         public String getDestination() {
             return destination;
         }
 
         /**
-         * 获取Payload
-         *
-         * @return 获取payload的结果
+        * 获取Payload
+        *
+        * @return 获取payload的结果
          */
         public Object getPayload() {
             return payload;
         }
 
         /**
-         * 获取头部
-         *
-         * @return 获取头部的结果
+        * 获取头部
+        *
+        * @return 获取头部的结果
          */
         public Map<String, Object> getHeaders() {
             return headers;

@@ -10,23 +10,23 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
- * 全局异常处理器。
- *
- * <p>将所有异常统一转换为前端契约信封 {@link ApiResult}（{@code success:false,code,error}），
- * 并保证响应体始终为 JSON（非 JSON 响应会被前端判为契约违规）。</p>
- *
- * @since 4.0.0.42
- * @author CH
+* 全局异常处理器。
+*
+* <p>将所有异常统一转换为前端契约信封 {@link ApiResult}（{@code success:false,code,error}），
+* 并保证响应体始终为 JSON（非 JSON 响应会被前端判为契约违规）。</p>
+*
+* @since 4.0.0.42
+* @author CH
  */
 @Slf4j
 @RestControllerAdvice("com.chua.starter.ai.support.manage")
 public class GlobalApiExceptionHandler {
 
     /**
-     * 处理业务契约异常。
-     *
-     * @param ex 业务异常
-     * @return 错误信封与对应 HTTP 状态码
+    * 处理业务契约异常。
+    *
+    * @param ex 业务异常
+    * @return 错误信封与对应 HTTP 状态码
      */
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiResult<Void>> handleApiException(ApiException ex) {
@@ -37,10 +37,10 @@ public class GlobalApiExceptionHandler {
     }
 
     /**
-     * 处理未预期异常。
-     *
-     * @param ex 异常
-     * @return 内部错误信封（HTTP 500）
+    * 处理未预期异常。
+    *
+    * @param ex 异常
+    * @return 内部错误信封（HTTP 500）
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResult<Void>> handleException(Exception ex) {

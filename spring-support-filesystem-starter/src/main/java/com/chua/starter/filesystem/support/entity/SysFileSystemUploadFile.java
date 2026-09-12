@@ -7,10 +7,10 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 文件系统上传完成主体表（分片合并后的最终文件记录）。
- *
- * @since 4.0.0.42
- * @author CH
+* 文件系统上传完成主体表（分片合并后的最终文件记录）。
+*
+* @since 4.0.0.42
+* @author CH
  */
 @TableName(value = "filesystem_upload_file")
 public class SysFileSystemUploadFile extends SysBase implements Serializable {
@@ -81,158 +81,158 @@ public class SysFileSystemUploadFile extends SysBase implements Serializable {
     public SysFileSystemUploadFile() {}
 
     /**
-      * 获取filesystemupload文件标识
-     *
-     * @return 获取filesystemupload文件id的结果
+    * 获取filesystemupload文件标识
+    *
+    * @return 获取filesystemupload文件id的结果
      */
     public Long getFilesystemUploadFileId() { return filesystemUploadFileId; }
     /**
-      * 设置filesystemupload文件标识
-     *
-     * @param v v
+    * 设置filesystemupload文件标识
+    *
+    * @param v v
      */
     public void setFilesystemUploadFileId(Long v) { this.filesystemUploadFileId = v; }
 
     /**
-     * 获取filesystemupload文件uploadid
-     *
-     * @return 获取filesystemupload文件uploadid的结果
+    * 获取filesystemupload文件uploadid
+    *
+    * @return 获取filesystemupload文件uploadid的结果
      */
     public String getFilesystemUploadFileUploadId() { return filesystemUploadFileUploadId; }
     /**
-     * 设置filesystemupload文件uploadid
-     *
-     * @param v v
+    * 设置filesystemupload文件uploadid
+    *
+    * @param v v
      */
     public void setFilesystemUploadFileUploadId(String v) { this.filesystemUploadFileUploadId = v; }
 
     /**
-     * 获取filesystemupload文件名称
-     *
-     * @return 获取filesystemupload文件名称的结果
+    * 获取filesystemupload文件名称
+    *
+    * @return 获取filesystemupload文件名称的结果
      */
     public String getFilesystemUploadFileName() { return filesystemUploadFileName; }
     /**
-     * 设置filesystemupload文件名称
-     *
-     * @param v v
+    * 设置filesystemupload文件名称
+    *
+    * @param v v
      */
     public void setFilesystemUploadFileName(String v) { this.filesystemUploadFileName = v; }
 
     /**
-     * 获取filesystemupload文件原始名称
-     *
-     * @return 获取filesystemupload文件原始名称的结果
+    * 获取filesystemupload文件原始名称
+    *
+    * @return 获取filesystemupload文件原始名称的结果
      */
     public String getFilesystemUploadFileOriginalName() { return filesystemUploadFileOriginalName; }
     /**
-     * 设置filesystemupload文件原始名称
-     *
-     * @param v v
+    * 设置filesystemupload文件原始名称
+    *
+    * @param v v
      */
     public void setFilesystemUploadFileOriginalName(String v) { this.filesystemUploadFileOriginalName = v; }
 
     /**
-     * 获取filesystemupload文件获取大小
-     *
-     * @return 获取filesystemupload文件大小的结果
+    * 获取filesystemupload文件获取大小
+    *
+    * @return 获取filesystemupload文件大小的结果
      */
     public Long getFilesystemUploadFileSize() { return filesystemUploadFileSize; }
     /**
-     * 设置filesystemupload文件获取大小
-     *
-     * @param v v
+    * 设置filesystemupload文件获取大小
+    *
+    * @param v v
      */
     public void setFilesystemUploadFileSize(Long v) { this.filesystemUploadFileSize = v; }
 
     /**
-     * 获取filesystemupload文件storage类型
-     *
-     * @return 获取filesystemupload文件storage类型的结果
+    * 获取filesystemupload文件storage类型
+    *
+    * @return 获取filesystemupload文件storage类型的结果
      */
     public String getFilesystemUploadFileStorageType() { return filesystemUploadFileStorageType; }
     /**
-     * 设置filesystemupload文件storage类型
-     *
-     * @param v v
+    * 设置filesystemupload文件storage类型
+    *
+    * @param v v
      */
     public void setFilesystemUploadFileStorageType(String v) { this.filesystemUploadFileStorageType = v; }
 
     /**
-     * 获取filesystemupload文件bucket
-     *
-     * @return 获取filesystemupload文件bucket的结果
+    * 获取filesystemupload文件bucket
+    *
+    * @return 获取filesystemupload文件bucket的结果
      */
     public String getFilesystemUploadFileBucket() { return filesystemUploadFileBucket; }
     /**
-     * 设置filesystemupload文件bucket
-     *
-     * @param v v
+    * 设置filesystemupload文件bucket
+    *
+    * @param v v
      */
     public void setFilesystemUploadFileBucket(String v) { this.filesystemUploadFileBucket = v; }
 
     /**
-     * 获取filesystemupload文件钥匙
-     *
-     * @return 获取filesystemupload文件钥匙的结果
+    * 获取filesystemupload文件钥匙
+    *
+    * @return 获取filesystemupload文件钥匙的结果
      */
     public String getFilesystemUploadFileKey() { return filesystemUploadFileKey; }
     /**
-     * 设置filesystemupload文件钥匙
-     *
-     * @param v v
+    * 设置filesystemupload文件钥匙
+    *
+    * @param v v
      */
     public void setFilesystemUploadFileKey(String v) { this.filesystemUploadFileKey = v; }
 
     /**
-     * 获取filesystemupload文件url
-     *
-     * @return 获取filesystemupload文件url的结果
+    * 获取filesystemupload文件url
+    *
+    * @return 获取filesystemupload文件url的结果
      */
     public String getFilesystemUploadFileUrl() { return filesystemUploadFileUrl; }
     /**
-     * 设置filesystemupload文件url
-     *
-     * @param v v
+    * 设置filesystemupload文件url
+    *
+    * @param v v
      */
     public void setFilesystemUploadFileUrl(String v) { this.filesystemUploadFileUrl = v; }
 
     /**
-     * 获取filesystemupload文件内容类型
-     *
-     * @return 获取filesystemupload文件内容类型的结果
+    * 获取filesystemupload文件内容类型
+    *
+    * @return 获取filesystemupload文件内容类型的结果
      */
     public String getFilesystemUploadFileContentType() { return filesystemUploadFileContentType; }
     /**
-     * 设置filesystemupload文件内容类型
-     *
-     * @param v v
+    * 设置filesystemupload文件内容类型
+    *
+    * @param v v
      */
     public void setFilesystemUploadFileContentType(String v) { this.filesystemUploadFileContentType = v; }
 
     /**
-     * 获取filesystemupload文件etag
-     *
-     * @return 获取filesystemupload文件etag的结果
+    * 获取filesystemupload文件etag
+    *
+    * @return 获取filesystemupload文件etag的结果
      */
     public String getFilesystemUploadFileEtag() { return filesystemUploadFileEtag; }
     /**
-     * 设置filesystemupload文件etag
-     *
-     * @param v v
+    * 设置filesystemupload文件etag
+    *
+    * @param v v
      */
     public void setFilesystemUploadFileEtag(String v) { this.filesystemUploadFileEtag = v; }
 
     /**
-     * 获取filesystemupload文件完成时间
-     *
-     * @return 获取filesystemupload文件完成时间的结果
+    * 获取filesystemupload文件完成时间
+    *
+    * @return 获取filesystemupload文件完成时间的结果
      */
     public LocalDateTime getFilesystemUploadFileCompleteTime() { return filesystemUploadFileCompleteTime; }
     /**
-     * 设置filesystemupload文件完成时间
-     *
-     * @param v v
+    * 设置filesystemupload文件完成时间
+    *
+    * @param v v
      */
     public void setFilesystemUploadFileCompleteTime(LocalDateTime v) { this.filesystemUploadFileCompleteTime = v; }
 }

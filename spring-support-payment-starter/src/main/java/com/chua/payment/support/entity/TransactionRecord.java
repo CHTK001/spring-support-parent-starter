@@ -7,10 +7,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 交易流水实体类
- *
- * @since 2026-03-18
- * @author CH
+* 交易流水实体类
+*
+* @since 2026-03-18
+* @author CH
  */
 @Data
 @TableName("pay_transaction_record")
