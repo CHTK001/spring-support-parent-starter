@@ -96,6 +96,6 @@ effective-pom
 **/args*.txt
 **/start-backend-node.mjs
 **/monitor-run.bat
+**/run-monitor-*.bat
 **/start-*.bat
-
 **/start-backend-ps.ps1
