@@ -14,15 +14,12 @@ spring:
     generate:
       enabled: false
 
-  # 建表脚本迁移：启用项目自带 FlywayLike（plugin.datasource.script），
-  # 自动扫描 classpath 内所有模块 db/init|migration|sync 下的 V*__*.sql 并执行。
-  # 覆盖：monitor 自身 + 依赖 server-starter/project-starter 的资产台账/项目表，
-  # 使独立 H2/MySQL 启动即具备完整表结构（版本记录表 flyway_schema_history 追踪）。
-  # 注意：filesystem-starter 自带 db/init 含 MySQL-only 语法（SET @x=IF(...)），
-  # H2 下会失败；continue-on-error=true 保证单脚本失败不阻断启动。
-  sql:
-    init:
-      mode: never
+  # 建表脚本迁移：默认由 spring-support-datasource-starter 的 EnvironmentPostProcessor
+  # 强制 spring.sql.init.mode=never + plugin.datasource.script.enable=true（全局默认），
+  # 启动时自动扫描 classpath*:db/init|migration|sync 下 V*__*.sql 执行（FlywayLike）。
+  # 覆盖 monitor 自身 + 依赖 server-starter/project-starter 的资产台账/项目表。
+  # filesystem-starter 自带 db/init 含 MySQL-only 语法（SET @x=IF(...)），H2 下会失败；
+  # continue-on-error=true（见下方 plugin.datasource.script）保证单脚本失败不阻断启动。
 
   datasource:
     url: jdbc:h2:mem:monitordb;DB_CLOSE_DELAY=-1;MODE=MySQL;DATABASE_TO_UPPER=false
