@@ -85,6 +85,24 @@ public class AiBotBindingService {
     }
 
     /**
+     * 按归属标识过滤绑定列表（用于越权过滤）。
+     *
+     * <p>登录用户归属为 {@code u:<userId>}，匿名用户归属为 {@code fp:<浏览器指纹>}。
+     * 传入 {@code null} / 空串时只返回未归属（历史遗留）记录。</p>
+     *
+     * @param ownerKey 归属标识（可为空）
+     * @return 绑定列表（按创建时间降序）
+     */
+    public List<SysAiBotBinding> listByOwnerKey(String ownerKey) {
+        boolean blank = ownerKey == null || ownerKey.isBlank();
+        return botBindingMapper.selectList(
+                Wrappers.<SysAiBotBinding>lambdaQuery()
+                        .eq(!blank, SysAiBotBinding::getOwnerKey, ownerKey)
+                        .isNull(blank, SysAiBotBinding::getOwnerKey)
+                        .orderByDesc(SysAiBotBinding::getCreateTime));
+    }
+
+    /**
      * 管理员视角的用户聚合列表：按 userId 分组统计每个用户绑定的 Bot 数与在线数。
      *
      * @return 用户摘要列表（含未分配用户组的记录）
@@ -232,7 +250,18 @@ public class AiBotBindingService {
      * @return 会话 key（前端传给 /qrcode/status）+ qrcodeUrl（轮询 status=ready 后从 QrStatus 取）
      */
     public QrResult generateQrCode(String platform) {
-        return generateQrCode(platform, null);
+        return generateQrCode(platform, null, null);
+    }
+
+    /**
+     * 生成微信 iLink 扫码会话（不带归属标识，兼容旧调用）。
+     *
+     * @param platform wechat / wecom
+     * @param oldBotId 重新扫码场景下需合并的旧 Bot 唯一标识（可为空）
+     * @return 会话 key + qrcodeUrl
+     */
+    public QrResult generateQrCode(String platform, String oldBotId) {
+        return generateQrCode(platform, oldBotId, null);
     }
 
     /**
@@ -246,7 +275,7 @@ public class AiBotBindingService {
      * @param oldBotId 重新扫码场景下需合并的旧 Bot 唯一标识（可为空，表示全新绑定）
      * @return 会话 key + qrcodeUrl
      */
-    public QrResult generateQrCode(String platform, String oldBotId) {
+    public QrResult generateQrCode(String platform, String oldBotId, String ownerKey) {
         // 企业微信不支持 iLink 扫码，直接返回空 key
         if ("wecom".equals(platform)) {
             log.info("[Bot] wecom 扫码被拒绝，使用手动导入");
@@ -259,6 +288,7 @@ public class AiBotBindingService {
         session.platform = "wechat";
         session.status = "pending";
         session.oldBotId = oldBotId != null && !oldBotId.isBlank() ? oldBotId.trim() : null;
+        session.ownerKey = ownerKey;
         session.expireAt = System.currentTimeMillis() + 180_000L; // 3 分钟超时
         qrSessions.put(key, session);
 
@@ -431,6 +461,11 @@ public class AiBotBindingService {
                 target.setPlatform(platform);
                 target.setStatus("online");
                 target.setBindSource("qrcode_scan");
+                // 领取归属：旧记录未归属时，用本次请求的归属标识补上
+                if ((target.getOwnerKey() == null || target.getOwnerKey().isBlank())
+                        && session.ownerKey != null && !session.ownerKey.isBlank()) {
+                    target.setOwnerKey(session.ownerKey);
+                }
                 target.setUpdateTime(LocalDateTime.now());
                 if (userId != null && !userId.isBlank() && !userId.equals(target.getNickname())) {
                     target.setNickname(userId);
@@ -458,6 +493,7 @@ public class AiBotBindingService {
             binding.setNickname(userId != null ? userId : newBotId);
             binding.setStatus("online");
             binding.setBindSource("qrcode_scan");
+            binding.setOwnerKey(session.ownerKey);
             binding.setCreateTime(LocalDateTime.now());
             binding.setUpdateTime(LocalDateTime.now());
             saveOrUpdate(binding);
@@ -533,6 +569,8 @@ public class AiBotBindingService {
         String errorMsg;
         /** 重新扫码场景：需要合并的旧 Bot 唯一标识（原绑定记录） */
         String oldBotId;
+        /** 发起扫码时的归属标识（登录 u:<userId> / 匿名 fp:<fingerprint>），用于写入绑定记录 */
+        String ownerKey;
         /** 会话超时时间戳（毫秒） */
         long expireAt;
     }

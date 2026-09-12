@@ -3365,3 +3365,6 @@ ALTER TABLE `sys_ai_usage_daily`
     ADD COLUMN `sys_ai_usage_daily_total_first_token_latency` BIGINT DEFAULT 0 COMMENT '总首字延迟(ms)合计' AFTER `sys_ai_usage_daily_total_latency`;
 DELETE FROM `workshop_asset`
 WHERE `asset_id` NOT REGEXP '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$';
+
+ALTER TABLE `sys_ai_bot_binding`
+    ADD COLUMN `sys_ai_bot_binding_owner_key` VARCHAR(128) NULL COMMENT '归属标识（登录 u:<userId> / 匿名设备指纹 fp:<fingerprint>），用于绑定越权过滤' AFTER `sys_ai_bot_binding_user_id`;

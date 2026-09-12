@@ -127,68 +127,68 @@ CREATE TABLE IF NOT EXISTS `sys_ai_bot_message` (
     KEY `idx_sys_ai_bot_message_conv` (`sys_ai_bot_message_bot_id`, `sys_ai_bot_message_from_user`)
 );
 
-CREATE TABLE IF NOT EXISTS `sys_ai_pricing` (
-    `sys_ai_pricing_id`                  BIGINT       NOT NULL AUTO_INCREMENT COMMENT ' ID',
-    `sys_ai_pricing_provider`            VARCHAR(64)  NULL COMMENT '',
-    `sys_ai_pricing_model`              VARCHAR(128) NULL COMMENT '',
-    `sys_ai_pricing_input_price_per_1k`  DOUBLE       NULL COMMENT ' 1k tokens',
-    `sys_ai_pricing_output_price_per_1k` DOUBLE      NULL COMMENT ' 1k tokens',
-    `sys_ai_pricing_currency`           VARCHAR(8)   NULL COMMENT 'CNY / USD',
-    `sys_ai_pricing_effective_date`     DATETIME     NULL COMMENT '',
-    `sys_ai_pricing_source`             VARCHAR(32)  NULL COMMENT 'manual / sync',
-    `create_name`                        VARCHAR(64)  NULL COMMENT '',
-    `create_by`                          INT          NULL COMMENT '',
-    `create_time`                        DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '',
-    `update_name`                        VARCHAR(64)  NULL COMMENT '',
-    `update_by`                          INT          NULL COMMENT '',
-    `update_time`                        DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '',
-    PRIMARY KEY (`sys_ai_pricing_id`)
+CREATE TABLE IF NOT EXISTS `sys_ai_pricing` (
+    `sys_ai_pricing_id`                  BIGINT       NOT NULL AUTO_INCREMENT COMMENT ' ID',
+    `sys_ai_pricing_provider`            VARCHAR(64)  NULL COMMENT '',
+    `sys_ai_pricing_model`              VARCHAR(128) NULL COMMENT '',
+    `sys_ai_pricing_input_price_per_1k`  DOUBLE       NULL COMMENT ' 1k tokens',
+    `sys_ai_pricing_output_price_per_1k` DOUBLE      NULL COMMENT ' 1k tokens',
+    `sys_ai_pricing_currency`           VARCHAR(8)   NULL COMMENT 'CNY / USD',
+    `sys_ai_pricing_effective_date`     DATETIME     NULL COMMENT '',
+    `sys_ai_pricing_source`             VARCHAR(32)  NULL COMMENT 'manual / sync',
+    `create_name`                        VARCHAR(64)  NULL COMMENT '',
+    `create_by`                          INT          NULL COMMENT '',
+    `create_time`                        DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '',
+    `update_name`                        VARCHAR(64)  NULL COMMENT '',
+    `update_by`                          INT          NULL COMMENT '',
+    `update_time`                        DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '',
+    PRIMARY KEY (`sys_ai_pricing_id`)
 );
 
-CREATE TABLE IF NOT EXISTS `sys_ai_usage` (
-    `sys_ai_usage_id`                   BIGINT       NOT NULL AUTO_INCREMENT COMMENT ' ID',
-    `sys_ai_usage_group_name`           VARCHAR(32)  NULL COMMENT 'chat / image / video / colorize / vision / rag',
-    `sys_ai_usage_provider`            VARCHAR(64)  NULL COMMENT 'openai / zhipu / baidu ',
-    `sys_ai_usage_model`               VARCHAR(128) NULL COMMENT '',
-    `sys_ai_usage_call_type`           VARCHAR(16)  NULL COMMENT 'sync / async',
-    `sys_ai_usage_prompt_tokens`        INT          NULL COMMENT ' Token ',
-    `sys_ai_usage_completion_tokens`    INT          NULL COMMENT ' Token ',
-    `sys_ai_usage_total_tokens`        INT          NULL COMMENT ' Token ',
-    `sys_ai_usage_input_cost`          DOUBLE       NULL COMMENT '',
-    `sys_ai_usage_output_cost`         DOUBLE       NULL COMMENT '',
-    `sys_ai_usage_total_cost`          DOUBLE       NULL COMMENT '',
-    `sys_ai_usage_request_id`          VARCHAR(128) NULL COMMENT ' ID',
-    `sys_ai_usage_user_id`             VARCHAR(64)  NULL COMMENT '',
-    `sys_ai_usage_call_time`           DATETIME     NULL COMMENT '',
-    `create_name`                       VARCHAR(64)  NULL COMMENT '',
-    `create_by`                         INT          NULL COMMENT '',
-    `create_time`                       DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '',
-    `update_name`                       VARCHAR(64)  NULL COMMENT '',
-    `update_by`                         INT          NULL COMMENT '',
-    `update_time`                       DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '',
-    PRIMARY KEY (`sys_ai_usage_id`),
+CREATE TABLE IF NOT EXISTS `sys_ai_usage` (
+    `sys_ai_usage_id`                   BIGINT       NOT NULL AUTO_INCREMENT COMMENT ' ID',
+    `sys_ai_usage_group_name`           VARCHAR(32)  NULL COMMENT 'chat / image / video / colorize / vision / rag',
+    `sys_ai_usage_provider`            VARCHAR(64)  NULL COMMENT 'openai / zhipu / baidu ',
+    `sys_ai_usage_model`               VARCHAR(128) NULL COMMENT '',
+    `sys_ai_usage_call_type`           VARCHAR(16)  NULL COMMENT 'sync / async',
+    `sys_ai_usage_prompt_tokens`        INT          NULL COMMENT ' Token ',
+    `sys_ai_usage_completion_tokens`    INT          NULL COMMENT ' Token ',
+    `sys_ai_usage_total_tokens`        INT          NULL COMMENT ' Token ',
+    `sys_ai_usage_input_cost`          DOUBLE       NULL COMMENT '',
+    `sys_ai_usage_output_cost`         DOUBLE       NULL COMMENT '',
+    `sys_ai_usage_total_cost`          DOUBLE       NULL COMMENT '',
+    `sys_ai_usage_request_id`          VARCHAR(128) NULL COMMENT ' ID',
+    `sys_ai_usage_user_id`             VARCHAR(64)  NULL COMMENT '',
+    `sys_ai_usage_call_time`           DATETIME     NULL COMMENT '',
+    `create_name`                       VARCHAR(64)  NULL COMMENT '',
+    `create_by`                         INT          NULL COMMENT '',
+    `create_time`                       DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '',
+    `update_name`                       VARCHAR(64)  NULL COMMENT '',
+    `update_by`                         INT          NULL COMMENT '',
+    `update_time`                       DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '',
+    PRIMARY KEY (`sys_ai_usage_id`),
     KEY `idx_sys_ai_usage_request_id` (`sys_ai_usage_request_id`),
-    KEY `idx_sys_ai_usage_call_time` (`sys_ai_usage_call_time`)
+    KEY `idx_sys_ai_usage_call_time` (`sys_ai_usage_call_time`)
 );
 
-CREATE TABLE IF NOT EXISTS `sys_ai_usage_daily` (
-    `sys_ai_usage_daily_id`                     BIGINT       NOT NULL AUTO_INCREMENT COMMENT ' ID',
-    `sys_ai_usage_daily_stat_date`              DATE         NULL COMMENT '',
-    `sys_ai_usage_daily_group_name`            VARCHAR(32)  NULL COMMENT '',
-    `sys_ai_usage_daily_provider`              VARCHAR(64)  NULL COMMENT '',
-    `sys_ai_usage_daily_model`                 VARCHAR(128) NULL COMMENT '',
-    `sys_ai_usage_daily_total_calls`           BIGINT       NULL COMMENT '',
-    `sys_ai_usage_daily_total_prompt_tokens`   BIGINT       NULL COMMENT ' Token',
-    `sys_ai_usage_daily_total_completion_tokens` BIGINT    NULL COMMENT ' Token',
-    `sys_ai_usage_daily_total_tokens`         BIGINT       NULL COMMENT ' Token',
-    `sys_ai_usage_daily_total_cost`           DOUBLE       NULL COMMENT '',
-    `create_name`                               VARCHAR(64)  NULL COMMENT '',
-    `create_by`                                 INT          NULL COMMENT '',
-    `create_time`                               DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '',
-    `update_name`                               VARCHAR(64)  NULL COMMENT '',
-    `update_by`                                 INT          NULL COMMENT '',
-    `update_time`                               DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '',
-    PRIMARY KEY (`sys_ai_usage_daily_id`)
+CREATE TABLE IF NOT EXISTS `sys_ai_usage_daily` (
+    `sys_ai_usage_daily_id`                     BIGINT       NOT NULL AUTO_INCREMENT COMMENT ' ID',
+    `sys_ai_usage_daily_stat_date`              DATE         NULL COMMENT '',
+    `sys_ai_usage_daily_group_name`            VARCHAR(32)  NULL COMMENT '',
+    `sys_ai_usage_daily_provider`              VARCHAR(64)  NULL COMMENT '',
+    `sys_ai_usage_daily_model`                 VARCHAR(128) NULL COMMENT '',
+    `sys_ai_usage_daily_total_calls`           BIGINT       NULL COMMENT '',
+    `sys_ai_usage_daily_total_prompt_tokens`   BIGINT       NULL COMMENT ' Token',
+    `sys_ai_usage_daily_total_completion_tokens` BIGINT    NULL COMMENT ' Token',
+    `sys_ai_usage_daily_total_tokens`         BIGINT       NULL COMMENT ' Token',
+    `sys_ai_usage_daily_total_cost`           DOUBLE       NULL COMMENT '',
+    `create_name`                               VARCHAR(64)  NULL COMMENT '',
+    `create_by`                                 INT          NULL COMMENT '',
+    `create_time`                               DATETIME     NULL DEFAULT CURRENT_TIMESTAMP COMMENT '',
+    `update_name`                               VARCHAR(64)  NULL COMMENT '',
+    `update_by`                                 INT          NULL COMMENT '',
+    `update_time`                               DATETIME     NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '',
+    PRIMARY KEY (`sys_ai_usage_daily_id`)
 );
 
 CREATE TABLE IF NOT EXISTS `sys_agent_browser_lane` (
@@ -1113,3 +1113,7 @@ CREATE TABLE IF NOT EXISTS `sys_ai_companion_shared_config` (
     `sys_ai_companion_shared_config_updated_at` BIGINT  NOT NULL COMMENT '更新时间（毫秒）',
     PRIMARY KEY (`sys_ai_companion_shared_config_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='桌面伙伴共享配置';
+
+ALTER TABLE `sys_ai_bot_binding`
+    ADD COLUMN `sys_ai_bot_binding_owner_key` VARCHAR(128) NULL COMMENT '归属标识（登录 u:<userId> / 匿名设备指纹 fp:<fingerprint>），用于绑定越权过滤' AFTER `sys_ai_bot_binding_user_id`;
+

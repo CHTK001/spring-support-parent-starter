@@ -14,6 +14,7 @@ import com.chua.starter.ai.support.service.AiBotBindingService;
 import com.chua.starter.ai.support.service.AiBotChatService;
 import com.chua.starter.ai.support.service.SysAiGlobalSettingService;
 import com.chua.common.support.ai.bot.BotSendResult;
+import com.chua.starter.ai.support.manage.LocalTrustAuthFilter;
 import com.chua.starter.oauth.client.support.execute.AuthClientExecute;
 import com.chua.starter.oauth.client.support.user.UserResult;
 import jakarta.servlet.http.HttpServletRequest;
@@ -96,19 +97,33 @@ public class AiBotBindingController {
     }
 
     /**
-     * 获取全部绑定列表。
+     * 获取绑定列表（按当前身份做越权过滤）。
      *
-     * <p>可选按用户过滤；普通用户调用时仅返回其本人绑定，
-     * 管理员（{@code userId} 显式传值）可查看指定用户绑定。</p>
+     * <p>可见范围：</p>
+     * <ul>
+     *   <li>管理员 / 本地信任：返回全部；显式传 {@code userId} 时按用户过滤</li>
+     *   <li>已登录普通用户：仅返回归属为 {@code u:<userId>} 的绑定</li>
+     *   <li>未登录：以浏览器指纹（请求头 {@code x-req-fingerprint}）归属 {@code fp:<指纹>} 过滤</li>
+     *   <li>无任何身份标识：仅返回未归属（历史遗留）记录</li>
+     * </ul>
      *
-     * @param userId 可选，按用户 ID 过滤绑定列表
+     * @param userId      可选，管理员按用户 ID 过滤绑定列表
+     * @param httpRequest HTTP 请求（用于解析当前身份）
      * @return 绑定列表（按创建时间降序）
      */
     @GetMapping("/list")
-    public ReturnResult<List<BotBindingListResponse>> list(@RequestParam(required = false) Long userId) {
-        List<SysAiBotBinding> entities = (userId != null)
-                ? botBindingService.listByUser(userId)
-                : botBindingService.listAll();
+    public ReturnResult<List<BotBindingListResponse>> list(@RequestParam(required = false) Long userId,
+                                                           HttpServletRequest httpRequest) {
+        Identity identity = resolveIdentity(httpRequest);
+        List<SysAiBotBinding> entities;
+        if (identity.admin()) {
+            entities = (userId != null)
+                    ? botBindingService.listByUser(userId)
+                    : botBindingService.listAll();
+        } else {
+            // 非管理员：仅返回本人归属；无身份标识时只返回未归属记录（默认最小可见）
+            entities = botBindingService.listByOwnerKey(identity.ownerKey());
+        }
         List<BotBindingListResponse> result = entities.stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -137,15 +152,32 @@ public class AiBotBindingController {
         String fromUser = body.get("fromUser");
         String content = body.get("content");
         if (StringUtils.isBlank(botId) || StringUtils.isBlank(fromUser) || StringUtils.isBlank(content)) {
-            return ReturnResult.illegal("botId / fromUser / content 不能为空");
+            return sendFailure("botId / fromUser / content 不能为空");
         }
         BotSendResult result = aiBotChatService.sendMessage(botId, fromUser, content);
         if (!result.isSuccess()) {
-            return ReturnResult.error(result.getErrorMessage() != null ? result.getErrorMessage() : "发送失败");
+            return sendFailure(result.getErrorMessage() != null ? result.getErrorMessage() : "发送失败");
         }
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("messageId", result.getMsgId());
         data.put("ok", true);
+        return ReturnResult.ok(data);
+    }
+
+    /**
+     * 构造发送失败响应。
+     *
+     * <p>与成功响应保持同一信封（{@code ReturnResult.ok}），仅以 {@code ok=false} + {@code msg}
+     * 表达业务失败，避免前端在“业务失败”与“请求失败”两分支间产生歧义。</p>
+     *
+     * @param message 失败原因
+     * @return 统一的发送结果响应
+     */
+    private ReturnResult<Map<String, Object>> sendFailure(String message) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("ok", false);
+        data.put("msg", message);
+        data.put("messageId", null);
         return ReturnResult.ok(data);
     }
 
@@ -470,9 +502,12 @@ public class AiBotBindingController {
      * @return 数据库 ID
      */
     @PostMapping("/create")
-    public ReturnResult<Long> create(@RequestBody BotBindingCreateRequest request) {
+    public ReturnResult<Long> create(@RequestBody BotBindingCreateRequest body,
+                                     HttpServletRequest httpRequest) {
         SysAiBotBinding entity = new SysAiBotBinding();
-        BeanUtils.copyProperties(request, entity);
+        BeanUtils.copyProperties(body, entity);
+        // 归属标识由服务端根据当前身份写入，不接受前端指定
+        entity.setOwnerKey(resolveIdentity(httpRequest).ownerKey());
         return ReturnResult.ok(botBindingService.saveOrUpdate(entity));
     }
 
@@ -544,11 +579,14 @@ public class AiBotBindingController {
     @PostMapping("/qrcode")
     public ReturnResult<AiBotBindingService.QrResult> generateQr(
             @RequestParam(defaultValue = "wechat") String platform,
-            @RequestParam(required = false) String botId) {
+            @RequestParam(required = false) String botId,
+            HttpServletRequest httpRequest) {
         if (!"wechat".equals(platform) && !"wecom".equals(platform)) {
             return ReturnResult.illegal("platform 仅支持 wechat / wecom");
         }
-        return ReturnResult.ok(botBindingService.generateQrCode(platform, botId));
+        // 归属标识随扫码会话下发，扫码确认时写入绑定记录
+        return ReturnResult.ok(botBindingService.generateQrCode(platform, botId,
+                resolveIdentity(httpRequest).ownerKey()));
     }
 
     /**
@@ -577,7 +615,64 @@ public class AiBotBindingController {
      */
     @PostMapping("/feishu")
     public ReturnResult<Long> bindFeishu(@RequestParam String appId,
-                                         @RequestParam String appSecret) {
-        return ReturnResult.ok(botBindingService.bindFeishu(appId, appSecret));
+                                         @RequestParam String appSecret,
+                                         HttpServletRequest httpRequest) {
+        return ReturnResult.ok(botBindingService.bindFeishu(appId, appSecret,
+                resolveIdentity(httpRequest).ownerKey()));
+    }
+
+    // ==================== 身份解析 ====================
+
+    /**
+     * 解析当前请求的归属身份与角色，用于绑定资源的越权过滤。
+     *
+     * <p>优先级：本地信任（桌面 / 本地开发）→ 登录 Token → 浏览器指纹。</p>
+     *
+     * @param request HTTP 请求
+     * @return 归属身份（ownerKey + 是否管理员）
+     */
+    private Identity resolveIdentity(HttpServletRequest request) {
+        // 本地信任（Tauri / 本地开发）：视为管理员，保持原有全量可见行为
+        Object trusted = request.getAttribute(LocalTrustAuthFilter.TRUSTED_ATTR);
+        if (Boolean.TRUE.equals(trusted)) {
+            return new Identity(null, true);
+        }
+        // 登录态：以 u:<userId> 归属，管理员放行全部
+        String token = resolveToken(request);
+        if (StringUtils.isNotBlank(token)) {
+            try {
+                UserResult user = AuthClientExecute.getInstance().getUserResult(token);
+                if (user != null) {
+                    boolean admin = user.getRoles() != null && user.getRoles().stream()
+                            .anyMatch(r -> "admin".equalsIgnoreCase(r) || "superadmin".equalsIgnoreCase(r));
+                    if (StringUtils.isNotBlank(user.getUserId())) {
+                        return new Identity("u:" + user.getUserId().trim(), admin);
+                    }
+                    if (admin) {
+                        return new Identity(null, true);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[Bot] 解析当前用户失败: {}", e.getMessage());
+            }
+        }
+        // 未登录：以浏览器指纹作为设备归属标识
+        String fingerprint = request.getHeader("x-req-fingerprint");
+        if (StringUtils.isBlank(fingerprint)) {
+            fingerprint = request.getHeader("X-Request-Fingerprint");
+        }
+        if (StringUtils.isNotBlank(fingerprint)) {
+            return new Identity("fp:" + fingerprint.trim(), false);
+        }
+        return new Identity(null, false);
+    }
+
+    /**
+     * 请求归属身份。
+     *
+     * @param ownerKey 归属标识（{@code u:<userId>} / {@code fp:<fingerprint>}），无身份时为 null
+     * @param admin    是否管理员（或本地信任）
+     */
+    private record Identity(String ownerKey, boolean admin) {
     }
 }

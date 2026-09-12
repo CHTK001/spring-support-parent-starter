@@ -223,6 +223,13 @@ public class HostOnlineScheduler {
             host.setServerHostDelayMs(delay < 0 ? -1 : delay);
             host.setServerHostLastDelayTime(LocalDateTime.now());
             hostMapper.updateById(host);
+            if (delayHook != null) {
+                try {
+                    delayHook.accept(host);
+                } catch (Exception hookEx) {
+                    log.debug("[delay] 延迟钩子异常 hostId={}: {}", hostId, hookEx.getMessage());
+                }
+            }
         } catch (Exception e) {
             log.warn("[delay] 更新延迟状态失败 hostId={}", hostId, e);
         }
