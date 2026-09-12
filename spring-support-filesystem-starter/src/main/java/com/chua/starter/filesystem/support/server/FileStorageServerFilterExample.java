@@ -43,7 +43,7 @@ public class FileStorageServerFilterExample {
     /**
     * 运行示例自检：验证 文件storage服务端过滤器 基本功能。
     *
-    * @param args 命令行参数（键=值 形式），当前未使用
+    * @param args 命令行参数（key=value 形式），当前未使用
     * @return 全部场景通过返回 true
      */
     public static boolean run(Map<String, String> args) {
@@ -124,7 +124,7 @@ public class FileStorageServerFilterExample {
     /**
     * 入口方法：解析参数并执行自检。
     *
-    * @param args 命令行参数（键=值 形式）
+    * @param args 命令行参数（key=value 形式）
      */
     public static void main(String[] args) {
         Map<String, String> parsed = com.chua.common.support.utils.CommandLine.parse(args).getOptions();

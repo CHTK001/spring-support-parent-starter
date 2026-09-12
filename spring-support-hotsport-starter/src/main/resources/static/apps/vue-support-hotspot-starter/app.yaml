@@ -1,0 +1,26 @@
+# ===========================================
+# 应用配置（vue-support-hotspot-starter）
+# ===========================================
+
+appConfig:
+  title: APM 热点观测台
+  openAuth: false
+
+# 路由：本地模式（前后端分离，后端纯 REST）
+routeConfig:
+  mode: local
+
+# API 基础路径（dev 走 vite proxy → :8086）
+httpConfig:
+  baseUrl: /
+
+loginConfig:
+  captcha: false
+  otp: false
+  slider: false
+  brandName: Hotsport
+  title: APM 热点观测台
+
+otherConfig:
+  avatarFrame:
+    enable: false
