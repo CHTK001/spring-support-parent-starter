@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS ms_server_group (
     ms_server_group_name      VARCHAR(64)  NOT NULL                COMMENT '分组名称',
     ms_server_group_sort      INT          NOT NULL DEFAULT 0      COMMENT '排序号',
     ms_server_group_remark    VARCHAR(255) NULL                    COMMENT '备注',
+    ms_server_group_color     VARCHAR(32)  NULL                    COMMENT '分组颜色(十六进制,如 #6d5dfc)',
     create_by                 INT          NULL                    COMMENT '创建人',
     create_name               VARCHAR(64)  NULL                    COMMENT '创建人名称',
     create_time               DATETIME     NULL                    COMMENT '创建时间',

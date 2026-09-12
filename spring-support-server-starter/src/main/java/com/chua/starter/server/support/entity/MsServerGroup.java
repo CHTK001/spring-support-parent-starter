@@ -63,4 +63,11 @@ public class MsServerGroup extends SysBase {
     @TableField("ms_server_group_remark")
     @Schema(description = "备注", example = "生产环境服务器")
     private String msServerGroupRemark;
+
+    /**
+     * 分组颜色（十六进制，如 #6d5dfc），用于标记/徽标底色
+     */
+    @TableField("ms_server_group_color")
+    @Schema(description = "分组颜色(十六进制)", example = "#6d5dfc")
+    private String msServerGroupColor;
 }
