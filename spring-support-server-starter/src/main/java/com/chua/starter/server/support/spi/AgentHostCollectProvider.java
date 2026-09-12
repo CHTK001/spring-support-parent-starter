@@ -26,9 +26,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class AgentHostCollectProvider implements HostCollectProvider {
 
-    /** 
-    * 主机 映射器
-    *
+    /** 主机 映射器（用于回写上报的在线状态） */
     private final MsServerHostMapper hostMapper;
 
     @Override
